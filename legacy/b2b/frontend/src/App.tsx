@@ -1,4 +1,4 @@
-import { Suspense, lazy, useState } from 'react';
+import { Suspense, lazy, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AppShell } from './layouts/AppShell';
 import { ErrorBoundary } from './components/Shared/ErrorBoundary';
@@ -6,6 +6,7 @@ import { FABSupportButton } from './components/Shared/FABSupportButton';
 import { OnboardingTour } from './components/Shared/OnboardingTour';
 import { PageBreadcrumb, getPageLabel } from './components/Shared/PageBreadcrumb';
 import { useUserStore } from './store/userStore';
+import { useAuthStore } from './store/authStore';
 
 // Lazy load page components
 const ProductManagement = lazy(() => import('./pages/ProductManagement').then(m => ({ default: m.ProductManagement })));
@@ -67,7 +68,15 @@ type Page =
 
 function App() {
   const screen = useUserStore((s) => s.screen);
+  const initAuth = useAuthStore((s) => s.initAuth);
+  const isLoading = useAuthStore((s) => s.isLoading);
 
+  // Initialize auth on app startup — validates persisted token
+  useEffect(() => {
+    initAuth();
+  }, [initAuth]);
+
+  if (isLoading) return <LoadingSkeleton />;
   if (screen === 'onboarding') return <OnboardingPage />;
   if (screen === 'pending_verification') return <PendingVerificationPage />;
 

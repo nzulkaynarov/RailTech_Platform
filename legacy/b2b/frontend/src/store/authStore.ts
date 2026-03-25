@@ -13,11 +13,14 @@ interface AuthState {
     refreshToken: string | null;
     isLoading: boolean;
     isAuthenticated: boolean;
+    error: string | null;
 
     login: (email: string, password: string) => Promise<void>;
     logout: () => void;
     initAuth: () => Promise<void>;
     setUser: (user: User) => void;
+    setTokens: (access: string, refresh?: string) => void;
+    clearError: () => void;
 }
 
 const API_URL = import.meta.env.VITE_API_URL || '';
@@ -32,9 +35,10 @@ export const useAuthStore = create<AuthState>()(
             refreshToken: null,
             isLoading: false,
             isAuthenticated: false,
+            error: null,
 
             login: async (email: string, password: string) => {
-                set({ isLoading: true });
+                set({ isLoading: true, error: null });
                 try {
                     const response = await fetch(`${API_URL}/api/v1/auth/token/`, {
                         method: 'POST',
@@ -43,15 +47,21 @@ export const useAuthStore = create<AuthState>()(
                     });
 
                     if (!response.ok) {
-                        const err = await response.json();
-                        throw new Error(err.detail || 'Неверный логин или пароль');
+                        const err = await response.json().catch(() => ({}));
+                        const message = err.detail || 'Неверный логин или пароль';
+                        set({ error: message });
+                        throw new Error(message);
                     }
 
                     const { access, refresh } = await response.json();
-                    set({ accessToken: access, refreshToken: refresh });
+                    set({ accessToken: access, refreshToken: refresh, error: null });
 
                     // Fetch user profile with the new token
                     await get().initAuth();
+                } catch (e) {
+                    const message = e instanceof Error ? e.message : 'Ошибка авторизации';
+                    set({ error: message });
+                    throw e;
                 } finally {
                     set({ isLoading: false });
                 }
@@ -115,6 +125,14 @@ export const useAuthStore = create<AuthState>()(
                     kyc_status: (user.kyc_status as KYCStatus) || null,
                 });
             },
+
+            setTokens: (access: string, refresh?: string) => {
+                const updates: Partial<AuthState> = { accessToken: access };
+                if (refresh) updates.refreshToken = refresh;
+                set(updates);
+            },
+
+            clearError: () => set({ error: null }),
         }),
         {
             name: 'railtech-auth',

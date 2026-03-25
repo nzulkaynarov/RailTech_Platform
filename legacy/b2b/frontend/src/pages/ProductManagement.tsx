@@ -57,10 +57,11 @@ import { cn } from '@/lib/utils';
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 20, 50];
 
-/* Company ID for "our" company — in a real app this comes from auth */
+/* Company ID for "our" company — resolved from auth store at runtime */
 const SELF_COMPANY_ID = 'C_SELF';
-// Demo: when in MANUFACTURER mode, also show SAUT/RATEP products as "own"
-const MANUFACTURER_IDS = ['C_SELF', 'C_SAUT', 'C_RATEP'];
+// In production, manufacturer IDs come from the backend (company relationships)
+// TODO: Fetch from accountsApi when company relationships API is ready
+const MANUFACTURER_IDS = [SELF_COMPANY_ID];
 
 // ─── KPI Card (Shoppers-inspired with vs. period) ──────────────────────
 

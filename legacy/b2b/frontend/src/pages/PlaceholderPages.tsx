@@ -3,7 +3,7 @@ import {
   HelpCircle, ClipboardList, Calculator, Users, CalendarDays,
   Layers, Tags, Truck, Shield, ChevronRight, FileSpreadsheet,
   Clock, CheckCircle2, XCircle, AlertCircle, Star, Pause, Check,
-  Zap, Flame, Package, UserRound,
+  // Zap, Flame, Package, UserRound — removed (were used by hardcoded equipment groups)
   ChevronDown, Download, MapPin, Calendar,
   Mail, MessageSquare,
 } from 'lucide-react';
@@ -388,21 +388,10 @@ export function QuotesPage() {
   const { activeStatus } = useUserStore();
   const isBuyer = activeStatus === 'BUYER';
 
-  const sellerQuotes = [
-    { number: 'КП-2026-001', client: 'UTY Tashkent', items: 12, amount: 45600, margin: 15, status: 'draft', statusLabel: t('pages.quotes.status.draft'), date: '2026-03-20' },
-    { number: 'КП-2026-002', client: 'Navoi Mining', items: 8, amount: 28900, margin: 18, status: 'calculating', statusLabel: t('pages.quotes.status.calculating'), date: '2026-03-19' },
-    { number: 'КП-2026-003', client: 'Uzbekiston Temir Yullari', items: 24, amount: 89500, margin: 12, status: 'sent', statusLabel: t('pages.quotes.status.sent'), date: '2026-03-18' },
-    { number: 'КП-2026-004', client: 'Tashkent Metro', items: 15, amount: 52300, margin: 16, status: 'sent', statusLabel: t('pages.quotes.status.sent'), date: '2026-03-17' },
-    { number: 'КП-2026-005', client: 'Almalyk MMC', items: 18, amount: 64200, margin: 20, status: 'approved', statusLabel: t('pages.quotes.status.approved'), date: '2026-03-15' },
-    { number: 'КП-2026-006', client: 'Samarkand Transport', items: 6, amount: 21400, margin: 14, status: 'draft', statusLabel: t('pages.quotes.status.draft'), date: '2026-03-20' },
-  ];
-
-  const buyerQuotes = [
-    { number: 'КП-2026-003', seller: 'OOO «RailTech»', items: 24, amount: 89500, status: 'review', statusLabel: t('pages.quotes.status.underReview'), date: '2026-03-18', deadline: '2026-03-25' },
-    { number: 'КП-2026-007', seller: 'SAUT Plant', items: 8, amount: 34200, status: 'accepted', statusLabel: t('pages.quotes.status.accepted'), date: '2026-03-15', deadline: '—' },
-    { number: 'КП-2026-008', seller: 'Uz Railway Logistics', items: 5, amount: 18900, status: 'review', statusLabel: t('pages.quotes.status.underReview'), date: '2026-03-19', deadline: '2026-03-26' },
-    { number: 'КП-2026-009', seller: 'RATEP Ekb', items: 12, amount: 52800, status: 'expired', statusLabel: t('pages.quotes.status.expired'), date: '2026-03-05', deadline: '2026-03-12' },
-  ];
+  // Quotes are loaded from the backend API via crmApi
+  // TODO: Replace with useEffect + crmApi.getQuotes() when component mounts
+  const sellerQuotes: { number: string; client: string; items: number; amount: number; margin: number; status: string; statusLabel: string; date: string }[] = [];
+  const buyerQuotes: { number: string; seller: string; items: number; amount: number; status: string; statusLabel: string; date: string; deadline: string }[] = [];
 
   if (isBuyer) {
     return (
@@ -532,16 +521,9 @@ export function QuotesPage() {
 
 export function ClientsPage() {
   const { t } = useTranslation();
-  const clients = [
-    { name: 'Uzbekiston Temir Yullari (UTY)', inn: '201234567890', status: 'BUYER', kyc: 'Verified', deals: 8, lastActivity: '2026-03-20' },
-    { name: 'Navoi Mining Company', inn: '201345678901', status: 'SELLER', kyc: 'Verified', deals: 5, lastActivity: '2026-03-19' },
-    { name: 'Almalyk MMC', inn: '201456789012', status: 'MANUFACTURER', kyc: 'Verified', deals: 12, lastActivity: '2026-03-20' },
-    { name: 'Tashkent Metro LLC', inn: '201567890123', status: 'BUYER', kyc: 'Pending', deals: 3, lastActivity: '2026-03-18' },
-    { name: 'Uz Railway Logistics', inn: '201678901234', status: 'SELLER', kyc: 'Verified', deals: 7, lastActivity: '2026-03-17' },
-    { name: 'Samarkand Transport', inn: '201789012345', status: 'BUYER', kyc: 'Pending', deals: 2, lastActivity: '2026-03-16' },
-    { name: 'Tashkent Locomotive Works', inn: '201890123456', status: 'MANUFACTURER', kyc: 'Verified', deals: 9, lastActivity: '2026-03-20' },
-    { name: 'Fergana Railway Terminal', inn: '201901234567', status: 'BUYER', kyc: 'Verified', deals: 4, lastActivity: '2026-03-15' },
-  ];
+  // Clients are loaded from the backend API via accountsApi
+  // TODO: Replace with useEffect + accountsApi.getCompanies() when component mounts
+  const clients: { name: string; inn: string; status: string; kyc: string; deals: number; lastActivity: string }[] = [];
 
   return (
     <PageShell
@@ -626,12 +608,9 @@ export function ProductionOrdersPage({ onNavigate }: { onNavigate?: (t: string) 
 
 export function ProductionSchedulePage() {
   const { t } = useTranslation();
-  const orders = [
-    { name: 'ТЭД ЭД-118А × 12', progress: 75, deadline: '2026-04-15', status: t('pages.productionSchedule.status.inProduction') },
-    { name: 'Тележка 18-100 × 6', progress: 40, deadline: '2026-04-30', status: t('pages.productionSchedule.status.inProduction') },
-    { name: 'Колёсная пара × 24', progress: 90, deadline: '2026-03-25', status: t('pages.productionSchedule.status.finishing') },
-    { name: 'Буфер автосцепного устройства × 36', progress: 55, deadline: '2026-05-10', status: t('pages.productionSchedule.status.inProduction') },
-  ];
+  // Production orders are loaded from the backend API
+  // TODO: Replace with useEffect + API call when production endpoints are ready
+  const orders: { name: string; progress: number; deadline: string; status: string }[] = [];
 
   return (
     <PageShell
@@ -685,21 +664,10 @@ export function AnalyticsPage() {
   }
 
   // Seller / Manufacturer analytics
-  const funnelData = [
-    { stage: t('pages.analytics.funnel.incomingRequests'), value: 100 },
-    { stage: t('pages.analytics.funnel.quoteSent'), value: 65 },
-    { stage: t('pages.analytics.funnel.approved'), value: 28 },
-    { stage: t('pages.analytics.funnel.deal'), value: 18 },
-  ];
-
-  const revenueData = [
-    { month: t('pages.analytics.months.sep'), revenue: 45 },
-    { month: t('pages.analytics.months.oct'), revenue: 52 },
-    { month: t('pages.analytics.months.nov'), revenue: 48 },
-    { month: t('pages.analytics.months.dec'), revenue: 61 },
-    { month: t('pages.analytics.months.jan'), revenue: 55 },
-    { month: t('pages.analytics.months.feb'), revenue: 67 },
-  ];
+  // Analytics data loaded from the backend API via crmApi.getAnalytics()
+  // TODO: Replace with useEffect + API call
+  const funnelData: { stage: string; value: number }[] = [];
+  const revenueData: { month: string; revenue: number }[] = [];
 
   const colors = ['var(--color-chart-1)', 'var(--color-chart-2)', 'var(--color-chart-5)', 'var(--color-chart-4)'];
 
@@ -766,28 +734,11 @@ export function AnalyticsPage() {
 
 function BuyerAnalytics() {
   const { t } = useTranslation();
-  const spendData = [
-    { month: t('pages.analytics.months.sep'), spend: 32 },
-    { month: t('pages.analytics.months.oct'), spend: 41 },
-    { month: t('pages.analytics.months.nov'), spend: 38 },
-    { month: t('pages.analytics.months.dec'), spend: 55 },
-    { month: t('pages.analytics.months.jan'), spend: 48 },
-    { month: t('pages.analytics.months.feb'), spend: 62 },
-  ];
-
-  const categoryData = [
-    { name: t('pages.analytics.categories.railwayEquipment'), value: 45, color: 'var(--color-chart-1)' },
-    { name: t('pages.analytics.categories.spareParts'), value: 28, color: 'var(--color-chart-2)' },
-    { name: t('pages.analytics.categories.rawMaterials'), value: 18, color: 'var(--color-chart-3)' },
-    { name: t('pages.analytics.categories.services'), value: 9, color: 'var(--color-chart-4)' },
-  ];
-
-  const suppliers = [
-    { name: 'SAUT Plant', orders: 14, total: '$124,500', avgDelivery: t('pages.analytics.supplierDays', { count: 12 }), rating: 4.8 },
-    { name: 'RATEP Ekb', orders: 9, total: '$87,200', avgDelivery: t('pages.analytics.supplierDays', { count: 18 }), rating: 4.5 },
-    { name: 'Almalyk MMC', orders: 6, total: '$52,300', avgDelivery: t('pages.analytics.supplierDays', { count: 8 }), rating: 4.9 },
-    { name: 'Navoi Mining', orders: 4, total: '$34,100', avgDelivery: t('pages.analytics.supplierDays', { count: 15 }), rating: 4.2 },
-  ];
+  // Buyer analytics data loaded from the backend API
+  // TODO: Replace with useEffect + API call when buyer analytics endpoint is ready
+  const spendData: { month: string; spend: number }[] = [];
+  const categoryData: { name: string; value: number; color: string }[] = [];
+  const suppliers: { name: string; orders: number; total: string; avgDelivery: string; rating: number }[] = [];
 
   return (
     <PageShell
@@ -887,34 +838,9 @@ function BuyerAnalytics() {
 
 export function CategoriesPage() {
   const { t } = useTranslation();
-  const categories = [
-    {
-      name: t('pages.categories.items.railwayTech'),
-      subcats: [
-        { name: t('pages.categories.items.tractionRollingStock'), items: [t('pages.categories.items.ted'), t('pages.categories.items.dieselLocos'), t('pages.categories.items.electricLocos')] },
-        { name: t('pages.categories.items.brakeEquipment'), items: [t('pages.categories.items.cylinders'), t('pages.categories.items.valves'), t('pages.categories.items.hoses')] },
-      ]
-    },
-    {
-      name: t('pages.categories.items.materials'),
-      subcats: [
-        { name: t('pages.categories.items.nonFerrousMetals'), items: [t('pages.categories.items.babbits'), t('pages.categories.items.bronze'), t('pages.categories.items.tin')] },
-      ]
-    },
-    {
-      name: t('pages.categories.items.metalProducts'),
-      subcats: [
-        { name: t('pages.categories.items.assortment'), items: [t('pages.categories.items.round'), t('pages.categories.items.strip'), t('pages.categories.items.pipe'), t('pages.categories.items.profile')] },
-      ]
-    },
-    {
-      name: t('pages.categories.items.electricalEquipment'),
-      subcats: [
-        { name: t('pages.categories.items.cableProducts'), items: [t('pages.categories.items.wires'), t('pages.categories.items.cables'), t('pages.categories.items.couplings')] },
-        { name: t('pages.categories.items.generatingEquipment'), items: [t('pages.categories.items.generators'), t('pages.categories.items.transformers')] },
-      ]
-    },
-  ];
+  // Categories are loaded from the backend API via catalogApi.getCategories()
+  // TODO: Replace with useEffect + catalogApi.getCategories()
+  const categories: { name: string; subcats: { name: string; items: string[] }[] }[] = [];
 
   return (
     <PageShell
@@ -962,12 +888,9 @@ export function CategoriesPage() {
 
 export function EquipmentGroupsPage() {
   const { t } = useTranslation();
-  const groups = [
-    { name: t('pages.equipmentGroups.items.electricLocos'), icon: <Zap className="h-6 w-6 text-primary" />, series: 8, components: 156 },
-    { name: t('pages.equipmentGroups.items.dieselLocos'), icon: <Flame className="h-6 w-6 text-primary" />, series: 12, components: 284 },
-    { name: t('pages.equipmentGroups.items.freightWagons'), icon: <Package className="h-6 w-6 text-primary" />, series: 15, components: 342 },
-    { name: t('pages.equipmentGroups.items.passengerWagons'), icon: <UserRound className="h-6 w-6 text-primary" />, series: 6, components: 198 },
-  ];
+  // Equipment groups loaded from the backend API via catalogApi.getEquipmentGroups()
+  // TODO: Replace with useEffect + catalogApi.getEquipmentGroups()
+  const groups: { name: string; icon: React.ReactNode; series: number; components: number }[] = [];
 
   return (
     <PageShell
@@ -1007,14 +930,9 @@ export function EquipmentGroupsPage() {
 
 export function IntegrationsPage() {
   const { t } = useTranslation();
-  const integrations = [
-    { name: '1C:Предприятие', description: t('pages.integrations.items.1c'), status: 'connected', lastSync: t('pages.integrations.syncAgo', { time: '15' }), records: '1,240' },
-    { name: 'SAP ERP', description: t('pages.integrations.items.sap'), status: 'disconnected', lastSync: '—', records: '—' },
-    { name: 'Telegram Bot', description: t('pages.integrations.items.telegram'), status: 'connected', lastSync: t('pages.integrations.realtime'), records: t('pages.integrations.messages', { count: '342' }) },
-    { name: 'Email SMTP', description: t('pages.integrations.items.email'), status: 'connected', lastSync: t('pages.integrations.syncAgo', { time: '2' }), records: t('pages.integrations.emails', { count: '89' }) },
-    { name: 'ASAN Imzo', description: t('pages.integrations.items.asan'), status: 'pending', lastSync: '—', records: '—' },
-    { name: 'Uzum Bank API', description: t('pages.integrations.items.uzum'), status: 'disconnected', lastSync: '—', records: '—' },
-  ];
+  // Integrations are loaded from the backend API
+  // TODO: Replace with useEffect + API call when integrations endpoint is ready
+  const integrations: { name: string; description: string; status: string; lastSync: string; records: string }[] = [];
 
   return (
     <PageShell
@@ -1214,14 +1132,9 @@ export function MyRequestsPage({ onNavigate }: { onNavigate?: (t: string) => voi
 
 export function MyDocumentsPage() {
   const { t } = useTranslation();
-  const documents = [
-    { type: t('pages.documents.types.quote'), number: 'КП-2026-001', date: '2026-03-20', counterparty: 'UTY Tashkent', status: 'sent', statusLabel: t('pages.documents.status.sent'), amount: '$45,600' },
-    { type: t('pages.documents.types.contract'), number: 'ДГ-2026-001', date: '2026-03-15', counterparty: 'Almalyk MMC', status: 'signed', statusLabel: t('pages.documents.status.signed'), amount: '$64,200' },
-    { type: t('pages.documents.types.act'), number: 'АК-2026-001', date: '2026-03-10', counterparty: 'Navoi Mining', status: 'archive', statusLabel: t('pages.documents.status.archive'), amount: '$28,900' },
-    { type: t('pages.documents.types.invoice'), number: 'ИН-2026-001', date: '2026-03-18', counterparty: 'Tashkent Metro', status: 'pending', statusLabel: t('pages.documents.status.pendingPayment'), amount: '$52,300' },
-    { type: t('pages.documents.types.quote'), number: 'КП-2026-002', date: '2026-03-19', counterparty: 'Navoi Mining', status: 'draft', statusLabel: t('pages.documents.status.draft'), amount: '$28,900' },
-    { type: t('pages.documents.types.contract'), number: 'ДГ-2026-002', date: '2026-03-12', counterparty: 'Uzbekiston Temir Yullari', status: 'forSignature', statusLabel: t('pages.documents.status.forSignature'), amount: '$89,500' },
-  ];
+  // Documents are loaded from the backend API
+  // TODO: Replace with useEffect + API call when documents endpoint is ready
+  const documents: { type: string; number: string; date: string; counterparty: string; status: string; statusLabel: string; amount: string }[] = [];
 
   return (
     <PageShell
@@ -1283,13 +1196,9 @@ export function MyDocumentsPage() {
 
 export function LogisticsPage() {
   const { t } = useTranslation();
-  const shipments = [
-    { number: 'ШП-001', route: 'Москва \u2192 Ташкент', status: 'in_transit', etd: '2026-03-18', eta: '2026-03-28', carrier: 'РЖД Логистика' },
-    { number: 'ШП-002', route: 'СПб \u2192 Ташкент', status: 'customs', etd: '2026-03-15', eta: '2026-04-05', carrier: 'TransCaspian' },
-    { number: 'ШП-003', route: 'Екатеринбург \u2192 Ташкент', status: 'in_transit', etd: '2026-03-20', eta: '2026-03-30', carrier: 'УТ-Логистика' },
-    { number: 'ШП-004', route: 'Москва \u2192 Ташкент', status: 'delivered', etd: '2026-03-05', eta: '2026-03-15', carrier: 'РЖД Логистика' },
-    { number: 'ШП-005', route: 'СПб \u2192 Бухара', status: 'in_transit', etd: '2026-03-17', eta: '2026-04-08', carrier: 'CentraAsia' },
-  ];
+  // Shipments are loaded from the backend API
+  // TODO: Replace with useEffect + API call when logistics endpoint is ready
+  const shipments: { number: string; route: string; status: string; etd: string; eta: string; carrier: string }[] = [];
 
   const statusBadges: Record<string, 'default' | 'secondary' | 'outline'> = {
     'in_transit': 'secondary',
@@ -1359,16 +1268,9 @@ export function LogisticsPage() {
 
 export function AdminUsersPage() {
   const { t } = useTranslation();
-  const users = [
-    { name: 'Азиз Қодиров', email: 'aziz.kodirov@railtech.uz', role: 'admin', roleLabel: t('pages.adminUsers.roles.admin'), status: 'active', lastLogin: '2026-03-20 14:30' },
-    { name: 'Диана Рахимова', email: 'diana.rahimova@railtech.uz', role: 'manager', roleLabel: t('pages.adminUsers.roles.salesManager'), status: 'active', lastLogin: '2026-03-20 13:45' },
-    { name: 'Фарход Махмудов', email: 'farhod.mahmudov@railtech.uz', role: 'manager', roleLabel: t('pages.adminUsers.roles.salesManager'), status: 'active', lastLogin: '2026-03-19 16:20' },
-    { name: 'Лола Искандарова', email: 'lola.iskandarova@railtech.uz', role: 'admin', roleLabel: t('pages.adminUsers.roles.admin'), status: 'active', lastLogin: '2026-03-20 15:10' },
-    { name: 'Умид Абдуллаев', email: 'umid.abdullaev@railtech.uz', role: 'employee', roleLabel: t('pages.adminUsers.roles.employee'), status: 'active', lastLogin: '2026-03-18 09:15' },
-    { name: 'Наталья Петрова', email: 'natalia.petrova@railtech.uz', role: 'manager', roleLabel: t('pages.adminUsers.roles.salesManager'), status: 'inactive', lastLogin: '2026-03-10 11:45' },
-    { name: 'Камол Зарифов', email: 'kamol.zarifov@railtech.uz', role: 'employee', roleLabel: t('pages.adminUsers.roles.employee'), status: 'active', lastLogin: '2026-03-20 10:20' },
-    { name: 'Евгений Смирнов', email: 'evgeny.smirnov@railtech.uz', role: 'employee', roleLabel: t('pages.adminUsers.roles.employee'), status: 'active', lastLogin: '2026-03-17 14:50' },
-  ];
+  // Users are loaded from the backend API via accountsApi
+  // TODO: Replace with useEffect + accountsApi.getUsers() when endpoint is ready
+  const users: { name: string; email: string; role: string; roleLabel: string; status: string; lastLogin: string }[] = [];
 
   return (
     <PageShell

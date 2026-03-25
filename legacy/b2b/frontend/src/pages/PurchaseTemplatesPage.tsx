@@ -54,56 +54,10 @@ interface RecentOrder {
   statusVariant: "default" | "secondary" | "destructive" | "outline";
 }
 
-const templates: Template[] = [
-  {
-    id: 1,
-    name: "Квартальная закупка ТЭД",
-    itemCount: 5,
-    lastOrderDate: "15.02.2026",
-    totalAmount: "$142,500",
-  },
-  {
-    id: 2,
-    name: "Расходные материалы",
-    itemCount: 8,
-    lastOrderDate: "01.03.2026",
-    totalAmount: "$23,800",
-  },
-  {
-    id: 3,
-    name: "Комплект подшипников",
-    itemCount: 3,
-    lastOrderDate: "20.01.2026",
-    totalAmount: "$67,200",
-  },
-];
-
-const recentOrders: RecentOrder[] = [
-  {
-    id: "ORD-2026-0147",
-    date: "01.03.2026",
-    itemCount: 8,
-    amount: "$23,800",
-    status: "Доставлен",
-    statusVariant: "default",
-  },
-  {
-    id: "ORD-2026-0132",
-    date: "15.02.2026",
-    itemCount: 5,
-    amount: "$142,500",
-    status: "В обработке",
-    statusVariant: "secondary",
-  },
-  {
-    id: "ORD-2026-0098",
-    date: "20.01.2026",
-    itemCount: 3,
-    amount: "$67,200",
-    status: "Доставлен",
-    statusVariant: "default",
-  },
-];
+// Templates and orders are loaded from the backend API
+// TODO: Replace with useEffect + API calls when backend endpoints are ready
+const templates: Template[] = [];
+const recentOrders: RecentOrder[] = [];
 
 export function PurchaseTemplatesPage() {
   const { t } = useTranslation();

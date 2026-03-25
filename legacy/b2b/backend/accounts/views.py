@@ -1,6 +1,7 @@
 from rest_framework import viewsets, status, views, permissions, exceptions
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.generics import RetrieveAPIView
 from rest_framework.parsers import MultiPartParser, FormParser
 
 from .models import Company, CustomUser, KYCDocument, CompanyMember, VerificationStatus
@@ -237,3 +238,15 @@ class SubmitProfileView(views.APIView):
             "message": "Profile submitted successful.",
             "user": UserSerializer(user).data
         })
+
+
+class MeView(RetrieveAPIView):
+    """
+    Retrieve the current authenticated user's profile.
+    GET /api/v1/accounts/me/
+    """
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user

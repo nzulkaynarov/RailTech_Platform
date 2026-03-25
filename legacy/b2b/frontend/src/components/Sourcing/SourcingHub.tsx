@@ -34,14 +34,9 @@ interface CatalogProduct {
   manufacturer: string;
 }
 
-const masterCatalog: CatalogProduct[] = [
-  { id: 'MC-1', name: 'Подшипник роликовый 42726 ГОСТ 8328-75', sku: 'BRG-042726', manufacturer: 'СКФ' },
-  { id: 'MC-2', name: 'Подшипник роликовый 32726', sku: 'BRG-032726', manufacturer: 'ЕПК' },
-  { id: 'MC-3', name: 'Смазка ЦИАТИМ-201 ГОСТ 6267-74', sku: 'LUB-CIATIM201', manufacturer: 'ВНИИНП' },
-  { id: 'MC-4', name: 'Смазка Литол-24', sku: 'LUB-LITOL24', manufacturer: 'ВНИИНП' },
-  { id: 'MC-5', name: 'Подшипник шариковый 6-180306', sku: 'BRG-180306', manufacturer: 'СКФ' },
-  { id: 'MC-6', name: 'Масло трансмиссионное ТСп-15К', sku: 'LUB-TSP15K', manufacturer: 'Газпромнефть' },
-];
+// Master catalog is loaded from the backend API via catalogApi.getProducts()
+// TODO: Replace with useEffect + catalogApi.getProducts() when component mounts
+const masterCatalog: CatalogProduct[] = [];
 
 /* ─── Status helpers ───────────────────────────────────────────────── */
 

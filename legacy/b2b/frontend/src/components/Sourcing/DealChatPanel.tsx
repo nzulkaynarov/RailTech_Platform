@@ -28,30 +28,9 @@ interface ChatMessage {
   time?: string;
 }
 
-const initialMessages: ChatMessage[] = [
-  { id: 1, sender: 'manager', name: 'Нурбек З.', textKey: 'dealChat.messages.requestAccepted', time: '09:15' },
-  { id: 2, sender: 'client', name: 'Иванов А.П.', textKey: 'dealChat.messages.whenQuote', time: '09:18' },
-  { id: 3, sender: 'manager', name: 'Нурбек З.', textKey: 'dealChat.messages.rfqSent', time: '09:20' },
-  { id: 4, sender: 'client', name: 'Иванов А.П.', textKey: 'dealChat.messages.alternatives', time: '10:05' },
-  { id: 5, sender: 'manager', name: 'Нурбек З.', textKey: 'dealChat.messages.analogFound', time: '10:12' },
-];
+const initialMessages: ChatMessage[] = [];
 
-const delayedMessages: { delay: number; message: ChatMessage }[] = [
-  {
-    delay: 3000,
-    message: { id: 6, sender: 'system', textKey: 'dealChat.messages.factoriesConfirmed' },
-  },
-  {
-    delay: 6000,
-    message: {
-      id: 7,
-      sender: 'manager',
-      name: 'Нурбек З.',
-      textKey: 'dealChat.messages.landedCostCalc',
-      time: '14:30',
-    },
-  },
-];
+const delayedMessages: { delay: number; message: ChatMessage }[] = [];
 
 interface DemoDocument {
   nameKey: string;
@@ -60,18 +39,21 @@ interface DemoDocument {
   date: string;
 }
 
-const documents: DemoDocument[] = [
-  { nameKey: 'dealChat.docs.request', name: 'Заявка ЗК-2026-0047.xlsx', size: '145 KB', date: '18.03.2026' },
-  { nameKey: 'dealChat.docs.smartMatch', name: 'Smart Match результаты.pdf', size: '89 KB', date: '19.03.2026' },
-  { nameKey: 'dealChat.docs.rfq', name: 'RFQ САУТ.pdf', size: '234 KB', date: '19.03.2026' },
-  { nameKey: 'dealChat.docs.quoteDraft', name: 'КП Черновик.pdf', size: '567 KB', date: '21.03.2026' },
-];
+const documents: DemoDocument[] = [];
 
-export function DealChatPanel() {
+export function DealChatPanel(): React.ReactNode {
+  // TODO: when implementing live chat fetching, accept dealId prop
   const { t } = useTranslation();
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [inputValue, setInputValue] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // TODO: Fetch messages from crmApi.getMessages(dealId) when dealId changes
+  // useEffect(() => {
+  //   if (dealId) {
+  //     crmApi.getMessages(dealId).then(setMessages);
+  //   }
+  // }, [dealId]);
 
   useEffect(() => {
     const timers = delayedMessages.map(({ delay, message }) =>

@@ -9,13 +9,12 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-ENV NODE_ENV=production \
-    NODE_OPTIONS=--max-old-space-size=512
+ENV NODE_OPTIONS=--max-old-space-size=2048
 
 # Copy package files
 COPY package.json package-lock.json ./
 
-# Install dependencies
+# Install all dependencies (including devDependencies for build)
 RUN npm ci --legacy-peer-deps
 
 # Copy source code
@@ -43,12 +42,11 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 # Copy built application from builder
 COPY --from=builder /app/dist .
 
-# Create nginx user (already exists in alpine, but ensure permissions)
+# Set permissions for nginx user
 RUN chown -R nginx:nginx /usr/share/nginx/html && \
-    chmod -R 755 /usr/share/nginx/html
-
-# Create cache directory for nginx
-RUN mkdir -p /var/cache/nginx && \
+    chmod -R 755 /usr/share/nginx/html && \
+    chown -R nginx:nginx /etc/nginx/conf.d && \
+    mkdir -p /var/cache/nginx && \
     chown -R nginx:nginx /var/cache/nginx && \
     touch /var/run/nginx.pid && \
     chown -R nginx:nginx /var/run/nginx.pid

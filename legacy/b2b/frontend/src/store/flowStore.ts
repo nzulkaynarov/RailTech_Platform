@@ -23,12 +23,8 @@ export interface DemoCompany {
   inn: string;
 }
 
-export const demoCompanies: DemoCompany[] = [
-  { id: 'UTY', name: 'АО «UTY» (Узбекистон темир йуллари)', type: 'buyer', inn: '200876543' },
-  { id: 'RT', name: 'OOO «RailTech»', type: 'seller', inn: '309876543' },
-  { id: 'SAUT', name: 'АО «САУТ»', type: 'manufacturer', inn: '500111222' },
-  { id: 'RATEP', name: 'АО «РАТЕП»', type: 'manufacturer', inn: '500333444' },
-];
+// Loaded from API via accountsApi
+export const demoCompanies: DemoCompany[] = [];
 
 /* ─── Request Item (line from Excel import) ──────────────────────────── */
 
@@ -180,141 +176,20 @@ export interface Deal {
    DEMO DATA — Pre-populated scenario
    ═══════════════════════════════════════════════════════════════════════ */
 
+// Creates an empty sourcing request structure for new requests
+// Live data is loaded from the API via sourcingApi
 function createDemoRequest(): SourcingRequest {
   return {
-    id: 'SR-001',
-    number: 'ЗК-2026-0047',
-    clientId: 'UTY',
-    clientName: 'АО «UTY»',
-    sellerId: 'RT',
-    sellerName: 'OOO «RailTech»',
-    status: 'submitted',
-    createdAt: '2026-03-18',
-    updatedAt: '2026-03-18',
-    items: [
-      // ─── Matched, seller has access + stock ───────────────
-      {
-        id: 'RI-01',
-        name: 'Баббит Б-83',
-        article: 'MAT-001',
-        gost: 'ГОСТ 1320-74',
-        uom: 'тн',
-        quantity: 5,
-        matchStatus: 'matched',
-        matchedProductId: 'P001',
-        manufacturerId: 'SAUT',
-        manufacturerName: 'АО «САУТ»',
-        sellerHasAccess: true,
-        inSellerStock: true,
-        partnerPriceFCA: 14200,
-        rfqStatus: 'not_sent',
-      },
-      {
-        id: 'RI-02',
-        name: 'Баббит БК-2',
-        article: 'MAT-002',
-        gost: 'ГОСТ 1209-90',
-        uom: 'тн',
-        quantity: 8,
-        matchStatus: 'matched',
-        matchedProductId: 'P002',
-        manufacturerId: 'RATEP',
-        manufacturerName: 'АО «РАТЕП»',
-        sellerHasAccess: true,
-        inSellerStock: true,
-        partnerPriceFCA: 11800,
-        rfqStatus: 'not_sent',
-      },
-      // ─── Matched, seller has access, NOT in stock → RFQ needed ──
-      {
-        id: 'RI-03',
-        name: 'Провод БПВЛ 1,5 мм²',
-        article: 'ELC-001',
-        gost: 'ТУ16.505.911-76',
-        uom: 'км',
-        quantity: 50,
-        matchStatus: 'matched',
-        matchedProductId: 'P005',
-        manufacturerId: 'SAUT',
-        manufacturerName: 'АО «САУТ»',
-        sellerHasAccess: true,
-        inSellerStock: false,
-        partnerPriceFCA: 850,
-        rfqStatus: 'not_sent',
-      },
-      {
-        id: 'RI-04',
-        name: 'Круг ø120мм ст. 12ХН3А',
-        article: 'MET-001',
-        gost: 'ст. 12ХН3А',
-        uom: 'тн',
-        quantity: 10,
-        matchStatus: 'matched',
-        matchedProductId: 'P007',
-        manufacturerId: 'SAUT',
-        manufacturerName: 'АО «САУТ»',
-        sellerHasAccess: true,
-        inSellerStock: false,
-        rfqStatus: 'not_sent',
-      },
-      // ─── Partial match (similar product found but spec differs) ──
-      {
-        id: 'RI-05',
-        name: 'Провод БПВЛ 4,0 мм²',
-        article: 'ELC-003',
-        gost: 'ТУ16.505.911-76',
-        uom: 'км',
-        quantity: 30,
-        matchStatus: 'partial',
-        manufacturerId: 'SAUT',
-        manufacturerName: 'АО «САУТ»',
-        sellerHasAccess: true,
-        inSellerStock: false,
-        rfqStatus: 'not_sent',
-      },
-      // ─── Not found in catalog ─────────────────────────────
-      {
-        id: 'RI-06',
-        name: 'Подшипник роликовый 42726',
-        article: 'BRG-001',
-        gost: 'ГОСТ 8328-75',
-        uom: 'шт',
-        quantity: 200,
-        matchStatus: 'not_found',
-        sellerHasAccess: false,
-        inSellerStock: false,
-        rfqStatus: 'not_sent',
-      },
-      {
-        id: 'RI-07',
-        name: 'Смазка ЦИАТИМ-201',
-        article: 'LUB-001',
-        gost: 'ГОСТ 6267-74',
-        uom: 'кг',
-        quantity: 500,
-        matchStatus: 'not_found',
-        sellerHasAccess: false,
-        inSellerStock: false,
-        rfqStatus: 'not_sent',
-      },
-      // ─── Matched, in stock ──────────────────────────────
-      {
-        id: 'RI-08',
-        name: 'Олово марка О1 пч',
-        article: 'MAT-003',
-        gost: 'ГОСТ 860-75',
-        uom: 'тн',
-        quantity: 3,
-        matchStatus: 'matched',
-        matchedProductId: 'P003',
-        manufacturerId: 'RATEP',
-        manufacturerName: 'АО «РАТЕП»',
-        sellerHasAccess: true,
-        inSellerStock: true,
-        partnerPriceFCA: 22500,
-        rfqStatus: 'not_sent',
-      },
-    ],
+    id: '',
+    number: '',
+    clientId: '',
+    clientName: '',
+    sellerId: '',
+    sellerName: '',
+    status: 'draft',
+    items: [],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   };
 }
 
@@ -328,7 +203,11 @@ interface FlowState {
 
   /* ── Actions ────────────────────────────────────────────────────── */
 
-  /** Step 1: Client submits request (already done in demo data) */
+  /** Load sourcing requests from API */
+  loadFromApi: () => Promise<void>;
+
+  /** Fetch deals from API */
+  fetchDeals: () => Promise<void>;
 
   /** Step 2: Seller starts processing */
   sellerStartProcessing: () => void;
@@ -363,9 +242,60 @@ export const useFlowStore = create<FlowState>((set, get) => ({
   request: createDemoRequest(),
   deal: null,
 
+  loadFromApi: async () => {
+    try {
+      const { sourcingApi } = await import('../api/sourcingApi');
+      const requests = await sourcingApi.getRequests();
+      if (requests.length > 0) {
+        const firstRequest = requests[0];
+        set({
+          request: {
+            id: String(firstRequest.id),
+            number: firstRequest.number,
+            clientId: '',
+            clientName: firstRequest.client_name,
+            sellerId: '',
+            sellerName: '',
+            status: firstRequest.status as RequestStatus,
+            items: [],
+            createdAt: firstRequest.created_at,
+            updatedAt: firstRequest.created_at,
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Failed to load sourcing requests from API:', error);
+    }
+  },
+
+  fetchDeals: async () => {
+    try {
+      const { crmApi } = await import('../api/crmApi');
+      const deals = await crmApi.getDeals();
+      if (deals.length > 0) {
+        const firstDeal = deals[0];
+        const deal: Deal = {
+          id: String(firstDeal.id),
+          number: firstDeal.id?.toString() || '',
+          stage: (firstDeal.stage_name as DealStage) || 'DRAFT',
+          clientName: firstDeal.client_name || '',
+          totalAmount: 0,
+          totalAmountWithVAT: 0,
+          itemCount: 0,
+          requestId: '',
+          createdAt: firstDeal.created_at,
+          manager: '',
+        };
+        set({ deal });
+      }
+    } catch (error) {
+      console.error('Failed to load deals from API:', error);
+    }
+  },
+
   sellerStartProcessing: () =>
     set((s) => ({
-      request: { ...s.request, status: 'processing', updatedAt: '2026-03-19' },
+      request: { ...s.request, status: 'processing', updatedAt: new Date().toISOString() },
     })),
 
   sellerSendRFQs: () =>
@@ -378,7 +308,7 @@ export const useFlowStore = create<FlowState>((set, get) => ({
         return item;
       });
       return {
-        request: { ...s.request, items, status: 'rfq_sent', updatedAt: '2026-03-19' },
+        request: { ...s.request, items, status: 'rfq_sent', updatedAt: new Date().toISOString() },
       };
     }),
 
@@ -397,7 +327,7 @@ export const useFlowStore = create<FlowState>((set, get) => ({
           ...s.request,
           items,
           status: allRFQsDone ? 'rfq_received' : s.request.status,
-          updatedAt: '2026-03-20',
+          updatedAt: new Date().toISOString(),
         },
       };
     }),
@@ -421,7 +351,7 @@ export const useFlowStore = create<FlowState>((set, get) => ({
         return item;
       });
       return {
-        request: { ...s.request, items, status: 'rfq_received', updatedAt: '2026-03-20' },
+        request: { ...s.request, items, status: 'rfq_received', updatedAt: new Date().toISOString() },
       };
     }),
 
@@ -454,13 +384,13 @@ export const useFlowStore = create<FlowState>((set, get) => ({
         };
       });
       return {
-        request: { ...s.request, items, status: 'calculating', updatedAt: '2026-03-21' },
+        request: { ...s.request, items, status: 'calculating', updatedAt: new Date().toISOString() },
       };
     }),
 
   sellerSendKP: () =>
     set((s) => ({
-      request: { ...s.request, status: 'kp_sent', updatedAt: '2026-03-21' },
+      request: { ...s.request, status: 'kp_sent', updatedAt: new Date().toISOString() },
     })),
 
   clientAcceptKP: () => {
@@ -468,19 +398,19 @@ export const useFlowStore = create<FlowState>((set, get) => ({
     const totalWithVAT = req.items.reduce((sum, i) => sum + (i.finalPriceWithVAT ?? 0) * i.quantity, 0);
     const totalNoVAT = req.items.reduce((sum, i) => sum + (i.finalPrice ?? 0) * i.quantity, 0);
     const deal: Deal = {
-      id: 'DEAL-001',
-      number: 'СД-2026-0012',
+      id: '',
+      number: '',
       stage: 'CONTRACT_SIGNED',
       clientName: req.clientName,
       totalAmount: totalNoVAT,
       totalAmountWithVAT: totalWithVAT,
       itemCount: req.items.filter((i) => i.finalPrice).length,
       requestId: req.id,
-      createdAt: '2026-03-21',
-      manager: 'Зулкайнаров Н.А.',
+      createdAt: new Date().toISOString(),
+      manager: '',
     };
     set({
-      request: { ...req, status: 'deal_opened', dealId: deal.id, updatedAt: '2026-03-21' },
+      request: { ...req, status: 'deal_opened', dealId: deal.id, updatedAt: new Date().toISOString() },
       deal,
     });
   },
@@ -492,7 +422,7 @@ export const useFlowStore = create<FlowState>((set, get) => ({
         status: 'kp_rejected',
         rejectionReason: reason,
         rejectionComment: comment,
-        updatedAt: '2026-03-21',
+        updatedAt: new Date().toISOString(),
       },
     })),
 

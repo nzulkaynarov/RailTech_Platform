@@ -82,6 +82,9 @@ interface UserState {
   profile: UserProfile;
   company: Company;
 
+  /* ── Auth integration ── */
+  loadFromAuth: () => Promise<void>;
+
   /* ── Onboarding actions ── */
   completeOnboarding: (data: {
     email: string;
@@ -120,30 +123,65 @@ function getVerifiedStatuses(entries: CompanyStatusEntry[]): CompanyStatus[] {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const useUserStore = create<UserState>((set, _get) => ({
-  /* Default: pre-authenticated for demo */
+  /* Default: empty until loaded from auth */
   screen: 'onboarding',
   role: 'ADMIN',
   activeStatus: 'SELLER',
   profile: {
-    firstName: 'Нурбек',
-    lastName: 'Зулкайнаров',
-    patronymic: 'Алишерович',
-    email: 'n.zulkainarov@railtech.uz',
-    phone: '+998 90 123 45 67',
-    position: 'Руководитель отдела снабжения',
-    avatarInitials: 'НЗ',
+    firstName: '',
+    lastName: '',
+    patronymic: '',
+    email: '',
+    phone: '',
+    position: '',
+    avatarInitials: '',
   },
   company: {
-    name: 'OOO «RailTech»',
-    inn: '309876543',
-    kycStatus: 'verified',
-    country: 'Узбекистан',
-    city: 'Ташкент',
-    statusEntries: [
-      { status: 'BUYER', verification: 'verified' },
-      { status: 'MANUFACTURER', verification: 'verified' },
-      { status: 'SELLER', verification: 'verified' },
-    ],
+    name: '',
+    inn: '',
+    kycStatus: 'not_started',
+    country: '',
+    city: '',
+    statusEntries: [],
+  },
+
+  loadFromAuth: async () => {
+    // Dynamic import to avoid circular dependency
+    const { useAuthStore: authStoreHook } = await import('../store/authStore');
+    const authState = authStoreHook.getState();
+    if (authState.user) {
+      const { first_name, last_name, email, role_code, company } = authState.user;
+      const initials = `${(first_name || '')[0] || ''}${(last_name || '')[0] || ''}`.toUpperCase();
+      set({
+        screen: 'main',
+        role: (role_code === 'ADMIN' || role_code === 'SALES_MANAGER') ? 'ADMIN' :
+              role_code === 'ACCOUNT_MANAGER' ? 'MANAGER' : 'EMPLOYEE',
+        profile: {
+          firstName: first_name || '',
+          lastName: last_name || '',
+          patronymic: '',
+          email: email || '',
+          phone: '',
+          position: '',
+          avatarInitials: initials || '??',
+        },
+        company: company ? {
+          name: company.name || '',
+          inn: company.inn || '',
+          kycStatus: (company.verification_status === 'verified' ? 'verified' : 'pending') as 'verified' | 'pending' | 'not_started',
+          country: company.country || '',
+          city: '',
+          statusEntries: [],
+        } : {
+          name: '',
+          inn: '',
+          kycStatus: 'not_started',
+          country: '',
+          city: '',
+          statusEntries: [],
+        },
+      });
+    }
   },
 
   completeOnboarding: (data) => {

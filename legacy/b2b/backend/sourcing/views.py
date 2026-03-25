@@ -2,7 +2,7 @@ import logging
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status, viewsets
 from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from celery.result import AsyncResult
@@ -183,3 +183,36 @@ class ImportStatusView(APIView):
             "status": res.status,
             "result": result_data
         })
+
+
+class SourcingRequestViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet for retrieving sourcing requests (Deals in SOURCING stage).
+    GET /api/v1/sourcing/requests/ - List all sourcing requests
+    GET /api/v1/sourcing/requests/{id}/ - Get details of a specific request
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        from crm.models import Deal
+
+        user = self.request.user
+        queryset = Deal.objects.filter(
+            stage__code='SOURCING'
+        ).select_related('company', 'client', 'manager', 'stage').prefetch_related(
+            'quotes', 'quotes__items'
+        )
+
+        # B2B Filter: User sees deals from their active companies
+        if not (user.is_superuser or user.is_manager_or_admin):
+            user_company_ids = user.memberships.filter(
+                is_active=True
+            ).values_list('company_id', flat=True)
+            queryset = queryset.filter(company_id__in=user_company_ids)
+
+        return queryset
+
+    def get_serializer_class(self):
+        # Use DealListSerializer for consistency with existing CRM endpoints
+        from crm.serializers import DealListSerializer
+        return DealListSerializer

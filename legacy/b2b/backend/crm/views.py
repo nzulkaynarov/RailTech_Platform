@@ -9,6 +9,10 @@ from .serializers import (
 )
 from rest_framework.permissions import IsAuthenticated
 from core.permissions import IsManagerOrAdmin, IsOwnerOrManagerOrAdmin
+from django.db.models import Count, Sum, Q
+from django.utils import timezone
+from datetime import timedelta
+from decimal import Decimal
 
 # Explicit deal stage transition matrix (FSM)
 ALLOWED_STAGE_TRANSITIONS = {
@@ -215,6 +219,187 @@ class MessageViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(sender=self.request.user)
+
+
+class DashboardAnalyticsView(APIView):
+    """
+    Provides comprehensive dashboard analytics with KPIs for the main dashboard.
+    GET /api/v1/crm/analytics/dashboard/?period=30d
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from catalog.models import Product
+        from accounts.models import Company
+
+        period = request.query_params.get('period', '30d')
+
+        # Calculate period start date
+        if period == '30d':
+            period_start = timezone.now() - timedelta(days=30)
+        elif period == '7d':
+            period_start = timezone.now() - timedelta(days=7)
+        elif period == '90d':
+            period_start = timezone.now() - timedelta(days=90)
+        else:
+            period_start = timezone.now() - timedelta(days=30)
+
+        # Get all deals and current period deals
+        all_deals = Deal.objects.all()
+        period_deals = Deal.objects.filter(created_at__gte=period_start)
+
+        # Get previous period deals for comparison
+        prev_period_start = period_start - (timezone.now() - period_start)
+        prev_period_deals = Deal.objects.filter(
+            created_at__gte=prev_period_start,
+            created_at__lt=period_start
+        )
+
+        # Calculate deals volume
+        current_volume = sum(d.total_value or Decimal('0') for d in period_deals)
+        prev_volume = sum(d.total_value or Decimal('0') for d in prev_period_deals)
+        volume_change = self._calculate_percentage_change(prev_volume, current_volume)
+
+        # Active requests (not closed)
+        current_active = all_deals.exclude(
+            stage__code__in=['CLOSED_WON', 'CLOSED_LOST']
+        ).count()
+        prev_active = prev_period_deals.exclude(
+            stage__code__in=['CLOSED_WON', 'CLOSED_LOST']
+        ).count()
+        active_change = self._calculate_percentage_change(
+            prev_active if prev_active > 0 else current_active,
+            current_active
+        )
+
+        # Catalog items
+        published_products = Product.objects.filter(status__code='PUBLISHED').count()
+        prev_published = Product.objects.filter(
+            status__code='PUBLISHED',
+            created_at__lt=period_start
+        ).count()
+        catalog_change = self._calculate_percentage_change(prev_published, published_products)
+
+        # Clients count
+        from accounts.models import CompanyType
+        client_type = CompanyType.objects.filter(code='CLIENT').first()
+        if client_type:
+            current_clients = Company.objects.filter(types=client_type).distinct().count()
+            # For previous period, use approximate (all clients - new ones)
+            prev_clients = current_clients - Company.objects.filter(
+                types=client_type,
+                created_at__gte=period_start
+            ).distinct().count()
+        else:
+            current_clients = 0
+            prev_clients = 0
+        clients_change = self._calculate_percentage_change(prev_clients, current_clients)
+
+        # Deals by month (last 6 months)
+        deals_by_month = self._get_deals_by_month(all_deals)
+
+        # Activity by day (last 30 days)
+        activity_by_day = self._get_activity_by_day()
+
+        # Top products by deal frequency
+        top_products = self._get_top_products()
+
+        # Counterparties breakdown
+        manufacturer_type = CompanyType.objects.filter(code='MANUFACTURER').first()
+        supplier_type = CompanyType.objects.filter(code='SUPPLIER').first()
+
+        counterparties = {
+            'manufacturers': Company.objects.filter(types=manufacturer_type).count() if manufacturer_type else 0,
+            'buyers': Company.objects.filter(types=client_type).count() if client_type else 0,
+            'intermediaries': Company.objects.filter(types=supplier_type).count() if supplier_type else 0,
+        }
+
+        # Request completion percentage
+        completed_quotes = Quote.objects.filter(
+            status__code__in=['APPROVED', 'SENT']
+        ).count()
+        total_quotes = Quote.objects.count()
+        completion_percentage = (completed_quotes / total_quotes * 100) if total_quotes > 0 else 0
+
+        return Response({
+            'deals_volume': float(current_volume),
+            'deals_volume_change': volume_change,
+            'active_requests': current_active,
+            'active_requests_change': active_change,
+            'catalog_items': published_products,
+            'catalog_items_change': catalog_change,
+            'clients_count': current_clients,
+            'clients_count_change': clients_change,
+            'deals_by_month': deals_by_month,
+            'activity_by_day': activity_by_day,
+            'top_products': top_products,
+            'counterparties': counterparties,
+            'request_completion': round(completion_percentage, 1),
+            'request_completion_goal': 80,
+        })
+
+    def _calculate_percentage_change(self, previous, current):
+        """Calculate percentage change between two values."""
+        if previous == 0:
+            return 0.0
+        return round(((current - previous) / abs(previous)) * 100, 1)
+
+    def _get_deals_by_month(self, deals):
+        """Get deals aggregated by month for the last 6 months."""
+        from django.db.models.functions import TruncMonth
+
+        six_months_ago = timezone.now() - timedelta(days=180)
+        monthly_deals = deals.filter(
+            created_at__gte=six_months_ago
+        ).extra(
+            select={'month': 'DATE_TRUNC(\'month\', crm_deal.created_at)'}
+        ).values('month').annotate(count=Count('id'), value=Sum('quotes__total_incl_vat'))
+
+        result = []
+        for item in monthly_deals:
+            result.append({
+                'month': item.get('month', ''),
+                'count': item['count'],
+                'value': float(item.get('value') or 0)
+            })
+        return result
+
+    def _get_activity_by_day(self):
+        """Get activity aggregated by day for the last 30 days."""
+        from crm.models import ActivityLog
+
+        thirty_days_ago = timezone.now() - timedelta(days=30)
+        daily_activity = ActivityLog.objects.filter(
+            timestamp__gte=thirty_days_ago
+        ).extra(
+            select={'day': 'DATE(crm_activitylog.timestamp)'}
+        ).values('day').annotate(count=Count('id'))
+
+        result = []
+        for item in daily_activity:
+            result.append({
+                'day': item.get('day', ''),
+                'count': item['count']
+            })
+        return result
+
+    def _get_top_products(self, limit=5):
+        """Get top products by deal frequency."""
+        from catalog.models import Product
+
+        top = Product.objects.annotate(
+            deal_count=Count('quotes__items')
+        ).order_by('-deal_count')[:limit]
+
+        return [
+            {
+                'id': p.id,
+                'name': p.name,
+                'sku': p.sku,
+                'deal_count': p.deal_count
+            }
+            for p in top
+        ]
 
 
 class CRMAnalyticsView(APIView):

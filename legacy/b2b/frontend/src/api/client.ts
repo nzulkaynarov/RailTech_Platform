@@ -70,9 +70,9 @@ apiClient.interceptors.response.use(
 						});
 						const newToken = response.data.access;
 
-						// Update store
-						authData.state.accessToken = newToken;
-						localStorage.setItem('railtech-auth', JSON.stringify(authData));
+						// Update store via Zustand (keeps state and localStorage in sync)
+						const { useAuthStore } = await import('../store/authStore');
+						useAuthStore.getState().setTokens(newToken);
 
 						// Notify queued requests
 						onRefreshed(newToken);
@@ -83,15 +83,26 @@ apiClient.interceptors.response.use(
 					}
 				}
 			} catch (refreshError) {
-				// Refresh failed, logout user
+				// Refresh failed, logout user via store
 				refreshSubscribers = [];
-				localStorage.removeItem('railtech-auth');
+				try {
+					const { useAuthStore } = await import('../store/authStore');
+					useAuthStore.getState().logout();
+				} catch {
+					localStorage.removeItem('railtech-auth');
+				}
 				window.location.href = '/';
 				return Promise.reject(refreshError);
 			} finally {
 				isRefreshing = false;
 			}
 		}
+
+		// Handle 403 Forbidden
+		if (error.response?.status === 403) {
+			console.warn('[API] Forbidden:', originalRequest?.url);
+		}
+
 		return Promise.reject(error);
 	}
 );

@@ -16,21 +16,12 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-/* ─── Demo: Verified badges + Trust Score ──────────────────────────── */
-const verifiedManufacturers: Record<string, { verified: boolean; iso: boolean; trustScore: number }> = {
-    'АО «САУТ»': { verified: true, iso: true, trustScore: 4.9 },
-    'АО «РАТЕП»': { verified: true, iso: true, trustScore: 4.7 },
-    'ОАО ММЗ': { verified: true, iso: false, trustScore: 4.5 },
-    'Газпромнефть': { verified: true, iso: true, trustScore: 4.8 },
-};
+// TODO: Fetch manufacturer verification data from API
+// const verifiedManufacturers: Record<string, { verified: boolean; iso: boolean; trustScore: number }> = {};
+const verifiedManufacturers: Record<string, { verified: boolean; iso: boolean; trustScore: number }> = {};
 
-/* ─── Demo: Technical documents ────────────────────────────────────── */
-const demoDocuments = [
-    { name: 'Техническое описание.pdf', size: '2.4 MB' },
-    { name: 'Чертёж общий вид.dwg', size: '1.1 MB' },
-    { name: 'Сертификат соответствия.pdf', size: '340 KB' },
-    { name: 'ГОСТ спецификация.pdf', size: '890 KB' },
-];
+// TODO: Fetch technical documents from API or product.documents
+const demoDocuments: { name: string; size: string }[] = [];
 
 interface ProductDetailModalProps {
     product: Product | null;

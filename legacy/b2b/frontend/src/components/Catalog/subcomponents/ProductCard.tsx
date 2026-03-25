@@ -7,13 +7,9 @@ import { useUserStore } from '../../../store/userStore';
 import { Button } from '@/components/ui/button';
 import { clsx } from 'clsx';
 
-/* ─── Demo: Verified badges + Trust Score ──────────────────────────── */
-const verifiedManufacturers: Record<string, { verified: boolean; iso: boolean; trustScore: number }> = {
-  'АО «САУТ»': { verified: true, iso: true, trustScore: 4.9 },
-  'АО «РАТЕП»': { verified: true, iso: true, trustScore: 4.7 },
-  'ОАО ММЗ': { verified: true, iso: false, trustScore: 4.5 },
-  'Газпромнефть': { verified: true, iso: true, trustScore: 4.8 },
-};
+// TODO: Fetch manufacturer verification data from API
+// For now, use empty object — badge display should degrade gracefully
+const verifiedManufacturers: Record<string, { verified: boolean; iso: boolean; trustScore: number }> = {};
 
 interface ProductCardProps {
     product: Product;

@@ -231,8 +231,10 @@ class Command(BaseCommand):
 
         # ─── 18. Тестовые пользователи из seed_data.json ───
         for user_data in seed_data.get('test_users', []):
-            email = os.environ.get(user_data['email_env'], user_data['email_default'])
-            password = os.environ.get(user_data['password_env'], user_data['password_default'])
+            email_env = user_data.get('email_env')
+            email = os.environ.get(email_env, user_data['email_default']) if email_env else user_data['email_default']
+            password_env = user_data.get('password_env')
+            password = os.environ.get(password_env, user_data['password_default']) if password_env else user_data['password_default']
             sys_role = SystemRole.objects.filter(code=user_data['role']).first()
 
             user_obj, created = User.objects.get_or_create(

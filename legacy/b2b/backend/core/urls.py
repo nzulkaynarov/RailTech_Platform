@@ -10,15 +10,17 @@ from catalog.views import (
 )
 from crm.views import (
     DealViewSet, QuoteViewSet, QuoteItemViewSet, MessageViewSet,
-    LeadCreateView, CRMAnalyticsView, ActivityLogViewSet
+    LeadCreateView, CRMAnalyticsView, ActivityLogViewSet, DashboardAnalyticsView
 )
-from accounts.views import CompanyViewSet, UserViewSet, RegisterView, SetupPasswordView, SubmitProfileView
+from accounts.views import (
+    CompanyViewSet, UserViewSet, RegisterView, SetupPasswordView, SubmitProfileView, MeView
+)
 from notifications.views import NotificationViewSet
 from master_data.views import (
     CountryViewSet, CurrencyViewSet,
     UnitOfMeasureViewSet, DeliveryBasisViewSet
 )
-from sourcing.views import ExcelImportView, CatalogImportView, ImportStatusView
+from sourcing.views import ExcelImportView, CatalogImportView, ImportStatusView, SourcingRequestViewSet
 from core.health import health_check
 
 router = DefaultRouter()
@@ -44,6 +46,9 @@ router.register(r'master-data/currencies', CurrencyViewSet)
 router.register(r'master-data/units', UnitOfMeasureViewSet)
 router.register(r'master-data/delivery-basis', DeliveryBasisViewSet)
 
+# Sourcing
+router.register(r'sourcing/requests', SourcingRequestViewSet, basename='sourcing-request')
+
 from accounts.wizard import CompanyWizardView, WIZARD_FORMS
 
 urlpatterns = [
@@ -66,7 +71,9 @@ urlpatterns = [
     path('api/v1/sourcing/import-catalog/', CatalogImportView.as_view(), name='import-catalog'),
     path('api/v1/sourcing/import-status/<str:task_id>/', ImportStatusView.as_view(), name='import-status'),
     path('api/v1/crm/analytics/', CRMAnalyticsView.as_view(), name='crm-analytics'),
+    path('api/v1/crm/analytics/dashboard/', DashboardAnalyticsView.as_view(), name='dashboard-analytics'),
     path('api/v1/crm/leads/', LeadCreateView.as_view(), name='lead-create'),
+    path('api/v1/accounts/me/', MeView.as_view(), name='current-user'),
     path('api/v1/health/', health_check, name='health_check'),
     # Root-level health endpoint for Docker/K8s healthchecks
     path('health/', health_check, name='health_check_root'),
