@@ -131,6 +131,7 @@ function DomainBadge({ domain }: { domain: Product['domain'] }) {
   );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function getDomainGradient(_domain: Product['domain']): string {
   return 'bg-muted';
 }

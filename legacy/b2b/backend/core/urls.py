@@ -19,6 +19,7 @@ from master_data.views import (
     UnitOfMeasureViewSet, DeliveryBasisViewSet
 )
 from sourcing.views import ExcelImportView, CatalogImportView, ImportStatusView
+from core.health import health_check
 
 router = DefaultRouter()
 router.register(r'catalog/products', ProductViewSet, basename='product')
@@ -66,9 +67,7 @@ urlpatterns = [
     path('api/v1/sourcing/import-status/<str:task_id>/', ImportStatusView.as_view(), name='import-status'),
     path('api/v1/crm/analytics/', CRMAnalyticsView.as_view(), name='crm-analytics'),
     path('api/v1/crm/leads/', LeadCreateView.as_view(), name='lead-create'),
-    path('api/v1/health/', include([
-        path('', include([
-            path('', __import__('core.health', fromlist=['health_check']).health_check, name='health_check'),
-        ])),
-    ])),
+    path('api/v1/health/', health_check, name='health_check'),
+    # Root-level health endpoint for Docker/K8s healthchecks
+    path('health/', health_check, name='health_check_root'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

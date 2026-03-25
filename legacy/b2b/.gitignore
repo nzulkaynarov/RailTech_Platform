@@ -48,3 +48,19 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Testing
+.pytest_cache/
+htmlcov/
+coverage/
+.coverage
+.nyc_output/
+playwright-report/
+
+# Build artifacts
+*.egg-info/
+build/
+*.whl
+
+# Docker
+docker-compose.override.yml

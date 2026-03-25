@@ -215,6 +215,7 @@ function StatusIcon({ status, className }: { status: CompanyStatus; className?: 
 
 /* ─── Status color helper ───────────────────────────────────────────── */
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function statusColor(_status: CompanyStatus): string {
   return 'text-primary';
 }
@@ -863,7 +864,7 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
                           'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent',
                           item.active ? 'bg-accent font-medium text-foreground' : 'text-muted-foreground'
                         )}
-                        onClick={() => { item.id && onNavigate(item.id); setMobileNavOpen(false); }}
+                        onClick={() => { if (item.id) onNavigate(item.id); setMobileNavOpen(false); }}
                       >
                         {item.icon}
                         <span>{item.label}</span>
@@ -883,7 +884,7 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
                   <button
                     key={item.label}
                     className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent"
-                    onClick={() => { item.id && onNavigate(item.id); setMobileNavOpen(false); }}
+                    onClick={() => { if (item.id) onNavigate(item.id); setMobileNavOpen(false); }}
                   >
                     {item.icon}
                     <span>{item.label}</span>

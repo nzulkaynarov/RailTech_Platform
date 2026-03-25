@@ -118,6 +118,7 @@ function getVerifiedStatuses(entries: CompanyStatusEntry[]): CompanyStatus[] {
 
 /* ─── Store ─────────────────────────────────────────────────────────── */
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const useUserStore = create<UserState>((set, _get) => ({
   /* Default: pre-authenticated for demo */
   screen: 'onboarding',

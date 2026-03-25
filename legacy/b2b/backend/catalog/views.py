@@ -44,7 +44,9 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        queryset = Product.objects.all().prefetch_related('offers', 'images', 'documents')
+        queryset = Product.objects.all().select_related(
+            'category', 'manufacturer', 'domain_type', 'status'
+        ).prefetch_related('offers', 'images', 'documents')
         # Non-admins only see PUBLISHED products
         # Note: In V2, status is a ForeignKey to ProductStatus, but we filter by its code
         if not (user.is_authenticated and (user.is_superuser or user.is_manager_or_admin)):

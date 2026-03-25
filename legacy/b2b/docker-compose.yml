@@ -1,0 +1,227 @@
+# ==============================================================================
+# RailTech B2B SaaS — Development Docker Compose
+# Full stack: Django, React, Redis (x2), MinIO, Celery
+# Database: External Neon Cloud PostgreSQL (no local postgres)
+# ==============================================================================
+
+version: '3.9'
+
+services:
+  # ===========================================================================
+  # Redis for Django Channels (WebSocket)
+  # ===========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: railtech_redis_channels
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_channels_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - railtech
+    restart: unless-stopped
+
+  # ===========================================================================
+  # Redis for Celery Broker & Result Backend
+  # ===========================================================================
+  redis-celery:
+    image: redis:7-alpine
+    container_name: railtech_redis_celery
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_celery_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - railtech
+    restart: unless-stopped
+
+  # ===========================================================================
+  # MinIO Object Storage (S3-compatible)
+  # ===========================================================================
+  minio:
+    image: minio/minio:latest
+    container_name: railtech_minio
+    env_file: .env
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-railtech}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-railtech}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/minio_data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - railtech
+    restart: unless-stopped
+    command: >
+      minio server /minio_data
+      --console-address ":9001"
+
+  # ===========================================================================
+  # MinIO Bucket Initialization
+  # ===========================================================================
+  minio-init:
+    image: minio/mc:latest
+    container_name: railtech_minio_init
+    depends_on:
+      minio:
+        condition: service_healthy
+    env_file: .env
+    entrypoint: >
+      sh -c "
+      /usr/bin/mc config host add railtech http://minio:9000 ${MINIO_ACCESS_KEY:-railtech} ${MINIO_SECRET_KEY:-railtech} &&
+      /usr/bin/mc mb railtech/${MINIO_PUBLIC_BUCKET:-railtech-public} --ignore-existing &&
+      /usr/bin/mc mb railtech/${MINIO_PRIVATE_BUCKET:-railtech-private} --ignore-existing &&
+      /usr/bin/mc mb railtech/${MINIO_TEMP_BUCKET:-railtech-temp} --ignore-existing &&
+      /usr/bin/mc anonymous set public railtech/${MINIO_PUBLIC_BUCKET:-railtech-public} &&
+      exit 0
+      "
+    networks:
+      - railtech
+
+  # ===========================================================================
+  # Django Backend (Daphne ASGI)
+  # ===========================================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: railtech_backend
+    env_file: .env
+    environment:
+      PYTHONUNBUFFERED: 1
+      DJANGO_SETTINGS_MODULE: core.settings
+    command: daphne -b 0.0.0.0 -p 8000 core.asgi:application
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - backend_static:/app/staticfiles
+      - backend_media:/app/media
+    depends_on:
+      redis:
+        condition: service_healthy
+      redis-celery:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - railtech
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ===========================================================================
+  # Celery Worker (PDF, imports, async tasks)
+  # ===========================================================================
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: railtech_celery_worker
+    env_file: .env
+    environment:
+      PYTHONUNBUFFERED: 1
+      DJANGO_SETTINGS_MODULE: core.settings
+    command: celery -A core worker -l info -Q default,pdf,imports
+    volumes:
+      - ./backend:/app
+      - backend_media:/app/media
+    depends_on:
+      redis-celery:
+        condition: service_healthy
+    networks:
+      - railtech
+    restart: unless-stopped
+
+  # ===========================================================================
+  # Celery Beat (Scheduled tasks)
+  # ===========================================================================
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: railtech_celery_beat
+    env_file: .env
+    environment:
+      PYTHONUNBUFFERED: 1
+      DJANGO_SETTINGS_MODULE: core.settings
+    command: celery -A core beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    volumes:
+      - ./backend:/app
+    depends_on:
+      redis-celery:
+        condition: service_healthy
+    networks:
+      - railtech
+    restart: unless-stopped
+
+  # ===========================================================================
+  # React Frontend (Vite dev server with hot reload)
+  # ===========================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+        VITE_WS_URL: ${VITE_WS_URL:-ws://localhost:8000/ws}
+    container_name: railtech_frontend
+    env_file: .env
+    ports:
+      - "5173:80"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - railtech
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+# ==============================================================================
+# Networks
+# ==============================================================================
+networks:
+  railtech:
+    driver: bridge
+
+# ==============================================================================
+# Volumes
+# ==============================================================================
+volumes:
+  redis_channels_data:
+    driver: local
+  redis_celery_data:
+    driver: local
+  minio_data:
+    driver: local
+  backend_static:
+    driver: local
+  backend_media:
+    driver: local

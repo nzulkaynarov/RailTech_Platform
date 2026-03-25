@@ -1,0 +1,178 @@
+# ==============================================================================
+# RailTech B2B SaaS — Production Docker Compose Override
+# Use: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up
+# Includes: nginx reverse proxy, gunicorn+daphne, no source mounting
+# ==============================================================================
+
+version: '3.9'
+
+services:
+  # ===========================================================================
+  # Nginx Reverse Proxy (Production)
+  # ===========================================================================
+  nginx:
+    image: nginx:stable-alpine
+    container_name: railtech_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - nginx_cache:/var/cache/nginx
+    depends_on:
+      - backend
+      - frontend
+      - minio
+    networks:
+      - railtech
+    restart: always
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ===========================================================================
+  # Redis for Channels (Production)
+  # ===========================================================================
+  redis:
+    restart: always
+
+  # ===========================================================================
+  # Redis for Celery (Production)
+  # ===========================================================================
+  redis-celery:
+    restart: always
+
+  # ===========================================================================
+  # MinIO (Production)
+  # ===========================================================================
+  minio:
+    restart: always
+    volumes:
+      - minio_data_prod:/minio_data
+
+  # ===========================================================================
+  # MinIO Initialization (Production)
+  # ===========================================================================
+  minio-init:
+    restart: "no"
+
+  # ===========================================================================
+  # Django Backend (Production with Gunicorn + Daphne)
+  # ===========================================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: railtech_backend_prod
+    env_file: .env
+    environment:
+      PYTHONUNBUFFERED: 1
+      DJANGO_SETTINGS_MODULE: core.settings
+      DJANGO_DEBUG: "False"
+      WORKERS: 4
+    # Production: gunicorn + daphne for ASGI with proper worker management
+    command: >
+      gunicorn
+      --worker-class=uvicorn.workers.UvicornWorker
+      --workers=4
+      --worker-connections=1000
+      --max-requests=1000
+      --max-requests-jitter=100
+      --timeout=120
+      --graceful-timeout=30
+      --keep-alive=5
+      --bind=0.0.0.0:8000
+      --access-logfile=-
+      --error-logfile=-
+      core.asgi:application
+    ports:
+      - "8000:8000"
+    volumes:
+      - backend_static_prod:/app/staticfiles
+      - backend_media_prod:/app/media
+    depends_on:
+      redis:
+        condition: service_healthy
+      redis-celery:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - railtech
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ===========================================================================
+  # Celery Worker (Production)
+  # ===========================================================================
+  celery-worker:
+    env_file: .env
+    environment:
+      PYTHONUNBUFFERED: 1
+      DJANGO_SETTINGS_MODULE: core.settings
+      DJANGO_DEBUG: "False"
+    restart: always
+    # Limit resources in production
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
+  # ===========================================================================
+  # Celery Beat (Production)
+  # ===========================================================================
+  celery-beat:
+    env_file: .env
+    environment:
+      PYTHONUNBUFFERED: 1
+      DJANGO_SETTINGS_MODULE: core.settings
+      DJANGO_DEBUG: "False"
+    restart: always
+
+  # ===========================================================================
+  # React Frontend (Production — Static)
+  # ===========================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/api}
+        VITE_WS_URL: ${VITE_WS_URL:-/ws}
+    container_name: railtech_frontend_prod
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - railtech
+    restart: always
+    # Remove volumes for production (immutable image)
+    # Remove healthcheck for production
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  minio_data_prod:
+    driver: local
+  backend_static_prod:
+    driver: local
+  backend_media_prod:
+    driver: local
+  nginx_cache:
+    driver: local

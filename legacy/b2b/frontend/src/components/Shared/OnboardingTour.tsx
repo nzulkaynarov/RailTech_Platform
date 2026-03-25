@@ -22,6 +22,7 @@ interface OnboardingTourProps {
 
 const stepIcons = [Package, FileSpreadsheet, Calculator, Rocket, BarChart3]
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function OnboardingTour({ open, onClose, onNavigate: _onNavigate }: OnboardingTourProps) {
   const { t } = useTranslation()
   const [currentStep, setCurrentStep] = useState(0)

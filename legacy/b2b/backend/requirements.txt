@@ -40,3 +40,5 @@ whitenoise>=6.9.0
 django-celery-beat>=2.7.0
 django-storages[s3]>=1.14.4
 boto3>=1.35.0
+pytest>=7.4.0
+pytest-django>=4.5.2

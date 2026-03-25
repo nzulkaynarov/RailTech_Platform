@@ -1,0 +1,2 @@
+# Directory for nginx configuration files
+# Place SSL certificates here: ssl/railtech.crt, ssl/railtech.key, ssl/railtech_chain.crt

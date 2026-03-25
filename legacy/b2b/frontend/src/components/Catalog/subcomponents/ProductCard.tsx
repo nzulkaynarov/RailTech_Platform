@@ -47,6 +47,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, canS
 
     const handleAddToCart = (e: React.MouseEvent) => {
         e.stopPropagation();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         addItem(product as any);
         openCart();
     };

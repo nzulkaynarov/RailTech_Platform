@@ -95,7 +95,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
         )
         return Response(KYCDocumentSerializer(doc).data, status=status.HTTP_201_CREATED)
 
-    @action(detail=True, methods=['delete'], url_path='delete-document/(?P<doc_id>[0-9]+)')
+    @action(detail=True, methods=['delete'], url_path='delete-document/(?P<doc_id>[0-9]+)', url_name='delete-document')
     def delete_document(self, request, pk=None, doc_id=None):
         company = self.get_object()
         doc = KYCDocument.objects.filter(company=company, id=doc_id).first()

@@ -172,6 +172,7 @@ function TopProductsTable({ onProductClick }: { onProductClick?: (id: string) =>
 
 // ─── BUYER Dashboard ────────────────────────────────────────────────────
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function BuyerDashboard({ onProductClick: _onProductClick, period: _period }: { onProductClick?: (id: string) => void; period: string }) {
   return (
     <div className="flex flex-col gap-6">
@@ -326,6 +327,7 @@ function BuyerDashboard({ onProductClick: _onProductClick, period: _period }: { 
 
 // ─── SELLER Dashboard ───────────────────────────────────────────────────
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function SellerDashboard({ onProductClick, period: _period }: { onProductClick?: (id: string) => void; period: string }) {
   return (
     <div className="flex flex-col gap-6">
@@ -510,6 +512,7 @@ function SellerDashboard({ onProductClick, period: _period }: { onProductClick?:
 
 // ─── MANUFACTURER Dashboard ──────────────────────────────────────────────
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function ManufacturerDashboard({ onProductClick: _onProductClick, period: _period }: { onProductClick?: (id: string) => void; period: string }) {
   return (
     <div className="flex flex-col gap-6">

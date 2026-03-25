@@ -1,39 +1,43 @@
-import { useState } from 'react';
+import { Suspense, lazy, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AppShell } from './layouts/AppShell';
-import { ProductManagement } from './pages/ProductManagement';
-import { ProductDetail } from './pages/ProductDetail';
-import { Dashboard } from './pages/Dashboard';
-import { ProfilePage } from './pages/ProfilePage';
-import { SettingsPage } from './pages/SettingsPage';
-import { OnboardingPage } from './pages/OnboardingPage';
-import { PendingVerificationPage } from './pages/PendingVerificationPage';
 import { ErrorBoundary } from './components/Shared/ErrorBoundary';
-import {
-  SourcingRequestsPage,
-  SourcingImportPage,
-  DealsPage,
-  QuotesPage,
-  ClientsPage,
-  ProductionOrdersPage,
-  ProductionSchedulePage,
-  AnalyticsPage,
-  CategoriesPage,
-  EquipmentGroupsPage,
-  IntegrationsPage,
-  HelpPage,
-  MyRequestsPage,
-  MyDocumentsPage,
-  LogisticsPage,
-  AdminUsersPage,
-} from './pages/PlaceholderPages';
-import { RequestDetailPage } from './pages/flow/RequestDetailPage';
-import { PurchaseTemplatesPage } from './pages/PurchaseTemplatesPage';
-import { SourcingHub } from './components/Sourcing/SourcingHub';
 import { FABSupportButton } from './components/Shared/FABSupportButton';
 import { OnboardingTour } from './components/Shared/OnboardingTour';
 import { PageBreadcrumb, getPageLabel } from './components/Shared/PageBreadcrumb';
 import { useUserStore } from './store/userStore';
+
+// Lazy load page components
+const ProductManagement = lazy(() => import('./pages/ProductManagement').then(m => ({ default: m.ProductManagement })));
+const ProductDetail = lazy(() => import('./pages/ProductDetail').then(m => ({ default: m.ProductDetail })));
+const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
+const ProfilePage = lazy(() => import('./pages/ProfilePage').then(m => ({ default: m.ProfilePage })));
+const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
+const OnboardingPage = lazy(() => import('./pages/OnboardingPage').then(m => ({ default: m.OnboardingPage })));
+const PendingVerificationPage = lazy(() => import('./pages/PendingVerificationPage').then(m => ({ default: m.PendingVerificationPage })));
+const RequestDetailPage = lazy(() => import('./pages/flow/RequestDetailPage').then(m => ({ default: m.RequestDetailPage })));
+const PurchaseTemplatesPage = lazy(() => import('./pages/PurchaseTemplatesPage').then(m => ({ default: m.PurchaseTemplatesPage })));
+const SourcingHub = lazy(() => import('./components/Sourcing/SourcingHub').then(m => ({ default: m.SourcingHub })));
+
+// Lazy load placeholder pages
+const SourcingRequestsPage = lazy(() => import('./pages/PlaceholderPages').then(m => ({ default: m.SourcingRequestsPage })));
+const SourcingImportPage = lazy(() => import('./pages/PlaceholderPages').then(m => ({ default: m.SourcingImportPage })));
+const DealsPage = lazy(() => import('./pages/PlaceholderPages').then(m => ({ default: m.DealsPage })));
+const QuotesPage = lazy(() => import('./pages/PlaceholderPages').then(m => ({ default: m.QuotesPage })));
+const ClientsPage = lazy(() => import('./pages/PlaceholderPages').then(m => ({ default: m.ClientsPage })));
+const ProductionOrdersPage = lazy(() => import('./pages/PlaceholderPages').then(m => ({ default: m.ProductionOrdersPage })));
+const ProductionSchedulePage = lazy(() => import('./pages/PlaceholderPages').then(m => ({ default: m.ProductionSchedulePage })));
+const AnalyticsPage = lazy(() => import('./pages/PlaceholderPages').then(m => ({ default: m.AnalyticsPage })));
+const CategoriesPage = lazy(() => import('./pages/PlaceholderPages').then(m => ({ default: m.CategoriesPage })));
+const EquipmentGroupsPage = lazy(() => import('./pages/PlaceholderPages').then(m => ({ default: m.EquipmentGroupsPage })));
+const IntegrationsPage = lazy(() => import('./pages/PlaceholderPages').then(m => ({ default: m.IntegrationsPage })));
+const HelpPage = lazy(() => import('./pages/PlaceholderPages').then(m => ({ default: m.HelpPage })));
+const MyRequestsPage = lazy(() => import('./pages/PlaceholderPages').then(m => ({ default: m.MyRequestsPage })));
+const MyDocumentsPage = lazy(() => import('./pages/PlaceholderPages').then(m => ({ default: m.MyDocumentsPage })));
+const LogisticsPage = lazy(() => import('./pages/PlaceholderPages').then(m => ({ default: m.LogisticsPage })));
+const AdminUsersPage = lazy(() => import('./pages/PlaceholderPages').then(m => ({ default: m.AdminUsersPage })));
+
+import { LoadingSkeleton } from './components/LoadingSkeleton';
 
 type Page =
   | { type: 'dashboard' }
@@ -226,10 +230,12 @@ function MainApp() {
 
   return (
     <AppShell activePage={activePageId} onNavigate={handleNavigate} onStartTour={() => setShowTour(true)}>
-      {breadcrumbs.length > 0 && (
-        <PageBreadcrumb segments={breadcrumbs} onNavigate={handleNavigate} />
-      )}
-      {content}
+      <Suspense fallback={<LoadingSkeleton />}>
+        {breadcrumbs.length > 0 && (
+          <PageBreadcrumb segments={breadcrumbs} onNavigate={handleNavigate} />
+        )}
+        {content}
+      </Suspense>
       <FABSupportButton />
       <OnboardingTour
         open={showTour}
