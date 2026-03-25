@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body { font-family: 'Arial', sans-serif; font-size: 12px; color: #333; margin: 40px; }
+  h1 { font-size: 24px; color: #1a1a2e; margin-bottom: 5px; }
+  .subtitle { color: #666; font-size: 14px; margin-bottom: 30px; }
+  .header-info { display: flex; justify-content: space-between; margin-bottom: 30px; }
+  .company-block { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+  .company-block h3 { margin: 0 0 8px 0; color: #1a1a2e; }
+  .company-block p { margin: 2px 0; }
+  table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+  th { background: #1a1a2e; color: white; padding: 10px 8px; text-align: left; font-size: 11px; }
+  td { padding: 8px; border-bottom: 1px solid #e0e0e0; font-size: 11px; }
+  tr:nth-child(even) { background: #f8f9fa; }
+  .text-right { text-align: right; }
+  .totals { margin-top: 20px; float: right; width: 300px; }
+  .totals table { margin-top: 0; }
+  .totals td { padding: 6px 10px; font-size: 12px; }
+  .totals .total-row { font-weight: bold; font-size: 14px; background: #1a1a2e; color: white; }
+  .footer { margin-top: 80px; font-size: 10px; color: #999; text-align: center; border-top: 1px solid #e0e0e0; padding-top: 10px; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; }
+  .valid-until { margin-top: 20px; padding: 10px; background: #fff3cd; border-radius: 4px; font-size: 11px; }
+</style>
+</head>
+<body>
+  <h1>Коммерческое предложение</h1>
+  <p class="subtitle">КП №{{ quote.deal_id }}-v{{ quote.version }} от {{ quote.created_at|date:"d.m.Y" }}</p>
+
+  <div class="company-block">
+    <h3>Клиент</h3>
+    <p><strong>{{ company.name }}</strong></p>
+    <p>ИНН: {{ company.inn }}</p>
+    {% if company.legal_address %}<p>Адрес: {{ company.legal_address }}</p>{% endif %}
+    {% if company.contact_person %}<p>Контактное лицо: {{ company.contact_person }}</p>{% endif %}
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:5%">#</th>
+        <th style="width:35%">Наименование</th>
+        <th style="width:8%">Кол-во</th>
+        <th style="width:13%" class="text-right">Цена FCA</th>
+        <th style="width:13%" class="text-right">Логистика</th>
+        <th style="width:13%" class="text-right">Цена без НДС</th>
+        <th style="width:13%" class="text-right">Сумма</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in items %}
+      <tr>
+        <td>{{ forloop.counter }}</td>
+        <td>{{ item.product.name|default:item.imported_raw_name }}</td>
+        <td>{{ item.quantity }}</td>
+        <td class="text-right">{{ item.frozen_base_price|floatformat:2 }}</td>
+        <td class="text-right">{{ item.logistics_cost|floatformat:2 }}</td>
+        <td class="text-right">{{ item.final_price_excl_vat|floatformat:2 }}</td>
+        <td class="text-right">{{ item.line_total|floatformat:2 }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="totals">
+    <table>
+      <tr>
+        <td>Итого без НДС:</td>
+        <td class="text-right">{{ quote.subtotal_excl_vat|floatformat:2 }}</td>
+      </tr>
+      <tr>
+        <td>НДС {{ quote.vat_rate }}%:</td>
+        <td class="text-right">{{ quote.vat_amount|floatformat:2 }}</td>
+      </tr>
+      <tr class="total-row">
+        <td>ИТОГО с НДС:</td>
+        <td class="text-right">{{ quote.total_incl_vat|floatformat:2 }}</td>
+      </tr>
+    </table>
+  </div>
+
+  <div style="clear:both"></div>
+
+  {% if quote.valid_until %}
+  <div class="valid-until">
+    Предложение действительно до: <strong>{{ quote.valid_until|date:"d.m.Y" }}</strong>
+  </div>
+  {% endif %}
+
+  {% if quote.notes %}
+  <div style="margin-top:20px">
+    <strong>Примечания:</strong><br>{{ quote.notes|linebreaks }}
+  </div>
+  {% endif %}
+
+  <div class="footer">
+    RailTech B2B Ecosystem | {{ quote.created_at|date:"Y" }} | Сгенерировано автоматически
+  </div>
+</body>
+</html>

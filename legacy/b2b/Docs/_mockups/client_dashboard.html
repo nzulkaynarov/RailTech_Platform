@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>RailTech B2B — Кабинет клиента</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--i50:#f8fafc;--i100:#f1f5f9;--i200:#e2e8f0;--i300:#cbd5e1;--i400:#94a3b8;--i500:#64748b;--i600:#475569;--i700:#334155;--i800:#1e293b;--i900:#0f172a;--i950:#060d1a;--action:#2563eb}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;font-size:14px;line-height:1.5;background:var(--i50);color:var(--i900);-webkit-font-smoothing:antialiased}
+.shell{display:flex;height:100vh;overflow:hidden}
+/* Sidebar */
+.side{width:240px;background:var(--i900);border-right:1px solid var(--i800);display:flex;flex-direction:column;flex-shrink:0}
+.s-logo{padding:16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--i800)}
+.s-ico{width:32px;height:32px;background:var(--action);border-radius:8px;display:flex;align-items:center;justify-content:center}
+.s-ico svg{width:20px;height:20px;stroke:white;fill:none;stroke-width:2}
+.s-txt{font-size:18px;font-weight:700;color:white;letter-spacing:-0.025em}
+.s-txt span{color:#3b82f6}
+.s-sub{font-size:12px;color:var(--i500)}
+.s-nav{flex:1;padding:16px 8px;display:flex;flex-direction:column;gap:4px}
+.ni{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;font-weight:600;font-size:14px;transition:.15s;text-decoration:none;color:var(--i400)}
+.ni svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;flex-shrink:0}
+.ni.on{background:var(--action);color:white}
+.ni.on svg{stroke:white}
+.ni:not(.on):hover{color:white;background:rgba(255,255,255,0.05)}
+/* User card */
+.uc{padding:8px;border-top:1px solid var(--i800)}
+.uc-inner{padding:12px;border-radius:8px;background:rgba(30,41,59,0.5);border:1px solid var(--i800)}
+.uc-row{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.uc-av{width:32px;height:32px;border-radius:8px;background:rgba(37,99,235,0.2);border:1px solid rgba(59,130,246,0.2);display:flex;align-items:center;justify-content:center}
+.uc-av svg{width:16px;height:16px;stroke:#60a5fa;fill:none;stroke-width:2}
+.uc-name{font-size:14px;font-weight:600;color:white}
+.uc-comp{font-size:12px;color:var(--i500)}
+.kyc-row{display:flex;align-items:center;gap:6px}
+.kyc-row svg{width:12px;height:12px;stroke:var(--i400);fill:none;stroke-width:2}
+.kyc-badge{font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;background:rgba(16,185,129,0.1);color:#059669;border:1px solid rgba(16,185,129,0.2)}
+.logout{width:100%;display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:8px;font-weight:600;font-size:14px;color:var(--i400);background:0;border:0;cursor:pointer;font-family:inherit;margin-top:6px}
+.logout:hover{color:#f87171;background:rgba(239,68,68,0.1)}
+.logout svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
+/* Main */
+.mn{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.hdr{height:56px;background:white;border-bottom:1px solid var(--i200);padding:0 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.hdr-l{font-size:14px;color:var(--i500)}
+.hdr-r{display:flex;align-items:center;gap:12px}
+.hb{padding:8px;border-radius:8px;border:1px solid var(--i200);background:0;cursor:pointer;display:flex;position:relative}
+.hb svg{width:16px;height:16px;stroke:var(--i500);fill:none;stroke-width:2}
+.bdot{position:absolute;top:6px;right:6px;width:6px;height:6px;background:#ef4444;border-radius:50%;border:2px solid white}
+.dv{width:1px;height:24px;background:var(--i200)}
+.lb{font-size:12px;font-weight:600;color:var(--i500);padding:4px 8px;border:1px solid var(--i200);border-radius:6px;background:white;cursor:pointer}
+/* Content */
+.cnt{flex:1;overflow-y:auto;padding:16px 24px}
+.cnt-hdr{display:flex;align-items:flex-end;justify-content:space-between;border-bottom:1px solid var(--i200);padding-bottom:12px;margin-bottom:20px}
+.cnt-hdr h1{font-size:20px;font-weight:700;letter-spacing:-0.025em}
+.cnt-hdr p{font-size:14px;color:var(--i500);margin-top:2px}
+/* KYC Banner */
+.kyc-banner{display:flex;align-items:center;gap:16px;padding:16px;border-radius:12px;border:1px solid rgba(245,158,11,0.2);background:rgba(254,243,199,0.5);margin-bottom:20px}
+.kyc-icon{width:40px;height:40px;border-radius:8px;background:white;border:1px solid rgba(245,158,11,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.kyc-icon svg{width:20px;height:20px;stroke:#f59e0b;fill:none;stroke-width:2}
+.kyc-body{flex:1}
+.kyc-badge2{font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;background:rgba(245,158,11,0.1);color:#b45309;border:1px solid rgba(245,158,11,0.2);margin-bottom:4px;display:inline-block}
+.kyc-body p{font-size:14px;color:var(--i600)}
+.kyc-btn{flex-shrink:0;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;padding:8px 16px;border-radius:8px;background:var(--action);color:white;border:0;cursor:pointer;font-family:inherit}
+.kyc-btn svg{width:16px;height:16px;stroke:white;fill:none;stroke-width:2}
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.kpi{background:white;border:1px solid var(--i200);border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,0.06)}
+.kpi-top{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.kpi-ic{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(0,0,0,0.05)}
+.kpi-ic svg{width:16px;height:16px;fill:none;stroke-width:2}
+.kpi-lb{font-size:12px;color:var(--i500)}
+.kpi-val{font-size:24px;font-weight:700;letter-spacing:-0.025em;font-variant-numeric:tabular-nums}
+.kpi-trend{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:#059669;margin-top:4px}
+/* Content grid */
+.cg{display:grid;grid-template-columns:2fr 1fr;gap:16px}
+.card{background:white;border:1px solid var(--i200);border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,0.04);overflow:hidden;display:flex;flex-direction:column}
+.card-hdr{padding:14px 20px;border-bottom:1px solid var(--i200);display:flex;align-items:center;justify-content:space-between}
+.card-hdr h2{font-size:14px;font-weight:700}
+.card-hdr a{font-size:12px;font-weight:600;color:var(--action);text-decoration:none;display:flex;align-items:center;gap:4px}
+.card-hdr a svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2}
+.deal-row{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;transition:.15s;cursor:pointer;border-bottom:1px solid var(--i100)}
+.deal-row:hover{background:var(--i50)}
+.deal-left{display:flex;align-items:center;gap:12px}
+.deal-ic{width:32px;height:32px;border-radius:8px;background:var(--i100);border:1px solid var(--i200);display:flex;align-items:center;justify-content:center}
+.deal-ic svg{width:16px;height:16px;stroke:var(--i500);fill:none;stroke-width:2}
+.deal-name{font-size:14px;font-weight:600}
+.deal-sub{font-size:12px;color:var(--i400)}
+.deal-right{display:flex;align-items:center;gap:16px}
+.deal-sum{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+.stg{font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;border:1px solid}
+.stg.blue{background:rgba(59,130,246,0.1);color:#1d4ed8;border-color:rgba(59,130,246,0.2)}
+.stg.green{background:rgba(16,185,129,0.1);color:#059669;border-color:rgba(16,185,129,0.2)}
+.stg.yellow{background:rgba(245,158,11,0.1);color:#b45309;border-color:rgba(245,158,11,0.2)}
+.deal-arr{width:16px;height:16px;stroke:var(--i300);fill:none;stroke-width:2}
+/* Quick actions */
+.qa-list{padding:20px;display:flex;flex-direction:column;gap:12px;flex:1}
+.qa{display:flex;align-items:center;gap:12px;padding:14px;border-radius:8px;border:1px solid var(--i200);cursor:pointer;transition:.15s;text-decoration:none;color:inherit}
+.qa:hover{background:var(--i50);border-color:rgba(37,99,235,0.3)}
+.qa-ic{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid}
+.qa-ic svg{width:20px;height:20px;fill:none;stroke-width:2}
+.qa-ic.bl{background:rgba(37,99,235,0.1);color:var(--action);border-color:rgba(37,99,235,0.2)}
+.qa-ic.bl svg{stroke:var(--action)}
+.qa-ic.gr{background:rgba(16,185,129,0.1);color:#059669;border-color:rgba(16,185,129,0.2)}
+.qa-ic.gr svg{stroke:#059669}
+.qa-ic.pu{background:rgba(147,51,234,0.1);color:#7c3aed;border-color:rgba(147,51,234,0.2)}
+.qa-ic.pu svg{stroke:#7c3aed}
+.qa-text{font-size:14px;font-weight:600;flex:1}
+.qa-arr svg{width:16px;height:16px;stroke:var(--i300);fill:none;stroke-width:2}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside class="side">
+  <div class="s-logo">
+    <div class="s-ico" style="background:none"><svg viewBox="0 0 655 655" width="32" height="32"><polygon fill="#35819B" points="327.5 0 655 327.5 327.5 655 0 327.5"/><g transform="translate(185,157)" stroke="#FFF" stroke-linecap="round" stroke-width="20" fill="none" stroke-linejoin="round"><path d="M170,267 C205,240 227,197 227,150 C227,67 160,0 78,0 M78,132 L78,0"/><path d="M170,268 L228,341"/><path d="M78,170 L78,340 M0,170 L156,170"/></g></svg></div>
+    <div><div class="s-txt">RailTech<span> B2B</span></div><p class="s-sub">Личный кабинет</p></div>
+  </div>
+  <nav class="s-nav">
+    <a href="#" class="ni on"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Главная</a>
+    <a href="#" class="ni"><svg viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>Сделки</a>
+    <a href="#" class="ni"><svg viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Профиль</a>
+  </nav>
+  <div class="uc">
+    <div class="uc-inner">
+      <div class="uc-row"><div class="uc-av"><svg viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><div><div class="uc-name">Нурбек</div><div class="uc-comp">ООО «TashRail Supply»</div></div></div>
+      <div class="kyc-row"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg><span class="kyc-badge">L3 Контракт</span></div>
+    </div>
+    <button class="logout"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Выйти</button>
+  </div>
+</aside>
+<div class="mn">
+  <header class="hdr">
+    <span class="hdr-l">ООО «TashRail Supply»</span>
+    <div class="hdr-r">
+      <button class="hb"><svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="bdot"></span></button>
+      <div class="dv"></div>
+      <span class="lb">RU</span>
+      <button class="hb"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg></button>
+    </div>
+  </header>
+  <div class="cnt">
+    <div class="cnt-hdr"><div><h1>Добро пожаловать, Нурбек</h1><p>ООО «TashRail Supply»</p></div></div>
+    <!-- KPI -->
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-top"><div class="kpi-ic" style="background:rgba(59,130,246,0.1)"><svg viewBox="0 0 24 24" style="stroke:#3b82f6"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg></div><span class="kpi-lb">Всего заявок</span></div><div class="kpi-val">24</div><span class="kpi-trend">↑ +12.5%</span></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-ic" style="background:rgba(245,158,11,0.1)"><svg viewBox="0 0 24 24" style="stroke:#f59e0b"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><span class="kpi-lb">В работе</span></div><div class="kpi-val">8</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-ic" style="background:rgba(16,185,129,0.1)"><svg viewBox="0 0 24 24" style="stroke:#10b981"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div><span class="kpi-lb">Закрытые</span></div><div class="kpi-val">14</div><span class="kpi-trend">↑ +4.2%</span></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-ic" style="background:rgba(147,51,234,0.1)"><svg viewBox="0 0 24 24" style="stroke:#a855f7"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><span class="kpi-lb">Сумма сделок</span></div><div class="kpi-val">$248 700</div></div>
+    </div>
+    <!-- Cards -->
+    <div class="cg">
+      <div class="card">
+        <div class="card-hdr"><h2>Последние сделки</h2><a href="#">Показать все <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a></div>
+        <div class="deal-row"><div class="deal-left"><div class="deal-ic"><svg viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg></div><div><div class="deal-name">Сделка #8a3f1d2b</div><div class="deal-sub">12 позиций</div></div></div><div class="deal-right"><div class="deal-sum">$84 500</div><span class="stg blue">Расчёт</span><svg class="deal-arr" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div></div>
+        <div class="deal-row"><div class="deal-left"><div class="deal-ic"><svg viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg></div><div><div class="deal-name">Сделка #c7e4b891</div><div class="deal-sub">6 позиций</div></div></div><div class="deal-right"><div class="deal-sum">$32 100</div><span class="stg green">Контракт</span><svg class="deal-arr" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div></div>
+        <div class="deal-row"><div class="deal-left"><div class="deal-ic"><svg viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg></div><div><div class="deal-name">Сделка #1f29a4c3</div><div class="deal-sub">3 позиции</div></div></div><div class="deal-right"><div class="deal-sum">$12 400</div><span class="stg yellow">КП отправлено</span><svg class="deal-arr" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div></div>
+        <div class="deal-row"><div class="deal-left"><div class="deal-ic"><svg viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg></div><div><div class="deal-name">Сделка #e5d82f10</div><div class="deal-sub">8 позиций</div></div></div><div class="deal-right"><div class="deal-sum">$45 200</div><span class="stg green">Контракт</span><svg class="deal-arr" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div></div>
+      </div>
+      <div class="card" style="height:fit-content">
+        <div class="card-hdr" style="border-bottom:1px solid var(--i200)"><h2>Быстрые действия</h2></div>
+        <div class="qa-list">
+          <a href="#" class="qa"><div class="qa-ic bl"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div><span class="qa-text">Создать заявку</span><span class="qa-arr"><svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span></a>
+          <a href="#" class="qa"><div class="qa-ic gr"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div><span class="qa-text">Загрузить Excel</span><span class="qa-arr"><svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span></a>
+          <a href="#" class="qa"><div class="qa-ic pu"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg></div><span class="qa-text">Данные KYC</span><span class="qa-arr"><svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span></a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+</body>
+</html>

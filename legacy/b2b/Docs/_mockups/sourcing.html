@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>RailTech B2B — Smart Import</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--i50:#f8fafc;--i100:#f1f5f9;--i200:#e2e8f0;--i300:#cbd5e1;--i400:#94a3b8;--i500:#64748b;--i600:#475569;--i700:#334155;--i800:#1e293b;--i900:#0f172a;--action:#2563eb}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;font-size:14px;line-height:1.5;background:var(--i50);color:var(--i900);-webkit-font-smoothing:antialiased}
+.shell{display:flex;height:100vh;overflow:hidden}
+.side{width:240px;background:var(--i900);border-right:1px solid var(--i800);display:flex;flex-direction:column;flex-shrink:0}
+.s-logo{padding:16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--i800)}
+.s-ico{width:32px;height:32px;background:var(--action);border-radius:8px;display:flex;align-items:center;justify-content:center}
+.s-ico svg{width:20px;height:20px;stroke:white;fill:none;stroke-width:2}
+.s-txt{font-size:18px;font-weight:700;color:white;letter-spacing:-0.025em}
+.s-txt span{color:#3b82f6}
+.s-sub{font-size:12px;color:var(--i500)}
+.s-nav{flex:1;padding:16px 8px;display:flex;flex-direction:column;gap:4px}
+.ni{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;font-weight:600;font-size:14px;text-decoration:none;color:var(--i400)}
+.ni svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;flex-shrink:0}
+.ni.on{background:var(--action);color:white}
+.ni.on svg{stroke:white}
+.mn{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.hdr{height:52px;background:white;border-bottom:1px solid var(--i200);padding:0 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.hdr-l{font-size:14px;color:var(--i500)}
+.hdr-r{display:flex;align-items:center;gap:8px}
+.hb{padding:8px;border-radius:8px;border:1px solid var(--i200);background:0;cursor:pointer;display:flex}
+.hb svg{width:16px;height:16px;stroke:var(--i500);fill:none;stroke-width:2}
+.dv{width:1px;height:24px;background:var(--i200)}
+.lb{font-size:12px;font-weight:600;color:var(--i500);padding:4px 8px;border:1px solid var(--i200);border-radius:6px;background:white;cursor:pointer}
+/* Content */
+.cnt{flex:1;overflow-y:auto;padding:16px 24px}
+.cnt-top{display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
+.chip{display:inline-flex;align-items:center;gap:8px;padding:4px 12px;border-radius:8px;background:rgba(59,130,246,0.1);color:var(--action);font-size:12px;font-weight:500;width:fit-content}
+.chip svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2}
+h1{font-size:24px;font-weight:700;letter-spacing:-0.025em}
+.desc{font-size:14px;color:var(--i500);max-width:640px;margin-top:4px}
+/* Controls */
+.ctrls{display:flex;align-items:center;gap:12px;margin:24px 0 16px}
+.search{position:relative;min-width:280px}
+.search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;stroke:var(--i400);fill:none;stroke-width:2}
+.search input{width:100%;height:40px;padding:0 16px 0 40px;background:white;border:1px solid var(--i200);border-radius:8px;font-size:14px;outline:none;font-family:inherit}
+.search input:focus{border-color:var(--action);box-shadow:0 0 0 3px rgba(37,99,235,0.1)}
+.fgroup{display:flex;background:white;border:1px solid var(--i200);padding:4px;border-radius:8px}
+.fb{padding:6px 12px;border-radius:6px;font-size:12px;font-weight:600;background:0;border:0;cursor:pointer;color:var(--i500);font-family:inherit;transition:.15s}
+.fb.on{background:var(--action);color:white;box-shadow:0 1px 2px rgba(0,0,0,0.06)}
+/* Table */
+.tbl{flex:1;overflow-x:auto;border-radius:12px;border:1px solid var(--i200);background:white;box-shadow:0 1px 2px rgba(0,0,0,0.04)}
+table{width:100%;border-collapse:collapse}
+thead tr{background:var(--i50);border-bottom:1px solid var(--i200)}
+th{padding:12px 16px;font-size:12px;font-weight:600;color:var(--i500);text-transform:uppercase;letter-spacing:.05em;text-align:left}
+th.c{text-align:center}
+td{padding:14px 16px;border-bottom:1px solid var(--i100)}
+td.c{text-align:center}
+tr:hover{background:var(--i50)}
+.rn{font-size:14px;font-weight:600;margin-bottom:2px}
+.rs{font-size:12px;color:var(--i400)}
+.qty{display:inline-flex;align-items:center;padding:2px 8px;border-radius:6px;background:var(--i100);color:var(--i700);font-size:12px;font-weight:600;font-variant-numeric:tabular-nums}
+.qref{font-size:14px;font-weight:500;color:var(--i600)}
+.abtn{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:8px;background:var(--action);color:white;font-size:12px;font-weight:600;border:0;cursor:pointer;font-family:inherit;box-shadow:0 1px 2px rgba(0,0,0,0.06)}
+.sim{display:flex;align-items:center;gap:8px;margin-top:4px}
+.simbar{flex:1;height:6px;background:var(--i100);border-radius:3px;overflow:hidden;max-width:120px}
+.simfill{height:100%;border-radius:3px}
+.simpct{font-size:11px;font-weight:600;font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside class="side">
+  <div class="s-logo"><div class="s-ico" style="background:none"><svg viewBox="0 0 655 655" width="32" height="32"><polygon fill="#35819B" points="327.5 0 655 327.5 327.5 655 0 327.5"/><g transform="translate(185,157)" stroke="#FFF" stroke-linecap="round" stroke-width="20" fill="none" stroke-linejoin="round"><path d="M170,267 C205,240 227,197 227,150 C227,67 160,0 78,0 M78,132 L78,0"/><path d="M170,268 L228,341"/><path d="M78,170 L78,340 M0,170 L156,170"/></g></svg></div><div><div class="s-txt">RailTech<span> B2B</span></div><p class="s-sub">CRM Менеджера</p></div></div>
+  <nav class="s-nav">
+    <a href="#" class="ni"><svg viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>Сделки</a>
+    <a href="#" class="ni on"><svg viewBox="0 0 24 24"><path d="m7.5 4.27 9 5.15M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>Sourcing</a>
+    <a href="#" class="ni"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>Аналитика</a>
+  </nav>
+</aside>
+<div class="mn">
+  <header class="hdr"><span class="hdr-l">Алексей Иванов · Менеджер</span><div class="hdr-r"><button class="hb"><svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></button><div class="dv"></div><span class="lb">RU</span></div></header>
+  <div class="cnt">
+    <div class="cnt-top">
+      <div class="chip"><svg viewBox="0 0 24 24"><path d="m7.5 4.27 9 5.15M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>Smart Import</div>
+      <h1>Нераспознанные позиции</h1>
+      <p class="desc">Позиции, загруженные из Excel-файлов клиентов, ожидающие привязки к номенклатуре каталога через Smart Match (pg_trgm)</p>
+    </div>
+    <div class="ctrls">
+      <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input type="text" placeholder="Поиск по наименованию..."></div>
+      <div class="fgroup">
+        <button class="fb on">Все</button>
+        <button class="fb">Ж/Д техника</button>
+        <button class="fb">Общие товары</button>
+      </div>
+    </div>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Наименование из Excel</th><th>Кол.</th><th>Сделка</th><th>Совпадение</th><th class="c">Действие</th></tr></thead>
+        <tbody>
+          <tr><td><div class="rn">Дизель 2Д49 главный в сборе с навесными</div><div class="rs">Не привязан к номенклатуре</div><div class="sim"><div class="simbar"><div class="simfill" style="width:92%;background:#10b981"></div></div><span class="simpct" style="color:#059669">92%</span></div></td><td><span class="qty">2 шт</span></td><td><span class="qref">#1847</span></td><td style="font-size:13px;color:var(--i600)">Дизель 2Д49 в сборе</td><td class="c"><button class="abtn">Привязать</button></td></tr>
+          <tr><td><div class="rn">Генератор тяговый типа ГПП-354У2</div><div class="rs">Не привязан к номенклатуре</div><div class="sim"><div class="simbar"><div class="simfill" style="width:87%;background:#10b981"></div></div><span class="simpct" style="color:#059669">87%</span></div></td><td><span class="qty">4 шт</span></td><td><span class="qref">#1847</span></td><td style="font-size:13px;color:var(--i600)">Генератор тяговый ГПП-354</td><td class="c"><button class="abtn">Привязать</button></td></tr>
+          <tr><td><div class="rn">Компресор КТ7 воздушн.</div><div class="rs">Не привязан к номенклатуре</div><div class="sim"><div class="simbar"><div class="simfill" style="width:74%;background:#f59e0b"></div></div><span class="simpct" style="color:#b45309">74%</span></div></td><td><span class="qty">6 шт</span></td><td><span class="qref">#1847</span></td><td style="font-size:13px;color:var(--i600)">Компрессор КТ-7</td><td class="c"><button class="abtn">Привязать</button></td></tr>
+          <tr><td><div class="rn">Тормозн. цилиндр ТЦ254</div><div class="rs">Не привязан к номенклатуре</div><div class="sim"><div class="simbar"><div class="simfill" style="width:81%;background:#10b981"></div></div><span class="simpct" style="color:#059669">81%</span></div></td><td><span class="qty">12 шт</span></td><td><span class="qref">#1821</span></td><td style="font-size:13px;color:var(--i600)">Тормозной цилиндр ТЦ-254</td><td class="c"><button class="abtn">Привязать</button></td></tr>
+          <tr><td><div class="rn">п/ш буксовый роликовый 232726</div><div class="rs">Не привязан к номенклатуре</div><div class="sim"><div class="simbar"><div class="simfill" style="width:68%;background:#f59e0b"></div></div><span class="simpct" style="color:#b45309">68%</span></div></td><td><span class="qty">48 шт</span></td><td><span class="qref">#1832</span></td><td style="font-size:13px;color:var(--i600)">Подшипник буксовый 232726</td><td class="c"><button class="abtn">Привязать</button></td></tr>
+          <tr><td><div class="rn">Маслофильтр ФМ22 тонкой очистки</div><div class="rs">Не привязан к номенклатуре</div><div class="sim"><div class="simbar"><div class="simfill" style="width:56%;background:#ef4444"></div></div><span class="simpct" style="color:#dc2626">56%</span></div></td><td><span class="qty">24 шт</span></td><td><span class="qref">#1847</span></td><td style="font-size:13px;color:var(--i400)">—</td><td class="c"><button class="abtn">Назначить</button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</div>
+</body>
+</html>

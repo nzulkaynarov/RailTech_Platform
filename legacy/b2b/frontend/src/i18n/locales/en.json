@@ -1,0 +1,1827 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "search": "Search",
+    "filters": "Filters",
+    "reset": "Reset",
+    "close": "Close",
+    "noData": "No data",
+    "showMore": "Show more",
+    "copyright": "© {{year}} RailTech LLC",
+    "corporateSite": "Corporate website",
+    "open": "Open",
+    "add": "Add",
+    "send": "Send",
+    "update": "Update",
+    "updating": "Updating..."
+  },
+
+  "auth": {
+    "loginTitle": "Sign in",
+    "loginSubtitle": "Enter your credentials to access the platform",
+    "emailLabel": "Email / TIN",
+    "emailPlaceholder": "user@company.com",
+    "passwordLabel": "Password",
+    "passwordPlaceholder": "••••••••",
+    "submitButton": "Sign in",
+    "loginError": "Invalid email or password",
+    "genericError": "Login failed. Please try again later.",
+    "newCompany": "New company?",
+    "registerLink": "Register with your TIN",
+    "forgotPassword": "Forgot password?",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "login": "Sign in"
+  },
+
+  "landing": {
+    "heroTitle": "Unified digital environment for <highlight>industrial procurement</highlight>",
+    "heroSubtitle": "RailTech B2B Ecosystem automates industrial equipment procurement. Access official quotes, transparent logistics, and secure document management.",
+    "featureSmartMatch": "Smart Match Import",
+    "featureSmartMatchDesc": "Upload Excel specifications. Our algorithm recognizes items and fills in the request automatically.",
+    "featureUnitEconomics": "Deep Unit Economics",
+    "featureUnitEconomicsDesc": "Transparent Landed Cost calculation (FCA + DAP + Customs) for every product."
+  },
+
+  "catalog": {
+    "title": "Product Catalog",
+    "searchPlaceholder": "Search by SKU, name, or GOST...",
+    "gridView": "Grid",
+    "tableView": "Table",
+    "totalItems": "{{count}} items",
+    "noResults": "No results found",
+    "noResultsHint": "Try changing your search or resetting filters",
+    "emptyState": "Catalog is empty",
+    "emptyStateHint": "No products have been added yet. Contact your manager.",
+    "priceHidden": "Prices available after verification",
+    "sidebar": {
+      "allProducts": "All products",
+      "domain": "Section",
+      "collapse": "Collapse menu",
+      "expand": "Expand menu",
+      "noCategories": "No categories"
+    },
+    "density": {
+      "comfortable": "Large",
+      "normal": "Normal",
+      "compact": "Compact"
+    },
+    "filters": {
+      "category": "Category",
+      "manufacturer": "Manufacturer",
+      "equipmentGroup": "Equipment group",
+      "stockStatus": "Stock status",
+      "allCategories": "All categories",
+      "allManufacturers": "All manufacturers",
+      "activeFilters": "{{count}} filters active"
+    },
+    "stock": {
+      "IN_STOCK": "In stock",
+      "ON_ORDER": "On order",
+      "EXPECTED": "Expected",
+      "OUT_OF_STOCK": "Out of stock",
+      "inStock": "In stock",
+      "onOrder": "On order",
+      "expected": "Expected"
+    },
+    "table": {
+      "name": "Name",
+      "sku": "SKU",
+      "manufacturer": "Manufacturer",
+      "origin": "Origin",
+      "stock": "Stock",
+      "price": "Price",
+      "unit": "Unit",
+      "selected": "Selected: {{count}}",
+      "addToRequest": "Add to request ({{count}})",
+      "exportCSV": "Export CSV",
+      "clearSelection": "Clear selection",
+      "defaultUnit": "pc"
+    },
+    "card": {
+      "verified": "Verified",
+      "priceOnRequest": "Price on request",
+      "requestQuote": "Request quote →"
+    },
+    "recentSearches": "Recent searches",
+    "productDetail": {
+      "specifications": "Specifications",
+      "description": "Description",
+      "documents": "Documents",
+      "noImage": "No image",
+      "noSpecifications": "No specifications available",
+      "addToRequest": "Add to request",
+      "priceFCA": "FCA Price",
+      "priceRestricted": "Available after verification"
+    }
+  },
+
+  "domains": {
+    "RAILWAY_MACHINERY": "Railway Equipment",
+    "GENERAL_GOODS": "General Industrial Goods",
+    "SERVICES": "Services",
+    "short": {
+      "RAILWAY_MACHINERY": "Railway Equip.",
+      "GENERAL_GOODS": "Industrial Goods",
+      "SERVICES": "Services"
+    }
+  },
+
+  "dashboard": {
+    "welcome": "Welcome, {{name}}",
+    "kpi": {
+      "registryVolume": "Registry Volume",
+      "activePipeline": "Active Pipeline",
+      "closedDeals": "Closed Deals",
+      "economicExposure": "Economic Exposure"
+    },
+    "deals": {
+      "title": "Active Deals",
+      "noDealSelected": "Select a deal from the list on the left",
+      "emptyState": "You have no deals yet",
+      "emptyStateHint": "Create your first request for a commercial offer",
+      "createRFQ": "Create RFQ",
+      "bulkImport": "Import from Excel",
+      "complianceData": "Compliance data",
+      "createError": "Failed to create deal"
+    },
+    "stages": {
+      "NEW": "New",
+      "QUOTING": "Quoting",
+      "NEGOTIATION": "Negotiation",
+      "CONTRACT_SIGNED": "Contract Signed",
+      "IN_DELIVERY": "In Delivery",
+      "CLOSED_WON": "Closed (Won)",
+      "CLOSED_LOST": "Closed (Lost)"
+    },
+    "quickActions": "Quick Actions"
+  },
+
+  "kyc": {
+    "banner": {
+      "unverified": "Complete verification to unlock all features",
+      "verified": "Account verified",
+      "contracted": "Contract signed",
+      "action": "Start verification"
+    },
+    "status": {
+      "L1_UNVERIFIED": "Unverified",
+      "PROFILE_SUBMITTED": "Profile submitted",
+      "L2_VERIFIED": "Verified",
+      "L3_CONTRACTED": "Contracted"
+    }
+  },
+
+  "sourcing": {
+    "title": "Specification Import",
+    "uploadTitle": "Upload file",
+    "uploadHint": "Drag and drop an Excel file here or click to browse",
+    "uploadError": "Failed to upload file. Check the format (.xlsx, .xls).",
+    "searchPlaceholder": "Search by item names...",
+    "processing": "Processing file...",
+    "matchFound": "Match found",
+    "noMatch": "No match found",
+    "assignProduct": "Assign product",
+    "itemName": "Item name",
+    "matchStatus": "Match status"
+  },
+
+  "quote": {
+    "title": "Commercial Offer",
+    "subtotal": "Subtotal",
+    "vat": "VAT 12% (Uzbekistan)",
+    "total": "Total incl. VAT",
+    "margin": "Margin",
+    "landedCost": "Landed Cost",
+    "basePrice": "FCA Base Price",
+    "unsavedChanges": "You have unsaved changes",
+    "unsavedChangesDesc": "You have unsaved changes. Click Save to persist them.",
+    "logistics": "Logistics",
+    "quantityHelp": "Quantity / Units",
+    "basePriceHelp": "FCA Base Price per unit",
+    "logisticsHelp": "Logistics DAP cost per unit",
+    "customsDutyHelp": "Customs duty per unit",
+    "landedCostHelp": "Base + Logistics + Customs",
+    "marginHelp": "Margin percentage applied to landed cost",
+    "deleteItem": "Delete item?",
+    "addItemPlaceholder": "Item name...",
+    "builder": "Quote Builder",
+    "subtotalExclVAT": "Subtotal excl. VAT",
+    "vatPercent": "VAT 12%",
+    "totalInclVAT": "Total incl. VAT",
+    "avgMargin": "Avg. Margin",
+    "totalItems": "Total Items",
+    "totalItemsUnit": "{{count}} units",
+    "noItemsInCategory": "No items in this category",
+    "priceFCA": "FCA Price ($)",
+    "logisticsCost": "Logistics",
+    "customsDuty": "Customs",
+    "priceExclVAT": "Price excl. VAT",
+    "priceInclVAT": "Price incl. VAT",
+    "article": "Article",
+    "gost": "GOST",
+    "unitShort": "Unit",
+    "quantity": "Qty",
+    "marginPercent": "Margin %",
+    "lineTotal": "Total"
+  },
+
+  "admin": {
+    "dashboard": {
+      "title": "Admin Dashboard",
+      "systemHealth": "System Health",
+      "totalUsers": "Users",
+      "totalProducts": "Products",
+      "quickAccess": "Quick Access",
+      "recentActivity": "Recent Activity",
+      "viewAllLogs": "View all logs"
+    },
+    "nomenclature": {
+      "title": "Nomenclature",
+      "importExcel": "Import from Excel",
+      "masterTitle": "Master",
+      "masterHighlight": "Nomenclature",
+      "subtitle": "Global Product Registry & Taxonomy Control",
+      "batchSync": "Batch Sync",
+      "createSKU": "Create SKU",
+      "searchPlaceholder": "SEARCH_BY_SKU_OR_NAME...",
+      "syncingData": "Synchronizing Registry Data...",
+      "emptyState": "Registry entry not found for current filter set",
+      "universal": "UNIVERSAL",
+      "confirmDelete": "Confirm removal of this master record?",
+      "confirmBulkDelete": "Delete {{count}} records permanently?",
+      "operationFailed": "Operation failed",
+      "bulkOperationFailed": "Bulk operation failed",
+      "selected": "{{count}} SELECTED",
+      "columns": {
+        "objectDescription": "OBJECT_DESCRIPTION / SKU",
+        "domainSegment": "DOMAIN_SEGMENT",
+        "baseValue": "BASE_VALUE (FCA)",
+        "eqGroups": "EQ_GROUPS / SERIES",
+        "actions": "PROTO_ACTIONS"
+      }
+    },
+    "users": {
+      "title": "User Management"
+    },
+    "profile": {
+      "title": "My",
+      "titleHighlight": "Profile",
+      "subtitle": "Manage your personal data and security",
+      "personalData": "Personal Data",
+      "security": "Security",
+      "accountVerified": "Account verified",
+      "fullAccess": "Full access (L4)",
+      "mainData": "Main Data",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "workEmail": "Work Email",
+      "phone": "Phone",
+      "saveProfile": "Save profile",
+      "profileUpdated": "Profile updated successfully!",
+      "profileSaveError": "Failed to save profile",
+      "changePassword": "Change Password",
+      "currentPassword": "Current password",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm password",
+      "updatePassword": "Update password",
+      "passwordChanged": "Password changed successfully!",
+      "passwordChangeError": "Failed to change password",
+      "passwordMismatch": "Passwords do not match",
+      "superAdmin": "Super Administrator"
+    },
+    "systemSettings": {
+      "title": "System",
+      "titleHighlight": "Settings",
+      "subtitle": "Global platform parameters and integrations",
+      "saveNotAvailable": "Saving settings will be available in the next version. Current parameters are applied from server configuration.",
+      "settingsSaved": "Settings saved successfully!",
+      "saveChanges": "Save changes",
+      "tabs": {
+        "finance": "Finance & Tax",
+        "platform": "Site Settings",
+        "security": "Security",
+        "notifications": "Notifications"
+      },
+      "finance": {
+        "title": "Finance & VAT",
+        "vatRate": "VAT Rate (Uzbekistan)",
+        "standardMargin": "Standard Margin",
+        "exchangeRate": "USD to UZS Rate (Auto)",
+        "vatWarning": "Changing the tax rate will affect Landed Cost calculations for all new deals."
+      },
+      "platform": {
+        "title": "Site Settings",
+        "maintenance": "Maintenance Mode",
+        "maintenanceDesc": "Disable public access during maintenance",
+        "platformName": "Platform Name"
+      },
+      "security": {
+        "title": "Security",
+        "twoFactor": "Two-Factor Authentication",
+        "twoFactorDesc": "Required for all managers",
+        "resetSessions": "Reset all user sessions"
+      }
+    }
+  },
+
+  "notifications": {
+    "title": "Notifications",
+    "empty": "No notifications",
+    "emptyHint": "Deal events and system alerts will appear here",
+    "markAllRead": "Mark all read",
+    "unread": "Unread: {{count}}",
+    "viewAll": "All notifications"
+  },
+
+  "cart": {
+    "title": "Cart",
+    "empty": "Cart is empty",
+    "emptyHint": "Add products from the catalog",
+    "addToCart": "Add to cart",
+    "addedToCart": "Added",
+    "remove": "Remove",
+    "clear": "Clear cart",
+    "itemsCount": "{{count}} items",
+    "increase": "Increase quantity",
+    "decrease": "Decrease quantity",
+    "requestQuote": "Request Quote",
+    "requestHint": "Our manager will contact you within 1 business day"
+  },
+
+  "nav": {
+    "home": "Home",
+    "catalog": "Catalog",
+    "cabinet": "My Account",
+    "deals": "Deals",
+    "profile": "Profile",
+    "sourcing": "Import",
+    "analytics": "Analytics",
+    "kycManager": "KYC",
+    "users": "Users",
+    "nomenclature": "Nomenclature",
+    "settings": "Settings",
+    "corporateSite": "Corporate site",
+    "logout": "Sign out",
+    "companyName": "RailTech LLC",
+    "operationsCenter": "Operations Center",
+    "dashboard": "Dashboard",
+    "crmDeals": "CRM Deals",
+    "quotePricing": "Quote Pricing"
+  },
+
+  "chat": {
+    "title": "Deal Discussion",
+    "placeholder": "Type a message...",
+    "emptyState": "Start discussing this deal",
+    "send": "Send",
+    "connectionLost": "Connection lost. Reconnecting...",
+    "connected": "Connected"
+  },
+
+  "task": {
+    "excelImport": "Excel Import",
+    "catalogUpdate": "Catalog Update",
+    "processing": "Processing file...",
+    "success": "Successfully processed",
+    "failure": "Import failed",
+    "completed": "Completed",
+    "initializing": "Initializing...",
+    "progress": "Progress"
+  },
+
+  "errors": {
+    "network": "Network error. Check your internet connection.",
+    "unauthorized": "Session expired. Please sign in again.",
+    "forbidden": "You don't have access to this section.",
+    "notFound": "Page not found.",
+    "server": "Server error. Please try again later.",
+    "uploadFailed": "Failed to upload file: {{reason}}",
+    "validationFailed": "Please check the form fields.",
+    "unknown": "An unknown error occurred.",
+    "operationFailed": "Operation failed",
+    "uploadFailure": "Upload failed"
+  },
+
+  "team": {
+    "title": "Company Team",
+    "subtitle": "Manage employee access to the dashboard",
+    "employee": "Employee",
+    "role": "Role",
+    "status": "Status",
+    "itsYou": "(That's you)",
+    "active": "Active",
+    "noMembers": "No team members",
+    "invite": "Invite Employee",
+    "emailPlaceholder": "Employee email",
+    "inviteSuccess": "User {{email}} has been invited.",
+    "inviteError": "Failed to send invitation.",
+    "ownerOnly": "Only the company Owner can invite new employees.",
+    "roles": {
+      "OWNER": "Owner",
+      "ACCOUNTANT": "Accountant",
+      "MANAGER": "Manager"
+    },
+    "roleOptions": {
+      "MANAGER": "Manager (Create requests)",
+      "ACCOUNTANT": "Accountant (Acts, Invoices)"
+    }
+  },
+
+  "company": {
+    "title": "Company",
+    "titleHighlight": "Profile",
+    "subtitle": "Details, KYC status and documents",
+    "details": "Company Details",
+    "name": "Company name",
+    "inn": "TIN",
+    "mfo": "MFO",
+    "bankAccount": "Bank account",
+    "contactPerson": "Contact person",
+    "legalAddress": "Legal address",
+    "noCompany": "No company linked to your account.\nContact your manager.",
+    "kycDocuments": "KYC Documents",
+    "docCount": "{{count}} docs",
+    "noDocuments": "No documents uploaded",
+    "deleteConfirm": "Delete document?",
+    "deleteDocError": "Failed to delete document",
+    "uploadError": "Failed to upload document",
+    "uploading": "Uploading...",
+    "uploadDoc": "Upload document",
+    "manager": "Your manager",
+    "managerHint": "For verification and pricing inquiries:",
+    "status": {
+      "L1_UNVERIFIED": "Pending verification (L1)",
+      "PROFILE_SUBMITTED": "Profile under review",
+      "L2_VERIFIED": "KYC Verified (L2)",
+      "L3_CONTRACTED": "Partner (L3)"
+    },
+    "statusHint": {
+      "unverified": "Upload company charter and director's passport for verification",
+      "verified": "Your account has been verified by a RailTech manager"
+    },
+    "docTypes": {
+      "CHARTER": "Company Charter",
+      "LICENSE": "License",
+      "PASSPORT": "Director's Passport",
+      "TAX_CERT": "Tax Registration Certificate",
+      "OTHER": "Other document"
+    }
+  },
+
+  "profileForm": {
+    "title": "Company Profile",
+    "step": "Step 3 of 4: Final details",
+    "companyName": "Organization name",
+    "companyNamePlaceholder": "LLC / Sole Proprietorship Name",
+    "innLabel": "Company TIN",
+    "innPlaceholder": "9 digits",
+    "roleLabel": "Your role in the company",
+    "rolePlaceholder": "Select role",
+    "roleOwner": "Owner / Founder",
+    "roleManager": "Procurement Manager",
+    "roleAccountant": "Accountant",
+    "submit": "Submit for verification",
+    "saveError": "Failed to save profile. Check TIN.",
+    "validation": {
+      "minChars": "Minimum 2 characters",
+      "innFormat": "TIN must contain exactly 9 digits",
+      "selectRole": "Select a role"
+    }
+  },
+
+  "passwordSetup": {
+    "title": "Password Setup",
+    "step": "Step 2 of 4",
+    "newPassword": "New password",
+    "newPasswordPlaceholder": "Enter password",
+    "confirmPassword": "Confirm password",
+    "confirmPasswordPlaceholder": "Repeat password",
+    "submit": "Activate account",
+    "invalidLink": "This link is invalid or expired.",
+    "setupError": "An error occurred while setting up the password.",
+    "success": "Password set!",
+    "successHint": "Your account has been activated. You can now sign in.",
+    "goToLogin": "Go to sign in",
+    "validation": {
+      "minLength": "Password must be at least 8 characters.",
+      "confirm": "Please confirm password.",
+      "mismatch": "Passwords do not match."
+    }
+  },
+
+  "registration": {
+    "title": "Register at RailTech",
+    "subtitle": "Secure start in the B2B ecosystem",
+    "stepContact": "Step 1: Contact information",
+    "firstName": "First name",
+    "firstNamePlaceholder": "First name",
+    "lastName": "Last name",
+    "lastNamePlaceholder": "Last name",
+    "emailLabel": "Work Email",
+    "emailPlaceholder": "Work Email",
+    "submit": "Register",
+    "genericError": "Registration failed. Check your data.",
+    "emailSent": "Email sent!",
+    "emailSentHint": "We've sent a confirmation link to <strong>{{email}}</strong>. Please check your inbox (including Spam) to continue.",
+    "waitHint": "Waiting for the link? It usually arrives within 1-2 minutes.",
+    "backToLogin": "Back to sign in",
+    "validation": {
+      "email": "Enter a valid email",
+      "minChars": "Minimum 2 characters"
+    }
+  },
+
+  "nomenclaturePanel": {
+    "editTitle": "Edit Product",
+    "createTitle": "New Product",
+    "editDescription": "Editing SKU: {{sku}}",
+    "editDescriptionNoSku": "Unassigned",
+    "createDescription": "Fill in the product details below.",
+    "productName": "Product Name",
+    "productNamePlaceholder": "Enter product name",
+    "sku": "SKU",
+    "domainType": "Domain Type",
+    "domainPlaceholder": "Select domain",
+    "category": "Category",
+    "categoryPlaceholder": "Select category",
+    "noCategory": "No category",
+    "description": "Description",
+    "descriptionPlaceholder": "Enter product description...",
+    "basePrice": "Base Price (FCA)",
+    "currency": "Currency",
+    "currencyPlaceholder": "Currency",
+    "uom": "Unit of Measurement",
+    "uomPlaceholder": "Select unit",
+    "gostDrawing": "GOST / Drawing Reference",
+    "gostPlaceholder": "GOST XXXXX-YY / Drawing ID",
+    "equipmentSeries": "Equipment Series Binding",
+    "searchSeries": "Search series (e.g. TEM2, CHME3...)",
+    "noGroups": "No equipment groups found",
+    "railwayGroupRequired": "Railway domain requires at least one equipment group binding.",
+    "saveChanges": "Save Changes",
+    "createProduct": "Create Product",
+    "validation": {
+      "nameRequired": "Product name is required",
+      "priceRequired": "Base price is required"
+    }
+  },
+
+  "userPanel": {
+    "editTitle": "Edit User",
+    "createTitle": "Create User",
+    "editDescription": "Editing user ID: {{id}}",
+    "createDescription": "Fill in the details to provision a new user.",
+    "firstName": "First Name",
+    "firstNamePlaceholder": "First name",
+    "lastName": "Last Name",
+    "lastNamePlaceholder": "Last name",
+    "email": "Email",
+    "emailPlaceholder": "user@railtech.uz",
+    "role": "Role",
+    "rolePlaceholder": "Select role",
+    "roleAdmin": "Administrator",
+    "roleSalesManager": "Sales Manager",
+    "roleAccountManager": "Account Manager",
+    "roleClient": "Client",
+    "company": "Company",
+    "companyPlaceholder": "Internal staff (no company)",
+    "internalStaff": "Internal staff",
+    "workspaceRole": "Workspace Role",
+    "workspaceRolePlaceholder": "Select workspace role",
+    "workspaceNone": "None",
+    "workspaceOwner": "Owner",
+    "workspaceAccountant": "Accountant",
+    "workspaceManager": "Manager",
+    "validation": {
+      "emailRequired": "Valid email is required",
+      "firstNameRequired": "First name is required",
+      "lastNameRequired": "Last name is required"
+    }
+  },
+
+  "kycManager": {
+    "title": "KYC",
+    "titleHighlight": "Verification",
+    "subtitle": "Corporate Identity & Trust Level Management",
+    "globalView": "GLOBAL_VIEW",
+    "searchPlaceholder": "FILTER_BY_IDENTITY_OR_TAX_ID...",
+    "emptyState": "Zero matching identities in current buffer",
+    "entityReview": "Entity_Protocol_Review",
+    "authStatus": "AUTH_STATUS_LEVEL",
+    "registryData": "REGISTRY_DATA",
+    "physicalAddress": "PHYSICAL_ADDRESS",
+    "docRecords": "DOC_RECORDS",
+    "docCount": "COUNT: {{count}}",
+    "noDocuments": "ZERO_RECORDS_SUBMITTED",
+    "importDoc": "IMPORT_REPRESENTATION",
+    "observations": "SEC_OBSERVATIONS",
+    "observationsPlaceholder": "ENTRY_INTERNAL_AUDIT_LOG...",
+    "approveL2": "APPROVE_TRUST_L2",
+    "upgradeL3": "UPGRADE_TO_PARTNER_L3",
+    "revokeL1": "REVOKE_TRUST_L1",
+    "operationFailure": "Operation failure",
+    "uploadFailure": "Upload failure",
+    "status": {
+      "P_PENDING": "P_PENDING",
+      "P_SUBMITTED": "P_SUBMITTED",
+      "V_VERIFIED_L2": "V_VERIFIED_L2",
+      "V_PARTNER_L3": "V_PARTNER_L3"
+    },
+    "registryFields": {
+      "taxId": "UID_TAX",
+      "mfo": "MFO_CODE",
+      "bankAcc": "BANK_ACC",
+      "contact": "OP_CONTACT"
+    },
+    "docTypes": {
+      "CHARTER": "Company Charter / Устав",
+      "LICENSE": "License / Лицензия",
+      "PASSPORT": "Director ID / Паспорт",
+      "TAX_CERT": "Tax Registry / Свид. ИНН",
+      "OTHER": "Misc / Другое"
+    }
+  },
+
+  "breadcrumb": {
+    "productDetail": "Product details",
+    "requestDetail": "Request details"
+  },
+
+  "onboarding": {
+    "companyRegistration": "Company Registration",
+    "companyRegistrationDesc": "Enter your organization details to get started",
+    "email": "Email",
+    "companyName": "Company Name",
+    "companyNamePlaceholder": "LLC «Company Name»",
+    "inn": "TIN (optional)",
+    "innPlaceholder": "123456789",
+    "next": "Next",
+    "back": "Back",
+    "selectCompanyStatus": "Select Company Status",
+    "selectCompanyStatusDesc": "Define your company's main role on the platform",
+    "statusUnderReview": "Status under review",
+    "statusUnderReviewDesc": "After registration, a platform administrator will review and confirm your company status. Until confirmation, access to main features will be limited.",
+    "contactPerson": "Contact Person",
+    "contactPersonDesc": "You will become the company administrator on the platform",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "registrationSummary": "Registration Summary",
+    "company": "Company",
+    "status": "Status",
+    "role": "Role",
+    "roleAdmin": "Administrator",
+    "registrationNote": "By clicking \"Register\", you are submitting a connection request. The platform administrator will review the data and confirm your company's status.",
+    "register": "Register",
+    "capabilities": {
+      "BUYER": ["Browse product catalog", "Import requests from Excel", "Request commercial offers", "Track deals"],
+      "SELLER": ["Everything a Buyer can do", "Add available products (with manufacturer info)", "CRM, quotes and cost calculation", "Work with partner manufacturers"],
+      "MANUFACTURER": ["Everything a Buyer and Seller can do", "Publish own products", "Accept orders from partner sellers", "Direct sales without intermediaries", "Choose sellers and set prices"]
+    }
+  },
+
+  "verification": {
+    "applicationUnderReview": "Application Under Review",
+    "applicationUnderReviewDesc": "The platform administrator is reviewing your company data. You will receive a notification at {{email}} upon confirmation.",
+    "requestedStatuses": "Requested Statuses",
+    "pending": "Pending",
+    "verified": "Verified",
+    "rejected": "Rejected",
+    "sellerPartnershipNote": "As a Seller, you can only add products from manufacturers that have confirmed their partnership with you. If a manufacturer is not in the system, you can send them a confirmation request.",
+    "demoSimulation": "Simulation (demo)",
+    "approve": "Approve \"{{status}}\"",
+    "startOver": "Start over",
+    "enterSystem": "Enter system"
+  },
+
+  "companyStatus": {
+    "BUYER": "Buyer",
+    "MANUFACTURER": "Manufacturer",
+    "SELLER": "Seller"
+  },
+
+  "roles": {
+    "ADMIN": "Administrator",
+    "MANAGER": "Manager",
+    "EMPLOYEE": "Employee"
+  },
+
+  "companyStatusDesc": {
+    "BUYER": "Only requests quotes and purchases equipment",
+    "MANUFACTURER": "Produces, sells directly or through sellers, can also purchase",
+    "SELLER": "Intermediary: buys and resells, can add available products"
+  },
+
+  "shell": {
+    "b2bPlatform": "B2B Platform",
+    "workContext": "Work context",
+    "dashboard": "Dashboard",
+    "catalog": "Catalog",
+    "myRequests": "My Requests",
+    "commercialOffers": "Commercial Offers",
+    "documents": "Documents",
+    "purchaseTemplates": "Purchase Templates",
+    "logistics": "Logistics",
+    "analytics": "Analytics",
+    "nomenclature": "Nomenclature",
+    "products": "Products",
+    "categories": "Categories",
+    "equipmentGroups": "Equipment Groups",
+    "productionOrders": "Production Orders",
+    "incomingOrders": "Incoming Orders",
+    "productionSchedule": "Production Schedule",
+    "quotes": "Quotes",
+    "productionAnalytics": "Production Analytics",
+    "sourcing": "Sourcing",
+    "requests": "Requests",
+    "excelImport": "Excel Import",
+    "smartMatch": "Smart Match",
+    "crm": "CRM",
+    "deals": "Deals",
+    "clients": "Clients",
+    "salesAnalytics": "Sales Analytics",
+    "settings": "Settings",
+    "users": "Users",
+    "integrations": "Integrations",
+    "help": "Help",
+    "profile": "Profile",
+    "logout": "Sign out",
+    "demoMode": "Demo Mode",
+    "openMenu": "Open menu"
+  },
+
+  "dashboardPage": {
+    "title": "Dashboard",
+    "period": "Period",
+    "month": "Month",
+    "quarter": "Quarter",
+    "year": "Year",
+    "export": "Export",
+    "showAll": "Show all",
+    "byMonths": "By months",
+    "byWeeks": "By weeks",
+    "thisWeek": "This week",
+    "lastWeek": "Last week",
+    "prevPeriod": "prev. period",
+    "topProducts": "Top Products by Requests",
+    "id": "ID",
+    "name": "Name",
+    "quantity": "Qty",
+    "category": "Category",
+    "buyer": {
+      "activeRequests": "Active Requests",
+      "awaitingQuotes": "Awaiting Quotes",
+      "dealSavings": "Deal Savings",
+      "avgDeliveryTime": "Avg. Delivery Time",
+      "days": "days",
+      "requestsByStatus": "My Requests by Status",
+      "statusDistribution": "Request Status",
+      "recentRequests": "Recent Requests",
+      "requestNumber": "#",
+      "date": "Date",
+      "supplier": "Supplier",
+      "items": "Items",
+      "status": "Status",
+      "amount": "Amount",
+      "requests": "Requests",
+      "draft": "Draft",
+      "sent": "Sent",
+      "quoteReceived": "Quote Received",
+      "deal": "Deal",
+      "completed": "Completed"
+    },
+    "seller": {
+      "dealVolume": "Deal Volume",
+      "activeRequests": "Active Requests",
+      "catalogItems": "Catalog Items",
+      "clients": "Clients",
+      "dealVolumeChart": "Deal Volume",
+      "activityByDay": "Activity by Day",
+      "requestsPerWeek": "requests this week",
+      "requests": "Requests",
+      "volume": "Volume",
+      "counterpartyBreakdown": "Counterparties",
+      "manufacturers": "Manufacturers",
+      "buyers": "Buyers",
+      "intermediaries": "Intermediaries"
+    },
+    "manufacturer": {
+      "productionLoad": "Production Load",
+      "activeOrders": "Active Orders",
+      "catalogItems": "Catalog Items",
+      "partners": "Partners",
+      "productionLoadByLine": "Load by Line",
+      "rfqsFromSuppliers": "RFQs from Suppliers",
+      "supplier": "Supplier",
+      "product": "Product",
+      "qty": "Qty",
+      "daysToRespond": "Days to Respond",
+      "status": "Status",
+      "urgent": "Urgent",
+      "waiting": "Waiting",
+      "processed": "Processed",
+      "inQueue": "In Queue",
+      "productionPlan": "Production Plan",
+      "target": "of {{target}}",
+      "completedPercent": "{{completed}}%"
+    },
+    "months": {
+      "sep": "Sep", "oct": "Oct", "nov": "Nov", "dec": "Dec",
+      "jan": "Jan", "feb": "Feb", "mar": "Mar"
+    },
+    "days": {
+      "mon": "Mon", "tue": "Tue", "wed": "Wed", "thu": "Thu",
+      "fri": "Fri", "sat": "Sat", "sun": "Sun"
+    },
+    "counterparties": {
+      "clients": "Clients",
+      "suppliers": "Suppliers",
+      "factories": "Factories"
+    }
+  },
+
+  "demo": {
+    "toggleLabel": "Demo Mode",
+    "enabled": "Demo mode enabled",
+    "disabled": "Demo mode disabled"
+  },
+
+  "profile": {
+    "title": "Profile",
+    "subtitle": "Manage your personal data and account settings",
+    "tabs": {
+      "personal": "Personal Data",
+      "company": "Company",
+      "security": "Security",
+      "notifications": "Notifications"
+    },
+    "personalInfo": {
+      "title": "Personal Information",
+      "description": "Update your personal data",
+      "uploadPhoto": "Upload photo",
+      "photoHint": "JPG, PNG. Max 2MB",
+      "role": "Role",
+      "saved": "Saved!",
+      "saveChanges": "Save changes"
+    },
+    "fields": {
+      "lastName": "Last name",
+      "firstName": "First name",
+      "patronymic": "Patronymic",
+      "position": "Position",
+      "email": "Email",
+      "phone": "Phone"
+    },
+    "companyInfo": {
+      "title": "Company Data",
+      "description": "Information about your organization",
+      "name": "Name",
+      "inn": "TIN",
+      "country": "Country",
+      "city": "City",
+      "kycStatus": "KYC Status",
+      "platformStatuses": "Company statuses on the platform",
+      "pendingVerification": "pending",
+      "contactAdmin": "Contact administrator to change company data"
+    },
+    "kyc": {
+      "verified": "Verified",
+      "pending": "Under review",
+      "notStarted": "Not completed"
+    },
+    "security": {
+      "title": "Security",
+      "description": "Manage password and two-factor authentication",
+      "password": "Password",
+      "lastChanged": "Last changed",
+      "change": "Change",
+      "twoFactor": "Two-factor authentication",
+      "twoFactorDesc": "Additional account protection",
+      "activeSessions": "Active sessions",
+      "activeDevices": "{{count}} active devices",
+      "manage": "Manage"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "description": "Configure which notifications you want to receive",
+      "newDeals": "New deals",
+      "newDealsDesc": "Notifications about assigned deals",
+      "requestStatus": "Request status",
+      "requestStatusDesc": "Status changes of your requests",
+      "chatMessages": "Chat messages",
+      "chatMessagesDesc": "New messages from clients/managers",
+      "excelImport": "Excel import",
+      "excelImportDesc": "Completion of uploaded file processing",
+      "system": "System",
+      "systemDesc": "Platform updates and maintenance",
+      "emailDigest": "Email digest",
+      "emailDigestDesc": "Weekly activity summary"
+    },
+    "passwordDialog": {
+      "title": "Change password",
+      "description": "Enter current and new password",
+      "currentPassword": "Current password",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm password"
+    }
+  },
+
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Platform configuration and preferences",
+    "tabs": {
+      "general": "General",
+      "appearance": "Appearance",
+      "business": "Business",
+      "company": "Company",
+      "system": "System"
+    },
+    "general": {
+      "title": "General Settings",
+      "description": "Language, currency, and regional parameters",
+      "language": "Interface language",
+      "languageDesc": "Choose display language",
+      "currency": "Default currency",
+      "currencyDesc": "Primary currency for calculations",
+      "currencyUZS": "UZS (sum)",
+      "currencyRUB": "RUB (₽)",
+      "timezone": "Time zone",
+      "timezoneDesc": "For correct date display",
+      "tzTashkent": "Tashkent (UTC+5)",
+      "tzMoscow": "Moscow (UTC+3)",
+      "tzAlmaty": "Almaty (UTC+6)",
+      "dateFormat": "Date format",
+      "dateFormatDesc": "Date display in the system",
+      "dateDMY": "DD.MM.YYYY",
+      "dateMDY": "MM/DD/YYYY",
+      "dateYMD": "YYYY-MM-DD"
+    },
+    "appearance": {
+      "title": "Appearance",
+      "description": "Customize the interface to your preference",
+      "theme": "Theme",
+      "themeDesc": "Light or dark theme",
+      "themeLight": "Light",
+      "themeDark": "Dark",
+      "themeSystem": "System",
+      "density": "Interface density",
+      "densityDesc": "Compact mode for large tables",
+      "densityCompact": "Compact",
+      "densityNormal": "Normal",
+      "densityComfortable": "Comfortable",
+      "sidebar": "Sidebar",
+      "sidebarDesc": "Sidebar behavior",
+      "sidebarExpanded": "Always expanded",
+      "sidebarCollapsed": "Collapsed (icons)",
+      "sidebarHover": "Expand on hover"
+    },
+    "business": {
+      "sellerTitle": "Sales Settings",
+      "manufacturerTitle": "Production Settings",
+      "sellerDescription": "Deal, margin, and quote parameters",
+      "manufacturerDescription": "Production order and pricing parameters",
+      "autoNumbering": "Deal auto-numbering",
+      "autoNumberingDesc": "Automatic number generation",
+      "reminders": "Reminders",
+      "remindersDesc": "Notify about deals with no activity for 3+ days",
+      "defaultMargin": "Default margin",
+      "defaultMarginDesc": "Base margin for new quotes",
+      "vat": "VAT",
+      "vatDesc": "VAT rate for Uzbekistan",
+      "vatExport": "0% (export)",
+      "orderMode": "Order acceptance mode",
+      "orderModeDesc": "How to accept incoming orders",
+      "orderModeAuto": "Auto-confirm",
+      "orderModeManual": "Manual confirmation",
+      "orderNotifications": "Order notifications",
+      "orderNotificationsDesc": "Instant notifications for new orders",
+      "minOrder": "Minimum order",
+      "minOrderDesc": "Minimum order amount for production",
+      "noLimit": "No limit",
+      "partnerSuppliers": "Partner suppliers",
+      "partnerSuppliersDesc": "Manage approved sellers",
+      "manage": "Manage"
+    },
+    "company": {
+      "title": "Company Management",
+      "description": "Statuses, users, and permission delegation",
+      "statuses": "Company statuses",
+      "statusesDesc": "Active roles on the platform",
+      "pending": "pending",
+      "users": "Users",
+      "usersDesc": "Invite and manage employees",
+      "invite": "Invite",
+      "rolesPermissions": "Roles and permissions",
+      "rolesPermissionsDesc": "Assign roles by company statuses",
+      "manage": "Manage",
+      "delegation": "Delegation",
+      "delegationDesc": "Delegate permissions to employees by context",
+      "configure": "Configure"
+    },
+    "system": {
+      "title": "System Settings",
+      "description": "Platform configuration (administrators only)",
+      "apiIntegrations": "API Integrations",
+      "apiIntegrationsDesc": "Configure external APIs and webhooks",
+      "configure": "Configure",
+      "backup": "Backup",
+      "backupDesc": "Automatic data backup",
+      "passwordPolicy": "Password policy",
+      "passwordPolicyDesc": "Minimum length, complexity",
+      "auditLogs": "Audit logs",
+      "auditLogsDesc": "User action log",
+      "view": "View"
+    }
+  },
+
+  "sourcingHub": {
+    "title": "Request Items — Catalog Matching",
+    "kpi": {
+      "matched": "Matched",
+      "partial": "Partial",
+      "notFound": "Not Found",
+      "outOf": "of {{total}}"
+    },
+    "table": {
+      "num": "#",
+      "name": "Name",
+      "article": "SKU",
+      "gost": "GOST",
+      "uom": "Unit",
+      "qty": "Qty",
+      "matchStatus": "Match Status",
+      "action": "Action"
+    },
+    "status": {
+      "matched": "Matched",
+      "partial": "Partial",
+      "not_found": "Not Found"
+    },
+    "actions": {
+      "findInCatalog": "Find in catalog",
+      "clarify": "Clarify",
+      "linked": "Linked"
+    },
+    "linkedTo": "Linked to: {{name}}",
+    "dialog": {
+      "title": "Catalog Search",
+      "item": "Item",
+      "searchPlaceholder": "Search by name, SKU, manufacturer...",
+      "noResults": "No results found"
+    }
+  },
+
+  "dealChat": {
+    "tabs": {
+      "chat": "Chat",
+      "documents": "Documents"
+    },
+    "placeholder": "Write a message...",
+    "messages": {
+      "requestAccepted": "Good day! Request ZK-2026-0047 has been accepted.",
+      "whenQuote": "Thank you! When can we expect the quote?",
+      "rfqSent": "RFQ sent to factories. Expecting responses within 2-3 days.",
+      "alternatives": "Alright. For bearing 42726 — are there alternatives?",
+      "analogFound": "Yes, found an analog from SKF. We will include both options in the quote.",
+      "factoriesConfirmed": "Factories confirmed 3 out of 5 items",
+      "landedCostCalc": "Received responses from SAUT and RATEP. Starting Landed Cost calculation."
+    },
+    "docs": {
+      "request": "Request ZK-2026-0047.xlsx",
+      "smartMatch": "Smart Match results.pdf",
+      "rfq": "RFQ SAUT.pdf",
+      "quoteDraft": "Quote Draft.pdf"
+    }
+  },
+
+  "fab": {
+    "telegram": "Telegram",
+    "call": "Call",
+    "writeManager": "Write to manager",
+    "support": "Support"
+  },
+
+  "tour": {
+    "skip": "Skip",
+    "next": "Next",
+    "back": "Back",
+    "done": "Done",
+    "close": "Close",
+    "steps": {
+      "0": {
+        "title": "Product Catalog",
+        "description": "55 items of railway equipment, goods, and services. Switch domains and view modes."
+      },
+      "1": {
+        "title": "Purchase Request",
+        "description": "Import Excel with items. Smart Match automatically finds products in the catalog."
+      },
+      "2": {
+        "title": "Commercial Offer",
+        "description": "Landed Cost calculation: FCA + logistics + customs. Waterfall cost diagram."
+      },
+      "3": {
+        "title": "Quote Builder",
+        "description": "Full cost calculation with margin. Split by domains."
+      },
+      "4": {
+        "title": "Analytics & CRM",
+        "description": "Role-based dashboards, deal funnel, KPIs. One platform — three roles."
+      }
+    }
+  },
+
+  "error": {
+    "title": "System Interruption",
+    "defaultMessage": "An unexpected error has occurred in the application.",
+    "hardRefresh": "Hard Refresh",
+    "returnHome": "Return Home",
+    "supportId": "RailTech Technical Support ID"
+  },
+
+  "purchaseTemplates": {
+    "title": "Purchase Templates",
+    "subtitle": "Saved templates for quick reordering",
+    "createTemplate": "Create template",
+    "itemCount_one": "{{count}} item",
+    "itemCount_other": "{{count}} items",
+    "itemCount": "{{count}} items",
+    "lastOrder": "Last order",
+    "reorder": "Reorder",
+    "details": "Details",
+    "recentOrders": "Recent Orders",
+    "repeat": "Repeat",
+    "create": "Create",
+    "table": {
+      "number": "#",
+      "date": "Date",
+      "itemCount": "Items",
+      "amount": "Amount",
+      "status": "Status",
+      "action": "Action"
+    },
+    "dialog": {
+      "name": "Template name",
+      "namePlaceholder": "Enter template name",
+      "description": "Description",
+      "descriptionPlaceholder": "Enter template description"
+    }
+  },
+
+  "requestDetail": {
+    "title": "Request {{number}}",
+    "resetDemo": "Reset demo",
+    "reset": "Reset",
+    "importSummary": "Excel import · {{count}} items · {{date}}",
+    "steps": {
+      "submitted": "Request submitted",
+      "supplierProcessing": "Supplier processing",
+      "quoteReceived": "Quote received",
+      "deal": "Deal"
+    },
+    "stats": {
+      "matched": "Found in catalog",
+      "partial": "Partial match",
+      "notFound": "Not found"
+    },
+    "matchStatus": {
+      "matched": "Matched",
+      "partial": "Partial",
+      "notFound": "Not found"
+    },
+    "tabs": {
+      "items": "Request items ({{count}})",
+      "quote": "Commercial offer",
+      "deal": "Deal"
+    },
+    "table": {
+      "name": "Name",
+      "article": "SKU",
+      "gost": "GOST",
+      "unit": "Unit",
+      "quantity": "Qty",
+      "status": "Status",
+      "factory": "Factory",
+      "priceFCA": "FCA Price",
+      "rfq": "RFQ",
+      "factoryPrice": "Factory price",
+      "leadTime": "Lead time",
+      "priceExclVAT": "Price (excl. VAT)",
+      "priceInclVAT": "Price (incl. VAT)",
+      "totalInclVAT": "Total incl. VAT"
+    },
+    "quoteFrom": "Commercial offer from {{seller}}",
+    "quoteItemsSummary": "{{count}} items · {{date}}",
+    "status": {
+      "discountRequested": "Discount request sent",
+      "accepted": "Accepted",
+      "rejected": "Rejected"
+    },
+    "actions": {
+      "reject": "Reject",
+      "requestDiscount": "Request discount",
+      "acceptQuote": "Accept quote",
+      "acceptCurrentQuote": "Accept current quote",
+      "rejectQuote": "Reject quote",
+      "sendRequest": "Send request",
+      "takeInWork": "Take in work",
+      "sendRFQ": "Send RFQ to factories ({{count}} items)",
+      "simulateResponses": "Simulation: factories responded",
+      "calculateCost": "Calculate cost",
+      "sendQuoteToClient": "Send quote to client"
+    },
+    "totals": {
+      "exclVAT": "Total excl. VAT",
+      "vat": "VAT 12%",
+      "inclVAT": "Total incl. VAT"
+    },
+    "deal": {
+      "title": "Deal {{number}}",
+      "manager": "Manager: {{name}}",
+      "amount": "Deal amount",
+      "items": "Items",
+      "createdAt": "Created",
+      "nextStep": "Next step: contract signing and payment. Manager {{manager}} will contact you to finalize details."
+    },
+    "rejectDialog": {
+      "title": "Reject commercial offer",
+      "description": "Specify the reason for rejection",
+      "reason": "Reason",
+      "selectReason": "Select a reason",
+      "reasons": {
+        "expensive": "Too expensive — exceeds our budget",
+        "terms": "Delivery terms are unacceptable",
+        "partial": "Need a complete set (not all items included)",
+        "other": "Other reason"
+      },
+      "comment": "Comment",
+      "commentPlaceholder": "Additional notes..."
+    },
+    "negotiateDialog": {
+      "title": "Request discount",
+      "currentAmount": "Current quote amount: {{amount}} (incl. VAT)",
+      "desiredDiscount": "Desired discount (%)",
+      "estimatedAmount": "Estimated amount: {{amount}} (saving {{savings}})",
+      "justification": "Justification",
+      "justificationPlaceholder": "Order volume, long-term partnership, competitive offer..."
+    },
+    "seller": {
+      "client": "Client",
+      "itemsCount": "{{count}} items",
+      "inStock": "In stock",
+      "needRFQ": "Need RFQ",
+      "factoryResponses": "Factory responses",
+      "noAccess": "No access",
+      "marginLabel": "Margin %",
+      "warehouse": "Warehouse",
+      "leadDays": "{{days}} days"
+    },
+    "sellerSteps": {
+      "received": "Received",
+      "analysis": "Analysis",
+      "rfqFactories": "RFQ to factories",
+      "responses": "Responses",
+      "calculation": "Calculation",
+      "quoteToClient": "Quote to client"
+    },
+    "sellerTabs": {
+      "all": "All items ({{count}})",
+      "inStock": "In stock ({{count}})",
+      "rfq": "RFQ to factories ({{count}})",
+      "noAccess": "No access ({{count}})"
+    },
+    "rfqStatus": {
+      "waiting": "Waiting",
+      "sent": "Sent",
+      "responded": "Responded"
+    },
+    "cost": {
+      "title": "Cost calculation",
+      "fca": "FCA",
+      "logistics": "Logistics",
+      "customs": "Customs",
+      "margin": "Margin",
+      "vat": "VAT 12%",
+      "total": "TOTAL",
+      "purchaseFCA": "Purchase FCA",
+      "logisticsDAP": "+ Logistics DAP (8%)",
+      "customsDuty": "+ Customs duty (5%)",
+      "landedCostLabel": "= Landed Cost",
+      "marginWithPercent": "+ Margin ({{percent}}%)",
+      "subtotalExclVAT": "Subtotal excl. VAT",
+      "totalInclVAT": "TOTAL incl. VAT",
+      "structure": "Cost structure",
+      "amount": "Amount"
+    },
+    "manufacturer": {
+      "incomingRequests": "Incoming requests",
+      "noRequests": "No active requests from suppliers",
+      "noRequestsHint": "Requests will appear when a supplier sends an RFQ",
+      "rfqFrom": "RFQ from {{seller}}",
+      "itemsCount": "{{count}} items",
+      "priceAndTerms": "Price and terms request · Request {{number}}",
+      "filled": "Filled: {{responded}} of {{total}}",
+      "article": "SKU",
+      "gost": "GOST",
+      "qty": "Qty",
+      "priceFCA": "FCA Price ($)",
+      "leadTimeDays": "Lead time (days)",
+      "note": "Note",
+      "commentPlaceholder": "Comment",
+      "confirm": "Confirm",
+      "sent": "Sent"
+    }
+  },
+
+  "pages": {
+    "common": {
+      "sectionInDevelopment": "Section under development",
+      "comingSoon": "This feature will be available in the next update",
+      "items": "items",
+      "found": "found",
+      "uom": {
+        "pcs": "pcs",
+        "set": "set",
+        "kg": "kg",
+        "km": "km"
+      }
+    },
+    "sourcingRequests": {
+      "title": "Purchase Requests",
+      "description": "Manage incoming requests from clients",
+      "stats": {
+        "total": "Total requests",
+        "new": "New",
+        "inProgress": "In progress",
+        "completed": "Completed"
+      },
+      "createRequest": "Create request",
+      "activeRequests": "Active requests"
+    },
+    "sourcingImport": {
+      "title": "Excel Import",
+      "description": "Upload and parse client specifications",
+      "uploadFile": "Upload file",
+      "dragDrop": "Drag and drop Excel file here",
+      "orClick": "or click to upload",
+      "lastImport": "Last import",
+      "uploadedAgo": "Uploaded 15 min ago",
+      "status": {
+        "completed": "Completed"
+      },
+      "stats": {
+        "parsed": "Parsed",
+        "found": "Found",
+        "partial": "Partial"
+      },
+      "table": {
+        "number": "#",
+        "name": "Name",
+        "gost": "GOST",
+        "uom": "UOM",
+        "qty": "Qty",
+        "status": "Status"
+      },
+      "matchStatus": {
+        "found": "Found",
+        "partial": "Partial",
+        "notFound": "Not found"
+      }
+    },
+    "sourcingMatch": {
+      "title": "Smart Match",
+      "description": "Automatic mapping of unrecognized Excel items",
+      "stats": {
+        "unrecognized": "Unrecognized",
+        "matches": "Matches",
+        "needReview": "Need review",
+        "accuracy": "Accuracy"
+      }
+    },
+    "deals": {
+      "title": "Deals",
+      "description": "Sales funnel and deal lifecycle management",
+      "stats": {
+        "total": "All deals",
+        "active": "Active",
+        "quoteSent": "Quote sent",
+        "closedWon": "Closed (Won)"
+      },
+      "newDeal": "New deal",
+      "daysInStage": "days in stage",
+      "stages": {
+        "draft": "Draft",
+        "sourcing": "Sourcing",
+        "calculating": "Calculating",
+        "quoteSent": "Quote Sent",
+        "contractSigned": "Contract Signed",
+        "closedWon": "Closed (Won)",
+        "closedLost": "Closed (Lost)"
+      }
+    },
+    "quotes": {
+      "buyerTitle": "Commercial Offers",
+      "buyerDescription": "Received quotes from suppliers",
+      "sellerTitle": "Quotes",
+      "sellerDescription": "Quote Builder — Landed Cost calculation and quote generation",
+      "createQuote": "Create quote",
+      "stats": {
+        "total": "Total quotes",
+        "underReview": "Under review",
+        "accepted": "Accepted",
+        "totalAmount": "Total amount",
+        "drafts": "Drafts",
+        "sent": "Sent",
+        "approved": "Approved",
+        "pipeline": "Pipeline"
+      },
+      "status": {
+        "draft": "Draft",
+        "calculating": "Calculating",
+        "sent": "Sent",
+        "approved": "Approved",
+        "underReview": "Under review",
+        "accepted": "Accepted",
+        "expired": "Expired"
+      },
+      "table": {
+        "number": "Quote #",
+        "supplier": "Supplier",
+        "client": "Client",
+        "items": "Items",
+        "amount": "Amount",
+        "amountVat": "Amount (incl. VAT)",
+        "margin": "Margin",
+        "status": "Status",
+        "date": "Date",
+        "deadline": "Response deadline",
+        "actions": "Actions"
+      }
+    },
+    "clients": {
+      "title": "Clients",
+      "description": "Counterparty database and KYC verification",
+      "stats": {
+        "total": "Total",
+        "verified": "Verified",
+        "awaitingKyc": "Awaiting KYC",
+        "guests": "Guests"
+      },
+      "addClient": "Add client",
+      "table": {
+        "company": "Company",
+        "inn": "TIN",
+        "status": "Status",
+        "kyc": "KYC",
+        "deals": "Deals",
+        "lastActivity": "Last activity"
+      },
+      "statusLabel": {
+        "buyer": "Buyer",
+        "seller": "Supplier",
+        "manufacturer": "Manufacturer"
+      },
+      "kycStatus": {
+        "verified": "Verified",
+        "pending": "Pending"
+      }
+    },
+    "productionOrders": {
+      "title": "Incoming Orders",
+      "description": "Price and terms requests from partner suppliers",
+      "stats": {
+        "active": "Active",
+        "awaitingResponse": "Awaiting response",
+        "responded": "Responded",
+        "overdue": "Overdue"
+      },
+      "partnerRequests": "Requests from partners"
+    },
+    "productionSchedule": {
+      "title": "Production Schedule",
+      "description": "Production planning and deadline control",
+      "stats": {
+        "activeOrders": "Active orders",
+        "completed": "Completed",
+        "delayed": "Delayed",
+        "nextWeek": "Next week"
+      },
+      "deadline": "Deadline",
+      "progress": "Progress",
+      "status": {
+        "inProduction": "In production",
+        "finishing": "Finishing"
+      }
+    },
+    "analytics": {
+      "sellerTitle": "Sales Analytics",
+      "sellerDescription": "Commercial analytics and reports",
+      "manufacturerTitle": "Production Analytics",
+      "manufacturerDescription": "Production analytics and utilization",
+      "buyerTitle": "Procurement Analytics",
+      "buyerDescription": "Spending, suppliers and procurement efficiency",
+      "stats": {
+        "conversion": "Conversion",
+        "avgDeal": "Avg. deal",
+        "pipeline": "Pipeline",
+        "winRate": "Win Rate"
+      },
+      "conversionFunnel": "Conversion Funnel",
+      "revenueByMonth": "Revenue by Month",
+      "spendByMonth": "Spending by Month ($K)",
+      "spendStructure": "Procurement Structure",
+      "supplierRating": "Supplier Rating",
+      "supplierRatingDesc": "By procurement volume over the last 6 months",
+      "supplierDays": "{{count}} days",
+      "months": {
+        "sep": "Sep",
+        "oct": "Oct",
+        "nov": "Nov",
+        "dec": "Dec",
+        "jan": "Jan",
+        "feb": "Feb"
+      },
+      "funnel": {
+        "incomingRequests": "Incoming requests",
+        "quoteSent": "Quote sent",
+        "approved": "Approved",
+        "deal": "Deal"
+      },
+      "categories": {
+        "railwayEquipment": "Railway equipment",
+        "spareParts": "Spare parts",
+        "rawMaterials": "Raw materials",
+        "services": "Services"
+      },
+      "buyerStats": {
+        "spendPeriod": "Spending for period",
+        "savings": "Savings",
+        "activeRequests": "Active requests",
+        "avgDelivery": "Avg. delivery time"
+      },
+      "supplierTable": {
+        "supplier": "Supplier",
+        "orders": "Orders",
+        "amount": "Amount",
+        "avgDelivery": "Avg. delivery",
+        "rating": "Rating"
+      }
+    },
+    "categories": {
+      "title": "Categories",
+      "description": "Manage nomenclature category tree",
+      "addCategory": "Add category",
+      "items": {
+        "railwayTech": "Railway Equipment",
+        "tractionRollingStock": "Traction rolling stock",
+        "ted": "TED",
+        "dieselLocos": "Diesel locomotives",
+        "electricLocos": "Electric locomotives",
+        "brakeEquipment": "Brake equipment",
+        "cylinders": "Cylinders",
+        "valves": "Valves",
+        "hoses": "Hoses",
+        "materials": "Materials",
+        "nonFerrousMetals": "Non-ferrous metals",
+        "babbits": "Babbits",
+        "bronze": "Bronze",
+        "tin": "Tin",
+        "metalProducts": "Metal products",
+        "assortment": "Assortment",
+        "round": "Round bar",
+        "strip": "Strip",
+        "pipe": "Pipe",
+        "profile": "Profile",
+        "electricalEquipment": "Electrical equipment",
+        "cableProducts": "Cable products",
+        "wires": "Wires",
+        "cables": "Cables",
+        "couplings": "Couplings",
+        "generatingEquipment": "Generating equipment",
+        "generators": "Generators",
+        "transformers": "Transformers"
+      }
+    },
+    "equipmentGroups": {
+      "title": "Equipment Groups",
+      "description": "Railway equipment hierarchy: Type → Series → Unit",
+      "addGroup": "Add group",
+      "series": "Series",
+      "components": "Components",
+      "items": {
+        "electricLocos": "Electric locomotives",
+        "dieselLocos": "Diesel locomotives",
+        "freightWagons": "Freight wagons",
+        "passengerWagons": "Passenger wagons"
+      }
+    },
+    "integrations": {
+      "title": "Integrations",
+      "description": "Connect external services, APIs and ERP systems",
+      "stats": {
+        "connected": "Connected",
+        "pending": "Pending",
+        "availableApis": "Available APIs",
+        "syncedRecords": "Synced records"
+      },
+      "apiDocs": "API documentation",
+      "addIntegration": "Add integration",
+      "processed": "Processed",
+      "settings": "Settings",
+      "finishSetup": "Finish setup",
+      "connect": "Connect",
+      "syncAgo": "{{time}} min ago",
+      "realtime": "Realtime",
+      "messages": "{{count}} messages",
+      "emails": "{{count}} emails",
+      "statusLabel": {
+        "connected": "Connected",
+        "configuring": "Configuring...",
+        "disconnected": "Disconnected"
+      },
+      "items": {
+        "1c": "Two-way sync of catalog, inventory and orders",
+        "sap": "Corporate ERP integration: procurement, warehouse, finance",
+        "telegram": "Notifications to managers about new deals, requests and stages",
+        "email": "Send quotes, invoices and documents to clients via corporate email",
+        "asan": "Electronic digital signature for contracts and quotes (Uzbekistan)",
+        "uzum": "Payment acceptance and automatic reconciliation"
+      }
+    },
+    "help": {
+      "title": "Help & Support",
+      "description": "Documentation, FAQ and technical support contacts",
+      "needHelp": "Need help?",
+      "supportHours": "Our technical support operates Mon-Fri 09:00-18:00 (UTC+5). Average response time is 30 minutes.",
+      "contactSupport": "Contact support",
+      "sections": {
+        "gettingStarted": "Getting Started",
+        "procurement": "Procurement & Requests",
+        "quotesAndPricing": "Quotes & Pricing",
+        "securityAndAccess": "Security & Access"
+      },
+      "quickActions": {
+        "apiDocs": "API Documentation",
+        "apiDocsDesc": "Swagger, REST endpoints, webhooks",
+        "telegramSupport": "Telegram Support",
+        "telegramSupportDesc": "Response within 30 minutes",
+        "emailSupport": "Email Support"
+      },
+      "faq": {
+        "howRegister": "How to register a company?",
+        "howRegisterAnswer": "Fill out the registration form, select your company status (Buyer, Seller, or Manufacturer) and wait for administrator confirmation. Verification usually takes 1-2 business days.",
+        "howAddEmployees": "How to add employees?",
+        "howAddEmployeesAnswer": "Go to Settings > Users. Click 'Add user', enter email and role (Manager or Employee). An invitation will be sent to their email.",
+        "howSwitchStatus": "How to switch company status?",
+        "howSwitchStatusAnswer": "Use the toggle in the left sidebar. Each status has its own set of features and navigation adapted to your tasks.",
+        "howCreateRequest": "How to create a purchase request?",
+        "howCreateRequestAnswer": "Go to the Catalog, select the products you need and click 'Add to request'. Or import a list from Excel via the 'Excel Import' section. Smart Match will automatically find matches in the catalog.",
+        "excelFormats": "What Excel formats are supported?",
+        "excelFormatsAnswer": "Files in .xlsx and .xls formats are supported. The table must contain columns: Name, SKU (or GOST), Quantity, Unit of Measure. XLSX is recommended for best compatibility.",
+        "whatIsSmartMatch": "What is Smart Match?",
+        "whatIsSmartMatchAnswer": "Smart Match is an automatic matching algorithm for Excel items against the catalog. It searches by SKU, GOST, name and equipment group, returning results: Found, Partial, Not Found.",
+        "howLandedCost": "How is Landed Cost calculated?",
+        "howLandedCostAnswer": "FCA Base Price + DAP Logistics (8%) + Customs Duty (5%) = Landed Cost. Then: Landed Cost x (1 + Margin%) = Price excl. VAT x 1.12 = Total incl. VAT (12% Uzbekistan).",
+        "canEditSentQuote": "Can I edit a sent quote?",
+        "canEditSentQuoteAnswer": "Yes, but this will create a new version (v2, v3...). Old versions are kept in the archive for audit. The client will see the latest version.",
+        "howRequestDiscount": "How to request a discount?",
+        "howRequestDiscountAnswer": "When viewing a quote, click 'Request discount', enter the desired percentage and comment. The seller will receive a notification and can recalculate the quote.",
+        "whatRoles": "What roles are available?",
+        "whatRolesAnswer": "Administrator — full access and management. Manager — business operations: deals, procurement, quotes. Employee — limited view.",
+        "howResetPassword": "How to reset password?",
+        "howResetPasswordAnswer": "Click 'Forgot password?' on the login page. A recovery link will be sent to your registered email."
+      }
+    },
+    "myRequests": {
+      "title": "My Requests",
+      "description": "Track your requests and orders",
+      "stats": {
+        "active": "Active",
+        "quoteReceived": "Quote received",
+        "contract": "Contract",
+        "completed": "Completed"
+      },
+      "newRequest": "New request",
+      "recentRequests": "Recent requests"
+    },
+    "documents": {
+      "title": "Documents",
+      "description": "Quotes, contracts and closing documents",
+      "uploadDocument": "Upload document",
+      "types": {
+        "quote": "Quote",
+        "contract": "Contract",
+        "act": "Act",
+        "invoice": "Invoice"
+      },
+      "status": {
+        "sent": "Sent",
+        "signed": "Signed",
+        "archive": "Archive",
+        "pendingPayment": "Pending payment",
+        "draft": "Draft",
+        "forSignature": "For signature"
+      },
+      "table": {
+        "type": "Type",
+        "number": "Number",
+        "date": "Date",
+        "counterparty": "Counterparty",
+        "status": "Status",
+        "amount": "Amount",
+        "actions": "Actions"
+      }
+    },
+    "logistics": {
+      "title": "Logistics",
+      "description": "Shipment tracking and transportation management",
+      "stats": {
+        "inTransit": "In transit",
+        "customs": "At customs",
+        "delivered": "Delivered",
+        "delays": "Delays"
+      },
+      "newShipment": "New shipment",
+      "departure": "Departure",
+      "arrival": "Arrival",
+      "carrier": "Carrier",
+      "statusLabel": {
+        "inTransit": "In transit",
+        "customs": "At customs",
+        "delivered": "Delivered"
+      }
+    },
+    "adminUsers": {
+      "title": "Company Users",
+      "description": "Manage employees, roles and access delegation",
+      "stats": {
+        "total": "Total",
+        "admins": "Administrators",
+        "managers": "Managers",
+        "employees": "Employees"
+      },
+      "inviteUser": "Invite user",
+      "roles": {
+        "admin": "Administrator",
+        "salesManager": "Sales Manager",
+        "employee": "Employee"
+      },
+      "statusLabel": {
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "table": {
+        "name": "Name",
+        "email": "Email",
+        "role": "Role",
+        "status": "Status",
+        "lastLogin": "Last login",
+        "actions": "Actions"
+      }
+    }
+  },
+
+  "shell": {
+    "nav": {
+      "crmDeals": "Deals (CRM)",
+      "catalog": "Catalog (PIM)",
+      "smartMatch": "Smart Match",
+      "kycManager": "KYC Manager",
+      "systemControl": "System Control"
+    },
+    "sections": {
+      "commerce": "Commerce",
+      "infrastructure": "Infrastructure"
+    },
+    "systemAdmin": "System Admin",
+    "signOut": "Sign Out",
+    "breadcrumb": {
+      "main": "Main"
+    },
+    "globalSearch": "Global Search (Alt+S)..."
+  },
+
+  "error": {
+    "title": "Something went wrong",
+    "description": "An unexpected error occurred. Try reloading the page.",
+    "goHome": "Go home",
+    "reload": "Reload"
+  },
+
+  "dealSplit": {
+    "stageLabel": "Stage",
+    "docsComingSoon": "Upload of contracts, specifications, and invoices will be available in the next version.",
+    "stages": {
+      "NEW": "New Inquiry",
+      "SOURCING": "Sourcing Suppliers",
+      "CALCULATING": "Pricing Analysis",
+      "QUOTE_SENT": "Quote Sent",
+      "CONTRACT_SIGNED": "Contract Signed",
+      "CLOSED_LOST": "Closed Lost"
+    }
+  }
+}

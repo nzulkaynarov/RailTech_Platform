@@ -1,0 +1,1828 @@
+{
+  "common": {
+    "loading": "Загрузка...",
+    "error": "Произошла ошибка",
+    "save": "Сохранить",
+    "cancel": "Отмена",
+    "delete": "Удалить",
+    "search": "Поиск",
+    "filters": "Фильтры",
+    "reset": "Сбросить",
+    "close": "Закрыть",
+    "noData": "Нет данных",
+    "showMore": "Показать ещё",
+    "copyright": "© {{year}} ООО «RailTech»",
+    "corporateSite": "Корпоративный сайт",
+    "open": "Открыть",
+    "add": "Добавить",
+    "send": "Отправить",
+    "update": "Обновить",
+    "updating": "Обновление..."
+  },
+
+  "auth": {
+    "loginTitle": "Вход в кабинет",
+    "loginSubtitle": "Введите данные для доступа к платформе",
+    "emailLabel": "Email / ИНН",
+    "emailPlaceholder": "user@company.com",
+    "passwordLabel": "Пароль",
+    "passwordPlaceholder": "••••••••",
+    "submitButton": "Войти в кабинет",
+    "loginError": "Неверный логин или пароль",
+    "genericError": "Ошибка входа. Попробуйте позже.",
+    "newCompany": "Новая компания?",
+    "registerLink": "Пройти регистрацию по ИНН",
+    "forgotPassword": "Забыли пароль?",
+    "showPassword": "Показать пароль",
+    "hidePassword": "Скрыть пароль",
+    "login": "Войти"
+  },
+
+  "landing": {
+    "heroTitle": "Единая цифровая среда для <highlight>комплексного снабжения</highlight>",
+    "heroSubtitle": "RailTech B2B Ecosystem автоматизирует закупки промышленного оборудования. Доступ к официальным КП, прозрачной логистике и защищённому документообороту.",
+    "featureSmartMatch": "Smart Match Импорт",
+    "featureSmartMatchDesc": "Загружайте Excel-спецификации. Наш алгоритм распознает позиции и заполнит запрос автоматически.",
+    "featureUnitEconomics": "Глубокая юнит-экономика",
+    "featureUnitEconomicsDesc": "Прозрачный расчёт Landed Cost (FCA + DAP + Таможня) для каждого товара."
+  },
+
+  "catalog": {
+    "title": "Каталог продукции",
+    "searchPlaceholder": "Поиск по артикулу, названию или ГОСТ...",
+    "gridView": "Плитка",
+    "tableView": "Таблица",
+    "totalItems": "{{count}} позиций",
+    "noResults": "Ничего не найдено",
+    "noResultsHint": "Попробуйте изменить параметры поиска или сбросить фильтры",
+    "emptyState": "Каталог пуст",
+    "emptyStateHint": "Товары ещё не добавлены. Обратитесь к менеджеру.",
+    "priceHidden": "Цены доступны после верификации",
+    "sidebar": {
+      "allProducts": "Все товары",
+      "domain": "Раздел",
+      "collapse": "Свернуть меню",
+      "expand": "Развернуть меню",
+      "noCategories": "Нет категорий"
+    },
+    "density": {
+      "comfortable": "Крупно",
+      "normal": "Обычный",
+      "compact": "Компактно"
+    },
+    "filters": {
+      "category": "Категория",
+      "manufacturer": "Производитель",
+      "equipmentGroup": "Группа оборудования",
+      "stockStatus": "Наличие",
+      "allCategories": "Все категории",
+      "allManufacturers": "Все производители",
+      "activeFilters": "{{count}} фильтров активно"
+    },
+    "stock": {
+      "IN_STOCK": "В наличии",
+      "ON_ORDER": "Под заказ",
+      "EXPECTED": "Ожидается",
+      "OUT_OF_STOCK": "Нет в наличии",
+      "inStock": "В наличии",
+      "onOrder": "Под заказ",
+      "expected": "Ожидается"
+    },
+    "table": {
+      "name": "Наименование",
+      "sku": "Артикул",
+      "manufacturer": "Производитель",
+      "origin": "Страна",
+      "stock": "Наличие",
+      "price": "Цена",
+      "unit": "Ед. изм.",
+      "selected": "Выбрано: {{count}}",
+      "addToRequest": "Добавить в запрос ({{count}})",
+      "exportCSV": "Экспорт CSV",
+      "clearSelection": "Снять выделение",
+      "defaultUnit": "шт"
+    },
+    "card": {
+      "verified": "Верифицирован",
+      "priceOnRequest": "Цена по запросу",
+      "requestQuote": "Запросить КП →"
+    },
+    "recentSearches": "Недавние запросы",
+    "productDetail": {
+      "specifications": "Характеристики",
+      "description": "Описание",
+      "documents": "Документы",
+      "noImage": "Нет изображения",
+      "noSpecifications": "Характеристики не указаны",
+      "addToRequest": "Добавить в запрос",
+      "priceFCA": "Цена FCA",
+      "priceRestricted": "Доступно после верификации"
+    }
+  },
+
+  "domains": {
+    "RAILWAY_MACHINERY": "Железнодорожное оборудование",
+    "GENERAL_GOODS": "Общепромышленные товары",
+    "SERVICES": "Услуги",
+    "short": {
+      "RAILWAY_MACHINERY": "Ж/Д оборудование",
+      "GENERAL_GOODS": "Пром. товары",
+      "SERVICES": "Услуги"
+    }
+  },
+
+  "dashboard": {
+    "welcome": "Добро пожаловать, {{name}}",
+    "kpi": {
+      "registryVolume": "Объём реестра",
+      "activePipeline": "Активные сделки",
+      "closedDeals": "Закрытые сделки",
+      "economicExposure": "Экономическая экспозиция"
+    },
+    "deals": {
+      "title": "Активные сделки",
+      "noDealSelected": "Выберите сделку из списка слева",
+      "emptyState": "У вас пока нет сделок",
+      "emptyStateHint": "Создайте первый запрос на коммерческое предложение",
+      "createRFQ": "Создать запрос КП",
+      "bulkImport": "Импорт из Excel",
+      "complianceData": "Данные комплаенса",
+      "createError": "Ошибка создания сделки"
+    },
+    "stages": {
+      "NEW": "Новая",
+      "QUOTING": "КП",
+      "NEGOTIATION": "Переговоры",
+      "CONTRACT_SIGNED": "Договор подписан",
+      "IN_DELIVERY": "В доставке",
+      "CLOSED_WON": "Закрыта (успех)",
+      "CLOSED_LOST": "Закрыта (отказ)"
+    },
+    "quickActions": "Быстрые действия"
+  },
+
+  "kyc": {
+    "banner": {
+      "unverified": "Пройдите верификацию для доступа ко всем функциям",
+      "verified": "Аккаунт верифицирован",
+      "contracted": "Договор заключён",
+      "action": "Начать верификацию"
+    },
+    "status": {
+      "L1_UNVERIFIED": "Не верифицирован",
+      "PROFILE_SUBMITTED": "Профиль на проверке",
+      "L2_VERIFIED": "Верифицирован",
+      "L3_CONTRACTED": "Договор"
+    }
+  },
+
+  "sourcing": {
+    "title": "Импорт спецификаций",
+    "uploadTitle": "Загрузить файл",
+    "uploadHint": "Перетащите Excel-файл сюда или нажмите для выбора",
+    "uploadError": "Не удалось загрузить файл. Проверьте формат (.xlsx, .xls).",
+    "searchPlaceholder": "Поиск по названиям позиций...",
+    "processing": "Обработка файла...",
+    "matchFound": "Совпадение найдено",
+    "noMatch": "Совпадение не найдено",
+    "assignProduct": "Назначить товар",
+    "itemName": "Наименование",
+    "matchStatus": "Статус совпадения"
+  },
+
+  "quote": {
+    "title": "Коммерческое предложение",
+    "subtotal": "Промежуточный итог",
+    "vat": "НДС 12% (Узбекистан)",
+    "total": "Итого с НДС",
+    "margin": "Маржа",
+    "landedCost": "Стоимость доставки",
+    "basePrice": "Базовая цена FCA",
+    "unsavedChanges": "Есть несохранённые изменения",
+    "unsavedChangesDesc": "У вас есть несохранённые изменения. Нажмите Сохранить для их применения.",
+    "logistics": "Логистика",
+    "quantityHelp": "Количество / Единицы",
+    "basePriceHelp": "Базовая цена FCA за единицу",
+    "logisticsHelp": "Стоимость логистики DAP за единицу",
+    "customsDutyHelp": "Таможенная пошлина за единицу",
+    "landedCostHelp": "Базовая + Логистика + Таможня",
+    "marginHelp": "Процент маржи к Landed Cost",
+    "deleteItem": "Удалить позицию?",
+    "addItemPlaceholder": "Наименование позиции...",
+    "builder": "Конструктор коммерческого предложения",
+    "subtotalExclVAT": "Итого без НДС",
+    "vatPercent": "НДС 12%",
+    "totalInclVAT": "Итого с НДС",
+    "avgMargin": "Средняя маржа",
+    "totalItems": "Всего позиций",
+    "totalItemsUnit": "{{count}} ед.",
+    "noItemsInCategory": "Нет позиций в данной категории",
+    "priceFCA": "Цена FCA ($)",
+    "logisticsCost": "Логистика",
+    "customsDuty": "Таможня",
+    "priceExclVAT": "Цена без НДС",
+    "priceInclVAT": "Цена с НДС",
+    "article": "Артикул",
+    "gost": "ГОСТ",
+    "unitShort": "Ед.",
+    "quantity": "Кол-во",
+    "marginPercent": "Маржа %",
+    "lineTotal": "Итого"
+  },
+
+  "admin": {
+    "dashboard": {
+      "title": "Панель управления",
+      "systemHealth": "Состояние системы",
+      "totalUsers": "Пользователи",
+      "totalProducts": "Товары",
+      "quickAccess": "Быстрый доступ",
+      "recentActivity": "Последние события",
+      "viewAllLogs": "Все события"
+    },
+    "nomenclature": {
+      "title": "Номенклатура",
+      "importExcel": "Импорт из Excel",
+      "masterTitle": "Master",
+      "masterHighlight": "Nomenclature",
+      "subtitle": "Global Product Registry & Taxonomy Control",
+      "batchSync": "Batch Sync",
+      "createSKU": "Create SKU",
+      "searchPlaceholder": "SEARCH_BY_SKU_OR_NAME...",
+      "syncingData": "Synchronizing Registry Data...",
+      "emptyState": "Registry entry not found for current filter set",
+      "universal": "UNIVERSAL",
+      "confirmDelete": "Confirm removal of this master record?",
+      "confirmBulkDelete": "Delete {{count}} records permanently?",
+      "operationFailed": "Ошибка операции",
+      "bulkOperationFailed": "Ошибка массовой операции",
+      "selected": "{{count}} SELECTED",
+      "columns": {
+        "objectDescription": "OBJECT_DESCRIPTION / SKU",
+        "domainSegment": "DOMAIN_SEGMENT",
+        "baseValue": "BASE_VALUE (FCA)",
+        "eqGroups": "EQ_GROUPS / SERIES",
+        "actions": "PROTO_ACTIONS"
+      }
+    },
+    "users": {
+      "title": "Управление пользователями"
+    },
+    "profile": {
+      "title": "Мой",
+      "titleHighlight": "Профиль",
+      "subtitle": "Управление личными данными и безопасностью",
+      "personalData": "Личные данные",
+      "security": "Безопасность",
+      "accountVerified": "Аккаунт подтвержден",
+      "fullAccess": "Полный доступ (L4)",
+      "mainData": "Основные данные",
+      "firstName": "Имя",
+      "lastName": "Фамилия",
+      "workEmail": "Рабочий Email",
+      "phone": "Телефон",
+      "saveProfile": "Сохранить профиль",
+      "profileUpdated": "Профиль успешно обновлен!",
+      "profileSaveError": "Ошибка при сохранении профиля",
+      "changePassword": "Изменение пароля",
+      "currentPassword": "Текущий пароль",
+      "newPassword": "Новый пароль",
+      "confirmPassword": "Подтвердите пароль",
+      "updatePassword": "Обновить пароль",
+      "passwordChanged": "Пароль успешно изменен!",
+      "passwordChangeError": "Ошибка при смене пароля",
+      "passwordMismatch": "Пароли не совпадают",
+      "superAdmin": "Super Administrator"
+    },
+    "systemSettings": {
+      "title": "Настройки",
+      "titleHighlight": "Системы",
+      "subtitle": "Глобальные параметры платформы и интеграции",
+      "saveNotAvailable": "Сохранение настроек будет доступно в следующей версии. Текущие параметры применяются из серверной конфигурации.",
+      "settingsSaved": "Настройки успешно сохранены!",
+      "saveChanges": "Сохранить изменения",
+      "tabs": {
+        "finance": "Финансы & Налоги",
+        "platform": "Параметры сайта",
+        "security": "Безопасность",
+        "notifications": "Уведомления"
+      },
+      "finance": {
+        "title": "Финансы & НДС",
+        "vatRate": "Ставка НДС (Узбекистан)",
+        "standardMargin": "Стандартная Маржа",
+        "exchangeRate": "Курс USD к UZS (Авто)",
+        "vatWarning": "Изменение налоговой ставки повлияет на расчет Landed Cost во всех новых сделках."
+      },
+      "platform": {
+        "title": "Параметры сайта",
+        "maintenance": "Техническое обслуживание",
+        "maintenanceDesc": "Закрыть публичный доступ на время работ",
+        "platformName": "Название платформы"
+      },
+      "security": {
+        "title": "Безопасность",
+        "twoFactor": "Двухфакторная аутентификация",
+        "twoFactorDesc": "Обязательно для всех менеджеров",
+        "resetSessions": "Сбросить все сессии пользователей"
+      }
+    }
+  },
+
+  "notifications": {
+    "title": "Уведомления",
+    "empty": "Уведомлений нет",
+    "emptyHint": "Здесь появятся события по сделкам и системные оповещения",
+    "markAllRead": "Всё прочитано",
+    "unread": "Непрочитанных: {{count}}",
+    "viewAll": "Все уведомления"
+  },
+
+  "cart": {
+    "title": "Корзина",
+    "empty": "Корзина пуста",
+    "emptyHint": "Добавьте товары из каталога",
+    "addToCart": "В корзину",
+    "addedToCart": "Добавлено",
+    "remove": "Удалить",
+    "clear": "Очистить корзину",
+    "itemsCount": "{{count}} позиций",
+    "increase": "Увеличить количество",
+    "decrease": "Уменьшить количество",
+    "requestQuote": "Запросить КП",
+    "requestHint": "Наш менеджер свяжется с вами в течение 1 рабочего дня"
+  },
+
+  "nav": {
+    "home": "Главная",
+    "catalog": "Каталог",
+    "cabinet": "Личный кабинет",
+    "deals": "Сделки",
+    "profile": "Профиль",
+    "sourcing": "Импорт",
+    "analytics": "Аналитика",
+    "kycManager": "KYC",
+    "users": "Пользователи",
+    "nomenclature": "Номенклатура",
+    "settings": "Настройки",
+    "logout": "Выйти",
+    "corporateSite": "Корпоративный сайт",
+    "companyName": "ООО «RailTech»",
+    "operationsCenter": "Operations Center",
+    "dashboard": "Дашборд",
+    "crmDeals": "Сделки CRM",
+    "quotePricing": "Расчёт Цен"
+  },
+
+  "chat": {
+    "title": "Обсуждение сделки",
+    "placeholder": "Введите сообщение...",
+    "emptyState": "Начните обсуждение по этой сделке",
+    "send": "Отправить",
+    "connectionLost": "Соединение потеряно. Переподключение...",
+    "connected": "Подключено"
+  },
+
+  "task": {
+    "excelImport": "Импорт Excel",
+    "catalogUpdate": "Обновление каталога",
+    "processing": "Обработка файла...",
+    "success": "Обработка завершена",
+    "failure": "Ошибка импорта",
+    "completed": "Готово",
+    "initializing": "Подготовка...",
+    "progress": "Прогресс"
+  },
+
+  "errors": {
+    "network": "Ошибка сети. Проверьте подключение к интернету.",
+    "unauthorized": "Сессия истекла. Войдите снова.",
+    "forbidden": "У вас нет доступа к этому разделу.",
+    "notFound": "Страница не найдена.",
+    "server": "Ошибка сервера. Попробуйте позже.",
+    "uploadFailed": "Не удалось загрузить файл: {{reason}}",
+    "validationFailed": "Проверьте правильность заполнения полей.",
+    "unknown": "Произошла неизвестная ошибка.",
+    "operationFailed": "Операция не выполнена",
+    "uploadFailure": "Ошибка загрузки"
+  },
+
+  "team": {
+    "title": "Команда компании",
+    "subtitle": "Управляйте доступами сотрудников к кабинету",
+    "employee": "Сотрудник",
+    "role": "Роль",
+    "status": "Статус",
+    "itsYou": "(Это вы)",
+    "active": "Активен",
+    "noMembers": "Нет сотрудников",
+    "invite": "Пригласить сотрудника",
+    "emailPlaceholder": "Email сотрудника",
+    "inviteSuccess": "Пользователь {{email}} успешно приглашен.",
+    "inviteError": "Ошибка при приглашении.",
+    "ownerOnly": "Только Владелец компании может приглашать новых сотрудников.",
+    "roles": {
+      "OWNER": "Владелец",
+      "ACCOUNTANT": "Бухгалтер",
+      "MANAGER": "Снабженец"
+    },
+    "roleOptions": {
+      "MANAGER": "Снабженец (Создание заявок)",
+      "ACCOUNTANT": "Бухгалтер (Акты, Счета)"
+    }
+  },
+
+  "company": {
+    "title": "Профиль",
+    "titleHighlight": "компании",
+    "subtitle": "Реквизиты, KYC статус и документы",
+    "details": "Реквизиты компании",
+    "name": "Название компании",
+    "inn": "ИНН",
+    "mfo": "МФО",
+    "bankAccount": "Расчётный счёт",
+    "contactPerson": "Контактное лицо",
+    "legalAddress": "Юридический адрес",
+    "noCompany": "Компания не привязана к вашему аккаунту.\nОбратитесь к менеджеру.",
+    "kycDocuments": "KYC Документы",
+    "docCount": "{{count}} шт.",
+    "noDocuments": "Нет загруженных документов",
+    "deleteConfirm": "Удалить документ?",
+    "deleteDocError": "Ошибка удаления документа",
+    "uploadError": "Ошибка загрузки документа",
+    "uploading": "Загрузка...",
+    "uploadDoc": "Загрузить документ",
+    "manager": "Ваш менеджер",
+    "managerHint": "По вопросам верификации и цен обращайтесь:",
+    "status": {
+      "L1_UNVERIFIED": "Ожидает верификации (L1)",
+      "PROFILE_SUBMITTED": "Профиль на проверке",
+      "L2_VERIFIED": "KYC Пройден (L2)",
+      "L3_CONTRACTED": "Партнёр (L3)"
+    },
+    "statusHint": {
+      "unverified": "Загрузите устав компании и паспорт директора для прохождения верификации",
+      "verified": "Ваш аккаунт успешно верифицирован менеджером RailTech"
+    },
+    "docTypes": {
+      "CHARTER": "Устав компании",
+      "LICENSE": "Лицензия",
+      "PASSPORT": "Паспорт директора",
+      "TAX_CERT": "Свид. налоговой регистрации",
+      "OTHER": "Другой документ"
+    }
+  },
+
+  "profileForm": {
+    "title": "Профиль компании",
+    "step": "Шаг 3 из 4: Последние детали",
+    "companyName": "Название организации",
+    "companyNamePlaceholder": "ООО / ИП Название",
+    "innLabel": "ИНН Компании",
+    "innPlaceholder": "9 цифр",
+    "roleLabel": "Ваша роль в компании",
+    "rolePlaceholder": "Выберите роль",
+    "roleOwner": "Владелец / Основатель",
+    "roleManager": "Снабженец / Закупщик",
+    "roleAccountant": "Бухгалтер",
+    "submit": "Отправить на верификацию",
+    "saveError": "Ошибка при сохранении профиля. Проверьте ИНН.",
+    "validation": {
+      "minChars": "Минимум 2 символа",
+      "innFormat": "ИНН должен содержать ровно 9 цифр",
+      "selectRole": "Выберите роль"
+    }
+  },
+
+  "passwordSetup": {
+    "title": "Установка пароля",
+    "step": "Шаг 2 из 4",
+    "newPassword": "Новый пароль",
+    "newPasswordPlaceholder": "Введите пароль",
+    "confirmPassword": "Подтвердите пароль",
+    "confirmPasswordPlaceholder": "Повторите пароль",
+    "submit": "Активировать аккаунт",
+    "invalidLink": "Ссылка недействительна или просрочена.",
+    "setupError": "Произошла ошибка при установке пароля.",
+    "success": "Пароль установлен!",
+    "successHint": "Ваш аккаунт успешно активирован. Теперь вы можете войти в систему.",
+    "goToLogin": "Перейти к входу",
+    "validation": {
+      "minLength": "Пароль должен быть не менее 8 символов.",
+      "confirm": "Подтвердите пароль.",
+      "mismatch": "Пароли не совпадают."
+    }
+  },
+
+  "registration": {
+    "title": "Регистрация в RailTech",
+    "subtitle": "Безопасный старт в B2B экосистеме",
+    "stepContact": "Шаг 1: Контактные данные",
+    "firstName": "Имя",
+    "firstNamePlaceholder": "Имя",
+    "lastName": "Фамилия",
+    "lastNamePlaceholder": "Фамилия",
+    "emailLabel": "Рабочий Email",
+    "emailPlaceholder": "Рабочий Email",
+    "submit": "Зарегистрироваться",
+    "genericError": "Ошибка регистрации. Проверьте данные.",
+    "emailSent": "Письмо отправлено!",
+    "emailSentHint": "Мы отправили ссылку для подтверждения на <strong>{{email}}</strong>. Пожалуйста, проверьте вашу почту (включая папку Спам) для продолжения.",
+    "waitHint": "Ожидаете ссылку? Обычно она приходит в течение 1-2 минут.",
+    "backToLogin": "Вернуться к входу",
+    "validation": {
+      "email": "Введите корректный email",
+      "minChars": "Минимум 2 символа"
+    }
+  },
+
+  "nomenclaturePanel": {
+    "editTitle": "Редактировать товар",
+    "createTitle": "Новый товар",
+    "editDescription": "Редактирование SKU: {{sku}}",
+    "editDescriptionNoSku": "SKU не назначен",
+    "createDescription": "Заполните данные товара ниже.",
+    "productName": "Название товара",
+    "productNamePlaceholder": "Введите название товара",
+    "sku": "SKU",
+    "domainType": "Тип домена",
+    "domainPlaceholder": "Выберите домен",
+    "category": "Категория",
+    "categoryPlaceholder": "Выберите категорию",
+    "noCategory": "Без категории",
+    "description": "Описание",
+    "descriptionPlaceholder": "Описание товара...",
+    "basePrice": "Базовая цена (FCA)",
+    "currency": "Валюта",
+    "currencyPlaceholder": "Валюта",
+    "uom": "Единица измерения",
+    "uomPlaceholder": "Выберите единицу",
+    "gostDrawing": "ГОСТ / Чертёж",
+    "gostPlaceholder": "ГОСТ XXXXX-YY / Номер чертежа",
+    "equipmentSeries": "Привязка к сериям оборудования",
+    "searchSeries": "Поиск серии (напр. ТЭМ2, ЧМЭ3...)",
+    "noGroups": "Группы оборудования не найдены",
+    "railwayGroupRequired": "Для ж/д домена требуется минимум одна группа оборудования.",
+    "saveChanges": "Сохранить",
+    "createProduct": "Создать товар",
+    "validation": {
+      "nameRequired": "Название товара обязательно",
+      "priceRequired": "Базовая цена обязательна"
+    }
+  },
+
+  "userPanel": {
+    "editTitle": "Редактировать пользователя",
+    "createTitle": "Создать пользователя",
+    "editDescription": "Редактирование ID: {{id}}",
+    "createDescription": "Заполните данные для нового пользователя.",
+    "firstName": "Имя",
+    "firstNamePlaceholder": "Имя",
+    "lastName": "Фамилия",
+    "lastNamePlaceholder": "Фамилия",
+    "email": "Email",
+    "emailPlaceholder": "user@railtech.uz",
+    "role": "Роль",
+    "rolePlaceholder": "Выберите роль",
+    "roleAdmin": "Администратор",
+    "roleSalesManager": "Менеджер продаж",
+    "roleAccountManager": "Аккаунт-менеджер",
+    "roleClient": "Клиент",
+    "company": "Компания",
+    "companyPlaceholder": "Штатный сотрудник (без компании)",
+    "internalStaff": "Штатный сотрудник",
+    "workspaceRole": "Роль в кабинете",
+    "workspaceRolePlaceholder": "Выберите роль в кабинете",
+    "workspaceNone": "Нет",
+    "workspaceOwner": "Владелец",
+    "workspaceAccountant": "Бухгалтер",
+    "workspaceManager": "Менеджер",
+    "validation": {
+      "emailRequired": "Введите корректный email",
+      "firstNameRequired": "Имя обязательно",
+      "lastNameRequired": "Фамилия обязательна"
+    }
+  },
+
+  "kycManager": {
+    "title": "KYC",
+    "titleHighlight": "Verification",
+    "subtitle": "Corporate Identity & Trust Level Management",
+    "globalView": "GLOBAL_VIEW",
+    "searchPlaceholder": "FILTER_BY_IDENTITY_OR_TAX_ID...",
+    "emptyState": "Zero matching identities in current buffer",
+    "entityReview": "Entity_Protocol_Review",
+    "authStatus": "AUTH_STATUS_LEVEL",
+    "registryData": "REGISTRY_DATA",
+    "physicalAddress": "PHYSICAL_ADDRESS",
+    "docRecords": "DOC_RECORDS",
+    "docCount": "COUNT: {{count}}",
+    "noDocuments": "ZERO_RECORDS_SUBMITTED",
+    "importDoc": "IMPORT_REPRESENTATION",
+    "observations": "SEC_OBSERVATIONS",
+    "observationsPlaceholder": "ENTRY_INTERNAL_AUDIT_LOG...",
+    "approveL2": "APPROVE_TRUST_L2",
+    "upgradeL3": "UPGRADE_TO_PARTNER_L3",
+    "revokeL1": "REVOKE_TRUST_L1",
+    "operationFailure": "Ошибка операции",
+    "uploadFailure": "Ошибка загрузки",
+    "status": {
+      "P_PENDING": "P_PENDING",
+      "P_SUBMITTED": "P_SUBMITTED",
+      "V_VERIFIED_L2": "V_VERIFIED_L2",
+      "V_PARTNER_L3": "V_PARTNER_L3"
+    },
+    "registryFields": {
+      "taxId": "UID_TAX",
+      "mfo": "MFO_CODE",
+      "bankAcc": "BANK_ACC",
+      "contact": "OP_CONTACT"
+    },
+    "docTypes": {
+      "CHARTER": "Company Charter / Устав",
+      "LICENSE": "License / Лицензия",
+      "PASSPORT": "Director ID / Паспорт",
+      "TAX_CERT": "Tax Registry / Свид. ИНН",
+      "OTHER": "Misc / Другое"
+    }
+  },
+
+  "breadcrumb": {
+    "productDetail": "Детали товара",
+    "requestDetail": "Детали заявки"
+  },
+
+  "onboarding": {
+    "companyRegistration": "Регистрация компании",
+    "companyRegistrationDesc": "Укажите данные вашей организации для начала работы",
+    "email": "Email",
+    "companyName": "Название компании",
+    "companyNamePlaceholder": "ООО «Название»",
+    "inn": "ИНН (необязательно)",
+    "innPlaceholder": "123456789",
+    "next": "Далее",
+    "back": "Назад",
+    "selectCompanyStatus": "Выберите статус компании",
+    "selectCompanyStatusDesc": "Определите основную роль вашей компании на платформе",
+    "statusUnderReview": "Статус проходит проверку",
+    "statusUnderReviewDesc": "После регистрации администратор системы проверит и подтвердит статус вашей компании. До подтверждения доступ к основным функциям будет ограничен.",
+    "contactPerson": "Контактное лицо",
+    "contactPersonDesc": "Вы станете администратором компании на платформе",
+    "firstName": "Имя",
+    "lastName": "Фамилия",
+    "registrationSummary": "Сводка регистрации",
+    "company": "Компания",
+    "status": "Статус",
+    "role": "Роль",
+    "roleAdmin": "Администратор",
+    "registrationNote": "Нажимая «Зарегистрироваться», вы отправляете заявку на подключение. Администратор платформы проверит данные и подтвердит статус вашей компании.",
+    "register": "Зарегистрироваться",
+    "capabilities": {
+      "BUYER": ["Просмотр каталога товаров", "Импорт заявок из Excel", "Запрос коммерческих предложений", "Отслеживание сделок"],
+      "SELLER": ["Всё что может Покупатель", "Добавление товаров в наличии (с указанием производителя)", "CRM, котировки и расчёт себестоимости", "Работа с производителями-партнёрами"],
+      "MANUFACTURER": ["Всё что может Покупатель и Продавец", "Публикация собственной продукции", "Приём заказов от продавцов-партнёров", "Прямые продажи без посредников", "Выбор продавцов и назначение цен"]
+    }
+  },
+
+  "verification": {
+    "applicationUnderReview": "Заявка на рассмотрении",
+    "applicationUnderReviewDesc": "Администратор платформы проверяет данные вашей компании. Вы получите уведомление на {{email}} после подтверждения.",
+    "requestedStatuses": "Запрошенные статусы",
+    "pending": "Ожидание",
+    "verified": "Подтверждён",
+    "rejected": "Отклонён",
+    "sellerPartnershipNote": "Как Продавец вы сможете добавлять товары только от производителей, которые подтвердили партнёрство с вами. Если производителя нет в системе — можно отправить ему запрос на подтверждение.",
+    "demoSimulation": "Симуляция (для демо)",
+    "approve": "Подтвердить «{{status}}»",
+    "startOver": "Начать заново",
+    "enterSystem": "Войти в систему"
+  },
+
+  "companyStatus": {
+    "BUYER": "Покупатель",
+    "MANUFACTURER": "Производитель",
+    "SELLER": "Продавец"
+  },
+
+  "roles": {
+    "ADMIN": "Администратор",
+    "MANAGER": "Менеджер",
+    "EMPLOYEE": "Сотрудник"
+  },
+
+  "companyStatusDesc": {
+    "BUYER": "Только запрашивает КП и закупает оборудование",
+    "MANUFACTURER": "Производит, продаёт напрямую или через продавцов, может закупать",
+    "SELLER": "Посредник: покупает и перепродаёт, может добавлять товары в наличии"
+  },
+
+  "shell": {
+    "b2bPlatform": "B2B Платформа",
+    "workContext": "Контекст работы",
+    "dashboard": "Дашборд",
+    "catalog": "Каталог",
+    "myRequests": "Мои заявки",
+    "commercialOffers": "Коммерческие предложения",
+    "documents": "Документы",
+    "purchaseTemplates": "Шаблоны закупок",
+    "logistics": "Логистика",
+    "analytics": "Аналитика",
+    "nomenclature": "Номенклатура",
+    "products": "Продукция",
+    "categories": "Категории",
+    "equipmentGroups": "Группы техники",
+    "productionOrders": "Заказы на производство",
+    "incomingOrders": "Входящие заказы",
+    "productionSchedule": "График производства",
+    "quotes": "Котировки",
+    "productionAnalytics": "Аналитика производства",
+    "sourcing": "Закупки",
+    "requests": "Заявки",
+    "excelImport": "Импорт Excel",
+    "smartMatch": "Smart Match",
+    "crm": "CRM",
+    "deals": "Сделки",
+    "clients": "Клиенты",
+    "salesAnalytics": "Аналитика продаж",
+    "settings": "Настройки",
+    "users": "Пользователи",
+    "integrations": "Интеграции",
+    "help": "Помощь",
+    "profile": "Профиль",
+    "logout": "Выйти",
+    "demoMode": "Демо-режим",
+    "openMenu": "Открыть меню"
+  },
+
+  "dashboardPage": {
+    "title": "Дашборд",
+    "period": "Период",
+    "month": "Месяц",
+    "quarter": "Квартал",
+    "year": "Год",
+    "export": "Экспорт",
+    "showAll": "Показать все",
+    "byMonths": "По месяцам",
+    "byWeeks": "По неделям",
+    "thisWeek": "Эта неделя",
+    "lastWeek": "Прошлая неделя",
+    "prevPeriod": "пред. период",
+    "topProducts": "Топ товаров по запросам",
+    "id": "ID",
+    "name": "Наименование",
+    "quantity": "Кол-во",
+    "category": "Категория",
+    "buyer": {
+      "activeRequests": "Активные заявки",
+      "awaitingQuotes": "Ожидают КП",
+      "dealSavings": "Экономия по сделкам",
+      "avgDeliveryTime": "Средний срок поставки",
+      "days": "дн",
+      "requestsByStatus": "Мои заявки по статусам",
+      "statusDistribution": "Статусы заявок",
+      "recentRequests": "Последние заявки",
+      "requestNumber": "№",
+      "date": "Дата",
+      "supplier": "Поставщик",
+      "items": "Позиций",
+      "status": "Статус",
+      "amount": "Сумма",
+      "requests": "Заявок",
+      "draft": "Черновик",
+      "sent": "Отправлено",
+      "quoteReceived": "КП получено",
+      "deal": "Сделка",
+      "completed": "Завершено"
+    },
+    "seller": {
+      "dealVolume": "Объём сделок",
+      "activeRequests": "Активные заявки",
+      "catalogItems": "Позиций в каталоге",
+      "clients": "Клиентов",
+      "dealVolumeChart": "Объём сделок",
+      "activityByDay": "Активность по дням",
+      "requestsPerWeek": "запросов за неделю",
+      "requests": "Запросов",
+      "volume": "Объём",
+      "counterpartyBreakdown": "Контрагенты",
+      "manufacturers": "Производители",
+      "buyers": "Покупатели",
+      "intermediaries": "Посредники"
+    },
+    "manufacturer": {
+      "productionLoad": "Загрузка производства",
+      "activeOrders": "Активных заказов",
+      "catalogItems": "Позиций в каталоге",
+      "partners": "Партнёров",
+      "productionLoadByLine": "Загрузка по линиям",
+      "rfqsFromSuppliers": "Запросы от поставщиков",
+      "supplier": "Поставщик",
+      "product": "Продукт",
+      "qty": "Кол-во",
+      "daysToRespond": "Дней на ответ",
+      "status": "Статус",
+      "urgent": "Срочно",
+      "waiting": "Ожидает",
+      "processed": "Обработано",
+      "inQueue": "В очереди",
+      "productionPlan": "План производства",
+      "target": "из {{target}}",
+      "completedPercent": "{{completed}}%"
+    },
+    "months": {
+      "sep": "Сен", "oct": "Окт", "nov": "Ноя", "dec": "Дек",
+      "jan": "Янв", "feb": "Фев", "mar": "Мар"
+    },
+    "days": {
+      "mon": "Пн", "tue": "Вт", "wed": "Ср", "thu": "Чт",
+      "fri": "Пт", "sat": "Сб", "sun": "Вс"
+    },
+    "counterparties": {
+      "clients": "Клиенты",
+      "suppliers": "Поставщики",
+      "factories": "Заводы"
+    }
+  },
+
+  "demo": {
+    "toggleLabel": "Демо-режим",
+    "enabled": "Демо-режим включён",
+    "disabled": "Демо-режим выключен"
+  },
+
+  "requestDetail": {
+    "title": "Заявка {{number}}",
+    "resetDemo": "Сбросить демо",
+    "reset": "Сбросить",
+    "importSummary": "Импорт из Excel · {{count}} позиций · {{date}}",
+    "steps": {
+      "submitted": "Заявка отправлена",
+      "supplierProcessing": "Поставщик обрабатывает",
+      "quoteReceived": "КП получено",
+      "deal": "Сделка"
+    },
+    "stats": {
+      "matched": "Найдено в каталоге",
+      "partial": "Частичное совпадение",
+      "notFound": "Не найдено"
+    },
+    "matchStatus": {
+      "matched": "Найден",
+      "partial": "Частично",
+      "notFound": "Не найден"
+    },
+    "tabs": {
+      "items": "Позиции заявки ({{count}})",
+      "quote": "Коммерческое предложение",
+      "deal": "Сделка"
+    },
+    "table": {
+      "name": "Наименование",
+      "article": "Артикул",
+      "gost": "ГОСТ",
+      "unit": "Ед.",
+      "quantity": "Кол-во",
+      "status": "Статус",
+      "factory": "Завод",
+      "priceFCA": "Цена FCA",
+      "rfq": "RFQ",
+      "factoryPrice": "Цена завода",
+      "leadTime": "Срок",
+      "priceExclVAT": "Цена (без НДС)",
+      "priceInclVAT": "Цена (с НДС)",
+      "totalInclVAT": "Итого с НДС"
+    },
+    "quoteFrom": "Коммерческое предложение от {{seller}}",
+    "quoteItemsSummary": "{{count}} позиций · {{date}}",
+    "status": {
+      "discountRequested": "Запрос скидки отправлен",
+      "accepted": "Принято",
+      "rejected": "Отклонено"
+    },
+    "actions": {
+      "reject": "Отклонить",
+      "requestDiscount": "Запросить скидку",
+      "acceptQuote": "Принять КП",
+      "acceptCurrentQuote": "Принять текущее КП",
+      "rejectQuote": "Отклонить КП",
+      "sendRequest": "Отправить запрос",
+      "takeInWork": "Взять в работу",
+      "sendRFQ": "Отправить RFQ заводам ({{count}} поз.)",
+      "simulateResponses": "Симуляция: заводы ответили",
+      "calculateCost": "Рассчитать себестоимость",
+      "sendQuoteToClient": "Отправить КП клиенту"
+    },
+    "totals": {
+      "exclVAT": "Итого без НДС",
+      "vat": "НДС 12%",
+      "inclVAT": "Итого с НДС"
+    },
+    "deal": {
+      "title": "Сделка {{number}}",
+      "manager": "Менеджер: {{name}}",
+      "amount": "Сумма сделки",
+      "items": "Позиций",
+      "createdAt": "Дата создания",
+      "nextStep": "Следующий шаг: подписание договора и оплата. Менеджер {{manager}} свяжется с вами для согласования деталей."
+    },
+    "rejectDialog": {
+      "title": "Отклонить коммерческое предложение",
+      "description": "Укажите причину отказа",
+      "reason": "Причина",
+      "selectReason": "Выберите причину",
+      "reasons": {
+        "expensive": "Дорого — не укладываемся в бюджет",
+        "terms": "Не устраивают сроки поставки",
+        "partial": "Нужен полный комплект (не все позиции)",
+        "other": "Другая причина"
+      },
+      "comment": "Комментарий",
+      "commentPlaceholder": "Дополнительные пояснения..."
+    },
+    "negotiateDialog": {
+      "title": "Запросить скидку",
+      "currentAmount": "Текущая сумма КП: {{amount}} (с НДС)",
+      "desiredDiscount": "Желаемая скидка (%)",
+      "estimatedAmount": "Предполагаемая сумма: {{amount}} (экономия {{savings}})",
+      "justification": "Обоснование",
+      "justificationPlaceholder": "Объём заказа, долгосрочное сотрудничество, конкурентное предложение..."
+    },
+    "seller": {
+      "client": "Клиент",
+      "itemsCount": "{{count}} позиций",
+      "inStock": "В наличии",
+      "needRFQ": "Нужен RFQ",
+      "factoryResponses": "Ответов от заводов",
+      "noAccess": "Нет доступа",
+      "marginLabel": "Маржа %",
+      "warehouse": "Склад",
+      "leadDays": "{{days}} дн."
+    },
+    "sellerSteps": {
+      "received": "Получена",
+      "analysis": "Анализ",
+      "rfqFactories": "RFQ заводам",
+      "responses": "Ответы",
+      "calculation": "Расчёт",
+      "quoteToClient": "КП клиенту"
+    },
+    "sellerTabs": {
+      "all": "Все позиции ({{count}})",
+      "inStock": "В наличии ({{count}})",
+      "rfq": "RFQ заводам ({{count}})",
+      "noAccess": "Нет доступа ({{count}})"
+    },
+    "rfqStatus": {
+      "waiting": "Ожидает",
+      "sent": "Отправлен",
+      "responded": "Ответ"
+    },
+    "cost": {
+      "title": "Расчёт себестоимости",
+      "fca": "FCA",
+      "logistics": "Логистика",
+      "customs": "Таможня",
+      "margin": "Маржа",
+      "vat": "НДС 12%",
+      "total": "ИТОГО",
+      "purchaseFCA": "Закупка FCA",
+      "logisticsDAP": "+ Логистика DAP (8%)",
+      "customsDuty": "+ Таможенная пошлина (5%)",
+      "landedCostLabel": "= Landed Cost",
+      "marginWithPercent": "+ Маржа ({{percent}}%)",
+      "subtotalExclVAT": "Итого без НДС",
+      "totalInclVAT": "ИТОГО с НДС",
+      "structure": "Структура стоимости",
+      "amount": "Сумма"
+    },
+    "manufacturer": {
+      "incomingRequests": "Входящие запросы",
+      "noRequests": "Нет активных запросов от поставщиков",
+      "noRequestsHint": "Запросы появятся когда поставщик отправит RFQ",
+      "rfqFrom": "RFQ от {{seller}}",
+      "itemsCount": "{{count}} позиций",
+      "priceAndTerms": "Запрос цен и сроков · Заявка {{number}}",
+      "filled": "Заполнено: {{responded}} из {{total}}",
+      "article": "Арт",
+      "gost": "ГОСТ",
+      "qty": "Кол-во",
+      "priceFCA": "Цена FCA ($)",
+      "leadTimeDays": "Срок (дн.)",
+      "note": "Примечание",
+      "commentPlaceholder": "Комментарий",
+      "confirm": "Подтвердить",
+      "sent": "Отправлено"
+    }
+  },
+
+  "profile": {
+    "title": "Профиль",
+    "subtitle": "Управление личными данными и настройками аккаунта",
+    "tabs": {
+      "personal": "Личные данные",
+      "company": "Компания",
+      "security": "Безопасность",
+      "notifications": "Уведомления"
+    },
+    "personalInfo": {
+      "title": "Личная информация",
+      "description": "Обновите свои личные данные",
+      "uploadPhoto": "Загрузить фото",
+      "photoHint": "JPG, PNG. Макс. 2MB",
+      "role": "Роль",
+      "saved": "Сохранено!",
+      "saveChanges": "Сохранить изменения"
+    },
+    "fields": {
+      "lastName": "Фамилия",
+      "firstName": "Имя",
+      "patronymic": "Отчество",
+      "position": "Должность",
+      "email": "Email",
+      "phone": "Телефон"
+    },
+    "companyInfo": {
+      "title": "Данные компании",
+      "description": "Информация о вашей организации",
+      "name": "Название",
+      "inn": "ИНН",
+      "country": "Страна",
+      "city": "Город",
+      "kycStatus": "KYC Статус",
+      "platformStatuses": "Статусы компании на платформе",
+      "pendingVerification": "ожидание",
+      "contactAdmin": "Для изменения данных компании обратитесь к администратору"
+    },
+    "kyc": {
+      "verified": "Верифицирован",
+      "pending": "На проверке",
+      "notStarted": "Не пройден"
+    },
+    "security": {
+      "title": "Безопасность",
+      "description": "Управление паролем и двухфакторной аутентификацией",
+      "password": "Пароль",
+      "lastChanged": "Последнее изменение",
+      "change": "Изменить",
+      "twoFactor": "Двухфакторная аутентификация",
+      "twoFactorDesc": "Дополнительная защита аккаунта",
+      "activeSessions": "Активные сессии",
+      "activeDevices": "{{count}} активных устройства",
+      "manage": "Управление"
+    },
+    "notifications": {
+      "title": "Уведомления",
+      "description": "Настройте какие уведомления вы хотите получать",
+      "newDeals": "Новые сделки",
+      "newDealsDesc": "Уведомления о назначенных сделках",
+      "requestStatus": "Статус заявок",
+      "requestStatusDesc": "Изменение статуса ваших заявок",
+      "chatMessages": "Сообщения чата",
+      "chatMessagesDesc": "Новые сообщения от клиентов/менеджеров",
+      "excelImport": "Импорт Excel",
+      "excelImportDesc": "Завершение обработки загруженных файлов",
+      "system": "Системные",
+      "systemDesc": "Обновления платформы и техобслуживание",
+      "emailDigest": "Email-дайджест",
+      "emailDigestDesc": "Еженедельная сводка активности"
+    },
+    "passwordDialog": {
+      "title": "Изменить пароль",
+      "description": "Введите текущий и новый пароль",
+      "currentPassword": "Текущий пароль",
+      "newPassword": "Новый пароль",
+      "confirmPassword": "Подтвердите пароль"
+    }
+  },
+
+  "settings": {
+    "title": "Настройки",
+    "subtitle": "Конфигурация платформы и предпочтений",
+    "tabs": {
+      "general": "Общие",
+      "appearance": "Внешний вид",
+      "business": "Бизнес",
+      "company": "Компания",
+      "system": "Система"
+    },
+    "general": {
+      "title": "Основные настройки",
+      "description": "Язык, валюта и региональные параметры",
+      "language": "Язык интерфейса",
+      "languageDesc": "Выберите язык отображения",
+      "currency": "Валюта по умолчанию",
+      "currencyDesc": "Основная валюта для расчётов",
+      "currencyUZS": "UZS (сум)",
+      "currencyRUB": "RUB (₽)",
+      "timezone": "Часовой пояс",
+      "timezoneDesc": "Для корректного отображения дат",
+      "tzTashkent": "Ташкент (UTC+5)",
+      "tzMoscow": "Москва (UTC+3)",
+      "tzAlmaty": "Алматы (UTC+6)",
+      "dateFormat": "Формат дат",
+      "dateFormatDesc": "Отображение дат в системе",
+      "dateDMY": "ДД.ММ.ГГГГ",
+      "dateMDY": "ММ/ДД/ГГГГ",
+      "dateYMD": "ГГГГ-ММ-ДД"
+    },
+    "appearance": {
+      "title": "Внешний вид",
+      "description": "Настройте интерфейс под себя",
+      "theme": "Тема",
+      "themeDesc": "Светлая или тёмная тема",
+      "themeLight": "Светлая",
+      "themeDark": "Тёмная",
+      "themeSystem": "Системная",
+      "density": "Плотность интерфейса",
+      "densityDesc": "Компактный режим для больших таблиц",
+      "densityCompact": "Компактный",
+      "densityNormal": "Обычный",
+      "densityComfortable": "Просторный",
+      "sidebar": "Сайдбар",
+      "sidebarDesc": "Поведение боковой панели",
+      "sidebarExpanded": "Всегда открыт",
+      "sidebarCollapsed": "Свёрнут (иконки)",
+      "sidebarHover": "Открывать при наведении"
+    },
+    "business": {
+      "sellerTitle": "Настройки продаж",
+      "manufacturerTitle": "Настройки производства",
+      "sellerDescription": "Параметры сделок, маржи и котировок",
+      "manufacturerDescription": "Параметры производственных заказов и ценообразования",
+      "autoNumbering": "Авто-нумерация сделок",
+      "autoNumberingDesc": "Автоматическая генерация номеров",
+      "reminders": "Напоминания",
+      "remindersDesc": "Уведомлять о сделках без активности 3+ дней",
+      "defaultMargin": "Маржа по умолчанию",
+      "defaultMarginDesc": "Базовая маржа для новых котировок",
+      "vat": "НДС",
+      "vatDesc": "Ставка НДС для Узбекистана",
+      "vatExport": "0% (экспорт)",
+      "orderMode": "Режим приёма заказов",
+      "orderModeDesc": "Как принимать входящие заказы",
+      "orderModeAuto": "Авто-подтверждение",
+      "orderModeManual": "Ручное подтверждение",
+      "orderNotifications": "Уведомления о заказах",
+      "orderNotificationsDesc": "Мгновенные уведомления о новых заказах",
+      "minOrder": "Минимальный заказ",
+      "minOrderDesc": "Минимальная сумма заказа для производства",
+      "noLimit": "Без ограничений",
+      "partnerSuppliers": "Партнёрские поставщики",
+      "partnerSuppliersDesc": "Управление одобренными продавцами",
+      "manage": "Управление"
+    },
+    "company": {
+      "title": "Управление компанией",
+      "description": "Статусы, пользователи и делегирование прав",
+      "statuses": "Статусы компании",
+      "statusesDesc": "Активные роли на платформе",
+      "pending": "ожидание",
+      "users": "Пользователи",
+      "usersDesc": "Приглашение и управление сотрудниками",
+      "invite": "Пригласить",
+      "rolesPermissions": "Роли и разрешения",
+      "rolesPermissionsDesc": "Назначение ролей по статусам компании",
+      "manage": "Управление",
+      "delegation": "Делегирование",
+      "delegationDesc": "Передача прав сотрудникам по контекстам",
+      "configure": "Настроить"
+    },
+    "system": {
+      "title": "Системные настройки",
+      "description": "Конфигурация платформы (только для администраторов)",
+      "apiIntegrations": "API интеграции",
+      "apiIntegrationsDesc": "Настройка внешних API и вебхуков",
+      "configure": "Настроить",
+      "backup": "Резервное копирование",
+      "backupDesc": "Автоматический бэкап данных",
+      "passwordPolicy": "Политика паролей",
+      "passwordPolicyDesc": "Минимальная длина, сложность",
+      "auditLogs": "Логи аудита",
+      "auditLogsDesc": "Журнал действий пользователей",
+      "view": "Просмотр"
+    }
+  },
+
+  "sourcingHub": {
+    "title": "Позиции заявки — сопоставление с каталогом",
+    "kpi": {
+      "matched": "Найдено",
+      "partial": "Частично",
+      "notFound": "Не найдено",
+      "outOf": "из {{total}}"
+    },
+    "table": {
+      "num": "№",
+      "name": "Наименование",
+      "article": "Артикул",
+      "gost": "ГОСТ",
+      "uom": "Ед.",
+      "qty": "Кол-во",
+      "matchStatus": "Статус совпадения",
+      "action": "Действие"
+    },
+    "status": {
+      "matched": "Найден",
+      "partial": "Частично",
+      "not_found": "Не найден"
+    },
+    "actions": {
+      "findInCatalog": "Найти в каталоге",
+      "clarify": "Уточнить",
+      "linked": "Привязан"
+    },
+    "linkedTo": "Привязан к: {{name}}",
+    "dialog": {
+      "title": "Поиск в каталоге",
+      "item": "Позиция",
+      "searchPlaceholder": "Поиск по названию, артикулу, производителю...",
+      "noResults": "Ничего не найдено"
+    }
+  },
+
+  "dealChat": {
+    "tabs": {
+      "chat": "Чат",
+      "documents": "Документы"
+    },
+    "placeholder": "Написать сообщение...",
+    "messages": {
+      "requestAccepted": "Добрый день! Заявка ЗК-2026-0047 принята в работу.",
+      "whenQuote": "Спасибо! Когда ожидать КП?",
+      "rfqSent": "Отправили RFQ на заводы. Ожидаем ответы в течение 2-3 дней.",
+      "alternatives": "Хорошо. По подшипнику 42726 — есть альтернативы?",
+      "analogFound": "Да, нашли аналог от СКФ. Включим в КП оба варианта.",
+      "factoriesConfirmed": "Заводы подтвердили 3 из 5 позиций",
+      "landedCostCalc": "Получили ответы от САУТ и РАТЕП. Начинаю расчёт Landed Cost."
+    },
+    "docs": {
+      "request": "Заявка ЗК-2026-0047.xlsx",
+      "smartMatch": "Smart Match результаты.pdf",
+      "rfq": "RFQ САУТ.pdf",
+      "quoteDraft": "КП Черновик.pdf"
+    }
+  },
+
+  "fab": {
+    "telegram": "Telegram",
+    "call": "Позвонить",
+    "writeManager": "Написать менеджеру",
+    "support": "Поддержка"
+  },
+
+  "tour": {
+    "skip": "Пропустить",
+    "next": "Далее",
+    "back": "Назад",
+    "done": "Готово",
+    "close": "Закрыть",
+    "steps": {
+      "0": {
+        "title": "Каталог продукции",
+        "description": "55 позиций ж/д оборудования, товаров и услуг. Переключайте домены и режимы просмотра."
+      },
+      "1": {
+        "title": "Заявка на закупку",
+        "description": "Импортируйте Excel с позициями. Smart Match автоматически находит товары в каталоге."
+      },
+      "2": {
+        "title": "Коммерческое предложение",
+        "description": "Расчёт Landed Cost: FCA + логистика + таможня. Waterfall-диаграмма стоимости."
+      },
+      "3": {
+        "title": "Quote Builder",
+        "description": "Полноценный расчёт себестоимости с маржой. Разделение по доменам."
+      },
+      "4": {
+        "title": "Аналитика и CRM",
+        "description": "Дашборды по ролям, воронка сделок, KPI. Одна платформа — три роли."
+      }
+    }
+  },
+
+  "error": {
+    "title": "Сбой системы",
+    "defaultMessage": "Произошла непредвиденная ошибка в приложении.",
+    "hardRefresh": "Перезагрузить",
+    "returnHome": "На главную",
+    "supportId": "Техподдержка RailTech ID"
+  },
+
+  "purchaseTemplates": {
+    "title": "Шаблоны закупок",
+    "subtitle": "Сохранённые шаблоны для быстрого повторного заказа",
+    "createTemplate": "Создать шаблон",
+    "itemCount_one": "{{count}} позиция",
+    "itemCount_few": "{{count}} позиции",
+    "itemCount_many": "{{count}} позиций",
+    "itemCount": "{{count}} позиций",
+    "lastOrder": "Последний заказ",
+    "reorder": "Повторить заказ",
+    "details": "Детали",
+    "recentOrders": "Последние заказы",
+    "repeat": "Повторить",
+    "create": "Создать",
+    "table": {
+      "number": "№",
+      "date": "Дата",
+      "itemCount": "Кол-во позиций",
+      "amount": "Сумма",
+      "status": "Статус",
+      "action": "Действие"
+    },
+    "dialog": {
+      "name": "Название шаблона",
+      "namePlaceholder": "Введите название шаблона",
+      "description": "Описание",
+      "descriptionPlaceholder": "Введите описание шаблона"
+    }
+  },
+
+  "pages": {
+    "common": {
+      "sectionInDevelopment": "Раздел в разработке",
+      "comingSoon": "Функционал будет доступен в ближайшем обновлении",
+      "items": "позиций",
+      "found": "найдено",
+      "uom": {
+        "pcs": "шт",
+        "set": "комп.",
+        "kg": "кг",
+        "km": "км"
+      }
+    },
+    "sourcingRequests": {
+      "title": "Заявки на закупку",
+      "description": "Управление входящими заявками от клиентов",
+      "stats": {
+        "total": "Всего заявок",
+        "new": "Новые",
+        "inProgress": "В обработке",
+        "completed": "Завершено"
+      },
+      "createRequest": "Создать заявку",
+      "activeRequests": "Активные заявки"
+    },
+    "sourcingImport": {
+      "title": "Импорт Excel",
+      "description": "Загрузка и парсинг спецификаций клиентов",
+      "uploadFile": "Загрузить файл",
+      "dragDrop": "Перетащите Excel файл сюда",
+      "orClick": "или нажмите для загрузки",
+      "lastImport": "Последний импорт",
+      "uploadedAgo": "Загружено 15 мин. назад",
+      "status": {
+        "completed": "Завершено"
+      },
+      "stats": {
+        "parsed": "Распарсено",
+        "found": "Найдено",
+        "partial": "Частичное"
+      },
+      "table": {
+        "number": "№",
+        "name": "Наименование",
+        "gost": "ГОСТ",
+        "uom": "Ед. изм.",
+        "qty": "Кол-во",
+        "status": "Статус"
+      },
+      "matchStatus": {
+        "found": "Найдено",
+        "partial": "Частичное",
+        "notFound": "Не найдено"
+      }
+    },
+    "sourcingMatch": {
+      "title": "Smart Match",
+      "description": "Автоматический маппинг нераспознанных позиций из Excel",
+      "stats": {
+        "unrecognized": "Нераспознанных",
+        "matches": "Совпадений",
+        "needReview": "Требуют проверки",
+        "accuracy": "Точность"
+      }
+    },
+    "deals": {
+      "title": "Сделки",
+      "description": "Воронка продаж и управление жизненным циклом сделок",
+      "stats": {
+        "total": "Все сделки",
+        "active": "В работе",
+        "quoteSent": "КП отправлено",
+        "closedWon": "Закрыто (выиграно)"
+      },
+      "newDeal": "Новая сделка",
+      "daysInStage": "дней в этапе",
+      "stages": {
+        "draft": "Черновик",
+        "sourcing": "Закупка",
+        "calculating": "Расчёт",
+        "quoteSent": "КП Отправлено",
+        "contractSigned": "Договор Подписан",
+        "closedWon": "Закрыто (Выиграно)",
+        "closedLost": "Закрыто (Проиграно)"
+      }
+    },
+    "quotes": {
+      "buyerTitle": "Коммерческие предложения",
+      "buyerDescription": "Полученные КП от поставщиков",
+      "sellerTitle": "Котировки",
+      "sellerDescription": "Quote Builder — расчёт Landed Cost и формирование КП",
+      "createQuote": "Создать котировку",
+      "stats": {
+        "total": "Всего КП",
+        "underReview": "На рассмотрении",
+        "accepted": "Принято",
+        "totalAmount": "Общая сумма",
+        "drafts": "Черновики",
+        "sent": "Отправлено",
+        "approved": "Согласовано",
+        "pipeline": "Pipeline"
+      },
+      "status": {
+        "draft": "Черновик",
+        "calculating": "Расчёт",
+        "sent": "Отправлено",
+        "approved": "Согласовано",
+        "underReview": "На рассмотрении",
+        "accepted": "Принято",
+        "expired": "Истекло"
+      },
+      "table": {
+        "number": "№ КП",
+        "supplier": "Поставщик",
+        "client": "Клиент",
+        "items": "Позиций",
+        "amount": "Сумма",
+        "amountVat": "Сумма (с НДС)",
+        "margin": "Маржа",
+        "status": "Статус",
+        "date": "Дата",
+        "deadline": "Срок ответа",
+        "actions": "Действия"
+      }
+    },
+    "clients": {
+      "title": "Клиенты",
+      "description": "База контрагентов и KYC верификация",
+      "stats": {
+        "total": "Всего",
+        "verified": "Верифицированы",
+        "awaitingKyc": "Ожидают KYC",
+        "guests": "Гости"
+      },
+      "addClient": "Добавить клиента",
+      "table": {
+        "company": "Компания",
+        "inn": "ИНН",
+        "status": "Статус",
+        "kyc": "KYC",
+        "deals": "Сделок",
+        "lastActivity": "Последняя активность"
+      },
+      "statusLabel": {
+        "buyer": "Покупатель",
+        "seller": "Поставщик",
+        "manufacturer": "Производитель"
+      },
+      "kycStatus": {
+        "verified": "Верифицирован",
+        "pending": "В ожидании"
+      }
+    },
+    "productionOrders": {
+      "title": "Входящие заказы",
+      "description": "Запросы цен и условий от поставщиков-партнёров",
+      "stats": {
+        "active": "Активных",
+        "awaitingResponse": "Ожидают ответа",
+        "responded": "Отвечено",
+        "overdue": "Просрочено"
+      },
+      "partnerRequests": "Запросы от партнёров"
+    },
+    "productionSchedule": {
+      "title": "График производства",
+      "description": "Планирование и контроль сроков производства",
+      "stats": {
+        "activeOrders": "Активных заказов",
+        "completed": "Завершено",
+        "delayed": "В задержке",
+        "nextWeek": "На следующей неделе"
+      },
+      "deadline": "Дедлайн",
+      "progress": "Прогресс",
+      "status": {
+        "inProduction": "На производстве",
+        "finishing": "Завершение"
+      }
+    },
+    "analytics": {
+      "sellerTitle": "Аналитика продаж",
+      "sellerDescription": "Коммерческая аналитика и отчёты",
+      "manufacturerTitle": "Аналитика производства",
+      "manufacturerDescription": "Производственная аналитика и загрузка",
+      "buyerTitle": "Аналитика закупок",
+      "buyerDescription": "Расходы, поставщики и эффективность закупок",
+      "stats": {
+        "conversion": "Конверсия",
+        "avgDeal": "Ср. сделка",
+        "pipeline": "Pipeline",
+        "winRate": "Win Rate"
+      },
+      "conversionFunnel": "Воронка конверсии",
+      "revenueByMonth": "Доход по месяцам",
+      "spendByMonth": "Расходы по месяцам ($K)",
+      "spendStructure": "Структура закупок",
+      "supplierRating": "Рейтинг поставщиков",
+      "supplierRatingDesc": "По объёму закупок за последние 6 месяцев",
+      "supplierDays": "{{count}} дней",
+      "months": {
+        "sep": "Сент",
+        "oct": "Окт",
+        "nov": "Ноя",
+        "dec": "Дек",
+        "jan": "Янв",
+        "feb": "Фев"
+      },
+      "funnel": {
+        "incomingRequests": "Входящие заявки",
+        "quoteSent": "КП отправлено",
+        "approved": "Согласовано",
+        "deal": "Сделка"
+      },
+      "categories": {
+        "railwayEquipment": "ЖД оборудование",
+        "spareParts": "Запчасти",
+        "rawMaterials": "Сырьё",
+        "services": "Услуги"
+      },
+      "buyerStats": {
+        "spendPeriod": "Расходы за период",
+        "savings": "Экономия",
+        "activeRequests": "Активные заявки",
+        "avgDelivery": "Ср. срок поставки"
+      },
+      "supplierTable": {
+        "supplier": "Поставщик",
+        "orders": "Заказов",
+        "amount": "Сумма",
+        "avgDelivery": "Ср. доставка",
+        "rating": "Рейтинг"
+      }
+    },
+    "categories": {
+      "title": "Категории",
+      "description": "Управление деревом категорий номенклатуры",
+      "addCategory": "Добавить категорию",
+      "items": {
+        "railwayTech": "ЖД Техника",
+        "tractionRollingStock": "Тяговый подвижной состав",
+        "ted": "ТЭД",
+        "dieselLocos": "Тепловозы",
+        "electricLocos": "Электровозы",
+        "brakeEquipment": "Тормозное оборудование",
+        "cylinders": "Цилиндры",
+        "valves": "Краны",
+        "hoses": "Шланги",
+        "materials": "Материалы",
+        "nonFerrousMetals": "Цветные металлы",
+        "babbits": "Баббиты",
+        "bronze": "Бронза",
+        "tin": "Олово",
+        "metalProducts": "Металлопрокат",
+        "assortment": "Сортамент",
+        "round": "Круг",
+        "strip": "Лента",
+        "pipe": "Труба",
+        "profile": "Профиль",
+        "electricalEquipment": "Электрооборудование",
+        "cableProducts": "Кабельная продукция",
+        "wires": "Провода",
+        "cables": "Кабели",
+        "couplings": "Муфты",
+        "generatingEquipment": "Генерирующее оборудование",
+        "generators": "Генераторы",
+        "transformers": "Трансформаторы"
+      }
+    },
+    "equipmentGroups": {
+      "title": "Группы техники",
+      "description": "Иерархия ЖД оборудования: Тип → Серия → Узел",
+      "addGroup": "Добавить группу",
+      "series": "Серий",
+      "components": "Компонентов",
+      "items": {
+        "electricLocos": "Электровозы",
+        "dieselLocos": "Тепловозы",
+        "freightWagons": "Грузовые вагоны",
+        "passengerWagons": "Пассажирские вагоны"
+      }
+    },
+    "integrations": {
+      "title": "Интеграции",
+      "description": "Подключение внешних сервисов, API и ERP-систем",
+      "stats": {
+        "connected": "Подключено",
+        "pending": "Ожидают",
+        "availableApis": "Доступных API",
+        "syncedRecords": "Записей синхр."
+      },
+      "apiDocs": "API документация",
+      "addIntegration": "Добавить интеграцию",
+      "processed": "Обработано",
+      "settings": "Настройки",
+      "finishSetup": "Завершить настройку",
+      "connect": "Подключить",
+      "syncAgo": "{{time}} мин назад",
+      "realtime": "Реалтайм",
+      "messages": "{{count}} сообщ.",
+      "emails": "{{count}} писем",
+      "statusLabel": {
+        "connected": "Подключено",
+        "configuring": "Настройка...",
+        "disconnected": "Не подключено"
+      },
+      "items": {
+        "1c": "Двусторонняя синхронизация каталога, остатков и заказов",
+        "sap": "Интеграция с корпоративной ERP-системой: закупки, склад, финансы",
+        "telegram": "Уведомления менеджерам о новых сделках, заявках и этапах",
+        "email": "Отправка КП, счетов и документов клиентам через корпоративную почту",
+        "asan": "Электронная цифровая подпись для договоров и КП (Узбекистан)",
+        "uzum": "Приём платежей и автоматическая сверка оплат"
+      }
+    },
+    "help": {
+      "title": "Помощь и поддержка",
+      "description": "Документация, FAQ и контакты технической поддержки",
+      "needHelp": "Нужна помощь?",
+      "supportHours": "Наша техническая поддержка работает Пн-Пт 09:00-18:00 (UTC+5). Среднее время ответа — 30 минут.",
+      "contactSupport": "Написать в поддержку",
+      "sections": {
+        "gettingStarted": "Начало работы",
+        "procurement": "Закупки и заявки",
+        "quotesAndPricing": "Котировки и ценообразование",
+        "securityAndAccess": "Безопасность и доступ"
+      },
+      "quickActions": {
+        "apiDocs": "Документация API",
+        "apiDocsDesc": "Swagger, REST endpoints, webhooks",
+        "telegramSupport": "Telegram-поддержка",
+        "telegramSupportDesc": "Ответ в течение 30 минут",
+        "emailSupport": "Email поддержки"
+      },
+      "faq": {
+        "howRegister": "Как зарегистрировать компанию?",
+        "howRegisterAnswer": "Заполните форму регистрации, выберите статус компании (Покупатель, Продавец или Производитель) и дождитесь подтверждения администратора. Обычно верификация занимает 1-2 рабочих дня.",
+        "howAddEmployees": "Как добавить сотрудников?",
+        "howAddEmployeesAnswer": "Перейдите в Настройки → Пользователи. Нажмите «Добавить пользователя», укажите email и роль (Менеджер или Сотрудник). Приглашение будет отправлено на почту.",
+        "howSwitchStatus": "Как переключить статус компании?",
+        "howSwitchStatusAnswer": "Используйте переключатель в левом сайдбаре. Каждый статус имеет свой набор функций и навигацию, адаптированную под ваши задачи.",
+        "howCreateRequest": "Как создать заявку на закупку?",
+        "howCreateRequestAnswer": "Перейдите в Каталог, выберите нужные товары и нажмите «Добавить в запрос». Либо импортируйте список из Excel через раздел «Импорт Excel». Smart Match автоматически найдёт совпадения в каталоге.",
+        "excelFormats": "Какие форматы Excel поддерживаются?",
+        "excelFormatsAnswer": "Поддерживаются файлы .xlsx и .xls. Таблица должна содержать колонки: Наименование, Артикул (или ГОСТ), Количество, Единица измерения. Рекомендуется XLSX для лучшей совместимости.",
+        "whatIsSmartMatch": "Что такое Smart Match?",
+        "whatIsSmartMatchAnswer": "Smart Match — алгоритм автоматического сопоставления позиций из Excel с каталогом. Он ищет по артикулу, ГОСТ, наименованию и группе оборудования, выдавая результат: Найден, Частично, Не найден.",
+        "howLandedCost": "Как рассчитывается Landed Cost?",
+        "howLandedCostAnswer": "FCA Base Price + Логистика DAP (8%) + Таможенная пошлина (5%) = Landed Cost. Далее: Landed Cost × (1 + Маржа%) = Цена без НДС × 1.12 = Итого с НДС (12% Узбекистан).",
+        "canEditSentQuote": "Можно ли редактировать отправленное КП?",
+        "canEditSentQuoteAnswer": "Да, но это создаст новую версию (v2, v3...). Старые версии сохраняются в архиве для аудита. Клиент увидит актуальную версию.",
+        "howRequestDiscount": "Как запросить скидку?",
+        "howRequestDiscountAnswer": "При просмотре КП нажмите «Запросить скидку», укажите желаемый процент и комментарий. Продавец получит уведомление и сможет пересчитать КП.",
+        "whatRoles": "Какие роли доступны?",
+        "whatRolesAnswer": "Администратор — полный доступ и управление. Менеджер — бизнес-операции: сделки, закупки, котировки. Сотрудник — ограниченный просмотр.",
+        "howResetPassword": "Как восстановить пароль?",
+        "howResetPasswordAnswer": "Нажмите «Забыли пароль?» на странице входа. Ссылка для восстановления будет отправлена на привязанный email."
+      }
+    },
+    "myRequests": {
+      "title": "Мои заявки",
+      "description": "Отслеживание ваших запросов и заказов",
+      "stats": {
+        "active": "Активные",
+        "quoteReceived": "КП получено",
+        "contract": "Договор",
+        "completed": "Завершено"
+      },
+      "newRequest": "Новый запрос",
+      "recentRequests": "Последние заявки"
+    },
+    "documents": {
+      "title": "Документы",
+      "description": "КП, договоры и закрывающие документы",
+      "uploadDocument": "Загрузить документ",
+      "types": {
+        "quote": "КП",
+        "contract": "Договор",
+        "act": "Акт",
+        "invoice": "Инвойс"
+      },
+      "status": {
+        "sent": "Отправлено",
+        "signed": "Подписано",
+        "archive": "Архив",
+        "pendingPayment": "К оплате",
+        "draft": "Черновик",
+        "forSignature": "На подпись"
+      },
+      "table": {
+        "type": "Тип",
+        "number": "Номер",
+        "date": "Дата",
+        "counterparty": "Контрагент",
+        "status": "Статус",
+        "amount": "Сумма",
+        "actions": "Действия"
+      }
+    },
+    "logistics": {
+      "title": "Логистика",
+      "description": "Отслеживание доставок и управление транспортировкой",
+      "stats": {
+        "inTransit": "В пути",
+        "customs": "На таможне",
+        "delivered": "Доставлено",
+        "delays": "Задержки"
+      },
+      "newShipment": "Новая отгрузка",
+      "departure": "Отправление",
+      "arrival": "Прибытие",
+      "carrier": "Перевозчик",
+      "statusLabel": {
+        "inTransit": "В пути",
+        "customs": "На таможне",
+        "delivered": "Доставлено"
+      }
+    },
+    "adminUsers": {
+      "title": "Пользователи компании",
+      "description": "Управление сотрудниками, ролями и делегированием доступа",
+      "stats": {
+        "total": "Всего",
+        "admins": "Администраторы",
+        "managers": "Менеджеры",
+        "employees": "Сотрудники"
+      },
+      "inviteUser": "Пригласить пользователя",
+      "roles": {
+        "admin": "Администратор",
+        "salesManager": "Sales Manager",
+        "employee": "Сотрудник"
+      },
+      "statusLabel": {
+        "active": "Активен",
+        "inactive": "Неактивен"
+      },
+      "table": {
+        "name": "Имя",
+        "email": "Email",
+        "role": "Роль",
+        "status": "Статус",
+        "lastLogin": "Последний вход",
+        "actions": "Действия"
+      }
+    }
+  },
+
+  "shell": {
+    "nav": {
+      "crmDeals": "Сделки (CRM)",
+      "catalog": "Каталог (PIM)",
+      "smartMatch": "Smart Match",
+      "kycManager": "KYC Manager",
+      "systemControl": "Управление"
+    },
+    "sections": {
+      "commerce": "Коммерция",
+      "infrastructure": "Инфраструктура"
+    },
+    "systemAdmin": "Системный админ",
+    "signOut": "Выйти",
+    "breadcrumb": {
+      "main": "Главная"
+    },
+    "globalSearch": "Глобальный поиск (Alt+S)..."
+  },
+
+  "error": {
+    "title": "Что-то пошло не так",
+    "description": "Произошла непредвиденная ошибка. Попробуйте перезагрузить страницу.",
+    "goHome": "На главную",
+    "reload": "Перезагрузить"
+  },
+
+  "dealSplit": {
+    "stageLabel": "Этап",
+    "docsComingSoon": "Загрузка договоров, спецификаций и накладных будет доступна в следующей версии.",
+    "stages": {
+      "NEW": "Новый запрос",
+      "SOURCING": "Поиск поставщиков",
+      "CALCULATING": "Расчёт цен",
+      "QUOTE_SENT": "КП отправлено",
+      "CONTRACT_SIGNED": "Договор подписан",
+      "CLOSED_LOST": "Закрыта (отказ)"
+    }
+  }
+}

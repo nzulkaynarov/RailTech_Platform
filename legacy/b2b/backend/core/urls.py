@@ -1,0 +1,74 @@
+from django.contrib import admin
+from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
+from rest_framework.routers import DefaultRouter
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from catalog.views import (
+    ProductViewSet, EquipmentGroupViewSet, CategoryViewSet,
+    ManufacturerViewSet, SupplierOfferViewSet
+)
+from crm.views import (
+    DealViewSet, QuoteViewSet, QuoteItemViewSet, MessageViewSet,
+    LeadCreateView, CRMAnalyticsView, ActivityLogViewSet
+)
+from accounts.views import CompanyViewSet, UserViewSet, RegisterView, SetupPasswordView, SubmitProfileView
+from notifications.views import NotificationViewSet
+from master_data.views import (
+    CountryViewSet, CurrencyViewSet,
+    UnitOfMeasureViewSet, DeliveryBasisViewSet
+)
+from sourcing.views import ExcelImportView, CatalogImportView, ImportStatusView
+
+router = DefaultRouter()
+router.register(r'catalog/products', ProductViewSet, basename='product')
+router.register(r'catalog/offers', SupplierOfferViewSet, basename='offer')
+router.register(r'catalog/equipment-groups', EquipmentGroupViewSet, basename='equipmentgroup')
+router.register(r'catalog/categories', CategoryViewSet, basename='category')
+router.register(r'catalog/manufacturers', ManufacturerViewSet, basename='manufacturer')
+
+router.register(r'crm/deals', DealViewSet, basename='deal')
+router.register(r'crm/quotes', QuoteViewSet, basename='quote')
+router.register(r'crm/quote-items', QuoteItemViewSet, basename='quoteitem')
+router.register(r'crm/messages', MessageViewSet, basename='message')
+router.register(r'crm/activity-logs', ActivityLogViewSet, basename='activitylog')
+
+router.register(r'accounts/companies', CompanyViewSet)
+router.register(r'accounts/users', UserViewSet)
+router.register(r'notifications', NotificationViewSet, basename='notification')
+
+# Master Data
+router.register(r'master-data/countries', CountryViewSet)
+router.register(r'master-data/currencies', CurrencyViewSet)
+router.register(r'master-data/units', UnitOfMeasureViewSet)
+router.register(r'master-data/delivery-basis', DeliveryBasisViewSet)
+
+from accounts.wizard import CompanyWizardView, WIZARD_FORMS
+
+urlpatterns = [
+    path('admin/accounts/company/wizard/',
+         CompanyWizardView.as_view(WIZARD_FORMS),
+         name='company-wizard'),
+    path('admin/', admin.site.urls),
+    path('api/v1/', include(router.urls)),
+    path('api/v1/auth/register/', RegisterView.as_view(), name='register'),
+    path('api/v1/auth/setup-password/',
+         SetupPasswordView.as_view(), name='setup-password'),
+    path('api/v1/auth/submit-profile/',
+         SubmitProfileView.as_view(), name='submit-profile'),
+    path('api/v1/auth/token/', TokenObtainPairView.as_view(),
+         name='token_obtain_pair'),
+    path('api/v1/auth/token/refresh/',
+         TokenRefreshView.as_view(), name='token_refresh'),
+    # Sourcing & Imports
+    path('api/v1/sourcing/import-deal/<int:deal_id>/', ExcelImportView.as_view(), name='import-deal'),
+    path('api/v1/sourcing/import-catalog/', CatalogImportView.as_view(), name='import-catalog'),
+    path('api/v1/sourcing/import-status/<str:task_id>/', ImportStatusView.as_view(), name='import-status'),
+    path('api/v1/crm/analytics/', CRMAnalyticsView.as_view(), name='crm-analytics'),
+    path('api/v1/crm/leads/', LeadCreateView.as_view(), name='lead-create'),
+    path('api/v1/health/', include([
+        path('', include([
+            path('', __import__('core.health', fromlist=['health_check']).health_check, name='health_check'),
+        ])),
+    ])),
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

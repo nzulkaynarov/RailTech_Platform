@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background:#f1f5f9; display:flex; width:1400px; height:900px; overflow:hidden; }
+.sidebar { width:60px; background:#0c1628; flex-shrink:0; display:flex; flex-direction:column; align-items:center; padding-top:16px; }
+.sidebar .logo { font-size:18px; font-weight:700; color:#60a5fa; margin-bottom:16px; }
+.sidebar .nav-item { width:40px; height:40px; border-radius:8px; display:flex; align-items:center; justify-content:center; margin-bottom:4px; font-size:16px; color:#94a3b8; cursor:pointer; }
+.sidebar .nav-item.active { background:#16233e; color:#fff; }
+.main { flex:1; display:flex; flex-direction:column; }
+.topbar { height:56px; background:#fff; border-bottom:1px solid #e2e8f0; display:flex; align-items:center; padding:0 24px; }
+.topbar .title { font-size:18px; font-weight:700; color:#0f172a; }
+
+.grid-container { flex:1; margin:12px; background:#fff; border-radius:12px; border:1px solid #e2e8f0; display:flex; flex-direction:column; overflow:hidden; }
+
+/* Table */
+table { width:100%; border-collapse:collapse; font-size:11px; }
+thead th { background:#1e293b; color:#fff; font-weight:600; font-size:10px; padding:10px 8px; text-align:left; white-space:nowrap; position:sticky; top:0; }
+.zone-label { background:#f1f5f9; text-align:center; font-size:9px; color:#64748b; padding:4px; font-weight:600; letter-spacing:0.5px; }
+.domain-header td { padding:6px 12px; font-size:11px; font-weight:600; }
+.domain-rail { background:#eff6ff; color:#2563eb; }
+.domain-goods { background:#f0fdf4; color:#16a34a; }
+.domain-serv { background:#f5f3ff; color:#7c3aed; }
+tbody td { padding:9px 8px; border-bottom:1px solid #f1f5f9; }
+tbody tr:nth-child(even) td { background:#fafbfc; }
+.internal-zone { background:#f0f2f5 !important; }
+tr:nth-child(even) .internal-zone { background:#e8eaee !important; }
+.pname { font-weight:600; color:#0f172a; }
+.total-cell { color:#2563eb; font-weight:700; font-size:12px; }
+.margin-cell { color:#16a34a; font-weight:600; }
+.na-cell { color:#94a3b8; }
+.num { font-variant-numeric: tabular-nums; }
+
+.total-footer { margin-top:auto; background:#0f172a; padding:14px 24px; display:flex; justify-content:space-between; align-items:center; }
+.tf-section { }
+.tf-label { font-size:11px; color:#64748b; }
+.tf-items { font-size:10px; color:#64748b; }
+.tf-profit-val { font-size:20px; font-weight:700; color:#22c55e; }
+.tf-profit-pct { font-size:11px; color:#22c55e; margin-left:6px; }
+.tf-excl { font-size:14px; font-weight:700; color:#fff; }
+.tf-incl { font-size:18px; font-weight:700; color:#f59e0b; }
+.tf-vat { font-size:10px; color:#64748b; }
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="logo">RF</div>
+  <div class="nav-item">📊</div>
+  <div class="nav-item">📦</div>
+  <div class="nav-item active">💼</div>
+  <div class="nav-item">📋</div>
+  <div class="nav-item">📄</div>
+  <div class="nav-item">⚙️</div>
+</div>
+<div class="main">
+  <div class="topbar"><span class="title">Калькулятор КП — Сделка #2024-0847</span></div>
+  <div class="grid-container">
+    <div style="overflow:auto; flex:1;">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:30px">#</th>
+            <th style="width:200px">Наименование</th>
+            <th style="width:60px">Кол-во</th>
+            <th style="width:85px">FCA ($)</th>
+            <th style="width:85px">Логист. ($)</th>
+            <th style="width:80px">Таможня ($)</th>
+            <th style="width:90px">Себест. ($)</th>
+            <th style="width:65px">Маржа %</th>
+            <th style="width:90px">Цена ($)</th>
+            <th style="width:75px">НДС 12%</th>
+            <th style="width:100px">Итого ($)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td colspan="3"></td><td colspan="4" class="zone-label">← ВНУТРЕННЯЯ ЗОНА (скрыта от клиента) →</td><td colspan="4"></td></tr>
+          <tr class="domain-header"><td colspan="11" class="domain-rail">🚂 ЖД Техника (5 позиций)</td></tr>
+          <tr><td class="num">1</td><td class="pname">Тепловоз ТЭМ18ДМ</td><td class="num">2</td><td class="num internal-zone">285,000.00</td><td class="num internal-zone">12,400.00</td><td class="num internal-zone">8,550.00</td><td class="num internal-zone">305,950.00</td><td class="margin-cell num">8.0%</td><td class="num">330,426.00</td><td class="num">39,651.12</td><td class="total-cell num">740,154.24</td></tr>
+          <tr><td class="num">2</td><td class="pname">Колёсная пара РУ1-950</td><td class="num">16</td><td class="num internal-zone">4,200.00</td><td class="num internal-zone">380.00</td><td class="num internal-zone">126.00</td><td class="num internal-zone">4,706.00</td><td class="margin-cell num">12.0%</td><td class="num">5,270.72</td><td class="num">632.49</td><td class="total-cell num">94,451.36</td></tr>
+          <tr><td class="num">3</td><td class="pname">Тормозная колодка ТК-1</td><td class="num">200</td><td class="num internal-zone">45.00</td><td class="num internal-zone">8.00</td><td class="num internal-zone">1.35</td><td class="num internal-zone">54.35</td><td class="margin-cell num">15.0%</td><td class="num">62.50</td><td class="num">7.50</td><td class="total-cell num">14,000.00</td></tr>
+          <tr><td class="num">4</td><td class="pname">Подшипник буксовый 42726</td><td class="num">32</td><td class="num internal-zone">280.00</td><td class="num internal-zone">22.00</td><td class="num internal-zone">8.40</td><td class="num internal-zone">310.40</td><td class="margin-cell num">10.0%</td><td class="num">341.44</td><td class="num">40.97</td><td class="total-cell num">12,237.12</td></tr>
+          <tr><td class="num">5</td><td class="pname">Стрелочный перевод Р65</td><td class="num">4</td><td class="num internal-zone">18,500.00</td><td class="num internal-zone">2,100.00</td><td class="num internal-zone">618.00</td><td class="num internal-zone">21,218.00</td><td class="margin-cell num">9.0%</td><td class="num">23,127.62</td><td class="num">2,775.31</td><td class="total-cell num">103,611.72</td></tr>
+          <tr class="domain-header"><td colspan="11" class="domain-goods">📦 Общие товары (4 позиции)</td></tr>
+          <tr><td class="num">6</td><td class="pname">Смазка буксовая ЛЗ-ЦНИИ</td><td class="num">50 кг</td><td class="num internal-zone">18.00</td><td class="num internal-zone">3.00</td><td class="num internal-zone">0.63</td><td class="num internal-zone">21.63</td><td class="margin-cell num">20.0%</td><td class="num">25.96</td><td class="num">3.11</td><td class="total-cell num">1,453.50</td></tr>
+          <tr><td class="num">7</td><td class="pname">Крепёж М20×120 болт в/пр</td><td class="num">500</td><td class="num internal-zone">2.40</td><td class="num internal-zone">0.30</td><td class="num internal-zone">0.08</td><td class="num internal-zone">2.78</td><td class="margin-cell num">25.0%</td><td class="num">3.47</td><td class="num">0.42</td><td class="total-cell num">1,945.00</td></tr>
+          <tr><td class="num">8</td><td class="pname">Провод ПВ3 1×2.5</td><td class="num">2000 м</td><td class="num internal-zone">0.85</td><td class="num internal-zone">0.05</td><td class="num internal-zone">0.03</td><td class="num internal-zone">0.93</td><td class="margin-cell num">30.0%</td><td class="num">1.21</td><td class="num">0.15</td><td class="total-cell num">2,720.00</td></tr>
+          <tr><td class="num">9</td><td class="pname">Масло трансф. ТКП</td><td class="num">200 л</td><td class="num internal-zone">4.50</td><td class="num internal-zone">0.60</td><td class="num internal-zone">0.15</td><td class="num internal-zone">5.25</td><td class="margin-cell num">18.0%</td><td class="num">6.20</td><td class="num">0.74</td><td class="total-cell num">1,388.00</td></tr>
+          <tr class="domain-header"><td colspan="11" class="domain-serv">🔧 Услуги (2 позиции)</td></tr>
+          <tr><td class="num">10</td><td class="pname">Ж/д транспорт до Ташкента</td><td class="num">1</td><td class="num internal-zone">8,500.00</td><td class="na-cell internal-zone">—</td><td class="na-cell internal-zone">—</td><td class="num internal-zone">8,500.00</td><td class="margin-cell num">15.0%</td><td class="num">9,775.00</td><td class="num">1,173.00</td><td class="total-cell num">10,948.00</td></tr>
+          <tr><td class="num">11</td><td class="pname">Тех. консультация (8 ч)</td><td class="num">1</td><td class="num internal-zone">1,200.00</td><td class="na-cell internal-zone">—</td><td class="na-cell internal-zone">—</td><td class="num internal-zone">1,200.00</td><td class="margin-cell num">20.0%</td><td class="num">1,440.00</td><td class="num">172.80</td><td class="total-cell num">1,612.80</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="total-footer">
+      <div class="tf-section">
+        <div class="tf-label">ИТОГО:</div>
+        <div class="tf-items">11 позиций · 3 домена</div>
+      </div>
+      <div class="tf-section">
+        <div class="tf-label">Прибыль компании:</div>
+        <div style="display:flex;align-items:baseline"><span class="tf-profit-val">$98,420</span><span class="tf-profit-pct">(11.6%)</span></div>
+      </div>
+      <div class="tf-section" style="text-align:right">
+        <div style="display:flex;gap:30px;align-items:baseline">
+          <div><div class="tf-label">Без НДС:</div><div class="tf-excl">$756,473</div></div>
+          <div><div class="tf-label">С НДС (12%):</div><div class="tf-incl">$847,250</div><div class="tf-vat">вкл. НДС $90,777</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

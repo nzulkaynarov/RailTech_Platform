@@ -1,0 +1,76 @@
+{
+    "equipment_groups": [
+        {
+            "type": "Тепловоз",
+            "series": "ТЭМ18",
+            "name": "Маневровый тепловоз ТЭМ18"
+        },
+        {
+            "type": "Тепловоз",
+            "series": "2ТЭ25КМ",
+            "name": "Магистральный тепловоз 2ТЭ25КМ"
+        },
+        {
+            "type": "Вагон",
+            "series": "12-132",
+            "name": "Полувагон люковый"
+        },
+        {
+            "type": "Путевая техника",
+            "series": "ВПР-02",
+            "name": "Выправочно-подбивочно-рихтовочная машина"
+        }
+    ],
+    "companies": [
+        {
+            "name": "ООО RailTech",
+            "inn": "309876543",
+            "legal_address": "г. Ташкент, ул. Железнодорожная, 1",
+            "contact_person": "System Admin",
+            "email": "info@railtech.uz",
+            "verification_status": "L2_VERIFIED",
+            "is_platform_owner": true
+        }
+    ],
+    "test_users": [
+        {
+            "email_env": "SUPERADMIN_EMAIL",
+            "password_env": "SUPERADMIN_PASSWORD",
+            "email_default": "admin@railtech.uz",
+            "password_default": "admin123",
+            "first_name": "System",
+            "last_name": "Admin",
+            "role": "ADMIN",
+            "is_superuser": true,
+            "is_staff": true,
+            "company_inn": "309876543",
+            "workspace_role": "OWNER"
+        },
+        {
+            "email_env": "MANAGER_EMAIL",
+            "password_env": "MANAGER_PASSWORD",
+            "email_default": "manager@railtech.uz",
+            "password_default": "manager123",
+            "first_name": "Sales",
+            "last_name": "Manager",
+            "role": "MANAGER",
+            "is_superuser": false,
+            "is_staff": true,
+            "company_inn": "309876543",
+            "workspace_role": "PROCUREMENT"
+        },
+        {
+            "email_env": "CLIENT_EMAIL",
+            "password_env": "CLIENT_PASSWORD",
+            "email_default": "client@railtech.uz",
+            "password_default": "client123",
+            "first_name": "Demo",
+            "last_name": "Client",
+            "role": "CLIENT",
+            "is_superuser": false,
+            "is_staff": false,
+            "company_inn": null,
+            "workspace_role": null
+        }
+    ]
+}
