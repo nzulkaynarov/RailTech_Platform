@@ -4,8 +4,6 @@
 # Database: External Neon Cloud PostgreSQL (no local postgres)
 # ==============================================================================
 
-version: '3.9'
-
 services:
   # ===========================================================================
   # Redis for Django Channels (WebSocket)
@@ -86,7 +84,7 @@ services:
     env_file: .env
     entrypoint: >
       sh -c "
-      /usr/bin/mc config host add railtech http://minio:9000 ${MINIO_ACCESS_KEY:-railtech} ${MINIO_SECRET_KEY:-railtech} &&
+      /usr/bin/mc alias set railtech http://minio:9000 ${MINIO_ACCESS_KEY:-railtech} ${MINIO_SECRET_KEY:-railtech} &&
       /usr/bin/mc mb railtech/${MINIO_PUBLIC_BUCKET:-railtech-public} --ignore-existing &&
       /usr/bin/mc mb railtech/${MINIO_PRIVATE_BUCKET:-railtech-private} --ignore-existing &&
       /usr/bin/mc mb railtech/${MINIO_TEMP_BUCKET:-railtech-temp} --ignore-existing &&
@@ -199,7 +197,7 @@ services:
       - railtech
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost/health"]
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1/health"]
       interval: 30s
       timeout: 5s
       retries: 3
