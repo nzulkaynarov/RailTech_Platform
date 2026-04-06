@@ -86,6 +86,8 @@ class SubmitProfileSerializer(serializers.Serializer):
     inn = serializers.CharField(max_length=20)
     companyName = serializers.CharField(max_length=255)
     role_code = serializers.CharField(max_length=50, help_text="WorkspaceRole code (e.g. 'OWNER')")
+    company_type = serializers.CharField(max_length=50, required=False, default='CLIENT',
+                                         help_text="CompanyType code (e.g. 'CLIENT', 'MANUFACTURER', 'SUPPLIER')")
 
 
 class ChangePasswordSerializer(serializers.Serializer):

@@ -124,8 +124,13 @@ export const accountsApi = {
 		const response = await apiClient.post<{ message: string; user: User }>('auth/setup-password/', data);
 		return response.data.user;
 	},
-	submitProfile: async (data: { inn: string; companyName: string; role: string }) => {
-		const response = await apiClient.post<{ message: string; user: User }>('auth/submit-profile/', data);
+	submitProfile: async (data: { inn: string; companyName: string; role: string; company_type?: string }) => {
+		const response = await apiClient.post<{ message: string; user: User }>('auth/submit-profile/', {
+			inn: data.inn,
+			companyName: data.companyName,
+			role_code: data.role,
+			company_type: data.company_type || 'CLIENT',
+		});
 		return response.data.user;
 	},
 	// Admin specific endpoints

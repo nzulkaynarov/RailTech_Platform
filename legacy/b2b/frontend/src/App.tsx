@@ -7,6 +7,10 @@ import { OnboardingTour } from './components/Shared/OnboardingTour';
 import { PageBreadcrumb, getPageLabel } from './components/Shared/PageBreadcrumb';
 import { useUserStore } from './store/userStore';
 import { useAuthStore } from './store/authStore';
+import { LoginPage } from './components/Auth/LoginPage';
+import { KYCRegistrationForm } from './components/Auth/KYCRegistrationForm';
+import { PasswordSetupPage } from './components/Auth/PasswordSetupPage';
+import { ProfileCompletionForm } from './components/Cabinet/ProfileCompletionForm';
 
 // Lazy load page components
 const ProductManagement = lazy(() => import('./pages/ProductManagement').then(m => ({ default: m.ProductManagement })));
@@ -14,8 +18,8 @@ const ProductDetail = lazy(() => import('./pages/ProductDetail').then(m => ({ de
 const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
 const ProfilePage = lazy(() => import('./pages/ProfilePage').then(m => ({ default: m.ProfilePage })));
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
-const OnboardingPage = lazy(() => import('./pages/OnboardingPage').then(m => ({ default: m.OnboardingPage })));
-const PendingVerificationPage = lazy(() => import('./pages/PendingVerificationPage').then(m => ({ default: m.PendingVerificationPage })));
+// OnboardingPage and PendingVerificationPage removed — real auth flow via LoginPage + KYCRegistrationForm
+// Admin approves users via Django admin panel at /admin/
 const RequestDetailPage = lazy(() => import('./pages/flow/RequestDetailPage').then(m => ({ default: m.RequestDetailPage })));
 const PurchaseTemplatesPage = lazy(() => import('./pages/PurchaseTemplatesPage').then(m => ({ default: m.PurchaseTemplatesPage })));
 const SourcingHub = lazy(() => import('./components/Sourcing/SourcingHub').then(m => ({ default: m.SourcingHub })));
@@ -66,29 +70,116 @@ type Page =
   | { type: 'logistics' }
   | { type: 'purchase-templates' };
 
+/** Parse URL path and query params for auth routes */
+function useAuthRoute() {
+  const [route, setRoute] = useState(() => {
+    const url = new URL(window.location.href);
+    const path = url.pathname;
+    if (path === '/setup-password') {
+      return {
+        view: 'setup-password' as const,
+        uid: url.searchParams.get('uid'),
+        token: url.searchParams.get('token'),
+      };
+    }
+    if (path === '/register') return { view: 'register' as const, uid: null, token: null };
+    return { view: 'login' as const, uid: null, token: null };
+  });
+
+  const navigate = (view: 'login' | 'register') => {
+    const newPath = view === 'register' ? '/register' : '/';
+    window.history.pushState(null, '', newPath);
+    setRoute({ view, uid: null, token: null });
+  };
+
+  // Handle browser back/forward
+  useEffect(() => {
+    const onPopState = () => {
+      const url = new URL(window.location.href);
+      const path = url.pathname;
+      if (path === '/setup-password') {
+        setRoute({
+          view: 'setup-password',
+          uid: url.searchParams.get('uid'),
+          token: url.searchParams.get('token'),
+        });
+      } else if (path === '/register') {
+        setRoute({ view: 'register', uid: null, token: null });
+      } else {
+        setRoute({ view: 'login', uid: null, token: null });
+      }
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  return { route, navigate };
+}
+
 function App() {
-  const screen = useUserStore((s) => s.screen);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const user = useAuthStore((s) => s.user);
   const initAuth = useAuthStore((s) => s.initAuth);
   const isLoading = useAuthStore((s) => s.isLoading);
+  const loadFromAuth = useUserStore((s) => s.loadFromAuth);
+  const { route, navigate } = useAuthRoute();
+  const [profileCompleted, setProfileCompleted] = useState(false);
 
   // Initialize auth on app startup — validates persisted token
   useEffect(() => {
     initAuth();
   }, [initAuth]);
 
+  // Sync userStore from authStore when authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadFromAuth();
+      // Clear auth URL paths after login
+      if (window.location.pathname !== '/') {
+        window.history.replaceState(null, '', '/');
+      }
+    }
+  }, [isAuthenticated, loadFromAuth]);
+
   if (isLoading) return <LoadingSkeleton />;
 
-  if (screen === 'onboarding') return (
-    <Suspense fallback={<LoadingSkeleton />}>
-      <OnboardingPage />
-    </Suspense>
-  );
+  // Password setup page — accessible without auth (from email link)
+  if (route.view === 'setup-password') {
+    return (
+      <PasswordSetupPage
+        uid={route.uid}
+        token={route.token}
+        onLogin={() => navigate('login')}
+      />
+    );
+  }
 
-  if (screen === 'pending_verification') return (
-    <Suspense fallback={<LoadingSkeleton />}>
-      <PendingVerificationPage />
-    </Suspense>
-  );
+  // Not authenticated — show login or registration
+  if (!isAuthenticated) {
+    if (route.view === 'register') {
+      return <KYCRegistrationForm />;
+    }
+    return (
+      <LoginPage
+        onNavigate={() => {}}
+        onRegister={() => navigate('register')}
+      />
+    );
+  }
+
+  // Authenticated but no company — show profile completion (company + type selection)
+  const hasCompany = user?.company || user?.primary_company || profileCompleted;
+  if (!hasCompany) {
+    return (
+      <ProfileCompletionForm
+        onComplete={async () => {
+          setProfileCompleted(true);
+          await initAuth();
+          await loadFromAuth();
+        }}
+      />
+    );
+  }
 
   return (
     <ErrorBoundary>

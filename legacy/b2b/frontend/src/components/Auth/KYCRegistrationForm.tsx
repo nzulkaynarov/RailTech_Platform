@@ -205,12 +205,15 @@ export const KYCRegistrationForm: React.FC = () => {
 									{t('registration.waitHint')}
 								</p>
 								<div className="flex justify-center">
-									<a
-										href="/login"
+									<button
+										onClick={() => {
+											window.history.pushState(null, '', '/');
+											window.dispatchEvent(new PopStateEvent('popstate'));
+										}}
 										className="text-sm text-primary hover:text-primary/80 font-bold transition-colors"
 									>
 										{t('registration.backToLogin')}
-									</a>
+									</button>
 								</div>
 							</div>
 						</div>

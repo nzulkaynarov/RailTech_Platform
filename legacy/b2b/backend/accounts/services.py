@@ -66,10 +66,11 @@ def submit_company_profile(
     user: CustomUser,
     inn: str,
     company_name: str,
-    workspace_role_code: str
+    workspace_role_code: str,
+    company_type_code: str = 'CLIENT',
 ) -> Tuple[Optional[CustomUser], Optional[str]]:
     """
-    Step 3: User fills in company info and creates membership.
+    Step 3: User fills in company info, assigns company type, and creates membership.
     """
     if not all([inn, company_name, workspace_role_code]):
         return None, "INN, company name and role are required"
@@ -81,6 +82,9 @@ def submit_company_profile(
     if not w_role:
         return None, f"Role '{workspace_role_code}' not found in master data."
 
+    from .models import CompanyType
+    company_type = CompanyType.objects.filter(code=company_type_code).first()
+
     company, created = Company.objects.get_or_create(
         inn=inn,
         defaults={
@@ -88,6 +92,10 @@ def submit_company_profile(
             'verification_status': submitted_status
         }
     )
+
+    # Assign company type
+    if company_type and not company.types.filter(pk=company_type.pk).exists():
+        company.types.add(company_type)
 
     # Create membership (Multi-tenancy V2)
     CompanyMember.objects.get_or_create(

@@ -39,7 +39,7 @@ docs/                       # Architecture, specs, roadmap, mockups, presentatio
 
 ## Key Architecture Decisions
 
-- **No React Router** — client-side state machine via `useUserStore.screen` + `useState<Page>` in App.tsx
+- **Minimal URL routing** — auth routes (`/`, `/register`, `/setup-password`) via `useAuthRoute()` hook in App.tsx; main app uses `useState<Page>` state machine (no React Router)
 - **B2B Multi-tenancy** — via `CompanyMember` join table, not schema/DB isolation
 - **Deal FSM** — DRAFT → KYC_PENDING → SOURCING → CALCULATING → QUOTE_SENT → CONTRACT_SIGNED → CLOSED_WON/CLOSED_LOST
 - **Dual Redis** — redis:6379 (Channels/WebSocket), redis-celery:6380 (Celery broker+results)
@@ -120,10 +120,23 @@ make shell           # backend bash
 - **Frontend:** vitest + @testing-library/react + jsdom
 - **CI:** GitHub Actions — 6 jobs (backend-lint, backend-test, frontend-lint, frontend-build, docker-build, security)
 
+## Auth Flow (production)
+
+1. User opens app → `LoginPage` (or `/register` → `KYCRegistrationForm`)
+2. Registration: `POST /api/v1/auth/register/` → creates `CustomUser(is_active=False)` + sends email
+3. In DEBUG mode, email goes to **backend container logs** (`docker compose logs backend`)
+4. User clicks link `/setup-password?uid=...&token=...` → `PasswordSetupPage` → sets password → `is_active=True`
+5. Admin approves company via Django admin at `/admin/` (Unfold UI) → action "Подтвердить KYC (L2)"
+6. User logs in with JWT → `LoginPage` → main app
+
+**Test accounts (pre-seeded):**
+- `admin@railtech.uz` / `admin123` — Admin (superuser)
+- `manager@railtech.uz` / `manager123` — Sales Manager
+- `client@test.uz` / `client123` — Client
+
 ## Common Pitfalls
 
 - Frontend is a **production build** served by nginx — `import.meta.env.DEV` is always `false` in Docker
-- `demoStore.isDemoMode` controls simulation buttons on PendingVerificationPage
-- No URL-based routing — navigation is state-driven, so browser back/forward doesn't work
+- Auth URL routes (`/`, `/register`, `/setup-password`) handled by `useAuthRoute()` in App.tsx; main app pages use state-based navigation
 - `DATABASE_URL` query params (like `channel_binding=require`) are passed as DB OPTIONS
 - Volume mount `./backend:/app` enables hot-reload for backend; frontend needs rebuild (`docker compose up -d --build frontend`)

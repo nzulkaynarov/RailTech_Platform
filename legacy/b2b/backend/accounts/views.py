@@ -230,7 +230,8 @@ class SubmitProfileView(views.APIView):
             user=request.user,
             inn=serializer.validated_data['inn'],
             company_name=serializer.validated_data['companyName'],
-            workspace_role_code=serializer.validated_data['role_code']
+            workspace_role_code=serializer.validated_data['role_code'],
+            company_type_code=serializer.validated_data.get('company_type', 'CLIENT'),
         )
         if error:
             return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
