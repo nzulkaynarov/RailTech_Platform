@@ -20,41 +20,31 @@ $ARGUMENTS — название модели и приложение. Приме
 
 ```python
 from django.db import models
-from django.core.validators import MinValueValidator, MaxValueValidator
-from accounts.models import User, Company
-from core.models import AuditMixin
+from django.utils.translation import gettext_lazy as _
+from django.core.validators import MinValueValidator
+from accounts.models import CustomUser, Company
 
-class <Model>(AuditMixin, models.Model):
-    # Выбор статусов
-    STATUS_CHOICES = [
-        ('DRAFT', 'Draft'),
-        ('APPROVED', 'Approved'),
-        ('REJECTED', 'Rejected'),
-    ]
-
+class <Model>(models.Model):
     # Основные поля
-    name = models.CharField(max_length=255, db_index=True)
-    code = models.CharField(max_length=50, unique=True)
-    description = models.TextField(blank=True, null=True)
+    name = models.CharField(max_length=255, db_index=True, verbose_name=_("Название"))
+    code = models.CharField(max_length=50, unique=True, verbose_name=_("Код"))
+    description = models.TextField(blank=True, default='', verbose_name=_("Описание"))
 
     # Внешние ключи
     company = models.ForeignKey(Company, on_delete=models.CASCADE)
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+')
+    created_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name='+')
 
-    # Статус и параметры
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='DRAFT')
+    # Статус — используй FK на lookup-таблицу (см. master_data.AbstractLookup)
+    # или choices для простых случаев
     amount = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
 
-    # Аудит (наследуется из AuditMixin)
-    # - created_at
-    # - updated_at
-    # - created_by (определи сам через FK)
+    # Даты (определяй явно — AuditMixin не существует в проекте)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = '<app>_<model_lower>'
         indexes = [
             models.Index(fields=['company', 'created_at']),
-            models.Index(fields=['status', 'created_at']),
             models.Index(fields=['code']),
         ]
         constraints = [
@@ -66,11 +56,16 @@ class <Model>(AuditMixin, models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.code})"
+```
 
-    @property
-    def is_editable(self):
-        """Модель редактируется только в статусе DRAFT"""
-        return self.status == 'DRAFT'
+**Для справочных таблиц** (статусы, типы) наследуй `AbstractLookup` из `master_data.models`:
+```python
+from master_data.models import AbstractLookup
+
+class <MyStatus>(AbstractLookup):
+    """Наследует: code (unique), name, sort_order, is_active"""
+    class Meta(AbstractLookup.Meta):
+        verbose_name = '<MyStatus>'
 ```
 
 3. Создай ModelSerializer в `{app}/serializers.py`:
@@ -176,19 +171,12 @@ python manage.py migrate {app}
 python manage.py showmigrations {app}
 ```
 
-## AuditMixin
+## Базовые классы
 
-Убедись, что модель наследует AuditMixin для автоматических полей:
-
-```python
-# core/models.py
-class AuditMixin(models.Model):
-    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        abstract = True
-```
+- **Обычные модели** — определяй `created_at`/`updated_at` явно (нет AuditMixin в проекте)
+- **Справочники (lookup)** — наследуй `master_data.models.AbstractLookup` (поля: code, name, sort_order, is_active)
+- **Пользователь** — `accounts.models.CustomUser` (не `User`), email как USERNAME_FIELD
+- **Компания** — `accounts.models.Company`
 
 ## Индексы и Constraints
 

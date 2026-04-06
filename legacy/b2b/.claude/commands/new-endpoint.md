@@ -39,11 +39,12 @@ class <Model>Serializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at', 'updated_at']
 ```
 
-4. Создай ViewSet в `{app}/viewsets.py`:
+4. Создай ViewSet в `{app}/views.py`:
 
 ```python
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
+from core.permissions import IsManagerOrAdmin, IsOwnerOrManagerOrAdmin
 from .models import <Model>
 from .serializers import <Model>Serializer
 
@@ -52,31 +53,24 @@ class <Model>ViewSet(viewsets.ModelViewSet):
     serializer_class = <Model>Serializer
     permission_classes = [IsAuthenticated]
 
-    # Фильтрация по роли пользователя
+    # B2B Multi-tenancy: фильтрация по компании пользователя
     def get_queryset(self):
         user = self.request.user
-        qs = <Model>.objects.all()
+        qs = super().get_queryset()
 
-        # GUEST — доступ только к публичным данным
-        if user.role == 'GUEST':
-            return qs.filter(is_public=True)
+        # Staff (is_staff_level) видят всё
+        if user.role and user.role.is_staff_level:
+            return qs
 
-        # CLIENT — только свои данные
-        if user.role == 'CLIENT':
-            return qs.filter(company=user.company)
+        # Остальные — только данные своих компаний
+        company_ids = user.memberships.filter(
+            is_active=True
+        ).values_list('company_id', flat=True)
+        return qs.filter(company_id__in=company_ids)
 
-        # SALES_MANAGER/ACCOUNT_MANAGER — все в рамках компании
-        if user.role in ['SALES_MANAGER', 'ACCOUNT_MANAGER']:
-            return qs.filter(company=user.company)
-
-        # ADMIN — все
-        return qs
-
-    # Пагинация и фильтрация
-    pagination_class = StandardResultsSetPagination
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ['status', 'created_at']
-    search_fields = ['name', 'code']
+    filterset_fields = ['created_at']
+    search_fields = ['name']
     ordering_fields = ['created_at', 'name']
     ordering = ['-created_at']
 ```
@@ -129,25 +123,15 @@ class <Model>ViewSetTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 ```
 
-## Роли и Permissions
+## Permissions (из core/permissions.py)
 
-**GUEST** — только чтение публичных данных
-- `AllowAny` для list/retrieve публичных
-- `403` для create/update/delete
+- **IsAuthenticated** — базовый, по умолчанию для всех endpoints
+- **IsManagerOrAdmin** — проверяет `user.role.is_staff_level` (SystemRole с флагом staff)
+- **IsAdminUser** — проверяет `user.role.code == 'ADMIN'`
+- **IsAdminOrReadOnly** — safe methods всем, write только админам
+- **IsOwnerOrManagerOrAdmin** — object-level, проверяет через CompanyMember memberships
 
-**CLIENT** — работа со своей компанией
-- `IsAuthenticated` + фильтр по company
-
-**SALES_MANAGER** — работа с квотами и трейдами
-- Полный доступ к данным своей компании
-- `IsAuthenticated` + фильтр по company
-
-**ACCOUNT_MANAGER** — работа с аккаунтами
-- Полный доступ к данным своего аккаунта
-- `IsAuthenticated` + фильтр по account
-
-**ADMIN** — полный доступ
-- `IsAdminUser`
+**Multi-tenancy:** Фильтруй queryset по `user.memberships` (CompanyMember join table), не по `user.company` напрямую.
 
 ## Пагинация и Фильтрация
 
@@ -181,5 +165,5 @@ class StandardResultsSetPagination(PageNumberPagination):
 
 4. Сообщи путь к созданным файлам:
    - Serializer: `{app}/serializers.py`
-   - ViewSet: `{app}/viewsets.py`
+   - ViewSet: `{app}/views.py`
    - Tests: `{app}/tests/test_viewsets.py`

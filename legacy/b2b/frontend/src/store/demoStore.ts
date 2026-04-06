@@ -12,7 +12,7 @@ interface DemoState {
 export const useDemoStore = create<DemoState>()(
   persist(
     (set) => ({
-      isDemoMode: import.meta.env.DEV,
+      isDemoMode: true,
       enableDemoMode: () => set({ isDemoMode: true }),
       disableDemoMode: () => set({ isDemoMode: false }),
       toggleDemoMode: () => set((s) => ({ isDemoMode: !s.isDemoMode })),
