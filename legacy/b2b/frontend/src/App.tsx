@@ -77,8 +77,18 @@ function App() {
   }, [initAuth]);
 
   if (isLoading) return <LoadingSkeleton />;
-  if (screen === 'onboarding') return <OnboardingPage />;
-  if (screen === 'pending_verification') return <PendingVerificationPage />;
+
+  if (screen === 'onboarding') return (
+    <Suspense fallback={<LoadingSkeleton />}>
+      <OnboardingPage />
+    </Suspense>
+  );
+
+  if (screen === 'pending_verification') return (
+    <Suspense fallback={<LoadingSkeleton />}>
+      <PendingVerificationPage />
+    </Suspense>
+  );
 
   return (
     <ErrorBoundary>

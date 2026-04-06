@@ -29,7 +29,7 @@ B2B marketplace and CRM platform for the railway equipment industry. Built with 
 │       ├── i18n/            # EN + RU translations
 │       ├── pages/           # Page components
 │       └── store/           # Zustand state stores
-├── Docs/                    # Architecture, specs, roadmap, mockups
+├── docs/                    # Architecture, specs, roadmap, mockups
 ├── nginx/                   # Production Nginx config
 ├── .claude/commands/        # 21 AI development commands
 ├── docker-compose.yml       # Development environment
@@ -156,14 +156,16 @@ make test-frontend
 
 ## Documentation
 
-Detailed documentation in the `Docs/` folder:
+Detailed documentation in the `docs/` folder:
 
-- **Master System Document.md** — Complete architecture blueprint
-- **Business_Logic.md** — User journeys, KYC, pricing
-- **Technical_Specification.md** — Backend/Frontend/DB specs
-- **Role_Model.md** — RBAC (Guest, Client, Sales Manager, Account Manager, Admin)
-- **ROADMAP.md** — Sprint plan (7 sprints)
-- **Security_Audit_2026-03-20.md** — Security audit findings and fixes
+- **master-system-document.md** — Complete architecture blueprint
+- **business-logic.md** — User journeys, KYC, pricing
+- **technical-specification.md** — Backend/Frontend/DB specs
+- **role-model.md** — RBAC (Guest, Client, Sales Manager, Account Manager, Admin)
+- **roadmap.md** — Sprint plan (7 sprints)
+- **security-audit-2026-03-20.md** — Security audit findings and fixes
+- **mockups/** — UI mockups (admin, catalog, CRM, sourcing)
+- **presentations/** — Business presentations and estimates
 
 ## License
 

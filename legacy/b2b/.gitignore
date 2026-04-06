@@ -64,3 +64,7 @@ build/
 
 # Docker
 docker-compose.override.yml
+
+# Temp/lock files
+*.tmp
+.~lock.*

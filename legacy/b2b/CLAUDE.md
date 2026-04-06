@@ -34,7 +34,7 @@ frontend/                   # React app
   src/hooks/                # useAccounts, useCatalog, useCRM, useMasterData, use-mobile
   src/i18n/locales/         # ru.json, en.json
 nginx/                      # Production nginx.conf (rate limiting, caching, WebSocket)
-Docs/                       # 23 docs (specs, roadmap, audits, mockups, presentations)
+docs/                       # Architecture, specs, roadmap, mockups, presentations
 ```
 
 ## Key Architecture Decisions
