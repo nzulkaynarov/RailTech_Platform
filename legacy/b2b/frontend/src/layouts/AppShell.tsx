@@ -24,12 +24,9 @@ import {
   Calculator,
   Handshake,
   Check,
-  PanelLeftClose,
-  PanelLeftOpen,
   Minus,
   Plus,
   X,
-  Menu,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -346,7 +343,7 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
   const cartCount = useCartCount();
   const { currency, setCurrency } = useCurrencyStore();
   const { isDemoMode, toggleDemoMode } = useDemoStore();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [cartSheetOpen, setCartSheetOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);

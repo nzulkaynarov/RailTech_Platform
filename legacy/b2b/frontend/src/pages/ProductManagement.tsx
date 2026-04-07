@@ -150,6 +150,7 @@ type ViewMode = 'list' | 'grid';
 type CardSize = 'compact' | 'normal' | 'large';
 
 export function ProductManagement({ onProductClick }: ProductManagementProps) {
+  const { t } = useTranslation();
   const { activeStatus, role } = useUserStore();
   const cartStore = useCartStore();
 
