@@ -75,6 +75,7 @@ interface KPICardProps {
 }
 
 function KPICard({ title, value, prevValue, icon, iconBg }: KPICardProps) {
+  const { t } = useTranslation();
   const diff = value - prevValue;
   const pct = prevValue > 0 ? ((diff / prevValue) * 100).toFixed(1) : '0';
   const isUp = diff >= 0;
@@ -95,7 +96,7 @@ function KPICard({ title, value, prevValue, icon, iconBg }: KPICardProps) {
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
-              vs. {prevValue.toLocaleString('ru-RU')} пред. период
+              vs. {prevValue.toLocaleString('ru-RU')} {t('productManagement.prevPeriod')}
             </p>
           </div>
           <div className={`rounded-lg p-2 ${iconBg}`}>
@@ -235,9 +236,9 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
 
   /* ─── Status-aware labels ────────────────────────────────────────── */
   const pageTitle = {
-    BUYER: 'Каталог товаров',
-    MANUFACTURER: 'Моя продукция',
-    SELLER: 'Номенклатура',
+    BUYER: t('productManagement.title.buyer'),
+    MANUFACTURER: t('productManagement.title.manufacturer'),
+    SELLER: t('productManagement.title.seller'),
   }[activeStatus];
 
   const canEdit = activeStatus === 'MANUFACTURER' && role !== 'EMPLOYEE';
@@ -253,17 +254,17 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
           <h1 className="text-2xl font-bold tracking-tight">{pageTitle}</h1>
           {activeStatus === 'BUYER' && (
             <p className="text-sm text-muted-foreground mt-0.5">
-              Просмотр каталога и отправка заявок
+              {t('productManagement.subtitle.buyer')}
             </p>
           )}
           {activeStatus === 'MANUFACTURER' && (
             <p className="text-sm text-muted-foreground mt-0.5">
-              Управление вашей продукцией
+              {t('productManagement.subtitle.manufacturer')}
             </p>
           )}
           {activeStatus === 'SELLER' && (
             <p className="text-sm text-muted-foreground mt-0.5">
-              Товары одобренных производителей-партнёров
+              {t('productManagement.subtitle.seller')}
             </p>
           )}
         </div>
@@ -272,7 +273,7 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
             <>
               <Button variant="outline" className="gap-2">
                 <Upload className="h-4 w-4" />
-                Загрузить заявку
+                {t('productManagement.uploadRequest')}
               </Button>
               <Button
                 className="gap-2"
@@ -285,7 +286,7 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
                 }}
               >
                 <ShoppingCart className="h-4 w-4" />
-                Создать заявку {selectedIds.size > 0 && `(${selectedIds.size})`}
+                {t('productManagement.createRequest')} {selectedIds.size > 0 && `(${selectedIds.size})`}
               </Button>
             </>
           )}
@@ -293,11 +294,11 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
             <>
               <Button variant="outline" className="gap-2">
                 <Download className="h-4 w-4" />
-                Экспорт CSV
+                {t('productManagement.exportCsv')}
               </Button>
               <Button className="gap-2">
                 <Plus className="h-4 w-4" />
-                Добавить товар
+                {t('productManagement.addProduct')}
               </Button>
             </>
           )}
@@ -305,11 +306,11 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
             <>
               <Button variant="outline" className="gap-2">
                 <Download className="h-4 w-4" />
-                Экспорт
+                {t('productManagement.export')}
               </Button>
               <Button variant="outline" className="gap-2">
                 <Plus className="h-4 w-4" />
-                Запросить товар
+                {t('productManagement.requestProduct')}
               </Button>
             </>
           )}
@@ -372,8 +373,8 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder={activeStatus === 'BUYER'
-              ? 'Поиск по названию, производителю, категории...'
-              : 'Поиск по наименованию, артикулу, ГОСТ...'}
+              ? t('productManagement.searchPlaceholder.buyer')
+              : t('productManagement.searchPlaceholder.seller')}
             className="pl-9"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
@@ -382,26 +383,26 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
         <div className="flex items-center gap-2">
           <Select value={domainFilter} onValueChange={(v) => { setDomainFilter(v); setCurrentPage(1); }}>
             <SelectTrigger className="w-44">
-              <SelectValue placeholder="Домен" />
+              <SelectValue placeholder={t('productManagement.filters.domain')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Все домены</SelectItem>
-              <SelectItem value="RAILWAY_MACHINERY">ЖД и Техника</SelectItem>
-              <SelectItem value="GENERAL_GOODS">Общие товары</SelectItem>
-              <SelectItem value="SERVICES">Услуги</SelectItem>
+              <SelectItem value="all">{t('productManagement.filters.allDomains')}</SelectItem>
+              <SelectItem value="RAILWAY_MACHINERY">{t('productManagement.filters.railwayMachinery')}</SelectItem>
+              <SelectItem value="GENERAL_GOODS">{t('productManagement.filters.generalGoods')}</SelectItem>
+              <SelectItem value="SERVICES">{t('productManagement.filters.services')}</SelectItem>
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}>
             <SelectTrigger className="w-40">
               <SlidersHorizontal className="mr-2 h-4 w-4" />
-              <SelectValue placeholder="Статус" />
+              <SelectValue placeholder={t('productManagement.filters.status')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Все статусы</SelectItem>
-              <SelectItem value="in_stock">В наличии</SelectItem>
-              <SelectItem value="to_order">Под заказ</SelectItem>
-              <SelectItem value="sourcing">Поиск</SelectItem>
-              {activeStatus !== 'BUYER' && <SelectItem value="inactive">Неактивно</SelectItem>}
+              <SelectItem value="all">{t('productManagement.filters.allStatuses')}</SelectItem>
+              <SelectItem value="in_stock">{t('productManagement.filters.inStock')}</SelectItem>
+              <SelectItem value="to_order">{t('productManagement.filters.toOrder')}</SelectItem>
+              <SelectItem value="sourcing">{t('productManagement.filters.sourcing')}</SelectItem>
+              {activeStatus !== 'BUYER' && <SelectItem value="inactive">{t('productManagement.filters.inactive')}</SelectItem>}
             </SelectContent>
           </Select>
           {canSendRequest && (
@@ -430,7 +431,7 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
                     variant={cardSize === 'compact' ? 'default' : 'ghost'}
                     size="icon"
                     className="h-8 w-8"
-                    title="Компактные"
+                    title={t('productManagement.cardSize.compact')}
                     onClick={() => setCardSize('compact')}
                   >
                     <Grid3X3 className="h-4 w-4" />
@@ -439,7 +440,7 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
                     variant={cardSize === 'normal' ? 'default' : 'ghost'}
                     size="icon"
                     className="h-8 w-8"
-                    title="Обычные"
+                    title={t('productManagement.cardSize.normal')}
                     onClick={() => setCardSize('normal')}
                   >
                     <Grid2X2 className="h-4 w-4" />
@@ -448,7 +449,7 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
                     variant={cardSize === 'large' ? 'default' : 'ghost'}
                     size="icon"
                     className="h-8 w-8"
-                    title="Крупные"
+                    title={t('productManagement.cardSize.large')}
                     onClick={() => setCardSize('large')}
                   >
                     <LayoutGrid className="h-4 w-4" />
@@ -473,16 +474,16 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
                   />
                 </TableHead>
                 <TableHead>
-                  <div className="flex items-center gap-1">Наименование <ArrowUpDown className="h-3 w-3 text-muted-foreground" /></div>
+                  <div className="flex items-center gap-1">{t('productManagement.table.name')} <ArrowUpDown className="h-3 w-3 text-muted-foreground" /></div>
                 </TableHead>
-                <TableHead>Артикул</TableHead>
-                <TableHead>ГОСТ / Чертёж</TableHead>
-                <TableHead>Домен</TableHead>
-                <TableHead>Категория</TableHead>
-                <TableHead>Ед. изм</TableHead>
-                <TableHead className="text-right">Кол-во</TableHead>
-                {showPrices && <TableHead className="text-right">Цена FCA</TableHead>}
-                <TableHead>Статус</TableHead>
+                <TableHead>{t('productManagement.table.article')}</TableHead>
+                <TableHead>{t('productManagement.table.gost')}</TableHead>
+                <TableHead>{t('productManagement.table.domain')}</TableHead>
+                <TableHead>{t('productManagement.table.category')}</TableHead>
+                <TableHead>{t('productManagement.table.uom')}</TableHead>
+                <TableHead className="text-right">{t('productManagement.table.quantity')}</TableHead>
+                {showPrices && <TableHead className="text-right">{t('productManagement.table.priceFca')}</TableHead>}
+                <TableHead>{t('productManagement.table.status')}</TableHead>
                 <TableHead className="w-10" />
               </TableRow>
             </TableHeader>
@@ -492,8 +493,8 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
                   <TableCell colSpan={showPrices ? 11 : 10} className="h-32 text-center">
                     <div className="flex flex-col items-center gap-2 text-muted-foreground">
                       <PackageSearch className="h-8 w-8" />
-                      <p className="text-sm">Товары не найдены</p>
-                      <p className="text-xs">Попробуйте изменить параметры поиска</p>
+                      <p className="text-sm">{t('productManagement.noResults')}</p>
+                      <p className="text-xs">{t('productManagement.noResultsHint')}</p>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -511,7 +512,7 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
                           <span className="text-xs text-muted-foreground">
                             {product.manufacturer}
                             {isOwn && activeStatus !== 'BUYER' && (
-                              <Badge variant="secondary" className="ml-1 text-xs px-1 py-0">Своё</Badge>
+                              <Badge variant="secondary" className="ml-1 text-xs px-1 py-0">{t('productManagement.ownProduct')}</Badge>
                             )}
                           </span>
                         </div>
@@ -542,30 +543,30 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => handleRowClick(product)}>
-                              <Eye className="mr-2 h-4 w-4" /> Подробнее
+                              <Eye className="mr-2 h-4 w-4" /> {t('productManagement.actions.viewDetails')}
                             </DropdownMenuItem>
                             {/* Manufacturer: edit own products */}
                             {canEdit && isOwn && (
                               <DropdownMenuItem>
-                                <Pencil className="mr-2 h-4 w-4" /> Редактировать
+                                <Pencil className="mr-2 h-4 w-4" /> {t('productManagement.actions.edit')}
                               </DropdownMenuItem>
                             )}
                             {/* Buyer: send request */}
                             {canSendRequest && (
                               <DropdownMenuItem onClick={() => cartStore.addItem(product)}>
-                                <ShoppingCart className="mr-2 h-4 w-4" /> Добавить в заявку
+                                <ShoppingCart className="mr-2 h-4 w-4" /> {t('productManagement.actions.addToRequest')}
                               </DropdownMenuItem>
                             )}
                             {/* Seller: add to deal */}
                             {activeStatus === 'SELLER' && (
                               <DropdownMenuItem>
-                                <DollarSign className="mr-2 h-4 w-4" /> Добавить в котировку
+                                <DollarSign className="mr-2 h-4 w-4" /> {t('productManagement.actions.addToQuote')}
                               </DropdownMenuItem>
                             )}
                             {/* Manufacturer: manage visibility */}
                             {canEdit && isOwn && (
                               <DropdownMenuItem>
-                                <Lock className="mr-2 h-4 w-4" /> Управление доступом
+                                <Lock className="mr-2 h-4 w-4" /> {t('productManagement.actions.manageAccess')}
                               </DropdownMenuItem>
                             )}
                           </DropdownMenuContent>
@@ -587,7 +588,7 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
                 </SelectTrigger>
                 <SelectContent>
                   {ITEMS_PER_PAGE_OPTIONS.map((n) => (
-                    <SelectItem key={n} value={String(n)}>{n} записей</SelectItem>
+                    <SelectItem key={n} value={String(n)}>{n} {t('productManagement.records')}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -612,7 +613,7 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
                 <ChevronRight className="h-4 w-4" />
               </Button>
               <span className="ml-2 text-xs text-muted-foreground">
-                {filtered.length > 0 ? `${(currentPage - 1) * perPage + 1}–${Math.min(currentPage * perPage, filtered.length)} из ${filtered.length}` : '0 записей'}
+                {filtered.length > 0 ? t('productManagement.paginationRange', { from: (currentPage - 1) * perPage + 1, to: Math.min(currentPage * perPage, filtered.length), total: filtered.length }) : t('productManagement.noRecords')}
               </span>
             </div>
           </div>
@@ -624,8 +625,8 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
             <Card className="h-64 flex items-center justify-center">
               <div className="flex flex-col items-center gap-2 text-muted-foreground">
                 <PackageSearch className="h-8 w-8" />
-                <p className="text-sm">Товары не найдены</p>
-                <p className="text-xs">Попробуйте изменить параметры поиска</p>
+                <p className="text-sm">{t('productManagement.noResults')}</p>
+                <p className="text-xs">{t('productManagement.noResultsHint')}</p>
               </div>
             </Card>
           ) : (
@@ -700,7 +701,7 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
                             disabled
                           >
                             <Check className="h-3 w-3" />
-                            В запросе
+                            {t('productManagement.inRequest')}
                           </Button>
                         ) : (
                           <Button
@@ -711,7 +712,7 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
                             }}
                           >
                             <Plus className={cardSize === 'compact' ? 'h-3 w-3' : 'h-4 w-4'} />
-                            {cardSize === 'compact' ? 'В запрос' : 'Добавить в запрос'}
+                            {cardSize === 'compact' ? t('productManagement.toRequest') : t('productManagement.addToRequest')}
                           </Button>
                         )}
                       </CardContent>
@@ -729,7 +730,7 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
                     </SelectTrigger>
                     <SelectContent>
                       {ITEMS_PER_PAGE_OPTIONS.map((n) => (
-                        <SelectItem key={n} value={String(n)}>{n} записей</SelectItem>
+                        <SelectItem key={n} value={String(n)}>{n} {t('productManagement.records')}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -754,7 +755,7 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
                     <ChevronRight className="h-4 w-4" />
                   </Button>
                   <span className="ml-2 text-xs text-muted-foreground">
-                    {filtered.length > 0 ? `${(currentPage - 1) * perPage + 1}–${Math.min(currentPage * perPage, filtered.length)} из ${filtered.length}` : '0 записей'}
+                    {filtered.length > 0 ? t('productManagement.paginationRange', { from: (currentPage - 1) * perPage + 1, to: Math.min(currentPage * perPage, filtered.length), total: filtered.length }) : t('productManagement.noRecords')}
                   </span>
                 </div>
               </div>
