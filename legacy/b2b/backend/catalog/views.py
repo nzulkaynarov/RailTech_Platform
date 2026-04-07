@@ -101,6 +101,27 @@ class ProductViewSet(viewsets.ModelViewSet):
         ).update(status=pub_status)
         return Response({"message": f"Successfully published {updated} products."}, status=status.HTTP_200_OK)
 
+    @action(detail=False, methods=['get'], url_path='export-template')
+    def export_template(self, request):
+        """Generate an XLSX template for catalog import."""
+        import openpyxl
+        from django.http import HttpResponse
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = 'Products'
+        headers = ['name', 'sku', 'description', 'domain_type', 'category', 'uom', 'manufacturer', 'gost_drawing']
+        for col, header in enumerate(headers, 1):
+            ws.cell(row=1, column=col, value=header)
+            ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 20
+
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename="railtech_import_template.xlsx"'
+        wb.save(response)
+        return response
+
 
 class SupplierOfferViewSet(viewsets.ModelViewSet):
     queryset = SupplierOffer.objects.all()

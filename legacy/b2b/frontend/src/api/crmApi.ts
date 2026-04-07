@@ -63,6 +63,7 @@ export interface Deal {
 	client_name?: string;
 	manager?: number | null;
 	stage?: number | null;
+	stage_code?: string;
 	stage_name?: string;
 	title?: string;
 	total_value?: string;
@@ -185,7 +186,7 @@ export const crmApi = {
 		return response.data;
 	},
 	exportDealPDF: async (dealId: number) => {
-		const response = await apiClient.get(`crm/deals/${dealId}/export_pdf/`, {
+		const response = await apiClient.get(`crm/deals/${dealId}/export-pdf/`, {
 			responseType: 'blob'
 		});
 		const url = window.URL.createObjectURL(new Blob([response.data]));

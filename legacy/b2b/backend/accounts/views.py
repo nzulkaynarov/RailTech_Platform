@@ -181,6 +181,21 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(request.user)
         return Response(serializer.data)
 
+    @action(detail=True, methods=['post'], url_path='toggle-active')
+    def toggle_active(self, request, pk=None):
+        user = self.get_object()
+        if user == request.user:
+            return Response(
+                {'error': 'Cannot deactivate yourself'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        user.is_active = not user.is_active
+        user.save(update_fields=['is_active'])
+        return Response({
+            'status': 'activated' if user.is_active else 'deactivated',
+            'is_active': user.is_active,
+        })
+
 
 class RegisterView(views.APIView):
     permission_classes = [permissions.AllowAny]

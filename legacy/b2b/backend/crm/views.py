@@ -105,6 +105,39 @@ class DealViewSet(viewsets.ModelViewSet):
         serializer = DealDetailSerializer(deal)
         return Response(serializer.data)
 
+    @action(detail=True, methods=['get'], url_path='export-pdf')
+    def export_pdf(self, request, pk=None):
+        """Export PDF of the deal's active quote."""
+        deal = self.get_object()
+        quote = deal.active_quote
+        if not quote:
+            return Response(
+                {'error': 'No active quote for this deal'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        if not quote.pdf_file:
+            # Auto-generate PDF if not yet generated
+            from .services import QuoteLifecycleService
+            try:
+                quote = QuoteLifecycleService.generate_pdf(quote.pk)
+            except Exception:
+                return Response(
+                    {'error': 'Failed to generate PDF'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+        if not quote.pdf_file:
+            return Response(
+                {'error': 'PDF generation failed'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        from django.http import FileResponse
+        return FileResponse(
+            quote.pdf_file.open('rb'),
+            content_type='application/pdf',
+            as_attachment=True,
+            filename=f'RailTech_Quote_{deal.id}.pdf'
+        )
+
 
 class QuoteViewSet(viewsets.ModelViewSet):
     serializer_class = QuoteSerializer

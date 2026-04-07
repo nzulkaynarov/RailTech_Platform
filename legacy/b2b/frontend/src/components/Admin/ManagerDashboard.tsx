@@ -60,14 +60,14 @@ export const ManagerDashboard: React.FC = () => {
     
     const loading = dealsLoading || analyticsLoading;
 
-    // Filter deals based on stage_name (supporting both Russian and English strings from legacy/current DB)
-    const newLeads = deals.filter(d => d.stage_name === 'Черновик' || d.stage_name === 'Draft' || d.stage_name === 'Проверка KYC' || d.stage_name === 'KYC Check').length;
-    const inProgress = deals.filter(d => d.stage_name === 'Расчет цен' || d.stage_name === 'Calculating' || d.stage_name === 'КП отправлено' || d.stage_name === 'Quote Sent').length;
-    const contracted = deals.filter(d => d.stage_name === 'Договор подписан' || d.stage_name === 'Contract Signed').length;
+    // Filter deals by stage_code (stable DB codes, not translatable names)
+    const newLeads = deals.filter(d => d.stage_code === 'DRAFT' || d.stage_code === 'KYC_PENDING').length;
+    const inProgress = deals.filter(d => d.stage_code === 'CALCULATING' || d.stage_code === 'QUOTE_SENT').length;
+    const contracted = deals.filter(d => d.stage_code === 'CONTRACT_SIGNED').length;
 
     // Revenue calculation from total_value
     const totalSum = deals
-        .filter(d => d.stage_name === 'Договор подписан' || d.stage_name === 'Contract Signed')
+        .filter(d => d.stage_code === 'CONTRACT_SIGNED' || d.stage_code === 'CLOSED_WON')
         .reduce((sum, d) => sum + parseFloat(d.total_value || '0'), 0);
 
     const sourcingPending = analytics?.sourcing_backlog ?? 0;
@@ -171,11 +171,12 @@ export const ManagerDashboard: React.FC = () => {
                                                     DL_{deal.id.toString().padStart(6, '0')}
                                                 </p>
                                                 <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded border ${
-                                                    deal.stage_name === 'Черновик' || deal.stage_name === 'Draft' ? 'bg-muted text-muted-foreground border-border' :
-                                                    deal.stage_name === 'Проверка KYC' || deal.stage_name === 'KYC Check' ? 'bg-primary/10 text-primary border-primary/20' :
-                                                    deal.stage_name === 'Расчет цен' || deal.stage_name === 'Calculating' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
-                                                    deal.stage_name === 'КП отправлено' || deal.stage_name === 'Quote Sent' ? 'bg-primary/10 text-primary border-primary/20' :
-                                                    'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                                                    deal.stage_code === 'DRAFT' ? 'bg-muted text-muted-foreground border-border' :
+                                                    deal.stage_code === 'KYC_PENDING' ? 'bg-primary/10 text-primary border-primary/20' :
+                                                    deal.stage_code === 'CALCULATING' ? 'bg-warning/10 text-warning border-warning/20' :
+                                                    deal.stage_code === 'QUOTE_SENT' ? 'bg-info/10 text-info border-info/20' :
+                                                    deal.stage_code === 'CONTRACT_SIGNED' || deal.stage_code === 'CLOSED_WON' ? 'bg-success/10 text-success border-success/20' :
+                                                    'bg-muted text-muted-foreground border-border'
                                                 }`}>
                                                     {deal.stage_name || 'System Draft'}
                                                 </span>

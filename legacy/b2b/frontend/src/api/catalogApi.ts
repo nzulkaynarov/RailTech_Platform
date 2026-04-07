@@ -138,10 +138,10 @@ export const catalogApi = {
         const response = await apiClient.get<PaginatedResponse<EquipmentGroup>>(url);
         return response.data.results;
     },
-    importExcel: async (file: File): Promise<{ message: string, task_id: string }> => {
+    importExcel: async (file: File): Promise<{ task_id: string }> => {
         const formData = new FormData();
         formData.append('file', file);
-        const response = await apiClient.post('/catalog/products/import_excel/', formData, {
+        const response = await apiClient.post('sourcing/import-catalog/', formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
             },
@@ -149,7 +149,7 @@ export const catalogApi = {
         return response.data;
     },
     exportTemplate: async (): Promise<void> => {
-        const response = await apiClient.get('/catalog/products/export_template/', {
+        const response = await apiClient.get('catalog/products/export-template/', {
             responseType: 'blob'
         });
         const url = window.URL.createObjectURL(new Blob([response.data]));

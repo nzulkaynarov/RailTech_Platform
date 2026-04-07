@@ -137,9 +137,94 @@ make shell           # backend bash
 - `manager@railtech.uz` / `manager123` — Sales Manager
 - `client@test.uz` / `client123` — Client
 
+## IRON RULES — VIOLATION PROHIBITED
+
+### Rule 1: No fake data
+- NEVER create mock data, static arrays, or fake API responses in production code
+- EVERY endpoint MUST query the real database via Django ORM
+- If test data is needed — use management commands (`core_seed`, `seed_demo`), not hardcode
+
+### Rule 2: No hardcoded values
+- URLs, keys, secrets, IDs — ONLY from environment variables (.env)
+- Business constants (limits, prices, settings) — ONLY from DB or config
+- Roles, statuses, enum values — compare by `code` field (e.g., `stage_code === 'DRAFT'`), NEVER by translated `name`
+
+### Rule 3: Strict naming
+- JS/TS variables and functions: camelCase
+- JS/TS classes and types: PascalCase
+- API endpoints: kebab-case, plural nouns
+- DB tables and columns: snake_case (Django convention)
+- Environment variables: UPPER_SNAKE_CASE
+- Boolean fields: `is_`/`has_` prefix in DB
+
+### Rule 4: Only shadcn/ui + semantic tokens
+- ONLY use components from `@/components/ui/` (shadcn/ui)
+- Colors: `bg-primary`, `text-foreground`, `bg-success`, `bg-warning`, `bg-destructive`, `bg-info` — NEVER `bg-emerald-500`, `text-white`, `bg-amber-*`
+- No custom CSS, no inline styles for static values, no `blur-[120px]` decorative hacks
+
+### Rule 5: All text via i18n
+- ALL user-facing text wrapped in `t()` from `useTranslation()`
+- Labels stored in `frontend/src/i18n/locales/ru.json` and `en.json`
+- Store files (Zustand) hold i18n KEYS, not raw text — translate in components
+
+### Rule 6: Always read before writing
+- ALWAYS read the file with Read tool before editing
+- ALWAYS check that imports exist, types are correct, fields match DB schema
+- NEVER assume file contents or code structure
+
+### Rule 7: Frontend-backend sync
+- Every frontend feature must call a real backend API endpoint
+- `userStore.loadFromAuth()` maps backend CompanyType → frontend CompanyStatus
+- Use `stage_code` (DB code) for logic, `stage_name` only for display
+
+## ANTI-HALLUCINATION — What does NOT exist
+
+### Tables that DON'T exist
+- NO `payments` table — payment not yet implemented
+- NO `sessions` table — sessions handled by Django middleware
+- NO `roles` table — roles are `SystemRole` (in accounts app), NOT a separate table
+
+### Endpoints that DON'T exist
+- NO `PUT /api/v1/accounts/users/{id}/toggle-active/` — not implemented yet
+- NO `POST /api/v1/catalog/products/import_excel/` — use `sourcing/import-catalog/` instead
+- NO `GET /api/v1/catalog/products/export_template/` — not implemented
+- NO `GET /api/v1/crm/deals/{id}/export_pdf/` — PDF export is on quotes, not deals
+
+### Fields that DON'T exist
+- `users` table has NO `username` field for login — uses `email` as USERNAME_FIELD
+- `deals` table has NO `discount` field
+- `products` table has NO `price` field — prices are in `SupplierOffer` (separate table)
+- Frontend `Product` type from `data/products.ts` is LEGACY — real products come from `catalogApi.getProducts()`
+
+## Data Transformations
+
+| DB (snake_case) | API Response (snake_case) | Frontend Store |
+|-----------------|--------------------------|----------------|
+| `first_name` | `first_name` | `firstName` (mapped in loadFromAuth) |
+| `stage.code` | `stage_code` | `stage_code` (use for logic) |
+| `stage.name` | `stage_name` | `stage_name` (use for display only) |
+| `company.types` | `company_types[]` | `activeStatus` (CLIENT→BUYER, SUPPLIER→SELLER) |
+| `verification_status.code` | `verification_status` | `kycStatus` |
+
+Transformation happens in: `userStore.loadFromAuth()` and DRF serializers.
+
+## Self-Check Before Commit
+
+1. [ ] New/changed endpoint queries real DB? (no mocks, no hardcode)
+2. [ ] Request/response fields match DB schema?
+3. [ ] Naming follows conventions? (camelCase in JS, snake_case in DB)
+4. [ ] All text wrapped in `t()`? No hardcoded Russian/English strings?
+5. [ ] Colors use semantic tokens? (bg-primary, text-success, NOT bg-emerald-500)
+6. [ ] Using shadcn/ui components? (Button, Input, Table, NOT raw HTML)
+7. [ ] Errors handled, not silently swallowed?
+8. [ ] Stage/status compared by `code`, not by translated `name`?
+9. [ ] Frontend build passes? (`docker compose build frontend`)
+10. [ ] No `as any`, `@ts-ignore` unless absolutely necessary with comment?
+
 ## Common Pitfalls
 
 - Frontend is a **production build** served by nginx — `import.meta.env.DEV` is always `false` in Docker
-- Auth URL routes (`/`, `/register`, `/setup-password`) handled by `useAuthRoute()` in App.tsx; main app pages use state-based navigation
+- Auth URL routes (`/`, `/register`, `/setup-password`) handled by `useAuthRoute()` in App.tsx; main app pages use `#hash` navigation
 - `DATABASE_URL` query params (like `channel_binding=require`) are passed as DB OPTIONS
 - Volume mount `./backend:/app` enables hot-reload for backend; frontend needs rebuild (`docker compose up -d --build frontend`)
+- `data/products.ts` exports an EMPTY array — it's legacy, use `catalogApi` for real data

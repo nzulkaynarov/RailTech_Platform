@@ -4,7 +4,7 @@ from .models import Deal, Quote, QuoteItem, Message, ActivityLog, Lead
 
 class QuoteItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source='product.name', read_only=True)
-    product_domain = serializers.CharField(source='product.domain_type', read_only=True)
+    product_domain = serializers.CharField(source='product.domain_type.code', read_only=True)
     product_sku = serializers.CharField(source='product.sku', read_only=True)
     product_gost = serializers.CharField(source='product.gost_drawing', read_only=True)
     offer_supplier_name = serializers.CharField(source='offer.supplier.name', read_only=True)
@@ -40,6 +40,7 @@ class QuoteSerializer(serializers.ModelSerializer):
 class DealListSerializer(serializers.ModelSerializer):
     """MED-3: Optimized list serializer with human-readable names."""
     stage_name = serializers.CharField(source='stage.name', read_only=True)
+    stage_code = serializers.CharField(source='stage.code', read_only=True)
     company_name = serializers.CharField(source='company.name', read_only=True)
     active_quote = QuoteSerializer(read_only=True)
 
@@ -47,7 +48,7 @@ class DealListSerializer(serializers.ModelSerializer):
         model = Deal
         fields = [
             "id", "title", "company", "company_name",
-            "stage", "stage_name", "total_value",
+            "stage", "stage_code", "stage_name", "total_value",
             "manager", "active_quote", "created_at",
         ]
 

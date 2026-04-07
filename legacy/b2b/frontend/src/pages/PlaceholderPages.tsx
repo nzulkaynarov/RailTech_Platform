@@ -2,7 +2,7 @@ import {
   ShoppingCart, FileText, Factory, BarChart3, Upload, Search, Plug,
   HelpCircle, ClipboardList, Calculator, Users, CalendarDays,
   Layers, Tags, Truck, Shield, ChevronRight, FileSpreadsheet,
-  Clock, CheckCircle2, XCircle, AlertCircle, Star, Pause, Check,
+  Clock, CheckCircle2, Star, Pause, Check,
   // Zap, Flame, Package, UserRound — removed (were used by hardcoded equipment groups)
   ChevronDown, Download, MapPin, Calendar,
   Mail, MessageSquare,
@@ -173,65 +173,11 @@ export function SourcingImportPage() {
               <Badge>{t('pages.sourcingImport.status.completed')}</Badge>
             </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-3 gap-4">
-              <div className="rounded-lg bg-muted p-3">
-                <p className="text-xs text-muted-foreground">{t('pages.sourcingImport.stats.parsed')}</p>
-                <p className="text-xl font-bold">156</p>
-              </div>
-              <div className="rounded-lg bg-muted p-3">
-                <p className="text-xs text-muted-foreground">{t('pages.sourcingImport.stats.found')}</p>
-                <p className="text-xl font-bold">124</p>
-                <p className="text-xs text-muted-foreground">(79%)</p>
-              </div>
-              <div className="rounded-lg bg-muted p-3">
-                <p className="text-xs text-muted-foreground">{t('pages.sourcingImport.stats.partial')}</p>
-                <p className="text-xl font-bold">18</p>
-                <p className="text-xs text-muted-foreground">(12%)</p>
-              </div>
-            </div>
-
-            {/* Preview Table */}
-            <div className="overflow-x-auto mt-6">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b">
-                    <th className="px-3 py-2 text-left font-medium">{t('pages.sourcingImport.table.number')}</th>
-                    <th className="px-3 py-2 text-left font-medium">{t('pages.sourcingImport.table.name')}</th>
-                    <th className="px-3 py-2 text-left font-medium">{t('pages.sourcingImport.table.gost')}</th>
-                    <th className="px-3 py-2 text-left font-medium">{t('pages.sourcingImport.table.uom')}</th>
-                    <th className="px-3 py-2 text-right font-medium">{t('pages.sourcingImport.table.qty')}</th>
-                    <th className="px-3 py-2 text-left font-medium">{t('pages.sourcingImport.table.status')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[
-                    { n: 1, name: 'ТЭД ЭД-118А', gost: 'ГОСТ 1234', uom: t('pages.common.uom.pcs'), qty: 12, status: 'matched' },
-                    { n: 2, name: 'Тележка 18-100', gost: 'ГОСТ 5678', uom: t('pages.common.uom.pcs'), qty: 6, status: 'matched' },
-                    { n: 3, name: 'Колёсная пара', gost: '', uom: t('pages.common.uom.set'), qty: 24, status: 'partial' },
-                    { n: 4, name: 'Буфер автосцепного устройства', gost: 'ГОСТ 9101', uom: t('pages.common.uom.pcs'), qty: 36, status: 'matched' },
-                    { n: 5, name: 'Подшипник сферический', gost: 'ГОСТ 5721', uom: t('pages.common.uom.pcs'), qty: 48, status: 'matched' },
-                    { n: 6, name: 'Баббит Б83', gost: '', uom: t('pages.common.uom.kg'), qty: 500, status: 'partial' },
-                    { n: 7, name: 'Проводка высоковольтная', gost: '', uom: t('pages.common.uom.km'), qty: 15, status: 'partial' },
-                    { n: 8, name: 'Тормозной цилиндр ТЦ-14М', gost: 'ГОСТ 1876', uom: t('pages.common.uom.pcs'), qty: 12, status: 'matched' },
-                  ].map((row) => (
-                    <tr key={row.n} className="border-b hover:bg-muted/50">
-                      <td className="px-3 py-2">{row.n}</td>
-                      <td className="px-3 py-2">{row.name}</td>
-                      <td className="px-3 py-2 text-muted-foreground">{row.gost}</td>
-                      <td className="px-3 py-2">{row.uom}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">{row.qty}</td>
-                      <td className="px-3 py-2">
-                        <Badge variant={row.status === 'matched' ? 'default' : row.status === 'partial' ? 'secondary' : 'destructive'} className="gap-1">
-                          {row.status === 'matched' && <><CheckCircle2 className="h-3 w-3" /> {t('pages.sourcingImport.matchStatus.found')}</>}
-                          {row.status === 'partial' && <><AlertCircle className="h-3 w-3" /> {t('pages.sourcingImport.matchStatus.partial')}</>}
-                          {row.status !== 'matched' && row.status !== 'partial' && <><XCircle className="h-3 w-3" /> {t('pages.sourcingImport.matchStatus.notFound')}</>}
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            {/* Import results will be displayed here after actual file upload */}
+            <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
+              <Upload className="h-8 w-8 mb-3 opacity-50" />
+              <p className="text-sm font-medium">{t('pages.sourcingImport.noImportsYet')}</p>
+              <p className="text-xs mt-1">{t('pages.sourcingImport.uploadToSee')}</p>
             </div>
           </CardContent>
         </Card>
@@ -279,63 +225,15 @@ interface DealColumn {
 export function DealsPage() {
   const { t } = useTranslation();
   const { data: ps } = usePageStats();
+  // TODO: Replace with useDeals() hook and group by stage_code
   const columns: DealColumn[] = [
-    {
-      title: 'DRAFT',
-      stage: t('pages.deals.stages.draft'),
-      deals: [
-        { id: '1', number: 'D-2026-001', client: 'Navoi Mining', amount: 95, manager: 'Азиз Қ.', days: 3 },
-        { id: '2', number: 'D-2026-002', client: 'Almalyk MMC', amount: 210, manager: 'Диана Р.', days: 1 },
-      ]
-    },
-    {
-      title: 'SOURCING',
-      stage: t('pages.deals.stages.sourcing'),
-      deals: [
-        { id: '3', number: 'D-2026-003', client: 'Uzbekiston Temir Yullari', amount: 320, manager: 'Азиз Қ.', days: 5 },
-        { id: '4', number: 'D-2026-004', client: 'Tashkent Metro', amount: 150, manager: 'Фарход М.', days: 2 },
-        { id: '5', number: 'D-2026-005', client: 'Uz Railway Logistics', amount: 85, manager: 'Диана Р.', days: 7 },
-      ]
-    },
-    {
-      title: 'CALCULATING',
-      stage: t('pages.deals.stages.calculating'),
-      deals: [
-        { id: '6', number: 'D-2026-006', client: 'Tashkent Locomotive Works', amount: 275, manager: 'Азиз Қ.', days: 4 },
-        { id: '7', number: 'D-2026-007', client: 'Fergana Railway Terminal', amount: 120, manager: 'Фарход М.', days: 2 },
-      ]
-    },
-    {
-      title: 'QUOTE_SENT',
-      stage: t('pages.deals.stages.quoteSent'),
-      deals: [
-        { id: '8', number: 'D-2026-008', client: 'UTY Bukhara Branch', amount: 180, manager: 'Диана Р.', days: 6 },
-        { id: '9', number: 'D-2026-009', client: 'Samarkand Transport', amount: 65, manager: 'Азиз Қ.', days: 3 },
-      ]
-    },
-    {
-      title: 'CONTRACT_SIGNED',
-      stage: t('pages.deals.stages.contractSigned'),
-      deals: [
-        { id: '10', number: 'D-2026-010', client: 'Khiva Railway Depot', amount: 155, manager: 'Фарход М.', days: 8 },
-      ]
-    },
-    {
-      title: 'CLOSED_WON',
-      stage: t('pages.deals.stages.closedWon'),
-      deals: [
-        { id: '11', number: 'D-2026-011', client: 'UTY Karshi', amount: 245, manager: 'Азиз Қ.', days: 12 },
-        { id: '12', number: 'D-2026-012', client: 'Andijan Logistics', amount: 98, manager: 'Диана Р.', days: 9 },
-        { id: '13', number: 'D-2026-013', client: 'Navoi Port Authority', amount: 175, manager: 'Фарход М.', days: 15 },
-      ]
-    },
-    {
-      title: 'CLOSED_LOST',
-      stage: t('pages.deals.stages.closedLost'),
-      deals: [
-        { id: '14', number: 'D-2026-014', client: 'Margilan Industrial', amount: 72, manager: 'Диана Р.', days: 10 },
-      ]
-    },
+    { title: 'DRAFT', stage: t('pages.deals.stages.draft'), deals: [] },
+    { title: 'SOURCING', stage: t('pages.deals.stages.sourcing'), deals: [] },
+    { title: 'CALCULATING', stage: t('pages.deals.stages.calculating'), deals: [] },
+    { title: 'QUOTE_SENT', stage: t('pages.deals.stages.quoteSent'), deals: [] },
+    { title: 'CONTRACT_SIGNED', stage: t('pages.deals.stages.contractSigned'), deals: [] },
+    { title: 'CLOSED_WON', stage: t('pages.deals.stages.closedWon'), deals: [] },
+    { title: 'CLOSED_LOST', stage: t('pages.deals.stages.closedLost'), deals: [] },
   ];
 
   return (
