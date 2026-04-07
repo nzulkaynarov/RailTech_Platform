@@ -537,7 +537,8 @@
     "validation": {
       "minChars": "Minimum 2 characters",
       "innFormat": "TIN must contain exactly 9 digits",
-      "selectRole": "Select a role"
+      "selectRole": "Select a role",
+      "selectType": "Select company type"
     }
   },
   "passwordSetup": {
@@ -681,11 +682,16 @@
       "contact": "OP_CONTACT"
     },
     "docTypes": {
-      "CHARTER": "Company Charter / Устав",
-      "LICENSE": "License / Лицензия",
-      "PASSPORT": "Director ID / Паспорт",
-      "TAX_CERT": "Tax Registry / Свид. ИНН",
-      "OTHER": "Misc / Другое"
+      "CHARTER": "Company Charter",
+      "LICENSE": "License",
+      "PASSPORT": "Director ID",
+      "TAX_CERT": "Tax Registry Certificate",
+      "OTHER": "Other",
+      "charter": "Company Charter",
+      "license": "License",
+      "passport": "Director ID",
+      "taxCert": "Tax Registry Certificate",
+      "other": "Other"
     }
   },
   "breadcrumb": {

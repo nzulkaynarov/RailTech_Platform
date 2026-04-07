@@ -66,6 +66,19 @@ import {
   SheetFooter,
 } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarRail,
+  SidebarTrigger,
+} from '@/components/ui/sidebar';
 
 import { useTranslation } from 'react-i18next';
 import {
@@ -350,32 +363,29 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
   };
 
   return (
-    <TooltipProvider>
-      <div className="flex h-screen overflow-hidden bg-muted/30">
-        {/* Sidebar — hidden on mobile, collapsible on desktop */}
-        <aside className={cn(
-          'hidden md:flex flex-col border-r bg-background transition-all duration-200',
-          sidebarCollapsed ? 'w-16' : 'w-64'
-        )}>
-          {/* Company branding — top */}
-          <div className={cn(
-            'flex h-14 items-center border-b',
-            sidebarCollapsed ? 'justify-center px-2' : 'gap-2 px-4'
-          )}>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground flex-shrink-0">
-              <Layers className="h-4 w-4" />
-            </div>
-            {!sidebarCollapsed && (
-              <div className="flex-1 min-w-0">
-                <span className="text-sm font-bold tracking-tight leading-none truncate block">{company.name || 'RAILTECH'}</span>
-                <p className="text-xs text-muted-foreground truncate">{t('shell.b2bPlatform')}</p>
-              </div>
-            )}
-          </div>
+    <SidebarProvider>
+      <TooltipProvider>
+      <Sidebar collapsible="icon">
+        <SidebarHeader>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton size="lg" onClick={() => onNavigate('dashboard')}>
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                  <Layers className="size-4" />
+                </div>
+                <div className="grid flex-1 text-left text-sm leading-tight">
+                  <span className="truncate font-semibold">{company.name || 'RAILTECH'}</span>
+                  <span className="truncate text-xs text-muted-foreground">{t('shell.b2bPlatform')}</span>
+                </div>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarHeader>
 
+        <SidebarContent>
           {/* Company status switcher */}
-          {!sidebarCollapsed && company.statusEntries.filter(e => e.verification === 'verified').length > 1 && (
-            <div className="px-3 pt-3">
+          {company.statusEntries.filter(e => e.verification === 'verified').length > 1 && (
+            <div className="px-3 pt-3 group-data-[collapsible=icon]:hidden">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="flex w-full items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2 text-sm hover:bg-accent transition-colors h-auto">
@@ -413,20 +423,15 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
           )}
 
           {/* Search */}
-          {!sidebarCollapsed && (
-            <div className="px-3 pt-3">
-              <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input placeholder={`${t('common.search')}...`} className="h-8 pl-8 text-xs" />
-              </div>
+          <div className="px-3 pt-3 group-data-[collapsible=icon]:hidden">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input placeholder={`${t('common.search')}...`} className="h-8 pl-8 text-xs" />
             </div>
-          )}
+          </div>
 
           {/* Main navigation */}
-          <nav className={cn(
-            'flex-1 space-y-0.5 overflow-y-auto py-3 transition-all duration-200',
-            sidebarCollapsed ? 'px-1.5' : 'px-3'
-          )}>
+          <nav className="flex-1 space-y-0.5 overflow-y-auto py-3 px-3 group-data-[collapsible=icon]:px-1.5">
             {navigation.map((item) => (
               <SidebarNavItem key={item.label} item={item} onNavigate={onNavigate} collapsed={sidebarCollapsed} />
             ))}
@@ -435,46 +440,14 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
           <Separator />
 
           {/* Bottom navigation */}
-          <nav className={cn(
-            'space-y-0.5 py-2 transition-all duration-200',
-            sidebarCollapsed ? 'px-1.5' : 'px-3'
-          )}>
+          <nav className="space-y-0.5 py-2 px-3 group-data-[collapsible=icon]:px-1.5">
             {bottomNav.map((item) => (
               <SidebarNavItem key={item.label} item={item} onNavigate={onNavigate} collapsed={sidebarCollapsed} />
             ))}
           </nav>
+        </SidebarContent>
 
-          <Separator />
-
-          {/* Sidebar collapse button */}
-          <div className={cn(
-            'px-1.5 py-2 transition-all duration-200',
-            sidebarCollapsed ? '' : 'px-3'
-          )}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="w-full justify-center"
-                  onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                >
-                  {sidebarCollapsed ? (
-                    <PanelLeftOpen className="h-4 w-4" />
-                  ) : (
-                    <PanelLeftClose className="h-4 w-4" />
-                  )}
-                </Button>
-              </TooltipTrigger>
-              {sidebarCollapsed && <TooltipContent side="right">{t('catalog.sidebar.expand')}</TooltipContent>}
-            </Tooltip>
-          </div>
-
-          {/* User info — bottom */}
-          <div className={cn(
-            'transition-all duration-200',
-            sidebarCollapsed ? 'p-1.5' : 'p-3'
-          )}>
+        <SidebarFooter>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className={cn(
@@ -543,23 +516,17 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          </div>
-        </aside>
+        </SidebarFooter>
 
+        <SidebarRail />
+      </Sidebar>
+
+      <SidebarInset>
         {/* Main */}
-        <div className="flex flex-1 flex-col overflow-hidden">
           <header className="flex h-14 items-center justify-between border-b bg-background px-4 md:px-6">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              {/* Mobile hamburger */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="md:hidden"
-                aria-label={t('shell.openMenu')}
-                onClick={() => setMobileNavOpen(true)}
-              >
-                <Menu className="h-5 w-5" />
-              </Button>
+              <SidebarTrigger className="-ml-1" />
+              <Separator orientation="vertical" className="mr-2 h-4" />
               <StatusIcon status={activeStatus} className={cn('h-4 w-4 hidden sm:block', statusColor(activeStatus))} />
               <span className="hidden sm:inline">{t(`companyStatus.${activeStatus}`)}</span>
               <span className="hidden sm:inline text-muted-foreground/50">/</span>
@@ -640,7 +607,7 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
             </div>
           </header>
           <main className="flex-1 overflow-y-auto p-6">{children}</main>
-        </div>
+      </SidebarInset>
 
         {/* Notifications Sheet */}
         <Sheet open={notificationsOpen} onOpenChange={setNotificationsOpen}>
@@ -879,7 +846,7 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
             </ScrollArea>
           </SheetContent>
         </Sheet>
-      </div>
     </TooltipProvider>
+    </SidebarProvider>
   );
 }

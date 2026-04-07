@@ -40,6 +40,7 @@ import { dashboardApi, type DashboardStats } from '@/api/dashboardApi';
 // ─── Chart color constants ──────────────────────────────────────────────
 
 const buyerRequestsStatusColors = ['var(--color-chart-1)', 'var(--color-chart-2)', 'var(--color-chart-3)', 'var(--color-chart-4)', 'var(--color-chart-5)'];
+const chartDotClasses = ['bg-[var(--color-chart-1)]', 'bg-[var(--color-chart-2)]', 'bg-[var(--color-chart-3)]', 'bg-[var(--color-chart-4)]', 'bg-[var(--color-chart-5)]'];
 
 // ─── Top Products Table ─────────────────────────────────────────────────
 
@@ -196,7 +197,7 @@ function BuyerDashboard({ onProductClick: _onProductClick, period: _period, stat
               {buyerRequestsStatus.map((item, i) => (
                 <div key={item.name} className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-1.5">
-                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: buyerRequestsStatusColors[i] }} />
+                    <span className={`h-2.5 w-2.5 rounded-full ${chartDotClasses[i % chartDotClasses.length]}`} />
                     <span className="font-medium">{item.name}</span>
                   </div>
                   <span className="text-muted-foreground">{item.value}</span>
@@ -218,9 +219,9 @@ function SellerDashboard({ onProductClick, period: _period, stats }: { onProduct
   const dealVolumeData = stats?.deals_by_month ?? [];
   const activityByDay = stats?.activity_by_day ?? [];
   const counterpartyBreakdown = stats ? [
-    { name: t('dashboardPage.seller.manufacturers'), value: stats.counterparties.manufacturers, color: 'var(--color-chart-1)' },
-    { name: t('dashboardPage.seller.buyers'), value: stats.counterparties.buyers, color: 'var(--color-chart-2)' },
-    { name: t('dashboardPage.seller.intermediaries'), value: stats.counterparties.intermediaries, color: 'var(--color-chart-4)' },
+    { name: t('dashboardPage.seller.manufacturers'), value: stats.counterparties.manufacturers, color: 'var(--color-chart-1)', dotClass: 'bg-[var(--color-chart-1)]' },
+    { name: t('dashboardPage.seller.buyers'), value: stats.counterparties.buyers, color: 'var(--color-chart-2)', dotClass: 'bg-[var(--color-chart-2)]' },
+    { name: t('dashboardPage.seller.intermediaries'), value: stats.counterparties.intermediaries, color: 'var(--color-chart-4)', dotClass: 'bg-[var(--color-chart-4)]' },
   ] : [];
   const completionPct = stats?.request_completion ?? 0;
   const completionGoal = stats?.request_completion_goal ?? 80;
@@ -351,7 +352,7 @@ function SellerDashboard({ onProductClick, period: _period, stats }: { onProduct
               <div className="mt-2 flex justify-center gap-4">
                 {counterpartyBreakdown.map((c) => (
                   <div key={c.name} className="flex items-center gap-1.5 text-xs">
-                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: c.color }} />
+                    <span className={`h-2.5 w-2.5 rounded-full ${c.dotClass}`} />
                     <span className="font-medium">{c.value}</span>
                     <span className="text-muted-foreground">{c.name}</span>
                   </div>

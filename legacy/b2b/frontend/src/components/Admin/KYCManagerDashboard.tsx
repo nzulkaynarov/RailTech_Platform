@@ -46,12 +46,12 @@ const STATUS_CONFIG = {
 	},
 };
 
-const DOC_TYPES = [
-	{ value: 'CHARTER', label: 'Company Charter / Устав' },
-	{ value: 'LICENSE', label: 'License / Лицензия' },
-	{ value: 'PASSPORT', label: 'Director ID / Паспорт' },
-	{ value: 'TAX_CERT', label: 'Tax Registry / Свид. ИНН' },
-	{ value: 'OTHER', label: 'Misc / Другое' },
+const DOC_TYPE_KEYS = [
+	{ value: 'CHARTER', labelKey: 'kycManager.docTypes.charter' },
+	{ value: 'LICENSE', labelKey: 'kycManager.docTypes.license' },
+	{ value: 'PASSPORT', labelKey: 'kycManager.docTypes.passport' },
+	{ value: 'TAX_CERT', labelKey: 'kycManager.docTypes.taxCert' },
+	{ value: 'OTHER', labelKey: 'kycManager.docTypes.other' },
 ];
 
 // --- Company Detail Side Panel ---
@@ -151,7 +151,7 @@ const CompanyDetailPanel: React.FC<SidePanelProps> = ({ company, onClose, onVeri
 							onChange={e => setSelectedDocType(e.target.value)}
 							className="w-full bg-muted border border-border rounded px-3 py-1.5 text-xs font-black text-foreground outline-none focus:border-primary transition-all uppercase"
 						>
-							{DOC_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+							{DOC_TYPE_KEYS.map(dt => <option key={dt.value} value={dt.value}>{t(dt.labelKey)}</option>)}
 						</select>
 						<input ref={fileInputRef} type="file" className="hidden" accept=".pdf,.doc,.docx,.jpg,.png"
 							onChange={e => {

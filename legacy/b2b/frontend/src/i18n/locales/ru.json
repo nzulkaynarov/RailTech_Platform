@@ -537,7 +537,8 @@
     "validation": {
       "minChars": "Минимум 2 символа",
       "innFormat": "ИНН должен содержать ровно 9 цифр",
-      "selectRole": "Выберите роль"
+      "selectRole": "Выберите роль",
+      "selectType": "Выберите тип компании"
     }
   },
   "passwordSetup": {
@@ -681,11 +682,16 @@
       "contact": "OP_CONTACT"
     },
     "docTypes": {
-      "CHARTER": "Company Charter / Устав",
-      "LICENSE": "License / Лицензия",
-      "PASSPORT": "Director ID / Паспорт",
-      "TAX_CERT": "Tax Registry / Свид. ИНН",
-      "OTHER": "Misc / Другое"
+      "CHARTER": "Устав компании",
+      "LICENSE": "Лицензия",
+      "PASSPORT": "Паспорт директора",
+      "TAX_CERT": "Свид. ИНН",
+      "OTHER": "Другое",
+      "charter": "Устав компании",
+      "license": "Лицензия",
+      "passport": "Паспорт директора",
+      "taxCert": "Свид. ИНН",
+      "other": "Другое"
     }
   },
   "breadcrumb": {
