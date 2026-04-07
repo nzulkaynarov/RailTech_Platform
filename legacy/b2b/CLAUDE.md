@@ -33,8 +33,9 @@ frontend/                   # React app
   src/components/           # shadcn/ui (66 components), Admin, Catalog, Sourcing, Dashboard, Auth, Cabinet
   src/hooks/                # useAccounts, useCatalog, useCRM, useMasterData, use-mobile
   src/i18n/locales/         # ru.json, en.json
+  src/layouts/              # AppShell (main SPA shell with shadcn Sidebar)
 nginx/                      # Production nginx.conf (rate limiting, caching, WebSocket)
-docs/                       # Architecture, specs, roadmap, mockups, presentations
+Docs/                       # Architecture, specs, roadmap, mockups, presentations, UI audit
 ```
 
 ## Key Architecture Decisions
@@ -48,6 +49,13 @@ docs/                       # Architecture, specs, roadmap, mockups, presentatio
 - **Auth model** — `CustomUser` with email as USERNAME_FIELD, `SystemRole` FK for RBAC
 - **Company types** — `CompanyType` M2M on Company (CLIENT=Buyer, MANUFACTURER, SUPPLIER=Seller); returned in `/me/` as `company_types[]`
 - **Frontend role mapping** — `loadFromAuth()` maps backend CompanyType codes to frontend CompanyStatus (CLIENT→BUYER, SUPPLIER→SELLER, MANUFACTURER→MANUFACTURER)
+- **4 Shell layouts** — all use shadcn `<Sidebar>` with `collapsible="icon"`:
+  - `AppShell` (hash-based SPA, Buyer/Seller/Manufacturer context switcher)
+  - `AdminShell` (React Router, `/admin/*`)
+  - `ClientShell` (React Router, `/cabinet/*`)
+  - `ManagerShell` (React Router, `/crm/*`)
+  - `CatalogShell` (public catalog, top navbar only — no sidebar)
+- **Unified shell layout** — all shells use `p-6` content padding, `h-14` header, `<SidebarTrigger>` for mobile
 
 ## Database
 
@@ -116,6 +124,10 @@ make shell           # backend bash
 - **i18n:** All UI text via `useTranslation()`, keys in `ru.json`/`en.json`
 - **State:** Zustand stores with `persist` middleware for auth/theme; no Redux
 - **UI:** Only shadcn/ui components + Tailwind semantic tokens. No custom CSS, no hardcoded hex colors, no `text-white`/`text-black` — use `text-foreground`/`text-primary-foreground`
+- **Text sizes:** Only Tailwind scale (`text-xs`, `text-sm`, `text-base`, etc.) — NEVER `text-[9px]`, `text-[11px]` or arbitrary pixel values
+- **Chart colors:** Use `bg-[var(--color-chart-N)]` for dynamic chart legend dots — this is the correct Tailwind pattern for CSS variable colors. NEVER use inline `style={{ backgroundColor }}` for chart legends
+- **Sidebar:** ALL shell layouts must use shadcn `<Sidebar>` + `<SidebarProvider>` + `<SidebarInset>` — NEVER custom `<aside>` with manual collapse state
+- **Zod validation messages:** For i18n, use factory pattern: `const createSchema = (t: TFn) => z.object(...)` — call inside component where `t()` is available
 
 ## Testing
 
@@ -159,8 +171,11 @@ make shell           # backend bash
 
 ### Rule 4: Only shadcn/ui + semantic tokens
 - ONLY use components from `@/components/ui/` (shadcn/ui)
-- Colors: `bg-primary`, `text-foreground`, `bg-success`, `bg-warning`, `bg-destructive`, `bg-info` — NEVER `bg-emerald-500`, `text-white`, `bg-amber-*`
+- Colors: `bg-primary`, `text-foreground`, `bg-success`, `bg-warning`, `bg-destructive`, `bg-info` — NEVER `bg-emerald-500`, `text-white`, `bg-amber-*`, `bg-red-600`
+- Text sizes: ONLY Tailwind scale (`text-xs` minimum) — NEVER `text-[9px]`, `text-[8px]`, `text-[11px]`
 - No custom CSS, no inline styles for static values, no `blur-[120px]` decorative hacks
+- Chart colors: use `bg-[var(--color-chart-N)]` Tailwind classes, NOT inline `style={{ backgroundColor }}`
+- Sidebar: use shadcn `<Sidebar>` primitives, NOT custom `<aside>` elements
 
 ### Rule 5: All text via i18n
 - ALL user-facing text wrapped in `t()` from `useTranslation()`
@@ -215,11 +230,14 @@ Transformation happens in: `userStore.loadFromAuth()` and DRF serializers.
 3. [ ] Naming follows conventions? (camelCase in JS, snake_case in DB)
 4. [ ] All text wrapped in `t()`? No hardcoded Russian/English strings?
 5. [ ] Colors use semantic tokens? (bg-primary, text-success, NOT bg-emerald-500)
-6. [ ] Using shadcn/ui components? (Button, Input, Table, NOT raw HTML)
-7. [ ] Errors handled, not silently swallowed?
-8. [ ] Stage/status compared by `code`, not by translated `name`?
-9. [ ] Frontend build passes? (`docker compose build frontend`)
-10. [ ] No `as any`, `@ts-ignore` unless absolutely necessary with comment?
+6. [ ] Text sizes use Tailwind scale? (text-xs, text-sm, NOT text-[9px])
+7. [ ] Using shadcn/ui components? (Button, Input, Table, Sidebar, NOT raw HTML)
+8. [ ] Errors handled, not silently swallowed? (toast for user-facing, NOT alert())
+9. [ ] Stage/status compared by `code`, not by translated `name`?
+10. [ ] Frontend build passes? (`docker compose build frontend`)
+11. [ ] No `as any`, `@ts-ignore` unless absolutely necessary with comment?
+12. [ ] New i18n keys added to BOTH `ru.json` AND `en.json`? (no desync)
+13. [ ] Run `/design-check` and `/check-i18n` skills for automated verification?
 
 ## Common Pitfalls
 
