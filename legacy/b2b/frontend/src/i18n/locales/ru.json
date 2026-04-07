@@ -659,6 +659,32 @@
     "requestDetail": "Детали заявки"
   },
 
+  "breadcrumbs": {
+    "dashboard": "Дашборд",
+    "products": "Каталог",
+    "myRequests": "Мои заявки",
+    "requestDetail": "Заявка",
+    "crmDeals": "Сделки",
+    "crmQuotes": "Котировки",
+    "crmClients": "Клиенты",
+    "sourcingRequests": "Заявки на снабжение",
+    "sourcingImport": "Импорт",
+    "sourcingMatch": "Sourcing Hub",
+    "productionOrders": "Заказы на производство",
+    "productionSchedule": "График производства",
+    "analytics": "Аналитика",
+    "categories": "Категории",
+    "equipmentGroups": "Группы техники",
+    "integrations": "Интеграции",
+    "help": "Помощь",
+    "profile": "Профиль",
+    "settings": "Настройки",
+    "myDocuments": "Документы",
+    "adminUsers": "Пользователи",
+    "logistics": "Логистика",
+    "purchaseTemplates": "Шаблоны закупок"
+  },
+
   "onboarding": {
     "companyRegistration": "Регистрация компании",
     "companyRegistrationDesc": "Укажите данные вашей организации для начала работы",
@@ -723,6 +749,33 @@
     "SELLER": "Посредник: покупает и перепродаёт, может добавлять товары в наличии"
   },
 
+  "productStatuses": {
+    "in_stock": "В наличии",
+    "to_order": "Под заказ",
+    "sourcing": "Поиск",
+    "inactive": "Неактивен"
+  },
+
+  "domainLabels": {
+    "RAILWAY_MACHINERY": "ЖД и Техника",
+    "GENERAL_GOODS": "Общие товары",
+    "SERVICES": "Услуги"
+  },
+
+  "requestStatuses": {
+    "draft": "Черновик",
+    "submitted": "Отправлена",
+    "processing": "В обработке",
+    "rfq_sent": "Запросы отправлены",
+    "rfq_received": "Ответы получены",
+    "calculating": "Расчёт себестоимости",
+    "kp_sent": "КП отправлено",
+    "kp_review": "На рассмотрении",
+    "kp_accepted": "КП принято",
+    "kp_rejected": "КП отклонено",
+    "deal_opened": "Сделка открыта"
+  },
+
   "shell": {
     "b2bPlatform": "B2B Платформа",
     "workContext": "Контекст работы",
@@ -758,7 +811,11 @@
     "profile": "Профиль",
     "logout": "Выйти",
     "demoMode": "Демо-режим",
-    "openMenu": "Открыть меню"
+    "openMenu": "Открыть меню",
+    "notifications": "Уведомления",
+    "notificationsDesc": "Последние события в системе",
+    "noNotifications": "Нет новых уведомлений",
+    "markAllRead": "Отметить все как прочитанные"
   },
 
   "dashboardPage": {
@@ -1810,7 +1867,11 @@
     "breadcrumb": {
       "main": "Главная"
     },
-    "globalSearch": "Глобальный поиск (Alt+S)..."
+    "globalSearch": "Глобальный поиск (Alt+S)...",
+    "notifications": "Уведомления",
+    "notificationsDesc": "Последние события в системе",
+    "noNotifications": "Нет новых уведомлений",
+    "markAllRead": "Отметить все как прочитанные"
   },
 
   "error": {

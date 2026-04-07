@@ -30,8 +30,6 @@ import {
   Plus,
   X,
   Menu,
-  CheckCircle2,
-  UserPlus,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -78,6 +76,7 @@ import {
 import { useCartStore, useCartCount } from '@/store/cartStore';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useDemoStore } from '@/store/demoStore';
+import { useAuthStore } from '@/store/authStore';
 
 /* ─── Types ─────────────────────────────────────────────────────────── */
 
@@ -240,9 +239,10 @@ function SidebarNavItem({
         <CollapsibleTrigger asChild>
           <Tooltip>
             <TooltipTrigger asChild>
-              <button
+              <Button
+                variant="ghost"
                 className={cn(
-                  'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground',
+                  'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground h-auto',
                   hasActiveChild ? 'text-foreground' : 'text-muted-foreground',
                   collapsed && 'justify-center px-0'
                 )}
@@ -259,7 +259,7 @@ function SidebarNavItem({
                     <ChevronDown className={cn('h-4 w-4 transition-transform', open && 'rotate-180')} />
                   </>
                 )}
-              </button>
+              </Button>
             </TooltipTrigger>
             {collapsed && <TooltipContent side="right">{item.label}</TooltipContent>}
           </Tooltip>
@@ -268,16 +268,17 @@ function SidebarNavItem({
           <CollapsibleContent>
             <div className="ml-4 mt-1 flex flex-col gap-0.5 border-l pl-3">
               {item.children.map((child) => (
-                <button
+                <Button
                   key={child.id}
+                  variant="ghost"
                   className={cn(
-                    'rounded-md px-3 py-1.5 text-left text-sm transition-colors hover:bg-accent hover:text-accent-foreground',
+                    'rounded-md px-3 py-1.5 text-left text-sm transition-colors hover:bg-accent hover:text-accent-foreground h-auto w-full justify-start',
                     child.active ? 'bg-accent font-medium text-foreground' : 'text-muted-foreground'
                   )}
                   onClick={() => onNavigate(child.id)}
                 >
                   {child.label}
-                </button>
+                </Button>
               ))}
             </div>
           </CollapsibleContent>
@@ -289,9 +290,10 @@ function SidebarNavItem({
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <button
+        <Button
+          variant="ghost"
           className={cn(
-            'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground',
+            'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground h-auto',
             item.active ? 'bg-accent text-foreground' : 'text-muted-foreground',
             collapsed && 'justify-center px-0'
           )}
@@ -308,7 +310,7 @@ function SidebarNavItem({
               )}
             </>
           )}
-        </button>
+        </Button>
       </TooltipTrigger>
       {collapsed && <TooltipContent side="right">{item.label}</TooltipContent>}
     </Tooltip>
@@ -376,13 +378,13 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
             <div className="px-3 pt-3">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="flex w-full items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2 text-sm hover:bg-accent transition-colors">
+                  <Button variant="outline" className="flex w-full items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2 text-sm hover:bg-accent transition-colors h-auto">
                     <StatusIcon status={activeStatus} className={cn('h-4 w-4', statusColor(activeStatus))} />
                     <span className="flex-1 text-left font-medium">
                       {t(`companyStatus.${activeStatus}`)}
                     </span>
                     <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                  </button>
+                  </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-56">
                   <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
@@ -475,8 +477,8 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
           )}>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className={cn(
-                  'flex items-center rounded-lg text-sm hover:bg-accent transition-colors',
+                <Button variant="ghost" className={cn(
+                  'flex items-center rounded-lg text-sm hover:bg-accent transition-colors h-auto',
                   sidebarCollapsed ? 'justify-center w-full' : 'gap-3 w-full items-center px-2 py-2'
                 )}>
                   <Avatar className="h-8 w-8 flex-shrink-0">
@@ -499,7 +501,7 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
                       <ChevronUp className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     </>
                   )}
-                </button>
+                </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align={sidebarCollapsed ? 'end' : 'start'} className="w-64" side="top">
                 <div className="px-2 py-2">
@@ -532,7 +534,10 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
                   {t('shell.demoMode')}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-destructive">
+                <DropdownMenuItem className="text-destructive" onClick={() => {
+                  useAuthStore.getState().logout();
+                  window.location.href = '/';
+                }}>
                   <LogOut className="mr-2 h-4 w-4" />
                   {t('shell.logout')}
                 </DropdownMenuItem>
@@ -641,44 +646,21 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
         <Sheet open={notificationsOpen} onOpenChange={setNotificationsOpen}>
           <SheetContent side="right" className="w-full sm:w-96 flex flex-col">
             <SheetHeader>
-              <SheetTitle>Уведомления</SheetTitle>
-              <SheetDescription>Последние события в системе</SheetDescription>
+              <SheetTitle>{t('shell.notifications')}</SheetTitle>
+              <SheetDescription>{t('shell.notificationsDesc')}</SheetDescription>
             </SheetHeader>
             <ScrollArea className="flex-1 -mx-6 px-6">
               <div className="space-y-2 pr-4">
-                {[
-                  { title: 'КП-2026-003 отправлено', desc: 'Коммерческое предложение для UTY отправлено на рассмотрение', time: '5 мин назад', type: 'success' as const, icon: CheckCircle2, iconBg: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' },
-                  { title: 'Новая заявка ЗК-2026-0052', desc: 'Получена заявка от Tashkent Metro на 8 позиций', time: '1 час назад', type: 'info' as const, icon: FileText, iconBg: 'bg-primary/10 text-primary' },
-                  { title: 'Заявка ЗК-2026-0047 обработана', desc: 'Smart Match нашёл 6 из 8 позиций в каталоге', time: '3 часа назад', type: 'info' as const, icon: Package, iconBg: 'bg-primary/10 text-primary' },
-                  { title: 'Новый пользователь', desc: 'Иванов А.С. присоединился к команде как Менеджер', time: 'Вчера', type: 'default' as const, icon: UserPlus, iconBg: 'bg-muted text-muted-foreground' },
-                  { title: 'Обновление системы', desc: 'Версия 2.4.1 — улучшен Quote Builder', time: '2 дня назад', type: 'default' as const, icon: Settings, iconBg: 'bg-muted text-muted-foreground' },
-                ].map((n, i) => {
-                  const isUnread = i < 3;
-                  return (
-                    <div key={i} className={cn(
-                      'rounded-lg border p-3 cursor-pointer hover:bg-muted/50 transition-colors',
-                      isUnread && 'border-l-2 border-l-primary bg-accent/50',
-                    )}>
-                      <div className="flex gap-3">
-                        <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-full', n.iconBg)}>
-                          <n.icon className="h-4 w-4" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2">
-                            <p className="text-sm font-semibold leading-tight">{n.title}</p>
-                            <span className="shrink-0 text-xs text-muted-foreground whitespace-nowrap">{n.time}</span>
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{n.desc}</p>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+                {/* TODO: Load notifications from API */}
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <Bell className="h-10 w-10 text-muted-foreground/50 mb-3" />
+                  <p className="text-sm text-muted-foreground">{t('shell.noNotifications')}</p>
+                </div>
               </div>
             </ScrollArea>
             <SheetFooter>
               <Button variant="outline" className="w-full" onClick={() => setNotificationsOpen(false)}>
-                Отметить все как прочитанные
+                {t('shell.markAllRead')}
               </Button>
             </SheetFooter>
           </SheetContent>
@@ -846,22 +828,24 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
                           {item.label}
                         </p>
                         {item.children.map((child) => (
-                          <button
+                          <Button
                             key={child.id}
+                            variant="ghost"
                             className={cn(
-                              'flex w-full items-center rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent',
+                              'flex w-full items-center rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent h-auto justify-start',
                               child.active ? 'bg-accent font-medium text-foreground' : 'text-muted-foreground'
                             )}
                             onClick={() => { onNavigate(child.id); setMobileNavOpen(false); }}
                           >
                             {child.label}
-                          </button>
+                          </Button>
                         ))}
                       </div>
                     ) : (
-                      <button
+                      <Button
+                        variant="ghost"
                         className={cn(
-                          'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent',
+                          'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent h-auto justify-start',
                           item.active ? 'bg-accent font-medium text-foreground' : 'text-muted-foreground'
                         )}
                         onClick={() => { if (item.id) onNavigate(item.id); setMobileNavOpen(false); }}
@@ -873,7 +857,7 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
                             {item.badge}
                           </Badge>
                         )}
-                      </button>
+                      </Button>
                     )}
                   </div>
                 ))}
@@ -881,14 +865,15 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
               <Separator />
               <nav className="space-y-0.5 p-3">
                 {bottomNav.map((item) => (
-                  <button
+                  <Button
                     key={item.label}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent"
+                    variant="ghost"
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent h-auto justify-start"
                     onClick={() => { if (item.id) onNavigate(item.id); setMobileNavOpen(false); }}
                   >
                     {item.icon}
                     <span>{item.label}</span>
-                  </button>
+                  </Button>
                 ))}
               </nav>
             </ScrollArea>

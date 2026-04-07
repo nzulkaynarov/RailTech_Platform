@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     TrendingUp,
     Users,
@@ -16,6 +17,7 @@ import { useTaskStore } from '../../store/taskStore';
 import { Button } from '@/components/ui/button';
 
 export const AnalyticsDashboard: React.FC = () => {
+    const { t } = useTranslation();
     const [data, setData] = useState<CRMAnalytics | null>(null);
     const [loading, setLoading] = useState(true);
     const { activeTaskIds } = useTaskStore();
@@ -177,7 +179,7 @@ export const AnalyticsDashboard: React.FC = () => {
                                 <div key={item.stage__name} className="group">
                                     <div className="flex justify-between items-center mb-1.5 px-0.5">
                                         <span className="text-xs font-black uppercase tracking-widest text-muted-foreground group-hover:text-foreground transition-colors">
-                                            {statusLabels[item.stage__name] || item.stage__name}
+                                            {t(statusLabels[item.stage__name] || item.stage__name)}
                                         </span>
                                         <span className="text-xs font-black text-foreground">{item.count}</span>
                                     </div>

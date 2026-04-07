@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Package,
   PackageCheck,
@@ -116,18 +117,20 @@ const statusVariantMap: Record<Product['status'], 'success' | 'warning' | 'info'
 };
 
 function StatusBadgeCustom({ status }: { status: Product['status'] }) {
+  const { t } = useTranslation();
   return (
     <StatusBadge
-      label={statusLabels[status]}
+      label={t(statusLabels[status])}
       variant={statusVariantMap[status]}
     />
   );
 }
 
 function DomainBadge({ domain }: { domain: Product['domain'] }) {
+  const { t } = useTranslation();
   return (
     <Badge variant="secondary" className="text-xs font-medium">
-      {domainLabels[domain]}
+      {t(domainLabels[domain])}
     </Badge>
   );
 }

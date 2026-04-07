@@ -79,32 +79,33 @@ export type RequestStatus =
   | 'kp_rejected'      // Client rejected
   | 'deal_opened';     // Deal created
 
+/** i18n keys for request status labels — use with t(`requestStatuses.${status}`) */
 export const requestStatusLabels: Record<RequestStatus, string> = {
-  draft: 'Черновик',
-  submitted: 'Отправлена',
-  processing: 'В обработке',
-  rfq_sent: 'Запросы отправлены',
-  rfq_received: 'Ответы получены',
-  calculating: 'Расчёт себестоимости',
-  kp_sent: 'КП отправлено',
-  kp_review: 'На рассмотрении',
-  kp_accepted: 'КП принято',
-  kp_rejected: 'КП отклонено',
-  deal_opened: 'Сделка открыта',
+  draft: 'requestStatuses.draft',
+  submitted: 'requestStatuses.submitted',
+  processing: 'requestStatuses.processing',
+  rfq_sent: 'requestStatuses.rfq_sent',
+  rfq_received: 'requestStatuses.rfq_received',
+  calculating: 'requestStatuses.calculating',
+  kp_sent: 'requestStatuses.kp_sent',
+  kp_review: 'requestStatuses.kp_review',
+  kp_accepted: 'requestStatuses.kp_accepted',
+  kp_rejected: 'requestStatuses.kp_rejected',
+  deal_opened: 'requestStatuses.deal_opened',
 };
 
 export const requestStatusColors: Record<RequestStatus, string> = {
-  draft: 'bg-slate-50 text-slate-700 border-slate-200',
-  submitted: 'bg-blue-50 text-blue-700 border-blue-200',
-  processing: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-  rfq_sent: 'bg-purple-50 text-purple-700 border-purple-200',
-  rfq_received: 'bg-amber-50 text-amber-700 border-amber-200',
-  calculating: 'bg-orange-50 text-orange-700 border-orange-200',
-  kp_sent: 'bg-cyan-50 text-cyan-700 border-cyan-200',
-  kp_review: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-  kp_accepted: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  kp_rejected: 'bg-red-50 text-red-700 border-red-200',
-  deal_opened: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  draft: 'bg-muted text-muted-foreground border-border',
+  submitted: 'bg-info/10 text-info border-info/20',
+  processing: 'bg-info/10 text-info border-info/20',
+  rfq_sent: 'bg-accent text-accent-foreground border-border',
+  rfq_received: 'bg-warning/10 text-warning border-warning/20',
+  calculating: 'bg-warning/10 text-warning border-warning/20',
+  kp_sent: 'bg-info/10 text-info border-info/20',
+  kp_review: 'bg-warning/10 text-warning border-warning/20',
+  kp_accepted: 'bg-success/10 text-success border-success/20',
+  kp_rejected: 'bg-destructive/10 text-destructive border-destructive/20',
+  deal_opened: 'bg-success/10 text-success border-success/20',
 };
 
 export interface SourcingRequest {

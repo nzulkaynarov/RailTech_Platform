@@ -19,10 +19,10 @@ interface StatusBadgeProps {
  * that pairs well with our custom color overrides.
  */
 const variantStyles: Record<BadgeVariant, string> = {
-  success: 'bg-emerald-500/10 text-emerald-700 border-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30',
-  warning: 'bg-amber-500/10 text-amber-700 border-amber-500/20 dark:text-amber-400 dark:border-amber-500/30',
-  danger: 'bg-red-500/10 text-red-700 border-red-500/20 dark:text-red-400 dark:border-red-500/30',
-  info: 'bg-blue-500/10 text-blue-700 border-blue-500/20 dark:text-blue-400 dark:border-blue-500/30',
+  success: 'bg-success/10 text-success border-success/20',
+  warning: 'bg-warning/10 text-warning border-warning/20',
+  danger: 'bg-destructive/10 text-destructive border-destructive/20',
+  info: 'bg-info/10 text-info border-info/20',
   neutral: 'bg-muted text-muted-foreground border-border',
 };
 

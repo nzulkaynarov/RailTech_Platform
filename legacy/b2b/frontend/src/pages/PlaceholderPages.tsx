@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useFlowStore, requestStatusLabels, requestStatusColors } from '@/store/flowStore';
 import { useUserStore } from '@/store/userStore';
+import { usePageStats } from '@/hooks/usePageStats';
 import { Progress } from '@/components/ui/progress';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import {
@@ -96,7 +97,7 @@ function DemoRequestCard({ onOpen }: { onOpen: () => void }) {
             <div className="flex items-center gap-2">
               <span className="font-medium">{request.number}</span>
               <Badge variant="outline" className={cn('text-xs', requestStatusColors[request.status])}>
-                {requestStatusLabels[request.status]}
+                {t(requestStatusLabels[request.status])}
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">
@@ -114,16 +115,18 @@ function DemoRequestCard({ onOpen }: { onOpen: () => void }) {
 
 export function SourcingRequestsPage({ onNavigate }: { onNavigate?: (t: string) => void }) {
   const { t } = useTranslation();
+  const { data: ps } = usePageStats();
+  const s = ps?.sourcing;
   return (
     <PageShell
       title={t('pages.sourcingRequests.title')}
       description={t('pages.sourcingRequests.description')}
       icon={<ClipboardList className="h-5 w-5" />}
       stats={[
-        { label: t('pages.sourcingRequests.stats.total'), value: '47' },
-        { label: t('pages.sourcingRequests.stats.new'), value: '12' },
-        { label: t('pages.sourcingRequests.stats.inProgress'), value: '23' },
-        { label: t('pages.sourcingRequests.stats.completed'), value: '12' },
+        { label: t('pages.sourcingRequests.stats.total'), value: String(s?.total ?? '—') },
+        { label: t('pages.sourcingRequests.stats.new'), value: String(s?.new ?? '—') },
+        { label: t('pages.sourcingRequests.stats.inProgress'), value: String(s?.in_progress ?? '—') },
+        { label: t('pages.sourcingRequests.stats.completed'), value: String(s?.completed ?? '—') },
       ]}
       actions={[{ label: t('pages.sourcingRequests.createRequest') }]}
     >
@@ -239,16 +242,18 @@ export function SourcingImportPage() {
 
 export function SourcingMatchPage() {
   const { t } = useTranslation();
+  const { data: ps } = usePageStats();
+  const s = ps?.sourcing_match;
   return (
     <PageShell
       title={t('pages.sourcingMatch.title')}
       description={t('pages.sourcingMatch.description')}
       icon={<Search className="h-5 w-5" />}
       stats={[
-        { label: t('pages.sourcingMatch.stats.unrecognized'), value: '8' },
-        { label: t('pages.sourcingMatch.stats.matches'), value: '142' },
-        { label: t('pages.sourcingMatch.stats.needReview'), value: '5' },
-        { label: t('pages.sourcingMatch.stats.accuracy'), value: '94%' },
+        { label: t('pages.sourcingMatch.stats.unrecognized'), value: String(s?.unrecognized ?? '—') },
+        { label: t('pages.sourcingMatch.stats.matches'), value: String(s?.matches ?? '—') },
+        { label: t('pages.sourcingMatch.stats.needReview'), value: String(s?.need_review ?? '—') },
+        { label: t('pages.sourcingMatch.stats.accuracy'), value: s?.accuracy ?? '—' },
       ]}
     />
   );
@@ -273,6 +278,7 @@ interface DealColumn {
 
 export function DealsPage() {
   const { t } = useTranslation();
+  const { data: ps } = usePageStats();
   const columns: DealColumn[] = [
     {
       title: 'DRAFT',
@@ -338,10 +344,10 @@ export function DealsPage() {
       description={t('pages.deals.description')}
       icon={<FileText className="h-5 w-5" />}
       stats={[
-        { label: t('pages.deals.stats.total'), value: '14' },
-        { label: t('pages.deals.stats.active'), value: '7' },
-        { label: t('pages.deals.stats.quoteSent'), value: '2' },
-        { label: t('pages.deals.stats.closedWon'), value: '3' },
+        { label: t('pages.deals.stats.total'), value: String(ps?.deals?.total ?? '—') },
+        { label: t('pages.deals.stats.active'), value: String(ps?.deals?.active ?? '—') },
+        { label: t('pages.deals.stats.quoteSent'), value: String(ps?.deals?.quote_sent ?? '—') },
+        { label: t('pages.deals.stats.closedWon'), value: String(ps?.deals?.closed_won ?? '—') },
       ]}
       actions={[{ label: t('pages.deals.newDeal') }]}
     >
@@ -386,6 +392,7 @@ export function DealsPage() {
 export function QuotesPage() {
   const { t } = useTranslation();
   const { activeStatus } = useUserStore();
+  const { data: ps } = usePageStats();
   const isBuyer = activeStatus === 'BUYER';
 
   // Quotes are loaded from the backend API via crmApi
@@ -401,9 +408,9 @@ export function QuotesPage() {
         icon={<Calculator className="h-5 w-5" />}
         stats={[
           { label: t('pages.quotes.stats.total'), value: String(buyerQuotes.length) },
-          { label: t('pages.quotes.stats.underReview'), value: '2' },
-          { label: t('pages.quotes.stats.accepted'), value: '1' },
-          { label: t('pages.quotes.stats.totalAmount'), value: '$195K' },
+          { label: t('pages.quotes.stats.underReview'), value: String(ps?.quotes?.under_review ?? '—') },
+          { label: t('pages.quotes.stats.accepted'), value: String(ps?.quotes?.approved ?? '—') },
+          { label: t('pages.quotes.stats.totalAmount'), value: ps?.quotes?.total_amount ?? '—' },
         ]}
       >
         <Card>
@@ -462,10 +469,10 @@ export function QuotesPage() {
       description={t('pages.quotes.sellerDescription')}
       icon={<Calculator className="h-5 w-5" />}
       stats={[
-        { label: t('pages.quotes.stats.drafts'), value: '2' },
-        { label: t('pages.quotes.stats.sent'), value: '2' },
-        { label: t('pages.quotes.stats.approved'), value: '1' },
-        { label: t('pages.quotes.stats.pipeline'), value: '$302K' },
+        { label: t('pages.quotes.stats.drafts'), value: String(ps?.quotes?.drafts ?? '—') },
+        { label: t('pages.quotes.stats.sent'), value: String(ps?.quotes?.sent ?? '—') },
+        { label: t('pages.quotes.stats.approved'), value: String(ps?.quotes?.approved ?? '—') },
+        { label: t('pages.quotes.stats.pipeline'), value: ps?.quotes?.pipeline ?? '—' },
       ]}
       actions={[{ label: t('pages.quotes.createQuote') }]}
     >
@@ -520,6 +527,7 @@ export function QuotesPage() {
 }
 
 export function ClientsPage() {
+  const { data: ps } = usePageStats();
   const { t } = useTranslation();
   // Clients are loaded from the backend API via accountsApi
   // TODO: Replace with useEffect + accountsApi.getCompanies() when component mounts
@@ -531,10 +539,10 @@ export function ClientsPage() {
       description={t('pages.clients.description')}
       icon={<Users className="h-5 w-5" />}
       stats={[
-        { label: t('pages.clients.stats.total'), value: '50' },
-        { label: t('pages.clients.stats.verified'), value: '24' },
-        { label: t('pages.clients.stats.awaitingKyc'), value: '8' },
-        { label: t('pages.clients.stats.guests'), value: '18' },
+        { label: t('pages.clients.stats.total'), value: String(ps?.clients?.total ?? '—') },
+        { label: t('pages.clients.stats.verified'), value: String(ps?.clients?.verified ?? '—') },
+        { label: t('pages.clients.stats.awaitingKyc'), value: String(ps?.clients?.awaiting_kyc ?? '—') },
+        { label: t('pages.clients.stats.guests'), value: String(ps?.clients?.unverified ?? '—') },
       ]}
       actions={[{ label: t('pages.clients.addClient') }]}
     >
@@ -585,6 +593,7 @@ export function ClientsPage() {
 // ─── Production Pages ───────────────────────────────────────────────────
 
 export function ProductionOrdersPage({ onNavigate }: { onNavigate?: (t: string) => void }) {
+  const { data: ps } = usePageStats();
   const { t } = useTranslation();
   return (
     <PageShell
@@ -592,10 +601,10 @@ export function ProductionOrdersPage({ onNavigate }: { onNavigate?: (t: string) 
       description={t('pages.productionOrders.description')}
       icon={<Factory className="h-5 w-5" />}
       stats={[
-        { label: t('pages.productionOrders.stats.active'), value: '12' },
-        { label: t('pages.productionOrders.stats.awaitingResponse'), value: '3' },
-        { label: t('pages.productionOrders.stats.responded'), value: '7' },
-        { label: t('pages.productionOrders.stats.overdue'), value: '2' },
+        { label: t('pages.productionOrders.stats.active'), value: String(ps?.production?.active ?? '0') },
+        { label: t('pages.productionOrders.stats.awaitingResponse'), value: String(ps?.production?.awaiting_response ?? '0') },
+        { label: t('pages.productionOrders.stats.responded'), value: String(ps?.production?.responded ?? '0') },
+        { label: t('pages.productionOrders.stats.overdue'), value: String(ps?.production?.overdue ?? '0') },
       ]}
     >
       <div className="space-y-2">
@@ -607,6 +616,7 @@ export function ProductionOrdersPage({ onNavigate }: { onNavigate?: (t: string) 
 }
 
 export function ProductionSchedulePage() {
+  const { data: ps } = usePageStats();
   const { t } = useTranslation();
   // Production orders are loaded from the backend API
   // TODO: Replace with useEffect + API call when production endpoints are ready
@@ -618,10 +628,10 @@ export function ProductionSchedulePage() {
       description={t('pages.productionSchedule.description')}
       icon={<CalendarDays className="h-5 w-5" />}
       stats={[
-        { label: t('pages.productionSchedule.stats.activeOrders'), value: '4' },
-        { label: t('pages.productionSchedule.stats.completed'), value: '12' },
-        { label: t('pages.productionSchedule.stats.delayed'), value: '0' },
-        { label: t('pages.productionSchedule.stats.nextWeek'), value: '2' },
+        { label: t('pages.productionSchedule.stats.activeOrders'), value: String(ps?.production_schedule?.active_orders ?? '0') },
+        { label: t('pages.productionSchedule.stats.completed'), value: String(ps?.production_schedule?.completed ?? '0') },
+        { label: t('pages.productionSchedule.stats.delayed'), value: String(ps?.production_schedule?.delayed ?? '0') },
+        { label: t('pages.productionSchedule.stats.nextWeek'), value: String(ps?.production_schedule?.next_week ?? '0') },
       ]}
     >
       <div className="space-y-4">
@@ -656,6 +666,7 @@ export function ProductionSchedulePage() {
 // ─── Analytics ──────────────────────────────────────────────────────────
 
 export function AnalyticsPage() {
+  const { data: ps } = usePageStats();
   const { t } = useTranslation();
   const { activeStatus } = useUserStore();
 
@@ -677,10 +688,10 @@ export function AnalyticsPage() {
       description={activeStatus === 'MANUFACTURER' ? t('pages.analytics.manufacturerDescription') : t('pages.analytics.sellerDescription')}
       icon={<BarChart3 className="h-5 w-5" />}
       stats={[
-        { label: t('pages.analytics.stats.conversion'), value: '18%' },
-        { label: t('pages.analytics.stats.avgDeal'), value: '$18.4K' },
-        { label: t('pages.analytics.stats.pipeline'), value: '$380K' },
-        { label: t('pages.analytics.stats.winRate'), value: '35%' },
+        { label: t('pages.analytics.stats.conversion'), value: ps?.analytics?.conversion ?? '—' },
+        { label: t('pages.analytics.stats.avgDeal'), value: ps?.analytics?.avg_deal ?? '—' },
+        { label: t('pages.analytics.stats.pipeline'), value: ps?.analytics?.pipeline ?? '—' },
+        { label: t('pages.analytics.stats.winRate'), value: ps?.analytics?.win_rate ?? '—' },
       ]}
     >
       <div className="grid gap-6 lg:grid-cols-2">
@@ -734,6 +745,7 @@ export function AnalyticsPage() {
 
 function BuyerAnalytics() {
   const { t } = useTranslation();
+  const { data: ps } = usePageStats();
   // Buyer analytics data loaded from the backend API
   // TODO: Replace with useEffect + API call when buyer analytics endpoint is ready
   const spendData: { month: string; spend: number }[] = [];
@@ -746,9 +758,9 @@ function BuyerAnalytics() {
       description={t('pages.analytics.buyerDescription')}
       icon={<BarChart3 className="h-5 w-5" />}
       stats={[
-        { label: t('pages.analytics.buyerStats.spendPeriod'), value: '$276K' },
-        { label: t('pages.analytics.buyerStats.savings'), value: '$18.2K' },
-        { label: t('pages.analytics.buyerStats.activeRequests'), value: '12' },
+        { label: t('pages.analytics.buyerStats.spendPeriod'), value: ps?.analytics_buyer?.spend_period ?? '—' },
+        { label: t('pages.analytics.buyerStats.savings'), value: ps?.analytics_buyer?.savings ?? '—' },
+        { label: t('pages.analytics.buyerStats.activeRequests'), value: String(ps?.analytics_buyer?.active_requests ?? '—') },
         { label: t('pages.analytics.buyerStats.avgDelivery'), value: t('pages.analytics.supplierDays', { count: 14 }) },
       ]}
     >
@@ -855,13 +867,13 @@ export function CategoriesPage() {
             <Card className="border">
               <CardContent className="p-0">
                 <CollapsibleTrigger asChild>
-                  <button className="w-full p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
+                  <Button variant="ghost" className="w-full p-4 flex items-center justify-between hover:bg-muted/50 transition-colors h-auto">
                     <div className="flex items-center gap-2">
                       <ChevronDown className="h-4 w-4 transition-transform" />
                       <span className="font-medium">{cat.name}</span>
                     </div>
                     <Badge variant="outline" className="text-xs">{cat.subcats.reduce((sum, s) => sum + s.items.length, 0)} {t('pages.common.items')}</Badge>
-                  </button>
+                  </Button>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <div className="border-t bg-muted/30 p-4 space-y-3">
@@ -929,6 +941,7 @@ export function EquipmentGroupsPage() {
 // ─── Integrations & Help ────────────────────────────────────────────────
 
 export function IntegrationsPage() {
+  const { data: ps } = usePageStats();
   const { t } = useTranslation();
   // Integrations are loaded from the backend API
   // TODO: Replace with useEffect + API call when integrations endpoint is ready
@@ -940,10 +953,10 @@ export function IntegrationsPage() {
       description={t('pages.integrations.description')}
       icon={<Plug className="h-5 w-5" />}
       stats={[
-        { label: t('pages.integrations.stats.connected'), value: '3' },
-        { label: t('pages.integrations.stats.pending'), value: '1' },
-        { label: t('pages.integrations.stats.availableApis'), value: '12' },
-        { label: t('pages.integrations.stats.syncedRecords'), value: '1,671' },
+        { label: t('pages.integrations.stats.connected'), value: String(ps?.integrations?.connected ?? '0') },
+        { label: t('pages.integrations.stats.pending'), value: String(ps?.integrations?.pending ?? '0') },
+        { label: t('pages.integrations.stats.availableApis'), value: String(ps?.integrations?.available_apis ?? '0') },
+        { label: t('pages.integrations.stats.syncedRecords'), value: String(ps?.integrations?.synced_records ?? '0') },
       ]}
       actions={[{ label: t('pages.integrations.apiDocs'), variant: 'outline' }, { label: t('pages.integrations.addIntegration') }]}
     >
@@ -1065,10 +1078,10 @@ export function HelpPage() {
                     <Card className="border">
                       <CardContent className="p-0">
                         <CollapsibleTrigger asChild>
-                          <button className="w-full p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
+                          <Button variant="ghost" className="w-full p-4 flex items-center justify-between hover:bg-muted/50 transition-colors h-auto">
                             <span className="font-medium text-sm text-left">{faq.question}</span>
                             <ChevronDown className="h-4 w-4 transition-transform flex-shrink-0 ml-2" />
-                          </button>
+                          </Button>
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                           <div className="border-t bg-muted/30 p-4 text-sm text-muted-foreground">
@@ -1108,6 +1121,7 @@ export function HelpPage() {
 // ─── Client-specific Pages ──────────────────────────────────────────────
 
 export function MyRequestsPage({ onNavigate }: { onNavigate?: (t: string) => void }) {
+  const { data: ps } = usePageStats();
   const { t } = useTranslation();
   return (
     <PageShell
@@ -1115,10 +1129,10 @@ export function MyRequestsPage({ onNavigate }: { onNavigate?: (t: string) => voi
       description={t('pages.myRequests.description')}
       icon={<ShoppingCart className="h-5 w-5" />}
       stats={[
-        { label: t('pages.myRequests.stats.active'), value: '3' },
-        { label: t('pages.myRequests.stats.quoteReceived'), value: '2' },
-        { label: t('pages.myRequests.stats.contract'), value: '1' },
-        { label: t('pages.myRequests.stats.completed'), value: '8' },
+        { label: t('pages.myRequests.stats.active'), value: String(ps?.my_requests?.active ?? '—') },
+        { label: t('pages.myRequests.stats.quoteReceived'), value: String(ps?.my_requests?.quote_received ?? '—') },
+        { label: t('pages.myRequests.stats.contract'), value: String(ps?.my_requests?.contract ?? '—') },
+        { label: t('pages.myRequests.stats.completed'), value: String(ps?.my_requests?.completed ?? '—') },
       ]}
       actions={[{ label: t('pages.myRequests.newRequest') }]}
     >
@@ -1195,6 +1209,7 @@ export function MyDocumentsPage() {
 // ─── Logistics Page ────────────────────────────────────────────────────
 
 export function LogisticsPage() {
+  const { data: ps } = usePageStats();
   const { t } = useTranslation();
   // Shipments are loaded from the backend API
   // TODO: Replace with useEffect + API call when logistics endpoint is ready
@@ -1212,10 +1227,10 @@ export function LogisticsPage() {
       description={t('pages.logistics.description')}
       icon={<Truck className="h-5 w-5" />}
       stats={[
-        { label: t('pages.logistics.stats.inTransit'), value: '3' },
-        { label: t('pages.logistics.stats.customs'), value: '1' },
-        { label: t('pages.logistics.stats.delivered'), value: '1' },
-        { label: t('pages.logistics.stats.delays'), value: '0' },
+        { label: t('pages.logistics.stats.inTransit'), value: String(ps?.logistics?.in_transit ?? '0') },
+        { label: t('pages.logistics.stats.customs'), value: String(ps?.logistics?.customs ?? '0') },
+        { label: t('pages.logistics.stats.delivered'), value: String(ps?.logistics?.delivered ?? '0') },
+        { label: t('pages.logistics.stats.delays'), value: String(ps?.logistics?.delays ?? '0') },
       ]}
       actions={[{ label: t('pages.logistics.newShipment') }]}
     >
@@ -1267,6 +1282,7 @@ export function LogisticsPage() {
 // ─── Admin Users Page ──────────────────────────────────────────────────
 
 export function AdminUsersPage() {
+  const { data: ps } = usePageStats();
   const { t } = useTranslation();
   // Users are loaded from the backend API via accountsApi
   // TODO: Replace with useEffect + accountsApi.getUsers() when endpoint is ready
@@ -1278,10 +1294,10 @@ export function AdminUsersPage() {
       description={t('pages.adminUsers.description')}
       icon={<Shield className="h-5 w-5" />}
       stats={[
-        { label: t('pages.adminUsers.stats.total'), value: '8' },
-        { label: t('pages.adminUsers.stats.admins'), value: '2' },
-        { label: t('pages.adminUsers.stats.managers'), value: '3' },
-        { label: t('pages.adminUsers.stats.employees'), value: '3' },
+        { label: t('pages.adminUsers.stats.total'), value: String(ps?.admin_users?.total ?? '—') },
+        { label: t('pages.adminUsers.stats.admins'), value: String(ps?.admin_users?.admins ?? '—') },
+        { label: t('pages.adminUsers.stats.managers'), value: String(ps?.admin_users?.managers ?? '—') },
+        { label: t('pages.adminUsers.stats.employees'), value: String(ps?.admin_users?.employees ?? '—') },
       ]}
       actions={[{ label: t('pages.adminUsers.inviteUser') }]}
     >

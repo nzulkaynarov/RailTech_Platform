@@ -107,7 +107,19 @@ export const PasswordSetupPage: React.FC<PasswordSetupPageProps> = ({ uid, token
                 </CardHeader>
 
                 <CardContent>
-                    {!success ? (
+                    {(!uid || !token) ? (
+                        <div className="space-y-4">
+                            <Alert variant="destructive">
+                                <AlertCircle className="h-4 w-4" />
+                                <AlertDescription>
+                                    {t('passwordSetup.invalidLink')}
+                                </AlertDescription>
+                            </Alert>
+                            <Button variant="outline" className="w-full" onClick={onLogin}>
+                                {t('passwordSetup.goToLogin')}
+                            </Button>
+                        </div>
+                    ) : !success ? (
                         <Form {...form}>
                             <form
                                 onSubmit={form.handleSubmit(onSubmit)}

@@ -652,6 +652,32 @@
     "requestDetail": "Request details"
   },
 
+  "breadcrumbs": {
+    "dashboard": "Dashboard",
+    "products": "Catalog",
+    "myRequests": "My Requests",
+    "requestDetail": "Request",
+    "crmDeals": "Deals",
+    "crmQuotes": "Quotes",
+    "crmClients": "Clients",
+    "sourcingRequests": "Sourcing Requests",
+    "sourcingImport": "Import",
+    "sourcingMatch": "Sourcing Hub",
+    "productionOrders": "Production Orders",
+    "productionSchedule": "Production Schedule",
+    "analytics": "Analytics",
+    "categories": "Categories",
+    "equipmentGroups": "Equipment Groups",
+    "integrations": "Integrations",
+    "help": "Help",
+    "profile": "Profile",
+    "settings": "Settings",
+    "myDocuments": "Documents",
+    "adminUsers": "Users",
+    "logistics": "Logistics",
+    "purchaseTemplates": "Purchase Templates"
+  },
+
   "onboarding": {
     "companyRegistration": "Company Registration",
     "companyRegistrationDesc": "Enter your organization details to get started",
@@ -751,7 +777,11 @@
     "profile": "Profile",
     "logout": "Sign out",
     "demoMode": "Demo Mode",
-    "openMenu": "Open menu"
+    "openMenu": "Open menu",
+    "notifications": "Notifications",
+    "notificationsDesc": "Recent system events",
+    "noNotifications": "No new notifications",
+    "markAllRead": "Mark all as read"
   },
 
   "dashboardPage": {
@@ -1802,7 +1832,11 @@
     "breadcrumb": {
       "main": "Main"
     },
-    "globalSearch": "Global Search (Alt+S)..."
+    "globalSearch": "Global Search (Alt+S)...",
+    "notifications": "Notifications",
+    "notificationsDesc": "Recent system events",
+    "noNotifications": "No new notifications",
+    "markAllRead": "Mark all as read"
   },
 
   "error": {

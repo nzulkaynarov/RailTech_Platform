@@ -31,17 +31,19 @@ export interface Product {
 // Use catalogApi.getProducts() to fetch from backend.
 export const products: Product[] = [];
 
+/** i18n keys for product status labels — use with t(`productStatuses.${status}`) */
 export const statusLabels: Record<string, string> = {
-  in_stock: 'В наличии',
-  to_order: 'Под заказ',
-  sourcing: 'Поиск',
-  inactive: 'Неактивен',
+  in_stock: 'productStatuses.in_stock',
+  to_order: 'productStatuses.to_order',
+  sourcing: 'productStatuses.sourcing',
+  inactive: 'productStatuses.inactive',
 };
 
+/** i18n keys for domain labels — use with t(`domainLabels.${domain}`) */
 export const domainLabels: Record<string, string> = {
-  RAILWAY_MACHINERY: 'ЖД и Техника',
-  GENERAL_GOODS: 'Общие товары',
-  SERVICES: 'Услуги',
+  RAILWAY_MACHINERY: 'domainLabels.RAILWAY_MACHINERY',
+  GENERAL_GOODS: 'domainLabels.GENERAL_GOODS',
+  SERVICES: 'domainLabels.SERVICES',
 };
 
 // Re-export API product type for new components that need it

@@ -152,8 +152,28 @@ export const useUserStore = create<UserState>((set, _get) => ({
     if (authState.user) {
       const { first_name, last_name, email, role_code, company } = authState.user;
       const initials = `${(first_name || '')[0] || ''}${(last_name || '')[0] || ''}`.toUpperCase();
+
+      // Map backend company_types to frontend CompanyStatus
+      const typeMap: Record<string, CompanyStatus> = {
+        CLIENT: 'BUYER',
+        MANUFACTURER: 'MANUFACTURER',
+        SUPPLIER: 'SELLER',
+        PLANT: 'MANUFACTURER',
+      };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const companyTypes: string[] = (company as any)?.company_types as string[] || [];
+      const statusEntries: CompanyStatusEntry[] = companyTypes.map((code) => ({
+        status: typeMap[code] || 'BUYER',
+        verification: 'verified' as const,
+      }));
+      // Set activeStatus from first company type, fallback to BUYER
+      const activeStatus: CompanyStatus = statusEntries.length > 0
+        ? statusEntries[0].status
+        : 'BUYER';
+
       set({
         screen: 'main',
+        activeStatus,
         role: (role_code === 'ADMIN' || role_code === 'SALES_MANAGER') ? 'ADMIN' :
               role_code === 'ACCOUNT_MANAGER' ? 'MANAGER' : 'EMPLOYEE',
         profile: {
@@ -171,7 +191,7 @@ export const useUserStore = create<UserState>((set, _get) => ({
           kycStatus: (company.verification_status === 'verified' ? 'verified' : 'pending') as 'verified' | 'pending' | 'not_started',
           country: company.country || '',
           city: '',
-          statusEntries: [],
+          statusEntries,
         } : {
           name: '',
           inn: '',

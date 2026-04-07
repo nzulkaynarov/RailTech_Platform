@@ -28,6 +28,7 @@ class CompanySerializer(serializers.ModelSerializer):
     kyc_documents = KYCDocumentSerializer(many=True, read_only=True)
     user_count = serializers.SerializerMethodField()
     verification_status_name = serializers.CharField(source='verification_status.name', read_only=True)
+    company_types = serializers.SerializerMethodField()
 
     class Meta:
         model = Company
@@ -35,12 +36,15 @@ class CompanySerializer(serializers.ModelSerializer):
             'id', 'name', 'inn', 'verification_status', 'verification_status_name',
             'bank_account', 'mfo', 'legal_address', 'phone',
             'contact_person', 'country', 'website', 'email', 'logo', 'kyc_notes',
-            'created_at', 'kyc_documents', 'user_count'
+            'created_at', 'kyc_documents', 'user_count', 'company_types'
         ]
         read_only_fields = ['verification_status', 'created_at']
 
     def get_user_count(self, obj):
         return obj.members.count()
+
+    def get_company_types(self, obj):
+        return list(obj.types.values_list('code', flat=True))
 
 
 class UserSerializer(serializers.ModelSerializer):

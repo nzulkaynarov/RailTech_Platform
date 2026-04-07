@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft,
   Bookmark,
@@ -8,6 +9,7 @@ import {
   Package,
   Layers,
   ChevronRight,
+  Loader2,
 } from 'lucide-react';
 
 import { Card, CardContent } from '@/components/ui/card';
@@ -37,7 +39,6 @@ import {
 } from '@/components/ui/tooltip';
 
 import {
-  products,
   statusLabels,
   domainLabels,
   type Product,
@@ -46,21 +47,23 @@ import {
 // ─── Status & Domain Badges ─────────────────────────────────────────────
 
 function StatusDot({ status }: { status: Product['status'] }) {
+  const { t } = useTranslation();
   const dotColor: Record<Product['status'], string> = {
-    in_stock: 'bg-emerald-500',
-    to_order: 'bg-amber-500',
+    in_stock: 'bg-success',
+    to_order: 'bg-warning',
     sourcing: 'bg-primary',
-    inactive: 'bg-red-500',
+    inactive: 'bg-destructive',
   };
   return (
     <div className="flex items-center gap-2">
       <span className={`h-2.5 w-2.5 rounded-full ${dotColor[status]}`} />
-      <span className="text-sm font-medium">{statusLabels[status]}</span>
+      <span className="text-sm font-medium">{t(statusLabels[status])}</span>
     </div>
   );
 }
 
 function DomainBadge({ domain }: { domain: Product['domain'] }) {
+  const { t } = useTranslation();
   const colorMap: Record<Product['domain'], string> = {
     RAILWAY_MACHINERY: 'bg-primary/10 text-primary border-primary/20',
     GENERAL_GOODS: 'bg-muted text-foreground border-border',
@@ -68,7 +71,7 @@ function DomainBadge({ domain }: { domain: Product['domain'] }) {
   };
   return (
     <Badge variant="outline" className={`text-xs font-medium ${colorMap[domain]}`}>
-      {domainLabels[domain]}
+      {t(domainLabels[domain])}
     </Badge>
   );
 }
@@ -127,21 +130,69 @@ interface ProductDetailProps {
 }
 
 export function ProductDetail({ productId, onBack, onNavigate }: ProductDetailProps) {
-  const product = products.find((p) => p.id === productId);
+  const { t } = useTranslation();
+  const [apiProduct, setApiProduct] = useState<Record<string, unknown> | null>(null);
+  const [apiLoading, setApiLoading] = useState(true);
+  const [apiError, setApiError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setApiLoading(true);
+    setApiError(null);
+    import('@/api/catalogApi').then(({ catalogApi }) =>
+      catalogApi.getProduct(productId)
+    ).then((data) => {
+      if (!cancelled) setApiProduct(data as unknown as Record<string, unknown>);
+    }).catch((err) => {
+      if (!cancelled) setApiError(err instanceof Error ? err.message : 'Error');
+    }).finally(() => {
+      if (!cancelled) setApiLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [productId]);
+
+  // Map API product to legacy Product type for compatibility
+  const product: Product | undefined = apiProduct ? {
+    id: String(apiProduct.id ?? productId),
+    name: String(apiProduct.name ?? ''),
+    article: String(apiProduct.sku ?? ''),
+    gost: String(apiProduct.gost_drawing ?? ''),
+    uom: String((apiProduct.uom_data as Record<string, unknown>)?.name ?? ''),
+    quantity: 0,
+    domain: (apiProduct.domain_type_name ?? 'GENERAL_GOODS') as Product['domain'],
+    category: String((apiProduct.category_data as Record<string, unknown>)?.name ?? ''),
+    status: 'in_stock' as const,
+    manufacturer: String((apiProduct.manufacturer_data as Record<string, unknown>)?.name ?? ''),
+    addedDate: String(apiProduct.created_at ?? ''),
+    ownerCompanyId: '',
+    partnerVisible: true,
+    description: String(apiProduct.description ?? ''),
+    specifications: (apiProduct.specifications ?? {}) as Record<string, string>,
+    images: ((apiProduct.images as Array<Record<string, string>>) ?? []).map(i => i.image_url || i.image || ''),
+    basePriceFCA: 0,
+  } : undefined;
+
   const [qty, setQty] = useState(product?.packageQuantity ?? 10);
   const [saved, setSaved] = useState(false);
 
-  if (!product) {
+  if (apiLoading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <p className="text-muted-foreground">Товар не найден</p>
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
-  const similarProducts = products
-    .filter((p) => p.id !== product.id && p.category === product.category)
-    .slice(0, 4);
+  if (apiError || !product) {
+    return (
+      <div className="flex h-64 flex-col items-center justify-center gap-3">
+        <p className="text-muted-foreground">{apiError || t('catalog.productNotFound')}</p>
+        <Button variant="outline" onClick={onBack}>{t('common.back')}</Button>
+      </div>
+    );
+  }
+
+  const similarProducts: Product[] = [];
 
   const specs = product.specifications ?? {};
   const specEntries = Object.entries(specs);
@@ -372,7 +423,7 @@ export function ProductDetail({ productId, onBack, onNavigate }: ProductDetailPr
                 <TableBody>
                   <TableRow>
                     <TableCell className="font-medium text-muted-foreground w-48">Домен</TableCell>
-                    <TableCell>{domainLabels[product.domain]}</TableCell>
+                    <TableCell>{t(domainLabels[product.domain])}</TableCell>
                   </TableRow>
                   <TableRow>
                     <TableCell className="font-medium text-muted-foreground">Категория</TableCell>

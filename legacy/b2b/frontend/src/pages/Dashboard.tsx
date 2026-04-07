@@ -19,6 +19,7 @@ import {
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -463,22 +464,38 @@ export function Dashboard({ onProductClick }: DashboardProps) {
   const [period, setPeriod] = useState('30d');
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const activeStatus = useUserStore((s) => s.activeStatus);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setError(null);
     dashboardApi.getStats(period)
       .then((data) => { if (!cancelled) setStats(data); })
-      .catch((err) => { console.error('Dashboard stats fetch failed:', err); })
+      .catch((err) => { if (!cancelled) setError(err instanceof Error ? err.message : t('errors.server')); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [period]);
+  }, [period, t]);
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-4">
+        <Alert variant="destructive" className="max-w-md">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+        <Button variant="outline" onClick={() => setLoading(true)}>
+          {t('common.retry')}
+        </Button>
       </div>
     );
   }
@@ -511,10 +528,14 @@ export function Dashboard({ onProductClick }: DashboardProps) {
         </div>
       </div>
 
-      {/* Role-based dashboard content */}
-      {activeStatus === 'BUYER' && <BuyerDashboard onProductClick={onProductClick} period={period} stats={stats} />}
-      {activeStatus === 'SELLER' && <SellerDashboard onProductClick={onProductClick} period={period} stats={stats} />}
-      {activeStatus === 'MANUFACTURER' && <ManufacturerDashboard onProductClick={onProductClick} period={period} stats={stats} />}
+      {/* Role-based dashboard content — fallback to BuyerDashboard */}
+      {activeStatus === 'SELLER' ? (
+        <SellerDashboard onProductClick={onProductClick} period={period} stats={stats} />
+      ) : activeStatus === 'MANUFACTURER' ? (
+        <ManufacturerDashboard onProductClick={onProductClick} period={period} stats={stats} />
+      ) : (
+        <BuyerDashboard onProductClick={onProductClick} period={period} stats={stats} />
+      )}
     </div>
   );
 }

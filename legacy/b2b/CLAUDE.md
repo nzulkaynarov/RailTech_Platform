@@ -46,6 +46,8 @@ docs/                       # Architecture, specs, roadmap, mockups, presentatio
 - **Dual Storage** — MinIO (public/private/temp buckets) with local filesystem fallback
 - **Financial precision** — `decimal.js` on frontend, `DecimalField` on backend, `QuoteItemHistory` audit trail
 - **Auth model** — `CustomUser` with email as USERNAME_FIELD, `SystemRole` FK for RBAC
+- **Company types** — `CompanyType` M2M on Company (CLIENT=Buyer, MANUFACTURER, SUPPLIER=Seller); returned in `/me/` as `company_types[]`
+- **Frontend role mapping** — `loadFromAuth()` maps backend CompanyType codes to frontend CompanyStatus (CLIENT→BUYER, SUPPLIER→SELLER, MANUFACTURER→MANUFACTURER)
 
 ## Database
 
@@ -112,7 +114,8 @@ make shell           # backend bash
 - **Models:** `AbstractLookup` base for reference tables (code, name, sort_order, is_active)
 - **Serializers:** Nested read, flat write pattern; `_data` suffix for nested representations
 - **i18n:** All UI text via `useTranslation()`, keys in `ru.json`/`en.json`
-- **State:** Zustand stores with `persist` middleware for auth/theme/demo; no Redux
+- **State:** Zustand stores with `persist` middleware for auth/theme; no Redux
+- **UI:** Only shadcn/ui components + Tailwind semantic tokens. No custom CSS, no hardcoded hex colors, no `text-white`/`text-black` — use `text-foreground`/`text-primary-foreground`
 
 ## Testing
 

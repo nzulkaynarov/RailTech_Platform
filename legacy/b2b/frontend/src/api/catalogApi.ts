@@ -115,6 +115,10 @@ export const catalogApi = {
         const response = await apiClient.get<PaginatedResponse<Manufacturer>>('catalog/manufacturers/');
         return response.data.results;
     },
+    getProduct: async (id: number | string): Promise<Product> => {
+        const response = await apiClient.get<Product>(`catalog/products/${id}/`);
+        return response.data;
+    },
     createProduct: async (data: Partial<Product>): Promise<Product> => {
         const response = await apiClient.post<Product>('catalog/products/', data);
         return response.data;

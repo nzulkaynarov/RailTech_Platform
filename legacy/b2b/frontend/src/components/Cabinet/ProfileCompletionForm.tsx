@@ -3,28 +3,17 @@ import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, AlertCircle, ShoppingCart, Factory, Store, Building2 } from 'lucide-react';
+import { Loader2, AlertCircle, ShoppingCart, Factory, Store, Building2, Check } from 'lucide-react';
 import { accountsApi } from '@/api/accountsApi';
 import { useAuthStore } from '@/store/authStore';
-import {
-    Card,
-    CardHeader,
-    CardTitle,
-    CardDescription,
-    CardContent,
-} from '@/components/ui/card';
-import {
-    Form,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormControl,
-    FormMessage,
-} from '@/components/ui/form';
+import { cn } from '@/lib/utils';
+
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { cn } from '@/lib/utils';
+import { Separator } from '@/components/ui/separator';
 
 const COMPANY_TYPES = [
     { code: 'CLIENT', icon: ShoppingCart, labelKey: 'profileForm.typeBuyer', descKey: 'profileForm.typeBuyerDesc' },
@@ -73,29 +62,20 @@ export const ProfileCompletionForm: React.FC<ProfileCompletionFormProps> = ({ on
             onComplete();
         } catch (err: unknown) {
             const errorMessage =
-                err instanceof Error
-                    ? err.message
-                    : t('profileForm.saveError');
+                err instanceof Error ? err.message : t('profileForm.saveError');
             setServerError(errorMessage);
         }
     };
 
     return (
-        <div className="min-h-screen bg-background flex items-center justify-center p-6 relative overflow-hidden font-sans">
-            <div className="absolute top-0 right-0 w-96 h-96 bg-primary/20 blur-[100px] rounded-full" />
-            <div className="absolute bottom-0 left-0 w-80 h-80 bg-chart-2/10 blur-[80px] rounded-full" />
-
-            <Card className="relative z-10 w-full max-w-2xl border-border bg-card text-card-foreground shadow-2xl">
+        <div className="min-h-screen bg-background flex items-center justify-center p-6">
+            <Card className="w-full max-w-2xl">
                 <CardHeader className="text-center">
-                    <div className="mx-auto mb-2 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-                        <Building2 className="h-7 w-7 text-primary" />
+                    <div className="mx-auto mb-2 flex h-14 w-14 items-center justify-center rounded-full bg-muted">
+                        <Building2 className="h-7 w-7 text-muted-foreground" />
                     </div>
-                    <CardTitle className="text-2xl font-black tracking-tight">
-                        {t('profileForm.title')}
-                    </CardTitle>
-                    <CardDescription>
-                        {t('profileForm.step')}
-                    </CardDescription>
+                    <CardTitle className="text-xl">{t('profileForm.title')}</CardTitle>
+                    <CardDescription>{t('profileForm.step')}</CardDescription>
                 </CardHeader>
 
                 <CardContent>
@@ -115,22 +95,25 @@ export const ProfileCompletionForm: React.FC<ProfileCompletionFormProps> = ({ on
                                                     type="button"
                                                     onClick={() => field.onChange(code)}
                                                     className={cn(
-                                                        'flex flex-col items-center rounded-xl border-2 p-4 text-center transition-all hover:shadow-md',
+                                                        'relative flex flex-col items-center rounded-lg border-2 p-4 text-center transition-all',
                                                         selectedType === code
-                                                            ? 'border-primary bg-primary/5 text-primary'
-                                                            : 'border-border bg-card text-foreground hover:border-muted-foreground/30'
+                                                            ? 'border-primary bg-primary/5'
+                                                            : 'border-border hover:border-muted-foreground/30'
                                                     )}
                                                 >
+                                                    {selectedType === code && (
+                                                        <div className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                                                            <Check className="h-3 w-3" />
+                                                        </div>
+                                                    )}
                                                     <div className={cn(
                                                         'flex h-10 w-10 items-center justify-center rounded-lg',
-                                                        selectedType === code ? 'bg-primary/10' : 'bg-muted'
+                                                        selectedType === code ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
                                                     )}>
                                                         <Icon className="h-5 w-5" />
                                                     </div>
-                                                    <h3 className="mt-2 text-sm font-bold">{t(labelKey)}</h3>
-                                                    <p className={cn('mt-1 text-xs leading-snug', selectedType === code ? 'opacity-80' : 'text-muted-foreground')}>
-                                                        {t(descKey)}
-                                                    </p>
+                                                    <h3 className="mt-2 text-sm font-semibold">{t(labelKey)}</h3>
+                                                    <p className="mt-1 text-xs text-muted-foreground">{t(descKey)}</p>
                                                 </button>
                                             ))}
                                         </div>
@@ -138,6 +121,8 @@ export const ProfileCompletionForm: React.FC<ProfileCompletionFormProps> = ({ on
                                     </FormItem>
                                 )}
                             />
+
+                            <Separator />
 
                             {/* Company name */}
                             <FormField
@@ -182,9 +167,7 @@ export const ProfileCompletionForm: React.FC<ProfileCompletionFormProps> = ({ on
                                 size="lg"
                                 disabled={form.formState.isSubmitting}
                             >
-                                {form.formState.isSubmitting && (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                )}
+                                {form.formState.isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
                                 {t('profileForm.submit')}
                             </Button>
                         </form>

@@ -190,10 +190,40 @@ function App() {
 
 function MainApp() {
   const { t } = useTranslation();
-  const [page, setPage] = useState<Page>({ type: 'dashboard' });
+  const [page, setPage] = useState<Page>(() => {
+    // Restore page from URL hash on initial load
+    const hash = window.location.hash.replace('#', '');
+    if (hash && hash !== 'dashboard') {
+      return { type: hash } as Page;
+    }
+    return { type: 'dashboard' };
+  });
   const [showTour, setShowTour] = useState(false);
 
-  const navigateTo = (p: Page) => setPage(p);
+  const navigateTo = (p: Page) => {
+    setPage(p);
+    // Sync URL hash with current page for browser back/forward
+    const hash = p.type === 'product_detail' ? `product_detail/${(p as { productId: string }).productId}` : p.type;
+    window.history.pushState({ page: p }, '', `#${hash}`);
+  };
+
+  // Handle browser back/forward
+  useEffect(() => {
+    const onPopState = (e: PopStateEvent) => {
+      if (e.state?.page) {
+        setPage(e.state.page);
+      } else {
+        const hash = window.location.hash.replace('#', '');
+        if (hash) {
+          setPage({ type: hash } as Page);
+        } else {
+          setPage({ type: 'dashboard' });
+        }
+      }
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
 
   const handleProductClick = (productId: string) => {
     navigateTo({ type: 'product_detail', productId });
@@ -222,22 +252,22 @@ function MainApp() {
     switch (page.type) {
       case 'dashboard': return [];
       case 'product_detail': return [
-        { label: getPageLabel('products'), pageId: 'products' },
+        { label: getPageLabel('products', t), pageId: 'products' },
         { label: t('breadcrumb.productDetail') },
       ];
       case 'request-detail': return [
-        { label: getPageLabel('my-requests'), pageId: 'my-requests' },
+        { label: getPageLabel('my-requests', t), pageId: 'my-requests' },
         { label: t('breadcrumb.requestDetail') },
       ];
       case 'sourcing-import': return [
-        { label: getPageLabel('sourcing-requests'), pageId: 'sourcing-requests' },
-        { label: getPageLabel('sourcing-import') },
+        { label: getPageLabel('sourcing-requests', t), pageId: 'sourcing-requests' },
+        { label: getPageLabel('sourcing-import', t) },
       ];
       case 'sourcing-match': return [
-        { label: getPageLabel('sourcing-requests'), pageId: 'sourcing-requests' },
-        { label: 'Sourcing Hub' },
+        { label: getPageLabel('sourcing-requests', t), pageId: 'sourcing-requests' },
+        { label: getPageLabel('sourcing-match', t) },
       ];
-      default: return [{ label: getPageLabel(page.type) }];
+      default: return [{ label: getPageLabel(page.type, t) }];
     }
   };
 

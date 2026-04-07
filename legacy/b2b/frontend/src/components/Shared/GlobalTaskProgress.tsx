@@ -26,13 +26,13 @@ export const GlobalTaskProgress: React.FC = () => {
                         key={id}
                         className={clsx(
                             "pointer-events-auto bg-card border rounded-2xl p-4 shadow-2xl flex items-start gap-3 transition-all animate-in slide-in-from-right-full",
-                            isFailure ? "border-red-500/20" : "border-border"
+                            isFailure ? "border-destructive/20" : "border-border"
                         )}
                     >
                         <div className={clsx(
                             "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm",
-                            isSuccess ? "bg-emerald-50 text-emerald-600" :
-                            isFailure ? "bg-red-50 text-red-600" : "bg-primary/10 text-primary"
+                            isSuccess ? "bg-success/10 text-success" :
+                            isFailure ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"
                         )}>
                             {task.type === 'excel_import' ? <FileSpreadsheet className="w-5 h-5" /> : <Package className="w-5 h-5" />}
                         </div>
@@ -72,13 +72,13 @@ export const GlobalTaskProgress: React.FC = () => {
                             )}
 
                             {isSuccess && (
-                                <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-bold bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-full w-fit">
+                                <div className="flex items-center gap-1.5 text-xs text-success font-bold bg-success/10 px-2 py-0.5 rounded-full w-fit">
                                     <CheckCircle2 className="w-3 h-3" /> {t('task.completed')}
                                 </div>
                             )}
 
                             {isFailure && (
-                                <div className="flex items-center gap-1.5 text-xs text-red-600 font-bold bg-red-50 dark:bg-red-500/10 px-2 py-0.5 rounded-full w-fit">
+                                <div className="flex items-center gap-1.5 text-xs text-destructive font-bold bg-destructive/10 px-2 py-0.5 rounded-full w-fit">
                                     <AlertCircle className="w-3 h-3" /> {task.error || t('errors.unknown')}
                                 </div>
                             )}

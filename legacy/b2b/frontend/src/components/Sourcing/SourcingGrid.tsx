@@ -122,7 +122,7 @@ export const SourcingGrid: React.FC = () => {
                                 <SelectContent>
                                     {(['ALL', 'RAILWAY', 'GENERAL'] as const).map((f) => (
                                         <SelectItem key={f} value={f}>
-                                            {domainLabels[f]}
+                                            {t(domainLabels[f])}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>

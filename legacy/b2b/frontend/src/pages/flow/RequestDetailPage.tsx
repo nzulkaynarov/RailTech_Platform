@@ -71,9 +71,11 @@ function MatchBadge({ status }: { status: MatchStatus }) {
 }
 
 function StatusBadge({ status }: { status: string; colors?: string }) {
+  const { t } = useTranslation();
+  const labelKey = requestStatusLabels[status as keyof typeof requestStatusLabels];
   return (
     <Badge variant="outline" className={cn('text-xs', requestStatusColors[status as keyof typeof requestStatusColors])}>
-      {requestStatusLabels[status as keyof typeof requestStatusLabels] ?? status}
+      {labelKey ? t(labelKey) : status}
     </Badge>
   );
 }

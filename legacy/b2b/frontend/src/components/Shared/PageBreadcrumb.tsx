@@ -8,6 +8,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { Home } from 'lucide-react';
+import { TFunction } from 'i18next';
 
 export interface BreadcrumbSegment {
   label: string;
@@ -19,34 +20,35 @@ interface PageBreadcrumbProps {
   onNavigate: (pageId: string) => void;
 }
 
-const pageLabels: Record<string, string> = {
-  dashboard: 'Дашборд',
-  products: 'Каталог',
-  'my-requests': 'Мои заявки',
-  'request-detail': 'Заявка',
-  'crm-deals': 'Сделки',
-  'crm-quotes': 'Котировки',
-  'crm-clients': 'Клиенты',
-  'sourcing-requests': 'Заявки на снабжение',
-  'sourcing-import': 'Импорт',
-  'sourcing-match': 'Sourcing Hub',
-  'production-orders': 'Заказы на производство',
-  'production-schedule': 'График производства',
-  analytics: 'Аналитика',
-  categories: 'Категории',
-  'equipment-groups': 'Группы техники',
-  integrations: 'Интеграции',
-  help: 'Помощь',
-  profile: 'Профиль',
-  settings: 'Настройки',
-  'my-documents': 'Документы',
-  'admin-users': 'Пользователи',
-  logistics: 'Логистика',
-  'purchase-templates': 'Шаблоны закупок',
+const pageI18nKeys: Record<string, string> = {
+  dashboard: 'breadcrumbs.dashboard',
+  products: 'breadcrumbs.products',
+  'my-requests': 'breadcrumbs.myRequests',
+  'request-detail': 'breadcrumbs.requestDetail',
+  'crm-deals': 'breadcrumbs.crmDeals',
+  'crm-quotes': 'breadcrumbs.crmQuotes',
+  'crm-clients': 'breadcrumbs.crmClients',
+  'sourcing-requests': 'breadcrumbs.sourcingRequests',
+  'sourcing-import': 'breadcrumbs.sourcingImport',
+  'sourcing-match': 'breadcrumbs.sourcingMatch',
+  'production-orders': 'breadcrumbs.productionOrders',
+  'production-schedule': 'breadcrumbs.productionSchedule',
+  analytics: 'breadcrumbs.analytics',
+  categories: 'breadcrumbs.categories',
+  'equipment-groups': 'breadcrumbs.equipmentGroups',
+  integrations: 'breadcrumbs.integrations',
+  help: 'breadcrumbs.help',
+  profile: 'breadcrumbs.profile',
+  settings: 'breadcrumbs.settings',
+  'my-documents': 'breadcrumbs.myDocuments',
+  'admin-users': 'breadcrumbs.adminUsers',
+  logistics: 'breadcrumbs.logistics',
+  'purchase-templates': 'breadcrumbs.purchaseTemplates',
 };
 
-export function getPageLabel(pageId: string): string {
-  return pageLabels[pageId] ?? pageId;
+export function getPageLabel(pageId: string, t: TFunction): string {
+  const key = pageI18nKeys[pageId];
+  return key ? t(key) : pageId;
 }
 
 export function PageBreadcrumb({ segments, onNavigate }: PageBreadcrumbProps) {

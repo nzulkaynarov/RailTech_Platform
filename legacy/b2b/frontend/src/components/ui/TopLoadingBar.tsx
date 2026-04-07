@@ -55,7 +55,7 @@ export const TopLoadingBar: React.FC = () => {
             aria-label="Загрузка данных"
         >
             <div
-                className="h-full bg-blue-500 top-loading-bar"
+                className="h-full bg-primary top-loading-bar"
                 style={{
                     width: `${progress}%`,
                     opacity: visible ? 1 : 0,

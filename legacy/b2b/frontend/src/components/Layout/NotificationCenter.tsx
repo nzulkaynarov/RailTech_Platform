@@ -32,9 +32,9 @@ const getTypeIcon = (type: string) => {
 const getTypeColor = (type: string, isRead: boolean) => {
     if (isRead) return 'text-muted-foreground bg-muted border-border';
     switch (type) {
-        case 'WARNING': return 'text-amber-600 bg-amber-500/10 border-amber-500/20';
-        case 'ERROR':   return 'text-red-600 bg-red-500/10 border-red-500/20';
-        case 'SUCCESS': return 'text-emerald-600 bg-emerald-500/10 border-emerald-500/20';
+        case 'WARNING': return 'text-warning bg-warning/10 border-warning/20';
+        case 'ERROR':   return 'text-destructive bg-destructive/10 border-destructive/20';
+        case 'SUCCESS': return 'text-success bg-success/10 border-success/20';
         default:        return 'text-primary bg-primary/10 border-primary/20';
     }
 };
