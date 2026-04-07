@@ -17,7 +17,13 @@
     "add": "Добавить",
     "send": "Отправить",
     "update": "Обновить",
-    "updating": "Обновление..."
+    "updating": "Обновление...",
+    "pcs": "шт",
+    "active": "Активен",
+    "inactive": "Неактивен",
+    "deleting": "Удаление...",
+    "new": "Новое",
+    "retry": "Повторить"
   },
 
   "auth": {
@@ -266,7 +272,25 @@
       }
     },
     "users": {
-      "title": "Управление пользователями"
+      "title": "Персонал",
+      "registry": "Реестр",
+      "description": "Управление доступом и авторизацией",
+      "provision": "Создать пользователя",
+      "searchPlaceholder": "Поиск по имени или email...",
+      "filterByRole": "Фильтр по роли",
+      "allRoles": "Все роли",
+      "noUsersFound": "Пользователи не найдены",
+      "internal": "Внутренний",
+      "editUser": "Редактировать",
+      "deleteUser": "Удалить пользователя",
+      "deleteConfirmation": "Вы уверены, что хотите удалить {{email}}? Это действие нельзя отменить.",
+      "columns": {
+        "user": "Пользователь",
+        "role": "Роль",
+        "company": "Компания",
+        "status": "Статус",
+        "actions": "Действия"
+      }
     },
     "profile": {
       "title": "Мой",
@@ -339,14 +363,15 @@
   },
 
   "cart": {
-    "title": "Корзина",
-    "empty": "Корзина пуста",
+    "title": "Запрос на закупку",
+    "empty": "Запрос на закупку пуст",
     "emptyHint": "Добавьте товары из каталога",
     "addToCart": "В корзину",
     "addedToCart": "Добавлено",
     "remove": "Удалить",
-    "clear": "Очистить корзину",
-    "itemsCount": "{{count}} позиций",
+    "clear": "Очистить",
+    "submit": "Отправить запрос",
+    "itemsCount": "{{count}} позиций в запросе",
     "increase": "Увеличить количество",
     "decrease": "Уменьшить количество",
     "requestQuote": "Запросить КП",
@@ -371,11 +396,14 @@
     "operationsCenter": "Operations Center",
     "dashboard": "Дашборд",
     "crmDeals": "Сделки CRM",
-    "quotePricing": "Расчёт Цен"
+    "quotePricing": "Расчёт Цен",
+    "backoffice": "Бэкофис"
   },
 
   "chat": {
-    "title": "Обсуждение сделки",
+    "title": "Сообщения",
+    "description": "Переписка с контрагентами",
+    "openAll": "Открыть все сообщения",
     "placeholder": "Введите сообщение...",
     "emptyState": "Начните обсуждение по этой сделке",
     "send": "Отправить",
@@ -740,7 +768,11 @@
   "roles": {
     "ADMIN": "Администратор",
     "MANAGER": "Менеджер",
-    "EMPLOYEE": "Сотрудник"
+    "EMPLOYEE": "Сотрудник",
+    "SALES_MANAGER": "Менеджер по продажам",
+    "ACCOUNT_MANAGER": "Аккаунт-менеджер",
+    "CLIENT": "Клиент",
+    "GUEST": "Гость"
   },
 
   "companyStatusDesc": {
@@ -831,7 +863,19 @@
     "thisWeek": "Эта неделя",
     "lastWeek": "Прошлая неделя",
     "prevPeriod": "пред. период",
+    "vsPrevPeriod": "vs. пред. период",
     "topProducts": "Топ товаров по запросам",
+    "productName": "Наименование",
+    "requests": "Заявок",
+    "goal": "Цель",
+    "showDetails": "Показать детали",
+    "kpi": {
+      "activeRequests": "Активные заявки",
+      "catalogItems": "Позиций в каталоге",
+      "dealsVolume": "Объём сделок",
+      "clients": "Клиентов",
+      "requestCompletion": "Выполнение заявок"
+    },
     "id": "ID",
     "name": "Наименование",
     "quantity": "Кол-во",
@@ -856,7 +900,12 @@
       "sent": "Отправлено",
       "quoteReceived": "КП получено",
       "deal": "Сделка",
-      "completed": "Завершено"
+      "completed": "Завершено",
+      "statusActive": "Активные",
+      "statusInProgress": "В работе",
+      "statusQuoteReceived": "КП получено",
+      "statusCompleted": "Завершено",
+      "requestStatuses": "Статусы заявок"
     },
     "seller": {
       "dealVolume": "Объём сделок",
@@ -871,7 +920,10 @@
       "counterpartyBreakdown": "Контрагенты",
       "manufacturers": "Производители",
       "buyers": "Покупатели",
-      "intermediaries": "Посредники"
+      "intermediaries": "Посредники",
+      "dealsVolume": "Объём сделок",
+      "counterparties": "Контрагенты",
+      "requestCompletion": "Выполнение заявок"
     },
     "manufacturer": {
       "productionLoad": "Загрузка производства",
@@ -891,7 +943,8 @@
       "inQueue": "В очереди",
       "productionPlan": "План производства",
       "target": "из {{target}}",
-      "completedPercent": "{{completed}}%"
+      "completedPercent": "{{completed}}%",
+      "dealsByMonth": "Сделки по месяцам"
     },
     "months": {
       "sep": "Сен", "oct": "Окт", "nov": "Ноя", "dec": "Дек",

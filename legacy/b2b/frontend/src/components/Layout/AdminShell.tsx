@@ -83,12 +83,12 @@ export const AdminShell: React.FC = () => {
             <SidebarMenuItem>
               <SidebarMenuButton size="lg" asChild>
                 <a href="/admin/home">
-                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-red-600 text-white">
+                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                     <Train className="size-4" />
                   </div>
                   <div className="grid flex-1 text-left text-sm leading-tight">
                     <span className="truncate font-semibold">
-                      Rail<span className="text-red-500">Tech</span>
+                      Rail<span className="text-primary">Tech</span>
                     </span>
                     <span className="truncate text-xs text-muted-foreground">Admin</span>
                   </div>
@@ -134,7 +134,7 @@ export const AdminShell: React.FC = () => {
                     className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                   >
                     <Avatar className="size-8 rounded-lg">
-                      <AvatarFallback className="rounded-lg bg-red-600 text-white text-xs font-bold">
+                      <AvatarFallback className="rounded-lg bg-primary text-primary-foreground text-xs font-bold">
                         {userInitials}
                       </AvatarFallback>
                     </Avatar>
@@ -156,7 +156,7 @@ export const AdminShell: React.FC = () => {
                   <DropdownMenuLabel className="p-0 font-normal">
                     <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                       <Avatar className="size-8 rounded-lg">
-                        <AvatarFallback className="rounded-lg bg-red-600 text-white text-xs font-bold">
+                        <AvatarFallback className="rounded-lg bg-primary text-primary-foreground text-xs font-bold">
                           {userInitials}
                         </AvatarFallback>
                       </Avatar>
@@ -209,7 +209,7 @@ export const AdminShell: React.FC = () => {
             <ThemeToggle />
           </div>
         </header>
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto p-6">
           <Outlet />
         </div>
       </SidebarInset>

@@ -605,9 +605,9 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
                   <Button variant="ghost" size="icon" className="relative" aria-label={t('cart.title')} onClick={() => setCartSheetOpen(true)}>
                     <ShoppingCart className="h-4 w-4" />
                     {cartCount > 0 && (
-                      <span className="absolute -right-0 -top-0 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
+                      <Badge className="absolute -top-1 -right-1 size-4 p-0 text-xs font-bold">
                         {cartCount}
-                      </span>
+                      </Badge>
                     )}
                   </Button>
                 </TooltipTrigger>
@@ -617,9 +617,9 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
                 <TooltipTrigger asChild>
                   <Button variant="ghost" size="icon" className="relative" aria-label={t('chat.title')} onClick={() => setChatOpen(true)}>
                     <MessageSquare className="h-4 w-4" />
-                    <span className="absolute -right-0 -top-0 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
+                    <Badge className="absolute -top-1 -right-1 size-4 p-0 text-xs font-bold">
                       2
-                    </span>
+                    </Badge>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>{t('chat.title')}</TooltipContent>
@@ -629,9 +629,9 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
                   <Button variant="ghost" size="icon" className="relative" aria-label={t('notifications.title')} onClick={() => { setNotificationsOpen(true); setNotificationCount(0); }}>
                     <Bell className="h-4 w-4" />
                     {notificationCount > 0 && (
-                      <span className="absolute -right-0 -top-0 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-xs font-medium text-destructive-foreground">
+                      <Badge variant="destructive" className="absolute -top-1 -right-1 size-4 p-0 text-xs font-bold">
                         {notificationCount}
-                      </span>
+                      </Badge>
                     )}
                   </Button>
                 </TooltipTrigger>
@@ -670,8 +670,8 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
         <Sheet open={chatOpen} onOpenChange={setChatOpen}>
           <SheetContent side="right" className="w-full sm:w-96 flex flex-col">
             <SheetHeader>
-              <SheetTitle>Сообщения</SheetTitle>
-              <SheetDescription>Переписка с контрагентами</SheetDescription>
+              <SheetTitle>{t('chat.title')}</SheetTitle>
+              <SheetDescription>{t('chat.description')}</SheetDescription>
             </SheetHeader>
             <ScrollArea className="flex-1 -mx-6 px-6">
               <div className="space-y-3 pr-4">
@@ -708,7 +708,7 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
               </div>
             </ScrollArea>
             <SheetFooter>
-              <Button className="w-full">Открыть все сообщения</Button>
+              <Button className="w-full">{t('chat.openAll')}</Button>
             </SheetFooter>
           </SheetContent>
         </Sheet>
@@ -717,9 +717,9 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
         <Sheet open={cartSheetOpen} onOpenChange={setCartSheetOpen}>
           <SheetContent side="right" className="w-full sm:w-96 flex flex-col">
             <SheetHeader>
-              <SheetTitle>Запрос на закупку</SheetTitle>
+              <SheetTitle>{t('cart.title')}</SheetTitle>
               <SheetDescription>
-                {cartCount} {cartCount === 1 ? 'позиция' : 'позиций'} в запросе
+                {t('cart.itemsCount', { count: cartCount })}
               </SheetDescription>
             </SheetHeader>
 
@@ -727,7 +727,7 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
               <div className="flex flex-1 items-center justify-center">
                 <div className="text-center">
                   <ShoppingCart className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">Запрос на закупку пуст</p>
+                  <p className="text-sm text-muted-foreground">{t('cart.empty')}</p>
                 </div>
               </div>
             ) : (
@@ -737,7 +737,7 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
                     <div key={cartItem.product.id} className="flex items-start gap-3 rounded-lg border p-3">
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{cartItem.product.name}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">{cartItem.product.uom || 'шт'}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{cartItem.product.uom || t('common.pcs')}</p>
                       </div>
                       <div className="flex items-center gap-1 flex-shrink-0">
                         <Button
@@ -793,14 +793,14 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
                   setCartSheetOpen(false);
                 }}
               >
-                Очистить
+                {t('cart.clear')}
               </Button>
               <Button
                 className="w-full"
                 onClick={handleSubmitCart}
                 disabled={cartItems.length === 0}
               >
-                Отправить запрос
+                {t('cart.submit')}
               </Button>
             </SheetFooter>
           </SheetContent>

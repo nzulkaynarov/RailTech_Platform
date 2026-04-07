@@ -44,10 +44,11 @@ const buyerRequestsStatusColors = ['var(--color-chart-1)', 'var(--color-chart-2)
 // ─── Top Products Table ─────────────────────────────────────────────────
 
 function TopProductsTable({ onProductClick, topProducts }: { onProductClick?: (id: string) => void; topProducts: DashboardStats['top_products'] }) {
+  const { t } = useTranslation();
   return (
     <Card className="py-0 gap-0">
       <CardHeader className="flex flex-row items-center justify-between px-4 py-3">
-        <CardTitle className="text-sm font-semibold">Топ товаров по запросам</CardTitle>
+        <CardTitle className="text-sm font-semibold">{t('dashboardPage.topProducts')}</CardTitle>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -55,8 +56,8 @@ function TopProductsTable({ onProductClick, topProducts }: { onProductClick?: (i
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem>Экспорт</DropdownMenuItem>
-            <DropdownMenuItem>Показать все</DropdownMenuItem>
+            <DropdownMenuItem>{t('dashboardPage.export')}</DropdownMenuItem>
+            <DropdownMenuItem>{t('dashboardPage.showAll')}</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </CardHeader>
@@ -64,14 +65,14 @@ function TopProductsTable({ onProductClick, topProducts }: { onProductClick?: (i
         <TableHeader>
           <TableRow className="bg-muted/40">
             <TableHead className="text-xs">ID</TableHead>
-            <TableHead className="text-xs">Наименование</TableHead>
-            <TableHead className="text-right text-xs">Кол-во</TableHead>
-            <TableHead className="text-xs">Категория</TableHead>
+            <TableHead className="text-xs">{t('dashboardPage.productName')}</TableHead>
+            <TableHead className="text-right text-xs">{t('dashboardPage.quantity')}</TableHead>
+            <TableHead className="text-xs">{t('dashboardPage.category')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {topProducts.length === 0 && (
-            <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">Нет данных</TableCell></TableRow>
+            <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">{t('common.noData')}</TableCell></TableRow>
           )}
           {topProducts.map((p) => (
             <TableRow
@@ -104,12 +105,13 @@ function TopProductsTable({ onProductClick, topProducts }: { onProductClick?: (i
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function BuyerDashboard({ onProductClick: _onProductClick, period: _period, stats }: { onProductClick?: (id: string) => void; period: string; stats: DashboardStats | null }) {
+  const { t } = useTranslation();
   // Buyer-specific request statuses from API (placeholder — extend API for buyer-specific data)
   const buyerRequestsStatus = stats ? [
-    { name: 'Активные', value: stats.active_requests },
-    { name: 'В работе', value: Math.round(stats.active_requests * 0.4) },
-    { name: 'КП получено', value: Math.round(stats.active_requests * 0.2) },
-    { name: 'Завершено', value: stats.clients_count },
+    { name: t('dashboardPage.buyer.statusActive'), value: stats.active_requests },
+    { name: t('dashboardPage.buyer.statusInProgress'), value: Math.round(stats.active_requests * 0.4) },
+    { name: t('dashboardPage.buyer.statusQuoteReceived'), value: Math.round(stats.active_requests * 0.2) },
+    { name: t('dashboardPage.buyer.statusCompleted'), value: stats.clients_count },
   ] : [];
 
   return (
@@ -117,28 +119,28 @@ function BuyerDashboard({ onProductClick: _onProductClick, period: _period, stat
       {/* KPI Row */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KPICard
-          label="Активные заявки"
+          label={t('dashboardPage.kpi.activeRequests')}
           value={String(stats?.active_requests ?? 0)}
           icon={<ShoppingCart className="h-5 w-5 text-muted-foreground" />}
-          trend={{ value: `${stats?.active_requests_change ?? 0}% vs. пред. период`, direction: (stats?.active_requests_change ?? 0) >= 0 ? "up" : "down" }}
+          trend={{ value: `${stats?.active_requests_change ?? 0}% ${t('dashboardPage.vsPrevPeriod')}`, direction: (stats?.active_requests_change ?? 0) >= 0 ? "up" : "down" }}
         />
         <KPICard
-          label="Позиций в каталоге"
+          label={t('dashboardPage.kpi.catalogItems')}
           value={String(stats?.catalog_items ?? 0)}
           icon={<FileText className="h-5 w-5 text-muted-foreground" />}
-          trend={{ value: `${stats?.catalog_items_change ?? 0}% vs. пред. период`, direction: (stats?.catalog_items_change ?? 0) >= 0 ? "up" : "down" }}
+          trend={{ value: `${stats?.catalog_items_change ?? 0}% ${t('dashboardPage.vsPrevPeriod')}`, direction: (stats?.catalog_items_change ?? 0) >= 0 ? "up" : "down" }}
         />
         <KPICard
-          label="Объём сделок"
+          label={t('dashboardPage.kpi.dealsVolume')}
           value={`$${((stats?.deals_volume ?? 0) / 1000).toFixed(0)}K`}
           icon={<DollarSign className="h-5 w-5 text-muted-foreground" />}
-          trend={{ value: `${stats?.deals_volume_change ?? 0}% vs. пред. период`, direction: (stats?.deals_volume_change ?? 0) >= 0 ? "up" : "down" }}
+          trend={{ value: `${stats?.deals_volume_change ?? 0}% ${t('dashboardPage.vsPrevPeriod')}`, direction: (stats?.deals_volume_change ?? 0) >= 0 ? "up" : "down" }}
         />
         <KPICard
-          label="Клиентов"
+          label={t('dashboardPage.kpi.clients')}
           value={String(stats?.clients_count ?? 0)}
           icon={<Calendar className="h-5 w-5 text-muted-foreground" />}
-          trend={{ value: `${stats?.clients_count_change ?? 0}% vs. пред. период`, direction: (stats?.clients_count_change ?? 0) >= 0 ? "up" : "down" }}
+          trend={{ value: `${stats?.clients_count_change ?? 0}% ${t('dashboardPage.vsPrevPeriod')}`, direction: (stats?.clients_count_change ?? 0) >= 0 ? "up" : "down" }}
         />
       </div>
 
@@ -147,7 +149,7 @@ function BuyerDashboard({ onProductClick: _onProductClick, period: _period, stat
         {/* Bar Chart — Request Status */}
         <Card className="lg:col-span-2 py-0 gap-0">
           <CardHeader className="flex flex-row items-center justify-between px-4 py-3">
-            <CardTitle className="text-sm font-semibold">Мои заявки по статусам</CardTitle>
+            <CardTitle className="text-sm font-semibold">{t('dashboardPage.buyer.requestsByStatus')}</CardTitle>
           </CardHeader>
           <CardContent className="px-2 pb-4">
             <ResponsiveContainer width="100%" height={220}>
@@ -156,7 +158,7 @@ function BuyerDashboard({ onProductClick: _onProductClick, period: _period, stat
                 <XAxis dataKey="name" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
                 <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
                 <RechartsTooltip
-                  formatter={(value: number) => [value, 'Заявок']}
+                  formatter={(value: number) => [value, t('dashboardPage.requests')]}
                   contentStyle={{ borderRadius: '8px', fontSize: '12px', border: '1px solid var(--color-border)' }}
                 />
                 <Bar dataKey="value" fill="var(--color-chart-1)" radius={[4, 4, 0, 0]} />
@@ -168,7 +170,7 @@ function BuyerDashboard({ onProductClick: _onProductClick, period: _period, stat
         {/* Pie Chart — Request Status Distribution */}
         <Card className="py-0 gap-0">
           <CardHeader className="px-4 py-3">
-            <CardTitle className="text-sm font-semibold">Статусы заявок</CardTitle>
+            <CardTitle className="text-sm font-semibold">{t('dashboardPage.buyer.requestStatuses')}</CardTitle>
           </CardHeader>
           <CardContent className="px-4 pb-4">
             <div className="flex items-center justify-center">
@@ -212,12 +214,13 @@ function BuyerDashboard({ onProductClick: _onProductClick, period: _period, stat
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function SellerDashboard({ onProductClick, period: _period, stats }: { onProductClick?: (id: string) => void; period: string; stats: DashboardStats | null }) {
+  const { t } = useTranslation();
   const dealVolumeData = stats?.deals_by_month ?? [];
   const activityByDay = stats?.activity_by_day ?? [];
   const counterpartyBreakdown = stats ? [
-    { name: 'Производители', value: stats.counterparties.manufacturers, color: 'var(--color-chart-1)' },
-    { name: 'Покупатели', value: stats.counterparties.buyers, color: 'var(--color-chart-2)' },
-    { name: 'Посредники', value: stats.counterparties.intermediaries, color: 'var(--color-chart-4)' },
+    { name: t('dashboardPage.seller.manufacturers'), value: stats.counterparties.manufacturers, color: 'var(--color-chart-1)' },
+    { name: t('dashboardPage.seller.buyers'), value: stats.counterparties.buyers, color: 'var(--color-chart-2)' },
+    { name: t('dashboardPage.seller.intermediaries'), value: stats.counterparties.intermediaries, color: 'var(--color-chart-4)' },
   ] : [];
   const completionPct = stats?.request_completion ?? 0;
   const completionGoal = stats?.request_completion_goal ?? 80;
@@ -227,28 +230,28 @@ function SellerDashboard({ onProductClick, period: _period, stats }: { onProduct
       {/* KPI Row */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KPICard
-          label="Объём сделок"
+          label={t('dashboardPage.kpi.dealsVolume')}
           value={`$${((stats?.deals_volume ?? 0) / 1000).toFixed(0)}K`}
           icon={<DollarSign className="h-5 w-5 text-muted-foreground" />}
-          trend={{ value: `${stats?.deals_volume_change ?? 0}% vs. пред. период`, direction: (stats?.deals_volume_change ?? 0) >= 0 ? "up" : "down" }}
+          trend={{ value: `${stats?.deals_volume_change ?? 0}% ${t('dashboardPage.vsPrevPeriod')}`, direction: (stats?.deals_volume_change ?? 0) >= 0 ? "up" : "down" }}
         />
         <KPICard
-          label="Активные заявки"
+          label={t('dashboardPage.kpi.activeRequests')}
           value={String(stats?.active_requests ?? 0)}
           icon={<ShoppingCart className="h-5 w-5 text-muted-foreground" />}
-          trend={{ value: `${stats?.active_requests_change ?? 0}% vs. пред. период`, direction: (stats?.active_requests_change ?? 0) >= 0 ? "up" : "down" }}
+          trend={{ value: `${stats?.active_requests_change ?? 0}% ${t('dashboardPage.vsPrevPeriod')}`, direction: (stats?.active_requests_change ?? 0) >= 0 ? "up" : "down" }}
         />
         <KPICard
-          label="Позиций в каталоге"
+          label={t('dashboardPage.kpi.catalogItems')}
           value={String(stats?.catalog_items ?? 0)}
           icon={<Package className="h-5 w-5 text-muted-foreground" />}
-          trend={{ value: `${stats?.catalog_items_change ?? 0}% vs. пред. период`, direction: (stats?.catalog_items_change ?? 0) >= 0 ? "up" : "down" }}
+          trend={{ value: `${stats?.catalog_items_change ?? 0}% ${t('dashboardPage.vsPrevPeriod')}`, direction: (stats?.catalog_items_change ?? 0) >= 0 ? "up" : "down" }}
         />
         <KPICard
-          label="Клиентов"
+          label={t('dashboardPage.kpi.clients')}
           value={String(stats?.clients_count ?? 0)}
           icon={<Users className="h-5 w-5 text-muted-foreground" />}
-          trend={{ value: `${stats?.clients_count_change ?? 0}% vs. пред. период`, direction: (stats?.clients_count_change ?? 0) >= 0 ? "up" : "down" }}
+          trend={{ value: `${stats?.clients_count_change ?? 0}% ${t('dashboardPage.vsPrevPeriod')}`, direction: (stats?.clients_count_change ?? 0) >= 0 ? "up" : "down" }}
         />
       </div>
 
@@ -258,10 +261,10 @@ function SellerDashboard({ onProductClick, period: _period, stats }: { onProduct
         <Card className="lg:col-span-2 py-0 gap-0">
           <CardHeader className="flex flex-row items-center justify-between px-4 py-3">
             <div>
-              <CardTitle className="text-sm font-semibold">Объём сделок</CardTitle>
+              <CardTitle className="text-sm font-semibold">{t('dashboardPage.seller.dealsVolume')}</CardTitle>
               <div className="mt-1 flex items-baseline gap-2">
                 <span className="text-2xl font-bold tabular-nums">${((stats?.deals_volume ?? 0) / 1000).toFixed(0)}K</span>
-                <span className="text-xs font-medium text-muted-foreground">{stats?.deals_volume_change ?? 0}% vs. пред. период</span>
+                <span className="text-xs font-medium text-muted-foreground">{stats?.deals_volume_change ?? 0}% {t('dashboardPage.vsPrevPeriod')}</span>
               </div>
             </div>
           </CardHeader>
@@ -278,7 +281,7 @@ function SellerDashboard({ onProductClick, period: _period, stats }: { onProduct
                 <XAxis dataKey="month" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
                 <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(v: number) => `$${v / 1000}K`} />
                 <RechartsTooltip
-                  formatter={(value: number) => [`$${(value / 1000).toFixed(0)}K`, 'Объём']}
+                  formatter={(value: number) => [`$${(value / 1000).toFixed(0)}K`, t('dashboardPage.seller.volume')]}
                   contentStyle={{ borderRadius: '8px', fontSize: '12px', border: '1px solid var(--color-border)' }}
                 />
                 <Area type="monotone" dataKey="value" stroke="var(--color-chart-1)" strokeWidth={2} fill="url(#colorVal)" />
@@ -290,18 +293,18 @@ function SellerDashboard({ onProductClick, period: _period, stats }: { onProduct
         {/* Bar Chart — Activity by Day */}
         <Card className="py-0 gap-0">
           <CardHeader className="flex flex-row items-center justify-between px-4 py-3">
-            <CardTitle className="text-sm font-semibold">Активность по дням</CardTitle>
+            <CardTitle className="text-sm font-semibold">{t('dashboardPage.seller.activityByDay')}</CardTitle>
           </CardHeader>
           <CardContent className="px-2 pb-4">
             <div className="mb-2 text-center">
               <span className="text-2xl font-bold tabular-nums">{activityByDay.reduce((s, d) => s + d.count, 0)}</span>
-              <p className="text-xs text-muted-foreground">запросов за неделю</p>
+              <p className="text-xs text-muted-foreground">{t('dashboardPage.seller.requestsPerWeek')}</p>
             </div>
             <ResponsiveContainer width="100%" height={160}>
               <BarChart data={activityByDay}>
                 <XAxis dataKey="day" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
                 <RechartsTooltip
-                  formatter={(value: number) => [value, 'Запросов']}
+                  formatter={(value: number) => [value, t('dashboardPage.requests')]}
                   contentStyle={{ borderRadius: '8px', fontSize: '12px', border: '1px solid var(--color-border)' }}
                 />
                 <Bar dataKey="count" fill="var(--color-chart-1)" radius={[4, 4, 0, 0]} />
@@ -323,7 +326,7 @@ function SellerDashboard({ onProductClick, period: _period, stats }: { onProduct
           {/* Counterparty breakdown */}
           <Card className="py-0 gap-0">
             <CardHeader className="px-4 py-3">
-              <CardTitle className="text-sm font-semibold">Контрагенты</CardTitle>
+              <CardTitle className="text-sm font-semibold">{t('dashboardPage.seller.counterparties')}</CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4">
               <div className="flex items-center justify-center">
@@ -360,14 +363,14 @@ function SellerDashboard({ onProductClick, period: _period, stats }: { onProduct
           {/* Fulfillment Rate */}
           <Card className="py-0 gap-0">
             <CardHeader className="flex flex-row items-center justify-between px-4 py-3">
-              <CardTitle className="text-sm font-semibold">Выполнение заявок</CardTitle>
+              <CardTitle className="text-sm font-semibold">{t('dashboardPage.seller.requestCompletion')}</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col items-center gap-3 px-4 pb-4">
               <span className="text-4xl font-bold text-primary tabular-nums">{completionPct}%</span>
-              <p className="text-xs text-muted-foreground">Цель: {completionGoal}%</p>
+              <p className="text-xs text-muted-foreground">{t('dashboardPage.goal')}: {completionGoal}%</p>
               <Progress value={completionPct} className="h-2 w-full" />
               <Button variant="link" size="sm" className="text-xs">
-                Показать детали
+                {t('dashboardPage.showDetails')}
               </Button>
             </CardContent>
           </Card>
@@ -381,33 +384,34 @@ function SellerDashboard({ onProductClick, period: _period, stats }: { onProduct
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function ManufacturerDashboard({ onProductClick: _onProductClick, period: _period, stats }: { onProductClick?: (id: string) => void; period: string; stats: DashboardStats | null }) {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-col gap-6">
       {/* KPI Row */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KPICard
-          label="Активные заявки"
+          label={t('dashboardPage.kpi.activeRequests')}
           value={String(stats?.active_requests ?? 0)}
           icon={<FileText className="h-5 w-5 text-muted-foreground" />}
-          trend={{ value: `${stats?.active_requests_change ?? 0}% vs. пред. период`, direction: (stats?.active_requests_change ?? 0) >= 0 ? "up" : "down" }}
+          trend={{ value: `${stats?.active_requests_change ?? 0}% ${t('dashboardPage.vsPrevPeriod')}`, direction: (stats?.active_requests_change ?? 0) >= 0 ? "up" : "down" }}
         />
         <KPICard
-          label="Позиций в каталоге"
+          label={t('dashboardPage.kpi.catalogItems')}
           value={String(stats?.catalog_items ?? 0)}
           icon={<AlertCircle className="h-5 w-5 text-muted-foreground" />}
-          trend={{ value: `${stats?.catalog_items_change ?? 0}% vs. пред. период`, direction: (stats?.catalog_items_change ?? 0) >= 0 ? "up" : "down" }}
+          trend={{ value: `${stats?.catalog_items_change ?? 0}% ${t('dashboardPage.vsPrevPeriod')}`, direction: (stats?.catalog_items_change ?? 0) >= 0 ? "up" : "down" }}
         />
         <KPICard
-          label="Выполнение заявок"
+          label={t('dashboardPage.kpi.requestCompletion')}
           value={`${stats?.request_completion ?? 0}%`}
           icon={<BarChart3 className="h-5 w-5 text-muted-foreground" />}
           trend={{ value: "—", direction: "flat" }}
         />
         <KPICard
-          label="Объём сделок"
+          label={t('dashboardPage.kpi.dealsVolume')}
           value={`$${((stats?.deals_volume ?? 0) / 1000).toFixed(0)}K`}
           icon={<DollarSign className="h-5 w-5 text-muted-foreground" />}
-          trend={{ value: `${stats?.deals_volume_change ?? 0}% vs. пред. период`, direction: (stats?.deals_volume_change ?? 0) >= 0 ? "up" : "down" }}
+          trend={{ value: `${stats?.deals_volume_change ?? 0}% ${t('dashboardPage.vsPrevPeriod')}`, direction: (stats?.deals_volume_change ?? 0) >= 0 ? "up" : "down" }}
         />
       </div>
 
@@ -416,7 +420,7 @@ function ManufacturerDashboard({ onProductClick: _onProductClick, period: _perio
         {/* Bar Chart — Deals by Month */}
         <Card className="lg:col-span-2 py-0 gap-0">
           <CardHeader className="flex flex-row items-center justify-between px-4 py-3">
-            <CardTitle className="text-sm font-semibold">Сделки по месяцам</CardTitle>
+            <CardTitle className="text-sm font-semibold">{t('dashboardPage.manufacturer.dealsByMonth')}</CardTitle>
           </CardHeader>
           <CardContent className="px-2 pb-4">
             <ResponsiveContainer width="100%" height={220}>
@@ -425,7 +429,7 @@ function ManufacturerDashboard({ onProductClick: _onProductClick, period: _perio
                 <XAxis dataKey="month" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
                 <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(v: number) => `$${v / 1000}K`} />
                 <RechartsTooltip
-                  formatter={(value: number) => [`$${(value / 1000).toFixed(0)}K`, 'Объём']}
+                  formatter={(value: number) => [`$${(value / 1000).toFixed(0)}K`, t('dashboardPage.seller.volume')]}
                   contentStyle={{ borderRadius: '8px', fontSize: '12px', border: '1px solid var(--color-border)' }}
                 />
                 <Bar dataKey="value" fill="var(--color-chart-1)" radius={[4, 4, 0, 0]} />
@@ -437,11 +441,11 @@ function ManufacturerDashboard({ onProductClick: _onProductClick, period: _perio
         {/* Completion */}
         <Card className="py-0 gap-0">
           <CardHeader className="px-4 py-3">
-            <CardTitle className="text-sm font-semibold">Выполнение заявок</CardTitle>
+            <CardTitle className="text-sm font-semibold">{t('dashboardPage.seller.requestCompletion')}</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col items-center gap-3 px-4 pb-4">
             <span className="text-4xl font-bold text-primary tabular-nums">{stats?.request_completion ?? 0}%</span>
-            <p className="text-xs text-muted-foreground">Цель: {stats?.request_completion_goal ?? 80}%</p>
+            <p className="text-xs text-muted-foreground">{t('dashboardPage.goal')}: {stats?.request_completion_goal ?? 80}%</p>
             <Progress value={stats?.request_completion ?? 0} className="h-2 w-full" />
           </CardContent>
         </Card>
