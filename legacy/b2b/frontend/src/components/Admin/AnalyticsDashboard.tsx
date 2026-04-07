@@ -89,7 +89,7 @@ export const AnalyticsDashboard: React.FC = () => {
                     </p>
                 </div>
                 
-                <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                <div className="flex items-center gap-4 text-xs font-black uppercase tracking-widest text-muted-foreground">
                     <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-500/5 border border-emerald-500/20 rounded text-emerald-500">
                         <Activity className="w-3 h-3" />
                         System_Stable
@@ -106,7 +106,7 @@ export const AnalyticsDashboard: React.FC = () => {
                         </div>
                         <span className="text-xs font-black text-emerald-500">LIVE</span>
                     </div>
-                    <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Pipeline_Value</p>
+                    <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Pipeline_Value</p>
                     <h3 className="text-xl font-black text-foreground">
                         ${data.total_pipeline_value.toLocaleString()}
                     </h3>
@@ -119,7 +119,7 @@ export const AnalyticsDashboard: React.FC = () => {
                         </div>
                         <span className="text-xs font-black text-amber-500">URGENT</span>
                     </div>
-                    <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Sourcing_Backlog</p>
+                    <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Sourcing_Backlog</p>
                     <h3 className="text-xl font-black text-foreground">
                         {data.sourcing_backlog} <span className="text-xs text-muted-foreground uppercase tracking-widest">SKUs</span>
                     </h3>
@@ -132,7 +132,7 @@ export const AnalyticsDashboard: React.FC = () => {
                         </div>
                         <span className="text-xs font-black text-emerald-500">STABLE</span>
                     </div>
-                    <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Conversion_Rate</p>
+                    <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Conversion_Rate</p>
                     <h3 className="text-xl font-black text-foreground">
                         {data.conversion_rate || 0}%
                     </h3>
@@ -145,7 +145,7 @@ export const AnalyticsDashboard: React.FC = () => {
                         </div>
                         <span className="text-xs font-black text-primary">TARGET: 15%</span>
                     </div>
-                    <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Avg_Margin</p>
+                    <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Avg_Margin</p>
                     <h3 className="text-xl font-black text-foreground">
                         {data.avg_margin || 0}%
                     </h3>
@@ -161,10 +161,10 @@ export const AnalyticsDashboard: React.FC = () => {
                             <div className="w-8 h-8 rounded bg-foreground flex items-center justify-center text-background border border-border">
                                 <PieChart className="w-4 h-4" />
                             </div>
-                            <h4 className="text-[11px] font-black uppercase tracking-widest text-foreground">Commercial_Funnel_Dynamics</h4>
+                            <h4 className="text-xs font-black uppercase tracking-widest text-foreground">Commercial_Funnel_Dynamics</h4>
                         </div>
                         {activeTaskIds.length > 0 && (
-                            <div className="flex items-center gap-2 text-[9px] font-black text-primary uppercase tracking-widest animate-pulse">
+                            <div className="flex items-center gap-2 text-xs font-black text-primary uppercase tracking-widest animate-pulse">
                                 <Zap className="w-3 h-3" /> Processing_Feed
                             </div>
                         )}
@@ -200,12 +200,12 @@ export const AnalyticsDashboard: React.FC = () => {
                     <div className="relative z-10 flex flex-col h-full">
                         <div className="flex items-center gap-2 mb-6">
                             <Target className="w-5 h-5 text-primary" />
-                            <h4 className="text-[11px] font-black uppercase tracking-widest">Sourcing_Efficiency_Index</h4>
+                            <h4 className="text-xs font-black uppercase tracking-widest">Sourcing_Efficiency_Index</h4>
                         </div>
                         
                         <div className="space-y-4 flex-1">
                             <div className="p-4 rounded bg-white/5 border border-white/10">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-primary mb-1">MAPPING_PRECISION</p>
+                                <p className="text-xs font-black uppercase tracking-widest text-primary mb-1">MAPPING_PRECISION</p>
                                 <div className="text-2xl font-black tabular-nums">{data.mapped_items_percentage}%</div>
                                 <div className="w-full h-1 bg-white/10 rounded-full mt-2 overflow-hidden">
                                     <div className="h-full bg-primary shadow-[0_0_8px_hsl(var(--primary)/0.5)] transition-all duration-1000" style={{ width: `${data.mapped_items_percentage}%` }}></div>
@@ -213,9 +213,9 @@ export const AnalyticsDashboard: React.FC = () => {
                             </div>
                             
                             <div className="p-4 rounded bg-white/5 border border-white/10">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-primary mb-1">AVG_DISCOVERY_LATENCY</p>
+                                <p className="text-xs font-black uppercase tracking-widest text-primary mb-1">AVG_DISCOVERY_LATENCY</p>
                                 <div className="text-2xl font-black tabular-nums">{data.sourcing_speed_avg || 0}D</div>
-                                <p className="text-[8px] text-muted-foreground mt-2 font-bold uppercase tracking-tight">Derived from 30-day transactional history</p>
+                                <p className="text-xs text-muted-foreground mt-2 font-bold uppercase tracking-tight">Derived from 30-day transactional history</p>
                             </div>
                         </div>
 

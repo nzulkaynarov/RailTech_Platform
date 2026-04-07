@@ -89,7 +89,7 @@ function KPICard({ title, value, prevValue, icon, iconBg }: KPICardProps) {
               <span className="text-2xl font-bold tabular-nums tracking-tight">
                 {value.toLocaleString('ru-RU')}
               </span>
-              <div className={`flex items-center gap-0.5 text-xs font-medium ${isUp ? 'text-emerald-600' : 'text-red-500'}`}>
+              <div className={`flex items-center gap-0.5 text-xs font-medium ${isUp ? 'text-success' : 'text-destructive'}`}>
                 {isUp ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
                 {isUp ? '+' : ''}{pct}%
               </div>
@@ -319,13 +319,13 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="product_list">
-            {activeStatus === 'BUYER' ? 'Каталог' : 'Список товаров'}
+            {activeStatus === 'BUYER' ? t('productManagement.catalog') : t('productManagement.productList')}
           </TabsTrigger>
           {activeStatus !== 'BUYER' && (
-            <TabsTrigger value="categories">Категории</TabsTrigger>
+            <TabsTrigger value="categories">{t('productManagement.categories')}</TabsTrigger>
           )}
           {activeStatus !== 'BUYER' && (
-            <TabsTrigger value="equipment_groups">Группы техники</TabsTrigger>
+            <TabsTrigger value="equipment_groups">{t('productManagement.equipmentGroups')}</TabsTrigger>
           )}
         </TabsList>
       </Tabs>
@@ -333,28 +333,28 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KPICard
-          title="Всего позиций"
+          title={t('productManagement.kpi.totalItems')}
           value={totalProducts}
           prevValue={prevTotal}
           icon={<Package className="h-5 w-5 text-primary" />}
           iconBg="bg-primary/10"
         />
         <KPICard
-          title="В наличии"
+          title={t('productManagement.kpi.inStock')}
           value={inStockCount}
           prevValue={prevInStock}
-          icon={<PackageCheck className="h-5 w-5 text-emerald-600" />}
-          iconBg="bg-emerald-50"
+          icon={<PackageCheck className="h-5 w-5 text-success" />}
+          iconBg="bg-success/10"
         />
         <KPICard
-          title="Под заказ"
+          title={t('productManagement.kpi.toOrder')}
           value={toOrderCount}
           prevValue={prevToOrder}
-          icon={<PackageSearch className="h-5 w-5 text-amber-600" />}
-          iconBg="bg-amber-50"
+          icon={<PackageSearch className="h-5 w-5 text-warning" />}
+          iconBg="bg-warning/10"
         />
         <KPICard
-          title={activeStatus === 'BUYER' ? 'В корзине' : 'На поиске'}
+          title={activeStatus === 'BUYER' ? t('productManagement.kpi.inCart') : t('productManagement.kpi.sourcing')}
           value={activeStatus === 'BUYER' ? cartStore.items.length : sourcingCount}
           prevValue={activeStatus === 'BUYER' ? 0 : prevSourcing}
           icon={activeStatus === 'BUYER'

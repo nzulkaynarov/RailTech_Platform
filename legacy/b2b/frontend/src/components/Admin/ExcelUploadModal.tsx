@@ -65,7 +65,7 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({ isOpen, onCl
                         <Database className="size-4 text-primary" />
                         DATA_INGESTION_PROTOCOL
                     </DialogTitle>
-                    <DialogDescription className="text-[9px] font-bold uppercase tracking-widest">
+                    <DialogDescription className="text-xs font-bold uppercase tracking-widest">
                         BULK_IMPORT_MODULE_XLSX_CSV
                     </DialogDescription>
                 </DialogHeader>
@@ -89,7 +89,7 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({ isOpen, onCl
                             <h3 className="text-xs font-black uppercase tracking-tight">
                                 {file ? file.name : 'SELECT_SOURCE_FILE'}
                             </h3>
-                            <p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+                            <p className="mt-1 text-xs font-bold uppercase tracking-widest text-muted-foreground">
                                 DRAG_DROP_OR_KEYPATCH_ENTRY
                             </p>
                         </div>
@@ -123,7 +123,7 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({ isOpen, onCl
                                 <CheckCircle2 className="size-6 text-emerald-500" />
                             </div>
                             <h3 className="text-xs font-black uppercase tracking-widest">COMMIT_SUCCESSFUL</h3>
-                            <p className="mt-2 px-10 text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+                            <p className="mt-2 px-10 text-xs font-bold uppercase tracking-widest text-muted-foreground">
                                 MASTER_REGISTRY_STATE_SYNCHRONIZED_WITH_NEW_NODES.
                             </p>
                         </div>
@@ -166,7 +166,7 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({ isOpen, onCl
                         <Button
                             variant="outline"
                             onClick={() => catalogApi.exportTemplate()}
-                            className="flex-1 text-[9px] font-black uppercase tracking-widest"
+                            className="flex-1 text-xs font-black uppercase tracking-widest"
                             size="sm"
                         >
                             <Download className="size-3" />
@@ -176,7 +176,7 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({ isOpen, onCl
                             variant="outline"
                             disabled={localStatus === 'uploading' || activeTask?.status === 'PROGRESS'}
                             onClick={onClose}
-                            className="flex-1 text-[9px] font-black uppercase tracking-widest hover:text-destructive"
+                            className="flex-1 text-xs font-black uppercase tracking-widest hover:text-destructive"
                             size="sm"
                         >
                             TERMINATE

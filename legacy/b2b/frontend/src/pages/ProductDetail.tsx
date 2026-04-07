@@ -277,7 +277,7 @@ export function ProductDetail({ productId, onBack, onNavigate }: ProductDetailPr
                   <Bookmark className={`h-4 w-4 ${saved ? 'fill-current' : ''}`} />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>{saved ? 'В избранном' : 'Сохранить в список'}</TooltipContent>
+              <TooltipContent>{saved ? t('productDetail.inFavorites') : t('productDetail.saveToList')}</TooltipContent>
             </Tooltip>
           </div>
 
@@ -294,7 +294,7 @@ export function ProductDetail({ productId, onBack, onNavigate }: ProductDetailPr
           <Table>
             <TableBody>
               <TableRow>
-                <TableCell className="text-muted-foreground font-medium w-40">Артикул</TableCell>
+                <TableCell className="text-muted-foreground font-medium w-40">{t('productDetail.article')}</TableCell>
                 <TableCell className="text-right font-mono">{product.article}</TableCell>
               </TableRow>
               {product.materialId && (
@@ -304,7 +304,7 @@ export function ProductDetail({ productId, onBack, onNavigate }: ProductDetailPr
                 </TableRow>
               )}
               <TableRow>
-                <TableCell className="text-muted-foreground font-medium">ГОСТ / Чертёж</TableCell>
+                <TableCell className="text-muted-foreground font-medium">{t('productDetail.gostDrawing')}</TableCell>
                 <TableCell className="text-right">{product.gost}</TableCell>
               </TableRow>
               {product.iso && (
@@ -314,12 +314,12 @@ export function ProductDetail({ productId, onBack, onNavigate }: ProductDetailPr
                 </TableRow>
               )}
               <TableRow>
-                <TableCell className="text-muted-foreground font-medium">Ед. измерения</TableCell>
+                <TableCell className="text-muted-foreground font-medium">{t('productDetail.uom')}</TableCell>
                 <TableCell className="text-right">{product.uom}</TableCell>
               </TableRow>
               {product.packageQuantity && (
                 <TableRow>
-                  <TableCell className="text-muted-foreground font-medium">Упаковка</TableCell>
+                  <TableCell className="text-muted-foreground font-medium">{t('productDetail.packaging')}</TableCell>
                   <TableCell className="text-right">{product.packageQuantity} {product.uom}</TableCell>
                 </TableRow>
               )}
@@ -372,9 +372,9 @@ export function ProductDetail({ productId, onBack, onNavigate }: ProductDetailPr
       {/* Bottom tabs: Specs / Similar / Data */}
       <Tabs defaultValue="specifications">
         <TabsList>
-          <TabsTrigger value="specifications">Характеристики</TabsTrigger>
-          <TabsTrigger value="similar">Аналоги ({similarProducts.length})</TabsTrigger>
-          <TabsTrigger value="data">Данные</TabsTrigger>
+          <TabsTrigger value="specifications">{t('productDetail.specifications')}</TabsTrigger>
+          <TabsTrigger value="similar">{t('productDetail.analogs')} ({similarProducts.length})</TabsTrigger>
+          <TabsTrigger value="data">{t('productDetail.data')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="specifications">

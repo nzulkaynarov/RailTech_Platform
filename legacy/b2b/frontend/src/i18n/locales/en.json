@@ -23,9 +23,9 @@
     "inactive": "Inactive",
     "deleting": "Deleting...",
     "new": "New",
-    "retry": "Retry"
+    "retry": "Retry",
+    "back": "Back"
   },
-
   "auth": {
     "loginTitle": "Sign in",
     "loginSubtitle": "Enter your credentials to access the platform",
@@ -43,7 +43,6 @@
     "hidePassword": "Hide password",
     "login": "Sign in"
   },
-
   "landing": {
     "heroTitle": "Unified digital environment for <highlight>industrial procurement</highlight>",
     "heroSubtitle": "RailTech B2B Ecosystem automates industrial equipment procurement. Access official quotes, transparent logistics, and secure document management.",
@@ -52,7 +51,6 @@
     "featureUnitEconomics": "Deep Unit Economics",
     "featureUnitEconomicsDesc": "Transparent Landed Cost calculation (FCA + DAP + Customs) for every product."
   },
-
   "catalog": {
     "title": "Product Catalog",
     "searchPlaceholder": "Search by SKU, name, or GOST...",
@@ -122,10 +120,38 @@
       "noSpecifications": "No specifications available",
       "addToRequest": "Add to request",
       "priceFCA": "FCA Price",
-      "priceRestricted": "Available after verification"
+      "priceRestricted": "Available after verification",
+      "inFavorites": "In favorites",
+      "saveToList": "Save to list",
+      "article": "Article",
+      "gostDrawing": "GOST / Drawing",
+      "uom": "Unit of measure",
+      "packaging": "Packaging",
+      "analogs": "Analogs",
+      "data": "Data",
+      "moq": "Minimum order: 1 pc",
+      "inStock": "In stock",
+      "toOrder": "To order",
+      "days": "days",
+      "volumePricing": "Volume pricing",
+      "qty": "Qty",
+      "pricePerUnit": "Price / unit",
+      "discount": "Discount"
     }
   },
-
+  "productManagement": {
+    "catalog": "Catalog",
+    "productList": "Product List",
+    "categories": "Categories",
+    "equipmentGroups": "Equipment Groups",
+    "kpi": {
+      "totalItems": "Total Items",
+      "inStock": "In Stock",
+      "toOrder": "To Order",
+      "inCart": "In Cart",
+      "sourcing": "Sourcing"
+    }
+  },
   "domains": {
     "RAILWAY_MACHINERY": "Railway Equipment",
     "GENERAL_GOODS": "General Industrial Goods",
@@ -136,7 +162,6 @@
       "SERVICES": "Services"
     }
   },
-
   "dashboard": {
     "welcome": "Welcome, {{name}}",
     "kpi": {
@@ -166,7 +191,6 @@
     },
     "quickActions": "Quick Actions"
   },
-
   "kyc": {
     "banner": {
       "unverified": "Complete verification to unlock all features",
@@ -181,7 +205,6 @@
       "L3_CONTRACTED": "Contracted"
     }
   },
-
   "sourcing": {
     "title": "Specification Import",
     "uploadTitle": "Upload file",
@@ -195,7 +218,6 @@
     "itemName": "Item name",
     "matchStatus": "Match status"
   },
-
   "quote": {
     "title": "Commercial Offer",
     "subtotal": "Subtotal",
@@ -235,7 +257,6 @@
     "marginPercent": "Margin %",
     "lineTotal": "Total"
   },
-
   "admin": {
     "dashboard": {
       "title": "Admin Dashboard",
@@ -352,7 +373,6 @@
       }
     }
   },
-
   "notifications": {
     "title": "Notifications",
     "empty": "No notifications",
@@ -361,7 +381,6 @@
     "unread": "Unread: {{count}}",
     "viewAll": "All notifications"
   },
-
   "cart": {
     "title": "Purchase Request",
     "empty": "Purchase request is empty",
@@ -377,7 +396,6 @@
     "requestQuote": "Request Quote",
     "requestHint": "Our manager will contact you within 1 business day"
   },
-
   "nav": {
     "home": "Home",
     "catalog": "Catalog",
@@ -399,7 +417,6 @@
     "quotePricing": "Quote Pricing",
     "backoffice": "Backoffice"
   },
-
   "chat": {
     "title": "Messages",
     "description": "Correspondence with counterparties",
@@ -410,7 +427,6 @@
     "connectionLost": "Connection lost. Reconnecting...",
     "connected": "Connected"
   },
-
   "task": {
     "excelImport": "Excel Import",
     "catalogUpdate": "Catalog Update",
@@ -421,7 +437,6 @@
     "initializing": "Initializing...",
     "progress": "Progress"
   },
-
   "errors": {
     "network": "Network error. Check your internet connection.",
     "unauthorized": "Session expired. Please sign in again.",
@@ -434,7 +449,6 @@
     "operationFailed": "Operation failed",
     "uploadFailure": "Upload failed"
   },
-
   "team": {
     "title": "Company Team",
     "subtitle": "Manage employee access to the dashboard",
@@ -459,7 +473,6 @@
       "ACCOUNTANT": "Accountant (Acts, Invoices)"
     }
   },
-
   "company": {
     "title": "Company",
     "titleHighlight": "Profile",
@@ -500,7 +513,6 @@
       "OTHER": "Other document"
     }
   },
-
   "profileForm": {
     "title": "Company Profile",
     "step": "Step 3 of 4: Final details",
@@ -508,6 +520,13 @@
     "companyNamePlaceholder": "LLC / Sole Proprietorship Name",
     "innLabel": "Company TIN",
     "innPlaceholder": "9 digits",
+    "companyTypeLabel": "Company type",
+    "typeBuyer": "Buyer",
+    "typeBuyerDesc": "Purchasing equipment and materials",
+    "typeManufacturer": "Manufacturer",
+    "typeManufacturerDesc": "Manufacturing railway equipment",
+    "typeSupplier": "Supplier",
+    "typeSupplierDesc": "Supplying equipment and spare parts",
     "roleLabel": "Your role in the company",
     "rolePlaceholder": "Select role",
     "roleOwner": "Owner / Founder",
@@ -521,7 +540,6 @@
       "selectRole": "Select a role"
     }
   },
-
   "passwordSetup": {
     "title": "Password Setup",
     "step": "Step 2 of 4",
@@ -541,7 +559,6 @@
       "mismatch": "Passwords do not match."
     }
   },
-
   "registration": {
     "title": "Register at RailTech",
     "subtitle": "Secure start in the B2B ecosystem",
@@ -563,7 +580,6 @@
       "minChars": "Minimum 2 characters"
     }
   },
-
   "nomenclaturePanel": {
     "editTitle": "Edit Product",
     "createTitle": "New Product",
@@ -598,7 +614,6 @@
       "priceRequired": "Base price is required"
     }
   },
-
   "userPanel": {
     "editTitle": "Edit User",
     "createTitle": "Create User",
@@ -631,7 +646,6 @@
       "lastNameRequired": "Last name is required"
     }
   },
-
   "kycManager": {
     "title": "KYC",
     "titleHighlight": "Verification",
@@ -674,12 +688,10 @@
       "OTHER": "Misc / Другое"
     }
   },
-
   "breadcrumb": {
     "productDetail": "Product details",
     "requestDetail": "Request details"
   },
-
   "breadcrumbs": {
     "dashboard": "Dashboard",
     "products": "Catalog",
@@ -705,7 +717,6 @@
     "logistics": "Logistics",
     "purchaseTemplates": "Purchase Templates"
   },
-
   "onboarding": {
     "companyRegistration": "Company Registration",
     "companyRegistrationDesc": "Enter your organization details to get started",
@@ -732,12 +743,27 @@
     "registrationNote": "By clicking \"Register\", you are submitting a connection request. The platform administrator will review the data and confirm your company's status.",
     "register": "Register",
     "capabilities": {
-      "BUYER": ["Browse product catalog", "Import requests from Excel", "Request commercial offers", "Track deals"],
-      "SELLER": ["Everything a Buyer can do", "Add available products (with manufacturer info)", "CRM, quotes and cost calculation", "Work with partner manufacturers"],
-      "MANUFACTURER": ["Everything a Buyer and Seller can do", "Publish own products", "Accept orders from partner sellers", "Direct sales without intermediaries", "Choose sellers and set prices"]
+      "BUYER": [
+        "Browse product catalog",
+        "Import requests from Excel",
+        "Request commercial offers",
+        "Track deals"
+      ],
+      "SELLER": [
+        "Everything a Buyer can do",
+        "Add available products (with manufacturer info)",
+        "CRM, quotes and cost calculation",
+        "Work with partner manufacturers"
+      ],
+      "MANUFACTURER": [
+        "Everything a Buyer and Seller can do",
+        "Publish own products",
+        "Accept orders from partner sellers",
+        "Direct sales without intermediaries",
+        "Choose sellers and set prices"
+      ]
     }
   },
-
   "verification": {
     "applicationUnderReview": "Application Under Review",
     "applicationUnderReviewDesc": "The platform administrator is reviewing your company data. You will receive a notification at {{email}} upon confirmation.",
@@ -751,13 +777,11 @@
     "startOver": "Start over",
     "enterSystem": "Enter system"
   },
-
   "companyStatus": {
     "BUYER": "Buyer",
     "MANUFACTURER": "Manufacturer",
     "SELLER": "Seller"
   },
-
   "roles": {
     "ADMIN": "Administrator",
     "MANAGER": "Manager",
@@ -767,16 +791,36 @@
     "CLIENT": "Client",
     "GUEST": "Guest"
   },
-
   "companyStatusDesc": {
     "BUYER": "Only requests quotes and purchases equipment",
     "MANUFACTURER": "Produces, sells directly or through sellers, can also purchase",
     "SELLER": "Intermediary: buys and resells, can add available products"
   },
-
+  "productStatuses": {
+    "in_stock": "In Stock",
+    "to_order": "To Order",
+    "sourcing": "Sourcing",
+    "inactive": "Inactive"
+  },
+  "domainLabels": {
+    "RAILWAY_MACHINERY": "Railway Machinery",
+    "GENERAL_GOODS": "General Goods",
+    "SERVICES": "Services"
+  },
+  "requestStatuses": {
+    "draft": "Draft",
+    "submitted": "Submitted",
+    "processing": "Processing",
+    "rfq_sent": "RFQ Sent",
+    "rfq_received": "RFQ Received",
+    "calculating": "Calculating",
+    "kp_sent": "Quote Sent",
+    "kp_review": "Quote Under Review",
+    "kp_accepted": "Quote Accepted",
+    "kp_rejected": "Quote Rejected",
+    "deal_opened": "Deal Opened"
+  },
   "shell": {
-    "b2bPlatform": "B2B Platform",
-    "workContext": "Work context",
     "dashboard": "Dashboard",
     "catalog": "Catalog",
     "myRequests": "My Requests",
@@ -806,16 +850,34 @@
     "users": "Users",
     "integrations": "Integrations",
     "help": "Help",
+    "b2bPlatform": "B2B Platform",
+    "workContext": "Work context",
     "profile": "Profile",
-    "logout": "Sign out",
     "demoMode": "Demo Mode",
+    "logout": "Sign out",
     "openMenu": "Open menu",
     "notifications": "Notifications",
     "notificationsDesc": "Recent system events",
     "noNotifications": "No new notifications",
-    "markAllRead": "Mark all as read"
+    "markAllRead": "Mark all as read",
+    "nav": {
+      "crmDeals": "Deals (CRM)",
+      "catalog": "Catalog (PIM)",
+      "smartMatch": "Smart Match",
+      "kycManager": "KYC Manager",
+      "systemControl": "System Control"
+    },
+    "sections": {
+      "commerce": "Commerce",
+      "infrastructure": "Infrastructure"
+    },
+    "systemAdmin": "System Admin",
+    "signOut": "Sign Out",
+    "breadcrumb": {
+      "main": "Main"
+    },
+    "globalSearch": "Global Search (Alt+S)..."
   },
-
   "dashboardPage": {
     "title": "Dashboard",
     "period": "Period",
@@ -913,12 +975,22 @@
       "dealsByMonth": "Deals by Month"
     },
     "months": {
-      "sep": "Sep", "oct": "Oct", "nov": "Nov", "dec": "Dec",
-      "jan": "Jan", "feb": "Feb", "mar": "Mar"
+      "sep": "Sep",
+      "oct": "Oct",
+      "nov": "Nov",
+      "dec": "Dec",
+      "jan": "Jan",
+      "feb": "Feb",
+      "mar": "Mar"
     },
     "days": {
-      "mon": "Mon", "tue": "Tue", "wed": "Wed", "thu": "Thu",
-      "fri": "Fri", "sat": "Sat", "sun": "Sun"
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat",
+      "sun": "Sun"
     },
     "counterparties": {
       "clients": "Clients",
@@ -926,13 +998,11 @@
       "factories": "Factories"
     }
   },
-
   "demo": {
     "toggleLabel": "Demo Mode",
     "enabled": "Demo mode enabled",
     "disabled": "Demo mode disabled"
   },
-
   "profile": {
     "title": "Profile",
     "subtitle": "Manage your personal data and account settings",
@@ -1012,7 +1082,6 @@
       "confirmPassword": "Confirm password"
     }
   },
-
   "settings": {
     "title": "Settings",
     "subtitle": "Platform configuration and preferences",
@@ -1120,7 +1189,6 @@
       "view": "View"
     }
   },
-
   "sourcingHub": {
     "title": "Request Items — Catalog Matching",
     "kpi": {
@@ -1157,7 +1225,6 @@
       "noResults": "No results found"
     }
   },
-
   "dealChat": {
     "tabs": {
       "chat": "Chat",
@@ -1180,14 +1247,12 @@
       "quoteDraft": "Quote Draft.pdf"
     }
   },
-
   "fab": {
     "telegram": "Telegram",
     "call": "Call",
     "writeManager": "Write to manager",
     "support": "Support"
   },
-
   "tour": {
     "skip": "Skip",
     "next": "Next",
@@ -1217,20 +1282,23 @@
       }
     }
   },
-
   "error": {
-    "title": "System Interruption",
+    "title": "Something went wrong",
     "defaultMessage": "An unexpected error has occurred in the application.",
     "hardRefresh": "Hard Refresh",
     "returnHome": "Return Home",
-    "supportId": "RailTech Technical Support ID"
+    "supportId": "RailTech Technical Support ID",
+    "description": "An unexpected error occurred. Try reloading the page.",
+    "goHome": "Go home",
+    "reload": "Reload"
   },
-
   "purchaseTemplates": {
     "title": "Purchase Templates",
     "subtitle": "Saved templates for quick reordering",
     "createTemplate": "Create template",
     "itemCount_one": "{{count}} item",
+    "itemCount_few": "{{count}} items",
+    "itemCount_many": "{{count}} items",
     "itemCount_other": "{{count}} items",
     "itemCount": "{{count}} items",
     "lastOrder": "Last order",
@@ -1254,7 +1322,6 @@
       "descriptionPlaceholder": "Enter template description"
     }
   },
-
   "requestDetail": {
     "title": "Request {{number}}",
     "resetDemo": "Reset demo",
@@ -1419,7 +1486,6 @@
       "sent": "Sent"
     }
   },
-
   "pages": {
     "common": {
       "sectionInDevelopment": "Section under development",
@@ -1453,6 +1519,8 @@
       "orClick": "or click to upload",
       "lastImport": "Last import",
       "uploadedAgo": "Uploaded 15 min ago",
+      "noImportsYet": "No imports yet",
+      "uploadToSee": "Upload a file to see import history",
       "status": {
         "completed": "Completed"
       },
@@ -1867,38 +1935,6 @@
       }
     }
   },
-
-  "shell": {
-    "nav": {
-      "crmDeals": "Deals (CRM)",
-      "catalog": "Catalog (PIM)",
-      "smartMatch": "Smart Match",
-      "kycManager": "KYC Manager",
-      "systemControl": "System Control"
-    },
-    "sections": {
-      "commerce": "Commerce",
-      "infrastructure": "Infrastructure"
-    },
-    "systemAdmin": "System Admin",
-    "signOut": "Sign Out",
-    "breadcrumb": {
-      "main": "Main"
-    },
-    "globalSearch": "Global Search (Alt+S)...",
-    "notifications": "Notifications",
-    "notificationsDesc": "Recent system events",
-    "noNotifications": "No new notifications",
-    "markAllRead": "Mark all as read"
-  },
-
-  "error": {
-    "title": "Something went wrong",
-    "description": "An unexpected error occurred. Try reloading the page.",
-    "goHome": "Go home",
-    "reload": "Reload"
-  },
-
   "dealSplit": {
     "stageLabel": "Stage",
     "docsComingSoon": "Upload of contracts, specifications, and invoices will be available in the next version.",

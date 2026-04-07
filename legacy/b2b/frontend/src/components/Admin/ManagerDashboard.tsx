@@ -24,15 +24,15 @@ const KPICard: React.FC<KPICardProps> = ({ icon: Icon, label, value, sub, color,
                     <Icon className="w-4 h-4" />
                 </div>
                 {trend && (
-                    <span className="flex items-center gap-1 text-[9px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-500/5 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                    <span className="flex items-center gap-1 text-xs font-black text-emerald-500 uppercase tracking-widest bg-emerald-500/5 px-1.5 py-0.5 rounded border border-emerald-500/20">
                         <TrendingUp className="w-2.5 h-2.5" />{trend}
                     </span>
                 )}
             </div>
             <div>
                 <div className="text-xl font-black text-foreground leading-none mb-0.5">{value}</div>
-                <div className="text-[9px] font-bold text-muted-foreground  uppercase tracking-widest font-mono">{label}</div>
-                {sub && <div className="text-[8px] font-medium text-muted-foreground  mt-1 uppercase tracking-tight">{sub}</div>}
+                <div className="text-xs font-bold text-muted-foreground  uppercase tracking-widest font-mono">{label}</div>
+                {sub && <div className="text-xs font-medium text-muted-foreground  mt-1 uppercase tracking-tight">{sub}</div>}
             </div>
         </div>
     );
@@ -86,7 +86,7 @@ export const ManagerDashboard: React.FC = () => {
                     </p>
                 </div>
                 <div className="hidden sm:flex items-center gap-2">
-                    <div className="flex items-center gap-1.5 px-2 py-1 bg-primary/10 border border-primary/20 rounded text-primary text-[9px] font-bold uppercase tracking-widest">
+                    <div className="flex items-center gap-1.5 px-2 py-1 bg-primary/10 border border-primary/20 rounded text-primary text-xs font-bold uppercase tracking-widest">
                         <Activity className="w-3 h-3" />
                         Live Feed Active
                     </div>
@@ -112,7 +112,7 @@ export const ManagerDashboard: React.FC = () => {
                 <div className="lg:col-span-1 space-y-3">
                     <div className="px-1 flex items-center justify-between">
                         <h2 className="text-xs font-black uppercase tracking-widest text-muted-foreground">Action Queue</h2>
-                        <span className="px-1.5 py-0.5 bg-red-500/10 text-red-500 text-[8px] font-black rounded border border-red-500/20 animate-pulse">Critical</span>
+                        <span className="px-1.5 py-0.5 bg-red-500/10 text-red-500 text-xs font-black rounded border border-red-500/20 animate-pulse">Critical</span>
                     </div>
 
                     <Link to="/crm/sourcing" className="block p-4 rounded bg-card border border-border hover:border-primary/30 hover:bg-muted transition-all group group shadow-sm">
@@ -122,10 +122,10 @@ export const ManagerDashboard: React.FC = () => {
                             </div>
                             <div>
                                 <p className="text-2xl font-black text-foreground leading-none">{sourcingPending}</p>
-                                <p className="text-[9px] font-bold text-muted-foreground  uppercase tracking-widest font-mono mt-1">Sourcing Backlog</p>
+                                <p className="text-xs font-bold text-muted-foreground  uppercase tracking-widest font-mono mt-1">Sourcing Backlog</p>
                             </div>
                         </div>
-                        <div className="flex items-center justify-between text-[9px] font-bold text-muted-foreground uppercase tracking-tight pt-3 border-t border-border">
+                        <div className="flex items-center justify-between text-xs font-bold text-muted-foreground uppercase tracking-tight pt-3 border-t border-border">
                             <span className="flex items-center gap-2"><AlertTriangle className="w-3 h-3 text-amber-500" /> Items requiring PIN mapping</span>
                             <ArrowRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
                         </div>
@@ -138,10 +138,10 @@ export const ManagerDashboard: React.FC = () => {
                             </div>
                             <div>
                                 <p className="text-2xl font-black text-foreground leading-none">{kycPendingCount}</p>
-                                <p className="text-[9px] font-bold text-muted-foreground  uppercase tracking-widest font-mono mt-1">KYC Verifications</p>
+                                <p className="text-xs font-bold text-muted-foreground  uppercase tracking-widest font-mono mt-1">KYC Verifications</p>
                             </div>
                         </div>
-                        <div className="flex items-center justify-between text-[9px] font-bold text-muted-foreground uppercase tracking-tight pt-3 border-t border-border">
+                        <div className="flex items-center justify-between text-xs font-bold text-muted-foreground uppercase tracking-tight pt-3 border-t border-border">
                             <span className="flex items-center gap-2"><Clock className="w-3 h-3" /> Entities at L1 restriction</span>
                             <ArrowRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
                         </div>
@@ -153,7 +153,7 @@ export const ManagerDashboard: React.FC = () => {
                     <div className="bg-card border border-border rounded shadow-sm flex flex-col h-full font-mono overflow-hidden">
                         <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-muted/50">
                             <h2 className="text-xs font-black text-foreground uppercase tracking-widest">Active Deal Pipeline</h2>
-                            <Link to="/crm/home" className="text-[8px] font-bold text-primary hover:text-primary/80 uppercase tracking-widest transition-colors flex items-center gap-1">
+                            <Link to="/crm/home" className="text-xs font-bold text-primary hover:text-primary/80 uppercase tracking-widest transition-colors flex items-center gap-1">
                                 Full Registry <ArrowRight className="w-3 h-3" />
                             </Link>
                         </div>
@@ -167,10 +167,10 @@ export const ManagerDashboard: React.FC = () => {
                                         </div>
                                         <div className="min-w-0">
                                             <div className="flex items-center gap-2 mb-0.5">
-                                                <p className="text-[11px] font-black text-foreground uppercase tracking-tight group-hover:text-primary transition-colors truncate">
+                                                <p className="text-xs font-black text-foreground uppercase tracking-tight group-hover:text-primary transition-colors truncate">
                                                     DL_{deal.id.toString().padStart(6, '0')}
                                                 </p>
-                                                <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded border ${
+                                                <span className={`text-xs font-black uppercase px-1.5 py-0.5 rounded border ${
                                                     deal.stage_code === 'DRAFT' ? 'bg-muted text-muted-foreground border-border' :
                                                     deal.stage_code === 'KYC_PENDING' ? 'bg-primary/10 text-primary border-primary/20' :
                                                     deal.stage_code === 'CALCULATING' ? 'bg-warning/10 text-warning border-warning/20' :
@@ -181,7 +181,7 @@ export const ManagerDashboard: React.FC = () => {
                                                     {deal.stage_name || 'System Draft'}
                                                 </span>
                                             </div>
-                                            <div className="flex items-center gap-3 text-[8px] text-muted-foreground font-bold uppercase tracking-widest truncate">
+                                            <div className="flex items-center gap-3 text-xs text-muted-foreground font-bold uppercase tracking-widest truncate">
                                                 <span className="flex items-center gap-1"><UserCheck className="w-2.5 h-2.5" /> {deal.company_name || '—'}</span>
                                                 <span>•</span>
                                                 <span className="flex items-center gap-1"><Package className="w-2.5 h-2.5" /> {(deal.active_quote?.items || []).length} SKU</span>
@@ -191,7 +191,7 @@ export const ManagerDashboard: React.FC = () => {
                                     <div className="flex items-center gap-4 shrink-0">
                                         <div className="text-right hidden sm:block">
                                             <p className="text-xs font-black text-foreground">${parseFloat(deal.total_value || '0').toLocaleString()}</p>
-                                            <p className="text-[8px] text-muted-foreground font-bold uppercase tracking-widest">Gross Value</p>
+                                            <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">Gross Value</p>
                                         </div>
                                         <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors ml-2" />
                                     </div>

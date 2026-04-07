@@ -1,5 +1,6 @@
 import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../store/authStore';
 import { Loader2 } from 'lucide-react';
 import { UserRole } from '../../store/authStore';
@@ -11,6 +12,7 @@ interface ProtectedRouteProps {
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     allowedRoles,
 }) => {
+    const { t } = useTranslation();
     const { isAuthenticated, role, isLoading, kyc_status } = useAuthStore();
 
     if (isLoading) {
@@ -18,7 +20,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
             <div className="flex h-screen items-center justify-center bg-background">
                 <div className="flex flex-col items-center gap-4">
                     <Loader2 className="w-10 h-10 text-primary animate-spin" />
-                    <p className="text-muted-foreground text-sm font-medium tracking-widest uppercase">Проверка доступа...</p>
+                    <p className="text-muted-foreground text-sm font-medium tracking-widest uppercase">{t('common.loading')}</p>
                 </div>
             </div>
         );
