@@ -46,12 +46,12 @@ const STATUS_CONFIG = {
 	},
 };
 
-const DOC_TYPES = [
-	{ value: 'CHARTER', label: 'Company Charter / Устав' },
-	{ value: 'LICENSE', label: 'License / Лицензия' },
-	{ value: 'PASSPORT', label: 'Director ID / Паспорт' },
-	{ value: 'TAX_CERT', label: 'Tax Registry / Свид. ИНН' },
-	{ value: 'OTHER', label: 'Misc / Другое' },
+const DOC_TYPE_KEYS = [
+	{ value: 'CHARTER', labelKey: 'kycManager.docTypes.charter' },
+	{ value: 'LICENSE', labelKey: 'kycManager.docTypes.license' },
+	{ value: 'PASSPORT', labelKey: 'kycManager.docTypes.passport' },
+	{ value: 'TAX_CERT', labelKey: 'kycManager.docTypes.taxCert' },
+	{ value: 'OTHER', labelKey: 'kycManager.docTypes.other' },
 ];
 
 // --- Company Detail Side Panel ---
@@ -76,7 +76,7 @@ const CompanyDetailPanel: React.FC<SidePanelProps> = ({ company, onClose, onVeri
 			{/* Panel Header */}
 			<div className="p-4 border-b border-border flex items-center justify-between bg-muted/50">
 				<div>
-					<p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-0.5">{t('kycManager.entityReview')}</p>
+					<p className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-0.5">{t('kycManager.entityReview')}</p>
 					<h2 className="text-sm font-black text-foreground uppercase truncate max-w-[200px]">{company.name}</h2>
 				</div>
 				<Button variant="ghost" size="icon-xs" onClick={onClose}>
@@ -88,16 +88,16 @@ const CompanyDetailPanel: React.FC<SidePanelProps> = ({ company, onClose, onVeri
 			<div className="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar">
 				{/* Status */}
 				<div>
-					<p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-2">{t('kycManager.authStatus')}</p>
+					<p className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-2">{t('kycManager.authStatus')}</p>
 					<div className={`flex items-center gap-2.5 p-3 rounded border ${cfg.bg} ${cfg.border}`}>
 						<StatusIcon className={`w-4 h-4 ${cfg.color}`} />
-						<span className={`text-[11px] font-black ${cfg.color} tracking-tighter`}>{cfg.label}</span>
+						<span className={`text-xs font-black ${cfg.color} tracking-tighter`}>{cfg.label}</span>
 					</div>
 				</div>
 
 				{/* Company Info */}
 				<div>
-					<p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-2">{t('kycManager.registryData')}</p>
+					<p className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-2">{t('kycManager.registryData')}</p>
 					<div className="space-y-1.5 border border-border rounded p-2">
 						{[
 							{ label: t('kycManager.registryFields.taxId'), value: company.inn },
@@ -113,7 +113,7 @@ const CompanyDetailPanel: React.FC<SidePanelProps> = ({ company, onClose, onVeri
 					</div>
 					{company.legal_address && (
 						<div className="mt-2 p-2 bg-muted/50 rounded border border-border">
-							<span className="text-[9px] font-bold text-muted-foreground uppercase block mb-1">{t('kycManager.physicalAddress')}</span>
+							<span className="text-xs font-bold text-muted-foreground uppercase block mb-1">{t('kycManager.physicalAddress')}</span>
 							<span className="text-xs font-medium text-foreground/80 leading-tight uppercase">{company.legal_address}</span>
 						</div>
 					)}
@@ -122,8 +122,8 @@ const CompanyDetailPanel: React.FC<SidePanelProps> = ({ company, onClose, onVeri
 				{/* Documents */}
 				<div>
 					<div className="flex items-center justify-between mb-2">
-						<p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">{t('kycManager.docRecords')}</p>
-						<span className="text-[9px] font-black text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{t('kycManager.docCount', { count: company.kyc_documents?.length || 0 })}</span>
+						<p className="text-xs font-black uppercase tracking-widest text-muted-foreground">{t('kycManager.docRecords')}</p>
+						<span className="text-xs font-black text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{t('kycManager.docCount', { count: company.kyc_documents?.length || 0 })}</span>
 					</div>
 					<div className="space-y-1 mb-4">
 						{(company.kyc_documents || []).map(doc => (
@@ -131,7 +131,7 @@ const CompanyDetailPanel: React.FC<SidePanelProps> = ({ company, onClose, onVeri
 								<FileText className="w-3.5 h-3.5 text-primary shrink-0" />
 								<div className="min-w-0 flex-1">
 									<p className="text-xs font-black text-foreground/80 truncate tracking-tight uppercase">{doc.original_filename}</p>
-									<p className="text-[8px] text-muted-foreground font-bold uppercase">{doc.doc_type_display}</p>
+									<p className="text-xs text-muted-foreground font-bold uppercase">{doc.doc_type_display}</p>
 								</div>
 								<CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 opacity-50" />
 							</div>
@@ -139,7 +139,7 @@ const CompanyDetailPanel: React.FC<SidePanelProps> = ({ company, onClose, onVeri
 						{(company.kyc_documents || []).length === 0 && (
 							<div className="p-4 rounded border border-dashed border-border text-center bg-muted/20">
 								<FileQuestion className="w-6 h-6 text-muted-foreground/30 mx-auto mb-1.5" />
-								<p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{t('kycManager.noDocuments')}</p>
+								<p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{t('kycManager.noDocuments')}</p>
 							</div>
 						)}
 					</div>
@@ -151,7 +151,7 @@ const CompanyDetailPanel: React.FC<SidePanelProps> = ({ company, onClose, onVeri
 							onChange={e => setSelectedDocType(e.target.value)}
 							className="w-full bg-muted border border-border rounded px-3 py-1.5 text-xs font-black text-foreground outline-none focus:border-primary transition-all uppercase"
 						>
-							{DOC_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+							{DOC_TYPE_KEYS.map(dt => <option key={dt.value} value={dt.value}>{t(dt.labelKey)}</option>)}
 						</select>
 						<input ref={fileInputRef} type="file" className="hidden" accept=".pdf,.doc,.docx,.jpg,.png"
 							onChange={e => {
@@ -164,7 +164,7 @@ const CompanyDetailPanel: React.FC<SidePanelProps> = ({ company, onClose, onVeri
 							variant="outline"
 							onClick={() => fileInputRef.current?.click()}
 							disabled={busy}
-							className="w-full flex items-center justify-center gap-2 py-2 border-dashed text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:border-primary/50 hover:text-primary"
+							className="w-full flex items-center justify-center gap-2 py-2 border-dashed text-xs font-black uppercase tracking-widest text-muted-foreground hover:border-primary/50 hover:text-primary"
 						>
 							<Upload className="w-3 h-3" />
 							{t('kycManager.importDoc')}
@@ -174,13 +174,13 @@ const CompanyDetailPanel: React.FC<SidePanelProps> = ({ company, onClose, onVeri
 
 				{/* Notes */}
 				<div>
-					<p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-2">{t('kycManager.observations')}</p>
+					<p className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-2">{t('kycManager.observations')}</p>
 					<textarea
 						value={comment}
 						onChange={e => setComment(e.target.value)}
 						placeholder={t('kycManager.observationsPlaceholder')}
 						rows={3}
-						className="w-full bg-muted/50 border border-border rounded p-3 text-[11px] font-medium text-foreground/80 outline-none focus:border-primary/50 resize-none transition-all"
+						className="w-full bg-muted/50 border border-border rounded p-3 text-xs font-medium text-foreground/80 outline-none focus:border-primary/50 resize-none transition-all"
 					/>
 				</div>
 			</div>
@@ -212,7 +212,7 @@ const CompanyDetailPanel: React.FC<SidePanelProps> = ({ company, onClose, onVeri
 						variant="destructive"
 						onClick={() => onVerify(company.id, 'L1_UNVERIFIED', comment)}
 						disabled={busy}
-						className="w-full flex items-center justify-center gap-2 py-2 font-black text-[9px] uppercase tracking-widest active:scale-[0.98]"
+						className="w-full flex items-center justify-center gap-2 py-2 font-black text-xs uppercase tracking-widest active:scale-[0.98]"
 					>
 						<XCircle className="w-3.5 h-3.5" />
 						{t('kycManager.revokeL1')}
@@ -325,13 +325,13 @@ export const KYCManagerDashboard: React.FC = () => {
 									variant={isActive ? 'default' : 'ghost'}
 									size="xs"
 									onClick={() => setFilter(s)}
-									className={`flex items-center gap-2 text-[9px] font-black uppercase tracking-widest ${isActive
+									className={`flex items-center gap-2 text-xs font-black uppercase tracking-widest ${isActive
 										? 'bg-foreground text-background hover:bg-foreground/90'
 										: 'text-muted-foreground'
 										}`}
 								>
 									{label}
-									<span className={`px-1 rounded text-[8px] font-black ${isActive ? 'bg-background/20 text-background' : 'bg-muted text-muted-foreground'
+									<span className={`px-1 rounded text-xs font-black ${isActive ? 'bg-background/20 text-background' : 'bg-muted text-muted-foreground'
 										}`}>{count}</span>
 								</Button>
 							);
@@ -349,7 +349,7 @@ export const KYCManagerDashboard: React.FC = () => {
 							placeholder={t('kycManager.searchPlaceholder')}
 							value={search}
 							onChange={e => setSearch(e.target.value)}
-							className="w-full bg-background border border-border rounded py-1.5 pl-9 pr-4 text-[11px] font-mono outline-none focus:ring-1 focus:ring-primary/50 transition-all"
+							className="w-full bg-background border border-border rounded py-1.5 pl-9 pr-4 text-xs font-mono outline-none focus:ring-1 focus:ring-primary/50 transition-all"
 						/>
 					</div>
 
@@ -381,14 +381,14 @@ export const KYCManagerDashboard: React.FC = () => {
 											<CfgIcon className={`w-4 h-4 ${cfg.color}`} />
 										</div>
 										<div className="min-w-0">
-											<h3 className="text-[11px] font-black text-foreground uppercase truncate tracking-tight">{company.name}</h3>
+											<h3 className="text-xs font-black text-foreground uppercase truncate tracking-tight">{company.name}</h3>
 											<div className="flex items-center gap-2.5 mt-0.5">
-												<span className="text-[9px] text-muted-foreground font-bold tracking-widest">ID: {company.inn}</span>
-												<span className={`text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded ${cfg.badge}`}>
+												<span className="text-xs text-muted-foreground font-bold tracking-widest">ID: {company.inn}</span>
+												<span className={`text-xs font-black uppercase tracking-wider px-1.5 py-0.5 rounded ${cfg.badge}`}>
 													{cfg.label}
 												</span>
 												{(company.kyc_documents?.length || 0) > 0 && (
-													<span className="flex items-center gap-1 text-[8px] text-muted-foreground font-bold uppercase tracking-widest">
+													<span className="flex items-center gap-1 text-xs text-muted-foreground font-bold uppercase tracking-widest">
 														<FileText className="w-2.5 h-2.5" />
 														{company.kyc_documents!.length} DOCS
 													</span>

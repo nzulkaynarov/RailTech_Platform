@@ -37,10 +37,17 @@ $ARGUMENTS — (опционально) путь к файлу или дирек
 - [ ] Строки на русском языке прямо в JSX (не через `t()`)
 - [ ] Строки на английском языке в JSX (не через `t()`)
 - [ ] `placeholder`, `title`, `aria-label` атрибуты с хардкод текстом
+- [ ] Zod validation messages: `z.string().min(2, 'Hardcoded text')` — должны использовать `t()` через factory pattern
+- [ ] Hardcoded label arrays: `{ label: 'Text' }` — должны использовать `{ labelKey: 'i18n.key' }` + `t(item.labelKey)`
 
 #### Проблемы с интерполяцией
 - [ ] `t()` вызовы с параметрами, но ключ не содержит `{{variable}}`
 - [ ] Ключи с `{{variable}}`, но `t()` вызывается без параметров
+
+#### Дублирование ключей в JSON
+- [ ] Дублирующиеся top-level ключи в `ru.json` (второе вхождение затирает первое!)
+- [ ] Дублирующиеся top-level ключи в `en.json`
+- [ ] Для проверки: `node -e "const s=require('fs').readFileSync('path','utf8'); const keys=s.match(/\"[^\"]+\":/g); const counts={}; keys.forEach(k=>{counts[k]=(counts[k]||0)+1}); Object.entries(counts).filter(([,v])=>v>1).forEach(([k,v])=>console.log(k,v))"`
 
 ### 4. Выведи отчёт
 

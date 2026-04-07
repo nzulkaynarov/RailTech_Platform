@@ -33,8 +33,8 @@ export function ProfilePage() {
   };
 
   const kycBadge = {
-    verified: { label: t('profile.kyc.verified'), variant: 'secondary' as const, className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-    pending: { label: t('profile.kyc.pending'), variant: 'secondary' as const, className: 'bg-amber-50 text-amber-700 border-amber-200' },
+    verified: { label: t('profile.kyc.verified'), variant: 'secondary' as const, className: 'bg-success/10 text-success border-success/20' },
+    pending: { label: t('profile.kyc.pending'), variant: 'secondary' as const, className: 'bg-warning/10 text-warning border-warning/20' },
     not_started: { label: t('profile.kyc.notStarted'), variant: 'destructive' as const, className: '' },
   }[company.kycStatus];
 

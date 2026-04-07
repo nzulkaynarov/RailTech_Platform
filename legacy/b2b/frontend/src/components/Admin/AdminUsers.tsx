@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, Search, Briefcase, Edit, Trash2, Shield, MoreHorizontal, Users } from 'lucide-react';
 import { User, Company } from '@/api/accountsApi';
 import { useAuthStore } from '@/store/authStore';
@@ -11,9 +12,11 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { toast } from 'sonner';
 
 const ROLE_BADGES: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
     'ADMIN': { label: 'SYS_ADMIN', variant: 'default' },
@@ -24,6 +27,7 @@ const ROLE_BADGES: Record<string, { label: string; variant: 'default' | 'seconda
 };
 
 export const AdminUsers: React.FC = () => {
+    const { t } = useTranslation();
     const { user: currentUser } = useAuthStore();
 
     // UI states
@@ -85,7 +89,7 @@ export const AdminUsers: React.FC = () => {
             setSelectedUser(null);
         } catch (error: unknown) {
             const e = error as { response?: { data?: { detail?: string } }; message?: string };
-            alert('Error: ' + (e.response?.data?.detail || e.message || 'Unknown error'));
+            toast.error(e.response?.data?.detail || e.message || t('errors.unknown'));
         }
     };
 
@@ -95,15 +99,15 @@ export const AdminUsers: React.FC = () => {
                 <div className="flex items-center justify-between">
                     <div>
                         <CardTitle className="text-xl font-black tracking-tight uppercase">
-                            Personnel <span className="text-primary">Registry</span>
+                            {t('admin.users.title')} <span className="text-primary">{t('admin.users.registry')}</span>
                         </CardTitle>
                         <CardDescription className="text-xs font-bold uppercase tracking-widest mt-1">
-                            System Access Control & Authorization Management
+                            {t('admin.users.description')}
                         </CardDescription>
                     </div>
                     <Button size="sm" onClick={handleCreateClick}>
                         <Plus className="size-4" />
-                        Provision User
+                        {t('admin.users.provision')}
                     </Button>
                 </div>
             </CardHeader>
@@ -115,7 +119,7 @@ export const AdminUsers: React.FC = () => {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                         <Input
                             type="text"
-                            placeholder="Search by name or email..."
+                            placeholder={t('admin.users.searchPlaceholder')}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="pl-9"
@@ -123,36 +127,36 @@ export const AdminUsers: React.FC = () => {
                     </div>
                     <Select value={filterRole} onValueChange={setFilterRole}>
                         <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="Filter by role" />
+                            <SelectValue placeholder={t('admin.users.filterByRole')} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="ALL">All Roles</SelectItem>
-                            <SelectItem value="ADMIN">SYS_ADMIN</SelectItem>
-                            <SelectItem value="SALES_MANAGER">SALES_OPS</SelectItem>
-                            <SelectItem value="ACCOUNT_MANAGER">ACC_EXEC</SelectItem>
-                            <SelectItem value="CLIENT">EXT_PARTNER</SelectItem>
-                            <SelectItem value="GUEST">AUDIT_ONLY</SelectItem>
+                            <SelectItem value="ALL">{t('admin.users.allRoles')}</SelectItem>
+                            <SelectItem value="ADMIN">{t('roles.ADMIN')}</SelectItem>
+                            <SelectItem value="SALES_MANAGER">{t('roles.SALES_MANAGER')}</SelectItem>
+                            <SelectItem value="ACCOUNT_MANAGER">{t('roles.ACCOUNT_MANAGER')}</SelectItem>
+                            <SelectItem value="CLIENT">{t('roles.CLIENT')}</SelectItem>
+                            <SelectItem value="GUEST">{t('roles.GUEST')}</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
 
                 {/* Data Table */}
                 <div className="flex-1 overflow-auto rounded-md border">
-                    <table className="w-full text-left border-collapse">
-                        <thead className="sticky top-0 z-10 bg-muted text-muted-foreground text-xs font-semibold uppercase tracking-wider border-b">
-                            <tr>
-                                <th className="px-4 py-3">User</th>
-                                <th className="px-4 py-3">Role</th>
-                                <th className="px-4 py-3">Company</th>
-                                <th className="px-4 py-3">Status</th>
-                                <th className="px-4 py-3 text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y">
+                    <Table>
+                        <TableHeader className="sticky top-0 z-10 bg-muted">
+                            <TableRow>
+                                <TableHead>{t('admin.users.columns.user')}</TableHead>
+                                <TableHead>{t('admin.users.columns.role')}</TableHead>
+                                <TableHead>{t('admin.users.columns.company')}</TableHead>
+                                <TableHead>{t('admin.users.columns.status')}</TableHead>
+                                <TableHead className="text-right">{t('admin.users.columns.actions')}</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
                             {isLoading ? (
                                 Array.from({ length: 5 }).map((_, i) => (
-                                    <tr key={i}>
-                                        <td className="px-4 py-3">
+                                    <TableRow key={i}>
+                                        <TableCell>
                                             <div className="flex items-center gap-3">
                                                 <Skeleton className="size-8 rounded-full" />
                                                 <div className="space-y-1.5">
@@ -160,22 +164,22 @@ export const AdminUsers: React.FC = () => {
                                                     <Skeleton className="h-3 w-40" />
                                                 </div>
                                             </div>
-                                        </td>
-                                        <td className="px-4 py-3"><Skeleton className="h-5 w-20" /></td>
-                                        <td className="px-4 py-3"><Skeleton className="h-3.5 w-24" /></td>
-                                        <td className="px-4 py-3"><Skeleton className="h-5 w-10" /></td>
-                                        <td className="px-4 py-3"><Skeleton className="h-8 w-8 ml-auto" /></td>
-                                    </tr>
+                                        </TableCell>
+                                        <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                                        <TableCell><Skeleton className="h-3.5 w-24" /></TableCell>
+                                        <TableCell><Skeleton className="h-5 w-10" /></TableCell>
+                                        <TableCell><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+                                    </TableRow>
                                 ))
                             ) : users.length === 0 ? (
-                                <tr>
-                                    <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
+                                <TableRow>
+                                    <TableCell colSpan={5} className="py-12 text-center text-muted-foreground">
                                         <div className="flex flex-col items-center justify-center gap-2">
                                             <Users className="size-8 opacity-30" />
-                                            <p className="text-sm font-medium">No users found</p>
+                                            <p className="text-sm font-medium">{t('admin.users.noUsersFound')}</p>
                                         </div>
-                                    </td>
-                                </tr>
+                                    </TableCell>
+                                </TableRow>
                             ) : (
                                 users.map((user) => {
                                     const roleInfo = ROLE_BADGES[user.role_data?.code || 'GUEST'] || ROLE_BADGES['GUEST'];
@@ -183,8 +187,8 @@ export const AdminUsers: React.FC = () => {
                                     const isSelf = user.id === currentUser?.id;
 
                                     return (
-                                        <tr key={user.id} className="hover:bg-muted/50 transition-colors">
-                                            <td className="px-4 py-3">
+                                        <TableRow key={user.id}>
+                                            <TableCell>
                                                 <div className="flex items-center gap-3">
                                                     <Avatar size="sm">
                                                         <AvatarFallback className="text-xs font-bold">
@@ -200,14 +204,14 @@ export const AdminUsers: React.FC = () => {
                                                         </div>
                                                     </div>
                                                 </div>
-                                            </td>
-                                            <td className="px-4 py-3">
+                                            </TableCell>
+                                            <TableCell>
                                                 <Badge variant={roleInfo.variant} className="gap-1 text-xs">
                                                     <Shield className="size-3" />
                                                     {roleInfo.label}
                                                 </Badge>
-                                            </td>
-                                            <td className="px-4 py-3">
+                                            </TableCell>
+                                            <TableCell>
                                                 {company ? (
                                                     <div className="min-w-0">
                                                         <div className="text-sm text-muted-foreground flex items-center gap-1.5">
@@ -221,10 +225,10 @@ export const AdminUsers: React.FC = () => {
                                                         )}
                                                     </div>
                                                 ) : (
-                                                    <span className="text-xs text-muted-foreground">Internal</span>
+                                                    <span className="text-xs text-muted-foreground">{t('admin.users.internal')}</span>
                                                 )}
-                                            </td>
-                                            <td className="px-4 py-3">
+                                            </TableCell>
+                                            <TableCell>
                                                 <div className="flex items-center gap-2">
                                                     <Switch
                                                         size="sm"
@@ -236,22 +240,22 @@ export const AdminUsers: React.FC = () => {
                                                         variant={user.is_active ? 'secondary' : 'destructive'}
                                                         className="text-xs"
                                                     >
-                                                        {user.is_active ? 'Active' : 'Inactive'}
+                                                        {user.is_active ? t('common.active') : t('common.inactive')}
                                                     </Badge>
                                                 </div>
-                                            </td>
-                                            <td className="px-4 py-3 text-right">
+                                            </TableCell>
+                                            <TableCell className="text-right">
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
                                                         <Button variant="ghost" size="icon-xs">
                                                             <MoreHorizontal className="size-4" />
-                                                            <span className="sr-only">Actions</span>
+                                                            <span className="sr-only">{t('admin.users.columns.actions')}</span>
                                                         </Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuItem onClick={() => handleEditClick(user)}>
                                                             <Edit className="size-4" />
-                                                            Edit User
+                                                            {t('admin.users.editUser')}
                                                         </DropdownMenuItem>
                                                         <DropdownMenuSeparator />
                                                         <DropdownMenuItem
@@ -260,17 +264,17 @@ export const AdminUsers: React.FC = () => {
                                                             onClick={() => setDeleteDialogUser(user)}
                                                         >
                                                             <Trash2 className="size-4" />
-                                                            Delete User
+                                                            {t('admin.users.deleteUser')}
                                                         </DropdownMenuItem>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
-                                            </td>
-                                        </tr>
+                                            </TableCell>
+                                        </TableRow>
                                     );
                                 })
                             )}
-                        </tbody>
-                    </table>
+                        </TableBody>
+                    </Table>
                 </div>
             </CardContent>
 
@@ -278,23 +282,21 @@ export const AdminUsers: React.FC = () => {
             <Dialog open={!!deleteDialogUser} onOpenChange={(open) => !open && setDeleteDialogUser(null)}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Delete User</DialogTitle>
+                        <DialogTitle>{t('admin.users.deleteUser')}</DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to permanently delete{' '}
-                            <span className="font-semibold">{deleteDialogUser?.email}</span>?
-                            This action cannot be undone.
+                            {t('admin.users.deleteConfirmation', { email: deleteDialogUser?.email })}
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setDeleteDialogUser(null)}>
-                            Cancel
+                            {t('common.cancel')}
                         </Button>
                         <Button
                             variant="destructive"
                             onClick={handleDeleteUser}
                             disabled={deleteMutation.isPending}
                         >
-                            {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+                            {deleteMutation.isPending ? t('common.deleting') : t('common.delete')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

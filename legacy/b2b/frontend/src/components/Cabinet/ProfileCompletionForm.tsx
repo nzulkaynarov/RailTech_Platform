@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -21,13 +21,13 @@ const COMPANY_TYPES = [
     { code: 'SUPPLIER', icon: Store, labelKey: 'profileForm.typeSupplier', descKey: 'profileForm.typeSupplierDesc' },
 ] as const;
 
-const profileSchema = z.object({
-    companyName: z.string().min(2, 'Минимум 2 символа'),
-    inn: z.string().regex(/^\d{9}$/, 'ИНН должен содержать ровно 9 цифр'),
-    company_type: z.string().min(1, 'Выберите тип компании'),
+const createProfileSchema = (t: (key: string) => string) => z.object({
+    companyName: z.string().min(2, t('profileForm.validation.minChars')),
+    inn: z.string().regex(/^\d{9}$/, t('profileForm.validation.innFormat')),
+    company_type: z.string().min(1, t('profileForm.validation.selectType')),
 });
 
-type ProfileFormValues = z.infer<typeof profileSchema>;
+type ProfileFormValues = z.infer<ReturnType<typeof createProfileSchema>>;
 
 interface ProfileCompletionFormProps {
     onComplete: () => void;
@@ -37,6 +37,7 @@ export const ProfileCompletionForm: React.FC<ProfileCompletionFormProps> = ({ on
     const { t } = useTranslation();
     const { initAuth } = useAuthStore();
     const [serverError, setServerError] = useState('');
+    const profileSchema = useMemo(() => createProfileSchema(t), [t]);
 
     const form = useForm<ProfileFormValues>({
         resolver: zodResolver(profileSchema),

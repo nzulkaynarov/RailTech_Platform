@@ -72,11 +72,11 @@ export function PurchaseTemplatesPage() {
   };
 
   return (
-    <div className="space-y-8 p-6">
+    <div className="space-y-6">
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
+          <h1 className="text-2xl font-bold tracking-tight">
             {t('purchaseTemplates.title')}
           </h1>
           <p className="text-muted-foreground mt-1">
@@ -90,12 +90,12 @@ export function PurchaseTemplatesPage() {
       </div>
 
       {/* Template Cards */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {templates.map((template) => (
           <Card key={template.id} className="flex flex-col">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+                <Star className="h-5 w-5 text-warning fill-warning" />
                 {template.name}
               </CardTitle>
               <CardDescription className="flex flex-col gap-1 pt-1">
@@ -127,7 +127,7 @@ export function PurchaseTemplatesPage() {
 
       {/* Recent Orders Section */}
       <div className="space-y-4">
-        <h2 className="text-2xl font-semibold tracking-tight">
+        <h2 className="text-lg font-semibold tracking-tight">
           {t('purchaseTemplates.recentOrders')}
         </h2>
         <Card>

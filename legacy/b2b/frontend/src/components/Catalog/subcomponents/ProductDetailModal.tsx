@@ -172,16 +172,16 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                                     {/* MOQ */}
                                     <div className="flex items-center gap-3">
                                         <Package className="size-4 text-primary" aria-hidden="true" />
-                                        <span className="text-sm font-medium">Минимальный заказ: 1 шт</span>
+                                        <span className="text-sm font-medium">{t('productDetail.moq')}</span>
                                     </div>
 
                                     {/* Stock availability */}
                                     <div className="flex flex-wrap gap-2">
-                                        <Badge className="gap-1 border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400" variant="outline">
-                                            В наличии: 45 шт
+                                        <Badge className="gap-1 bg-success/10 text-success border-success/20" variant="outline">
+                                            {t('productDetail.inStock')}: 45 {t('common.pcs')}
                                         </Badge>
-                                        <Badge className="gap-1 border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400" variant="outline">
-                                            Под заказ: 14-21 дн.
+                                        <Badge className="gap-1 bg-warning/10 text-warning border-warning/20" variant="outline">
+                                            {t('productDetail.toOrder')}: 14-21 {t('productDetail.days')}
                                         </Badge>
                                     </div>
 
@@ -189,14 +189,14 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
 
                                     {/* Volume pricing table */}
                                     <div>
-                                        <p className="mb-3 text-sm font-semibold">Оптовые цены</p>
+                                        <p className="mb-3 text-sm font-semibold">{t('productDetail.volumePricing')}</p>
                                         <div className="rounded-lg border border-border overflow-hidden">
                                             <table className="w-full text-sm">
                                                 <thead>
                                                     <tr className="bg-muted text-muted-foreground">
-                                                        <th className="px-4 py-2 text-left font-medium">Кол-во</th>
-                                                        <th className="px-4 py-2 text-right font-medium">Цена / шт</th>
-                                                        <th className="px-4 py-2 text-right font-medium">Скидка</th>
+                                                        <th className="px-4 py-2 text-left font-medium">{t('productDetail.qty')}</th>
+                                                        <th className="px-4 py-2 text-right font-medium">{t('productDetail.pricePerUnit')}</th>
+                                                        <th className="px-4 py-2 text-right font-medium">{t('productDetail.discount')}</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>

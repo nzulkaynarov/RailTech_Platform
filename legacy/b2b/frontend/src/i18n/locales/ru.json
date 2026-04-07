@@ -17,9 +17,15 @@
     "add": "Добавить",
     "send": "Отправить",
     "update": "Обновить",
-    "updating": "Обновление..."
+    "updating": "Обновление...",
+    "pcs": "шт",
+    "active": "Активен",
+    "inactive": "Неактивен",
+    "deleting": "Удаление...",
+    "new": "Новое",
+    "retry": "Повторить",
+    "back": "Назад"
   },
-
   "auth": {
     "loginTitle": "Вход в кабинет",
     "loginSubtitle": "Введите данные для доступа к платформе",
@@ -37,7 +43,6 @@
     "hidePassword": "Скрыть пароль",
     "login": "Войти"
   },
-
   "landing": {
     "heroTitle": "Единая цифровая среда для <highlight>комплексного снабжения</highlight>",
     "heroSubtitle": "RailTech B2B Ecosystem автоматизирует закупки промышленного оборудования. Доступ к официальным КП, прозрачной логистике и защищённому документообороту.",
@@ -46,7 +51,6 @@
     "featureUnitEconomics": "Глубокая юнит-экономика",
     "featureUnitEconomicsDesc": "Прозрачный расчёт Landed Cost (FCA + DAP + Таможня) для каждого товара."
   },
-
   "catalog": {
     "title": "Каталог продукции",
     "searchPlaceholder": "Поиск по артикулу, названию или ГОСТ...",
@@ -116,10 +120,38 @@
       "noSpecifications": "Характеристики не указаны",
       "addToRequest": "Добавить в запрос",
       "priceFCA": "Цена FCA",
-      "priceRestricted": "Доступно после верификации"
+      "priceRestricted": "Доступно после верификации",
+      "inFavorites": "В избранном",
+      "saveToList": "Сохранить в список",
+      "article": "Артикул",
+      "gostDrawing": "ГОСТ / Чертёж",
+      "uom": "Ед. измерения",
+      "packaging": "Упаковка",
+      "analogs": "Аналоги",
+      "data": "Данные",
+      "moq": "Минимальный заказ: 1 шт",
+      "inStock": "В наличии",
+      "toOrder": "Под заказ",
+      "days": "дн.",
+      "volumePricing": "Оптовые цены",
+      "qty": "Кол-во",
+      "pricePerUnit": "Цена / шт",
+      "discount": "Скидка"
     }
   },
-
+  "productManagement": {
+    "catalog": "Каталог",
+    "productList": "Список товаров",
+    "categories": "Категории",
+    "equipmentGroups": "Группы техники",
+    "kpi": {
+      "totalItems": "Всего позиций",
+      "inStock": "В наличии",
+      "toOrder": "Под заказ",
+      "inCart": "В корзине",
+      "sourcing": "На поиске"
+    }
+  },
   "domains": {
     "RAILWAY_MACHINERY": "Железнодорожное оборудование",
     "GENERAL_GOODS": "Общепромышленные товары",
@@ -130,7 +162,6 @@
       "SERVICES": "Услуги"
     }
   },
-
   "dashboard": {
     "welcome": "Добро пожаловать, {{name}}",
     "kpi": {
@@ -160,7 +191,6 @@
     },
     "quickActions": "Быстрые действия"
   },
-
   "kyc": {
     "banner": {
       "unverified": "Пройдите верификацию для доступа ко всем функциям",
@@ -175,7 +205,6 @@
       "L3_CONTRACTED": "Договор"
     }
   },
-
   "sourcing": {
     "title": "Импорт спецификаций",
     "uploadTitle": "Загрузить файл",
@@ -189,7 +218,6 @@
     "itemName": "Наименование",
     "matchStatus": "Статус совпадения"
   },
-
   "quote": {
     "title": "Коммерческое предложение",
     "subtotal": "Промежуточный итог",
@@ -229,7 +257,6 @@
     "marginPercent": "Маржа %",
     "lineTotal": "Итого"
   },
-
   "admin": {
     "dashboard": {
       "title": "Панель управления",
@@ -266,7 +293,25 @@
       }
     },
     "users": {
-      "title": "Управление пользователями"
+      "title": "Персонал",
+      "registry": "Реестр",
+      "description": "Управление доступом и авторизацией",
+      "provision": "Создать пользователя",
+      "searchPlaceholder": "Поиск по имени или email...",
+      "filterByRole": "Фильтр по роли",
+      "allRoles": "Все роли",
+      "noUsersFound": "Пользователи не найдены",
+      "internal": "Внутренний",
+      "editUser": "Редактировать",
+      "deleteUser": "Удалить пользователя",
+      "deleteConfirmation": "Вы уверены, что хотите удалить {{email}}? Это действие нельзя отменить.",
+      "columns": {
+        "user": "Пользователь",
+        "role": "Роль",
+        "company": "Компания",
+        "status": "Статус",
+        "actions": "Действия"
+      }
     },
     "profile": {
       "title": "Мой",
@@ -328,7 +373,6 @@
       }
     }
   },
-
   "notifications": {
     "title": "Уведомления",
     "empty": "Уведомлений нет",
@@ -337,22 +381,21 @@
     "unread": "Непрочитанных: {{count}}",
     "viewAll": "Все уведомления"
   },
-
   "cart": {
-    "title": "Корзина",
-    "empty": "Корзина пуста",
+    "title": "Запрос на закупку",
+    "empty": "Запрос на закупку пуст",
     "emptyHint": "Добавьте товары из каталога",
     "addToCart": "В корзину",
     "addedToCart": "Добавлено",
     "remove": "Удалить",
-    "clear": "Очистить корзину",
-    "itemsCount": "{{count}} позиций",
+    "clear": "Очистить",
+    "submit": "Отправить запрос",
+    "itemsCount": "{{count}} позиций в запросе",
     "increase": "Увеличить количество",
     "decrease": "Уменьшить количество",
     "requestQuote": "Запросить КП",
     "requestHint": "Наш менеджер свяжется с вами в течение 1 рабочего дня"
   },
-
   "nav": {
     "home": "Главная",
     "catalog": "Каталог",
@@ -371,18 +414,19 @@
     "operationsCenter": "Operations Center",
     "dashboard": "Дашборд",
     "crmDeals": "Сделки CRM",
-    "quotePricing": "Расчёт Цен"
+    "quotePricing": "Расчёт Цен",
+    "backoffice": "Бэкофис"
   },
-
   "chat": {
-    "title": "Обсуждение сделки",
+    "title": "Сообщения",
+    "description": "Переписка с контрагентами",
+    "openAll": "Открыть все сообщения",
     "placeholder": "Введите сообщение...",
     "emptyState": "Начните обсуждение по этой сделке",
     "send": "Отправить",
     "connectionLost": "Соединение потеряно. Переподключение...",
     "connected": "Подключено"
   },
-
   "task": {
     "excelImport": "Импорт Excel",
     "catalogUpdate": "Обновление каталога",
@@ -393,7 +437,6 @@
     "initializing": "Подготовка...",
     "progress": "Прогресс"
   },
-
   "errors": {
     "network": "Ошибка сети. Проверьте подключение к интернету.",
     "unauthorized": "Сессия истекла. Войдите снова.",
@@ -406,7 +449,6 @@
     "operationFailed": "Операция не выполнена",
     "uploadFailure": "Ошибка загрузки"
   },
-
   "team": {
     "title": "Команда компании",
     "subtitle": "Управляйте доступами сотрудников к кабинету",
@@ -431,7 +473,6 @@
       "ACCOUNTANT": "Бухгалтер (Акты, Счета)"
     }
   },
-
   "company": {
     "title": "Профиль",
     "titleHighlight": "компании",
@@ -472,7 +513,6 @@
       "OTHER": "Другой документ"
     }
   },
-
   "profileForm": {
     "title": "Профиль компании",
     "step": "Заполните данные вашей компании для начала работы на платформе",
@@ -497,10 +537,10 @@
     "validation": {
       "minChars": "Минимум 2 символа",
       "innFormat": "ИНН должен содержать ровно 9 цифр",
-      "selectRole": "Выберите роль"
+      "selectRole": "Выберите роль",
+      "selectType": "Выберите тип компании"
     }
   },
-
   "passwordSetup": {
     "title": "Установка пароля",
     "step": "Шаг 2 из 4",
@@ -520,7 +560,6 @@
       "mismatch": "Пароли не совпадают."
     }
   },
-
   "registration": {
     "title": "Регистрация в RailTech",
     "subtitle": "Безопасный старт в B2B экосистеме",
@@ -542,7 +581,6 @@
       "minChars": "Минимум 2 символа"
     }
   },
-
   "nomenclaturePanel": {
     "editTitle": "Редактировать товар",
     "createTitle": "Новый товар",
@@ -577,7 +615,6 @@
       "priceRequired": "Базовая цена обязательна"
     }
   },
-
   "userPanel": {
     "editTitle": "Редактировать пользователя",
     "createTitle": "Создать пользователя",
@@ -610,7 +647,6 @@
       "lastNameRequired": "Фамилия обязательна"
     }
   },
-
   "kycManager": {
     "title": "KYC",
     "titleHighlight": "Verification",
@@ -646,19 +682,22 @@
       "contact": "OP_CONTACT"
     },
     "docTypes": {
-      "CHARTER": "Company Charter / Устав",
-      "LICENSE": "License / Лицензия",
-      "PASSPORT": "Director ID / Паспорт",
-      "TAX_CERT": "Tax Registry / Свид. ИНН",
-      "OTHER": "Misc / Другое"
+      "CHARTER": "Устав компании",
+      "LICENSE": "Лицензия",
+      "PASSPORT": "Паспорт директора",
+      "TAX_CERT": "Свид. ИНН",
+      "OTHER": "Другое",
+      "charter": "Устав компании",
+      "license": "Лицензия",
+      "passport": "Паспорт директора",
+      "taxCert": "Свид. ИНН",
+      "other": "Другое"
     }
   },
-
   "breadcrumb": {
     "productDetail": "Детали товара",
     "requestDetail": "Детали заявки"
   },
-
   "breadcrumbs": {
     "dashboard": "Дашборд",
     "products": "Каталог",
@@ -684,7 +723,6 @@
     "logistics": "Логистика",
     "purchaseTemplates": "Шаблоны закупок"
   },
-
   "onboarding": {
     "companyRegistration": "Регистрация компании",
     "companyRegistrationDesc": "Укажите данные вашей организации для начала работы",
@@ -711,12 +749,27 @@
     "registrationNote": "Нажимая «Зарегистрироваться», вы отправляете заявку на подключение. Администратор платформы проверит данные и подтвердит статус вашей компании.",
     "register": "Зарегистрироваться",
     "capabilities": {
-      "BUYER": ["Просмотр каталога товаров", "Импорт заявок из Excel", "Запрос коммерческих предложений", "Отслеживание сделок"],
-      "SELLER": ["Всё что может Покупатель", "Добавление товаров в наличии (с указанием производителя)", "CRM, котировки и расчёт себестоимости", "Работа с производителями-партнёрами"],
-      "MANUFACTURER": ["Всё что может Покупатель и Продавец", "Публикация собственной продукции", "Приём заказов от продавцов-партнёров", "Прямые продажи без посредников", "Выбор продавцов и назначение цен"]
+      "BUYER": [
+        "Просмотр каталога товаров",
+        "Импорт заявок из Excel",
+        "Запрос коммерческих предложений",
+        "Отслеживание сделок"
+      ],
+      "SELLER": [
+        "Всё что может Покупатель",
+        "Добавление товаров в наличии (с указанием производителя)",
+        "CRM, котировки и расчёт себестоимости",
+        "Работа с производителями-партнёрами"
+      ],
+      "MANUFACTURER": [
+        "Всё что может Покупатель и Продавец",
+        "Публикация собственной продукции",
+        "Приём заказов от продавцов-партнёров",
+        "Прямые продажи без посредников",
+        "Выбор продавцов и назначение цен"
+      ]
     }
   },
-
   "verification": {
     "applicationUnderReview": "Заявка на рассмотрении",
     "applicationUnderReviewDesc": "Администратор платформы проверяет данные вашей компании. Вы получите уведомление на {{email}} после подтверждения.",
@@ -730,38 +783,36 @@
     "startOver": "Начать заново",
     "enterSystem": "Войти в систему"
   },
-
   "companyStatus": {
     "BUYER": "Покупатель",
     "MANUFACTURER": "Производитель",
     "SELLER": "Продавец"
   },
-
   "roles": {
     "ADMIN": "Администратор",
     "MANAGER": "Менеджер",
-    "EMPLOYEE": "Сотрудник"
+    "EMPLOYEE": "Сотрудник",
+    "SALES_MANAGER": "Менеджер по продажам",
+    "ACCOUNT_MANAGER": "Аккаунт-менеджер",
+    "CLIENT": "Клиент",
+    "GUEST": "Гость"
   },
-
   "companyStatusDesc": {
     "BUYER": "Только запрашивает КП и закупает оборудование",
     "MANUFACTURER": "Производит, продаёт напрямую или через продавцов, может закупать",
     "SELLER": "Посредник: покупает и перепродаёт, может добавлять товары в наличии"
   },
-
   "productStatuses": {
     "in_stock": "В наличии",
     "to_order": "Под заказ",
     "sourcing": "Поиск",
     "inactive": "Неактивен"
   },
-
   "domainLabels": {
     "RAILWAY_MACHINERY": "ЖД и Техника",
     "GENERAL_GOODS": "Общие товары",
     "SERVICES": "Услуги"
   },
-
   "requestStatuses": {
     "draft": "Черновик",
     "submitted": "Отправлена",
@@ -775,10 +826,7 @@
     "kp_rejected": "КП отклонено",
     "deal_opened": "Сделка открыта"
   },
-
   "shell": {
-    "b2bPlatform": "B2B Платформа",
-    "workContext": "Контекст работы",
     "dashboard": "Дашборд",
     "catalog": "Каталог",
     "myRequests": "Мои заявки",
@@ -788,18 +836,18 @@
     "logistics": "Логистика",
     "analytics": "Аналитика",
     "nomenclature": "Номенклатура",
-    "products": "Продукция",
+    "products": "Товары",
     "categories": "Категории",
-    "equipmentGroups": "Группы техники",
+    "equipmentGroups": "Группы оборудования",
     "productionOrders": "Заказы на производство",
     "incomingOrders": "Входящие заказы",
     "productionSchedule": "График производства",
-    "quotes": "Котировки",
+    "quotes": "Коммерческие предложения",
     "productionAnalytics": "Аналитика производства",
-    "sourcing": "Закупки",
+    "sourcing": "Сорсинг",
     "requests": "Заявки",
-    "excelImport": "Импорт Excel",
-    "smartMatch": "Smart Match",
+    "excelImport": "Импорт из Excel",
+    "smartMatch": "Умный подбор",
     "crm": "CRM",
     "deals": "Сделки",
     "clients": "Клиенты",
@@ -808,16 +856,60 @@
     "users": "Пользователи",
     "integrations": "Интеграции",
     "help": "Помощь",
+    "b2bPlatform": "B2B Платформа",
+    "workContext": "Рабочий контекст",
     "profile": "Профиль",
+    "demoMode": "Демо режим",
     "logout": "Выйти",
-    "demoMode": "Демо-режим",
     "openMenu": "Открыть меню",
     "notifications": "Уведомления",
     "notificationsDesc": "Последние события в системе",
     "noNotifications": "Нет новых уведомлений",
-    "markAllRead": "Отметить все как прочитанные"
+    "markAllRead": "Отметить все как прочитанные",
+    "nav": {
+      "crmDeals": "Сделки (CRM)",
+      "catalog": "Каталог (PIM)",
+      "smartMatch": "Smart Match",
+      "kycManager": "KYC Manager",
+      "systemControl": "Управление"
+    },
+    "sections": {
+      "commerce": "Коммерция",
+      "infrastructure": "Инфраструктура"
+    },
+    "systemAdmin": "Системный админ",
+    "signOut": "Выйти",
+    "breadcrumb": {
+      "main": "Главная"
+    },
+    "globalSearch": "Глобальный поиск (Alt+S)..."
   },
-
+  "productDetail": {
+    "specifications": "Характеристики",
+    "description": "Описание",
+    "documents": "Документы",
+    "noImage": "Нет изображения",
+    "noSpecifications": "Характеристики не указаны",
+    "addToRequest": "Добавить в запрос",
+    "priceFCA": "Цена FCA",
+    "priceRestricted": "Доступно после верификации",
+    "inFavorites": "В избранном",
+    "saveToList": "Сохранить в список",
+    "article": "Артикул",
+    "gostDrawing": "ГОСТ / Чертёж",
+    "uom": "Ед. измерения",
+    "packaging": "Упаковка",
+    "analogs": "Аналоги",
+    "data": "Данные",
+    "moq": "Минимальный заказ: 1 шт",
+    "inStock": "В наличии",
+    "toOrder": "Под заказ",
+    "days": "дн.",
+    "volumePricing": "Оптовые цены",
+    "qty": "Кол-во",
+    "pricePerUnit": "Цена / шт",
+    "discount": "Скидка"
+  },
   "dashboardPage": {
     "title": "Дашборд",
     "period": "Период",
@@ -831,7 +923,19 @@
     "thisWeek": "Эта неделя",
     "lastWeek": "Прошлая неделя",
     "prevPeriod": "пред. период",
+    "vsPrevPeriod": "vs. пред. период",
     "topProducts": "Топ товаров по запросам",
+    "productName": "Наименование",
+    "requests": "Заявок",
+    "goal": "Цель",
+    "showDetails": "Показать детали",
+    "kpi": {
+      "activeRequests": "Активные заявки",
+      "catalogItems": "Позиций в каталоге",
+      "dealsVolume": "Объём сделок",
+      "clients": "Клиентов",
+      "requestCompletion": "Выполнение заявок"
+    },
     "id": "ID",
     "name": "Наименование",
     "quantity": "Кол-во",
@@ -856,7 +960,12 @@
       "sent": "Отправлено",
       "quoteReceived": "КП получено",
       "deal": "Сделка",
-      "completed": "Завершено"
+      "completed": "Завершено",
+      "statusActive": "Активные",
+      "statusInProgress": "В работе",
+      "statusQuoteReceived": "КП получено",
+      "statusCompleted": "Завершено",
+      "requestStatuses": "Статусы заявок"
     },
     "seller": {
       "dealVolume": "Объём сделок",
@@ -871,7 +980,10 @@
       "counterpartyBreakdown": "Контрагенты",
       "manufacturers": "Производители",
       "buyers": "Покупатели",
-      "intermediaries": "Посредники"
+      "intermediaries": "Посредники",
+      "dealsVolume": "Объём сделок",
+      "counterparties": "Контрагенты",
+      "requestCompletion": "Выполнение заявок"
     },
     "manufacturer": {
       "productionLoad": "Загрузка производства",
@@ -891,15 +1003,26 @@
       "inQueue": "В очереди",
       "productionPlan": "План производства",
       "target": "из {{target}}",
-      "completedPercent": "{{completed}}%"
+      "completedPercent": "{{completed}}%",
+      "dealsByMonth": "Сделки по месяцам"
     },
     "months": {
-      "sep": "Сен", "oct": "Окт", "nov": "Ноя", "dec": "Дек",
-      "jan": "Янв", "feb": "Фев", "mar": "Мар"
+      "sep": "Сен",
+      "oct": "Окт",
+      "nov": "Ноя",
+      "dec": "Дек",
+      "jan": "Янв",
+      "feb": "Фев",
+      "mar": "Мар"
     },
     "days": {
-      "mon": "Пн", "tue": "Вт", "wed": "Ср", "thu": "Чт",
-      "fri": "Пт", "sat": "Сб", "sun": "Вс"
+      "mon": "Пн",
+      "tue": "Вт",
+      "wed": "Ср",
+      "thu": "Чт",
+      "fri": "Пт",
+      "sat": "Сб",
+      "sun": "Вс"
     },
     "counterparties": {
       "clients": "Клиенты",
@@ -907,13 +1030,11 @@
       "factories": "Заводы"
     }
   },
-
   "demo": {
     "toggleLabel": "Демо-режим",
     "enabled": "Демо-режим включён",
     "disabled": "Демо-режим выключен"
   },
-
   "requestDetail": {
     "title": "Заявка {{number}}",
     "resetDemo": "Сбросить демо",
@@ -1078,7 +1199,6 @@
       "sent": "Отправлено"
     }
   },
-
   "profile": {
     "title": "Профиль",
     "subtitle": "Управление личными данными и настройками аккаунта",
@@ -1158,7 +1278,6 @@
       "confirmPassword": "Подтвердите пароль"
     }
   },
-
   "settings": {
     "title": "Настройки",
     "subtitle": "Конфигурация платформы и предпочтений",
@@ -1266,7 +1385,6 @@
       "view": "Просмотр"
     }
   },
-
   "sourcingHub": {
     "title": "Позиции заявки — сопоставление с каталогом",
     "kpi": {
@@ -1303,7 +1421,6 @@
       "noResults": "Ничего не найдено"
     }
   },
-
   "dealChat": {
     "tabs": {
       "chat": "Чат",
@@ -1326,14 +1443,12 @@
       "quoteDraft": "КП Черновик.pdf"
     }
   },
-
   "fab": {
     "telegram": "Telegram",
     "call": "Позвонить",
     "writeManager": "Написать менеджеру",
     "support": "Поддержка"
   },
-
   "tour": {
     "skip": "Пропустить",
     "next": "Далее",
@@ -1363,15 +1478,16 @@
       }
     }
   },
-
   "error": {
-    "title": "Сбой системы",
+    "title": "Что-то пошло не так",
     "defaultMessage": "Произошла непредвиденная ошибка в приложении.",
     "hardRefresh": "Перезагрузить",
     "returnHome": "На главную",
-    "supportId": "Техподдержка RailTech ID"
+    "supportId": "Техподдержка RailTech ID",
+    "description": "Произошла непредвиденная ошибка. Попробуйте перезагрузить страницу.",
+    "goHome": "На главную",
+    "reload": "Перезагрузить"
   },
-
   "purchaseTemplates": {
     "title": "Шаблоны закупок",
     "subtitle": "Сохранённые шаблоны для быстрого повторного заказа",
@@ -1379,6 +1495,7 @@
     "itemCount_one": "{{count}} позиция",
     "itemCount_few": "{{count}} позиции",
     "itemCount_many": "{{count}} позиций",
+    "itemCount_other": "{{count}} позиций",
     "itemCount": "{{count}} позиций",
     "lastOrder": "Последний заказ",
     "reorder": "Повторить заказ",
@@ -1401,7 +1518,6 @@
       "descriptionPlaceholder": "Введите описание шаблона"
     }
   },
-
   "pages": {
     "common": {
       "sectionInDevelopment": "Раздел в разработке",
@@ -1851,38 +1967,6 @@
       }
     }
   },
-
-  "shell": {
-    "nav": {
-      "crmDeals": "Сделки (CRM)",
-      "catalog": "Каталог (PIM)",
-      "smartMatch": "Smart Match",
-      "kycManager": "KYC Manager",
-      "systemControl": "Управление"
-    },
-    "sections": {
-      "commerce": "Коммерция",
-      "infrastructure": "Инфраструктура"
-    },
-    "systemAdmin": "Системный админ",
-    "signOut": "Выйти",
-    "breadcrumb": {
-      "main": "Главная"
-    },
-    "globalSearch": "Глобальный поиск (Alt+S)...",
-    "notifications": "Уведомления",
-    "notificationsDesc": "Последние события в системе",
-    "noNotifications": "Нет новых уведомлений",
-    "markAllRead": "Отметить все как прочитанные"
-  },
-
-  "error": {
-    "title": "Что-то пошло не так",
-    "description": "Произошла непредвиденная ошибка. Попробуйте перезагрузить страницу.",
-    "goHome": "На главную",
-    "reload": "Перезагрузить"
-  },
-
   "dealSplit": {
     "stageLabel": "Этап",
     "docsComingSoon": "Загрузка договоров, спецификаций и накладных будет доступна в следующей версии.",

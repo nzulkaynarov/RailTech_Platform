@@ -24,12 +24,9 @@ import {
   Calculator,
   Handshake,
   Check,
-  PanelLeftClose,
-  PanelLeftOpen,
   Minus,
   Plus,
   X,
-  Menu,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -66,6 +63,20 @@ import {
   SheetFooter,
 } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarRail,
+  SidebarTrigger,
+  useSidebar,
+} from '@/components/ui/sidebar';
 
 import { useTranslation } from 'react-i18next';
 import {
@@ -326,15 +337,23 @@ interface AppShellProps {
   onStartTour?: () => void;
 }
 
-export function AppShell({ children, activePage, onNavigate, onStartTour }: AppShellProps) {
+export function AppShell(props: AppShellProps) {
+  return (
+    <SidebarProvider>
+      <AppShellInner {...props} />
+    </SidebarProvider>
+  );
+}
+
+function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShellProps) {
   const { t } = useTranslation();
   const { role, activeStatus, profile, company, setActiveStatus } = useUserStore();
   const { items: cartItems, clearCart } = useCartStore();
   const cartCount = useCartCount();
   const { currency, setCurrency } = useCurrencyStore();
   const { isDemoMode, toggleDemoMode } = useDemoStore();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const { state } = useSidebar();
+  const sidebarCollapsed = state === 'collapsed';
   const [cartSheetOpen, setCartSheetOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
@@ -350,32 +369,28 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
   };
 
   return (
-    <TooltipProvider>
-      <div className="flex h-screen overflow-hidden bg-muted/30">
-        {/* Sidebar — hidden on mobile, collapsible on desktop */}
-        <aside className={cn(
-          'hidden md:flex flex-col border-r bg-background transition-all duration-200',
-          sidebarCollapsed ? 'w-16' : 'w-64'
-        )}>
-          {/* Company branding — top */}
-          <div className={cn(
-            'flex h-14 items-center border-b',
-            sidebarCollapsed ? 'justify-center px-2' : 'gap-2 px-4'
-          )}>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground flex-shrink-0">
-              <Layers className="h-4 w-4" />
-            </div>
-            {!sidebarCollapsed && (
-              <div className="flex-1 min-w-0">
-                <span className="text-sm font-bold tracking-tight leading-none truncate block">{company.name || 'RAILTECH'}</span>
-                <p className="text-xs text-muted-foreground truncate">{t('shell.b2bPlatform')}</p>
-              </div>
-            )}
-          </div>
+      <TooltipProvider>
+      <Sidebar collapsible="icon">
+        <SidebarHeader>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton size="lg" onClick={() => onNavigate('dashboard')}>
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                  <Layers className="size-4" />
+                </div>
+                <div className="grid flex-1 text-left text-sm leading-tight">
+                  <span className="truncate font-semibold">{company.name || 'RAILTECH'}</span>
+                  <span className="truncate text-xs text-muted-foreground">{t('shell.b2bPlatform')}</span>
+                </div>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarHeader>
 
+        <SidebarContent>
           {/* Company status switcher */}
-          {!sidebarCollapsed && company.statusEntries.filter(e => e.verification === 'verified').length > 1 && (
-            <div className="px-3 pt-3">
+          {company.statusEntries.filter(e => e.verification === 'verified').length > 1 && (
+            <div className="px-3 pt-3 group-data-[collapsible=icon]:hidden">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="flex w-full items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2 text-sm hover:bg-accent transition-colors h-auto">
@@ -413,20 +428,15 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
           )}
 
           {/* Search */}
-          {!sidebarCollapsed && (
-            <div className="px-3 pt-3">
-              <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input placeholder={`${t('common.search')}...`} className="h-8 pl-8 text-xs" />
-              </div>
+          <div className="px-3 pt-3 group-data-[collapsible=icon]:hidden">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input placeholder={`${t('common.search')}...`} className="h-8 pl-8 text-xs" />
             </div>
-          )}
+          </div>
 
           {/* Main navigation */}
-          <nav className={cn(
-            'flex-1 space-y-0.5 overflow-y-auto py-3 transition-all duration-200',
-            sidebarCollapsed ? 'px-1.5' : 'px-3'
-          )}>
+          <nav className="flex-1 space-y-0.5 overflow-y-auto py-3 px-3 group-data-[collapsible=icon]:px-1.5">
             {navigation.map((item) => (
               <SidebarNavItem key={item.label} item={item} onNavigate={onNavigate} collapsed={sidebarCollapsed} />
             ))}
@@ -435,46 +445,14 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
           <Separator />
 
           {/* Bottom navigation */}
-          <nav className={cn(
-            'space-y-0.5 py-2 transition-all duration-200',
-            sidebarCollapsed ? 'px-1.5' : 'px-3'
-          )}>
+          <nav className="space-y-0.5 py-2 px-3 group-data-[collapsible=icon]:px-1.5">
             {bottomNav.map((item) => (
               <SidebarNavItem key={item.label} item={item} onNavigate={onNavigate} collapsed={sidebarCollapsed} />
             ))}
           </nav>
+        </SidebarContent>
 
-          <Separator />
-
-          {/* Sidebar collapse button */}
-          <div className={cn(
-            'px-1.5 py-2 transition-all duration-200',
-            sidebarCollapsed ? '' : 'px-3'
-          )}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="w-full justify-center"
-                  onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                >
-                  {sidebarCollapsed ? (
-                    <PanelLeftOpen className="h-4 w-4" />
-                  ) : (
-                    <PanelLeftClose className="h-4 w-4" />
-                  )}
-                </Button>
-              </TooltipTrigger>
-              {sidebarCollapsed && <TooltipContent side="right">{t('catalog.sidebar.expand')}</TooltipContent>}
-            </Tooltip>
-          </div>
-
-          {/* User info — bottom */}
-          <div className={cn(
-            'transition-all duration-200',
-            sidebarCollapsed ? 'p-1.5' : 'p-3'
-          )}>
+        <SidebarFooter>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className={cn(
@@ -543,23 +521,17 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          </div>
-        </aside>
+        </SidebarFooter>
 
+        <SidebarRail />
+      </Sidebar>
+
+      <SidebarInset>
         {/* Main */}
-        <div className="flex flex-1 flex-col overflow-hidden">
           <header className="flex h-14 items-center justify-between border-b bg-background px-4 md:px-6">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              {/* Mobile hamburger */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="md:hidden"
-                aria-label={t('shell.openMenu')}
-                onClick={() => setMobileNavOpen(true)}
-              >
-                <Menu className="h-5 w-5" />
-              </Button>
+              <SidebarTrigger className="-ml-1" />
+              <Separator orientation="vertical" className="mr-2 h-4" />
               <StatusIcon status={activeStatus} className={cn('h-4 w-4 hidden sm:block', statusColor(activeStatus))} />
               <span className="hidden sm:inline">{t(`companyStatus.${activeStatus}`)}</span>
               <span className="hidden sm:inline text-muted-foreground/50">/</span>
@@ -605,9 +577,9 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
                   <Button variant="ghost" size="icon" className="relative" aria-label={t('cart.title')} onClick={() => setCartSheetOpen(true)}>
                     <ShoppingCart className="h-4 w-4" />
                     {cartCount > 0 && (
-                      <span className="absolute -right-0 -top-0 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
+                      <Badge className="absolute -top-1 -right-1 size-4 p-0 text-xs font-bold">
                         {cartCount}
-                      </span>
+                      </Badge>
                     )}
                   </Button>
                 </TooltipTrigger>
@@ -617,9 +589,9 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
                 <TooltipTrigger asChild>
                   <Button variant="ghost" size="icon" className="relative" aria-label={t('chat.title')} onClick={() => setChatOpen(true)}>
                     <MessageSquare className="h-4 w-4" />
-                    <span className="absolute -right-0 -top-0 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
+                    <Badge className="absolute -top-1 -right-1 size-4 p-0 text-xs font-bold">
                       2
-                    </span>
+                    </Badge>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>{t('chat.title')}</TooltipContent>
@@ -629,9 +601,9 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
                   <Button variant="ghost" size="icon" className="relative" aria-label={t('notifications.title')} onClick={() => { setNotificationsOpen(true); setNotificationCount(0); }}>
                     <Bell className="h-4 w-4" />
                     {notificationCount > 0 && (
-                      <span className="absolute -right-0 -top-0 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-xs font-medium text-destructive-foreground">
+                      <Badge variant="destructive" className="absolute -top-1 -right-1 size-4 p-0 text-xs font-bold">
                         {notificationCount}
-                      </span>
+                      </Badge>
                     )}
                   </Button>
                 </TooltipTrigger>
@@ -640,7 +612,7 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
             </div>
           </header>
           <main className="flex-1 overflow-y-auto p-6">{children}</main>
-        </div>
+      </SidebarInset>
 
         {/* Notifications Sheet */}
         <Sheet open={notificationsOpen} onOpenChange={setNotificationsOpen}>
@@ -670,8 +642,8 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
         <Sheet open={chatOpen} onOpenChange={setChatOpen}>
           <SheetContent side="right" className="w-full sm:w-96 flex flex-col">
             <SheetHeader>
-              <SheetTitle>Сообщения</SheetTitle>
-              <SheetDescription>Переписка с контрагентами</SheetDescription>
+              <SheetTitle>{t('chat.title')}</SheetTitle>
+              <SheetDescription>{t('chat.description')}</SheetDescription>
             </SheetHeader>
             <ScrollArea className="flex-1 -mx-6 px-6">
               <div className="space-y-3 pr-4">
@@ -708,7 +680,7 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
               </div>
             </ScrollArea>
             <SheetFooter>
-              <Button className="w-full">Открыть все сообщения</Button>
+              <Button className="w-full">{t('chat.openAll')}</Button>
             </SheetFooter>
           </SheetContent>
         </Sheet>
@@ -717,9 +689,9 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
         <Sheet open={cartSheetOpen} onOpenChange={setCartSheetOpen}>
           <SheetContent side="right" className="w-full sm:w-96 flex flex-col">
             <SheetHeader>
-              <SheetTitle>Запрос на закупку</SheetTitle>
+              <SheetTitle>{t('cart.title')}</SheetTitle>
               <SheetDescription>
-                {cartCount} {cartCount === 1 ? 'позиция' : 'позиций'} в запросе
+                {t('cart.itemsCount', { count: cartCount })}
               </SheetDescription>
             </SheetHeader>
 
@@ -727,7 +699,7 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
               <div className="flex flex-1 items-center justify-center">
                 <div className="text-center">
                   <ShoppingCart className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">Запрос на закупку пуст</p>
+                  <p className="text-sm text-muted-foreground">{t('cart.empty')}</p>
                 </div>
               </div>
             ) : (
@@ -737,7 +709,7 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
                     <div key={cartItem.product.id} className="flex items-start gap-3 rounded-lg border p-3">
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{cartItem.product.name}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">{cartItem.product.uom || 'шт'}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{cartItem.product.uom || t('common.pcs')}</p>
                       </div>
                       <div className="flex items-center gap-1 flex-shrink-0">
                         <Button
@@ -793,93 +765,19 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
                   setCartSheetOpen(false);
                 }}
               >
-                Очистить
+                {t('cart.clear')}
               </Button>
               <Button
                 className="w-full"
                 onClick={handleSubmitCart}
                 disabled={cartItems.length === 0}
               >
-                Отправить запрос
+                {t('cart.submit')}
               </Button>
             </SheetFooter>
           </SheetContent>
         </Sheet>
 
-        {/* Mobile Navigation Sheet */}
-        <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
-          <SheetContent side="left" className="w-72 p-0 flex flex-col">
-            <SheetHeader className="p-4 border-b">
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                  <Layers className="h-4 w-4" />
-                </div>
-                <SheetTitle className="text-sm font-bold">{company.name || 'RAILTECH'}</SheetTitle>
-              </div>
-              <SheetDescription className="sr-only">{t('shell.b2bPlatform')}</SheetDescription>
-            </SheetHeader>
-            <ScrollArea className="flex-1">
-              <nav className="space-y-0.5 p-3">
-                {navigation.map((item) => (
-                  <div key={item.label}>
-                    {item.children ? (
-                      <div className="space-y-0.5">
-                        <p className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                          {item.label}
-                        </p>
-                        {item.children.map((child) => (
-                          <Button
-                            key={child.id}
-                            variant="ghost"
-                            className={cn(
-                              'flex w-full items-center rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent h-auto justify-start',
-                              child.active ? 'bg-accent font-medium text-foreground' : 'text-muted-foreground'
-                            )}
-                            onClick={() => { onNavigate(child.id); setMobileNavOpen(false); }}
-                          >
-                            {child.label}
-                          </Button>
-                        ))}
-                      </div>
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        className={cn(
-                          'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent h-auto justify-start',
-                          item.active ? 'bg-accent font-medium text-foreground' : 'text-muted-foreground'
-                        )}
-                        onClick={() => { if (item.id) onNavigate(item.id); setMobileNavOpen(false); }}
-                      >
-                        {item.icon}
-                        <span>{item.label}</span>
-                        {item.badge != null && (
-                          <Badge className="ml-auto h-5 min-w-5 justify-center rounded-full px-1.5 text-xs">
-                            {item.badge}
-                          </Badge>
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </nav>
-              <Separator />
-              <nav className="space-y-0.5 p-3">
-                {bottomNav.map((item) => (
-                  <Button
-                    key={item.label}
-                    variant="ghost"
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent h-auto justify-start"
-                    onClick={() => { if (item.id) onNavigate(item.id); setMobileNavOpen(false); }}
-                  >
-                    {item.icon}
-                    <span>{item.label}</span>
-                  </Button>
-                ))}
-              </nav>
-            </ScrollArea>
-          </SheetContent>
-        </Sheet>
-      </div>
     </TooltipProvider>
   );
 }

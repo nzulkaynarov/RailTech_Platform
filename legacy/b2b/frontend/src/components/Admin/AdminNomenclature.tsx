@@ -132,7 +132,7 @@ export const AdminNomenclature: React.FC = () => {
                         placeholder={t('admin.nomenclature.searchPlaceholder')}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-9 pr-4 py-1.5 bg-muted border border-border rounded text-[11px] font-mono focus:ring-1 focus:ring-primary/50 outline-none transition-all text-foreground"
+                        className="w-full pl-9 pr-4 py-1.5 bg-muted border border-border rounded text-xs font-mono focus:ring-1 focus:ring-primary/50 outline-none transition-all text-foreground"
                     />
                 </div>
 
@@ -144,7 +144,7 @@ export const AdminNomenclature: React.FC = () => {
                             variant={domainFilter === domain ? 'secondary' : 'ghost'}
                             size="xs"
                             onClick={() => setDomainFilter(domain)}
-                            className="text-[9px] font-black uppercase tracking-widest"
+                            className="text-xs font-black uppercase tracking-widest"
                         >
                             {domain === 'ALL' ? 'GLOBAL' : domain === 'RAILWAY_MACHINERY' ? 'RAIL' : domain === 'GENERAL_GOODS' ? 'GOODS' : 'SVCS'}
                         </Button>
@@ -153,7 +153,7 @@ export const AdminNomenclature: React.FC = () => {
 
                 {selectedIds.length > 0 && (
                     <div className="flex items-center gap-2 pl-4 border-l border-border ml-2 bg-destructive/5 px-2 py-1 rounded">
-                        <span className="text-[9px] font-black text-destructive uppercase tracking-widest">{t('admin.nomenclature.selected', { count: selectedIds.length })}</span>
+                        <span className="text-xs font-black text-destructive uppercase tracking-widest">{t('admin.nomenclature.selected', { count: selectedIds.length })}</span>
                         <Button
                             variant="destructive"
                             size="icon-xs"
@@ -218,12 +218,12 @@ export const AdminNomenclature: React.FC = () => {
                                         </td>
                                         <td className="px-4 py-3 max-w-xs">
                                             <div className="flex flex-col min-w-0">
-                                                <span className="text-[11px] font-black text-foreground uppercase truncate group-hover:text-primary transition-colors">{product.name}</span>
-                                                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">{product.sku || 'SKU_MISSING'}</span>
+                                                <span className="text-xs font-black text-foreground uppercase truncate group-hover:text-primary transition-colors">{product.name}</span>
+                                                <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-0.5">{product.sku || 'SKU_MISSING'}</span>
                                             </div>
                                         </td>
                                         <td className="px-4 py-3">
-                                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${
+                                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-black uppercase tracking-widest border ${
                                                 product.domain_type_name === 'RAILWAY_MACHINERY' ? 'bg-primary/10 text-primary border-primary/20' :
                                                 product.domain_type_name === 'SERVICES' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
                                                 'bg-muted text-muted-foreground border-border'
@@ -233,18 +233,18 @@ export const AdminNomenclature: React.FC = () => {
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="text-xs font-black text-foreground font-mono leading-none">{parseFloat(product.base_price).toLocaleString()} {product.currency_data?.code || 'USD'}</div>
-                                            <div className="text-[8px] text-muted-foreground font-bold uppercase tracking-tight mt-1">per {product.uom_data?.name || 'unit'}</div>
+                                            <div className="text-xs text-muted-foreground font-bold uppercase tracking-tight mt-1">per {product.uom_data?.name || 'unit'}</div>
                                         </td>
                                         <td className="px-4 py-3 min-w-[140px]">
                                             <div className="flex flex-wrap gap-1">
                                                 {product.equipment_groups && product.equipment_groups.length > 0 ? (
                                                     product.equipment_groups.map(g => (
-                                                        <span key={g.id} className="text-[8px] font-black px-1.5 py-0.5 bg-muted text-muted-foreground rounded border border-border uppercase tracking-tighter">
+                                                        <span key={g.id} className="text-xs font-black px-1.5 py-0.5 bg-muted text-muted-foreground rounded border border-border uppercase tracking-tighter">
                                                             {g.name}
                                                         </span>
                                                     ))
                                                 ) : (
-                                                    <span className="text-[8px] text-muted-foreground font-bold uppercase tracking-widest opacity-50">{t('admin.nomenclature.universal')}</span>
+                                                    <span className="text-xs text-muted-foreground font-bold uppercase tracking-widest opacity-50">{t('admin.nomenclature.universal')}</span>
                                                 )}
                                             </div>
                                         </td>

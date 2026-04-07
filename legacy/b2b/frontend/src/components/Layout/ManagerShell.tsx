@@ -206,10 +206,10 @@ export const ManagerShell: React.FC = () => {
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 h-4" />
           <div className="flex flex-1 items-center gap-2">
-            <span className="text-sm text-muted-foreground">Backoffice</span>
+            <span className="text-sm text-muted-foreground">{t('nav.backoffice')}</span>
             <span className="text-muted-foreground/50">/</span>
             <span className="text-sm font-medium">
-              {role === 'ADMIN' ? 'System Admin' : 'Manager'}
+              {role === 'ADMIN' ? t('roles.ADMIN') : t('roles.MANAGER')}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -219,7 +219,7 @@ export const ManagerShell: React.FC = () => {
             <LanguageSwitcher />
           </div>
         </header>
-        <div className="flex-1 overflow-y-auto p-2">
+        <div className="flex-1 overflow-y-auto p-6">
           <Outlet />
         </div>
       </SidebarInset>
