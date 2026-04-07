@@ -18,12 +18,12 @@ import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { toast } from 'sonner';
 
-const ROLE_BADGES: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-    'ADMIN': { label: 'SYS_ADMIN', variant: 'default' },
-    'SALES_MANAGER': { label: 'SALES_OPS', variant: 'secondary' },
-    'ACCOUNT_MANAGER': { label: 'ACC_EXEC', variant: 'secondary' },
-    'CLIENT': { label: 'EXT_PARTNER', variant: 'outline' },
-    'GUEST': { label: 'AUDIT_ONLY', variant: 'outline' },
+const ROLE_BADGES: Record<string, { labelKey: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+    'ADMIN': { labelKey: 'roles.ADMIN', variant: 'default' },
+    'SALES_MANAGER': { labelKey: 'roles.SALES_MANAGER', variant: 'secondary' },
+    'ACCOUNT_MANAGER': { labelKey: 'roles.ACCOUNT_MANAGER', variant: 'secondary' },
+    'CLIENT': { labelKey: 'roles.CLIENT', variant: 'outline' },
+    'GUEST': { labelKey: 'roles.GUEST', variant: 'outline' },
 };
 
 export const AdminUsers: React.FC = () => {
@@ -208,7 +208,7 @@ export const AdminUsers: React.FC = () => {
                                             <TableCell>
                                                 <Badge variant={roleInfo.variant} className="gap-1 text-xs">
                                                     <Shield className="size-3" />
-                                                    {roleInfo.label}
+                                                    {t(roleInfo.labelKey)}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell>
