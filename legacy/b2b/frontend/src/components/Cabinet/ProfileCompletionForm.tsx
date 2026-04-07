@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -37,7 +37,7 @@ export const ProfileCompletionForm: React.FC<ProfileCompletionFormProps> = ({ on
     const { t } = useTranslation();
     const { initAuth } = useAuthStore();
     const [serverError, setServerError] = useState('');
-    const profileSchema = createProfileSchema(t);
+    const profileSchema = useMemo(() => createProfileSchema(t), [t]);
 
     const form = useForm<ProfileFormValues>({
         resolver: zodResolver(profileSchema),

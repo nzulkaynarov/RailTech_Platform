@@ -75,6 +75,7 @@ import {
   SidebarProvider,
   SidebarRail,
   SidebarTrigger,
+  useSidebar,
 } from '@/components/ui/sidebar';
 
 import { useTranslation } from 'react-i18next';
@@ -336,15 +337,23 @@ interface AppShellProps {
   onStartTour?: () => void;
 }
 
-export function AppShell({ children, activePage, onNavigate, onStartTour }: AppShellProps) {
+export function AppShell(props: AppShellProps) {
+  return (
+    <SidebarProvider>
+      <AppShellInner {...props} />
+    </SidebarProvider>
+  );
+}
+
+function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShellProps) {
   const { t } = useTranslation();
   const { role, activeStatus, profile, company, setActiveStatus } = useUserStore();
   const { items: cartItems, clearCart } = useCartStore();
   const cartCount = useCartCount();
   const { currency, setCurrency } = useCurrencyStore();
   const { isDemoMode, toggleDemoMode } = useDemoStore();
-  const [sidebarCollapsed] = useState(false);
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const { state } = useSidebar();
+  const sidebarCollapsed = state === 'collapsed';
   const [cartSheetOpen, setCartSheetOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
@@ -360,7 +369,6 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
   };
 
   return (
-    <SidebarProvider>
       <TooltipProvider>
       <Sidebar collapsible="icon">
         <SidebarHeader>
@@ -770,80 +778,6 @@ export function AppShell({ children, activePage, onNavigate, onStartTour }: AppS
           </SheetContent>
         </Sheet>
 
-        {/* Mobile Navigation Sheet */}
-        <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
-          <SheetContent side="left" className="w-72 p-0 flex flex-col">
-            <SheetHeader className="p-4 border-b">
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                  <Layers className="h-4 w-4" />
-                </div>
-                <SheetTitle className="text-sm font-bold">{company.name || 'RAILTECH'}</SheetTitle>
-              </div>
-              <SheetDescription className="sr-only">{t('shell.b2bPlatform')}</SheetDescription>
-            </SheetHeader>
-            <ScrollArea className="flex-1">
-              <nav className="space-y-0.5 p-3">
-                {navigation.map((item) => (
-                  <div key={item.label}>
-                    {item.children ? (
-                      <div className="space-y-0.5">
-                        <p className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                          {item.label}
-                        </p>
-                        {item.children.map((child) => (
-                          <Button
-                            key={child.id}
-                            variant="ghost"
-                            className={cn(
-                              'flex w-full items-center rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent h-auto justify-start',
-                              child.active ? 'bg-accent font-medium text-foreground' : 'text-muted-foreground'
-                            )}
-                            onClick={() => { onNavigate(child.id); setMobileNavOpen(false); }}
-                          >
-                            {child.label}
-                          </Button>
-                        ))}
-                      </div>
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        className={cn(
-                          'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent h-auto justify-start',
-                          item.active ? 'bg-accent font-medium text-foreground' : 'text-muted-foreground'
-                        )}
-                        onClick={() => { if (item.id) onNavigate(item.id); setMobileNavOpen(false); }}
-                      >
-                        {item.icon}
-                        <span>{item.label}</span>
-                        {item.badge != null && (
-                          <Badge className="ml-auto h-5 min-w-5 justify-center rounded-full px-1.5 text-xs">
-                            {item.badge}
-                          </Badge>
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </nav>
-              <Separator />
-              <nav className="space-y-0.5 p-3">
-                {bottomNav.map((item) => (
-                  <Button
-                    key={item.label}
-                    variant="ghost"
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent h-auto justify-start"
-                    onClick={() => { if (item.id) onNavigate(item.id); setMobileNavOpen(false); }}
-                  >
-                    {item.icon}
-                    <span>{item.label}</span>
-                  </Button>
-                ))}
-              </nav>
-            </ScrollArea>
-          </SheetContent>
-        </Sheet>
     </TooltipProvider>
-    </SidebarProvider>
   );
 }
