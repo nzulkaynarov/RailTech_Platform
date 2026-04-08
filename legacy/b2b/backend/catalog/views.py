@@ -46,11 +46,17 @@ class ProductViewSet(viewsets.ModelViewSet):
         user = self.request.user
         queryset = Product.objects.all().select_related(
             'category', 'manufacturer', 'domain_type', 'status'
-        ).prefetch_related('offers', 'images', 'documents')
+        ).prefetch_related('offers', 'offers__stock_status', 'images', 'documents')
         # Non-admins only see PUBLISHED products
         # Note: In V2, status is a ForeignKey to ProductStatus, but we filter by its code
         if not (user.is_authenticated and (user.is_superuser or user.is_manager_or_admin)):
             queryset = queryset.filter(status__code='PUBLISHED')
+
+        # Filter by stock_status (from supplier offers)
+        stock_status = self.request.query_params.get('stock_status')
+        if stock_status:
+            queryset = queryset.filter(offers__stock_status__code=stock_status).distinct()
+
         return queryset
 
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
