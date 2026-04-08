@@ -113,10 +113,10 @@ function TopProductsTable({ onProductClick, topProducts }: { onProductClick?: (i
 function BuyerDashboard({ onProductClick: _onProductClick, period: _period, stats }: { onProductClick?: (id: string) => void; period: string; stats: DashboardStats | null }) {
   const { t } = useTranslation();
   const buyerRequestsStatus = useMemo(() => stats ? [
-    { name: t('dashboardPage.buyer.statusActive'), value: stats.active_requests },
-    { name: t('dashboardPage.buyer.statusInProgress'), value: Math.round(stats.active_requests * 0.4) },
-    { name: t('dashboardPage.buyer.statusQuoteReceived'), value: Math.round(stats.active_requests * 0.2) },
-    { name: t('dashboardPage.buyer.statusCompleted'), value: stats.clients_count },
+    { name: t('dashboardPage.buyer.statusActive'), value: stats.active_requests ?? 0 },
+    { name: t('dashboardPage.buyer.statusInProgress'), value: stats.deals_in_progress ?? 0 },
+    { name: t('dashboardPage.buyer.statusQuoteReceived'), value: stats.quotes_received ?? 0 },
+    { name: t('dashboardPage.buyer.statusCompleted'), value: stats.deals_completed ?? 0 },
   ] : [], [stats, t]);
 
   return (

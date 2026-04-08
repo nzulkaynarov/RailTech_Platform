@@ -229,8 +229,15 @@ class CustomUser(AbstractUser):
     @property
     def primary_company(self):
         """Основная компания пользователя (is_primary=True)."""
-        membership = self.memberships.filter(is_primary=True, is_active=True).select_related('company').first()
-        return membership.company if membership else None
+        # Use Python filtering to leverage prefetched memberships cache
+        try:
+            memberships = self.memberships.all()
+            for m in memberships:
+                if m.is_primary and m.is_active:
+                    return m.company
+        except AttributeError:
+            pass
+        return None
 
 
 class CompanyMember(models.Model):

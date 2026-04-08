@@ -41,10 +41,15 @@ class CompanySerializer(serializers.ModelSerializer):
         read_only_fields = ['verification_status', 'created_at']
 
     def get_user_count(self, obj):
-        return obj.members.count()
+        # Use len() to leverage prefetched members cache instead of extra COUNT query
+        try:
+            return len(obj.members.all())
+        except AttributeError:
+            return 0
 
     def get_company_types(self, obj):
-        return list(obj.types.values_list('code', flat=True))
+        # Use Python list comprehension to leverage prefetched types cache
+        return [t.code for t in obj.types.all()]
 
 
 class UserSerializer(serializers.ModelSerializer):

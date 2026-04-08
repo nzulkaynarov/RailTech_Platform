@@ -169,6 +169,10 @@ export const crmApi = {
 		const response = await apiClient.get<PaginatedResponse<Message>>(`crm/messages/?deal_id=${dealId}`);
 		return response.data.results;
 	},
+	getRecentMessages: async () => {
+		const response = await apiClient.get<PaginatedResponse<Message>>('crm/messages/?ordering=-timestamp&page_size=20');
+		return response.data.results;
+	},
 	sendMessage: async (dealId: number, text: string) => {
 		const response = await apiClient.post<Message>('crm/messages/', {
 			deal: dealId,

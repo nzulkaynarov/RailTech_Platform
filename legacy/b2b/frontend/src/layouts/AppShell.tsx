@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   LayoutDashboard,
   Package,
@@ -88,6 +88,10 @@ import { useCartStore, useCartCount } from '@/store/cartStore';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useDemoStore } from '@/store/demoStore';
 import { useAuthStore } from '@/store/authStore';
+import { notificationsApi } from '@/api/notificationsApi';
+import type { Notification } from '@/api/notificationsApi';
+import { crmApi, type Message as CrmMessage } from '@/api/crmApi';
+import { toast } from 'sonner';
 
 /* ─── Types ─────────────────────────────────────────────────────────── */
 
@@ -357,15 +361,58 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
   const [cartSheetOpen, setCartSheetOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
-  const [notificationCount, setNotificationCount] = useState(3);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [chatMessages, setChatMessages] = useState<CrmMessage[]>([]);
+  const [submittingCart, setSubmittingCart] = useState(false);
+
+  const notificationCount = notifications.filter((n) => !n.is_read).length;
+
+  // Load real notifications from API
+  useState(() => {
+    notificationsApi.getNotifications()
+      .then((data) => setNotifications(data))
+      .catch(() => { /* silent — no notifications available */ });
+  });
+
+  // Load messages when chat sheet opens
+  useEffect(() => {
+    if (chatOpen) {
+      crmApi.getRecentMessages()
+        .then((data) => setChatMessages(data))
+        .catch(() => { /* silent */ });
+    }
+  }, [chatOpen]);
 
   const navigation = useMemo(() => getNavigation(activeStatus, activePage, role, t), [activeStatus, activePage, role, t]);
   const bottomNav = useMemo(() => getBottomNavigation(role, t), [role, t]);
 
-  const handleSubmitCart = () => {
-    clearCart();
-    setCartSheetOpen(false);
-    onNavigate('my-requests');
+  const handleSubmitCart = async () => {
+    if (cartItems.length === 0) return;
+    setSubmittingCart(true);
+    try {
+      const deal = await crmApi.createDeal({
+        title: `${t('cart.requestFrom')} ${new Date().toLocaleDateString()}`,
+        notes: cartItems.map((item) => `${item.product.name} x${item.quantity}`).join('\n'),
+      });
+      if (deal?.id) {
+        toast.success(t('cart.requestCreated', { id: deal.id }));
+      }
+      clearCart();
+      setCartSheetOpen(false);
+      onNavigate('my-requests');
+    } catch {
+      toast.error(t('cart.requestError'));
+    } finally {
+      setSubmittingCart(false);
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      await notificationsApi.markAllAsRead();
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    } catch { /* silent */ }
+    setNotificationsOpen(false);
   };
 
   return (
@@ -589,16 +636,13 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
                 <TooltipTrigger asChild>
                   <Button variant="ghost" size="icon" className="relative" aria-label={t('chat.title')} onClick={() => setChatOpen(true)}>
                     <MessageSquare className="h-4 w-4" />
-                    <Badge className="absolute -top-1 -right-1 size-4 p-0 text-xs font-bold">
-                      2
-                    </Badge>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>{t('chat.title')}</TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="relative" aria-label={t('notifications.title')} onClick={() => { setNotificationsOpen(true); setNotificationCount(0); }}>
+                  <Button variant="ghost" size="icon" className="relative" aria-label={t('notifications.title')} onClick={() => setNotificationsOpen(true)}>
                     <Bell className="h-4 w-4" />
                     {notificationCount > 0 && (
                       <Badge variant="destructive" className="absolute -top-1 -right-1 size-4 p-0 text-xs font-bold">
@@ -621,20 +665,32 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
               <SheetTitle>{t('shell.notifications')}</SheetTitle>
               <SheetDescription>{t('shell.notificationsDesc')}</SheetDescription>
             </SheetHeader>
-            <ScrollArea className="flex-1 -mx-6 px-6">
-              <div className="space-y-2 pr-4">
-                {/* TODO: Load notifications from API */}
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <Bell className="h-10 w-10 text-muted-foreground/50 mb-3" />
-                  <p className="text-sm text-muted-foreground">{t('shell.noNotifications')}</p>
-                </div>
+            <ScrollArea className="flex-1">
+              <div className="space-y-2 py-2">
+                {notifications.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <Bell className="h-10 w-10 text-muted-foreground/50 mb-3" />
+                    <p className="text-sm text-muted-foreground">{t('shell.noNotifications')}</p>
+                  </div>
+                ) : notifications.map((n) => (
+                  <div key={n.id} className={cn('rounded-lg border bg-card p-3 space-y-1 transition-colors', !n.is_read && 'bg-primary/5 border-primary/20')}>
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-sm font-medium leading-tight">{n.title}</p>
+                      {!n.is_read && <div className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" />}
+                    </div>
+                    <p className="text-xs text-muted-foreground line-clamp-2">{n.message}</p>
+                    <p className="text-xs text-muted-foreground">{new Date(n.created_at).toLocaleDateString()}</p>
+                  </div>
+                ))}
               </div>
             </ScrollArea>
-            <SheetFooter>
-              <Button variant="outline" className="w-full" onClick={() => setNotificationsOpen(false)}>
-                {t('shell.markAllRead')}
-              </Button>
-            </SheetFooter>
+            {notifications.length > 0 && (
+              <SheetFooter>
+                <Button variant="outline" className="w-full" onClick={handleMarkAllRead}>
+                  {t('shell.markAllRead')}
+                </Button>
+              </SheetFooter>
+            )}
           </SheetContent>
         </Sheet>
 
@@ -645,18 +701,25 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
               <SheetTitle>{t('chat.title')}</SheetTitle>
               <SheetDescription>{t('chat.description')}</SheetDescription>
             </SheetHeader>
-            <ScrollArea className="flex-1 -mx-6 px-6">
-              <div className="space-y-3 pr-4">
-                {/* TODO: Load messages from API — /api/v1/crm/messages/ */}
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <MessageSquare className="h-10 w-10 text-muted-foreground/50 mb-3" />
-                  <p className="text-sm text-muted-foreground">{t('chat.noMessages')}</p>
-                </div>
+            <ScrollArea className="flex-1">
+              <div className="space-y-2 py-2">
+                {chatMessages.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <MessageSquare className="h-10 w-10 text-muted-foreground/50 mb-3" />
+                    <p className="text-sm text-muted-foreground">{t('chat.noMessages')}</p>
+                  </div>
+                ) : chatMessages.map((msg) => (
+                  <div key={msg.id} className="rounded-lg border bg-card p-3 space-y-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-medium text-primary">{t('pages.quotes.dealRef', { id: msg.deal })}</p>
+                      <p className="text-xs text-muted-foreground">{new Date(msg.timestamp).toLocaleString()}</p>
+                    </div>
+                    <p className="text-sm leading-snug">{msg.text}</p>
+                    <p className="text-xs text-muted-foreground">{msg.sender_name}</p>
+                  </div>
+                ))}
               </div>
             </ScrollArea>
-            <SheetFooter>
-              <Button className="w-full">{t('chat.openAll')}</Button>
-            </SheetFooter>
           </SheetContent>
         </Sheet>
 
@@ -678,17 +741,27 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
                 </div>
               </div>
             ) : (
-              <ScrollArea className="flex-1 -mx-6 px-6">
-                <div className="space-y-3 pr-4">
+              <ScrollArea className="flex-1">
+                <div className="space-y-3 py-2">
                   {cartItems.map((cartItem) => (
-                    <div key={cartItem.product.id} className="flex items-start gap-3 rounded-lg border p-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{cartItem.product.name}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">{cartItem.product.uom || t('common.pcs')}</p>
-                      </div>
-                      <div className="flex items-center gap-1 flex-shrink-0">
+                    <div key={cartItem.product.id} className="rounded-lg border bg-card p-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium leading-snug">{cartItem.product.name}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{cartItem.product.uom || t('common.pcs')}</p>
+                        </div>
                         <Button
                           variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 shrink-0"
+                          onClick={() => useCartStore.getState().removeItem(cartItem.product.id)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      <div className="flex items-center gap-1 mt-2">
+                        <Button
+                          variant="outline"
                           size="icon"
                           className="h-7 w-7"
                           onClick={() => useCartStore.setState(state => ({
@@ -701,9 +774,9 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
                         >
                           <Minus className="h-3 w-3" />
                         </Button>
-                        <span className="w-7 text-center text-xs font-medium">{cartItem.quantity}</span>
+                        <span className="w-8 text-center text-sm font-medium tabular-nums">{cartItem.quantity}</span>
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="icon"
                           className="h-7 w-7"
                           onClick={() => useCartStore.setState(state => ({
@@ -715,14 +788,6 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
                           }))}
                         >
                           <Plus className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 ml-1"
-                          onClick={() => useCartStore.getState().removeItem(cartItem.product.id)}
-                        >
-                          <X className="h-3 w-3" />
                         </Button>
                       </div>
                     </div>
@@ -745,9 +810,9 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
               <Button
                 className="w-full"
                 onClick={handleSubmitCart}
-                disabled={cartItems.length === 0}
+                disabled={cartItems.length === 0 || submittingCart}
               >
-                {t('cart.submit')}
+                {submittingCart ? t('common.loading') : t('cart.submit')}
               </Button>
             </SheetFooter>
           </SheetContent>

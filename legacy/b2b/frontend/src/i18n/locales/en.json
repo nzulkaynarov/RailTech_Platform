@@ -471,7 +471,10 @@
     "increase": "Increase quantity",
     "decrease": "Decrease quantity",
     "requestQuote": "Request Quote",
-    "requestHint": "Our manager will contact you within 1 business day"
+    "requestHint": "Our manager will contact you within 1 business day",
+    "requestFrom": "Request from",
+    "requestCreated": "Request #{{id}} created",
+    "requestError": "Failed to create request"
   },
   "nav": {
     "home": "Home",
@@ -1434,11 +1437,14 @@
       "namePlaceholder": "Enter template name",
       "description": "Description",
       "descriptionPlaceholder": "Enter template description"
-    }
+    },
+    "emptyTitle": "No saved templates",
+    "emptyDescription": "Create a purchase template to quickly repeat frequent orders. Templates save your product list and quantities."
   },
   "requestDetail": {
     "title": "Request {{number}}",
     "resetDemo": "Reset demo",
+    "resetDemoHint": "Resets the demo request flow to its initial state. Use to walk through the processing steps again.",
     "reset": "Reset",
     "importSummary": "Excel import · {{count}} items · {{date}}",
     "steps": {
@@ -1729,7 +1735,22 @@
         "deadline": "Response deadline",
         "actions": "Actions"
       },
-      "dealRef": "Deal #{{id}}"
+      "dealRef": "Deal #{{id}}",
+      "actions": {
+        "view": "View",
+        "sendToClient": "Send to client",
+        "approve": "Approve",
+        "reject": "Reject",
+        "downloadPDF": "Download PDF",
+        "generatePDF": "Generate PDF"
+      },
+      "toast": {
+        "sentSuccess": "Quote #{{id}} sent to client",
+        "approvedSuccess": "Quote #{{id}} approved",
+        "rejectedSuccess": "Quote #{{id}} rejected",
+        "pdfGenerated": "PDF generated",
+        "actionError": "Failed to perform action"
+      }
     },
     "clients": {
       "title": "Clients",
@@ -1974,6 +1995,7 @@
     "myRequests": {
       "title": "My Requests",
       "description": "Track your requests and orders",
+      "deal": "Request",
       "stats": {
         "active": "Active",
         "quoteReceived": "Quote received",

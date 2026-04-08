@@ -41,6 +41,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 import { useUserStore } from '@/store/userStore';
 import {
@@ -177,9 +178,18 @@ function BuyerView({ onBack }: { onBack: () => void; onNavigate: (t: string) => 
             {t('requestDetail.importSummary', { count: request.items.length, date: request.createdAt })}
           </p>
         </div>
-        <Button variant="outline" size="sm" className="gap-2" onClick={resetFlow}>
-          <RotateCcw className="h-3.5 w-3.5" /> {t('requestDetail.resetDemo')}
-        </Button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2" onClick={resetFlow}>
+                <RotateCcw className="h-3.5 w-3.5" /> {t('requestDetail.resetDemo')}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{t('requestDetail.resetDemoHint')}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
 
       {/* Progress steps */}

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { apiClient } from '../api/client';
 import { User } from '../api/accountsApi';
 
 export type UserRole = 'GUEST' | 'CLIENT' | 'SALES_MANAGER' | 'ACCOUNT_MANAGER' | 'ADMIN';
@@ -87,21 +88,15 @@ export const useAuthStore = create<AuthState>()(
 
                 set({ isLoading: true });
                 try {
-                    const response = await fetch(`${API_URL}/api/v1/accounts/users/me/`, {
-                        headers: { Authorization: `Bearer ${accessToken}` },
-                    });
-
-                    if (!response.ok) {
-                        // Token expired or invalid
-                        get().logout();
-                        return;
-                    }
-
-                    const user: User = await response.json();
-                    // Use common setter to handle mapping
+                    // Use apiClient which has the refresh interceptor —
+                    // if the access token is expired, it will automatically
+                    // refresh using the stored refresh token before retrying
+                    const response = await apiClient.get<User>('accounts/users/me/');
+                    const user = response.data;
                     get().setUser(user);
                     set({ isAuthenticated: true });
                 } catch {
+                    // Both access and refresh tokens invalid — logout
                     get().logout();
                 } finally {
                     set({ isLoading: false });

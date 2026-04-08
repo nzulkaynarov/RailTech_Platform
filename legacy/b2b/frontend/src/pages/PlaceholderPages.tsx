@@ -4,7 +4,7 @@ import {
   Layers, Tags, Truck, Shield, ChevronRight, FileSpreadsheet,
   Clock, CheckCircle2, Pause, Check,
   ChevronDown, Download, MapPin, Calendar,
-  Mail, MessageSquare,
+  Mail, MessageSquare, MoreHorizontal, Send, ThumbsUp, ThumbsDown, FileDown,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -18,10 +18,18 @@ import { usePageStats } from '@/hooks/usePageStats';
 import { Progress } from '@/components/ui/progress';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useDeals, useAnalytics, useQuotes } from '@/hooks/useCRM';
+import { useDeals, useAnalytics, useQuotes, useSendQuoteToClient, useApproveQuote } from '@/hooks/useCRM';
 import { useCompanies, useUsers } from '@/hooks/useAccounts';
 import { useCategories, useEquipmentGroups } from '@/hooks/useCatalog';
+import { crmApi } from '@/api/crmApi';
 import type { Deal, Quote } from '@/api/crmApi';
+import { toast } from 'sonner';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import type { Company, User } from '@/api/accountsApi';
 import type { Category, EquipmentGroup } from '@/api/catalogApi';
 
@@ -140,24 +148,54 @@ function DemoRequestCard({ onOpen }: { onOpen: () => void }) {
 export function SourcingRequestsPage({ onNavigate }: { onNavigate?: (t: string) => void }) {
   const { t } = useTranslation();
   const { data: ps } = usePageStats();
+  const { data: deals, isLoading } = useDeals();
   const s = ps?.sourcing;
+
+  const sourcingDeals = (deals ?? []).filter((d: Deal) =>
+    d.stage_code === 'SOURCING' || d.stage_code === 'CALCULATING' || d.stage_code === 'DRAFT'
+  );
+
   return (
     <PageShell
       title={t('pages.sourcingRequests.title')}
       description={t('pages.sourcingRequests.description')}
       icon={<ClipboardList className="h-5 w-5" />}
       stats={[
-        { label: t('pages.sourcingRequests.stats.total'), value: String(s?.total ?? '—') },
+        { label: t('pages.sourcingRequests.stats.total'), value: String(s?.total ?? sourcingDeals.length) },
         { label: t('pages.sourcingRequests.stats.new'), value: String(s?.new ?? '—') },
         { label: t('pages.sourcingRequests.stats.inProgress'), value: String(s?.in_progress ?? '—') },
         { label: t('pages.sourcingRequests.stats.completed'), value: String(s?.completed ?? '—') },
       ]}
-      actions={[{ label: t('pages.sourcingRequests.createRequest') }]}
+      actions={[{ label: t('pages.sourcingRequests.createRequest'), onClick: () => onNavigate?.('catalog') }]}
     >
-      <div className="space-y-2">
-        <p className="text-sm font-medium text-muted-foreground">{t('pages.sourcingRequests.activeRequests')}</p>
-        <DemoRequestCard onOpen={() => onNavigate?.('request-detail')} />
-      </div>
+      {isLoading ? <LoadingRows rows={3} /> : sourcingDeals.length === 0 ? (
+        <EmptyState icon={<ClipboardList className="h-5 w-5" />} message={t('pages.common.noData')} />
+      ) : (
+        <div className="space-y-2">
+          {sourcingDeals.map((deal: Deal) => (
+            <Card key={deal.id} className="cursor-pointer hover:border-primary/50 transition-colors py-0 gap-0">
+              <CardContent className="px-4 py-4">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <FileSpreadsheet className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{deal.title ?? `#${deal.id}`}</span>
+                      <Badge variant="outline" className="text-xs">{deal.stage_name}</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {deal.client_name ?? deal.company_name ?? '—'} · {new Date(deal.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <p className="text-sm font-bold text-primary tabular-nums">{deal.total_value ? `$${Number(deal.total_value).toLocaleString()}` : '—'}</p>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </PageShell>
   );
 }
@@ -315,6 +353,8 @@ export function QuotesPage() {
   const { activeStatus } = useUserStore();
   const { data: ps } = usePageStats();
   const { data: quotes, isLoading } = useQuotes();
+  const sendToClient = useSendQuoteToClient();
+  const approveQuote = useApproveQuote();
   const isBuyer = activeStatus === 'BUYER';
 
   const quotesList = quotes ?? [];
@@ -334,6 +374,58 @@ export function QuotesPage() {
         { label: t('pages.quotes.stats.approved'), value: String(ps?.quotes?.approved ?? '—') },
         { label: t('pages.quotes.stats.pipeline'), value: ps?.quotes?.pipeline ?? '—' },
       ];
+
+  const handleSendToClient = async (id: number) => {
+    try {
+      await sendToClient.mutateAsync(id);
+      toast.success(t('pages.quotes.toast.sentSuccess', { id }));
+    } catch {
+      toast.error(t('pages.quotes.toast.actionError'));
+    }
+  };
+
+  const handleApprove = async (id: number) => {
+    try {
+      await approveQuote.mutateAsync(id);
+      toast.success(t('pages.quotes.toast.approvedSuccess', { id }));
+    } catch {
+      toast.error(t('pages.quotes.toast.actionError'));
+    }
+  };
+
+  const handleReject = async (id: number) => {
+    try {
+      await crmApi.rejectQuote(id);
+      toast.success(t('pages.quotes.toast.rejectedSuccess', { id }));
+    } catch {
+      toast.error(t('pages.quotes.toast.actionError'));
+    }
+  };
+
+  const handleDownloadPDF = async (id: number) => {
+    try {
+      await crmApi.downloadQuotePDF(id);
+    } catch {
+      toast.error(t('pages.quotes.toast.actionError'));
+    }
+  };
+
+  const handleGeneratePDF = async (id: number) => {
+    try {
+      await crmApi.generateQuotePDF(id);
+      toast.success(t('pages.quotes.toast.pdfGenerated'));
+    } catch {
+      toast.error(t('pages.quotes.toast.actionError'));
+    }
+  };
+
+  const getStatusBadgeVariant = (statusName: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
+    const lower = statusName.toLowerCase();
+    if (lower.includes('approved') || lower.includes('согласов')) return 'default';
+    if (lower.includes('sent') || lower.includes('отправлен')) return 'secondary';
+    if (lower.includes('reject') || lower.includes('отклон')) return 'destructive';
+    return 'outline';
+  };
 
   return (
     <PageShell
@@ -369,15 +461,49 @@ export function QuotesPage() {
                       <td className="px-4 py-3 text-center tabular-nums">{q.items?.length ?? 0}</td>
                       <td className="px-4 py-3 text-right tabular-nums font-medium">${Number(q.total_incl_vat).toLocaleString()}</td>
                       <td className="px-4 py-3">
-                        <Badge variant={q.status_name === 'Approved' ? 'default' : 'secondary'}>
+                        <Badge variant={getStatusBadgeVariant(q.status_name)}>
                           {q.status_name}
                         </Badge>
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">{new Date(q.created_at).toLocaleDateString()}</td>
                       <td className="px-4 py-3 text-center">
-                        <Button variant="ghost" size="sm" className="h-8 w-8">
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {!isBuyer && (
+                              <>
+                                <DropdownMenuItem onClick={() => handleSendToClient(q.id)}>
+                                  <Send className="mr-2 h-4 w-4" />
+                                  {t('pages.quotes.actions.sendToClient')}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleGeneratePDF(q.id)}>
+                                  <FileText className="mr-2 h-4 w-4" />
+                                  {t('pages.quotes.actions.generatePDF')}
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                            {isBuyer && (
+                              <>
+                                <DropdownMenuItem onClick={() => handleApprove(q.id)}>
+                                  <ThumbsUp className="mr-2 h-4 w-4" />
+                                  {t('pages.quotes.actions.approve')}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleReject(q.id)}>
+                                  <ThumbsDown className="mr-2 h-4 w-4" />
+                                  {t('pages.quotes.actions.reject')}
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                            <DropdownMenuItem onClick={() => handleDownloadPDF(q.id)}>
+                              <FileDown className="mr-2 h-4 w-4" />
+                              {t('pages.quotes.actions.downloadPDF')}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </td>
                     </tr>
                   ))}
@@ -927,23 +1053,51 @@ export function HelpPage() {
 export function MyRequestsPage({ onNavigate }: { onNavigate?: (t: string) => void }) {
   const { data: ps } = usePageStats();
   const { t } = useTranslation();
+  const { data: deals, isLoading } = useDeals();
+
+  const myDeals = deals ?? [];
+
   return (
     <PageShell
       title={t('pages.myRequests.title')}
       description={t('pages.myRequests.description')}
       icon={<ShoppingCart className="h-5 w-5" />}
       stats={[
-        { label: t('pages.myRequests.stats.active'), value: String(ps?.my_requests?.active ?? '—') },
-        { label: t('pages.myRequests.stats.quoteReceived'), value: String(ps?.my_requests?.quote_received ?? '—') },
-        { label: t('pages.myRequests.stats.contract'), value: String(ps?.my_requests?.contract ?? '—') },
-        { label: t('pages.myRequests.stats.completed'), value: String(ps?.my_requests?.completed ?? '—') },
+        { label: t('pages.myRequests.stats.active'), value: String(ps?.my_requests?.active ?? myDeals.filter((d: Deal) => !['CLOSED_WON', 'CLOSED_LOST'].includes(d.stage_code ?? '')).length) },
+        { label: t('pages.myRequests.stats.quoteReceived'), value: String(ps?.my_requests?.quote_received ?? myDeals.filter((d: Deal) => d.stage_code === 'QUOTE_SENT').length) },
+        { label: t('pages.myRequests.stats.contract'), value: String(ps?.my_requests?.contract ?? myDeals.filter((d: Deal) => d.stage_code === 'CONTRACT_SIGNED').length) },
+        { label: t('pages.myRequests.stats.completed'), value: String(ps?.my_requests?.completed ?? myDeals.filter((d: Deal) => d.stage_code === 'CLOSED_WON').length) },
       ]}
-      actions={[{ label: t('pages.myRequests.newRequest') }]}
+      actions={[{ label: t('pages.myRequests.newRequest'), onClick: () => onNavigate?.('catalog') }]}
     >
-      <div className="space-y-2">
-        <p className="text-sm font-medium text-muted-foreground">{t('pages.myRequests.recentRequests')}</p>
-        <DemoRequestCard onOpen={() => onNavigate?.('request-detail')} />
-      </div>
+      {isLoading ? <LoadingRows rows={3} /> : myDeals.length === 0 ? (
+        <EmptyState icon={<ShoppingCart className="h-5 w-5" />} message={t('pages.common.noData')} />
+      ) : (
+        <div className="space-y-2">
+          {myDeals.map((deal: Deal) => (
+            <Card key={deal.id} className="cursor-pointer hover:border-primary/50 transition-colors py-0 gap-0">
+              <CardContent className="px-4 py-4">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <FileText className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{deal.title ?? `${t('pages.myRequests.deal')} #${deal.id}`}</span>
+                      <Badge variant="outline" className="text-xs">{deal.stage_name}</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {deal.company_name ?? '—'} · {new Date(deal.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <p className="text-sm font-bold text-primary tabular-nums">{deal.total_value ? `$${Number(deal.total_value).toLocaleString()}` : '—'}</p>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </PageShell>
   );
 }

@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.generics import RetrieveAPIView
 from rest_framework.parsers import MultiPartParser, FormParser
 
+from django.db.models import Prefetch
 from .models import Company, CustomUser, KYCDocument, CompanyMember, VerificationStatus
 from .serializers import (
     KYCDocumentSerializer, RegisterInterestSerializer,
@@ -147,7 +148,21 @@ class CompanyViewSet(viewsets.ModelViewSet):
 
 
 class UserViewSet(viewsets.ModelViewSet):
-    queryset = CustomUser.objects.all().prefetch_related('memberships').order_by('-date_joined')
+    queryset = CustomUser.objects.all().select_related(
+        'role',
+    ).prefetch_related(
+        Prefetch(
+            'memberships',
+            queryset=CompanyMember.objects.select_related(
+                'company__verification_status',
+                'role',
+            ).prefetch_related(
+                'company__kyc_documents__doc_type',
+                'company__types',
+                'company__members',
+            ),
+        ),
+    ).order_by('-date_joined')
     serializer_class = UserSerializer
     # Use custom IsAdminUser that checks SystemRole.code == 'ADMIN', not Django's is_staff
     from core.permissions import IsAdminUser as CustomIsAdminUser

@@ -66,6 +66,7 @@ export function PurchaseTemplatesPage() {
   const [templateDescription, setTemplateDescription] = useState("");
 
   const handleCreateTemplate = () => {
+    // TODO: Wire to backend API when purchase-templates endpoint is ready
     setTemplateName("");
     setTemplateDescription("");
     setCreateDialogOpen(false);
@@ -89,85 +90,16 @@ export function PurchaseTemplatesPage() {
         </Button>
       </div>
 
-      {/* Template Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {templates.map((template) => (
-          <Card key={template.id} className="flex flex-col">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Star className="h-5 w-5 text-warning fill-warning" />
-                {template.name}
-              </CardTitle>
-              <CardDescription className="flex flex-col gap-1 pt-1">
-                <span className="flex items-center gap-1.5">
-                  <FileText className="h-3.5 w-3.5" />
-                  {t('purchaseTemplates.itemCount', { count: template.itemCount })}
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Clock className="h-3.5 w-3.5" />
-                  {t('purchaseTemplates.lastOrder')}: {template.lastOrderDate}
-                </span>
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="mt-auto space-y-4">
-              <div className="text-2xl font-bold">{template.totalAmount}</div>
-              <div className="flex gap-2">
-                <Button className="flex-1">
-                  <ShoppingCart className="mr-2 h-4 w-4" />
-                  {t('purchaseTemplates.reorder')}
-                </Button>
-                <Button variant="outline">{t('purchaseTemplates.details')}</Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <Separator />
-
-      {/* Recent Orders Section */}
-      <div className="space-y-4">
-        <h2 className="text-lg font-semibold tracking-tight">
-          {t('purchaseTemplates.recentOrders')}
-        </h2>
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('purchaseTemplates.table.number')}</TableHead>
-                  <TableHead>{t('purchaseTemplates.table.date')}</TableHead>
-                  <TableHead>{t('purchaseTemplates.table.itemCount')}</TableHead>
-                  <TableHead>{t('purchaseTemplates.table.amount')}</TableHead>
-                  <TableHead>{t('purchaseTemplates.table.status')}</TableHead>
-                  <TableHead className="text-right">{t('purchaseTemplates.table.action')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recentOrders.map((order) => (
-                  <TableRow key={order.id}>
-                    <TableCell className="font-medium">{order.id}</TableCell>
-                    <TableCell>{order.date}</TableCell>
-                    <TableCell>{order.itemCount}</TableCell>
-                    <TableCell>{order.amount}</TableCell>
-                    <TableCell>
-                      <Badge variant={order.statusVariant}>
-                        {order.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="outline" size="sm">
-                        <RotateCcw className="mr-2 h-3.5 w-3.5" />
-                        {t('purchaseTemplates.repeat')}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Empty State */}
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+            <FileText className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <h3 className="text-lg font-semibold">{t('purchaseTemplates.emptyTitle')}</h3>
+          <p className="mt-2 max-w-md text-sm text-muted-foreground">{t('purchaseTemplates.emptyDescription')}</p>
+        </CardContent>
+      </Card>
 
       {/* Create Template Dialog */}
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
