@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Globe, Palette, Bell, Shield, Database, Plug, Users, Building2, FileText, Monitor,
@@ -49,6 +50,13 @@ export function SettingsPage() {
   const isAdmin = role === 'ADMIN';
   const isManagerOrAdmin = role === 'ADMIN' || role === 'MANAGER';
 
+  // Local preferences (localStorage)
+  const [currency, setCurrency] = useState(() => localStorage.getItem('railtech-currency') || 'usd');
+  const [timezone, setTimezone] = useState(() => localStorage.getItem('railtech-timezone') || 'tashkent');
+  const [dateFormat, setDateFormat] = useState(() => localStorage.getItem('railtech-dateformat') || 'dmy');
+  const [density, setDensity] = useState(() => localStorage.getItem('railtech-density') || 'normal');
+  const [sidebarMode, setSidebarMode] = useState(() => localStorage.getItem('railtech-sidebar') || 'expanded');
+
   return (
     <div className="flex flex-col gap-6 max-w-4xl">
       <div>
@@ -86,7 +94,13 @@ export function SettingsPage() {
               </SettingRow>
 
               <SettingRow icon={Database} title={t('settings.general.currency')} description={t('settings.general.currencyDesc')}>
-                <Select defaultValue="usd">
+                <Select
+                  value={currency}
+                  onValueChange={(val) => {
+                    setCurrency(val);
+                    localStorage.setItem('railtech-currency', val);
+                  }}
+                >
                   <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="usd">USD ($)</SelectItem>
@@ -98,7 +112,13 @@ export function SettingsPage() {
               </SettingRow>
 
               <SettingRow icon={Globe} title={t('settings.general.timezone')} description={t('settings.general.timezoneDesc')}>
-                <Select defaultValue="tashkent">
+                <Select
+                  value={timezone}
+                  onValueChange={(val) => {
+                    setTimezone(val);
+                    localStorage.setItem('railtech-timezone', val);
+                  }}
+                >
                   <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="tashkent">{t('settings.general.tzTashkent')}</SelectItem>
@@ -109,7 +129,13 @@ export function SettingsPage() {
               </SettingRow>
 
               <SettingRow icon={FileText} title={t('settings.general.dateFormat')} description={t('settings.general.dateFormatDesc')}>
-                <Select defaultValue="dmy">
+                <Select
+                  value={dateFormat}
+                  onValueChange={(val) => {
+                    setDateFormat(val);
+                    localStorage.setItem('railtech-dateformat', val);
+                  }}
+                >
                   <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="dmy">{t('settings.general.dateDMY')}</SelectItem>
@@ -141,7 +167,13 @@ export function SettingsPage() {
               </SettingRow>
 
               <SettingRow icon={Monitor} title={t('settings.appearance.density')} description={t('settings.appearance.densityDesc')}>
-                <Select defaultValue="normal">
+                <Select
+                  value={density}
+                  onValueChange={(val) => {
+                    setDensity(val);
+                    localStorage.setItem('railtech-density', val);
+                  }}
+                >
                   <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="compact">{t('settings.appearance.densityCompact')}</SelectItem>
@@ -152,7 +184,13 @@ export function SettingsPage() {
               </SettingRow>
 
               <SettingRow icon={Monitor} title={t('settings.appearance.sidebar')} description={t('settings.appearance.sidebarDesc')}>
-                <Select defaultValue="expanded">
+                <Select
+                  value={sidebarMode}
+                  onValueChange={(val) => {
+                    setSidebarMode(val);
+                    localStorage.setItem('railtech-sidebar', val);
+                  }}
+                >
                   <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="expanded">{t('settings.appearance.sidebarExpanded')}</SelectItem>

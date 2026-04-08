@@ -11,7 +11,7 @@ from rest_framework import filters
 
 
 class EquipmentGroupViewSet(viewsets.ModelViewSet):
-    queryset = EquipmentGroup.objects.all()
+    queryset = EquipmentGroup.objects.select_related('domain_type').all()
     serializer_class = EquipmentGroupSerializer
     filter_backends = [filters.SearchFilter]
     search_fields = ['name']
@@ -24,7 +24,7 @@ class EquipmentGroupViewSet(viewsets.ModelViewSet):
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
-    queryset = Category.objects.all()
+    queryset = Category.objects.select_related('domain_type').all()
     serializer_class = CategorySerializer
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
     filterset_fields = {
@@ -45,8 +45,16 @@ class ProductViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         queryset = Product.objects.all().select_related(
-            'category', 'manufacturer', 'domain_type', 'status'
-        ).prefetch_related('offers', 'offers__stock_status', 'images', 'documents')
+            'category', 'manufacturer', 'domain_type', 'status', 'uom'
+        ).prefetch_related(
+            'equipment_groups',
+            'images',
+            'documents',
+            'offers__stock_status',
+            'offers__supplier',
+            'offers__currency',
+            'offers__delivery_basis',
+        )
         # Non-admins only see PUBLISHED products
         # Note: In V2, status is a ForeignKey to ProductStatus, but we filter by its code
         if not (user.is_authenticated and (user.is_superuser or user.is_manager_or_admin)):
@@ -130,7 +138,9 @@ class ProductViewSet(viewsets.ModelViewSet):
 
 
 class SupplierOfferViewSet(viewsets.ModelViewSet):
-    queryset = SupplierOffer.objects.all()
+    queryset = SupplierOffer.objects.select_related(
+        'supplier', 'product', 'currency', 'delivery_basis', 'stock_status'
+    ).all()
     serializer_class = SupplierOfferSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['product', 'supplier', 'stock_status']
@@ -150,7 +160,6 @@ class ManufacturerViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         from accounts.models import Company
-        manufacturer_ids = Product.objects.exclude(
-            manufacturer__isnull=True
-        ).values_list('manufacturer_id', flat=True).distinct()
-        return Company.objects.filter(id__in=manufacturer_ids).order_by('name')
+        return Company.objects.filter(
+            manufactured_products__isnull=False
+        ).distinct().order_by('name')

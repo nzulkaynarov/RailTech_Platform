@@ -299,24 +299,34 @@ if os.environ.get('DATABASE_URL'):
     tmpPostgres = urlparse(os.environ.get("DATABASE_URL"))
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.postgresql',
+            'ENGINE': 'dj_db_conn_pool.backends.postgresql',
             'NAME': tmpPostgres.path.replace('/', ''),
             'USER': tmpPostgres.username,
             'PASSWORD': tmpPostgres.password,
             'HOST': tmpPostgres.hostname,
             'PORT': tmpPostgres.port or 5432,
+            'POOL_OPTIONS': {
+                'POOL_SIZE': 5,
+                'MAX_OVERFLOW': 10,
+                'RECYCLE': 300,
+            },
             'OPTIONS': dict(parse_qsl(tmpPostgres.query)),
         }
     }
 else:
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.postgresql',
+            'ENGINE': 'dj_db_conn_pool.backends.postgresql',
             'NAME': os.environ.get('POSTGRES_DB', 'railtech'),
             'USER': os.environ.get('POSTGRES_USER', 'postgres'),
             'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'postgres'),
             'HOST': os.environ.get('POSTGRES_HOST', 'db'),
             'PORT': os.environ.get('POSTGRES_PORT', '5432'),
+            'POOL_OPTIONS': {
+                'POOL_SIZE': 5,
+                'MAX_OVERFLOW': 10,
+                'RECYCLE': 300,
+            },
         }
     }
 
@@ -418,6 +428,15 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
+}
+
+# Cache (Redis — already running for Channels)
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': os.environ.get('REDIS_URL', 'redis://redis:6379/0'),
+        'TIMEOUT': 300,
+    }
 }
 
 # Celery Configuration Options

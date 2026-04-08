@@ -6,7 +6,14 @@ from .models import (
     Product, EquipmentGroup, Category,
     SupplierOffer, ProductImage, ProductDocument
 )
-from accounts.serializers import CompanySerializer
+from accounts.models import Company
+
+
+class CompanyLightSerializer(serializers.ModelSerializer):
+    """Lightweight company serializer for nested use — no extra queries."""
+    class Meta:
+        model = Company
+        fields = ['id', 'name', 'inn', 'logo']
 
 # --- Simple Reference Serializers ---
 
@@ -58,7 +65,7 @@ class ProductDocumentSerializer(serializers.ModelSerializer):
 
 
 class SupplierOfferSerializer(serializers.ModelSerializer):
-    supplier_data = CompanySerializer(source='supplier', read_only=True)
+    supplier_data = CompanyLightSerializer(source='supplier', read_only=True)
     currency_data = CurrencySerializer(source='currency', read_only=True)
     delivery_basis_data = DeliveryBasisSerializer(source='delivery_basis', read_only=True)
 
@@ -78,7 +85,7 @@ class SupplierOfferSerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
     # Readable Nested Objects (for GET)
     category_data = CategorySerializer(source='category', read_only=True)
-    manufacturer_data = CompanySerializer(source='manufacturer', read_only=True)
+    manufacturer_data = CompanyLightSerializer(source='manufacturer', read_only=True)
     uom_data = UnitOfMeasureSerializer(source='uom', read_only=True)
     equipment_groups_data = EquipmentGroupSerializer(source='equipment_groups', many=True, read_only=True)
 
@@ -117,22 +124,27 @@ class ProductSerializer(serializers.ModelSerializer):
     def get_domain_type_name(self, obj):
         return obj.domain_type.name if obj.domain_type else None
 
+    def _first_offer(self, obj):
+        """Get first active offer from prefetched data (no extra query)."""
+        offers = obj.offers.all()
+        active = next((o for o in offers if o.is_active), None)
+        return active or next(iter(offers), None)
+
     def get_stock_status(self, obj):
-        """Return stock_status code from the first active supplier offer."""
-        offer = obj.offers.filter(is_active=True).first() or obj.offers.first()
+        offer = self._first_offer(obj)
         if offer and offer.stock_status:
             return offer.stock_status.code
         return None
 
     def get_base_price(self, obj):
-        """Return base_price from the first active supplier offer."""
-        offer = obj.offers.filter(is_active=True).first() or obj.offers.first()
+        offer = self._first_offer(obj)
         if offer:
             return str(offer.base_price)
         return '0'
 
     def get_main_image_url(self, obj):
-        main_img = obj.images.filter(is_main=True).first() or obj.images.first()
+        images = obj.images.all()
+        main_img = next((i for i in images if i.is_main), None) or next(iter(images), None)
         if main_img:
             url = main_img.image.url if main_img.image else main_img.image_url
             if url:
@@ -143,7 +155,8 @@ class ProductSerializer(serializers.ModelSerializer):
         return None
 
     def get_main_document_url(self, obj):
-        doc = obj.documents.first()
+        docs = obj.documents.all()
+        doc = next(iter(docs), None)
         if doc:
             url = doc.file.url if doc.file else doc.file_url
             if url:

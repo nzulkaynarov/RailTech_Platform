@@ -38,6 +38,7 @@ django-import-export>=4.0
 django-formtools>=2.5
 whitenoise>=6.9.0
 django-celery-beat>=2.7.0
+django-db-connection-pool[postgresql]>=1.2.5
 django-storages[s3]>=1.14.4
 boto3>=1.35.0
 pytest>=7.4.0

@@ -145,7 +145,12 @@ class QuoteViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        queryset = Quote.objects.all().select_related('deal', 'status')
+        queryset = Quote.objects.all().select_related(
+            'deal', 'deal__company', 'deal__stage', 'status'
+        ).prefetch_related(
+            'items', 'items__product', 'items__product__domain_type',
+            'items__offer', 'items__offer__supplier', 'items__frozen_currency'
+        )
         if user.is_superuser or user.is_manager_or_admin:
             return queryset
 
@@ -225,7 +230,10 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        queryset = QuoteItem.objects.all().select_related('product', 'quote')
+        queryset = QuoteItem.objects.all().select_related(
+            'product', 'product__domain_type', 'quote',
+            'offer', 'offer__supplier', 'frozen_currency'
+        )
         if user.is_superuser or user.is_manager_or_admin:
             return queryset
 
@@ -262,8 +270,15 @@ class DashboardAnalyticsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        from django.core.cache import cache
         from catalog.models import Product
         from accounts.models import Company
+
+        period = request.query_params.get('period', '30d')
+        cache_key = f'dashboard_analytics_{period}'
+        cached = cache.get(cache_key)
+        if cached:
+            return Response(cached)
 
         period = request.query_params.get('period', '30d')
 
@@ -288,9 +303,11 @@ class DashboardAnalyticsView(APIView):
             created_at__lt=period_start
         )
 
-        # Calculate deals volume
-        current_volume = sum(d.total_value or Decimal('0') for d in period_deals)
-        prev_volume = sum(d.total_value or Decimal('0') for d in prev_period_deals)
+        # Calculate deals volume (aggregate in DB, not Python)
+        current_volume = period_deals.aggregate(
+            total=Sum('total_value'))['total'] or Decimal('0')
+        prev_volume = prev_period_deals.aggregate(
+            total=Sum('total_value'))['total'] or Decimal('0')
         volume_change = self._calculate_percentage_change(prev_volume, current_volume)
 
         # Active requests (not closed)
@@ -354,7 +371,7 @@ class DashboardAnalyticsView(APIView):
         total_quotes = Quote.objects.count()
         completion_percentage = (completed_quotes / total_quotes * 100) if total_quotes > 0 else 0
 
-        return Response({
+        data = {
             'deals_volume': float(current_volume),
             'deals_volume_change': volume_change,
             'active_requests': current_active,
@@ -369,7 +386,9 @@ class DashboardAnalyticsView(APIView):
             'counterparties': counterparties,
             'request_completion': round(completion_percentage, 1),
             'request_completion_goal': 80,
-        })
+        }
+        cache.set(cache_key, data, 60)
+        return Response(data)
 
     def _calculate_percentage_change(self, previous, current):
         """Calculate percentage change between two values."""
@@ -427,7 +446,7 @@ class DashboardAnalyticsView(APIView):
         """Get top products by deal frequency."""
         from catalog.models import Product
 
-        top = Product.objects.annotate(
+        top = Product.objects.select_related('category').annotate(
             deal_count=Count('quote_items', distinct=True)
         ).order_by('-deal_count')[:limit]
 
@@ -436,7 +455,7 @@ class DashboardAnalyticsView(APIView):
                 'id': str(p.id),
                 'name': p.name,
                 'quantity': p.deal_count,
-                'category': getattr(p.category, 'name', '') if hasattr(p, 'category') else '',
+                'category': p.category.name if p.category else '',
             }
             for p in top
         ]

@@ -180,20 +180,20 @@ export function ProfilePage() {
               <CardDescription>{t('profile.security.description')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Card className="flex items-center justify-between p-4">
+              <div className="flex items-center justify-between rounded-lg border p-4">
                 <div className="flex items-center gap-3">
                   <KeyRound className="h-5 w-5 text-muted-foreground" />
                   <div>
                     <p className="text-sm font-medium">{t('profile.security.password')}</p>
-                    <p className="text-xs text-muted-foreground">{t('profile.security.lastChanged')}: 15.01.2026</p>
+                    <p className="text-xs text-muted-foreground">{t('profile.security.lastChanged')}</p>
                   </div>
                 </div>
                 <Button variant="outline" size="sm" onClick={() => setPasswordDialog(true)}>
                   {t('profile.security.change')}
                 </Button>
-              </Card>
+              </div>
 
-              <Card className="flex items-center justify-between p-4">
+              <div className="flex items-center justify-between rounded-lg border p-4">
                 <div className="flex items-center gap-3">
                   <Shield className="h-5 w-5 text-muted-foreground" />
                   <div>
@@ -202,18 +202,18 @@ export function ProfilePage() {
                   </div>
                 </div>
                 <Switch />
-              </Card>
+              </div>
 
-              <Card className="flex items-center justify-between p-4">
+              <div className="flex items-center justify-between rounded-lg border p-4">
                 <div className="flex items-center gap-3">
                   <Globe className="h-5 w-5 text-muted-foreground" />
                   <div>
                     <p className="text-sm font-medium">{t('profile.security.activeSessions')}</p>
-                    <p className="text-xs text-muted-foreground">{t('profile.security.activeDevices', { count: 2 })}</p>
+                    <p className="text-xs text-muted-foreground">{t('profile.security.activeDevices')}</p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm">{t('profile.security.manage')}</Button>
-              </Card>
+                <Button variant="outline" size="sm" disabled>{t('profile.security.manage')}</Button>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -234,13 +234,13 @@ export function ProfilePage() {
                 { titleKey: 'profile.notifications.system', descKey: 'profile.notifications.systemDesc', defaultOn: false },
                 { titleKey: 'profile.notifications.emailDigest', descKey: 'profile.notifications.emailDigestDesc', defaultOn: false },
               ].map((item) => (
-                <Card key={item.titleKey} className="flex items-center justify-between p-4">
-                  <div>
+                <div key={item.titleKey} className="flex items-center justify-between rounded-lg border p-4">
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium">{t(item.titleKey)}</p>
                     <p className="text-xs text-muted-foreground">{t(item.descKey)}</p>
                   </div>
                   <Switch defaultChecked={item.defaultOn} />
-                </Card>
+                </div>
               ))}
             </CardContent>
           </Card>
