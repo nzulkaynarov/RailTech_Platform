@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Product } from '@/data/products';
+import type { Product } from '@/api/catalogApi';
 
 export interface CartItem {
   product: Product;
@@ -11,8 +11,8 @@ interface CartState {
   isOpen: boolean;
 
   addItem: (product: Product, qty?: number) => void;
-  removeItem: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
+  removeItem: (productId: number) => void;
+  updateQuantity: (productId: number, quantity: number) => void;
   clearCart: () => void;
   openCart: () => void;
   closeCart: () => void;
@@ -80,4 +80,4 @@ export const useCartStore = create<CartState>()((set, get) => ({
 
 /* ─── Selectors ───────────────────────────────────────────────────────── */
 export const useCartCount = () => useCartStore((s) => s.items.reduce((sum, i) => sum + i.quantity, 0));
-export const useIsInCart = (productId: string) => useCartStore((s) => s.items.some((i) => i.product.id === productId));
+export const useIsInCart = (productId: number) => useCartStore((s) => s.items.some((i) => i.product.id === productId));

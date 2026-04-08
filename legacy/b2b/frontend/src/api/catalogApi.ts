@@ -71,13 +71,13 @@ export interface Product {
 }
 
 export const catalogApi = {
-    getProducts: async (params?: { 
-        domain_type?: string, 
+    getProducts: async (params?: {
+        domain_type?: string,
         search?: string,
         category?: number,
         manufacturer?: number,
         equipment_groups?: number,
-        stock_status?: string
+        stock_status?: string,
     }): Promise<Product[]> => {
         let url = 'catalog/products/';
         if (params) {

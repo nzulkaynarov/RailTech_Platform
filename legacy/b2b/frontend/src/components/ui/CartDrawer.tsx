@@ -73,9 +73,9 @@ export const CartDrawer: React.FC = () => {
                                 <li key={product.id} className="flex gap-3 p-4">
                                     {/* Thumbnail */}
                                     <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted">
-                                        {product.images?.[0] ? (
+                                        {(product.main_image_url || product.images?.[0]?.image_url) ? (
                                             <img
-                                                src={product.images[0]}
+                                                src={product.main_image_url || product.images?.[0]?.image_url || ''}
                                                 alt={product.name}
                                                 className="h-full w-full object-contain"
                                             />
@@ -87,7 +87,7 @@ export const CartDrawer: React.FC = () => {
                                     {/* Details */}
                                     <div className="min-w-0 flex-1">
                                         <p className="mb-0.5 text-xs tabular-nums text-muted-foreground">
-                                            {product.article}
+                                            {product.sku}
                                         </p>
                                         <p className="line-clamp-2 text-sm font-medium leading-snug text-foreground">
                                             {product.name}

@@ -32,7 +32,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { StatusBadge } from '@/components/ui/StatusBadge';
+import { StatusBadge, getStockVariant } from '@/components/ui/StatusBadge';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
@@ -45,12 +46,8 @@ import {
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 
-import {
-  products as allProducts,
-  statusLabels,
-  domainLabels,
-  type Product,
-} from '@/data/products';
+import { useProducts } from '@/hooks/useCatalog';
+import type { Product } from '@/api/catalogApi';
 
 import { useUserStore } from '@/store/userStore';
 import { useCartStore } from '@/store/cartStore';
@@ -58,13 +55,7 @@ import { cn } from '@/lib/utils';
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 20, 50];
 
-/* Company ID for "our" company — resolved from auth store at runtime */
-const SELF_COMPANY_ID = 'C_SELF';
-// In production, manufacturer IDs come from the backend (company relationships)
-// TODO: Fetch from accountsApi when company relationships API is ready
-const MANUFACTURER_IDS = [SELF_COMPANY_ID];
-
-// ─── KPI Card (Shoppers-inspired with vs. period) ──────────────────────
+// ─── KPI Card ──────────────────────────────────────────────────────────
 
 interface KPICardProps {
   title: string;
@@ -72,10 +63,29 @@ interface KPICardProps {
   prevValue: number;
   icon: React.ReactNode;
   iconBg: string;
+  isLoading?: boolean;
 }
 
-function KPICard({ title, value, prevValue, icon, iconBg }: KPICardProps) {
+function KPICard({ title, value, prevValue, icon, iconBg, isLoading }: KPICardProps) {
   const { t } = useTranslation();
+
+  if (isLoading) {
+    return (
+      <Card className="py-4 gap-2">
+        <CardContent className="px-4">
+          <div className="flex items-start justify-between">
+            <div className="flex flex-col gap-1.5">
+              <Skeleton className="h-3 w-24" />
+              <Skeleton className="h-6 w-16" />
+              <Skeleton className="h-3 w-20" />
+            </div>
+            <Skeleton className="h-9 w-9 rounded-lg" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const diff = value - prevValue;
   const pct = prevValue > 0 ? ((diff / prevValue) * 100).toFixed(1) : '0';
   const isUp = diff >= 0;
@@ -108,37 +118,31 @@ function KPICard({ title, value, prevValue, icon, iconBg }: KPICardProps) {
   );
 }
 
-// ─── Status Badge ───────────────────────────────────────────────────────
+// ─── Stock Status Badge ────────────────────────────────────────────────
 
-const statusVariantMap: Record<Product['status'], 'success' | 'warning' | 'info' | 'danger'> = {
-  in_stock: 'success',
-  to_order: 'warning',
-  sourcing: 'info',
-  inactive: 'danger',
-};
-
-function StatusBadgeCustom({ status }: { status: Product['status'] }) {
+function StockStatusBadge({ status }: { status: string | null | undefined }) {
   const { t } = useTranslation();
+  if (!status) return <Badge variant="secondary" className="text-xs">{t('productManagement.filters.unknown')}</Badge>;
+  const labelMap: Record<string, string> = {
+    IN_STOCK: 'productStatuses.in_stock',
+    ON_ORDER: 'productStatuses.to_order',
+    EXPECTED: 'productStatuses.sourcing',
+    OUT_OF_STOCK: 'productStatuses.inactive',
+  };
   return (
     <StatusBadge
-      label={t(statusLabels[status])}
-      variant={statusVariantMap[status]}
+      label={t(labelMap[status] ?? status)}
+      variant={getStockVariant(status)}
     />
   );
 }
 
-function DomainBadge({ domain }: { domain: Product['domain'] }) {
-  const { t } = useTranslation();
+function DomainBadge({ domainName }: { domainName: string }) {
   return (
     <Badge variant="secondary" className="text-xs font-medium">
-      {t(domainLabels[domain])}
+      {domainName}
     </Badge>
   );
-}
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function getDomainGradient(_domain: Product['domain']): string {
-  return 'bg-muted';
 }
 
 // ─── Main Component ─────────────────────────────────────────────────────
@@ -160,60 +164,39 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
   const [domainFilter, setDomainFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [activeTab, setActiveTab] = useState('product_list');
   const [viewMode, setViewMode] = useState<ViewMode>(activeStatus === 'BUYER' ? 'grid' : 'list');
   const [cardSize, setCardSize] = useState<CardSize>('normal');
 
-  /* ─── Visibility rules ───────────────────────────────────────────── */
-  const visibleProducts = useMemo(() => {
-    switch (activeStatus) {
-      case 'BUYER':
-        // Buyers see all published (non-inactive) products — no prices
-        return allProducts.filter((p) => p.status !== 'inactive');
-      case 'MANUFACTURER':
-        // Manufacturers see own products (demo: includes SAUT/RATEP as "our factories")
-        return allProducts.filter((p) => MANUFACTURER_IDS.includes(p.ownerCompanyId));
-      case 'SELLER':
-        // Sellers see products from partnered manufacturers + own services
-        return allProducts.filter(
-          (p) => p.approvedSellers?.includes(SELF_COMPANY_ID) || p.ownerCompanyId === SELF_COMPANY_ID
-        );
-      default:
-        return allProducts;
-    }
-  }, [activeStatus]);
+  /* ─── Fetch products from API ────────────────────────────────────── */
+  const apiParams = useMemo(() => {
+    const params: Parameters<typeof useProducts>[0] = {};
+    if (domainFilter !== 'all') params.domain_type = domainFilter;
+    if (search.trim()) params.search = search.trim();
+    if (statusFilter !== 'all') params.stock_status = statusFilter;
+    return params;
+  }, [domainFilter, search, statusFilter]);
 
-  const filtered = useMemo(() => {
-    return visibleProducts.filter((p) => {
-      const searchLower = search.toLowerCase();
-      const matchesSearch =
-        search === '' ||
-        p.name.toLowerCase().includes(searchLower) ||
-        p.article.toLowerCase().includes(searchLower) ||
-        p.gost.toLowerCase().includes(searchLower) ||
-        p.manufacturer.toLowerCase().includes(searchLower) ||
-        p.category.toLowerCase().includes(searchLower);
-      const matchesStatus = statusFilter === 'all' || p.status === statusFilter;
-      const matchesDomain = domainFilter === 'all' || p.domain === domainFilter;
-      return matchesSearch && matchesStatus && matchesDomain;
-    });
-  }, [visibleProducts, search, statusFilter, domainFilter]);
+  const { data: products = [], isLoading } = useProducts(apiParams);
+
+  /* ─── Client-side filtering & pagination ─────────────────────────── */
+  const filtered = products;
 
   // KPI
-  const totalProducts = visibleProducts.length;
+  const totalProducts = products.length;
   const prevTotal = Math.max(1, totalProducts - 3);
-  const inStockCount = visibleProducts.filter((p) => p.status === 'in_stock').length;
+  const inStockCount = products.filter((p) => p.stock_status === 'IN_STOCK').length;
   const prevInStock = Math.max(1, inStockCount - 2);
-  const toOrderCount = visibleProducts.filter((p) => p.status === 'to_order').length;
+  const toOrderCount = products.filter((p) => p.stock_status === 'ON_ORDER').length;
   const prevToOrder = Math.max(1, toOrderCount - 1);
-  const sourcingCount = visibleProducts.filter((p) => p.status === 'sourcing').length;
+  const sourcingCount = products.filter((p) => p.stock_status === 'EXPECTED').length;
   const prevSourcing = Math.max(0, sourcingCount - 1);
 
   const totalPages = Math.ceil(filtered.length / perPage);
   const paginated = filtered.slice((currentPage - 1) * perPage, currentPage * perPage);
 
-  const toggleSelect = (id: string) => {
+  const toggleSelect = (id: number) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -231,7 +214,7 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
   };
 
   const handleRowClick = (product: Product) => {
-    onProductClick?.(product.id);
+    onProductClick?.(String(product.id));
   };
 
   /* ─── Status-aware labels ────────────────────────────────────────── */
@@ -340,6 +323,7 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
           prevValue={prevTotal}
           icon={<Package className="h-5 w-5 text-primary" />}
           iconBg="bg-primary/10"
+          isLoading={isLoading}
         />
         <KPICard
           title={t('productManagement.kpi.inStock')}
@@ -347,6 +331,7 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
           prevValue={prevInStock}
           icon={<PackageCheck className="h-5 w-5 text-success" />}
           iconBg="bg-success/10"
+          isLoading={isLoading}
         />
         <KPICard
           title={t('productManagement.kpi.toOrder')}
@@ -354,6 +339,7 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
           prevValue={prevToOrder}
           icon={<PackageSearch className="h-5 w-5 text-warning" />}
           iconBg="bg-warning/10"
+          isLoading={isLoading}
         />
         <KPICard
           title={activeStatus === 'BUYER' ? t('productManagement.kpi.inCart') : t('productManagement.kpi.sourcing')}
@@ -364,6 +350,7 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
             : <PackageX className="h-5 w-5 text-primary" />
           }
           iconBg="bg-primary/10"
+          isLoading={isLoading}
         />
       </div>
 
@@ -399,10 +386,10 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t('productManagement.filters.allStatuses')}</SelectItem>
-              <SelectItem value="in_stock">{t('productManagement.filters.inStock')}</SelectItem>
-              <SelectItem value="to_order">{t('productManagement.filters.toOrder')}</SelectItem>
-              <SelectItem value="sourcing">{t('productManagement.filters.sourcing')}</SelectItem>
-              {activeStatus !== 'BUYER' && <SelectItem value="inactive">{t('productManagement.filters.inactive')}</SelectItem>}
+              <SelectItem value="IN_STOCK">{t('productManagement.filters.inStock')}</SelectItem>
+              <SelectItem value="ON_ORDER">{t('productManagement.filters.toOrder')}</SelectItem>
+              <SelectItem value="EXPECTED">{t('productManagement.filters.sourcing')}</SelectItem>
+              {activeStatus !== 'BUYER' && <SelectItem value="OUT_OF_STOCK">{t('productManagement.filters.inactive')}</SelectItem>}
             </SelectContent>
           </Select>
           {canSendRequest && (
@@ -461,8 +448,24 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
         </div>
       </div>
 
-      {/* List/Grid View */}
-      {viewMode === 'list' ? (
+      {/* Loading State */}
+      {isLoading ? (
+        <Card className="py-0 gap-0 overflow-hidden">
+          <div className="p-6 space-y-4">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4">
+                <Skeleton className="h-4 w-4" />
+                <Skeleton className="h-4 w-48" />
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-16" />
+              </div>
+            ))}
+          </div>
+        </Card>
+      ) : viewMode === 'list' ? (
+        /* List View */
         <Card className="py-0 gap-0 overflow-hidden">
           <Table>
             <TableHeader>
@@ -481,7 +484,6 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
                 <TableHead>{t('productManagement.table.domain')}</TableHead>
                 <TableHead>{t('productManagement.table.category')}</TableHead>
                 <TableHead>{t('productManagement.table.uom')}</TableHead>
-                <TableHead className="text-right">{t('productManagement.table.quantity')}</TableHead>
                 {showPrices && <TableHead className="text-right">{t('productManagement.table.priceFca')}</TableHead>}
                 <TableHead>{t('productManagement.table.status')}</TableHead>
                 <TableHead className="w-10" />
@@ -490,7 +492,7 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
             <TableBody>
               {paginated.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={showPrices ? 11 : 10} className="h-32 text-center">
+                  <TableCell colSpan={showPrices ? 10 : 9} className="h-32 text-center">
                     <div className="flex flex-col items-center gap-2 text-muted-foreground">
                       <PackageSearch className="h-8 w-8" />
                       <p className="text-sm">{t('productManagement.noResults')}</p>
@@ -499,82 +501,69 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
                   </TableCell>
                 </TableRow>
               ) : (
-                paginated.map((product) => {
-                  const isOwn = product.ownerCompanyId === SELF_COMPANY_ID;
-                  return (
-                    <TableRow key={product.id} className="cursor-pointer" onClick={() => handleRowClick(product)}>
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <Checkbox checked={selectedIds.has(product.id)} onCheckedChange={() => toggleSelect(product.id)} />
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-medium text-sm">{product.name}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {product.manufacturer}
-                            {isOwn && activeStatus !== 'BUYER' && (
-                              <Badge variant="secondary" className="ml-1 text-xs px-1 py-0">{t('productManagement.ownProduct')}</Badge>
-                            )}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-mono text-xs text-primary">{product.article}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{product.gost}</TableCell>
-                      <TableCell><DomainBadge domain={product.domain} /></TableCell>
-                      <TableCell className="text-sm">{product.category}</TableCell>
-                      <TableCell className="text-sm">{product.uom}</TableCell>
+                paginated.map((product) => (
+                  <TableRow key={product.id} className="cursor-pointer" onClick={() => handleRowClick(product)}>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <Checkbox checked={selectedIds.has(product.id)} onCheckedChange={() => toggleSelect(product.id)} />
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="font-medium text-sm">{product.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {product.manufacturer_data?.name ?? '—'}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-mono text-xs text-primary">{product.sku ?? '—'}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{product.gost_drawing ?? '—'}</TableCell>
+                    <TableCell><DomainBadge domainName={product.domain_type_name} /></TableCell>
+                    <TableCell className="text-sm">{product.category_data?.name ?? '—'}</TableCell>
+                    <TableCell className="text-sm">{product.uom_data?.name ?? product.uom_data?.code ?? '—'}</TableCell>
+                    {showPrices && (
                       <TableCell className="text-right font-medium tabular-nums text-sm">
-                        {product.quantity.toLocaleString('ru-RU')}
+                        {product.base_price && parseFloat(product.base_price) > 0
+                          ? `$${parseFloat(product.base_price).toLocaleString('ru-RU')}`
+                          : <span className="text-muted-foreground">—</span>
+                        }
                       </TableCell>
-                      {showPrices && (
-                        <TableCell className="text-right font-medium tabular-nums text-sm">
-                          {product.basePriceFCA
-                            ? `$${product.basePriceFCA.toLocaleString('ru-RU')}`
-                            : <span className="text-muted-foreground">—</span>
-                          }
-                        </TableCell>
-                      )}
-                      <TableCell><StatusBadgeCustom status={product.status} /></TableCell>
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleRowClick(product)}>
-                              <Eye className="mr-2 h-4 w-4" /> {t('productManagement.actions.viewDetails')}
+                    )}
+                    <TableCell><StockStatusBadge status={product.stock_status} /></TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleRowClick(product)}>
+                            <Eye className="mr-2 h-4 w-4" /> {t('productManagement.actions.viewDetails')}
+                          </DropdownMenuItem>
+                          {canEdit && (
+                            <DropdownMenuItem>
+                              <Pencil className="mr-2 h-4 w-4" /> {t('productManagement.actions.edit')}
                             </DropdownMenuItem>
-                            {/* Manufacturer: edit own products */}
-                            {canEdit && isOwn && (
-                              <DropdownMenuItem>
-                                <Pencil className="mr-2 h-4 w-4" /> {t('productManagement.actions.edit')}
-                              </DropdownMenuItem>
-                            )}
-                            {/* Buyer: send request */}
-                            {canSendRequest && (
-                              <DropdownMenuItem onClick={() => cartStore.addItem(product)}>
-                                <ShoppingCart className="mr-2 h-4 w-4" /> {t('productManagement.actions.addToRequest')}
-                              </DropdownMenuItem>
-                            )}
-                            {/* Seller: add to deal */}
-                            {activeStatus === 'SELLER' && (
-                              <DropdownMenuItem>
-                                <DollarSign className="mr-2 h-4 w-4" /> {t('productManagement.actions.addToQuote')}
-                              </DropdownMenuItem>
-                            )}
-                            {/* Manufacturer: manage visibility */}
-                            {canEdit && isOwn && (
-                              <DropdownMenuItem>
-                                <Lock className="mr-2 h-4 w-4" /> {t('productManagement.actions.manageAccess')}
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
+                          )}
+                          {canSendRequest && (
+                            <DropdownMenuItem onClick={() => cartStore.addItem(product)}>
+                              <ShoppingCart className="mr-2 h-4 w-4" /> {t('productManagement.actions.addToRequest')}
+                            </DropdownMenuItem>
+                          )}
+                          {activeStatus === 'SELLER' && (
+                            <DropdownMenuItem>
+                              <DollarSign className="mr-2 h-4 w-4" /> {t('productManagement.actions.addToQuote')}
+                            </DropdownMenuItem>
+                          )}
+                          {canEdit && (
+                            <DropdownMenuItem>
+                              <Lock className="mr-2 h-4 w-4" /> {t('productManagement.actions.manageAccess')}
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
               )}
             </TableBody>
           </Table>
@@ -639,18 +628,22 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
               )}>
                 {paginated.map((product) => {
                   const isInCart = cartStore.items.some((i) => i.product.id === product.id);
+                  const imageUrl = product.main_image_url || product.images?.[0]?.image_url;
                   return (
                     <Card key={product.id} className="overflow-hidden flex flex-col hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleRowClick(product)}>
-                      {/* Image Placeholder */}
+                      {/* Image or Placeholder */}
                       <div className={cn(
-                        'w-full flex items-center justify-center',
-                        getDomainGradient(product.domain),
+                        'w-full flex items-center justify-center bg-muted',
                         cardSize === 'compact' ? 'h-20' : cardSize === 'normal' ? 'h-28' : 'h-40'
                       )}>
-                        <Package className={cn(
-                          'text-muted-foreground',
-                          cardSize === 'compact' ? 'h-8 w-8' : cardSize === 'normal' ? 'h-12 w-12' : 'h-16 w-16'
-                        )} />
+                        {imageUrl ? (
+                          <img src={imageUrl} alt={product.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <Package className={cn(
+                            'text-muted-foreground',
+                            cardSize === 'compact' ? 'h-8 w-8' : cardSize === 'normal' ? 'h-12 w-12' : 'h-16 w-16'
+                          )} />
+                        )}
                       </div>
                       <CardContent className={cn(
                         'flex flex-col gap-2',
@@ -664,32 +657,28 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
                           )}>
                             {product.name}
                           </h3>
-                          <p className={cn(
-                            'text-muted-foreground',
-                            cardSize === 'compact' ? 'text-xs' : 'text-xs'
-                          )}>
-                            {product.manufacturer}
+                          <p className="text-xs text-muted-foreground">
+                            {product.manufacturer_data?.name ?? '—'}
                           </p>
                         </div>
 
                         {/* GOST Badge — hide on compact */}
-                        {cardSize !== 'compact' && product.gost && (
+                        {cardSize !== 'compact' && product.gost_drawing && (
                           <Badge variant="outline" className="text-xs font-mono w-fit">
-                            {product.gost}
+                            {product.gost_drawing}
                           </Badge>
                         )}
 
                         {/* Domain + Status Badges */}
                         <div className="flex items-center gap-1 flex-wrap">
-                          <DomainBadge domain={product.domain} />
-                          {cardSize !== 'compact' && <StatusBadgeCustom status={product.status} />}
+                          <DomainBadge domainName={product.domain_type_name} />
+                          {cardSize !== 'compact' && <StockStatusBadge status={product.stock_status} />}
                         </div>
 
-                        {/* Quantity + UOM — hide on compact */}
-                        {cardSize !== 'compact' && (
+                        {/* UOM — hide on compact */}
+                        {cardSize !== 'compact' && product.uom_data && (
                           <div className="text-sm">
-                            <span className="font-medium">{product.quantity.toLocaleString('ru-RU')}</span>
-                            <span className="text-muted-foreground ml-1">{product.uom}</span>
+                            <span className="text-muted-foreground">{product.uom_data.name || product.uom_data.code}</span>
                           </div>
                         )}
 
