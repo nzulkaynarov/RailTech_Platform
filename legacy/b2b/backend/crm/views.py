@@ -9,7 +9,7 @@ from .serializers import (
 )
 from rest_framework.permissions import IsAuthenticated
 from core.permissions import IsManagerOrAdmin, IsOwnerOrManagerOrAdmin
-from django.db.models import Count, Sum, Q
+from django.db.models import Count, Sum, Q, Subquery, OuterRef, Max
 from django.utils import timezone
 from datetime import timedelta
 from decimal import Decimal
@@ -303,11 +303,17 @@ class DashboardAnalyticsView(APIView):
             created_at__lt=period_start
         )
 
-        # Calculate deals volume (aggregate in DB, not Python)
-        current_volume = period_deals.aggregate(
-            total=Sum('total_value'))['total'] or Decimal('0')
-        prev_volume = prev_period_deals.aggregate(
-            total=Sum('total_value'))['total'] or Decimal('0')
+        # Calculate deals volume via latest quote's total_incl_vat
+        latest_quote = Quote.objects.filter(
+            deal=OuterRef('pk')
+        ).order_by('-version').values('total_incl_vat')[:1]
+
+        current_volume = period_deals.annotate(
+            deal_value=Subquery(latest_quote)
+        ).aggregate(total=Sum('deal_value'))['total'] or Decimal('0')
+        prev_volume = prev_period_deals.annotate(
+            deal_value=Subquery(latest_quote)
+        ).aggregate(total=Sum('deal_value'))['total'] or Decimal('0')
         volume_change = self._calculate_percentage_change(prev_volume, current_volume)
 
         # Active requests (not closed)

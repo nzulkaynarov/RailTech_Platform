@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { crmApi, QuoteItem, Quote } from '../api/crmApi';
+import { crmApi, QuoteItem } from '../api/crmApi';
 
 export const useDeals = () => useQuery({
   queryKey: ['deals'],

@@ -9,7 +9,7 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import { cn } from '@/lib/utils';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useFlowStore, requestStatusLabels, requestStatusColors } from '@/store/flowStore';
@@ -18,9 +18,6 @@ import { usePageStats } from '@/hooks/usePageStats';
 import { Progress } from '@/components/ui/progress';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
-} from 'recharts';
 import { useDeals, useAnalytics, useQuotes } from '@/hooks/useCRM';
 import { useCompanies, useUsers } from '@/hooks/useAccounts';
 import { useCategories, useEquipmentGroups } from '@/hooks/useCatalog';
