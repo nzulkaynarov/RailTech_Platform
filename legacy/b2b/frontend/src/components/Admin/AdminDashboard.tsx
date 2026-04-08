@@ -28,7 +28,7 @@ export const AdminDashboard: React.FC = () => {
                     </h1>
                     <p className="text-sm text-muted-foreground mt-0.5">{t('admin.dashboard.systemHealth')}</p>
                 </div>
-                <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-500 text-xs font-medium">
+                <div className="flex items-center gap-1.5 px-2 py-1 bg-success/10 border border-success/20 rounded-lg text-success text-xs font-medium">
                     <Activity className="w-3 h-3" aria-hidden="true" />
                     {t('chat.connected')}
                 </div>
@@ -51,7 +51,7 @@ export const AdminDashboard: React.FC = () => {
                     href="/crm/sourcing"
                 />
                 <KPICard
-                    icon={<Activity className="w-4 h-4 text-emerald-500" />}
+                    icon={<Activity className="w-4 h-4 text-success" />}
                     label={t('dashboard.kpi.closedDeals')}
                     value={loading ? '...' : analytics ? `${analytics.mapped_items_percentage || 0}%` : '0%'}
                     isLoading={loading}
@@ -167,9 +167,9 @@ export const AdminDashboard: React.FC = () => {
                                 activityLogs.slice(0, 10).map((event) => {
                                     const levelConfig: Record<string, { color: string; bg: string; icon: React.ElementType }> = {
                                         INFO: { color: 'text-primary', bg: 'bg-primary/10', icon: Activity },
-                                        SUCCESS: { color: 'text-emerald-500', bg: 'bg-emerald-500/10', icon: ShieldCheck },
-                                        WARNING: { color: 'text-amber-500', bg: 'bg-amber-500/10', icon: Activity },
-                                        ERROR: { color: 'text-red-500', bg: 'bg-red-500/10', icon: Activity },
+                                        SUCCESS: { color: 'text-success', bg: 'bg-success/10', icon: ShieldCheck },
+                                        WARNING: { color: 'text-warning', bg: 'bg-warning/10', icon: Activity },
+                                        ERROR: { color: 'text-destructive', bg: 'bg-destructive/10', icon: Activity },
                                     };
                                     const conf = levelConfig[event.level] || levelConfig.INFO;
 

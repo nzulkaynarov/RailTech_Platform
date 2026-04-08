@@ -382,37 +382,44 @@ class DashboardAnalyticsView(APIView):
         from django.db.models.functions import TruncMonth
 
         six_months_ago = timezone.now() - timedelta(days=180)
-        monthly_deals = deals.filter(
-            created_at__gte=six_months_ago
-        ).extra(
-            select={'month': 'DATE_TRUNC(\'month\', crm_deal.created_at)'}
-        ).values('month').annotate(count=Count('id'), value=Sum('quotes__total_incl_vat'))
+        monthly_deals = (
+            deals.filter(created_at__gte=six_months_ago)
+            .annotate(month=TruncMonth('created_at'))
+            .values('month')
+            .annotate(count=Count('id'), value=Sum('quotes__total_incl_vat'))
+            .order_by('month')
+        )
 
         result = []
         for item in monthly_deals:
+            month_val = item.get('month')
             result.append({
-                'month': item.get('month', ''),
+                'month': month_val.strftime('%Y-%m') if month_val else '',
                 'count': item['count'],
-                'value': float(item.get('value') or 0)
+                'value': float(item.get('value') or 0),
             })
         return result
 
     def _get_activity_by_day(self):
         """Get activity aggregated by day for the last 30 days."""
+        from django.db.models.functions import TruncDate
         from crm.models import ActivityLog
 
         thirty_days_ago = timezone.now() - timedelta(days=30)
-        daily_activity = ActivityLog.objects.filter(
-            timestamp__gte=thirty_days_ago
-        ).extra(
-            select={'day': 'DATE(crm_activitylog.timestamp)'}
-        ).values('day').annotate(count=Count('id'))
+        daily_activity = (
+            ActivityLog.objects.filter(timestamp__gte=thirty_days_ago)
+            .annotate(day=TruncDate('timestamp'))
+            .values('day')
+            .annotate(count=Count('id'))
+            .order_by('day')
+        )
 
         result = []
         for item in daily_activity:
+            day_val = item.get('day')
             result.append({
-                'day': item.get('day', ''),
-                'count': item['count']
+                'day': day_val.strftime('%a') if day_val else '',
+                'count': item['count'],
             })
         return result
 
@@ -421,15 +428,15 @@ class DashboardAnalyticsView(APIView):
         from catalog.models import Product
 
         top = Product.objects.annotate(
-            deal_count=Count('quotes__items')
+            deal_count=Count('quote_items', distinct=True)
         ).order_by('-deal_count')[:limit]
 
         return [
             {
-                'id': p.id,
+                'id': str(p.id),
                 'name': p.name,
-                'sku': p.sku,
-                'deal_count': p.deal_count
+                'quantity': p.deal_count,
+                'category': getattr(p.category, 'name', '') if hasattr(p, 'category') else '',
             }
             for p in top
         ]

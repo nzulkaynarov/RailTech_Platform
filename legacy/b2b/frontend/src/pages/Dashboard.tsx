@@ -351,7 +351,7 @@ function SellerDashboard({ onProductClick, period: _period, stats }: { onProduct
               <div className="mt-2 flex justify-center gap-4">
                 {counterpartyBreakdown.map((c) => (
                   <div key={c.name} className="flex items-center gap-1.5 text-xs">
-                    <span className={`h-2.5 w-2.5 rounded-full bg-[${c.color}]`} />
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: c.color }} />
                     <span className="font-medium">{c.value}</span>
                     <span className="text-muted-foreground">{c.name}</span>
                   </div>

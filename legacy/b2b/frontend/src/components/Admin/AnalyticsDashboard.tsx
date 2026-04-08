@@ -62,10 +62,10 @@ export const AnalyticsDashboard: React.FC = () => {
 
     const statusColors: { [key: string]: string } = {
         'Draft': 'bg-muted-foreground',
-        'KYC Pending': 'bg-amber-500',
+        'KYC Pending': 'bg-warning',
         'Calculating': 'bg-primary',
         'Quote Sent': 'bg-primary/80',
-        'Contract Signed': 'bg-emerald-500',
+        'Contract Signed': 'bg-success',
     };
 
     const statusLabels: { [key: string]: string } = {
@@ -90,7 +90,7 @@ export const AnalyticsDashboard: React.FC = () => {
                 </div>
                 
                 <div className="flex items-center gap-4 text-xs font-black uppercase tracking-widest text-muted-foreground">
-                    <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-500/5 border border-emerald-500/20 rounded text-emerald-500">
+                    <div className="flex items-center gap-1.5 px-2 py-1 bg-success/5 border border-success/20 rounded text-success">
                         <Activity className="w-3 h-3" />
                         System_Stable
                     </div>
@@ -104,7 +104,7 @@ export const AnalyticsDashboard: React.FC = () => {
                         <div className="w-8 h-8 rounded bg-[var(--color-chart-1)]/10 flex items-center justify-center text-[var(--color-chart-1)] border border-[var(--color-chart-1)]/20">
                             <TrendingUp className="w-4 h-4" />
                         </div>
-                        <span className="text-xs font-black text-emerald-500">LIVE</span>
+                        <span className="text-xs font-black text-success">LIVE</span>
                     </div>
                     <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Pipeline_Value</p>
                     <h3 className="text-xl font-black text-foreground">
@@ -114,10 +114,10 @@ export const AnalyticsDashboard: React.FC = () => {
 
                 <div className="bg-card p-4 rounded border border-border shadow-sm relative overflow-hidden group">
                     <div className="flex items-center justify-between mb-3">
-                        <div className="w-8 h-8 rounded bg-amber-500/10 flex items-center justify-center text-amber-600 border border-amber-500/20">
+                        <div className="w-8 h-8 rounded bg-warning/10 flex items-center justify-center text-warning border border-warning/20">
                             <PackageSearch className="w-4 h-4" />
                         </div>
-                        <span className="text-xs font-black text-amber-500">URGENT</span>
+                        <span className="text-xs font-black text-warning">URGENT</span>
                     </div>
                     <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Sourcing_Backlog</p>
                     <h3 className="text-xl font-black text-foreground">
@@ -127,10 +127,10 @@ export const AnalyticsDashboard: React.FC = () => {
 
                 <div className="bg-card p-4 rounded border border-border shadow-sm relative overflow-hidden group">
                     <div className="flex items-center justify-between mb-3">
-                        <div className="w-8 h-8 rounded bg-emerald-500/10 flex items-center justify-center text-emerald-600 border border-emerald-500/20">
+                        <div className="w-8 h-8 rounded bg-success/10 flex items-center justify-center text-success border border-success/20">
                             <Users className="w-4 h-4" />
                         </div>
-                        <span className="text-xs font-black text-emerald-500">STABLE</span>
+                        <span className="text-xs font-black text-success">STABLE</span>
                     </div>
                     <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Conversion_Rate</p>
                     <h3 className="text-xl font-black text-foreground">
@@ -204,15 +204,15 @@ export const AnalyticsDashboard: React.FC = () => {
                         </div>
                         
                         <div className="space-y-4 flex-1">
-                            <div className="p-4 rounded bg-white/5 border border-white/10">
+                            <div className="p-4 rounded bg-muted/10 border border-muted/20">
                                 <p className="text-xs font-black uppercase tracking-widest text-primary mb-1">MAPPING_PRECISION</p>
                                 <div className="text-2xl font-black tabular-nums">{data.mapped_items_percentage}%</div>
-                                <div className="w-full h-1 bg-white/10 rounded-full mt-2 overflow-hidden">
+                                <div className="w-full h-1 bg-muted/20 rounded-full mt-2 overflow-hidden">
                                     <div className="h-full bg-primary shadow-[0_0_8px_hsl(var(--primary)/0.5)] transition-all duration-1000" style={{ width: `${data.mapped_items_percentage}%` }}></div>
                                 </div>
                             </div>
                             
-                            <div className="p-4 rounded bg-white/5 border border-white/10">
+                            <div className="p-4 rounded bg-muted/10 border border-muted/20">
                                 <p className="text-xs font-black uppercase tracking-widest text-primary mb-1">AVG_DISCOVERY_LATENCY</p>
                                 <div className="text-2xl font-black tabular-nums">{data.sourcing_speed_avg || 0}D</div>
                                 <p className="text-xs text-muted-foreground mt-2 font-bold uppercase tracking-tight">Derived from 30-day transactional history</p>
