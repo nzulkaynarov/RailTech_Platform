@@ -1,172 +1,159 @@
 # RailTech B2B SaaS Platform
 
-B2B marketplace and CRM platform for the railway equipment industry. Built with Django 5.1 (backend) and React 18 + TypeScript (frontend).
+B2B маркетплейс и CRM для ж/д оборудования (Узбекистан).
+Django 5.1 + React 18 + TypeScript, полностью в Docker.
 
-## Tech Stack
+## Требования
 
-**Backend:** Python 3.11, Django 5.1, Django REST Framework, Django Channels (WebSocket), Celery + Redis, PostgreSQL 15, WeasyPrint (PDF), MinIO (S3)
+- **Docker Desktop** (или Docker Engine + Docker Compose v2)
+- **Git**
+- Доступ к удалённой БД (Neon Cloud PostgreSQL) — `DATABASE_URL` от администратора
 
-**Frontend:** TypeScript, React 18, Vite 7, Tailwind CSS 4, shadcn/ui, Zustand, React Query, i18next (EN/RU)
+> Локальной БД нет. База всегда удалённая — и при разработке, и на продакшне.
 
-**Infrastructure:** Docker, Nginx, GitHub Actions CI
+## Запуск проекта
 
-## Project Structure
-
-```
-├── backend/                 # Django REST API
-│   ├── accounts/            # Users, Companies, KYC, Roles
-│   ├── catalog/             # Products, Categories, Equipment
-│   ├── crm/                 # Deals, Quotes, Messages, Chat
-│   ├── sourcing/            # Excel import, async tasks
-│   ├── master_data/         # Countries, Currencies, Units
-│   ├── notifications/       # Notification center
-│   └── core/                # Settings, URLs, ASGI, Middleware
-├── frontend/                # React SPA
-│   └── src/
-│       ├── api/             # Axios API clients
-│       ├── components/      # UI components (Admin, Auth, Catalog, CRM, etc.)
-│       ├── hooks/           # Custom React hooks
-│       ├── i18n/            # EN + RU translations
-│       ├── pages/           # Page components
-│       └── store/           # Zustand state stores
-├── docs/                    # Architecture, specs, roadmap, mockups
-├── nginx/                   # Production Nginx config
-├── .claude/commands/        # 21 AI development commands
-├── docker-compose.yml       # Development environment
-├── docker-compose.prod.yml  # Production overrides
-├── Makefile                 # Developer convenience commands
-└── pyproject.toml           # Python tooling config
-```
-
-## Quick Start (Docker)
+### 1. Клонировать и настроить окружение
 
 ```bash
-# 1. Clone and configure
+git clone git@github.com:nzulkaynarov/RailTech_SaaS_B2B.git
+cd RailTech_SaaS_B2B
 cp .env.example .env
-# Edit .env — set DJANGO_SECRET_KEY, SUPERADMIN_PASSWORD, DATABASE_URL
+```
 
-# 2. Start all services
+Открыть `.env` и заполнить **обязательные** переменные:
+
+| Переменная | Что указать |
+| --- | --- |
+| `DATABASE_URL` | Строка подключения к Neon Cloud (получить у админа) |
+| `DJANGO_SECRET_KEY` | Сгенерировать: `python3 -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"` |
+| `SUPERADMIN_PASSWORD` | Пароль суперадмина (будет создан автоматически при миграции) |
+| `MINIO_SECRET_KEY` | Любой пароль для локального хранилища файлов |
+
+Остальные переменные имеют рабочие значения по умолчанию для локальной разработки.
+
+### 2. Поднять все сервисы
+
+```bash
 make up
-# Or: docker compose up -d --build
+```
 
-# 3. Run migrations and seed data
+Это соберёт и запустит 7 контейнеров: backend, frontend, 2× Redis, MinIO, Celery worker, Celery beat.
+
+### 3. Применить миграции и загрузить справочники
+
+```bash
 make migrate
 make seed
-
-# 4. Open the app
-# Frontend:  http://localhost:5173
-# Backend:   http://localhost:8000
-# Admin:     http://localhost:8000/admin/
-# MinIO:     http://localhost:9001
 ```
 
-## Quick Start (Local)
+### 4. Открыть
+
+| Сервис | URL |
+| --- | --- |
+| Фронтенд | `http://localhost:5173` |
+| API | `http://localhost:8000` |
+| Django Admin | `http://localhost:8000/admin/` |
+| MinIO Console | `http://localhost:9001` |
+
+### Тестовые аккаунты (после seed)
+
+| Email | Пароль | Роль |
+| --- | --- | --- |
+| `admin@railtech.uz` | `admin123` | Админ (суперпользователь) |
+| `manager@railtech.uz` | `manager123` | Менеджер по продажам |
+| `client@test.uz` | `client123` | Клиент |
+
+## Повседневные команды
 
 ```bash
-# Backend
-cd backend
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-python manage.py migrate
-python manage.py runserver
-
-# Frontend (separate terminal)
-cd frontend
-npm install
-npm run dev
+make up                  # Поднять все контейнеры (с пересборкой)
+make down                # Остановить всё
+make logs                # Логи всех сервисов (follow)
+make shell               # bash внутри backend-контейнера
+make migrate             # Применить миграции
+make makemigrations      # Создать новые миграции
+make seed                # Загрузить справочные данные
+make test                # Запустить тесты (pytest)
+make test-backend        # Тесты бэкенда с coverage
+make test-frontend       # Тесты фронтенда (vitest)
+make lint                # Линтеры (flake8 + black + isort + eslint)
+make format              # Автоформатирование (black + isort)
+make celery-logs         # Логи Celery worker
+make collectstatic       # Собрать статику Django
+make clean               # Снести всё: контейнеры, volumes, кэш
 ```
 
-Requires PostgreSQL 15+ and Redis 7+ running locally.
+## Горячая перезагрузка (hot reload)
 
-## Available Commands
+- **Backend:** бэкенд монтируется как volume (`./backend:/app`) — изменения применяются автоматически через Daphne
+- **Frontend:** после изменений нужна пересборка контейнера.
+  Причина: фронтенд — это production-сборка (Vite build), а не dev-сервер.
 
-### Make
+  ```bash
+  docker compose up -d --build frontend
+  ```
 
-```bash
-make up / down / logs       # Docker lifecycle
-make migrate                # Run Django migrations
-make test                   # Run all tests
-make lint                   # Run all linters
-make format                 # Run formatters (black, isort)
-make security               # Run security checks
-make shell                  # Backend Django shell
-make dbshell                # PostgreSQL shell
-```
+## Регистрация нового пользователя
 
-### Claude AI Commands (21 total)
+1. Зарегистрироваться через `/register`
+2. Ссылка для установки пароля придёт **в логи backend-контейнера** (в dev-режиме):
 
-**Frontend:** `/new-component`, `/new-page`, `/new-hook`, `/new-store`, `/lint-fix`, `/build-check`, `/commit`, `/review-pr`, `/check-i18n`, `/audit-a11y`, `/design-check`
+   ```bash
+   make logs | grep setup-password
+   ```
 
-**Backend:** `/new-endpoint`, `/new-model`, `/new-celery-task`, `/run-tests`, `/migrate`, `/security-check`, `/deploy-check`, `/docker-up`, `/api-docs`, `/seed-data`
+3. Перейти по ссылке `/setup-password?uid=...&token=...`, задать пароль
+4. Подтвердить KYC компании: Django Admin → Компании → действие "Подтвердить KYC (L2)"
+5. Войти в систему
 
-## Environment Variables
-
-See [.env.example](.env.example) for full documentation. Key variables:
-
-| Variable | Description |
-|----------|-------------|
-| `DATABASE_URL` | PostgreSQL connection (Neon Cloud or local) |
-| `DJANGO_SECRET_KEY` | Django secret key (generate unique!) |
-| `REDIS_URL` | Redis for Django Channels |
-| `CELERY_BROKER_URL` | Redis for Celery tasks |
-| `VITE_API_URL` | Backend URL for frontend |
-| `VITE_WS_URL` | WebSocket URL for real-time chat |
-| `MINIO_ENDPOINT` | S3-compatible storage |
-
-## Architecture
+## Структура проекта
 
 ```
-                    ┌──────────────┐
-                    │    Nginx     │  (reverse proxy, SSL, rate limiting)
-                    └──────┬───────┘
-                   ┌───────┴────────┐
-            ┌──────┴───┐      ┌─────┴──────┐
-            │ Frontend  │      │  Backend   │
-            │ React SPA │      │  Django    │
-            │ (Vite)    │      │  Daphne    │
-            └───────────┘      └──────┬─────┘
-                              ┌───────┼────────┐
-                        ┌─────┴──┐ ┌──┴───┐ ┌──┴──────┐
-                        │  Redis │ │ PG15 │ │  MinIO  │
-                        │ (×2)   │ │      │ │  (S3)   │
-                        └────┬───┘ └──────┘ └─────────┘
-                             │
-                        ┌────┴─────┐
-                        │  Celery  │  (worker + beat)
-                        └──────────┘
+backend/                 # Django REST API
+  accounts/              # Пользователи, компании, KYC, роли
+  catalog/               # Товары (PIM), категории, оборудование
+  crm/                   # Сделки, котировки, чат, аналитика
+  sourcing/              # Импорт Excel, асинхронные задачи
+  master_data/           # Страны, валюты, единицы измерения
+  notifications/         # Центр уведомлений
+  core/                  # Настройки, URL, ASGI, Celery, middleware
+
+frontend/                # React SPA
+  src/api/               # Axios клиенты с JWT interceptor
+  src/components/        # shadcn/ui компоненты
+  src/hooks/             # React Query хуки (accounts, catalog, crm)
+  src/i18n/locales/      # Переводы: ru.json, en.json
+  src/pages/             # Страницы приложения
+  src/store/             # Zustand сторы (auth, cart, theme и др.)
+
+nginx/                   # Конфиг Nginx для продакшна
+docs/                    # Архитектура, спеки, роадмап, мокапы
 ```
 
-**Key features:** Domain-driven product catalog (Railway/General/Services), strict RBAC (5 roles), real-time deal chat (WebSocket), async Excel import with smart matching, PDF quote generation, multi-tenant workspaces, i18n (EN/RU).
+## Сервисы в Docker
 
-## Testing
+| Контейнер | Порт | Назначение |
+| --- | --- | --- |
+| `backend` | 8000 | Django + Daphne (ASGI) |
+| `frontend` | 5173 | React (nginx, prod-сборка) |
+| `redis` | 6379 | Django Channels (WebSocket) |
+| `redis-celery` | 6380 | Celery broker + результаты |
+| `minio` | 9000, 9001 | S3-совместимое хранилище файлов |
+| `celery-worker` | — | Импорт Excel, генерация PDF |
+| `celery-beat` | — | Запланированные задачи |
 
-```bash
-# All tests
-make test
+> PostgreSQL — внешняя БД (Neon Cloud), в Docker не поднимается.
 
-# Backend only
-make test-backend
-# or: cd backend && python -m pytest --cov --tb=short
+## Переменные окружения
 
-# Frontend only
-make test-frontend
-# or: cd frontend && npm run test
-```
+Полный список с описанием: [.env.example](.env.example)
 
-## Documentation
+## Документация
 
-Detailed documentation in the `docs/` folder:
+Подробная документация в папке [docs/](docs/):
+архитектура, бизнес-логика, ролевая модель, спринт-план, мокапы, аудит безопасности.
 
-- **master-system-document.md** — Complete architecture blueprint
-- **business-logic.md** — User journeys, KYC, pricing
-- **technical-specification.md** — Backend/Frontend/DB specs
-- **role-model.md** — RBAC (Guest, Client, Sales Manager, Account Manager, Admin)
-- **roadmap.md** — Sprint plan (7 sprints)
-- **security-audit-2026-03-20.md** — Security audit findings and fixes
-- **mockups/** — UI mockups (admin, catalog, CRM, sourcing)
-- **presentations/** — Business presentations and estimates
+## Лицензия
 
-## License
-
-Proprietary. All rights reserved.
+Проприетарное ПО. Все права защищены.
