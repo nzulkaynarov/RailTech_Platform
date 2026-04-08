@@ -69,7 +69,7 @@ export function ProfilePage() {
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <Button variant="outline" size="sm" className="gap-2">
+                  <Button variant="outline" size="sm" className="gap-2" disabled>
                     <Camera className="h-4 w-4" />
                     {t('profile.personalInfo.uploadPhoto')}
                   </Button>
@@ -109,7 +109,7 @@ export function ProfilePage() {
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Shield className="h-4 w-4" />
-                  {t('profile.personalInfo.role')}: <Badge variant="outline">{roleLabels[role]}</Badge>
+                  {t('profile.personalInfo.role')}: <Badge variant="outline">{t(roleLabels[role])}</Badge>
                 </div>
               </div>
 
@@ -159,7 +159,7 @@ export function ProfilePage() {
                 <div className="flex flex-wrap gap-2">
                   {company.statusEntries.map((entry) => (
                     <Badge key={entry.status} variant={entry.status === activeStatus ? 'default' : 'outline'}>
-                      {companyStatusLabels[entry.status]}
+                      {t(companyStatusLabels[entry.status])}
                       {entry.verification === 'pending' && ` (${t('profile.companyInfo.pendingVerification')})`}
                     </Badge>
                   ))}

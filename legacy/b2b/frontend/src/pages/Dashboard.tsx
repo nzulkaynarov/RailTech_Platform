@@ -20,6 +20,11 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -369,9 +374,16 @@ function SellerDashboard({ onProductClick, period: _period, stats }: { onProduct
               <span className="text-4xl font-bold text-primary tabular-nums">{completionPct}%</span>
               <p className="text-xs text-muted-foreground">{t('dashboardPage.goal')}: {completionGoal}%</p>
               <Progress value={completionPct} className="h-2 w-full" />
-              <Button variant="link" size="sm" className="text-xs">
-                {t('dashboardPage.showDetails')}
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="link" size="sm" className="text-xs" disabled>
+                    {t('dashboardPage.showDetails')}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {t('common.comingSoon')}
+                </TooltipContent>
+              </Tooltip>
             </CardContent>
           </Card>
         </div>
@@ -525,10 +537,17 @@ export function Dashboard({ onProductClick }: DashboardProps) {
               <SelectItem value="1y">{t('dashboardPage.year')}</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" size="sm" className="gap-1.5 text-xs">
-            <Download className="h-3.5 w-3.5" />
-            {t('dashboardPage.export')}
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1.5 text-xs" disabled>
+                <Download className="h-3.5 w-3.5" />
+                {t('dashboardPage.export')}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {t('common.comingSoon')}
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
 

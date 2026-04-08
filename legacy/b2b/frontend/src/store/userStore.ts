@@ -4,24 +4,24 @@ import { create } from 'zustand';
 export type CompanyStatus = 'BUYER' | 'MANUFACTURER' | 'SELLER';
 
 export const companyStatusLabels: Record<CompanyStatus, string> = {
-  BUYER: 'Покупатель',
-  MANUFACTURER: 'Производитель',
-  SELLER: 'Продавец',
+  BUYER: 'companyStatus.buyer',
+  MANUFACTURER: 'companyStatus.manufacturer',
+  SELLER: 'companyStatus.seller',
 };
 
 export const companyStatusDescriptions: Record<CompanyStatus, string> = {
-  BUYER: 'Только запрашивает КП и закупает оборудование',
-  MANUFACTURER: 'Производит, продаёт напрямую или через продавцов, может закупать',
-  SELLER: 'Посредник: покупает и перепродаёт, может добавлять товары в наличии',
+  BUYER: 'companyStatus.buyerDesc',
+  MANUFACTURER: 'companyStatus.manufacturerDesc',
+  SELLER: 'companyStatus.sellerDesc',
 };
 
 /* ─── Verification status per company status ────────────────────────── */
 export type VerificationStatus = 'pending' | 'verified' | 'rejected';
 
 export const verificationLabels: Record<VerificationStatus, string> = {
-  pending: 'Ожидает подтверждения',
-  verified: 'Подтверждён',
-  rejected: 'Отклонён',
+  pending: 'verification.pending',
+  verified: 'verification.verified',
+  rejected: 'verification.rejected',
 };
 
 export interface CompanyStatusEntry {
@@ -35,15 +35,15 @@ export interface CompanyStatusEntry {
 export type UserRole = 'ADMIN' | 'MANAGER' | 'EMPLOYEE';
 
 export const roleLabels: Record<UserRole, string> = {
-  ADMIN: 'Администратор',
-  MANAGER: 'Менеджер',
-  EMPLOYEE: 'Сотрудник',
+  ADMIN: 'roles.admin',
+  MANAGER: 'roles.manager',
+  EMPLOYEE: 'roles.employee',
 };
 
 export const roleDescriptions: Record<UserRole, string> = {
-  ADMIN: 'Полный доступ, управление пользователями и делегирование прав',
-  MANAGER: 'Основные бизнес-операции: сделки, закупки, котировки',
-  EMPLOYEE: 'Ограниченный доступ на просмотр или определённые операции',
+  ADMIN: 'roles.adminDesc',
+  MANAGER: 'roles.managerDesc',
+  EMPLOYEE: 'roles.employeeDesc',
 };
 
 /* ─── User Profile ──────────────────────────────────────────────────── */
@@ -223,8 +223,8 @@ export const useUserStore = create<UserState>((set, _get) => ({
         name: data.companyName,
         inn: data.companyInn,
         kycStatus: 'pending',
-        country: 'Узбекистан',
-        city: 'Ташкент',
+        country: '',
+        city: '',
         statusEntries: [
           { status: data.selectedStatus, verification: 'pending' },
         ],

@@ -6,7 +6,11 @@ import {
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
@@ -16,6 +20,7 @@ import {
 } from '@/components/ui/select';
 
 import { useUserStore, companyStatusLabels } from '@/store/userStore';
+import { useThemeStore } from '@/store/themeStore';
 
 function SettingRow({ icon: Icon, title, description, children }: {
   icon: React.ComponentType<{ className?: string }>;
@@ -38,8 +43,9 @@ function SettingRow({ icon: Icon, title, description, children }: {
 }
 
 export function SettingsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { role, activeStatus, company } = useUserStore();
+  const { theme, setTheme } = useThemeStore();
   const isAdmin = role === 'ADMIN';
   const isManagerOrAdmin = role === 'ADMIN' || role === 'MANAGER';
 
@@ -70,12 +76,11 @@ export function SettingsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <SettingRow icon={Globe} title={t('settings.general.language')} description={t('settings.general.languageDesc')}>
-                <Select defaultValue="ru">
+                <Select value={i18n.language?.startsWith('ru') ? 'ru' : i18n.language?.startsWith('en') ? 'en' : 'ru'} onValueChange={(val) => i18n.changeLanguage(val)}>
                   <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="ru">Русский</SelectItem>
                     <SelectItem value="en">English</SelectItem>
-                    <SelectItem value="uz">O'zbekcha</SelectItem>
                   </SelectContent>
                 </Select>
               </SettingRow>
@@ -126,12 +131,11 @@ export function SettingsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <SettingRow icon={Palette} title={t('settings.appearance.theme')} description={t('settings.appearance.themeDesc')}>
-                <Select defaultValue="light">
+                <Select value={theme} onValueChange={(val) => setTheme(val as 'light' | 'dark')}>
                   <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="light">{t('settings.appearance.themeLight')}</SelectItem>
                     <SelectItem value="dark">{t('settings.appearance.themeDark')}</SelectItem>
-                    <SelectItem value="system">{t('settings.appearance.themeSystem')}</SelectItem>
                   </SelectContent>
                 </Select>
               </SettingRow>
@@ -233,7 +237,14 @@ export function SettingsPage() {
                       </Select>
                     </SettingRow>
                     <SettingRow icon={Store} title={t('settings.business.partnerSuppliers')} description={t('settings.business.partnerSuppliersDesc')}>
-                      <Button variant="outline" size="sm">{t('settings.business.manage')}</Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="outline" size="sm" disabled>{t('settings.business.manage')}</Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {t('common.comingSoon')}
+                        </TooltipContent>
+                      </Tooltip>
                     </SettingRow>
                   </>
                 )}
@@ -255,20 +266,41 @@ export function SettingsPage() {
                   <div className="flex gap-1.5">
                     {company.statusEntries.map((entry) => (
                       <Badge key={entry.status} variant="secondary" className="text-xs">
-                        {companyStatusLabels[entry.status]}
+                        {t(companyStatusLabels[entry.status])}
                         {entry.verification === 'pending' && ` (${t('settings.company.pending')})`}
                       </Badge>
                     ))}
                   </div>
                 </SettingRow>
                 <SettingRow icon={Users} title={t('settings.company.users')} description={t('settings.company.usersDesc')}>
-                  <Button size="sm">{t('settings.company.invite')}</Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button size="sm" disabled>{t('settings.company.invite')}</Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {t('common.comingSoon')}
+                    </TooltipContent>
+                  </Tooltip>
                 </SettingRow>
                 <SettingRow icon={Shield} title={t('settings.company.rolesPermissions')} description={t('settings.company.rolesPermissionsDesc')}>
-                  <Button variant="outline" size="sm">{t('settings.company.manage')}</Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" size="sm" disabled>{t('settings.company.manage')}</Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {t('common.comingSoon')}
+                    </TooltipContent>
+                  </Tooltip>
                 </SettingRow>
                 <SettingRow icon={Shield} title={t('settings.company.delegation')} description={t('settings.company.delegationDesc')}>
-                  <Button variant="outline" size="sm">{t('settings.company.configure')}</Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" size="sm" disabled>{t('settings.company.configure')}</Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {t('common.comingSoon')}
+                    </TooltipContent>
+                  </Tooltip>
                 </SettingRow>
               </CardContent>
             </Card>
@@ -285,16 +317,37 @@ export function SettingsPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <SettingRow icon={Plug} title={t('settings.system.apiIntegrations')} description={t('settings.system.apiIntegrationsDesc')}>
-                  <Button variant="outline" size="sm">{t('settings.system.configure')}</Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" size="sm" disabled>{t('settings.system.configure')}</Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {t('common.comingSoon')}
+                    </TooltipContent>
+                  </Tooltip>
                 </SettingRow>
                 <SettingRow icon={Database} title={t('settings.system.backup')} description={t('settings.system.backupDesc')}>
                   <Switch defaultChecked />
                 </SettingRow>
                 <SettingRow icon={Shield} title={t('settings.system.passwordPolicy')} description={t('settings.system.passwordPolicyDesc')}>
-                  <Button variant="outline" size="sm">{t('settings.system.configure')}</Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" size="sm" disabled>{t('settings.system.configure')}</Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {t('common.comingSoon')}
+                    </TooltipContent>
+                  </Tooltip>
                 </SettingRow>
                 <SettingRow icon={FileText} title={t('settings.system.auditLogs')} description={t('settings.system.auditLogsDesc')}>
-                  <Button variant="outline" size="sm">{t('settings.system.view')}</Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" size="sm" disabled>{t('settings.system.view')}</Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {t('common.comingSoon')}
+                    </TooltipContent>
+                  </Tooltip>
                 </SettingRow>
               </CardContent>
             </Card>

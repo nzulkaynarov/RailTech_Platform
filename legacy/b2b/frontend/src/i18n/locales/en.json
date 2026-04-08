@@ -24,7 +24,9 @@
     "deleting": "Deleting...",
     "new": "New",
     "retry": "Retry",
-    "back": "Back"
+    "back": "Back",
+    "backToList": "Back to list",
+    "comingSoon": "Coming soon"
   },
   "auth": {
     "loginTitle": "Sign in",
@@ -136,7 +138,15 @@
       "volumePricing": "Volume pricing",
       "qty": "Qty",
       "pricePerUnit": "Price / unit",
-      "discount": "Discount"
+      "discount": "Discount",
+      "compatibleParts": "Compatible parts ({{count}})",
+      "noAnalogs": "No analogs found",
+      "domain": "Domain",
+      "category": "Category",
+      "manufacturer": "Manufacturer",
+      "dateAdded": "Date added",
+      "stockQuantity": "Quantity in stock",
+      "prevPeriod": "Previous period"
     }
   },
   "productManagement": {
@@ -491,7 +501,8 @@
     "emptyState": "Start discussing this deal",
     "send": "Send",
     "connectionLost": "Connection lost. Reconnecting...",
-    "connected": "Connected"
+    "connected": "Connected",
+    "noMessages": "No messages"
   },
   "task": {
     "excelImport": "Excel Import",
@@ -1617,6 +1628,7 @@
       "orClick": "or click to upload",
       "lastImport": "Last import",
       "uploadedAgo": "Uploaded 15 min ago",
+      "sampleFileName": "Specification_2026_Q1.xlsx",
       "noImportsYet": "No imports yet",
       "uploadToSee": "Upload a file to see import history",
       "status": {
@@ -2044,5 +2056,10 @@
       "CONTRACT_SIGNED": "Contract Signed",
       "CLOSED_LOST": "Closed Lost"
     }
+  },
+  "validation": {
+    "validEmailRequired": "Valid email is required",
+    "firstNameRequired": "First name is required",
+    "lastNameRequired": "Last name is required"
   }
 }

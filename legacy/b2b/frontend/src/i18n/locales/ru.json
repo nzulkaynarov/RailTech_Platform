@@ -24,7 +24,9 @@
     "deleting": "Удаление...",
     "new": "Новое",
     "retry": "Повторить",
-    "back": "Назад"
+    "back": "Назад",
+    "backToList": "Назад к списку",
+    "comingSoon": "Функция скоро появится"
   },
   "auth": {
     "loginTitle": "Вход в кабинет",
@@ -136,7 +138,15 @@
       "volumePricing": "Оптовые цены",
       "qty": "Кол-во",
       "pricePerUnit": "Цена / шт",
-      "discount": "Скидка"
+      "discount": "Скидка",
+      "compatibleParts": "Совместимые детали ({{count}})",
+      "noAnalogs": "Аналоги не найдены",
+      "domain": "Домен",
+      "category": "Категория",
+      "manufacturer": "Производитель",
+      "dateAdded": "Дата добавления",
+      "stockQuantity": "Количество на складе",
+      "prevPeriod": "Пред. период"
     }
   },
   "productManagement": {
@@ -491,7 +501,8 @@
     "emptyState": "Начните обсуждение по этой сделке",
     "send": "Отправить",
     "connectionLost": "Соединение потеряно. Переподключение...",
-    "connected": "Подключено"
+    "connected": "Подключено",
+    "noMessages": "Нет сообщений"
   },
   "task": {
     "excelImport": "Импорт Excel",
@@ -1617,6 +1628,7 @@
       "orClick": "или нажмите для загрузки",
       "lastImport": "Последний импорт",
       "uploadedAgo": "Загружено 15 мин. назад",
+      "sampleFileName": "Спецификация_2026_Q1.xlsx",
       "noImportsYet": "Нет завершённых импортов",
       "uploadToSee": "Загрузите Excel файл чтобы увидеть результаты",
       "status": {
@@ -2044,5 +2056,10 @@
       "CONTRACT_SIGNED": "Договор подписан",
       "CLOSED_LOST": "Закрыта (отказ)"
     }
+  },
+  "validation": {
+    "validEmailRequired": "Введите корректный email",
+    "firstNameRequired": "Имя обязательно",
+    "lastNameRequired": "Фамилия обязательна"
   }
 }

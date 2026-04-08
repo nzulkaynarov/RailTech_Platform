@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Loader2,
 } from 'lucide-react';
+import { useCartStore } from '@/store/cartStore';
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -131,6 +132,7 @@ interface ProductDetailProps {
 
 export function ProductDetail({ productId, onBack, onNavigate }: ProductDetailProps) {
   const { t } = useTranslation();
+  const { addItem, openCart } = useCartStore();
   const [apiProduct, setApiProduct] = useState<Record<string, unknown> | null>(null);
   const [apiLoading, setApiLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
@@ -204,7 +206,7 @@ export function ProductDetail({ productId, onBack, onNavigate }: ProductDetailPr
         <BreadcrumbList>
           <BreadcrumbItem>
             <BreadcrumbLink href="#" onClick={(e) => { e.preventDefault(); onBack(); }}>
-              Номенклатура
+              {t('catalog.title')}
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
@@ -223,7 +225,7 @@ export function ProductDetail({ productId, onBack, onNavigate }: ProductDetailPr
       {/* Back button */}
       <Button variant="ghost" className="w-fit gap-2" onClick={onBack}>
         <ArrowLeft className="h-4 w-4" />
-        Назад к списку
+        {t('common.backToList')}
       </Button>
 
       {/* Main card — FEROX-inspired layout */}
@@ -252,7 +254,7 @@ export function ProductDetail({ productId, onBack, onNavigate }: ProductDetailPr
               <div className="mt-4">
                 <Button variant="outline" className="w-full gap-2">
                   <Layers className="h-4 w-4" />
-                  Совместимые детали ({product.matchingTools})
+                  {t('productDetail.compatibleParts', { count: product.matchingTools })}
                 </Button>
               </div>
             )}
@@ -354,9 +356,15 @@ export function ProductDetail({ productId, onBack, onNavigate }: ProductDetailPr
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
-            <Button className="flex-1 gap-2">
+            <Button
+              className="flex-1 gap-2"
+              onClick={() => {
+                addItem(product as any, qty);
+                openCart();
+              }}
+            >
               <ShoppingCart className="h-4 w-4" />
-              Добавить в запрос
+              {t('productDetail.addToRequest')}
             </Button>
           </div>
 
@@ -393,7 +401,7 @@ export function ProductDetail({ productId, onBack, onNavigate }: ProductDetailPr
                 </Table>
               ) : (
                 <div className="flex h-24 items-center justify-center text-sm text-muted-foreground">
-                  Характеристики не указаны
+                  {t('productDetail.noSpecifications')}
                 </div>
               )}
             </CardContent>
@@ -410,7 +418,7 @@ export function ProductDetail({ productId, onBack, onNavigate }: ProductDetailPr
           ) : (
             <Card>
               <CardContent className="flex h-24 items-center justify-center text-sm text-muted-foreground">
-                Аналоги не найдены
+                {t('productDetail.noAnalogs')}
               </CardContent>
             </Card>
           )}
@@ -422,28 +430,28 @@ export function ProductDetail({ productId, onBack, onNavigate }: ProductDetailPr
               <Table>
                 <TableBody>
                   <TableRow>
-                    <TableCell className="font-medium text-muted-foreground w-48">Домен</TableCell>
+                    <TableCell className="font-medium text-muted-foreground w-48">{t('productDetail.domain')}</TableCell>
                     <TableCell>{t(domainLabels[product.domain])}</TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell className="font-medium text-muted-foreground">Категория</TableCell>
+                    <TableCell className="font-medium text-muted-foreground">{t('productDetail.category')}</TableCell>
                     <TableCell>{product.category}</TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell className="font-medium text-muted-foreground">Производитель</TableCell>
+                    <TableCell className="font-medium text-muted-foreground">{t('productDetail.manufacturer')}</TableCell>
                     <TableCell>{product.manufacturer}</TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell className="font-medium text-muted-foreground">Дата добавления</TableCell>
+                    <TableCell className="font-medium text-muted-foreground">{t('productDetail.dateAdded')}</TableCell>
                     <TableCell>{product.addedDate}</TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell className="font-medium text-muted-foreground">Количество на складе</TableCell>
+                    <TableCell className="font-medium text-muted-foreground">{t('productDetail.stockQuantity')}</TableCell>
                     <TableCell className="tabular-nums">{product.quantity} {product.uom}</TableCell>
                   </TableRow>
                   {product.prevQuantity !== undefined && (
                     <TableRow>
-                      <TableCell className="font-medium text-muted-foreground">Пред. период</TableCell>
+                      <TableCell className="font-medium text-muted-foreground">{t('productDetail.prevPeriod')}</TableCell>
                       <TableCell className="tabular-nums">{product.prevQuantity} {product.uom}</TableCell>
                     </TableRow>
                   )}

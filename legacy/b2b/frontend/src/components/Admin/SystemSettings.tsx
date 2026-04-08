@@ -36,7 +36,7 @@ export const SystemSettings: React.FC = () => {
             </div>
 
             {showSuccess && (
-                <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 p-4 rounded-2xl flex items-center gap-3 animate-in fade-in zoom-in-95 duration-300">
+                <div className="bg-success/10 border border-success/20 text-success p-4 rounded-2xl flex items-center gap-3 animate-in fade-in zoom-in-95 duration-300">
                     <CheckCircle className="w-5 h-5" />
                     <span className="font-bold">{t('admin.systemSettings.settingsSaved')}</span>
                 </div>
@@ -85,7 +85,7 @@ export const SystemSettings: React.FC = () => {
                                         <Input type="text" readOnly value="12,500.00" className="bg-muted text-muted-foreground font-mono" />
                                     </div>
                                 </div>
-                                <div className="p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/30 rounded-xl text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
+                                <div className="p-4 bg-warning/10 border border-warning/20 rounded-xl text-xs text-warning leading-relaxed">
                                     {t('admin.systemSettings.finance.vatWarning')}
                                 </div>
                             </div>

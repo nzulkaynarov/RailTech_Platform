@@ -114,8 +114,8 @@ function getBuyerNavigation(activePage: string, role: UserRole, t: TFn): NavItem
   const items: NavItem[] = [
     { label: t('shell.dashboard'), icon: <LayoutDashboard className="h-4 w-4" />, id: 'dashboard', active: activePage === 'dashboard' },
     { label: t('shell.catalog'), icon: <Package className="h-4 w-4" />, id: 'products', active: activePage === 'products' },
-    { label: t('shell.myRequests'), icon: <ClipboardList className="h-4 w-4" />, id: 'my-requests', active: activePage === 'my-requests', badge: 3 },
-    { label: t('shell.commercialOffers'), icon: <Calculator className="h-4 w-4" />, id: 'crm-quotes', active: activePage === 'crm-quotes', badge: 2 },
+    { label: t('shell.myRequests'), icon: <ClipboardList className="h-4 w-4" />, id: 'my-requests', active: activePage === 'my-requests' },
+    { label: t('shell.commercialOffers'), icon: <Calculator className="h-4 w-4" />, id: 'crm-quotes', active: activePage === 'crm-quotes' },
     { label: t('shell.documents'), icon: <FileText className="h-4 w-4" />, id: 'my-documents', active: activePage === 'my-documents' },
     { label: t('shell.purchaseTemplates'), icon: <ClipboardList className="h-4 w-4" />, id: 'purchase-templates', active: activePage === 'purchase-templates' },
     { label: t('shell.logistics'), icon: <Truck className="h-4 w-4" />, id: 'logistics', active: activePage === 'logistics' },
@@ -144,7 +144,7 @@ function getManufacturerNavigation(activePage: string, role: UserRole, t: TFn): 
         { label: t('shell.productionSchedule'), id: 'production-schedule', active: activePage === 'production-schedule' },
       ],
     },
-    { label: t('shell.quotes'), icon: <Calculator className="h-4 w-4" />, id: 'crm-quotes', active: activePage === 'crm-quotes', badge: 4 },
+    { label: t('shell.quotes'), icon: <Calculator className="h-4 w-4" />, id: 'crm-quotes', active: activePage === 'crm-quotes' },
     { label: t('shell.documents'), icon: <FileText className="h-4 w-4" />, id: 'my-documents', active: activePage === 'my-documents' },
   ];
   if (role === 'ADMIN' || role === 'MANAGER') {
@@ -173,7 +173,7 @@ function getSellerNavigation(activePage: string, role: UserRole, t: TFn): NavIte
       ],
     },
     {
-      label: t('shell.crm'), icon: <Handshake className="h-4 w-4" />, badge: 8,
+      label: t('shell.crm'), icon: <Handshake className="h-4 w-4" />,
       children: [
         { label: t('shell.deals'), id: 'crm-deals', active: activePage === 'crm-deals' },
         { label: t('shell.quotes'), id: 'crm-quotes', active: activePage === 'crm-quotes' },
@@ -261,7 +261,7 @@ function SidebarNavItem({
                 {item.icon}
                 {!collapsed && (
                   <>
-                    <span className="flex-1 text-left">{item.label}</span>
+                    <span className="flex-1 text-left truncate">{item.label}</span>
                     {item.badge != null && (
                       <Badge className="h-5 min-w-5 justify-center rounded-full px-1.5 text-xs">
                         {item.badge}
@@ -313,7 +313,7 @@ function SidebarNavItem({
           {item.icon}
           {!collapsed && (
             <>
-              <span>{item.label}</span>
+              <span className="flex-1 text-left truncate">{item.label}</span>
               {item.badge != null && (
                 <Badge className="ml-auto h-5 min-w-5 justify-center rounded-full px-1.5 text-xs">
                   {item.badge}
@@ -647,36 +647,11 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
             </SheetHeader>
             <ScrollArea className="flex-1 -mx-6 px-6">
               <div className="space-y-3 pr-4">
-                {[
-                  { name: 'Алексей Петров', company: 'SAUT Plant', message: 'Уточните пожалуйста количество по тележке 18-100...', time: '10 мин', unread: true },
-                  { name: 'Мария Сидорова', company: 'UTY Tashkent', message: 'Готовы принять КП, ждём обновлённый расчёт', time: '45 мин', unread: true },
-                  { name: 'Дмитрий Ким', company: 'RATEP Ekb', message: 'Отгрузка планируется на следующей неделе', time: '2 часа', unread: false },
-                  { name: 'Фаррух Исмоилов', company: 'Navoi Mining', message: 'Спасибо, документы получили', time: 'Вчера', unread: false },
-                ].map((chat, i) => (
-                  <div key={i} className={cn(
-                    'rounded-lg border p-3 cursor-pointer hover:bg-muted/50 transition-colors',
-                    chat.unread && 'bg-accent border-accent'
-                  )}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="bg-muted text-xs">
-                            {chat.name.split(' ').map(w => w[0]).join('')}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="text-sm font-medium">{chat.name}</p>
-                          <p className="text-xs text-muted-foreground">{chat.company}</p>
-                        </div>
-                      </div>
-                      <span className="text-xs text-muted-foreground">{chat.time}</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{chat.message}</p>
-                    {chat.unread && (
-                      <Badge className="mt-2 text-xs">{t('common.new', 'New')}</Badge>
-                    )}
-                  </div>
-                ))}
+                {/* TODO: Load messages from API — /api/v1/crm/messages/ */}
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <MessageSquare className="h-10 w-10 text-muted-foreground/50 mb-3" />
+                  <p className="text-sm text-muted-foreground">{t('chat.noMessages')}</p>
+                </div>
               </div>
             </ScrollArea>
             <SheetFooter>

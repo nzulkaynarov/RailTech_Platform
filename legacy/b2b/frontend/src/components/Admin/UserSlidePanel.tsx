@@ -35,18 +35,19 @@ import { Button } from '@/components/ui/button';
 import { useCompanies } from '@/hooks/useAccounts';
 
 // ---------------------------------------------------------------------------
-// Zod schema
+// Zod schema factory
 // ---------------------------------------------------------------------------
-const userFormSchema = z.object({
-    email: z.string().email('Valid email is required'),
-    first_name: z.string().min(1, 'First name is required'),
-    last_name: z.string().min(1, 'Last name is required'),
-    role: z.enum(['ADMIN', 'SALES_MANAGER', 'ACCOUNT_MANAGER', 'CLIENT']),
-    company_id: z.string().optional(),
-    workspace_role: z.enum(['OWNER', 'ACCOUNTANT', 'MANAGER', '']).optional(),
-});
+const createUserFormSchema = (t: (key: string, options?: any) => string) =>
+    z.object({
+        email: z.string().email(t('validation.validEmailRequired')),
+        first_name: z.string().min(1, t('validation.firstNameRequired')),
+        last_name: z.string().min(1, t('validation.lastNameRequired')),
+        role: z.enum(['ADMIN', 'SALES_MANAGER', 'ACCOUNT_MANAGER', 'CLIENT']),
+        company_id: z.string().optional(),
+        workspace_role: z.enum(['OWNER', 'ACCOUNTANT', 'MANAGER', '']).optional(),
+    });
 
-type UserFormValues = z.infer<typeof userFormSchema>;
+type UserFormValues = z.infer<ReturnType<typeof createUserFormSchema>>;
 
 // ---------------------------------------------------------------------------
 // Props
@@ -69,6 +70,8 @@ export const UserSlidePanel: React.FC<UserSlidePanelProps> = ({
 }) => {
     const { t } = useTranslation();
     const isEdit = !!user;
+
+    const userFormSchema = createUserFormSchema(t);
 
     const { data: companies = [] } = useCompanies();
 

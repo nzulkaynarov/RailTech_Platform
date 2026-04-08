@@ -167,7 +167,7 @@ export function SourcingImportPage() {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">Спецификация_УТИ_2026_Q1.xlsx</p>
+                <p className="font-medium">{t('pages.sourcingImport.sampleFileName')}</p>
                 <p className="text-sm text-muted-foreground">{t('pages.sourcingImport.uploadedAgo')}</p>
               </div>
               <Badge>{t('pages.sourcingImport.status.completed')}</Badge>
