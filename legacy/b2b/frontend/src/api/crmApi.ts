@@ -208,5 +208,41 @@ export const crmApi = {
 	submitLead: async (data: Lead) => {
 		const response = await apiClient.post<Lead>('crm/leads/', data);
 		return response.data;
+	},
+	getQuotes: async () => {
+		const response = await apiClient.get<PaginatedResponse<Quote>>('crm/quotes/');
+		return response.data.results;
+	},
+	getQuote: async (id: number) => {
+		const response = await apiClient.get<Quote>(`crm/quotes/${id}/`);
+		return response.data;
+	},
+	generateQuotePDF: async (id: number) => {
+		const response = await apiClient.post<{ url: string }>(`crm/quotes/${id}/generate-pdf/`);
+		return response.data;
+	},
+	sendQuoteToClient: async (id: number) => {
+		const response = await apiClient.post<Quote>(`crm/quotes/${id}/send-to-client/`);
+		return response.data;
+	},
+	approveQuote: async (id: number) => {
+		const response = await apiClient.post<Quote>(`crm/quotes/${id}/approve/`);
+		return response.data;
+	},
+	rejectQuote: async (id: number) => {
+		const response = await apiClient.post<Quote>(`crm/quotes/${id}/reject/`);
+		return response.data;
+	},
+	downloadQuotePDF: async (id: number) => {
+		const response = await apiClient.get(`crm/quotes/${id}/download-pdf/`, {
+			responseType: 'blob'
+		});
+		const url = window.URL.createObjectURL(new Blob([response.data]));
+		const link = document.createElement('a');
+		link.href = url;
+		link.setAttribute('download', `RailTech_Quote_${id}.pdf`);
+		document.body.appendChild(link);
+		link.click();
+		link.remove();
 	}
 };

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { crmApi, QuoteItem } from '../api/crmApi';
+import { crmApi, QuoteItem, Quote } from '../api/crmApi';
 
 export const useDeals = () => useQuery({
   queryKey: ['deals'],
@@ -85,3 +85,36 @@ export const useActivityLogs = () => useQuery({
     queryKey: ['activity-logs'],
     queryFn: () => crmApi.getActivityLogs(),
 });
+
+export const useQuotes = () => useQuery({
+    queryKey: ['quotes'],
+    queryFn: crmApi.getQuotes,
+});
+
+export const useQuote = (id: number) => useQuery({
+    queryKey: ['quotes', id],
+    queryFn: () => crmApi.getQuote(id),
+    enabled: !!id,
+});
+
+export const useSendQuoteToClient = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (id: number) => crmApi.sendQuoteToClient(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['quotes'] });
+            queryClient.invalidateQueries({ queryKey: ['deals'] });
+        },
+    });
+};
+
+export const useApproveQuote = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (id: number) => crmApi.approveQuote(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['quotes'] });
+            queryClient.invalidateQueries({ queryKey: ['deals'] });
+        },
+    });
+};

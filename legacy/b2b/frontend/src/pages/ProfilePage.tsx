@@ -18,18 +18,81 @@ import {
 } from '@/components/ui/dialog';
 
 import { useUserStore, roleLabels, companyStatusLabels } from '@/store/userStore';
+import { accountsApi } from '@/api/accountsApi';
+import { toast } from 'sonner';
+
+function PasswordChangeForm({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation();
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPw, setChangingPw] = useState(false);
+
+  const handleChangePassword = async () => {
+    if (newPassword !== confirmPassword) {
+      toast.error(t('profile.passwordDialog.mismatch'));
+      return;
+    }
+    setChangingPw(true);
+    try {
+      await accountsApi.changePassword({ current_password: currentPassword, new_password: newPassword });
+      toast.success(t('profile.passwordDialog.success'));
+      onClose();
+    } catch {
+      toast.error(t('profile.passwordDialog.error'));
+    } finally {
+      setChangingPw(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="space-y-4 py-2">
+        <div className="space-y-2">
+          <Label>{t('profile.passwordDialog.currentPassword')}</Label>
+          <Input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
+        </div>
+        <div className="space-y-2">
+          <Label>{t('profile.passwordDialog.newPassword')}</Label>
+          <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+        </div>
+        <div className="space-y-2">
+          <Label>{t('profile.passwordDialog.confirmPassword')}</Label>
+          <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+        </div>
+      </div>
+      <DialogFooter>
+        <Button variant="outline" onClick={onClose}>{t('common.cancel')}</Button>
+        <Button onClick={handleChangePassword} disabled={changingPw || !currentPassword || !newPassword}>
+          {changingPw ? t('common.saving') : t('common.save')}
+        </Button>
+      </DialogFooter>
+    </>
+  );
+}
 
 export function ProfilePage() {
   const { t } = useTranslation();
   const { profile, company, role, activeStatus, updateProfile } = useUserStore();
   const [form, setForm] = useState({ ...profile });
-  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [passwordDialog, setPasswordDialog] = useState(false);
 
-  const handleSave = () => {
-    updateProfile(form);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await accountsApi.updateMe({
+        first_name: form.firstName,
+        last_name: form.lastName,
+        phone: form.phone,
+      });
+      updateProfile(form);
+      toast.success(t('profile.personalInfo.saved'));
+    } catch {
+      toast.error(t('profile.personalInfo.saveError'));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const kycBadge = {
@@ -114,9 +177,9 @@ export function ProfilePage() {
               </div>
 
               <div className="flex justify-end">
-                <Button onClick={handleSave} className="gap-2">
+                <Button onClick={handleSave} disabled={saving} className="gap-2">
                   <Save className="h-4 w-4" />
-                  {saved ? t('profile.personalInfo.saved') : t('profile.personalInfo.saveChanges')}
+                  {saving ? t('common.saving') : t('profile.personalInfo.saveChanges')}
                 </Button>
               </div>
             </CardContent>
@@ -254,24 +317,7 @@ export function ProfilePage() {
             <DialogTitle>{t('profile.passwordDialog.title')}</DialogTitle>
             <DialogDescription>{t('profile.passwordDialog.description')}</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>{t('profile.passwordDialog.currentPassword')}</Label>
-              <Input type="password" />
-            </div>
-            <div className="space-y-2">
-              <Label>{t('profile.passwordDialog.newPassword')}</Label>
-              <Input type="password" />
-            </div>
-            <div className="space-y-2">
-              <Label>{t('profile.passwordDialog.confirmPassword')}</Label>
-              <Input type="password" />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPasswordDialog(false)}>{t('common.cancel')}</Button>
-            <Button onClick={() => setPasswordDialog(false)}>{t('common.save')}</Button>
-          </DialogFooter>
+          <PasswordChangeForm onClose={() => setPasswordDialog(false)} />
         </DialogContent>
       </Dialog>
     </div>

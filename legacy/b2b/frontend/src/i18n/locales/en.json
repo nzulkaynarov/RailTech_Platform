@@ -26,7 +26,8 @@
     "retry": "Retry",
     "back": "Back",
     "backToList": "Back to list",
-    "comingSoon": "Coming soon"
+    "comingSoon": "Coming soon",
+    "saving": "Saving..."
   },
   "auth": {
     "loginTitle": "Sign in",
@@ -1128,7 +1129,8 @@
       "photoHint": "JPG, PNG. Max 2MB",
       "role": "Role",
       "saved": "Saved!",
-      "saveChanges": "Save changes"
+      "saveChanges": "Save changes",
+      "saveError": "Failed to save profile"
     },
     "fields": {
       "lastName": "Last name",
@@ -1188,7 +1190,10 @@
       "description": "Enter current and new password",
       "currentPassword": "Current password",
       "newPassword": "New password",
-      "confirmPassword": "Confirm password"
+      "confirmPassword": "Confirm password",
+      "mismatch": "Passwords do not match",
+      "success": "Password changed successfully",
+      "error": "Failed to change password"
     }
   },
   "settings": {
@@ -1606,7 +1611,8 @@
         "set": "set",
         "kg": "kg",
         "km": "km"
-      }
+      },
+      "noData": "No data"
     },
     "sourcingRequests": {
       "title": "Purchase Requests",
@@ -1681,7 +1687,8 @@
         "quoteSent": "Quote Sent",
         "contractSigned": "Contract Signed",
         "closedWon": "Closed (Won)",
-        "closedLost": "Closed (Lost)"
+        "closedLost": "Closed (Lost)",
+        "kycPending": "KYC Pending"
       }
     },
     "quotes": {
@@ -1721,7 +1728,8 @@
         "date": "Date",
         "deadline": "Response deadline",
         "actions": "Actions"
-      }
+      },
+      "dealRef": "Deal #{{id}}"
     },
     "clients": {
       "title": "Clients",
@@ -1830,7 +1838,12 @@
         "amount": "Amount",
         "avgDelivery": "Avg. delivery",
         "rating": "Rating"
-      }
+      },
+      "keyMetrics": "Key Metrics",
+      "sourcingBacklog": "Sourcing Backlog",
+      "kycBacklog": "KYC Backlog",
+      "mappedItems": "Mapped Items",
+      "sourcingSpeed": "Sourcing Speed"
     },
     "categories": {
       "title": "Categories",
@@ -1878,7 +1891,8 @@
         "dieselLocos": "Diesel locomotives",
         "freightWagons": "Freight wagons",
         "passengerWagons": "Passenger wagons"
-      }
+      },
+      "type": "Type"
     },
     "integrations": {
       "title": "Integrations",

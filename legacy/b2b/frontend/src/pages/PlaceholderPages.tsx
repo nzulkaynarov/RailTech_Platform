@@ -2,8 +2,7 @@ import {
   ShoppingCart, FileText, Factory, BarChart3, Upload, Search, Plug,
   HelpCircle, ClipboardList, Calculator, Users, CalendarDays,
   Layers, Tags, Truck, Shield, ChevronRight, FileSpreadsheet,
-  Clock, CheckCircle2, Star, Pause, Check,
-  // Zap, Flame, Package, UserRound — removed (were used by hardcoded equipment groups)
+  Clock, CheckCircle2, Pause, Check,
   ChevronDown, Download, MapPin, Calendar,
   Mail, MessageSquare,
 } from 'lucide-react';
@@ -18,9 +17,16 @@ import { useUserStore } from '@/store/userStore';
 import { usePageStats } from '@/hooks/usePageStats';
 import { Progress } from '@/components/ui/progress';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
 } from 'recharts';
+import { useDeals, useAnalytics, useQuotes } from '@/hooks/useCRM';
+import { useCompanies, useUsers } from '@/hooks/useAccounts';
+import { useCategories, useEquipmentGroups } from '@/hooks/useCatalog';
+import type { Deal, Quote } from '@/api/crmApi';
+import type { Company, User } from '@/api/accountsApi';
+import type { Category, EquipmentGroup } from '@/api/catalogApi';
 
 interface PageShellProps {
   title: string;
@@ -74,6 +80,27 @@ function PageShell({ title, description, icon, stats, actions, children }: PageS
           </CardContent>
         </Card>
       )}
+    </div>
+  );
+}
+
+/* ─── Loading / Empty helpers ──────────────────────────────────────── */
+
+function LoadingRows({ rows = 5 }: { rows?: number }) {
+  return (
+    <div className="space-y-3 p-4">
+      {Array.from({ length: rows }).map((_, i) => (
+        <Skeleton key={i} className="h-10 w-full" />
+      ))}
+    </div>
+  );
+}
+
+function EmptyState({ icon, message }: { icon: React.ReactNode; message: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
+      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">{icon}</div>
+      <p className="text-sm font-medium">{message}</p>
     </div>
   );
 }
@@ -207,34 +234,28 @@ export function SourcingMatchPage() {
 
 // ─── CRM Pages ──────────────────────────────────────────────────────────
 
-interface DealCard {
-  id: string;
-  number: string;
-  client: string;
-  amount: number;
-  manager: string;
-  days: number;
-}
-
-interface DealColumn {
-  title: string;
-  stage: string;
-  deals: DealCard[];
-}
-
 export function DealsPage() {
   const { t } = useTranslation();
   const { data: ps } = usePageStats();
-  // TODO: Replace with useDeals() hook and group by stage_code
-  const columns: DealColumn[] = [
-    { title: 'DRAFT', stage: t('pages.deals.stages.draft'), deals: [] },
-    { title: 'SOURCING', stage: t('pages.deals.stages.sourcing'), deals: [] },
-    { title: 'CALCULATING', stage: t('pages.deals.stages.calculating'), deals: [] },
-    { title: 'QUOTE_SENT', stage: t('pages.deals.stages.quoteSent'), deals: [] },
-    { title: 'CONTRACT_SIGNED', stage: t('pages.deals.stages.contractSigned'), deals: [] },
-    { title: 'CLOSED_WON', stage: t('pages.deals.stages.closedWon'), deals: [] },
-    { title: 'CLOSED_LOST', stage: t('pages.deals.stages.closedLost'), deals: [] },
-  ];
+  const { data: deals, isLoading } = useDeals();
+
+  const stageOrder = ['DRAFT', 'KYC_PENDING', 'SOURCING', 'CALCULATING', 'QUOTE_SENT', 'CONTRACT_SIGNED', 'CLOSED_WON', 'CLOSED_LOST'];
+  const stageLabels: Record<string, string> = {
+    DRAFT: t('pages.deals.stages.draft'),
+    KYC_PENDING: t('pages.deals.stages.kycPending'),
+    SOURCING: t('pages.deals.stages.sourcing'),
+    CALCULATING: t('pages.deals.stages.calculating'),
+    QUOTE_SENT: t('pages.deals.stages.quoteSent'),
+    CONTRACT_SIGNED: t('pages.deals.stages.contractSigned'),
+    CLOSED_WON: t('pages.deals.stages.closedWon'),
+    CLOSED_LOST: t('pages.deals.stages.closedLost'),
+  };
+
+  const grouped = stageOrder.map((code) => ({
+    code,
+    label: stageLabels[code] ?? code,
+    deals: (deals ?? []).filter((d: Deal) => d.stage_code === code),
+  }));
 
   return (
     <PageShell
@@ -249,40 +270,45 @@ export function DealsPage() {
       ]}
       actions={[{ label: t('pages.deals.newDeal') }]}
     >
-      <div className="overflow-x-auto pb-4">
-        <div className="flex gap-4 min-w-max">
-          {columns.map((column) => (
-            <div key={column.stage} className="flex-shrink-0 w-80">
-              <div className={cn('rounded-lg p-4 space-y-3 bg-muted')}>
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-sm">{column.stage}</h3>
-                  <Badge variant="outline" className="text-xs">{column.deals.length}</Badge>
-                </div>
-                <div className="space-y-3">
-                  {column.deals.map((deal) => (
-                    <Card key={deal.id} className="cursor-pointer hover:shadow-md transition-shadow">
-                      <CardContent className="p-3 space-y-2">
-                        <div>
-                          <p className="font-medium text-sm">{deal.number}</p>
-                          <p className="text-xs text-muted-foreground">{deal.client}</p>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <p className="text-lg font-bold text-primary">${deal.amount}K</p>
-                          <Badge variant="secondary" className="text-xs">{deal.manager}</Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {deal.days} {t('pages.deals.daysInStage')}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  ))}
+      {isLoading ? <LoadingRows rows={4} /> : (
+        <div className="overflow-x-auto pb-4">
+          <div className="flex gap-4 min-w-max">
+            {grouped.map((column) => (
+              <div key={column.code} className="flex-shrink-0 w-80">
+                <div className={cn('rounded-lg p-4 space-y-3 bg-muted')}>
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-sm">{column.label}</h3>
+                    <Badge variant="outline" className="text-xs">{column.deals.length}</Badge>
+                  </div>
+                  <div className="space-y-3">
+                    {column.deals.length === 0 && (
+                      <p className="text-xs text-muted-foreground text-center py-4">{t('pages.common.noData')}</p>
+                    )}
+                    {column.deals.map((deal: Deal) => (
+                      <Card key={deal.id} className="cursor-pointer hover:shadow-md transition-shadow">
+                        <CardContent className="p-3 space-y-2">
+                          <div>
+                            <p className="font-medium text-sm">{deal.title ?? `#${deal.id}`}</p>
+                            <p className="text-xs text-muted-foreground">{deal.client_name ?? deal.company_name ?? '—'}</p>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <p className="text-lg font-bold text-primary">{deal.total_value ? `$${Number(deal.total_value).toLocaleString()}` : '—'}</p>
+                            <Badge variant="secondary" className="text-xs">{deal.stage_name}</Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {new Date(deal.created_at).toLocaleDateString()}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </PageShell>
   );
 }
@@ -291,60 +317,66 @@ export function QuotesPage() {
   const { t } = useTranslation();
   const { activeStatus } = useUserStore();
   const { data: ps } = usePageStats();
+  const { data: quotes, isLoading } = useQuotes();
   const isBuyer = activeStatus === 'BUYER';
 
-  // Quotes are loaded from the backend API via crmApi
-  // TODO: Replace with useEffect + crmApi.getQuotes() when component mounts
-  const sellerQuotes: { number: string; client: string; items: number; amount: number; margin: number; status: string; statusLabel: string; date: string }[] = [];
-  const buyerQuotes: { number: string; seller: string; items: number; amount: number; status: string; statusLabel: string; date: string; deadline: string }[] = [];
+  const quotesList = quotes ?? [];
 
-  if (isBuyer) {
-    return (
-      <PageShell
-        title={t('pages.quotes.buyerTitle')}
-        description={t('pages.quotes.buyerDescription')}
-        icon={<Calculator className="h-5 w-5" />}
-        stats={[
-          { label: t('pages.quotes.stats.total'), value: String(buyerQuotes.length) },
-          { label: t('pages.quotes.stats.underReview'), value: String(ps?.quotes?.under_review ?? '—') },
-          { label: t('pages.quotes.stats.accepted'), value: String(ps?.quotes?.approved ?? '—') },
-          { label: t('pages.quotes.stats.totalAmount'), value: ps?.quotes?.total_amount ?? '—' },
-        ]}
-      >
-        <Card>
-          <CardContent className="p-0">
+  const title = isBuyer ? t('pages.quotes.buyerTitle') : t('pages.quotes.sellerTitle');
+  const description = isBuyer ? t('pages.quotes.buyerDescription') : t('pages.quotes.sellerDescription');
+  const stats = isBuyer
+    ? [
+        { label: t('pages.quotes.stats.total'), value: String(quotesList.length) },
+        { label: t('pages.quotes.stats.underReview'), value: String(ps?.quotes?.under_review ?? '—') },
+        { label: t('pages.quotes.stats.accepted'), value: String(ps?.quotes?.approved ?? '—') },
+        { label: t('pages.quotes.stats.totalAmount'), value: ps?.quotes?.total_amount ?? '—' },
+      ]
+    : [
+        { label: t('pages.quotes.stats.drafts'), value: String(ps?.quotes?.drafts ?? '—') },
+        { label: t('pages.quotes.stats.sent'), value: String(ps?.quotes?.sent ?? '—') },
+        { label: t('pages.quotes.stats.approved'), value: String(ps?.quotes?.approved ?? '—') },
+        { label: t('pages.quotes.stats.pipeline'), value: ps?.quotes?.pipeline ?? '—' },
+      ];
+
+  return (
+    <PageShell
+      title={title}
+      description={description}
+      icon={<Calculator className="h-5 w-5" />}
+      stats={stats}
+      actions={isBuyer ? undefined : [{ label: t('pages.quotes.createQuote') }]}
+    >
+      <Card>
+        <CardContent className="p-0">
+          {isLoading ? <LoadingRows rows={5} /> : quotesList.length === 0 ? (
+            <EmptyState icon={<Calculator className="h-5 w-5" />} message={t('pages.common.noData')} />
+          ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-muted/50">
                     <th className="px-4 py-3 text-left font-medium">{t('pages.quotes.table.number')}</th>
-                    <th className="px-4 py-3 text-left font-medium">{t('pages.quotes.table.supplier')}</th>
+                    <th className="px-4 py-3 text-left font-medium">{isBuyer ? t('pages.quotes.table.supplier') : t('pages.quotes.table.client')}</th>
                     <th className="px-4 py-3 text-center font-medium">{t('pages.quotes.table.items')}</th>
-                    <th className="px-4 py-3 text-right font-medium">{t('pages.quotes.table.amountVat')}</th>
+                    <th className="px-4 py-3 text-right font-medium">{t('pages.quotes.table.amount')}</th>
                     <th className="px-4 py-3 text-left font-medium">{t('pages.quotes.table.status')}</th>
                     <th className="px-4 py-3 text-left font-medium">{t('pages.quotes.table.date')}</th>
-                    <th className="px-4 py-3 text-left font-medium">{t('pages.quotes.table.deadline')}</th>
                     <th className="px-4 py-3 text-center font-medium">{t('pages.quotes.table.actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {buyerQuotes.map((q, idx) => (
-                    <tr key={idx} className="border-b hover:bg-muted/50">
-                      <td className="px-4 py-3 font-medium">{q.number}</td>
-                      <td className="px-4 py-3">{q.seller}</td>
-                      <td className="px-4 py-3 text-center">{q.items}</td>
-                      <td className="px-4 py-3 text-right tabular-nums font-medium">${q.amount.toLocaleString()}</td>
+                  {quotesList.map((q: Quote) => (
+                    <tr key={q.id} className="border-b hover:bg-muted/50">
+                      <td className="px-4 py-3 font-medium">#{q.id}-v{q.version}</td>
+                      <td className="px-4 py-3">{t('pages.quotes.dealRef', { id: q.deal })}</td>
+                      <td className="px-4 py-3 text-center tabular-nums">{q.items?.length ?? 0}</td>
+                      <td className="px-4 py-3 text-right tabular-nums font-medium">${Number(q.total_incl_vat).toLocaleString()}</td>
                       <td className="px-4 py-3">
-                        <Badge variant={
-                          q.status === 'accepted' ? 'default' :
-                          q.status === 'review' ? 'secondary' :
-                          'outline'
-                        }>
-                          {q.statusLabel}
+                        <Badge variant={q.status_name === 'Approved' ? 'default' : 'secondary'}>
+                          {q.status_name}
                         </Badge>
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">{q.date}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{q.deadline}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{new Date(q.created_at).toLocaleDateString()}</td>
                       <td className="px-4 py-3 text-center">
                         <Button variant="ghost" size="sm" className="h-8 w-8">
                           <ChevronRight className="h-4 w-4" />
@@ -355,69 +387,7 @@ export function QuotesPage() {
                 </tbody>
               </table>
             </div>
-          </CardContent>
-        </Card>
-      </PageShell>
-    );
-  }
-
-  return (
-    <PageShell
-      title={t('pages.quotes.sellerTitle')}
-      description={t('pages.quotes.sellerDescription')}
-      icon={<Calculator className="h-5 w-5" />}
-      stats={[
-        { label: t('pages.quotes.stats.drafts'), value: String(ps?.quotes?.drafts ?? '—') },
-        { label: t('pages.quotes.stats.sent'), value: String(ps?.quotes?.sent ?? '—') },
-        { label: t('pages.quotes.stats.approved'), value: String(ps?.quotes?.approved ?? '—') },
-        { label: t('pages.quotes.stats.pipeline'), value: ps?.quotes?.pipeline ?? '—' },
-      ]}
-      actions={[{ label: t('pages.quotes.createQuote') }]}
-    >
-      <Card>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-muted/50">
-                  <th className="px-4 py-3 text-left font-medium">{t('pages.quotes.table.number')}</th>
-                  <th className="px-4 py-3 text-left font-medium">{t('pages.quotes.table.client')}</th>
-                  <th className="px-4 py-3 text-center font-medium">{t('pages.quotes.table.items')}</th>
-                  <th className="px-4 py-3 text-right font-medium">{t('pages.quotes.table.amount')}</th>
-                  <th className="px-4 py-3 text-center font-medium">{t('pages.quotes.table.margin')}</th>
-                  <th className="px-4 py-3 text-left font-medium">{t('pages.quotes.table.status')}</th>
-                  <th className="px-4 py-3 text-left font-medium">{t('pages.quotes.table.date')}</th>
-                  <th className="px-4 py-3 text-center font-medium">{t('pages.quotes.table.actions')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sellerQuotes.map((quote, idx) => (
-                  <tr key={idx} className="border-b hover:bg-muted/50">
-                    <td className="px-4 py-3 font-medium">{quote.number}</td>
-                    <td className="px-4 py-3">{quote.client}</td>
-                    <td className="px-4 py-3 text-center">{quote.items}</td>
-                    <td className="px-4 py-3 text-right tabular-nums font-medium">${quote.amount.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-center">{quote.margin}%</td>
-                    <td className="px-4 py-3">
-                      <Badge variant={
-                        quote.status === 'approved' ? 'default' :
-                        quote.status === 'sent' ? 'secondary' :
-                        'outline'
-                      }>
-                        {quote.statusLabel}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">{quote.date}</td>
-                    <td className="px-4 py-3 text-center">
-                      <Button variant="ghost" size="sm" className="h-8 w-8">
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          )}
         </CardContent>
       </Card>
     </PageShell>
@@ -427,9 +397,7 @@ export function QuotesPage() {
 export function ClientsPage() {
   const { data: ps } = usePageStats();
   const { t } = useTranslation();
-  // Clients are loaded from the backend API via accountsApi
-  // TODO: Replace with useEffect + accountsApi.getCompanies() when component mounts
-  const clients: { name: string; inn: string; status: string; kyc: string; deals: number; lastActivity: string }[] = [];
+  const { data: companies, isLoading } = useCompanies();
 
   return (
     <PageShell
@@ -446,42 +414,40 @@ export function ClientsPage() {
     >
       <Card>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-muted/50">
-                  <th className="px-4 py-3 text-left font-medium">{t('pages.clients.table.company')}</th>
-                  <th className="px-4 py-3 text-left font-medium">{t('pages.clients.table.inn')}</th>
-                  <th className="px-4 py-3 text-left font-medium">{t('pages.clients.table.status')}</th>
-                  <th className="px-4 py-3 text-left font-medium">{t('pages.clients.table.kyc')}</th>
-                  <th className="px-4 py-3 text-center font-medium">{t('pages.clients.table.deals')}</th>
-                  <th className="px-4 py-3 text-left font-medium">{t('pages.clients.table.lastActivity')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {clients.map((client, idx) => (
-                  <tr key={idx} className="border-b hover:bg-muted/50">
-                    <td className="px-4 py-3 font-medium">{client.name}</td>
-                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{client.inn}</td>
-                    <td className="px-4 py-3">
-                      <Badge variant="outline">{
-                        client.status === 'BUYER' ? t('pages.clients.statusLabel.buyer') :
-                        client.status === 'SELLER' ? t('pages.clients.statusLabel.seller') :
-                        t('pages.clients.statusLabel.manufacturer')
-                      }</Badge>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge variant={client.kyc === 'Verified' ? 'default' : 'secondary'} className="gap-1">
-                        {client.kyc === 'Verified' ? <><Check className="h-3 w-3" /> {t('pages.clients.kycStatus.verified')}</> : <><Clock className="h-3 w-3" /> {t('pages.clients.kycStatus.pending')}</>}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3 text-center tabular-nums">{client.deals}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{client.lastActivity}</td>
+          {isLoading ? <LoadingRows rows={5} /> : !companies?.length ? (
+            <EmptyState icon={<Users className="h-5 w-5" />} message={t('pages.common.noData')} />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="px-4 py-3 text-left font-medium">{t('pages.clients.table.company')}</th>
+                    <th className="px-4 py-3 text-left font-medium">{t('pages.clients.table.inn')}</th>
+                    <th className="px-4 py-3 text-left font-medium">{t('pages.clients.table.kyc')}</th>
+                    <th className="px-4 py-3 text-center font-medium">{t('pages.clients.table.deals')}</th>
+                    <th className="px-4 py-3 text-left font-medium">{t('pages.clients.table.lastActivity')}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {companies.map((company: Company) => (
+                    <tr key={company.id} className="border-b hover:bg-muted/50">
+                      <td className="px-4 py-3 font-medium">{company.name}</td>
+                      <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{company.inn}</td>
+                      <td className="px-4 py-3">
+                        <Badge variant={company.verification_status === 'VERIFIED' ? 'default' : 'secondary'} className="gap-1">
+                          {company.verification_status === 'VERIFIED'
+                            ? <><Check className="h-3 w-3" /> {t('pages.clients.kycStatus.verified')}</>
+                            : <><Clock className="h-3 w-3" /> {t('pages.clients.kycStatus.pending')}</>}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3 text-center tabular-nums">{company.user_count ?? 0}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{company.created_at ? new Date(company.created_at).toLocaleDateString() : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </PageShell>
@@ -567,18 +533,19 @@ export function AnalyticsPage() {
   const { data: ps } = usePageStats();
   const { t } = useTranslation();
   const { activeStatus } = useUserStore();
+  const { data: analytics, isLoading } = useAnalytics();
 
   if (activeStatus === 'BUYER') {
     return <BuyerAnalytics />;
   }
 
-  // Seller / Manufacturer analytics
-  // Analytics data loaded from the backend API via crmApi.getAnalytics()
-  // TODO: Replace with useEffect + API call
-  const funnelData: { stage: string; value: number }[] = [];
-  const revenueData: { month: string; revenue: number }[] = [];
+  const funnelData = (analytics?.pipeline_by_status ?? []).map((item) => ({
+    stage: item.stage__name,
+    value: item.count,
+  }));
+  const maxFunnel = Math.max(...funnelData.map((d) => d.value), 1);
 
-  const colors = ['var(--color-chart-1)', 'var(--color-chart-2)', 'var(--color-chart-5)', 'var(--color-chart-4)'];
+  const colors = ['var(--color-chart-1)', 'var(--color-chart-2)', 'var(--color-chart-5)', 'var(--color-chart-4)', 'var(--color-chart-3)'];
 
   return (
     <PageShell
@@ -586,57 +553,70 @@ export function AnalyticsPage() {
       description={activeStatus === 'MANUFACTURER' ? t('pages.analytics.manufacturerDescription') : t('pages.analytics.sellerDescription')}
       icon={<BarChart3 className="h-5 w-5" />}
       stats={[
-        { label: t('pages.analytics.stats.conversion'), value: ps?.analytics?.conversion ?? '—' },
-        { label: t('pages.analytics.stats.avgDeal'), value: ps?.analytics?.avg_deal ?? '—' },
-        { label: t('pages.analytics.stats.pipeline'), value: ps?.analytics?.pipeline ?? '—' },
+        { label: t('pages.analytics.stats.conversion'), value: analytics?.conversion_rate != null ? `${analytics.conversion_rate.toFixed(1)}%` : (ps?.analytics?.conversion ?? '—') },
+        { label: t('pages.analytics.stats.avgDeal'), value: analytics?.avg_margin != null ? `${analytics.avg_margin.toFixed(1)}%` : (ps?.analytics?.avg_deal ?? '—') },
+        { label: t('pages.analytics.stats.pipeline'), value: analytics?.total_pipeline_value != null ? `$${analytics.total_pipeline_value.toLocaleString()}` : (ps?.analytics?.pipeline ?? '—') },
         { label: t('pages.analytics.stats.winRate'), value: ps?.analytics?.win_rate ?? '—' },
       ]}
     >
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">{t('pages.analytics.conversionFunnel')}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {funnelData.map((item, idx) => {
-              const percentage = (item.value / 100) * 100;
-              return (
-                <div key={idx} className="space-y-1">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium">{item.stage}</span>
-                    <span className="text-muted-foreground">{item.value} ({percentage.toFixed(0)}%)</span>
-                  </div>
-                  <div className="h-8 rounded-full overflow-hidden bg-muted">
-                    <div
-                      className="h-full rounded-full flex items-center justify-end pr-2 text-xs font-medium text-primary-foreground"
-                      style={{ width: `${percentage}%`, backgroundColor: colors[idx] }}
-                    >
-                      {percentage > 20 && `${percentage.toFixed(0)}%`}
+      {isLoading ? <LoadingRows rows={4} /> : (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">{t('pages.analytics.conversionFunnel')}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {funnelData.length === 0 ? (
+                <EmptyState icon={<BarChart3 className="h-5 w-5" />} message={t('pages.common.noData')} />
+              ) : funnelData.map((item, idx) => {
+                const percentage = (item.value / maxFunnel) * 100;
+                return (
+                  <div key={idx} className="space-y-1">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium">{item.stage}</span>
+                      <span className="text-muted-foreground">{item.value}</span>
+                    </div>
+                    <div className="h-8 rounded-full overflow-hidden bg-muted">
+                      <div
+                        className="h-full rounded-full flex items-center justify-end pr-2 text-xs font-medium text-primary-foreground"
+                        style={{ width: `${Math.max(percentage, 5)}%`, backgroundColor: colors[idx % colors.length] }}
+                      >
+                        {percentage > 20 && item.value}
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
+                );
+              })}
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">{t('pages.analytics.revenueByMonth')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={revenueData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                <XAxis dataKey="month" stroke="var(--color-muted-foreground)" />
-                <YAxis stroke="var(--color-muted-foreground)" />
-                <RechartsTooltip contentStyle={{ backgroundColor: 'var(--color-card)', border: '1px solid var(--color-border)' }} />
-                <Bar dataKey="revenue" fill="var(--color-chart-1)" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">{t('pages.analytics.keyMetrics')}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="rounded-lg border p-4">
+                  <p className="text-xs text-muted-foreground">{t('pages.analytics.sourcingBacklog')}</p>
+                  <p className="text-2xl font-bold tabular-nums">{analytics?.sourcing_backlog ?? 0}</p>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <p className="text-xs text-muted-foreground">{t('pages.analytics.kycBacklog')}</p>
+                  <p className="text-2xl font-bold tabular-nums">{analytics?.kyc_backlog ?? 0}</p>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <p className="text-xs text-muted-foreground">{t('pages.analytics.mappedItems')}</p>
+                  <p className="text-2xl font-bold tabular-nums">{analytics?.mapped_items_percentage != null ? `${analytics.mapped_items_percentage.toFixed(0)}%` : '—'}</p>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <p className="text-xs text-muted-foreground">{t('pages.analytics.sourcingSpeed')}</p>
+                  <p className="text-2xl font-bold tabular-nums">{analytics?.sourcing_speed_avg != null ? `${analytics.sourcing_speed_avg.toFixed(1)}h` : '—'}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </PageShell>
   );
 }
@@ -644,11 +624,6 @@ export function AnalyticsPage() {
 function BuyerAnalytics() {
   const { t } = useTranslation();
   const { data: ps } = usePageStats();
-  // Buyer analytics data loaded from the backend API
-  // TODO: Replace with useEffect + API call when buyer analytics endpoint is ready
-  const spendData: { month: string; spend: number }[] = [];
-  const categoryData: { name: string; value: number; color: string }[] = [];
-  const suppliers: { name: string; orders: number; total: string; avgDelivery: string; rating: number }[] = [];
 
   return (
     <PageShell
@@ -659,87 +634,10 @@ function BuyerAnalytics() {
         { label: t('pages.analytics.buyerStats.spendPeriod'), value: ps?.analytics_buyer?.spend_period ?? '—' },
         { label: t('pages.analytics.buyerStats.savings'), value: ps?.analytics_buyer?.savings ?? '—' },
         { label: t('pages.analytics.buyerStats.activeRequests'), value: String(ps?.analytics_buyer?.active_requests ?? '—') },
-        { label: t('pages.analytics.buyerStats.avgDelivery'), value: t('pages.analytics.supplierDays', { count: 14 }) },
+        { label: t('pages.analytics.buyerStats.avgDelivery'), value: '—' },
       ]}
     >
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Spend by Month */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">{t('pages.analytics.spendByMonth')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={spendData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                <XAxis dataKey="month" stroke="var(--color-muted-foreground)" />
-                <YAxis stroke="var(--color-muted-foreground)" />
-                <RechartsTooltip contentStyle={{ backgroundColor: 'var(--color-card)', border: '1px solid var(--color-border)' }} />
-                <Bar dataKey="spend" fill="var(--color-chart-1)" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* Spend by Category */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">{t('pages.analytics.spendStructure')}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {categoryData.map((cat, idx) => (
-              <div key={idx} className="space-y-1">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium">{cat.name}</span>
-                  <span className="text-muted-foreground">{cat.value}%</span>
-                </div>
-                <div className="h-6 rounded-full overflow-hidden bg-muted">
-                  <div
-                    className="h-full rounded-full"
-                    style={{ width: `${cat.value}%`, backgroundColor: cat.color }}
-                  />
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        {/* Top Suppliers */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base">{t('pages.analytics.supplierRating')}</CardTitle>
-            <CardDescription>{t('pages.analytics.supplierRatingDesc')}</CardDescription>
-          </CardHeader>
-          <CardContent className="p-0">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-muted/50">
-                  <th className="px-4 py-3 text-left font-medium">{t('pages.analytics.supplierTable.supplier')}</th>
-                  <th className="px-4 py-3 text-center font-medium">{t('pages.analytics.supplierTable.orders')}</th>
-                  <th className="px-4 py-3 text-right font-medium">{t('pages.analytics.supplierTable.amount')}</th>
-                  <th className="px-4 py-3 text-center font-medium">{t('pages.analytics.supplierTable.avgDelivery')}</th>
-                  <th className="px-4 py-3 text-center font-medium">{t('pages.analytics.supplierTable.rating')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {suppliers.map((s, idx) => (
-                  <tr key={idx} className="border-b hover:bg-muted/30">
-                    <td className="px-4 py-3 font-medium">{s.name}</td>
-                    <td className="px-4 py-3 text-center tabular-nums">{s.orders}</td>
-                    <td className="px-4 py-3 text-right tabular-nums font-medium">{s.total}</td>
-                    <td className="px-4 py-3 text-center text-muted-foreground">{s.avgDelivery}</td>
-                    <td className="px-4 py-3 text-center">
-                      <Badge variant="outline" className="gap-1">
-                        <Star className="h-3 w-3 fill-current" /> {s.rating}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </CardContent>
-        </Card>
-      </div>
+      <EmptyState icon={<BarChart3 className="h-5 w-5" />} message={t('pages.common.sectionInDevelopment')} />
     </PageShell>
   );
 }
@@ -748,9 +646,10 @@ function BuyerAnalytics() {
 
 export function CategoriesPage() {
   const { t } = useTranslation();
-  // Categories are loaded from the backend API via catalogApi.getCategories()
-  // TODO: Replace with useEffect + catalogApi.getCategories()
-  const categories: { name: string; subcats: { name: string; items: string[] }[] }[] = [];
+  const { data: categories, isLoading } = useCategories();
+
+  const topLevel = (categories ?? []).filter((c: Category) => !c.parent);
+  const getChildren = (parentId: number) => (categories ?? []).filter((c: Category) => c.parent === parentId);
 
   return (
     <PageShell
@@ -759,48 +658,52 @@ export function CategoriesPage() {
       icon={<Tags className="h-5 w-5" />}
       actions={[{ label: t('pages.categories.addCategory') }]}
     >
-      <div className="space-y-2">
-        {categories.map((cat, idx) => (
-          <Collapsible key={idx} defaultOpen={idx === 0}>
-            <Card className="border">
-              <CardContent className="p-0">
-                <CollapsibleTrigger asChild>
-                  <Button variant="ghost" className="w-full p-4 flex items-center justify-between hover:bg-muted/50 transition-colors h-auto">
-                    <div className="flex items-center gap-2">
-                      <ChevronDown className="h-4 w-4 transition-transform" />
-                      <span className="font-medium">{cat.name}</span>
-                    </div>
-                    <Badge variant="outline" className="text-xs">{cat.subcats.reduce((sum, s) => sum + s.items.length, 0)} {t('pages.common.items')}</Badge>
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <div className="border-t bg-muted/30 p-4 space-y-3">
-                    {cat.subcats.map((subcat, sidx) => (
-                      <div key={sidx} className="ml-4">
-                        <p className="text-sm font-medium text-muted-foreground">{subcat.name}</p>
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          {subcat.items.map((item, iidx) => (
-                            <Badge key={iidx} variant="secondary" className="text-xs">{item}</Badge>
-                          ))}
+      {isLoading ? <LoadingRows rows={4} /> : topLevel.length === 0 ? (
+        <EmptyState icon={<Tags className="h-5 w-5" />} message={t('pages.common.noData')} />
+      ) : (
+        <div className="space-y-2">
+          {topLevel.map((cat: Category, idx: number) => {
+            const children = getChildren(cat.id);
+            return (
+              <Collapsible key={cat.id} defaultOpen={idx === 0}>
+                <Card className="border">
+                  <CardContent className="p-0">
+                    <CollapsibleTrigger asChild>
+                      <Button variant="ghost" className="w-full p-4 flex items-center justify-between hover:bg-muted/50 transition-colors h-auto">
+                        <div className="flex items-center gap-2">
+                          <ChevronDown className="h-4 w-4 transition-transform" />
+                          <span className="font-medium">{cat.name}</span>
                         </div>
+                        <Badge variant="outline" className="text-xs">{children.length} {t('pages.common.items')}</Badge>
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="border-t bg-muted/30 p-4">
+                        {children.length === 0 ? (
+                          <p className="text-xs text-muted-foreground ml-4">{t('pages.common.noData')}</p>
+                        ) : (
+                          <div className="flex flex-wrap gap-2 ml-4">
+                            {children.map((child: Category) => (
+                              <Badge key={child.id} variant="secondary" className="text-xs">{child.name}</Badge>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    ))}
-                  </div>
-                </CollapsibleContent>
-              </CardContent>
-            </Card>
-          </Collapsible>
-        ))}
-      </div>
+                    </CollapsibleContent>
+                  </CardContent>
+                </Card>
+              </Collapsible>
+            );
+          })}
+        </div>
+      )}
     </PageShell>
   );
 }
 
 export function EquipmentGroupsPage() {
   const { t } = useTranslation();
-  // Equipment groups loaded from the backend API via catalogApi.getEquipmentGroups()
-  // TODO: Replace with useEffect + catalogApi.getEquipmentGroups()
-  const groups: { name: string; icon: React.ReactNode; series: number; components: number }[] = [];
+  const { data: groups, isLoading } = useEquipmentGroups();
 
   return (
     <PageShell
@@ -809,29 +712,35 @@ export function EquipmentGroupsPage() {
       icon={<Layers className="h-5 w-5" />}
       actions={[{ label: t('pages.equipmentGroups.addGroup') }]}
     >
-      <div className="grid gap-4 md:grid-cols-2">
-        {groups.map((group, idx) => (
-          <Card key={idx} className="cursor-pointer hover:shadow-md transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="text-4xl">{group.icon}</div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <h3 className="font-semibold text-lg mb-3">{group.name}</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-muted-foreground">{t('pages.equipmentGroups.series')}</p>
-                  <p className="text-2xl font-bold">{group.series}</p>
+      {isLoading ? <LoadingRows rows={4} /> : !groups?.length ? (
+        <EmptyState icon={<Layers className="h-5 w-5" />} message={t('pages.common.noData')} />
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2">
+          {groups.map((group: EquipmentGroup) => (
+            <Card key={group.id} className="cursor-pointer hover:shadow-md transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <Layers className="h-6 w-6" />
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">{t('pages.equipmentGroups.components')}</p>
-                  <p className="text-2xl font-bold">{group.components}</p>
+                <h3 className="font-semibold text-lg mb-3">{group.name}</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground">{t('pages.equipmentGroups.type')}</p>
+                    <p className="text-sm font-medium">{group.equipment_type || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">{t('pages.equipmentGroups.series')}</p>
+                    <p className="text-sm font-medium">{group.series || '—'}</p>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </PageShell>
   );
 }
@@ -1182,9 +1091,7 @@ export function LogisticsPage() {
 export function AdminUsersPage() {
   const { data: ps } = usePageStats();
   const { t } = useTranslation();
-  // Users are loaded from the backend API via accountsApi
-  // TODO: Replace with useEffect + accountsApi.getUsers() when endpoint is ready
-  const users: { name: string; email: string; role: string; roleLabel: string; status: string; lastLogin: string }[] = [];
+  const { data: users, isLoading } = useUsers();
 
   return (
     <PageShell
@@ -1201,48 +1108,54 @@ export function AdminUsersPage() {
     >
       <Card>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-muted/50">
-                  <th className="px-4 py-3 text-left font-medium">{t('pages.adminUsers.table.name')}</th>
-                  <th className="px-4 py-3 text-left font-medium">{t('pages.adminUsers.table.email')}</th>
-                  <th className="px-4 py-3 text-left font-medium">{t('pages.adminUsers.table.role')}</th>
-                  <th className="px-4 py-3 text-left font-medium">{t('pages.adminUsers.table.status')}</th>
-                  <th className="px-4 py-3 text-left font-medium">{t('pages.adminUsers.table.lastLogin')}</th>
-                  <th className="px-4 py-3 text-center font-medium">{t('pages.adminUsers.table.actions')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((user, idx) => (
-                  <tr key={idx} className="border-b hover:bg-muted/50">
-                    <td className="px-4 py-3 font-medium">{user.name}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{user.email}</td>
-                    <td className="px-4 py-3">
-                      <Badge variant={
-                        user.role === 'admin' ? 'default' :
-                        user.role === 'manager' ? 'secondary' :
-                        'outline'
-                      }>
-                        {user.roleLabel}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge variant={user.status === 'active' ? 'default' : 'secondary'} className="gap-1">
-                        {user.status === 'active' ? <><Check className="h-3 w-3" /> {t('pages.adminUsers.statusLabel.active')}</> : <><Pause className="h-3 w-3" /> {t('pages.adminUsers.statusLabel.inactive')}</>}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground text-xs">{user.lastLogin}</td>
-                    <td className="px-4 py-3 text-center">
-                      <Button variant="ghost" size="sm" className="h-8 w-8">
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </td>
+          {isLoading ? <LoadingRows rows={5} /> : !users?.length ? (
+            <EmptyState icon={<Shield className="h-5 w-5" />} message={t('pages.common.noData')} />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="px-4 py-3 text-left font-medium">{t('pages.adminUsers.table.name')}</th>
+                    <th className="px-4 py-3 text-left font-medium">{t('pages.adminUsers.table.email')}</th>
+                    <th className="px-4 py-3 text-left font-medium">{t('pages.adminUsers.table.role')}</th>
+                    <th className="px-4 py-3 text-left font-medium">{t('pages.adminUsers.table.status')}</th>
+                    <th className="px-4 py-3 text-left font-medium">{t('pages.adminUsers.table.lastLogin')}</th>
+                    <th className="px-4 py-3 text-center font-medium">{t('pages.adminUsers.table.actions')}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {users.map((user: User) => (
+                    <tr key={user.id} className="border-b hover:bg-muted/50">
+                      <td className="px-4 py-3 font-medium">{user.first_name} {user.last_name}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{user.email}</td>
+                      <td className="px-4 py-3">
+                        <Badge variant={
+                          user.role_code === 'ADMIN' ? 'default' :
+                          user.role_code === 'MANAGER' ? 'secondary' :
+                          'outline'
+                        }>
+                          {user.role_data?.name ?? user.role_code ?? '—'}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge variant={user.is_active ? 'default' : 'secondary'} className="gap-1">
+                          {user.is_active
+                            ? <><Check className="h-3 w-3" /> {t('pages.adminUsers.statusLabel.active')}</>
+                            : <><Pause className="h-3 w-3" /> {t('pages.adminUsers.statusLabel.inactive')}</>}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground text-xs">{user.last_login ? new Date(user.last_login).toLocaleDateString() : '—'}</td>
+                      <td className="px-4 py-3 text-center">
+                        <Button variant="ghost" size="sm" className="h-8 w-8">
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </PageShell>
