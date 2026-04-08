@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   LayoutDashboard,
   Package,
@@ -359,8 +359,8 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
   const [chatOpen, setChatOpen] = useState(false);
   const [notificationCount, setNotificationCount] = useState(3);
 
-  const navigation = getNavigation(activeStatus, activePage, role, t);
-  const bottomNav = getBottomNavigation(role, t);
+  const navigation = useMemo(() => getNavigation(activeStatus, activePage, role, t), [activeStatus, activePage, role, t]);
+  const bottomNav = useMemo(() => getBottomNavigation(role, t), [role, t]);
 
   const handleSubmitCart = () => {
     clearCart();

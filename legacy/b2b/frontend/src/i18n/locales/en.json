@@ -150,7 +150,73 @@
       "toOrder": "To Order",
       "inCart": "In Cart",
       "sourcing": "Sourcing"
-    }
+    },
+    "prevPeriod": "prev. period",
+    "title": {
+      "buyer": "Product Catalog",
+      "manufacturer": "My Products",
+      "seller": "Product Range"
+    },
+    "subtitle": {
+      "buyer": "Browse catalog and submit requests",
+      "manufacturer": "Manage your products",
+      "seller": "Products from approved partner manufacturers"
+    },
+    "uploadRequest": "Upload Request",
+    "createRequest": "Create Request",
+    "exportCsv": "Export CSV",
+    "addProduct": "Add Product",
+    "export": "Export",
+    "requestProduct": "Request Product",
+    "searchPlaceholder": {
+      "buyer": "Search by name, manufacturer, category...",
+      "seller": "Search by name, article, GOST..."
+    },
+    "filters": {
+      "domain": "Domain",
+      "allDomains": "All Domains",
+      "railwayMachinery": "Railway & Equipment",
+      "generalGoods": "General Goods",
+      "services": "Services",
+      "status": "Status",
+      "allStatuses": "All Statuses",
+      "inStock": "In Stock",
+      "toOrder": "To Order",
+      "sourcing": "Sourcing",
+      "inactive": "Inactive"
+    },
+    "cardSize": {
+      "compact": "Compact",
+      "normal": "Normal",
+      "large": "Large"
+    },
+    "table": {
+      "name": "Name",
+      "article": "Article",
+      "gost": "GOST / Drawing",
+      "domain": "Domain",
+      "category": "Category",
+      "uom": "UOM",
+      "quantity": "Qty",
+      "priceFca": "Price FCA",
+      "status": "Status"
+    },
+    "noResults": "No products found",
+    "noResultsHint": "Try changing your search criteria",
+    "ownProduct": "Own",
+    "actions": {
+      "viewDetails": "View Details",
+      "edit": "Edit",
+      "addToRequest": "Add to Request",
+      "addToQuote": "Add to Quote",
+      "manageAccess": "Manage Access"
+    },
+    "records": "records",
+    "paginationRange": "{{from}}–{{to}} of {{total}}",
+    "noRecords": "0 records",
+    "inRequest": "In Request",
+    "toRequest": "To Request",
+    "addToRequest": "Add to Request"
   },
   "domains": {
     "RAILWAY_MACHINERY": "Railway Equipment",

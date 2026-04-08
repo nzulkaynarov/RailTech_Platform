@@ -150,7 +150,73 @@
       "toOrder": "Под заказ",
       "inCart": "В корзине",
       "sourcing": "На поиске"
-    }
+    },
+    "prevPeriod": "пред. период",
+    "title": {
+      "buyer": "Каталог товаров",
+      "manufacturer": "Моя продукция",
+      "seller": "Номенклатура"
+    },
+    "subtitle": {
+      "buyer": "Просмотр каталога и отправка заявок",
+      "manufacturer": "Управление вашей продукцией",
+      "seller": "Товары одобренных производителей-партнёров"
+    },
+    "uploadRequest": "Загрузить заявку",
+    "createRequest": "Создать заявку",
+    "exportCsv": "Экспорт CSV",
+    "addProduct": "Добавить товар",
+    "export": "Экспорт",
+    "requestProduct": "Запросить товар",
+    "searchPlaceholder": {
+      "buyer": "Поиск по названию, производителю, категории...",
+      "seller": "Поиск по наименованию, артикулу, ГОСТ..."
+    },
+    "filters": {
+      "domain": "Домен",
+      "allDomains": "Все домены",
+      "railwayMachinery": "ЖД и Техника",
+      "generalGoods": "Общие товары",
+      "services": "Услуги",
+      "status": "Статус",
+      "allStatuses": "Все статусы",
+      "inStock": "В наличии",
+      "toOrder": "Под заказ",
+      "sourcing": "Поиск",
+      "inactive": "Неактивно"
+    },
+    "cardSize": {
+      "compact": "Компактные",
+      "normal": "Обычные",
+      "large": "Крупные"
+    },
+    "table": {
+      "name": "Наименование",
+      "article": "Артикул",
+      "gost": "ГОСТ / Чертёж",
+      "domain": "Домен",
+      "category": "Категория",
+      "uom": "Ед. изм",
+      "quantity": "Кол-во",
+      "priceFca": "Цена FCA",
+      "status": "Статус"
+    },
+    "noResults": "Товары не найдены",
+    "noResultsHint": "Попробуйте изменить параметры поиска",
+    "ownProduct": "Своё",
+    "actions": {
+      "viewDetails": "Подробнее",
+      "edit": "Редактировать",
+      "addToRequest": "Добавить в заявку",
+      "addToQuote": "Добавить в котировку",
+      "manageAccess": "Управление доступом"
+    },
+    "records": "записей",
+    "paginationRange": "{{from}}–{{to}} из {{total}}",
+    "noRecords": "0 записей",
+    "inRequest": "В запросе",
+    "toRequest": "В запрос",
+    "addToRequest": "Добавить в запрос"
   },
   "domains": {
     "RAILWAY_MACHINERY": "Железнодорожное оборудование",

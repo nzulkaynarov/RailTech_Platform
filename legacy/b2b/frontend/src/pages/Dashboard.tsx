@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Package,
   FileText,
@@ -107,13 +107,12 @@ function TopProductsTable({ onProductClick, topProducts }: { onProductClick?: (i
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function BuyerDashboard({ onProductClick: _onProductClick, period: _period, stats }: { onProductClick?: (id: string) => void; period: string; stats: DashboardStats | null }) {
   const { t } = useTranslation();
-  // Buyer-specific request statuses from API (placeholder — extend API for buyer-specific data)
-  const buyerRequestsStatus = stats ? [
+  const buyerRequestsStatus = useMemo(() => stats ? [
     { name: t('dashboardPage.buyer.statusActive'), value: stats.active_requests },
     { name: t('dashboardPage.buyer.statusInProgress'), value: Math.round(stats.active_requests * 0.4) },
     { name: t('dashboardPage.buyer.statusQuoteReceived'), value: Math.round(stats.active_requests * 0.2) },
     { name: t('dashboardPage.buyer.statusCompleted'), value: stats.clients_count },
-  ] : [];
+  ] : [], [stats, t]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -218,11 +217,11 @@ function SellerDashboard({ onProductClick, period: _period, stats }: { onProduct
   const { t } = useTranslation();
   const dealVolumeData = stats?.deals_by_month ?? [];
   const activityByDay = stats?.activity_by_day ?? [];
-  const counterpartyBreakdown = stats ? [
-    { name: t('dashboardPage.seller.manufacturers'), value: stats.counterparties.manufacturers, color: 'var(--color-chart-1)', dotClass: 'bg-[var(--color-chart-1)]' },
-    { name: t('dashboardPage.seller.buyers'), value: stats.counterparties.buyers, color: 'var(--color-chart-2)', dotClass: 'bg-[var(--color-chart-2)]' },
-    { name: t('dashboardPage.seller.intermediaries'), value: stats.counterparties.intermediaries, color: 'var(--color-chart-4)', dotClass: 'bg-[var(--color-chart-4)]' },
-  ] : [];
+  const counterpartyBreakdown = useMemo(() => stats ? [
+    { name: t('dashboardPage.seller.manufacturers'), value: stats.counterparties.manufacturers, color: 'var(--color-chart-1)' },
+    { name: t('dashboardPage.seller.buyers'), value: stats.counterparties.buyers, color: 'var(--color-chart-2)' },
+    { name: t('dashboardPage.seller.intermediaries'), value: stats.counterparties.intermediaries, color: 'var(--color-chart-4)' },
+  ] : [], [stats, t]);
   const completionPct = stats?.request_completion ?? 0;
   const completionGoal = stats?.request_completion_goal ?? 80;
 
@@ -352,7 +351,7 @@ function SellerDashboard({ onProductClick, period: _period, stats }: { onProduct
               <div className="mt-2 flex justify-center gap-4">
                 {counterpartyBreakdown.map((c) => (
                   <div key={c.name} className="flex items-center gap-1.5 text-xs">
-                    <span className={`h-2.5 w-2.5 rounded-full ${c.dotClass}`} />
+                    <span className={`h-2.5 w-2.5 rounded-full bg-[${c.color}]`} />
                     <span className="font-medium">{c.value}</span>
                     <span className="text-muted-foreground">{c.name}</span>
                   </div>
