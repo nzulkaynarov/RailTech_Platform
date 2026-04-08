@@ -36,7 +36,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, canS
 
     const stock = stockConfig[product.stock_status as keyof typeof stockConfig] ?? stockConfig.ON_ORDER;
     const domain = domainConfig[String(product.domain_type_name ?? '')];
-    const inCart = items.some(i => i.product.id === String(product.id));
+    const inCart = items.some(i => Number(i.product.id) === Number(product.id));
     const mfgName = product.manufacturer_data?.name ?? '';
     const mfgInfo = verifiedManufacturers[mfgName];
     const isBuyer = activeStatus === 'BUYER';
