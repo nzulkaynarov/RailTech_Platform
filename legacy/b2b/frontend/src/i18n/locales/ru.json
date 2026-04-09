@@ -206,7 +206,8 @@
       "inStock": "В наличии",
       "toOrder": "Под заказ",
       "sourcing": "Поиск",
-      "inactive": "Неактивно"
+      "inactive": "Неактивно",
+      "unknown": "Не указан"
     },
     "cardSize": {
       "compact": "Компактные",
@@ -1003,7 +1004,14 @@
     "volumePricing": "Оптовые цены",
     "qty": "Кол-во",
     "pricePerUnit": "Цена / шт",
-    "discount": "Скидка"
+    "discount": "Скидка",
+    "domain": "Домен",
+    "category": "Категория",
+    "manufacturer": "Производитель",
+    "dateAdded": "Дата добавления",
+    "stockQuantity": "Остаток на складе",
+    "prevPeriod": "Пред. период",
+    "noAnalogs": "Аналоги не найдены"
   },
   "managerDashboard": {
     "title": "Sourcing",

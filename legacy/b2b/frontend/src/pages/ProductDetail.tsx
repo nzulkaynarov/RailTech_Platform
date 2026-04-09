@@ -148,11 +148,13 @@ export function ProductDetail({ productId, onBack, onNavigate }: ProductDetailPr
     gost: String(apiProduct.gost_drawing ?? ''),
     uom: String((apiProduct.uom_data as Record<string, unknown>)?.name ?? ''),
     quantity: 0,
-    domain: (apiProduct.domain_type_name ?? 'GENERAL_GOODS') as Product['domain'],
+    domain: String(apiProduct.domain_type_code ?? 'GENERAL_GOODS'),
     category: String((apiProduct.category_data as Record<string, unknown>)?.name ?? ''),
     status: 'in_stock' as const,
     manufacturer: String((apiProduct.manufacturer_data as Record<string, unknown>)?.name ?? ''),
-    addedDate: String(apiProduct.created_at ?? ''),
+    addedDate: apiProduct.created_at
+      ? new Date(String(apiProduct.created_at)).toLocaleDateString()
+      : '',
     ownerCompanyId: '',
     partnerVisible: true,
     description: String(apiProduct.description ?? ''),

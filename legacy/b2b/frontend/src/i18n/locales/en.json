@@ -206,7 +206,8 @@
       "inStock": "In Stock",
       "toOrder": "To Order",
       "sourcing": "Sourcing",
-      "inactive": "Inactive"
+      "inactive": "Inactive",
+      "unknown": "Unknown"
     },
     "cardSize": {
       "compact": "Compact",
@@ -1003,7 +1004,14 @@
     "volumePricing": "Volume pricing",
     "qty": "Qty",
     "pricePerUnit": "Price / unit",
-    "discount": "Discount"
+    "discount": "Discount",
+    "domain": "Domain",
+    "category": "Category",
+    "manufacturer": "Manufacturer",
+    "dateAdded": "Date added",
+    "stockQuantity": "Stock quantity",
+    "prevPeriod": "Previous period",
+    "noAnalogs": "No analogs found"
   },
   "managerDashboard": {
     "title": "Sourcing",
