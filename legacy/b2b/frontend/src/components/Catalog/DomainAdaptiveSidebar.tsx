@@ -157,7 +157,7 @@ export const DomainAdaptiveSidebar: React.FC<DomainAdaptiveSidebarProps> = ({ is
                                     'w-full flex items-center justify-between h-7 px-2.5 rounded-md transition-all text-left border text-sm',
                                     filters.category === cat.id
                                         ? 'bg-background text-primary border-border shadow-sm font-medium'
-                                        : 'text-muted-foreground hover:text-foreground dark:hover:text-white border-transparent'
+                                        : 'text-muted-foreground hover:text-foreground dark:hover:text-foreground border-transparent'
                                 )}
                             >
                                 <span className="text-xs truncate">{cat.name}</span>

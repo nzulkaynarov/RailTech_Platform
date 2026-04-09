@@ -304,8 +304,8 @@ export const DealSplitView: React.FC = () => {
 
                         {/* Quote approval banner */}
                         {selectedDeal.stage_name === 'Quote Sent' && (
-                            <div className="bg-amber-50 dark:bg-amber-900/10 border-b border-amber-200 dark:border-amber-500/20 px-4 py-2 flex items-center justify-between shrink-0">
-                                <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 text-sm font-medium">
+                            <div className="bg-warning/10 border-b border-warning/20 px-4 py-2 flex items-center justify-between shrink-0">
+                                <div className="flex items-center gap-2 text-warning text-sm font-medium">
                                     <AlertCircle size={16} />
                                     {t('quote.title')} — {t('dashboard.stages.QUOTING')}
                                 </div>

@@ -140,8 +140,8 @@ export const ExcelUpload: React.FC<ExcelUploadProps> = ({ dealId, onUploadSucces
             ) : (
                 <div className="bg-muted dark:bg-muted/50 border border-border rounded-xl p-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="bg-emerald-500/10 p-2 rounded-lg">
-                            <FileSpreadsheet className="w-5 h-5 text-emerald-500" aria-hidden="true" />
+                        <div className="bg-success/10 p-2 rounded-lg">
+                            <FileSpreadsheet className="w-5 h-5 text-success" aria-hidden="true" />
                         </div>
                         <div>
                             <p className="text-sm font-semibold text-foreground truncate max-w-[200px]">
@@ -199,7 +199,7 @@ export const ExcelUpload: React.FC<ExcelUploadProps> = ({ dealId, onUploadSucces
             )}
 
             {(error || (activeTask && activeTask.error)) && (
-                <div className="mt-4 p-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-lg text-red-600 dark:text-red-400 text-sm" role="alert">
+                <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm" role="alert">
                     {error || activeTask?.error}
                 </div>
             )}

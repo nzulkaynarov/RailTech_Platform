@@ -26,7 +26,7 @@ const KPICard: React.FC<KPICardProps> = ({ icon: Icon, label, value, sub, color,
                     <Icon className="w-4 h-4" />
                 </div>
                 {trend && (
-                    <span className="flex items-center gap-1 text-xs font-black text-emerald-500 uppercase tracking-widest bg-emerald-500/5 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                    <span className="flex items-center gap-1 text-xs font-black text-success uppercase tracking-widest bg-success/5 px-1.5 py-0.5 rounded border border-success/20">
                         <TrendingUp className="w-2.5 h-2.5" />{trend}
                     </span>
                 )}

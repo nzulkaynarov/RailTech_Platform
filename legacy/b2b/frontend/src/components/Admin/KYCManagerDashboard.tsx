@@ -15,10 +15,10 @@ const STATUS_CONFIG = {
 	L1_UNVERIFIED: {
 		label: 'P_PENDING',
 		icon: Clock,
-		color: 'text-amber-500',
-		bg: 'bg-amber-500/5',
-		border: 'border-amber-500/20',
-		badge: 'bg-amber-500/10 text-amber-500 border border-amber-500/20',
+		color: 'text-warning',
+		bg: 'bg-warning/5',
+		border: 'border-warning/20',
+		badge: 'bg-warning/10 text-warning border border-warning/20',
 	},
 	PROFILE_SUBMITTED: {
 		label: 'P_SUBMITTED',
@@ -31,10 +31,10 @@ const STATUS_CONFIG = {
 	L2_VERIFIED: {
 		label: 'V_VERIFIED_L2',
 		icon: ShieldCheck,
-		color: 'text-emerald-500',
-		bg: 'bg-emerald-500/5',
-		border: 'border-emerald-500/20',
-		badge: 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20',
+		color: 'text-success',
+		bg: 'bg-success/5',
+		border: 'border-success/20',
+		badge: 'bg-success/10 text-success border border-success/20',
 	},
 	L3_CONTRACTED: {
 		label: 'V_PARTNER_L3',
@@ -133,7 +133,7 @@ const CompanyDetailPanel: React.FC<SidePanelProps> = ({ company, onClose, onVeri
 									<p className="text-xs font-black text-foreground/80 truncate tracking-tight uppercase">{doc.original_filename}</p>
 									<p className="text-xs text-muted-foreground font-bold uppercase">{doc.doc_type_display}</p>
 								</div>
-								<CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 opacity-50" />
+								<CheckCircle2 className="w-3.5 h-3.5 text-success shrink-0 opacity-50" />
 							</div>
 						))}
 						{(company.kyc_documents || []).length === 0 && (

@@ -25,6 +25,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 export const SourcingGrid: React.FC = () => {
     const { t } = useTranslation();
@@ -140,48 +141,48 @@ export const SourcingGrid: React.FC = () => {
                             className="py-16"
                         />
                     ) : (
-                        <table className="w-full border-collapse">
-                            <thead>
-                                <tr className="border-b border-border bg-muted/50">
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        <Table className="w-full border-collapse">
+                            <TableHeader>
+                                <TableRow className="border-b border-border bg-muted/50">
+                                    <TableHead className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                                         {t('catalog.table.name')}
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                    </TableHead>
+                                    <TableHead className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                                         {t('catalog.table.unit')}
-                                    </th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                    </TableHead>
+                                    <TableHead className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                                         {t('dashboard.deals.title')}
-                                    </th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                    </TableHead>
+                                    <TableHead className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                                         {t('sourcing.assignProduct')}
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border">
+                                    </TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody className="divide-y divide-border">
                                 {filteredItems.map((item) => (
-                                    <tr
+                                    <TableRow
                                         key={item.id}
                                         className="transition-colors hover:bg-muted/50"
                                     >
-                                        <td className="px-4 py-3.5">
+                                        <TableCell className="px-4 py-3.5">
                                             <div className="mb-0.5 text-sm font-semibold">
                                                 {item.imported_raw_name}
                                             </div>
                                             <div className="text-xs text-muted-foreground">
                                                 {t('sourcing.noMatch')}
                                             </div>
-                                        </td>
-                                        <td className="px-4 py-3.5">
+                                        </TableCell>
+                                        <TableCell className="px-4 py-3.5">
                                             <Badge variant="secondary" className="tabular-nums">
                                                 {item.quantity}
                                             </Badge>
-                                        </td>
-                                        <td className="px-4 py-3.5">
+                                        </TableCell>
+                                        <TableCell className="px-4 py-3.5">
                                             <span className="text-sm font-medium text-muted-foreground">
                                                 #{item.quote}
                                             </span>
-                                        </td>
-                                        <td className="px-4 py-3.5 text-center">
+                                        </TableCell>
+                                        <TableCell className="px-4 py-3.5 text-center">
                                             <Button
                                                 size="sm"
                                                 onClick={() => {
@@ -192,11 +193,11 @@ export const SourcingGrid: React.FC = () => {
                                             >
                                                 {t('sourcing.assignProduct')}
                                             </Button>
-                                        </td>
-                                    </tr>
+                                        </TableCell>
+                                    </TableRow>
                                 ))}
-                            </tbody>
-                        </table>
+                            </TableBody>
+                        </Table>
                     )}
                 </CardContent>
             </Card>

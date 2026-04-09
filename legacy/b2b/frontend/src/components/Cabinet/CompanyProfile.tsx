@@ -11,9 +11,9 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Button } from '@/components/ui/button';
 
 const STATUS_CONFIG: Record<string, { icon: React.ElementType; color: string; bg: string; border: string }> = {
-    L1_UNVERIFIED: { icon: AlertTriangle, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-200 dark:border-amber-500/30' },
+    L1_UNVERIFIED: { icon: AlertTriangle, color: 'text-warning', bg: 'bg-warning/10', border: 'border-warning/20' },
     PROFILE_SUBMITTED: { icon: FileText, color: 'text-primary', bg: 'bg-primary/10', border: 'border-primary/20' },
-    L2_VERIFIED: { icon: Shield, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/20', border: 'border-emerald-200 dark:border-emerald-500/30' },
+    L2_VERIFIED: { icon: Shield, color: 'text-success', bg: 'bg-success/10', border: 'border-success/20' },
     L3_CONTRACTED: { icon: BadgeCheck, color: 'text-primary', bg: 'bg-primary/10', border: 'border-primary/20' },
 };
 

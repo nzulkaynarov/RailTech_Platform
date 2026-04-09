@@ -337,7 +337,7 @@ export const PublicCatalog: React.FC = () => {
                 {/* Price restriction banner */}
                 {!canSeePrices && (
                     <div className="bg-muted border-b border-border px-4 py-2 flex items-center justify-between shrink-0">
-                        <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 text-sm font-medium">
+                        <div className="flex items-center gap-2 text-warning text-sm font-medium">
                             <ShieldAlert size={16} aria-hidden="true" />
                             {t('catalog.priceHidden')}
                         </div>

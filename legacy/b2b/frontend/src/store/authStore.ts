@@ -49,7 +49,7 @@ export const useAuthStore = create<AuthState>()(
 
                     if (!response.ok) {
                         const err = await response.json().catch(() => ({}));
-                        const message = err.detail || 'Неверный логин или пароль';
+                        const message = err.detail || 'auth.loginError';
                         set({ error: message });
                         throw new Error(message);
                     }

@@ -366,7 +366,7 @@ function BuyerView({ onBack }: { onBack: () => void; onNavigate: (t: string) => 
                     <CardDescription>{t('requestDetail.deal.manager', { name: deal.manager })}</CardDescription>
                   </div>
                   <Badge className={cn('text-sm px-3 py-1', dealStageColors[deal.stage])}>
-                    {dealStageLabels[deal.stage]}
+                    {t(dealStageLabels[deal.stage])}
                   </Badge>
                 </div>
               </CardHeader>

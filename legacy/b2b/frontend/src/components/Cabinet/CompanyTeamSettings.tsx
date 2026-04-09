@@ -6,10 +6,11 @@ import { useAuthStore } from '../../store/authStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const ROLE_BADGE_COLORS: Record<string, string> = {
     OWNER: 'bg-muted text-foreground border-border',
-    ACCOUNTANT: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
+    ACCOUNTANT: 'bg-success/10 text-success border-success/20',
     MANAGER: 'bg-muted text-foreground border-border',
 };
 
@@ -85,18 +86,18 @@ export const CompanyTeamSettings: React.FC = () => {
             {/* Team List */}
             <div className="bg-card border border-border rounded-2xl overflow-hidden">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-muted border-b border-border text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                <th className="p-4">{t('team.employee')}</th>
-                                <th className="p-4">{t('team.role')}</th>
-                                <th className="p-4">{t('team.status')}</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border">
+                    <Table className="w-full text-left border-collapse">
+                        <TableHeader>
+                            <TableRow className="bg-muted border-b border-border text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                                <TableHead className="p-4">{t('team.employee')}</TableHead>
+                                <TableHead className="p-4">{t('team.role')}</TableHead>
+                                <TableHead className="p-4">{t('team.status')}</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody className="divide-y divide-border">
                             {team.map((member) => (
-                                <tr key={member.id} className="hover:bg-muted transition-colors">
-                                    <td className="p-4">
+                                <TableRow key={member.id} className="hover:bg-muted transition-colors">
+                                    <TableCell className="p-4">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground font-bold">
                                                 {member.email.charAt(0).toUpperCase()}
@@ -108,26 +109,26 @@ export const CompanyTeamSettings: React.FC = () => {
                                                 <div className="text-xs text-muted-foreground">{member.email}</div>
                                             </div>
                                         </div>
-                                    </td>
-                                    <td className="p-4">
+                                    </TableCell>
+                                    <TableCell className="p-4">
                                         <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold border ${member.workspace_role ? ROLE_BADGE_COLORS[member.workspace_role] : 'bg-muted text-muted-foreground border-border'}`}>
                                             {member.workspace_role ? t(`team.roles.${member.workspace_role}`) : t('team.employee')}
                                         </span>
-                                    </td>
-                                    <td className="p-4">
-                                        <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                                    </TableCell>
+                                    <TableCell className="p-4">
+                                        <div className="flex items-center gap-1.5 text-xs font-medium text-success">
                                             <CheckCircle2 className="w-4 h-4" /> {t('team.active')}
                                         </div>
-                                    </td>
-                                </tr>
+                                    </TableCell>
+                                </TableRow>
                             ))}
                             {team.length === 0 && (
-                                <tr>
-                                    <td colSpan={3} className="p-8 text-center text-muted-foreground">{t('team.noMembers')}</td>
-                                </tr>
+                                <TableRow>
+                                    <TableCell colSpan={3} className="p-8 text-center text-muted-foreground">{t('team.noMembers')}</TableCell>
+                                </TableRow>
                             )}
-                        </tbody>
-                    </table>
+                        </TableBody>
+                    </Table>
                 </div>
             </div>
 
@@ -172,13 +173,13 @@ export const CompanyTeamSettings: React.FC = () => {
                     </form>
 
                     {error && (
-                        <div className="mt-4 flex items-center gap-2 text-sm text-rose-500 font-medium bg-rose-50 dark:bg-rose-500/10 p-3 rounded-lg border border-rose-200 dark:border-rose-500/20">
+                        <div className="mt-4 flex items-center gap-2 text-sm text-destructive font-medium bg-destructive/10 p-3 rounded-lg border border-destructive/20">
                             <AlertCircle className="w-4 h-4 shrink-0" /> {error}
                         </div>
                     )}
 
                     {success && (
-                        <div className="mt-4 flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 font-medium bg-emerald-50 dark:bg-emerald-500/10 p-3 rounded-lg border border-emerald-200 dark:border-emerald-500/20">
+                        <div className="mt-4 flex items-center gap-2 text-sm text-success font-medium bg-success/10 p-3 rounded-lg border border-success/20">
                             <CheckCircle2 className="w-4 h-4 shrink-0" /> {success}
                         </div>
                     )}

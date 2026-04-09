@@ -119,8 +119,8 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({ isOpen, onCl
 
                     {activeTask?.status === 'SUCCESS' && (
                         <div className="animate-in fade-in py-10 text-center duration-500">
-                            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded border border-emerald-500/20 bg-emerald-500/5">
-                                <CheckCircle2 className="size-6 text-emerald-500" />
+                            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded border border-success/20 bg-success/5">
+                                <CheckCircle2 className="size-6 text-success" />
                             </div>
                             <h3 className="text-xs font-black uppercase tracking-widest">COMMIT_SUCCESSFUL</h3>
                             <p className="mt-2 px-10 text-xs font-bold uppercase tracking-widest text-muted-foreground">

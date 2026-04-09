@@ -1,4 +1,14 @@
 {
+  "dealStages": {
+    "draft": "Черновик",
+    "kycPending": "KYC проверка",
+    "sourcing": "Закупка",
+    "calculating": "Расчёт",
+    "quoteSent": "КП отправлено",
+    "contractSigned": "Договор подписан",
+    "closedWon": "Закрыта (выиграна)",
+    "closedLost": "Закрыта (проиграна)"
+  },
   "common": {
     "loading": "Загрузка...",
     "error": "Произошла ошибка",

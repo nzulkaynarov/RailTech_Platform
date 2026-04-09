@@ -138,26 +138,27 @@ export type DealStage =
   | 'CLOSED_WON'
   | 'CLOSED_LOST';
 
+/** i18n KEYS — translate in components via t(dealStageLabels[stage]) */
 export const dealStageLabels: Record<DealStage, string> = {
-  DRAFT: 'Черновик',
-  KYC_PENDING: 'KYC проверка',
-  SOURCING: 'Закупка',
-  CALCULATING: 'Расчёт',
-  QUOTE_SENT: 'КП отправлено',
-  CONTRACT_SIGNED: 'Договор подписан',
-  CLOSED_WON: 'Закрыта (выиграна)',
-  CLOSED_LOST: 'Закрыта (проиграна)',
+  DRAFT: 'dealStages.draft',
+  KYC_PENDING: 'dealStages.kycPending',
+  SOURCING: 'dealStages.sourcing',
+  CALCULATING: 'dealStages.calculating',
+  QUOTE_SENT: 'dealStages.quoteSent',
+  CONTRACT_SIGNED: 'dealStages.contractSigned',
+  CLOSED_WON: 'dealStages.closedWon',
+  CLOSED_LOST: 'dealStages.closedLost',
 };
 
 export const dealStageColors: Record<DealStage, string> = {
-  DRAFT: 'bg-slate-100 text-slate-700',
-  KYC_PENDING: 'bg-amber-100 text-amber-700',
-  SOURCING: 'bg-blue-100 text-blue-700',
-  CALCULATING: 'bg-orange-100 text-orange-700',
-  QUOTE_SENT: 'bg-cyan-100 text-cyan-700',
-  CONTRACT_SIGNED: 'bg-emerald-100 text-emerald-700',
-  CLOSED_WON: 'bg-green-100 text-green-700',
-  CLOSED_LOST: 'bg-red-100 text-red-700',
+  DRAFT: 'bg-muted text-muted-foreground',
+  KYC_PENDING: 'bg-warning/10 text-warning',
+  SOURCING: 'bg-info/10 text-info',
+  CALCULATING: 'bg-warning/10 text-warning',
+  QUOTE_SENT: 'bg-info/10 text-info',
+  CONTRACT_SIGNED: 'bg-success/10 text-success',
+  CLOSED_WON: 'bg-success/10 text-success',
+  CLOSED_LOST: 'bg-destructive/10 text-destructive',
 };
 
 export interface Deal {

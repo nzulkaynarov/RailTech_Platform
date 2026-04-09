@@ -5,6 +5,7 @@ import { Download, FileText, Lock as LockIcon, Package, ShoppingCart, X } from '
 import { StatusBadge, getStockVariant } from '@/components/ui/StatusBadge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useCartStore } from '@/store/cartStore';
 
 interface CatalogTableProps {
@@ -108,28 +109,28 @@ export const CatalogTable: React.FC<CatalogTableProps> = ({ products, onProductC
                     </div>
                 </div>
             )}
-            <table className="w-full text-left border-separate border-spacing-0">
-                <thead className="bg-muted dark:bg-background sticky top-0 z-10">
-                    <tr className="text-xs uppercase font-semibold text-muted-foreground">
-                        <th className="py-2.5 px-3 border-b border-border w-10 text-center">
+            <Table className="w-full text-left border-separate border-spacing-0">
+                <TableHeader className="bg-muted dark:bg-background sticky top-0 z-10">
+                    <TableRow className="text-xs uppercase font-semibold text-muted-foreground">
+                        <TableHead className="py-2.5 px-3 border-b border-border w-10 text-center">
                             <Checkbox
                                 checked={allSelected ? true : someSelected ? 'indeterminate' : false}
                                 onCheckedChange={toggleAll}
                                 aria-label="Select all"
                             />
-                        </th>
-                        <th className="py-2.5 px-3 border-b border-border w-10 text-center">#</th>
-                        <th className="py-2.5 px-3 border-b border-border min-w-[280px]">{t('catalog.table.name')}</th>
-                        <th className="py-2.5 px-3 border-b border-border w-44">{t('catalog.table.sku')}</th>
-                        <th className="py-2.5 px-3 border-b border-border w-36">{t('catalog.table.manufacturer')}</th>
-                        <th className="py-2.5 px-3 border-b border-border w-16 text-center">{t('catalog.table.unit')}</th>
-                        <th className="py-2.5 px-3 border-b border-border w-28 text-center">{t('catalog.table.stock')}</th>
-                        <th className="py-2.5 px-3 border-b border-border w-32 text-right">{t('catalog.table.price')}</th>
-                    </tr>
-                </thead>
-                <tbody>
+                        </TableHead>
+                        <TableHead className="py-2.5 px-3 border-b border-border w-10 text-center">#</TableHead>
+                        <TableHead className="py-2.5 px-3 border-b border-border min-w-[280px]">{t('catalog.table.name')}</TableHead>
+                        <TableHead className="py-2.5 px-3 border-b border-border w-44">{t('catalog.table.sku')}</TableHead>
+                        <TableHead className="py-2.5 px-3 border-b border-border w-36">{t('catalog.table.manufacturer')}</TableHead>
+                        <TableHead className="py-2.5 px-3 border-b border-border w-16 text-center">{t('catalog.table.unit')}</TableHead>
+                        <TableHead className="py-2.5 px-3 border-b border-border w-28 text-center">{t('catalog.table.stock')}</TableHead>
+                        <TableHead className="py-2.5 px-3 border-b border-border w-32 text-right">{t('catalog.table.price')}</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
                     {products.map((product, idx) => (
-                        <tr
+                        <TableRow
                             key={product.id}
                             role="button"
                             tabIndex={0}
@@ -138,17 +139,17 @@ export const CatalogTable: React.FC<CatalogTableProps> = ({ products, onProductC
                             onClick={() => onProductClick(product)}
                             onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onProductClick(product); } }}
                         >
-                            <td className="py-2 px-3 text-center" onClick={(e) => e.stopPropagation()}>
+                            <TableCell className="py-2 px-3 text-center" onClick={(e) => e.stopPropagation()}>
                                 <Checkbox
                                     checked={selectedIds.has(product.id)}
                                     onCheckedChange={() => toggleOne(product.id)}
                                     aria-label={`Select ${product.name}`}
                                 />
-                            </td>
-                            <td className="py-2 px-3 text-xs text-muted-foreground text-center tabular-nums">
+                            </TableCell>
+                            <TableCell className="py-2 px-3 text-xs text-muted-foreground text-center tabular-nums">
                                 {idx + 1}
-                            </td>
-                            <td className="py-2 px-3">
+                            </TableCell>
+                            <TableCell className="py-2 px-3">
                                 <div className="flex items-center gap-2.5">
                                     <div className="w-8 h-8 rounded-md bg-muted dark:bg-muted flex items-center justify-center shrink-0 border border-border overflow-hidden">
                                         {product.main_image_url ? (
@@ -166,8 +167,8 @@ export const CatalogTable: React.FC<CatalogTableProps> = ({ products, onProductC
                                         </span>
                                     </div>
                                 </div>
-                            </td>
-                            <td className="py-2 px-3">
+                            </TableCell>
+                            <TableCell className="py-2 px-3">
                                 <div className="flex flex-col gap-0.5">
                                     <span className="text-sm font-mono font-semibold text-foreground">
                                         {product.sku || '—'}
@@ -179,8 +180,8 @@ export const CatalogTable: React.FC<CatalogTableProps> = ({ products, onProductC
                                         </span>
                                     )}
                                 </div>
-                            </td>
-                            <td className="py-2 px-3">
+                            </TableCell>
+                            <TableCell className="py-2 px-3">
                                 <div className="flex flex-col">
                                     <span className="text-sm text-foreground dark:text-muted-foreground truncate">
                                         {product.manufacturer_data?.name || '—'}
@@ -191,19 +192,19 @@ export const CatalogTable: React.FC<CatalogTableProps> = ({ products, onProductC
                                         </span>
                                     )}
                                 </div>
-                            </td>
-                            <td className="py-2 px-3 text-center">
+                            </TableCell>
+                            <TableCell className="py-2 px-3 text-center">
                                 <span className="text-xs font-medium text-muted-foreground bg-muted dark:bg-muted px-1.5 py-0.5 rounded-md">
                                     {product.uom_data?.code || t('catalog.table.defaultUnit')}
                                 </span>
-                            </td>
-                            <td className="py-2 px-3 text-center">
+                            </TableCell>
+                            <TableCell className="py-2 px-3 text-center">
                                 <StatusBadge
                                     label={t(`catalog.stock.${product.stock_status || 'IN_STOCK'}`)}
                                     variant={getStockVariant(product.stock_status || 'IN_STOCK')}
                                 />
-                            </td>
-                            <td className="py-2 px-3 text-right">
+                            </TableCell>
+                            <TableCell className="py-2 px-3 text-right">
                                 {canSeePrices ? (
                                     <div className="flex flex-col items-end">
                                         <span className="text-sm font-semibold text-foreground tabular-nums">
@@ -214,16 +215,16 @@ export const CatalogTable: React.FC<CatalogTableProps> = ({ products, onProductC
                                         </span>
                                     </div>
                                 ) : (
-                                    <div className="flex items-center justify-end gap-1.5 text-amber-600 dark:text-amber-400">
+                                    <div className="flex items-center justify-end gap-1.5 text-warning">
                                         <LockIcon size={12} aria-hidden="true" />
-                                        <span className="text-xs text-amber-600 dark:text-amber-400">{t('catalog.priceHidden')}</span>
+                                        <span className="text-xs text-warning">{t('catalog.priceHidden')}</span>
                                     </div>
                                 )}
-                            </td>
-                        </tr>
+                            </TableCell>
+                        </TableRow>
                     ))}
-                </tbody>
-            </table>
+                </TableBody>
+            </Table>
         </div>
     );
 };

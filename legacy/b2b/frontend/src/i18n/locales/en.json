@@ -1,4 +1,14 @@
 {
+  "dealStages": {
+    "draft": "Draft",
+    "kycPending": "KYC Verification",
+    "sourcing": "Sourcing",
+    "calculating": "Calculating",
+    "quoteSent": "Quote Sent",
+    "contractSigned": "Contract Signed",
+    "closedWon": "Closed (Won)",
+    "closedLost": "Closed (Lost)"
+  },
   "common": {
     "loading": "Loading...",
     "error": "An error occurred",

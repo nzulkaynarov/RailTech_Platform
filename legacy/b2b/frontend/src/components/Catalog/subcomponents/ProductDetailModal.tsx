@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 // TODO: Fetch manufacturer verification data from API
 // const verifiedManufacturers: Record<string, { verified: boolean; iso: boolean; trustScore: number }> = {};
@@ -102,13 +103,13 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                                     </Badge>
                                 )}
                                 {mfgInfo.iso && (
-                                    <Badge variant="outline" className="gap-1 border-green-200 bg-green-50 text-green-700 dark:border-green-500/30 dark:bg-green-500/10 dark:text-green-400">
+                                    <Badge variant="outline" className="gap-1 border-success/20 bg-success/10 text-success">
                                         <Award className="size-3" aria-hidden="true" />
                                         ISO 9001
                                     </Badge>
                                 )}
                                 <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                                    <Star className="size-3 fill-amber-400 text-amber-400" aria-hidden="true" />
+                                    <Star className="size-3 fill-warning text-warning" aria-hidden="true" />
                                     {mfgInfo.trustScore}
                                 </span>
                             </div>
@@ -191,38 +192,38 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                                     <div>
                                         <p className="mb-3 text-sm font-semibold">{t('productDetail.volumePricing')}</p>
                                         <div className="rounded-lg border border-border overflow-hidden">
-                                            <table className="w-full text-sm">
-                                                <thead>
-                                                    <tr className="bg-muted text-muted-foreground">
-                                                        <th className="px-4 py-2 text-left font-medium">{t('productDetail.qty')}</th>
-                                                        <th className="px-4 py-2 text-right font-medium">{t('productDetail.pricePerUnit')}</th>
-                                                        <th className="px-4 py-2 text-right font-medium">{t('productDetail.discount')}</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
+                                            <Table className="w-full text-sm">
+                                                <TableHeader>
+                                                    <TableRow className="bg-muted text-muted-foreground">
+                                                        <TableHead className="px-4 py-2 text-left font-medium">{t('productDetail.qty')}</TableHead>
+                                                        <TableHead className="px-4 py-2 text-right font-medium">{t('productDetail.pricePerUnit')}</TableHead>
+                                                        <TableHead className="px-4 py-2 text-right font-medium">{t('productDetail.discount')}</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
                                                     {volumeTiers.map((tier, idx) => (
-                                                        <tr key={idx} className="border-t border-border">
-                                                            <td className="px-4 py-2">{tier.range}</td>
-                                                            <td className="px-4 py-2 text-right tabular-nums font-medium">
+                                                        <TableRow key={idx} className="border-t border-border">
+                                                            <TableCell className="px-4 py-2">{tier.range}</TableCell>
+                                                            <TableCell className="px-4 py-2 text-right tabular-nums font-medium">
                                                                 {canSeePrices ? (
                                                                     <>
                                                                         {formatPrice(tier.price)}{' '}
                                                                         <span className="text-xs text-muted-foreground">{currencyCode}</span>
                                                                     </>
                                                                 ) : (
-                                                                    <span className="flex items-center justify-end gap-1 text-amber-600">
+                                                                    <span className="flex items-center justify-end gap-1 text-warning">
                                                                         <LockIcon className="size-3" aria-hidden="true" />
                                                                         Скрыто
                                                                     </span>
                                                                 )}
-                                                            </td>
-                                                            <td className="px-4 py-2 text-right text-muted-foreground">
+                                                            </TableCell>
+                                                            <TableCell className="px-4 py-2 text-right text-muted-foreground">
                                                                 {tier.discount || '—'}
-                                                            </td>
-                                                        </tr>
+                                                            </TableCell>
+                                                        </TableRow>
                                                     ))}
-                                                </tbody>
-                                            </table>
+                                                </TableBody>
+                                            </Table>
                                         </div>
                                     </div>
                                 </div>
@@ -286,7 +287,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                                     </span>
                                 </p>
                             ) : (
-                                <div className="flex items-center gap-2 text-amber-600">
+                                <div className="flex items-center gap-2 text-warning">
                                     <LockIcon className="size-3.5" aria-hidden="true" />
                                     <span className="text-sm">{t('catalog.priceHidden')}</span>
                                 </div>

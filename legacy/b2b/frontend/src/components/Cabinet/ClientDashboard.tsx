@@ -11,6 +11,7 @@ import { KPICard } from '@/components/ui/KPICard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { StatusBadge, getDealStageVariant, getKycVariant } from '@/components/ui/StatusBadge';
 import { TableSkeleton } from '@/components/ui/LoadingSkeleton';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useCurrencyStore } from '@/store/currencyStore';
 
 export const ClientDashboard: React.FC = () => {
@@ -67,9 +68,9 @@ export const ClientDashboard: React.FC = () => {
 
             {/* KYC Banner */}
             {kyc_status && kyc_status !== 'L3_CONTRACTED' && (
-                <div className="flex items-center gap-4 p-4 rounded-xl border bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-500/20">
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-background border border-amber-200 dark:border-amber-500/20 shrink-0">
-                        <Shield className="w-5 h-5 text-amber-500" />
+                <div className="flex items-center gap-4 p-4 rounded-xl border bg-warning/10 border-warning/20">
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-background border border-warning/20 shrink-0">
+                        <Shield className="w-5 h-5 text-warning" />
                     </div>
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
@@ -104,7 +105,7 @@ export const ClientDashboard: React.FC = () => {
                     isLoading={loading}
                 />
                 <KPICard
-                    icon={<Clock className="w-4 h-4 text-amber-500" />}
+                    icon={<Clock className="w-4 h-4 text-warning" />}
                     label={t('dashboard.kpi.activePipeline')}
                     value={inProgress}
                     isLoading={loading}
@@ -141,9 +142,9 @@ export const ClientDashboard: React.FC = () => {
 
                         <div className="flex-1">
                             {loading ? (
-                                <table className="w-full">
+                                <Table className="w-full">
                                     <TableSkeleton rows={3} columns={4} />
-                                </table>
+                                </Table>
                             ) : deals.length === 0 ? (
                                 <EmptyState
                                     icon={<Package className="w-7 h-7 text-muted-foreground" />}
@@ -213,16 +214,16 @@ export const ClientDashboard: React.FC = () => {
                             <QuickActionItem
                                 to="/cabinet/deals"
                                 icon={<Upload className="w-5 h-5" />}
-                                iconColor="bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                                iconColor="bg-success/10 text-success border-success/20"
                                 title={t('dashboard.deals.bulkImport')}
-                                hoverColor="hover:border-emerald-500/30"
+                                hoverColor="hover:border-success/30"
                             />
                             <QuickActionItem
                                 to="/cabinet/profile"
                                 icon={<Shield className="w-5 h-5" />}
-                                iconColor="bg-purple-500/10 text-purple-600 border-purple-500/20"
+                                iconColor="bg-primary/10 text-primary border-primary/20"
                                 title={t('dashboard.deals.complianceData')}
-                                hoverColor="hover:border-purple-500/30"
+                                hoverColor="hover:border-primary/30"
                             />
                         </div>
                     </div>

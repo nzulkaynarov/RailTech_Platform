@@ -110,9 +110,9 @@ export const ContextualChat: React.FC<ContextualChatProps> = ({ dealId }) => {
                     {isConnected ? t('chat.connected') : t('chat.connectionLost')}
                 </span>
                 {isConnected ? (
-                    <Wifi className="w-3 h-3 text-emerald-500" aria-label={t('chat.connected')} />
+                    <Wifi className="w-3 h-3 text-success" aria-label={t('chat.connected')} />
                 ) : (
-                    <WifiOff className="w-3 h-3 text-red-500" aria-label={t('chat.connectionLost')} />
+                    <WifiOff className="w-3 h-3 text-destructive" aria-label={t('chat.connectionLost')} />
                 )}
             </div>
 

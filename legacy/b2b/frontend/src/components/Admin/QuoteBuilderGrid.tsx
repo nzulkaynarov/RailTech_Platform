@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 
 interface QuoteBuilderGridProps {
 	dealId?: number;
@@ -188,78 +189,78 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 			{/* Data Grid */}
 			<div className="flex-1 overflow-auto rounded-md border">
 				<TooltipProvider>
-					<table className="w-full text-left text-sm">
-						<thead className="border-b bg-muted/50">
-							<tr>
-								<th className="px-2 py-2 text-center text-xs font-semibold text-muted-foreground w-8">#</th>
-								<th className="px-2 py-2 text-xs font-semibold text-muted-foreground min-w-[200px]">
+					<Table className="w-full text-left text-sm">
+						<TableHeader className="border-b bg-muted/50">
+							<TableRow>
+								<TableHead className="px-2 py-2 text-center text-xs font-semibold text-muted-foreground w-8">#</TableHead>
+								<TableHead className="px-2 py-2 text-xs font-semibold text-muted-foreground min-w-[200px]">
 									{t('catalog.table.name')}
-								</th>
-								<th className="px-2 py-2 text-center text-xs font-semibold text-muted-foreground w-16">
+								</TableHead>
+								<TableHead className="px-2 py-2 text-center text-xs font-semibold text-muted-foreground w-16">
 									<Tooltip>
 										<TooltipTrigger asChild>
 											<span className="cursor-help">{t('catalog.table.unit')}</span>
 										</TooltipTrigger>
 										<TooltipContent>{t('quote.quantityHelp', 'Quantity / Units')}</TooltipContent>
 									</Tooltip>
-								</th>
-								<th className="px-2 py-2 text-xs font-semibold text-muted-foreground w-28 bg-muted/30">
+								</TableHead>
+								<TableHead className="px-2 py-2 text-xs font-semibold text-muted-foreground w-28 bg-muted/30">
 									<Tooltip>
 										<TooltipTrigger asChild>
 											<span className="cursor-help">{t('quote.basePrice')}</span>
 										</TooltipTrigger>
 										<TooltipContent>{t('quote.basePriceHelp', 'FCA Base Price per unit')}</TooltipContent>
 									</Tooltip>
-								</th>
-								<th className="px-2 py-2 text-xs font-semibold text-muted-foreground w-24 bg-muted/30">
+								</TableHead>
+								<TableHead className="px-2 py-2 text-xs font-semibold text-muted-foreground w-24 bg-muted/30">
 									<Tooltip>
 										<TooltipTrigger asChild>
 											<span className="cursor-help">{t('quote.logistics', 'Logistics')}</span>
 										</TooltipTrigger>
 										<TooltipContent>{t('quote.logisticsHelp', 'Logistics DAP cost per unit')}</TooltipContent>
 									</Tooltip>
-								</th>
-								<th className="px-2 py-2 text-xs font-semibold text-muted-foreground w-24 bg-muted/30">
+								</TableHead>
+								<TableHead className="px-2 py-2 text-xs font-semibold text-muted-foreground w-24 bg-muted/30">
 									<Tooltip>
 										<TooltipTrigger asChild>
 											<span className="cursor-help">{t('sourcing.title')}</span>
 										</TooltipTrigger>
 										<TooltipContent>{t('quote.customsDutyHelp', 'Customs duty per unit')}</TooltipContent>
 									</Tooltip>
-								</th>
-								<th className="px-2 py-2 text-xs font-bold text-muted-foreground w-28">
+								</TableHead>
+								<TableHead className="px-2 py-2 text-xs font-bold text-muted-foreground w-28">
 									<Tooltip>
 										<TooltipTrigger asChild>
 											<span className="cursor-help">{t('quote.landedCost')}</span>
 										</TooltipTrigger>
 										<TooltipContent>{t('quote.landedCostHelp', 'Base + Logistics + Customs')}</TooltipContent>
 									</Tooltip>
-								</th>
-								<th className="px-2 py-2 text-center text-xs font-semibold text-primary w-16">
+								</TableHead>
+								<TableHead className="px-2 py-2 text-center text-xs font-semibold text-primary w-16">
 									<Tooltip>
 										<TooltipTrigger asChild>
 											<span className="cursor-help">{t('quote.margin')}</span>
 										</TooltipTrigger>
 										<TooltipContent>{t('quote.marginHelp', 'Margin percentage applied to landed cost')}</TooltipContent>
 									</Tooltip>
-								</th>
-								<th className="px-2 py-2 text-right text-xs font-semibold text-muted-foreground w-32 pr-4">
+								</TableHead>
+								<TableHead className="px-2 py-2 text-right text-xs font-semibold text-muted-foreground w-32 pr-4">
 									{t('quote.total')}
-								</th>
-								<th className="px-2 py-2 w-8" />
-							</tr>
-						</thead>
-						<tbody className="divide-y">
+								</TableHead>
+								<TableHead className="px-2 py-2 w-8" />
+							</TableRow>
+						</TableHeader>
+						<TableBody className="divide-y">
 							{localItems.map((item, idx) => (
-								<tr key={item.id} className="hover:bg-muted/50 transition-colors group">
-									<td className="px-2 py-1.5 text-center text-xs font-mono text-muted-foreground tabular-nums">
+								<TableRow key={item.id} className="hover:bg-muted/50 transition-colors group">
+									<TableCell className="px-2 py-1.5 text-center text-xs font-mono text-muted-foreground tabular-nums">
 										{idx + 1}
-									</td>
-									<td className="px-2 py-1.5">
+									</TableCell>
+									<TableCell className="px-2 py-1.5">
 										<div className="flex flex-col leading-tight pr-4">
 											<div className="flex items-center gap-2">
 												{!item.product && (
-													<AlertTriangle className="size-3 text-yellow-500 shrink-0" aria-label={t('sourcing.noMatch')} />
+													<AlertTriangle className="size-3 text-warning shrink-0" aria-label={t('sourcing.noMatch')} />
 												)}
 												<span className="text-sm font-semibold truncate max-w-[280px]">
 													{item.product_name || item.imported_raw_name}
@@ -274,8 +275,8 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 												{item.offer_supplier_name || t('sourcing.noMatch')}
 											</span>
 										</div>
-									</td>
-									<td className="p-0">
+									</TableCell>
+									<TableCell className="p-0">
 										<Input
 											type="number"
 											aria-label={t('catalog.table.unit')}
@@ -283,8 +284,8 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 											value={item.quantity}
 											onChange={(e) => updateItemLocally(item.id, 'quantity', e.target.value)}
 										/>
-									</td>
-									<td className="p-0 bg-muted/20">
+									</TableCell>
+									<TableCell className="p-0 bg-muted/20">
 										<Input
 											type="number"
 											aria-label={t('quote.basePrice')}
@@ -292,8 +293,8 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 											value={item.frozen_base_price}
 											onChange={(e) => updateItemLocally(item.id, 'frozen_base_price', e.target.value)}
 										/>
-									</td>
-									<td className="p-0 bg-muted/20">
+									</TableCell>
+									<TableCell className="p-0 bg-muted/20">
 										<Input
 											type="number"
 											aria-label={t('quote.logistics', 'Logistics')}
@@ -301,8 +302,8 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 											value={item.logistics_cost}
 											onChange={(e) => updateItemLocally(item.id, 'logistics_cost', e.target.value)}
 										/>
-									</td>
-									<td className="p-0 bg-muted/20">
+									</TableCell>
+									<TableCell className="p-0 bg-muted/20">
 										<Input
 											type="number"
 											aria-label={t('sourcing.title')}
@@ -310,13 +311,13 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 											value={item.customs_duty}
 											onChange={(e) => updateItemLocally(item.id, 'customs_duty', e.target.value)}
 										/>
-									</td>
-									<td className="px-2 py-1.5 text-right pr-2 bg-muted/30">
+									</TableCell>
+									<TableCell className="px-2 py-1.5 text-right pr-2 bg-muted/30">
 										<span className="text-sm font-bold tabular-nums">
 											{formatMoney(item.landed_cost, item.frozen_currency)}
 										</span>
-									</td>
-									<td className="p-0">
+									</TableCell>
+									<TableCell className="p-0">
 										<Input
 											type="number"
 											aria-label={t('quote.margin')}
@@ -324,13 +325,13 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 											value={item.margin_percent}
 											onChange={(e) => updateItemLocally(item.id, 'margin_percent', e.target.value)}
 										/>
-									</td>
-									<td className="px-2 py-1.5 text-right pr-4">
+									</TableCell>
+									<TableCell className="px-2 py-1.5 text-right pr-4">
 										<span className="text-sm font-bold tabular-nums">
 											{formatMoney(calculateLineTotal(item.final_price_excl_vat, item.quantity), item.frozen_currency)}
 										</span>
-									</td>
-									<td className="px-1 py-0.5">
+									</TableCell>
+									<TableCell className="px-1 py-0.5">
 										<Button
 											variant="ghost"
 											size="icon-xs"
@@ -340,13 +341,13 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 										>
 											<Trash2 className="size-3" />
 										</Button>
-									</td>
-								</tr>
+									</TableCell>
+								</TableRow>
 							))}
 							{showAddRow && (
-								<tr className="bg-primary/5">
-									<td className="px-2 py-1.5 text-center text-xs text-muted-foreground">+</td>
-									<td className="p-1" colSpan={7}>
+								<TableRow className="bg-primary/5">
+									<TableCell className="px-2 py-1.5 text-center text-xs text-muted-foreground">+</TableCell>
+									<TableCell className="p-1" colSpan={7}>
 										<div className="flex items-center gap-2">
 											<Input
 												type="text"
@@ -365,13 +366,13 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 												{t('common.add')}
 											</Button>
 										</div>
-									</td>
-									<td />
-									<td />
-								</tr>
+									</TableCell>
+									<TableCell />
+									<TableCell />
+								</TableRow>
 							)}
-						</tbody>
-					</table>
+						</TableBody>
+					</Table>
 				</TooltipProvider>
 			</div>
 

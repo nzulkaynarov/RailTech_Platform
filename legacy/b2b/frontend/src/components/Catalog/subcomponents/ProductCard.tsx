@@ -18,9 +18,9 @@ interface ProductCardProps {
 }
 
 const stockConfig = {
-    IN_STOCK:  { color: 'text-emerald-600 bg-emerald-50 border-emerald-200 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-400', dotColor: 'bg-emerald-500', labelKey: 'catalog.stock.inStock' },
+    IN_STOCK:  { color: 'text-success bg-success/10 border-success/20', dotColor: 'bg-success', labelKey: 'catalog.stock.inStock' },
     EXPECTED:  { color: 'text-primary bg-primary/10 border-primary/20', dotColor: 'bg-primary', labelKey: 'catalog.stock.expected' },
-    ON_ORDER:  { color: 'text-amber-600 bg-amber-50 border-amber-200 dark:bg-amber-500/10 dark:border-amber-500/20 dark:text-amber-400', dotColor: 'bg-amber-500', labelKey: 'catalog.stock.onOrder' },
+    ON_ORDER:  { color: 'text-warning bg-warning/10 border-warning/20', dotColor: 'bg-warning', labelKey: 'catalog.stock.onOrder' },
 };
 
 const domainConfig: Record<string, { color: string }> = {
@@ -118,11 +118,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, canS
                                     </span>
                                 )}
                                 {mfgInfo.iso && (
-                                    <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 dark:bg-emerald-500/10 dark:text-emerald-400 px-1.5 py-0.5 rounded">
+                                    <span className="inline-flex items-center gap-1 text-xs font-medium text-success bg-success/10 px-1.5 py-0.5 rounded">
                                         <Award className="w-2.5 h-2.5" /> ISO 9001
                                     </span>
                                 )}
-                                <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 dark:bg-amber-500/10 dark:text-amber-400 px-1.5 py-0.5 rounded">
+                                <span className="inline-flex items-center gap-1 text-xs font-medium text-warning bg-warning/10 px-1.5 py-0.5 rounded">
                                     <Star className="w-2.5 h-2.5" /> {mfgInfo.trustScore}
                                 </span>
                             </div>
@@ -156,7 +156,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, canS
                                         </span>
                                     </p>
                                 ) : (
-                                    <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-500">
+                                    <div className="flex items-center gap-1.5 text-warning">
                                         <Lock className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
                                         <span className="text-xs font-medium">{t('catalog.productDetail.priceRestricted')}</span>
                                     </div>
@@ -173,7 +173,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, canS
                             aria-label={inCart ? t('cart.addedToCart') : t('cart.addToCart')}
                             className={clsx(
                                 'shrink-0 w-9 h-9 rounded-lg',
-                                inCart && 'bg-emerald-500 border-emerald-500 text-white hover:bg-emerald-600'
+                                inCart && 'bg-success border-success text-success-foreground hover:bg-success/90'
                             )}
                         >
                             {inCart ? <Check className="w-4 h-4" /> : <ShoppingCart className="w-4 h-4" />}

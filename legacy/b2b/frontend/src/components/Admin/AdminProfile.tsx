@@ -98,7 +98,7 @@ export const AdminProfile: React.FC = () => {
 
             {message && (
                 <div className={`p-4 rounded-2xl flex items-center gap-3 animate-in fade-in zoom-in-95 duration-300 ${
-                    message.type === 'success' ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-500' : 'bg-destructive/10 border border-destructive/20 text-destructive'
+                    message.type === 'success' ? 'bg-success/10 border border-success/20 text-success' : 'bg-destructive/10 border border-destructive/20 text-destructive'
                 }`}>
                     <CheckCircle className="w-5 h-5" />
                     <span className="font-bold">{message.text}</span>
@@ -125,7 +125,7 @@ export const AdminProfile: React.FC = () => {
 
                     <div className="mt-8 pt-8 border-t border-border flex flex-col gap-3">
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <UserCheck className="w-4 h-4 text-emerald-500" />
+                            <UserCheck className="w-4 h-4 text-success" />
                             {t('admin.profile.accountVerified')}
                         </div>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -141,7 +141,7 @@ export const AdminProfile: React.FC = () => {
                         <form onSubmit={handleSaveProfile} className="space-y-6">
                             <div className="flex items-center gap-6 mb-8">
                                 <div className="relative inline-block">
-                                    <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center text-white text-2xl font-black shadow-xl">
+                                    <div className="w-20 h-20 rounded-3xl bg-primary flex items-center justify-center text-primary-foreground text-2xl font-black shadow-xl">
                                         {user?.first_name?.[0]}{user?.last_name?.[0]}
                                     </div>
                                     <Button type="button" variant="outline" size="icon-xs" className="absolute -bottom-1 -right-1 rounded-lg shadow-lg">

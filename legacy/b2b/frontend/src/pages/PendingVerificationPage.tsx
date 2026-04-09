@@ -30,13 +30,13 @@ function VerificationBadge({ v }: { v: VerificationStatus }) {
   switch (v) {
     case 'pending':
       return (
-        <Badge variant="secondary" className="gap-1 text-amber-700 border-amber-200 bg-amber-50">
+        <Badge variant="secondary" className="gap-1 text-warning border-warning/20 bg-warning/10">
           <Clock className="h-3 w-3" /> {t('verification.pending')}
         </Badge>
       );
     case 'verified':
       return (
-        <Badge variant="secondary" className="gap-1 text-emerald-700 border-emerald-200 bg-emerald-50">
+        <Badge variant="secondary" className="gap-1 text-success border-success/20 bg-success/10">
           <CheckCircle2 className="h-3 w-3" /> {t('verification.verified')}
         </Badge>
       );
@@ -128,7 +128,7 @@ export function PendingVerificationPage() {
                         className="gap-1.5"
                         onClick={() => adminApproveStatus(entry.status)}
                       >
-                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                        <CheckCircle2 className="h-3.5 w-3.5 text-success" />
                         {t('verification.approve', { status: t(`companyStatus.${entry.status}`) })}
                       </Button>
                     ))}
