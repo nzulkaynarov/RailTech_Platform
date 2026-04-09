@@ -113,6 +113,9 @@ jobs:
           cd frontend
           npx tsc --noEmit
 
+      - name: Check i18n key sync (ru.json ↔ en.json)
+        run: python3 scripts/check-i18n-sync.py
+
   frontend-build:
     runs-on: ubuntu-latest
     strategy:

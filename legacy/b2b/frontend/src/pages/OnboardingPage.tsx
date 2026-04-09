@@ -127,8 +127,8 @@ export function OnboardingPage() {
               <div className={cn(
                 'flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium',
                 s < step ? 'bg-primary text-primary-foreground' :
-                s === step ? 'bg-primary text-primary-foreground ring-2 ring-primary/30' :
-                'bg-muted text-muted-foreground'
+                  s === step ? 'bg-primary text-primary-foreground ring-2 ring-primary/30' :
+                    'bg-muted text-muted-foreground'
               )}>
                 {s < step ? <Check className="h-4 w-4" /> : s}
               </div>

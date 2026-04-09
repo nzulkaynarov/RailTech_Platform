@@ -91,12 +91,13 @@ export const ProfileCompletionForm: React.FC<ProfileCompletionFormProps> = ({ on
                                         <FormLabel>{t('profileForm.companyTypeLabel')}</FormLabel>
                                         <div className="grid gap-3 md:grid-cols-3">
                                             {COMPANY_TYPES.map(({ code, icon: Icon, labelKey, descKey }) => (
-                                                <button
+                                                <Button
                                                     key={code}
                                                     type="button"
+                                                    variant="ghost"
                                                     onClick={() => field.onChange(code)}
                                                     className={cn(
-                                                        'relative flex flex-col items-center rounded-lg border-2 p-4 text-center transition-all',
+                                                        'relative flex flex-col items-center rounded-lg border-2 p-4 text-center transition-all h-auto',
                                                         selectedType === code
                                                             ? 'border-primary bg-primary/5'
                                                             : 'border-border hover:border-muted-foreground/30'
@@ -115,7 +116,7 @@ export const ProfileCompletionForm: React.FC<ProfileCompletionFormProps> = ({ on
                                                     </div>
                                                     <h3 className="mt-2 text-sm font-semibold">{t(labelKey)}</h3>
                                                     <p className="mt-1 text-xs text-muted-foreground">{t(descKey)}</p>
-                                                </button>
+                                                </Button>
                                             ))}
                                         </div>
                                         <FormMessage />

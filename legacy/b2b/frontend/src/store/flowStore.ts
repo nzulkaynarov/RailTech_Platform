@@ -347,7 +347,7 @@ export const useFlowStore = create<FlowState>((set, get) => ({
             rfqStatus: 'responded' as const,
             rfqPrice: price,
             rfqLeadDays: leadDays,
-            rfqNote: `Готово к отгрузке — ${item.manufacturerName ?? 'завод'}`,
+            rfqNote: item.manufacturerName ?? '',
           };
         }
         return item;

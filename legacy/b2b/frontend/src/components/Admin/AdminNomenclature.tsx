@@ -24,7 +24,7 @@ export const AdminNomenclature: React.FC = () => {
         search: searchTerm || undefined,
         domain_type: domainFilter === 'ALL' ? undefined : domainFilter
     });
-    
+
     const createMutation = useCreateProduct();
     const updateMutation = useUpdateProduct();
     const deleteMutation = useDeleteProduct();
@@ -128,8 +128,8 @@ export const AdminNomenclature: React.FC = () => {
             <div className="bg-card border border-border rounded p-2 flex flex-col md:flex-row gap-2 items-center shadow-sm font-mono">
                 <div className="relative flex-1 w-full">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <input 
-                        type="text" 
+                    <input
+                        type="text"
                         placeholder={t('admin.nomenclature.searchPlaceholder')}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -173,11 +173,11 @@ export const AdminNomenclature: React.FC = () => {
                         <TableHeader className="sticky top-0 z-10 bg-muted text-muted-foreground text-xs font-black uppercase tracking-widest border-b border-border">
                             <TableRow>
                                 <TableHead className="px-4 py-3 w-10">
-                                    <input 
-                                        type="checkbox" 
+                                    <input
+                                        type="checkbox"
                                         checked={selectedIds.length === products.length && products.length > 0}
                                         onChange={toggleSelectAll}
-                                        className="w-4 h-4 rounded-sm border-border text-primary focus:ring-primary transition-all cursor-pointer opacity-70" 
+                                        className="w-4 h-4 rounded-sm border-border text-primary focus:ring-primary transition-all cursor-pointer opacity-70"
                                     />
                                 </TableHead>
                                 <TableHead className="px-4 py-3">{t('admin.nomenclature.columns.objectDescription')}</TableHead>
@@ -210,11 +210,11 @@ export const AdminNomenclature: React.FC = () => {
                                 products.map((product) => (
                                     <TableRow key={product.id} className="group hover:bg-muted/50 transition-colors border-l-2 border-transparent hover:border-primary">
                                         <TableCell className="px-4 py-3 w-10">
-                                            <input 
-                                                type="checkbox" 
+                                            <input
+                                                type="checkbox"
                                                 checked={selectedIds.includes(product.id)}
                                                 onChange={() => toggleSelect(product.id)}
-                                                className="w-4 h-4 rounded-sm border-border text-primary focus:ring-primary transition-all cursor-pointer opacity-70" 
+                                                className="w-4 h-4 rounded-sm border-border text-primary focus:ring-primary transition-all cursor-pointer opacity-70"
                                             />
                                         </TableCell>
                                         <TableCell className="px-4 py-3 max-w-xs">
@@ -224,11 +224,10 @@ export const AdminNomenclature: React.FC = () => {
                                             </div>
                                         </TableCell>
                                         <TableCell className="px-4 py-3">
-                                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-black uppercase tracking-widest border ${
-                                                product.domain_type_name === 'RAILWAY_MACHINERY' ? 'bg-primary/10 text-primary border-primary/20' :
-                                                product.domain_type_name === 'SERVICES' ? 'bg-warning/10 text-warning border-warning/20' :
-                                                'bg-muted text-muted-foreground border-border'
-                                            }`}>
+                                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-black uppercase tracking-widest border ${product.domain_type_name === 'RAILWAY_MACHINERY' ? 'bg-primary/10 text-primary border-primary/20' :
+                                                    product.domain_type_name === 'SERVICES' ? 'bg-warning/10 text-warning border-warning/20' :
+                                                        'bg-muted text-muted-foreground border-border'
+                                                }`}>
                                                 <Tag className="w-2.5 h-2.5 mr-1" /> {product.domain_type_name}
                                             </span>
                                         </TableCell>
@@ -278,19 +277,19 @@ export const AdminNomenclature: React.FC = () => {
                 </div>
             </div>
 
-            <NomenclatureSlidePanel 
-                isOpen={isPanelOpen} 
-                onClose={() => setIsPanelOpen(false)} 
-                product={selectedProduct} 
-                onSave={handleSavePanel} 
+            <NomenclatureSlidePanel
+                isOpen={isPanelOpen}
+                onClose={() => setIsPanelOpen(false)}
+                product={selectedProduct}
+                onSave={handleSavePanel}
             />
 
-            <ExcelUploadModal 
-                isOpen={isUploadModalOpen} 
+            <ExcelUploadModal
+                isOpen={isUploadModalOpen}
                 onClose={() => {
                     setIsUploadModalOpen(false);
                     refetch();
-                }} 
+                }}
             />
         </div>
     );

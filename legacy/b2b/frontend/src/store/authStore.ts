@@ -60,7 +60,7 @@ export const useAuthStore = create<AuthState>()(
                     // Fetch user profile with the new token
                     await get().initAuth();
                 } catch (e) {
-                    const message = e instanceof Error ? e.message : 'Ошибка авторизации';
+                    const message = e instanceof Error ? e.message : 'auth.genericError';
                     set({ error: message });
                     throw e;
                 } finally {

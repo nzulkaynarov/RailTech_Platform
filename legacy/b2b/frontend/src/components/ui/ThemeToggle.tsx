@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { Sun, Moon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useThemeStore } from '../../store/themeStore';
 
 export const ThemeToggle: React.FC = () => {
@@ -15,9 +16,10 @@ export const ThemeToggle: React.FC = () => {
     }, [theme]);
 
     return (
-        <button
+        <Button
+            variant="ghost"
+            size="icon"
             onClick={toggleTheme}
-            className="p-2 rounded-lg bg-muted hover:bg-accent text-muted-foreground transition-all"
             aria-label="Toggle theme"
         >
             {theme === 'light' ? (
@@ -25,6 +27,6 @@ export const ThemeToggle: React.FC = () => {
             ) : (
                 <Sun className="w-4 h-4" />
             )}
-        </button>
+        </Button>
     );
 };

@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Globe } from 'lucide-react';
 import { clsx } from 'clsx';
+import { Button } from '@/components/ui/button';
 
 /**
  * Compact language switcher (RU/EN toggle).
@@ -16,20 +17,18 @@ export const LanguageSwitcher: React.FC<{ className?: string }> = ({ className }
   };
 
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
       onClick={toggle}
       aria-label={isRu ? 'Switch to English' : 'Переключить на русский'}
       className={clsx(
-        'flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-semibold transition-colors',
-        'text-muted-foreground hover:text-foreground hover:bg-muted',
-        'dark:text-muted-foreground dark:hover:text-white dark:hover:bg-muted',
-        'focus-ring',
+        'flex items-center gap-1.5 h-auto',
         className,
       )}
     >
       <Globe size={14} />
       <span>{isRu ? 'EN' : 'РУ'}</span>
-    </button>
+    </Button>
   );
 };

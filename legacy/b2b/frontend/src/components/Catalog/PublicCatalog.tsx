@@ -17,23 +17,23 @@ import { Button } from '@/components/ui/button';
 import { clsx } from 'clsx';
 
 const domainIcons: Record<string, React.ReactNode> = {
-  RAILWAY_MACHINERY: <Train size={12} className="text-muted-foreground" />,
-  GENERAL_GOODS: <Package size={12} className="text-primary" />,
-  SERVICES: <Wrench size={12} className="text-primary" />,
+    RAILWAY_MACHINERY: <Train size={12} className="text-muted-foreground" />,
+    GENERAL_GOODS: <Package size={12} className="text-primary" />,
+    SERVICES: <Wrench size={12} className="text-primary" />,
 };
 
 const RECENT_SEARCHES_KEY = 'railtech-recent-searches';
 
 function getRecentSearches(): string[] {
-  try {
-    return JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY) || '[]').slice(0, 5);
-  } catch { return []; }
+    try {
+        return JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY) || '[]').slice(0, 5);
+    } catch { return []; }
 }
 
 function saveRecentSearch(query: string) {
-  const recent = getRecentSearches().filter(s => s !== query);
-  recent.unshift(query);
-  localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(recent.slice(0, 5)));
+    const recent = getRecentSearches().filter(s => s !== query);
+    recent.unshift(query);
+    localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(recent.slice(0, 5)));
 }
 
 type SortOption = 'name' | 'price_asc' | 'price_desc' | 'stock';
@@ -139,9 +139,9 @@ export const PublicCatalog: React.FC = () => {
     };
 
     const densityOptions: { value: GridDensity; icon: React.ElementType; label: string }[] = [
-        { value: 'comfortable', icon: Grid2X2,   label: t('catalog.density.comfortable') },
-        { value: 'normal',      icon: LayoutGrid, label: t('catalog.density.normal') },
-        { value: 'compact',     icon: LayoutList, label: t('catalog.density.compact') },
+        { value: 'comfortable', icon: Grid2X2, label: t('catalog.density.comfortable') },
+        { value: 'normal', icon: LayoutGrid, label: t('catalog.density.normal') },
+        { value: 'compact', icon: LayoutList, label: t('catalog.density.compact') },
     ];
 
     return (

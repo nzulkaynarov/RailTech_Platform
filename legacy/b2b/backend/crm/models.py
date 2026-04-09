@@ -1,6 +1,7 @@
 from decimal import Decimal
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+import pghistory
 from master_data.models import AbstractLookup, Currency, Country
 from core.storage import get_private_storage, quote_pdf_path
 
@@ -35,6 +36,10 @@ class QuoteStatus(AbstractLookup):
 # Основные CRM-модели
 # ────────────────────────────────────────────
 
+@pghistory.track(
+    pghistory.Snapshot('deal.snapshot'),
+    pghistory.BeforeUpdate('deal.before_update')
+)
 class Deal(models.Model):
     """
     Сделка — процесс переговоров с клиентом.
@@ -104,6 +109,10 @@ class Deal(models.Model):
         return quote.total_incl_vat if quote else Decimal('0')
 
 
+@pghistory.track(
+    pghistory.Snapshot('quote.snapshot'),
+    pghistory.BeforeUpdate('quote.before_update')
+)
 class Quote(models.Model):
     """
     Коммерческое Предложение (КП) — версионированный документ.
@@ -224,6 +233,10 @@ class Quote(models.Model):
         return QuoteCalculationService.recalculate_quote(self.pk)
 
 
+@pghistory.track(
+    pghistory.Snapshot('quote_item.snapshot'),
+    pghistory.BeforeUpdate('quote_item.before_update')
+)
 class QuoteItem(models.Model):
     """
     Позиция в КП — Financial Pipeline Engine.
