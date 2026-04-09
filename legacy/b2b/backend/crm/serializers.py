@@ -24,11 +24,12 @@ class QuoteItemSerializer(serializers.ModelSerializer):
 class QuoteSerializer(serializers.ModelSerializer):
     items = QuoteItemSerializer(many=True, read_only=True)
     status_name = serializers.CharField(source='status.name', read_only=True)
+    status_code = serializers.CharField(source='status.code', read_only=True)
 
     class Meta:
         model = Quote
         fields = [
-            'id', 'deal', 'version', 'status', 'status_name',
+            'id', 'deal', 'version', 'status', 'status_code', 'status_name',
             'prepared_by', 'tax_country', 'vat_rate',
             'subtotal_excl_vat', 'vat_amount', 'total_incl_vat',
             'valid_until', 'notes', 'pdf_file', 'frozen_at', 'items',

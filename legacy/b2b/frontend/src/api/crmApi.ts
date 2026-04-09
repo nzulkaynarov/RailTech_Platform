@@ -33,6 +33,7 @@ export interface Quote {
 	deal: number;
 	version: number;
 	status: number;
+	status_code: string;
 	status_name: string;
 	tax_country?: number | null;
 	vat_rate?: string;

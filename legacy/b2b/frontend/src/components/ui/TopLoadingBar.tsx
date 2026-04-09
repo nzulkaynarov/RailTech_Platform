@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLoadingStore } from '../../store/loadingStore';
 
 /**
@@ -7,6 +8,7 @@ import { useLoadingStore } from '../../store/loadingStore';
  * Non-intrusive: 2px height, positioned above all content.
  */
 export const TopLoadingBar: React.FC = () => {
+    const { t } = useTranslation();
     const isLoading = useLoadingStore(s => s.isPageLoading);
     const [progress, setProgress] = useState(0);
     const [visible, setVisible] = useState(false);
@@ -52,7 +54,7 @@ export const TopLoadingBar: React.FC = () => {
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={progress}
-            aria-label="Загрузка данных"
+            aria-label={t('common.loading')}
         >
             <div
                 className="h-full bg-primary top-loading-bar"

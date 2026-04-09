@@ -1,0 +1,197 @@
+import { useTranslation } from 'react-i18next';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Calculator, FileText, MoreHorizontal, Send, ThumbsUp, ThumbsDown, FileDown,
+} from 'lucide-react';
+import { useUserStore } from '@/store/userStore';
+import { useCurrencyStore } from '@/store/currencyStore';
+import { usePageStats } from '@/hooks/usePageStats';
+import { useQuotes, useSendQuoteToClient, useApproveQuote } from '@/hooks/useCRM';
+import { crmApi } from '@/api/crmApi';
+import type { Quote } from '@/api/crmApi';
+import { toast } from 'sonner';
+import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
+
+export function QuotesPage() {
+  const { t } = useTranslation();
+  const { activeStatus } = useUserStore();
+  const { data: ps } = usePageStats();
+  const { data: quotes, isLoading } = useQuotes();
+  const sendToClient = useSendQuoteToClient();
+  const approveQuote = useApproveQuote();
+  const formatCurrency = useCurrencyStore((s) => s.format);
+  const isBuyer = activeStatus === 'BUYER';
+
+  const quotesList = quotes ?? [];
+
+  const title = isBuyer ? t('pages.quotes.buyerTitle') : t('pages.quotes.sellerTitle');
+  const description = isBuyer ? t('pages.quotes.buyerDescription') : t('pages.quotes.sellerDescription');
+  const stats = isBuyer
+    ? [
+        { label: t('pages.quotes.stats.total'), value: String(quotesList.length) },
+        { label: t('pages.quotes.stats.underReview'), value: String(ps?.quotes?.under_review ?? '—') },
+        { label: t('pages.quotes.stats.accepted'), value: String(ps?.quotes?.approved ?? '—') },
+        { label: t('pages.quotes.stats.totalAmount'), value: ps?.quotes?.total_amount ?? '—' },
+      ]
+    : [
+        { label: t('pages.quotes.stats.drafts'), value: String(ps?.quotes?.drafts ?? '—') },
+        { label: t('pages.quotes.stats.sent'), value: String(ps?.quotes?.sent ?? '—') },
+        { label: t('pages.quotes.stats.approved'), value: String(ps?.quotes?.approved ?? '—') },
+        { label: t('pages.quotes.stats.pipeline'), value: ps?.quotes?.pipeline ?? '—' },
+      ];
+
+  const handleSendToClient = async (id: number) => {
+    try {
+      await sendToClient.mutateAsync(id);
+      toast.success(t('pages.quotes.toast.sentSuccess', { id }));
+    } catch {
+      toast.error(t('pages.quotes.toast.actionError'));
+    }
+  };
+
+  const handleApprove = async (id: number) => {
+    try {
+      await approveQuote.mutateAsync(id);
+      toast.success(t('pages.quotes.toast.approvedSuccess', { id }));
+    } catch {
+      toast.error(t('pages.quotes.toast.actionError'));
+    }
+  };
+
+  const handleReject = async (id: number) => {
+    try {
+      await crmApi.rejectQuote(id);
+      toast.success(t('pages.quotes.toast.rejectedSuccess', { id }));
+    } catch {
+      toast.error(t('pages.quotes.toast.actionError'));
+    }
+  };
+
+  const handleDownloadPDF = async (id: number) => {
+    try {
+      await crmApi.downloadQuotePDF(id);
+    } catch {
+      toast.error(t('pages.quotes.toast.actionError'));
+    }
+  };
+
+  const handleGeneratePDF = async (id: number) => {
+    try {
+      await crmApi.generateQuotePDF(id);
+      toast.success(t('pages.quotes.toast.pdfGenerated'));
+    } catch {
+      toast.error(t('pages.quotes.toast.actionError'));
+    }
+  };
+
+  /** Compare by status code, not by translated name (Iron Rule #2) */
+  const getStatusBadgeVariant = (statusCode: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
+    switch (statusCode) {
+      case 'APPROVED': return 'default';
+      case 'SENT': return 'secondary';
+      case 'REJECTED': return 'destructive';
+      case 'EXPIRED': return 'destructive';
+      default: return 'outline'; // DRAFT and unknown
+    }
+  };
+
+  return (
+    <PageShell
+      title={title}
+      description={description}
+      icon={<Calculator className="h-5 w-5" />}
+      stats={stats}
+      actions={isBuyer ? undefined : [{ label: t('pages.quotes.createQuote') }]}
+    >
+      <Card>
+        <CardContent className="p-0">
+          {isLoading ? <LoadingRows rows={5} /> : quotesList.length === 0 ? (
+            <EmptyState icon={<Calculator className="h-5 w-5" />} message={t('pages.common.noData')} />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('pages.quotes.table.number')}</TableHead>
+                  <TableHead>{isBuyer ? t('pages.quotes.table.supplier') : t('pages.quotes.table.client')}</TableHead>
+                  <TableHead className="text-center">{t('pages.quotes.table.items')}</TableHead>
+                  <TableHead className="text-right">{t('pages.quotes.table.amount')}</TableHead>
+                  <TableHead>{t('pages.quotes.table.status')}</TableHead>
+                  <TableHead>{t('pages.quotes.table.date')}</TableHead>
+                  <TableHead className="text-center">{t('pages.quotes.table.actions')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {quotesList.map((q: Quote) => (
+                  <TableRow key={q.id}>
+                    <TableCell className="font-medium">#{q.id}-v{q.version}</TableCell>
+                    <TableCell>{t('pages.quotes.dealRef', { id: q.deal })}</TableCell>
+                    <TableCell className="text-center tabular-nums">{q.items?.length ?? 0}</TableCell>
+                    <TableCell className="text-right tabular-nums font-medium">{formatCurrency(Number(q.total_incl_vat))}</TableCell>
+                    <TableCell>
+                      <Badge variant={getStatusBadgeVariant(q.status_code)}>
+                        {q.status_name}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{new Date(q.created_at).toLocaleDateString()}</TableCell>
+                    <TableCell className="text-center">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {!isBuyer && (
+                            <>
+                              <DropdownMenuItem onClick={() => handleSendToClient(q.id)}>
+                                <Send className="mr-2 h-4 w-4" />
+                                {t('pages.quotes.actions.sendToClient')}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleGeneratePDF(q.id)}>
+                                <FileText className="mr-2 h-4 w-4" />
+                                {t('pages.quotes.actions.generatePDF')}
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          {isBuyer && (
+                            <>
+                              <DropdownMenuItem onClick={() => handleApprove(q.id)}>
+                                <ThumbsUp className="mr-2 h-4 w-4" />
+                                {t('pages.quotes.actions.approve')}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleReject(q.id)}>
+                                <ThumbsDown className="mr-2 h-4 w-4" />
+                                {t('pages.quotes.actions.reject')}
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          <DropdownMenuItem onClick={() => handleDownloadPDF(q.id)}>
+                            <FileDown className="mr-2 h-4 w-4" />
+                            {t('pages.quotes.actions.downloadPDF')}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </PageShell>
+  );
+}
+
+export default QuotesPage;

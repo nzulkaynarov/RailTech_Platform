@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -30,8 +30,6 @@ interface ChatMessage {
 
 const initialMessages: ChatMessage[] = [];
 
-const delayedMessages: { delay: number; message: ChatMessage }[] = [];
-
 interface DemoDocument {
   nameKey: string;
   name: string;
@@ -48,30 +46,7 @@ export function DealChatPanel(): React.ReactNode {
   const [inputValue, setInputValue] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // TODO: Fetch messages from crmApi.getMessages(dealId) when dealId changes
-  // useEffect(() => {
-  //   if (dealId) {
-  //     crmApi.getMessages(dealId).then(setMessages);
-  //   }
-  // }, [dealId]);
-
-  useEffect(() => {
-    const timers = delayedMessages.map(({ delay, message }) =>
-      setTimeout(() => {
-        setMessages((prev) => [...prev, message]);
-      }, delay),
-    );
-
-    return () => {
-      timers.forEach(clearTimeout);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages]);
+  // TODO: Fetch messages from crmApi.getMessages(dealId) when dealId prop is added
 
   function getMessageText(msg: ChatMessage): string {
     if (msg.textKey) return t(msg.textKey);

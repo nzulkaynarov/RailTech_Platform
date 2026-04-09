@@ -24,23 +24,23 @@ const RequestDetailPage = lazy(() => import('./pages/flow/RequestDetailPage').th
 const PurchaseTemplatesPage = lazy(() => import('./pages/PurchaseTemplatesPage').then(m => ({ default: m.PurchaseTemplatesPage })));
 const SourcingHub = lazy(() => import('./components/Sourcing/SourcingHub').then(m => ({ default: m.SourcingHub })));
 
-// Lazy load placeholder pages
-const SourcingRequestsPage = lazy(() => import('./pages/PlaceholderPages').then(m => ({ default: m.SourcingRequestsPage })));
-const SourcingImportPage = lazy(() => import('./pages/PlaceholderPages').then(m => ({ default: m.SourcingImportPage })));
-const DealsPage = lazy(() => import('./pages/PlaceholderPages').then(m => ({ default: m.DealsPage })));
-const QuotesPage = lazy(() => import('./pages/PlaceholderPages').then(m => ({ default: m.QuotesPage })));
-const ClientsPage = lazy(() => import('./pages/PlaceholderPages').then(m => ({ default: m.ClientsPage })));
-const ProductionOrdersPage = lazy(() => import('./pages/PlaceholderPages').then(m => ({ default: m.ProductionOrdersPage })));
-const ProductionSchedulePage = lazy(() => import('./pages/PlaceholderPages').then(m => ({ default: m.ProductionSchedulePage })));
-const AnalyticsPage = lazy(() => import('./pages/PlaceholderPages').then(m => ({ default: m.AnalyticsPage })));
-const CategoriesPage = lazy(() => import('./pages/PlaceholderPages').then(m => ({ default: m.CategoriesPage })));
-const EquipmentGroupsPage = lazy(() => import('./pages/PlaceholderPages').then(m => ({ default: m.EquipmentGroupsPage })));
-const IntegrationsPage = lazy(() => import('./pages/PlaceholderPages').then(m => ({ default: m.IntegrationsPage })));
-const HelpPage = lazy(() => import('./pages/PlaceholderPages').then(m => ({ default: m.HelpPage })));
-const MyRequestsPage = lazy(() => import('./pages/PlaceholderPages').then(m => ({ default: m.MyRequestsPage })));
-const MyDocumentsPage = lazy(() => import('./pages/PlaceholderPages').then(m => ({ default: m.MyDocumentsPage })));
-const LogisticsPage = lazy(() => import('./pages/PlaceholderPages').then(m => ({ default: m.LogisticsPage })));
-const AdminUsersPage = lazy(() => import('./pages/PlaceholderPages').then(m => ({ default: m.AdminUsersPage })));
+// Lazy load individual page modules
+const SourcingRequestsPage = lazy(() => import('./pages/SourcingRequestsPage'));
+const SourcingImportPage = lazy(() => import('./pages/SourcingImportPage'));
+const DealsPage = lazy(() => import('./pages/DealsPage'));
+const QuotesPage = lazy(() => import('./pages/QuotesPage'));
+const ClientsPage = lazy(() => import('./pages/ClientsPage'));
+const ProductionOrdersPage = lazy(() => import('./pages/ProductionOrdersPage'));
+const ProductionSchedulePage = lazy(() => import('./pages/ProductionSchedulePage'));
+const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));
+const CategoriesPage = lazy(() => import('./pages/CategoriesPage'));
+const EquipmentGroupsPage = lazy(() => import('./pages/EquipmentGroupsPage'));
+const IntegrationsPage = lazy(() => import('./pages/IntegrationsPage'));
+const HelpPage = lazy(() => import('./pages/HelpPage'));
+const MyRequestsPage = lazy(() => import('./pages/MyRequestsPage'));
+const MyDocumentsPage = lazy(() => import('./pages/MyDocumentsPage'));
+const LogisticsPage = lazy(() => import('./pages/LogisticsPage'));
+const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'));
 
 import { LoadingSkeleton } from './components/LoadingSkeleton';
 
