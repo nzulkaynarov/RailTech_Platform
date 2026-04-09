@@ -44,6 +44,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 import { useUserStore } from '@/store/userStore';
+import { useCurrencyStore } from '@/store/currencyStore';
 import {
   useFlowStore,
   requestStatusLabels,
@@ -106,7 +107,7 @@ function StepIndicator({ steps, current }: { steps: string[]; current: number })
 
 function formatCurrency(val: number | undefined): string {
   if (val == null) return '—';
-  return `$${val.toLocaleString('ru-RU')}`;
+  return useCurrencyStore.getState().format(val);
 }
 
 /* ─── Props ──────────────────────────────────────────────────────────── */
@@ -823,9 +824,9 @@ function CostSummaryCard({ items }: { items: RequestItem[] }) {
               <BarChart data={waterfallData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
                 <XAxis dataKey="name" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}K`} />
+                <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(v: number) => formatCurrency(v)} />
                 <RechartsTooltip
-                  formatter={(value: number) => [`$${value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`, t('requestDetail.cost.amount')]}
+                  formatter={(value: number) => [formatCurrency(value), t('requestDetail.cost.amount')]}
                   contentStyle={{ borderRadius: '8px', fontSize: '12px', border: '1px solid var(--color-border)' }}
                 />
                 <Bar dataKey="value" radius={[4, 4, 0, 0]}>

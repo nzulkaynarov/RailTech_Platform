@@ -27,7 +27,8 @@
     "back": "Назад",
     "backToList": "Назад к списку",
     "comingSoon": "Функция скоро появится",
-    "saving": "Сохранение..."
+    "saving": "Сохранение...",
+    "unitHours": "ч"
   },
   "auth": {
     "loginTitle": "Вход в кабинет",
@@ -991,6 +992,29 @@
     "pricePerUnit": "Цена / шт",
     "discount": "Скидка"
   },
+  "managerDashboard": {
+    "title": "Sourcing",
+    "titleHighlight": "Commander",
+    "subtitle": "Оперативная панель и реестр сделок",
+    "liveFeed": "Трансляция активна",
+    "actionQueue": "Очередь действий",
+    "critical": "Критично",
+    "sourcingBacklog": "Backlog поиска",
+    "itemsRequiringMapping": "Позиции, требующие маппинга",
+    "kycVerifications": "Верификация KYC",
+    "entitiesL1": "Контрагенты на уровне L1",
+    "activePipeline": "Активные сделки",
+    "fullRegistry": "Полный реестр",
+    "systemDraft": "Черновик",
+    "grossValue": "Сумма",
+    "noProtocols": "Нет активных протоколов в реестре",
+    "kpi": {
+      "newProtocols": "Новые протоколы",
+      "operationalPL": "Операционный P/L",
+      "grossExposure": "Общий объём",
+      "finalizedSales": "Закрытые сделки"
+    }
+  },
   "dashboardPage": {
     "title": "Дашборд",
     "period": "Период",
@@ -1381,8 +1405,11 @@
       "languageDesc": "Выберите язык отображения",
       "currency": "Валюта по умолчанию",
       "currencyDesc": "Основная валюта для расчётов",
+      "currencyUSD": "USD ($)",
       "currencyUZS": "UZS (сум)",
       "currencyRUB": "RUB (₽)",
+      "langRu": "Русский",
+      "langEn": "English",
       "timezone": "Часовой пояс",
       "timezoneDesc": "Для корректного отображения дат",
       "tzTashkent": "Ташкент (UTC+5)",
@@ -1436,6 +1463,7 @@
       "minOrder": "Минимальный заказ",
       "minOrderDesc": "Минимальная сумма заказа для производства",
       "noLimit": "Без ограничений",
+      "minOrderValue": "${{amount}}",
       "partnerSuppliers": "Партнёрские поставщики",
       "partnerSuppliersDesc": "Управление одобренными продавцами",
       "manage": "Управление"
@@ -1953,6 +1981,8 @@
       "description": "Документация, FAQ и контакты технической поддержки",
       "needHelp": "Нужна помощь?",
       "supportHours": "Наша техническая поддержка работает Пн-Пт 09:00-18:00 (UTC+5). Среднее время ответа — 30 минут.",
+      "supportEmail": "support@railtech.uz",
+      "supportPhone": "+998 (71) 200-00-00",
       "contactSupport": "Написать в поддержку",
       "sections": {
         "gettingStarted": "Начало работы",

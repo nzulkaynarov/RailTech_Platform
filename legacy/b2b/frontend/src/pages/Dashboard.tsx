@@ -40,6 +40,7 @@ import { KPICard } from '@/components/ui/KPICard';
 
 import { useTranslation } from 'react-i18next';
 import { useUserStore } from '@/store/userStore';
+import { useCurrencyStore } from '@/store/currencyStore';
 import { dashboardApi, type DashboardStats } from '@/api/dashboardApi';
 
 // ─── Chart color constants ──────────────────────────────────────────────
@@ -70,7 +71,7 @@ function TopProductsTable({ onProductClick, topProducts }: { onProductClick?: (i
       <Table>
         <TableHeader>
           <TableRow className="bg-muted/40">
-            <TableHead className="text-xs">ID</TableHead>
+            <TableHead className="text-xs">{t('common.id')}</TableHead>
             <TableHead className="text-xs">{t('dashboardPage.productName')}</TableHead>
             <TableHead className="text-right text-xs">{t('dashboardPage.quantity')}</TableHead>
             <TableHead className="text-xs">{t('dashboardPage.category')}</TableHead>
@@ -112,6 +113,7 @@ function TopProductsTable({ onProductClick, topProducts }: { onProductClick?: (i
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function BuyerDashboard({ onProductClick: _onProductClick, period: _period, stats }: { onProductClick?: (id: string) => void; period: string; stats: DashboardStats | null }) {
   const { t } = useTranslation();
+  const formatCurrency = useCurrencyStore((s) => s.format);
   const buyerRequestsStatus = useMemo(() => stats ? [
     { name: t('dashboardPage.buyer.statusActive'), value: stats.active_requests ?? 0 },
     { name: t('dashboardPage.buyer.statusInProgress'), value: stats.deals_in_progress ?? 0 },
@@ -137,7 +139,7 @@ function BuyerDashboard({ onProductClick: _onProductClick, period: _period, stat
         />
         <KPICard
           label={t('dashboardPage.kpi.dealsVolume')}
-          value={`$${((stats?.deals_volume ?? 0) / 1000).toFixed(0)}K`}
+          value={formatCurrency(stats?.deals_volume ?? 0)}
           icon={<DollarSign className="h-5 w-5 text-muted-foreground" />}
           trend={{ value: `${stats?.deals_volume_change ?? 0}% ${t('dashboardPage.vsPrevPeriod')}`, direction: (stats?.deals_volume_change ?? 0) >= 0 ? "up" : "down" }}
         />
@@ -220,12 +222,13 @@ function BuyerDashboard({ onProductClick: _onProductClick, period: _period, stat
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function SellerDashboard({ onProductClick, period: _period, stats }: { onProductClick?: (id: string) => void; period: string; stats: DashboardStats | null }) {
   const { t } = useTranslation();
+  const formatCurrency = useCurrencyStore((s) => s.format);
   const dealVolumeData = stats?.deals_by_month ?? [];
   const activityByDay = stats?.activity_by_day ?? [];
   const counterpartyBreakdown = useMemo(() => stats ? [
-    { name: t('dashboardPage.seller.manufacturers'), value: stats.counterparties.manufacturers, color: 'var(--color-chart-1)' },
-    { name: t('dashboardPage.seller.buyers'), value: stats.counterparties.buyers, color: 'var(--color-chart-2)' },
-    { name: t('dashboardPage.seller.intermediaries'), value: stats.counterparties.intermediaries, color: 'var(--color-chart-4)' },
+    { name: t('dashboardPage.seller.manufacturers'), value: stats.counterparties.manufacturers, color: 'var(--color-chart-1)', dotClass: 'bg-[var(--color-chart-1)]' },
+    { name: t('dashboardPage.seller.buyers'), value: stats.counterparties.buyers, color: 'var(--color-chart-2)', dotClass: 'bg-[var(--color-chart-2)]' },
+    { name: t('dashboardPage.seller.intermediaries'), value: stats.counterparties.intermediaries, color: 'var(--color-chart-4)', dotClass: 'bg-[var(--color-chart-4)]' },
   ] : [], [stats, t]);
   const completionPct = stats?.request_completion ?? 0;
   const completionGoal = stats?.request_completion_goal ?? 80;
@@ -236,7 +239,7 @@ function SellerDashboard({ onProductClick, period: _period, stats }: { onProduct
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KPICard
           label={t('dashboardPage.kpi.dealsVolume')}
-          value={`$${((stats?.deals_volume ?? 0) / 1000).toFixed(0)}K`}
+          value={formatCurrency(stats?.deals_volume ?? 0)}
           icon={<DollarSign className="h-5 w-5 text-muted-foreground" />}
           trend={{ value: `${stats?.deals_volume_change ?? 0}% ${t('dashboardPage.vsPrevPeriod')}`, direction: (stats?.deals_volume_change ?? 0) >= 0 ? "up" : "down" }}
         />
@@ -268,7 +271,7 @@ function SellerDashboard({ onProductClick, period: _period, stats }: { onProduct
             <div>
               <CardTitle className="text-sm font-semibold">{t('dashboardPage.seller.dealsVolume')}</CardTitle>
               <div className="mt-1 flex items-baseline gap-2">
-                <span className="text-2xl font-bold tabular-nums">${((stats?.deals_volume ?? 0) / 1000).toFixed(0)}K</span>
+                <span className="text-2xl font-bold tabular-nums">{formatCurrency(stats?.deals_volume ?? 0)}</span>
                 <span className="text-xs font-medium text-muted-foreground">{stats?.deals_volume_change ?? 0}% {t('dashboardPage.vsPrevPeriod')}</span>
               </div>
             </div>
@@ -284,9 +287,9 @@ function SellerDashboard({ onProductClick, period: _period, stats }: { onProduct
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
                 <XAxis dataKey="month" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(v: number) => `$${v / 1000}K`} />
+                <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(v: number) => formatCurrency(v)} />
                 <RechartsTooltip
-                  formatter={(value: number) => [`$${(value / 1000).toFixed(0)}K`, t('dashboardPage.seller.volume')]}
+                  formatter={(value: number) => [formatCurrency(value), t('dashboardPage.seller.volume')]}
                   contentStyle={{ borderRadius: '8px', fontSize: '12px', border: '1px solid var(--color-border)' }}
                 />
                 <Area type="monotone" dataKey="value" stroke="var(--color-chart-1)" strokeWidth={2} fill="url(#colorVal)" />
@@ -356,7 +359,7 @@ function SellerDashboard({ onProductClick, period: _period, stats }: { onProduct
               <div className="mt-2 flex justify-center gap-4">
                 {counterpartyBreakdown.map((c) => (
                   <div key={c.name} className="flex items-center gap-1.5 text-xs">
-                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: c.color }} />
+                    <span className={`h-2.5 w-2.5 rounded-full ${c.dotClass}`} />
                     <span className="font-medium">{c.value}</span>
                     <span className="text-muted-foreground">{c.name}</span>
                   </div>
@@ -397,6 +400,7 @@ function SellerDashboard({ onProductClick, period: _period, stats }: { onProduct
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function ManufacturerDashboard({ onProductClick: _onProductClick, period: _period, stats }: { onProductClick?: (id: string) => void; period: string; stats: DashboardStats | null }) {
   const { t } = useTranslation();
+  const formatCurrency = useCurrencyStore((s) => s.format);
   return (
     <div className="flex flex-col gap-6">
       {/* KPI Row */}
@@ -421,7 +425,7 @@ function ManufacturerDashboard({ onProductClick: _onProductClick, period: _perio
         />
         <KPICard
           label={t('dashboardPage.kpi.dealsVolume')}
-          value={`$${((stats?.deals_volume ?? 0) / 1000).toFixed(0)}K`}
+          value={formatCurrency(stats?.deals_volume ?? 0)}
           icon={<DollarSign className="h-5 w-5 text-muted-foreground" />}
           trend={{ value: `${stats?.deals_volume_change ?? 0}% ${t('dashboardPage.vsPrevPeriod')}`, direction: (stats?.deals_volume_change ?? 0) >= 0 ? "up" : "down" }}
         />
@@ -439,9 +443,9 @@ function ManufacturerDashboard({ onProductClick: _onProductClick, period: _perio
               <BarChart data={stats?.deals_by_month ?? []}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
                 <XAxis dataKey="month" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(v: number) => `$${v / 1000}K`} />
+                <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(v: number) => formatCurrency(v)} />
                 <RechartsTooltip
-                  formatter={(value: number) => [`$${(value / 1000).toFixed(0)}K`, t('dashboardPage.seller.volume')]}
+                  formatter={(value: number) => [formatCurrency(value), t('dashboardPage.seller.volume')]}
                   contentStyle={{ borderRadius: '8px', fontSize: '12px', border: '1px solid var(--color-border)' }}
                 />
                 <Bar dataKey="value" fill="var(--color-chart-1)" radius={[4, 4, 0, 0]} />

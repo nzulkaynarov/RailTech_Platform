@@ -5,12 +5,14 @@ import { Link } from 'react-router-dom';
 import { useUsers } from '../../hooks/useAccounts';
 import { useProducts } from '../../hooks/useCatalog';
 import { useAnalytics, useActivityLogs } from '../../hooks/useCRM';
+import { useCurrencyStore } from '@/store/currencyStore';
 import { KPICard } from '@/components/ui/KPICard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/LoadingSkeleton';
 
 export const AdminDashboard: React.FC = () => {
     const { t } = useTranslation();
+    const formatCurrency = useCurrencyStore((s) => s.format);
     const { data: users = [], isLoading: usersLoading } = useUsers();
     const { data: products = [], isLoading: productsLoading } = useProducts();
     const { data: analytics, isLoading: analyticsLoading } = useAnalytics();
@@ -39,12 +41,12 @@ export const AdminDashboard: React.FC = () => {
                 <KPICard
                     icon={<FileText className="w-4 h-4 text-primary" />}
                     label={t('dashboard.kpi.activePipeline')}
-                    value={loading ? '...' : analytics?.total_pipeline_value ? `${analytics.total_pipeline_value.toLocaleString()} $` : '0 $'}
+                    value={loading ? '...' : formatCurrency(analytics?.total_pipeline_value ?? 0)}
                     isLoading={loading}
                     href="/crm/analytics"
                 />
                 <KPICard
-                    icon={<Database className="w-4 h-4 text-amber-500" />}
+                    icon={<Database className="w-4 h-4 text-warning" />}
                     label={t('sourcing.title')}
                     value={loading ? '...' : analytics?.sourcing_backlog ?? 0}
                     isLoading={loading}

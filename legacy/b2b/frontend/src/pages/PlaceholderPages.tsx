@@ -12,8 +12,12 @@ import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table';
 import { useFlowStore, requestStatusLabels, requestStatusColors } from '@/store/flowStore';
 import { useUserStore } from '@/store/userStore';
+import { useCurrencyStore } from '@/store/currencyStore';
 import { usePageStats } from '@/hooks/usePageStats';
 import { Progress } from '@/components/ui/progress';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
@@ -149,6 +153,7 @@ export function SourcingRequestsPage({ onNavigate }: { onNavigate?: (t: string) 
   const { t } = useTranslation();
   const { data: ps } = usePageStats();
   const { data: deals, isLoading } = useDeals();
+  const formatCurrency = useCurrencyStore((s) => s.format);
   const s = ps?.sourcing;
 
   const sourcingDeals = (deals ?? []).filter((d: Deal) =>
@@ -188,7 +193,7 @@ export function SourcingRequestsPage({ onNavigate }: { onNavigate?: (t: string) 
                       {deal.client_name ?? deal.company_name ?? '—'} · {new Date(deal.created_at).toLocaleDateString()}
                     </p>
                   </div>
-                  <p className="text-sm font-bold text-primary tabular-nums">{deal.total_value ? `$${Number(deal.total_value).toLocaleString()}` : '—'}</p>
+                  <p className="text-sm font-bold text-primary tabular-nums">{deal.total_value ? formatCurrency(Number(deal.total_value)) : '—'}</p>
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </div>
               </CardContent>
@@ -273,6 +278,7 @@ export function DealsPage() {
   const { t } = useTranslation();
   const { data: ps } = usePageStats();
   const { data: deals, isLoading } = useDeals();
+  const formatCurrency = useCurrencyStore((s) => s.format);
 
   const stageOrder = ['DRAFT', 'KYC_PENDING', 'SOURCING', 'CALCULATING', 'QUOTE_SENT', 'CONTRACT_SIGNED', 'CLOSED_WON', 'CLOSED_LOST'];
   const stageLabels: Record<string, string> = {
@@ -327,7 +333,7 @@ export function DealsPage() {
                             <p className="text-xs text-muted-foreground">{deal.client_name ?? deal.company_name ?? '—'}</p>
                           </div>
                           <div className="flex items-center justify-between">
-                            <p className="text-lg font-bold text-primary">{deal.total_value ? `$${Number(deal.total_value).toLocaleString()}` : '—'}</p>
+                            <p className="text-lg font-bold text-primary">{deal.total_value ? formatCurrency(Number(deal.total_value)) : '—'}</p>
                             <Badge variant="secondary" className="text-xs">{deal.stage_name}</Badge>
                           </div>
                           <p className="text-xs text-muted-foreground flex items-center gap-1">
@@ -355,6 +361,7 @@ export function QuotesPage() {
   const { data: quotes, isLoading } = useQuotes();
   const sendToClient = useSendQuoteToClient();
   const approveQuote = useApproveQuote();
+  const formatCurrency = useCurrencyStore((s) => s.format);
   const isBuyer = activeStatus === 'BUYER';
 
   const quotesList = quotes ?? [];
@@ -440,76 +447,74 @@ export function QuotesPage() {
           {isLoading ? <LoadingRows rows={5} /> : quotesList.length === 0 ? (
             <EmptyState icon={<Calculator className="h-5 w-5" />} message={t('pages.common.noData')} />
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/50">
-                    <th className="px-4 py-3 text-left font-medium">{t('pages.quotes.table.number')}</th>
-                    <th className="px-4 py-3 text-left font-medium">{isBuyer ? t('pages.quotes.table.supplier') : t('pages.quotes.table.client')}</th>
-                    <th className="px-4 py-3 text-center font-medium">{t('pages.quotes.table.items')}</th>
-                    <th className="px-4 py-3 text-right font-medium">{t('pages.quotes.table.amount')}</th>
-                    <th className="px-4 py-3 text-left font-medium">{t('pages.quotes.table.status')}</th>
-                    <th className="px-4 py-3 text-left font-medium">{t('pages.quotes.table.date')}</th>
-                    <th className="px-4 py-3 text-center font-medium">{t('pages.quotes.table.actions')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {quotesList.map((q: Quote) => (
-                    <tr key={q.id} className="border-b hover:bg-muted/50">
-                      <td className="px-4 py-3 font-medium">#{q.id}-v{q.version}</td>
-                      <td className="px-4 py-3">{t('pages.quotes.dealRef', { id: q.deal })}</td>
-                      <td className="px-4 py-3 text-center tabular-nums">{q.items?.length ?? 0}</td>
-                      <td className="px-4 py-3 text-right tabular-nums font-medium">${Number(q.total_incl_vat).toLocaleString()}</td>
-                      <td className="px-4 py-3">
-                        <Badge variant={getStatusBadgeVariant(q.status_name)}>
-                          {q.status_name}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">{new Date(q.created_at).toLocaleDateString()}</td>
-                      <td className="px-4 py-3 text-center">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {!isBuyer && (
-                              <>
-                                <DropdownMenuItem onClick={() => handleSendToClient(q.id)}>
-                                  <Send className="mr-2 h-4 w-4" />
-                                  {t('pages.quotes.actions.sendToClient')}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleGeneratePDF(q.id)}>
-                                  <FileText className="mr-2 h-4 w-4" />
-                                  {t('pages.quotes.actions.generatePDF')}
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                            {isBuyer && (
-                              <>
-                                <DropdownMenuItem onClick={() => handleApprove(q.id)}>
-                                  <ThumbsUp className="mr-2 h-4 w-4" />
-                                  {t('pages.quotes.actions.approve')}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleReject(q.id)}>
-                                  <ThumbsDown className="mr-2 h-4 w-4" />
-                                  {t('pages.quotes.actions.reject')}
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                            <DropdownMenuItem onClick={() => handleDownloadPDF(q.id)}>
-                              <FileDown className="mr-2 h-4 w-4" />
-                              {t('pages.quotes.actions.downloadPDF')}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('pages.quotes.table.number')}</TableHead>
+                  <TableHead>{isBuyer ? t('pages.quotes.table.supplier') : t('pages.quotes.table.client')}</TableHead>
+                  <TableHead className="text-center">{t('pages.quotes.table.items')}</TableHead>
+                  <TableHead className="text-right">{t('pages.quotes.table.amount')}</TableHead>
+                  <TableHead>{t('pages.quotes.table.status')}</TableHead>
+                  <TableHead>{t('pages.quotes.table.date')}</TableHead>
+                  <TableHead className="text-center">{t('pages.quotes.table.actions')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {quotesList.map((q: Quote) => (
+                  <TableRow key={q.id}>
+                    <TableCell className="font-medium">#{q.id}-v{q.version}</TableCell>
+                    <TableCell>{t('pages.quotes.dealRef', { id: q.deal })}</TableCell>
+                    <TableCell className="text-center tabular-nums">{q.items?.length ?? 0}</TableCell>
+                    <TableCell className="text-right tabular-nums font-medium">{formatCurrency(Number(q.total_incl_vat))}</TableCell>
+                    <TableCell>
+                      <Badge variant={getStatusBadgeVariant(q.status_name)}>
+                        {q.status_name}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{new Date(q.created_at).toLocaleDateString()}</TableCell>
+                    <TableCell className="text-center">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {!isBuyer && (
+                            <>
+                              <DropdownMenuItem onClick={() => handleSendToClient(q.id)}>
+                                <Send className="mr-2 h-4 w-4" />
+                                {t('pages.quotes.actions.sendToClient')}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleGeneratePDF(q.id)}>
+                                <FileText className="mr-2 h-4 w-4" />
+                                {t('pages.quotes.actions.generatePDF')}
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          {isBuyer && (
+                            <>
+                              <DropdownMenuItem onClick={() => handleApprove(q.id)}>
+                                <ThumbsUp className="mr-2 h-4 w-4" />
+                                {t('pages.quotes.actions.approve')}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleReject(q.id)}>
+                                <ThumbsDown className="mr-2 h-4 w-4" />
+                                {t('pages.quotes.actions.reject')}
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          <DropdownMenuItem onClick={() => handleDownloadPDF(q.id)}>
+                            <FileDown className="mr-2 h-4 w-4" />
+                            {t('pages.quotes.actions.downloadPDF')}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
@@ -540,36 +545,34 @@ export function ClientsPage() {
           {isLoading ? <LoadingRows rows={5} /> : !companies?.length ? (
             <EmptyState icon={<Users className="h-5 w-5" />} message={t('pages.common.noData')} />
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/50">
-                    <th className="px-4 py-3 text-left font-medium">{t('pages.clients.table.company')}</th>
-                    <th className="px-4 py-3 text-left font-medium">{t('pages.clients.table.inn')}</th>
-                    <th className="px-4 py-3 text-left font-medium">{t('pages.clients.table.kyc')}</th>
-                    <th className="px-4 py-3 text-center font-medium">{t('pages.clients.table.deals')}</th>
-                    <th className="px-4 py-3 text-left font-medium">{t('pages.clients.table.lastActivity')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {companies.map((company: Company) => (
-                    <tr key={company.id} className="border-b hover:bg-muted/50">
-                      <td className="px-4 py-3 font-medium">{company.name}</td>
-                      <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{company.inn}</td>
-                      <td className="px-4 py-3">
-                        <Badge variant={company.verification_status === 'VERIFIED' ? 'default' : 'secondary'} className="gap-1">
-                          {company.verification_status === 'VERIFIED'
-                            ? <><Check className="h-3 w-3" /> {t('pages.clients.kycStatus.verified')}</>
-                            : <><Clock className="h-3 w-3" /> {t('pages.clients.kycStatus.pending')}</>}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3 text-center tabular-nums">{company.user_count ?? 0}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{company.created_at ? new Date(company.created_at).toLocaleDateString() : '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('pages.clients.table.company')}</TableHead>
+                  <TableHead>{t('pages.clients.table.inn')}</TableHead>
+                  <TableHead>{t('pages.clients.table.kyc')}</TableHead>
+                  <TableHead className="text-center">{t('pages.clients.table.deals')}</TableHead>
+                  <TableHead>{t('pages.clients.table.lastActivity')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {companies.map((company: Company) => (
+                  <TableRow key={company.id}>
+                    <TableCell className="font-medium">{company.name}</TableCell>
+                    <TableCell className="font-mono text-xs text-muted-foreground">{company.inn}</TableCell>
+                    <TableCell>
+                      <Badge variant={company.verification_status === 'VERIFIED' ? 'default' : 'secondary'} className="gap-1">
+                        {company.verification_status === 'VERIFIED'
+                          ? <><Check className="h-3 w-3" /> {t('pages.clients.kycStatus.verified')}</>
+                          : <><Clock className="h-3 w-3" /> {t('pages.clients.kycStatus.pending')}</>}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-center tabular-nums">{company.user_count ?? 0}</TableCell>
+                    <TableCell className="text-muted-foreground">{company.created_at ? new Date(company.created_at).toLocaleDateString() : '—'}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
@@ -657,6 +660,7 @@ export function AnalyticsPage() {
   const { t } = useTranslation();
   const { activeStatus } = useUserStore();
   const { data: analytics, isLoading } = useAnalytics();
+  const formatCurrency = useCurrencyStore((s) => s.format);
 
   if (activeStatus === 'BUYER') {
     return <BuyerAnalytics />;
@@ -668,7 +672,7 @@ export function AnalyticsPage() {
   }));
   const maxFunnel = Math.max(...funnelData.map((d) => d.value), 1);
 
-  const colors = ['var(--color-chart-1)', 'var(--color-chart-2)', 'var(--color-chart-5)', 'var(--color-chart-4)', 'var(--color-chart-3)'];
+  const chartColorClasses = ['bg-[var(--color-chart-1)]', 'bg-[var(--color-chart-2)]', 'bg-[var(--color-chart-5)]', 'bg-[var(--color-chart-4)]', 'bg-[var(--color-chart-3)]'];
 
   return (
     <PageShell
@@ -678,7 +682,7 @@ export function AnalyticsPage() {
       stats={[
         { label: t('pages.analytics.stats.conversion'), value: analytics?.conversion_rate != null ? `${analytics.conversion_rate.toFixed(1)}%` : (ps?.analytics?.conversion ?? '—') },
         { label: t('pages.analytics.stats.avgDeal'), value: analytics?.avg_margin != null ? `${analytics.avg_margin.toFixed(1)}%` : (ps?.analytics?.avg_deal ?? '—') },
-        { label: t('pages.analytics.stats.pipeline'), value: analytics?.total_pipeline_value != null ? `$${analytics.total_pipeline_value.toLocaleString()}` : (ps?.analytics?.pipeline ?? '—') },
+        { label: t('pages.analytics.stats.pipeline'), value: analytics?.total_pipeline_value != null ? formatCurrency(analytics.total_pipeline_value) : (ps?.analytics?.pipeline ?? '—') },
         { label: t('pages.analytics.stats.winRate'), value: ps?.analytics?.win_rate ?? '—' },
       ]}
     >
@@ -701,8 +705,8 @@ export function AnalyticsPage() {
                     </div>
                     <div className="h-8 rounded-full overflow-hidden bg-muted">
                       <div
-                        className="h-full rounded-full flex items-center justify-end pr-2 text-xs font-medium text-primary-foreground"
-                        style={{ width: `${Math.max(percentage, 5)}%`, backgroundColor: colors[idx % colors.length] }}
+                        className={cn('h-full rounded-full flex items-center justify-end pr-2 text-xs font-medium text-primary-foreground', chartColorClasses[idx % chartColorClasses.length])}
+                        style={{ width: `${Math.max(percentage, 5)}%` }}
                       >
                         {percentage > 20 && item.value}
                       </div>
@@ -733,7 +737,7 @@ export function AnalyticsPage() {
                 </div>
                 <div className="rounded-lg border p-4">
                   <p className="text-xs text-muted-foreground">{t('pages.analytics.sourcingSpeed')}</p>
-                  <p className="text-2xl font-bold tabular-nums">{analytics?.sourcing_speed_avg != null ? `${analytics.sourcing_speed_avg.toFixed(1)}h` : '—'}</p>
+                  <p className="text-2xl font-bold tabular-nums">{analytics?.sourcing_speed_avg != null ? `${analytics.sourcing_speed_avg.toFixed(1)}${t('common.unitHours')}` : '—'}</p>
                 </div>
               </div>
             </CardContent>
@@ -981,7 +985,7 @@ export function HelpPage() {
           {[
             { icon: <FileText className="h-5 w-5" />, title: t('pages.help.quickActions.apiDocs'), desc: t('pages.help.quickActions.apiDocsDesc') },
             { icon: <MessageSquare className="h-5 w-5" />, title: t('pages.help.quickActions.telegramSupport'), desc: t('pages.help.quickActions.telegramSupportDesc') },
-            { icon: <Mail className="h-5 w-5" />, title: t('pages.help.quickActions.emailSupport'), desc: 'support@railtech.uz' },
+            { icon: <Mail className="h-5 w-5" />, title: t('pages.help.quickActions.emailSupport'), desc: t('pages.help.supportEmail') },
           ].map((action, i) => (
             <Card key={i} className="cursor-pointer hover:shadow-md transition-shadow">
               <CardContent className="p-4 flex items-center gap-3">
@@ -1035,8 +1039,8 @@ export function HelpPage() {
                 <h3 className="font-semibold text-base mb-1">{t('pages.help.needHelp')}</h3>
                 <p className="text-sm text-muted-foreground">{t('pages.help.supportHours')}</p>
                 <div className="flex items-center gap-4 mt-2 text-sm">
-                  <span className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" /> support@railtech.uz</span>
-                  <span className="flex items-center gap-1.5"><MessageSquare className="h-3.5 w-3.5" /> +998 (71) 200-00-00</span>
+                  <span className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" /> {t('pages.help.supportEmail')}</span>
+                  <span className="flex items-center gap-1.5"><MessageSquare className="h-3.5 w-3.5" /> {t('pages.help.supportPhone')}</span>
                 </div>
               </div>
               <Button>{t('pages.help.contactSupport')}</Button>
@@ -1054,6 +1058,7 @@ export function MyRequestsPage({ onNavigate }: { onNavigate?: (t: string) => voi
   const { data: ps } = usePageStats();
   const { t } = useTranslation();
   const { data: deals, isLoading } = useDeals();
+  const formatCurrency = useCurrencyStore((s) => s.format);
 
   const myDeals = deals ?? [];
 
@@ -1090,7 +1095,7 @@ export function MyRequestsPage({ onNavigate }: { onNavigate?: (t: string) => voi
                       {deal.company_name ?? '—'} · {new Date(deal.created_at).toLocaleDateString()}
                     </p>
                   </div>
-                  <p className="text-sm font-bold text-primary tabular-nums">{deal.total_value ? `$${Number(deal.total_value).toLocaleString()}` : '—'}</p>
+                  <p className="text-sm font-bold text-primary tabular-nums">{deal.total_value ? formatCurrency(Number(deal.total_value)) : '—'}</p>
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </div>
               </CardContent>
@@ -1117,47 +1122,45 @@ export function MyDocumentsPage() {
     >
       <Card>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-muted/50">
-                  <th className="px-4 py-3 text-left font-medium">{t('pages.documents.table.type')}</th>
-                  <th className="px-4 py-3 text-left font-medium">{t('pages.documents.table.number')}</th>
-                  <th className="px-4 py-3 text-left font-medium">{t('pages.documents.table.date')}</th>
-                  <th className="px-4 py-3 text-left font-medium">{t('pages.documents.table.counterparty')}</th>
-                  <th className="px-4 py-3 text-left font-medium">{t('pages.documents.table.status')}</th>
-                  <th className="px-4 py-3 text-right font-medium">{t('pages.documents.table.amount')}</th>
-                  <th className="px-4 py-3 text-center font-medium">{t('pages.documents.table.actions')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {documents.map((doc, idx) => (
-                  <tr key={idx} className="border-b hover:bg-muted/50">
-                    <td className="px-4 py-3 font-medium">{doc.type}</td>
-                    <td className="px-4 py-3">{doc.number}</td>
-                    <td className="px-4 py-3">{doc.date}</td>
-                    <td className="px-4 py-3">{doc.counterparty}</td>
-                    <td className="px-4 py-3">
-                      <Badge variant={
-                        doc.status === 'signed' ? 'default' :
-                        doc.status === 'pending' ? 'secondary' :
-                        doc.status === 'forSignature' ? 'outline' :
-                        'secondary'
-                      }>
-                        {doc.statusLabel}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3 text-right tabular-nums font-medium">{doc.amount}</td>
-                    <td className="px-4 py-3 text-center">
-                      <Button variant="ghost" size="sm" className="h-8 w-8">
-                        <Download className="h-4 w-4" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t('pages.documents.table.type')}</TableHead>
+                <TableHead>{t('pages.documents.table.number')}</TableHead>
+                <TableHead>{t('pages.documents.table.date')}</TableHead>
+                <TableHead>{t('pages.documents.table.counterparty')}</TableHead>
+                <TableHead>{t('pages.documents.table.status')}</TableHead>
+                <TableHead className="text-right">{t('pages.documents.table.amount')}</TableHead>
+                <TableHead className="text-center">{t('pages.documents.table.actions')}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {documents.map((doc, idx) => (
+                <TableRow key={idx}>
+                  <TableCell className="font-medium">{doc.type}</TableCell>
+                  <TableCell>{doc.number}</TableCell>
+                  <TableCell>{doc.date}</TableCell>
+                  <TableCell>{doc.counterparty}</TableCell>
+                  <TableCell>
+                    <Badge variant={
+                      doc.status === 'signed' ? 'default' :
+                      doc.status === 'pending' ? 'secondary' :
+                      doc.status === 'forSignature' ? 'outline' :
+                      'secondary'
+                    }>
+                      {doc.statusLabel}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums font-medium">{doc.amount}</TableCell>
+                  <TableCell className="text-center">
+                    <Button variant="ghost" size="sm" className="h-8 w-8">
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     </PageShell>
@@ -1262,50 +1265,48 @@ export function AdminUsersPage() {
           {isLoading ? <LoadingRows rows={5} /> : !users?.length ? (
             <EmptyState icon={<Shield className="h-5 w-5" />} message={t('pages.common.noData')} />
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/50">
-                    <th className="px-4 py-3 text-left font-medium">{t('pages.adminUsers.table.name')}</th>
-                    <th className="px-4 py-3 text-left font-medium">{t('pages.adminUsers.table.email')}</th>
-                    <th className="px-4 py-3 text-left font-medium">{t('pages.adminUsers.table.role')}</th>
-                    <th className="px-4 py-3 text-left font-medium">{t('pages.adminUsers.table.status')}</th>
-                    <th className="px-4 py-3 text-left font-medium">{t('pages.adminUsers.table.lastLogin')}</th>
-                    <th className="px-4 py-3 text-center font-medium">{t('pages.adminUsers.table.actions')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((user: User) => (
-                    <tr key={user.id} className="border-b hover:bg-muted/50">
-                      <td className="px-4 py-3 font-medium">{user.first_name} {user.last_name}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{user.email}</td>
-                      <td className="px-4 py-3">
-                        <Badge variant={
-                          user.role_code === 'ADMIN' ? 'default' :
-                          user.role_code === 'MANAGER' ? 'secondary' :
-                          'outline'
-                        }>
-                          {user.role_data?.name ?? user.role_code ?? '—'}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge variant={user.is_active ? 'default' : 'secondary'} className="gap-1">
-                          {user.is_active
-                            ? <><Check className="h-3 w-3" /> {t('pages.adminUsers.statusLabel.active')}</>
-                            : <><Pause className="h-3 w-3" /> {t('pages.adminUsers.statusLabel.inactive')}</>}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground text-xs">{user.last_login ? new Date(user.last_login).toLocaleDateString() : '—'}</td>
-                      <td className="px-4 py-3 text-center">
-                        <Button variant="ghost" size="sm" className="h-8 w-8">
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('pages.adminUsers.table.name')}</TableHead>
+                  <TableHead>{t('pages.adminUsers.table.email')}</TableHead>
+                  <TableHead>{t('pages.adminUsers.table.role')}</TableHead>
+                  <TableHead>{t('pages.adminUsers.table.status')}</TableHead>
+                  <TableHead>{t('pages.adminUsers.table.lastLogin')}</TableHead>
+                  <TableHead className="text-center">{t('pages.adminUsers.table.actions')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {users.map((user: User) => (
+                  <TableRow key={user.id}>
+                    <TableCell className="font-medium">{user.first_name} {user.last_name}</TableCell>
+                    <TableCell className="text-muted-foreground">{user.email}</TableCell>
+                    <TableCell>
+                      <Badge variant={
+                        user.role_code === 'ADMIN' ? 'default' :
+                        user.role_code === 'MANAGER' ? 'secondary' :
+                        'outline'
+                      }>
+                        {user.role_data?.name ?? user.role_code ?? '—'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={user.is_active ? 'default' : 'secondary'} className="gap-1">
+                        {user.is_active
+                          ? <><Check className="h-3 w-3" /> {t('pages.adminUsers.statusLabel.active')}</>
+                          : <><Pause className="h-3 w-3" /> {t('pages.adminUsers.statusLabel.inactive')}</>}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-xs">{user.last_login ? new Date(user.last_login).toLocaleDateString() : '—'}</TableCell>
+                    <TableCell className="text-center">
+                      <Button variant="ghost" size="sm" className="h-8 w-8">
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>

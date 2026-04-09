@@ -23,6 +23,7 @@ import {
   Hash,
 } from 'lucide-react';
 import type { RequestItem } from '@/store/flowStore';
+import { useCurrencyStore } from '@/store/currencyStore';
 
 /* ─── Types ────────────────────────────────────────────────────────────── */
 
@@ -68,10 +69,7 @@ function assignDomain(article: string): Domain {
 /* ─── Currency formatting ──────────────────────────────────────────────── */
 
 function fmt(value: number): string {
-  return `$${value.toLocaleString('ru-RU', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
+  return useCurrencyStore.getState().format(value);
 }
 
 function fmtPercent(value: number): string {

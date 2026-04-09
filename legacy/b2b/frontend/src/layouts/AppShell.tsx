@@ -368,11 +368,11 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
   const notificationCount = notifications.filter((n) => !n.is_read).length;
 
   // Load real notifications from API
-  useState(() => {
+  useEffect(() => {
     notificationsApi.getNotifications()
       .then((data) => setNotifications(data))
       .catch(() => { /* silent — no notifications available */ });
-  });
+  }, []);
 
   // Load messages when chat sheet opens
   useEffect(() => {
@@ -426,7 +426,7 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
                   <Layers className="size-4" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">{company.name || 'RAILTECH'}</span>
+                  <span className="truncate font-semibold">{company.name || t('nav.companyName')}</span>
                   <span className="truncate text-xs text-muted-foreground">{t('shell.b2bPlatform')}</span>
                 </div>
               </SidebarMenuButton>

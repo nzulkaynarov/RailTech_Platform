@@ -4,7 +4,9 @@ import {
     TrendingUp, Package, Clock, UserCheck, Activity, AlertTriangle
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useDeals, useAnalytics } from '../../hooks/useCRM';
+import { useCurrencyStore } from '@/store/currencyStore';
 
 interface KPICardProps {
     icon: React.ElementType;
@@ -55,6 +57,8 @@ const KPICard: React.FC<KPICardProps> = ({ icon: Icon, label, value, sub, color,
 };
 
 export const ManagerDashboard: React.FC = () => {
+    const { t } = useTranslation();
+    const formatCurrency = useCurrencyStore((s) => s.format);
     const { data: deals = [], isLoading: dealsLoading } = useDeals();
     const { data: analytics, isLoading: analyticsLoading } = useAnalytics();
     
@@ -79,31 +83,31 @@ export const ManagerDashboard: React.FC = () => {
             <div className="flex items-end justify-between border-b border-border pb-3">
                 <div>
                     <h1 className="text-xl font-black tracking-tight text-foreground uppercase">
-                        Sourcing <span className="text-primary">Commander</span>
+                        {t('managerDashboard.title')} <span className="text-primary">{t('managerDashboard.titleHighlight')}</span>
                     </h1>
                     <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest leading-none mt-1">
-                        Operational Dashboard & Transaction Registry
+                        {t('managerDashboard.subtitle')}
                     </p>
                 </div>
                 <div className="hidden sm:flex items-center gap-2">
                     <div className="flex items-center gap-1.5 px-2 py-1 bg-primary/10 border border-primary/20 rounded text-primary text-xs font-bold uppercase tracking-widest">
                         <Activity className="w-3 h-3" />
-                        Live Feed Active
+                        {t('managerDashboard.liveFeed')}
                     </div>
                 </div>
             </div>
 
             {/* KPI Grid */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <KPICard icon={FileText} label="New Protocols" value={loading ? '—' : newLeads}
+                <KPICard icon={FileText} label={t('managerDashboard.kpi.newProtocols')} value={loading ? '—' : newLeads}
                     color="bg-primary/10 text-primary"
  link="/crm/home" />
-                <KPICard icon={Clock} label="Operational P/L" value={loading ? '—' : inProgress}
-                    color="bg-amber-500/10 text-amber-500" link="/crm/home" />
-                <KPICard icon={DollarSign} label="Gross Exposure" value={loading ? '—' : `$${totalSum.toLocaleString()}`}
-                    color="bg-emerald-500/10 text-emerald-500"
+                <KPICard icon={Clock} label={t('managerDashboard.kpi.operationalPL')} value={loading ? '—' : inProgress}
+                    color="bg-warning/10 text-warning" link="/crm/home" />
+                <KPICard icon={DollarSign} label={t('managerDashboard.kpi.grossExposure')} value={loading ? '—' : formatCurrency(totalSum)}
+                    color="bg-success/10 text-success"
  link="/crm/analytics" />
-                <KPICard icon={Package} label="Finalized Sales" value={loading ? '—' : contracted}
+                <KPICard icon={Package} label={t('managerDashboard.kpi.finalizedSales')} value={loading ? '—' : contracted}
                     color="bg-primary/10 text-primary" link="/crm/analytics" />
             </div>
 
@@ -111,8 +115,8 @@ export const ManagerDashboard: React.FC = () => {
                 {/* Pending Actions Board */}
                 <div className="lg:col-span-1 space-y-3">
                     <div className="px-1 flex items-center justify-between">
-                        <h2 className="text-xs font-black uppercase tracking-widest text-muted-foreground">Action Queue</h2>
-                        <span className="px-1.5 py-0.5 bg-red-500/10 text-red-500 text-xs font-black rounded border border-red-500/20 animate-pulse">Critical</span>
+                        <h2 className="text-xs font-black uppercase tracking-widest text-muted-foreground">{t('managerDashboard.actionQueue')}</h2>
+                        <span className="px-1.5 py-0.5 bg-destructive/10 text-destructive text-xs font-black rounded border border-destructive/20 animate-pulse">{t('managerDashboard.critical')}</span>
                     </div>
 
                     <Link to="/crm/sourcing" className="block p-4 rounded bg-card border border-border hover:border-primary/30 hover:bg-muted transition-all group group shadow-sm">
@@ -122,11 +126,11 @@ export const ManagerDashboard: React.FC = () => {
                             </div>
                             <div>
                                 <p className="text-2xl font-black text-foreground leading-none">{sourcingPending}</p>
-                                <p className="text-xs font-bold text-muted-foreground  uppercase tracking-widest font-mono mt-1">Sourcing Backlog</p>
+                                <p className="text-xs font-bold text-muted-foreground  uppercase tracking-widest font-mono mt-1">{t('managerDashboard.sourcingBacklog')}</p>
                             </div>
                         </div>
                         <div className="flex items-center justify-between text-xs font-bold text-muted-foreground uppercase tracking-tight pt-3 border-t border-border">
-                            <span className="flex items-center gap-2"><AlertTriangle className="w-3 h-3 text-amber-500" /> Items requiring PIN mapping</span>
+                            <span className="flex items-center gap-2"><AlertTriangle className="w-3 h-3 text-warning" /> {t('managerDashboard.itemsRequiringMapping')}</span>
                             <ArrowRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
                         </div>
                     </Link>
@@ -138,11 +142,11 @@ export const ManagerDashboard: React.FC = () => {
                             </div>
                             <div>
                                 <p className="text-2xl font-black text-foreground leading-none">{kycPendingCount}</p>
-                                <p className="text-xs font-bold text-muted-foreground  uppercase tracking-widest font-mono mt-1">KYC Verifications</p>
+                                <p className="text-xs font-bold text-muted-foreground  uppercase tracking-widest font-mono mt-1">{t('managerDashboard.kycVerifications')}</p>
                             </div>
                         </div>
                         <div className="flex items-center justify-between text-xs font-bold text-muted-foreground uppercase tracking-tight pt-3 border-t border-border">
-                            <span className="flex items-center gap-2"><Clock className="w-3 h-3" /> Entities at L1 restriction</span>
+                            <span className="flex items-center gap-2"><Clock className="w-3 h-3" /> {t('managerDashboard.entitiesL1')}</span>
                             <ArrowRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
                         </div>
                     </Link>
@@ -152,9 +156,9 @@ export const ManagerDashboard: React.FC = () => {
                 <div className="lg:col-span-2">
                     <div className="bg-card border border-border rounded shadow-sm flex flex-col h-full font-mono overflow-hidden">
                         <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-muted/50">
-                            <h2 className="text-xs font-black text-foreground uppercase tracking-widest">Active Deal Pipeline</h2>
+                            <h2 className="text-xs font-black text-foreground uppercase tracking-widest">{t('managerDashboard.activePipeline')}</h2>
                             <Link to="/crm/home" className="text-xs font-bold text-primary hover:text-primary/80 uppercase tracking-widest transition-colors flex items-center gap-1">
-                                Full Registry <ArrowRight className="w-3 h-3" />
+                                {t('managerDashboard.fullRegistry')} <ArrowRight className="w-3 h-3" />
                             </Link>
                         </div>
 
@@ -178,7 +182,7 @@ export const ManagerDashboard: React.FC = () => {
                                                     deal.stage_code === 'CONTRACT_SIGNED' || deal.stage_code === 'CLOSED_WON' ? 'bg-success/10 text-success border-success/20' :
                                                     'bg-muted text-muted-foreground border-border'
                                                 }`}>
-                                                    {deal.stage_name || 'System Draft'}
+                                                    {deal.stage_name || t('managerDashboard.systemDraft')}
                                                 </span>
                                             </div>
                                             <div className="flex items-center gap-3 text-xs text-muted-foreground font-bold uppercase tracking-widest truncate">
@@ -190,8 +194,8 @@ export const ManagerDashboard: React.FC = () => {
                                     </div>
                                     <div className="flex items-center gap-4 shrink-0">
                                         <div className="text-right hidden sm:block">
-                                            <p className="text-xs font-black text-foreground">${parseFloat(deal.total_value || '0').toLocaleString()}</p>
-                                            <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">Gross Value</p>
+                                            <p className="text-xs font-black text-foreground">{formatCurrency(parseFloat(deal.total_value || '0'))}</p>
+                                            <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">{t('managerDashboard.grossValue')}</p>
                                         </div>
                                         <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors ml-2" />
                                     </div>
@@ -199,7 +203,7 @@ export const ManagerDashboard: React.FC = () => {
                             ))}
                             {!loading && deals.length === 0 && (
                                 <div className="py-10 text-center text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                                    No active protocols found in pipeline
+                                    {t('managerDashboard.noProtocols')}
                                 </div>
                             )}
                         </div>

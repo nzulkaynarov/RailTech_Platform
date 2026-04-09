@@ -11,9 +11,11 @@ import { KPICard } from '@/components/ui/KPICard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { StatusBadge, getDealStageVariant, getKycVariant } from '@/components/ui/StatusBadge';
 import { TableSkeleton } from '@/components/ui/LoadingSkeleton';
+import { useCurrencyStore } from '@/store/currencyStore';
 
 export const ClientDashboard: React.FC = () => {
     const { t } = useTranslation();
+    const formatCurrency = useCurrencyStore((s) => s.format);
     const { user, kyc_status } = useAuthStore();
     const [deals, setDeals] = useState<Deal[]>([]);
     const [loading, setLoading] = useState(true);
@@ -108,15 +110,15 @@ export const ClientDashboard: React.FC = () => {
                     isLoading={loading}
                 />
                 <KPICard
-                    icon={<CheckCircle2 className="w-4 h-4 text-emerald-500" />}
+                    icon={<CheckCircle2 className="w-4 h-4 text-success" />}
                     label={t('dashboard.kpi.closedDeals')}
                     value={contracted}
                     isLoading={loading}
                 />
                 <KPICard
-                    icon={<DollarSign className="w-4 h-4 text-purple-500" />}
+                    icon={<DollarSign className="w-4 h-4 text-primary" />}
                     label={t('dashboard.kpi.economicExposure')}
-                    value={loading ? '...' : `$${totalSum.toLocaleString('ru-RU')}`}
+                    value={loading ? '...' : formatCurrency(totalSum)}
                     isLoading={loading}
                 />
             </div>

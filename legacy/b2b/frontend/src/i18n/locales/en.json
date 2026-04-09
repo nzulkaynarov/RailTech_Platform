@@ -27,7 +27,8 @@
     "back": "Back",
     "backToList": "Back to list",
     "comingSoon": "Coming soon",
-    "saving": "Saving..."
+    "saving": "Saving...",
+    "unitHours": "h"
   },
   "auth": {
     "loginTitle": "Sign in",
@@ -991,6 +992,29 @@
     "pricePerUnit": "Price / unit",
     "discount": "Discount"
   },
+  "managerDashboard": {
+    "title": "Sourcing",
+    "titleHighlight": "Commander",
+    "subtitle": "Operational Dashboard & Transaction Registry",
+    "liveFeed": "Live Feed Active",
+    "actionQueue": "Action Queue",
+    "critical": "Critical",
+    "sourcingBacklog": "Sourcing Backlog",
+    "itemsRequiringMapping": "Items requiring PIN mapping",
+    "kycVerifications": "KYC Verifications",
+    "entitiesL1": "Entities at L1 restriction",
+    "activePipeline": "Active Deal Pipeline",
+    "fullRegistry": "Full Registry",
+    "systemDraft": "System Draft",
+    "grossValue": "Gross Value",
+    "noProtocols": "No active protocols found in pipeline",
+    "kpi": {
+      "newProtocols": "New Protocols",
+      "operationalPL": "Operational P/L",
+      "grossExposure": "Gross Exposure",
+      "finalizedSales": "Finalized Sales"
+    }
+  },
   "dashboardPage": {
     "title": "Dashboard",
     "period": "Period",
@@ -1216,8 +1240,11 @@
       "languageDesc": "Choose display language",
       "currency": "Default currency",
       "currencyDesc": "Primary currency for calculations",
+      "currencyUSD": "USD ($)",
       "currencyUZS": "UZS (sum)",
       "currencyRUB": "RUB (₽)",
+      "langRu": "Русский",
+      "langEn": "English",
       "timezone": "Time zone",
       "timezoneDesc": "For correct date display",
       "tzTashkent": "Tashkent (UTC+5)",
@@ -1271,6 +1298,7 @@
       "minOrder": "Minimum order",
       "minOrderDesc": "Minimum order amount for production",
       "noLimit": "No limit",
+      "minOrderValue": "${{amount}}",
       "partnerSuppliers": "Partner suppliers",
       "partnerSuppliersDesc": "Manage approved sellers",
       "manage": "Manage"
@@ -1953,6 +1981,8 @@
       "description": "Documentation, FAQ and technical support contacts",
       "needHelp": "Need help?",
       "supportHours": "Our technical support operates Mon-Fri 09:00-18:00 (UTC+5). Average response time is 30 minutes.",
+      "supportEmail": "support@railtech.uz",
+      "supportPhone": "+998 (71) 200-00-00",
       "contactSupport": "Contact support",
       "sections": {
         "gettingStarted": "Getting Started",

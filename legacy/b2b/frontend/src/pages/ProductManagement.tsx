@@ -51,6 +51,7 @@ import type { Product } from '@/api/catalogApi';
 
 import { useUserStore } from '@/store/userStore';
 import { useCartStore } from '@/store/cartStore';
+import { useCurrencyStore } from '@/store/currencyStore';
 import { cn } from '@/lib/utils';
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 20, 50];
@@ -158,6 +159,7 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
   const { t } = useTranslation();
   const { activeStatus, role } = useUserStore();
   const cartStore = useCartStore();
+  const formatCurrency = useCurrencyStore((s) => s.format);
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -522,7 +524,7 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
                     {showPrices && (
                       <TableCell className="text-right font-medium tabular-nums text-sm">
                         {product.base_price && parseFloat(product.base_price) > 0
-                          ? `$${parseFloat(product.base_price).toLocaleString('ru-RU')}`
+                          ? formatCurrency(parseFloat(product.base_price))
                           : <span className="text-muted-foreground">—</span>
                         }
                       </TableCell>

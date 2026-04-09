@@ -87,8 +87,8 @@ export function SettingsPage() {
                 <Select value={i18n.language?.startsWith('ru') ? 'ru' : i18n.language?.startsWith('en') ? 'en' : 'ru'} onValueChange={(val) => i18n.changeLanguage(val)}>
                   <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="ru">Русский</SelectItem>
-                    <SelectItem value="en">English</SelectItem>
+                    <SelectItem value="ru">{t('settings.general.langRu')}</SelectItem>
+                    <SelectItem value="en">{t('settings.general.langEn')}</SelectItem>
                   </SelectContent>
                 </Select>
               </SettingRow>
@@ -103,7 +103,7 @@ export function SettingsPage() {
                 >
                   <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="usd">USD ($)</SelectItem>
+                    <SelectItem value="usd">{t('settings.general.currencyUSD')}</SelectItem>
                     <SelectItem value="uzs">{t('settings.general.currencyUZS')}</SelectItem>
                     <SelectItem value="eur">EUR</SelectItem>
                     <SelectItem value="rub">{t('settings.general.currencyRUB')}</SelectItem>
@@ -268,9 +268,9 @@ export function SettingsPage() {
                         <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="0">{t('settings.business.noLimit')}</SelectItem>
-                          <SelectItem value="500">$500</SelectItem>
-                          <SelectItem value="1000">$1 000</SelectItem>
-                          <SelectItem value="5000">$5 000</SelectItem>
+                          <SelectItem value="500">{t('settings.business.minOrderValue', { amount: '500' })}</SelectItem>
+                          <SelectItem value="1000">{t('settings.business.minOrderValue', { amount: '1 000' })}</SelectItem>
+                          <SelectItem value="5000">{t('settings.business.minOrderValue', { amount: '5 000' })}</SelectItem>
                         </SelectContent>
                       </Select>
                     </SettingRow>
