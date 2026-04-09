@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { Search, ShieldAlert, ArrowRight, LayoutGrid, List, PanelLeftClose, PanelLeftOpen, Grid2X2, LayoutList, Train, Package, Wrench, Clock } from 'lucide-react';
+import { Search, ShieldAlert, ArrowRight, LayoutGrid, List, PanelLeftClose, PanelLeftOpen, Grid2X2, LayoutList, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Product } from '../../api/catalogApi';
@@ -15,12 +15,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { CatalogGridSkeleton } from '@/components/ui/LoadingSkeleton';
 import { Button } from '@/components/ui/button';
 import { clsx } from 'clsx';
-
-const domainIcons: Record<string, React.ReactNode> = {
-    RAILWAY_MACHINERY: <Train size={12} className="text-muted-foreground" />,
-    GENERAL_GOODS: <Package size={12} className="text-primary" />,
-    SERVICES: <Wrench size={12} className="text-primary" />,
-};
+import { getDomainVisual } from '../../config/domainConfig';
 
 const RECENT_SEARCHES_KEY = 'railtech-recent-searches';
 
@@ -243,7 +238,10 @@ export const PublicCatalog: React.FC = () => {
                                         >
                                             <div className="flex items-center gap-2.5 min-w-0">
                                                 <span className="shrink-0 flex items-center justify-center w-6 h-6 rounded bg-muted">
-                                                    {domainIcons[p.domain_type_name ?? ''] ?? <Package size={12} className="text-muted-foreground" />}
+                                                    {(() => {
+                                                        const Visual = getDomainVisual(p.domain_type_code ?? 'GENERAL_GOODS');
+                                                        return <Visual.icon size={12} className="text-muted-foreground" />;
+                                                    })()}
                                                 </span>
                                                 <div className="flex flex-col min-w-0">
                                                     <span className="text-sm font-semibold text-foreground truncate">{p.name}</span>

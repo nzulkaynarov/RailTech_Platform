@@ -46,8 +46,9 @@ import {
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 
-import { useProducts } from '@/hooks/useCatalog';
+import { useProducts, useDomainTypes } from '@/hooks/useCatalog';
 import type { Product } from '@/api/catalogApi';
+import { getDomainLabelKey } from '@/config/domainConfig';
 
 import { useUserStore } from '@/store/userStore';
 import { useCartStore } from '@/store/cartStore';
@@ -160,6 +161,7 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
   const { activeStatus, role } = useUserStore();
   const cartStore = useCartStore();
   const formatCurrency = useCurrencyStore((s) => s.format);
+  const { data: domainTypes = [] } = useDomainTypes();
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -376,9 +378,11 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t('productManagement.filters.allDomains')}</SelectItem>
-              <SelectItem value="RAILWAY_MACHINERY">{t('productManagement.filters.railwayMachinery')}</SelectItem>
-              <SelectItem value="GENERAL_GOODS">{t('productManagement.filters.generalGoods')}</SelectItem>
-              <SelectItem value="SERVICES">{t('productManagement.filters.services')}</SelectItem>
+              {domainTypes.map(d => (
+                <SelectItem key={d.code} value={d.code}>
+                  {t(getDomainLabelKey(d.code), d.name)}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}>

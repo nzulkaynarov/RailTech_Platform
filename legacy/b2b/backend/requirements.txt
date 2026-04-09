@@ -49,7 +49,7 @@ drf-spectacular>=0.29
 
 # Audit / history
 django-pghistory>=3.9
-pgtrigger>=4.12
+django-pgtrigger>=4.9
 
 # Auth & utils
 python-dotenv>=1.2

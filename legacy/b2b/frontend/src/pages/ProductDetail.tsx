@@ -41,9 +41,9 @@ import {
 
 import {
   statusLabels,
-  domainLabels,
   type Product,
 } from '@/data/products';
+import { getDomainVisual, getDomainLabelKey } from '@/config/domainConfig';
 
 // ─── Status & Domain Badges ─────────────────────────────────────────────
 
@@ -65,14 +65,10 @@ function StatusDot({ status }: { status: Product['status'] }) {
 
 function DomainBadge({ domain }: { domain: Product['domain'] }) {
   const { t } = useTranslation();
-  const colorMap: Record<Product['domain'], string> = {
-    RAILWAY_MACHINERY: 'bg-primary/10 text-primary border-primary/20',
-    GENERAL_GOODS: 'bg-muted text-foreground border-border',
-    SERVICES: 'bg-accent text-accent-foreground border-border',
-  };
+  const visual = getDomainVisual(domain);
   return (
-    <Badge variant="outline" className={`text-xs font-medium ${colorMap[domain]}`}>
-      {t(domainLabels[domain])}
+    <Badge variant="outline" className={`text-xs font-medium ${visual.badgeClass}`}>
+      {t(getDomainLabelKey(domain))}
     </Badge>
   );
 }
@@ -80,20 +76,11 @@ function DomainBadge({ domain }: { domain: Product['domain'] }) {
 // ─── Product Image Placeholder ──────────────────────────────────────────
 
 function ProductImagePlaceholder({ product }: { product: Product }) {
-  const bgColors: Record<Product['domain'], string> = {
-    RAILWAY_MACHINERY: 'from-primary/10 to-muted',
-    GENERAL_GOODS: 'from-muted to-muted',
-    SERVICES: 'from-accent to-muted',
-  };
-  const iconColors: Record<Product['domain'], string> = {
-    RAILWAY_MACHINERY: 'text-primary/30',
-    GENERAL_GOODS: 'text-muted-foreground/30',
-    SERVICES: 'text-muted-foreground/30',
-  };
+  const visual = getDomainVisual(product.domain);
 
   return (
-    <div className={`flex aspect-square items-center justify-center rounded-xl bg-gradient-to-br ${bgColors[product.domain]}`}>
-      <Package className={`h-24 w-24 ${iconColors[product.domain]}`} strokeWidth={1} />
+    <div className={`flex aspect-square items-center justify-center rounded-xl bg-gradient-to-br ${visual.gradientClass}`}>
+      <Package className={`h-24 w-24 ${visual.iconColorClass}`} strokeWidth={1} />
     </div>
   );
 }
@@ -431,7 +418,7 @@ export function ProductDetail({ productId, onBack, onNavigate }: ProductDetailPr
                 <TableBody>
                   <TableRow>
                     <TableCell className="font-medium text-muted-foreground w-48">{t('productDetail.domain')}</TableCell>
-                    <TableCell>{t(domainLabels[product.domain])}</TableCell>
+                    <TableCell>{t(getDomainLabelKey(product.domain))}</TableCell>
                   </TableRow>
                   <TableRow>
                     <TableCell className="font-medium text-muted-foreground">{t('productDetail.category')}</TableCell>

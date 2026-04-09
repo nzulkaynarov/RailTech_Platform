@@ -6,6 +6,7 @@ import { useCartStore } from '../../../store/cartStore';
 import { useUserStore } from '../../../store/userStore';
 import { Button } from '@/components/ui/button';
 import { clsx } from 'clsx';
+import { getDomainVisual, getDomainLabelKey } from '../../../config/domainConfig';
 
 // TODO: Fetch manufacturer verification data from API
 // For now, use empty object — badge display should degrade gracefully
@@ -23,19 +24,13 @@ const stockConfig = {
     ON_ORDER:  { color: 'text-warning bg-warning/10 border-warning/20', dotColor: 'bg-warning', labelKey: 'catalog.stock.onOrder' },
 };
 
-const domainConfig: Record<string, { color: string }> = {
-    RAILWAY_MACHINERY: { color: 'bg-primary text-primary-foreground' },
-    GENERAL_GOODS:     { color: 'bg-primary text-primary-foreground' },
-    SERVICES:          { color: 'bg-secondary text-secondary-foreground' },
-};
-
 export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, canSeePrices }) => {
     const { t } = useTranslation();
     const { addItem, items, openCart } = useCartStore();
     const activeStatus = useUserStore((s) => s.activeStatus);
 
     const stock = stockConfig[product.stock_status as keyof typeof stockConfig] ?? stockConfig.ON_ORDER;
-    const domain = domainConfig[String(product.domain_type_name ?? '')];
+    const domainVisual = getDomainVisual(product.domain_type_code ?? 'GENERAL_GOODS');
     const inCart = items.some(i => Number(i.product.id) === Number(product.id));
     const mfgName = product.manufacturer_data?.name ?? '';
     const mfgInfo = verifiedManufacturers[mfgName];
@@ -66,11 +61,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, canS
                 )}
 
                 {/* Domain badge */}
-                {domain && (
-                    <span className={clsx('absolute top-2 left-2 px-2 py-0.5 rounded-md text-xs font-semibold', domain.color)}>
-                        {t(`domains.short.${product.domain_type_name}`, product.domain_type_name ?? '')}
-                    </span>
-                )}
+                <span className={clsx('absolute top-2 left-2 px-2 py-0.5 rounded-md text-xs font-semibold border', domainVisual.badgeClass)}>
+                    {t(domainVisual.shortLabelKey)}
+                </span>
 
                 {/* Stock badge */}
                 <span className={clsx('absolute top-2 right-2 flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium border', stock.color)}>

@@ -6,7 +6,7 @@ export interface Product {
   gost: string;
   uom: string;
   quantity: number;
-  domain: 'RAILWAY_MACHINERY' | 'GENERAL_GOODS' | 'SERVICES';
+  domain: string;
   category: string;
   status: 'in_stock' | 'to_order' | 'sourcing' | 'inactive';
   manufacturer: string;
@@ -37,13 +37,6 @@ export const statusLabels: Record<string, string> = {
   to_order: 'productStatuses.to_order',
   sourcing: 'productStatuses.sourcing',
   inactive: 'productStatuses.inactive',
-};
-
-/** i18n keys for domain labels — use with t(`domainLabels.${domain}`) */
-export const domainLabels: Record<string, string> = {
-  RAILWAY_MACHINERY: 'domainLabels.RAILWAY_MACHINERY',
-  GENERAL_GOODS: 'domainLabels.GENERAL_GOODS',
-  SERVICES: 'domainLabels.SERVICES',
 };
 
 // Re-export API product type for new components that need it

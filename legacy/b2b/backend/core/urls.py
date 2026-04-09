@@ -7,7 +7,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from catalog.views import (
     ProductViewSet, EquipmentGroupViewSet, CategoryViewSet,
-    ManufacturerViewSet, SupplierOfferViewSet
+    ManufacturerViewSet, SupplierOfferViewSet, DomainTypeViewSet
 )
 from crm.views import (
     DealViewSet, QuoteViewSet, QuoteItemViewSet, MessageViewSet,
@@ -31,6 +31,7 @@ router.register(r'catalog/offers', SupplierOfferViewSet, basename='offer')
 router.register(r'catalog/equipment-groups', EquipmentGroupViewSet, basename='equipmentgroup')
 router.register(r'catalog/categories', CategoryViewSet, basename='category')
 router.register(r'catalog/manufacturers', ManufacturerViewSet, basename='manufacturer')
+router.register(r'catalog/domain-types', DomainTypeViewSet, basename='domaintype')
 
 router.register(r'crm/deals', DealViewSet, basename='deal')
 router.register(r'crm/quotes', QuoteViewSet, basename='quote')

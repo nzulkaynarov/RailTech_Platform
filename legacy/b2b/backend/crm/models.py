@@ -2,6 +2,7 @@ from decimal import Decimal
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 import pghistory
+import pgtrigger
 from master_data.models import AbstractLookup, Currency, Country
 from core.storage import get_private_storage, quote_pdf_path
 
@@ -37,8 +38,8 @@ class QuoteStatus(AbstractLookup):
 # ────────────────────────────────────────────
 
 @pghistory.track(
-    pghistory.Snapshot('deal.snapshot'),
-    pghistory.BeforeUpdate('deal.before_update')
+    pghistory.RowEvent('deal.snapshot', row=pghistory.New, operation=pgtrigger.Insert | pgtrigger.Update),
+    pghistory.RowEvent('deal.before_update', row=pghistory.Old, operation=pgtrigger.Update)
 )
 class Deal(models.Model):
     """
@@ -110,8 +111,8 @@ class Deal(models.Model):
 
 
 @pghistory.track(
-    pghistory.Snapshot('quote.snapshot'),
-    pghistory.BeforeUpdate('quote.before_update')
+    pghistory.RowEvent('quote.snapshot', row=pghistory.New, operation=pgtrigger.Insert | pgtrigger.Update),
+    pghistory.RowEvent('quote.before_update', row=pghistory.Old, operation=pgtrigger.Update)
 )
 class Quote(models.Model):
     """
@@ -234,8 +235,8 @@ class Quote(models.Model):
 
 
 @pghistory.track(
-    pghistory.Snapshot('quote_item.snapshot'),
-    pghistory.BeforeUpdate('quote_item.before_update')
+    pghistory.RowEvent('quote_item.snapshot', row=pghistory.New, operation=pgtrigger.Insert | pgtrigger.Update),
+    pghistory.RowEvent('quote_item.before_update', row=pghistory.Old, operation=pgtrigger.Update)
 )
 class QuoteItem(models.Model):
     """

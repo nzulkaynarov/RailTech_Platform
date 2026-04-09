@@ -4,6 +4,7 @@ import { Search, Box, ExternalLink } from 'lucide-react';
 import { useQuoteItems, useUpdateQuoteItem } from '../../hooks/useCRM';
 import { useProducts } from '../../hooks/useCatalog';
 import { Product, QuoteItem } from '../../api/crmApi';
+import { getDomainLabelKey } from '../../config/domainConfig';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/LoadingSkeleton';
 import { Input } from '@/components/ui/input';
@@ -38,6 +39,9 @@ export const SourcingGrid: React.FC = () => {
     const [productSearch, setProductSearch] = useState('');
     const [domainFilter, setDomainFilter] = useState<string>('ALL');
 
+    // Regex to detect railway-related keywords in imported raw names
+    const railwayKeywordPattern = /тепловоз|вагон|двигатель/i;
+
     const { data: products = [] } = useProducts({ search: productSearch || undefined });
 
     const handleLinkProduct = async (itemId: number, productId: number) => {
@@ -68,19 +72,21 @@ export const SourcingGrid: React.FC = () => {
 
     const filteredItems = quoteItems.filter(i => {
         const matchesSearch = i.imported_raw_name.toLowerCase().includes(searchQuery.toLowerCase());
-        const isRailway = i.imported_raw_name.toLowerCase().match(/тепловоз|вагон|двигатель/);
+        const isRailway = railwayKeywordPattern.test(i.imported_raw_name);
         const matchesDomain = domainFilter === 'ALL' ||
-                             (domainFilter === 'RAILWAY' && isRailway) ||
-                             (domainFilter === 'GENERAL' && !isRailway);
+                             (domainFilter === 'RAILWAY_MACHINERY' && isRailway) ||
+                             (domainFilter === 'GENERAL_GOODS' && !isRailway);
         return matchesSearch && matchesDomain;
     });
 
     const selectedItem = (quoteItems as QuoteItem[]).find(i => i.id === selectedItemId);
 
-    const domainLabels: Record<string, string> = {
-        ALL: t('catalog.filters.allCategories'),
-        RAILWAY: t('domains.RAILWAY_MACHINERY'),
-        GENERAL: t('domains.GENERAL_GOODS'),
+    // Helper function to get i18n key for domain filter option
+    const getDomainFilterLabel = (filterCode: string): string => {
+        if (filterCode === 'ALL') {
+            return t('catalog.filters.allCategories');
+        }
+        return t(getDomainLabelKey(filterCode));
     };
 
     return (
@@ -121,9 +127,9 @@ export const SourcingGrid: React.FC = () => {
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {(['ALL', 'RAILWAY', 'GENERAL'] as const).map((f) => (
+                                    {(['ALL', 'RAILWAY_MACHINERY', 'GENERAL_GOODS'] as const).map((f) => (
                                         <SelectItem key={f} value={f}>
-                                            {t(domainLabels[f])}
+                                            {getDomainFilterLabel(f)}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>

@@ -10,6 +10,7 @@
     "closedLost": "Closed (Lost)"
   },
   "common": {
+    "all": "All",
     "loading": "Loading...",
     "error": "An error occurred",
     "save": "Save",
@@ -244,6 +245,7 @@
     "RAILWAY_MACHINERY": "Railway Equipment",
     "GENERAL_GOODS": "General Industrial Goods",
     "SERVICES": "Services",
+    "unknown": "Other",
     "short": {
       "RAILWAY_MACHINERY": "Railway Equip.",
       "GENERAL_GOODS": "Industrial Goods",
@@ -704,7 +706,8 @@
     "createProduct": "Create Product",
     "validation": {
       "nameRequired": "Product name is required",
-      "priceRequired": "Base price is required"
+      "priceRequired": "Base price is required",
+      "domainRequired": "Domain is required"
     }
   },
   "userPanel": {

@@ -1,6 +1,15 @@
 import { apiClient } from './client';
 import { PaginatedResponse } from './types';
 
+export interface DomainTypeItem {
+    id: number;
+    code: string;
+    name: string;
+    sku_prefix: string;
+    sort_order: number;
+    is_active: boolean;
+}
+
 export interface EquipmentGroup {
     id: number;
     name: string;
@@ -30,6 +39,7 @@ export interface Product {
     status_name: string;
     domain_type: number | string;
     domain_type_name: string;
+    domain_type_code?: string;
     
     category?: number | null;
     category_data?: { id: number, name: string } | null;
@@ -71,6 +81,11 @@ export interface Product {
 }
 
 export const catalogApi = {
+    getDomainTypes: async (): Promise<DomainTypeItem[]> => {
+        const response = await apiClient.get<DomainTypeItem[]>('catalog/domain-types/');
+        return response.data;
+    },
+
     getProducts: async (params?: {
         domain_type?: string,
         search?: string,

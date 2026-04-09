@@ -92,7 +92,7 @@ class Attachment(models.Model):
         # MED-7: Ensure exactly one FK is populated
         constraints = [
             models.CheckConstraint(
-                check=(
+                condition=(
                     models.Q(
                         product__isnull=False, deal__isnull=True,
                         message__isnull=True, quote__isnull=True, company__isnull=True) |

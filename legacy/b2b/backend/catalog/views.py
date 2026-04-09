@@ -1,13 +1,21 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .models import Product, EquipmentGroup, Category, SupplierOffer
+from .models import Product, EquipmentGroup, Category, DomainType, SupplierOffer
 from .serializers import (
     ProductSerializer, EquipmentGroupSerializer,
-    CategorySerializer, SupplierOfferSerializer
+    CategorySerializer, DomainTypeSerializer, SupplierOfferSerializer
 )
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
+
+
+class DomainTypeViewSet(viewsets.ReadOnlyModelViewSet):
+    """GET /api/v1/catalog/domain-types/ — active domain types from DB."""
+    queryset = DomainType.objects.filter(is_active=True)
+    serializer_class = DomainTypeSerializer
+    permission_classes = [permissions.AllowAny]
+    pagination_class = None  # Small lookup table — no pagination needed
 
 
 class EquipmentGroupViewSet(viewsets.ModelViewSet):

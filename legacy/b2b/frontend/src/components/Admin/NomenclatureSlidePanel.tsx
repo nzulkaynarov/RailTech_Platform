@@ -6,8 +6,9 @@ import { z } from 'zod';
 import { Loader2, Search, Check } from 'lucide-react';
 
 import { Product } from '@/api/catalogApi';
-import { useEquipmentGroups, useCategories } from '@/hooks/useCatalog';
+import { useEquipmentGroups, useCategories, useDomainTypes } from '@/hooks/useCatalog';
 import { useCurrencies, useUnits } from '@/hooks/useMasterData';
+import { getDomainLabelKey } from '@/config/domainConfig';
 
 import {
   Sheet,
@@ -40,7 +41,7 @@ import { cn } from '@/lib/utils';
 const createNomenclatureSchema = (t: (key: string) => string) => z.object({
   name: z.string().min(1, t('nomenclaturePanel.validation.nameRequired')),
   sku: z.string().optional(),
-  domain_type: z.enum(['GENERAL_GOODS', 'RAILWAY_MACHINERY', 'SERVICES']),
+  domain_type: z.string().min(1, t('nomenclaturePanel.validation.domainRequired')),
   category: z.string().optional(),
   description: z.string().optional(),
   base_price: z.string().min(1, t('nomenclaturePanel.validation.priceRequired')),
@@ -71,12 +72,14 @@ export const NomenclatureSlidePanel: React.FC<NomenclatureSlidePanelProps> = ({
 
   const nomenclatureSchema = createNomenclatureSchema(t);
 
+  const { data: domainTypes = [] } = useDomainTypes();
+
   const form = useForm<NomenclatureFormValues>({
     resolver: zodResolver(nomenclatureSchema),
     defaultValues: {
       name: '',
       sku: '',
-      domain_type: 'GENERAL_GOODS',
+      domain_type: '',
       category: '',
       description: '',
       base_price: '0',
@@ -113,7 +116,7 @@ export const NomenclatureSlidePanel: React.FC<NomenclatureSlidePanelProps> = ({
       form.reset({
         name: product.name || '',
         sku: product.sku || '',
-        domain_type: (product.domain_type as 'GENERAL_GOODS' | 'RAILWAY_MACHINERY' | 'SERVICES') || 'GENERAL_GOODS',
+        domain_type: (product.domain_type as string) || '',
         category: product.category != null ? String(product.category) : '',
         description: product.description || '',
         base_price: product.base_price || '0',
@@ -126,7 +129,7 @@ export const NomenclatureSlidePanel: React.FC<NomenclatureSlidePanelProps> = ({
       form.reset({
         name: '',
         sku: '',
-        domain_type: 'GENERAL_GOODS',
+        domain_type: domainTypes.length > 0 ? domainTypes[0].code : '',
         category: '',
         description: '',
         base_price: '0',
@@ -136,7 +139,7 @@ export const NomenclatureSlidePanel: React.FC<NomenclatureSlidePanelProps> = ({
       });
       setSelectedGroupIds([]);
     }
-  }, [product, isOpen, currencies, units, form]);
+  }, [product, isOpen, currencies, units, domainTypes, form]);
 
   const toggleGroup = (id: number) => {
     setSelectedGroupIds(prev =>
@@ -145,6 +148,7 @@ export const NomenclatureSlidePanel: React.FC<NomenclatureSlidePanelProps> = ({
   };
 
   const onSubmit = async (values: NomenclatureFormValues) => {
+    // Business rule: Railway machinery domain requires at least one equipment group binding
     if (values.domain_type === 'RAILWAY_MACHINERY' && selectedGroupIds.length === 0) {
       form.setError('domain_type', {
         message: t('nomenclaturePanel.railwayGroupRequired'),
@@ -242,9 +246,11 @@ export const NomenclatureSlidePanel: React.FC<NomenclatureSlidePanelProps> = ({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="GENERAL_GOODS">{t('domains.GENERAL_GOODS')}</SelectItem>
-                          <SelectItem value="RAILWAY_MACHINERY">{t('domains.RAILWAY_MACHINERY')}</SelectItem>
-                          <SelectItem value="SERVICES">{t('domains.SERVICES')}</SelectItem>
+                          {domainTypes.map(d => (
+                            <SelectItem key={d.code} value={d.code}>
+                              {t(getDomainLabelKey(d.code), d.name)}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />

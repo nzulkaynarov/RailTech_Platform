@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { NomenclatureSlidePanel } from './NomenclatureSlidePanel';
 import { ExcelUploadModal } from './ExcelUploadModal';
-import { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct } from '../../hooks/useCatalog';
+import { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, useDomainTypes } from '../../hooks/useCatalog';
+import { getDomainVisual } from '../../config/domainConfig';
 
 export const AdminNomenclature: React.FC = () => {
     const { t } = useTranslation();
@@ -20,6 +21,7 @@ export const AdminNomenclature: React.FC = () => {
     const [domainFilter, setDomainFilter] = useState<string>('ALL');
 
     // React Query Hooks
+    const { data: domainTypes = [] } = useDomainTypes();
     const { data: products = [], isLoading, refetch } = useProducts({
         search: searchTerm || undefined,
         domain_type: domainFilter === 'ALL' ? undefined : domainFilter
@@ -139,15 +141,15 @@ export const AdminNomenclature: React.FC = () => {
 
                 <div className="flex items-center gap-1 border-l border-border ml-2 pl-2">
                     <Filter className="w-3.5 h-3.5 text-muted-foreground mr-2" />
-                    {['ALL', 'RAILWAY_MACHINERY', 'GENERAL_GOODS', 'SERVICES'].map((domain) => (
+                    {[{ code: 'ALL', name: t('common.all') }, ...domainTypes].map((d) => (
                         <Button
-                            key={domain}
-                            variant={domainFilter === domain ? 'secondary' : 'ghost'}
+                            key={d.code}
+                            variant={domainFilter === d.code ? 'secondary' : 'ghost'}
                             size="xs"
-                            onClick={() => setDomainFilter(domain)}
+                            onClick={() => setDomainFilter(d.code)}
                             className="text-xs font-black uppercase tracking-widest"
                         >
-                            {domain === 'ALL' ? 'GLOBAL' : domain === 'RAILWAY_MACHINERY' ? 'RAIL' : domain === 'GENERAL_GOODS' ? 'GOODS' : 'SVCS'}
+                            {d.code === 'ALL' ? t('common.all') : t(getDomainVisual(d.code).shortLabelKey, d.name)}
                         </Button>
                     ))}
                 </div>
@@ -224,10 +226,7 @@ export const AdminNomenclature: React.FC = () => {
                                             </div>
                                         </TableCell>
                                         <TableCell className="px-4 py-3">
-                                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-black uppercase tracking-widest border ${product.domain_type_name === 'RAILWAY_MACHINERY' ? 'bg-primary/10 text-primary border-primary/20' :
-                                                    product.domain_type_name === 'SERVICES' ? 'bg-warning/10 text-warning border-warning/20' :
-                                                        'bg-muted text-muted-foreground border-border'
-                                                }`}>
+                                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-black uppercase tracking-widest border ${getDomainVisual(product.domain_type_name).badgeClass}`}>
                                                 <Tag className="w-2.5 h-2.5 mr-1" /> {product.domain_type_name}
                                             </span>
                                         </TableCell>

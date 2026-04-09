@@ -1,8 +1,9 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Layers, Factory, Database, Train, Package, Wrench, LayoutGrid } from 'lucide-react';
-import { useDomainStore, DomainType } from '../../store/domainStore';
-import { useProductsCount, useCategories, useManufacturers, useEquipmentGroups } from '../../hooks/useCatalog';
+import { Layers, Factory, Database, LayoutGrid, Package } from 'lucide-react';
+import { useDomainStore } from '../../store/domainStore';
+import { useProductsCount, useCategories, useManufacturers, useEquipmentGroups, useDomainTypes } from '../../hooks/useCatalog';
+import { getDomainVisual } from '../../config/domainConfig';
 import { Skeleton } from '@/components/ui/LoadingSkeleton';
 import { Button } from '@/components/ui/button';
 import { clsx } from 'clsx';
@@ -11,15 +12,10 @@ interface DomainAdaptiveSidebarProps {
     isCollapsed?: boolean;
 }
 
-const domainIcons: Record<string, React.ElementType> = {
-    RAILWAY_MACHINERY: Train,
-    GENERAL_GOODS: Package,
-    SERVICES: Wrench,
-};
-
 export const DomainAdaptiveSidebar: React.FC<DomainAdaptiveSidebarProps> = ({ isCollapsed = false }) => {
     const { t } = useTranslation();
     const { activeDomain, setActiveDomain, filters, setFilter } = useDomainStore();
+    const { data: domainTypes = [] } = useDomainTypes();
 
     const { data: categories = [], isLoading: catsLoading } = useCategories({
         domain_type: activeDomain || undefined
@@ -31,12 +27,6 @@ export const DomainAdaptiveSidebar: React.FC<DomainAdaptiveSidebarProps> = ({ is
     });
 
     const isLoading = catsLoading || mansLoading || egLoading || prodsLoading;
-
-    const domainOptions: { id: DomainType; shortKey: string; labelKey: string }[] = [
-        { id: 'RAILWAY_MACHINERY', labelKey: 'domains.RAILWAY_MACHINERY', shortKey: 'domains.short.RAILWAY_MACHINERY' },
-        { id: 'GENERAL_GOODS',     labelKey: 'domains.GENERAL_GOODS',     shortKey: 'domains.short.GENERAL_GOODS' },
-        { id: 'SERVICES',          labelKey: 'domains.SERVICES',           shortKey: 'domains.short.SERVICES' },
-    ];
 
     if (isCollapsed) {
         // Icon-only collapsed view
@@ -60,18 +50,19 @@ export const DomainAdaptiveSidebar: React.FC<DomainAdaptiveSidebarProps> = ({ is
 
                 <div className="w-6 h-px bg-muted dark:bg-muted my-1" />
 
-                {domainOptions.map(d => {
-                    const Icon = domainIcons[d.id] ?? Package;
+                {domainTypes.map(d => {
+                    const visual = getDomainVisual(d.code);
+                    const Icon = visual.icon ?? Package;
                     return (
                         <Button
                             key={d.id}
                             variant="ghost"
                             size="icon"
-                            title={t(d.labelKey)}
-                            onClick={() => setActiveDomain(d.id)}
+                            title={t(visual.labelKey, d.name)}
+                            onClick={() => setActiveDomain(d.code)}
                             className={clsx(
                                 'w-10 h-10 rounded-lg flex items-center justify-center border transition-all',
-                                activeDomain === d.id
+                                activeDomain === d.code
                                     ? 'bg-primary text-primary-foreground border-primary'
                                     : 'border-border text-muted-foreground hover:border-muted-foreground/30'
                             )}
@@ -107,23 +98,24 @@ export const DomainAdaptiveSidebar: React.FC<DomainAdaptiveSidebarProps> = ({ is
                         <span className="truncate">{t('catalog.sidebar.allProducts')}</span>
                     </Button>
 
-                    {domainOptions.map(d => {
-                        const Icon = domainIcons[d.id] ?? Package;
+                    {domainTypes.map(d => {
+                        const visual = getDomainVisual(d.code);
+                        const Icon = visual.icon ?? Package;
                         return (
                             <Button
                                 key={d.id}
                                 variant="ghost"
-                                title={t(d.labelKey)}
-                                onClick={() => setActiveDomain(d.id)}
+                                title={t(visual.labelKey, d.name)}
+                                onClick={() => setActiveDomain(d.code)}
                                 className={clsx(
                                     'w-full flex items-center gap-2.5 h-8 px-2.5 rounded-lg transition-all text-left border text-sm justify-start',
-                                    activeDomain === d.id
+                                    activeDomain === d.code
                                         ? 'bg-primary text-primary-foreground border-primary font-semibold'
                                         : 'bg-transparent border-border text-muted-foreground hover:border-muted-foreground/30 dark:hover:border-muted-foreground/30'
                                 )}
                             >
                                 <Icon size={14} className="shrink-0" />
-                                <span className="truncate">{t(d.shortKey, t(d.labelKey))}</span>
+                                <span className="truncate">{t(visual.shortLabelKey, d.name)}</span>
                             </Button>
                         );
                     })}

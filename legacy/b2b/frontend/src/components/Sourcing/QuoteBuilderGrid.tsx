@@ -24,10 +24,10 @@ import {
 } from 'lucide-react';
 import type { RequestItem } from '@/store/flowStore';
 import { useCurrencyStore } from '@/store/currencyStore';
+import { useDomainTypes } from '@/hooks/useCatalog';
+import { getDomainVisual, getDomainChartColor } from '@/config/domainConfig';
 
 /* ─── Types ────────────────────────────────────────────────────────────── */
-
-type Domain = 'RAILWAY_MACHINERY' | 'GENERAL_GOODS' | 'SERVICES';
 
 interface QuoteBuilderGridProps {
   items: RequestItem[];
@@ -37,28 +37,7 @@ interface QuoteBuilderGridProps {
 
 /* ─── Domain helpers ───────────────────────────────────────────────────── */
 
-const DOMAIN_META: Record<
-  Domain,
-  { labelKey: string; icon: React.ReactNode; color: string }
-> = {
-  RAILWAY_MACHINERY: {
-    labelKey: 'domains.short.RAILWAY_MACHINERY',
-    icon: <Train className="size-4" />,
-    color: 'bg-[var(--color-chart-1)]/10 text-[var(--color-chart-1)]',
-  },
-  GENERAL_GOODS: {
-    labelKey: 'domains.short.GENERAL_GOODS',
-    icon: <Package className="size-4" />,
-    color: 'bg-[var(--color-chart-2)]/10 text-[var(--color-chart-2)]',
-  },
-  SERVICES: {
-    labelKey: 'domains.short.SERVICES',
-    icon: <Wrench className="size-4" />,
-    color: 'bg-[var(--color-chart-3)]/10 text-[var(--color-chart-3)]',
-  },
-};
-
-function assignDomain(article: string): Domain {
+function assignDomain(article: string): string {
   const prefix = article.split('-')[0]?.toUpperCase() ?? '';
   if (prefix === 'MAT' || prefix === 'MET') return 'RAILWAY_MACHINERY';
   if (prefix === 'ELC') return 'GENERAL_GOODS';
@@ -83,7 +62,7 @@ function fmtPercent(value: number): string {
 
 interface CalculatedRow {
   item: RequestItem;
-  domain: Domain;
+  domain: string;
   basePrice: number;
   logisticsCost: number;
   customsDuty: number;
@@ -135,6 +114,7 @@ export function QuoteBuilderGrid({
   defaultMargin = 15,
 }: QuoteBuilderGridProps) {
   const { t } = useTranslation();
+  const { data: domainTypes = [] } = useDomainTypes();
   const [marginOverrides, setMarginOverrides] = useState<
     Record<string, number>
   >({});
@@ -159,16 +139,16 @@ export function QuoteBuilderGrid({
   );
 
   const rowsByDomain = useMemo(() => {
-    const grouped: Record<Domain, CalculatedRow[]> = {
-      RAILWAY_MACHINERY: [],
-      GENERAL_GOODS: [],
-      SERVICES: [],
-    };
+    const grouped: Record<string, CalculatedRow[]> = Object.fromEntries(
+      domainTypes.map((d) => [d.code, []])
+    );
     for (const row of calculatedRows) {
-      grouped[row.domain].push(row);
+      if (grouped[row.domain]) {
+        grouped[row.domain].push(row);
+      }
     }
     return grouped;
-  }, [calculatedRows]);
+  }, [calculatedRows, domainTypes]);
 
   const totals = useMemo(() => {
     const subtotalWithoutVAT = calculatedRows.reduce(
@@ -207,22 +187,21 @@ export function QuoteBuilderGrid({
       </CardHeader>
 
       <CardContent className="p-0">
-        <Tabs defaultValue="RAILWAY_MACHINERY">
+        <Tabs defaultValue={domainTypes[0]?.code ?? ''}>
           <div className="border-b px-4">
             <TabsList variant="line">
-              {(
-                ['RAILWAY_MACHINERY', 'GENERAL_GOODS', 'SERVICES'] as Domain[]
-              ).map((domain) => {
-                const meta = DOMAIN_META[domain];
-                const count = rowsByDomain[domain].length;
+              {domainTypes.map((domainType) => {
+                const domain = domainType.code;
+                const visual = getDomainVisual(domain);
+                const count = rowsByDomain[domain]?.length ?? 0;
                 return (
                   <TabsTrigger
                     key={domain}
                     value={domain}
                     className="gap-1.5 text-xs"
                   >
-                    {meta.icon}
-                    {t(meta.labelKey)}
+                    {visual.icon}
+                    {t(visual.labelKey)}
                     {count > 0 && (
                       <Badge
                         variant="secondary"
@@ -237,18 +216,19 @@ export function QuoteBuilderGrid({
             </TabsList>
           </div>
 
-          {(
-            ['RAILWAY_MACHINERY', 'GENERAL_GOODS', 'SERVICES'] as Domain[]
-          ).map((domain) => (
+          {domainTypes.map((domainType) => {
+            const domain = domainType.code;
+            return (
             <TabsContent key={domain} value={domain} className="mt-0">
               <DomainTable
-                rows={rowsByDomain[domain]}
+                rows={rowsByDomain[domain] ?? []}
                 numCellClass={numCellClass}
                 onMarginChange={handleMarginChange}
                 marginOverrides={marginOverrides}
               />
             </TabsContent>
-          ))}
+          );
+          })}
         </Tabs>
 
         {/* ─── Dark Totalling Panel ──────────────────────────────────── */}

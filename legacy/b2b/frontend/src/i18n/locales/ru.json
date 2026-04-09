@@ -10,6 +10,7 @@
     "closedLost": "Закрыта (проиграна)"
   },
   "common": {
+    "all": "Все",
     "loading": "Загрузка...",
     "error": "Произошла ошибка",
     "save": "Сохранить",
@@ -244,6 +245,7 @@
     "RAILWAY_MACHINERY": "Железнодорожное оборудование",
     "GENERAL_GOODS": "Общепромышленные товары",
     "SERVICES": "Услуги",
+    "unknown": "Другое",
     "short": {
       "RAILWAY_MACHINERY": "Ж/Д оборудование",
       "GENERAL_GOODS": "Пром. товары",
@@ -704,7 +706,8 @@
     "createProduct": "Создать товар",
     "validation": {
       "nameRequired": "Название товара обязательно",
-      "priceRequired": "Базовая цена обязательна"
+      "priceRequired": "Базовая цена обязательна",
+      "domainRequired": "Домен обязателен"
     }
   },
   "userPanel": {

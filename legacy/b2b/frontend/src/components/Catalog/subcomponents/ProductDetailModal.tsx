@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Product } from '../../../api/catalogApi';
 import { ShoppingCart, Download, Info, Package, Lock as LockIcon, MessageSquare, ShieldCheck, Star, Award, FileText as FileTextIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { getDomainVisual, getDomainLabelKey } from '../../../config/domainConfig';
 import {
     Dialog,
     DialogContent,
@@ -78,8 +79,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                     {/* Header */}
                     <DialogHeader className="p-6 pb-4">
                         <div className="mb-3 flex flex-wrap items-center gap-2">
-                            <Badge>
-                                {product.domain_type_name || t('domains.GENERAL_GOODS')}
+                            <Badge className={getDomainVisual(product.domain_type_code ?? 'GENERAL_GOODS').badgeClass}>
+                                {t(getDomainLabelKey(product.domain_type_code ?? 'GENERAL_GOODS'), product.domain_type_name)}
                             </Badge>
                             <Badge variant={stockVariant as 'default' | 'secondary' | 'outline'}>
                                 {t(`catalog.stock.${stockStatusKey}`)}

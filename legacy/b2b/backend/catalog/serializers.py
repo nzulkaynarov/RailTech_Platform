@@ -3,7 +3,7 @@ from master_data.models import (
     UnitOfMeasure, Currency, DeliveryBasis
 )
 from .models import (
-    Product, EquipmentGroup, Category,
+    Product, EquipmentGroup, Category, DomainType,
     SupplierOffer, ProductImage, ProductDocument
 )
 from accounts.models import Company
@@ -16,6 +16,12 @@ class CompanyLightSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'inn', 'logo']
 
 # --- Simple Reference Serializers ---
+
+
+class DomainTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DomainType
+        fields = ['id', 'code', 'name', 'sku_prefix', 'sort_order', 'is_active']
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -99,6 +105,7 @@ class ProductSerializer(serializers.ModelSerializer):
     # Computed display fields
     status_name = serializers.SerializerMethodField()
     domain_type_name = serializers.SerializerMethodField()
+    domain_type_code = serializers.SerializerMethodField()
     stock_status = serializers.SerializerMethodField()
     base_price = serializers.SerializerMethodField()
 
@@ -106,7 +113,7 @@ class ProductSerializer(serializers.ModelSerializer):
         model = Product
         fields = [
             'id', 'sku', 'name', 'description', 'status', 'status_name',
-            'domain_type', 'domain_type_name',
+            'domain_type', 'domain_type_name', 'domain_type_code',
             'category', 'category_data',
             'manufacturer', 'manufacturer_data',
             'uom', 'uom_data',
@@ -123,6 +130,9 @@ class ProductSerializer(serializers.ModelSerializer):
 
     def get_domain_type_name(self, obj):
         return obj.domain_type.name if obj.domain_type else None
+
+    def get_domain_type_code(self, obj):
+        return obj.domain_type.code if obj.domain_type else None
 
     def _first_offer(self, obj):
         """Get first active offer from prefetched data (no extra query)."""

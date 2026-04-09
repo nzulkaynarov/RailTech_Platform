@@ -1,6 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { catalogApi } from '../api/catalogApi';
 
+export const useDomainTypes = () => useQuery({
+  queryKey: ['domain-types'],
+  queryFn: catalogApi.getDomainTypes,
+  staleTime: 30 * 60_000,    // lookup table — cache 30 min
+  gcTime: 60 * 60_000,       // keep in memory 1 hour
+});
+
 export const useProducts = (params?: Parameters<typeof catalogApi.getProducts>[0]) => useQuery({
   queryKey: ['products', params],
   queryFn: () => catalogApi.getProducts(params),
