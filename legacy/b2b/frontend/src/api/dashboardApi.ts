@@ -15,6 +15,9 @@ export interface DashboardStats {
   counterparties: { manufacturers: number; buyers: number; intermediaries: number };
   request_completion: number;
   request_completion_goal: number;
+  deals_in_progress: number;
+  quotes_received: number;
+  deals_completed: number;
 }
 
 export interface PageStats {

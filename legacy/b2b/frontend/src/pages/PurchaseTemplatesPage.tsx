@@ -1,23 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
   DialogContent,
@@ -28,36 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import {
-  Plus,
-  ShoppingCart,
-  Clock,
-  FileText,
-  RotateCcw,
-  Star,
-} from "lucide-react";
-
-interface Template {
-  id: number;
-  name: string;
-  itemCount: number;
-  lastOrderDate: string;
-  totalAmount: string;
-}
-
-interface RecentOrder {
-  id: string;
-  date: string;
-  itemCount: number;
-  amount: string;
-  status: string;
-  statusVariant: "default" | "secondary" | "destructive" | "outline";
-}
-
-// Templates and orders are loaded from the backend API
-// TODO: Replace with useEffect + API calls when backend endpoints are ready
-const templates: Template[] = [];
-const recentOrders: RecentOrder[] = [];
+import { Plus, FileText } from "lucide-react";
 
 export function PurchaseTemplatesPage() {
   const { t } = useTranslation();

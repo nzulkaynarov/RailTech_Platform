@@ -11,7 +11,7 @@ import { KPICard } from '@/components/ui/KPICard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { StatusBadge, getDealStageVariant, getKycVariant } from '@/components/ui/StatusBadge';
 import { TableSkeleton } from '@/components/ui/LoadingSkeleton';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table } from '@/components/ui/table';
 import { useCurrencyStore } from '@/store/currencyStore';
 
 export const ClientDashboard: React.FC = () => {
