@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import {
     FileText,
     Plus,
@@ -79,7 +80,7 @@ export const DealSplitView: React.FC = () => {
             setSelectedDealId(deal.id);
         } catch (err) {
             const msg = err instanceof Error ? err.message : t('dashboard.deals.createError');
-            alert(msg);
+            toast.error(msg);
         } finally {
             setIsCreating(false);
         }
@@ -303,7 +304,7 @@ export const DealSplitView: React.FC = () => {
                         </div>
 
                         {/* Quote approval banner */}
-                        {selectedDeal.stage_name === 'Quote Sent' && (
+                        {selectedDeal.stage_code === 'QUOTE_SENT' && (
                             <div className="bg-warning/10 border-b border-warning/20 px-4 py-2 flex items-center justify-between shrink-0">
                                 <div className="flex items-center gap-2 text-warning text-sm font-medium">
                                     <AlertCircle size={16} />
@@ -317,7 +318,7 @@ export const DealSplitView: React.FC = () => {
                             <div className="border-b px-3 py-1.5 flex items-center gap-1.5 shrink-0 overflow-x-auto bg-muted/50">
                                 <span className="text-xs text-muted-foreground mr-1 shrink-0">{t('dealSplit.stageLabel')}:</span>
                                 {stages.map(s => {
-                                    const isActive = selectedDeal.stage_name === s.label;
+                                    const isActive = selectedDeal.stage_code === s.code;
                                     return (
                                         <Button
                                             key={s.code}

@@ -267,10 +267,17 @@ if not DEBUG:
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = 'DENY'
     SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
-    # HSTS: enable after confirming SSL works
-    # SECURE_HSTS_SECONDS = 31536000
-    # SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    # SECURE_HSTS_PRELOAD = True
+
+    # HTTPS enforcement — opt-in via env so DEBUG=False can still be used for local testing
+    # with remote DB. Enable these in real production deployment (behind HTTPS nginx).
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'False').lower() == 'true'
+
+    # HSTS — opt-in. Only enable when SSL is fully configured and you are ready
+    # for browsers to cache the "HTTPS-only" policy. Do NOT enable for localhost.
+    SECURE_HSTS_SECONDS = int(os.environ.get('SECURE_HSTS_SECONDS', '0'))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = os.environ.get('SECURE_HSTS_INCLUDE_SUBDOMAINS', 'False').lower() == 'true'
+    SECURE_HSTS_PRELOAD = os.environ.get('SECURE_HSTS_PRELOAD', 'False').lower() == 'true'
 
 
 ROOT_URLCONF = 'core.urls'

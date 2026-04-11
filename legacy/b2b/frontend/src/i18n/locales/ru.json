@@ -39,7 +39,9 @@
     "backToList": "Назад к списку",
     "comingSoon": "Функция скоро появится",
     "saving": "Сохранение...",
-    "unitHours": "ч"
+    "unitHours": "ч",
+    "select": "Выбрать",
+    "selectAll": "Выбрать все"
   },
   "auth": {
     "loginTitle": "Вход в кабинет",
@@ -131,6 +133,10 @@
       "specifications": "Характеристики",
       "description": "Описание",
       "documents": "Документы",
+      "pricing": "Цены и наличие",
+      "hidden": "Скрыто",
+      "downloadFile": "Скачать {{name}}",
+      "expertConsultation": "Консультация эксперта",
       "noImage": "Нет изображения",
       "noSpecifications": "Характеристики не указаны",
       "addToRequest": "Добавить в запрос",
@@ -869,6 +875,7 @@
   "verification": {
     "applicationUnderReview": "Заявка на рассмотрении",
     "applicationUnderReviewDesc": "Администратор платформы проверяет данные вашей компании. Вы получите уведомление на {{email}} после подтверждения.",
+    "innLabel": "ИНН: {{inn}}",
     "requestedStatuses": "Запрошенные статусы",
     "pending": "Ожидание",
     "verified": "Подтверждён",
@@ -903,6 +910,12 @@
     "to_order": "Под заказ",
     "sourcing": "Поиск",
     "inactive": "Неактивен"
+  },
+  "languageSwitcher": {
+    "switchToEn": "Switch to English",
+    "switchToRu": "Переключить на русский",
+    "labelEn": "EN",
+    "labelRu": "РУ"
   },
   "domainLabels": {
     "RAILWAY_MACHINERY": "ЖД и Техника",

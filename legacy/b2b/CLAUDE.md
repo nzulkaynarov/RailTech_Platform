@@ -200,10 +200,14 @@ make shell           # backend bash
 - NO `roles` table — roles are `SystemRole` (in accounts app), NOT a separate table
 
 ### Endpoints that DON'T exist
-- NO `PUT /api/v1/accounts/users/{id}/toggle-active/` — not implemented yet
+
 - NO `POST /api/v1/catalog/products/import_excel/` — use `sourcing/import-catalog/` instead
-- NO `GET /api/v1/catalog/products/export_template/` — not implemented
-- NO `GET /api/v1/crm/deals/{id}/export_pdf/` — PDF export is on quotes, not deals
+
+### Endpoints that DO exist (common confusion)
+
+- `POST /api/v1/accounts/users/{id}/toggle-active/` — `@action` in `accounts/views.py` (method is POST, not PUT)
+- `GET /api/v1/catalog/products/export-template/` — `@action` in `catalog/views.py` (kebab-case URL)
+- `GET /api/v1/crm/deals/{id}/export-pdf/` — `@action` in `crm/views.py` — returns active quote PDF (kebab-case URL)
 
 ### Fields that DON'T exist
 - `users` table has NO `username` field for login — uses `email` as USERNAME_FIELD

@@ -31,7 +31,7 @@ export const DomainAdaptiveSidebar: React.FC<DomainAdaptiveSidebarProps> = ({ is
     if (isCollapsed) {
         // Icon-only collapsed view
         return (
-            <aside className="w-full flex flex-col h-full bg-background border-r border-border items-center py-4 gap-2">
+            <nav aria-label={t('catalog.sidebar.domain')} className="w-full flex flex-col h-full bg-background border-r border-border items-center py-4 gap-2">
                 {/* All products */}
                 <Button
                     variant="ghost"
@@ -71,12 +71,12 @@ export const DomainAdaptiveSidebar: React.FC<DomainAdaptiveSidebarProps> = ({ is
                         </Button>
                     );
                 })}
-            </aside>
+            </nav>
         );
     }
 
     return (
-        <aside className="w-full flex flex-col h-full bg-background border-r border-border">
+        <nav aria-label={t('catalog.sidebar.domain')} className="w-full flex flex-col h-full bg-background border-r border-border">
             {/* Domain Switcher */}
             <div className="p-3 border-b border-border bg-muted/50 dark:bg-black/10">
                 <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5 px-1">
@@ -181,6 +181,6 @@ export const DomainAdaptiveSidebar: React.FC<DomainAdaptiveSidebarProps> = ({ is
                     </div>
                 </div>
             </div>
-        </aside>
+        </nav>
     );
 };

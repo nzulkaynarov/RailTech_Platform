@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import {
 	ShieldCheck, XCircle, Clock, FileText, Upload,
 	ChevronRight, RefreshCw, Search,
@@ -8,6 +9,8 @@ import {
 } from 'lucide-react';
 import { Company, accountsApi } from '../../api/accountsApi';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 
 type FilterStatus = 'ALL' | 'L1_UNVERIFIED' | 'PROFILE_SUBMITTED' | 'L2_VERIFIED' | 'L3_CONTRACTED';
 
@@ -175,12 +178,12 @@ const CompanyDetailPanel: React.FC<SidePanelProps> = ({ company, onClose, onVeri
 				{/* Notes */}
 				<div>
 					<p className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-2">{t('kycManager.observations')}</p>
-					<textarea
+					<Textarea
 						value={comment}
 						onChange={e => setComment(e.target.value)}
 						placeholder={t('kycManager.observationsPlaceholder')}
 						rows={3}
-						className="w-full bg-muted/50 border border-border rounded p-3 text-xs font-medium text-foreground/80 outline-none focus:border-primary/50 resize-none transition-all"
+						className="resize-none text-xs"
 					/>
 				</div>
 			</div>
@@ -257,7 +260,7 @@ export const KYCManagerDashboard: React.FC = () => {
 				return null;
 			});
 		} catch {
-			alert(t('kycManager.operationFailure'));
+			toast.error(t('kycManager.operationFailure'));
 		} finally {
 			setBusy(false);
 		}
@@ -269,7 +272,7 @@ export const KYCManagerDashboard: React.FC = () => {
 			await accountsApi.uploadDocument(companyId, file, docType);
 			await loadCompanies();
 		} catch {
-			alert(t('kycManager.uploadFailure'));
+			toast.error(t('kycManager.uploadFailure'));
 		} finally {
 			setBusy(false);
 		}
@@ -343,13 +346,13 @@ export const KYCManagerDashboard: React.FC = () => {
 				<div className="flex-1 overflow-y-auto p-4 space-y-2 bg-muted/20 custom-scrollbar">
 					{/* Search */}
 					<div className="relative group mb-4">
-						<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
-						<input
+						<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground group-focus-within:text-primary transition-colors pointer-events-none" />
+						<Input
 							type="text"
 							placeholder={t('kycManager.searchPlaceholder')}
 							value={search}
 							onChange={e => setSearch(e.target.value)}
-							className="w-full bg-background border border-border rounded py-1.5 pl-9 pr-4 text-xs font-mono outline-none focus:ring-1 focus:ring-primary/50 transition-all"
+							className="pl-9 text-xs font-mono"
 						/>
 					</div>
 

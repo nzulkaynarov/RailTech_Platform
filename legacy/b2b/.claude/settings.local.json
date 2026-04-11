@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(make up:*)"
+      "Bash(make up:*)",
+      "Bash(docker rm:*)",
+      "Bash(xargs -r docker rm -f)",
+      "Bash(docker compose:*)",
+      "Bash(grep:*)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:8000/health/)"
     ]
   }
 }

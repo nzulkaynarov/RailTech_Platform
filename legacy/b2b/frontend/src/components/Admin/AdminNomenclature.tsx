@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { Plus, Search, Archive, Loader2, FileSpreadsheet, Edit, Boxes, Filter, Tag } from 'lucide-react';
 import { Product } from '../../api/catalogApi';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { NomenclatureSlidePanel } from './NomenclatureSlidePanel';
 import { ExcelUploadModal } from './ExcelUploadModal';
@@ -49,7 +52,7 @@ export const AdminNomenclature: React.FC = () => {
             setSelectedProduct(null);
         } catch (err: unknown) {
             const e = err as { response?: { data?: { detail?: string } }; message?: string };
-            alert(t('common.error') + ': ' + (e.response?.data?.detail || e.message || 'Unknown error'));
+            toast.error(t('common.error') + ': ' + (e.response?.data?.detail || e.message || 'Unknown error'));
         }
     };
 
@@ -68,7 +71,7 @@ export const AdminNomenclature: React.FC = () => {
         try {
             await deleteMutation.mutateAsync(id);
         } catch {
-            alert(t('admin.nomenclature.operationFailed'));
+            toast.error(t('admin.nomenclature.operationFailed'));
         }
     };
 
@@ -90,7 +93,7 @@ export const AdminNomenclature: React.FC = () => {
             await Promise.all(selectedIds.map(id => deleteMutation.mutateAsync(id)));
             setSelectedIds([]);
         } catch {
-            alert(t('admin.nomenclature.bulkOperationFailed'));
+            toast.error(t('admin.nomenclature.bulkOperationFailed'));
         }
     };
 
@@ -129,13 +132,13 @@ export const AdminNomenclature: React.FC = () => {
             {/* Smart Toolbar */}
             <div className="bg-card border border-border rounded p-2 flex flex-col md:flex-row gap-2 items-center shadow-sm font-mono">
                 <div className="relative flex-1 w-full">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <input
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                    <Input
                         type="text"
                         placeholder={t('admin.nomenclature.searchPlaceholder')}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-9 pr-4 py-1.5 bg-muted border border-border rounded text-xs font-mono focus:ring-1 focus:ring-primary/50 outline-none transition-all text-foreground"
+                        className="pl-9 font-mono text-xs"
                     />
                 </div>
 
@@ -175,11 +178,10 @@ export const AdminNomenclature: React.FC = () => {
                         <TableHeader className="sticky top-0 z-10 bg-muted text-muted-foreground text-xs font-black uppercase tracking-widest border-b border-border">
                             <TableRow>
                                 <TableHead className="px-4 py-3 w-10">
-                                    <input
-                                        type="checkbox"
+                                    <Checkbox
                                         checked={selectedIds.length === products.length && products.length > 0}
-                                        onChange={toggleSelectAll}
-                                        className="w-4 h-4 rounded-sm border-border text-primary focus:ring-primary transition-all cursor-pointer opacity-70"
+                                        onCheckedChange={toggleSelectAll}
+                                        aria-label={t('common.selectAll')}
                                     />
                                 </TableHead>
                                 <TableHead className="px-4 py-3">{t('admin.nomenclature.columns.objectDescription')}</TableHead>
@@ -212,11 +214,10 @@ export const AdminNomenclature: React.FC = () => {
                                 products.map((product) => (
                                     <TableRow key={product.id} className="group hover:bg-muted/50 transition-colors border-l-2 border-transparent hover:border-primary">
                                         <TableCell className="px-4 py-3 w-10">
-                                            <input
-                                                type="checkbox"
+                                            <Checkbox
                                                 checked={selectedIds.includes(product.id)}
-                                                onChange={() => toggleSelect(product.id)}
-                                                className="w-4 h-4 rounded-sm border-border text-primary focus:ring-primary transition-all cursor-pointer opacity-70"
+                                                onCheckedChange={() => toggleSelect(product.id)}
+                                                aria-label={t('common.select')}
                                             />
                                         </TableCell>
                                         <TableCell className="px-4 py-3 max-w-xs">

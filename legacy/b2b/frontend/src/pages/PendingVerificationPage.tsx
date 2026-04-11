@@ -83,7 +83,7 @@ export function PendingVerificationPage() {
             <Card>
               <CardContent className="p-4 space-y-2">
                 <p className="text-sm font-medium">{company.name}</p>
-                {company.inn && <p className="text-xs text-muted-foreground">ИНН: {company.inn}</p>}
+                {company.inn && <p className="text-xs text-muted-foreground">{t('verification.innLabel', { inn: company.inn })}</p>}
               </CardContent>
             </Card>
 

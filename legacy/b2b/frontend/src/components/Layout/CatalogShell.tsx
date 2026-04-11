@@ -188,7 +188,7 @@ export const CatalogShell: React.FC = () => {
             <Separator />
             <footer className="h-9 bg-background flex items-center justify-between px-4 lg:px-6 shrink-0">
                 <p className="text-xs text-muted-foreground">
-                    &copy; {new Date().getFullYear()} {t('nav.companyName', { defaultValue: 'ООО «RailTech»' })}
+                    &copy; {new Date().getFullYear()} {t('nav.companyName')}
                 </p>
                 <Button variant="link" size="sm" className="text-xs text-muted-foreground h-auto p-0" asChild>
                     <a href="#" target="_blank" rel="noopener noreferrer">

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { DollarSign, Globe, Shield, Bell, Save, RefreshCw, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +16,7 @@ export const SystemSettings: React.FC = () => {
         setIsSaving(true);
         setShowSuccess(false);
         // TODO: Wire to backend API when settings endpoint is implemented
-        alert(t('admin.systemSettings.saveNotAvailable'));
+        toast.info(t('admin.systemSettings.saveNotAvailable'));
         setIsSaving(false);
     };
 

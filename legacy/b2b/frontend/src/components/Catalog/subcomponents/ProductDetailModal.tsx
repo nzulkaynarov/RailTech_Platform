@@ -124,13 +124,13 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                                 {t('catalog.productDetail.description')}
                             </TabsTrigger>
                             <TabsTrigger value="pricing">
-                                Цены и наличие
+                                {t('catalog.productDetail.pricing')}
                             </TabsTrigger>
                             <TabsTrigger value="specs">
                                 {t('catalog.productDetail.specifications')}
                             </TabsTrigger>
                             <TabsTrigger value="docs">
-                                Документация
+                                {t('catalog.productDetail.documents')}
                             </TabsTrigger>
                         </TabsList>
 
@@ -214,7 +214,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                                                                 ) : (
                                                                     <span className="flex items-center justify-end gap-1 text-warning">
                                                                         <LockIcon className="size-3" aria-hidden="true" />
-                                                                        Скрыто
+                                                                        {t('catalog.productDetail.hidden')}
                                                                     </span>
                                                                 )}
                                                             </TableCell>
@@ -244,7 +244,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                                                     <p className="text-xs text-muted-foreground">{doc.size}</p>
                                                 </div>
                                             </div>
-                                            <Button variant="ghost" size="icon" aria-label={`Скачать ${doc.name}`}>
+                                            <Button variant="ghost" size="icon" aria-label={t('catalog.productDetail.downloadFile', { name: doc.name })}>
                                                 <Download className="size-4" />
                                             </Button>
                                         </div>
@@ -298,7 +298,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                         <div className="flex gap-2">
                             <Button variant="outline">
                                 <MessageSquare className="size-4" />
-                                Консультация эксперта
+                                {t('catalog.productDetail.expertConsultation')}
                             </Button>
                             {product.main_document_url && (
                                 <Button

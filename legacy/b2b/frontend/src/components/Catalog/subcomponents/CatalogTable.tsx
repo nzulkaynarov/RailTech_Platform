@@ -61,7 +61,7 @@ export const CatalogTable: React.FC<CatalogTableProps> = ({ products, onProductC
             const name = p.name.replace(/"/g, '""');
             const manufacturer = (p.manufacturer_data?.name || '').replace(/"/g, '""');
             const price = p.base_price ?? '';
-            const uom = p.uom_data?.code || 'шт';
+            const uom = p.uom_data?.code || 'pcs';
             const stock = p.stock_status || 'IN_STOCK';
             return `"${sku}","${name}","${manufacturer}","${price}","${uom}","${stock}"`;
         });

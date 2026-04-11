@@ -4,6 +4,7 @@ import {
     AlertTriangle, BadgeCheck, FileQuestion, Loader2
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { accountsApi, Company, KYCDocument } from '../../api/accountsApi';
 import { useAuthStore } from '../../store/authStore';
 import { CompanyTeamSettings } from './CompanyTeamSettings';
@@ -57,7 +58,7 @@ export const CompanyProfile: React.FC = () => {
             await accountsApi.deleteDocument(company.id, docId);
             const refreshed = await accountsApi.getCompanyDetail(company.id);
             setCompany(refreshed);
-        } catch (err) { console.error('Operation failed', err); alert(t('company.deleteDocError')); }
+        } catch (err) { console.error('Operation failed', err); toast.error(t('company.deleteDocError')); }
     };
 
     const handleUpload = async (file: File) => {
@@ -68,7 +69,7 @@ export const CompanyProfile: React.FC = () => {
             // Reload company data via detail endpoint (getCompanies is manager-only)
             const refreshed = await accountsApi.getCompanyDetail(company.id);
             setCompany(refreshed);
-        } catch (err) { console.error('Operation failed', err); alert(t('company.uploadError')); }
+        } catch (err) { console.error('Operation failed', err); toast.error(t('company.uploadError')); }
         finally { setUploading(false); }
     };
 

@@ -39,7 +39,9 @@
     "backToList": "Back to list",
     "comingSoon": "Coming soon",
     "saving": "Saving...",
-    "unitHours": "h"
+    "unitHours": "h",
+    "select": "Select",
+    "selectAll": "Select all"
   },
   "auth": {
     "loginTitle": "Sign in",
@@ -131,6 +133,10 @@
       "specifications": "Specifications",
       "description": "Description",
       "documents": "Documents",
+      "pricing": "Prices & availability",
+      "hidden": "Hidden",
+      "downloadFile": "Download {{name}}",
+      "expertConsultation": "Expert consultation",
       "noImage": "No image",
       "noSpecifications": "No specifications available",
       "addToRequest": "Add to request",
@@ -869,6 +875,7 @@
   "verification": {
     "applicationUnderReview": "Application Under Review",
     "applicationUnderReviewDesc": "The platform administrator is reviewing your company data. You will receive a notification at {{email}} upon confirmation.",
+    "innLabel": "TIN: {{inn}}",
     "requestedStatuses": "Requested Statuses",
     "pending": "Pending",
     "verified": "Verified",
@@ -903,6 +910,12 @@
     "to_order": "To Order",
     "sourcing": "Sourcing",
     "inactive": "Inactive"
+  },
+  "languageSwitcher": {
+    "switchToEn": "Switch to English",
+    "switchToRu": "Переключить на русский",
+    "labelEn": "EN",
+    "labelRu": "РУ"
   },
   "domainLabels": {
     "RAILWAY_MACHINERY": "Railway Machinery",
