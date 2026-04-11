@@ -6,7 +6,12 @@
       "Bash(xargs -r docker rm -f)",
       "Bash(docker compose:*)",
       "Bash(grep:*)",
-      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:8000/health/)"
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:8000/health/)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" -H \"Host: localhost\" http://localhost:8000/api/v1/health/)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:5173/api/v1/auth/token/ -X POST -H \"Content-Type: application/json\" -d '{\"\"email\"\":\"\"test\"\",\"\"password\"\":\"\"test\"\"}')",
+      "Bash(curl -s http://localhost:5173/)",
+      "Bash(curl -sI http://localhost:8000/static/unfold/css/styles.css)",
+      "Bash(curl -sI http://localhost:8000/static/admin/css/base.css)"
     ]
   }
 }
