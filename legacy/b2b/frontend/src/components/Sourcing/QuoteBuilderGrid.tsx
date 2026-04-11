@@ -15,9 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { cn } from '@/lib/utils';
 import {
-  Train,
   Package,
-  Wrench,
   Calculator,
   TrendingUp,
   Hash,
@@ -25,7 +23,7 @@ import {
 import type { RequestItem } from '@/store/flowStore';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useDomainTypes } from '@/hooks/useCatalog';
-import { getDomainVisual, getDomainChartColor } from '@/config/domainConfig';
+import { getDomainVisual } from '@/config/domainConfig';
 
 /* ─── Types ────────────────────────────────────────────────────────────── */
 
@@ -193,6 +191,7 @@ export function QuoteBuilderGrid({
               {domainTypes.map((domainType) => {
                 const domain = domainType.code;
                 const visual = getDomainVisual(domain);
+                const DomainIcon = visual.icon;
                 const count = rowsByDomain[domain]?.length ?? 0;
                 return (
                   <TabsTrigger
@@ -200,7 +199,7 @@ export function QuoteBuilderGrid({
                     value={domain}
                     className="gap-1.5 text-xs"
                   >
-                    {visual.icon}
+                    <DomainIcon className="size-4" />
                     {t(visual.labelKey)}
                     {count > 0 && (
                       <Badge

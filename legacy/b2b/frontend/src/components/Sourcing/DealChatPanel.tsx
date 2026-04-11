@@ -42,7 +42,7 @@ const documents: DemoDocument[] = [];
 export function DealChatPanel(): React.ReactNode {
   // TODO: when implementing live chat fetching, accept dealId prop
   const { t } = useTranslation();
-  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
+  const [messages] = useState<ChatMessage[]>(initialMessages);
   const [inputValue, setInputValue] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 

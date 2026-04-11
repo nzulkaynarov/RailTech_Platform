@@ -6,7 +6,7 @@ import { useCartStore } from '../../../store/cartStore';
 import { useUserStore } from '../../../store/userStore';
 import { Button } from '@/components/ui/button';
 import { clsx } from 'clsx';
-import { getDomainVisual, getDomainLabelKey } from '../../../config/domainConfig';
+import { getDomainVisual } from '../../../config/domainConfig';
 
 // TODO: Fetch manufacturer verification data from API
 // For now, use empty object — badge display should degrade gracefully
