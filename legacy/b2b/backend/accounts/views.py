@@ -11,7 +11,7 @@ from core.permissions import IsAdminUser, IsManagerOrAdmin
 from . import services
 from .models import (
     Company, CompanyMember, CompanyRoleApplication, CustomUser,
-    KYCDocument, SupplierSubscription, VerificationStatus,
+    SupplierSubscription,
 )
 from .services import (
     create_pending_user, verify_and_setup_password,
@@ -52,15 +52,17 @@ class CompanyViewSet(viewsets.ModelViewSet):
             code = serializer.validated_data['status_code']
             comment = serializer.validated_data.get('comment', '')
 
-            v_status = VerificationStatus.objects.filter(code=code).first()
-            if not v_status:
-                return Response({'error': f'Status {code} not found'}, status=status.HTTP_400_BAD_REQUEST)
+            result, error = services.verify_company_kyc(
+                company, request.user, level_code=code, require_documents=False
+            )
+            if error:
+                return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
 
-            company.verification_status = v_status
             if comment:
-                company.kyc_notes = comment
-            company.save()
-            return Response({'status': 'Status updated', 'new_status': v_status.name})
+                result.kyc_notes = comment
+                result.save(update_fields=['kyc_notes'])
+
+            return Response({'status': 'Status updated', 'new_status': result.verification_status.name})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @action(
@@ -75,43 +77,18 @@ class CompanyViewSet(viewsets.ModelViewSet):
         if not file_obj:
             return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # MED-4: File validation
-        from django.core.validators import FileExtensionValidator
-        from django.core.exceptions import ValidationError
-
-        allowed_extensions = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx']
-        max_size = 10 * 1024 * 1024  # 10MB
-
-        if file_obj.size > max_size:
-            return Response({"error": "File too large (max 10MB)"}, status=status.HTTP_400_BAD_REQUEST)
-
-        ext_validator = FileExtensionValidator(allowed_extensions)
-        try:
-            ext_validator(file_obj)
-        except ValidationError as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-        # doc_type here would be an ID or code. In this simple fix, we assume code.
         doc_type_code = request.data.get('doc_type', 'OTHER')
-        from .models import KYCDocType
-        d_type = KYCDocType.objects.filter(code=doc_type_code).first()
-
-        doc = KYCDocument.objects.create(
-            company=company,
-            file=file_obj,
-            doc_type=d_type,
-            original_filename=file_obj.name,
-        )
+        doc, error = services.upload_kyc_document(company, file_obj, doc_type_code)
+        if error:
+            return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
         return Response(KYCDocumentSerializer(doc).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['delete'], url_path='delete-document/(?P<doc_id>[0-9]+)', url_name='delete-document')
     def delete_document(self, request, pk=None, doc_id=None):
         company = self.get_object()
-        doc = KYCDocument.objects.filter(company=company, id=doc_id).first()
-        if not doc:
-            return Response({'detail': 'Document not found.'}, status=status.HTTP_404_NOT_FOUND)
-        doc.file.delete(save=False)
-        doc.delete()
+        success, error = services.delete_kyc_document(company, int(doc_id))
+        if error:
+            return Response({'detail': error}, status=status.HTTP_404_NOT_FOUND)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, methods=['get'])
@@ -182,11 +159,13 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer = ChangePasswordSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        if not request.user.check_password(serializer.validated_data['current_password']):
-            return Response({'error': 'Неверный текущий пароль'}, status=status.HTTP_400_BAD_REQUEST)
-
-        request.user.set_password(serializer.validated_data['new_password'])
-        request.user.save()
+        _, error = services.change_user_password(
+            request.user,
+            serializer.validated_data['current_password'],
+            serializer.validated_data['new_password'],
+        )
+        if error:
+            return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
         return Response({'message': 'Пароль успешно изменён'})
 
     @action(detail=False, methods=['patch'], url_path='update-me',
@@ -206,16 +185,12 @@ class UserViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='toggle-active')
     def toggle_active(self, request, pk=None):
         user = self.get_object()
-        if user == request.user:
-            return Response(
-                {'error': 'Cannot deactivate yourself'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        user.is_active = not user.is_active
-        user.save(update_fields=['is_active'])
+        result, error = services.toggle_user_active(user, request.user)
+        if error:
+            return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
         return Response({
-            'status': 'activated' if user.is_active else 'deactivated',
-            'is_active': user.is_active,
+            'status': 'activated' if result.is_active else 'deactivated',
+            'is_active': result.is_active,
         })
 
 

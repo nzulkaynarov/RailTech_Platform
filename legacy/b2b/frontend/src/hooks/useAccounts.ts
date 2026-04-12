@@ -52,6 +52,28 @@ export const useCompanies = (params?: CompanyFilterParams) => useQuery({
   queryFn: () => accountsApi.getCompanies(params),
 });
 
+export const useVerifyCompany = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, statusCode, comment }: { id: number; statusCode: string; comment?: string }) =>
+      accountsApi.verifyCompany(id, statusCode, comment),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['companies'] });
+    },
+  });
+};
+
+export const useUploadDocument = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ companyId, file, docType }: { companyId: number; file: File; docType: string }) =>
+      accountsApi.uploadDocument(companyId, file, docType),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['companies'] });
+    },
+  });
+};
+
 // ─── Subscriptions ─────────────────────────────────────────────────────
 
 export const useSubscriptions = () => useQuery({

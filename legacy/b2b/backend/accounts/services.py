@@ -3,6 +3,7 @@ from typing import List, Optional, Tuple
 from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
+from django.db import transaction
 from django.db.models import QuerySet
 from django.utils import timezone
 from django.utils.encoding import force_bytes, force_str
@@ -75,6 +76,7 @@ def verify_and_setup_password(uidb64: str, token: str, password: str) -> Tuple[O
     return user, None
 
 
+@transaction.atomic
 def submit_company_profile(
     user: CustomUser,
     inn: str,
@@ -315,6 +317,89 @@ def bulk_reject_role_applications(
     return rejected
 
 
+def change_user_password(
+    user: CustomUser,
+    current_password: str,
+    new_password: str,
+) -> Tuple[Optional[CustomUser], Optional[str]]:
+    """
+    Change user password after verifying the current one.
+    Returns: (user, error_or_None)
+    """
+    if not user.check_password(current_password):
+        return None, "Неверный текущий пароль"
+    user.set_password(new_password)
+    user.save(update_fields=['password'])
+    return user, None
+
+
+def toggle_user_active(
+    user: CustomUser,
+    requester: CustomUser,
+) -> Tuple[Optional[CustomUser], Optional[str]]:
+    """
+    Toggle user's is_active flag. Prevents self-deactivation.
+    Returns: (user, error_or_None)
+    """
+    if user.pk == requester.pk:
+        return None, "Cannot deactivate yourself"
+    user.is_active = not user.is_active
+    user.save(update_fields=['is_active'])
+    return user, None
+
+
+def upload_kyc_document(
+    company: Company,
+    file_obj,
+    doc_type_code: str = 'OTHER',
+) -> Tuple[Optional['KYCDocument'], Optional[str]]:
+    """
+    Upload a KYC document for a company with file validation.
+    Returns: (document, error_or_None)
+    """
+    from django.core.validators import FileExtensionValidator
+    from django.core.exceptions import ValidationError as DjangoValidationError
+    from .models import KYCDocType, KYCDocument
+
+    allowed_extensions = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx']
+    max_size = 10 * 1024 * 1024  # 10MB
+
+    if file_obj.size > max_size:
+        return None, "File too large (max 10MB)"
+
+    ext_validator = FileExtensionValidator(allowed_extensions)
+    try:
+        ext_validator(file_obj)
+    except DjangoValidationError as e:
+        return None, str(e)
+
+    d_type = KYCDocType.objects.filter(code=doc_type_code).first()
+    doc = KYCDocument.objects.create(
+        company=company,
+        file=file_obj,
+        doc_type=d_type,
+        original_filename=file_obj.name,
+    )
+    return doc, None
+
+
+def delete_kyc_document(
+    company: Company,
+    doc_id: int,
+) -> Tuple[bool, Optional[str]]:
+    """
+    Delete a KYC document belonging to a company.
+    Returns: (success, error_or_None)
+    """
+    from .models import KYCDocument
+    doc = KYCDocument.objects.filter(company=company, id=doc_id).first()
+    if not doc:
+        return False, "Document not found"
+    doc.file.delete(save=False)
+    doc.delete()
+    return True, None
+
+
 def change_subscription_status(
     subscriptions: QuerySet[SupplierSubscription],
     new_status: str,
@@ -323,7 +408,7 @@ def change_subscription_status(
     Change subscription status (ACTIVE / SUSPENDED / CANCELLED / TRIAL).
     Returns: count of updated rows.
     """
-    valid_statuses = {'ACTIVE', 'SUSPENDED', 'CANCELLED', 'TRIAL', 'EXPIRED'}
+    valid_statuses = {'ACTIVE', 'SUSPENDED', 'CANCELLED', 'TRIAL', 'PAST_DUE'}
     if new_status not in valid_statuses:
         raise ValueError(f"Invalid status '{new_status}'. Allowed: {valid_statuses}")
     return subscriptions.update(status=new_status)

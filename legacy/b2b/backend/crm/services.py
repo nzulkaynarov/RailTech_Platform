@@ -289,15 +289,34 @@ class QuoteLifecycleService:
 # ──────────────────────────────────────────────────────────────────────────
 
 
+ALLOWED_STAGE_TRANSITIONS = {
+    'DRAFT': ['KYC_PENDING', 'SOURCING', 'CLOSED_LOST'],
+    'KYC_PENDING': ['SOURCING', 'CLOSED_LOST'],
+    'SOURCING': ['CALCULATING', 'CLOSED_LOST'],
+    'CALCULATING': ['QUOTE_SENT', 'SOURCING', 'CLOSED_LOST'],
+    'QUOTE_SENT': ['CONTRACT_SIGNED', 'CALCULATING', 'CLOSED_LOST'],
+    'CONTRACT_SIGNED': ['CLOSED_WON', 'CLOSED_LOST'],
+    'CLOSED_WON': [],
+    'CLOSED_LOST': [],
+}
+
+
+def get_allowed_transitions(stage_code: str) -> list[str]:
+    """Return list of stage codes reachable from the given stage."""
+    return ALLOWED_STAGE_TRANSITIONS.get(stage_code, [])
+
+
 def transition_deal_stage(
     deal: Deal,
     target_stage_code: str,
     actor: Optional[CustomUser] = None,
     reason: str = '',
+    validate_fsm: bool = True,
 ) -> Tuple[Optional[Deal], Optional[str]]:
     """
     Transition a Deal to a new stage by stage code.
 
+    When validate_fsm=True, enforces the FSM transition matrix.
     Logs the change to ActivityLog.
     Returns: (deal, error_or_None)
     """
@@ -307,6 +326,13 @@ def transition_deal_stage(
 
     if deal.stage and deal.stage.code == target_stage_code:
         return deal, None  # already in target state, no-op
+
+    if validate_fsm:
+        current_code = deal.stage.code if deal.stage else 'DRAFT'
+        allowed = get_allowed_transitions(current_code)
+        if target_stage_code not in allowed:
+            allowed_str = ', '.join(allowed) if allowed else 'none (terminal state)'
+            return None, f"Transition {current_code} → {target_stage_code} is not allowed. Allowed: {allowed_str}"
 
     old_stage_name = deal.stage.name if deal.stage else '—'
     deal.stage = target_stage

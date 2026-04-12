@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Plus, Search, Archive, Loader2, FileSpreadsheet, Edit, Boxes, Filter, Tag } from 'lucide-react';
+import { Plus, Search, Archive, Loader2, FileSpreadsheet, Edit, Boxes, Filter, Tag, Package } from 'lucide-react';
 import { Product } from '../../api/catalogApi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { NomenclatureSlidePanel } from './NomenclatureSlidePanel';
 import { ExcelUploadModal } from './ExcelUploadModal';
 import { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, useDomainTypes } from '../../hooks/useCatalog';
 import { getDomainVisual } from '../../config/domainConfig';
+import { PageShell, LoadingRows, EmptyState } from '../../pages/shared/PageShell';
 
 export const AdminNomenclature: React.FC = () => {
     const { t } = useTranslation();
@@ -97,60 +99,48 @@ export const AdminNomenclature: React.FC = () => {
         }
     };
 
+    const uniqueDomainCount = new Set(products.map(p => p.domain_type_name).filter(Boolean)).size;
+
+    const stats = [
+        { label: t('admin.nomenclature.stats.total'), value: String(products.length) },
+        { label: t('admin.nomenclature.stats.domains'), value: String(uniqueDomainCount) },
+    ];
+
+    const actions = [
+        { label: t('admin.nomenclature.batchSync'), variant: 'outline' as const, onClick: () => setIsUploadModalOpen(true) },
+        { label: t('admin.nomenclature.createSKU'), onClick: handleCreateClick },
+    ];
+
     return (
-        <div className="p-4 h-full flex flex-col space-y-4 animate-in fade-in duration-300">
-            {/* Header Section */}
-            <div className="flex items-end justify-between border-b border-border pb-3">
-                <div>
-                    <h1 className="text-xl font-black tracking-tight text-foreground uppercase leading-none">
-                        {t('admin.nomenclature.masterTitle')} <span className="text-primary">{t('admin.nomenclature.masterHighlight')}</span>
-                    </h1>
-                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest leading-none mt-1">
-                        {t('admin.nomenclature.subtitle')}
-                    </p>
-                </div>
-
-                <div className="flex gap-2">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setIsUploadModalOpen(true)}
-                        className="text-xs font-black uppercase tracking-widest active:scale-95"
-                    >
-                        <FileSpreadsheet className="w-3.5 h-3.5" /> {t('admin.nomenclature.batchSync')}
-                    </Button>
-                    <Button
-                        size="sm"
-                        onClick={handleCreateClick}
-                        className="text-xs font-black uppercase tracking-widest active:scale-95"
-                    >
-                        <Plus className="w-3.5 h-3.5" /> {t('admin.nomenclature.createSKU')}
-                    </Button>
-                </div>
-            </div>
-
-            {/* Smart Toolbar */}
-            <div className="bg-card border border-border rounded p-2 flex flex-col md:flex-row gap-2 items-center shadow-sm font-mono">
-                <div className="relative flex-1 w-full">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+        <PageShell
+            title={t('admin.nomenclature.title')}
+            description={t('admin.nomenclature.description')}
+            icon={<Package className="h-5 w-5" />}
+            stats={stats}
+            actions={actions}
+        >
+            {/* Toolbar */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                     <Input
                         type="text"
                         placeholder={t('admin.nomenclature.searchPlaceholder')}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-9 font-mono text-xs"
+                        className="pl-9"
                     />
                 </div>
 
-                <div className="flex items-center gap-1 border-l border-border ml-2 pl-2">
-                    <Filter className="w-3.5 h-3.5 text-muted-foreground mr-2" />
+                <div className="flex items-center gap-1">
+                    <Filter className="h-3.5 w-3.5 text-muted-foreground mr-1" />
                     {[{ code: 'ALL', name: t('common.all') }, ...domainTypes].map((d) => (
                         <Button
                             key={d.code}
                             variant={domainFilter === d.code ? 'secondary' : 'ghost'}
-                            size="xs"
+                            size="sm"
                             onClick={() => setDomainFilter(d.code)}
-                            className="text-xs font-black uppercase tracking-widest"
+                            className="text-xs"
                         >
                             {d.code === 'ALL' ? t('common.all') : t(getDomainVisual(d.code).shortLabelKey, d.name)}
                         </Button>
@@ -158,8 +148,8 @@ export const AdminNomenclature: React.FC = () => {
                 </div>
 
                 {selectedIds.length > 0 && (
-                    <div className="flex items-center gap-2 pl-4 border-l border-border ml-2 bg-destructive/5 px-2 py-1 rounded">
-                        <span className="text-xs font-black text-destructive uppercase tracking-widest">{t('admin.nomenclature.selected', { count: selectedIds.length })}</span>
+                    <div className="flex items-center gap-2 bg-destructive/5 px-2 py-1 rounded">
+                        <span className="text-xs font-semibold text-destructive">{t('admin.nomenclature.selected', { count: selectedIds.length })}</span>
                         <Button
                             variant="destructive"
                             size="icon-xs"
@@ -171,90 +161,73 @@ export const AdminNomenclature: React.FC = () => {
                 )}
             </div>
 
-            {/* Nomenclature Table */}
-            <div className="bg-card border border-border rounded shadow-sm flex-1 overflow-hidden font-mono">
-                <div className="h-full overflow-auto custom-scrollbar">
-                    <Table className="w-full text-left border-collapse">
-                        <TableHeader className="sticky top-0 z-10 bg-muted text-muted-foreground text-xs font-black uppercase tracking-widest border-b border-border">
-                            <TableRow>
-                                <TableHead className="px-4 py-3 w-10">
-                                    <Checkbox
-                                        checked={selectedIds.length === products.length && products.length > 0}
-                                        onCheckedChange={toggleSelectAll}
-                                        aria-label={t('common.selectAll')}
-                                    />
-                                </TableHead>
-                                <TableHead className="px-4 py-3">{t('admin.nomenclature.columns.objectDescription')}</TableHead>
-                                <TableHead className="px-4 py-3">{t('admin.nomenclature.columns.domainSegment')}</TableHead>
-                                <TableHead className="px-4 py-3">{t('admin.nomenclature.columns.baseValue')}</TableHead>
-                                <TableHead className="px-4 py-3">{t('admin.nomenclature.columns.eqGroups')}</TableHead>
-                                <TableHead className="px-4 py-3 text-right">{t('admin.nomenclature.columns.protoActions')}</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody className="divide-y divide-border">
-                            {isLoading ? (
+            {/* Table */}
+            <Card>
+                <CardContent className="p-0">
+                    {isLoading ? <LoadingRows rows={5} /> : products.length === 0 ? (
+                        <EmptyState icon={<Boxes className="h-5 w-5" />} message={t('admin.nomenclature.emptyState')} />
+                    ) : (
+                        <Table>
+                            <TableHeader>
                                 <TableRow>
-                                    <TableCell colSpan={6} className="px-4 py-12 text-center text-muted-foreground text-xs uppercase font-bold tracking-widest leading-none">
-                                        <div className="flex items-center justify-center gap-2">
-                                            <Loader2 className="w-4 h-4 animate-spin" />
-                                            {t('admin.nomenclature.syncingData')}
-                                        </div>
-                                    </TableCell>
+                                    <TableHead className="w-10">
+                                        <Checkbox
+                                            checked={selectedIds.length === products.length && products.length > 0}
+                                            onCheckedChange={toggleSelectAll}
+                                            aria-label={t('common.selectAll')}
+                                        />
+                                    </TableHead>
+                                    <TableHead>{t('admin.nomenclature.columns.objectDescription')}</TableHead>
+                                    <TableHead>{t('admin.nomenclature.columns.domainSegment')}</TableHead>
+                                    <TableHead>{t('admin.nomenclature.columns.baseValue')}</TableHead>
+                                    <TableHead>{t('admin.nomenclature.columns.eqGroups')}</TableHead>
+                                    <TableHead className="text-right">{t('admin.nomenclature.columns.protoActions')}</TableHead>
                                 </TableRow>
-                            ) : products.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
-                                        <div className="flex flex-col items-center justify-center">
-                                            <Boxes className="w-8 h-8 mb-2 opacity-20" />
-                                            <p className="text-xs uppercase font-black tracking-widest">{t('admin.nomenclature.emptyState')}</p>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            ) : (
-                                products.map((product) => (
-                                    <TableRow key={product.id} className="group hover:bg-muted/50 transition-colors border-l-2 border-transparent hover:border-primary">
-                                        <TableCell className="px-4 py-3 w-10">
+                            </TableHeader>
+                            <TableBody>
+                                {products.map((product) => (
+                                    <TableRow key={product.id} className="group">
+                                        <TableCell className="w-10">
                                             <Checkbox
                                                 checked={selectedIds.includes(product.id)}
                                                 onCheckedChange={() => toggleSelect(product.id)}
                                                 aria-label={t('common.select')}
                                             />
                                         </TableCell>
-                                        <TableCell className="px-4 py-3 max-w-xs">
+                                        <TableCell className="max-w-xs">
                                             <div className="flex flex-col min-w-0">
-                                                <span className="text-xs font-black text-foreground uppercase truncate group-hover:text-primary transition-colors">{product.name}</span>
-                                                <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-0.5">{product.sku || 'SKU_MISSING'}</span>
+                                                <span className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">{product.name}</span>
+                                                <span className="text-xs text-muted-foreground mt-0.5">{product.sku || '—'}</span>
                                             </div>
                                         </TableCell>
-                                        <TableCell className="px-4 py-3">
-                                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-black uppercase tracking-widest border ${getDomainVisual(product.domain_type_name).badgeClass}`}>
+                                        <TableCell>
+                                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium border ${getDomainVisual(product.domain_type_name).badgeClass}`}>
                                                 <Tag className="w-2.5 h-2.5 mr-1" /> {product.domain_type_name}
                                             </span>
                                         </TableCell>
-                                        <TableCell className="px-4 py-3">
-                                            <div className="text-xs font-black text-foreground font-mono leading-none">{parseFloat(product.base_price).toLocaleString()} {product.currency_data?.code || 'USD'}</div>
-                                            <div className="text-xs text-muted-foreground font-bold uppercase tracking-tight mt-1">per {product.uom_data?.name || 'unit'}</div>
+                                        <TableCell>
+                                            <div className="text-sm font-medium tabular-nums">{parseFloat(product.base_price).toLocaleString()} {product.currency_data?.code || 'USD'}</div>
+                                            <div className="text-xs text-muted-foreground mt-0.5">per {product.uom_data?.name || 'unit'}</div>
                                         </TableCell>
-                                        <TableCell className="px-4 py-3 min-w-[140px]">
+                                        <TableCell className="min-w-[140px]">
                                             <div className="flex flex-wrap gap-1">
                                                 {product.equipment_groups && product.equipment_groups.length > 0 ? (
                                                     product.equipment_groups.map(g => (
-                                                        <span key={g.id} className="text-xs font-black px-1.5 py-0.5 bg-muted text-muted-foreground rounded border border-border uppercase tracking-tighter">
+                                                        <span key={g.id} className="text-xs font-medium px-1.5 py-0.5 bg-muted text-muted-foreground rounded border border-border">
                                                             {g.name}
                                                         </span>
                                                     ))
                                                 ) : (
-                                                    <span className="text-xs text-muted-foreground font-bold uppercase tracking-widest opacity-50">{t('admin.nomenclature.universal')}</span>
+                                                    <span className="text-xs text-muted-foreground opacity-50">{t('admin.nomenclature.universal')}</span>
                                                 )}
                                             </div>
                                         </TableCell>
-                                        <TableCell className="px-4 py-3 text-right">
+                                        <TableCell className="text-right">
                                             <div className="inline-flex items-center gap-1 opacity-40 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
                                                 <Button
                                                     variant="ghost"
                                                     size="icon-xs"
                                                     onClick={() => handleEditClick(product)}
-                                                    title="Modify Record"
                                                 >
                                                     <Edit className="w-3.5 h-3.5" />
                                                 </Button>
@@ -263,19 +236,18 @@ export const AdminNomenclature: React.FC = () => {
                                                     size="icon-xs"
                                                     onClick={() => handleDelete(product.id)}
                                                     className="hover:text-destructive"
-                                                    title="Delete Index"
                                                 >
                                                     <Archive className="w-3.5 h-3.5" />
                                                 </Button>
                                             </div>
                                         </TableCell>
                                     </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
-                </div>
-            </div>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    )}
+                </CardContent>
+            </Card>
 
             <NomenclatureSlidePanel
                 isOpen={isPanelOpen}
@@ -291,6 +263,6 @@ export const AdminNomenclature: React.FC = () => {
                     refetch();
                 }}
             />
-        </div>
+        </PageShell>
     );
 };

@@ -370,6 +370,11 @@
       "masterTitle": "Master",
       "masterHighlight": "Nomenclature",
       "subtitle": "Global Product Registry & Taxonomy Control",
+      "description": "Реестр продуктов и управление таксономией",
+      "stats": {
+        "total": "Всего позиций",
+        "domains": "Доменов"
+      },
       "batchSync": "Batch Sync",
       "createSKU": "Create SKU",
       "searchPlaceholder": "SEARCH_BY_SKU_OR_NAME...",
@@ -382,11 +387,11 @@
       "bulkOperationFailed": "Ошибка массовой операции",
       "selected": "{{count}} SELECTED",
       "columns": {
-        "objectDescription": "OBJECT_DESCRIPTION / SKU",
-        "domainSegment": "DOMAIN_SEGMENT",
-        "baseValue": "BASE_VALUE (FCA)",
-        "eqGroups": "EQ_GROUPS / SERIES",
-        "actions": "PROTO_ACTIONS"
+        "objectDescription": "Наименование / SKU",
+        "domainSegment": "Домен",
+        "baseValue": "Цена (FCA)",
+        "eqGroups": "Группы техники",
+        "protoActions": "Действия"
       }
     },
     "users": {
@@ -441,6 +446,9 @@
       "description": "Подписки поставщиков на платформе",
       "activated": "Подписка активирована",
       "suspended": "Подписка приостановлена",
+      "searchPlaceholder": "Поиск по компании...",
+      "allPlans": "Все планы",
+      "allStatuses": "Все статусы",
       "stats": {
         "total": "Всего",
         "active": "Активных",
@@ -454,6 +462,22 @@
         "rate": "Тариф",
         "validUntil": "Действует до",
         "actions": "Действия"
+      },
+      "detail": {
+        "title": "Детали подписки",
+        "companyInfo": "Информация о компании",
+        "inn": "ИНН",
+        "planAndStatus": "План и статус",
+        "billing": "Биллинг",
+        "monthlyRate": "Месячный тариф",
+        "validFrom": "Действует с",
+        "validUntil": "Действует до",
+        "lastPayment": "Последний платёж",
+        "nextPayment": "Следующий платёж",
+        "notes": "Заметки",
+        "noNotes": "Нет заметок",
+        "created": "Создана",
+        "updated": "Обновлена"
       }
     },
     "roleApps": {
@@ -464,6 +488,35 @@
       "approve": "Одобрить",
       "reject": "Отклонить",
       "approvedLabel": "Одобрено",
+      "rejectedLabel": "Отклонено",
+      "rejectDialog": {
+        "title": "Отклонить заявку",
+        "description": "Укажите причину отклонения заявки от {{company}}",
+        "reason": "Причина отклонения",
+        "reasonPlaceholder": "Опишите причину отклонения...",
+        "confirm": "Отклонить заявку",
+        "cancel": "Отмена"
+      },
+      "detail": {
+        "title": "Детали заявки",
+        "companyInfo": "Информация о компании",
+        "inn": "ИНН",
+        "requestedRole": "Запрашиваемая роль",
+        "currentStatus": "Текущий статус",
+        "submittedBy": "Подана",
+        "submittedAt": "Дата подачи",
+        "documents": "Документы",
+        "contractFile": "Договор",
+        "ndaFile": "NDA",
+        "partnershipAgreement": "Партнёрское соглашение",
+        "noDocument": "Не загружен",
+        "download": "Скачать",
+        "review": "Рецензия",
+        "reviewedBy": "Рецензент",
+        "reviewedAt": "Дата рецензии",
+        "reviewNotes": "Комментарий",
+        "noReview": "Ещё не рецензирована"
+      },
       "stats": {
         "total": "Всего",
         "pending": "Ожидают",
@@ -837,7 +890,25 @@
       "passport": "Паспорт директора",
       "taxCert": "Свид. ИНН",
       "other": "Другое"
-    }
+    },
+    "stats": {
+      "total": "Всего компаний",
+      "pending": "Ожидание",
+      "verified": "Верифицированы",
+      "partner": "Партнёры"
+    },
+    "table": {
+      "company": "Компания",
+      "inn": "ИНН",
+      "status": "Статус",
+      "docs": "Документы",
+      "date": "Дата регистрации",
+      "actions": "Действия"
+    },
+    "description": "Управление верификацией компаний и уровнями доверия",
+    "allStatuses": "Все статусы",
+    "verified": "Верификация выполнена",
+    "revoked": "Верификация отозвана"
   },
   "breadcrumb": {
     "productDetail": "Детали товара",

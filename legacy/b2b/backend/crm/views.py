@@ -2,7 +2,7 @@ from rest_framework import viewsets, status, throttling
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .models import Deal, DealStage, Quote, QuoteItem, Message, ActivityLog
+from .models import Deal, Quote, QuoteItem, Message, ActivityLog
 from .serializers import (
     DealListSerializer, DealDetailSerializer, QuoteSerializer, QuoteItemSerializer,
     MessageSerializer, ActivityLogSerializer, LeadSerializer
@@ -14,17 +14,7 @@ from django.utils import timezone
 from datetime import timedelta
 from decimal import Decimal
 
-# Explicit deal stage transition matrix (FSM)
-ALLOWED_STAGE_TRANSITIONS = {
-    'DRAFT': ['KYC_PENDING', 'SOURCING', 'CLOSED_LOST'],
-    'KYC_PENDING': ['SOURCING', 'CLOSED_LOST'],
-    'SOURCING': ['CALCULATING', 'CLOSED_LOST'],
-    'CALCULATING': ['QUOTE_SENT', 'SOURCING', 'CLOSED_LOST'],
-    'QUOTE_SENT': ['CONTRACT_SIGNED', 'CALCULATING', 'CLOSED_LOST'],
-    'CONTRACT_SIGNED': ['CLOSED_WON', 'CLOSED_LOST'],
-    'CLOSED_WON': [],   # Terminal state
-    'CLOSED_LOST': [],   # Terminal state
-}
+from .services import transition_deal_stage
 
 
 class DealViewSet(viewsets.ModelViewSet):
@@ -78,30 +68,10 @@ class DealViewSet(viewsets.ModelViewSet):
         if not stage_code:
             return Response({'detail': 'stage_code is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        new_stage = DealStage.objects.filter(code=stage_code).first()
-        if not new_stage:
-            return Response({'detail': f'Unknown stage: {stage_code}'}, status=status.HTTP_400_BAD_REQUEST)
+        deal, error = transition_deal_stage(deal, stage_code, actor=request.user)
+        if error:
+            return Response({'detail': error}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
-        # FSM validation: check allowed transitions
-        current_code = deal.stage.code if deal.stage else 'DRAFT'
-        allowed = ALLOWED_STAGE_TRANSITIONS.get(current_code, [])
-        if stage_code not in allowed:
-            return Response(
-                {'detail': f'Transition {current_code} → {stage_code} is not allowed. '
-                           f'Allowed: {", ".join(allowed) if allowed else "none (terminal state)"}'},
-                status=status.HTTP_422_UNPROCESSABLE_ENTITY
-            )
-
-        old_stage_name = deal.stage.name if deal.stage else 'N/A'
-        deal.stage = new_stage
-        deal.save(update_fields=['stage'])
-
-        ActivityLog.objects.create(
-            action="Стадия изменена",
-            detail=f"Сделка #{deal.id}: {old_stage_name} → {new_stage.name}",
-            user=request.user,
-            level='INFO'
-        )
         serializer = DealDetailSerializer(deal)
         return Response(serializer.data)
 

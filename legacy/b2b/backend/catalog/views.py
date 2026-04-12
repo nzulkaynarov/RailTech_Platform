@@ -96,7 +96,6 @@ class ProductViewSet(viewsets.ModelViewSet):
         if not product_ids:
             return Response({"error": "No product IDs provided"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Validate: product_ids must be a list of integers
         if not isinstance(product_ids, list):
             return Response({"error": "product_ids must be a list"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -105,22 +104,18 @@ class ProductViewSet(viewsets.ModelViewSet):
         except (ValueError, TypeError):
             return Response({"error": "product_ids must contain valid integers"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Cap batch size to prevent abuse
         if len(product_ids) > 500:
             return Response({"error": "Maximum 500 products per batch"}, status=status.HTTP_400_BAD_REQUEST)
 
-        from .models import ProductStatus
-        pub_status = ProductStatus.objects.filter(code='PUBLISHED').first()
-        if not pub_status:
-            return Response(
-                {"error": "PUBLISHED status not found in Master Data"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+        from . import services
+        products = Product.objects.filter(id__in=product_ids)
+        updated, skipped = services.publish_products(products)
 
-        # Only publish DRAFT products (prevent re-publishing ARCHIVED etc.)
-        updated = Product.objects.filter(
-            id__in=product_ids, status__code='DRAFT'
-        ).update(status=pub_status)
+        if not updated and skipped:
+            return Response(
+                {"error": skipped[0] if len(skipped) == 1 else f"Skipped: {', '.join(skipped)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         return Response({"message": f"Successfully published {updated} products."}, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['get'], url_path='export-template')

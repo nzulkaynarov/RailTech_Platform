@@ -370,6 +370,11 @@
       "masterTitle": "Master",
       "masterHighlight": "Nomenclature",
       "subtitle": "Global Product Registry & Taxonomy Control",
+      "description": "Product registry and taxonomy control",
+      "stats": {
+        "total": "Total items",
+        "domains": "Domains"
+      },
       "batchSync": "Batch Sync",
       "createSKU": "Create SKU",
       "searchPlaceholder": "SEARCH_BY_SKU_OR_NAME...",
@@ -382,11 +387,11 @@
       "bulkOperationFailed": "Bulk operation failed",
       "selected": "{{count}} SELECTED",
       "columns": {
-        "objectDescription": "OBJECT_DESCRIPTION / SKU",
-        "domainSegment": "DOMAIN_SEGMENT",
-        "baseValue": "BASE_VALUE (FCA)",
-        "eqGroups": "EQ_GROUPS / SERIES",
-        "actions": "PROTO_ACTIONS"
+        "objectDescription": "Name / SKU",
+        "domainSegment": "Domain",
+        "baseValue": "Price (FCA)",
+        "eqGroups": "Equipment Groups",
+        "protoActions": "Actions"
       }
     },
     "users": {
@@ -441,6 +446,9 @@
       "description": "Supplier subscriptions on the platform",
       "activated": "Subscription activated",
       "suspended": "Subscription suspended",
+      "searchPlaceholder": "Search by company...",
+      "allPlans": "All plans",
+      "allStatuses": "All statuses",
       "stats": {
         "total": "Total",
         "active": "Active",
@@ -454,6 +462,22 @@
         "rate": "Rate",
         "validUntil": "Valid Until",
         "actions": "Actions"
+      },
+      "detail": {
+        "title": "Subscription Details",
+        "companyInfo": "Company Information",
+        "inn": "TIN",
+        "planAndStatus": "Plan & Status",
+        "billing": "Billing",
+        "monthlyRate": "Monthly Rate",
+        "validFrom": "Valid From",
+        "validUntil": "Valid Until",
+        "lastPayment": "Last Payment",
+        "nextPayment": "Next Payment",
+        "notes": "Notes",
+        "noNotes": "No notes",
+        "created": "Created",
+        "updated": "Updated"
       }
     },
     "roleApps": {
@@ -464,6 +488,35 @@
       "approve": "Approve",
       "reject": "Reject",
       "approvedLabel": "Approved",
+      "rejectedLabel": "Rejected",
+      "rejectDialog": {
+        "title": "Reject Application",
+        "description": "Provide a reason for rejecting the application from {{company}}",
+        "reason": "Rejection Reason",
+        "reasonPlaceholder": "Describe the reason for rejection...",
+        "confirm": "Reject Application",
+        "cancel": "Cancel"
+      },
+      "detail": {
+        "title": "Application Details",
+        "companyInfo": "Company Information",
+        "inn": "TIN",
+        "requestedRole": "Requested Role",
+        "currentStatus": "Current Status",
+        "submittedBy": "Submitted By",
+        "submittedAt": "Submitted At",
+        "documents": "Documents",
+        "contractFile": "Contract",
+        "ndaFile": "NDA",
+        "partnershipAgreement": "Partnership Agreement",
+        "noDocument": "Not uploaded",
+        "download": "Download",
+        "review": "Review",
+        "reviewedBy": "Reviewed By",
+        "reviewedAt": "Review Date",
+        "reviewNotes": "Review Notes",
+        "noReview": "Not yet reviewed"
+      },
       "stats": {
         "total": "Total",
         "pending": "Pending",
@@ -837,7 +890,25 @@
       "passport": "Director ID",
       "taxCert": "Tax Registry Certificate",
       "other": "Other"
-    }
+    },
+    "stats": {
+      "total": "Total companies",
+      "pending": "Pending",
+      "verified": "Verified",
+      "partner": "Partners"
+    },
+    "table": {
+      "company": "Company",
+      "inn": "TIN",
+      "status": "Status",
+      "docs": "Documents",
+      "date": "Registration date",
+      "actions": "Actions"
+    },
+    "description": "Company identity verification and trust level management",
+    "allStatuses": "All statuses",
+    "verified": "Verification complete",
+    "revoked": "Verification revoked"
   },
   "breadcrumb": {
     "productDetail": "Product details",

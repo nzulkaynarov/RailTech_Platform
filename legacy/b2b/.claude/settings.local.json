@@ -13,7 +13,24 @@
       "Bash(curl -sI http://localhost:8000/static/unfold/css/styles.css)",
       "Bash(curl -sI http://localhost:8000/static/admin/css/base.css)",
       "Bash(find /Users/znz/Downloads/IT-projects/RailTech_SaaS_B2B/frontend/src -name *AdminShell* -o -name *CRM* -o -name *Cabinet* -o -name *Manager*)",
-      "Bash(find /Users/znz/Downloads/IT-projects/RailTech_SaaS_B2B/frontend/src/pages -type f -name *.tsx)"
+      "Bash(find /Users/znz/Downloads/IT-projects/RailTech_SaaS_B2B/frontend/src/pages -type f -name *.tsx)",
+      "Bash(npx tsc:*)",
+      "Bash(./node_modules/.bin/tsc --noEmit)",
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(ls node_modules/.bin/tsc*)",
+      "Bash(node_modules/.bin/vite build:*)",
+      "Bash(wc -l /Users/znz/Downloads/IT-projects/RailTech_SaaS_B2B/frontend/src/api/*.ts /Users/znz/Downloads/IT-projects/RailTech_SaaS_B2B/frontend/src/store/*.ts)",
+      "Bash(python -m py_compile backend/accounts/services.py)",
+      "Bash(python -m py_compile backend/accounts/views.py)",
+      "Bash(python -m py_compile backend/crm/services.py)",
+      "Bash(python -m py_compile backend/crm/views.py)",
+      "Bash(python -m py_compile backend/catalog/services.py)",
+      "Bash(python3 -m py_compile backend/accounts/services.py)",
+      "Bash(python3 -m py_compile backend/accounts/views.py)",
+      "Bash(python3 -m py_compile backend/crm/services.py)",
+      "Bash(python3 -m py_compile backend/crm/views.py)",
+      "Bash(python3 -m py_compile backend/catalog/services.py)",
+      "Bash(python3:*)"
     ]
   }
 }
