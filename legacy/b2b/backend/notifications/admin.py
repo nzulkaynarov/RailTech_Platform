@@ -2,6 +2,9 @@ from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 from unfold.admin import ModelAdmin
 from unfold.decorators import display
+
+from core.admin_mixins import ReadOnlyInspectionMixin
+
 from .models import NotificationType, Notification
 
 
@@ -14,11 +17,10 @@ class NotificationTypeAdmin(ModelAdmin):
 
 
 @admin.register(Notification)
-class NotificationAdmin(ModelAdmin):
+class NotificationAdmin(ReadOnlyInspectionMixin, ModelAdmin):
     list_display = ("title", "user", "type", "is_read", "read_badge", "created_at")
     list_filter = ("type", "is_read", "created_at")
     list_filter_submit = True
-    list_editable = ["is_read"]
     search_fields = ("title", "message", "user__email")
     autocomplete_fields = ["user", "type", "deal"]
     readonly_fields = ("created_at",)
@@ -46,5 +48,6 @@ class NotificationAdmin(ModelAdmin):
 
     @admin.action(description=_("Пометить прочитанными"))
     def mark_as_read(self, request, queryset):
-        updated = queryset.filter(is_read=False).update(is_read=True)
+        from . import services
+        updated = services.mark_notifications_read(queryset)
         self.message_user(request, _("%(count)d прочитано.") % {"count": updated})

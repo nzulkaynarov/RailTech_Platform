@@ -7,12 +7,15 @@ from unfold.contrib.import_export.forms import ExportForm, ImportForm
 from unfold.decorators import display
 from unfold.forms import UserChangeForm, UserCreationForm
 from import_export.admin import ImportExportModelAdmin
+from core.admin_mixins import ReadOnlyInspectionMixin
+
 from .models import (
     CustomUser, Company, CompanyMember, KYCDocument,
     SystemRole, WorkspaceRole, CompanyType, VerificationStatus, KYCDocType,
     CompanyRoleApplication, SupplierSubscription
 )
 from .resources import CompanyResource, UserResource
+from . import services
 
 admin.site.unregister(Group)
 
@@ -102,11 +105,10 @@ class UserAdmin(ImportExportModelAdmin, BaseUserAdmin, ModelAdmin):
 
     @admin.action(description=_("Назначить SALES_MANAGER + is_staff"))
     def make_staff(self, request, queryset):
-        sales_role = SystemRole.objects.filter(code='SALES_MANAGER').first()
-        if not sales_role:
-            self.message_user(request, _("Роль SALES_MANAGER не найдена!"), level="error")
+        updated, error = services.assign_sales_manager_role(queryset)
+        if error:
+            self.message_user(request, error, level="error")
             return
-        updated = queryset.update(is_staff=True, role=sales_role)
         self.message_user(request, _("%(count)d пользователей обновлено.") % {"count": updated})
 
     fieldsets = (
@@ -140,7 +142,7 @@ class UserAdmin(ImportExportModelAdmin, BaseUserAdmin, ModelAdmin):
 # ────────────────────────────────────────────
 
 @admin.register(Company)
-class CompanyAdmin(ImportExportModelAdmin, ModelAdmin):
+class CompanyAdmin(ReadOnlyInspectionMixin, ImportExportModelAdmin, ModelAdmin):
     resource_classes = [CompanyResource]
     import_form_class = ImportForm
     export_form_class = ExportForm
@@ -174,19 +176,7 @@ class CompanyAdmin(ImportExportModelAdmin, ModelAdmin):
 
     @admin.action(description=_("Подтвердить KYC (L2)"))
     def verify_kyc(self, request, queryset):
-        verified_status = VerificationStatus.objects.filter(code='L2_VERIFIED').first()
-        if not verified_status:
-            self.message_user(request, _("Статус L2_VERIFIED не найден!"), level="error")
-            return
-        approved = 0
-        skipped = []
-        for company in queryset:
-            if not company.kyc_documents.exists():
-                skipped.append(company.name)
-                continue
-            company.verification_status = verified_status
-            company.save(update_fields=["verification_status"])
-            approved += 1
+        approved, skipped = services.bulk_verify_kyc(queryset, request.user, level_code='L2_VERIFIED')
         if skipped:
             self.message_user(
                 request,
@@ -252,7 +242,7 @@ class KYCDocumentAdmin(ModelAdmin):
 # ────────────────────────────────────────────
 
 @admin.register(CompanyRoleApplication)
-class CompanyRoleApplicationAdmin(ModelAdmin):
+class CompanyRoleApplicationAdmin(ReadOnlyInspectionMixin, ModelAdmin):
     list_display = ("company", "requested_type", "app_status", "submitted_by", "reviewed_by", "created_at")
     list_filter = ("status", "requested_type", "created_at")
     list_filter_submit = True
@@ -303,22 +293,7 @@ class CompanyRoleApplicationAdmin(ModelAdmin):
 
     @admin.action(description=_("Одобрить (с проверкой документов)"))
     def approve_application(self, request, queryset):
-        from django.utils import timezone
-        approved = 0
-        errors = []
-        for app in queryset.filter(status__in=['PENDING', 'PAYMENT_REQUIRED', 'DOCUMENTS_REQUIRED']):
-            if app.requested_type.code == 'SUPPLIER' and (not app.contract_file or not app.nda_file):
-                errors.append(f"{app.company.name}: нужен договор + NDA")
-                continue
-            if app.requested_type.code == 'MANUFACTURER' and not app.partnership_agreement:
-                errors.append(f"{app.company.name}: нужен договор о партнёрстве")
-                continue
-            app.status = 'APPROVED'
-            app.reviewed_by = request.user
-            app.reviewed_at = timezone.now()
-            app.save()
-            app.company.types.add(app.requested_type)
-            approved += 1
+        approved, errors = services.bulk_approve_role_applications(queryset, request.user)
         if errors:
             self.message_user(request, "\n".join(errors), level="warning")
         if approved:
@@ -326,10 +301,7 @@ class CompanyRoleApplicationAdmin(ModelAdmin):
 
     @admin.action(description=_("Отклонить"))
     def reject_application(self, request, queryset):
-        from django.utils import timezone
-        updated = queryset.filter(
-            status__in=['PENDING', 'PAYMENT_REQUIRED', 'DOCUMENTS_REQUIRED']
-        ).update(status='REJECTED', reviewed_by=request.user, reviewed_at=timezone.now())
+        updated = services.bulk_reject_role_applications(queryset, request.user)
         self.message_user(request, _("%(count)d заявок отклонено.") % {"count": updated})
 
 
@@ -338,7 +310,7 @@ class CompanyRoleApplicationAdmin(ModelAdmin):
 # ────────────────────────────────────────────
 
 @admin.register(SupplierSubscription)
-class SupplierSubscriptionAdmin(ModelAdmin):
+class SupplierSubscriptionAdmin(ReadOnlyInspectionMixin, ModelAdmin):
     list_display = ("company", "plan_badge", "sub_status", "monthly_rate", "currency", "valid_until")
     list_filter = ("plan", "status")
     list_filter_submit = True
@@ -395,10 +367,10 @@ class SupplierSubscriptionAdmin(ModelAdmin):
 
     @admin.action(description=_("Активировать"))
     def activate_subscription(self, request, queryset):
-        updated = queryset.update(status='ACTIVE')
+        updated = services.change_subscription_status(queryset, 'ACTIVE')
         self.message_user(request, _("%(count)d активировано.") % {"count": updated})
 
     @admin.action(description=_("Приостановить"))
     def suspend_subscription(self, request, queryset):
-        updated = queryset.update(status='SUSPENDED')
+        updated = services.change_subscription_status(queryset, 'SUSPENDED')
         self.message_user(request, _("%(count)d приостановлено.") % {"count": updated})

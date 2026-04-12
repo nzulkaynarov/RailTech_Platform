@@ -2,6 +2,9 @@ from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 from unfold.admin import ModelAdmin, TabularInline
 from unfold.decorators import display
+
+from core.admin_mixins import ReadOnlyInspectionMixin
+
 from .models import (
     DealStage, QuoteStatus, Deal, Quote, QuoteItem,
     Message, Lead, ActivityLog, QuoteItemHistory
@@ -51,7 +54,7 @@ class CRMLookupAdmin(ModelAdmin):
 # ────────────────────────────────────────────
 
 @admin.register(Deal)
-class DealAdmin(ModelAdmin):
+class DealAdmin(ReadOnlyInspectionMixin, ModelAdmin):
     list_display = ("show_deal", "company", "stage_badge", "total_value", "manager", "created_at")
     list_filter = ("stage", "created_at", "manager")
     list_filter_submit = True
@@ -104,11 +107,8 @@ class DealAdmin(ModelAdmin):
 
     @admin.action(description=_("Закрыть как проигранную"))
     def mark_closed_lost(self, request, queryset):
-        lost = DealStage.objects.filter(code='CLOSED_LOST').first()
-        if not lost:
-            self.message_user(request, _("CLOSED_LOST не найдена!"), level="error")
-            return
-        updated = queryset.exclude(stage__code__in=['CLOSED_WON', 'CLOSED_LOST']).update(stage=lost)
+        from . import services
+        updated = services.bulk_close_deals_lost(queryset, actor=request.user)
         self.message_user(request, _("%(count)d сделок закрыто.") % {"count": updated})
 
 
@@ -189,7 +189,7 @@ class QuoteAdmin(ModelAdmin):
 # ────────────────────────────────────────────
 
 @admin.register(Lead)
-class LeadAdmin(ModelAdmin):
+class LeadAdmin(ReadOnlyInspectionMixin, ModelAdmin):
     list_display = ("name", "company", "email", "phone", "processed_badge", "created_at")
     list_filter = ("is_processed", "created_at")
     list_filter_submit = True
@@ -218,7 +218,8 @@ class LeadAdmin(ModelAdmin):
 
     @admin.action(description=_("Пометить обработанными"))
     def mark_processed(self, request, queryset):
-        updated = queryset.filter(is_processed=False).update(is_processed=True)
+        from . import services
+        updated = services.mark_leads_processed(queryset)
         self.message_user(request, _("%(count)d обработано.") % {"count": updated})
 
 
@@ -227,20 +228,28 @@ class LeadAdmin(ModelAdmin):
 # ────────────────────────────────────────────
 
 @admin.register(Message)
-class MessageAdmin(ModelAdmin):
-    list_display = ("id", "sender", "deal", "short_text", "timestamp")
-    list_filter = ("timestamp",)
-    search_fields = ("text", "sender__email", "deal__title")
+class MessageAdmin(ReadOnlyInspectionMixin, ModelAdmin):
+    list_display = ("id", "sender", "deal", "short_text", "message_type", "archive_badge", "timestamp")
+    list_filter = ("message_type", "is_archived", "timestamp")
+    list_filter_submit = True
+    search_fields = ("text", "sender__email", "deal__title", "deal__company__name")
     autocomplete_fields = ["deal", "sender"]
-    readonly_fields = ("timestamp",)
-    list_per_page = 30
+    list_per_page = 50
+    actions = ["archive_selected"]
 
     fieldsets = (
         (None, {
             "fields": (
                 ("deal", "sender"),
                 "text",
-                "timestamp",
+                ("message_type", "timestamp"),
+            ),
+        }),
+        (_("Архив"), {
+            "classes": ["tab"],
+            "fields": (
+                "is_archived",
+                ("archived_at", "archive_path"),
             ),
         }),
     )
@@ -248,6 +257,75 @@ class MessageAdmin(ModelAdmin):
     @display(description=_("Текст"))
     def short_text(self, obj):
         return obj.text[:80] + "..." if len(obj.text) > 80 else obj.text
+
+    @display(
+        description=_("Архив"),
+        label={True: "info", False: "success"},
+    )
+    def archive_badge(self, obj):
+        return obj.is_archived
+
+    @admin.action(description=_("Архивировать в S3 (sync)"))
+    def archive_selected(self, request, queryset):
+        """
+        Synchronously archive the selected messages.
+
+        For bulk/scheduled use prefer the management command or Celery beat schedule:
+            python manage.py archive_messages --older-than 90 --async
+        """
+        from .tasks import archive_old_messages
+        # Trick: temporarily mark these specific rows as old by passing days=0
+        # via subset; we run the task directly instead of via celery so engineer
+        # gets immediate feedback in admin.
+        from django.utils import timezone
+        # Direct path: mimic task logic on the explicit queryset
+        from io import BytesIO
+        import json
+        from django.core.files.base import ContentFile
+        from core.storage import get_private_storage
+        from .tasks import _serialize_message, _archive_path_for
+
+        storage = get_private_storage()
+        msgs = list(queryset.filter(is_archived=False).select_related('sender'))
+        if not msgs:
+            self.message_user(request, _("Нет сообщений для архивации"), level="warning")
+            return
+
+        groups: dict = {}
+        for m in msgs:
+            path = _archive_path_for(m.timestamp.date())
+            groups.setdefault(path, []).append(m)
+
+        archived = 0
+        for path, group_msgs in groups.items():
+            jsonl = '\n'.join(json.dumps(_serialize_message(m), ensure_ascii=False) for m in group_msgs) + '\n'
+            try:
+                if storage.exists(path):
+                    with storage.open(path, 'rb') as f:
+                        existing = f.read().decode('utf-8')
+                    content = existing + jsonl
+                    storage.delete(path)
+                else:
+                    content = jsonl
+                storage.save(path, ContentFile(content.encode('utf-8')))
+            except Exception as e:
+                self.message_user(request, f"Ошибка записи {path}: {e}", level="error")
+                continue
+
+            now = timezone.now()
+            ids = [m.id for m in group_msgs]
+            from .models import Message as M
+            M.objects.filter(id__in=ids).update(
+                is_archived=True, archived_at=now, archive_path=path
+            )
+            archived += len(group_msgs)
+
+        self.message_user(
+            request,
+            _("%(count)d сообщений архивировано в %(files)d файл(ах)") % {
+                "count": archived, "files": len(groups)
+            },
+        )
 
 
 # ────────────────────────────────────────────

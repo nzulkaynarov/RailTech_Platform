@@ -1,10 +1,23 @@
-from typing import Tuple, Optional
-from django.contrib.auth.tokens import default_token_generator
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from django.utils.encoding import force_bytes, force_str
-from django.core.mail import send_mail
+from typing import List, Optional, Tuple
+
 from django.conf import settings
-from .models import Company, CustomUser, CompanyMember, SystemRole, WorkspaceRole, VerificationStatus
+from django.contrib.auth.tokens import default_token_generator
+from django.core.mail import send_mail
+from django.db.models import QuerySet
+from django.utils import timezone
+from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+
+from .models import (
+    Company,
+    CompanyMember,
+    CompanyRoleApplication,
+    CustomUser,
+    SupplierSubscription,
+    SystemRole,
+    VerificationStatus,
+    WorkspaceRole,
+)
 
 
 def create_pending_user(email: str, first_name: str, last_name: str) -> Tuple[Optional[CustomUser], Optional[str]]:
@@ -152,3 +165,165 @@ def invite_workspace_member(company: Company, email: str, role_code: str) -> Tup
         [email]
     )
     return user, None
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Admin operations — single source of truth for business logic.
+# Called from both Django Unfold actions and DRF endpoints.
+# See ADR-0001 and CLAUDE.md IRON RULE 8.
+# ──────────────────────────────────────────────────────────────────────────
+
+
+def assign_sales_manager_role(users: QuerySet[CustomUser]) -> Tuple[int, Optional[str]]:
+    """
+    Assign SALES_MANAGER role to users and grant Django staff access.
+
+    Returns: (count_updated, error_message_or_None)
+    """
+    sales_role = SystemRole.objects.filter(code='SALES_MANAGER').first()
+    if not sales_role:
+        return 0, "SystemRole 'SALES_MANAGER' not found in master data"
+    updated = users.update(is_staff=True, role=sales_role)
+    return updated, None
+
+
+def verify_company_kyc(
+    company: Company,
+    approver: CustomUser,
+    level_code: str = 'L2_VERIFIED',
+    require_documents: bool = True,
+) -> Tuple[Optional[Company], Optional[str]]:
+    """
+    Move a company through KYC verification levels (L1 → L2 → L3).
+
+    - level_code: target VerificationStatus.code
+    - require_documents: when True, refuse to verify if no KYC documents uploaded
+    Returns: (company, error_message_or_None)
+    """
+    target_status = VerificationStatus.objects.filter(code=level_code).first()
+    if not target_status:
+        return None, f"VerificationStatus '{level_code}' not found"
+
+    if require_documents and not company.kyc_documents.exists():
+        return None, f"Company '{company.name}' has no KYC documents"
+
+    company.verification_status = target_status
+    company.save(update_fields=['verification_status'])
+    # TODO: hook for pghistory event / notification when triggers wired
+    return company, None
+
+
+def bulk_verify_kyc(
+    companies: QuerySet[Company],
+    approver: CustomUser,
+    level_code: str = 'L2_VERIFIED',
+) -> Tuple[int, List[str]]:
+    """
+    Bulk wrapper around verify_company_kyc for admin actions.
+
+    Returns: (approved_count, list_of_skipped_company_names)
+    """
+    approved = 0
+    skipped: List[str] = []
+    for company in companies:
+        _, error = verify_company_kyc(company, approver, level_code, require_documents=True)
+        if error:
+            skipped.append(company.name)
+        else:
+            approved += 1
+    return approved, skipped
+
+
+def approve_role_application(
+    application: CompanyRoleApplication,
+    reviewer: CustomUser,
+) -> Tuple[Optional[CompanyRoleApplication], Optional[str]]:
+    """
+    Approve a CompanyRoleApplication: validate required documents per type,
+    set status to APPROVED, attach the requested CompanyType to the company.
+
+    Returns: (application, error_message_or_None)
+    """
+    if application.status not in ('PENDING', 'PAYMENT_REQUIRED', 'DOCUMENTS_REQUIRED'):
+        return None, f"Application is in state '{application.status}', cannot approve"
+
+    requested_code = application.requested_type.code
+    if requested_code == 'SUPPLIER':
+        if not application.contract_file or not application.nda_file:
+            return None, f"{application.company.name}: contract + NDA required for SUPPLIER"
+    elif requested_code == 'MANUFACTURER':
+        if not application.partnership_agreement:
+            return None, f"{application.company.name}: partnership agreement required for MANUFACTURER"
+
+    application.status = 'APPROVED'
+    application.reviewed_by = reviewer
+    application.reviewed_at = timezone.now()
+    application.save(update_fields=['status', 'reviewed_by', 'reviewed_at', 'updated_at'])
+
+    application.company.types.add(application.requested_type)
+    return application, None
+
+
+def reject_role_application(
+    application: CompanyRoleApplication,
+    reviewer: CustomUser,
+    reason: str = '',
+) -> Tuple[Optional[CompanyRoleApplication], Optional[str]]:
+    """Reject a CompanyRoleApplication. Returns (app, error_or_None)."""
+    if application.status not in ('PENDING', 'PAYMENT_REQUIRED', 'DOCUMENTS_REQUIRED'):
+        return None, f"Application is in state '{application.status}', cannot reject"
+
+    application.status = 'REJECTED'
+    application.reviewed_by = reviewer
+    application.reviewed_at = timezone.now()
+    if reason:
+        application.review_notes = reason
+        application.save(update_fields=['status', 'reviewed_by', 'reviewed_at', 'review_notes', 'updated_at'])
+    else:
+        application.save(update_fields=['status', 'reviewed_by', 'reviewed_at', 'updated_at'])
+    return application, None
+
+
+def bulk_approve_role_applications(
+    applications: QuerySet[CompanyRoleApplication],
+    reviewer: CustomUser,
+) -> Tuple[int, List[str]]:
+    """Bulk approve. Returns (approved_count, list_of_error_messages)."""
+    approved = 0
+    errors: List[str] = []
+    pending = applications.filter(status__in=['PENDING', 'PAYMENT_REQUIRED', 'DOCUMENTS_REQUIRED'])
+    for app in pending:
+        _, error = approve_role_application(app, reviewer)
+        if error:
+            errors.append(error)
+        else:
+            approved += 1
+    return approved, errors
+
+
+def bulk_reject_role_applications(
+    applications: QuerySet[CompanyRoleApplication],
+    reviewer: CustomUser,
+) -> int:
+    """Bulk reject. Returns count of rejected applications."""
+    pending = applications.filter(status__in=['PENDING', 'PAYMENT_REQUIRED', 'DOCUMENTS_REQUIRED'])
+    rejected = 0
+    for app in pending:
+        _, error = reject_role_application(app, reviewer)
+        if not error:
+            rejected += 1
+    return rejected
+
+
+def change_subscription_status(
+    subscriptions: QuerySet[SupplierSubscription],
+    new_status: str,
+) -> int:
+    """
+    Change subscription status (ACTIVE / SUSPENDED / CANCELLED / TRIAL).
+    Returns: count of updated rows.
+    """
+    valid_statuses = {'ACTIVE', 'SUSPENDED', 'CANCELLED', 'TRIAL', 'EXPIRED'}
+    if new_status not in valid_statuses:
+        raise ValueError(f"Invalid status '{new_status}'. Allowed: {valid_statuses}")
+    return subscriptions.update(status=new_status)

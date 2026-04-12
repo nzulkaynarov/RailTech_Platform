@@ -192,6 +192,55 @@ make shell           # backend bash
 - `userStore.loadFromAuth()` maps backend CompanyType → frontend CompanyStatus
 - Use `stage_code` (DB code) for logic, `stage_name` only for display
 
+### Rule 8: Business logic lives in services.py only
+
+- ALL business logic (state transitions, validations, side effects, email sends, Celery dispatches, multi-model updates) MUST live in `<app>/services.py` as plain functions
+- `admin.py` actions and `views.py` ViewSets are THIN WRAPPERS — they only:
+  1. Authorize the request
+  2. Validate input (via DRF serializer or admin form)
+  3. Call ONE service function
+  4. Return / display the result
+- NEVER duplicate logic between `admin.py` action and `views.py` endpoint — both call the same service
+- NEVER put `Model.objects.update(...)`, status changes, or notifications inline in admin actions — extract to service first
+- See `Docs/adr/0001-admin-separation.md` for the full rationale (Django Unfold = engineers; React Admin = business users)
+
+**Wrong:**
+```python
+@admin.action
+def verify_kyc(self, request, queryset):
+    for c in queryset:
+        c.verification_status = VerificationStatus.objects.get(code='L2_VERIFIED')
+        c.save()
+        send_mail("Verified", ...)  # ← business logic in admin
+```
+
+**Right:**
+```python
+# accounts/services.py
+def verify_company_kyc(company, approver, level_code):
+    company.verification_status = VerificationStatus.objects.get(code=level_code)
+    company.save(update_fields=['verification_status'])
+    send_kyc_notification(company, approver)
+    return company
+
+# accounts/admin.py
+@admin.action(description="Подтвердить KYC (L2)")
+def verify_kyc_action(self, request, queryset):
+    for c in queryset:
+        services.verify_company_kyc(c, request.user, 'L2_VERIFIED')
+
+# accounts/views.py
+@action(detail=True, methods=['post'])
+def verify_kyc(self, request, pk=None):
+    services.verify_company_kyc(self.get_object(), request.user, request.data['level'])
+```
+
+### Admin separation — where to add new features
+
+- **New business features → React Admin** (`/admin/*` in SPA). Django Unfold is for engineers only.
+- Unfold is reserved for: master data CRUD (lookups), read-only audit inspection, Celery beat schedule, Django auth groups, emergency data fixes by DBA.
+- Adding a new `@admin.action` with business logic? STOP — implement it as a React page + DRF endpoint instead. The action can come later as a thin wrapper if engineers need it.
+
 ## ANTI-HALLUCINATION — What does NOT exist
 
 ### Tables that DON'T exist

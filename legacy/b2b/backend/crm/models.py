@@ -365,28 +365,66 @@ class QuoteItem(models.Model):
 
 class Message(models.Model):
     """Сообщение в чате сделки."""
+
+    MESSAGE_TYPE_CHOICES = [
+        ('CHAT', _("Chat")),
+        ('SYSTEM', _("System event")),
+        ('NOTIFICATION', _("Notification")),
+    ]
+
     deal = models.ForeignKey(
         Deal, on_delete=models.CASCADE, related_name='messages',
+        db_index=True,
         verbose_name=_("Сделка"),
         help_text=_("Сделка, к которой относится сообщение"),
     )
     sender = models.ForeignKey(
         'accounts.CustomUser', on_delete=models.CASCADE, related_name='sent_messages',
+        db_index=True,
         verbose_name=_("Отправитель"),
         help_text=_("Автор сообщения"),
     )
     text = models.TextField(
         verbose_name=_("Текст сообщения"),
     )
+    message_type = models.CharField(
+        max_length=20,
+        choices=MESSAGE_TYPE_CHOICES,
+        default='CHAT',
+        db_index=True,
+        verbose_name=_("Тип сообщения"),
+    )
     timestamp = models.DateTimeField(
         auto_now_add=True,
+        db_index=True,
         verbose_name=_("Время отправки"),
+    )
+
+    # Cold storage / archive metadata (Phase 6)
+    is_archived = models.BooleanField(
+        default=False,
+        db_index=True,
+        verbose_name=_("Архивировано"),
+        help_text=_("Сообщение перемещено в S3 архив"),
+    )
+    archived_at = models.DateTimeField(
+        null=True, blank=True,
+        verbose_name=_("Дата архивации"),
+    )
+    archive_path = models.CharField(
+        max_length=500, blank=True, default='',
+        verbose_name=_("Путь к архиву"),
+        help_text=_("Путь к JSONL файлу в S3/MinIO bucket"),
     )
 
     class Meta:
         verbose_name = _("Сообщение")
         verbose_name_plural = _("Сообщения")
         ordering = ['timestamp']
+        indexes = [
+            models.Index(fields=['deal', 'timestamp']),
+            models.Index(fields=['timestamp', 'is_archived']),
+        ]
 
     def __str__(self):
         return f"{self.sender} → Сделка #{self.deal_id} ({self.timestamp:%d.%m %H:%M})"

@@ -822,6 +822,7 @@
     "settings": "Настройки",
     "myDocuments": "Документы",
     "adminUsers": "Пользователи",
+    "adminKyc": "KYC верификация",
     "logistics": "Логистика",
     "purchaseTemplates": "Шаблоны закупок"
   },
@@ -963,6 +964,7 @@
     "salesAnalytics": "Аналитика продаж",
     "settings": "Настройки",
     "users": "Пользователи",
+    "kyc": "KYC верификация",
     "integrations": "Интеграции",
     "help": "Помощь",
     "b2bPlatform": "B2B Платформа",

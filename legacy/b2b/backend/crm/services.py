@@ -1,8 +1,12 @@
 from decimal import Decimal
+from typing import Optional, Tuple
+
 from django.db import transaction, models
-from django.db.models import Count, Sum
-from .models import Deal, DealStage, Quote, QuoteItem, QuoteStatus, ActivityLog
-from accounts.models import Company
+from django.db.models import Count, QuerySet, Sum
+
+from accounts.models import Company, CustomUser
+
+from .models import ActivityLog, Deal, DealStage, Lead, Quote, QuoteItem, QuoteStatus
 
 
 class QuoteCalculationService:
@@ -276,3 +280,72 @@ class QuoteLifecycleService:
         )
 
         return quote
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Admin operations — single source of truth for business logic.
+# Called from both Django Unfold actions and DRF endpoints.
+# See ADR-0001 and CLAUDE.md IRON RULE 8.
+# ──────────────────────────────────────────────────────────────────────────
+
+
+def transition_deal_stage(
+    deal: Deal,
+    target_stage_code: str,
+    actor: Optional[CustomUser] = None,
+    reason: str = '',
+) -> Tuple[Optional[Deal], Optional[str]]:
+    """
+    Transition a Deal to a new stage by stage code.
+
+    Logs the change to ActivityLog.
+    Returns: (deal, error_or_None)
+    """
+    target_stage = DealStage.objects.filter(code=target_stage_code).first()
+    if not target_stage:
+        return None, f"DealStage '{target_stage_code}' not found"
+
+    if deal.stage and deal.stage.code == target_stage_code:
+        return deal, None  # already in target state, no-op
+
+    old_stage_name = deal.stage.name if deal.stage else '—'
+    deal.stage = target_stage
+    deal.save(update_fields=['stage'])
+
+    ActivityLog.objects.create(
+        action="Стадия изменена",
+        detail=f"Сделка #{deal.id}: {old_stage_name} → {target_stage.name}{' · ' + reason if reason else ''}",
+        user=actor,
+        level='INFO',
+    )
+    return deal, None
+
+
+def bulk_close_deals_lost(
+    deals: QuerySet[Deal],
+    actor: Optional[CustomUser] = None,
+) -> int:
+    """
+    Mark deals as CLOSED_LOST. Skips deals already in any closed state.
+
+    Returns: count of deals updated.
+    """
+    closed_lost = DealStage.objects.filter(code='CLOSED_LOST').first()
+    if not closed_lost:
+        return 0
+    open_deals = deals.exclude(stage__code__in=['CLOSED_WON', 'CLOSED_LOST'])
+    count = 0
+    for deal in open_deals:
+        _, error = transition_deal_stage(deal, 'CLOSED_LOST', actor=actor)
+        if not error:
+            count += 1
+    return count
+
+
+def mark_leads_processed(leads: QuerySet[Lead]) -> int:
+    """
+    Mark a queryset of leads as processed.
+
+    Returns: count of leads updated (only previously-unprocessed ones).
+    """
+    return leads.filter(is_processed=False).update(is_processed=True)

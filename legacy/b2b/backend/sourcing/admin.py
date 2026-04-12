@@ -2,11 +2,14 @@ from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 from unfold.admin import ModelAdmin
 from unfold.decorators import display
+
+from core.admin_mixins import ReadOnlyInspectionMixin
+
 from .models import Attachment, DomainKeyword, ImportTask
 
 
 @admin.register(Attachment)
-class AttachmentAdmin(ModelAdmin):
+class AttachmentAdmin(ReadOnlyInspectionMixin, ModelAdmin):
     list_display = ("original_filename", "uploaded_by", "parent_entity", "uploaded_at")
     list_filter = ("uploaded_at",)
     search_fields = ("original_filename", "uploaded_by__email")

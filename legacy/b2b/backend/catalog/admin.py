@@ -4,6 +4,9 @@ from unfold.admin import ModelAdmin, TabularInline
 from unfold.contrib.import_export.forms import ExportForm, ImportForm
 from unfold.decorators import display
 from import_export.admin import ImportExportModelAdmin
+
+from core.admin_mixins import ReadOnlyInspectionMixin
+
 from .models import (
     DomainType, ProductStatus, StockStatus,
     Category, EquipmentGroup, Product, SupplierOffer,
@@ -120,7 +123,7 @@ class EquipmentGroupAdmin(ModelAdmin):
 # ────────────────────────────────────────────
 
 @admin.register(Product)
-class ProductAdmin(ImportExportModelAdmin, ModelAdmin):
+class ProductAdmin(ReadOnlyInspectionMixin, ImportExportModelAdmin, ModelAdmin):
     resource_classes = [ProductResource]
     import_form_class = ImportForm
     export_form_class = ExportForm
@@ -189,17 +192,13 @@ class ProductAdmin(ImportExportModelAdmin, ModelAdmin):
 
     @admin.action(description=_("Опубликовать (PUBLISHED)"))
     def publish_products(self, request, queryset):
-        published = ProductStatus.objects.filter(code='PUBLISHED').first()
-        if not published:
-            self.message_user(request, _("Статус PUBLISHED не найден!"), level="error")
-            return
-        no_domain = queryset.filter(domain_type__isnull=True)
-        if no_domain.exists():
-            names = ", ".join(no_domain.values_list("name", flat=True)[:5])
-            self.message_user(request, _("Нет домена: %(names)s") % {"names": names}, level="error")
-            return
-        updated = queryset.update(status=published)
-        self.message_user(request, _("%(count)d опубликовано.") % {"count": updated})
+        from . import services
+        updated, skipped = services.publish_products(queryset)
+        if skipped:
+            names = ", ".join(skipped[:5])
+            self.message_user(request, _("Не опубликовано: %(names)s") % {"names": names}, level="error")
+        if updated:
+            self.message_user(request, _("%(count)d опубликовано.") % {"count": updated})
 
 
 # ────────────────────────────────────────────
@@ -207,7 +206,7 @@ class ProductAdmin(ImportExportModelAdmin, ModelAdmin):
 # ────────────────────────────────────────────
 
 @admin.register(SupplierOffer)
-class SupplierOfferAdmin(ImportExportModelAdmin, ModelAdmin):
+class SupplierOfferAdmin(ReadOnlyInspectionMixin, ImportExportModelAdmin, ModelAdmin):
     resource_classes = [SupplierOfferResource]
     import_form_class = ImportForm
     export_form_class = ExportForm

@@ -822,6 +822,7 @@
     "settings": "Settings",
     "myDocuments": "Documents",
     "adminUsers": "Users",
+    "adminKyc": "KYC verification",
     "logistics": "Logistics",
     "purchaseTemplates": "Purchase Templates"
   },
@@ -963,6 +964,7 @@
     "salesAnalytics": "Sales Analytics",
     "settings": "Settings",
     "users": "Users",
+    "kyc": "KYC verification",
     "integrations": "Integrations",
     "help": "Help",
     "b2bPlatform": "B2B Platform",

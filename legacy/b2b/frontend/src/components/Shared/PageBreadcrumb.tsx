@@ -42,6 +42,7 @@ const pageI18nKeys: Record<string, string> = {
   settings: 'breadcrumbs.settings',
   'my-documents': 'breadcrumbs.myDocuments',
   'admin-users': 'breadcrumbs.adminUsers',
+  'admin-kyc': 'breadcrumbs.adminKyc',
   logistics: 'breadcrumbs.logistics',
   'purchase-templates': 'breadcrumbs.purchaseTemplates',
 };

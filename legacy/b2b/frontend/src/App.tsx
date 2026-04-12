@@ -41,6 +41,7 @@ const MyRequestsPage = lazy(() => import('./pages/MyRequestsPage'));
 const MyDocumentsPage = lazy(() => import('./pages/MyDocumentsPage'));
 const LogisticsPage = lazy(() => import('./pages/LogisticsPage'));
 const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'));
+const AdminKYCPage = lazy(() => import('./pages/AdminKYCPage'));
 
 import { LoadingSkeleton } from './components/LoadingSkeleton';
 
@@ -67,6 +68,7 @@ type Page =
   | { type: 'my-requests' }
   | { type: 'my-documents' }
   | { type: 'admin-users' }
+  | { type: 'admin-kyc' }
   | { type: 'logistics' }
   | { type: 'purchase-templates' };
 
@@ -237,7 +239,7 @@ function MainApp() {
       'production-orders', 'production-schedule',
       'analytics', 'categories', 'equipment-groups',
       'integrations', 'help', 'my-requests', 'my-documents',
-      'admin-users', 'logistics', 'request-detail',
+      'admin-users', 'admin-kyc', 'logistics', 'request-detail',
       'purchase-templates',
     ];
     if (validTypes.includes(target)) {
@@ -354,6 +356,9 @@ function MainApp() {
       break;
     case 'admin-users':
       content = <AdminUsersPage />;
+      break;
+    case 'admin-kyc':
+      content = <AdminKYCPage />;
       break;
     case 'logistics':
       content = <LogisticsPage />;

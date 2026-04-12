@@ -11,7 +11,9 @@
       "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:5173/api/v1/auth/token/ -X POST -H \"Content-Type: application/json\" -d '{\"\"email\"\":\"\"test\"\",\"\"password\"\":\"\"test\"\"}')",
       "Bash(curl -s http://localhost:5173/)",
       "Bash(curl -sI http://localhost:8000/static/unfold/css/styles.css)",
-      "Bash(curl -sI http://localhost:8000/static/admin/css/base.css)"
+      "Bash(curl -sI http://localhost:8000/static/admin/css/base.css)",
+      "Bash(find /Users/znz/Downloads/IT-projects/RailTech_SaaS_B2B/frontend/src -name *AdminShell* -o -name *CRM* -o -name *Cabinet* -o -name *Manager*)",
+      "Bash(find /Users/znz/Downloads/IT-projects/RailTech_SaaS_B2B/frontend/src/pages -type f -name *.tsx)"
     ]
   }
 }

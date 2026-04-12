@@ -27,6 +27,7 @@ import {
   Minus,
   Plus,
   X,
+  ShieldCheck,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -208,6 +209,7 @@ function getBottomNavigation(role: UserRole, t: TFn): NavItem[] {
   ];
   if (role === 'ADMIN') {
     items.push({ label: t('shell.users'), icon: <Users className="h-4 w-4" />, id: 'admin-users' });
+    items.push({ label: t('shell.kyc'), icon: <ShieldCheck className="h-4 w-4" />, id: 'admin-kyc' });
     items.push({ label: t('shell.integrations'), icon: <Plug className="h-4 w-4" />, id: 'integrations' });
   }
   items.push({ label: t('shell.help'), icon: <HelpCircle className="h-4 w-4" />, id: 'help' });
