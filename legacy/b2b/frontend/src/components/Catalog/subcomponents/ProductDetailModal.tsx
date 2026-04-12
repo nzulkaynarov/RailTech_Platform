@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Product } from '../../../api/catalogApi';
-import { ShoppingCart, Download, Info, Package, Lock as LockIcon, MessageSquare, ShieldCheck, Star, Award, FileText as FileTextIcon } from 'lucide-react';
+import { ShoppingCart, Download, Info, Package, Lock as LockIcon, MessageSquare, ShieldCheck, Star, Award } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { getDomainVisual, getDomainLabelKey } from '../../../config/domainConfig';
 import {
