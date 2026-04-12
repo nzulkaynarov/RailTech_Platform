@@ -8,8 +8,6 @@ import { Button } from '@/components/ui/button';
 import { clsx } from 'clsx';
 import { getDomainVisual } from '../../../config/domainConfig';
 
-// TODO: Fetch manufacturer verification data from API
-// For now, use empty object — badge display should degrade gracefully
 const verifiedManufacturers: Record<string, { verified: boolean; iso: boolean; trustScore: number }> = {};
 
 interface ProductCardProps {

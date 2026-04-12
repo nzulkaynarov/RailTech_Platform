@@ -18,12 +18,7 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
-// TODO: Fetch manufacturer verification data from API
-// const verifiedManufacturers: Record<string, { verified: boolean; iso: boolean; trustScore: number }> = {};
 const verifiedManufacturers: Record<string, { verified: boolean; iso: boolean; trustScore: number }> = {};
-
-// TODO: Fetch technical documents from API or product.documents
-const demoDocuments: { name: string; size: string }[] = [];
 
 interface ProductDetailModalProps {
     product: Product | null;
@@ -231,25 +226,9 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                             </TabsContent>
 
                             <TabsContent value="docs" className="p-4">
-                                <div className="space-y-2">
-                                    {demoDocuments.map((doc, idx) => (
-                                        <div
-                                            key={idx}
-                                            className="flex items-center justify-between rounded-lg border border-border px-4 py-3"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <FileTextIcon className="size-4 text-primary" aria-hidden="true" />
-                                                <div>
-                                                    <p className="text-sm font-medium">{doc.name}</p>
-                                                    <p className="text-xs text-muted-foreground">{doc.size}</p>
-                                                </div>
-                                            </div>
-                                            <Button variant="ghost" size="icon" aria-label={t('catalog.productDetail.downloadFile', { name: doc.name })}>
-                                                <Download className="size-4" />
-                                            </Button>
-                                        </div>
-                                    ))}
-                                </div>
+                                <p className="text-sm text-muted-foreground text-center py-8">
+                                    {t('pages.common.noData')}
+                                </p>
                             </TabsContent>
 
                             <TabsContent value="specs" className="p-4">

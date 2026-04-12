@@ -35,7 +35,6 @@ export function DealsPage() {
         { label: t('pages.deals.stats.quoteSent'), value: String(ps?.deals?.quote_sent ?? '—') },
         { label: t('pages.deals.stats.closedWon'), value: String(ps?.deals?.closed_won ?? '—') },
       ]}
-      actions={[{ label: t('pages.deals.newDeal') }]}
     >
       {isLoading ? <LoadingRows rows={4} /> : (
         <div className="overflow-x-auto pb-4">

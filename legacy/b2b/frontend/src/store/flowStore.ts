@@ -23,7 +23,6 @@ export interface DemoCompany {
   inn: string;
 }
 
-// Loaded from API via accountsApi
 export const demoCompanies: DemoCompany[] = [];
 
 /* ─── Request Item (line from Excel import) ──────────────────────────── */

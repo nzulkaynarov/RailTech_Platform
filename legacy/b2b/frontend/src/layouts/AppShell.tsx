@@ -3,7 +3,6 @@ import {
   LayoutDashboard,
   Package,
   ShoppingCart,
-  FileText,
   Settings,
   HelpCircle,
   Bell,
@@ -11,7 +10,6 @@ import {
   ChevronDown,
   Search,
   BarChart3,
-  Plug,
   Factory,
   Layers,
   ClipboardList,
@@ -20,7 +18,6 @@ import {
   LogOut,
   ChevronUp,
   Store,
-  Truck,
   Calculator,
   Handshake,
   Check,
@@ -88,7 +85,6 @@ import {
 } from '@/store/userStore';
 import { useCartStore, useCartCount } from '@/store/cartStore';
 import { useCurrencyStore } from '@/store/currencyStore';
-import { useDemoStore } from '@/store/demoStore';
 import { useAuthStore } from '@/store/authStore';
 import { notificationsApi } from '@/api/notificationsApi';
 import type { Notification } from '@/api/notificationsApi';
@@ -122,9 +118,6 @@ function getBuyerNavigation(activePage: string, role: UserRole, t: TFn): NavItem
     { label: t('shell.catalog'), icon: <Package className="h-4 w-4" />, id: 'products', active: activePage === 'products' },
     { label: t('shell.myRequests'), icon: <ClipboardList className="h-4 w-4" />, id: 'my-requests', active: activePage === 'my-requests' },
     { label: t('shell.commercialOffers'), icon: <Calculator className="h-4 w-4" />, id: 'crm-quotes', active: activePage === 'crm-quotes' },
-    { label: t('shell.documents'), icon: <FileText className="h-4 w-4" />, id: 'my-documents', active: activePage === 'my-documents' },
-    { label: t('shell.purchaseTemplates'), icon: <ClipboardList className="h-4 w-4" />, id: 'purchase-templates', active: activePage === 'purchase-templates' },
-    { label: t('shell.logistics'), icon: <Truck className="h-4 w-4" />, id: 'logistics', active: activePage === 'logistics' },
   ];
   if (role === 'ADMIN' || role === 'MANAGER') {
     items.push({ label: t('shell.analytics'), icon: <BarChart3 className="h-4 w-4" />, id: 'analytics', active: activePage === 'analytics' });
@@ -143,15 +136,7 @@ function getManufacturerNavigation(activePage: string, role: UserRole, t: TFn): 
         { label: t('shell.equipmentGroups'), id: 'equipment-groups', active: activePage === 'equipment-groups' },
       ],
     },
-    {
-      label: t('shell.productionOrders'), icon: <Factory className="h-4 w-4" />,
-      children: [
-        { label: t('shell.incomingOrders'), id: 'production-orders', active: activePage === 'production-orders' },
-        { label: t('shell.productionSchedule'), id: 'production-schedule', active: activePage === 'production-schedule' },
-      ],
-    },
     { label: t('shell.quotes'), icon: <Calculator className="h-4 w-4" />, id: 'crm-quotes', active: activePage === 'crm-quotes' },
-    { label: t('shell.documents'), icon: <FileText className="h-4 w-4" />, id: 'my-documents', active: activePage === 'my-documents' },
   ];
   if (role === 'ADMIN' || role === 'MANAGER') {
     items.push({ label: t('shell.productionAnalytics'), icon: <BarChart3 className="h-4 w-4" />, id: 'analytics', active: activePage === 'analytics' });
@@ -186,8 +171,6 @@ function getSellerNavigation(activePage: string, role: UserRole, t: TFn): NavIte
         { label: t('shell.clients'), id: 'crm-clients', active: activePage === 'crm-clients' },
       ],
     },
-    { label: t('shell.logistics'), icon: <Truck className="h-4 w-4" />, id: 'logistics', active: activePage === 'logistics' },
-    { label: t('shell.documents'), icon: <FileText className="h-4 w-4" />, id: 'my-documents', active: activePage === 'my-documents' },
   ];
   if (role === 'ADMIN' || role === 'MANAGER') {
     items.push({ label: t('shell.salesAnalytics'), icon: <BarChart3 className="h-4 w-4" />, id: 'analytics', active: activePage === 'analytics' });
@@ -213,7 +196,6 @@ function getBottomNavigation(role: UserRole, t: TFn): NavItem[] {
     items.push({ label: t('shell.kyc'), icon: <ShieldCheck className="h-4 w-4" />, id: 'admin-kyc' });
     items.push({ label: t('shell.subscriptions'), icon: <CreditCard className="h-4 w-4" />, id: 'admin-subscriptions' });
     items.push({ label: t('shell.roleApplications'), icon: <ClipboardList className="h-4 w-4" />, id: 'admin-role-apps' });
-    items.push({ label: t('shell.integrations'), icon: <Plug className="h-4 w-4" />, id: 'integrations' });
   }
   items.push({ label: t('shell.help'), icon: <HelpCircle className="h-4 w-4" />, id: 'help' });
   return items;
@@ -360,7 +342,6 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
   const { items: cartItems, clearCart } = useCartStore();
   const cartCount = useCartCount();
   const { currency, setCurrency } = useCurrencyStore();
-  const { isDemoMode, toggleDemoMode } = useDemoStore();
   const { state } = useSidebar();
   const sidebarCollapsed = state === 'collapsed';
   const [cartSheetOpen, setCartSheetOpen] = useState(false);
@@ -557,11 +538,6 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
                 <DropdownMenuItem onClick={() => onNavigate('settings')}>
                   <Settings className="mr-2 h-4 w-4" />
                   {t('shell.settings')}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={toggleDemoMode}>
-                  <span className={cn('mr-2 h-2 w-2 rounded-full', isDemoMode ? 'bg-primary' : 'bg-muted-foreground/30')} />
-                  {t('shell.demoMode')}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="text-destructive" onClick={() => {

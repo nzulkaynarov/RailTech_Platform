@@ -332,7 +332,7 @@ function MainApp() {
       content = <ClientsPage />;
       break;
     case 'production-orders':
-      content = <ProductionOrdersPage onNavigate={handleNavigate} />;
+      content = <ProductionOrdersPage />;
       break;
     case 'production-schedule':
       content = <ProductionSchedulePage />;

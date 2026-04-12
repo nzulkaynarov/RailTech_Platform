@@ -20,7 +20,6 @@ export function CategoriesPage() {
       title={t('pages.categories.title')}
       description={t('pages.categories.description')}
       icon={<Tags className="h-5 w-5" />}
-      actions={[{ label: t('pages.categories.addCategory') }]}
     >
       {isLoading ? <LoadingRows rows={4} /> : topLevel.length === 0 ? (
         <EmptyState icon={<Tags className="h-5 w-5" />} message={t('pages.common.noData')} />

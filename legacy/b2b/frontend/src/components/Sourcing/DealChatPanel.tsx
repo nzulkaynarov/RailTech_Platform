@@ -40,13 +40,10 @@ interface DemoDocument {
 const documents: DemoDocument[] = [];
 
 export function DealChatPanel(): React.ReactNode {
-  // TODO: when implementing live chat fetching, accept dealId prop
   const { t } = useTranslation();
   const [messages] = useState<ChatMessage[]>(initialMessages);
   const [inputValue, setInputValue] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
-
-  // TODO: Fetch messages from crmApi.getMessages(dealId) when dealId prop is added
 
   function getMessageText(msg: ChatMessage): string {
     if (msg.textKey) return t(msg.textKey);

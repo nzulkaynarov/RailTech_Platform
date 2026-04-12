@@ -26,7 +26,6 @@ export function ClientsPage() {
         { label: t('pages.clients.stats.awaitingKyc'), value: String(ps?.clients?.awaiting_kyc ?? '—') },
         { label: t('pages.clients.stats.guests'), value: String(ps?.clients?.unverified ?? '—') },
       ]}
-      actions={[{ label: t('pages.clients.addClient') }]}
     >
       <Card>
         <CardContent className="p-0">

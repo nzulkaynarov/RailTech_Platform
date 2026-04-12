@@ -9,18 +9,13 @@ import {
   SlidersHorizontal,
   ArrowUpDown,
   MoreVertical,
-  Download,
   Plus,
   ChevronLeft,
   ChevronRight,
   TrendingUp,
   TrendingDown,
   Eye,
-  Upload,
-  Pencil,
   ShoppingCart,
-  Lock,
-  DollarSign,
   LayoutGrid,
   List,
   Check,
@@ -228,8 +223,6 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
     SELLER: t('productManagement.title.seller'),
   }[activeStatus];
 
-  const canEdit = activeStatus === 'MANUFACTURER' && role !== 'EMPLOYEE';
-  const canAddProduct = activeStatus === 'MANUFACTURER' && role !== 'EMPLOYEE';
   const canSendRequest = activeStatus === 'BUYER';
   const showPrices = activeStatus === 'SELLER' || activeStatus === 'MANUFACTURER';
 
@@ -257,11 +250,6 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
         </div>
         <div className="flex items-center gap-2">
           {canSendRequest && (
-            <>
-              <Button variant="outline" className="gap-2">
-                <Upload className="h-4 w-4" />
-                {t('productManagement.uploadRequest')}
-              </Button>
               <Button
                 className="gap-2"
                 disabled={selectedIds.size === 0}
@@ -275,31 +263,6 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
                 <ShoppingCart className="h-4 w-4" />
                 {t('productManagement.createRequest')} {selectedIds.size > 0 && `(${selectedIds.size})`}
               </Button>
-            </>
-          )}
-          {canAddProduct && (
-            <>
-              <Button variant="outline" className="gap-2">
-                <Download className="h-4 w-4" />
-                {t('productManagement.exportCsv')}
-              </Button>
-              <Button className="gap-2">
-                <Plus className="h-4 w-4" />
-                {t('productManagement.addProduct')}
-              </Button>
-            </>
-          )}
-          {activeStatus === 'SELLER' && (
-            <>
-              <Button variant="outline" className="gap-2">
-                <Download className="h-4 w-4" />
-                {t('productManagement.export')}
-              </Button>
-              <Button variant="outline" className="gap-2">
-                <Plus className="h-4 w-4" />
-                {t('productManagement.requestProduct')}
-              </Button>
-            </>
           )}
         </div>
       </div>
@@ -545,24 +508,9 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
                           <DropdownMenuItem onClick={() => handleRowClick(product)}>
                             <Eye className="mr-2 h-4 w-4" /> {t('productManagement.actions.viewDetails')}
                           </DropdownMenuItem>
-                          {canEdit && (
-                            <DropdownMenuItem>
-                              <Pencil className="mr-2 h-4 w-4" /> {t('productManagement.actions.edit')}
-                            </DropdownMenuItem>
-                          )}
                           {canSendRequest && (
                             <DropdownMenuItem onClick={() => cartStore.addItem(product)}>
                               <ShoppingCart className="mr-2 h-4 w-4" /> {t('productManagement.actions.addToRequest')}
-                            </DropdownMenuItem>
-                          )}
-                          {activeStatus === 'SELLER' && (
-                            <DropdownMenuItem>
-                              <DollarSign className="mr-2 h-4 w-4" /> {t('productManagement.actions.addToQuote')}
-                            </DropdownMenuItem>
-                          )}
-                          {canEdit && (
-                            <DropdownMenuItem>
-                              <Lock className="mr-2 h-4 w-4" /> {t('productManagement.actions.manageAccess')}
                             </DropdownMenuItem>
                           )}
                         </DropdownMenuContent>

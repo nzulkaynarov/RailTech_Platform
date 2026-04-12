@@ -34,8 +34,6 @@ interface CatalogProduct {
   manufacturer: string;
 }
 
-// Master catalog is loaded from the backend API via catalogApi.getProducts()
-// TODO: Replace with useEffect + catalogApi.getProducts() when component mounts
 const masterCatalog: CatalogProduct[] = [];
 
 /* ─── Status helpers ───────────────────────────────────────────────── */

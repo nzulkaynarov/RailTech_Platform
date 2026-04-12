@@ -590,7 +590,8 @@
     "requestHint": "Our manager will contact you within 1 business day",
     "requestFrom": "Request from",
     "requestCreated": "Request #{{id}} created",
-    "requestError": "Failed to create request"
+    "requestError": "Failed to create request",
+    "comingSoon": "Request submission coming soon"
   },
   "nav": {
     "home": "Home",

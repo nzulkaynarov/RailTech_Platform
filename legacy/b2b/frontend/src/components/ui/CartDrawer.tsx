@@ -149,13 +149,13 @@ export const CartDrawer: React.FC = () => {
                                 {t('cart.clear')}
                             </Button>
 
-                            <Button size="lg" className="w-full gap-2">
+                            <Button size="lg" className="w-full gap-2" disabled>
                                 {t('cart.requestQuote')}
                                 <ArrowRight className="h-4 w-4" />
                             </Button>
 
                             <p className="text-center text-xs text-muted-foreground">
-                                {t('cart.requestHint')}
+                                {t('cart.comingSoon')}
                             </p>
                         </SheetFooter>
                     </>

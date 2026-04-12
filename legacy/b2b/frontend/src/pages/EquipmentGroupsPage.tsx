@@ -14,7 +14,6 @@ export function EquipmentGroupsPage() {
       title={t('pages.equipmentGroups.title')}
       description={t('pages.equipmentGroups.description')}
       icon={<Layers className="h-5 w-5" />}
-      actions={[{ label: t('pages.equipmentGroups.addGroup') }]}
     >
       {isLoading ? <LoadingRows rows={4} /> : !groups?.length ? (
         <EmptyState icon={<Layers className="h-5 w-5" />} message={t('pages.common.noData')} />
