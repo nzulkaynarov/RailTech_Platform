@@ -92,8 +92,8 @@ export const accountsApi = {
 		const response = await apiClient.get<Company>(`accounts/companies/${id}/`);
 		return response.data;
 	},
-	verifyCompany: async (id: number, status: string, comment?: string) => {
-		const response = await apiClient.post(`accounts/companies/${id}/verify-kyc/`, { status, comment });
+	verifyCompany: async (id: number, statusCode: string, comment?: string) => {
+		const response = await apiClient.post(`accounts/companies/${id}/verify-kyc/`, { status_code: statusCode, comment });
 		return response.data;
 	},
 	uploadDocument: async (companyId: number, file: File, docType: string) => {
