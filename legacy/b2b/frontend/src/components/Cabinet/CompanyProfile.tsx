@@ -79,7 +79,8 @@ export const CompanyProfile: React.FC = () => {
         </div>
     );
 
-    const kycInfo = company ? STATUS_CONFIG[company.verification_status] : null;
+    const statusKey = company?.verification_status_code || company?.verification_status;
+    const kycInfo = company ? (STATUS_CONFIG[statusKey as keyof typeof STATUS_CONFIG] || null) : null;
     const KycIcon = kycInfo?.icon || Shield;
 
     return (

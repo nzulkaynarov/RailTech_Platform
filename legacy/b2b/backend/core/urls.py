@@ -14,7 +14,8 @@ from crm.views import (
     LeadCreateView, CRMAnalyticsView, ActivityLogViewSet, DashboardAnalyticsView
 )
 from accounts.views import (
-    CompanyViewSet, UserViewSet, RegisterView, SetupPasswordView, SubmitProfileView, MeView
+    CompanyViewSet, UserViewSet, RegisterView, SetupPasswordView, SubmitProfileView, MeView,
+    SupplierSubscriptionViewSet, CompanyRoleApplicationViewSet,
 )
 from notifications.views import NotificationViewSet
 from master_data.views import (
@@ -23,7 +24,7 @@ from master_data.views import (
 )
 from sourcing.views import ExcelImportView, CatalogImportView, ImportStatusView, SourcingRequestViewSet
 from core.health import health_check
-from core.views import PageStatsView
+from core.views import PageStatsView, SystemSettingsView
 
 router = DefaultRouter()
 router.register(r'catalog/products', ProductViewSet, basename='product')
@@ -41,6 +42,8 @@ router.register(r'crm/activity-logs', ActivityLogViewSet, basename='activitylog'
 
 router.register(r'accounts/companies', CompanyViewSet)
 router.register(r'accounts/users', UserViewSet)
+router.register(r'accounts/subscriptions', SupplierSubscriptionViewSet, basename='subscription')
+router.register(r'accounts/role-applications', CompanyRoleApplicationViewSet, basename='roleapplication')
 router.register(r'notifications', NotificationViewSet, basename='notification')
 
 # Master Data
@@ -77,6 +80,7 @@ urlpatterns = [
     path('api/v1/crm/analytics/dashboard/', DashboardAnalyticsView.as_view(), name='dashboard-analytics'),
     path('api/v1/analytics/page-stats/', PageStatsView.as_view(), name='page-stats'),
     path('api/v1/crm/leads/', LeadCreateView.as_view(), name='lead-create'),
+    path('api/v1/system-settings/', SystemSettingsView.as_view(), name='system-settings'),
     path('api/v1/accounts/me/', MeView.as_view(), name='current-user'),
     path('api/v1/health/', health_check, name='health_check'),
     # Root-level health endpoint for Docker/K8s healthchecks

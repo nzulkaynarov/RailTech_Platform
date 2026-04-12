@@ -13,7 +13,9 @@ export interface Company {
 	id: number;
 	name: string;
 	inn: string;
-	verification_status: string;
+	verification_status: number | string;
+	verification_status_code?: string;
+	verification_status_name?: string;
 	bank_account?: string;
 	mfo?: string;
 	legal_address?: string;
@@ -164,5 +166,82 @@ export const accountsApi = {
 	changePassword: async (data: { current_password: string; new_password: string }) => {
 		const response = await apiClient.post<{ message: string }>('accounts/users/change-password/', data);
 		return response.data;
-	}
+	},
+
+	// ─── Subscriptions (admin) ─────────────────────────────────────────
+	getSubscriptions: async () => {
+		const response = await apiClient.get<PaginatedResponse<Subscription>>('accounts/subscriptions/');
+		return response.data.results;
+	},
+	activateSubscription: async (id: number) => {
+		const response = await apiClient.post<Subscription>(`accounts/subscriptions/${id}/activate/`);
+		return response.data;
+	},
+	suspendSubscription: async (id: number) => {
+		const response = await apiClient.post<Subscription>(`accounts/subscriptions/${id}/suspend/`);
+		return response.data;
+	},
+
+	// ─── Role Applications (admin) ─────────────────────────────────────
+	getRoleApplications: async () => {
+		const response = await apiClient.get<PaginatedResponse<RoleApplication>>('accounts/role-applications/');
+		return response.data.results;
+	},
+	approveRoleApplication: async (id: number) => {
+		const response = await apiClient.post<RoleApplication>(`accounts/role-applications/${id}/approve/`);
+		return response.data;
+	},
+	rejectRoleApplication: async (id: number, reason?: string) => {
+		const response = await apiClient.post<RoleApplication>(
+			`accounts/role-applications/${id}/reject/`,
+			reason ? { reason } : {},
+		);
+		return response.data;
+	},
 };
+
+// ─── Types ──────────────────────────────────────────────────────────────
+
+export interface Subscription {
+	id: number;
+	company: number;
+	company_name: string;
+	company_inn: string;
+	plan: string;
+	plan_display: string;
+	status: string;
+	status_display: string;
+	monthly_rate: string;
+	currency: number | null;
+	currency_code: string | null;
+	valid_from: string | null;
+	valid_until: string | null;
+	last_payment_date: string | null;
+	next_payment_date: string | null;
+	notes: string;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface RoleApplication {
+	id: number;
+	company: number;
+	company_name: string;
+	company_inn: string;
+	requested_type: number;
+	requested_type_name: string;
+	requested_type_code: string;
+	status: string;
+	status_display: string;
+	submitted_by: number | null;
+	submitted_by_email: string | null;
+	contract_file: string | null;
+	nda_file: string | null;
+	partnership_agreement: string | null;
+	reviewed_by: number | null;
+	reviewed_by_email: string | null;
+	review_notes: string;
+	reviewed_at: string | null;
+	created_at: string;
+	updated_at: string;
+}

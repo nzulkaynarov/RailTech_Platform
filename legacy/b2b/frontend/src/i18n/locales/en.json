@@ -436,6 +436,49 @@
       "passwordMismatch": "Passwords do not match",
       "superAdmin": "Super Administrator"
     },
+    "subscriptions": {
+      "title": "Subscription Management",
+      "description": "Supplier subscriptions on the platform",
+      "activated": "Subscription activated",
+      "suspended": "Subscription suspended",
+      "stats": {
+        "total": "Total",
+        "active": "Active",
+        "trial": "Trial",
+        "suspended": "Suspended"
+      },
+      "table": {
+        "company": "Company",
+        "plan": "Plan",
+        "status": "Status",
+        "rate": "Rate",
+        "validUntil": "Valid Until",
+        "actions": "Actions"
+      }
+    },
+    "roleApps": {
+      "title": "Role Applications",
+      "description": "Review company role applications",
+      "approved": "Application approved",
+      "rejected": "Application rejected",
+      "approve": "Approve",
+      "reject": "Reject",
+      "approvedLabel": "Approved",
+      "stats": {
+        "total": "Total",
+        "pending": "Pending",
+        "approved": "Approved",
+        "rejected": "Rejected"
+      },
+      "table": {
+        "company": "Company",
+        "requestedType": "Requested Role",
+        "status": "Status",
+        "submittedBy": "Submitted By",
+        "date": "Date",
+        "actions": "Actions"
+      }
+    },
     "systemSettings": {
       "title": "System",
       "titleHighlight": "Settings",
@@ -823,6 +866,8 @@
     "myDocuments": "Documents",
     "adminUsers": "Users",
     "adminKyc": "KYC verification",
+    "adminSubscriptions": "Subscriptions",
+    "adminRoleApps": "Role Applications",
     "logistics": "Logistics",
     "purchaseTemplates": "Purchase Templates"
   },
@@ -965,6 +1010,8 @@
     "settings": "Settings",
     "users": "Users",
     "kyc": "KYC verification",
+    "subscriptions": "Subscriptions",
+    "roleApplications": "Role Applications",
     "integrations": "Integrations",
     "help": "Help",
     "b2bPlatform": "B2B Platform",

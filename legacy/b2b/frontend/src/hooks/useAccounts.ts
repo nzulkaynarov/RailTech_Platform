@@ -51,3 +51,50 @@ export const useCompanies = (params?: CompanyFilterParams) => useQuery({
   queryKey: ['companies', params],
   queryFn: () => accountsApi.getCompanies(params),
 });
+
+// ─── Subscriptions ─────────────────────────────────────────────────────
+
+export const useSubscriptions = () => useQuery({
+  queryKey: ['subscriptions'],
+  queryFn: () => accountsApi.getSubscriptions(),
+});
+
+export const useActivateSubscription = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => accountsApi.activateSubscription(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['subscriptions'] }); },
+  });
+};
+
+export const useSuspendSubscription = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => accountsApi.suspendSubscription(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['subscriptions'] }); },
+  });
+};
+
+// ─── Role Applications ─────────────────────────────────────────────────
+
+export const useRoleApplications = () => useQuery({
+  queryKey: ['roleApplications'],
+  queryFn: () => accountsApi.getRoleApplications(),
+});
+
+export const useApproveRoleApplication = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => accountsApi.approveRoleApplication(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['roleApplications'] }); },
+  });
+};
+
+export const useRejectRoleApplication = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: number; reason?: string }) =>
+      accountsApi.rejectRoleApplication(id, reason),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['roleApplications'] }); },
+  });
+};

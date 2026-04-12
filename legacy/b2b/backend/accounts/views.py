@@ -5,18 +5,25 @@ from rest_framework.generics import RetrieveAPIView
 from rest_framework.parsers import MultiPartParser, FormParser
 
 from django.db.models import Prefetch
-from .models import Company, CustomUser, KYCDocument, CompanyMember, VerificationStatus
-from .serializers import (
-    KYCDocumentSerializer, RegisterInterestSerializer,
-    SetupPasswordSerializer, SubmitProfileSerializer,
-    UserSerializer, CompanySerializer,
-    KYCVerificationSerializer
+
+from core.permissions import IsAdminUser, IsManagerOrAdmin
+
+from . import services
+from .models import (
+    Company, CompanyMember, CompanyRoleApplication, CustomUser,
+    KYCDocument, SupplierSubscription, VerificationStatus,
 )
 from .services import (
     create_pending_user, verify_and_setup_password,
-    submit_company_profile
+    submit_company_profile,
 )
-from core.permissions import IsManagerOrAdmin
+from .serializers import (
+    CompanyRoleApplicationSerializer, CompanySerializer,
+    KYCDocumentSerializer, KYCVerificationSerializer,
+    RegisterInterestSerializer, SetupPasswordSerializer,
+    SubmitProfileSerializer, SupplierSubscriptionSerializer,
+    UserSerializer,
+)
 
 
 class CompanyViewSet(viewsets.ModelViewSet):
@@ -281,3 +288,85 @@ class MeView(RetrieveAPIView):
 
     def get_object(self):
         return self.request.user
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Phase 3: Admin-facing ViewSets (React Admin pages)
+# ──────────────────────────────────────────────────────────────────────────
+
+
+class SupplierSubscriptionViewSet(viewsets.ModelViewSet):
+    """
+    CRUD + status actions for supplier subscriptions.
+    Admin/Manager only.
+    """
+    serializer_class = SupplierSubscriptionSerializer
+    permission_classes = [permissions.IsAuthenticated, IsManagerOrAdmin]
+    filterset_fields = ['plan', 'status', 'company']
+    search_fields = ['company__name', 'company__inn']
+    ordering = ['-created_at']
+
+    def get_queryset(self):
+        return (
+            SupplierSubscription.objects
+            .select_related('company', 'currency')
+            .order_by('-created_at')
+        )
+
+    @action(detail=True, methods=['post'], url_path='activate')
+    def activate(self, request, pk=None):
+        """POST /api/v1/accounts/subscriptions/{id}/activate/"""
+        sub = self.get_object()
+        services.change_subscription_status(
+            SupplierSubscription.objects.filter(pk=sub.pk), 'ACTIVE'
+        )
+        sub.refresh_from_db()
+        return Response(self.get_serializer(sub).data)
+
+    @action(detail=True, methods=['post'], url_path='suspend')
+    def suspend(self, request, pk=None):
+        """POST /api/v1/accounts/subscriptions/{id}/suspend/"""
+        sub = self.get_object()
+        services.change_subscription_status(
+            SupplierSubscription.objects.filter(pk=sub.pk), 'SUSPENDED'
+        )
+        sub.refresh_from_db()
+        return Response(self.get_serializer(sub).data)
+
+
+class CompanyRoleApplicationViewSet(viewsets.ModelViewSet):
+    """
+    CRUD + approve/reject for company role applications.
+    Admin/Manager only.
+    """
+    serializer_class = CompanyRoleApplicationSerializer
+    permission_classes = [permissions.IsAuthenticated, IsManagerOrAdmin]
+    filterset_fields = ['status', 'requested_type', 'company']
+    search_fields = ['company__name', 'company__inn']
+    ordering = ['-created_at']
+
+    def get_queryset(self):
+        return (
+            CompanyRoleApplication.objects
+            .select_related('company', 'requested_type', 'submitted_by', 'reviewed_by')
+            .order_by('-created_at')
+        )
+
+    @action(detail=True, methods=['post'], url_path='approve')
+    def approve(self, request, pk=None):
+        """POST /api/v1/accounts/role-applications/{id}/approve/"""
+        app = self.get_object()
+        result, error = services.approve_role_application(app, request.user)
+        if error:
+            return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(self.get_serializer(result).data)
+
+    @action(detail=True, methods=['post'], url_path='reject')
+    def reject(self, request, pk=None):
+        """POST /api/v1/accounts/role-applications/{id}/reject/"""
+        app = self.get_object()
+        reason = request.data.get('reason', '')
+        result, error = services.reject_role_application(app, request.user, reason)
+        if error:
+            return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(self.get_serializer(result).data)

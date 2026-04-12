@@ -71,7 +71,8 @@ const CompanyDetailPanel: React.FC<SidePanelProps> = ({ company, onClose, onVeri
 	const [comment, setComment] = useState(company.kyc_notes || '');
 	const [selectedDocType, setSelectedDocType] = useState('CHARTER');
 	const fileInputRef = useRef<HTMLInputElement>(null);
-	const cfg = STATUS_CONFIG[company.verification_status as keyof typeof STATUS_CONFIG];
+	const statusKey = (company.verification_status_code || company.verification_status) as keyof typeof STATUS_CONFIG;
+	const cfg = STATUS_CONFIG[statusKey] || STATUS_CONFIG.L1_UNVERIFIED;
 	const StatusIcon = cfg.icon;
 
 	return (
@@ -190,7 +191,7 @@ const CompanyDetailPanel: React.FC<SidePanelProps> = ({ company, onClose, onVeri
 
 			{/* Action Overrides */}
 			<div className="p-4 border-t border-border shrink-0 space-y-2 bg-muted/30">
-				{(company.verification_status === 'L1_UNVERIFIED' || company.verification_status === 'PROFILE_SUBMITTED') && (
+				{(getStatusCode(company) === 'L1_UNVERIFIED' || getStatusCode(company) === 'PROFILE_SUBMITTED') && (
 					<Button
 						onClick={() => onVerify(company.id, 'L2_VERIFIED', comment)}
 						disabled={busy}
@@ -200,7 +201,7 @@ const CompanyDetailPanel: React.FC<SidePanelProps> = ({ company, onClose, onVeri
 						{t('kycManager.approveL2')}
 					</Button>
 				)}
-				{company.verification_status === 'L2_VERIFIED' && (
+				{getStatusCode(company) === 'L2_VERIFIED' && (
 					<Button
 						onClick={() => onVerify(company.id, 'L3_CONTRACTED', comment)}
 						disabled={busy}
@@ -210,7 +211,7 @@ const CompanyDetailPanel: React.FC<SidePanelProps> = ({ company, onClose, onVeri
 						{t('kycManager.upgradeL3')}
 					</Button>
 				)}
-				{company.verification_status !== 'L1_UNVERIFIED' && (
+				{getStatusCode(company) !== 'L1_UNVERIFIED' && (
 					<Button
 						variant="destructive"
 						onClick={() => onVerify(company.id, 'L1_UNVERIFIED', comment)}
@@ -225,6 +226,11 @@ const CompanyDetailPanel: React.FC<SidePanelProps> = ({ company, onClose, onVeri
 		</div>
 	);
 };
+
+/** Get verification status code string regardless of API response format */
+function getStatusCode(company: Company): string {
+	return (company.verification_status_code || String(company.verification_status)) as string;
+}
 
 // --- Main Dashboard ---
 export const KYCManagerDashboard: React.FC = () => {
@@ -280,14 +286,14 @@ export const KYCManagerDashboard: React.FC = () => {
 
 	const counts = {
 		ALL: companies.length,
-		L1_UNVERIFIED: companies.filter(c => c.verification_status === 'L1_UNVERIFIED').length,
-		PROFILE_SUBMITTED: companies.filter(c => c.verification_status === 'PROFILE_SUBMITTED').length,
-		L2_VERIFIED: companies.filter(c => c.verification_status === 'L2_VERIFIED').length,
-		L3_CONTRACTED: companies.filter(c => c.verification_status === 'L3_CONTRACTED').length,
+		L1_UNVERIFIED: companies.filter(c => getStatusCode(c) === 'L1_UNVERIFIED').length,
+		PROFILE_SUBMITTED: companies.filter(c => getStatusCode(c) === 'PROFILE_SUBMITTED').length,
+		L2_VERIFIED: companies.filter(c => getStatusCode(c) === 'L2_VERIFIED').length,
+		L3_CONTRACTED: companies.filter(c => getStatusCode(c) === 'L3_CONTRACTED').length,
 	};
 
 	const filtered = companies
-		.filter(c => filter === 'ALL' || c.verification_status === filter)
+		.filter(c => filter === 'ALL' || getStatusCode(c) === filter)
 		.filter(c =>
 			!search ||
 			c.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -367,7 +373,7 @@ export const KYCManagerDashboard: React.FC = () => {
 						</div>
 					) : (
 						filtered.map(company => {
-							const cfg = STATUS_CONFIG[company.verification_status as keyof typeof STATUS_CONFIG];
+							const cfg = STATUS_CONFIG[getStatusCode(company) as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.L1_UNVERIFIED;
 							const CfgIcon = cfg.icon;
 							const isSelected = selectedCompany?.id === company.id;
 							return (

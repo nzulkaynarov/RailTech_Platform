@@ -2,9 +2,53 @@ from decimal import Decimal
 
 from django.db.models import Count, Q, Sum
 from django.utils import timezone
+from rest_framework import serializers as drf_serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from core.models import SystemSetting
+from core.permissions import IsManagerOrAdmin
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# System Settings (singleton)
+# ──────────────────────────────────────────────────────────────────────────
+
+
+class SystemSettingSerializer(drf_serializers.ModelSerializer):
+    class Meta:
+        model = SystemSetting
+        fields = [
+            'vat_rate', 'standard_margin', 'exchange_rate_usd_uzs',
+            'platform_name', 'maintenance_mode',
+            'is_two_factor_required', 'updated_at',
+        ]
+        read_only_fields = ['updated_at']
+
+
+class SystemSettingsView(APIView):
+    """
+    GET  /api/v1/system-settings/ — read current settings (any authenticated user)
+    PATCH /api/v1/system-settings/ — update settings (admin/manager only)
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        settings_obj = SystemSetting.load()
+        return Response(SystemSettingSerializer(settings_obj).data)
+
+    def patch(self, request):
+        # Write requires elevated permissions
+        if not (request.user.is_superuser or getattr(request.user, 'is_manager_or_admin', False)):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied()
+
+        settings_obj = SystemSetting.load()
+        serializer = SystemSettingSerializer(settings_obj, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
 
 
 class PageStatsView(APIView):

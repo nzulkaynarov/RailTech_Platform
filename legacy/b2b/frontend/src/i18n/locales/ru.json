@@ -436,6 +436,49 @@
       "passwordMismatch": "Пароли не совпадают",
       "superAdmin": "Super Administrator"
     },
+    "subscriptions": {
+      "title": "Управление подписками",
+      "description": "Подписки поставщиков на платформе",
+      "activated": "Подписка активирована",
+      "suspended": "Подписка приостановлена",
+      "stats": {
+        "total": "Всего",
+        "active": "Активных",
+        "trial": "Пробных",
+        "suspended": "Приостановленных"
+      },
+      "table": {
+        "company": "Компания",
+        "plan": "План",
+        "status": "Статус",
+        "rate": "Тариф",
+        "validUntil": "Действует до",
+        "actions": "Действия"
+      }
+    },
+    "roleApps": {
+      "title": "Заявки на роли",
+      "description": "Рассмотрение заявок компаний на новые роли",
+      "approved": "Заявка одобрена",
+      "rejected": "Заявка отклонена",
+      "approve": "Одобрить",
+      "reject": "Отклонить",
+      "approvedLabel": "Одобрено",
+      "stats": {
+        "total": "Всего",
+        "pending": "Ожидают",
+        "approved": "Одобрено",
+        "rejected": "Отклонено"
+      },
+      "table": {
+        "company": "Компания",
+        "requestedType": "Запрашиваемая роль",
+        "status": "Статус",
+        "submittedBy": "Заявитель",
+        "date": "Дата",
+        "actions": "Действия"
+      }
+    },
     "systemSettings": {
       "title": "Настройки",
       "titleHighlight": "Системы",
@@ -823,6 +866,8 @@
     "myDocuments": "Документы",
     "adminUsers": "Пользователи",
     "adminKyc": "KYC верификация",
+    "adminSubscriptions": "Подписки",
+    "adminRoleApps": "Заявки на роли",
     "logistics": "Логистика",
     "purchaseTemplates": "Шаблоны закупок"
   },
@@ -965,6 +1010,8 @@
     "settings": "Настройки",
     "users": "Пользователи",
     "kyc": "KYC верификация",
+    "subscriptions": "Подписки",
+    "roleApplications": "Заявки на роли",
     "integrations": "Интеграции",
     "help": "Помощь",
     "b2bPlatform": "B2B Платформа",

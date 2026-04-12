@@ -1,5 +1,9 @@
 from rest_framework import serializers
-from .models import Company, CustomUser, KYCDocument, CompanyMember
+
+from .models import (
+    Company, CompanyMember, CompanyRoleApplication, CustomUser,
+    KYCDocument, SupplierSubscription,
+)
 
 
 class KYCDocumentSerializer(serializers.ModelSerializer):
@@ -28,12 +32,14 @@ class CompanySerializer(serializers.ModelSerializer):
     kyc_documents = KYCDocumentSerializer(many=True, read_only=True)
     user_count = serializers.SerializerMethodField()
     verification_status_name = serializers.CharField(source='verification_status.name', read_only=True)
+    verification_status_code = serializers.CharField(source='verification_status.code', read_only=True)
     company_types = serializers.SerializerMethodField()
 
     class Meta:
         model = Company
         fields = [
             'id', 'name', 'inn', 'verification_status', 'verification_status_name',
+            'verification_status_code',
             'bank_account', 'mfo', 'legal_address', 'phone',
             'contact_person', 'country', 'website', 'email', 'logo', 'kyc_notes',
             'created_at', 'kyc_documents', 'user_count', 'company_types'
@@ -102,3 +108,56 @@ class SubmitProfileSerializer(serializers.Serializer):
 class ChangePasswordSerializer(serializers.Serializer):
     current_password = serializers.CharField(required=True)
     new_password = serializers.CharField(required=True, min_length=8)
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Admin-facing serializers (Phase 3 deferred)
+# ──────────────────────────────────────────────────────────────────────────
+
+
+class SupplierSubscriptionSerializer(serializers.ModelSerializer):
+    company_name = serializers.CharField(source='company.name', read_only=True)
+    company_inn = serializers.CharField(source='company.inn', read_only=True)
+    currency_code = serializers.CharField(source='currency.code', read_only=True, default=None)
+    plan_display = serializers.CharField(source='get_plan_display', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+
+    class Meta:
+        model = SupplierSubscription
+        fields = [
+            'id', 'company', 'company_name', 'company_inn',
+            'plan', 'plan_display', 'status', 'status_display',
+            'monthly_rate', 'currency', 'currency_code',
+            'valid_from', 'valid_until',
+            'last_payment_date', 'next_payment_date',
+            'notes', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'company_name', 'company_inn', 'created_at', 'updated_at']
+
+
+class CompanyRoleApplicationSerializer(serializers.ModelSerializer):
+    company_name = serializers.CharField(source='company.name', read_only=True)
+    company_inn = serializers.CharField(source='company.inn', read_only=True)
+    requested_type_name = serializers.CharField(source='requested_type.name', read_only=True)
+    requested_type_code = serializers.CharField(source='requested_type.code', read_only=True)
+    submitted_by_email = serializers.CharField(source='submitted_by.email', read_only=True, default=None)
+    reviewed_by_email = serializers.CharField(source='reviewed_by.email', read_only=True, default=None)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+
+    class Meta:
+        model = CompanyRoleApplication
+        fields = [
+            'id', 'company', 'company_name', 'company_inn',
+            'requested_type', 'requested_type_name', 'requested_type_code',
+            'status', 'status_display',
+            'submitted_by', 'submitted_by_email',
+            'contract_file', 'nda_file', 'partnership_agreement',
+            'reviewed_by', 'reviewed_by_email', 'review_notes', 'reviewed_at',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = [
+            'id', 'company_name', 'company_inn',
+            'requested_type_name', 'requested_type_code',
+            'submitted_by_email', 'reviewed_by_email',
+            'status_display', 'created_at', 'updated_at',
+        ]
