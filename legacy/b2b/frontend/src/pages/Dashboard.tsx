@@ -113,8 +113,33 @@ function KYCPendingBanner() {
   const { t } = useTranslation();
   const { profile, company } = useUserStore();
 
+  const levels = [
+    {
+      code: 'L1',
+      label: t('dashboardPage.kyc.levels.l1.label'),
+      desc: t('dashboardPage.kyc.levels.l1.desc'),
+      features: t('dashboardPage.kyc.levels.l1.features'),
+      status: 'done' as const,
+    },
+    {
+      code: 'L2',
+      label: t('dashboardPage.kyc.levels.l2.label'),
+      desc: t('dashboardPage.kyc.levels.l2.desc'),
+      features: t('dashboardPage.kyc.levels.l2.features'),
+      status: (company.kycStatus === 'verified' ? 'done' : 'current') as 'done' | 'current' | 'locked',
+    },
+    {
+      code: 'L3',
+      label: t('dashboardPage.kyc.levels.l3.label'),
+      desc: t('dashboardPage.kyc.levels.l3.desc'),
+      features: t('dashboardPage.kyc.levels.l3.features'),
+      status: 'locked' as const,
+    },
+  ];
+
   return (
     <div className="flex flex-col gap-6">
+      {/* Header */}
       <Card>
         <CardContent className="p-6">
           <div className="flex items-start gap-4">
@@ -129,6 +154,7 @@ function KYCPendingBanner() {
         </CardContent>
       </Card>
 
+      {/* Company info */}
       <Card>
         <CardContent className="p-5">
           <h3 className="text-sm font-semibold mb-4">{t('dashboardPage.kyc.statusTitle')}</h3>
@@ -152,6 +178,52 @@ function KYCPendingBanner() {
         </CardContent>
       </Card>
 
+      {/* KYC Levels Roadmap */}
+      <Card>
+        <CardContent className="p-5">
+          <h3 className="text-sm font-semibold mb-4">{t('dashboardPage.kyc.levelsTitle')}</h3>
+          <div className="space-y-4">
+            {levels.map((level, i) => (
+              <div key={level.code} className={cn(
+                'relative rounded-lg border p-4',
+                level.status === 'current' && 'border-warning bg-warning/5',
+                level.status === 'done' && 'border-success/30 bg-success/5',
+                level.status === 'locked' && 'opacity-50',
+              )}>
+                <div className="flex items-start gap-3">
+                  {/* Step indicator */}
+                  <div className={cn(
+                    'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold',
+                    level.status === 'done' && 'bg-success text-success-foreground',
+                    level.status === 'current' && 'bg-warning text-warning-foreground',
+                    level.status === 'locked' && 'bg-muted text-muted-foreground',
+                  )}>
+                    {level.status === 'done' ? '✓' : i + 1}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-sm font-semibold">{level.label}</h4>
+                      {level.status === 'current' && (
+                        <Badge variant="secondary" className="text-xs gap-1">
+                          <Clock className="h-3 w-3" />
+                          {t('dashboardPage.kyc.yourLevel')}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">{level.desc}</p>
+                    <p className="text-xs mt-2">
+                      <span className="font-medium">{t('dashboardPage.kyc.access')}: </span>
+                      <span className="text-muted-foreground">{level.features}</span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Actions */}
       <Card className="border-dashed">
         <CardContent className="p-5 text-center space-y-3">
           <p className="text-sm text-muted-foreground">{t('dashboardPage.kyc.hint')}</p>

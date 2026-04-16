@@ -1383,6 +1383,8 @@
       "platformStatuses": "Company statuses on the platform",
       "pendingVerification": "pending",
       "contactAdmin": "Contact administrator to change company data",
+      "kycVerified": "Verified",
+      "kycPending": "Under review",
       "save": "Save company data",
       "saved": "Company data saved"
     },
