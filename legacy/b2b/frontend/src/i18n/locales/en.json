@@ -1152,7 +1152,11 @@
     "dateAdded": "Date added",
     "stockQuantity": "Stock quantity",
     "prevPeriod": "Previous period",
-    "noAnalogs": "No analogs found"
+    "noAnalogs": "No analogs found",
+    "characteristics": "Key Attributes",
+    "images": "Images",
+    "equipmentGroups": "Equipment Groups",
+    "document": "Document"
   },
   "managerDashboard": {
     "title": "Sourcing",
@@ -1885,6 +1889,27 @@
         "active": "Active",
         "quoteSent": "Quote sent",
         "closedWon": "Closed (Won)"
+      },
+      "deal": "Deal",
+      "searchPlaceholder": "Search by title or client...",
+      "allStages": "All stages",
+      "table": {
+        "deal": "Deal",
+        "client": "Client",
+        "stage": "Stage",
+        "value": "Value",
+        "manager": "Manager",
+        "date": "Date"
+      },
+      "detail": {
+        "info": "Deal Information",
+        "client": "Client",
+        "manager": "Manager",
+        "stage": "Stage",
+        "totalValue": "Total Value",
+        "created": "Created",
+        "updated": "Updated",
+        "notes": "Notes"
       },
       "newDeal": "New deal",
       "daysInStage": "days in stage",

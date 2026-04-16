@@ -16,7 +16,6 @@ import {
 } from 'lucide-react';
 import { useUserStore } from '@/store/userStore';
 import { useCurrencyStore } from '@/store/currencyStore';
-import { usePageStats } from '@/hooks/usePageStats';
 import { useQuotes, useSendQuoteToClient, useApproveQuote } from '@/hooks/useCRM';
 import { crmApi } from '@/api/crmApi';
 import type { Quote } from '@/api/crmApi';
@@ -26,7 +25,6 @@ import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
 export function QuotesPage() {
   const { t } = useTranslation();
   const { activeStatus } = useUserStore();
-  const { data: ps } = usePageStats();
   const { data: quotes, isLoading } = useQuotes();
   const sendToClient = useSendQuoteToClient();
   const approveQuote = useApproveQuote();
@@ -40,15 +38,15 @@ export function QuotesPage() {
   const stats = isBuyer
     ? [
         { label: t('pages.quotes.stats.total'), value: String(quotesList.length) },
-        { label: t('pages.quotes.stats.underReview'), value: String(ps?.quotes?.under_review ?? '—') },
-        { label: t('pages.quotes.stats.accepted'), value: String(ps?.quotes?.approved ?? '—') },
-        { label: t('pages.quotes.stats.totalAmount'), value: ps?.quotes?.total_amount ?? '—' },
+        { label: t('pages.quotes.stats.underReview'), value: String(quotesList.filter(q => q.status_code === 'SENT').length) },
+        { label: t('pages.quotes.stats.accepted'), value: String(quotesList.filter(q => q.status_code === 'APPROVED').length) },
+        { label: t('pages.quotes.stats.totalAmount'), value: String(quotesList.length) },
       ]
     : [
-        { label: t('pages.quotes.stats.drafts'), value: String(ps?.quotes?.drafts ?? '—') },
-        { label: t('pages.quotes.stats.sent'), value: String(ps?.quotes?.sent ?? '—') },
-        { label: t('pages.quotes.stats.approved'), value: String(ps?.quotes?.approved ?? '—') },
-        { label: t('pages.quotes.stats.pipeline'), value: ps?.quotes?.pipeline ?? '—' },
+        { label: t('pages.quotes.stats.drafts'), value: String(quotesList.filter(q => q.status_code === 'DRAFT').length) },
+        { label: t('pages.quotes.stats.sent'), value: String(quotesList.filter(q => q.status_code === 'SENT').length) },
+        { label: t('pages.quotes.stats.approved'), value: String(quotesList.filter(q => q.status_code === 'APPROVED').length) },
+        { label: t('pages.quotes.stats.pipeline'), value: String(quotesList.filter(q => !['APPROVED', 'REJECTED', 'EXPIRED'].includes(q.status_code)).length) },
       ];
 
   const handleSendToClient = async (id: number) => {

@@ -240,47 +240,50 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
         </Card>
       ) : (
         /* ─── Grid View ─── */
-        <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {paginated.map((product) => {
             const imageUrl = product.main_image_url || product.images?.[0]?.image_url;
             const isInCart = cartStore.items.some((i) => i.product.id === product.id);
             return (
-              <Card key={product.id} className="overflow-hidden flex flex-col hover:shadow-md transition-shadow cursor-pointer py-0 gap-0" onClick={() => handleRowClick(product)}>
-                <div className="aspect-square flex items-center justify-center bg-muted">
-                  {imageUrl ? (
-                    <img src={imageUrl} alt={product.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <Package className="h-12 w-12 text-muted-foreground" />
-                  )}
-                </div>
-                <CardContent className="flex flex-col gap-2 p-4">
-                  <h3 className="text-sm font-semibold line-clamp-2 leading-tight">{product.name}</h3>
-                  {product.manufacturer_data?.name && (
-                    <p className="text-xs text-muted-foreground">{product.manufacturer_data.name}</p>
-                  )}
-                  <div className="flex items-center gap-1 flex-wrap">
-                    <Badge variant="secondary" className="text-xs">{product.domain_type_name}</Badge>
-                    {product.stock_status && (
-                      <StatusBadge
-                        label={t(`productStatuses.${product.stock_status === 'IN_STOCK' ? 'in_stock' : product.stock_status === 'ON_ORDER' ? 'to_order' : product.stock_status === 'EXPECTED' ? 'sourcing' : 'inactive'}`)}
-                        variant={getStockVariant(product.stock_status)}
-                      />
+              <Card key={product.id} className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer py-0 gap-0" onClick={() => handleRowClick(product)}>
+                <CardContent className="flex gap-3 p-3">
+                  {/* Compact image */}
+                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-muted overflow-hidden">
+                    {imageUrl ? (
+                      <img src={imageUrl} alt={product.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <Package className="h-6 w-6 text-muted-foreground" />
                     )}
                   </div>
+                  {/* Info */}
+                  <div className="flex flex-col gap-1 min-w-0 flex-1">
+                    <h3 className="text-sm font-semibold line-clamp-2 leading-tight">{product.name}</h3>
+                    {product.sku && (
+                      <p className="text-xs text-muted-foreground font-mono">{product.sku}</p>
+                    )}
+                    <div className="flex items-center gap-1 flex-wrap mt-auto">
+                      <Badge variant="secondary" className="text-xs">{product.domain_type_name}</Badge>
+                      {product.stock_status && (
+                        <StatusBadge
+                          label={t(`productStatuses.${product.stock_status === 'IN_STOCK' ? 'in_stock' : product.stock_status === 'ON_ORDER' ? 'to_order' : product.stock_status === 'EXPECTED' ? 'sourcing' : 'inactive'}`)}
+                          variant={getStockVariant(product.stock_status)}
+                        />
+                      )}
+                    </div>
+                  </div>
+                  {/* Action */}
                   {canSendRequest && (
-                    <Button
-                      className="w-full gap-2 mt-auto"
-                      variant={isInCart ? 'secondary' : 'default'}
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (!isInCart) cartStore.addItem(product);
-                      }}
-                      disabled={isInCart}
-                    >
-                      <ShoppingCart className="h-3.5 w-3.5" />
-                      {isInCart ? t('productManagement.inRequest') : t('productManagement.addToRequest')}
-                    </Button>
+                    <div className="flex items-center shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        variant={isInCart ? 'secondary' : 'default'}
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => { if (!isInCart) cartStore.addItem(product); }}
+                        disabled={isInCart}
+                      >
+                        <ShoppingCart className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   )}
                 </CardContent>
               </Card>

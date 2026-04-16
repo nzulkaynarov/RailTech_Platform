@@ -1152,7 +1152,11 @@
     "dateAdded": "Дата добавления",
     "stockQuantity": "Остаток на складе",
     "prevPeriod": "Пред. период",
-    "noAnalogs": "Аналоги не найдены"
+    "noAnalogs": "Аналоги не найдены",
+    "characteristics": "Основные параметры",
+    "images": "Изображения",
+    "equipmentGroups": "Группы оборудования",
+    "document": "Документ"
   },
   "managerDashboard": {
     "title": "Sourcing",
@@ -1885,6 +1889,27 @@
         "active": "В работе",
         "quoteSent": "КП отправлено",
         "closedWon": "Закрыто (выиграно)"
+      },
+      "deal": "Сделка",
+      "searchPlaceholder": "Поиск по названию или клиенту...",
+      "allStages": "Все этапы",
+      "table": {
+        "deal": "Сделка",
+        "client": "Клиент",
+        "stage": "Этап",
+        "value": "Сумма",
+        "manager": "Менеджер",
+        "date": "Дата"
+      },
+      "detail": {
+        "info": "Информация о сделке",
+        "client": "Клиент",
+        "manager": "Менеджер",
+        "stage": "Этап",
+        "totalValue": "Сумма",
+        "created": "Дата создания",
+        "updated": "Обновлено",
+        "notes": "Заметки"
       },
       "newDeal": "Новая сделка",
       "daysInStage": "дней в этапе",

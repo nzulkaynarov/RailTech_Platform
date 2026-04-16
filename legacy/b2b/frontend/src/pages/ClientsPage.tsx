@@ -5,13 +5,11 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import { Users, Check, Clock } from 'lucide-react';
-import { usePageStats } from '@/hooks/usePageStats';
 import { useCompanies } from '@/hooks/useAccounts';
 import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
 import type { Company } from '@/api/accountsApi';
 
 export function ClientsPage() {
-  const { data: ps } = usePageStats();
   const { t } = useTranslation();
   const { data: companies, isLoading } = useCompanies();
 
@@ -21,10 +19,10 @@ export function ClientsPage() {
       description={t('pages.clients.description')}
       icon={<Users className="h-5 w-5" />}
       stats={[
-        { label: t('pages.clients.stats.total'), value: String(ps?.clients?.total ?? '—') },
-        { label: t('pages.clients.stats.verified'), value: String(ps?.clients?.verified ?? '—') },
-        { label: t('pages.clients.stats.awaitingKyc'), value: String(ps?.clients?.awaiting_kyc ?? '—') },
-        { label: t('pages.clients.stats.guests'), value: String(ps?.clients?.unverified ?? '—') },
+        { label: t('pages.clients.stats.total'), value: String(companies?.length ?? 0) },
+        { label: t('pages.clients.stats.verified'), value: String(companies?.filter(c => c.verification_status_code === 'L2_VERIFIED' || c.verification_status_code === 'L3_CONTRACTED').length ?? 0) },
+        { label: t('pages.clients.stats.awaitingKyc'), value: String(companies?.filter(c => c.verification_status_code === 'PROFILE_SUBMITTED').length ?? 0) },
+        { label: t('pages.clients.stats.guests'), value: String(companies?.filter(c => c.verification_status_code === 'L1_UNVERIFIED').length ?? 0) },
       ]}
     >
       <Card>

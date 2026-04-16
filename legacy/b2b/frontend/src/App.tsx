@@ -244,11 +244,9 @@ function MainApp() {
       'dashboard', 'products', 'profile', 'settings',
       'sourcing-requests', 'sourcing-import', 'sourcing-match',
       'crm-deals', 'crm-quotes', 'crm-clients',
-      'production-orders', 'production-schedule',
       'analytics', 'categories', 'equipment-groups',
-      'integrations', 'help', 'my-requests', 'my-documents',
+      'help', 'my-requests', 'request-detail',
       'admin-users', 'admin-kyc', 'admin-subscriptions', 'admin-role-apps',
-      'logistics', 'request-detail', 'purchase-templates',
     ];
     if (validTypes.includes(target)) {
       // Role guard: admin pages require ADMIN role

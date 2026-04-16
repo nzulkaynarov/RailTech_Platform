@@ -105,6 +105,8 @@ function getBuyerNavigation(activePage: string, role: UserRole, t: TFn): NavItem
     { label: t('shell.commercialOffers'), icon: <Calculator className="h-4 w-4" />, id: 'crm-quotes', active: activePage === 'crm-quotes' },
   ];
   if (role === 'ADMIN' || role === 'MANAGER') {
+    items.push({ label: t('shell.deals'), icon: <Handshake className="h-4 w-4" />, id: 'crm-deals', active: activePage === 'crm-deals' });
+    items.push({ label: t('shell.clients'), icon: <Users className="h-4 w-4" />, id: 'crm-clients', active: activePage === 'crm-clients' });
     items.push({ label: t('shell.analytics'), icon: <BarChart3 className="h-4 w-4" />, id: 'analytics', active: activePage === 'analytics' });
   }
   return items;
@@ -121,6 +123,7 @@ function getManufacturerNavigation(activePage: string, role: UserRole, t: TFn): 
         { label: t('shell.equipmentGroups'), id: 'equipment-groups', active: activePage === 'equipment-groups' },
       ],
     },
+    { label: t('shell.deals'), icon: <Handshake className="h-4 w-4" />, id: 'crm-deals', active: activePage === 'crm-deals' },
     { label: t('shell.quotes'), icon: <Calculator className="h-4 w-4" />, id: 'crm-quotes', active: activePage === 'crm-quotes' },
   ];
   if (role === 'ADMIN' || role === 'MANAGER') {

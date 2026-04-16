@@ -69,11 +69,12 @@ export function getStockVariant(status: string): BadgeVariant {
 }
 
 const dealStageVariantMap: Record<string, BadgeVariant> = {
-  NEW: 'info',
-  QUOTING: 'info',
-  NEGOTIATION: 'warning',
+  DRAFT: 'neutral',
+  KYC_PENDING: 'warning',
+  SOURCING: 'info',
+  CALCULATING: 'info',
+  QUOTE_SENT: 'warning',
   CONTRACT_SIGNED: 'success',
-  IN_DELIVERY: 'warning',
   CLOSED_WON: 'success',
   CLOSED_LOST: 'danger',
 };

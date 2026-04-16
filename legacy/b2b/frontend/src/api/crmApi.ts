@@ -63,14 +63,17 @@ export interface Deal {
 	client?: number | null;
 	client_name?: string;
 	manager?: number | null;
+	manager_name?: string;
 	stage?: number | null;
 	stage_code?: string;
 	stage_name?: string;
 	title?: string;
 	total_value?: string;
+	notes?: string;
 	active_quote?: Quote | null;
 	quotes?: Quote[];
 	created_at: string;
+	updated_at?: string;
 }
 
 export interface CRMAnalytics {
