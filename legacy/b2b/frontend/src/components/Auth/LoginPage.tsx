@@ -121,6 +121,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, onRegister }) 
                                                         size="icon"
                                                         className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
                                                         onClick={() => setShowPassword(p => !p)}
+                                                        aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
                                                     >
                                                         {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                                                     </Button>

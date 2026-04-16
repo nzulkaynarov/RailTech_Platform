@@ -40,7 +40,7 @@ export function DealsPage() {
         <div className="overflow-x-auto pb-4">
           <div className="flex gap-4 min-w-max">
             {grouped.map((column) => (
-              <div key={column.code} className="flex-shrink-0 w-80">
+              <div key={column.code} className="flex-shrink-0 w-80" role="group" aria-label={`${column.label} (${column.deals.length})`}>
                 <div className={cn('rounded-lg p-4 space-y-3 bg-muted')}>
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold text-sm">{column.label}</h3>

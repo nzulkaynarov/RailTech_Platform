@@ -258,7 +258,7 @@ function SidebarNavItem({
                         {item.badge}
                       </Badge>
                     )}
-                    <ChevronDown className={cn('h-4 w-4 transition-transform', open && 'rotate-180')} />
+                    <ChevronDown className={cn('h-4 w-4 transition-transform', open && 'rotate-180')} aria-hidden="true" />
                   </>
                 )}
               </Button>
@@ -463,13 +463,13 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
           {/* Search */}
           <div className="px-3 pt-3 group-data-[collapsible=icon]:hidden">
             <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input placeholder={`${t('common.search')}...`} className="h-8 pl-8 text-xs" />
+              <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+              <Input placeholder={`${t('common.search')}...`} className="h-8 pl-8 text-xs" aria-label={t('common.search')} />
             </div>
           </div>
 
           {/* Main navigation */}
-          <nav className="flex-1 space-y-0.5 overflow-y-auto py-3 px-3 group-data-[collapsible=icon]:px-1.5">
+          <nav aria-label={t('shell.mainNavigation')} className="flex-1 space-y-0.5 overflow-y-auto py-3 px-3 group-data-[collapsible=icon]:px-1.5">
             {navigation.map((item) => (
               <SidebarNavItem key={item.label} item={item} onNavigate={onNavigate} collapsed={sidebarCollapsed} />
             ))}
@@ -478,7 +478,7 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
           <Separator />
 
           {/* Bottom navigation */}
-          <nav className="space-y-0.5 py-2 px-3 group-data-[collapsible=icon]:px-1.5">
+          <nav aria-label={t('shell.secondaryNavigation')} className="space-y-0.5 py-2 px-3 group-data-[collapsible=icon]:px-1.5">
             {bottomNav.map((item) => (
               <SidebarNavItem key={item.label} item={item} onNavigate={onNavigate} collapsed={sidebarCollapsed} />
             ))}
@@ -567,12 +567,14 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
             </div>
             <div className="flex items-center gap-2">
               {/* Currency toggle */}
-              <div className="flex items-center rounded-lg border p-0.5 gap-0.5">
+              <div className="flex items-center rounded-lg border p-0.5 gap-0.5" role="radiogroup" aria-label={t('shell.currencySelector')}>
                 <Button
                   variant={currency === 'USD' ? 'default' : 'ghost'}
                   size="sm"
                   className="h-7 px-2.5 text-xs"
                   onClick={() => setCurrency('USD')}
+                  role="radio"
+                  aria-checked={currency === 'USD'}
                 >
                   USD
                 </Button>
@@ -581,6 +583,8 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
                   size="sm"
                   className="h-7 px-2.5 text-xs"
                   onClick={() => setCurrency('UZS')}
+                  role="radio"
+                  aria-checked={currency === 'UZS'}
                 >
                   UZS
                 </Button>
@@ -657,7 +661,12 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
                   <div key={n.id} className={cn('rounded-lg border bg-card p-3 space-y-1 transition-colors', !n.is_read && 'bg-primary/5 border-primary/20')}>
                     <div className="flex items-start justify-between gap-2">
                       <p className="text-sm font-medium leading-tight">{n.title}</p>
-                      {!n.is_read && <div className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" />}
+                      {!n.is_read && (
+                        <>
+                          <div className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" aria-hidden="true" />
+                          <span className="sr-only">{t('notifications.unreadLabel')}</span>
+                        </>
+                      )}
                     </div>
                     <p className="text-xs text-muted-foreground line-clamp-2">{n.message}</p>
                     <p className="text-xs text-muted-foreground">{new Date(n.created_at).toLocaleDateString()}</p>
@@ -736,6 +745,7 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
                           size="icon"
                           className="h-6 w-6 shrink-0"
                           onClick={() => useCartStore.getState().removeItem(cartItem.product.id)}
+                          aria-label={t('a11y.removeItem')}
                         >
                           <X className="h-3 w-3" />
                         </Button>
@@ -752,6 +762,7 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
                                 : i
                             ).filter(i => i.quantity > 0)
                           }))}
+                          aria-label={t('a11y.decreaseQuantity')}
                         >
                           <Minus className="h-3 w-3" />
                         </Button>
@@ -767,6 +778,7 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
                                 : i
                             )
                           }))}
+                          aria-label={t('a11y.increaseQuantity')}
                         >
                           <Plus className="h-3 w-3" />
                         </Button>

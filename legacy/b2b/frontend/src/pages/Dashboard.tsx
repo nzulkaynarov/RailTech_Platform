@@ -58,7 +58,7 @@ function TopProductsTable({ onProductClick, topProducts }: { onProductClick?: (i
         <CardTitle className="text-sm font-semibold">{t('dashboardPage.topProducts')}</CardTitle>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
+            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t('dashboardPage.actions')}>
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -85,7 +85,10 @@ function TopProductsTable({ onProductClick, topProducts }: { onProductClick?: (i
             <TableRow
               key={p.id}
               className="cursor-pointer"
+              tabIndex={0}
+              role="link"
               onClick={() => onProductClick?.(p.id)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onProductClick?.(p.id); } }}
             >
               <TableCell className="font-mono text-xs text-muted-foreground">{p.id}</TableCell>
               <TableCell>
@@ -159,6 +162,7 @@ function BuyerDashboard({ onProductClick: _onProductClick, period: _period, stat
             <CardTitle className="text-sm font-semibold">{t('dashboardPage.buyer.requestsByStatus')}</CardTitle>
           </CardHeader>
           <CardContent className="px-2 pb-4">
+            <div role="img" aria-label={t('dashboardPage.buyer.requestsByStatusChart')}>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={buyerRequestsStatus}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
@@ -171,6 +175,7 @@ function BuyerDashboard({ onProductClick: _onProductClick, period: _period, stat
                 <Bar dataKey="value" fill="var(--color-chart-1)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
 
@@ -180,7 +185,7 @@ function BuyerDashboard({ onProductClick: _onProductClick, period: _period, stat
             <CardTitle className="text-sm font-semibold">{t('dashboardPage.buyer.requestStatuses')}</CardTitle>
           </CardHeader>
           <CardContent className="px-4 pb-4">
-            <div className="flex items-center justify-center">
+            <div className="flex items-center justify-center" role="img" aria-label={t('dashboardPage.buyer.requestStatusesChart')}>
               <ResponsiveContainer width={160} height={160}>
                 <PieChart>
                   <Pie
@@ -277,6 +282,7 @@ function SellerDashboard({ onProductClick, period: _period, stats }: { onProduct
             </div>
           </CardHeader>
           <CardContent className="px-2 pb-4">
+            <div role="img" aria-label={t('dashboardPage.seller.dealsVolumeChart')}>
             <ResponsiveContainer width="100%" height={220}>
               <AreaChart data={dealVolumeData}>
                 <defs>
@@ -295,6 +301,7 @@ function SellerDashboard({ onProductClick, period: _period, stats }: { onProduct
                 <Area type="monotone" dataKey="value" stroke="var(--color-chart-1)" strokeWidth={2} fill="url(#colorVal)" />
               </AreaChart>
             </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
 
@@ -308,6 +315,7 @@ function SellerDashboard({ onProductClick, period: _period, stats }: { onProduct
               <span className="text-2xl font-bold tabular-nums">{activityByDay.reduce((s, d) => s + d.count, 0)}</span>
               <p className="text-xs text-muted-foreground">{t('dashboardPage.seller.requestsPerWeek')}</p>
             </div>
+            <div role="img" aria-label={t('dashboardPage.seller.activityByDayChart')}>
             <ResponsiveContainer width="100%" height={160}>
               <BarChart data={activityByDay}>
                 <XAxis dataKey="day" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
@@ -318,6 +326,7 @@ function SellerDashboard({ onProductClick, period: _period, stats }: { onProduct
                 <Bar dataKey="count" fill="var(--color-chart-1)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -337,7 +346,7 @@ function SellerDashboard({ onProductClick, period: _period, stats }: { onProduct
               <CardTitle className="text-sm font-semibold">{t('dashboardPage.seller.counterparties')}</CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4">
-              <div className="flex items-center justify-center">
+              <div className="flex items-center justify-center" role="img" aria-label={t('dashboardPage.seller.counterpartiesChart')}>
                 <ResponsiveContainer width={160} height={160}>
                   <PieChart>
                     <Pie
@@ -439,6 +448,7 @@ function ManufacturerDashboard({ onProductClick: _onProductClick, period: _perio
             <CardTitle className="text-sm font-semibold">{t('dashboardPage.manufacturer.dealsByMonth')}</CardTitle>
           </CardHeader>
           <CardContent className="px-2 pb-4">
+            <div role="img" aria-label={t('dashboardPage.manufacturer.dealsByMonthChart')}>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={stats?.deals_by_month ?? []}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
@@ -451,6 +461,7 @@ function ManufacturerDashboard({ onProductClick: _onProductClick, period: _perio
                 <Bar dataKey="value" fill="var(--color-chart-1)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
 
@@ -500,8 +511,9 @@ export function Dashboard({ onProductClick }: DashboardProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center h-64" role="status">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <span className="sr-only">{t('common.loading')}</span>
       </div>
     );
   }
@@ -531,7 +543,7 @@ export function Dashboard({ onProductClick }: DashboardProps) {
             <span>1 {t('dashboardPage.months.jan')} – 21 {t('dashboardPage.months.mar')} 2026</span>
           </div>
           <Select value={period} onValueChange={setPeriod}>
-            <SelectTrigger className="h-8 w-[140px] text-xs">
+            <SelectTrigger className="h-8 w-[140px] text-xs" aria-label={t('dashboardPage.selectPeriod')}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

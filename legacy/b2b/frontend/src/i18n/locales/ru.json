@@ -572,7 +572,8 @@
     "emptyHint": "Здесь появятся события по сделкам и системные оповещения",
     "markAllRead": "Всё прочитано",
     "unread": "Непрочитанных: {{count}}",
-    "viewAll": "Все уведомления"
+    "viewAll": "Все уведомления",
+    "unreadLabel": "Непрочитано"
   },
   "cart": {
     "title": "Запрос на закупку",
@@ -774,6 +775,7 @@
     "emailSentHint": "Мы отправили ссылку для подтверждения на <strong>{{email}}</strong>. Пожалуйста, проверьте вашу почту (включая папку Спам) для продолжения.",
     "waitHint": "Ожидаете ссылку? Обычно она приходит в течение 1-2 минут.",
     "backToLogin": "Вернуться к входу",
+    "progress": "Прогресс регистрации",
     "validation": {
       "email": "Введите корректный email",
       "minChars": "Минимум 2 символа"
@@ -1112,7 +1114,10 @@
     "breadcrumb": {
       "main": "Главная"
     },
-    "globalSearch": "Глобальный поиск (Alt+S)..."
+    "globalSearch": "Глобальный поиск (Alt+S)...",
+    "mainNavigation": "Основная навигация",
+    "secondaryNavigation": "Дополнительная навигация",
+    "currencySelector": "Выбор валюты"
   },
   "productDetail": {
     "specifications": "Характеристики",
@@ -1189,6 +1194,8 @@
     "requests": "Заявок",
     "goal": "Цель",
     "showDetails": "Показать детали",
+    "selectPeriod": "Выбрать период",
+    "actions": "Действия",
     "kpi": {
       "activeRequests": "Активные заявки",
       "catalogItems": "Позиций в каталоге",
@@ -1225,7 +1232,9 @@
       "statusInProgress": "В работе",
       "statusQuoteReceived": "КП получено",
       "statusCompleted": "Завершено",
-      "requestStatuses": "Статусы заявок"
+      "requestStatuses": "Статусы заявок",
+      "requestsByStatusChart": "Диаграмма заявок по статусам",
+      "requestStatusesChart": "Круговая диаграмма статусов заявок"
     },
     "seller": {
       "dealVolume": "Объём сделок",
@@ -1243,7 +1252,11 @@
       "intermediaries": "Посредники",
       "dealsVolume": "Объём сделок",
       "counterparties": "Контрагенты",
-      "requestCompletion": "Выполнение заявок"
+      "requestCompletion": "Выполнение заявок",
+      "dealsVolumeChart": "График объёма сделок",
+      "activityByDayChart": "Диаграмма активности по дням",
+      "counterpartiesChart": "Диаграмма контрагентов",
+      "requestCompletionChart": "Диаграмма выполнения заявок"
     },
     "manufacturer": {
       "productionLoad": "Загрузка производства",
@@ -1264,7 +1277,8 @@
       "productionPlan": "План производства",
       "target": "из {{target}}",
       "completedPercent": "{{completed}}%",
-      "dealsByMonth": "Сделки по месяцам"
+      "dealsByMonth": "Сделки по месяцам",
+      "dealsByMonthChart": "Диаграмма сделок по месяцам"
     },
     "months": {
       "sep": "Сен",
@@ -2282,5 +2296,13 @@
     "validEmailRequired": "Введите корректный email",
     "firstNameRequired": "Имя обязательно",
     "lastNameRequired": "Фамилия обязательна"
+  },
+  "a11y": {
+    "trendUp": "рост",
+    "trendDown": "снижение",
+    "trendFlat": "без изменений",
+    "removeItem": "Удалить",
+    "decreaseQuantity": "Уменьшить количество",
+    "increaseQuantity": "Увеличить количество"
   }
 }

@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 type TrendDirection = 'up' | 'down' | 'flat';
 
@@ -28,10 +29,27 @@ const trendStyles: Record<TrendDirection, string> = {
 const TrendIcon: React.FC<{ direction: TrendDirection }> = ({ direction }) => {
   const size = 14;
   switch (direction) {
-    case 'up': return <TrendingUp size={size} />;
-    case 'down': return <TrendingDown size={size} />;
-    case 'flat': return <Minus size={size} />;
+    case 'up': return <TrendingUp size={size} aria-hidden="true" />;
+    case 'down': return <TrendingDown size={size} aria-hidden="true" />;
+    case 'flat': return <Minus size={size} aria-hidden="true" />;
   }
+};
+
+const trendA11yKeys: Record<TrendDirection, string> = {
+  up: 'a11y.trendUp',
+  down: 'a11y.trendDown',
+  flat: 'a11y.trendFlat',
+};
+
+const TrendIndicator: React.FC<{ direction: TrendDirection; value: string }> = ({ direction, value }) => {
+  const { t } = useTranslation();
+  return (
+    <div className={cn('flex items-center gap-1 mt-1.5 text-xs font-medium', trendStyles[direction])}>
+      <TrendIcon direction={direction} />
+      <span>{value}</span>
+      <span className="sr-only">({t(trendA11yKeys[direction])})</span>
+    </div>
+  );
 };
 
 /**
@@ -87,10 +105,7 @@ export const KPICard: React.FC<KPICardProps> = ({
         </div>
 
         {trend && (
-          <div className={cn('flex items-center gap-1 mt-1.5 text-xs font-medium', trendStyles[trend.direction])}>
-            <TrendIcon direction={trend.direction} />
-            <span>{trend.value}</span>
-          </div>
+          <TrendIndicator direction={trend.direction} value={trend.value} />
         )}
       </CardContent>
     </Card>

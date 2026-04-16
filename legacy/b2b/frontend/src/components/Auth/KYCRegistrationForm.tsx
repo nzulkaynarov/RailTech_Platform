@@ -84,7 +84,14 @@ export const KYCRegistrationForm: React.FC = () => {
 						</div>
 					</div>
 
-					<div className="flex gap-2 h-1.5 w-full bg-muted rounded-full overflow-hidden">
+					<div
+						className="flex gap-2 h-1.5 w-full bg-muted rounded-full overflow-hidden"
+						role="progressbar"
+						aria-valuenow={step}
+						aria-valuemin={1}
+						aria-valuemax={2}
+						aria-label={t('registration.progress')}
+					>
 						<div
 							className={cn(
 								'h-full bg-primary transition-all duration-500',
@@ -205,15 +212,15 @@ export const KYCRegistrationForm: React.FC = () => {
 									{t('registration.waitHint')}
 								</p>
 								<div className="flex justify-center">
-									<button
+									<Button
+										variant="link"
 										onClick={() => {
 											window.history.pushState(null, '', '/');
 											window.dispatchEvent(new PopStateEvent('popstate'));
 										}}
-										className="text-sm text-primary hover:text-primary/80 font-bold transition-colors"
 									>
 										{t('registration.backToLogin')}
-									</button>
+									</Button>
 								</div>
 							</div>
 						</div>

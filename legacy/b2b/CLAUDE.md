@@ -89,32 +89,76 @@ Docs/                       # Mockups, presentations, UI audit (legacy path)
 - Key vars: `DATABASE_URL`, `DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `REDIS_URL`, `CELERY_BROKER_URL`, `MINIO_*`, `VITE_API_URL`, `VITE_WS_URL`
 - Frontend: build-time env via Vite `import.meta.env` (baked into production build)
 
+## First-Time Setup
+
+```bash
+git clone git@github.com:nzulkaynarov/RailTech_SaaS_B2B.git && cd RailTech_SaaS_B2B
+cp .env.example .env        # заполнить DATABASE_URL, DJANGO_SECRET_KEY, SUPERADMIN_PASSWORD, MINIO_SECRET_KEY
+make up                      # собрать и поднять все контейнеры (~1-3 мин)
+make migrate                 # применить миграции
+make seed                    # загрузить справочники (валюты, роли, статусы)
+docker compose exec backend python manage.py init_superadmin   # создать суперадмина из .env
+```
+
+Superadmin credentials: `SUPERADMIN_EMAIL` / `SUPERADMIN_PASSWORD` from `.env` (default email: `admin@railtech.uz`).
+Command `init_superadmin` reads these env vars, creates user with `is_active=True, is_staff=True, is_superuser=True`.
+
 ## Docker Services (dev)
 
-| Service | Image | Port | Purpose |
-|---------|-------|------|---------|
-| redis | redis:7-alpine | 6379 | Django Channels |
-| redis-celery | redis:7-alpine | 6380 | Celery broker |
-| minio | minio/minio | 9000, 9001 | Object storage |
-| minio-init | minio/mc | — | Bucket creation |
-| backend | custom (Dockerfile) | 8000 | Django/Daphne ASGI |
-| celery-worker | custom (Dockerfile) | — | Async tasks |
-| celery-beat | custom (Dockerfile) | — | Scheduled tasks |
-| frontend | custom (Dockerfile) | 5173 | React (nginx) |
+| Service | Container | Port | Purpose | Health Check |
+|---------|-----------|------|---------|-------------|
+| backend | railtech_backend | 8000 | Django/Daphne ASGI, REST API, WebSocket | `curl /health/` |
+| frontend | railtech_frontend | 5173 | React SPA (prod build via nginx) | `wget /health` |
+| redis | railtech_redis_channels | 6379 | Django Channels (WebSocket) | `redis-cli ping` |
+| redis-celery | railtech_redis_celery | 6380 | Celery broker + result backend | `redis-cli ping` |
+| minio | railtech_minio | 9000, 9001 | S3-compatible object storage | `curl /minio/health/live` |
+| minio-init | railtech_minio_init | — | Bucket creation (runs once, exits) | — |
+| celery-worker | railtech_celery_worker | — | Async tasks: Excel import, PDF gen | `celery inspect ping` |
+| celery-beat | railtech_celery_beat | — | Scheduled tasks (DatabaseScheduler) | — |
+
+## Web UI Endpoints (dev)
+
+| Service | URL |
+|---------|-----|
+| Frontend (SPA) | http://localhost:5173 |
+| Backend API | http://localhost:8000/api/v1/ |
+| Swagger UI (API docs) | http://localhost:8000/api/docs/ |
+| ReDoc (API docs) | http://localhost:8000/api/redoc/ |
+| Django Admin (Unfold) | http://localhost:8000/admin/ |
+| MinIO Console | http://localhost:9001 |
+| Health Check | http://localhost:8000/health/ |
+
+## Service Verification Commands
+
+```bash
+docker compose ps                                              # status of all containers
+curl http://localhost:8000/health/                             # backend + DB health
+docker compose exec redis redis-cli ping                       # Redis Channels
+docker compose exec redis-celery redis-cli ping                # Redis Celery
+docker compose exec celery-worker celery -A core inspect ping  # Celery worker
+```
 
 ## Commands
 
 ```bash
-make up              # docker compose up -d --build
-make down            # stop all
-make logs            # follow logs
-make migrate         # run migrations
-make makemigrations  # create migrations
-make seed            # loaddata seed_data
-make test            # pytest
-make lint            # flake8 + black + isort + eslint
-make format          # black + isort
-make shell           # backend bash
+make up                  # docker compose up -d --build
+make down                # stop all
+make logs                # follow logs
+make migrate             # run migrations
+make makemigrations      # create migrations
+make seed                # loaddata seed_data
+make createsuperuser     # interactive superuser creation
+make test                # pytest
+make test-backend        # pytest with coverage
+make test-frontend       # vitest
+make lint                # flake8 + black + isort + eslint
+make format              # black + isort
+make security            # pip audit + npm audit
+make shell               # backend bash
+make frontend-shell      # frontend bash
+make celery-logs         # celery worker logs
+make collectstatic       # django collectstatic
+make clean               # remove all containers, volumes, cache (DESTRUCTIVE)
 ```
 
 ## Coding Conventions
@@ -147,10 +191,10 @@ make shell           # backend bash
 5. Admin approves company via Django admin at `/admin/` (Unfold UI) → action "Подтвердить KYC (L2)"
 6. User logs in with JWT → `LoginPage` → main app
 
-**Test accounts (pre-seeded):**
-- `admin@railtech.uz` / `admin123` — Admin (superuser)
-- `manager@railtech.uz` / `manager123` — Sales Manager
-- `client@test.uz` / `client123` — Client
+**Superadmin account:**
+- Created via `python manage.py init_superadmin` using `SUPERADMIN_EMAIL` / `SUPERADMIN_PASSWORD` from `.env`
+- Default email: `admin@railtech.uz`, password: set in `.env`
+- NOT auto-created — must run the command manually after `make migrate` + `make seed`
 
 ## IRON RULES — VIOLATION PROHIBITED
 
@@ -302,6 +346,8 @@ Transformation happens in: `userStore.loadFromAuth()` and DRF serializers.
 - `DATABASE_URL` query params (like `channel_binding=require`) are passed as DB OPTIONS
 - Volume mount `./backend:/app` enables hot-reload for backend; frontend needs rebuild (`docker compose up -d --build frontend`)
 - `data/products.ts` exports an EMPTY array — it's legacy, use `catalogApi` for real data
-- **No demo/simulation shortcuts** — no demo onboarding, no hardcoded test flows, no bypass of backend. For testing use pre-seeded accounts or register via real flow. Admin operations go through Django Unfold at `/admin/`
+- **Neon Cloud sleep** — free Neon projects suspend after inactivity. If backend shows "Connection refused", check Neon Console, wake the project, then `docker compose restart backend celery-worker celery-beat`. `dj-db-conn-pool` caches dead connections — only a container restart resets the pool
+- **Superadmin is NOT auto-created** — must run `docker compose exec backend python manage.py init_superadmin` after migrations. Credentials come from `.env` (`SUPERADMIN_EMAIL`/`SUPERADMIN_PASSWORD`). Don't hardcode passwords in CLAUDE.md or README — always reference `.env`
+- **No demo/simulation shortcuts** — no demo onboarding, no hardcoded test flows, no bypass of backend. For testing use real registration flow or create users via `init_superadmin`. Admin operations go through Django Unfold at `/admin/`
 - **Don't assume code structure** — always read files before editing. Wrong assumptions (missing imports, wrong types, demo code bypassing backend) cost rebuild cycles. Verify imports exist, types match, and patterns match current code
 - **Shell layouts live in two places** — `src/layouts/AppShell.tsx` (main) and `src/components/Layout/` (AdminShell, ClientShell, ManagerShell, CatalogShell)

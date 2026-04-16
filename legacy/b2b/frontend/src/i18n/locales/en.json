@@ -572,7 +572,8 @@
     "emptyHint": "Deal events and system alerts will appear here",
     "markAllRead": "Mark all read",
     "unread": "Unread: {{count}}",
-    "viewAll": "All notifications"
+    "viewAll": "All notifications",
+    "unreadLabel": "Unread"
   },
   "cart": {
     "title": "Purchase Request",
@@ -774,6 +775,7 @@
     "emailSentHint": "We've sent a confirmation link to <strong>{{email}}</strong>. Please check your inbox (including Spam) to continue.",
     "waitHint": "Waiting for the link? It usually arrives within 1-2 minutes.",
     "backToLogin": "Back to sign in",
+    "progress": "Registration progress",
     "validation": {
       "email": "Enter a valid email",
       "minChars": "Minimum 2 characters"
@@ -1112,7 +1114,10 @@
     "breadcrumb": {
       "main": "Main"
     },
-    "globalSearch": "Global Search (Alt+S)..."
+    "globalSearch": "Global Search (Alt+S)...",
+    "mainNavigation": "Main navigation",
+    "secondaryNavigation": "Secondary navigation",
+    "currencySelector": "Currency selector"
   },
   "productDetail": {
     "specifications": "Specifications",
@@ -1189,6 +1194,8 @@
     "requests": "Requests",
     "goal": "Goal",
     "showDetails": "Show details",
+    "selectPeriod": "Select period",
+    "actions": "Actions",
     "kpi": {
       "activeRequests": "Active Requests",
       "catalogItems": "Catalog Items",
@@ -1225,7 +1232,9 @@
       "statusInProgress": "In Progress",
       "statusQuoteReceived": "Quote Received",
       "statusCompleted": "Completed",
-      "requestStatuses": "Request Statuses"
+      "requestStatuses": "Request Statuses",
+      "requestsByStatusChart": "Requests by status bar chart",
+      "requestStatusesChart": "Request statuses pie chart"
     },
     "seller": {
       "dealVolume": "Deal Volume",
@@ -1243,7 +1252,11 @@
       "intermediaries": "Intermediaries",
       "dealsVolume": "Deal Volume",
       "counterparties": "Counterparties",
-      "requestCompletion": "Request Completion"
+      "requestCompletion": "Request Completion",
+      "dealsVolumeChart": "Deals volume chart",
+      "activityByDayChart": "Activity by day chart",
+      "counterpartiesChart": "Counterparties chart",
+      "requestCompletionChart": "Request completion chart"
     },
     "manufacturer": {
       "productionLoad": "Production Load",
@@ -1264,7 +1277,8 @@
       "productionPlan": "Production Plan",
       "target": "of {{target}}",
       "completedPercent": "{{completed}}%",
-      "dealsByMonth": "Deals by Month"
+      "dealsByMonth": "Deals by Month",
+      "dealsByMonthChart": "Deals by month chart"
     },
     "months": {
       "sep": "Sep",
@@ -2282,5 +2296,13 @@
     "validEmailRequired": "Valid email is required",
     "firstNameRequired": "First name is required",
     "lastNameRequired": "Last name is required"
+  },
+  "a11y": {
+    "trendUp": "trending up",
+    "trendDown": "trending down",
+    "trendFlat": "no change",
+    "removeItem": "Remove",
+    "decreaseQuantity": "Decrease quantity",
+    "increaseQuantity": "Increase quantity"
   }
 }
