@@ -92,6 +92,10 @@ export const accountsApi = {
 		const response = await apiClient.get<Company>(`accounts/companies/${id}/`);
 		return response.data;
 	},
+	updateCompany: async (id: number, data: Partial<Company>) => {
+		const response = await apiClient.patch<Company>(`accounts/companies/${id}/`, data);
+		return response.data;
+	},
 	verifyCompany: async (id: number, statusCode: string, comment?: string) => {
 		const response = await apiClient.post(`accounts/companies/${id}/verify-kyc/`, { status_code: statusCode, comment });
 		return response.data;

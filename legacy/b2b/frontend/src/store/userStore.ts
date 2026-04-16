@@ -4,15 +4,15 @@ import { create } from 'zustand';
 export type CompanyStatus = 'BUYER' | 'MANUFACTURER' | 'SELLER';
 
 export const companyStatusLabels: Record<CompanyStatus, string> = {
-  BUYER: 'companyStatus.buyer',
-  MANUFACTURER: 'companyStatus.manufacturer',
-  SELLER: 'companyStatus.seller',
+  BUYER: 'companyStatus.BUYER',
+  MANUFACTURER: 'companyStatus.MANUFACTURER',
+  SELLER: 'companyStatus.SELLER',
 };
 
 export const companyStatusDescriptions: Record<CompanyStatus, string> = {
-  BUYER: 'companyStatus.buyerDesc',
-  MANUFACTURER: 'companyStatus.manufacturerDesc',
-  SELLER: 'companyStatus.sellerDesc',
+  BUYER: 'companyStatusDesc.BUYER',
+  MANUFACTURER: 'companyStatusDesc.MANUFACTURER',
+  SELLER: 'companyStatusDesc.SELLER',
 };
 
 /* ─── Verification status per company status ────────────────────────── */

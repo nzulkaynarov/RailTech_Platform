@@ -10,6 +10,7 @@ import {
   ShoppingCart,
   AlertCircle,
   Loader2,
+  Clock,
 } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -19,6 +20,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -105,12 +107,129 @@ function TopProductsTable({ onProductClick, topProducts }: { onProductClick?: (i
   );
 }
 
+// ─── KYC Pending Banner ────────────────────────────────────────────────
+
+function KYCPendingBanner() {
+  const { t } = useTranslation();
+  const { profile, company } = useUserStore();
+
+  return (
+    <div className="flex flex-col gap-6">
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-warning/10">
+              <Clock className="h-6 w-6 text-warning" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold">{t('dashboardPage.kyc.title', { name: profile.firstName || '' })}</h2>
+              <p className="text-sm text-muted-foreground mt-1">{t('dashboardPage.kyc.subtitle')}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="p-5">
+          <h3 className="text-sm font-semibold mb-4">{t('dashboardPage.kyc.statusTitle')}</h3>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">{t('dashboardPage.kyc.company')}</span>
+              <span className="text-sm font-medium">{company.name || t('dashboardPage.kyc.notSpecified')}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">{t('dashboardPage.kyc.inn')}</span>
+              <span className="text-sm font-mono">{company.inn || t('dashboardPage.kyc.notSpecified')}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">{t('dashboardPage.kyc.status')}</span>
+              <Badge variant="secondary" className="gap-1">
+                <Clock className="h-3 w-3" />
+                {t('dashboardPage.kyc.pending')}
+              </Badge>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-dashed">
+        <CardContent className="p-5 text-center space-y-3">
+          <p className="text-sm text-muted-foreground">{t('dashboardPage.kyc.hint')}</p>
+          <div className="flex justify-center gap-3">
+            <Button variant="outline" size="sm" onClick={() => window.location.hash = '#profile'}>
+              {t('dashboardPage.kyc.editProfile')}
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <a href={`mailto:support@railtech.uz?subject=${encodeURIComponent(t('dashboardPage.kyc.supportSubject'))}`}>
+                {t('dashboardPage.kyc.contactSupport')}
+              </a>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ─── BUYER Welcome (KYC verified, no activity) ────────────────────────
+
+function BuyerWelcome({ onNavigate }: { onNavigate: (page: string) => void }) {
+  const { t } = useTranslation();
+  const { profile } = useUserStore();
+
+  const steps = [
+    { icon: Package, label: t('dashboardPage.welcome.step1'), desc: t('dashboardPage.welcome.step1Desc'), action: () => onNavigate('products'), actionLabel: t('dashboardPage.welcome.browseCatalog') },
+    { icon: ShoppingCart, label: t('dashboardPage.welcome.step2'), desc: t('dashboardPage.welcome.step2Desc'), action: () => onNavigate('products'), actionLabel: t('dashboardPage.welcome.addToCart') },
+    { icon: FileText, label: t('dashboardPage.welcome.step3'), desc: t('dashboardPage.welcome.step3Desc'), action: () => onNavigate('my-requests'), actionLabel: t('dashboardPage.welcome.viewRequests') },
+  ];
+
+  return (
+    <div className="flex flex-col gap-6">
+      <Card>
+        <CardContent className="p-6">
+          <h2 className="text-lg font-bold">{t('dashboardPage.welcome.title', { name: profile.firstName || '' })}</h2>
+          <p className="text-sm text-muted-foreground mt-1">{t('dashboardPage.welcome.subtitle')}</p>
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {steps.map((step, i) => (
+          <Card key={i} className="hover:shadow-md transition-shadow">
+            <CardContent className="p-5 flex flex-col gap-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <step.icon className="h-5 w-5" />
+                </div>
+                <span className="text-xs font-bold text-muted-foreground">{t('dashboardPage.welcome.stepN', { n: i + 1 })}</span>
+              </div>
+              <h3 className="text-sm font-semibold">{step.label}</h3>
+              <p className="text-xs text-muted-foreground flex-1">{step.desc}</p>
+              <Button variant="outline" size="sm" className="w-full gap-2" onClick={step.action}>
+                {step.actionLabel}
+              </Button>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── BUYER Dashboard ────────────────────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-function BuyerDashboard({ onProductClick: _onProductClick, period: _period, stats }: { onProductClick?: (id: string) => void; period: string; stats: DashboardStats | null }) {
+function BuyerDashboard({ onProductClick: _onProductClick, period: _period, stats, onNavigate }: { onProductClick?: (id: string) => void; period: string; stats: DashboardStats | null; onNavigate: (page: string) => void }) {
   const { t } = useTranslation();
   const formatCurrency = useCurrencyStore((s) => s.format);
+  const { company } = useUserStore();
+
+  // State 1: KYC not verified — show verification status
+  if (company.kycStatus !== 'verified') return <KYCPendingBanner />;
+
+  // State 2: KYC verified but no activity — show welcome guide
+  const isEmpty = !stats || ((stats.active_requests ?? 0) === 0 && (stats.deals_completed ?? 0) === 0 && (stats.quotes_received ?? 0) === 0);
+  if (isEmpty) return <BuyerWelcome onNavigate={onNavigate} />;
+
   const buyerRequestsStatus = useMemo(() => stats ? [
     { name: t('dashboardPage.buyer.statusActive'), value: stats.active_requests ?? 0 },
     { name: t('dashboardPage.buyer.statusInProgress'), value: stats.deals_in_progress ?? 0 },
@@ -141,10 +260,9 @@ function BuyerDashboard({ onProductClick: _onProductClick, period: _period, stat
           trend={{ value: `${stats?.deals_volume_change ?? 0}% ${t('dashboardPage.vsPrevPeriod')}`, direction: (stats?.deals_volume_change ?? 0) >= 0 ? "up" : "down" }}
         />
         <KPICard
-          label={t('dashboardPage.kpi.clients')}
-          value={String(stats?.clients_count ?? 0)}
-          icon={<Calendar className="h-5 w-5 text-muted-foreground" />}
-          trend={{ value: `${stats?.clients_count_change ?? 0}% ${t('dashboardPage.vsPrevPeriod')}`, direction: (stats?.clients_count_change ?? 0) >= 0 ? "up" : "down" }}
+          label={t('dashboardPage.kpi.quotesReceived')}
+          value={String(stats?.quotes_received ?? 0)}
+          icon={<FileText className="h-5 w-5 text-muted-foreground" />}
         />
       </div>
 
@@ -472,9 +590,10 @@ function ManufacturerDashboard({ onProductClick: _onProductClick, period: _perio
 
 interface DashboardProps {
   onProductClick?: (productId: string) => void;
+  onNavigate?: (page: string) => void;
 }
 
-export function Dashboard({ onProductClick }: DashboardProps) {
+export function Dashboard({ onProductClick, onNavigate }: DashboardProps) {
   const { t } = useTranslation();
   const [period, setPeriod] = useState('30d');
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -546,7 +665,7 @@ export function Dashboard({ onProductClick }: DashboardProps) {
       ) : activeStatus === 'MANUFACTURER' ? (
         <ManufacturerDashboard onProductClick={onProductClick} period={period} stats={stats} />
       ) : (
-        <BuyerDashboard onProductClick={onProductClick} period={period} stats={stats} />
+        <BuyerDashboard onProductClick={onProductClick} period={period} stats={stats} onNavigate={onNavigate ?? (() => {})} />
       )}
     </div>
   );

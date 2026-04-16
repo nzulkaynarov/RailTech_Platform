@@ -215,8 +215,10 @@ function SidebarNavItem({
   item,
   onNavigate,
   collapsed,
+  disabled = false,
 }: {
   item: NavItem;
+  disabled?: boolean;
   onNavigate: (id: string) => void;
   collapsed: boolean;
 }) {
@@ -225,14 +227,16 @@ function SidebarNavItem({
 
   if (item.children) {
     return (
-      <Collapsible open={open} onOpenChange={setOpen}>
+      <Collapsible open={disabled ? false : open} onOpenChange={disabled ? undefined : setOpen}>
         <CollapsibleTrigger asChild>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 variant="ghost"
+                disabled={disabled}
                 className={cn(
-                  'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground h-auto',
+                  'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors h-auto',
+                  disabled ? 'opacity-40 cursor-not-allowed' : 'hover:bg-accent hover:text-accent-foreground',
                   hasActiveChild ? 'text-foreground' : 'text-muted-foreground',
                   collapsed && 'justify-center px-0'
                 )}
@@ -246,7 +250,7 @@ function SidebarNavItem({
                         {item.badge}
                       </Badge>
                     )}
-                    <ChevronDown className={cn('h-4 w-4 transition-transform', open && 'rotate-180')} aria-hidden="true" />
+                    {!disabled && <ChevronDown className={cn('h-4 w-4 transition-transform', open && 'rotate-180')} aria-hidden="true" />}
                   </>
                 )}
               </Button>
@@ -254,7 +258,7 @@ function SidebarNavItem({
             {collapsed && <TooltipContent side="right">{item.label}</TooltipContent>}
           </Tooltip>
         </CollapsibleTrigger>
-        {!collapsed && (
+        {!collapsed && !disabled && (
           <CollapsibleContent>
             <div className="ml-4 mt-1 flex flex-col gap-0.5 border-l pl-3">
               {item.children.map((child) => (
@@ -282,12 +286,14 @@ function SidebarNavItem({
       <TooltipTrigger asChild>
         <Button
           variant="ghost"
+          disabled={disabled}
           className={cn(
-            'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground h-auto',
+            'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors h-auto',
+            disabled ? 'opacity-40 cursor-not-allowed' : 'hover:bg-accent hover:text-accent-foreground',
             item.active ? 'bg-accent text-foreground' : 'text-muted-foreground',
             collapsed && 'justify-center px-0'
           )}
-          onClick={() => item.id && onNavigate(item.id)}
+          onClick={() => !disabled && item.id && onNavigate(item.id)}
         >
           {item.icon}
           {!collapsed && (
@@ -331,6 +337,7 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
   const { currency, setCurrency } = useCurrencyStore();
   const { state } = useSidebar();
   const sidebarCollapsed = state === 'collapsed';
+  const isKycVerified = company.kycStatus === 'verified';
   const navigation = useMemo(() => getNavigation(activeStatus, activePage, role, t), [activeStatus, activePage, role, t]);
   const bottomNav = useMemo(() => getBottomNavigation(role, t), [role, t]);
 
@@ -405,7 +412,7 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
           {/* Main navigation */}
           <nav aria-label={t('shell.mainNavigation')} className="flex-1 space-y-0.5 overflow-y-auto py-3 px-3 group-data-[collapsible=icon]:px-1.5">
             {navigation.map((item) => (
-              <SidebarNavItem key={item.label} item={item} onNavigate={onNavigate} collapsed={sidebarCollapsed} />
+              <SidebarNavItem key={item.label} item={item} onNavigate={onNavigate} collapsed={sidebarCollapsed} disabled={!isKycVerified} />
             ))}
           </nav>
 
@@ -537,7 +544,6 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
               )}
 
               <Separator orientation="vertical" className="h-6" />
-
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button variant="ghost" size="icon" className="relative" aria-label={t('cart.title')} onClick={() => useCartStore.getState().openCart()}>

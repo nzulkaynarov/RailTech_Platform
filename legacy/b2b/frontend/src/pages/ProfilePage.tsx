@@ -71,9 +71,114 @@ function PasswordChangeForm({ onClose }: { onClose: () => void }) {
   );
 }
 
+function CompanyTab() {
+  const { t } = useTranslation();
+  const { company, activeStatus } = useUserStore();
+  const canEdit = company.kycStatus !== 'verified';
+  const [companyName, setCompanyName] = useState(company.name);
+  const [companyInn, setCompanyInn] = useState(company.inn);
+  const [savingCompany, setSavingCompany] = useState(false);
+
+  const kycBadge = company.kycStatus === 'verified'
+    ? { variant: 'default' as const, label: t('profile.companyInfo.kycVerified'), className: '' }
+    : { variant: 'secondary' as const, label: t('profile.companyInfo.kycPending'), className: 'text-warning' };
+
+  const handleSaveCompany = async () => {
+    // Find company ID from statusEntries or primary company
+    const companyId = (company as unknown as { id?: number }).id;
+    if (!companyId) {
+      toast.error(t('common.error'));
+      return;
+    }
+    setSavingCompany(true);
+    try {
+      await accountsApi.updateCompany(companyId, {
+        name: companyName,
+        inn: companyInn,
+      });
+      toast.success(t('profile.companyInfo.saved'));
+    } catch {
+      toast.error(t('common.error'));
+    } finally {
+      setSavingCompany(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">{t('profile.companyInfo.title')}</CardTitle>
+        <CardDescription>{t('profile.companyInfo.description')}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label>{t('profile.companyInfo.name')}</Label>
+            <Input
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
+              disabled={!canEdit}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>{t('profile.companyInfo.inn')}</Label>
+            <Input
+              value={companyInn}
+              onChange={(e) => setCompanyInn(e.target.value)}
+              disabled={!canEdit}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>{t('profile.companyInfo.country')}</Label>
+            <Input value={company.country} disabled />
+          </div>
+          <div className="space-y-2">
+            <Label>{t('profile.companyInfo.city')}</Label>
+            <Input value={company.city} disabled />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Label>{t('profile.companyInfo.kycStatus')}:</Label>
+          <Badge variant={kycBadge.variant} className={kycBadge.className}>{kycBadge.label}</Badge>
+        </div>
+
+        <Separator />
+
+        <div className="space-y-2">
+          <Label>{t('profile.companyInfo.platformStatuses')}</Label>
+          <div className="flex flex-wrap gap-2">
+            {company.statusEntries.map((entry) => (
+              <Badge key={entry.status} variant={entry.status === activeStatus ? 'default' : 'outline'}>
+                {t(companyStatusLabels[entry.status])}
+                {entry.verification === 'pending' && ` (${t('profile.companyInfo.pendingVerification')})`}
+              </Badge>
+            ))}
+          </div>
+        </div>
+
+        {canEdit && (
+          <div className="flex justify-end">
+            <Button onClick={handleSaveCompany} disabled={savingCompany} className="gap-2">
+              <Save className="h-4 w-4" />
+              {savingCompany ? t('common.saving') : t('profile.companyInfo.save')}
+            </Button>
+          </div>
+        )}
+
+        {!canEdit && (
+          <p className="text-xs text-muted-foreground">
+            {t('profile.companyInfo.contactAdmin')}
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export function ProfilePage() {
   const { t } = useTranslation();
-  const { profile, company, role, activeStatus, updateProfile } = useUserStore();
+  const { profile, role, updateProfile } = useUserStore();
   const [form, setForm] = useState({ ...profile });
   const [saving, setSaving] = useState(false);
   const [passwordDialog, setPasswordDialog] = useState(false);
@@ -95,11 +200,6 @@ export function ProfilePage() {
     }
   };
 
-  const kycBadge = {
-    verified: { label: t('profile.kyc.verified'), variant: 'secondary' as const, className: 'bg-success/10 text-success border-success/20' },
-    pending: { label: t('profile.kyc.pending'), variant: 'secondary' as const, className: 'bg-warning/10 text-warning border-warning/20' },
-    not_started: { label: t('profile.kyc.notStarted'), variant: 'destructive' as const, className: '' },
-  }[company.kycStatus];
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl">
@@ -185,51 +285,7 @@ export function ProfilePage() {
 
         {/* Company Tab */}
         <TabsContent value="company">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">{t('profile.companyInfo.title')}</CardTitle>
-              <CardDescription>{t('profile.companyInfo.description')}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>{t('profile.companyInfo.name')}</Label>
-                  <Input value={company.name} disabled />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('profile.companyInfo.inn')}</Label>
-                  <Input value={company.inn} disabled />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('profile.companyInfo.country')}</Label>
-                  <Input value={company.country} disabled />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('profile.companyInfo.city')}</Label>
-                  <Input value={company.city} disabled />
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <Label>{t('profile.companyInfo.kycStatus')}:</Label>
-                <Badge variant={kycBadge.variant} className={kycBadge.className}>{kycBadge.label}</Badge>
-              </div>
-              <Separator />
-              <div className="space-y-2">
-                <Label>{t('profile.companyInfo.platformStatuses')}</Label>
-                <div className="flex flex-wrap gap-2">
-                  {company.statusEntries.map((entry) => (
-                    <Badge key={entry.status} variant={entry.status === activeStatus ? 'default' : 'outline'}>
-                      {t(companyStatusLabels[entry.status])}
-                      {entry.verification === 'pending' && ` (${t('profile.companyInfo.pendingVerification')})`}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {t('profile.companyInfo.contactAdmin')}
-              </p>
-            </CardContent>
-          </Card>
+          <CompanyTab />
         </TabsContent>
 
         {/* Security Tab */}

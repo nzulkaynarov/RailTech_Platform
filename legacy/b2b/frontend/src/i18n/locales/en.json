@@ -1185,6 +1185,34 @@
   },
   "dashboardPage": {
     "title": "Dashboard",
+    "kyc": {
+      "title": "Hello, {{name}}!",
+      "subtitle": "Your company is being verified. After KYC approval you will get full access to the platform.",
+      "statusTitle": "Verification Status",
+      "company": "Company",
+      "inn": "TIN",
+      "status": "KYC Status",
+      "pending": "Under review",
+      "notSpecified": "Not specified",
+      "hint": "Verification usually takes 1-2 business days. We'll notify you by email once access is confirmed.",
+      "editProfile": "Edit profile",
+      "contactSupport": "Contact support",
+      "supportSubject": "KYC verification inquiry"
+    },
+    "welcome": {
+      "title": "Welcome, {{name}}!",
+      "subtitle": "Get started on the platform in 3 simple steps",
+      "stepN": "Step {{n}}",
+      "step1": "Browse the catalog",
+      "step1Desc": "Explore available equipment and parts from verified suppliers",
+      "step2": "Create a request",
+      "step2Desc": "Add products to your cart and submit a request for quotation",
+      "step3": "Track your requests",
+      "step3Desc": "Receive quotes from suppliers, compare prices and sign contracts",
+      "browseCatalog": "Open catalog",
+      "addToCart": "Go to catalog",
+      "viewRequests": "My requests"
+    },
     "period": "Period",
     "month": "Month",
     "quarter": "Quarter",
@@ -1208,7 +1236,7 @@
       "activeRequests": "Active Requests",
       "catalogItems": "Catalog Items",
       "dealsVolume": "Deal Volume",
-      "clients": "Clients",
+      "quotesReceived": "Quotes Received",
       "requestCompletion": "Request Completion"
     },
     "id": "ID",
@@ -1354,7 +1382,9 @@
       "kycStatus": "KYC Status",
       "platformStatuses": "Company statuses on the platform",
       "pendingVerification": "pending",
-      "contactAdmin": "Contact administrator to change company data"
+      "contactAdmin": "Contact administrator to change company data",
+      "save": "Save company data",
+      "saved": "Company data saved"
     },
     "kyc": {
       "verified": "Verified",

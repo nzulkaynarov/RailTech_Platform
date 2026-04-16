@@ -188,10 +188,12 @@ function App() {
 }
 
 const ADMIN_PAGES = new Set(['admin-users', 'admin-kyc', 'admin-subscriptions', 'admin-role-apps']);
+const KYC_ALLOWED_PAGES = new Set(['dashboard', 'profile', 'settings', 'help']);
 
 function MainApp() {
   const { t } = useTranslation();
   const role = useUserStore((s) => s.role);
+  const kycStatus = useUserStore((s) => s.company.kycStatus);
   const [page, setPage] = useState<Page>(() => {
     // Restore page from URL hash on initial load
     const hash = window.location.hash.replace('#', '');
@@ -216,6 +218,14 @@ function MainApp() {
       window.history.replaceState(null, '', '#dashboard');
     }
   }, [page.type, role]);
+
+  // KYC guard: if not verified, only allow dashboard/profile/settings/help
+  useEffect(() => {
+    if (kycStatus !== 'verified' && !KYC_ALLOWED_PAGES.has(page.type)) {
+      setPage({ type: 'dashboard' });
+      window.history.replaceState(null, '', '#dashboard');
+    }
+  }, [page.type, kycStatus]);
 
   // Handle browser back/forward
   useEffect(() => {
@@ -289,7 +299,7 @@ function MainApp() {
 
   switch (page.type) {
     case 'dashboard':
-      content = <Dashboard onProductClick={handleProductClick} />;
+      content = <Dashboard onProductClick={handleProductClick} onNavigate={handleNavigate} />;
       break;
     case 'product_detail':
       content = (
@@ -366,7 +376,7 @@ function MainApp() {
       content = <AdminRoleApplicationsPage />;
       break;
     default:
-      content = <Dashboard onProductClick={handleProductClick} />;
+      content = <Dashboard onProductClick={handleProductClick} onNavigate={handleNavigate} />;
       activePageId = 'dashboard';
   }
 

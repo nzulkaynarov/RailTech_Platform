@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ShoppingCart, Trash2, Plus, Minus, Package, ArrowRight } from 'lucide-react';
+import { ShoppingCart, Trash2, Plus, Minus, Package, ArrowRight, Loader2 } from 'lucide-react';
 import { useCartStore } from '@/store/cartStore';
+import { crmApi } from '@/api/crmApi';
+import { toast } from 'sonner';
 import {
     Sheet,
     SheetContent,
@@ -20,6 +22,27 @@ export const CartDrawer: React.FC = () => {
     const { isOpen, closeCart, items, removeItem, updateQuantity, clearCart } = useCartStore();
 
     const totalItems = items.reduce((sum, i) => sum + i.quantity, 0);
+    const [submitting, setSubmitting] = useState(false);
+
+    const handleSubmit = async () => {
+        if (items.length === 0) return;
+        setSubmitting(true);
+        try {
+            const deal = await crmApi.createDeal({
+                title: `${t('cart.requestFrom')} ${new Date().toLocaleDateString()}`,
+                notes: items.map((item) => `${item.product.name} x${item.quantity}`).join('\n'),
+            });
+            if (deal?.id) {
+                toast.success(t('cart.requestCreated', { id: deal.id }));
+            }
+            clearCart();
+            closeCart();
+        } catch {
+            toast.error(t('cart.requestError'));
+        } finally {
+            setSubmitting(false);
+        }
+    };
 
     return (
         <Sheet open={isOpen} onOpenChange={(open) => { if (!open) closeCart(); }}>
@@ -149,14 +172,15 @@ export const CartDrawer: React.FC = () => {
                                 {t('cart.clear')}
                             </Button>
 
-                            <Button size="lg" className="w-full gap-2" disabled>
-                                {t('cart.requestQuote')}
-                                <ArrowRight className="h-4 w-4" />
+                            <Button
+                                size="lg"
+                                className="w-full gap-2"
+                                onClick={handleSubmit}
+                                disabled={submitting || items.length === 0}
+                            >
+                                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+                                {submitting ? t('common.loading') : t('cart.requestQuote')}
                             </Button>
-
-                            <p className="text-center text-xs text-muted-foreground">
-                                {t('cart.comingSoon')}
-                            </p>
                         </SheetFooter>
                     </>
                 )}
