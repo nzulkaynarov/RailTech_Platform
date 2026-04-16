@@ -50,13 +50,19 @@ def create_pending_user(email: str, first_name: str, last_name: str) -> Tuple[Op
     base_url = settings.FRONTEND_URL
     setup_url = f"{base_url}/setup-password?uid={uid}&token={token}"
 
-    send_mail(
-        "Подтверждение регистрации RailTech B2B",
-        f"Здравствуйте, {first_name}!\n\nДля завершения регистрации перейдите по ссылке:\n{setup_url}",
-        settings.DEFAULT_FROM_EMAIL,
-        [email],
-        fail_silently=False,
-    )
+    try:
+        send_mail(
+            "Подтверждение регистрации RailTech B2B",
+            f"Здравствуйте, {first_name}!\n\nДля завершения регистрации перейдите по ссылке:\n{setup_url}",
+            settings.DEFAULT_FROM_EMAIL,
+            [email],
+            fail_silently=False,
+        )
+    except Exception:
+        # Email failed — clean up the orphaned user so they can retry
+        user.delete()
+        return None, "Не удалось отправить письмо. Попробуйте позже."
+
     return user, None
 
 

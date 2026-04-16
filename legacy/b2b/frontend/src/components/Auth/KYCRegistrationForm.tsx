@@ -58,11 +58,11 @@ export const KYCRegistrationForm: React.FC = () => {
 			await accountsApi.registerInterest(data);
 			setStep(2);
 		} catch (err: unknown) {
-			const errorMessage =
-				err instanceof Error
-					? err.message
-					: t('registration.genericError');
-			setError(errorMessage);
+			const axiosErr = err as { response?: { data?: { error?: string; detail?: string; email?: string[] } } };
+			const serverMsg = axiosErr.response?.data?.error
+				|| axiosErr.response?.data?.detail
+				|| axiosErr.response?.data?.email?.[0];
+			setError(serverMsg || t('registration.genericError'));
 		}
 	};
 
