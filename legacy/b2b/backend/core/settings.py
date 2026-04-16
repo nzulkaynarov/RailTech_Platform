@@ -408,6 +408,9 @@ MINIO_PRIVATE_BUCKET = os.environ.get('MINIO_PRIVATE_BUCKET', 'railtech-private'
 # Domain used for public URLs (served via nginx proxy)
 # e.g. "localhost/storage" or "cdn.railtech.uz"
 MINIO_PUBLIC_DOMAIN = os.environ.get('MINIO_PUBLIC_DOMAIN', '')
+# External endpoint for presigned URLs (accessible from browser, not Docker internal)
+# e.g. "http://localhost:9000" — defaults to MINIO_ENDPOINT if not set
+MINIO_EXTERNAL_ENDPOINT = os.environ.get('MINIO_EXTERNAL_ENDPOINT', '') or MINIO_ENDPOINT
 
 # Auth
 AUTH_USER_MODEL = 'accounts.CustomUser'

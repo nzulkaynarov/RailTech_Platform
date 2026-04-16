@@ -665,7 +665,7 @@ function SellerView({ onBack }: { onBack: () => void; onNavigate: (t: string) =>
 
       {/* Right panel — 30% chat */}
       {chatPanelOpen && (
-        <div className="flex-[3] min-w-[280px] max-w-[380px] sticky top-0 self-start">
+        <div className="flex-[3] min-w-72 max-w-sm sticky top-0 self-start">
           <DealChatPanel />
         </div>
       )}

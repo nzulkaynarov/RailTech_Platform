@@ -1,4 +1,5 @@
 from decimal import Decimal
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 import pghistory
@@ -66,7 +67,7 @@ class Deal(models.Model):
     )
     stage = models.ForeignKey(
         DealStage, on_delete=models.PROTECT, related_name='deals',
-        null=True, blank=True, db_index=True,
+        null=True, db_index=True,
         verbose_name=_("Этап воронки"),
         help_text=_("Текущий этап сделки в воронке продаж"),
     )
@@ -277,6 +278,7 @@ class QuoteItem(models.Model):
     )
     quantity = models.PositiveIntegerField(
         default=1,
+        validators=[MinValueValidator(1)],
         verbose_name=_("Количество"),
         help_text=_("Количество единиц товара"),
     )
@@ -312,8 +314,9 @@ class QuoteItem(models.Model):
     )
     margin_percent = models.DecimalField(
         max_digits=5, decimal_places=2, default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(500)],
         verbose_name=_("Наценка (%)"),
-        help_text=_("Процент наценки RailTech"),
+        help_text=_("Процент наценки RailTech (0–500%)"),
     )
 
     # Вычисляемые поля (пересчитываются в save())

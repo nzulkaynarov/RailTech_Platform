@@ -8,6 +8,12 @@ export const useDomainTypes = () => useQuery({
   gcTime: 60 * 60_000,       // keep in memory 1 hour
 });
 
+export const useProduct = (id: string) => useQuery({
+  queryKey: ['product', id],
+  queryFn: () => catalogApi.getProduct(id),
+  staleTime: 3 * 60_000,
+});
+
 export const useProducts = (params?: Parameters<typeof catalogApi.getProducts>[0]) => useQuery({
   queryKey: ['products', params],
   queryFn: () => catalogApi.getProducts(params),

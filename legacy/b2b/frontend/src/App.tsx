@@ -21,7 +21,6 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ defa
 // OnboardingPage and PendingVerificationPage removed — real auth flow via LoginPage + KYCRegistrationForm
 // Admin approves users via Django admin panel at /admin/
 const RequestDetailPage = lazy(() => import('./pages/flow/RequestDetailPage').then(m => ({ default: m.RequestDetailPage })));
-const PurchaseTemplatesPage = lazy(() => import('./pages/PurchaseTemplatesPage').then(m => ({ default: m.PurchaseTemplatesPage })));
 const SourcingHub = lazy(() => import('./components/Sourcing/SourcingHub').then(m => ({ default: m.SourcingHub })));
 
 // Lazy load individual page modules
@@ -30,16 +29,11 @@ const SourcingImportPage = lazy(() => import('./pages/SourcingImportPage'));
 const DealsPage = lazy(() => import('./pages/DealsPage'));
 const QuotesPage = lazy(() => import('./pages/QuotesPage'));
 const ClientsPage = lazy(() => import('./pages/ClientsPage'));
-const ProductionOrdersPage = lazy(() => import('./pages/ProductionOrdersPage'));
-const ProductionSchedulePage = lazy(() => import('./pages/ProductionSchedulePage'));
 const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));
 const CategoriesPage = lazy(() => import('./pages/CategoriesPage'));
 const EquipmentGroupsPage = lazy(() => import('./pages/EquipmentGroupsPage'));
-const IntegrationsPage = lazy(() => import('./pages/IntegrationsPage'));
 const HelpPage = lazy(() => import('./pages/HelpPage'));
 const MyRequestsPage = lazy(() => import('./pages/MyRequestsPage'));
-const MyDocumentsPage = lazy(() => import('./pages/MyDocumentsPage'));
-const LogisticsPage = lazy(() => import('./pages/LogisticsPage'));
 const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'));
 const AdminKYCPage = lazy(() => import('./pages/AdminKYCPage'));
 const AdminSubscriptionsPage = lazy(() => import('./pages/AdminSubscriptionsPage'));
@@ -60,21 +54,16 @@ type Page =
   | { type: 'crm-deals' }
   | { type: 'crm-quotes' }
   | { type: 'crm-clients' }
-  | { type: 'production-orders' }
-  | { type: 'production-schedule' }
   | { type: 'analytics' }
   | { type: 'categories' }
   | { type: 'equipment-groups' }
-  | { type: 'integrations' }
   | { type: 'help' }
   | { type: 'my-requests' }
-  | { type: 'my-documents' }
   | { type: 'admin-users' }
   | { type: 'admin-kyc' }
   | { type: 'admin-subscriptions' }
   | { type: 'admin-role-apps' }
-  | { type: 'logistics' }
-  | { type: 'purchase-templates' };
+;
 
 /** Parse URL path and query params for auth routes */
 function useAuthRoute() {
@@ -140,6 +129,10 @@ function App() {
   useEffect(() => {
     if (isAuthenticated) {
       loadFromAuth();
+      // Load exchange rate from system settings
+      import('./store/currencyStore').then(({ useCurrencyStore }) => {
+        useCurrencyStore.getState().loadRate();
+      });
       // Clear auth URL paths after login
       if (window.location.pathname !== '/') {
         window.history.replaceState(null, '', '/');
@@ -194,8 +187,11 @@ function App() {
   );
 }
 
+const ADMIN_PAGES = new Set(['admin-users', 'admin-kyc', 'admin-subscriptions', 'admin-role-apps']);
+
 function MainApp() {
   const { t } = useTranslation();
+  const role = useUserStore((s) => s.role);
   const [page, setPage] = useState<Page>(() => {
     // Restore page from URL hash on initial load
     const hash = window.location.hash.replace('#', '');
@@ -212,6 +208,14 @@ function MainApp() {
     const hash = p.type === 'product_detail' ? `product_detail/${(p as { productId: string }).productId}` : p.type;
     window.history.pushState({ page: p }, '', `#${hash}`);
   };
+
+  // Role guard: redirect away from admin pages if not admin
+  useEffect(() => {
+    if (ADMIN_PAGES.has(page.type) && role !== 'ADMIN') {
+      setPage({ type: 'dashboard' });
+      window.history.replaceState(null, '', '#dashboard');
+    }
+  }, [page.type, role]);
 
   // Handle browser back/forward
   useEffect(() => {
@@ -247,6 +251,11 @@ function MainApp() {
       'logistics', 'request-detail', 'purchase-templates',
     ];
     if (validTypes.includes(target)) {
+      // Role guard: admin pages require ADMIN role
+      if (ADMIN_PAGES.has(target) && role !== 'ADMIN') {
+        navigateTo({ type: 'dashboard' });
+        return;
+      }
       navigateTo({ type: target } as Page);
     } else {
       navigateTo({ type: 'dashboard' });
@@ -331,12 +340,6 @@ function MainApp() {
     case 'crm-clients':
       content = <ClientsPage />;
       break;
-    case 'production-orders':
-      content = <ProductionOrdersPage />;
-      break;
-    case 'production-schedule':
-      content = <ProductionSchedulePage />;
-      break;
     case 'analytics':
       content = <AnalyticsPage />;
       break;
@@ -346,17 +349,11 @@ function MainApp() {
     case 'equipment-groups':
       content = <EquipmentGroupsPage />;
       break;
-    case 'integrations':
-      content = <IntegrationsPage />;
-      break;
     case 'help':
       content = <HelpPage />;
       break;
     case 'my-requests':
       content = <MyRequestsPage onNavigate={handleNavigate} />;
-      break;
-    case 'my-documents':
-      content = <MyDocumentsPage />;
       break;
     case 'admin-users':
       content = <AdminUsersPage />;
@@ -369,12 +366,6 @@ function MainApp() {
       break;
     case 'admin-role-apps':
       content = <AdminRoleApplicationsPage />;
-      break;
-    case 'logistics':
-      content = <LogisticsPage />;
-      break;
-    case 'purchase-templates':
-      content = <PurchaseTemplatesPage />;
       break;
     default:
       content = <Dashboard onProductClick={handleProductClick} />;

@@ -107,7 +107,7 @@ function DetailSheet({
           <SheetTitle>{company.name}</SheetTitle>
         </SheetHeader>
 
-        <div className="mt-6 space-y-6">
+        <div className="mt-2 space-y-6 px-4">
           {/* Status */}
           <section className="space-y-2">
             <h3 className="text-sm font-semibold">{t('kycManager.authStatus')}</h3>

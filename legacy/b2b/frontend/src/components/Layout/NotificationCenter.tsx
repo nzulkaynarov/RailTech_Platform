@@ -101,7 +101,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = () => {
                 </Button>
             </SheetTrigger>
 
-            <SheetContent side="right" showCloseButton={false} className="flex flex-col p-0 sm:max-w-[380px]">
+            <SheetContent side="right" showCloseButton={false} className="flex flex-col p-0 sm:max-w-sm">
                 <SheetHeader className="flex-row items-center justify-between space-y-0 border-b px-5 py-4">
                     <div className="flex items-center gap-3">
                         <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10">

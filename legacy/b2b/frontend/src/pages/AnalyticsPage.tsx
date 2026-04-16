@@ -18,13 +18,12 @@ function BuyerAnalytics() {
       description={t('pages.analytics.buyerDescription')}
       icon={<BarChart3 className="h-5 w-5" />}
       stats={[
-        { label: t('pages.analytics.buyerStats.spendPeriod'), value: ps?.analytics_buyer?.spend_period ?? '—' },
-        { label: t('pages.analytics.buyerStats.savings'), value: ps?.analytics_buyer?.savings ?? '—' },
-        { label: t('pages.analytics.buyerStats.activeRequests'), value: String(ps?.analytics_buyer?.active_requests ?? '—') },
-        { label: t('pages.analytics.buyerStats.avgDelivery'), value: '—' },
+        { label: t('pages.analytics.buyerStats.spendPeriod'), value: ps?.analytics_buyer?.spend_period ?? '0' },
+        { label: t('pages.analytics.buyerStats.savings'), value: ps?.analytics_buyer?.savings ?? '0' },
+        { label: t('pages.analytics.buyerStats.activeRequests'), value: String(ps?.analytics_buyer?.active_requests ?? 0) },
+        { label: t('pages.analytics.buyerStats.avgDelivery'), value: '0' },
       ]}
     >
-      <EmptyState icon={<BarChart3 className="h-5 w-5" />} message={t('pages.common.sectionInDevelopment')} />
     </PageShell>
   );
 }
@@ -54,10 +53,10 @@ export function AnalyticsPage() {
       description={activeStatus === 'MANUFACTURER' ? t('pages.analytics.manufacturerDescription') : t('pages.analytics.sellerDescription')}
       icon={<BarChart3 className="h-5 w-5" />}
       stats={[
-        { label: t('pages.analytics.stats.conversion'), value: analytics?.conversion_rate != null ? `${analytics.conversion_rate.toFixed(1)}%` : (ps?.analytics?.conversion ?? '—') },
-        { label: t('pages.analytics.stats.avgDeal'), value: analytics?.avg_margin != null ? `${analytics.avg_margin.toFixed(1)}%` : (ps?.analytics?.avg_deal ?? '—') },
-        { label: t('pages.analytics.stats.pipeline'), value: analytics?.total_pipeline_value != null ? formatCurrency(analytics.total_pipeline_value) : (ps?.analytics?.pipeline ?? '—') },
-        { label: t('pages.analytics.stats.winRate'), value: ps?.analytics?.win_rate ?? '—' },
+        { label: t('pages.analytics.stats.conversion'), value: analytics?.conversion_rate != null ? `${analytics.conversion_rate.toFixed(1)}%` : (ps?.analytics?.conversion ?? '0%') },
+        { label: t('pages.analytics.stats.avgDeal'), value: analytics?.avg_margin != null ? `${analytics.avg_margin.toFixed(1)}%` : (ps?.analytics?.avg_deal ?? '0%') },
+        { label: t('pages.analytics.stats.pipeline'), value: analytics?.total_pipeline_value != null ? formatCurrency(analytics.total_pipeline_value) : (ps?.analytics?.pipeline ?? '0') },
+        { label: t('pages.analytics.stats.winRate'), value: ps?.analytics?.win_rate ?? '0%' },
       ]}
     >
       {isLoading ? <LoadingRows rows={4} /> : (
@@ -107,11 +106,11 @@ export function AnalyticsPage() {
                 </div>
                 <div className="rounded-lg border p-4">
                   <p className="text-xs text-muted-foreground">{t('pages.analytics.mappedItems')}</p>
-                  <p className="text-2xl font-bold tabular-nums">{analytics?.mapped_items_percentage != null ? `${analytics.mapped_items_percentage.toFixed(0)}%` : '—'}</p>
+                  <p className="text-2xl font-bold tabular-nums">{analytics?.mapped_items_percentage != null ? `${analytics.mapped_items_percentage.toFixed(0)}%` : '0%'}</p>
                 </div>
                 <div className="rounded-lg border p-4">
                   <p className="text-xs text-muted-foreground">{t('pages.analytics.sourcingSpeed')}</p>
-                  <p className="text-2xl font-bold tabular-nums">{analytics?.sourcing_speed_avg != null ? `${analytics.sourcing_speed_avg.toFixed(1)}${t('common.unitHours')}` : '—'}</p>
+                  <p className="text-2xl font-bold tabular-nums">{analytics?.sourcing_speed_avg != null ? `${analytics.sourcing_speed_avg.toFixed(1)}${t('common.unitHours')}` : '0'}</p>
                 </div>
               </div>
             </CardContent>

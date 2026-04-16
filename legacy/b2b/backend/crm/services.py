@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Optional, Tuple
 
 from django.db import transaction, models
@@ -41,7 +41,9 @@ class QuoteCalculationService:
             )
 
         margin_mult = Decimal('1') + (item.margin_percent / Decimal('100'))
-        item.final_price_excl_vat = item.landed_cost * margin_mult
+        item.final_price_excl_vat = (
+            item.landed_cost * margin_mult
+        ).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
         if commit:
             item.save(update_fields=['landed_cost', 'final_price_excl_vat', 'logistics_cost', 'customs_duty'])
@@ -76,9 +78,10 @@ class QuoteCalculationService:
         subtotal = totals['subtotal'] or Decimal('0')
         vat_rate = quote.vat_rate / Decimal('100')
 
-        quote.subtotal_excl_vat = subtotal
-        quote.vat_amount = subtotal * vat_rate
-        quote.total_incl_vat = subtotal + quote.vat_amount
+        penny = Decimal('0.01')
+        quote.subtotal_excl_vat = subtotal.quantize(penny, rounding=ROUND_HALF_UP)
+        quote.vat_amount = (subtotal * vat_rate).quantize(penny, rounding=ROUND_HALF_UP)
+        quote.total_incl_vat = (quote.subtotal_excl_vat + quote.vat_amount)
 
         quote.save(update_fields=['subtotal_excl_vat', 'vat_amount', 'total_incl_vat', 'updated_at'])
         return quote

@@ -66,12 +66,12 @@ function DetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="overflow-y-auto sm:max-w-md">
+      <SheetContent className="overflow-y-auto sm:max-w-lg">
         <SheetHeader>
           <SheetTitle>{t('admin.subscriptions.detail.title')}</SheetTitle>
         </SheetHeader>
 
-        <div className="mt-6 space-y-6">
+        <div className="mt-2 space-y-6 px-4">
           {/* Company info */}
           <section className="space-y-2">
             <h3 className="text-sm font-semibold">{t('admin.subscriptions.detail.companyInfo')}</h3>

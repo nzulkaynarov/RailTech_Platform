@@ -624,7 +624,9 @@
     "send": "Send",
     "connectionLost": "Connection lost. Reconnecting...",
     "connected": "Connected",
-    "noMessages": "No messages"
+    "noMessages": "No messages",
+    "noMessagesHint": "Messages will appear when deal conversations start",
+    "moreMessages": "more"
   },
   "task": {
     "excelImport": "Excel Import",
@@ -1363,7 +1365,8 @@
       "twoFactorDesc": "Additional account protection",
       "activeSessions": "Active sessions",
       "activeDevices": "{{count}} active devices",
-      "manage": "Manage"
+      "manage": "Manage",
+      "currentDevice": "Current device"
     },
     "notifications": {
       "title": "Notifications",
@@ -1486,7 +1489,9 @@
       "manage": "Manage",
       "delegation": "Delegation",
       "delegationDesc": "Delegate permissions to employees by context",
-      "configure": "Configure"
+      "configure": "Configure",
+      "companyInfo": "Company Information",
+      "companyInfoDesc": "Name and details"
     },
     "system": {
       "title": "System Settings",
@@ -2110,7 +2115,8 @@
         "freightWagons": "Freight wagons",
         "passengerWagons": "Passenger wagons"
       },
-      "type": "Type"
+      "type": "Type",
+      "hasParent": "Subgroup"
     },
     "integrations": {
       "title": "Integrations",
@@ -2256,9 +2262,9 @@
       "description": "Manage employees, roles and access delegation",
       "stats": {
         "total": "Total",
-        "admins": "Administrators",
-        "managers": "Managers",
-        "employees": "Employees"
+        "active": "Active",
+        "staff": "Platform Staff",
+        "inactive": "Inactive"
       },
       "inviteUser": "Invite user",
       "roles": {
@@ -2277,6 +2283,20 @@
         "status": "Status",
         "lastLogin": "Last login",
         "actions": "Actions"
+      },
+      "searchPlaceholder": "Search by name or email...",
+      "toggleActive": "Toggle user active",
+      "activated": "{{name}} activated",
+      "deactivated": "{{name}} deactivated",
+      "detail": {
+        "info": "Contact Information",
+        "access": "Access & Roles",
+        "joined": "Date joined",
+        "lastLogin": "Last login",
+        "phone": "Phone",
+        "company": "Company",
+        "noData": "Not specified",
+        "noRole": "No role assigned"
       }
     }
   },

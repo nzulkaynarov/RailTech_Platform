@@ -1,18 +1,11 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Globe, Palette, Bell, Shield, Database, Plug, Users, Building2, FileText, Monitor,
-  Factory, Store,
+  Globe, Palette, Bell, Database, FileText, Monitor,
+  Factory, Store, Building2,
 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -72,7 +65,6 @@ export function SettingsPage() {
             <TabsTrigger value="business">{t('settings.tabs.business')}</TabsTrigger>
           )}
           {isAdmin && <TabsTrigger value="company">{t('settings.tabs.company')}</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="system">{t('settings.tabs.system')}</TabsTrigger>}
         </TabsList>
 
         {/* General */}
@@ -274,16 +266,6 @@ export function SettingsPage() {
                         </SelectContent>
                       </Select>
                     </SettingRow>
-                    <SettingRow icon={Store} title={t('settings.business.partnerSuppliers')} description={t('settings.business.partnerSuppliersDesc')}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="outline" size="sm" disabled>{t('settings.business.manage')}</Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {t('common.comingSoon')}
-                        </TooltipContent>
-                      </Tooltip>
-                    </SettingRow>
                   </>
                 )}
               </CardContent>
@@ -310,82 +292,10 @@ export function SettingsPage() {
                     ))}
                   </div>
                 </SettingRow>
-                <SettingRow icon={Users} title={t('settings.company.users')} description={t('settings.company.usersDesc')}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button size="sm" disabled>{t('settings.company.invite')}</Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {t('common.comingSoon')}
-                    </TooltipContent>
-                  </Tooltip>
-                </SettingRow>
-                <SettingRow icon={Shield} title={t('settings.company.rolesPermissions')} description={t('settings.company.rolesPermissionsDesc')}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="outline" size="sm" disabled>{t('settings.company.manage')}</Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {t('common.comingSoon')}
-                    </TooltipContent>
-                  </Tooltip>
-                </SettingRow>
-                <SettingRow icon={Shield} title={t('settings.company.delegation')} description={t('settings.company.delegationDesc')}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="outline" size="sm" disabled>{t('settings.company.configure')}</Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {t('common.comingSoon')}
-                    </TooltipContent>
-                  </Tooltip>
-                </SettingRow>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        )}
-
-        {/* System (Admin only) */}
-        {isAdmin && (
-          <TabsContent value="system" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">{t('settings.system.title')}</CardTitle>
-                <CardDescription>{t('settings.system.description')}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <SettingRow icon={Plug} title={t('settings.system.apiIntegrations')} description={t('settings.system.apiIntegrationsDesc')}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="outline" size="sm" disabled>{t('settings.system.configure')}</Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {t('common.comingSoon')}
-                    </TooltipContent>
-                  </Tooltip>
-                </SettingRow>
-                <SettingRow icon={Database} title={t('settings.system.backup')} description={t('settings.system.backupDesc')}>
-                  <Switch defaultChecked />
-                </SettingRow>
-                <SettingRow icon={Shield} title={t('settings.system.passwordPolicy')} description={t('settings.system.passwordPolicyDesc')}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="outline" size="sm" disabled>{t('settings.system.configure')}</Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {t('common.comingSoon')}
-                    </TooltipContent>
-                  </Tooltip>
-                </SettingRow>
-                <SettingRow icon={FileText} title={t('settings.system.auditLogs')} description={t('settings.system.auditLogsDesc')}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="outline" size="sm" disabled>{t('settings.system.view')}</Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {t('common.comingSoon')}
-                    </TooltipContent>
-                  </Tooltip>
+                <SettingRow icon={Store} title={t('settings.company.companyInfo')} description={t('settings.company.companyInfoDesc')}>
+                  <Badge variant="outline" className="text-xs">
+                    {company.name || '—'}
+                  </Badge>
                 </SettingRow>
               </CardContent>
             </Card>

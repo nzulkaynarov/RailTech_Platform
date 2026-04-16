@@ -132,7 +132,7 @@ export const ContextualChat: React.FC<ContextualChatProps> = ({ dealId }) => {
                     <div
                         key={msg.id}
                         className={clsx(
-                            'flex flex-col max-w-[85%]',
+                            'flex flex-col max-w-prose',
                             msg.is_me ? 'self-end' : 'self-start'
                         )}
                     >

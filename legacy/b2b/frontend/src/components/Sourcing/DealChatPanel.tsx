@@ -99,7 +99,7 @@ export function DealChatPanel(): React.ReactNode {
                     </div>
                     <div
                       className={cn(
-                        'max-w-[85%] rounded-lg px-2.5 py-1.5 text-xs leading-relaxed',
+                        'max-w-prose rounded-lg px-2.5 py-1.5 text-xs leading-relaxed',
                         isManager
                           ? 'bg-primary text-primary-foreground'
                           : 'bg-muted text-foreground',

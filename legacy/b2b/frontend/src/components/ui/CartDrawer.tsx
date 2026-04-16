@@ -23,11 +23,11 @@ export const CartDrawer: React.FC = () => {
 
     return (
         <Sheet open={isOpen} onOpenChange={(open) => { if (!open) closeCart(); }}>
-            <SheetContent side="right" className="flex flex-col sm:max-w-[400px]" showCloseButton={false}>
+            <SheetContent side="right" className="flex flex-col sm:max-w-sm" showCloseButton={false}>
                 <SheetHeader className="flex flex-row items-center justify-between space-y-0 px-5 py-4">
                     <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600/10">
-                            <ShoppingCart className="h-4 w-4 text-blue-600" aria-hidden="true" />
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                            <ShoppingCart className="h-4 w-4 text-primary" aria-hidden="true" />
                         </div>
                         <div>
                             <SheetTitle className="text-sm">

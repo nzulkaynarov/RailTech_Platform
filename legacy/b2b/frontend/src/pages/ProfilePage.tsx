@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Shield, Save, Camera, KeyRound, Globe,
+  Shield, Save, KeyRound, Globe,
 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -132,11 +132,8 @@ export function ProfilePage() {
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <Button variant="outline" size="sm" className="gap-2" disabled>
-                    <Camera className="h-4 w-4" />
-                    {t('profile.personalInfo.uploadPhoto')}
-                  </Button>
-                  <p className="text-xs text-muted-foreground mt-1">{t('profile.personalInfo.photoHint')}</p>
+                  <p className="text-sm font-medium">{profile.firstName} {profile.lastName}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{profile.email}</p>
                 </div>
               </div>
 
@@ -275,7 +272,7 @@ export function ProfilePage() {
                     <p className="text-xs text-muted-foreground">{t('profile.security.activeDevices')}</p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" disabled>{t('profile.security.manage')}</Button>
+                <Badge variant="secondary">{t('profile.security.currentDevice')}</Badge>
               </div>
             </CardContent>
           </Card>

@@ -280,6 +280,13 @@ class CompanyMember(models.Model):
         verbose_name_plural = _("Участники компаний")
         unique_together = [('user', 'company')]
         ordering = ['-is_primary', 'joined_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user'],
+                condition=models.Q(is_primary=True),
+                name='unique_primary_company_per_user',
+            ),
+        ]
 
     def __str__(self):
         return f"{self.user.email} → {self.company.name} [{self.role}]"

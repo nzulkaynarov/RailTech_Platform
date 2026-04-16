@@ -7,7 +7,7 @@ from drf_spectacular.utils import (
     OpenApiParameter, inline_serializer,
 )
 from rest_framework import serializers as drf_serializers
-from .models import Deal, Quote, QuoteItem, Message, ActivityLog
+from .models import Deal, DealStage, Quote, QuoteItem, Message, ActivityLog
 from .serializers import (
     DealListSerializer, DealDetailSerializer, QuoteSerializer, QuoteItemSerializer,
     MessageSerializer, ActivityLogSerializer, LeadSerializer
@@ -85,8 +85,13 @@ class DealViewSet(viewsets.ModelViewSet):
             raise ValidationError(
                 {"company": "У вас нет привязанной компании. Заполните профиль компании."}
             )
-        deal = serializer.save(client=self.request.user,
-                               company=primary_company)
+        # Auto-assign DRAFT stage if not provided
+        save_kwargs = dict(client=self.request.user, company=primary_company)
+        if not serializer.validated_data.get('stage'):
+            draft_stage = DealStage.objects.filter(code='DRAFT').first()
+            if draft_stage:
+                save_kwargs['stage'] = draft_stage
+        deal = serializer.save(**save_kwargs)
 
         ActivityLog.objects.create(
             action="Сделка создана",
@@ -471,6 +476,8 @@ class DashboardAnalyticsView(APIView):
     """
     Provides comprehensive dashboard analytics with KPIs for the main dashboard.
     GET /api/v1/crm/analytics/dashboard/?period=30d
+
+    Staff sees platform-wide KPIs. Non-staff sees only their companies' data.
     """
     permission_classes = [IsAuthenticated]
 
@@ -479,8 +486,18 @@ class DashboardAnalyticsView(APIView):
         from catalog.models import Product
         from accounts.models import Company
 
+        # B2B data isolation
+        is_staff = request.user.is_superuser or getattr(request.user, 'is_manager_or_admin', False)
+        if is_staff:
+            user_company_ids = None
+        else:
+            user_company_ids = list(
+                request.user.memberships.filter(is_active=True)
+                .values_list('company_id', flat=True)
+            )
+
         period = request.query_params.get('period', '30d')
-        cache_key = f'dashboard_analytics_{period}'
+        cache_key = f'dashboard_analytics_{period}_{request.user.pk}'
         cached = cache.get(cache_key)
         if cached:
             return Response(cached)
@@ -497,9 +514,11 @@ class DashboardAnalyticsView(APIView):
         else:
             period_start = timezone.now() - timedelta(days=30)
 
-        # Get all deals and current period deals
+        # Get deals — scoped to user's companies for non-staff
         all_deals = Deal.objects.all()
-        period_deals = Deal.objects.filter(created_at__gte=period_start)
+        if user_company_ids is not None:
+            all_deals = all_deals.filter(company_id__in=user_company_ids)
+        period_deals = all_deals.filter(created_at__gte=period_start)
 
         # Get previous period deals for comparison
         prev_period_start = period_start - (timezone.now() - period_start)
@@ -595,11 +614,14 @@ class DashboardAnalyticsView(APIView):
             ),
         }
 
-        # Request completion percentage
-        completed_quotes = Quote.objects.filter(
+        # Request completion percentage (scoped)
+        quotes_qs = Quote.objects.all()
+        if user_company_ids is not None:
+            quotes_qs = quotes_qs.filter(deal__company_id__in=user_company_ids)
+        completed_quotes = quotes_qs.filter(
             status__code__in=['APPROVED', 'SENT']
         ).count()
-        total_quotes = Quote.objects.count()
+        total_quotes = quotes_qs.count()
         completion_percentage = (
             (completed_quotes / total_quotes * 100)
             if total_quotes > 0 else 0

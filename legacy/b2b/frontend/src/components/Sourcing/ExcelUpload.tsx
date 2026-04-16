@@ -144,7 +144,7 @@ export const ExcelUpload: React.FC<ExcelUploadProps> = ({ dealId, onUploadSucces
                             <FileSpreadsheet className="w-5 h-5 text-success" aria-hidden="true" />
                         </div>
                         <div>
-                            <p className="text-sm font-semibold text-foreground truncate max-w-[200px]">
+                            <p className="text-sm font-semibold text-foreground truncate max-w-xs">
                                 {file.name}
                             </p>
                             <p className="text-xs text-muted-foreground">

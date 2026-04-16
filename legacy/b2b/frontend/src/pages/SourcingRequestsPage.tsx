@@ -26,9 +26,9 @@ export function SourcingRequestsPage({ onNavigate }: { onNavigate?: (t: string) 
       icon={<ClipboardList className="h-5 w-5" />}
       stats={[
         { label: t('pages.sourcingRequests.stats.total'), value: String(s?.total ?? sourcingDeals.length) },
-        { label: t('pages.sourcingRequests.stats.new'), value: String(s?.new ?? '—') },
-        { label: t('pages.sourcingRequests.stats.inProgress'), value: String(s?.in_progress ?? '—') },
-        { label: t('pages.sourcingRequests.stats.completed'), value: String(s?.completed ?? '—') },
+        { label: t('pages.sourcingRequests.stats.new'), value: String(s?.new ?? sourcingDeals.filter(d => d.stage_code === 'DRAFT').length) },
+        { label: t('pages.sourcingRequests.stats.inProgress'), value: String(s?.in_progress ?? sourcingDeals.filter(d => d.stage_code === 'SOURCING').length) },
+        { label: t('pages.sourcingRequests.stats.completed'), value: String(s?.completed ?? sourcingDeals.filter(d => d.stage_code === 'CALCULATING').length) },
       ]}
       actions={[{ label: t('pages.sourcingRequests.createRequest'), onClick: () => onNavigate?.('catalog') }]}
     >
@@ -49,10 +49,12 @@ export function SourcingRequestsPage({ onNavigate }: { onNavigate?: (t: string) 
                       <Badge variant="outline" className="text-xs">{deal.stage_name}</Badge>
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      {deal.client_name ?? deal.company_name ?? '—'} · {new Date(deal.created_at).toLocaleDateString()}
+                      {deal.client_name || deal.company_name || ''}{deal.client_name || deal.company_name ? ' · ' : ''}{new Date(deal.created_at).toLocaleDateString()}
                     </p>
                   </div>
-                  <p className="text-sm font-bold text-primary tabular-nums">{deal.total_value ? formatCurrency(Number(deal.total_value)) : '—'}</p>
+                  {deal.total_value ? (
+                    <p className="text-sm font-bold text-primary tabular-nums">{formatCurrency(Number(deal.total_value))}</p>
+                  ) : null}
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </div>
               </CardContent>

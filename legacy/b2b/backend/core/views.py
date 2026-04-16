@@ -102,48 +102,61 @@ class PageStatsView(APIView):
         from sourcing.models import ImportTask, Attachment
         from notifications.models import Notification
 
+        # B2B data isolation: staff sees everything, regular users — only their companies
+        is_staff = request.user.is_superuser or getattr(request.user, 'is_manager_or_admin', False)
+        if is_staff:
+            deals_qs = Deal.objects.all()
+            quotes_qs = Quote.objects.all()
+            quote_items_qs = QuoteItem.objects.all()
+        else:
+            user_company_ids = request.user.memberships.filter(
+                is_active=True
+            ).values_list('company_id', flat=True)
+            deals_qs = Deal.objects.filter(company_id__in=user_company_ids)
+            quotes_qs = Quote.objects.filter(deal__company_id__in=user_company_ids)
+            quote_items_qs = QuoteItem.objects.filter(quote__deal__company_id__in=user_company_ids)
+
         # --- Deals ---
-        deals_total = Deal.objects.count()
-        deals_active = Deal.objects.exclude(
+        deals_total = deals_qs.count()
+        deals_active = deals_qs.exclude(
             stage__code__in=['CLOSED_WON', 'CLOSED_LOST']
         ).count()
-        deals_quote_sent = Deal.objects.filter(
+        deals_quote_sent = deals_qs.filter(
             stage__code='QUOTE_SENT'
         ).count()
-        deals_closed_won = Deal.objects.filter(
+        deals_closed_won = deals_qs.filter(
             stage__code='CLOSED_WON'
         ).count()
 
         # --- Quotes ---
-        quotes_total = Quote.objects.count()
-        quotes_draft = Quote.objects.filter(status__code='DRAFT').count()
-        quotes_sent = Quote.objects.filter(status__code='SENT').count()
-        quotes_approved = Quote.objects.filter(
+        quotes_draft = quotes_qs.filter(status__code='DRAFT').count()
+        quotes_sent = quotes_qs.filter(status__code='SENT').count()
+        quotes_approved = quotes_qs.filter(
             status__code='APPROVED'
         ).count()
         quotes_under_review = quotes_sent  # sent = under review
-        pipeline_value = Quote.objects.filter(
+        pipeline_value = quotes_qs.filter(
             status__code__in=['DRAFT', 'SENT']
         ).aggregate(total=Sum('total_incl_vat'))['total'] or Decimal('0')
 
         # --- Sourcing ---
-        sourcing_total = Deal.objects.filter(
+        sourcing_total = deals_qs.filter(
             stage__code='SOURCING'
         ).count()
-        sourcing_new = Deal.objects.filter(stage__code='DRAFT').count()
-        sourcing_in_progress = Deal.objects.filter(
+        sourcing_new = deals_qs.filter(stage__code='DRAFT').count()
+        sourcing_in_progress = deals_qs.filter(
             stage__code__in=['SOURCING', 'CALCULATING']
         ).count()
-        sourcing_completed = Deal.objects.filter(
+        sourcing_completed = deals_qs.filter(
             stage__code__in=['QUOTE_SENT', 'CONTRACT_SIGNED', 'CLOSED_WON']
         ).count()
 
         # --- Smart Match ---
-        quote_items_total = QuoteItem.objects.count()
-        quote_items_matched = QuoteItem.objects.filter(
+        quote_items_total = quote_items_qs.count()
+        quote_items_matched = quote_items_qs.filter(
             product__isnull=False
         ).count()
-        quote_items_unmatched = QuoteItem.objects.filter(
+        quote_items_unmatched = quote_items_qs.filter(
             product__isnull=True
         ).count()
         match_accuracy = round(
@@ -151,7 +164,7 @@ class PageStatsView(APIView):
             if quote_items_total > 0 else 0
         )
 
-        # --- Clients / Companies ---
+        # --- Clients / Companies (global — public catalog data) ---
         client_type = CompanyType.objects.filter(code='CLIENT').first()
         clients_total = Company.objects.count()
         clients_verified = Company.objects.filter(
@@ -164,7 +177,7 @@ class PageStatsView(APIView):
             verification_status__code='L1_UNVERIFIED'
         ).count()
 
-        # --- Products / Catalog ---
+        # --- Products / Catalog (global — public catalog data) ---
         products_total = Product.objects.count()
         products_published = Product.objects.filter(
             status__code='PUBLISHED'
@@ -175,23 +188,29 @@ class PageStatsView(APIView):
         ).count()
         offers_total = SupplierOffer.objects.filter(is_active=True).count()
 
-        # --- Users ---
-        users_total = CustomUser.objects.filter(is_active=True).count()
-        users_admins = CustomUser.objects.filter(
-            is_active=True, role__code='ADMIN'
-        ).count()
-        users_managers = CustomUser.objects.filter(
-            is_active=True,
-            role__code__in=['SALES_MANAGER', 'ACCOUNT_MANAGER'],
-        ).count()
-        users_employees = users_total - users_admins - users_managers
+        # --- Users (staff-only section — non-staff get zeros) ---
+        if is_staff:
+            users_total = CustomUser.objects.filter(is_active=True).count()
+            users_admins = CustomUser.objects.filter(
+                is_active=True, role__code='ADMIN'
+            ).count()
+            users_managers = CustomUser.objects.filter(
+                is_active=True,
+                role__code__in=['SALES_MANAGER', 'ACCOUNT_MANAGER'],
+            ).count()
+            users_employees = users_total - users_admins - users_managers
+        else:
+            users_total = users_admins = users_managers = users_employees = 0
 
-        # --- Imports ---
-        imports_total = ImportTask.objects.count()
-        attachments_total = Attachment.objects.count()
+        # --- Imports (staff-only) ---
+        if is_staff:
+            imports_total = ImportTask.objects.count()
+            attachments_total = Attachment.objects.count()
+        else:
+            imports_total = attachments_total = 0
 
         # --- Analytics ---
-        total_deal_value = Deal.objects.aggregate(
+        total_deal_value = deals_qs.aggregate(
             total=Sum('quotes__total_incl_vat')
         )['total'] or Decimal('0')
         avg_deal = (

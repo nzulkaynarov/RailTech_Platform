@@ -337,7 +337,7 @@ function DomainTable({
                 {index + 1}
               </TableCell>
               <TableCell
-                className="max-w-[200px] truncate font-medium"
+                className="max-w-xs truncate font-medium"
                 title={row.item.name}
               >
                 {row.item.name}

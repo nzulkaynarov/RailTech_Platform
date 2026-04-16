@@ -46,10 +46,12 @@ export function MyRequestsPage({ onNavigate }: { onNavigate?: (t: string) => voi
                       <Badge variant="outline" className="text-xs">{deal.stage_name}</Badge>
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      {deal.company_name ?? '—'} · {new Date(deal.created_at).toLocaleDateString()}
+                      {deal.company_name ? `${deal.company_name} · ` : ''}{new Date(deal.created_at).toLocaleDateString()}
                     </p>
                   </div>
-                  <p className="text-sm font-bold text-primary tabular-nums">{deal.total_value ? formatCurrency(Number(deal.total_value)) : '—'}</p>
+                  {deal.total_value ? (
+                    <p className="text-sm font-bold text-primary tabular-nums">{formatCurrency(Number(deal.total_value))}</p>
+                  ) : null}
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </div>
               </CardContent>

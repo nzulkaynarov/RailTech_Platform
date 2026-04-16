@@ -55,7 +55,7 @@ export function ClientsPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-center tabular-nums">{company.user_count ?? 0}</TableCell>
-                    <TableCell className="text-muted-foreground">{company.created_at ? new Date(company.created_at).toLocaleDateString() : '—'}</TableCell>
+                    <TableCell className="text-muted-foreground text-xs">{company.created_at ? new Date(company.created_at).toLocaleDateString() : ''}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

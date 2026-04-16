@@ -126,11 +126,32 @@ def get_public_storage():
 
 
 def get_private_storage():
-    """Return the private storage backend (for KYC, deals, imports, etc.)."""
+    """
+    Return the private storage backend (for KYC, deals, imports, etc.).
+
+    Uses MINIO_EXTERNAL_ENDPOINT for presigned URL generation so URLs
+    are accessible from the browser (e.g. localhost:9000), while file
+    operations use the Docker-internal MINIO_ENDPOINT (e.g. minio:9000).
+    """
     if _minio_is_configured():
         from storages.backends.s3boto3 import S3Boto3Storage
-        return S3Boto3Storage(
-            endpoint_url=settings.MINIO_ENDPOINT,
+
+        external = getattr(settings, 'MINIO_EXTERNAL_ENDPOINT', '') or settings.MINIO_ENDPOINT
+        internal = settings.MINIO_ENDPOINT
+
+        class PrivateS3Storage(S3Boto3Storage):
+            """Rewrites presigned URLs to use external endpoint."""
+
+            def url(self, name, parameters=None, expire=None, http_method=None):
+                raw_url = super().url(
+                    name, parameters=parameters, expire=expire, http_method=http_method,
+                )
+                if internal != external and internal in raw_url:
+                    return raw_url.replace(internal, external, 1)
+                return raw_url
+
+        return PrivateS3Storage(
+            endpoint_url=internal,
             access_key=settings.MINIO_ACCESS_KEY,
             secret_key=settings.MINIO_SECRET_KEY,
             bucket_name=settings.MINIO_PRIVATE_BUCKET,

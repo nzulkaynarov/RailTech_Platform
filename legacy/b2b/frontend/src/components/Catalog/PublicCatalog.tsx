@@ -146,7 +146,7 @@ export const PublicCatalog: React.FC = () => {
                 <div
                     className={clsx(
                         'border-r border-border bg-card hidden lg:block overflow-hidden shrink-0 transition-all duration-200',
-                        sidebarCollapsed ? 'w-[52px]' : 'w-[210px]'
+                        sidebarCollapsed ? 'w-14' : 'w-52'
                     )}
                 >
                     <DomainAdaptiveSidebar isCollapsed={sidebarCollapsed} />
