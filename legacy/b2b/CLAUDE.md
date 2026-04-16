@@ -26,21 +26,24 @@ backend/                    # Django project
   sourcing/                 # Attachment, ImportTask, DomainKeyword, Excel import tasks
   master_data/              # AbstractLookup, Country, Currency, UOM, DeliveryBasis
   notifications/            # Notification, NotificationType
+  */services.py             # Business logic layer (accounts, catalog, crm, notifications, sourcing)
 frontend/                   # React app
   src/api/                  # Axios client with JWT interceptor + refresh mutex
   src/store/                # 10 Zustand stores (auth, user, cart, flow, task, theme, currency, domain, demo, loading)
-  src/pages/                # Dashboard, ProductManagement, OnboardingPage, ProfilePage, etc.
-  src/components/           # shadcn/ui (66 components), Admin, Catalog, Sourcing, Dashboard, Auth, Cabinet
-  src/hooks/                # useAccounts, useCatalog, useCRM, useMasterData, use-mobile
+  src/pages/                # Dashboard, Deals, Quotes, Products, KYC, Subscriptions, Settings, Sourcing, Analytics, etc.
+  src/components/           # shadcn/ui (64 components), Admin, Catalog, Sourcing, Dashboard, Auth, Cabinet, Layout, Shared
+  src/components/Layout/    # AdminShell, ClientShell, ManagerShell, CatalogShell
+  src/hooks/                # useAccounts, useCatalog, useCRM, useMasterData, useSystemSettings, usePageStats, use-mobile
   src/i18n/locales/         # ru.json, en.json
   src/layouts/              # AppShell (main SPA shell with shadcn Sidebar)
 nginx/                      # Production nginx.conf (rate limiting, caching, WebSocket)
-Docs/                       # Architecture, specs, roadmap, mockups, presentations, UI audit
+docs/                       # Architecture, specs, roadmap, ADRs, audits, WebSocket docs
+Docs/                       # Mockups, presentations, UI audit (legacy path)
 ```
 
 ## Key Architecture Decisions
 
-- **Minimal URL routing** — auth routes (`/`, `/register`, `/setup-password`) via `useAuthRoute()` hook in App.tsx; main app uses `useState<Page>` state machine (no React Router)
+- **Hybrid routing** — auth routes (`/`, `/register`, `/setup-password`) via `useAuthRoute()` hook in App.tsx; AppShell uses hash-based SPA navigation; AdminShell/ClientShell/ManagerShell use React Router
 - **B2B Multi-tenancy** — via `CompanyMember` join table, not schema/DB isolation
 - **Deal FSM** — DRAFT → KYC_PENDING → SOURCING → CALCULATING → QUOTE_SENT → CONTRACT_SIGNED → CLOSED_WON/CLOSED_LOST
 - **Dual Redis** — redis:6379 (Channels/WebSocket), redis-celery:6380 (Celery broker+results)
@@ -299,3 +302,6 @@ Transformation happens in: `userStore.loadFromAuth()` and DRF serializers.
 - `DATABASE_URL` query params (like `channel_binding=require`) are passed as DB OPTIONS
 - Volume mount `./backend:/app` enables hot-reload for backend; frontend needs rebuild (`docker compose up -d --build frontend`)
 - `data/products.ts` exports an EMPTY array — it's legacy, use `catalogApi` for real data
+- **No demo/simulation shortcuts** — no demo onboarding, no hardcoded test flows, no bypass of backend. For testing use pre-seeded accounts or register via real flow. Admin operations go through Django Unfold at `/admin/`
+- **Don't assume code structure** — always read files before editing. Wrong assumptions (missing imports, wrong types, demo code bypassing backend) cost rebuild cycles. Verify imports exist, types match, and patterns match current code
+- **Shell layouts live in two places** — `src/layouts/AppShell.tsx` (main) and `src/components/Layout/` (AdminShell, ClientShell, ManagerShell, CatalogShell)

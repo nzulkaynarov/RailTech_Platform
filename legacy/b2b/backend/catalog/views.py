@@ -1,6 +1,7 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResponse, OpenApiParameter
 from .models import Product, EquipmentGroup, Category, DomainType, SupplierOffer
 from .serializers import (
     ProductSerializer, EquipmentGroupSerializer,
@@ -10,6 +11,18 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="List domain types",
+        description="Returns all active domain types (e.g. RAILWAY, GENERAL).",
+        tags=['Catalog'],
+    ),
+    retrieve=extend_schema(
+        summary="Get domain type",
+        description="Returns a single domain type by ID.",
+        tags=['Catalog'],
+    ),
+)
 class DomainTypeViewSet(viewsets.ReadOnlyModelViewSet):
     """GET /api/v1/catalog/domain-types/ — active domain types from DB."""
     queryset = DomainType.objects.filter(is_active=True)
@@ -18,7 +31,28 @@ class DomainTypeViewSet(viewsets.ReadOnlyModelViewSet):
     pagination_class = None  # Small lookup table — no pagination needed
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="List equipment groups",
+        description="Returns all equipment groups. Searchable by name. Public read access.",
+        tags=['Catalog'],
+    ),
+    create=extend_schema(
+        summary="Create equipment group",
+        description="Create a new equipment group. Admin only.",
+        tags=['Catalog'],
+    ),
+    retrieve=extend_schema(summary="Get equipment group", tags=['Catalog']),
+    update=extend_schema(summary="Update equipment group", description="Admin only.", tags=['Catalog']),
+    partial_update=extend_schema(summary="Partially update equipment group", tags=['Catalog']),
+    destroy=extend_schema(summary="Delete equipment group", tags=['Catalog']),
+)
 class EquipmentGroupViewSet(viewsets.ModelViewSet):
+    """
+    CRUD for equipment groups (hierarchical classification).
+
+    Public read access; write operations require Admin role.
+    """
     queryset = EquipmentGroup.objects.select_related('domain_type').all()
     serializer_class = EquipmentGroupSerializer
     filter_backends = [filters.SearchFilter]
@@ -31,7 +65,28 @@ class EquipmentGroupViewSet(viewsets.ModelViewSet):
         return [permissions.IsAuthenticated(), IsAdminUser()]
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="List categories",
+        description=(
+            "Returns all product categories. Searchable by name, "
+            "filterable by domain_type__code. Public read access."
+        ),
+        tags=['Catalog'],
+    ),
+    create=extend_schema(summary="Create category", description="Admin only.", tags=['Catalog']),
+    retrieve=extend_schema(summary="Get category", tags=['Catalog']),
+    update=extend_schema(summary="Update category", tags=['Catalog']),
+    partial_update=extend_schema(summary="Partially update category", tags=['Catalog']),
+    destroy=extend_schema(summary="Delete category", tags=['Catalog']),
+)
 class CategoryViewSet(viewsets.ModelViewSet):
+    """
+    CRUD for product categories.
+
+    Public read access; write operations require Admin role.
+    Filterable by domain_type__code.
+    """
     queryset = Category.objects.select_related('domain_type').all()
     serializer_class = CategorySerializer
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
@@ -47,7 +102,41 @@ class CategoryViewSet(viewsets.ModelViewSet):
         return [permissions.IsAuthenticated(), IsAdminUser()]
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="List products",
+        description=(
+            "Returns products from the PIM catalog. Non-admin users only see PUBLISHED products. "
+            "Filterable by domain_type, category, manufacturer, equipment_groups, stock_status. "
+            "Searchable by name, GOST/drawing, SKU."
+        ),
+        parameters=[
+            OpenApiParameter(
+                name='stock_status',
+                description='Filter by supplier offer stock status code (e.g. IN_STOCK, ON_ORDER)',
+                type=str,
+                location=OpenApiParameter.QUERY,
+            ),
+        ],
+        tags=['Catalog'],
+    ),
+    create=extend_schema(summary="Create product", description="Admin only.", tags=['Catalog']),
+    retrieve=extend_schema(
+        summary="Get product details",
+        description="Returns full product details including offers, images, and documents.",
+        tags=['Catalog'],
+    ),
+    update=extend_schema(summary="Update product", description="Admin only.", tags=['Catalog']),
+    partial_update=extend_schema(summary="Partially update product", tags=['Catalog']),
+    destroy=extend_schema(summary="Delete product", tags=['Catalog']),
+)
 class ProductViewSet(viewsets.ModelViewSet):
+    """
+    CRUD for PIM products.
+
+    Public read access (PUBLISHED only for non-admin);
+    write operations require Admin role.
+    """
     serializer_class = ProductSerializer
 
     def get_queryset(self):
@@ -64,14 +153,15 @@ class ProductViewSet(viewsets.ModelViewSet):
             'offers__delivery_basis',
         )
         # Non-admins only see PUBLISHED products
-        # Note: In V2, status is a ForeignKey to ProductStatus, but we filter by its code
         if not (user.is_authenticated and (user.is_superuser or user.is_manager_or_admin)):
             queryset = queryset.filter(status__code='PUBLISHED')
 
         # Filter by stock_status (from supplier offers)
         stock_status = self.request.query_params.get('stock_status')
         if stock_status:
-            queryset = queryset.filter(offers__stock_status__code=stock_status).distinct()
+            queryset = queryset.filter(
+                offers__stock_status__code=stock_status
+            ).distinct()
 
         return queryset
 
@@ -90,22 +180,49 @@ class ProductViewSet(viewsets.ModelViewSet):
         from core.permissions import IsAdminUser
         return [permissions.IsAuthenticated(), IsAdminUser()]
 
+    @extend_schema(
+        summary="Bulk publish products",
+        description=(
+            "Publish multiple products at once by providing a list of product IDs. "
+            "Maximum 500 products per batch. Admin only."
+        ),
+        request={'application/json': {'type': 'object', 'properties': {
+            'product_ids': {'type': 'array', 'items': {'type': 'integer'}},
+        }}},
+        responses={
+            200: OpenApiResponse(description="Products published successfully"),
+            400: OpenApiResponse(description="Invalid IDs or batch too large"),
+        },
+        tags=['Catalog'],
+    )
     @action(detail=False, methods=['post'])
     def bulk_publish(self, request):
         product_ids = request.data.get('product_ids', [])
         if not product_ids:
-            return Response({"error": "No product IDs provided"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "No product IDs provided"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         if not isinstance(product_ids, list):
-            return Response({"error": "product_ids must be a list"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "product_ids must be a list"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
             product_ids = [int(pid) for pid in product_ids]
         except (ValueError, TypeError):
-            return Response({"error": "product_ids must contain valid integers"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "product_ids must contain valid integers"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         if len(product_ids) > 500:
-            return Response({"error": "Maximum 500 products per batch"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Maximum 500 products per batch"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         from . import services
         products = Product.objects.filter(id__in=product_ids)
@@ -114,10 +231,22 @@ class ProductViewSet(viewsets.ModelViewSet):
         if not updated and skipped:
             return Response(
                 {"error": skipped[0] if len(skipped) == 1 else f"Skipped: {', '.join(skipped)}"},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
-        return Response({"message": f"Successfully published {updated} products."}, status=status.HTTP_200_OK)
+        return Response(
+            {"message": f"Successfully published {updated} products."},
+            status=status.HTTP_200_OK,
+        )
 
+    @extend_schema(
+        summary="Download import template",
+        description="Generate and download an XLSX template for bulk catalog import.",
+        responses={
+            (200, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'):
+                OpenApiResponse(description="XLSX template file"),
+        },
+        tags=['Catalog'],
+    )
     @action(detail=False, methods=['get'], url_path='export-template')
     def export_template(self, request):
         """Generate an XLSX template for catalog import."""
@@ -127,20 +256,48 @@ class ProductViewSet(viewsets.ModelViewSet):
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = 'Products'
-        headers = ['name', 'sku', 'description', 'domain_type', 'category', 'uom', 'manufacturer', 'gost_drawing']
+        headers = [
+            'name', 'sku', 'description', 'domain_type',
+            'category', 'uom', 'manufacturer', 'gost_drawing',
+        ]
         for col, header in enumerate(headers, 1):
             ws.cell(row=1, column=col, value=header)
-            ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 20
+            ws.column_dimensions[
+                openpyxl.utils.get_column_letter(col)
+            ].width = 20
 
         response = HttpResponse(
             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         )
-        response['Content-Disposition'] = 'attachment; filename="railtech_import_template.xlsx"'
+        response['Content-Disposition'] = (
+            'attachment; filename="railtech_import_template.xlsx"'
+        )
         wb.save(response)
         return response
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="List supplier offers",
+        description="Returns all supplier offers. Filterable by product, supplier, stock_status.",
+        tags=['Catalog'],
+    ),
+    create=extend_schema(
+        summary="Create supplier offer",
+        description="Create a new supplier offer. Manager/Admin only.",
+        tags=['Catalog'],
+    ),
+    retrieve=extend_schema(summary="Get supplier offer", tags=['Catalog']),
+    update=extend_schema(summary="Update supplier offer", tags=['Catalog']),
+    partial_update=extend_schema(summary="Partially update supplier offer", tags=['Catalog']),
+    destroy=extend_schema(summary="Delete supplier offer", tags=['Catalog']),
+)
 class SupplierOfferViewSet(viewsets.ModelViewSet):
+    """
+    CRUD for supplier offers (pricing, stock, delivery terms).
+
+    Public read access; write operations require Manager/Admin role.
+    """
     queryset = SupplierOffer.objects.select_related(
         'supplier', 'product', 'currency', 'delivery_basis', 'stock_status'
     ).all()
@@ -156,7 +313,19 @@ class SupplierOfferViewSet(viewsets.ModelViewSet):
         return [permissions.IsAuthenticated(), IsManagerOrAdmin()]
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="List manufacturers",
+        description=(
+            "Returns companies that have manufactured products. "
+            "Derived from Company records linked to products."
+        ),
+        tags=['Catalog'],
+    ),
+    retrieve=extend_schema(summary="Get manufacturer", tags=['Catalog']),
+)
 class ManufacturerViewSet(viewsets.ReadOnlyModelViewSet):
+    """Read-only list of companies that are manufacturers (have linked products)."""
     from accounts.serializers import CompanySerializer
     serializer_class = CompanySerializer
     permission_classes = [permissions.AllowAny]

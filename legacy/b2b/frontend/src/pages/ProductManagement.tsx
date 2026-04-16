@@ -153,7 +153,7 @@ type CardSize = 'compact' | 'normal' | 'large';
 
 export function ProductManagement({ onProductClick }: ProductManagementProps) {
   const { t } = useTranslation();
-  const { activeStatus, role } = useUserStore();
+  const { activeStatus } = useUserStore();
   const cartStore = useCartStore();
   const formatCurrency = useCurrencyStore((s) => s.format);
   const { data: domainTypes = [] } = useDomainTypes();

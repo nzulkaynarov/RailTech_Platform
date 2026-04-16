@@ -2,6 +2,11 @@ from rest_framework import viewsets, status, throttling
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_spectacular.utils import (
+    extend_schema, extend_schema_view, OpenApiResponse,
+    OpenApiParameter, inline_serializer,
+)
+from rest_framework import serializers as drf_serializers
 from .models import Deal, Quote, QuoteItem, Message, ActivityLog
 from .serializers import (
     DealListSerializer, DealDetailSerializer, QuoteSerializer, QuoteItemSerializer,
@@ -17,7 +22,39 @@ from decimal import Decimal
 from .services import transition_deal_stage
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="List deals",
+        description=(
+            "Returns deals accessible to the current user. "
+            "Admins/managers see all; clients see only their company's deals."
+        ),
+        tags=['CRM'],
+    ),
+    create=extend_schema(
+        summary="Create deal",
+        description=(
+            "Create a new deal. The client is auto-assigned to the current user, "
+            "and the company is set from the user's primary company."
+        ),
+        tags=['CRM'],
+    ),
+    retrieve=extend_schema(
+        summary="Get deal details",
+        description="Returns full deal details including all quotes and their items.",
+        tags=['CRM'],
+    ),
+    update=extend_schema(summary="Update deal", tags=['CRM']),
+    partial_update=extend_schema(summary="Partially update deal", tags=['CRM']),
+    destroy=extend_schema(summary="Delete deal", tags=['CRM']),
+)
 class DealViewSet(viewsets.ModelViewSet):
+    """
+    CRUD for deals (the core CRM entity).
+
+    Deal lifecycle: DRAFT → KYC_PENDING → SOURCING → CALCULATING →
+    QUOTE_SENT → CONTRACT_SIGNED → CLOSED_WON / CLOSED_LOST.
+    """
     def get_serializer_class(self):
         if self.action == 'list':
             return DealListSerializer
@@ -25,6 +62,8 @@ class DealViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsOwnerOrManagerOrAdmin]
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Deal.objects.none()
         user = self.request.user
         queryset = Deal.objects.all().select_related(
             'client', 'manager', 'company', 'stage'
@@ -60,21 +99,58 @@ class DealViewSet(viewsets.ModelViewSet):
             level='INFO'
         )
 
+    @extend_schema(
+        summary="Change deal stage",
+        description=(
+            "Transition the deal to a new stage using FSM validation. "
+            "Valid transitions are enforced by the backend."
+        ),
+        request=inline_serializer('ChangeStageRequest', fields={
+            'stage_code': drf_serializers.CharField(
+                help_text="Target stage code (e.g. SOURCING, CALCULATING, QUOTE_SENT)"
+            ),
+        }),
+        responses={
+            200: DealDetailSerializer,
+            400: OpenApiResponse(description="stage_code is required"),
+            422: OpenApiResponse(description="Invalid stage transition"),
+        },
+        tags=['CRM'],
+    )
     @action(detail=True, methods=['post'], url_path='change-stage')
     def change_stage(self, request, pk=None):
         """Change deal stage with FSM validation."""
         deal = self.get_object()
         stage_code = request.data.get('stage_code')
         if not stage_code:
-            return Response({'detail': 'stage_code is required.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'detail': 'stage_code is required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         deal, error = transition_deal_stage(deal, stage_code, actor=request.user)
         if error:
-            return Response({'detail': error}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+            return Response(
+                {'detail': error},
+                status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
 
         serializer = DealDetailSerializer(deal)
         return Response(serializer.data)
 
+    @extend_schema(
+        summary="Export deal PDF",
+        description=(
+            "Export PDF of the deal's active quote. "
+            "Auto-generates the PDF if not yet created."
+        ),
+        responses={
+            (200, 'application/pdf'): OpenApiResponse(description="PDF file download"),
+            404: OpenApiResponse(description="No active quote"),
+            500: OpenApiResponse(description="PDF generation failed"),
+        },
+        tags=['CRM'],
+    )
     @action(detail=True, methods=['get'], url_path='export-pdf')
     def export_pdf(self, request, pk=None):
         """Export PDF of the deal's active quote."""
@@ -109,11 +185,35 @@ class DealViewSet(viewsets.ModelViewSet):
         )
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="List quotes",
+        description="Returns quotes accessible to the current user with items.",
+        tags=['CRM'],
+    ),
+    create=extend_schema(summary="Create quote", tags=['CRM']),
+    retrieve=extend_schema(
+        summary="Get quote details",
+        description="Returns full quote details including all line items.",
+        tags=['CRM'],
+    ),
+    update=extend_schema(summary="Update quote", tags=['CRM']),
+    partial_update=extend_schema(summary="Partially update quote", tags=['CRM']),
+    destroy=extend_schema(summary="Delete quote", tags=['CRM']),
+)
 class QuoteViewSet(viewsets.ModelViewSet):
+    """
+    CRUD for quotes (commercial proposals).
+
+    Quote lifecycle: DRAFT → SENT → APPROVED / REJECTED.
+    Includes PDF generation, send-to-client, approve, and reject actions.
+    """
     serializer_class = QuoteSerializer
     permission_classes = [IsAuthenticated, IsOwnerOrManagerOrAdmin]
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Quote.objects.none()
         user = self.request.user
         queryset = Quote.objects.all().select_related(
             'deal', 'deal__company', 'deal__stage', 'status'
@@ -128,6 +228,15 @@ class QuoteViewSet(viewsets.ModelViewSet):
             is_active=True).values_list('company_id', flat=True)
         return queryset.filter(deal__company_id__in=user_company_ids)
 
+    @extend_schema(
+        summary="Generate quote PDF",
+        description="Generate a PDF file for the quote using WeasyPrint.",
+        responses={
+            200: OpenApiResponse(description="PDF generated, URL returned"),
+            500: OpenApiResponse(description="PDF generation failed"),
+        },
+        tags=['CRM'],
+    )
     @action(detail=True, methods=['post'], url_path='generate-pdf')
     def generate_pdf(self, request, pk=None):
         """Generate PDF for a quote."""
@@ -137,11 +246,26 @@ class QuoteViewSet(viewsets.ModelViewSet):
             quote = QuoteLifecycleService.generate_pdf(quote.pk)
             return Response({
                 'status': 'PDF generated',
-                'pdf_url': request.build_absolute_uri(quote.pdf_file.url) if quote.pdf_file else None
+                'pdf_url': (
+                    request.build_absolute_uri(quote.pdf_file.url)
+                    if quote.pdf_file else None
+                ),
             })
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
+    @extend_schema(
+        summary="Send quote to client",
+        description=(
+            "Send the quote to the client. Freezes prices at current values. "
+            "Manager/Admin only."
+        ),
+        responses={200: QuoteSerializer},
+        tags=['CRM'],
+    )
     @action(detail=True, methods=['post'], url_path='send-to-client',
             permission_classes=[IsAuthenticated, IsManagerOrAdmin])
     def send_to_client(self, request, pk=None):
@@ -152,6 +276,15 @@ class QuoteViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(quote)
         return Response(serializer.data)
 
+    @extend_schema(
+        summary="Approve quote",
+        description="Client approves the quote. Only the client's company members or staff can approve.",
+        responses={
+            200: QuoteSerializer,
+            403: OpenApiResponse(description="Not authorized"),
+        },
+        tags=['CRM'],
+    )
     @action(detail=True, methods=['post'], url_path='approve')
     def approve(self, request, pk=None):
         """Client approves the quote."""
@@ -159,46 +292,105 @@ class QuoteViewSet(viewsets.ModelViewSet):
         # Verify the user is the deal's client or company member
         user = request.user
         if not (user.is_superuser or user.is_manager_or_admin):
-            if not user.memberships.filter(company=quote.deal.company, is_active=True).exists():
-                return Response({'error': 'Only the client company can approve'}, status=status.HTTP_403_FORBIDDEN)
+            if not user.memberships.filter(
+                company=quote.deal.company, is_active=True
+            ).exists():
+                return Response(
+                    {'error': 'Only the client company can approve'},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
 
         from .services import QuoteLifecycleService
         quote = QuoteLifecycleService.approve_quote(quote.pk, request.user)
         serializer = self.get_serializer(quote)
         return Response(serializer.data)
 
+    @extend_schema(
+        summary="Reject quote",
+        description="Client rejects the quote with an optional reason.",
+        request=inline_serializer('RejectQuoteRequest', fields={
+            'reason': drf_serializers.CharField(required=False, default=''),
+        }),
+        responses={
+            200: QuoteSerializer,
+            403: OpenApiResponse(description="Not authorized"),
+        },
+        tags=['CRM'],
+    )
     @action(detail=True, methods=['post'], url_path='reject')
     def reject(self, request, pk=None):
         """Client rejects the quote."""
         quote = self.get_object()
         user = request.user
         if not (user.is_superuser or user.is_manager_or_admin):
-            if not user.memberships.filter(company=quote.deal.company, is_active=True).exists():
-                return Response({'error': 'Only the client company can reject'}, status=status.HTTP_403_FORBIDDEN)
+            if not user.memberships.filter(
+                company=quote.deal.company, is_active=True
+            ).exists():
+                return Response(
+                    {'error': 'Only the client company can reject'},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
 
         reason = request.data.get('reason', '')
         from .services import QuoteLifecycleService
-        quote = QuoteLifecycleService.reject_quote(quote.pk, request.user, reason)
+        quote = QuoteLifecycleService.reject_quote(
+            quote.pk, request.user, reason
+        )
         serializer = self.get_serializer(quote)
         return Response(serializer.data)
 
+    @extend_schema(
+        summary="Download quote PDF",
+        description="Download the previously generated PDF file for a quote.",
+        responses={
+            (200, 'application/pdf'): OpenApiResponse(description="PDF file"),
+            404: OpenApiResponse(description="PDF not generated yet"),
+        },
+        tags=['CRM'],
+    )
     @action(detail=True, methods=['get'], url_path='download-pdf')
     def download_pdf(self, request, pk=None):
         """Download the generated PDF."""
         quote = self.get_object()
         if not quote.pdf_file:
-            return Response({'error': 'PDF not generated yet'}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {'error': 'PDF not generated yet'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
         from django.http import FileResponse
-        return FileResponse(quote.pdf_file.open('rb'), content_type='application/pdf',
-                            as_attachment=True, filename=quote.pdf_file.name.split('/')[-1])
+        return FileResponse(
+            quote.pdf_file.open('rb'),
+            content_type='application/pdf',
+            as_attachment=True,
+            filename=quote.pdf_file.name.split('/')[-1],
+        )
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="List quote items",
+        description="Returns quote line items accessible to the current user.",
+        tags=['CRM'],
+    ),
+    create=extend_schema(
+        summary="Create quote item",
+        description="Add a line item to a quote.",
+        tags=['CRM'],
+    ),
+    retrieve=extend_schema(summary="Get quote item", tags=['CRM']),
+    update=extend_schema(summary="Update quote item", tags=['CRM']),
+    partial_update=extend_schema(summary="Partially update quote item", tags=['CRM']),
+    destroy=extend_schema(summary="Delete quote item", tags=['CRM']),
+)
 class QuoteItemViewSet(viewsets.ModelViewSet):
+    """CRUD for quote line items (products, quantities, pricing)."""
     serializer_class = QuoteItemSerializer
     permission_classes = [IsAuthenticated, IsOwnerOrManagerOrAdmin]
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return QuoteItem.objects.none()
         user = self.request.user
         queryset = QuoteItem.objects.all().select_related(
             'product', 'product__domain_type', 'quote',
@@ -212,12 +404,36 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
         return queryset.filter(quote__deal__company_id__in=user_company_ids)
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="List messages",
+        description="Returns deal messages. Filterable by deal_id.",
+        tags=['CRM'],
+    ),
+    create=extend_schema(
+        summary="Send message",
+        description="Send a message in a deal chat. Sender is auto-assigned.",
+        tags=['CRM'],
+    ),
+    retrieve=extend_schema(summary="Get message", tags=['CRM']),
+    update=extend_schema(summary="Update message", tags=['CRM']),
+    partial_update=extend_schema(summary="Partially update message", tags=['CRM']),
+    destroy=extend_schema(summary="Delete message", tags=['CRM']),
+)
 class MessageViewSet(viewsets.ModelViewSet):
+    """
+    CRUD for deal messages (chat within a deal).
+
+    Messages are ordered by timestamp. The sender is auto-assigned
+    to the current user on creation.
+    """
     serializer_class = MessageSerializer
     permission_classes = [IsAuthenticated, IsOwnerOrManagerOrAdmin]
     filterset_fields = ['deal_id']
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Message.objects.none()
         user = self.request.user
         queryset = Message.objects.all().order_by(
             'timestamp').select_related('sender', 'deal')
@@ -232,6 +448,25 @@ class MessageViewSet(viewsets.ModelViewSet):
         serializer.save(sender=self.request.user)
 
 
+@extend_schema(
+    summary="Dashboard analytics",
+    description=(
+        "Comprehensive dashboard KPIs: deals volume, active requests, "
+        "catalog items, clients count, deals by month, activity by day, "
+        "top products, counterparties breakdown, and request completion."
+    ),
+    parameters=[
+        OpenApiParameter(
+            name='period',
+            description='Analytics period (7d, 30d, 90d). Default: 30d',
+            type=str,
+            location=OpenApiParameter.QUERY,
+            enum=['7d', '30d', '90d'],
+        ),
+    ],
+    responses={200: OpenApiResponse(description="Dashboard analytics data")},
+    tags=['Analytics'],
+)
 class DashboardAnalyticsView(APIView):
     """
     Provides comprehensive dashboard analytics with KPIs for the main dashboard.
@@ -284,7 +519,9 @@ class DashboardAnalyticsView(APIView):
         prev_volume = prev_period_deals.annotate(
             deal_value=Subquery(latest_quote)
         ).aggregate(total=Sum('deal_value'))['total'] or Decimal('0')
-        volume_change = self._calculate_percentage_change(prev_volume, current_volume)
+        volume_change = self._calculate_percentage_change(
+            prev_volume, current_volume
+        )
 
         # Active requests (not closed)
         current_active = all_deals.exclude(
@@ -299,19 +536,24 @@ class DashboardAnalyticsView(APIView):
         )
 
         # Catalog items
-        published_products = Product.objects.filter(status__code='PUBLISHED').count()
+        published_products = Product.objects.filter(
+            status__code='PUBLISHED'
+        ).count()
         prev_published = Product.objects.filter(
             status__code='PUBLISHED',
             created_at__lt=period_start
         ).count()
-        catalog_change = self._calculate_percentage_change(prev_published, published_products)
+        catalog_change = self._calculate_percentage_change(
+            prev_published, published_products
+        )
 
         # Clients count
         from accounts.models import CompanyType
         client_type = CompanyType.objects.filter(code='CLIENT').first()
         if client_type:
-            current_clients = Company.objects.filter(types=client_type).distinct().count()
-            # For previous period, use approximate (all clients - new ones)
+            current_clients = Company.objects.filter(
+                types=client_type
+            ).distinct().count()
             prev_clients = current_clients - Company.objects.filter(
                 types=client_type,
                 created_at__gte=period_start
@@ -319,7 +561,9 @@ class DashboardAnalyticsView(APIView):
         else:
             current_clients = 0
             prev_clients = 0
-        clients_change = self._calculate_percentage_change(prev_clients, current_clients)
+        clients_change = self._calculate_percentage_change(
+            prev_clients, current_clients
+        )
 
         # Deals by month (last 6 months)
         deals_by_month = self._get_deals_by_month(all_deals)
@@ -331,13 +575,24 @@ class DashboardAnalyticsView(APIView):
         top_products = self._get_top_products()
 
         # Counterparties breakdown
-        manufacturer_type = CompanyType.objects.filter(code='MANUFACTURER').first()
+        manufacturer_type = CompanyType.objects.filter(
+            code='MANUFACTURER'
+        ).first()
         supplier_type = CompanyType.objects.filter(code='SUPPLIER').first()
 
         counterparties = {
-            'manufacturers': Company.objects.filter(types=manufacturer_type).count() if manufacturer_type else 0,
-            'buyers': Company.objects.filter(types=client_type).count() if client_type else 0,
-            'intermediaries': Company.objects.filter(types=supplier_type).count() if supplier_type else 0,
+            'manufacturers': (
+                Company.objects.filter(types=manufacturer_type).count()
+                if manufacturer_type else 0
+            ),
+            'buyers': (
+                Company.objects.filter(types=client_type).count()
+                if client_type else 0
+            ),
+            'intermediaries': (
+                Company.objects.filter(types=supplier_type).count()
+                if supplier_type else 0
+            ),
         }
 
         # Request completion percentage
@@ -345,7 +600,10 @@ class DashboardAnalyticsView(APIView):
             status__code__in=['APPROVED', 'SENT']
         ).count()
         total_quotes = Quote.objects.count()
-        completion_percentage = (completed_quotes / total_quotes * 100) if total_quotes > 0 else 0
+        completion_percentage = (
+            (completed_quotes / total_quotes * 100)
+            if total_quotes > 0 else 0
+        )
 
         data = {
             'deals_volume': float(current_volume),
@@ -381,7 +639,9 @@ class DashboardAnalyticsView(APIView):
             deals.filter(created_at__gte=six_months_ago)
             .annotate(month=TruncMonth('created_at'))
             .values('month')
-            .annotate(count=Count('id'), value=Sum('quotes__total_incl_vat'))
+            .annotate(
+                count=Count('id'), value=Sum('quotes__total_incl_vat')
+            )
             .order_by('month')
         )
 
@@ -437,7 +697,14 @@ class DashboardAnalyticsView(APIView):
         ]
 
 
+@extend_schema(
+    summary="CRM analytics",
+    description="Aggregated CRM analytics data. Manager/Admin only.",
+    responses={200: OpenApiResponse(description="CRM analytics data")},
+    tags=['Analytics'],
+)
 class CRMAnalyticsView(APIView):
+    """CRM analytics endpoint for managers and admins."""
     permission_classes = [IsAuthenticated, IsManagerOrAdmin]
 
     def get(self, request):
@@ -446,7 +713,19 @@ class CRMAnalyticsView(APIView):
         return Response(data)
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="List activity logs",
+        description=(
+            "Returns activity logs. Superusers see all; "
+            "managers see only their own logs."
+        ),
+        tags=['CRM'],
+    ),
+    retrieve=extend_schema(summary="Get activity log entry", tags=['CRM']),
+)
 class ActivityLogViewSet(viewsets.ReadOnlyModelViewSet):
+    """Read-only access to activity logs for audit trail."""
     serializer_class = ActivityLogSerializer
     permission_classes = [IsAuthenticated, IsManagerOrAdmin]
 
@@ -469,7 +748,22 @@ class LeadSubmitThrottle(throttling.SimpleRateThrottle):
         }
 
 
+@extend_schema(
+    summary="Submit lead",
+    description=(
+        "Submit a lead from the landing page. "
+        "No authentication required. Rate-limited."
+    ),
+    request=LeadSerializer,
+    responses={
+        201: LeadSerializer,
+        400: OpenApiResponse(description="Validation error"),
+        429: OpenApiResponse(description="Rate limit exceeded"),
+    },
+    tags=['CRM'],
+)
 class LeadCreateView(APIView):
+    """Public endpoint for lead submission from the landing page."""
     permission_classes = []
     throttle_classes = [LeadSubmitThrottle]
 
@@ -479,7 +773,10 @@ class LeadCreateView(APIView):
             lead = serializer.save()
             ActivityLog.objects.create(
                 action="Новый лид с сайта",
-                detail=f"Получен запрос от {lead.name} ({lead.email}) через лендинг.",
+                detail=(
+                    f"Получен запрос от {lead.name} ({lead.email}) "
+                    f"через лендинг."
+                ),
                 level='SUCCESS'
             )
             return Response(serializer.data, status=status.HTTP_201_CREATED)

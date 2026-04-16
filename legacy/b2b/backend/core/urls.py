@@ -5,6 +5,7 @@ from django.conf.urls.static import static
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
+from drf_spectacular.utils import extend_schema
 from catalog.views import (
     ProductViewSet, EquipmentGroupViewSet, CategoryViewSet,
     ManufacturerViewSet, SupplierOfferViewSet, DomainTypeViewSet
@@ -68,10 +69,12 @@ urlpatterns = [
          SetupPasswordView.as_view(), name='setup-password'),
     path('api/v1/auth/submit-profile/',
          SubmitProfileView.as_view(), name='submit-profile'),
-    path('api/v1/auth/token/', TokenObtainPairView.as_view(),
+    path('api/v1/auth/token/',
+         extend_schema(summary="Obtain JWT token pair", description="Authenticate with email and password to receive access and refresh tokens.", tags=['Auth'])(TokenObtainPairView).as_view(),
          name='token_obtain_pair'),
     path('api/v1/auth/token/refresh/',
-         TokenRefreshView.as_view(), name='token_refresh'),
+         extend_schema(summary="Refresh JWT token", description="Exchange a valid refresh token for a new access token.", tags=['Auth'])(TokenRefreshView).as_view(),
+         name='token_refresh'),
     # Sourcing & Imports
     path('api/v1/sourcing/import-deal/<int:deal_id>/', ExcelImportView.as_view(), name='import-deal'),
     path('api/v1/sourcing/import-catalog/', CatalogImportView.as_view(), name='import-catalog'),

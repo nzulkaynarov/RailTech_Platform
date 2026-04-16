@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.generics import RetrieveAPIView
 from rest_framework.parsers import MultiPartParser, FormParser
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResponse, inline_serializer
 
 from django.db.models import Prefetch
 
@@ -26,7 +27,44 @@ from .serializers import (
 )
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="List companies",
+        description="Returns all companies with KYC documents and members. Manager/Admin only.",
+        tags=['Accounts'],
+    ),
+    create=extend_schema(
+        summary="Create company",
+        description="Register a new company. Manager/Admin only.",
+        tags=['Accounts'],
+    ),
+    retrieve=extend_schema(
+        summary="Get company details",
+        description="Returns company details. Staff sees any company; members see only their own.",
+        tags=['Accounts'],
+    ),
+    update=extend_schema(
+        summary="Update company",
+        description="Full update of company data (PUT). Manager/Admin only.",
+        tags=['Accounts'],
+    ),
+    partial_update=extend_schema(
+        summary="Partially update company",
+        description="Partial update of company data (PATCH). Manager/Admin only.",
+        tags=['Accounts'],
+    ),
+    destroy=extend_schema(
+        summary="Delete company",
+        description="Delete a company. Manager/Admin only.",
+        tags=['Accounts'],
+    ),
+)
 class CompanyViewSet(viewsets.ModelViewSet):
+    """
+    CRUD operations for companies.
+
+    Includes KYC verification, document upload, team management, and member invitations.
+    """
     queryset = Company.objects.prefetch_related('kyc_documents', 'members').order_by('-created_at')
     serializer_class = CompanySerializer
     permission_classes = [permissions.IsAuthenticated, IsManagerOrAdmin]
@@ -44,6 +82,19 @@ class CompanyViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
 
+    @extend_schema(
+        summary="Verify company KYC",
+        description=(
+            "Update KYC verification status for a company. "
+            "Pass a VerificationStatus code (e.g. 'L2_VERIFIED') and optional comment."
+        ),
+        request=KYCVerificationSerializer,
+        responses={
+            200: OpenApiResponse(description="Status updated successfully"),
+            400: OpenApiResponse(description="Validation error or business rule violation"),
+        },
+        tags=['Accounts'],
+    )
     @action(detail=True, methods=['post'], url_path='verify-kyc')
     def verify_kyc(self, request, pk=None):
         company = self.get_object()
@@ -65,6 +116,16 @@ class CompanyViewSet(viewsets.ModelViewSet):
             return Response({'status': 'Status updated', 'new_status': result.verification_status.name})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @extend_schema(
+        summary="Upload KYC document",
+        description="Upload a KYC document for company verification. Supports multipart file upload.",
+        request={'multipart/form-data': {'type': 'object', 'properties': {
+            'file': {'type': 'string', 'format': 'binary'},
+            'doc_type': {'type': 'string', 'default': 'OTHER'},
+        }}},
+        responses={201: KYCDocumentSerializer},
+        tags=['Accounts'],
+    )
     @action(
         detail=True,
         methods=['post'],
@@ -83,6 +144,12 @@ class CompanyViewSet(viewsets.ModelViewSet):
             return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
         return Response(KYCDocumentSerializer(doc).data, status=status.HTTP_201_CREATED)
 
+    @extend_schema(
+        summary="Delete KYC document",
+        description="Delete a specific KYC document by its ID from a company.",
+        responses={204: None, 404: OpenApiResponse(description="Document not found")},
+        tags=['Accounts'],
+    )
     @action(detail=True, methods=['delete'], url_path='delete-document/(?P<doc_id>[0-9]+)', url_name='delete-document')
     def delete_document(self, request, pk=None, doc_id=None):
         company = self.get_object()
@@ -91,6 +158,12 @@ class CompanyViewSet(viewsets.ModelViewSet):
             return Response({'detail': error}, status=status.HTTP_404_NOT_FOUND)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @extend_schema(
+        summary="Get company team members",
+        description="Returns all users that are members of this company. Accessible by team members and staff.",
+        responses={200: UserSerializer(many=True)},
+        tags=['Accounts'],
+    )
     @action(detail=True, methods=['get'])
     def team(self, request, pk=None):
         company = self.get_object()
@@ -104,6 +177,19 @@ class CompanyViewSet(viewsets.ModelViewSet):
         users = CustomUser.objects.filter(memberships__company=company).distinct()
         return Response(UserSerializer(users, many=True).data)
 
+    @extend_schema(
+        summary="Invite team member",
+        description=(
+            "Invite a new user to the company by email. "
+            "Only the company owner or staff can invite. Default role: PROCUREMENT_MANAGER."
+        ),
+        request=inline_serializer('InviteRequest', fields={
+            'email': __import__('rest_framework').serializers.EmailField(),
+            'role': __import__('rest_framework').serializers.CharField(default='PROCUREMENT_MANAGER'),
+        }),
+        responses={201: UserSerializer, 400: OpenApiResponse(description="Invalid email or role"), 403: OpenApiResponse(description="Not authorized")},
+        tags=['Accounts'],
+    )
     @action(detail=True, methods=['post'])
     def invite(self, request, pk=None):
         """Invite a new team member to the company."""
@@ -131,7 +217,20 @@ class CompanyViewSet(viewsets.ModelViewSet):
         return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
 
 
+@extend_schema_view(
+    list=extend_schema(summary="List users", description="Returns all users. Admin only.", tags=['Accounts']),
+    create=extend_schema(summary="Create user", description="Create a new user. Admin only.", tags=['Accounts']),
+    retrieve=extend_schema(summary="Get user details", description="Returns user details with memberships. Admin only.", tags=['Accounts']),
+    update=extend_schema(summary="Update user", description="Full update of user data. Admin only.", tags=['Accounts']),
+    partial_update=extend_schema(summary="Partially update user", description="Partial update of user data. Admin only.", tags=['Accounts']),
+    destroy=extend_schema(summary="Delete user", description="Delete a user. Admin only.", tags=['Accounts']),
+)
 class UserViewSet(viewsets.ModelViewSet):
+    """
+    CRUD operations for users (Admin only).
+
+    Includes password change, profile update, and user activation/deactivation.
+    """
     queryset = CustomUser.objects.all().select_related(
         'role',
     ).prefetch_related(
@@ -152,6 +251,16 @@ class UserViewSet(viewsets.ModelViewSet):
     from core.permissions import IsAdminUser as CustomIsAdminUser
     permission_classes = [permissions.IsAuthenticated, CustomIsAdminUser]
 
+    @extend_schema(
+        summary="Change password",
+        description="Change the current user's password. Requires current password for verification.",
+        request=inline_serializer('ChangePasswordRequest', fields={
+            'current_password': __import__('rest_framework').serializers.CharField(),
+            'new_password': __import__('rest_framework').serializers.CharField(min_length=8),
+        }),
+        responses={200: OpenApiResponse(description="Password changed"), 400: OpenApiResponse(description="Invalid current password")},
+        tags=['Accounts'],
+    )
     @action(detail=False, methods=['post'], url_path='change-password',
             permission_classes=[permissions.IsAuthenticated])
     def change_password(self, request):
@@ -168,6 +277,13 @@ class UserViewSet(viewsets.ModelViewSet):
             return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
         return Response({'message': 'Пароль успешно изменён'})
 
+    @extend_schema(
+        summary="Update current user profile",
+        description="Partial update of the authenticated user's own profile.",
+        request=UserSerializer,
+        responses={200: UserSerializer},
+        tags=['Accounts'],
+    )
     @action(detail=False, methods=['patch'], url_path='update-me',
             permission_classes=[permissions.IsAuthenticated])
     def update_me(self, request):
@@ -176,12 +292,24 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer.save()
         return Response(serializer.data)
 
+    @extend_schema(
+        summary="Get current user (via users endpoint)",
+        description="Returns the authenticated user's profile via the users ViewSet.",
+        responses={200: UserSerializer},
+        tags=['Accounts'],
+    )
     @action(detail=False, methods=['get'], url_path='me',
             permission_classes=[permissions.IsAuthenticated])
     def me(self, request):
         serializer = self.get_serializer(request.user)
         return Response(serializer.data)
 
+    @extend_schema(
+        summary="Toggle user active status",
+        description="Activate or deactivate a user. Admin only.",
+        responses={200: OpenApiResponse(description="User status toggled")},
+        tags=['Accounts'],
+    )
     @action(detail=True, methods=['post'], url_path='toggle-active')
     def toggle_active(self, request, pk=None):
         user = self.get_object()
@@ -194,6 +322,19 @@ class UserViewSet(viewsets.ModelViewSet):
         })
 
 
+@extend_schema(
+    summary="Register new user",
+    description=(
+        "Register a new user by email. Creates an inactive user and sends "
+        "a verification email with a password setup link."
+    ),
+    request=RegisterInterestSerializer,
+    responses={
+        201: OpenApiResponse(description="Verification email sent"),
+        400: OpenApiResponse(description="Email already exists or validation error"),
+    },
+    tags=['Auth'],
+)
 class RegisterView(views.APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -213,6 +354,19 @@ class RegisterView(views.APIView):
         }, status=status.HTTP_201_CREATED)
 
 
+@extend_schema(
+    summary="Setup password",
+    description=(
+        "Set a password for a newly registered user. Requires the uid and token "
+        "from the verification email link. Activates the user account."
+    ),
+    request=SetupPasswordSerializer,
+    responses={
+        200: OpenApiResponse(description="Password set, user activated"),
+        400: OpenApiResponse(description="Invalid or expired token"),
+    },
+    tags=['Auth'],
+)
 class SetupPasswordView(views.APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -232,6 +386,19 @@ class SetupPasswordView(views.APIView):
         })
 
 
+@extend_schema(
+    summary="Submit company profile",
+    description=(
+        "Submit company profile after registration. Creates or links a Company "
+        "by INN, assigns workspace role and company type."
+    ),
+    request=SubmitProfileSerializer,
+    responses={
+        200: OpenApiResponse(description="Profile submitted successfully"),
+        400: OpenApiResponse(description="Validation error"),
+    },
+    tags=['Auth'],
+)
 class SubmitProfileView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -253,6 +420,12 @@ class SubmitProfileView(views.APIView):
         })
 
 
+@extend_schema(
+    summary="Get current user profile",
+    description="Returns the authenticated user's full profile including memberships and company data.",
+    responses={200: UserSerializer},
+    tags=['Accounts'],
+)
 class MeView(RetrieveAPIView):
     """
     Retrieve the current authenticated user's profile.
@@ -270,6 +443,14 @@ class MeView(RetrieveAPIView):
 # ──────────────────────────────────────────────────────────────────────────
 
 
+@extend_schema_view(
+    list=extend_schema(summary="List subscriptions", description="Returns all supplier subscriptions. Filterable by plan, status, company.", tags=['Accounts']),
+    create=extend_schema(summary="Create subscription", description="Create a new supplier subscription.", tags=['Accounts']),
+    retrieve=extend_schema(summary="Get subscription details", tags=['Accounts']),
+    update=extend_schema(summary="Update subscription", tags=['Accounts']),
+    partial_update=extend_schema(summary="Partially update subscription", tags=['Accounts']),
+    destroy=extend_schema(summary="Delete subscription", tags=['Accounts']),
+)
 class SupplierSubscriptionViewSet(viewsets.ModelViewSet):
     """
     CRUD + status actions for supplier subscriptions.
@@ -288,6 +469,12 @@ class SupplierSubscriptionViewSet(viewsets.ModelViewSet):
             .order_by('-created_at')
         )
 
+    @extend_schema(
+        summary="Activate subscription",
+        description="Set subscription status to ACTIVE.",
+        responses={200: SupplierSubscriptionSerializer},
+        tags=['Accounts'],
+    )
     @action(detail=True, methods=['post'], url_path='activate')
     def activate(self, request, pk=None):
         """POST /api/v1/accounts/subscriptions/{id}/activate/"""
@@ -298,6 +485,12 @@ class SupplierSubscriptionViewSet(viewsets.ModelViewSet):
         sub.refresh_from_db()
         return Response(self.get_serializer(sub).data)
 
+    @extend_schema(
+        summary="Suspend subscription",
+        description="Set subscription status to SUSPENDED.",
+        responses={200: SupplierSubscriptionSerializer},
+        tags=['Accounts'],
+    )
     @action(detail=True, methods=['post'], url_path='suspend')
     def suspend(self, request, pk=None):
         """POST /api/v1/accounts/subscriptions/{id}/suspend/"""
@@ -309,6 +502,14 @@ class SupplierSubscriptionViewSet(viewsets.ModelViewSet):
         return Response(self.get_serializer(sub).data)
 
 
+@extend_schema_view(
+    list=extend_schema(summary="List role applications", description="Returns all company role applications. Filterable by status, type, company.", tags=['Accounts']),
+    create=extend_schema(summary="Create role application", description="Submit a new role application for a company.", tags=['Accounts']),
+    retrieve=extend_schema(summary="Get role application details", tags=['Accounts']),
+    update=extend_schema(summary="Update role application", tags=['Accounts']),
+    partial_update=extend_schema(summary="Partially update role application", tags=['Accounts']),
+    destroy=extend_schema(summary="Delete role application", tags=['Accounts']),
+)
 class CompanyRoleApplicationViewSet(viewsets.ModelViewSet):
     """
     CRUD + approve/reject for company role applications.
@@ -327,6 +528,12 @@ class CompanyRoleApplicationViewSet(viewsets.ModelViewSet):
             .order_by('-created_at')
         )
 
+    @extend_schema(
+        summary="Approve role application",
+        description="Approve a pending role application. Adds the requested CompanyType to the company.",
+        responses={200: CompanyRoleApplicationSerializer, 400: OpenApiResponse(description="Already processed")},
+        tags=['Accounts'],
+    )
     @action(detail=True, methods=['post'], url_path='approve')
     def approve(self, request, pk=None):
         """POST /api/v1/accounts/role-applications/{id}/approve/"""
@@ -336,6 +543,15 @@ class CompanyRoleApplicationViewSet(viewsets.ModelViewSet):
             return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
         return Response(self.get_serializer(result).data)
 
+    @extend_schema(
+        summary="Reject role application",
+        description="Reject a pending role application with an optional reason.",
+        request=inline_serializer('RejectRequest', fields={
+            'reason': __import__('rest_framework').serializers.CharField(required=False, default=''),
+        }),
+        responses={200: CompanyRoleApplicationSerializer, 400: OpenApiResponse(description="Already processed")},
+        tags=['Accounts'],
+    )
     @action(detail=True, methods=['post'], url_path='reject')
     def reject(self, request, pk=None):
         """POST /api/v1/accounts/role-applications/{id}/reject/"""

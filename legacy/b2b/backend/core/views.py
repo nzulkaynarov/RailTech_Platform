@@ -6,6 +6,7 @@ from rest_framework import serializers as drf_serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 from core.models import SystemSetting
 from core.permissions import IsManagerOrAdmin
@@ -34,23 +35,54 @@ class SystemSettingsView(APIView):
     """
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Get system settings",
+        description=(
+            "Returns current platform settings: VAT rate, margin, exchange rate, etc. "
+            "Any authenticated user can read."
+        ),
+        responses={200: SystemSettingSerializer},
+        tags=['System'],
+    )
     def get(self, request):
         settings_obj = SystemSetting.load()
         return Response(SystemSettingSerializer(settings_obj).data)
 
+    @extend_schema(
+        summary="Update system settings",
+        description="Partially update platform settings. Admin/Manager only.",
+        request=SystemSettingSerializer,
+        responses={200: SystemSettingSerializer},
+        tags=['System'],
+    )
     def patch(self, request):
         # Write requires elevated permissions
-        if not (request.user.is_superuser or getattr(request.user, 'is_manager_or_admin', False)):
+        if not (
+            request.user.is_superuser
+            or getattr(request.user, 'is_manager_or_admin', False)
+        ):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied()
 
         settings_obj = SystemSetting.load()
-        serializer = SystemSettingSerializer(settings_obj, data=request.data, partial=True)
+        serializer = SystemSettingSerializer(
+            settings_obj, data=request.data, partial=True
+        )
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
 
 
+@extend_schema(
+    summary="Page stats for frontend",
+    description=(
+        "Aggregated statistics for all frontend pages. Returns real counts "
+        "from the database for deals, quotes, sourcing, clients, products, "
+        "users, imports, analytics, and more."
+    ),
+    responses={200: OpenApiResponse(description="Page stats object with nested sections")},
+    tags=['Analytics'],
+)
 class PageStatsView(APIView):
     """
     Aggregated stats for all frontend pages.
@@ -61,29 +93,43 @@ class PageStatsView(APIView):
 
     def get(self, request):
         from crm.models import Deal, Quote, QuoteItem, Lead, ActivityLog
-        from catalog.models import Product, Category, EquipmentGroup, SupplierOffer
-        from accounts.models import Company, CustomUser, CompanyType, VerificationStatus
+        from catalog.models import (
+            Product, Category, EquipmentGroup, SupplierOffer,
+        )
+        from accounts.models import (
+            Company, CustomUser, CompanyType, VerificationStatus,
+        )
         from sourcing.models import ImportTask, Attachment
         from notifications.models import Notification
 
         # --- Deals ---
         deals_total = Deal.objects.count()
-        deals_active = Deal.objects.exclude(stage__code__in=['CLOSED_WON', 'CLOSED_LOST']).count()
-        deals_quote_sent = Deal.objects.filter(stage__code='QUOTE_SENT').count()
-        deals_closed_won = Deal.objects.filter(stage__code='CLOSED_WON').count()
+        deals_active = Deal.objects.exclude(
+            stage__code__in=['CLOSED_WON', 'CLOSED_LOST']
+        ).count()
+        deals_quote_sent = Deal.objects.filter(
+            stage__code='QUOTE_SENT'
+        ).count()
+        deals_closed_won = Deal.objects.filter(
+            stage__code='CLOSED_WON'
+        ).count()
 
         # --- Quotes ---
         quotes_total = Quote.objects.count()
         quotes_draft = Quote.objects.filter(status__code='DRAFT').count()
         quotes_sent = Quote.objects.filter(status__code='SENT').count()
-        quotes_approved = Quote.objects.filter(status__code='APPROVED').count()
+        quotes_approved = Quote.objects.filter(
+            status__code='APPROVED'
+        ).count()
         quotes_under_review = quotes_sent  # sent = under review
         pipeline_value = Quote.objects.filter(
             status__code__in=['DRAFT', 'SENT']
         ).aggregate(total=Sum('total_incl_vat'))['total'] or Decimal('0')
 
         # --- Sourcing ---
-        sourcing_total = Deal.objects.filter(stage__code='SOURCING').count()
+        sourcing_total = Deal.objects.filter(
+            stage__code='SOURCING'
+        ).count()
         sourcing_new = Deal.objects.filter(stage__code='DRAFT').count()
         sourcing_in_progress = Deal.objects.filter(
             stage__code__in=['SOURCING', 'CALCULATING']
@@ -94,10 +140,15 @@ class PageStatsView(APIView):
 
         # --- Smart Match ---
         quote_items_total = QuoteItem.objects.count()
-        quote_items_matched = QuoteItem.objects.filter(product__isnull=False).count()
-        quote_items_unmatched = QuoteItem.objects.filter(product__isnull=True).count()
+        quote_items_matched = QuoteItem.objects.filter(
+            product__isnull=False
+        ).count()
+        quote_items_unmatched = QuoteItem.objects.filter(
+            product__isnull=True
+        ).count()
         match_accuracy = round(
-            (quote_items_matched / quote_items_total * 100) if quote_items_total > 0 else 0
+            (quote_items_matched / quote_items_total * 100)
+            if quote_items_total > 0 else 0
         )
 
         # --- Clients / Companies ---
@@ -115,16 +166,23 @@ class PageStatsView(APIView):
 
         # --- Products / Catalog ---
         products_total = Product.objects.count()
-        products_published = Product.objects.filter(status__code='PUBLISHED').count()
+        products_published = Product.objects.filter(
+            status__code='PUBLISHED'
+        ).count()
         categories_total = Category.objects.filter(is_active=True).count()
-        equipment_groups_total = EquipmentGroup.objects.filter(is_active=True).count()
+        equipment_groups_total = EquipmentGroup.objects.filter(
+            is_active=True
+        ).count()
         offers_total = SupplierOffer.objects.filter(is_active=True).count()
 
         # --- Users ---
         users_total = CustomUser.objects.filter(is_active=True).count()
-        users_admins = CustomUser.objects.filter(is_active=True, role__code='ADMIN').count()
+        users_admins = CustomUser.objects.filter(
+            is_active=True, role__code='ADMIN'
+        ).count()
         users_managers = CustomUser.objects.filter(
-            is_active=True, role__code__in=['SALES_MANAGER', 'ACCOUNT_MANAGER']
+            is_active=True,
+            role__code__in=['SALES_MANAGER', 'ACCOUNT_MANAGER'],
         ).count()
         users_employees = users_total - users_admins - users_managers
 
@@ -136,12 +194,17 @@ class PageStatsView(APIView):
         total_deal_value = Deal.objects.aggregate(
             total=Sum('quotes__total_incl_vat')
         )['total'] or Decimal('0')
-        avg_deal = round(float(total_deal_value) / deals_total, 2) if deals_total > 0 else 0
+        avg_deal = (
+            round(float(total_deal_value) / deals_total, 2)
+            if deals_total > 0 else 0
+        )
         win_rate = round(
-            (deals_closed_won / deals_total * 100) if deals_total > 0 else 0
+            (deals_closed_won / deals_total * 100)
+            if deals_total > 0 else 0
         )
         conversion = round(
-            (deals_closed_won / deals_total * 100) if deals_total > 0 else 0
+            (deals_closed_won / deals_total * 100)
+            if deals_total > 0 else 0
         )
 
         # --- Notifications ---
@@ -150,7 +213,6 @@ class PageStatsView(APIView):
         ).count()
 
         # --- Production (manufacturer-specific) ---
-        # For now, count deals where user's company is manufacturer
         production_active = 0
         production_awaiting = 0
         production_responded = 0

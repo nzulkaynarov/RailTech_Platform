@@ -444,10 +444,28 @@ SIMPLE_JWT = {
 # DRF Spectacular (API Documentation)
 SPECTACULAR_SETTINGS = {
     'TITLE': 'RailTech B2B API',
-    'DESCRIPTION': 'B2B marketplace API for railway equipment procurement',
+    'DESCRIPTION': (
+        'B2B marketplace API for railway equipment procurement in Uzbekistan. '
+        'Supports deal lifecycle management, quoting, product catalog (PIM), '
+        'KYC verification, Excel imports, and real-time notifications via WebSocket.'
+    ),
     'VERSION': '1.0.0',
+    'CONTACT': {'name': 'RailTech API Support', 'email': 'api@railtech.com'},
+    'LICENSE': {'name': 'Proprietary'},
     'SERVE_INCLUDE_SCHEMA': False,
     'COMPONENT_SPLIT_REQUEST': True,
+    'SCHEMA_PATH_PREFIX': '/api/v[0-9]+/',
+    'TAGS': [
+        {'name': 'Auth', 'description': 'Registration, password setup, JWT tokens'},
+        {'name': 'Accounts', 'description': 'Users, companies, KYC, team management'},
+        {'name': 'Catalog', 'description': 'Products (PIM), categories, equipment groups, supplier offers'},
+        {'name': 'CRM', 'description': 'Deals, quotes, quote items, messages, activity logs'},
+        {'name': 'Sourcing', 'description': 'Excel imports, catalog imports, sourcing requests'},
+        {'name': 'Master Data', 'description': 'Countries, currencies, units of measure, delivery basis'},
+        {'name': 'Notifications', 'description': 'User notifications with read/unread tracking'},
+        {'name': 'Analytics', 'description': 'Dashboard KPIs, CRM analytics, page stats'},
+        {'name': 'System', 'description': 'Health checks, system settings'},
+    ],
 }
 
 # Cache (Redis — already running for Channels)

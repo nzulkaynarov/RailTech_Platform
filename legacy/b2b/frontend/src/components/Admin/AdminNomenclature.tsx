@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Plus, Search, Archive, Loader2, FileSpreadsheet, Edit, Boxes, Filter, Tag, Package } from 'lucide-react';
+import { Search, Archive, Edit, Boxes, Filter, Tag, Package } from 'lucide-react';
 import { Product } from '../../api/catalogApi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
