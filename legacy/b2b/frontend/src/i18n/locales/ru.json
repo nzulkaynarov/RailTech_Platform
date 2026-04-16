@@ -1156,7 +1156,9 @@
     "characteristics": "Основные параметры",
     "images": "Изображения",
     "equipmentGroups": "Группы оборудования",
-    "document": "Документ"
+    "document": "Документ",
+    "supplierOffers": "Предложения поставщиков",
+    "minOrder": "Мин. заказ: {{qty}} шт"
   },
   "managerDashboard": {
     "title": "Sourcing",

@@ -1156,7 +1156,9 @@
     "characteristics": "Key Attributes",
     "images": "Images",
     "equipmentGroups": "Equipment Groups",
-    "document": "Document"
+    "document": "Document",
+    "supplierOffers": "Supplier Offers",
+    "minOrder": "Min. order: {{qty}} pcs"
   },
   "managerDashboard": {
     "title": "Sourcing",

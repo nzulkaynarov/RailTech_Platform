@@ -30,6 +30,22 @@ export interface Manufacturer {
     country: string;
 }
 
+export interface SupplierOffer {
+    id: number;
+    supplier: number;
+    supplier_data?: { id: number; name: string } | null;
+    supplier_sku?: string;
+    base_price: string;
+    currency?: number | null;
+    currency_data?: { id: number; code: string; symbol: string } | null;
+    delivery_basis?: number | null;
+    delivery_basis_data?: { id: number; code: string; name: string } | null;
+    stock_status?: string | null;
+    delivery_lead_time?: string;
+    min_order_qty?: number;
+    is_active?: boolean;
+}
+
 export interface Product {
     id: number;
     name: string;
@@ -76,6 +92,7 @@ export interface Product {
     main_document_url?: string | null;
     
     equipment_groups?: EquipmentGroup[];
+    offers?: SupplierOffer[];
     created_at?: string;
     updated_at?: string;
 }

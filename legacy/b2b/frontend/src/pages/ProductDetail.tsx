@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft, ShoppingCart, Minus, Plus, Package, FileText,
+  Building2, Clock, Truck,
 } from 'lucide-react';
 
 import { Card, CardContent } from '@/components/ui/card';
@@ -177,6 +178,53 @@ export function ProductDetail({ productId, onBack }: ProductDetailProps) {
                 <div key={attr.label} className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">{attr.label}</span>
                   <span className="text-sm font-medium">{attr.value}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Supplier Offers */}
+      {product.offers && product.offers.filter(o => o.is_active).length > 0 && (
+        <Card>
+          <CardContent className="p-5">
+            <h2 className="text-sm font-semibold mb-3">
+              {t('productDetail.supplierOffers')} ({product.offers.filter(o => o.is_active).length})
+            </h2>
+            <div className="space-y-3">
+              {product.offers.filter(o => o.is_active).map((offer) => (
+                <div key={offer.id} className="rounded-lg border p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">{offer.supplier_data?.name}</span>
+                    </div>
+                    <span className="text-lg font-bold text-primary tabular-nums">
+                      {formatCurrency(parseFloat(offer.base_price))}
+                      {offer.currency_data?.code ? ` ${offer.currency_data.code}` : ''}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                    {offer.delivery_basis_data?.name && (
+                      <div className="flex items-center gap-1">
+                        <Truck className="h-3 w-3" />
+                        <span>{offer.delivery_basis_data.name}</span>
+                      </div>
+                    )}
+                    {offer.delivery_lead_time && (
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        <span>{offer.delivery_lead_time}</span>
+                      </div>
+                    )}
+                    {offer.min_order_qty && offer.min_order_qty > 1 && (
+                      <span>{t('productDetail.minOrder', { qty: offer.min_order_qty })}</span>
+                    )}
+                    {offer.supplier_sku && (
+                      <span className="font-mono">{offer.supplier_sku}</span>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
