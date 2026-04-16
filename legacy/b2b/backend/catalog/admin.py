@@ -5,7 +5,7 @@ from unfold.contrib.import_export.forms import ExportForm, ImportForm
 from unfold.decorators import display
 from import_export.admin import ImportExportModelAdmin
 
-from core.admin_mixins import ReadOnlyInspectionMixin
+from core.admin_mixins import ReadOnlyInspectionMixin, superuser_only_action
 
 from .models import (
     DomainType, ProductStatus, StockStatus,
@@ -190,7 +190,7 @@ class ProductAdmin(ReadOnlyInspectionMixin, ImportExportModelAdmin, ModelAdmin):
         }),
     )
 
-    @admin.action(description=_("Опубликовать (PUBLISHED)"))
+    @superuser_only_action(_("[Emergency] Опубликовать (PUBLISHED)"))
     def publish_products(self, request, queryset):
         from . import services
         updated, skipped = services.publish_products(queryset)

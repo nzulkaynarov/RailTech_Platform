@@ -37,7 +37,10 @@
       "Bash(grep -n \"schema\" backend/core/urls.py)",
       "Bash(grep -n \"spectacular\" backend/core/urls.py)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8000/health/)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(npm audit *)",
+      "Bash(ls -la \"/Users/nurbekgb/Downloads/IT projects/RailTech_SaaS_B2B/frontend/.env\"*)",
+      "Bash(ls -la /Users/nurbekgb/Downloads/IT*)"
     ]
   }
 }

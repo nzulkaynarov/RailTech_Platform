@@ -104,13 +104,17 @@ class CompanyViewSet(viewsets.ModelViewSet):
 ## План миграции
 
 1. **Phase 0 — Аудит** ✅ (выполнено 2026-04-12)
-2. **Phase 1 — ADR + IRON RULE 8** ⬅ текущая
-3. **Phase 2 — Рефакторинг бизнес-логики из admin.py в services.py**
-4. **Phase 3 — Закрытие пробелов в React Admin** (KYC route → SystemSettings → Subscriptions → Role apps)
-5. **Phase 4 — Урезание Unfold до read-only inspection**
-6. **Phase 5 — Hardening доступа (`system_engineers` group)**
-7. **Phase 6 — Message history archive в S3 (через Unfold + Celery)**
-8. **Phase 7 — Финальная верификация и документация**
+2. **Phase 1 — ADR + IRON RULE 8** ✅ (выполнено 2026-04-12)
+3. **Phase 2 — Рефакторинг бизнес-логики из admin.py в services.py** ✅ (выполнено ранее)
+4. **Phase 3 — Закрытие пробелов в React Admin** ✅ (KYC, Subscriptions, Role apps — реализованы)
+5. **Phase 4 — Урезание Unfold до read-only inspection** ✅ (выполнено 2026-04-16)
+   - `ReadOnlyInspectionMixin` на всех бизнес-моделях (Company, Deal, Lead, Message, Product, SupplierOffer, CompanyRoleApplication, SupplierSubscription)
+   - Все бизнес-экшены помечены `[Emergency]` и доступны только для `is_superuser=True`
+   - Декоратор `@superuser_only_action` в `core/admin_mixins.py`
+   - Справочники (master_data, lookups) — полный CRUD без ограничений
+6. **Phase 5 — Hardening доступа (`system_engineers` group)** — TODO
+7. **Phase 6 — Message history archive в S3 (через Unfold + Celery)** ✅ (выполнено)
+8. **Phase 7 — Финальная верификация и документация** — TODO
 
 ## Связанные документы
 

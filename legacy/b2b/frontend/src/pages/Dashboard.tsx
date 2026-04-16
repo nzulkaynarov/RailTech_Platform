@@ -543,7 +543,7 @@ export function Dashboard({ onProductClick }: DashboardProps) {
             <span>1 {t('dashboardPage.months.jan')} – 21 {t('dashboardPage.months.mar')} 2026</span>
           </div>
           <Select value={period} onValueChange={setPeriod}>
-            <SelectTrigger className="h-8 w-[140px] text-xs" aria-label={t('dashboardPage.selectPeriod')}>
+            <SelectTrigger className="h-8 w-36 text-xs" aria-label={t('dashboardPage.selectPeriod')}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

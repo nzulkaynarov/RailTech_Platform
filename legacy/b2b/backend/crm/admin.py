@@ -3,7 +3,7 @@ from django.utils.translation import gettext_lazy as _
 from unfold.admin import ModelAdmin, TabularInline
 from unfold.decorators import display
 
-from core.admin_mixins import ReadOnlyInspectionMixin
+from core.admin_mixins import ReadOnlyInspectionMixin, superuser_only_action
 
 from .models import (
     DealStage, QuoteStatus, Deal, Quote, QuoteItem,
@@ -105,7 +105,7 @@ class DealAdmin(ReadOnlyInspectionMixin, ModelAdmin):
         }),
     )
 
-    @admin.action(description=_("Закрыть как проигранную"))
+    @superuser_only_action(_("[Emergency] Закрыть как проигранную"))
     def mark_closed_lost(self, request, queryset):
         from . import services
         updated = services.bulk_close_deals_lost(queryset, actor=request.user)
@@ -216,7 +216,7 @@ class LeadAdmin(ReadOnlyInspectionMixin, ModelAdmin):
         }),
     )
 
-    @admin.action(description=_("Пометить обработанными"))
+    @superuser_only_action(_("[Emergency] Пометить обработанными"))
     def mark_processed(self, request, queryset):
         from . import services
         updated = services.mark_leads_processed(queryset)
@@ -265,7 +265,7 @@ class MessageAdmin(ReadOnlyInspectionMixin, ModelAdmin):
     def archive_badge(self, obj):
         return obj.is_archived
 
-    @admin.action(description=_("Архивировать в S3 (sync)"))
+    @superuser_only_action(_("[Emergency] Архивировать в S3 (sync)"))
     def archive_selected(self, request, queryset):
         """
         Synchronously archive the selected messages.

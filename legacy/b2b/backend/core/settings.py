@@ -67,6 +67,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_spectacular',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     'django.contrib.postgres',
     'channels',
@@ -245,7 +246,9 @@ CORS_ALLOWED_ORIGINS = [
 
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost:5173',
+    'http://localhost:8000',
     'http://127.0.0.1:5173',
+    'http://127.0.0.1:8000',
     'https://railtech.uz',
     'https://b2b.railtech.uz',
     'https://cabinet.railtech.uz',
@@ -253,8 +256,12 @@ CSRF_TRUSTED_ORIGINS = [
     'https://admin.railtech.uz'
 ]
 
-# Production Cookie & Session Settings
-if not DEBUG:
+# Production Cookie & Session Settings — only for real production domains (behind HTTPS nginx)
+# On localhost (even with DEBUG=False) these must NOT be set, otherwise cookies
+# are scoped to .railtech.uz domain and require HTTPS, breaking local admin login.
+_is_real_production = not DEBUG and os.environ.get('PRODUCTION', 'False').lower() == 'true'
+
+if _is_real_production:
     SESSION_COOKIE_DOMAIN = '.railtech.uz'
     CSRF_COOKIE_DOMAIN = '.railtech.uz'
     SESSION_COOKIE_SECURE = True
@@ -439,6 +446,7 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
 }
 
 # DRF Spectacular (API Documentation)

@@ -7,7 +7,7 @@ from unfold.contrib.import_export.forms import ExportForm, ImportForm
 from unfold.decorators import display
 from unfold.forms import UserChangeForm, UserCreationForm
 from import_export.admin import ImportExportModelAdmin
-from core.admin_mixins import ReadOnlyInspectionMixin
+from core.admin_mixins import ReadOnlyInspectionMixin, superuser_only_action
 
 from .models import (
     CustomUser, Company, CompanyMember, KYCDocument,
@@ -103,7 +103,7 @@ class UserAdmin(ImportExportModelAdmin, BaseUserAdmin, ModelAdmin):
     def role_badge(self, obj):
         return obj.role.name if obj.role else "—"
 
-    @admin.action(description=_("Назначить SALES_MANAGER + is_staff"))
+    @superuser_only_action(_("[Emergency] Назначить SALES_MANAGER + is_staff"))
     def make_staff(self, request, queryset):
         updated, error = services.assign_sales_manager_role(queryset)
         if error:
@@ -174,7 +174,7 @@ class CompanyAdmin(ReadOnlyInspectionMixin, ImportExportModelAdmin, ModelAdmin):
         types = obj.types.all()
         return ", ".join(t.name for t in types) if types else "—"
 
-    @admin.action(description=_("Подтвердить KYC (L2)"))
+    @superuser_only_action(_("[Emergency] Подтвердить KYC (L2)"))
     def verify_kyc(self, request, queryset):
         approved, skipped = services.bulk_verify_kyc(queryset, request.user, level_code='L2_VERIFIED')
         if skipped:
@@ -291,7 +291,7 @@ class CompanyRoleApplicationAdmin(ReadOnlyInspectionMixin, ModelAdmin):
         }),
     )
 
-    @admin.action(description=_("Одобрить (с проверкой документов)"))
+    @superuser_only_action(_("[Emergency] Одобрить (с проверкой документов)"))
     def approve_application(self, request, queryset):
         approved, errors = services.bulk_approve_role_applications(queryset, request.user)
         if errors:
@@ -299,7 +299,7 @@ class CompanyRoleApplicationAdmin(ReadOnlyInspectionMixin, ModelAdmin):
         if approved:
             self.message_user(request, _("%(count)d заявок одобрено.") % {"count": approved})
 
-    @admin.action(description=_("Отклонить"))
+    @superuser_only_action(_("[Emergency] Отклонить"))
     def reject_application(self, request, queryset):
         updated = services.bulk_reject_role_applications(queryset, request.user)
         self.message_user(request, _("%(count)d заявок отклонено.") % {"count": updated})
@@ -365,12 +365,12 @@ class SupplierSubscriptionAdmin(ReadOnlyInspectionMixin, ModelAdmin):
         }),
     )
 
-    @admin.action(description=_("Активировать"))
+    @superuser_only_action(_("[Emergency] Активировать"))
     def activate_subscription(self, request, queryset):
         updated = services.change_subscription_status(queryset, 'ACTIVE')
         self.message_user(request, _("%(count)d активировано.") % {"count": updated})
 
-    @admin.action(description=_("Приостановить"))
+    @superuser_only_action(_("[Emergency] Приостановить"))
     def suspend_subscription(self, request, queryset):
         updated = services.change_subscription_status(queryset, 'SUSPENDED')
         self.message_user(request, _("%(count)d приостановлено.") % {"count": updated})
