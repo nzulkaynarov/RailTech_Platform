@@ -5,10 +5,11 @@ from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResp
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from django.views.decorators.vary import vary_on_headers
-from .models import Product, EquipmentGroup, Category, DomainType, SupplierOffer
+from .models import Product, EquipmentGroup, Category, DomainType, SupplierOffer, ProductStatus, StockStatus
 from .serializers import (
     ProductSerializer, ProductListSerializer, EquipmentGroupSerializer,
-    CategorySerializer, DomainTypeSerializer, SupplierOfferSerializer
+    CategorySerializer, DomainTypeSerializer, SupplierOfferSerializer,
+    ProductStatusSerializer, StockStatusSerializer,
 )
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
@@ -370,3 +371,25 @@ class ManufacturerViewSet(viewsets.ReadOnlyModelViewSet):
         return Company.objects.filter(
             manufactured_products__isnull=False
         ).distinct().order_by('name')
+
+
+@extend_schema_view(
+    list=extend_schema(summary="List product statuses", tags=['Catalog']),
+    retrieve=extend_schema(summary="Get product status", tags=['Catalog']),
+)
+class ProductStatusViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = ProductStatus.objects.filter(is_active=True)
+    serializer_class = ProductStatusSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = None
+
+
+@extend_schema_view(
+    list=extend_schema(summary="List stock statuses", tags=['Catalog']),
+    retrieve=extend_schema(summary="Get stock status", tags=['Catalog']),
+)
+class StockStatusViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = StockStatus.objects.filter(is_active=True)
+    serializer_class = StockStatusSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = None

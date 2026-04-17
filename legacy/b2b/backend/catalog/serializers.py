@@ -4,7 +4,8 @@ from master_data.models import (
 )
 from .models import (
     Product, EquipmentGroup, Category, DomainType,
-    SupplierOffer, ProductImage, ProductDocument
+    SupplierOffer, ProductImage, ProductDocument,
+    ProductStatus, StockStatus,
 )
 from accounts.models import Company
 
@@ -22,6 +23,18 @@ class DomainTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = DomainType
         fields = ['id', 'code', 'name', 'sku_prefix', 'sort_order', 'is_active']
+
+
+class ProductStatusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductStatus
+        fields = ['id', 'code', 'name']
+
+
+class StockStatusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StockStatus
+        fields = ['id', 'code', 'name']
 
 
 class CategorySerializer(serializers.ModelSerializer):

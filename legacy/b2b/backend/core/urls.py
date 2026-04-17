@@ -8,7 +8,8 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, Spec
 from drf_spectacular.utils import extend_schema
 from catalog.views import (
     ProductViewSet, EquipmentGroupViewSet, CategoryViewSet,
-    ManufacturerViewSet, SupplierOfferViewSet, DomainTypeViewSet
+    ManufacturerViewSet, SupplierOfferViewSet, DomainTypeViewSet,
+    ProductStatusViewSet, StockStatusViewSet,
 )
 from crm.views import (
     DealViewSet, QuoteViewSet, QuoteItemViewSet, MessageViewSet,
@@ -34,6 +35,8 @@ router.register(r'catalog/equipment-groups', EquipmentGroupViewSet, basename='eq
 router.register(r'catalog/categories', CategoryViewSet, basename='category')
 router.register(r'catalog/manufacturers', ManufacturerViewSet, basename='manufacturer')
 router.register(r'catalog/domain-types', DomainTypeViewSet, basename='domaintype')
+router.register(r'catalog/product-statuses', ProductStatusViewSet, basename='productstatus')
+router.register(r'catalog/stock-statuses', StockStatusViewSet, basename='stockstatus')
 
 router.register(r'crm/deals', DealViewSet, basename='deal')
 router.register(r'crm/quotes', QuoteViewSet, basename='quote')

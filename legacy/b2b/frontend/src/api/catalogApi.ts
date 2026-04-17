@@ -14,6 +14,10 @@ export interface EquipmentGroup {
     id: number;
     name: string;
     full_path: string;
+    parent?: number | null;
+    description?: string;
+    sort_order?: number;
+    is_active?: boolean;
 }
 
 export interface Category {
@@ -22,6 +26,14 @@ export interface Category {
     parent?: number | null;
     domain_type?: number | null;
     icon?: string | null;
+    sort_order?: number;
+    is_active?: boolean;
+}
+
+export interface ProductStatusItem {
+    id: number;
+    code: string;
+    name: string;
 }
 
 export interface Manufacturer {
@@ -162,6 +174,62 @@ export const catalogApi = {
         }
         const response = await apiClient.get<PaginatedResponse<EquipmentGroup>>(url);
         return response.data.results;
+    },
+    createCategory: async (data: Partial<Category>): Promise<Category> => {
+        const response = await apiClient.post<Category>('catalog/categories/', data);
+        return response.data;
+    },
+    updateCategory: async (id: number, data: Partial<Category>): Promise<Category> => {
+        const response = await apiClient.patch<Category>(`catalog/categories/${id}/`, data);
+        return response.data;
+    },
+    deleteCategory: async (id: number): Promise<void> => {
+        await apiClient.delete(`catalog/categories/${id}/`);
+    },
+    createEquipmentGroup: async (data: Partial<EquipmentGroup>): Promise<EquipmentGroup> => {
+        const response = await apiClient.post<EquipmentGroup>('catalog/equipment-groups/', data);
+        return response.data;
+    },
+    updateEquipmentGroup: async (id: number, data: Partial<EquipmentGroup>): Promise<EquipmentGroup> => {
+        const response = await apiClient.patch<EquipmentGroup>(`catalog/equipment-groups/${id}/`, data);
+        return response.data;
+    },
+    deleteEquipmentGroup: async (id: number): Promise<void> => {
+        await apiClient.delete(`catalog/equipment-groups/${id}/`);
+    },
+    getOffers: async (params?: { product?: number; supplier?: number }): Promise<SupplierOffer[]> => {
+        let url = 'catalog/offers/';
+        if (params) {
+            const query = new URLSearchParams();
+            if (params.product) query.append('product', String(params.product));
+            if (params.supplier) query.append('supplier', String(params.supplier));
+            if (query.toString()) url += `?${query.toString()}`;
+        }
+        const response = await apiClient.get<PaginatedResponse<SupplierOffer>>(url);
+        return response.data.results;
+    },
+    createOffer: async (data: Partial<SupplierOffer>): Promise<SupplierOffer> => {
+        const response = await apiClient.post<SupplierOffer>('catalog/offers/', data);
+        return response.data;
+    },
+    updateOffer: async (id: number, data: Partial<SupplierOffer>): Promise<SupplierOffer> => {
+        const response = await apiClient.patch<SupplierOffer>(`catalog/offers/${id}/`, data);
+        return response.data;
+    },
+    deleteOffer: async (id: number): Promise<void> => {
+        await apiClient.delete(`catalog/offers/${id}/`);
+    },
+    bulkPublishProducts: async (ids: number[]): Promise<{ message: string }> => {
+        const response = await apiClient.post<{ message: string }>('catalog/products/bulk_publish/', { product_ids: ids });
+        return response.data;
+    },
+    getProductStatuses: async (): Promise<ProductStatusItem[]> => {
+        const response = await apiClient.get<ProductStatusItem[]>('catalog/product-statuses/');
+        return response.data;
+    },
+    getStockStatuses: async (): Promise<ProductStatusItem[]> => {
+        const response = await apiClient.get<ProductStatusItem[]>('catalog/stock-statuses/');
+        return response.data;
     },
     importExcel: async (file: File): Promise<{ task_id: string }> => {
         const formData = new FormData();

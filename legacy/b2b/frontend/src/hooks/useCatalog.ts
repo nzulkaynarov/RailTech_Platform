@@ -77,3 +77,113 @@ export const useDeleteProduct = () => {
     },
   });
 };
+
+export const useCreateCategory = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Parameters<typeof catalogApi.createCategory>[0]) => catalogApi.createCategory(data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['categories'] }),
+  });
+};
+
+export const useUpdateCategory = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Parameters<typeof catalogApi.updateCategory>[1] }) =>
+      catalogApi.updateCategory(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['categories'] }),
+  });
+};
+
+export const useDeleteCategory = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => catalogApi.deleteCategory(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['categories'] }),
+  });
+};
+
+export const useCreateEquipmentGroup = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Parameters<typeof catalogApi.createEquipmentGroup>[0]) => catalogApi.createEquipmentGroup(data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['equipment-groups'] }),
+  });
+};
+
+export const useUpdateEquipmentGroup = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Parameters<typeof catalogApi.updateEquipmentGroup>[1] }) =>
+      catalogApi.updateEquipmentGroup(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['equipment-groups'] }),
+  });
+};
+
+export const useDeleteEquipmentGroup = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => catalogApi.deleteEquipmentGroup(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['equipment-groups'] }),
+  });
+};
+
+export const useOffers = (params?: Parameters<typeof catalogApi.getOffers>[0]) => useQuery({
+  queryKey: ['offers', params],
+  queryFn: () => catalogApi.getOffers(params),
+  staleTime: 2 * 60_000,
+});
+
+export const useCreateOffer = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Parameters<typeof catalogApi.createOffer>[0]) => catalogApi.createOffer(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['offers'] });
+      qc.invalidateQueries({ queryKey: ['products'] });
+    },
+  });
+};
+
+export const useUpdateOffer = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Parameters<typeof catalogApi.updateOffer>[1] }) =>
+      catalogApi.updateOffer(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['offers'] });
+      qc.invalidateQueries({ queryKey: ['products'] });
+    },
+  });
+};
+
+export const useDeleteOffer = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => catalogApi.deleteOffer(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['offers'] });
+      qc.invalidateQueries({ queryKey: ['products'] });
+    },
+  });
+};
+
+export const useBulkPublishProducts = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: number[]) => catalogApi.bulkPublishProducts(ids),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['products'] }),
+  });
+};
+
+export const useProductStatuses = () => useQuery({
+  queryKey: ['product-statuses'],
+  queryFn: catalogApi.getProductStatuses,
+  staleTime: 30 * 60_000,
+});
+
+export const useStockStatuses = () => useQuery({
+  queryKey: ['stock-statuses'],
+  queryFn: catalogApi.getStockStatuses,
+  staleTime: 30 * 60_000,
+});
