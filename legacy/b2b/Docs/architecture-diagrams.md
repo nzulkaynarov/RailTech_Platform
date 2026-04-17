@@ -1,6 +1,10 @@
 # RailTech B2B SaaS — Architecture Diagrams
 
-This document contains Mermaid diagrams illustrating the core workflows and architecture of the RailTech platform.
+**Last Updated:** 2026-04-17
+
+Mermaid-диаграммы ключевых потоков и архитектуры RailTech. Источник правды по моделям — [technical-specification.md](technical-specification.md); по стадиям сделки — [business-logic.md](business-logic.md).
+
+> **Примечание:** На схеме мульти-тенантности блок `RFQRequest` — концептуальный (часть Sprint 4). В текущей реализации RFQ моделируется через `Deal` + `QuoteItem` (см. [business-logic.md](business-logic.md) §2.3).
 
 ---
 
@@ -816,13 +820,15 @@ sequenceDiagram
 
 ## Document Metadata
 
-- **Last Updated**: 2026-04-09
-- **Version**: 1.0
+- **Last Updated**: 2026-04-17
+- **Version**: 1.1
 - **Author**: RailTech Architecture Team
 - **Audience**: Engineers, Architects, DevOps, PMs
 
 For detailed implementation specifics, see:
-- `technical-specification.md` — API endpoints, schemas
-- `business-logic.md` — Deal FSM, quote calculation
-- `interface-architecture.md` — Frontend component architecture
-- `docker-setup.md` — Container orchestration guide
+
+- [technical-specification.md](technical-specification.md) — API endpoints, schemas
+- [business-logic.md](business-logic.md) — Deal FSM, quote calculation
+- [interface-architecture.md](interface-architecture.md) — Frontend component architecture
+- [docker-setup.md](docker-setup.md) — Container orchestration guide
+- [websocket-messages.md](websocket-messages.md) — WebSocket protocol

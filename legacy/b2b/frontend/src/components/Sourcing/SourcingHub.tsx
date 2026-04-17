@@ -65,7 +65,7 @@ const statusIconMap: Record<MatchStatus, React.ReactNode> = {
 
 export function SourcingHub() {
   const { t } = useTranslation();
-  const { deal, quote } = useFlowStore();
+  const { quote } = useFlowStore();
   const items: RequestItem[] = useMemo(() => {
     return (quote?.items || []).map(i => ({
       id: i.id.toString(),

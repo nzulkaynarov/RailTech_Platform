@@ -1,7 +1,9 @@
 # RailTech B2B SaaS Platform
 
 B2B маркетплейс и CRM для ж/д оборудования (Узбекистан).
-Django 5.1 + React 18 + TypeScript, полностью в Docker.
+Django 5.2 + React 18 + TypeScript, полностью в Docker.
+
+**Актуальность документации:** 2026-04-17
 
 ---
 
@@ -126,10 +128,11 @@ docker compose exec celery-worker celery -A core inspect ping
 | `railtech_redis_celery` | redis:7-alpine | 6380 | Celery broker + результаты задач |
 | `railtech_minio` | minio/minio | 9000, 9001 | S3-совместимое хранилище файлов |
 | `railtech_minio_init` | minio/mc | — | Автосоздание бакетов (разовый, Exited) |
-| `railtech_celery_worker` | python:3.13-slim | — | Асинхронные задачи: импорт Excel, генерация PDF |
-| `railtech_celery_beat` | python:3.13-slim | — | Планировщик периодических задач |
+| `railtech_celery_worker` | python:3.13-slim | — | Асинхронные задачи: импорт Excel, генерация PDF, архивирование чата |
+| `railtech_celery_beat` | python:3.13-slim | — | Планировщик периодических задач (DatabaseScheduler) |
 
 > PostgreSQL — внешняя БД (Neon Cloud), в Docker не поднимается.
+> На продакшне через `docker-compose.prod.yml` добавляется контейнер `railtech_nginx` (nginx:stable-alpine, порты 80/443).
 
 ---
 
@@ -330,38 +333,42 @@ backend/                    # Django REST API
   */services.py             # Бизнес-логика (все приложения)
 
 frontend/                   # React SPA
-  src/api/                  # Axios клиенты с JWT interceptor
-  src/components/           # shadcn/ui (64 компонента), Admin, Catalog, Sourcing, Layout
-  src/components/Layout/    # Shell-лейауты: AdminShell, ClientShell, ManagerShell, CatalogShell
-  src/hooks/                # React Query хуки (useAccounts, useCatalog, useCRM, useSystemSettings)
+  src/api/                  # Axios клиенты (10 файлов) с JWT interceptor + refresh mutex
+  src/components/           # shadcn/ui (64 компонента), Admin, Auth, Cabinet, Catalog, Dashboard, Shared, Sourcing
+  src/components/Layout/    # ChatDrawer, ErrorBoundary, NotificationCenter
+  src/hooks/                # React Query хуки (useAccounts, useCatalog, useCRM, useMasterData, useSystemSettings, usePageStats, use-mobile)
   src/i18n/locales/         # Переводы: ru.json, en.json
-  src/layouts/              # AppShell (главный SPA-лейаут)
-  src/pages/                # Страницы: Dashboard, Deals, Products, KYC, Settings, Sourcing
-  src/store/                # 10 Zustand сторов (auth, user, cart, theme, currency, domain...)
+  src/layouts/              # AppShell (единственный SPA-лейаут с hash-based навигацией)
+  src/pages/                # 20 страниц: Dashboard, Deals, Products, KYC, Settings, Sourcing, Analytics и др.
+  src/store/                # 9 Zustand сторов (auth, user, cart, currency, domain, flow, loading, task, theme)
 
 nginx/                      # Nginx конфиг для продакшна (SSL, rate limiting, кэш, WebSocket)
-docs/                       # Архитектура, спеки, роадмап, ADR, аудиты
+Docs/                       # Архитектура, спеки, роадмап, ADR, аудиты
 ```
 
 ---
 
 ## Документация
 
-Подробная документация в папке [docs/](docs/):
+Подробная документация в папке [Docs/](Docs/):
 
 | Файл | Содержание |
 |---|---|
-| `technical-specification.md` | Backend, Frontend, DB спецификации |
-| `business-logic.md` | Пользовательские сценарии, KYC, ценообразование |
-| `role-model.md` | Ролевая модель (5 ролей) |
-| `roadmap.md` | План спринтов |
-| `interface-architecture.md` | UI/UX архитектура |
-| `master-system-document.md` | Полный системный чертёж |
-| `docker-setup.md` | Настройка Docker |
-| `websocket-messages.md` | Спецификация WebSocket-сообщений |
-| `security-audit-2026-03-20.md` | Аудит безопасности |
-| `audit-checklist.md` | Чеклист аудита (frontend + backend) |
-| `adr/0001-admin-separation.md` | ADR: разделение админок (Unfold vs React) |
+| `master-system-document.md` | Полный системный чертёж (топология, домены, бизнес-логика) |
+| `technical-specification.md` | Технический стек, модели БД, API, CI/CD |
+| `business-logic.md` | Пользовательские сценарии, KYC, Landed Cost, FSM сделок |
+| `role-model.md` | Ролевая модель (5 системных + 3 workspace ролей) |
+| `ROADMAP.md` | План спринтов, статус выполнения |
+| `interface-architecture.md` | UI/UX архитектура, единый AppShell, дизайн-система |
+| `ux-ui-brief.md` | Дизайн-концепция и требования к UI/UX |
+| `architecture-diagrams.md` | Mermaid-диаграммы: FSM, KYC, Auth, Sourcing, Multi-tenancy и др. |
+| `docker-setup.md` | Полное руководство по Docker-инфраструктуре |
+| `docker-quick-reference.md` | Шпаргалка по командам docker compose |
+| `websocket-messages.md` | Спецификация WebSocket-сообщений (ChatConsumer) |
+| `audit-checklist.md` | Чеклист аудита (апрель 2026) |
+| `ui-audit-2026-04-07.md` | UI/UX аудит с планом исправлений |
+| `security-audit-2026-03-20.md` | Аудит безопасности Sprint 0 |
+| `adr/0001-admin-separation.md` | ADR: разделение Django Unfold и React Admin |
 
 ---
 

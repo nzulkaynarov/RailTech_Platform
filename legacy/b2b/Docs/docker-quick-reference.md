@@ -1,249 +1,178 @@
 # Docker Quick Reference — RailTech B2B
 
-## Startup
+**Актуальность:** 2026-04-17. Полный гайд — [docker-setup.md](docker-setup.md).
+
+> База данных — внешняя **Neon Cloud PostgreSQL**. Локального postgres в `docker-compose.yml` нет.
+
+## Старт и стоп
 
 ```bash
-# Development (with hot reload)
-docker-compose up
+# Dev (hot reload backend, prod-build frontend)
+make up                                    # docker compose up -d --build
+make down                                  # docker compose down
+make logs                                  # follow all logs
 
-# Production (with reverse proxy)
-docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# Prod (с nginx, gunicorn, без volume-mount)
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 
-# Rebuild images
-docker-compose up --build
-
-# Stop services
-docker-compose down
-docker-compose down -v          # Also remove volumes
+# Полная чистка (с volumes) — ОСТОРОЖНО
+make clean                                 # down -v + system prune
 ```
 
-## Common Commands
-
-### Database
+## База / миграции
 
 ```bash
-docker-compose exec backend python manage.py migrate
-docker-compose exec backend python manage.py makemigrations
-docker-compose exec backend python manage.py createsuperuser
-docker-compose exec backend python manage.py loaddata core/data/seed_data.json
-docker-compose exec backend python manage.py collectstatic --noinput
+make migrate
+make makemigrations
+make seed                                  # loaddata seed_data
+make createsuperuser                       # интерактивно
+docker compose exec backend python manage.py init_superadmin   # из .env
+docker compose exec backend python manage.py shell
 ```
 
-### Logs
+## Логи
 
 ```bash
-docker-compose logs -f                    # All services
-docker-compose logs -f backend            # Specific service
-docker-compose logs -f --tail=50 celery-worker    # Last 50 lines
-docker-compose logs --timestamps          # With timestamps
+docker compose logs -f                     # все
+docker compose logs -f backend
+docker compose logs -f --tail=50 celery-worker
+make celery-logs
 ```
 
-### Shell Access
+## Shell / exec
 
 ```bash
-docker-compose exec backend bash
-docker-compose exec backend python manage.py shell
-docker-compose exec db psql -U postgres railtech
-docker-compose exec redis redis-cli
+make shell                                 # backend bash
+make frontend-shell                        # frontend bash
+docker compose exec backend python manage.py shell
+docker compose exec redis redis-cli        # Channels (port 6379 inside)
+docker compose exec redis-celery redis-cli # Celery broker
 ```
 
-### Tasks & Workers
+## Celery
 
 ```bash
-docker-compose logs -f celery-worker      # Monitor worker
-docker-compose exec celery-worker celery -A core purge    # Clear queue
-docker-compose exec backend celery -A core inspect active   # Active tasks
-docker-compose exec backend celery -A core inspect stats    # Worker stats
+docker compose exec celery-worker celery -A core inspect ping
+docker compose exec celery-worker celery -A core inspect active
+docker compose exec celery-worker celery -A core inspect stats
+docker compose exec celery-worker celery -A core purge
 ```
 
-### MinIO
+## MinIO
 
 ```bash
-# Web interface
-open http://localhost:9001
-# Default: railtech / (MINIO_SECRET_KEY from .env)
+open http://localhost:9001                 # Web Console
+# Логин — значения MINIO_ACCESS_KEY / MINIO_SECRET_KEY из .env
 
-# Command line
-docker-compose exec minio-init mc ls railtech
-docker-compose exec minio-init mc mb railtech/new-bucket
+docker compose exec minio-init mc ls railtech
+docker compose exec minio-init mc mb railtech/new-bucket --ignore-existing
+docker compose exec minio-init mc mirror railtech/ /tmp/minio-backup/
 ```
 
-### Redis
+## Health checks
 
 ```bash
-docker-compose exec redis redis-cli
-docker-compose exec redis-celery redis-cli
-# Inside redis-cli: ping, info, keys *, flushdb, etc.
+docker compose ps
+curl http://localhost:8000/health/
+docker compose exec redis redis-cli ping
+docker compose exec redis-celery redis-cli ping
+docker compose exec celery-worker celery -A core inspect ping
 ```
 
-## Rebuilding
+## Пересборка отдельного сервиса
 
 ```bash
-# Frontend with custom Vite vars
-docker-compose build \
-  --build-arg VITE_API_URL=https://api.example.com \
-  --build-arg VITE_WS_URL=wss://example.com/ws \
+# Frontend с кастомными Vite env (бейкается в бандл!)
+docker compose build \
+  --build-arg VITE_API_URL=https://api.railtech.uz \
+  --build-arg VITE_WS_URL=wss://crm.railtech.uz/ws \
   frontend
 
-# Backend only
-docker-compose build backend
-
-# All images (no cache)
-docker-compose build --no-cache
-```
-
-## Health Checks
-
-```bash
-docker-compose ps                         # Status of all services
-
-curl http://localhost:8000/health/        # Backend
-curl http://localhost:5173/health         # Frontend (dev)
-curl http://localhost/health              # Frontend (prod)
-curl http://localhost:9000/minio/health/live  # MinIO
-
-docker-compose exec db pg_isready -U postgres
-docker-compose exec redis redis-cli ping
+docker compose build backend
+docker compose up -d --build frontend       # пересобрать и перезапустить
+docker compose build --no-cache             # всё с нуля
 ```
 
 ## Ports
 
-| Service | Dev | Prod |
-|---------|-----|------|
-| Frontend | 5173 | 80/443 |
-| Backend API | 8000 | 8000 |
-| MinIO S3 | 9000 | internal |
-| MinIO Console | 9001 | internal |
-| PostgreSQL | 5432 | internal |
-| Redis (Channels) | 6379 | internal |
-| Redis (Celery) | 6380 | internal |
+| Сервис | Dev (host:container) | Prod |
+| --- | --- | --- |
+| Frontend | 5173 : 80 | 80/443 (через nginx) |
+| Backend API | 8000 : 8000 | internal (через nginx) |
+| MinIO API | 9000 : 9000 | internal |
+| MinIO Console | 9001 : 9001 | internal |
+| Redis (Channels) | 6379 : 6379 | internal |
+| Redis (Celery) | 6380 : 6379 | internal |
+| Nginx | — | 80 : 80, 443 : 443 |
+| PostgreSQL | — (внешняя Neon) | — |
 
-## Configuration
+## Минимальный .env (для dev)
 
-```bash
-# Copy template
-cp .env.example .env
-
-# Edit environment
-nano .env
-
-# Required minimum:
-DJANGO_SECRET_KEY=...
-POSTGRES_PASSWORD=...
-REDIS_PASSWORD=...
-MINIO_SECRET_KEY=...
-```
-
-## Troubleshooting
-
-```bash
-# View all service status
-docker-compose ps
-
-# Check resource usage
-docker stats
-
-# Remove stopped containers
-docker-compose down
-docker system prune
-
-# Full cleanup (WARNING: removes all data)
-docker-compose down -v
-docker system prune -a
-
-# Rebuild specific service
-docker-compose up -d --build backend
-
-# View disk usage
-docker system df
-```
-
-## Production Deployment
-
-```bash
-# Enable SSL in nginx/nginx.conf
-# Place certificates in nginx/ssl/
-
-# Start production stack
-docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-
-# Follow logs
-docker-compose logs -f nginx
-docker-compose logs -f backend
-
-# Backup database
-docker-compose exec db pg_dump -U postgres railtech > backup.sql
-
-# Restore database
-docker-compose exec -T db psql -U postgres railtech < backup.sql
-
-# Scale celery workers
-docker-compose up -d --scale celery-worker=3
-```
-
-## Environment Variables
-
-**Development minimal:**
-```
-POSTGRES_PASSWORD=postgres
-DJANGO_SECRET_KEY=dev-key
-REDIS_PASSWORD=
-MINIO_SECRET_KEY=minio
+```text
+DATABASE_URL=postgresql://user:pass@endpoint.neon.tech/neondb?sslmode=require
+DJANGO_SECRET_KEY=<generate>
+DJANGO_DEBUG=True
+ALLOWED_HOSTS=localhost,127.0.0.1
+CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
+MINIO_ACCESS_KEY=railtech
+MINIO_SECRET_KEY=<strong-random>
 VITE_API_URL=http://localhost:8000
 VITE_WS_URL=ws://localhost:8000/ws
+FRONTEND_URL=http://localhost:5173
+SUPERADMIN_EMAIL=admin@railtech.uz
+SUPERADMIN_PASSWORD=<strong-random>
 ```
 
-**Production essential:**
+Генерация `DJANGO_SECRET_KEY`:
+
+```bash
+python3 -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
 ```
+
+## Prod обязательные переменные
+
+```text
 DJANGO_DEBUG=False
-DJANGO_SECRET_KEY=<strong-random>
-DATABASE_URL=postgresql://...
+DJANGO_SECRET_KEY=<strong-random-50chars>
+DATABASE_URL=postgresql://...                     # prod Neon branch
 REDIS_PASSWORD=<strong-random>
 MINIO_SECRET_KEY=<strong-random>
-ALLOWED_HOSTS=domain.com,www.domain.com
-CORS_ALLOWED_ORIGINS=https://domain.com
-VITE_API_URL=/api
-VITE_WS_URL=/ws
+ALLOWED_HOSTS=railtech.uz,www.railtech.uz
+CORS_ALLOWED_ORIGINS=https://railtech.uz
+CSRF_TRUSTED_ORIGINS=https://railtech.uz
+VITE_API_URL=/api                                 # либо https://api.railtech.uz
+VITE_WS_URL=/ws                                   # либо wss://crm.railtech.uz/ws
+FRONTEND_URL=https://railtech.uz
+EMAIL_HOST_PASSWORD=<real-app-password>
 ```
 
-## File Locations
+## Neon "Connection refused"
 
-| File | Purpose |
-|------|---------|
-| `docker-compose.yml` | Development stack definition |
-| `docker-compose.prod.yml` | Production overrides |
-| `frontend/Dockerfile` | React SPA build |
-| `frontend/nginx.conf` | Frontend web server config |
-| `backend/Dockerfile` | Django ASGI server build |
-| `nginx/nginx.conf` | Production reverse proxy |
-| `.env` | Environment variables (create from .env.example) |
-| `DOCKER_SETUP.md` | Complete documentation |
+Neon free-tier засыпает. Разбудите проект в [Neon Console](https://console.neon.tech), затем:
 
-## Performance Tips
+```bash
+docker compose restart backend celery-worker celery-beat
+```
 
-- **Backend**: Increase `WORKERS` in production docker-compose.prod.yml
-- **Celery**: Scale workers: `docker-compose up -d --scale celery-worker=N`
-- **Database**: Tune PostgreSQL settings in docker-compose env
-- **Redis**: Monitor with `redis-cli info memory`
-- **Nginx**: Adjust `worker_connections` for high traffic
+Пул `django-db-connection-pool` кэширует мёртвые соединения — рестарт необходим.
 
-## Security Checklist
+## Масштабирование
 
-- [ ] Change all default passwords in `.env`
-- [ ] Set `DJANGO_DEBUG=False` in production
-- [ ] Configure SSL certificates
-- [ ] Set strong `DJANGO_SECRET_KEY`
-- [ ] Restrict `ALLOWED_HOSTS`
-- [ ] Configure `CORS_ALLOWED_ORIGINS`
-- [ ] Enable Redis password
-- [ ] Set MinIO credentials
-- [ ] Configure email authentication
-- [ ] Review nginx rate limiting zones
+```bash
+# Больше Celery worker'ов
+docker compose up -d --scale celery-worker=3
 
-## Need Help?
+# Больше backend'ов (нужен внешний балансировщик)
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --scale backend=2
+```
 
-1. Check logs: `docker-compose logs -f`
-2. Verify environment: `docker-compose config | grep VARIABLE`
-3. Check services: `docker-compose ps`
-4. Read: `DOCKER_SETUP.md`
-5. Inspect Docker: `docker inspect <container-name>`
+## Безопасность перед продом
+
+- [ ] Все секреты в `.env` сгенерированы заново (не из `.env.example`).
+- [ ] `DJANGO_DEBUG=False`.
+- [ ] `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS`, `CSRF_TRUSTED_ORIGINS` заданы строго.
+- [ ] `REDIS_PASSWORD` установлен.
+- [ ] SSL-сертификаты в `nginx/ssl/`, SSL-блок в `nginx/nginx.conf` раскомментирован.
+- [ ] Rate limiting zones в nginx не отключены.
+- [ ] SMTP настроен для реальных email.
+- [ ] `init_superadmin` выполнен.

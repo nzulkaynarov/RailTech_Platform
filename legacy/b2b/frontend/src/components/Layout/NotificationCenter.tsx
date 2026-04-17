@@ -52,6 +52,9 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = () => {
     const dateLocale = i18n.language === 'ru' ? ru : enUS;
 
     const fetchNotifications = useCallback(async () => {
+        const authRaw = localStorage.getItem('railtech-auth');
+        if (!authRaw || !authRaw.includes('"accessToken"')) return;
+        if (typeof document !== 'undefined' && document.hidden) return;
         try {
             const data = await notificationsApi.getNotifications();
             setNotifications(data);
@@ -63,8 +66,13 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = () => {
 
     useEffect(() => {
         fetchNotifications();
-        const interval = setInterval(fetchNotifications, 30_000);
-        return () => clearInterval(interval);
+        const interval = setInterval(fetchNotifications, 60_000);
+        const onVisibility = () => { if (!document.hidden) fetchNotifications(); };
+        document.addEventListener('visibilitychange', onVisibility);
+        return () => {
+            clearInterval(interval);
+            document.removeEventListener('visibilitychange', onVisibility);
+        };
     }, [fetchNotifications]);
 
     const handleMarkAsRead = async (id: number) => {

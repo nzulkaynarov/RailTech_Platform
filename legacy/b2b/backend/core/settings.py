@@ -323,10 +323,13 @@ if os.environ.get('DATABASE_URL'):
             'PASSWORD': tmpPostgres.password,
             'HOST': tmpPostgres.hostname,
             'PORT': tmpPostgres.port or 5432,
+            'CONN_MAX_AGE': 600,
+            'CONN_HEALTH_CHECKS': True,
             'POOL_OPTIONS': {
-                'POOL_SIZE': 5,
-                'MAX_OVERFLOW': 10,
-                'RECYCLE': 300,
+                'POOL_SIZE': 10,
+                'MAX_OVERFLOW': 20,
+                'RECYCLE': 1800,
+                'PRE_PING': True,
             },
             'OPTIONS': dict(parse_qsl(tmpPostgres.query)),
         }
@@ -340,10 +343,13 @@ else:
             'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'postgres'),
             'HOST': os.environ.get('POSTGRES_HOST', 'db'),
             'PORT': os.environ.get('POSTGRES_PORT', '5432'),
+            'CONN_MAX_AGE': 600,
+            'CONN_HEALTH_CHECKS': True,
             'POOL_OPTIONS': {
-                'POOL_SIZE': 5,
-                'MAX_OVERFLOW': 10,
-                'RECYCLE': 300,
+                'POOL_SIZE': 10,
+                'MAX_OVERFLOW': 20,
+                'RECYCLE': 1800,
+                'PRE_PING': True,
             },
         }
     }

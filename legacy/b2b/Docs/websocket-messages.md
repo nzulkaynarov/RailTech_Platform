@@ -1,7 +1,7 @@
 # WebSocket Message Dictionary — RailTech B2B SaaS
 
-**Last Updated:** April 2026  
-**Status:** Active (v1.0)  
+**Last Updated:** 2026-04-17
+**Status:** Active (v1.1)
 **Transport:** WebSocket over HTTP/HTTPS, JWT-authenticated via query string or first message
 
 ---
