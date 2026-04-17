@@ -16,7 +16,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 
 interface ProductDetailModalProps {
@@ -41,10 +40,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
         trustScore: product.manufacturer_data.trust_score || 0,
     } : null;
 
-    const basePrice = Number(product.base_price) || 0;
-    const currencyCode = product.offers?.[0]?.currency_data?.code || 'USD';
-    const formatPrice = (price: number) =>
-        price.toLocaleString('en-US', { minimumFractionDigits: 2 });
+    const currencyCode = product.offers?.[0]?.currency_data?.code || '';
 
 
     return (
@@ -220,9 +216,11 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                             {canSeePrices ? (
                                 <p className="text-lg font-bold tabular-nums">
                                     {Number(product.base_price).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                                    <span className="ml-1 text-xs font-medium text-muted-foreground">
-                                        {currencyCode}
-                                    </span>
+                                    {currencyCode && (
+                                        <span className="ml-1 text-xs font-medium text-muted-foreground">
+                                            {currencyCode}
+                                        </span>
+                                    )}
                                 </p>
                             ) : (
                                 <div className="flex items-center gap-2 text-warning">

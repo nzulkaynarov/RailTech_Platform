@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import { DealChatPanel } from '@/components/Sourcing/DealChatPanel';
-import { cn } from '@/lib/utils';
 import { useCurrencyStore } from '@/store/currencyStore';
 
 export function RequestDetailPage({ onBack }: { onBack: () => void; onNavigate: (t: string) => void }) {

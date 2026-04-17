@@ -23,7 +23,18 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { cn } from '@/lib/utils';
-import { useFlowStore, type RequestItem, type MatchStatus } from '@/store/flowStore';
+import { useFlowStore } from '@/store/flowStore';
+
+export type MatchStatus = 'matched' | 'partial' | 'not_found';
+export interface RequestItem {
+  id: string;
+  name: string;
+  article: string;
+  gost: string;
+  uom: string;
+  quantity: number;
+  matchStatus: MatchStatus;
+}
 
 /* ─── Master Catalog demo data ─────────────────────────────────────── */
 
@@ -54,8 +65,18 @@ const statusIconMap: Record<MatchStatus, React.ReactNode> = {
 
 export function SourcingHub() {
   const { t } = useTranslation();
-  const { request } = useFlowStore();
-  const items = request.items;
+  const { deal, quote } = useFlowStore();
+  const items: RequestItem[] = useMemo(() => {
+    return (quote?.items || []).map(i => ({
+      id: i.id.toString(),
+      name: i.product_name || i.imported_raw_name,
+      article: i.product_sku || '',
+      gost: i.product_gost || '',
+      uom: 'pcs',
+      quantity: i.quantity,
+      matchStatus: i.product ? 'matched' : 'not_found'
+    }));
+  }, [quote]);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeItemId, setActiveItemId] = useState<string | null>(null);

@@ -144,9 +144,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, canS
                                 {canSeePrices ? (
                                     <p className="text-base font-bold text-foreground tabular-nums">
                                         {Number(product.base_price).toLocaleString('ru-RU', { minimumFractionDigits: 0 })}
-                                        <span className="text-xs font-semibold text-muted-foreground ml-1">
-                                            {product.offers?.[0]?.currency_data?.code ?? 'USD'}
-                                        </span>
+                                        {product.offers?.[0]?.currency_data?.code && (
+                                            <span className="text-xs font-medium text-muted-foreground ml-1">
+                                                {product.offers?.[0]?.currency_data?.code}
+                                            </span>
+                                        )}
                                     </p>
                                 ) : (
                                     <div className="flex items-center gap-1.5 text-warning">
