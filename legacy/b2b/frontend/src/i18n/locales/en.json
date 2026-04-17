@@ -1197,7 +1197,27 @@
       "hint": "Verification usually takes 1-2 business days. We'll notify you by email once access is confirmed.",
       "editProfile": "Edit profile",
       "contactSupport": "Contact support",
-      "supportSubject": "KYC verification inquiry"
+      "supportSubject": "KYC verification inquiry",
+      "levelsTitle": "Verification Levels",
+      "yourLevel": "Current",
+      "access": "Access",
+      "levels": {
+        "l1": {
+          "label": "L1 — Registration",
+          "desc": "Account created, profile submitted, awaiting manager review",
+          "features": "View profile, edit company data, contact support"
+        },
+        "l2": {
+          "label": "L2 — KYC Verified",
+          "desc": "Manager verified company data and approved verification",
+          "features": "Full catalog, create requests, receive quotes, deal chat, analytics"
+        },
+        "l3": {
+          "label": "L3 — Partner",
+          "desc": "Framework contract signed, full banking details confirmed",
+          "features": "Everything from L2 + sign contracts, electronic documents, priority support"
+        }
+      }
     },
     "welcome": {
       "title": "Welcome, {{name}}!",
