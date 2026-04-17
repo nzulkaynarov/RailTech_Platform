@@ -238,9 +238,7 @@ export function ProductDetail({ productId, onBack }: ProductDetailProps) {
                 <p className="text-2xl font-bold text-primary tabular-nums">
                   {formatCurrency(parseFloat(product.base_price))}
                 </p>
-                {product.currency_data?.code && (
-                  <p className="text-xs text-muted-foreground mt-0.5">{product.currency_data.code}</p>
-                )}
+
               </CardContent>
             </Card>
           )}

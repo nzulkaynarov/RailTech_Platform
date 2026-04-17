@@ -186,11 +186,7 @@ export const CatalogTable: React.FC<CatalogTableProps> = ({ products, onProductC
                                     <span className="text-sm text-foreground dark:text-muted-foreground truncate">
                                         {product.manufacturer_data?.name || '—'}
                                     </span>
-                                    {product.manufacturer_data?.country && (
-                                        <span className="text-xs text-muted-foreground">
-                                            {product.manufacturer_data.country}
-                                        </span>
-                                    )}
+
                                 </div>
                             </TableCell>
                             <TableCell className="py-2 px-3 text-center">
@@ -211,7 +207,7 @@ export const CatalogTable: React.FC<CatalogTableProps> = ({ products, onProductC
                                             {Number(product.base_price).toLocaleString('ru-RU', { minimumFractionDigits: 2 })}
                                         </span>
                                         <span className="text-xs text-muted-foreground">
-                                            {product.currency_data?.code || 'USD'}
+                                            {product.offers?.[0]?.currency_data?.code || 'USD'}
                                         </span>
                                     </div>
                                 ) : (

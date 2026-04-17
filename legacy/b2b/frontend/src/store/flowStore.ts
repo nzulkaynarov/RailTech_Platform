@@ -252,12 +252,12 @@ export const useFlowStore = create<FlowState>((set, get) => ({
         set({
           request: {
             id: String(firstRequest.id),
-            number: firstRequest.number,
+            number: String(firstRequest.id),
             clientId: '',
-            clientName: firstRequest.client_name,
+            clientName: firstRequest.company_name || '',
             sellerId: '',
             sellerName: '',
-            status: firstRequest.status as RequestStatus,
+            status: (firstRequest.stage_code?.toLowerCase() || 'draft') as RequestStatus,
             items: [],
             createdAt: firstRequest.created_at,
             updatedAt: firstRequest.created_at,

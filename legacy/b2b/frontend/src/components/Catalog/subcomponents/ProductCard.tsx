@@ -143,7 +143,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, canS
                                     <p className="text-base font-bold text-foreground tabular-nums">
                                         {Number(product.base_price).toLocaleString('ru-RU', { minimumFractionDigits: 0 })}
                                         <span className="text-xs font-semibold text-muted-foreground ml-1">
-                                            {product.currency_data?.code ?? 'USD'}
+                                            {product.offers?.[0]?.currency_data?.code ?? 'USD'}
                                         </span>
                                     </p>
                                 ) : (

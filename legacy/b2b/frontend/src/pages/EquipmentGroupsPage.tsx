@@ -29,7 +29,7 @@ export function EquipmentGroupsPage() {
                   <ChevronRight className="h-5 w-5 text-muted-foreground" />
                 </div>
                 <h3 className="font-semibold text-lg mb-3">{group.name}</h3>
-                {group.parent && (
+                {group.full_path && group.full_path !== group.name && (
                   <p className="text-xs text-muted-foreground">{t('pages.equipmentGroups.hasParent')}</p>
                 )}
               </CardContent>

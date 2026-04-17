@@ -40,7 +40,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
     const mfgInfo = verifiedManufacturers[mfgName];
 
     const basePrice = Number(product.base_price) || 0;
-    const currencyCode = product.currency_data?.code || 'USD';
+    const currencyCode = product.offers?.[0]?.currency_data?.code || 'USD';
     const formatPrice = (price: number) =>
         price.toLocaleString('en-US', { minimumFractionDigits: 2 });
 
@@ -139,7 +139,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                                         </div>
                                         <div className="border-l-2 border-border pl-3">
                                             <p className="mb-1 text-xs text-muted-foreground">{t('catalog.table.origin')}</p>
-                                            <p className="text-sm font-semibold">{product.manufacturer_data?.country || '\u2014'}</p>
+                                            <p className="text-sm font-semibold">{'\u2014'}</p>
                                         </div>
                                         <div className="border-l-2 border-border pl-3">
                                             <p className="mb-1 text-xs text-muted-foreground">{t('catalog.filters.category')}</p>
@@ -263,7 +263,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                                 <p className="text-lg font-bold tabular-nums">
                                     {Number(product.base_price).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                     <span className="ml-1 text-xs font-medium text-muted-foreground">
-                                        {product.currency_data?.code || 'USD'}
+                                        {currencyCode}
                                     </span>
                                 </p>
                             ) : (
