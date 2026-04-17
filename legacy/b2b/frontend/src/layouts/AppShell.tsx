@@ -6,7 +6,6 @@ import {
   Settings,
   HelpCircle,
   ChevronDown,
-  Search,
   BarChart3,
   Factory,
   Layers,
@@ -25,7 +24,6 @@ import {
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -400,14 +398,6 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
               </DropdownMenu>
             </div>
           )}
-
-          {/* Search */}
-          <div className="px-3 pt-3 group-data-[collapsible=icon]:hidden">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-              <Input placeholder={`${t('common.search')}...`} className="h-8 pl-8 text-xs" aria-label={t('common.search')} />
-            </div>
-          </div>
 
           {/* Main navigation */}
           <nav aria-label={t('shell.mainNavigation')} className="flex-1 space-y-0.5 overflow-y-auto py-3 px-3 group-data-[collapsible=icon]:px-1.5">

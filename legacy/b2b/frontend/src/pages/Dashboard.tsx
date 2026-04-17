@@ -410,9 +410,13 @@ function BuyerDashboard({ onProductClick: _onProductClick, period: _period, stat
 // ─── SELLER Dashboard ───────────────────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-function SellerDashboard({ onProductClick, period: _period, stats }: { onProductClick?: (id: string) => void; period: string; stats: DashboardStats | null }) {
+function SellerDashboard({ onProductClick, period: _period, stats, onNavigate: _onNavigate }: { onProductClick?: (id: string) => void; period: string; stats: DashboardStats | null; onNavigate: (page: string) => void }) {
   const { t } = useTranslation();
   const formatCurrency = useCurrencyStore((s) => s.format);
+  const { company } = useUserStore();
+
+  if (company.kycStatus !== 'verified') return <KYCPendingBanner />;
+
   const dealVolumeData = stats?.deals_by_month ?? [];
   const activityByDay = stats?.activity_by_day ?? [];
   const counterpartyBreakdown = useMemo(() => stats ? [
@@ -582,9 +586,13 @@ function SellerDashboard({ onProductClick, period: _period, stats }: { onProduct
 // ─── MANUFACTURER Dashboard ──────────────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-function ManufacturerDashboard({ onProductClick: _onProductClick, period: _period, stats }: { onProductClick?: (id: string) => void; period: string; stats: DashboardStats | null }) {
+function ManufacturerDashboard({ onProductClick: _onProductClick, period: _period, stats, onNavigate: _onNavigate2 }: { onProductClick?: (id: string) => void; period: string; stats: DashboardStats | null; onNavigate: (page: string) => void }) {
   const { t } = useTranslation();
   const formatCurrency = useCurrencyStore((s) => s.format);
+  const { company } = useUserStore();
+
+  if (company.kycStatus !== 'verified') return <KYCPendingBanner />;
+
   return (
     <div className="flex flex-col gap-6">
       {/* KPI Row */}
@@ -605,7 +613,6 @@ function ManufacturerDashboard({ onProductClick: _onProductClick, period: _perio
           label={t('dashboardPage.kpi.requestCompletion')}
           value={`${stats?.request_completion ?? 0}%`}
           icon={<BarChart3 className="h-5 w-5 text-muted-foreground" />}
-          trend={{ value: "—", direction: "flat" }}
         />
         <KPICard
           label={t('dashboardPage.kpi.dealsVolume')}
@@ -734,9 +741,9 @@ export function Dashboard({ onProductClick, onNavigate }: DashboardProps) {
 
       {/* Role-based dashboard content — fallback to BuyerDashboard */}
       {activeStatus === 'SELLER' ? (
-        <SellerDashboard onProductClick={onProductClick} period={period} stats={stats} />
+        <SellerDashboard onProductClick={onProductClick} period={period} stats={stats} onNavigate={onNavigate ?? (() => {})} />
       ) : activeStatus === 'MANUFACTURER' ? (
-        <ManufacturerDashboard onProductClick={onProductClick} period={period} stats={stats} />
+        <ManufacturerDashboard onProductClick={onProductClick} period={period} stats={stats} onNavigate={onNavigate ?? (() => {})} />
       ) : (
         <BuyerDashboard onProductClick={onProductClick} period={period} stats={stats} onNavigate={onNavigate ?? (() => {})} />
       )}

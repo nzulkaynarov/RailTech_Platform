@@ -1,8 +1,61 @@
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
-from crm.models import Deal, Quote, QuoteStatus
-from accounts.models import Company, VerificationStatus
+from crm.models import Deal, Message
+from accounts.models import Company
 from .models import Notification, NotificationType
+
+
+@receiver(post_save, sender=Deal)
+def notify_deal_created(sender, instance, created, **kwargs):
+    """Notify manager when a new deal is created by a client."""
+    if not created:
+        return
+
+    # Notify assigned manager (if any)
+    if instance.manager and instance.client and instance.manager != instance.client:
+        info_type = NotificationType.objects.filter(code='INFO').first()
+        company_name = instance.company.name if instance.company else ''
+        Notification.objects.create(
+            user=instance.manager,
+            type=info_type,
+            title="Новая сделка",
+            message=f"Создана сделка #{instance.pk} от {company_name}",
+            link="/crm/deals",
+            deal=instance,
+        )
+
+
+@receiver(post_save, sender=Message)
+def notify_new_message(sender, instance, created, **kwargs):
+    """Notify deal participants about new chat messages."""
+    if not created or instance.message_type != 'CHAT':
+        return
+
+    deal = instance.deal
+    sender_user = instance.sender
+    info_type = NotificationType.objects.filter(code='INFO').first()
+    short_text = instance.text[:80] + ('...' if len(instance.text) > 80 else '')
+
+    # Collect recipients: client + manager, excluding the sender
+    recipients = set()
+    if deal.client_id and deal.client_id != sender_user.id:
+        recipients.add(deal.client_id)
+    if deal.manager_id and deal.manager_id != sender_user.id:
+        recipients.add(deal.manager_id)
+
+    notifications = [
+        Notification(
+            user_id=uid,
+            type=info_type,
+            title=f"Сообщение по сделке #{deal.pk}",
+            message=f"{sender_user.get_full_name() or sender_user.email}: {short_text}",
+            link="/crm/deals",
+            deal=deal,
+        )
+        for uid in recipients
+    ]
+    if notifications:
+        Notification.objects.bulk_create(notifications)
 
 
 @receiver(pre_save, sender=Deal)
