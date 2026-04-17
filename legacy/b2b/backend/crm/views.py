@@ -233,6 +233,15 @@ class QuoteViewSet(viewsets.ModelViewSet):
             is_active=True).values_list('company_id', flat=True)
         return queryset.filter(deal__company_id__in=user_company_ids)
 
+    def perform_create(self, serializer):
+        """Auto-increment version for new quotes within a deal."""
+        deal = serializer.validated_data.get('deal')
+        if deal:
+            max_version = deal.quotes.aggregate(max_v=Max('version'))['max_v'] or 0
+            serializer.save(version=max_version + 1)
+        else:
+            serializer.save()
+
     @extend_schema(
         summary="Generate quote PDF",
         description="Generate a PDF file for the quote using WeasyPrint.",
@@ -502,8 +511,6 @@ class DashboardAnalyticsView(APIView):
         if cached:
             return Response(cached)
 
-        period = request.query_params.get('period', '30d')
-
         # Calculate period start date
         if period == '30d':
             period_start = timezone.now() - timedelta(days=30)
@@ -520,12 +527,14 @@ class DashboardAnalyticsView(APIView):
             all_deals = all_deals.filter(company_id__in=user_company_ids)
         period_deals = all_deals.filter(created_at__gte=period_start)
 
-        # Get previous period deals for comparison
+        # Get previous period deals for comparison (scoped same as all_deals)
         prev_period_start = period_start - (timezone.now() - period_start)
         prev_period_deals = Deal.objects.filter(
             created_at__gte=prev_period_start,
             created_at__lt=period_start
         )
+        if user_company_ids is not None:
+            prev_period_deals = prev_period_deals.filter(company_id__in=user_company_ids)
 
         # Calculate deals volume via latest quote's total_incl_vat
         latest_quote = Quote.objects.filter(
@@ -587,11 +596,11 @@ class DashboardAnalyticsView(APIView):
         # Deals by month (last 6 months)
         deals_by_month = self._get_deals_by_month(all_deals)
 
-        # Activity by day (last 30 days)
-        activity_by_day = self._get_activity_by_day()
+        # Activity by day (last 30 days) — scoped to user's companies
+        activity_by_day = self._get_activity_by_day(user_company_ids)
 
-        # Top products by deal frequency
-        top_products = self._get_top_products()
+        # Top products by deal frequency — scoped to user's companies
+        top_products = self._get_top_products(user_company_ids=user_company_ids)
 
         # Counterparties breakdown
         manufacturer_type = CompanyType.objects.filter(
@@ -677,15 +686,17 @@ class DashboardAnalyticsView(APIView):
             })
         return result
 
-    def _get_activity_by_day(self):
+    def _get_activity_by_day(self, user_company_ids=None):
         """Get activity aggregated by day for the last 30 days."""
         from django.db.models.functions import TruncDate
         from crm.models import ActivityLog
 
         thirty_days_ago = timezone.now() - timedelta(days=30)
+        qs = ActivityLog.objects.filter(timestamp__gte=thirty_days_ago)
+        if user_company_ids is not None:
+            qs = qs.filter(user__memberships__company_id__in=user_company_ids)
         daily_activity = (
-            ActivityLog.objects.filter(timestamp__gte=thirty_days_ago)
-            .annotate(day=TruncDate('timestamp'))
+            qs.annotate(day=TruncDate('timestamp'))
             .values('day')
             .annotate(count=Count('id'))
             .order_by('day')
@@ -700,11 +711,14 @@ class DashboardAnalyticsView(APIView):
             })
         return result
 
-    def _get_top_products(self, limit=5):
-        """Get top products by deal frequency."""
+    def _get_top_products(self, limit=5, user_company_ids=None):
+        """Get top products by deal frequency, scoped to user's companies."""
         from catalog.models import Product
 
-        top = Product.objects.select_related('category').annotate(
+        qs = Product.objects.select_related('category')
+        if user_company_ids is not None:
+            qs = qs.filter(quote_items__quote__deal__company_id__in=user_company_ids)
+        top = qs.annotate(
             deal_count=Count('quote_items', distinct=True)
         ).order_by('-deal_count')[:limit]
 

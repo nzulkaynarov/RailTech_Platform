@@ -4,9 +4,15 @@ Notification business logic — single source of truth.
 Called from both Django Unfold actions and DRF endpoints.
 See ADR-0001 and CLAUDE.md IRON RULE 8.
 """
+import logging
+
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 from django.db.models import QuerySet
 
 from .models import Notification
+
+logger = logging.getLogger(__name__)
 
 
 def mark_notifications_read(notifications: QuerySet[Notification]) -> int:
@@ -16,3 +22,29 @@ def mark_notifications_read(notifications: QuerySet[Notification]) -> int:
     Returns: count of notifications updated (only previously-unread ones).
     """
     return notifications.filter(is_read=False).update(is_read=True)
+
+
+def push_notification_ws(notification: Notification):
+    """Push a notification to the user via WebSocket channel layer."""
+    if not notification.user_id:
+        return
+    try:
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f"notifications_{notification.user_id}",
+            {
+                "type": "notification.push",
+                "data": {
+                    "id": notification.id,
+                    "title": notification.title,
+                    "message": notification.message,
+                    "link": notification.link or "",
+                    "type": notification.type.code if notification.type else "INFO",
+                    "is_read": notification.is_read,
+                    "created_at": notification.created_at.isoformat()
+                    if notification.created_at else "",
+                },
+            },
+        )
+    except Exception:
+        logger.debug("WebSocket push failed for notification %s", notification.pk)

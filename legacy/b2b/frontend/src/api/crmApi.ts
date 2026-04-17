@@ -43,7 +43,12 @@ export interface Quote {
 	total_incl_vat: string;
 	valid_until?: string | null;
 	notes?: string;
+	pdf_file?: string | null;
+	frozen_at?: string | null;
+	approved_by?: number | null;
+	approved_at?: string | null;
 	created_at: string;
+	updated_at?: string;
 }
 
 export interface Message {
@@ -52,6 +57,7 @@ export interface Message {
 	sender: number;
 	sender_name: string;
 	text: string;
+	message_type?: string;
 	timestamp: string;
 	is_me: boolean;
 }

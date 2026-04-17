@@ -1,9 +1,11 @@
+import base64
 import logging
 from django.utils import timezone
 from .services import smart_match_product
 import pandas as pd
 from io import BytesIO
 from django.db import transaction
+from django.db.models import Max
 from celery import shared_task
 from django.core.cache import cache
 from .models import DomainKeyword
@@ -40,22 +42,31 @@ def route_domain(text: str) -> str:
     return 'GENERAL_GOODS'
 
 
-@shared_task(bind=True)
-def process_excel_import(self, deal_id: int, file_content: bytes, user_id: int = None):
+@shared_task(bind=True, time_limit=600, soft_time_limit=540)
+def process_excel_import(self, deal_id: int, file_content_b64: str, user_id: int = None):
     """
     Processes uploaded Excel file and creates QuoteItems for the active Quote.
     Uses bulk_create to avoid O(n²) recalculation.
+    file_content_b64: base64-encoded XLSX file content (JSON-safe).
     """
-    from crm.models import Deal, Quote, QuoteItem
+    from crm.models import Deal, Quote, QuoteItem, QuoteStatus
 
     try:
+        file_content = base64.b64decode(file_content_b64)
         deal = Deal.objects.get(id=deal_id)
+
         # Ensure there's an active quote to add items to
         quote = deal.active_quote
         if not quote:
-            from crm.models import QuoteStatus
             draft_status = QuoteStatus.objects.filter(code='DRAFT').first()
-            quote = Quote.objects.create(deal=deal, version=1, status=draft_status)
+            if not draft_status:
+                return {'status': 'error', 'message': 'QuoteStatus DRAFT not found. Run seed data.'}
+            next_version = (deal.quotes.aggregate(max_v=Max('version'))['max_v'] or 0) + 1
+            quote, _created = Quote.objects.get_or_create(
+                deal=deal,
+                version=next_version,
+                defaults={'status': draft_status},
+            )
 
         df = pd.read_excel(BytesIO(file_content), nrows=MAX_EXCEL_ROWS)
         df.columns = [str(c).lower().strip() for c in df.columns]
@@ -116,15 +127,17 @@ def process_excel_import(self, deal_id: int, file_content: bytes, user_id: int =
         return {'status': 'error', 'message': 'Import failed. Please check the file format and try again.'}
 
 
-@shared_task(bind=True)
-def process_catalog_import(self, file_content: bytes):
+@shared_task(bind=True, time_limit=600, soft_time_limit=540)
+def process_catalog_import(self, file_content_b64: str):
     """
     Processes uploaded Excel file to populate the global Product catalog (PIM).
+    file_content_b64: base64-encoded XLSX file content (JSON-safe).
     """
     from catalog.models import Product, ProductStatus, DomainType
     from master_data.models import UnitOfMeasure
 
     try:
+        file_content = base64.b64decode(file_content_b64)
         df = pd.read_excel(BytesIO(file_content), nrows=MAX_EXCEL_ROWS)
         df.columns = [str(c).lower().strip() for c in df.columns]
 

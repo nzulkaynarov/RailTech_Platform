@@ -32,10 +32,14 @@ class QuoteSerializer(serializers.ModelSerializer):
             'id', 'deal', 'version', 'status', 'status_code', 'status_name',
             'prepared_by', 'tax_country', 'vat_rate',
             'subtotal_excl_vat', 'vat_amount', 'total_incl_vat',
-            'valid_until', 'notes', 'pdf_file', 'frozen_at', 'items',
-            'created_at', 'updated_at'
+            'valid_until', 'notes', 'pdf_file', 'frozen_at',
+            'approved_by', 'approved_at',
+            'items', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['subtotal_excl_vat', 'vat_amount', 'total_incl_vat', 'created_at']
+        read_only_fields = [
+            'subtotal_excl_vat', 'vat_amount', 'total_incl_vat',
+            'approved_by', 'approved_at', 'created_at',
+        ]
 
 
 class DealListSerializer(serializers.ModelSerializer):
@@ -81,7 +85,10 @@ class MessageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Message
-        fields = ['id', 'deal', 'sender', 'sender_name', 'text', 'timestamp', 'is_me']
+        fields = [
+            'id', 'deal', 'sender', 'sender_name', 'text',
+            'message_type', 'timestamp', 'is_me',
+        ]
         read_only_fields = ['sender', 'timestamp']
 
     def get_is_me(self, obj):
@@ -95,7 +102,7 @@ class LeadSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lead
         fields = ['id', 'name', 'company', 'phone', 'email', 'message', 'is_processed', 'created_at']
-        read_only_fields = ['created_at']
+        read_only_fields = ['created_at', 'is_processed']
 
 
 class ActivityLogSerializer(serializers.ModelSerializer):

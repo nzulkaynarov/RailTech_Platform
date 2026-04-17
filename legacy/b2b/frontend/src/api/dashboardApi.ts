@@ -27,13 +27,9 @@ export interface PageStats {
   quotes: { drafts: number; sent: number; approved: number; under_review: number; total_amount: string; pipeline: string };
   clients: { total: number; verified: number; awaiting_kyc: number; unverified: number };
   products: { total: number; published: number; categories: number; equipment_groups: number; offers: number };
-  production: { active: number; awaiting_response: number; responded: number; overdue: number };
-  production_schedule: { active_orders: number; completed: number; delayed: number; next_week: number };
   analytics: { conversion: string; avg_deal: string; pipeline: string; win_rate: string };
-  analytics_buyer: { spend_period: string; savings: string; active_requests: number };
-  integrations: { connected: number; pending: number; available_apis: number; synced_records: number };
+  analytics_buyer: { spend_period: string; active_requests: number };
   my_requests: { active: number; quote_received: number; contract: number; completed: number };
-  logistics: { in_transit: number; customs: number; delivered: number; delays: number };
   admin_users: { total: number; admins: number; managers: number; employees: number };
   imports: { total: number; attachments: number };
   notifications_unread: number;

@@ -31,7 +31,10 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         if getattr(self, 'swagger_fake_view', False):
             return Notification.objects.none()
-        return Notification.objects.filter(user=self.request.user)
+        from django.db.models import Q
+        return Notification.objects.filter(
+            Q(user=self.request.user) | Q(user__isnull=True)
+        )
 
     @extend_schema(
         summary="Mark notification as read",

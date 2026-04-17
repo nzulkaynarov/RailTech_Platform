@@ -77,7 +77,8 @@ class UserResource(resources.ModelResource):
             row['username'] = email.split('@')[0] if email else ''
 
     def after_save_instance(self, instance, row, **kwargs):
-        """Set a default password for new users."""
+        """Set unusable password for new users — they must use setup-password flow."""
         if kwargs.get('new', False):
-            instance.set_password('changeme123!')
-            instance.save(update_fields=['password'])
+            instance.set_unusable_password()
+            instance.is_active = False
+            instance.save(update_fields=['password', 'is_active'])

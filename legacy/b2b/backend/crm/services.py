@@ -6,7 +6,7 @@ from django.db.models import Count, QuerySet, Sum
 
 from accounts.models import Company, CustomUser
 
-from .models import ActivityLog, Deal, DealStage, Lead, Quote, QuoteItem, QuoteStatus
+from .models import ActivityLog, Deal, DealStage, Lead, Quote, QuoteItem, QuoteItemHistory, QuoteStatus
 
 
 class QuoteCalculationService:
@@ -69,6 +69,24 @@ class QuoteCalculationService:
             items,
             ['landed_cost', 'final_price_excl_vat', 'logistics_cost', 'customs_duty']
         )
+
+        # 2b. Record audit trail snapshots for changed items
+        history_records = [
+            QuoteItemHistory(
+                quote_item=item,
+                frozen_base_price=item.frozen_base_price,
+                logistics_cost=item.logistics_cost,
+                customs_duty=item.customs_duty,
+                margin_percent=item.margin_percent,
+                landed_cost=item.landed_cost,
+                final_price_excl_vat=item.final_price_excl_vat,
+                quantity=item.quantity,
+                change_reason='recalculation',
+            )
+            for item in items
+        ]
+        if history_records:
+            QuoteItemHistory.objects.bulk_create(history_records)
 
         # 3. Aggregation for Quote totals (use QuerySet, not list)
         totals = quote.items.aggregate(
@@ -151,16 +169,26 @@ class QuoteLifecycleService:
     def send_to_client(quote_id: int, sent_by_user) -> Quote:
         """
         Send quote to client:
-        1. Generate PDF if not exists
-        2. Set frozen_at timestamp
-        3. Change status to SENT
-        4. Change deal stage to QUOTE_SENT
-        5. Create notification for client
+        1. Guard: only DRAFT quotes can be sent
+        2. Generate PDF if not exists
+        3. Set frozen_at timestamp
+        4. Change status to SENT
+        5. Change deal stage to QUOTE_SENT via FSM
+        6. Create notification for client
         """
         from django.utils import timezone
         from notifications.models import Notification, NotificationType
 
-        quote = Quote.objects.select_related('deal__company', 'deal__client', 'deal__stage').get(pk=quote_id)
+        quote = Quote.objects.select_related(
+            'deal__company', 'deal__client', 'deal__stage', 'status'
+        ).get(pk=quote_id)
+
+        # Status guard: only DRAFT can be sent
+        if quote.status and quote.status.code != 'DRAFT':
+            raise ValueError(
+                f"Cannot send quote in status '{quote.status.code}'. "
+                "Only DRAFT quotes can be sent."
+            )
 
         # Generate PDF if missing
         if not quote.pdf_file:
@@ -173,11 +201,11 @@ class QuoteLifecycleService:
         quote.frozen_at = timezone.now()
         quote.save(update_fields=['status', 'frozen_at', 'updated_at'])
 
-        # Change deal stage to QUOTE_SENT
-        quote_sent_stage = DealStage.objects.filter(code='QUOTE_SENT').first()
-        if quote_sent_stage:
-            quote.deal.stage = quote_sent_stage
-            quote.deal.save(update_fields=['stage'])
+        # Change deal stage via FSM
+        transition_deal_stage(
+            quote.deal, 'QUOTE_SENT', actor=sent_by_user,
+            reason=f"КП v{quote.version} отправлено клиенту",
+        )
 
         # Create notification for client contact
         if quote.deal.client:
@@ -191,24 +219,26 @@ class QuoteLifecycleService:
                 deal=quote.deal,
             )
 
-        # Activity log
-        ActivityLog.objects.create(
-            action="КП отправлено клиенту",
-            detail=f"КП v{quote.version} для {quote.deal.company.name} отправлено",
-            user=sent_by_user,
-            level='SUCCESS'
-        )
-
         return quote
 
     @staticmethod
     @transaction.atomic
     def approve_quote(quote_id: int, approved_by_user) -> Quote:
-        """Client approves the quote."""
+        """Client approves the quote. Only SENT quotes can be approved."""
         from django.utils import timezone
         from notifications.models import Notification, NotificationType
 
-        quote = Quote.objects.select_related('deal__company', 'deal__manager').get(pk=quote_id)
+        quote = Quote.objects.select_related(
+            'deal__company', 'deal__manager', 'deal__stage', 'status'
+        ).get(pk=quote_id)
+
+        # Status guard
+        current = quote.status.code if quote.status else 'None'
+        if current != 'SENT':
+            raise ValueError(
+                f"Cannot approve quote in status '{current}'. "
+                "Only SENT quotes can be approved."
+            )
 
         approved_status = QuoteStatus.objects.filter(code='APPROVED').first()
         quote.status = approved_status
@@ -216,11 +246,11 @@ class QuoteLifecycleService:
         quote.approved_by = approved_by_user
         quote.save(update_fields=['status', 'approved_at', 'approved_by', 'updated_at'])
 
-        # Change deal stage to CONTRACT_SIGNED
-        contract_stage = DealStage.objects.filter(code='CONTRACT_SIGNED').first()
-        if contract_stage:
-            quote.deal.stage = contract_stage
-            quote.deal.save(update_fields=['stage'])
+        # Change deal stage via FSM
+        transition_deal_stage(
+            quote.deal, 'CONTRACT_SIGNED', actor=approved_by_user,
+            reason=f"КП v{quote.version} одобрено клиентом",
+        )
 
         # Notify manager
         if quote.deal.manager:
@@ -234,34 +264,39 @@ class QuoteLifecycleService:
                 deal=quote.deal,
             )
 
-        ActivityLog.objects.create(
-            action="КП одобрено",
-            detail=f"КП v{quote.version} одобрено {approved_by_user.email}",
-            user=approved_by_user,
-            level='SUCCESS'
-        )
-
         return quote
 
     @staticmethod
     @transaction.atomic
     def reject_quote(quote_id: int, rejected_by_user, reason: str = '') -> Quote:
-        """Client rejects the quote."""
-        from django.utils import timezone
+        """Client rejects the quote. Only SENT quotes can be rejected."""
         from notifications.models import Notification, NotificationType
 
-        quote = Quote.objects.select_related('deal__company', 'deal__manager').get(pk=quote_id)
+        quote = Quote.objects.select_related(
+            'deal__company', 'deal__manager', 'deal__stage', 'status'
+        ).get(pk=quote_id)
+
+        # Status guard
+        current = quote.status.code if quote.status else 'None'
+        if current != 'SENT':
+            raise ValueError(
+                f"Cannot reject quote in status '{current}'. "
+                "Only SENT quotes can be rejected."
+            )
 
         rejected_status = QuoteStatus.objects.filter(code='REJECTED').first()
         quote.status = rejected_status
-        quote.notes = f"Причина отказа: {reason}" if reason else quote.notes
+        # Append rejection reason instead of replacing notes
+        if reason:
+            rejection_note = f"Причина отказа: {reason}"
+            quote.notes = f"{quote.notes}\n{rejection_note}".strip() if quote.notes else rejection_note
         quote.save(update_fields=['status', 'notes', 'updated_at'])
 
-        # Move deal back to CALCULATING for revision
-        calc_stage = DealStage.objects.filter(code='CALCULATING').first()
-        if calc_stage:
-            quote.deal.stage = calc_stage
-            quote.deal.save(update_fields=['stage'])
+        # Move deal back to CALCULATING via FSM
+        transition_deal_stage(
+            quote.deal, 'CALCULATING', actor=rejected_by_user,
+            reason=f"КП v{quote.version} отклонено. {reason}",
+        )
 
         # Notify manager
         if quote.deal.manager:
@@ -274,13 +309,6 @@ class QuoteLifecycleService:
                 link="/crm/deals",
                 deal=quote.deal,
             )
-
-        ActivityLog.objects.create(
-            action="КП отклонено",
-            detail=f"КП v{quote.version} отклонено. {reason}",
-            user=rejected_by_user,
-            level='WARNING'
-        )
 
         return quote
 

@@ -104,7 +104,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
             comment = serializer.validated_data.get('comment', '')
 
             result, error = services.verify_company_kyc(
-                company, request.user, level_code=code, require_documents=False
+                company, request.user, level_code=code, require_documents=True
             )
             if error:
                 return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)

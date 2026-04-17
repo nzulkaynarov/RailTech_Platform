@@ -1,3 +1,4 @@
+import base64
 import logging
 
 from rest_framework.views import APIView
@@ -109,8 +110,9 @@ class ExcelImportView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
+            file_content_b64 = base64.b64encode(file_content).decode('ascii')
             task = process_excel_import.delay(
-                deal_id, file_content, request.user.id
+                deal_id, file_content_b64, request.user.id
             )
 
             # Store task ownership in DB (not volatile cache)
@@ -175,7 +177,8 @@ class CatalogImportView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            task = process_catalog_import.delay(file_content)
+            file_content_b64 = base64.b64encode(file_content).decode('ascii')
+            task = process_catalog_import.delay(file_content_b64)
 
             ImportTask.objects.create(
                 celery_task_id=task.id,

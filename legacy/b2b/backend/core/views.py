@@ -231,15 +231,9 @@ class PageStatsView(APIView):
             user=request.user, is_read=False
         ).count()
 
-        # --- Production (manufacturer-specific) ---
-        production_active = 0
-        production_awaiting = 0
-        production_responded = 0
-        production_overdue = 0
-
         return Response({
             'sourcing': {
-                'total': sourcing_total + sourcing_new + sourcing_in_progress,
+                'total': sourcing_total + sourcing_in_progress,
                 'new': sourcing_new,
                 'in_progress': sourcing_in_progress,
                 'completed': sourcing_completed,
@@ -277,18 +271,6 @@ class PageStatsView(APIView):
                 'equipment_groups': equipment_groups_total,
                 'offers': offers_total,
             },
-            'production': {
-                'active': production_active,
-                'awaiting_response': production_awaiting,
-                'responded': production_responded,
-                'overdue': production_overdue,
-            },
-            'production_schedule': {
-                'active_orders': production_active,
-                'completed': sourcing_completed,
-                'delayed': production_overdue,
-                'next_week': 0,
-            },
             'analytics': {
                 'conversion': f'{conversion}%',
                 'avg_deal': f'${avg_deal:,.0f}',
@@ -297,26 +279,13 @@ class PageStatsView(APIView):
             },
             'analytics_buyer': {
                 'spend_period': f'${int(total_deal_value):,}',
-                'savings': '$0',
                 'active_requests': deals_active,
-            },
-            'integrations': {
-                'connected': 0,
-                'pending': 0,
-                'available_apis': 0,
-                'synced_records': 0,
             },
             'my_requests': {
                 'active': deals_active,
                 'quote_received': quotes_sent,
                 'contract': deals_closed_won,
                 'completed': sourcing_completed,
-            },
-            'logistics': {
-                'in_transit': 0,
-                'customs': 0,
-                'delivered': 0,
-                'delays': 0,
             },
             'admin_users': {
                 'total': users_total,

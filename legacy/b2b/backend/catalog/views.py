@@ -247,7 +247,10 @@ class ProductViewSet(viewsets.ModelViewSet):
         },
         tags=['Catalog'],
     )
-    @action(detail=False, methods=['get'], url_path='export-template')
+    @action(
+        detail=False, methods=['get'], url_path='export-template',
+        permission_classes=[permissions.IsAuthenticated],
+    )
     def export_template(self, request):
         """Generate an XLSX template for catalog import."""
         import openpyxl
@@ -296,19 +299,25 @@ class SupplierOfferViewSet(viewsets.ModelViewSet):
     """
     CRUD for supplier offers (pricing, stock, delivery terms).
 
-    Public read access; write operations require Manager/Admin role.
+    Public read access (active only); write operations require Manager/Admin role.
     """
-    queryset = SupplierOffer.objects.select_related(
-        'supplier', 'product', 'currency', 'delivery_basis', 'stock_status'
-    ).all()
     serializer_class = SupplierOfferSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['product', 'supplier', 'stock_status']
 
+    def get_queryset(self):
+        qs = SupplierOffer.objects.select_related(
+            'supplier', 'product', 'currency', 'delivery_basis', 'stock_status'
+        )
+        # Non-admin users only see active offers
+        user = self.request.user
+        if not (user.is_authenticated and (user.is_superuser or getattr(user, 'is_manager_or_admin', False))):
+            qs = qs.filter(is_active=True)
+        return qs
+
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
             return [permissions.AllowAny()]
-        # Write operations require staff-level access
         from core.permissions import IsManagerOrAdmin
         return [permissions.IsAuthenticated(), IsManagerOrAdmin()]
 

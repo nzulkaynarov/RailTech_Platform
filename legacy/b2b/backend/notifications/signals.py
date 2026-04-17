@@ -3,6 +3,7 @@ from django.dispatch import receiver
 from crm.models import Deal, Message
 from accounts.models import Company
 from .models import Notification, NotificationType
+from .services import push_notification_ws
 
 
 @receiver(post_save, sender=Deal)
@@ -15,7 +16,7 @@ def notify_deal_created(sender, instance, created, **kwargs):
     if instance.manager and instance.client and instance.manager != instance.client:
         info_type = NotificationType.objects.filter(code='INFO').first()
         company_name = instance.company.name if instance.company else ''
-        Notification.objects.create(
+        notif = Notification.objects.create(
             user=instance.manager,
             type=info_type,
             title="Новая сделка",
@@ -23,6 +24,7 @@ def notify_deal_created(sender, instance, created, **kwargs):
             link="/crm/deals",
             deal=instance,
         )
+        push_notification_ws(notif)
 
 
 @receiver(post_save, sender=Message)
@@ -55,7 +57,9 @@ def notify_new_message(sender, instance, created, **kwargs):
         for uid in recipients
     ]
     if notifications:
-        Notification.objects.bulk_create(notifications)
+        created = Notification.objects.bulk_create(notifications)
+        for notif in created:
+            push_notification_ws(notif)
 
 
 @receiver(pre_save, sender=Deal)
@@ -72,14 +76,15 @@ def notify_deal_stage_change(sender, instance, **kwargs):
     if old_deal.stage_id != instance.stage_id and instance.client:
         info_type = NotificationType.objects.filter(code='INFO').first()
         new_stage_name = instance.stage.name if instance.stage else 'N/A'
-        Notification.objects.create(
+        notif = Notification.objects.create(
             user=instance.client,
             type=info_type,
-            title=f"Статус сделки изменён",
+            title="Статус сделки изменён",
             message=f"Сделка #{instance.pk} перешла в стадию: {new_stage_name}",
             link="/cabinet/deals",
             deal=instance,
         )
+        push_notification_ws(notif)
 
 
 @receiver(pre_save, sender=Company)
@@ -110,4 +115,6 @@ def notify_kyc_status_change(sender, instance, **kwargs):
             for uid in member_user_ids
         ]
         if notifications:
-            Notification.objects.bulk_create(notifications)
+            created = Notification.objects.bulk_create(notifications)
+            for notif in created:
+                push_notification_ws(notif)

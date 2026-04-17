@@ -19,9 +19,7 @@ function BuyerAnalytics() {
       icon={<BarChart3 className="h-5 w-5" />}
       stats={[
         { label: t('pages.analytics.buyerStats.spendPeriod'), value: ps?.analytics_buyer?.spend_period ?? '0' },
-        { label: t('pages.analytics.buyerStats.savings'), value: ps?.analytics_buyer?.savings ?? '0' },
         { label: t('pages.analytics.buyerStats.activeRequests'), value: String(ps?.analytics_buyer?.active_requests ?? 0) },
-        { label: t('pages.analytics.buyerStats.avgDelivery'), value: '0' },
       ]}
     >
     </PageShell>

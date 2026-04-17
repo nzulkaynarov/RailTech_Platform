@@ -8,6 +8,7 @@ Steps:
   4. Members: add owner (existing user or create new)
 """
 
+import logging
 from django import forms
 from django.contrib import messages
 from django.shortcuts import redirect
@@ -15,11 +16,18 @@ from django.utils.translation import gettext_lazy as _
 from formtools.wizard.views import SessionWizardView
 from django.core.files.storage import default_storage
 
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
+from django.conf import settings
+
 from .models import (
     Company, CompanyMember, CompanyType, CustomUser,
     VerificationStatus, WorkspaceRole,
 )
 from master_data.models import Country
+
+logger = logging.getLogger(__name__)
 
 
 # ────────────────────────────────────────────
@@ -210,17 +218,35 @@ class CompanyWizardView(SessionWizardView):
         user, created = CustomUser.objects.get_or_create(
             email=owner_email,
             defaults={
-                'username': owner_email.split('@')[0],
+                'username': owner_email,
                 'first_name': data.get('owner_first_name', ''),
                 'last_name': data.get('owner_last_name', ''),
                 'phone': data.get('owner_phone', ''),
                 'role': client_role,
-                'is_active': True,
+                'is_active': False,
             },
         )
         if created:
-            user.set_password('changeme123!')
+            user.set_unusable_password()
             user.save()
+            # Send setup-password email (same flow as registration)
+            token = default_token_generator.make_token(user)
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            base_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173')
+            setup_url = f"{base_url}/setup-password?uid={uid}&token={token}"
+            try:
+                from django.core.mail import send_mail
+                send_mail(
+                    "Настройка пароля RailTech B2B",
+                    f"Здравствуйте, {data.get('owner_first_name', '')}!\n\n"
+                    f"Для вас создан аккаунт на платформе RailTech.\n"
+                    f"Для установки пароля перейдите по ссылке:\n{setup_url}",
+                    settings.DEFAULT_FROM_EMAIL,
+                    [owner_email],
+                    fail_silently=False,
+                )
+            except Exception:
+                logger.exception(f"Failed to send setup email to {owner_email}")
 
         # Create membership
         owner_role = WorkspaceRole.objects.filter(code='OWNER').first()
