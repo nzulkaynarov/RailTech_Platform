@@ -153,7 +153,7 @@ export const CatalogTable: React.FC<CatalogTableProps> = ({ products, onProductC
                                 <div className="flex items-center gap-2.5">
                                     <div className="w-8 h-8 rounded-md bg-muted dark:bg-muted flex items-center justify-center shrink-0 border border-border overflow-hidden">
                                         {product.main_image_url ? (
-                                            <img src={product.main_image_url} alt="" className="w-full h-full object-contain" />
+                                            <img src={product.main_image_url} alt="" className="w-full h-full object-contain" loading="lazy" />
                                         ) : (
                                             <Package className="w-3.5 h-3.5 text-muted-foreground dark:text-muted-foreground" aria-hidden="true" />
                                         )}

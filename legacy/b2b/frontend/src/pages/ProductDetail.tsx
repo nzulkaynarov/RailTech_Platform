@@ -97,7 +97,7 @@ export function ProductDetail({ productId, onBack }: ProductDetailProps) {
             {hasImages && (
               <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-lg bg-muted overflow-hidden">
                 {imageUrl ? (
-                  <img src={imageUrl} alt={product.name} className="h-full w-full object-contain" />
+                  <img src={imageUrl} alt={product.name} className="h-full w-full object-contain" loading="lazy" />
                 ) : (
                   <Package className="h-8 w-8 text-muted-foreground/30" />
                 )}
@@ -216,7 +216,7 @@ export function ProductDetail({ productId, onBack }: ProductDetailProps) {
                   {product.images.map((img) => (
                     <div key={img.id} className="flex h-20 w-20 items-center justify-center rounded-lg border overflow-hidden bg-muted">
                       {img.image_url ? (
-                        <img src={img.image_url} alt="" className="h-full w-full object-cover" />
+                        <img src={img.image_url} alt="" className="h-full w-full object-cover" loading="lazy" />
                       ) : (
                         <Package className="h-6 w-6 text-muted-foreground/40" />
                       )}

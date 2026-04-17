@@ -261,6 +261,13 @@ CSRF_TRUSTED_ORIGINS = [
 # are scoped to .railtech.uz domain and require HTTPS, breaking local admin login.
 _is_real_production = not DEBUG and os.environ.get('PRODUCTION', 'False').lower() == 'true'
 
+# Security headers — always enabled (safe for localhost too)
+if not DEBUG:
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'DENY'
+    SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+
 if _is_real_production:
     SESSION_COOKIE_DOMAIN = '.railtech.uz'
     CSRF_COOKIE_DOMAIN = '.railtech.uz'
@@ -268,12 +275,6 @@ if _is_real_production:
     CSRF_COOKIE_SECURE = True
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
-
-    # Security headers
-    SECURE_BROWSER_XSS_FILTER = True
-    SECURE_CONTENT_TYPE_NOSNIFF = True
-    X_FRAME_OPTIONS = 'DENY'
-    SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 
     # HTTPS enforcement — opt-in via env so DEBUG=False can still be used for local testing
     # with remote DB. Enable these in real production deployment (behind HTTPS nginx).

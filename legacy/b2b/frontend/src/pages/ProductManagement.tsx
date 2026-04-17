@@ -250,7 +250,7 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
                   {/* Compact image */}
                   <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-muted overflow-hidden">
                     {imageUrl ? (
-                      <img src={imageUrl} alt={product.name} className="h-full w-full object-cover" />
+                      <img src={imageUrl} alt={product.name} className="h-full w-full object-cover" loading="lazy" />
                     ) : (
                       <Package className="h-6 w-6 text-muted-foreground" />
                     )}

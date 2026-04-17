@@ -88,8 +88,9 @@ urlpatterns = [
     path('api/v1/health/', health_check, name='health_check'),
     # Root-level health endpoint for Docker/K8s healthchecks
     path('health/', health_check, name='health_check_root'),
-    # API Documentation (drf-spectacular)
+    # API Documentation (drf-spectacular) — protected in production
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+] + ([
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+] if settings.DEBUG else []) + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
