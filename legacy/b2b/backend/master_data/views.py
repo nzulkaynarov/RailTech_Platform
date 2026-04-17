@@ -21,6 +21,7 @@ class CountryViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Country.objects.filter(is_active=True)
     serializer_class = CountrySerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
+    pagination_class = None
 
 
 @extend_schema_view(
@@ -36,6 +37,7 @@ class CurrencyViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Currency.objects.filter(is_active=True)
     serializer_class = CurrencySerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
+    pagination_class = None
 
 
 @extend_schema_view(
@@ -51,6 +53,7 @@ class UnitOfMeasureViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = UnitOfMeasure.objects.filter(is_active=True)
     serializer_class = UnitOfMeasureSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
+    pagination_class = None
 
 
 @extend_schema_view(
@@ -66,3 +69,4 @@ class DeliveryBasisViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = DeliveryBasis.objects.filter(is_active=True)
     serializer_class = DeliveryBasisSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
+    pagination_class = None

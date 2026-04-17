@@ -321,6 +321,36 @@ class UserViewSet(viewsets.ModelViewSet):
             'is_active': result.is_active,
         })
 
+    @extend_schema(
+        summary="Change user role",
+        description="Change the system role of a user. Admin only.",
+        request=inline_serializer('ChangeRoleRequest', {
+            'role': __import__('rest_framework').serializers.CharField(),
+        }),
+        responses={200: OpenApiResponse(description="Role updated")},
+        tags=['Accounts'],
+    )
+    @action(detail=True, methods=['post'], url_path='change-role')
+    def change_role(self, request, pk=None):
+        from .models import SystemRole
+        user = self.get_object()
+        role_code = request.data.get('role')
+        if not role_code:
+            return Response(
+                {'error': 'role is required'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        role = SystemRole.objects.filter(code=role_code).first()
+        if not role:
+            return Response(
+                {'error': f"Role '{role_code}' not found"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        user.role = role
+        user.save(update_fields=['role'])
+        from .serializers import UserSerializer
+        return Response(UserSerializer(user).data)
+
 
 @extend_schema(
     summary="Register new user",

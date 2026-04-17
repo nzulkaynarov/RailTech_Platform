@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework import status, viewsets
 from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.throttling import ScopedRateThrottle
 from celery.result import AsyncResult
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResponse
 
@@ -68,6 +69,8 @@ class ExcelImportView(APIView):
     """
     parser_classes = [MultiPartParser]
     permission_classes = [IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'import_upload'
 
     def post(self, request, deal_id):
         from crm.models import Deal
@@ -153,6 +156,8 @@ class CatalogImportView(APIView):
     """Endpoint for bulk supplier catalog imports (staff only)."""
     parser_classes = [MultiPartParser]
     permission_classes = [IsAuthenticated, IsManagerOrAdmin]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'import_upload'
 
     def post(self, request):
         file_obj = request.FILES.get('file')

@@ -45,11 +45,10 @@ export interface User {
 	kyc_status?: string | null;
 	company?: Company;
 	primary_company?: Company;
-	company_id?: number | null;
 	is_active?: boolean;
 	last_login?: string | null;
 	date_joined?: string;
-	profile_picture?: string | null;
+	avatar?: string | null;
 }
 
 /** Map backend `primary_company` → frontend `company` field */
@@ -116,8 +115,8 @@ export const accountsApi = {
 		await apiClient.delete(`accounts/companies/${companyId}/delete-document/${docId}/`);
 	},
 	getTeam: async (companyId: number) => {
-		const response = await apiClient.get<PaginatedResponse<User>>(`accounts/companies/${companyId}/team/`);
-		return response.data.results;
+		const response = await apiClient.get<User[]>(`accounts/companies/${companyId}/team/`);
+		return response.data;
 	},
 	inviteUser: async (companyId: number, data: { email: string; role: string }) => {
 		const response = await apiClient.post<User>(`accounts/companies/${companyId}/invite/`, data);
@@ -154,7 +153,7 @@ export const accountsApi = {
 		return response.data;
 	},
 	updateUserRole: async (id: number, role: string) => {
-		const response = await apiClient.patch<User>(`accounts/users/${id}/`, { role });
+		const response = await apiClient.post<User>(`accounts/users/${id}/change-role/`, { role });
 		return response.data;
 	},
 	createUser: async (data: Partial<User>) => {

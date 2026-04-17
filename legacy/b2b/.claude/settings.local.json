@@ -41,7 +41,8 @@
       "Bash(npm audit *)",
       "Bash(ls -la \"/Users/nurbekgb/Downloads/IT projects/RailTech_SaaS_B2B/frontend/.env\"*)",
       "Bash(ls -la /Users/nurbekgb/Downloads/IT*)",
-      "Bash(gh pr *)"
+      "Bash(gh pr *)",
+      "Bash(node -e ' *)"
     ]
   }
 }

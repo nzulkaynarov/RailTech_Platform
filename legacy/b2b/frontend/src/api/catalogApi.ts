@@ -13,15 +13,15 @@ export interface DomainTypeItem {
 export interface EquipmentGroup {
     id: number;
     name: string;
-    equipment_type: string;
-    series: string;
-    parent?: number;
+    full_path: string;
 }
 
 export interface Category {
     id: number;
     name: string;
     parent?: number | null;
+    domain_type?: number | null;
+    icon?: string | null;
 }
 
 export interface Manufacturer {
@@ -61,23 +61,13 @@ export interface Product {
     category_data?: { id: number, name: string } | null;
     
     manufacturer?: number | null;
-    manufacturer_data?: { id: number, name: string, country: string } | null;
-    
-    supplier?: number | null;
-    supplier_data?: { id: number, name: string } | null;
-    
+    manufacturer_data?: { id: number; name: string; inn?: string; logo?: string | null } | null;
+
     uom?: number | null;
-    uom_data?: { id: number, code: string, name: string } | null;
-    
+    uom_data?: { id: number; code: string; name: string } | null;
+
     stock_status?: string | null;
-    delivery_lead_time?: string | null;
-    
     base_price: string;
-    currency?: number | null;
-    currency_data?: { id: number, code: string, symbol: string } | null;
-    
-    price_base?: number | null;
-    price_base_data?: { id: number, code: string } | null;
 
     gost_drawing?: string | null;
     specifications?: {

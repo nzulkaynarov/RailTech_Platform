@@ -63,14 +63,17 @@ class DealDetailSerializer(serializers.ModelSerializer):
     quotes = QuoteSerializer(many=True, read_only=True)
     active_quote = QuoteSerializer(read_only=True)
     stage_name = serializers.CharField(source='stage.name', read_only=True)
+    stage_code = serializers.CharField(source='stage.code', read_only=True)
     company_name = serializers.CharField(source='company.name', read_only=True)
     client_name = serializers.CharField(source='client.get_full_name', read_only=True)
+    manager_name = serializers.CharField(source='manager.get_full_name', read_only=True)
 
     class Meta:
         model = Deal
         fields = [
             'id', 'company', 'company_name', 'client', 'client_name',
-            'manager', 'stage', 'stage_name', 'title', 'notes',
+            'manager', 'manager_name', 'stage', 'stage_code', 'stage_name',
+            'title', 'notes',
             'active_quote', 'quotes', 'created_at', 'updated_at'
         ]
         extra_kwargs = {

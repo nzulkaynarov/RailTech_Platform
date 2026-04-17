@@ -260,7 +260,7 @@ class QuoteViewSet(viewsets.ModelViewSet):
             quote = QuoteLifecycleService.generate_pdf(quote.pk)
             return Response({
                 'status': 'PDF generated',
-                'pdf_url': (
+                'url': (
                     request.build_absolute_uri(quote.pdf_file.url)
                     if quote.pdf_file else None
                 ),
@@ -401,6 +401,10 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
     """CRUD for quote line items (products, quantities, pricing)."""
     serializer_class = QuoteItemSerializer
     permission_classes = [IsAuthenticated, IsOwnerOrManagerOrAdmin]
+    filterset_fields = {
+        'quote__deal_id': ['exact'],
+        'product': ['isnull', 'exact'],
+    }
 
     def get_queryset(self):
         if getattr(self, 'swagger_fake_view', False):
@@ -636,6 +640,17 @@ class DashboardAnalyticsView(APIView):
             if total_quotes > 0 else 0
         )
 
+        # Buyer-specific stats
+        deals_in_progress = all_deals.filter(
+            stage__code__in=['SOURCING', 'CALCULATING']
+        ).count()
+        quotes_received = all_deals.filter(
+            stage__code='QUOTE_SENT'
+        ).count()
+        deals_completed = all_deals.filter(
+            stage__code__in=['CLOSED_WON', 'CONTRACT_SIGNED']
+        ).count()
+
         data = {
             'deals_volume': float(current_volume),
             'deals_volume_change': volume_change,
@@ -651,6 +666,9 @@ class DashboardAnalyticsView(APIView):
             'counterparties': counterparties,
             'request_completion': round(completion_percentage, 1),
             'request_completion_goal': 80,
+            'deals_in_progress': deals_in_progress,
+            'quotes_received': quotes_received,
+            'deals_completed': deals_completed,
         }
         cache.set(cache_key, data, 60)
         return Response(data)

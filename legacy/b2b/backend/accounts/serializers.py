@@ -63,16 +63,37 @@ class UserSerializer(serializers.ModelSerializer):
     primary_company = CompanySerializer(read_only=True)
     role_name = serializers.CharField(source='role.name', read_only=True)
     role_code = serializers.CharField(source='role.code', read_only=True)
+    role_data = serializers.SerializerMethodField()
+    workspace_role = serializers.SerializerMethodField()
     kyc_status = serializers.SerializerMethodField()
 
     class Meta:
         model = CustomUser
         fields = [
             'id', 'username', 'email', 'first_name', 'last_name',
-            'phone', 'avatar', 'role', 'role_code', 'role_name', 'kyc_status',
-            'is_active', 'memberships', 'primary_company', 'last_login', 'date_joined'
+            'phone', 'avatar', 'role', 'role_code', 'role_name',
+            'role_data', 'workspace_role', 'kyc_status',
+            'is_active', 'memberships', 'primary_company',
+            'last_login', 'date_joined',
         ]
         read_only_fields = ['id', 'role', 'last_login', 'date_joined']
+
+    def get_role_data(self, obj):
+        if obj.role:
+            return {
+                'code': obj.role.code,
+                'name': obj.role.name,
+                'is_staff_level': obj.role.is_staff_level,
+            }
+        return None
+
+    def get_workspace_role(self, obj):
+        membership = obj.memberships.filter(
+            is_primary=True, is_active=True
+        ).select_related('role').first()
+        if membership and membership.role:
+            return membership.role.code
+        return None
 
     def get_kyc_status(self, obj):
         if obj.primary_company and obj.primary_company.verification_status:

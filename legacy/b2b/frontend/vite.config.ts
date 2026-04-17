@@ -15,4 +15,16 @@ export default defineConfig({
 			"@": path.resolve(__dirname, "./src"),
 		},
 	},
+	build: {
+		rollupOptions: {
+			output: {
+				manualChunks: {
+					'vendor-react': ['react', 'react-dom'],
+					'vendor-charts': ['recharts'],
+					'vendor-i18n': ['i18next', 'react-i18next'],
+					'vendor-state': ['zustand', '@tanstack/react-query'],
+				},
+			},
+		},
+	},
 })

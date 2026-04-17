@@ -21,5 +21,5 @@ export const masterDataApi = {
   getCountries: () => apiClient.get<Country[]>('master-data/countries/').then(r => r.data),
   getCurrencies: () => apiClient.get<Currency[]>('master-data/currencies/').then(r => r.data),
   getUnits: () => apiClient.get<LookupItem[]>('master-data/units/').then(r => r.data),
-  getDeliveryBases: () => apiClient.get<LookupItem[]>('master-data/delivery-bases/').then(r => r.data),
+  getDeliveryBases: () => apiClient.get<LookupItem[]>('master-data/delivery-basis/').then(r => r.data),
 };

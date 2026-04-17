@@ -1,28 +1,19 @@
 import { apiClient } from './client';
 import { PaginatedResponse } from './types';
+import type { Quote } from './crmApi';
 
 export interface SourcingRequest {
   id: number;
-  number: string;
-  client_name: string;
-  items_count: number;
-  matched_count: number;
-  status: string;
+  title?: string;
+  company?: number | null;
+  company_name?: string;
+  stage?: number | null;
+  stage_code?: string;
+  stage_name?: string;
+  total_value?: string;
+  manager?: number | null;
+  active_quote?: Quote | null;
   created_at: string;
-}
-
-export interface SourcingItem {
-  id: number;
-  name: string;
-  article: string;
-  gost: string;
-  uom: string;
-  quantity: number;
-  match_status: 'matched' | 'partial' | 'not_found';
-  matched_product_id?: number;
-  manufacturer_name?: string;
-  base_price?: number;
-  rfq_status?: string;
 }
 
 export const sourcingApi = {

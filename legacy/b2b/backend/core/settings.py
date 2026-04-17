@@ -438,6 +438,7 @@ REST_FRAMEWORK = {
         'anon': '20/minute',
         'user': '200/minute',
         'lead_submit': '5/minute',
+        'import_upload': '10/hour',
     },
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
