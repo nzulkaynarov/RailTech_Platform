@@ -27,6 +27,7 @@ export interface Company {
 	kyc_notes?: string;
 	created_at?: string;
 	kyc_documents?: KYCDocument[];
+	company_types?: string[];
 	user_count?: number;
 }
 

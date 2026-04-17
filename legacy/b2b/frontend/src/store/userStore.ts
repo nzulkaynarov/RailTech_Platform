@@ -160,8 +160,7 @@ export const useUserStore = create<UserState>((set, _get) => ({
         SUPPLIER: 'SELLER',
         PLANT: 'MANUFACTURER',
       };
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const companyTypes: string[] = (company as any)?.company_types as string[] || [];
+      const companyTypes: string[] = company?.company_types ?? [];
       const statusEntries: CompanyStatusEntry[] = companyTypes.map((code) => ({
         status: typeMap[code] || 'BUYER',
         verification: 'verified' as const,
@@ -188,7 +187,7 @@ export const useUserStore = create<UserState>((set, _get) => ({
         company: company ? {
           name: company.name || '',
           inn: company.inn || '',
-          kycStatus: (company.verification_status === 'verified' ? 'verified' : 'pending') as 'verified' | 'pending' | 'not_started',
+          kycStatus: (['L2_VERIFIED', 'L3_CONTRACTED'].includes(company.verification_status_code ?? '') ? 'verified' : 'pending') as 'verified' | 'pending' | 'not_started',
           country: company.country || '',
           city: '',
           statusEntries,
