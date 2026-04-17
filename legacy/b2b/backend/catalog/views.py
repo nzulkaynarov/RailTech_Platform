@@ -2,13 +2,19 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResponse, OpenApiParameter
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
+from django.views.decorators.vary import vary_on_headers
 from .models import Product, EquipmentGroup, Category, DomainType, SupplierOffer
 from .serializers import (
-    ProductSerializer, EquipmentGroupSerializer,
+    ProductSerializer, ProductListSerializer, EquipmentGroupSerializer,
     CategorySerializer, DomainTypeSerializer, SupplierOfferSerializer
 )
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
+
+LOOKUP_CACHE_TTL = 60 * 10  # 10 min for rarely-changing lookups
+LIST_CACHE_TTL = 60  # 1 min for product list (balance freshness vs Neon latency)
 
 
 @extend_schema_view(
@@ -23,6 +29,8 @@ from rest_framework import filters
         tags=['Catalog'],
     ),
 )
+@method_decorator(vary_on_headers('Accept-Language'), name='list')
+@method_decorator(cache_page(LOOKUP_CACHE_TTL), name='list')
 class DomainTypeViewSet(viewsets.ReadOnlyModelViewSet):
     """GET /api/v1/catalog/domain-types/ — active domain types from DB."""
     queryset = DomainType.objects.filter(is_active=True)
@@ -47,6 +55,8 @@ class DomainTypeViewSet(viewsets.ReadOnlyModelViewSet):
     partial_update=extend_schema(summary="Partially update equipment group", tags=['Catalog']),
     destroy=extend_schema(summary="Delete equipment group", tags=['Catalog']),
 )
+@method_decorator(vary_on_headers('Accept-Language'), name='list')
+@method_decorator(cache_page(LOOKUP_CACHE_TTL), name='list')
 class EquipmentGroupViewSet(viewsets.ModelViewSet):
     """
     CRUD for equipment groups (hierarchical classification).
@@ -80,6 +90,8 @@ class EquipmentGroupViewSet(viewsets.ModelViewSet):
     partial_update=extend_schema(summary="Partially update category", tags=['Catalog']),
     destroy=extend_schema(summary="Delete category", tags=['Catalog']),
 )
+@method_decorator(vary_on_headers('Accept-Language'), name='list')
+@method_decorator(cache_page(LOOKUP_CACHE_TTL), name='list')
 class CategoryViewSet(viewsets.ModelViewSet):
     """
     CRUD for product categories.
@@ -130,6 +142,8 @@ class CategoryViewSet(viewsets.ModelViewSet):
     partial_update=extend_schema(summary="Partially update product", tags=['Catalog']),
     destroy=extend_schema(summary="Delete product", tags=['Catalog']),
 )
+@method_decorator(vary_on_headers('Accept-Language', 'Authorization'), name='list')
+@method_decorator(cache_page(LIST_CACHE_TTL), name='list')
 class ProductViewSet(viewsets.ModelViewSet):
     """
     CRUD for PIM products.
@@ -139,19 +153,31 @@ class ProductViewSet(viewsets.ModelViewSet):
     """
     serializer_class = ProductSerializer
 
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return ProductListSerializer
+        return ProductSerializer
+
     def get_queryset(self):
         user = self.request.user
-        queryset = Product.objects.all().select_related(
+        base = Product.objects.all().select_related(
             'category', 'manufacturer', 'domain_type', 'status', 'uom'
-        ).prefetch_related(
-            'equipment_groups',
-            'images',
-            'documents',
-            'offers__stock_status',
-            'offers__supplier',
-            'offers__currency',
-            'offers__delivery_basis',
         )
+        if self.action == 'list':
+            queryset = base.prefetch_related(
+                'images',
+                'offers__stock_status',
+            )
+        else:
+            queryset = base.prefetch_related(
+                'equipment_groups',
+                'images',
+                'documents',
+                'offers__stock_status',
+                'offers__supplier',
+                'offers__currency',
+                'offers__delivery_basis',
+            )
         # Non-admins only see PUBLISHED products
         if not (user.is_authenticated and (user.is_superuser or user.is_manager_or_admin)):
             queryset = queryset.filter(status__code='PUBLISHED')

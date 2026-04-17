@@ -1,11 +1,16 @@
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from drf_spectacular.utils import extend_schema, extend_schema_view
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
+from django.views.decorators.vary import vary_on_headers
 from .models import Country, Currency, UnitOfMeasure, DeliveryBasis
 from .serializers import (
     CountrySerializer, CurrencySerializer,
     UnitOfMeasureSerializer, DeliveryBasisSerializer
 )
+
+LOOKUP_CACHE_TTL = 60 * 10  # 10 min — master data changes rarely
 
 
 @extend_schema_view(
@@ -16,6 +21,8 @@ from .serializers import (
     ),
     retrieve=extend_schema(summary="Get country", tags=['Master Data']),
 )
+@method_decorator(vary_on_headers('Accept-Language'), name='list')
+@method_decorator(cache_page(LOOKUP_CACHE_TTL), name='list')
 class CountryViewSet(viewsets.ReadOnlyModelViewSet):
     """Read-only lookup for countries."""
     queryset = Country.objects.filter(is_active=True)
@@ -32,6 +39,8 @@ class CountryViewSet(viewsets.ReadOnlyModelViewSet):
     ),
     retrieve=extend_schema(summary="Get currency", tags=['Master Data']),
 )
+@method_decorator(vary_on_headers('Accept-Language'), name='list')
+@method_decorator(cache_page(LOOKUP_CACHE_TTL), name='list')
 class CurrencyViewSet(viewsets.ReadOnlyModelViewSet):
     """Read-only lookup for currencies."""
     queryset = Currency.objects.filter(is_active=True)
@@ -48,6 +57,8 @@ class CurrencyViewSet(viewsets.ReadOnlyModelViewSet):
     ),
     retrieve=extend_schema(summary="Get unit of measure", tags=['Master Data']),
 )
+@method_decorator(vary_on_headers('Accept-Language'), name='list')
+@method_decorator(cache_page(LOOKUP_CACHE_TTL), name='list')
 class UnitOfMeasureViewSet(viewsets.ReadOnlyModelViewSet):
     """Read-only lookup for units of measure."""
     queryset = UnitOfMeasure.objects.filter(is_active=True)
@@ -64,6 +75,8 @@ class UnitOfMeasureViewSet(viewsets.ReadOnlyModelViewSet):
     ),
     retrieve=extend_schema(summary="Get delivery basis", tags=['Master Data']),
 )
+@method_decorator(vary_on_headers('Accept-Language'), name='list')
+@method_decorator(cache_page(LOOKUP_CACHE_TTL), name='list')
 class DeliveryBasisViewSet(viewsets.ReadOnlyModelViewSet):
     """Read-only lookup for delivery basis (Incoterms)."""
     queryset = DeliveryBasis.objects.filter(is_active=True)

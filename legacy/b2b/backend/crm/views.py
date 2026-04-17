@@ -14,7 +14,7 @@ from .serializers import (
 )
 from rest_framework.permissions import IsAuthenticated
 from core.permissions import IsManagerOrAdmin, IsOwnerOrManagerOrAdmin
-from django.db.models import Count, Sum, Q, Subquery, OuterRef, Max
+from django.db.models import Count, Sum, Q, Subquery, OuterRef, Max, Prefetch
 from django.utils import timezone
 from datetime import timedelta
 from decimal import Decimal
@@ -65,14 +65,19 @@ class DealViewSet(viewsets.ModelViewSet):
         if getattr(self, 'swagger_fake_view', False):
             return Deal.objects.none()
         user = self.request.user
+        quote_items_qs = QuoteItem.objects.select_related(
+            'product', 'product__domain_type', 'offer', 'offer__supplier', 'frozen_currency'
+        )
+        quotes_qs = Quote.objects.select_related('status').prefetch_related(
+            Prefetch('items', queryset=quote_items_qs)
+        ).order_by('-version')
         queryset = Deal.objects.all().select_related(
             'client', 'manager', 'company', 'stage'
-        ).prefetch_related('quotes', 'quotes__items')
+        ).prefetch_related(Prefetch('quotes', queryset=quotes_qs))
 
         if user.is_superuser or user.is_manager_or_admin:
             return queryset
 
-        # B2B Filter: User sees all deals of their active companies
         user_company_ids = user.memberships.filter(
             is_active=True).values_list('company_id', flat=True)
         return queryset.filter(company_id__in=user_company_ids)

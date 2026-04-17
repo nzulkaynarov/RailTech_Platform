@@ -88,11 +88,10 @@ class UserSerializer(serializers.ModelSerializer):
         return None
 
     def get_workspace_role(self, obj):
-        membership = obj.memberships.filter(
-            is_primary=True, is_active=True
-        ).select_related('role').first()
-        if membership and membership.role:
-            return membership.role.code
+        # Leverage prefetched memberships — no extra SQL
+        for m in obj.memberships.all():
+            if m.is_primary and m.is_active and m.role:
+                return m.role.code
         return None
 
     def get_kyc_status(self, obj):

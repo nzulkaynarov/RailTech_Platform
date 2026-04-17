@@ -175,3 +175,65 @@ class ProductSerializer(serializers.ModelSerializer):
                     return request.build_absolute_uri(url)
                 return url
         return None
+
+
+class ProductListSerializer(serializers.ModelSerializer):
+    """Lightweight serializer for list endpoints — no nested offers/documents."""
+    category_data = CategorySerializer(source='category', read_only=True)
+    manufacturer_data = CompanyLightSerializer(source='manufacturer', read_only=True)
+    uom_data = UnitOfMeasureSerializer(source='uom', read_only=True)
+
+    main_image_url = serializers.SerializerMethodField()
+    status_name = serializers.SerializerMethodField()
+    domain_type_name = serializers.SerializerMethodField()
+    domain_type_code = serializers.SerializerMethodField()
+    stock_status = serializers.SerializerMethodField()
+    base_price = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Product
+        fields = [
+            'id', 'sku', 'name', 'status', 'status_name',
+            'domain_type', 'domain_type_name', 'domain_type_code',
+            'category', 'category_data',
+            'manufacturer', 'manufacturer_data',
+            'uom', 'uom_data',
+            'gost_drawing',
+            'main_image_url',
+            'stock_status', 'base_price',
+            'created_at', 'updated_at',
+        ]
+
+    def get_status_name(self, obj):
+        return obj.status.name if obj.status else None
+
+    def get_domain_type_name(self, obj):
+        return obj.domain_type.name if obj.domain_type else None
+
+    def get_domain_type_code(self, obj):
+        return obj.domain_type.code if obj.domain_type else None
+
+    def _first_offer(self, obj):
+        offers = obj.offers.all()
+        active = next((o for o in offers if o.is_active), None)
+        return active or next(iter(offers), None)
+
+    def get_stock_status(self, obj):
+        offer = self._first_offer(obj)
+        return offer.stock_status.code if offer and offer.stock_status else None
+
+    def get_base_price(self, obj):
+        offer = self._first_offer(obj)
+        return str(offer.base_price) if offer else '0'
+
+    def get_main_image_url(self, obj):
+        images = obj.images.all()
+        main_img = next((i for i in images if i.is_main), None) or next(iter(images), None)
+        if main_img:
+            url = main_img.image.url if main_img.image else main_img.image_url
+            if url:
+                request = self.context.get('request')
+                if request and not url.startswith('http'):
+                    return request.build_absolute_uri(url)
+                return url
+        return None

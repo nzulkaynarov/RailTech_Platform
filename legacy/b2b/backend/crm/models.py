@@ -1,6 +1,7 @@
 from decimal import Decimal
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
+from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 import pghistory
 import pgtrigger
@@ -99,14 +100,18 @@ class Deal(models.Model):
     def __str__(self):
         return self.title or f"Сделка #{self.pk}"
 
-    @property
+    @cached_property
     def active_quote(self):
-        """Последняя версия КП."""
-        return self.quotes.order_by('-version').first()
+        """Последняя версия КП. Использует prefetch cache если есть."""
+        quotes = self.quotes.all()
+        if 'quotes' in getattr(self, '_prefetched_objects_cache', {}):
+            # Uses prefetched list — no extra SQL
+            quotes_list = list(quotes)
+            return max(quotes_list, key=lambda q: q.version) if quotes_list else None
+        return quotes.order_by('-version').first()
 
     @property
     def total_value(self):
-        """Сумма по последнему КП."""
         quote = self.active_quote
         return quote.total_incl_vat if quote else Decimal('0')
 

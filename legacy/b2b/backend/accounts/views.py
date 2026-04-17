@@ -65,7 +65,13 @@ class CompanyViewSet(viewsets.ModelViewSet):
 
     Includes KYC verification, document upload, team management, and member invitations.
     """
-    queryset = Company.objects.prefetch_related('kyc_documents', 'members').order_by('-created_at')
+    queryset = Company.objects.select_related(
+        'verification_status', 'country'
+    ).prefetch_related(
+        'kyc_documents__doc_type',
+        'types',
+        'members',
+    ).order_by('-created_at')
     serializer_class = CompanySerializer
     permission_classes = [permissions.IsAuthenticated, IsManagerOrAdmin]
 
@@ -231,13 +237,12 @@ class UserViewSet(viewsets.ModelViewSet):
 
     Includes password change, profile update, and user activation/deactivation.
     """
-    queryset = CustomUser.objects.all().select_related(
-        'role',
-    ).prefetch_related(
+    queryset = CustomUser.objects.all().select_related('role').prefetch_related(
         Prefetch(
             'memberships',
             queryset=CompanyMember.objects.select_related(
                 'company__verification_status',
+                'company__country',
                 'role',
             ).prefetch_related(
                 'company__kyc_documents__doc_type',
@@ -301,7 +306,8 @@ class UserViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path='me',
             permission_classes=[permissions.IsAuthenticated])
     def me(self, request):
-        serializer = self.get_serializer(request.user)
+        user = self.get_queryset().filter(pk=request.user.pk).first() or request.user
+        serializer = self.get_serializer(user)
         return Response(serializer.data)
 
     @extend_schema(
