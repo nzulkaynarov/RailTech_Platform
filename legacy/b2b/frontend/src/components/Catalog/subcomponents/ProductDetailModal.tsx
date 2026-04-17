@@ -18,7 +18,6 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
-const verifiedManufacturers: Record<string, { verified: boolean; iso: boolean; trustScore: number }> = {};
 
 interface ProductDetailModalProps {
     product: Product | null;
@@ -36,19 +35,17 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
         : stockStatusKey === 'LOW_STOCK' ? 'secondary'
         : 'outline';
 
-    const mfgName = product.manufacturer_data?.name ?? '';
-    const mfgInfo = verifiedManufacturers[mfgName];
+    const mfgInfo = product.manufacturer_data ? {
+        verified: product.manufacturer_data.is_verified,
+        iso: product.manufacturer_data.has_iso9001,
+        trustScore: product.manufacturer_data.trust_score || 0,
+    } : null;
 
     const basePrice = Number(product.base_price) || 0;
     const currencyCode = product.offers?.[0]?.currency_data?.code || 'USD';
     const formatPrice = (price: number) =>
         price.toLocaleString('en-US', { minimumFractionDigits: 2 });
 
-    const volumeTiers = [
-        { range: '1–10', price: basePrice, discount: null },
-        { range: '10–50', price: basePrice * 0.95, discount: '−5%' },
-        { range: '50+', price: basePrice * 0.88, discount: '−12%' },
-    ];
 
     return (
         <Dialog open={!!product} onOpenChange={(open) => { if (!open) onClose(); }}>
@@ -182,46 +179,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                                         </Badge>
                                     </div>
 
-                                    <Separator />
 
-                                    {/* Volume pricing table */}
-                                    <div>
-                                        <p className="mb-3 text-sm font-semibold">{t('productDetail.volumePricing')}</p>
-                                        <div className="rounded-lg border border-border overflow-hidden">
-                                            <Table className="w-full text-sm">
-                                                <TableHeader>
-                                                    <TableRow className="bg-muted text-muted-foreground">
-                                                        <TableHead className="px-4 py-2 text-left font-medium">{t('productDetail.qty')}</TableHead>
-                                                        <TableHead className="px-4 py-2 text-right font-medium">{t('productDetail.pricePerUnit')}</TableHead>
-                                                        <TableHead className="px-4 py-2 text-right font-medium">{t('productDetail.discount')}</TableHead>
-                                                    </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                    {volumeTiers.map((tier, idx) => (
-                                                        <TableRow key={idx} className="border-t border-border">
-                                                            <TableCell className="px-4 py-2">{tier.range}</TableCell>
-                                                            <TableCell className="px-4 py-2 text-right tabular-nums font-medium">
-                                                                {canSeePrices ? (
-                                                                    <>
-                                                                        {formatPrice(tier.price)}{' '}
-                                                                        <span className="text-xs text-muted-foreground">{currencyCode}</span>
-                                                                    </>
-                                                                ) : (
-                                                                    <span className="flex items-center justify-end gap-1 text-warning">
-                                                                        <LockIcon className="size-3" aria-hidden="true" />
-                                                                        {t('catalog.productDetail.hidden')}
-                                                                    </span>
-                                                                )}
-                                                            </TableCell>
-                                                            <TableCell className="px-4 py-2 text-right text-muted-foreground">
-                                                                {tier.discount || '—'}
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                                </TableBody>
-                                            </Table>
-                                        </div>
-                                    </div>
                                 </div>
                             </TabsContent>
 

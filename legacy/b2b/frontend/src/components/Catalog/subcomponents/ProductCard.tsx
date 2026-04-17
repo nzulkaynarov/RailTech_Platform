@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { clsx } from 'clsx';
 import { getDomainVisual } from '../../../config/domainConfig';
 
-const verifiedManufacturers: Record<string, { verified: boolean; iso: boolean; trustScore: number }> = {};
 
 interface ProductCardProps {
     product: Product;
@@ -30,8 +29,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, canS
     const stock = stockConfig[product.stock_status as keyof typeof stockConfig] ?? stockConfig.ON_ORDER;
     const domainVisual = getDomainVisual(product.domain_type_code ?? 'GENERAL_GOODS');
     const inCart = items.some(i => Number(i.product.id) === Number(product.id));
-    const mfgName = product.manufacturer_data?.name ?? '';
-    const mfgInfo = verifiedManufacturers[mfgName];
+    const mfgInfo = product.manufacturer_data ? {
+        verified: product.manufacturer_data.is_verified,
+        iso: product.manufacturer_data.has_iso9001,
+        trustScore: product.manufacturer_data.trust_score || 0,
+    } : null;
     const isBuyer = activeStatus === 'BUYER';
 
     const handleAddToCart = (e: React.MouseEvent) => {

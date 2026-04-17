@@ -108,6 +108,21 @@ class Company(models.Model):
         verbose_name=_("Статус верификации"),
         help_text=_("Текущий статус KYC-проверки компании"),
     )
+    is_verified = models.BooleanField(
+        default=False,
+        verbose_name=_("Верифицирован"),
+        help_text=_("Компания прошла базовую проверку RailTech"),
+    )
+    has_iso9001 = models.BooleanField(
+        default=False,
+        verbose_name=_("ISO 9001"),
+        help_text=_("Имеется сертификат качества ISO 9001"),
+    )
+    trust_score = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_("Индекс доверия"),
+        help_text=_("Рейтинг доверия поставщика (0-100)"),
+    )
     country = models.ForeignKey(
         Country, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='companies',

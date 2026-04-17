@@ -39,7 +39,7 @@ class CompanySerializer(serializers.ModelSerializer):
         model = Company
         fields = [
             'id', 'name', 'inn', 'verification_status', 'verification_status_name',
-            'verification_status_code',
+            'verification_status_code', 'is_verified', 'has_iso9001', 'trust_score',
             'bank_account', 'mfo', 'legal_address', 'phone',
             'contact_person', 'country', 'website', 'email', 'logo', 'kyc_notes',
             'created_at', 'kyc_documents', 'user_count', 'company_types'

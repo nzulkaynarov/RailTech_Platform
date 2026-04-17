@@ -28,6 +28,9 @@ export interface Manufacturer {
     id: number;
     name: string;
     country: string;
+    is_verified?: boolean;
+    has_iso9001?: boolean;
+    trust_score?: number;
 }
 
 export interface SupplierOffer {
@@ -61,7 +64,7 @@ export interface Product {
     category_data?: { id: number, name: string } | null;
     
     manufacturer?: number | null;
-    manufacturer_data?: { id: number; name: string; inn?: string; logo?: string | null } | null;
+    manufacturer_data?: { id: number; name: string; inn?: string; logo?: string | null; is_verified?: boolean; has_iso9001?: boolean; trust_score?: number; } | null;
 
     uom?: number | null;
     uom_data?: { id: number; code: string; name: string } | null;

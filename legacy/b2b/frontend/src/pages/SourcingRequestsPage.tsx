@@ -5,6 +5,7 @@ import { ClipboardList, FileSpreadsheet, ChevronRight } from 'lucide-react';
 import { useDeals } from '@/hooks/useCRM';
 import { usePageStats } from '@/hooks/usePageStats';
 import { useCurrencyStore } from '@/store/currencyStore';
+import { useFlowStore } from '@/store/flowStore';
 import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
 import type { Deal } from '@/api/crmApi';
 
@@ -37,7 +38,7 @@ export function SourcingRequestsPage({ onNavigate }: { onNavigate?: (t: string) 
       ) : (
         <div className="space-y-2">
           {sourcingDeals.map((deal: Deal) => (
-            <Card key={deal.id} className="cursor-pointer hover:border-primary/50 transition-colors py-0 gap-0">
+            <Card key={deal.id} className="cursor-pointer hover:border-primary/50 transition-colors py-0 gap-0" onClick={() => { useFlowStore.getState().setActiveDealId(deal.id); onNavigate?.('request-detail'); }}>
               <CardContent className="px-4 py-4">
                 <div className="flex items-center gap-4">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
