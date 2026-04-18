@@ -173,7 +173,7 @@ function getNavigation(status: CompanyStatus, activePage: string, role: UserRole
   }
 }
 
-function getBottomNavigation(role: UserRole, t: TFn): NavItem[] {
+function getBottomNavigation(role: UserRole, activePage: string, t: TFn): NavItem[] {
   const items: NavItem[] = [
     { label: t('shell.settings'), icon: <Settings className="h-4 w-4" />, id: 'settings' },
   ];
@@ -182,6 +182,16 @@ function getBottomNavigation(role: UserRole, t: TFn): NavItem[] {
     items.push({ label: t('shell.kyc'), icon: <ShieldCheck className="h-4 w-4" />, id: 'admin-kyc' });
     items.push({ label: t('shell.subscriptions'), icon: <CreditCard className="h-4 w-4" />, id: 'admin-subscriptions' });
     items.push({ label: t('shell.roleApplications'), icon: <ClipboardList className="h-4 w-4" />, id: 'admin-role-apps' });
+    items.push({
+      label: t('shell.adminCatalog'),
+      icon: <Package className="h-4 w-4" />,
+      children: [
+        { label: t('shell.adminCatalogProducts'), id: 'admin-catalog', active: activePage === 'admin-catalog' },
+        { label: t('shell.adminCatalogCategories'), id: 'admin-categories', active: activePage === 'admin-categories' },
+        { label: t('shell.adminCatalogGroups'), id: 'admin-equipment-groups', active: activePage === 'admin-equipment-groups' },
+        { label: t('shell.adminCatalogOffers'), id: 'admin-offers', active: activePage === 'admin-offers' },
+      ],
+    });
   }
   items.push({ label: t('shell.help'), icon: <HelpCircle className="h-4 w-4" />, id: 'help' });
   return items;
@@ -337,7 +347,7 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
   const sidebarCollapsed = state === 'collapsed';
   const isKycVerified = company.kycStatus === 'verified';
   const navigation = useMemo(() => getNavigation(activeStatus, activePage, role, t), [activeStatus, activePage, role, t]);
-  const bottomNav = useMemo(() => getBottomNavigation(role, t), [role, t]);
+  const bottomNav = useMemo(() => getBottomNavigation(role, activePage, t), [role, activePage, t]);
 
 
   return (

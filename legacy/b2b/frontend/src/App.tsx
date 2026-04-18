@@ -38,6 +38,10 @@ const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'));
 const AdminKYCPage = lazy(() => import('./pages/AdminKYCPage'));
 const AdminSubscriptionsPage = lazy(() => import('./pages/AdminSubscriptionsPage'));
 const AdminRoleApplicationsPage = lazy(() => import('./pages/AdminRoleApplicationsPage'));
+const AdminCatalogPage = lazy(() => import('./pages/AdminCatalogPage'));
+const AdminCategoriesPage = lazy(() => import('./pages/AdminCategoriesPage'));
+const AdminEquipmentGroupsPage = lazy(() => import('./pages/AdminEquipmentGroupsPage'));
+const AdminOffersPage = lazy(() => import('./pages/AdminOffersPage'));
 
 import { LoadingSkeleton } from './components/LoadingSkeleton';
 
@@ -63,6 +67,10 @@ type Page =
   | { type: 'admin-kyc' }
   | { type: 'admin-subscriptions' }
   | { type: 'admin-role-apps' }
+  | { type: 'admin-catalog' }
+  | { type: 'admin-categories' }
+  | { type: 'admin-equipment-groups' }
+  | { type: 'admin-offers' }
 ;
 
 /** Parse URL path and query params for auth routes */
@@ -187,7 +195,10 @@ function App() {
   );
 }
 
-const ADMIN_PAGES = new Set(['admin-users', 'admin-kyc', 'admin-subscriptions', 'admin-role-apps']);
+const ADMIN_PAGES = new Set([
+  'admin-users', 'admin-kyc', 'admin-subscriptions', 'admin-role-apps',
+  'admin-catalog', 'admin-categories', 'admin-equipment-groups', 'admin-offers',
+]);
 const KYC_ALLOWED_PAGES = new Set(['dashboard', 'profile', 'settings', 'help']);
 
 function MainApp() {
@@ -257,6 +268,7 @@ function MainApp() {
       'analytics', 'categories', 'equipment-groups',
       'help', 'my-requests', 'request-detail',
       'admin-users', 'admin-kyc', 'admin-subscriptions', 'admin-role-apps',
+      'admin-catalog', 'admin-categories', 'admin-equipment-groups', 'admin-offers',
     ];
     if (validTypes.includes(target)) {
       // Role guard: admin pages require ADMIN role
@@ -374,6 +386,18 @@ function MainApp() {
       break;
     case 'admin-role-apps':
       content = <AdminRoleApplicationsPage />;
+      break;
+    case 'admin-catalog':
+      content = <AdminCatalogPage />;
+      break;
+    case 'admin-categories':
+      content = <AdminCategoriesPage />;
+      break;
+    case 'admin-equipment-groups':
+      content = <AdminEquipmentGroupsPage />;
+      break;
+    case 'admin-offers':
+      content = <AdminOffersPage />;
       break;
     default:
       content = <Dashboard onProductClick={handleProductClick} onNavigate={handleNavigate} />;

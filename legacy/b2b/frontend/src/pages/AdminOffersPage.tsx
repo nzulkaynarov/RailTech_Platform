@@ -1,0 +1,336 @@
+import { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
+import { Tags, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
+import {
+  useOffers, useCreateOffer, useUpdateOffer, useDeleteOffer,
+  useProducts, useStockStatuses,
+} from '@/hooks/useCatalog';
+import { useCurrencies, useDeliveryBases } from '@/hooks/useMasterData';
+import { useCompanies } from '@/hooks/useAccounts';
+import type { SupplierOffer } from '@/api/catalogApi';
+
+type Draft = Partial<SupplierOffer>;
+
+function OfferFormSheet({
+  open, onOpenChange, target,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  target: SupplierOffer | null;
+}) {
+  const { t } = useTranslation();
+  const createMut = useCreateOffer();
+  const updateMut = useUpdateOffer();
+  const { data: products } = useProducts();
+  const { data: companies } = useCompanies();
+  const { data: currencies } = useCurrencies();
+  const { data: deliveryBases } = useDeliveryBases();
+  const { data: stockStatuses } = useStockStatuses();
+
+  const [draft, setDraft] = useState<Draft>(() => target ?? { is_active: true, min_order_qty: 1 });
+  useMemo(() => setDraft(target ?? { is_active: true, min_order_qty: 1 }), [target]);
+
+  const busy = createMut.isPending || updateMut.isPending;
+  const isEdit = Boolean(target?.id);
+
+  const update = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
+
+  const submit = async () => {
+    if (!draft.supplier || !draft.base_price) {
+      toast.error(t('adminOffers.missingFields'));
+      return;
+    }
+    const payload: Partial<SupplierOffer> = {
+      supplier: Number(draft.supplier),
+      supplier_sku: draft.supplier_sku ?? '',
+      base_price: String(draft.base_price),
+      currency: draft.currency ? Number(draft.currency) : null,
+      delivery_basis: draft.delivery_basis ? Number(draft.delivery_basis) : null,
+      stock_status: (draft.stock_status as unknown as number) || null,
+      delivery_lead_time: draft.delivery_lead_time ?? '',
+      min_order_qty: draft.min_order_qty ?? 1,
+      is_active: draft.is_active ?? true,
+    };
+    // product is immutable after create
+    if (!isEdit) {
+      (payload as Draft & { product?: number }).product = Number(
+        (draft as Draft & { product?: number }).product,
+      );
+    }
+    try {
+      if (isEdit && target) {
+        await updateMut.mutateAsync({ id: target.id, data: payload });
+        toast.success(t('adminOffers.updated'));
+      } else {
+        await createMut.mutateAsync(payload);
+        toast.success(t('adminOffers.created'));
+      }
+      onOpenChange(false);
+    } catch {
+      toast.error(t('adminOffers.saveFailed'));
+    }
+  };
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="overflow-y-auto sm:max-w-xl">
+        <SheetHeader>
+          <SheetTitle>{isEdit ? t('adminOffers.edit') : t('adminOffers.new')}</SheetTitle>
+        </SheetHeader>
+
+        <div className="mt-4 space-y-4 px-4">
+          {!isEdit && (
+            <div className="space-y-2">
+              <Label>{t('adminOffers.fields.product')}</Label>
+              <Select
+                value={(draft as Draft & { product?: number }).product ? String((draft as Draft & { product?: number }).product) : undefined}
+                onValueChange={(v) => update({ ...(draft as Draft), ...({ product: Number(v) } as Draft) } as Draft)}
+              >
+                <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                <SelectContent>
+                  {(products ?? []).map((p) => (
+                    <SelectItem key={p.id} value={String(p.id)}>{p.name} {p.sku ? `(${p.sku})` : ''}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          <div className="space-y-2">
+            <Label>{t('adminOffers.fields.supplier')}</Label>
+            <Select
+              value={draft.supplier ? String(draft.supplier) : undefined}
+              onValueChange={(v) => update({ supplier: Number(v) })}
+            >
+              <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+              <SelectContent>
+                {(companies ?? []).map((c) => (
+                  <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>{t('adminOffers.fields.supplierSku')}</Label>
+            <Input value={draft.supplier_sku ?? ''} onChange={(e) => update({ supplier_sku: e.target.value })} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>{t('adminOffers.fields.basePrice')}</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={draft.base_price ?? ''}
+                onChange={(e) => update({ base_price: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{t('adminOffers.fields.currency')}</Label>
+              <Select
+                value={draft.currency ? String(draft.currency) : undefined}
+                onValueChange={(v) => update({ currency: Number(v) })}
+              >
+                <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                <SelectContent>
+                  {(currencies ?? []).map((c) => (
+                    <SelectItem key={c.id} value={String(c.id)}>{c.code}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>{t('adminOffers.fields.deliveryBasis')}</Label>
+              <Select
+                value={draft.delivery_basis ? String(draft.delivery_basis) : undefined}
+                onValueChange={(v) => update({ delivery_basis: Number(v) })}
+              >
+                <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                <SelectContent>
+                  {(deliveryBases ?? []).map((d) => (
+                    <SelectItem key={d.id} value={String(d.id)}>{d.code}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>{t('adminOffers.fields.stockStatus')}</Label>
+              <Select
+                value={draft.stock_status ? String(draft.stock_status) : undefined}
+                onValueChange={(v) => update({ stock_status: v as unknown as string })}
+              >
+                <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                <SelectContent>
+                  {(stockStatuses ?? []).map((s) => (
+                    <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>{t('adminOffers.fields.leadTime')}</Label>
+              <Input value={draft.delivery_lead_time ?? ''} onChange={(e) => update({ delivery_lead_time: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>{t('adminOffers.fields.minQty')}</Label>
+              <Input
+                type="number"
+                value={draft.min_order_qty ?? 1}
+                onChange={(e) => update({ min_order_qty: Number(e.target.value) })}
+              />
+            </div>
+          </div>
+        </div>
+
+        <SheetFooter className="mt-6">
+          <Button onClick={submit} disabled={busy} className="w-full">
+            {isEdit ? t('adminOffers.save') : t('adminOffers.create')}
+          </Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+export function AdminOffersPage() {
+  const { t } = useTranslation();
+  const { data: offers, isLoading } = useOffers();
+  const { data: products } = useProducts();
+  const deleteMut = useDeleteOffer();
+
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<SupplierOffer | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<SupplierOffer | null>(null);
+
+  const productNameById = useMemo(() => {
+    const m = new Map<number, string>();
+    (products ?? []).forEach((p) => m.set(p.id, `${p.name}${p.sku ? ' · ' + p.sku : ''}`));
+    return m;
+  }, [products]);
+
+  const onEdit = (o: SupplierOffer) => {
+    setEditTarget(o);
+    setSheetOpen(true);
+  };
+  const onNew = () => {
+    setEditTarget(null);
+    setSheetOpen(true);
+  };
+  const onDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteMut.mutateAsync(deleteTarget.id);
+      toast.success(t('adminOffers.deleted'));
+      setDeleteTarget(null);
+    } catch {
+      toast.error(t('adminOffers.deleteFailed'));
+    }
+  };
+
+  const stats = [
+    { label: t('adminOffers.stats.total'), value: String(offers?.length ?? '—') },
+    { label: t('adminOffers.stats.active'), value: String(offers?.filter((o) => o.is_active).length ?? '—') },
+  ];
+
+  return (
+    <PageShell
+      title={t('adminOffers.title')}
+      description={t('adminOffers.description')}
+      icon={<Tags className="h-5 w-5" />}
+      stats={stats}
+      actions={[{ label: t('adminOffers.new'), onClick: onNew }]}
+    >
+      <div className="flex">
+        <Button onClick={onNew} className="gap-2 ml-auto">
+          <Plus className="h-4 w-4" />
+          {t('adminOffers.new')}
+        </Button>
+      </div>
+
+      <Card>
+        <CardContent className="p-0">
+          {isLoading ? <LoadingRows rows={5} /> : !offers?.length ? (
+            <EmptyState icon={<Tags className="h-5 w-5" />} message={t('adminOffers.emptyState')} />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('adminOffers.table.product')}</TableHead>
+                  <TableHead>{t('adminOffers.table.supplier')}</TableHead>
+                  <TableHead>{t('adminOffers.table.price')}</TableHead>
+                  <TableHead>{t('adminOffers.table.status')}</TableHead>
+                  <TableHead>{t('adminOffers.table.active')}</TableHead>
+                  <TableHead className="text-right">{t('adminOffers.table.actions')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {offers.map((o) => (
+                  <TableRow key={o.id}>
+                    <TableCell className="text-sm">
+                      {productNameById.get((o as SupplierOffer & { product: number }).product) ?? '—'}
+                    </TableCell>
+                    <TableCell className="text-sm">{o.supplier_data?.name ?? '—'}</TableCell>
+                    <TableCell className="font-mono text-xs">
+                      {o.base_price} {o.currency_data?.code ?? ''}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-xs">{o.stock_status ?? '—'}</TableCell>
+                    <TableCell>
+                      <Badge variant={o.is_active ? 'default' : 'secondary'}>
+                        {o.is_active ? t('adminOffers.yes') : t('adminOffers.no')}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => onEdit(o)}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(o)}>
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <OfferFormSheet open={sheetOpen} onOpenChange={setSheetOpen} target={editTarget} />
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('adminOffers.confirmDelete')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('adminOffers.confirmDeleteDesc')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('adminOffers.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={onDelete} disabled={deleteMut.isPending}>
+              {t('adminOffers.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </PageShell>
+  );
+}
+
+export default AdminOffersPage;

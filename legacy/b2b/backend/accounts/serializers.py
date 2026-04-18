@@ -58,9 +58,28 @@ class CompanySerializer(serializers.ModelSerializer):
         return [t.code for t in obj.types.all()]
 
 
+class PrimaryCompanyLightSerializer(serializers.ModelSerializer):
+    """Lightweight company serializer for embedding into UserSerializer.primary_company.
+    Avoids nested kyc_documents/members/types — saves 4-5 SQL queries per request."""
+    verification_status_name = serializers.CharField(source='verification_status.name', read_only=True, default=None)
+    verification_status_code = serializers.CharField(source='verification_status.code', read_only=True, default=None)
+    company_types = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Company
+        fields = [
+            'id', 'name', 'inn', 'verification_status', 'verification_status_name',
+            'verification_status_code', 'is_verified', 'country', 'logo',
+            'company_types',
+        ]
+
+    def get_company_types(self, obj):
+        return [t.code for t in obj.types.all()]
+
+
 class UserSerializer(serializers.ModelSerializer):
     memberships = CompanyMemberSerializer(many=True, read_only=True)
-    primary_company = CompanySerializer(read_only=True)
+    primary_company = PrimaryCompanyLightSerializer(read_only=True)
     role_name = serializers.CharField(source='role.name', read_only=True)
     role_code = serializers.CharField(source='role.code', read_only=True)
     role_data = serializers.SerializerMethodField()
