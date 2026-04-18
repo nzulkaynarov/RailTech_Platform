@@ -185,3 +185,16 @@ export const useReassignProduct = () => {
     },
   });
 };
+
+
+export const useCreateQuote = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { deal: number; notes?: string; valid_until?: string }) =>
+      crmApi.createQuote(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['quotes'] });
+      qc.invalidateQueries({ queryKey: ['deals'] });
+    },
+  });
+};

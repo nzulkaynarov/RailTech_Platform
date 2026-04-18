@@ -30,7 +30,7 @@ export function MyRequestsPage({ onNavigate }: { onNavigate?: (t: string) => voi
         { label: t('pages.myRequests.stats.contract'), value: String(ps?.my_requests?.contract ?? myDeals.filter((d: Deal) => d.stage_code === 'CONTRACT_SIGNED').length) },
         { label: t('pages.myRequests.stats.completed'), value: String(ps?.my_requests?.completed ?? myDeals.filter((d: Deal) => d.stage_code === 'CLOSED_WON').length) },
       ]}
-      actions={[{ label: t('pages.myRequests.newRequest'), onClick: () => onNavigate?.('catalog') }]}
+      actions={[{ label: t('pages.myRequests.newRequest'), onClick: () => onNavigate?.('products') }]}
     >
       <Toolbar
         searchValue={listParams.searchInput}
@@ -58,7 +58,13 @@ export function MyRequestsPage({ onNavigate }: { onNavigate?: (t: string) => voi
           },
         });
         if (isLoading) return <LoadingRows rows={3} />;
-        if (!pageItems.length) return <EmptyState icon={<ShoppingCart className="h-5 w-5" />} message={t('pages.common.noData')} />;
+        if (!pageItems.length) return (
+          <EmptyState
+            icon={<ShoppingCart className="h-5 w-5" />}
+            message={t('pages.common.noData')}
+            action={{ label: t('pages.myRequests.newRequest'), onClick: () => onNavigate?.('products') }}
+          />
+        );
         return (
           <>
             <div className="space-y-2">

@@ -1,5 +1,6 @@
 import { Suspense, lazy, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { AppShell } from './layouts/AppShell';
 import { ErrorBoundary } from './components/Shared/ErrorBoundary';
 import { FABSupportButton } from './components/Shared/FABSupportButton';
@@ -218,8 +219,10 @@ const ADMIN_PAGES = new Set([
   'admin-users', 'admin-kyc', 'admin-subscriptions', 'admin-role-apps',
   'admin-catalog', 'admin-categories', 'admin-equipment-groups', 'admin-offers',
   'admin-companies', 'admin-deals', 'admin-master-data',
-  'leads',
 ]);
+// CRIT-2 / MED-18: pages that require manager-level RBAC but are not pure ADMIN.
+// Accessible for ADMIN + MANAGER + SELLER (SELLER's CRM submenu exposes Leads).
+const MANAGER_PAGES = new Set(['leads']);
 const KYC_ALLOWED_PAGES = new Set(['dashboard', 'profile', 'settings', 'help']);
 
 function MainApp() {
@@ -246,18 +249,28 @@ function MainApp() {
   // Role guard: redirect away from admin pages if not admin
   useEffect(() => {
     if (ADMIN_PAGES.has(page.type) && role !== 'ADMIN') {
+      toast.error(t('guards.adminRequired'));
+      setPage({ type: 'dashboard' });
+      window.history.replaceState(null, '', '#dashboard');
+      return;
+    }
+    // MED-18: manager-level pages (e.g. leads) require manager-or-admin, not regular employee.
+    if (MANAGER_PAGES.has(page.type) && role !== 'ADMIN' && role !== 'MANAGER') {
+      toast.error(t('guards.managerRequired'));
       setPage({ type: 'dashboard' });
       window.history.replaceState(null, '', '#dashboard');
     }
-  }, [page.type, role]);
+  }, [page.type, role, t]);
 
   // KYC guard: if not verified, only allow dashboard/profile/settings/help
   useEffect(() => {
     if (kycStatus !== 'verified' && !KYC_ALLOWED_PAGES.has(page.type)) {
+      // LOW-20: surface why the user was bounced back instead of silent redirect.
+      toast.info(t('guards.kycRequired'));
       setPage({ type: 'dashboard' });
       window.history.replaceState(null, '', '#dashboard');
     }
-  }, [page.type, kycStatus]);
+  }, [page.type, kycStatus, t]);
 
   // Handle browser back/forward
   useEffect(() => {
@@ -297,6 +310,13 @@ function MainApp() {
     if (validTypes.includes(target)) {
       // Role guard: admin pages require ADMIN role
       if (ADMIN_PAGES.has(target) && role !== 'ADMIN') {
+        toast.error(t('guards.adminRequired'));
+        navigateTo({ type: 'dashboard' });
+        return;
+      }
+      // MED-18: manager-only pages.
+      if (MANAGER_PAGES.has(target) && role !== 'ADMIN' && role !== 'MANAGER') {
+        toast.error(t('guards.managerRequired'));
         navigateTo({ type: 'dashboard' });
         return;
       }

@@ -22,8 +22,17 @@ interface OnboardingTourProps {
 
 const stepIcons = [Package, FileSpreadsheet, Calculator, Rocket, BarChart3]
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function OnboardingTour({ open, onClose, onNavigate: _onNavigate }: OnboardingTourProps) {
+/** Tour steps map 1:1 to a page id the user is taught about.
+ * Keeping this in the component (not i18n) because it's structural, not text. */
+const stepTargets: (string | null)[] = [
+  'products',        // step 0 — Catalog
+  'sourcing-import', // step 1 — Excel import
+  'crm-quotes',      // step 2 — Quotes builder
+  'crm-deals',       // step 3 — Deals pipeline
+  'analytics',       // step 4 — Analytics
+]
+
+export function OnboardingTour({ open, onClose, onNavigate }: OnboardingTourProps) {
   const { t } = useTranslation()
   const [currentStep, setCurrentStep] = useState(0)
 
@@ -31,6 +40,7 @@ export function OnboardingTour({ open, onClose, onNavigate: _onNavigate }: Onboa
 
   const StepIcon = stepIcons[currentStep]
   const isLastStep = currentStep === stepIcons.length - 1
+  const stepTarget = stepTargets[currentStep]
 
   function handleNext() {
     if (isLastStep) {
@@ -118,6 +128,19 @@ export function OnboardingTour({ open, onClose, onNavigate: _onNavigate }: Onboa
               {t('tour.skip')}
             </Button>
             <div className="flex items-center gap-2">
+              {stepTarget && onNavigate && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    onNavigate(stepTarget)
+                    onClose()
+                    setCurrentStep(0)
+                  }}
+                >
+                  {t('tour.goTo')}
+                </Button>
+              )}
               {currentStep > 0 && (
                 <Button variant="outline" size="sm" onClick={handlePrev}>
                   <ChevronLeft className="size-4" />

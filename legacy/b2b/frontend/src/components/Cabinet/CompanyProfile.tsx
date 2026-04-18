@@ -10,6 +10,10 @@ import { useAuthStore } from '../../store/authStore';
 import { CompanyTeamSettings } from './CompanyTeamSettings';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import {
+    AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+    AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 const STATUS_CONFIG: Record<string, { icon: React.ElementType; color: string; bg: string; border: string }> = {
     L1_UNVERIFIED: { icon: AlertTriangle, color: 'text-warning', bg: 'bg-warning/10', border: 'border-warning/20' },
@@ -27,6 +31,7 @@ export const CompanyProfile: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(false);
     const [selectedDocType, setSelectedDocType] = useState('CHARTER');
+    const [deleteDocTarget, setDeleteDocTarget] = useState<number | null>(null);
 
     useEffect(() => {
         const load = async () => {
@@ -52,13 +57,22 @@ export const CompanyProfile: React.FC = () => {
         load();
     }, [user]);
 
-    const handleDeleteDoc = async (docId: number) => {
-        if (!company || !confirm(t('company.deleteConfirm'))) return;
+    const handleDeleteDoc = (docId: number) => {
+        setDeleteDocTarget(docId);
+    };
+
+    const confirmDeleteDoc = async () => {
+        if (!company || deleteDocTarget == null) return;
         try {
-            await accountsApi.deleteDocument(company.id, docId);
+            await accountsApi.deleteDocument(company.id, deleteDocTarget);
             const refreshed = await accountsApi.getCompanyDetail(company.id);
             setCompany(refreshed);
-        } catch (err) { console.error('Operation failed', err); toast.error(t('company.deleteDocError')); }
+        } catch (err) {
+            console.error('Operation failed', err);
+            toast.error(t('company.deleteDocError'));
+        } finally {
+            setDeleteDocTarget(null);
+        }
     };
 
     const handleUpload = async (file: File) => {
@@ -213,6 +227,21 @@ export const CompanyProfile: React.FC = () => {
             <div className="mt-8 border-t border-border pt-8">
                 <CompanyTeamSettings />
             </div>
+
+            <AlertDialog open={deleteDocTarget != null} onOpenChange={(o) => !o && setDeleteDocTarget(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>{t('company.deleteConfirm')}</AlertDialogTitle>
+                        <AlertDialogDescription>{t('deleteConfirmations.companyDocDescription')}</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmDeleteDoc}>
+                            {t('common.delete')}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 };

@@ -252,6 +252,10 @@ export const crmApi = {
 		const response = await apiClient.get<Quote>(`crm/quotes/${id}/`);
 		return response.data;
 	},
+	createQuote: async (data: { deal: number; notes?: string; valid_until?: string }) => {
+		const response = await apiClient.post<Quote>('crm/quotes/', data);
+		return response.data;
+	},
 	generateQuotePDF: async (id: number) => {
 		const response = await apiClient.post<{ url: string }>(`crm/quotes/${id}/generate-pdf/`);
 		return response.data;

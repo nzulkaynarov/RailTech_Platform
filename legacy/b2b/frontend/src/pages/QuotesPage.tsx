@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +23,7 @@ import type { Quote } from '@/api/crmApi';
 import { toast } from 'sonner';
 import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
 import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/DataTable';
+import { CreateQuoteDialog } from '@/components/CRM/CreateQuoteDialog';
 
 export function QuotesPage() {
   const { t } = useTranslation();
@@ -35,6 +37,7 @@ export function QuotesPage() {
   const quotesList = quotes ?? [];
   const { data: statuses } = useQuoteStatuses();
   const listParams = useListParams(['status'] as const, { defaultOrdering: '-created_at' });
+  const [createOpen, setCreateOpen] = useState(false);
 
   const title = isBuyer ? t('pages.quotes.buyerTitle') : t('pages.quotes.sellerTitle');
   const description = isBuyer ? t('pages.quotes.buyerDescription') : t('pages.quotes.sellerDescription');
@@ -113,7 +116,7 @@ export function QuotesPage() {
       description={description}
       icon={<Calculator className="h-5 w-5" />}
       stats={stats}
-      actions={isBuyer ? undefined : [{ label: t('pages.quotes.createQuote') }]}
+      actions={isBuyer ? undefined : [{ label: t('pages.quotes.createQuote'), onClick: () => setCreateOpen(true) }]}
     >
       <Toolbar
         searchValue={listParams.searchInput}
@@ -222,6 +225,7 @@ export function QuotesPage() {
           })()}
         </CardContent>
       </Card>
+      <CreateQuoteDialog open={createOpen} onOpenChange={setCreateOpen} />
     </PageShell>
   );
 }

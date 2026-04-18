@@ -48,7 +48,7 @@ const chartDotClasses = ['bg-[var(--color-chart-1)]', 'bg-[var(--color-chart-2)]
 
 // ─── Top Products Table ─────────────────────────────────────────────────
 
-function TopProductsTable({ onProductClick, topProducts }: { onProductClick?: (id: string) => void; topProducts: DashboardStats['top_products'] }) {
+function TopProductsTable({ onProductClick, onShowAll, topProducts }: { onProductClick?: (id: string) => void; onShowAll?: () => void; topProducts: DashboardStats['top_products'] }) {
   const { t } = useTranslation();
   return (
     <Card className="py-0 gap-0">
@@ -61,8 +61,22 @@ function TopProductsTable({ onProductClick, topProducts }: { onProductClick?: (i
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem>{t('dashboardPage.export')}</DropdownMenuItem>
-            <DropdownMenuItem>{t('dashboardPage.showAll')}</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => {
+              const rows: (string | number)[][] = [
+                ['id', 'name', 'category', 'quantity'],
+                ...topProducts.map((p) => [p.id, p.name, p.category, p.quantity]),
+              ];
+              const csv = rows.map((r) => r.join(',')).join('\n');
+              const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+              const url = URL.createObjectURL(blob);
+              const link = document.createElement('a');
+              link.href = url; link.download = 'top_products.csv';
+              document.body.appendChild(link); link.click(); link.remove();
+              URL.revokeObjectURL(url);
+            }}>{t('dashboardPage.export')}</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => onShowAll?.()}>
+              {t('dashboardPage.showAll')}
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </CardHeader>
@@ -111,7 +125,7 @@ function TopProductsTable({ onProductClick, topProducts }: { onProductClick?: (i
 
 // ─── KYC Pending Banner ────────────────────────────────────────────────
 
-function KYCPendingBanner() {
+function KYCPendingBanner({ onNavigate }: { onNavigate?: (p: string) => void } = {}) {
   const { t } = useTranslation();
   const { profile, company } = useUserStore();
 
@@ -230,7 +244,7 @@ function KYCPendingBanner() {
         <CardContent className="p-5 text-center space-y-3">
           <p className="text-sm text-muted-foreground">{t('dashboardPage.kyc.hint')}</p>
           <div className="flex justify-center gap-3">
-            <Button variant="outline" size="sm" onClick={() => window.location.hash = '#profile'}>
+            <Button variant="outline" size="sm" onClick={() => onNavigate?.('profile')}>
               {t('dashboardPage.kyc.editProfile')}
             </Button>
             <Button variant="outline" size="sm" asChild>
@@ -298,7 +312,7 @@ function BuyerDashboard({ onProductClick: _onProductClick, period: _period, stat
   const { company } = useUserStore();
 
   // State 1: KYC not verified — show verification status
-  if (company.kycStatus !== 'verified') return <KYCPendingBanner />;
+  if (company.kycStatus !== 'verified') return <KYCPendingBanner onNavigate={onNavigate} />;
 
   // State 2: KYC verified but no activity — show welcome guide
   const isEmpty = !stats || ((stats.active_requests ?? 0) === 0 && (stats.deals_completed ?? 0) === 0 && (stats.quotes_received ?? 0) === 0);
@@ -411,12 +425,12 @@ function BuyerDashboard({ onProductClick: _onProductClick, period: _period, stat
 // ─── SELLER Dashboard ───────────────────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-function SellerDashboard({ onProductClick, period: _period, stats, onNavigate: _onNavigate }: { onProductClick?: (id: string) => void; period: string; stats: DashboardStats | null; onNavigate: (page: string) => void }) {
+function SellerDashboard({ onProductClick, period: _period, stats, onNavigate }: { onProductClick?: (id: string) => void; period: string; stats: DashboardStats | null; onNavigate: (page: string) => void }) {
   const { t } = useTranslation();
   const formatCurrency = useCurrencyStore((s) => s.format);
   const { company } = useUserStore();
 
-  if (company.kycStatus !== 'verified') return <KYCPendingBanner />;
+  if (company.kycStatus !== 'verified') return <KYCPendingBanner onNavigate={onNavigate} />;
 
   const dealVolumeData = stats?.deals_by_month ?? [];
   const activityByDay = stats?.activity_by_day ?? [];
@@ -525,7 +539,7 @@ function SellerDashboard({ onProductClick, period: _period, stats, onNavigate: _
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* Top Products */}
         <div className="lg:col-span-2">
-          <TopProductsTable onProductClick={onProductClick} topProducts={stats?.top_products ?? []} />
+          <TopProductsTable onProductClick={onProductClick} onShowAll={() => onNavigate?.("products")} topProducts={stats?.top_products ?? []} />
         </div>
 
         {/* Right column */}
@@ -587,12 +601,12 @@ function SellerDashboard({ onProductClick, period: _period, stats, onNavigate: _
 // ─── MANUFACTURER Dashboard ──────────────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-function ManufacturerDashboard({ onProductClick: _onProductClick, period: _period, stats, onNavigate: _onNavigate2 }: { onProductClick?: (id: string) => void; period: string; stats: DashboardStats | null; onNavigate: (page: string) => void }) {
+function ManufacturerDashboard({ onProductClick: _onProductClick, period: _period, stats, onNavigate }: { onProductClick?: (id: string) => void; period: string; stats: DashboardStats | null; onNavigate: (page: string) => void }) {
   const { t } = useTranslation();
   const formatCurrency = useCurrencyStore((s) => s.format);
   const { company } = useUserStore();
 
-  if (company.kycStatus !== 'verified') return <KYCPendingBanner />;
+  if (company.kycStatus !== 'verified') return <KYCPendingBanner onNavigate={onNavigate} />;
 
   return (
     <div className="flex flex-col gap-6">
@@ -662,7 +676,7 @@ function ManufacturerDashboard({ onProductClick: _onProductClick, period: _perio
       </div>
 
       {/* Bottom Row — Top Products */}
-      <TopProductsTable onProductClick={_onProductClick} topProducts={stats?.top_products ?? []} />
+      <TopProductsTable onProductClick={_onProductClick} onShowAll={() => onNavigate?.("products")} topProducts={stats?.top_products ?? []} />
     </div>
   );
 }

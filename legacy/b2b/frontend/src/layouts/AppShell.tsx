@@ -105,6 +105,8 @@ function getBuyerNavigation(activePage: string, role: UserRole, t: TFn): NavItem
     // Buyer now sees his own Deals — backend filters by company membership via IsOwnerOrManagerOrAdmin.
     { label: t('shell.deals'), icon: <Handshake className="h-4 w-4" />, id: 'crm-deals', active: activePage === 'crm-deals' },
     { label: t('shell.commercialOffers'), icon: <Calculator className="h-4 w-4" />, id: 'crm-quotes', active: activePage === 'crm-quotes' },
+    // CRIT-1: BUYER must see supplier bids on his open RFQs to pick a winner.
+    { label: t('shell.supplierBids'), icon: <Gavel className="h-4 w-4" />, id: 'supplier-bids', active: activePage === 'supplier-bids' },
     {
       label: t('shell.billing'), icon: <Receipt className="h-4 w-4" />,
       children: [
@@ -116,6 +118,7 @@ function getBuyerNavigation(activePage: string, role: UserRole, t: TFn): NavItem
       ],
     },
   ];
+  // HIGH-11: BuyerAnalytics is an empty page — show it only to mgr/admin.
   if (role === 'ADMIN' || role === 'MANAGER') {
     items.push({ label: t('shell.clients'), icon: <Users className="h-4 w-4" />, id: 'crm-clients', active: activePage === 'crm-clients' });
     items.push({ label: t('shell.analytics'), icon: <BarChart3 className="h-4 w-4" />, id: 'analytics', active: activePage === 'analytics' });
@@ -134,14 +137,16 @@ function getManufacturerNavigation(activePage: string, role: UserRole, t: TFn): 
         { label: t('shell.equipmentGroups'), id: 'equipment-groups', active: activePage === 'equipment-groups' },
       ],
     },
-    // Manufacturers now see Sourcing — they need to submit bids on open RFQs
+    // CRIT-3: MFG needs Excel Import the same way as SELLER.
     {
       label: t('shell.sourcing'), icon: <ShoppingCart className="h-4 w-4" />,
       children: [
         { label: t('shell.requests'), id: 'sourcing-requests', active: activePage === 'sourcing-requests' },
+        { label: t('shell.excelImport'), id: 'sourcing-import', active: activePage === 'sourcing-import' },
         { label: t('shell.smartMatch'), id: 'sourcing-match', active: activePage === 'sourcing-match' },
       ],
     },
+    { label: t('shell.myRequests'), icon: <ClipboardList className="h-4 w-4" />, id: 'my-requests', active: activePage === 'my-requests' },
     { label: t('shell.deals'), icon: <Handshake className="h-4 w-4" />, id: 'crm-deals', active: activePage === 'crm-deals' },
     { label: t('shell.quotes'), icon: <Calculator className="h-4 w-4" />, id: 'crm-quotes', active: activePage === 'crm-quotes' },
     { label: t('shell.supplierBids'), icon: <Gavel className="h-4 w-4" />, id: 'supplier-bids', active: activePage === 'supplier-bids' },
@@ -150,12 +155,17 @@ function getManufacturerNavigation(activePage: string, role: UserRole, t: TFn): 
       children: [
         { label: t('shell.contracts'), id: 'contracts', active: activePage === 'contracts' },
         { label: t('shell.invoices'), id: 'invoices', active: activePage === 'invoices' },
+        // CRIT-5: MFG must see Payments in billing just like BUYER/SELLER.
+        { label: t('shell.payments'), id: 'payments', active: activePage === 'payments' },
         { label: t('shell.acts'), id: 'acts', active: activePage === 'acts' },
         { label: t('shell.fulfillments'), id: 'fulfillments', active: activePage === 'fulfillments' },
       ],
     },
   ];
+  // CRIT-4: MFG with MANAGER role needs full CRM access (Clients, Leads).
   if (role === 'ADMIN' || role === 'MANAGER') {
+    items.push({ label: t('shell.clients'), icon: <Users className="h-4 w-4" />, id: 'crm-clients', active: activePage === 'crm-clients' });
+    items.push({ label: t('shell.leads'), icon: <ClipboardList className="h-4 w-4" />, id: 'leads', active: activePage === 'leads' });
     items.push({ label: t('shell.productionAnalytics'), icon: <BarChart3 className="h-4 w-4" />, id: 'analytics', active: activePage === 'analytics' });
   }
   return items;

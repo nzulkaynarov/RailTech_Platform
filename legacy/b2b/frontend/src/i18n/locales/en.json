@@ -1692,6 +1692,7 @@
     "back": "Back",
     "done": "Done",
     "close": "Close",
+    "goTo": "Go to",
     "steps": {
       "0": {
         "title": "Product Catalog",
@@ -3056,6 +3057,54 @@
   "manualMode": {
     "payment": "Manual mode: payment is recorded by hand. A real payment provider (Click / Payme / Stripe) will be wired before production release.",
     "esign": "Manual mode: click-to-sign. A legally binding e-signature (E-IMZO) will be wired before production release."
+  },
+  "guards": {
+    "adminRequired": "This section is admin-only",
+    "managerRequired": "This section is available to managers and admins only",
+    "kycRequired": "Finish KYC verification to access this section"
+  },
+  "requestDetailActions": {
+    "startSourcing": "Start sourcing",
+    "startCalculation": "Start calculation",
+    "sendQuote": "Send quote",
+    "approveQuote": "Approve",
+    "rejectQuote": "Reject",
+    "dealAccepted": "Deal accepted",
+    "noActions": "No actions available",
+    "actionsLabel": "Actions",
+    "quoteTitle": "Quote v{{version}}",
+    "totalInclVat": "Total incl. VAT",
+    "itemCol": "Item",
+    "supplierCol": "Supplier",
+    "qtyCol": "Qty",
+    "basePriceCol": "Base price",
+    "marginCol": "Margin",
+    "finalPriceCol": "Final price",
+    "noItems": "No items in this quote yet",
+    "noQuote": "No active quote yet",
+    "rejectDialog": {
+      "title": "Reject quote",
+      "description": "Provide a rejection reason — it will be logged and shown to the manager.",
+      "reasonLabel": "Reason",
+      "reasonPlaceholder": "E.g. price is 20% above our budget",
+      "confirm": "Reject",
+      "reasonRequired": "Reason is required"
+    }
+  },
+  "createQuoteDialog": {
+    "title": "Create quote",
+    "description": "A new quote will be created in DRAFT status, attached to the selected deal.",
+    "deal": "Deal",
+    "selectDeal": "Select a deal",
+    "validUntil": "Valid until",
+    "notes": "Notes",
+    "create": "Create",
+    "dealRequired": "Please select a deal",
+    "created": "Quote v{{version}} created"
+  },
+  "deleteConfirmations": {
+    "quoteItemDescription": "The item will be removed permanently.",
+    "companyDocDescription": "The document will be removed permanently."
   },
   "apiErrors": {
     "CONTRACT_NEEDS_APPROVAL": "A contract can only be created from an approved quote",

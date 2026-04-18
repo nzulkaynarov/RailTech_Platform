@@ -1857,6 +1857,7 @@
     "back": "Назад",
     "done": "Готово",
     "close": "Закрыть",
+    "goTo": "Перейти",
     "steps": {
       "0": {
         "title": "Каталог продукции",
@@ -3056,6 +3057,54 @@
   "manualMode": {
     "payment": "Ручной режим: оплата фиксируется менеджером вручную. Интеграция с платёжным провайдером (Click / Payme / Stripe) будет подключена до production-релиза.",
     "esign": "Ручной режим: подпись — клик в интерфейсе. Юридически значимая электронная подпись (E-IMZO) будет подключена до production-релиза."
+  },
+  "guards": {
+    "adminRequired": "Раздел доступен только администраторам",
+    "managerRequired": "Раздел доступен только менеджерам и администраторам",
+    "kycRequired": "Завершите KYC-верификацию, чтобы работать с этим разделом"
+  },
+  "requestDetailActions": {
+    "startSourcing": "К подбору",
+    "startCalculation": "Начать расчёт",
+    "sendQuote": "Отправить КП",
+    "approveQuote": "Одобрить",
+    "rejectQuote": "Отклонить",
+    "dealAccepted": "Сделка принята",
+    "noActions": "Действия недоступны",
+    "actionsLabel": "Действия",
+    "quoteTitle": "КП v{{version}}",
+    "totalInclVat": "Итого с НДС",
+    "itemCol": "Позиция",
+    "supplierCol": "Поставщик",
+    "qtyCol": "Кол-во",
+    "basePriceCol": "Базовая цена",
+    "marginCol": "Наценка",
+    "finalPriceCol": "Финальная цена",
+    "noItems": "В этом КП нет позиций",
+    "noQuote": "Активного КП пока нет",
+    "rejectDialog": {
+      "title": "Отклонить КП",
+      "description": "Укажите причину отклонения — она попадёт в историю сделки и будет видна менеджеру.",
+      "reasonLabel": "Причина",
+      "reasonPlaceholder": "Например: цена выше бюджета на 20%",
+      "confirm": "Отклонить",
+      "reasonRequired": "Укажите причину"
+    }
+  },
+  "createQuoteDialog": {
+    "title": "Создать КП",
+    "description": "КП создаётся в статусе DRAFT и привязывается к выбранной сделке.",
+    "deal": "Сделка",
+    "selectDeal": "Выберите сделку",
+    "validUntil": "Действует до",
+    "notes": "Комментарий",
+    "create": "Создать",
+    "dealRequired": "Выберите сделку",
+    "created": "КП v{{version}} создано"
+  },
+  "deleteConfirmations": {
+    "quoteItemDescription": "Позиция будет удалена без возможности восстановления.",
+    "companyDocDescription": "Документ будет удалён безвозвратно."
   },
   "apiErrors": {
     "CONTRACT_NEEDS_APPROVAL": "Контракт можно создать только на основе утверждённого КП",

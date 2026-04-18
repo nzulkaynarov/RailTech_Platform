@@ -171,7 +171,7 @@ def test_deal_fsm_valid_draft_to_sourcing(deal, manager):
 def test_deal_fsm_rejects_invalid_jump(deal, manager):
     d, err = crm_services.transition_deal_stage(deal, 'CLOSED_WON', actor=manager)
     assert d is None
-    assert 'not allowed' in err
+    assert err == 'FSM_TRANSITION_NOT_ALLOWED'
 
 
 @pytest.mark.django_db
@@ -182,7 +182,7 @@ def test_closed_won_requires_signed_contract(master_data, deal, manager):
     deal.save()
     d, err = crm_services.transition_deal_stage(deal, 'CLOSED_WON', actor=manager)
     assert d is None
-    assert 'подписанный контракт' in err.lower()
+    assert err == 'CLOSED_WON_REQUIRES_SIGNED_CONTRACT'
 
 
 @pytest.mark.django_db

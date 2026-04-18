@@ -37,7 +37,7 @@ export function SourcingRequestsPage({ onNavigate }: { onNavigate?: (t: string) 
         { label: t('pages.sourcingRequests.stats.inProgress'), value: String(s?.in_progress ?? sourcingDeals.filter(d => d.stage_code === 'SOURCING').length) },
         { label: t('pages.sourcingRequests.stats.completed'), value: String(s?.completed ?? sourcingDeals.filter(d => d.stage_code === 'CALCULATING').length) },
       ]}
-      actions={[{ label: t('pages.sourcingRequests.createRequest'), onClick: () => onNavigate?.('catalog') }]}
+      actions={[{ label: t('pages.sourcingRequests.createRequest'), onClick: () => onNavigate?.('products') }]}
     >
       <Toolbar
         searchValue={listParams.searchInput}

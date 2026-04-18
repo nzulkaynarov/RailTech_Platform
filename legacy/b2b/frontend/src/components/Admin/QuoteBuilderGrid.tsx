@@ -14,6 +14,10 @@ import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/comp
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface QuoteBuilderGridProps {
 	dealId?: number;
@@ -107,12 +111,20 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 		}
 	};
 
-	const handleDeleteItem = async (id: number) => {
-		if (!confirm(t('quote.deleteItem'))) return;
+	const [deleteTarget, setDeleteTarget] = useState<number | null>(null);
+
+	const handleDeleteItem = (id: number) => {
+		setDeleteTarget(id);
+	};
+
+	const confirmDeleteItem = async () => {
+		if (deleteTarget == null) return;
 		try {
-			await deleteItemMutation.mutateAsync(id);
+			await deleteItemMutation.mutateAsync(deleteTarget);
+			setDeleteTarget(null);
 		} catch (err) {
 			console.error('Failed to delete item:', err);
+			setDeleteTarget(null);
 		}
 	};
 
@@ -403,6 +415,21 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 					</div>
 				</CardContent>
 			</Card>
+
+			<AlertDialog open={deleteTarget != null} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>{t('quote.deleteItem')}</AlertDialogTitle>
+						<AlertDialogDescription>{t('deleteConfirmations.quoteItemDescription')}</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+						<AlertDialogAction onClick={confirmDeleteItem} disabled={deleteItemMutation.isPending}>
+							{t('common.delete')}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 };
