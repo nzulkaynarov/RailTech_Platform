@@ -81,6 +81,11 @@ interface UserState {
   activeStatus: CompanyStatus;
   profile: UserProfile;
   company: Company;
+  /** Platform admin acts as viewer: sees all 3 contexts (BUYER/SELLER/MFG) but
+   * cannot execute business actions (purchase, sign, pay, bid, etc.).
+   * True when role === 'ADMIN' AND user has no active CompanyMember, i.e. admin
+   * is not attached to any company and observes the platform from outside. */
+  isViewerMode: boolean;
 
   /* ── Auth integration ── */
   loadFromAuth: () => Promise<void>;
@@ -127,6 +132,7 @@ export const useUserStore = create<UserState>((set, _get) => ({
   screen: 'onboarding',
   role: 'ADMIN',
   activeStatus: 'SELLER',
+  isViewerMode: false,
   profile: {
     firstName: '',
     lastName: '',
@@ -161,11 +167,48 @@ export const useUserStore = create<UserState>((set, _get) => ({
         PLANT: 'MANUFACTURER',
       };
       const companyTypes: string[] = company?.company_types ?? [];
-      const statusEntries: CompanyStatusEntry[] = companyTypes.map((code) => ({
-        status: typeMap[code] || 'BUYER',
-        verification: 'verified' as const,
-      }));
-      // Set activeStatus from first company type, fallback to BUYER
+      // Per-membership capabilities set by the company OWNER.
+      // Default true so legacy users don't lose access; backend sends explicit
+      // flags on next `/me/` refresh.
+      const userPayload = authState.user as {
+        can_sell?: boolean;
+        can_buy?: boolean;
+      };
+      const canSell = userPayload.can_sell !== false;
+      const canBuy = userPayload.can_buy !== false;
+
+      // Platform-admin viewer mode: SystemRole.ADMIN user who isn't attached
+      // to any company. Gets to preview all 3 contexts (BUYER/SELLER/MFG) for
+      // moderation purposes, but business actions must be blocked by page-level
+      // guards / disabled buttons (see memory/admin_viewer_mode_*.md).
+      const isPlatformAdmin = role_code === 'ADMIN';
+      const hasCompany = !!company;
+      const isViewerMode = isPlatformAdmin && !hasCompany;
+
+      let statusEntries: CompanyStatusEntry[];
+      if (isViewerMode) {
+        // Admin without company — synthetic 3-context switcher for observation only.
+        statusEntries = [
+          { status: 'BUYER', verification: 'verified' as const },
+          { status: 'SELLER', verification: 'verified' as const },
+          { status: 'MANUFACTURER', verification: 'verified' as const },
+        ];
+      } else {
+        const rawEntries: CompanyStatusEntry[] = companyTypes.map((code) => ({
+          status: typeMap[code] || 'BUYER',
+          verification: 'verified' as const,
+        }));
+        // Filter out contexts the member may not use:
+        //   can_sell=false → drop SELLER / MANUFACTURER
+        //   can_buy=false  → drop BUYER
+        statusEntries = rawEntries.filter((e) => {
+          if ((e.status === 'SELLER' || e.status === 'MANUFACTURER') && !canSell) return false;
+          if (e.status === 'BUYER' && !canBuy) return false;
+          return true;
+        });
+      }
+      // If OWNER revoked every capability we still keep BUYER as a safe fallback
+      // so the app stays navigable (page-level guards do the fine-grained gating).
       const activeStatus: CompanyStatus = statusEntries.length > 0
         ? statusEntries[0].status
         : 'BUYER';
@@ -173,6 +216,7 @@ export const useUserStore = create<UserState>((set, _get) => ({
       set({
         screen: 'main',
         activeStatus,
+        isViewerMode,
         role: (role_code === 'ADMIN' || role_code === 'SALES_MANAGER') ? 'ADMIN' :
               role_code === 'ACCOUNT_MANAGER' ? 'MANAGER' : 'EMPLOYEE',
         profile: {

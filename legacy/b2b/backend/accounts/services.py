@@ -585,3 +585,43 @@ def change_subscription_status(
     if new_status not in valid_statuses:
         raise ValueError(f"Invalid status '{new_status}'. Allowed: {valid_statuses}")
     return subscriptions.update(status=new_status)
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Actor-level guards for business services
+# ──────────────────────────────────────────────────────────────────────────
+
+
+def is_member_of(user: 'CustomUser', company_id: int, *, capability: Optional[str] = None) -> bool:
+    """True if user is an active CompanyMember of the given company.
+
+    If `capability` is 'sell' or 'buy', also checks the membership's can_sell /
+    can_buy flag. OWNER distributes these in the team; a member without the
+    flag must be refused at the service layer even if the company has the
+    matching CompanyType.
+    """
+    if not user or not user.is_authenticated:
+        return False
+    qs = user.memberships.filter(company_id=company_id, is_active=True)
+    m = qs.first()
+    if m is None:
+        return False
+    if capability == 'sell':
+        return bool(m.can_sell)
+    if capability == 'buy':
+        return bool(m.can_buy)
+    return True
+
+
+def is_platform_admin_viewer(user: 'CustomUser') -> bool:
+    """Platform admin without any company membership — viewer mode.
+
+    Such users may READ all company data (moderation), but business services
+    must refuse write operations. See memory/admin_viewer_mode_*.md.
+    """
+    if not user or not user.is_authenticated:
+        return False
+    role_code = getattr(getattr(user, 'role', None), 'code', None)
+    if role_code != 'ADMIN':
+        return False
+    return not user.memberships.filter(is_active=True).exists()

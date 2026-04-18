@@ -121,13 +121,17 @@ class UserSerializer(serializers.ModelSerializer):
 
 class MeSerializer(serializers.ModelSerializer):
     """Lightweight serializer for /accounts/me/ — minimal queries.
-    Skips nested memberships (frontend uses workspace_role instead)."""
+    Skips nested memberships (frontend uses workspace_role + capabilities instead)."""
     primary_company = PrimaryCompanyLightSerializer(read_only=True)
     role_name = serializers.CharField(source='role.name', read_only=True)
     role_code = serializers.CharField(source='role.code', read_only=True)
     role_data = serializers.SerializerMethodField()
     workspace_role = serializers.SerializerMethodField()
     kyc_status = serializers.SerializerMethodField()
+    # Per-membership flags for the primary company. Frontend uses these to
+    # filter the BUYER/SELLER/MANUFACTURER context-switcher.
+    can_sell = serializers.SerializerMethodField()
+    can_buy = serializers.SerializerMethodField()
 
     class Meta:
         model = CustomUser
@@ -135,6 +139,7 @@ class MeSerializer(serializers.ModelSerializer):
             'id', 'username', 'email', 'first_name', 'last_name',
             'phone', 'avatar', 'role', 'role_code', 'role_name',
             'role_data', 'workspace_role', 'kyc_status',
+            'can_sell', 'can_buy',
             'is_active', 'primary_company',
             'last_login', 'date_joined',
         ]
@@ -149,11 +154,25 @@ class MeSerializer(serializers.ModelSerializer):
             }
         return None
 
-    def get_workspace_role(self, obj):
+    def _primary_membership(self, obj):
         for m in obj.memberships.all():
-            if m.is_primary and m.is_active and m.role:
-                return m.role.code
+            if m.is_primary and m.is_active:
+                return m
         return None
+
+    def get_workspace_role(self, obj):
+        m = self._primary_membership(obj)
+        return m.role.code if (m and m.role) else None
+
+    def get_can_sell(self, obj):
+        m = self._primary_membership(obj)
+        return bool(m and m.can_sell)
+
+    def get_can_buy(self, obj):
+        m = self._primary_membership(obj)
+        # If no primary membership (e.g. platform super-admin before seed),
+        # default to True so UI isn't accidentally locked down.
+        return bool(m.can_buy) if m else True
 
     def get_kyc_status(self, obj):
         if obj.primary_company and obj.primary_company.verification_status:

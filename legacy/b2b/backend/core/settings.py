@@ -78,7 +78,7 @@ INSTALLED_APPS = [
     'sourcing',
     'django_filters',
     'master_data',
-    'accounts',
+    'accounts.apps.AccountsConfig',
     'notifications',
     'core',
     'django_celery_beat',

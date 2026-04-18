@@ -1250,12 +1250,16 @@ class SupplierBidViewSet(viewsets.ModelViewSet):
         return Response(SupplierBidSerializer(bid).data, status=201)
 
     def _can_manage_bid(self, user, bid) -> bool:
-        """Manager/admin OR an active member of the deal's buyer company may manage the bid."""
-        if user.is_superuser or getattr(user, 'is_manager_or_admin', False):
+        """Active member of the deal's buyer company (with can_buy) OR superuser.
+        Platform-admin viewer is explicitly refused — admins moderate, they don't
+        accept business bids on behalf of the buyer.
+        """
+        from accounts.services import is_member_of, is_platform_admin_viewer
+        if user.is_superuser:
             return True
-        return user.memberships.filter(
-            is_active=True, company_id=bid.deal.company_id,
-        ).exists()
+        if is_platform_admin_viewer(user):
+            return False
+        return is_member_of(user, bid.deal.company_id, capability='buy')
 
     @extend_schema(summary="Accept bid", tags=['CRM'])
     @action(detail=True, methods=['post'], url_path='accept')

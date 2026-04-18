@@ -194,9 +194,12 @@ function App() {
     );
   }
 
-  // Authenticated but no company — show profile completion (company + type selection)
+  // Authenticated but no company — show profile completion (company + type selection).
+  // Exception: platform admin (SystemRole.ADMIN) enters viewer mode and does NOT
+  // need a company to moderate the platform.
   const hasCompany = user?.company || user?.primary_company || profileCompleted;
-  if (!hasCompany) {
+  const isPlatformAdmin = user?.role_code === 'ADMIN';
+  if (!hasCompany && !isPlatformAdmin) {
     return (
       <ProfileCompletionForm
         onComplete={async () => {

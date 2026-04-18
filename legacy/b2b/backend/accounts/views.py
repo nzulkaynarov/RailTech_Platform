@@ -192,6 +192,60 @@ class CompanyViewSet(viewsets.ModelViewSet):
         return Response(UserSerializer(users, many=True).data)
 
     @extend_schema(
+        summary="Update member capabilities (sell / buy flags)",
+        description=(
+            "Company OWNER distributes selling / buying rights across team members. "
+            "Only OWNER of the same company (or platform ADMIN/superuser) may call this."
+        ),
+        request=inline_serializer('MemberCapabilities', fields={
+            'member_id': __import__('rest_framework').serializers.IntegerField(),
+            'can_sell': __import__('rest_framework').serializers.BooleanField(required=False),
+            'can_buy': __import__('rest_framework').serializers.BooleanField(required=False),
+        }),
+        responses={
+            200: OpenApiResponse(description="Capabilities updated"),
+            403: OpenApiResponse(description="Only OWNER can distribute rights"),
+            404: OpenApiResponse(description="Member not found in this company"),
+        },
+        tags=['Accounts'],
+    )
+    @action(detail=True, methods=['post'], url_path='update-member-capabilities')
+    def update_member_capabilities(self, request, pk=None):
+        company = self.get_object()
+        # Authorization: OWNER of this company, or platform staff/superuser.
+        is_staff = request.user.is_superuser or getattr(request.user, 'is_manager_or_admin', False)
+        if not is_staff:
+            owner_membership = CompanyMember.objects.filter(
+                user=request.user, company=company, is_active=True,
+                role__code='OWNER',
+            ).exists()
+            if not owner_membership:
+                return Response({'detail': 'ONLY_OWNER_CAN_DISTRIBUTE_CAPABILITIES'},
+                                status=status.HTTP_403_FORBIDDEN)
+
+        member_id = request.data.get('member_id')
+        if not member_id:
+            return Response({'detail': 'MEMBER_ID_REQUIRED'}, status=400)
+        member = CompanyMember.objects.filter(pk=member_id, company=company).first()
+        if not member:
+            return Response({'detail': 'MEMBER_NOT_FOUND'},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        changed = []
+        if 'can_sell' in request.data:
+            member.can_sell = bool(request.data['can_sell'])
+            changed.append('can_sell')
+        if 'can_buy' in request.data:
+            member.can_buy = bool(request.data['can_buy'])
+            changed.append('can_buy')
+        if changed:
+            member.save(update_fields=[*changed, 'joined_at'][: len(changed)])
+        return Response({
+            'id': member.id, 'user_id': member.user_id,
+            'can_sell': member.can_sell, 'can_buy': member.can_buy,
+        })
+
+    @extend_schema(
         summary="Invite team member",
         description=(
             "Invite a new user to the company by email. "

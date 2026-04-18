@@ -43,6 +43,12 @@ export interface User {
 	role_data?: { code: string; name: string; is_staff_level: boolean };
 	workspace_role?: string | null;
 	kyc_status?: string | null;
+	// Per-membership capabilities from the primary company.
+	// OWNER distributes these inside the team; frontend filters
+	// the context switcher so a member with can_sell=false does not see
+	// SELLER/MANUFACTURER contexts.
+	can_sell?: boolean;
+	can_buy?: boolean;
 	company?: Company;
 	primary_company?: Company;
 	is_active?: boolean;

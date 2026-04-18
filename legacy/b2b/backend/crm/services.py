@@ -572,8 +572,14 @@ def sign_contract_by_client(
     See memory `tech_debt_payment_esign.md`.
     """
     from django.utils import timezone
+    from accounts.services import is_member_of, is_platform_admin_viewer
     from .models import Contract
-    contract = Contract.objects.select_for_update().get(pk=contract_id)
+    contract = Contract.objects.select_for_update().select_related('deal').get(pk=contract_id)
+    if is_platform_admin_viewer(client_user):
+        return None, 'ADMIN_VIEWER_CANNOT_ACT'
+    if not (getattr(client_user, 'is_superuser', False)
+            or is_member_of(client_user, contract.deal.company_id, capability='buy')):
+        return None, 'MEMBER_REQUIRED_FOR_ACTION'
     if contract.status not in {'DRAFT', 'PENDING_CLIENT'}:
         return None, 'CONTRACT_CLIENT_SIGN_NOT_ALLOWED'
     contract.client_signer = client_user
@@ -593,12 +599,29 @@ def sign_contract_by_client(
 def sign_contract_by_manager(
     contract_id: int, manager_user: CustomUser,
 ) -> Tuple[Optional['Contract'], Optional[str]]:
-    """Click-to-sign by RailTech manager. MANUAL MODE — to be replaced by E-IMZO.
+    """Click-to-sign by seller-side company manager. MANUAL MODE — to be replaced by E-IMZO.
     See memory `tech_debt_payment_esign.md`.
+
+    Seller side is represented by the accepted SupplierBid's supplier company
+    (if any) or — when a deal has no bid — by any member with can_sell on the
+    deal.company itself (self-service intra-company deals).
     """
     from django.utils import timezone
-    from .models import Contract
-    contract = Contract.objects.select_for_update().get(pk=contract_id)
+    from accounts.services import is_member_of, is_platform_admin_viewer
+    from .models import Contract, SupplierBid
+    contract = Contract.objects.select_for_update().select_related('deal').get(pk=contract_id)
+    if is_platform_admin_viewer(manager_user):
+        return None, 'ADMIN_VIEWER_CANNOT_ACT'
+    seller_company_ids = list(
+        SupplierBid.objects.filter(deal_id=contract.deal_id, status='ACCEPTED')
+        .values_list('supplier_id', flat=True),
+    )
+    seller_company_ids.append(contract.deal.company_id)  # intra-company fallback
+    authorized = getattr(manager_user, 'is_superuser', False) or any(
+        is_member_of(manager_user, cid, capability='sell') for cid in seller_company_ids
+    )
+    if not authorized:
+        return None, 'MEMBER_REQUIRED_FOR_ACTION'
     if contract.status not in {'DRAFT', 'PENDING_MANAGER', 'PENDING_CLIENT'}:
         return None, 'CONTRACT_MANAGER_SIGN_NOT_ALLOWED'
     contract.manager_signer = manager_user
@@ -737,8 +760,16 @@ def record_payment(
     `tech_debt_payment_esign.md`.
     """
     from decimal import Decimal as D
+    from accounts.services import is_member_of, is_platform_admin_viewer
     from .models import Invoice, Payment
-    invoice = Invoice.objects.select_for_update().get(pk=invoice_id)
+    invoice = Invoice.objects.select_for_update().select_related('deal').get(pk=invoice_id)
+    # Actor-guard: platform-admin viewer cannot execute business actions.
+    if is_platform_admin_viewer(actor):
+        return None, 'ADMIN_VIEWER_CANNOT_ACT'
+    # Payment is recorded by the buyer side of the deal — must be member w/ can_buy.
+    if not (getattr(actor, 'is_superuser', False)
+            or is_member_of(actor, invoice.deal.company_id, capability='buy')):
+        return None, 'MEMBER_REQUIRED_FOR_ACTION'
     if invoice.status in {'CANCELLED'}:
         return None, 'INVOICE_CANCELLED'
     amount_d = D(str(amount))
@@ -901,19 +932,17 @@ def submit_supplier_bid(
     """Create or update a SupplierBid for the given deal+supplier."""
     from decimal import Decimal as D
     from django.utils import timezone
+    from accounts.services import is_member_of, is_platform_admin_viewer
     from .models import SupplierBid, SupplierBidItem
+    if is_platform_admin_viewer(submitted_by):
+        return None, 'ADMIN_VIEWER_CANNOT_ACT'
     deal = Deal.objects.get(pk=deal_id)
     if deal.stage and deal.stage.code not in {'RFQ_OPEN'}:
         return None, 'BID_ONLY_IN_RFQ_OPEN'
-    # Security: user must be active member of the supplier company (or staff).
-    is_staff_actor = bool(getattr(submitted_by, 'is_superuser', False) or getattr(submitted_by, 'is_manager_or_admin', False))
-    if not is_staff_actor:
-        from accounts.models import CompanyMember
-        is_member = CompanyMember.objects.filter(
-            user=submitted_by, company_id=supplier_id, is_active=True,
-        ).exists()
-        if not is_member:
-            return None, 'NOT_A_SUPPLIER_MEMBER'
+    # Security: user must be active member of the supplier company with can_sell.
+    if not (getattr(submitted_by, 'is_superuser', False)
+            or is_member_of(submitted_by, supplier_id, capability='sell')):
+        return None, 'NOT_A_SUPPLIER_MEMBER'
     bid, _ = SupplierBid.objects.get_or_create(deal_id=deal_id, supplier_id=supplier_id)
     bid.items.all().delete()
     total = D('0')
