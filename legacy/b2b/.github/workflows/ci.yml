@@ -9,6 +9,16 @@ on:
       - main
 
 jobs:
+  i18n-symmetry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Verify ru.json / en.json key sets match
+        run: python3 scripts/check_i18n_symmetry.py
+
   backend-lint:
     runs-on: ubuntu-latest
     strategy:

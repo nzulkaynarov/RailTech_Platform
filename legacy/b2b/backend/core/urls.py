@@ -17,6 +17,7 @@ from crm.views import (
     DealStageViewSet, QuoteStatusViewSet,
     ContractViewSet, InvoiceViewSet, PaymentViewSet, ActViewSet,
     FulfillmentViewSet, SupplierBidViewSet, LeadViewSet,
+    Phase2StatusChoicesView,
 )
 from accounts.views import (
     CompanyViewSet, UserViewSet, RegisterView, SetupPasswordView, SubmitProfileView, MeView,
@@ -99,6 +100,7 @@ urlpatterns = [
     path('api/v1/crm/analytics/dashboard/', DashboardAnalyticsView.as_view(), name='dashboard-analytics'),
     path('api/v1/analytics/page-stats/', PageStatsView.as_view(), name='page-stats'),
     path('api/v1/crm/leads/', LeadCreateView.as_view(), name='lead-create'),
+    path('api/v1/crm/status-choices/', Phase2StatusChoicesView.as_view(), name='phase2-status-choices'),
     path('api/v1/system-settings/', SystemSettingsView.as_view(), name='system-settings'),
     path('api/v1/accounts/me/', MeView.as_view(), name='current-user'),
     path('api/v1/health/', health_check, name='health_check'),

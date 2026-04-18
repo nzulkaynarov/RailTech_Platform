@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { translateApiError } from '@/lib/apiError';
 import { Plus, Trash2 } from 'lucide-react';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -96,7 +97,7 @@ export function SupplierBidSubmitDialog({
       setNotes('');
       setLeadTime('');
     } catch (e) {
-      toast.error((e as Error).message || t('common.error'));
+      toast.error(translateApiError(e));
     }
   };
 

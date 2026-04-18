@@ -26,10 +26,10 @@ def create_pending_user(email: str, first_name: str, last_name: str) -> Tuple[Op
     Step 1: Create a user in a pending state and send verification email.
     """
     if not email or not first_name or not last_name:
-        return None, "Email, first name and last name are required"
+        return None, 'REGISTRATION_FIELDS_REQUIRED'
 
     if CustomUser.objects.filter(email=email).exists():
-        return None, "Пользователь с таким email уже существует."
+        return None, 'USER_EMAIL_ALREADY_EXISTS'
 
     # Assign default GUEST role from Master Data
     guest_role = SystemRole.objects.filter(code='GUEST').first()
@@ -61,7 +61,7 @@ def create_pending_user(email: str, first_name: str, last_name: str) -> Tuple[Op
     except Exception:
         # Email failed — clean up the orphaned user so they can retry
         user.delete()
-        return None, "Не удалось отправить письмо. Попробуйте позже."
+        return None, 'EMAIL_SEND_FAILED'
 
     return user, None
 
@@ -71,10 +71,10 @@ def verify_and_setup_password(uidb64: str, token: str, password: str) -> Tuple[O
         uid = force_str(urlsafe_base64_decode(uidb64))
         user = CustomUser.objects.get(pk=uid)
     except (TypeError, ValueError, OverflowError, CustomUser.DoesNotExist):
-        return None, "Invalid user"
+        return None, 'SETUP_PASSWORD_INVALID_USER'
 
     if not default_token_generator.check_token(user, token):
-        return None, "Invalid or expired token"
+        return None, 'SETUP_PASSWORD_INVALID_TOKEN'
 
     user.set_password(password)
     user.is_active = True
@@ -94,14 +94,14 @@ def submit_company_profile(
     Step 3: User fills in company info, assigns company type, and creates membership.
     """
     if not all([inn, company_name, workspace_role_code]):
-        return None, "INN, company name and role are required"
+        return None, 'PROFILE_FIELDS_REQUIRED'
 
     # Status lookups
     submitted_status = VerificationStatus.objects.filter(code='PROFILE_SUBMITTED').first()
     w_role = WorkspaceRole.objects.filter(code=workspace_role_code).first()
 
     if not w_role:
-        return None, f"Role '{workspace_role_code}' not found in master data."
+        return None, 'WORKSPACE_ROLE_NOT_FOUND'
 
     from .models import CompanyType
     company_type = CompanyType.objects.filter(code=company_type_code).first()
@@ -133,14 +133,14 @@ def submit_company_profile(
 
 def invite_workspace_member(company: Company, email: str, role_code: str) -> Tuple[Optional[CustomUser], Optional[str]]:
     if not email:
-        return None, "Email is required"
+        return None, 'EMAIL_REQUIRED'
 
     if CustomUser.objects.filter(email=email).exists():
-        return None, "Пользователь с таким email уже существует."
+        return None, 'USER_EMAIL_ALREADY_EXISTS'
 
     w_role = WorkspaceRole.objects.filter(code=role_code).first()
     if not w_role:
-        return None, f"Role '{role_code}' not found."
+        return None, 'SYSTEM_ROLE_NOT_FOUND'
 
     # Assign default GUEST role (same as registration flow)
     guest_role = SystemRole.objects.filter(code='GUEST').first()
@@ -190,7 +190,7 @@ def assign_sales_manager_role(users: QuerySet[CustomUser]) -> Tuple[int, Optiona
     """
     sales_role = SystemRole.objects.filter(code='SALES_MANAGER').first()
     if not sales_role:
-        return 0, "SystemRole 'SALES_MANAGER' not found in master data"
+        return 0, 'SALES_MANAGER_ROLE_NOT_FOUND'
     updated = users.update(is_staff=True, role=sales_role)
     return updated, None
 
@@ -210,10 +210,10 @@ def verify_company_kyc(
     """
     target_status = VerificationStatus.objects.filter(code=level_code).first()
     if not target_status:
-        return None, f"VerificationStatus '{level_code}' not found"
+        return None, 'VERIFICATION_STATUS_NOT_FOUND'
 
     if require_documents and not company.kyc_documents.exists():
-        return None, f"Company '{company.name}' has no KYC documents"
+        return None, 'KYC_DOCUMENTS_MISSING'
 
     company.verification_status = target_status
     company.save(update_fields=['verification_status'])
@@ -309,15 +309,15 @@ def approve_role_application(
     Returns: (application, error_message_or_None)
     """
     if application.status not in ('PENDING', 'PAYMENT_REQUIRED', 'DOCUMENTS_REQUIRED'):
-        return None, f"Application is in state '{application.status}', cannot approve"
+        return None, 'ROLE_APPLICATION_CANNOT_APPROVE'
 
     requested_code = application.requested_type.code
     if requested_code == 'SUPPLIER':
         if not application.contract_file or not application.nda_file:
-            return None, f"{application.company.name}: contract + NDA required for SUPPLIER"
+            return None, 'ROLE_APPLICATION_MISSING_CONTRACT_NDA'
     elif requested_code == 'MANUFACTURER':
         if not application.partnership_agreement:
-            return None, f"{application.company.name}: partnership agreement required for MANUFACTURER"
+            return None, 'ROLE_APPLICATION_MISSING_PARTNERSHIP'
 
     application.status = 'APPROVED'
     application.reviewed_by = reviewer
@@ -446,7 +446,7 @@ def reject_role_application(
 ) -> Tuple[Optional[CompanyRoleApplication], Optional[str]]:
     """Reject a CompanyRoleApplication. Returns (app, error_or_None)."""
     if application.status not in ('PENDING', 'PAYMENT_REQUIRED', 'DOCUMENTS_REQUIRED'):
-        return None, f"Application is in state '{application.status}', cannot reject"
+        return None, 'ROLE_APPLICATION_CANNOT_REJECT'
 
     application.status = 'REJECTED'
     application.reviewed_by = reviewer
@@ -500,7 +500,7 @@ def change_user_password(
     Returns: (user, error_or_None)
     """
     if not user.check_password(current_password):
-        return None, "Неверный текущий пароль"
+        return None, 'CURRENT_PASSWORD_WRONG'
     user.set_password(new_password)
     user.save(update_fields=['password'])
     return user, None
@@ -515,7 +515,7 @@ def toggle_user_active(
     Returns: (user, error_or_None)
     """
     if user.pk == requester.pk:
-        return None, "Cannot deactivate yourself"
+        return None, 'CANNOT_DEACTIVATE_SELF'
     user.is_active = not user.is_active
     user.save(update_fields=['is_active'])
     return user, None
@@ -538,7 +538,7 @@ def upload_kyc_document(
     max_size = 10 * 1024 * 1024  # 10MB
 
     if file_obj.size > max_size:
-        return None, "File too large (max 10MB)"
+        return None, 'FILE_TOO_LARGE'
 
     ext_validator = FileExtensionValidator(allowed_extensions)
     try:

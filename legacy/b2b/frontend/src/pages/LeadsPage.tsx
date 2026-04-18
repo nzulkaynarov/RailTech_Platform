@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { translateApiError } from '@/lib/apiError';
 import { ClipboardList, ArrowRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,7 +23,7 @@ export function LeadsPage() {
       const res = await convert.mutateAsync({ leadId: lead.id });
       toast.success(`${t('leadsPage.converted')} #${res.deal_id}`);
     } catch (e) {
-      toast.error((e as Error).message || t('common.error'));
+      toast.error(translateApiError(e));
     }
   };
 

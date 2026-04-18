@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { translateApiError } from '@/lib/apiError';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
@@ -40,7 +41,7 @@ export function OpenRfqDialog({ dealId, open, onOpenChange }: OpenRfqDialogProps
       onOpenChange(false);
       setSelectedIds(new Set());
     } catch (e) {
-      toast.error((e as Error).message || t('common.error'));
+      toast.error(translateApiError(e));
     }
   };
 

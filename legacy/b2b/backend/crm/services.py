@@ -381,7 +381,7 @@ def transition_deal_stage(
     """
     target_stage = DealStage.objects.filter(code=target_stage_code).first()
     if not target_stage:
-        return None, f"DealStage '{target_stage_code}' not found"
+        return None, 'DEAL_STAGE_NOT_FOUND'
 
     if deal.stage and deal.stage.code == target_stage_code:
         return deal, None  # already in target state, no-op
@@ -391,16 +391,13 @@ def transition_deal_stage(
         allowed = get_allowed_transitions(current_code)
         if target_stage_code not in allowed:
             allowed_str = ', '.join(allowed) if allowed else 'none (terminal state)'
-            return None, f"Transition {current_code} → {target_stage_code} is not allowed. Allowed: {allowed_str}"
+            return None, 'FSM_TRANSITION_NOT_ALLOWED'
 
     # Contract gate: CLOSED_WON requires a fully signed Contract.
     if validate_fsm and target_stage_code in STAGE_REQUIRES_SIGNED_CONTRACT:
         has_signed = deal.contracts.filter(status='SIGNED').exists()
         if not has_signed:
-            return None, (
-                "Для перехода в CLOSED_WON требуется подписанный контракт "
-                "(Contract.status=SIGNED)."
-            )
+            return None, 'CLOSED_WON_REQUIRES_SIGNED_CONTRACT'
 
     old_stage_name = deal.stage.name if deal.stage else '—'
     deal.stage = target_stage
@@ -463,14 +460,14 @@ def convert_lead_to_deal(
     If `company` is not provided, tries to resolve one via the lead email.
     """
     if lead.is_processed:
-        return None, "Lead уже обработан"
+        return None, 'LEAD_ALREADY_PROCESSED'
 
     if company is None:
         company = Company.objects.filter(
             members__user__email__iexact=lead.email, members__is_active=True,
         ).first()
     if company is None:
-        return None, "Нельзя создать сделку: не найдена компания-клиент для email лида"
+        return None, 'LEAD_NO_CLIENT_COMPANY'
 
     draft_stage = DealStage.objects.filter(code='DRAFT').first()
     deal = Deal.objects.create(
@@ -514,7 +511,7 @@ def generate_contract_from_quote(
     quote = Quote.objects.select_related('deal__company', 'status').get(pk=quote_id)
 
     if not quote.status or quote.status.code not in {'APPROVED', 'SENT'}:
-        return None, "Контракт можно создать только на основании утверждённого КП (APPROVED или SENT)"
+        return None, 'CONTRACT_NEEDS_APPROVAL'
 
     # Reuse existing draft contract if present
     contract = Contract.objects.filter(deal=quote.deal, quote=quote).exclude(
@@ -578,7 +575,7 @@ def sign_contract_by_client(
     from .models import Contract
     contract = Contract.objects.select_for_update().get(pk=contract_id)
     if contract.status not in {'DRAFT', 'PENDING_CLIENT'}:
-        return None, f"Контракт в статусе {contract.status}, подпись клиента невозможна"
+        return None, 'CONTRACT_CLIENT_SIGN_NOT_ALLOWED'
     contract.client_signer = client_user
     contract.client_signed_at = timezone.now()
     contract.status = 'PENDING_MANAGER' if not contract.manager_signed_at else 'SIGNED'
@@ -603,7 +600,7 @@ def sign_contract_by_manager(
     from .models import Contract
     contract = Contract.objects.select_for_update().get(pk=contract_id)
     if contract.status not in {'DRAFT', 'PENDING_MANAGER', 'PENDING_CLIENT'}:
-        return None, f"Контракт в статусе {contract.status}, подпись менеджера невозможна"
+        return None, 'CONTRACT_MANAGER_SIGN_NOT_ALLOWED'
     contract.manager_signer = manager_user
     contract.manager_signed_at = timezone.now()
     contract.status = 'SIGNED' if contract.client_signed_at else 'PENDING_CLIENT'
@@ -639,7 +636,7 @@ def cancel_contract(contract_id: int, actor: CustomUser, reason: str = '') -> Tu
     from .models import Contract
     contract = Contract.objects.select_for_update().get(pk=contract_id)
     if contract.status == 'SIGNED':
-        return None, "Подписанный контракт нельзя отменить — оформите расторжение отдельным документом"
+        return None, 'CONTRACT_SIGNED_CANNOT_CANCEL'
     contract.status = 'CANCELLED'
     contract.notes = f"{contract.notes}\nОтменён {actor}: {reason}".strip()
     contract.save(update_fields=['status', 'notes', 'updated_at'])
@@ -677,7 +674,7 @@ def generate_invoice_from_contract(
     contract = Contract.objects.select_related('quote__deal').get(pk=contract_id)
 
     if contract.status != 'SIGNED':
-        return None, "Инвойс можно выставить только по подписанному контракту"
+        return None, 'INVOICE_REQUIRES_SIGNED_CONTRACT'
 
     quote = contract.quote
     invoice = Invoice.objects.create(
@@ -743,10 +740,10 @@ def record_payment(
     from .models import Invoice, Payment
     invoice = Invoice.objects.select_for_update().get(pk=invoice_id)
     if invoice.status in {'CANCELLED'}:
-        return None, "Инвойс отменён"
+        return None, 'INVOICE_CANCELLED'
     amount_d = D(str(amount))
     if amount_d <= 0:
-        return None, "Сумма платежа должна быть > 0"
+        return None, 'PAYMENT_AMOUNT_MUST_BE_POSITIVE'
 
     payment = Payment.objects.create(
         invoice=invoice, amount=amount_d, method=method,
@@ -778,7 +775,7 @@ def generate_act(
     from .models import Invoice, Act
     invoice = Invoice.objects.select_related('contract', 'deal').get(pk=invoice_id)
     if invoice.status not in {'PAID', 'PARTIAL', 'ISSUED'}:
-        return None, f"Акт нельзя выставить для инвойса в статусе {invoice.status}"
+        return None, 'ACT_INVALID_INVOICE_STATUS'
 
     act = Act.objects.create(
         deal=invoice.deal, contract=invoice.contract, invoice=invoice,
@@ -811,7 +808,7 @@ def sign_act(act_id: int, actor: CustomUser, signed_file=None) -> Tuple[Optional
     from .models import Act
     act = Act.objects.select_for_update().get(pk=act_id)
     if act.status != 'ISSUED':
-        return None, f"Акт в статусе {act.status}, подпись невозможна"
+        return None, 'ACT_SIGN_NOT_ALLOWED'
     act.status = 'SIGNED'
     act.signed_at = timezone.now()
     if signed_file is not None:
@@ -840,7 +837,7 @@ def update_fulfillment_status(
     from .models import Fulfillment
     valid = {'PENDING', 'SHIPPED', 'IN_TRANSIT', 'DELIVERED', 'ACCEPTED', 'DISPUTED'}
     if status_code not in valid:
-        return None, f"Invalid status: {status_code}"
+        return None, 'FULFILLMENT_INVALID_STATUS'
     obj = Fulfillment.objects.select_for_update().select_related('deal').get(deal_id=deal_id)
     obj.status = status_code
     now = timezone.now()
@@ -907,7 +904,16 @@ def submit_supplier_bid(
     from .models import SupplierBid, SupplierBidItem
     deal = Deal.objects.get(pk=deal_id)
     if deal.stage and deal.stage.code not in {'RFQ_OPEN'}:
-        return None, "Bid можно подавать только на сделке в статусе RFQ_OPEN"
+        return None, 'BID_ONLY_IN_RFQ_OPEN'
+    # Security: user must be active member of the supplier company (or staff).
+    is_staff_actor = bool(getattr(submitted_by, 'is_superuser', False) or getattr(submitted_by, 'is_manager_or_admin', False))
+    if not is_staff_actor:
+        from accounts.models import CompanyMember
+        is_member = CompanyMember.objects.filter(
+            user=submitted_by, company_id=supplier_id, is_active=True,
+        ).exists()
+        if not is_member:
+            return None, 'NOT_A_SUPPLIER_MEMBER'
     bid, _ = SupplierBid.objects.get_or_create(deal_id=deal_id, supplier_id=supplier_id)
     bid.items.all().delete()
     total = D('0')
@@ -944,7 +950,7 @@ def accept_supplier_bid(
     from .models import SupplierBid
     bid = SupplierBid.objects.select_for_update().select_related('deal').get(pk=bid_id)
     if bid.status != 'SUBMITTED':
-        return None, f"Нельзя принять bid в статусе {bid.status}"
+        return None, 'BID_ACCEPT_NOT_ALLOWED'
     bid.status = 'ACCEPTED'
     bid.accepted_at = timezone.now()
     bid.save(update_fields=['status', 'accepted_at', 'updated_at'])
@@ -963,7 +969,7 @@ def reject_supplier_bid(
     from .models import SupplierBid
     bid = SupplierBid.objects.select_for_update().get(pk=bid_id)
     if bid.status not in {'SUBMITTED', 'DRAFT'}:
-        return None, f"Нельзя отклонить bid в статусе {bid.status}"
+        return None, 'BID_REJECT_NOT_ALLOWED'
     bid.status = 'REJECTED'
     if reason:
         bid.notes = f"{bid.notes}\nОтклонено: {reason}".strip()
@@ -984,11 +990,11 @@ def reassign_quote_item_product(
     from catalog.models import Product
     item = QuoteItem.objects.select_for_update().select_related('quote').get(pk=quote_item_id)
     if item.quote.frozen_at:
-        return None, "Нельзя переназначить продукт в замороженном (отправленном) КП"
+        return None, 'QUOTE_FROZEN_CANNOT_REASSIGN'
     if product_id:
         product = Product.objects.filter(pk=product_id).first()
         if not product:
-            return None, f"Product {product_id} не найден"
+            return None, 'PRODUCT_NOT_FOUND'
         item.product = product
     else:
         item.product = None

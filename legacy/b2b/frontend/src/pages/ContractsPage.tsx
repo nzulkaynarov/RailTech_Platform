@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { translateApiError } from '@/lib/apiError';
 import { FileText, Download, PenLine, Upload, Ban, FileSignature } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -15,14 +15,14 @@ import {
   Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle,
 } from '@/components/ui/sheet';
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
-import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
 import { ManualModeBanner } from '@/components/Shared/ManualModeBanner';
+import {
+  Toolbar, SortableHead, Pager, useListParams, applyListParams,
+} from '@/components/DataTable';
 import {
   useContracts, useSignContractClient, useSignContractManager,
   useUploadSignedContract, useCancelContract,
@@ -43,20 +43,12 @@ const STATUS_CODES: ContractStatus[] = [
 
 export function ContractsPage() {
   const { t } = useTranslation();
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [search, setSearch] = useState('');
+  const listParams = useListParams(['status'] as const, { defaultOrdering: '-created_at' });
   const [selected, setSelected] = useState<Contract | null>(null);
   const [cancelTarget, setCancelTarget] = useState<Contract | null>(null);
   const [cancelReason, setCancelReason] = useState('');
 
-  const queryParams = useMemo(() => {
-    const p: Record<string, string> = {};
-    if (statusFilter !== 'all') p.status = statusFilter;
-    if (search) p.search = search;
-    return Object.keys(p).length ? p : undefined;
-  }, [statusFilter, search]);
-
-  const { data: contracts, isLoading } = useContracts(queryParams);
+  const { data: contracts, isLoading } = useContracts(undefined);
   const signClient = useSignContractClient();
   const signManager = useSignContractManager();
   const uploadSigned = useUploadSignedContract();
@@ -82,7 +74,7 @@ export function ContractsPage() {
       await signClient.mutateAsync(c.id);
       toast.success(t('contractsPage.signedClient'));
     } catch (e) {
-      toast.error((e as Error).message || t('common.error'));
+      toast.error(translateApiError(e));
     }
   };
 
@@ -91,7 +83,7 @@ export function ContractsPage() {
       await signManager.mutateAsync(c.id);
       toast.success(t('contractsPage.signedManager'));
     } catch (e) {
-      toast.error((e as Error).message || t('common.error'));
+      toast.error(translateApiError(e));
     }
   };
 
@@ -100,7 +92,7 @@ export function ContractsPage() {
       await uploadSigned.mutateAsync({ id: c.id, file });
       toast.success(t('contractsPage.uploadedSigned'));
     } catch (e) {
-      toast.error((e as Error).message || t('common.error'));
+      toast.error(translateApiError(e));
     }
   };
 
@@ -112,7 +104,7 @@ export function ContractsPage() {
       setCancelTarget(null);
       setCancelReason('');
     } catch (e) {
-      toast.error((e as Error).message || t('common.error'));
+      toast.error(translateApiError(e));
     }
   };
 
@@ -124,66 +116,91 @@ export function ContractsPage() {
       stats={stats}
     >
       <ManualModeBanner kind="esign" />
-      <Card>
-        <CardContent className="flex flex-col gap-4 p-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={t('contractsPage.searchPlaceholder')}
-              className="max-w-xs"
-            />
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-52">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('contractsPage.allStatuses')}</SelectItem>
-                {STATUS_CODES.map((s) => (
-                  <SelectItem key={s} value={s}>{t(`contractsPage.status.${s}`)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      <Toolbar
+        searchValue={listParams.searchInput}
+        onSearchChange={listParams.setSearchInput}
+        searchPlaceholder={t('contractsPage.searchPlaceholder')}
+        filters={[
+          {
+            key: 'status',
+            value: listParams.filters.status,
+            onChange: (v) => listParams.setFilter('status', v),
+            allLabel: t('contractsPage.allStatuses'),
+            options: STATUS_CODES.map((s) => ({ value: s, label: t(`contractsPage.status.${s}`) })),
+          },
+        ]}
+      />
 
-          {isLoading ? <LoadingRows rows={6} /> : (contracts?.length ?? 0) === 0 ? (
-            <EmptyState icon={<FileSignature className="h-5 w-5" />} message={t('contractsPage.emptyState')} />
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('contractsPage.table.number')}</TableHead>
-                  <TableHead>{t('contractsPage.table.deal')}</TableHead>
-                  <TableHead>{t('contractsPage.table.total')}</TableHead>
-                  <TableHead>{t('contractsPage.table.status')}</TableHead>
-                  <TableHead>{t('contractsPage.table.created')}</TableHead>
-                  <TableHead className="text-right">{t('contractsPage.table.actions')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {(contracts ?? []).map((c) => (
-                  <TableRow key={c.id}>
-                    <TableCell className="font-medium">{c.number}</TableCell>
-                    <TableCell>#{c.deal}</TableCell>
-                    <TableCell className="tabular-nums">{c.total_amount}</TableCell>
-                    <TableCell>
-                      <Badge variant={STATUS_VARIANT[c.status]}>
-                        {t(`contractsPage.status.${c.status}`)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {new Date(c.created_at).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" onClick={() => setSelected(c)}>
-                        <FileText className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
+      <Card>
+        <CardContent className="p-0">
+          {(() => {
+            const { items: pageItems, total } = applyListParams(contracts ?? [], listParams, {
+              searchFields: (c) => [c.number, String(c.deal)],
+              filterPredicates: {
+                status: (c, v) => c.status === v,
+              },
+              sortAccessors: {
+                number: (c) => c.number,
+                deal: (c) => c.deal,
+                total: (c) => Number(c.total_amount),
+                status: (c) => c.status,
+                created_at: (c) => c.created_at,
+              },
+            });
+            if (isLoading) return <LoadingRows rows={6} />;
+            if (!pageItems.length) {
+              return <EmptyState icon={<FileSignature className="h-5 w-5" />} message={t('contractsPage.emptyState')} />;
+            }
+            return (
+              <>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <SortableHead sortKey="number" current={listParams.ordering} onChange={listParams.toggleOrdering}>
+                        {t('contractsPage.table.number')}
+                      </SortableHead>
+                      <SortableHead sortKey="deal" current={listParams.ordering} onChange={listParams.toggleOrdering}>
+                        {t('contractsPage.table.deal')}
+                      </SortableHead>
+                      <SortableHead sortKey="total" current={listParams.ordering} onChange={listParams.toggleOrdering}>
+                        {t('contractsPage.table.total')}
+                      </SortableHead>
+                      <SortableHead sortKey="status" current={listParams.ordering} onChange={listParams.toggleOrdering}>
+                        {t('contractsPage.table.status')}
+                      </SortableHead>
+                      <SortableHead sortKey="created_at" current={listParams.ordering} onChange={listParams.toggleOrdering}>
+                        {t('contractsPage.table.created')}
+                      </SortableHead>
+                      <TableHead className="text-right">{t('contractsPage.table.actions')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {pageItems.map((c) => (
+                      <TableRow key={c.id}>
+                        <TableCell className="font-medium">{c.number}</TableCell>
+                        <TableCell>#{c.deal}</TableCell>
+                        <TableCell className="tabular-nums">{c.total_amount}</TableCell>
+                        <TableCell>
+                          <Badge variant={STATUS_VARIANT[c.status]}>
+                            {t(`contractsPage.status.${c.status}`)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {new Date(c.created_at).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" onClick={() => setSelected(c)}>
+                            <FileText className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <Pager page={listParams.page} pageSize={listParams.pageSize} total={total} onPageChange={listParams.setPage} />
+              </>
+            );
+          })()}
         </CardContent>
       </Card>
 

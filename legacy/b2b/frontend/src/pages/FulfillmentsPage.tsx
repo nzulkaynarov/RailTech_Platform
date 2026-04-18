@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { translateApiError } from '@/lib/apiError';
 import { Truck } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -83,7 +84,7 @@ export function FulfillmentsPage() {
       toast.success(t('fulfillmentPage.statusUpdated'));
       setEditing(null);
     } catch (e) {
-      toast.error((e as Error).message || t('common.error'));
+      toast.error(translateApiError(e));
     }
   };
 

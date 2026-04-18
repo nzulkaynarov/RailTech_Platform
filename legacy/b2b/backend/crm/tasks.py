@@ -175,21 +175,45 @@ def check_overdue_deliveries() -> dict:
 
 @shared_task(name='crm.auto_invoice_on_closed_won')
 def auto_invoice_on_closed_won(deal_id: int) -> dict:
-    """Triggered after a deal transitions to CLOSED_WON: create invoice+act skeletons."""
-    from .models import Deal
+    """Triggered after a deal transitions to CLOSED_WON: create invoice+act skeletons.
+
+    Idempotent: safe to run multiple times for the same deal — reuses existing Invoice
+    for the contract (if any) and existing Act for the invoice. Needed because:
+      * transition_deal_stage may be called twice on a CLOSED_WON→CONTRACT_SIGNED→CLOSED_WON
+        reopen loop;
+      * Celery task retries duplicate the call.
+    """
+    from .models import Deal, Invoice, Act
     from .services import generate_invoice_from_contract, generate_act, ensure_fulfillment
     try:
         deal = Deal.objects.get(pk=deal_id)
     except Deal.DoesNotExist:
         return {'error': 'deal not found'}
     contract = deal.contracts.filter(status='SIGNED').order_by('-created_at').first()
-    result = {'deal_id': deal_id, 'invoice': None, 'act': None, 'fulfillment': True}
+    result = {'deal_id': deal_id, 'invoice': None, 'act': None, 'fulfillment': True,
+              'idempotent_reuse': False}
     ensure_fulfillment(deal)
-    if contract:
+    if not contract:
+        return result
+
+    # Reuse existing Invoice for this contract if present (idempotency).
+    invoice = Invoice.objects.filter(
+        deal=deal, contract=contract,
+    ).exclude(status='CANCELLED').order_by('-created_at').first()
+    if invoice is None:
         invoice, err = generate_invoice_from_contract(contract.id)
-        if invoice:
-            result['invoice'] = invoice.id
-            act, err2 = generate_act(invoice.id)
-            if act:
-                result['act'] = act.id
+        if invoice is None:
+            return result
+    else:
+        result['idempotent_reuse'] = True
+    result['invoice'] = invoice.id
+
+    # Reuse existing Act for this invoice if present.
+    act = Act.objects.filter(
+        invoice=invoice,
+    ).exclude(status='CANCELLED').order_by('-created_at').first()
+    if act is None:
+        act, err2 = generate_act(invoice.id)
+    if act is not None:
+        result['act'] = act.id
     return result

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { translateApiError } from '@/lib/apiError';
 import { Receipt, Download, DollarSign, ScrollText } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +21,9 @@ import { Separator } from '@/components/ui/separator';
 import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
 import { ManualModeBanner } from '@/components/Shared/ManualModeBanner';
 import {
+  Toolbar, SortableHead, Pager, useListParams, applyListParams,
+} from '@/components/DataTable';
+import {
   useInvoices, useRecordPayment, useGenerateAct,
 } from '@/hooks/useBilling';
 import type { Invoice, InvoiceStatus } from '@/api/billingApi';
@@ -38,8 +42,7 @@ const METHODS = ['BANK_TRANSFER', 'CARD', 'CASH', 'OTHER'] as const;
 
 export function InvoicesPage() {
   const { t } = useTranslation();
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [search, setSearch] = useState('');
+  const listParams = useListParams(['status'] as const, { defaultOrdering: '-created_at' });
   const [selected, setSelected] = useState<Invoice | null>(null);
   const [payOpen, setPayOpen] = useState(false);
   const [payForm, setPayForm] = useState({
@@ -49,14 +52,7 @@ export function InvoicesPage() {
     reference: '',
   });
 
-  const queryParams = useMemo(() => {
-    const p: Record<string, string> = {};
-    if (statusFilter !== 'all') p.status = statusFilter;
-    if (search) p.search = search;
-    return Object.keys(p).length ? p : undefined;
-  }, [statusFilter, search]);
-
-  const { data: invoices, isLoading } = useInvoices(queryParams);
+  const { data: invoices, isLoading } = useInvoices(undefined);
   const recordPayment = useRecordPayment();
   const generateAct = useGenerateAct();
 
@@ -92,7 +88,7 @@ export function InvoicesPage() {
         method: 'BANK_TRANSFER', reference: '',
       });
     } catch (e) {
-      toast.error((e as Error).message || t('common.error'));
+      toast.error(translateApiError(e));
     }
   };
 
@@ -102,7 +98,7 @@ export function InvoicesPage() {
       await generateAct.mutateAsync(selected.id);
       toast.success(t('invoicesPage.actGenerated'));
     } catch (e) {
-      toast.error((e as Error).message || t('common.error'));
+      toast.error(translateApiError(e));
     }
   };
 
@@ -114,70 +110,97 @@ export function InvoicesPage() {
       stats={stats}
     >
       <ManualModeBanner kind="payment" />
+      <Toolbar
+        searchValue={listParams.searchInput}
+        onSearchChange={listParams.setSearchInput}
+        searchPlaceholder={t('invoicesPage.searchPlaceholder')}
+        filters={[
+          {
+            key: 'status',
+            value: listParams.filters.status,
+            onChange: (v) => listParams.setFilter('status', v),
+            allLabel: t('invoicesPage.allStatuses'),
+            options: STATUS_CODES.map((s) => ({ value: s, label: t(`invoicesPage.status.${s}`) })),
+          },
+        ]}
+      />
       <Card>
-        <CardContent className="flex flex-col gap-4 p-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={t('invoicesPage.searchPlaceholder')}
-              className="max-w-xs"
-            />
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-52"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('invoicesPage.allStatuses')}</SelectItem>
-                {STATUS_CODES.map((s) => (
-                  <SelectItem key={s} value={s}>{t(`invoicesPage.status.${s}`)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {isLoading ? <LoadingRows rows={6} /> : (invoices?.length ?? 0) === 0 ? (
-            <EmptyState icon={<Receipt className="h-5 w-5" />} message={t('invoicesPage.emptyState')} />
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('invoicesPage.table.number')}</TableHead>
-                  <TableHead>{t('invoicesPage.table.deal')}</TableHead>
-                  <TableHead>{t('invoicesPage.table.total')}</TableHead>
-                  <TableHead>{t('invoicesPage.table.paid')}</TableHead>
-                  <TableHead>{t('invoicesPage.table.status')}</TableHead>
-                  <TableHead>{t('invoicesPage.table.issued')}</TableHead>
-                  <TableHead>{t('invoicesPage.table.due')}</TableHead>
-                  <TableHead className="text-right">{t('invoicesPage.table.actions')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {(invoices ?? []).map((inv) => (
-                  <TableRow key={inv.id}>
-                    <TableCell className="font-medium">{inv.number}</TableCell>
-                    <TableCell>#{inv.deal}</TableCell>
-                    <TableCell className="tabular-nums">{inv.total_incl_vat}</TableCell>
-                    <TableCell className="tabular-nums">{inv.amount_paid}</TableCell>
-                    <TableCell>
-                      <Badge variant={STATUS_VARIANT[inv.status]}>
-                        {t(`invoicesPage.status.${inv.status}`)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {inv.issued_at ? new Date(inv.issued_at).toLocaleDateString() : '—'}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {inv.due_date ? new Date(inv.due_date).toLocaleDateString() : '—'}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" onClick={() => setSelected(inv)}>
-                        <Receipt className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
+        <CardContent className="p-0">
+          {(() => {
+            const { items: pageItems, total } = applyListParams(invoices ?? [], listParams, {
+              searchFields: (i) => [i.number, String(i.deal)],
+              filterPredicates: {
+                status: (i, v) => i.status === v,
+              },
+              sortAccessors: {
+                number: (i) => i.number,
+                total: (i) => Number(i.total_incl_vat),
+                paid: (i) => Number(i.amount_paid),
+                issued: (i) => i.issued_at ?? '',
+                due: (i) => i.due_date ?? '',
+                created_at: (i) => i.created_at,
+              },
+            });
+            if (isLoading) return <LoadingRows rows={6} />;
+            if (!pageItems.length) {
+              return <EmptyState icon={<Receipt className="h-5 w-5" />} message={t('invoicesPage.emptyState')} />;
+            }
+            return (
+              <>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <SortableHead sortKey="number" current={listParams.ordering} onChange={listParams.toggleOrdering}>
+                        {t('invoicesPage.table.number')}
+                      </SortableHead>
+                      <TableHead>{t('invoicesPage.table.deal')}</TableHead>
+                      <SortableHead sortKey="total" current={listParams.ordering} onChange={listParams.toggleOrdering}>
+                        {t('invoicesPage.table.total')}
+                      </SortableHead>
+                      <SortableHead sortKey="paid" current={listParams.ordering} onChange={listParams.toggleOrdering}>
+                        {t('invoicesPage.table.paid')}
+                      </SortableHead>
+                      <TableHead>{t('invoicesPage.table.status')}</TableHead>
+                      <SortableHead sortKey="issued" current={listParams.ordering} onChange={listParams.toggleOrdering}>
+                        {t('invoicesPage.table.issued')}
+                      </SortableHead>
+                      <SortableHead sortKey="due" current={listParams.ordering} onChange={listParams.toggleOrdering}>
+                        {t('invoicesPage.table.due')}
+                      </SortableHead>
+                      <TableHead className="text-right">{t('invoicesPage.table.actions')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {pageItems.map((inv) => (
+                      <TableRow key={inv.id}>
+                        <TableCell className="font-medium">{inv.number}</TableCell>
+                        <TableCell>#{inv.deal}</TableCell>
+                        <TableCell className="tabular-nums">{inv.total_incl_vat}</TableCell>
+                        <TableCell className="tabular-nums">{inv.amount_paid}</TableCell>
+                        <TableCell>
+                          <Badge variant={STATUS_VARIANT[inv.status]}>
+                            {t(`invoicesPage.status.${inv.status}`)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {inv.issued_at ? new Date(inv.issued_at).toLocaleDateString() : '—'}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {inv.due_date ? new Date(inv.due_date).toLocaleDateString() : '—'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" onClick={() => setSelected(inv)}>
+                            <Receipt className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <Pager page={listParams.page} pageSize={listParams.pageSize} total={total} onPageChange={listParams.setPage} />
+              </>
+            );
+          })()}
         </CardContent>
       </Card>
 
