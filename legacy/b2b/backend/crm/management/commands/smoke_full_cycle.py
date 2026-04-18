@@ -55,27 +55,37 @@ class Command(BaseCommand):
         def info(msg):
             out.write(f"{tag}    {msg}")
 
-        # ─── Prepare master data ───
-        client_type, _ = CompanyType.objects.get_or_create(code='CLIENT', defaults={'name': 'Client', 'sort_order': 10})
-        supplier_type, _ = CompanyType.objects.get_or_create(code='SUPPLIER', defaults={'name': 'Supplier', 'sort_order': 20})
-        l2_status, _ = VerificationStatus.objects.get_or_create(code='L2_VERIFIED', defaults={'name': 'Verified', 'sort_order': 30})
-        owner_role, _ = WorkspaceRole.objects.get_or_create(code='OWNER', defaults={'name': 'Owner', 'sort_order': 10})
-        sales_mgr_role, _ = SystemRole.objects.get_or_create(
-            code='SALES_MANAGER',
-            defaults={'name': 'Sales Manager', 'sort_order': 10, 'is_staff_level': True},
-        )
-        draft_quote, _ = QuoteStatus.objects.get_or_create(code='DRAFT', defaults={'name': 'Draft', 'sort_order': 10})
-        QuoteStatus.objects.get_or_create(code='SENT', defaults={'name': 'Sent', 'sort_order': 20})
-        QuoteStatus.objects.get_or_create(code='APPROVED', defaults={'name': 'Approved', 'sort_order': 30})
+        # ─── Require lookups from data migration (Rule 1: no hot-path get_or_create) ───
+        def _must(model, code, hint=''):
+            obj = model.objects.filter(code=code).first()
+            if obj is None:
+                raise RuntimeError(
+                    f"Lookup {model.__name__}.code={code!r} missing. "
+                    f"Run `python manage.py migrate` — core.0002_seed_enterprise_lookups "
+                    f"is the single source of truth for business codes."
+                    f"{' · ' + hint if hint else ''}"
+                )
+            return obj
+
+        client_type    = _must(CompanyType, 'CLIENT')
+        supplier_type  = _must(CompanyType, 'SUPPLIER')
+        l2_status      = _must(VerificationStatus, 'L2_VERIFIED')
+        owner_role     = _must(WorkspaceRole, 'OWNER')
+        sales_mgr_role = _must(SystemRole, 'SALES_MANAGER')
+        draft_quote    = _must(QuoteStatus, 'DRAFT')
+        _must(QuoteStatus, 'SENT')
+        _must(QuoteStatus, 'APPROVED')
         for code in ['DRAFT', 'KYC_PENDING', 'RFQ_OPEN', 'SOURCING', 'CALCULATING',
                      'QUOTE_SENT', 'CONTRACT_SIGNED', 'CLOSED_WON', 'CLOSED_LOST']:
-            DealStage.objects.get_or_create(code=code, defaults={'name': code, 'sort_order': 10})
-        usd, _ = Currency.objects.get_or_create(code='USD', defaults={'name': 'US Dollar', 'symbol': '$', 'sort_order': 10})
-        pcs, _ = UnitOfMeasure.objects.get_or_create(code='PCS', defaults={'name': 'Piece', 'sort_order': 10})
+            _must(DealStage, code)
+        # Master Data (Country / Currency / UOM) still uses get_or_create — those are
+        # real reference data, not enterprise lookups owned by the seed migration.
+        usd, _     = Currency.objects.get_or_create(code='USD', defaults={'name': 'US Dollar', 'symbol': '$', 'sort_order': 10})
+        pcs, _     = UnitOfMeasure.objects.get_or_create(code='PCS', defaults={'name': 'Piece', 'sort_order': 10})
         country, _ = Country.objects.get_or_create(code='UZ', defaults={'name': 'Uzbekistan', 'sort_order': 10})
-        published, _ = ProductStatus.objects.get_or_create(code='PUBLISHED', defaults={'name': 'Published', 'sort_order': 20})
-        domain_general, _ = DomainType.objects.get_or_create(code='GENERAL', defaults={'name': 'General', 'sort_order': 10, 'sku_prefix': 'GEN'})
-        stock_in, _ = StockStatus.objects.get_or_create(code='IN_STOCK', defaults={'name': 'In stock', 'sort_order': 10})
+        published      = _must(ProductStatus, 'PUBLISHED')
+        domain_general = _must(DomainType, 'GENERAL')
+        stock_in       = _must(StockStatus, 'IN_STOCK')
 
         step(1, 'Buyer user + company')
         buyer, _ = CustomUser.objects.get_or_create(

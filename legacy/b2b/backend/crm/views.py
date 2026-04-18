@@ -1213,9 +1213,17 @@ class SupplierBidViewSet(viewsets.ModelViewSet):
         ).order_by('-created_at')
         if u.is_superuser or getattr(u, 'is_manager_or_admin', False):
             return qs
-        # Supplier sees only its own bids
-        supplier_ids = u.memberships.filter(is_active=True).values_list('company_id', flat=True)
-        return qs.filter(supplier_id__in=supplier_ids)
+        # B2B visibility:
+        #  * Supplier sees bids its company submitted.
+        #  * Buyer (deal.company member) sees bids placed on their RFQs —
+        #    required so the Buyer can pick a winner from the UI (CRIT-1).
+        user_company_ids = list(
+            u.memberships.filter(is_active=True).values_list('company_id', flat=True),
+        )
+        return qs.filter(
+            Q(supplier_id__in=user_company_ids)
+            | Q(deal__company_id__in=user_company_ids),
+        ).distinct()
 
     @extend_schema(summary="Submit bid for an RFQ", tags=['CRM'],
                    request=inline_serializer('SubmitBid', fields={
@@ -1241,19 +1249,31 @@ class SupplierBidViewSet(viewsets.ModelViewSet):
             return Response({'detail': err}, status=400)
         return Response(SupplierBidSerializer(bid).data, status=201)
 
-    @extend_schema(summary="Accept bid (manager-only)", tags=['CRM'])
-    @action(detail=True, methods=['post'], url_path='accept',
-            permission_classes=[IsAuthenticated, IsManagerOrAdmin])
+    def _can_manage_bid(self, user, bid) -> bool:
+        """Manager/admin OR an active member of the deal's buyer company may manage the bid."""
+        if user.is_superuser or getattr(user, 'is_manager_or_admin', False):
+            return True
+        return user.memberships.filter(
+            is_active=True, company_id=bid.deal.company_id,
+        ).exists()
+
+    @extend_schema(summary="Accept bid", tags=['CRM'])
+    @action(detail=True, methods=['post'], url_path='accept')
     def accept(self, request, pk=None):
+        bid = self.get_object()
+        if not self._can_manage_bid(request.user, bid):
+            return Response({'detail': 'NOT_AUTHORIZED_FOR_BID'}, status=403)
         bid, err = crm_services.accept_supplier_bid(int(pk), request.user)
         if err:
             return Response({'detail': err}, status=400)
         return Response(SupplierBidSerializer(bid).data)
 
     @extend_schema(summary="Reject bid", tags=['CRM'])
-    @action(detail=True, methods=['post'], url_path='reject',
-            permission_classes=[IsAuthenticated, IsManagerOrAdmin])
+    @action(detail=True, methods=['post'], url_path='reject')
     def reject(self, request, pk=None):
+        bid = self.get_object()
+        if not self._can_manage_bid(request.user, bid):
+            return Response({'detail': 'NOT_AUTHORIZED_FOR_BID'}, status=403)
         bid, err = crm_services.reject_supplier_bid(int(pk), request.user, reason=request.data.get('reason', ''))
         if err:
             return Response({'detail': err}, status=400)

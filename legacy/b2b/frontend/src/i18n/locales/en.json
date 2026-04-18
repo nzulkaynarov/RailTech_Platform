@@ -3121,6 +3121,7 @@
     "BID_ACCEPT_NOT_ALLOWED": "Cannot accept a bid in the current status",
     "BID_REJECT_NOT_ALLOWED": "Cannot reject a bid in the current status",
     "NOT_A_SUPPLIER_MEMBER": "You are not a member of this supplier company",
+    "NOT_AUTHORIZED_FOR_BID": "You are not allowed to manage this bid",
     "CLOSED_WON_REQUIRES_SIGNED_CONTRACT": "Closing the deal requires a signed contract",
     "FSM_TRANSITION_NOT_ALLOWED": "Stage transition is not allowed by FSM rules",
     "DEAL_STAGE_NOT_FOUND": "Deal stage not found",

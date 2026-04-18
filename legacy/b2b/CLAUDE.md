@@ -202,6 +202,7 @@ make clean               # remove all containers, volumes, cache (DESTRUCTIVE)
 - NEVER create mock data, static arrays, or fake API responses in production code
 - EVERY endpoint MUST query the real database via Django ORM
 - If test data is needed — use management commands (`core_seed`, `seed_demo`), not hardcode
+- **Seed = data migrations.** Business lookup rows (SystemRole.ADMIN, DealStage.RFQ_OPEN, VerificationStatus.L2_VERIFIED, etc.) are created via `migrations.RunPython` with `get_or_create` and a reverse no-op. `loaddata` fixtures and management commands are **dev/demo-only**, not the source of truth for business codes. After `migrate` on a fresh DB, every code referenced by `services.py` / FSM / permissions MUST already exist. Any `Model.objects.get_or_create(code=...)` in hot paths (views, services, smoke scripts) is a violation — replace with `Model.objects.get(code=...)` that raises a clear error if the migration was not applied.
 
 ### Rule 2: No hardcoded values
 - URLs, keys, secrets, IDs — ONLY from environment variables (.env)
