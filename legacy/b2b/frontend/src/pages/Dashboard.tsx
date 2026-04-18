@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   Package,
   FileText,
@@ -676,21 +677,15 @@ interface DashboardProps {
 export function Dashboard({ onProductClick, onNavigate }: DashboardProps) {
   const { t } = useTranslation();
   const [period, setPeriod] = useState('30d');
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const activeStatus = useUserStore((s) => s.activeStatus);
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    dashboardApi.getStats(period)
-      .then((data) => { if (!cancelled) setStats(data); })
-      .catch((err) => { if (!cancelled) setError(err instanceof Error ? err.message : t('errors.server')); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, [period, t]);
+  const { data, isLoading: loading, error: queryError, refetch } = useQuery({
+    queryKey: ['dashboard-stats', period],
+    queryFn: () => dashboardApi.getStats(period),
+    staleTime: 60_000,
+  });
+  const stats: DashboardStats | null = data ?? null;
+  const error = queryError ? (queryError instanceof Error ? queryError.message : t('errors.server')) : null;
 
   if (loading) {
     return (
@@ -708,7 +703,7 @@ export function Dashboard({ onProductClick, onNavigate }: DashboardProps) {
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
-        <Button variant="outline" onClick={() => setLoading(true)}>
+        <Button variant="outline" onClick={() => refetch()}>
           {t('common.retry')}
         </Button>
       </div>

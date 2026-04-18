@@ -42,6 +42,9 @@ const AdminCatalogPage = lazy(() => import('./pages/AdminCatalogPage'));
 const AdminCategoriesPage = lazy(() => import('./pages/AdminCategoriesPage'));
 const AdminEquipmentGroupsPage = lazy(() => import('./pages/AdminEquipmentGroupsPage'));
 const AdminOffersPage = lazy(() => import('./pages/AdminOffersPage'));
+const AdminCompaniesPage = lazy(() => import('./pages/AdminCompaniesPage'));
+const AdminDealsPage = lazy(() => import('./pages/AdminDealsPage'));
+const AdminMasterDataPage = lazy(() => import('./pages/AdminMasterDataPage'));
 
 import { LoadingSkeleton } from './components/LoadingSkeleton';
 
@@ -71,6 +74,9 @@ type Page =
   | { type: 'admin-categories' }
   | { type: 'admin-equipment-groups' }
   | { type: 'admin-offers' }
+  | { type: 'admin-companies' }
+  | { type: 'admin-deals' }
+  | { type: 'admin-master-data' }
 ;
 
 /** Parse URL path and query params for auth routes */
@@ -128,20 +134,19 @@ function App() {
   const { route, navigate } = useAuthRoute();
   const [profileCompleted, setProfileCompleted] = useState(false);
 
-  // Initialize auth on app startup — validates persisted token
+  // Initialize auth on app startup — validates persisted token and prefetches exchange rate in parallel
   useEffect(() => {
     initAuth();
+    // Fire currency rate load in parallel — doesn't block UI
+    import('./store/currencyStore').then(({ useCurrencyStore }) => {
+      useCurrencyStore.getState().loadRate();
+    });
   }, [initAuth]);
 
   // Sync userStore from authStore when authenticated
   useEffect(() => {
     if (isAuthenticated) {
       loadFromAuth();
-      // Load exchange rate from system settings
-      import('./store/currencyStore').then(({ useCurrencyStore }) => {
-        useCurrencyStore.getState().loadRate();
-      });
-      // Clear auth URL paths after login
       if (window.location.pathname !== '/') {
         window.history.replaceState(null, '', '/');
       }
@@ -198,6 +203,7 @@ function App() {
 const ADMIN_PAGES = new Set([
   'admin-users', 'admin-kyc', 'admin-subscriptions', 'admin-role-apps',
   'admin-catalog', 'admin-categories', 'admin-equipment-groups', 'admin-offers',
+  'admin-companies', 'admin-deals', 'admin-master-data',
 ]);
 const KYC_ALLOWED_PAGES = new Set(['dashboard', 'profile', 'settings', 'help']);
 
@@ -269,6 +275,7 @@ function MainApp() {
       'help', 'my-requests', 'request-detail',
       'admin-users', 'admin-kyc', 'admin-subscriptions', 'admin-role-apps',
       'admin-catalog', 'admin-categories', 'admin-equipment-groups', 'admin-offers',
+      'admin-companies', 'admin-deals', 'admin-master-data',
     ];
     if (validTypes.includes(target)) {
       // Role guard: admin pages require ADMIN role
@@ -398,6 +405,15 @@ function MainApp() {
       break;
     case 'admin-offers':
       content = <AdminOffersPage />;
+      break;
+    case 'admin-companies':
+      content = <AdminCompaniesPage />;
+      break;
+    case 'admin-deals':
+      content = <AdminDealsPage />;
+      break;
+    case 'admin-master-data':
+      content = <AdminMasterDataPage />;
       break;
     default:
       content = <Dashboard onProductClick={handleProductClick} onNavigate={handleNavigate} />;

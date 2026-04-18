@@ -7,7 +7,7 @@ from drf_spectacular.utils import (
     OpenApiParameter, inline_serializer,
 )
 from rest_framework import serializers as drf_serializers
-from .models import Deal, DealStage, Quote, QuoteItem, Message, ActivityLog
+from .models import Deal, DealStage, Quote, QuoteItem, QuoteStatus, Message, ActivityLog
 from .serializers import (
     DealListSerializer, DealDetailSerializer, QuoteSerializer, QuoteItemSerializer,
     MessageSerializer, ActivityLogSerializer, LeadSerializer
@@ -147,6 +147,41 @@ class DealViewSet(viewsets.ModelViewSet):
 
         serializer = DealDetailSerializer(deal)
         return Response(serializer.data)
+
+    @extend_schema(
+        summary="Force change deal stage (admin)",
+        description=(
+            "Transition the deal to ANY stage, bypassing FSM validation. "
+            "Admin/Manager only. Use for emergency fixes."
+        ),
+        request=inline_serializer('ForceChangeStageRequest', fields={
+            'stage_code': drf_serializers.CharField(),
+            'reason': drf_serializers.CharField(required=False, default=''),
+        }),
+        responses={
+            200: DealDetailSerializer,
+            400: OpenApiResponse(description="stage_code is required"),
+            404: OpenApiResponse(description="Stage not found"),
+        },
+        tags=['CRM'],
+    )
+    @action(
+        detail=True, methods=['post'], url_path='force-change-stage',
+        permission_classes=[IsAuthenticated, IsManagerOrAdmin],
+    )
+    def force_change_stage(self, request, pk=None):
+        deal = self.get_object()
+        stage_code = request.data.get('stage_code')
+        reason = request.data.get('reason', '')
+        if not stage_code:
+            return Response({'detail': 'stage_code is required.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        deal, error = transition_deal_stage(
+            deal, stage_code, actor=request.user, reason=reason, validate_fsm=False,
+        )
+        if error:
+            return Response({'detail': error}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(DealDetailSerializer(deal).data)
 
     @extend_schema(
         summary="Export deal PDF",
@@ -840,3 +875,29 @@ class LeadCreateView(APIView):
             )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@extend_schema_view(
+    list=extend_schema(summary="List deal stages", tags=['CRM']),
+)
+class DealStageViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = DealStage.objects.all().order_by('sort_order', 'name')
+    permission_classes = [IsAuthenticated]
+    pagination_class = None
+
+    def list(self, request, *args, **kwargs):
+        data = [{'code': s.code, 'name': s.name} for s in self.get_queryset()]
+        return Response(data)
+
+
+@extend_schema_view(
+    list=extend_schema(summary="List quote statuses", tags=['CRM']),
+)
+class QuoteStatusViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = QuoteStatus.objects.all().order_by('sort_order', 'name')
+    permission_classes = [IsAuthenticated]
+    pagination_class = None
+
+    def list(self, request, *args, **kwargs):
+        data = [{'code': s.code, 'name': s.name} for s in self.get_queryset()]
+        return Response(data)

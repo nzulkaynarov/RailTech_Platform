@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import RegexValidator
 from django.conf import settings
+from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 from master_data.models import AbstractLookup, Country
 from core.storage import (
@@ -241,13 +242,11 @@ class CustomUser(AbstractUser):
             return self.role.is_staff_level
         return False
 
-    @property
+    @cached_property
     def primary_company(self):
-        """Основная компания пользователя (is_primary=True)."""
-        # Use Python filtering to leverage prefetched memberships cache
+        """Основная компания пользователя (is_primary=True). Кэшируется на инстанс."""
         try:
-            memberships = self.memberships.all()
-            for m in memberships:
+            for m in self.memberships.all():
                 if m.is_primary and m.is_active:
                     return m.company
         except AttributeError:

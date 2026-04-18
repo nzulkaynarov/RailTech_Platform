@@ -119,6 +119,48 @@ class UserSerializer(serializers.ModelSerializer):
         return None
 
 
+class MeSerializer(serializers.ModelSerializer):
+    """Lightweight serializer for /accounts/me/ — minimal queries.
+    Skips nested memberships (frontend uses workspace_role instead)."""
+    primary_company = PrimaryCompanyLightSerializer(read_only=True)
+    role_name = serializers.CharField(source='role.name', read_only=True)
+    role_code = serializers.CharField(source='role.code', read_only=True)
+    role_data = serializers.SerializerMethodField()
+    workspace_role = serializers.SerializerMethodField()
+    kyc_status = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CustomUser
+        fields = [
+            'id', 'username', 'email', 'first_name', 'last_name',
+            'phone', 'avatar', 'role', 'role_code', 'role_name',
+            'role_data', 'workspace_role', 'kyc_status',
+            'is_active', 'primary_company',
+            'last_login', 'date_joined',
+        ]
+        read_only_fields = ['id', 'role', 'last_login', 'date_joined']
+
+    def get_role_data(self, obj):
+        if obj.role:
+            return {
+                'code': obj.role.code,
+                'name': obj.role.name,
+                'is_staff_level': obj.role.is_staff_level,
+            }
+        return None
+
+    def get_workspace_role(self, obj):
+        for m in obj.memberships.all():
+            if m.is_primary and m.is_active and m.role:
+                return m.role.code
+        return None
+
+    def get_kyc_status(self, obj):
+        if obj.primary_company and obj.primary_company.verification_status:
+            return obj.primary_company.verification_status.code
+        return None
+
+
 class KYCVerificationSerializer(serializers.Serializer):
     status_code = serializers.CharField(help_text="Code from VerificationStatus (e.g. 'L2_VERIFIED')")
     comment = serializers.CharField(required=False, allow_blank=True)

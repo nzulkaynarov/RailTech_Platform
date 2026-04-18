@@ -1,8 +1,9 @@
-from rest_framework import viewsets, status, views, permissions, exceptions
+from rest_framework import viewsets, status, views, permissions, exceptions, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.generics import RetrieveAPIView
 from rest_framework.parsers import MultiPartParser, FormParser
+from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResponse, inline_serializer
 
 from django.db.models import Prefetch
@@ -12,7 +13,7 @@ from core.permissions import IsAdminUser, IsManagerOrAdmin
 from . import services
 from .models import (
     Company, CompanyMember, CompanyRoleApplication, CustomUser,
-    SupplierSubscription,
+    SupplierSubscription, SystemRole,
 )
 from .services import (
     create_pending_user, verify_and_setup_password,
@@ -74,6 +75,12 @@ class CompanyViewSet(viewsets.ModelViewSet):
     ).order_by('-created_at')
     serializer_class = CompanySerializer
     permission_classes = [permissions.IsAuthenticated, IsManagerOrAdmin]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = {
+        'verification_status__code': ['exact'],
+        'types__code': ['exact'],
+    }
+    search_fields = ['name', 'inn', 'mfo', 'contact_person', 'email']
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -306,9 +313,16 @@ class UserViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path='me',
             permission_classes=[permissions.IsAuthenticated])
     def me(self, request):
-        user = self.get_queryset().filter(pk=request.user.pk).first() or request.user
-        serializer = self.get_serializer(user)
-        return Response(serializer.data)
+        from .serializers import MeSerializer
+        user = CustomUser.objects.select_related('role').prefetch_related(
+            Prefetch(
+                'memberships',
+                queryset=CompanyMember.objects.select_related(
+                    'company__verification_status', 'company__country', 'role',
+                ).prefetch_related('company__types'),
+            ),
+        ).filter(pk=request.user.pk).first() or request.user
+        return Response(MeSerializer(user, context=self.get_serializer_context()).data)
 
     @extend_schema(
         summary="Toggle user active status",
@@ -477,6 +491,21 @@ class MeView(RetrieveAPIView):
 # ──────────────────────────────────────────────────────────────────────────
 # Phase 3: Admin-facing ViewSets (React Admin pages)
 # ──────────────────────────────────────────────────────────────────────────
+
+
+@extend_schema_view(
+    list=extend_schema(summary="List system roles", tags=['Accounts']),
+    retrieve=extend_schema(summary="Get system role", tags=['Accounts']),
+)
+class SystemRoleViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = SystemRole.objects.all().order_by('sort_order', 'name')
+    permission_classes = [permissions.IsAuthenticated, IsAdminUser]
+    pagination_class = None
+
+    def list(self, request, *args, **kwargs):
+        data = [{'code': r.code, 'name': r.name, 'is_staff_level': r.is_staff_level}
+                for r in self.get_queryset()]
+        return Response(data)
 
 
 @extend_schema_view(

@@ -175,7 +175,6 @@ export function AdminCategoriesPage() {
       description={t('adminCategories.description')}
       icon={<Layers className="h-5 w-5" />}
       stats={stats}
-      actions={[{ label: t('adminCategories.new'), onClick: onNew }]}
     >
       <div className="flex">
         <Button onClick={onNew} className="gap-2 ml-auto">

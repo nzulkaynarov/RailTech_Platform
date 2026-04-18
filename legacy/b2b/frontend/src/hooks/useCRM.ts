@@ -49,6 +49,35 @@ export const useCreateDeal = () => {
   });
 };
 
+export const useDealStages = () => useQuery({
+  queryKey: ['deal-stages'],
+  queryFn: crmApi.getDealStages,
+  staleTime: 30 * 60_000,
+});
+
+export const useQuoteStatuses = () => useQuery({
+  queryKey: ['quote-statuses'],
+  queryFn: crmApi.getQuoteStatuses,
+  staleTime: 30 * 60_000,
+});
+
+export const useForceChangeDealStage = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, stage, reason }: { id: number; stage: string; reason?: string }) =>
+      crmApi.forceChangeDealStage(id, stage, reason),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['deals'] }),
+  });
+};
+
+export const useDeleteDeal = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => crmApi.deleteDeal(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['deals'] }),
+  });
+};
+
 export const useUpdateDeal = () => {
   const queryClient = useQueryClient();
   return useMutation({

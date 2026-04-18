@@ -37,6 +37,20 @@ export const useDeleteUser = () => {
   });
 };
 
+export const useSystemRoles = () => useQuery({
+  queryKey: ['system-roles'],
+  queryFn: () => accountsApi.getSystemRoles(),
+  staleTime: 30 * 60_000,
+});
+
+export const useChangeUserRole = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, role }: { id: number; role: string }) => accountsApi.updateUserRole(id, role),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
+  });
+};
+
 export const useToggleUserActive = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -51,6 +65,50 @@ export const useCompanies = (params?: CompanyFilterParams) => useQuery({
   queryKey: ['companies', params],
   queryFn: () => accountsApi.getCompanies(params),
 });
+
+export const useCreateCompany = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Parameters<typeof accountsApi.createCompany>[0]) => accountsApi.createCompany(data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['companies'] }),
+  });
+};
+
+export const useUpdateCompany = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Parameters<typeof accountsApi.updateCompany>[1] }) =>
+      accountsApi.updateCompany(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['companies'] }),
+  });
+};
+
+export const useDeleteCompany = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => accountsApi.deleteCompany(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['companies'] }),
+  });
+};
+
+export const useCompanyTeam = (companyId: number | null) => useQuery({
+  queryKey: ['company-team', companyId],
+  queryFn: () => accountsApi.getTeam(companyId as number),
+  enabled: !!companyId,
+  staleTime: 60_000,
+});
+
+export const useInviteMember = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ companyId, email, role }: { companyId: number; email: string; role: string }) =>
+      accountsApi.inviteUser(companyId, { email, role }),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: ['company-team', variables.companyId] });
+      qc.invalidateQueries({ queryKey: ['users'] });
+    },
+  });
+};
 
 export const useVerifyCompany = () => {
   const queryClient = useQueryClient();
@@ -94,6 +152,31 @@ export const useSuspendSubscription = () => {
   return useMutation({
     mutationFn: (id: number) => accountsApi.suspendSubscription(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['subscriptions'] }); },
+  });
+};
+
+export const useCreateSubscription = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Parameters<typeof accountsApi.createSubscription>[0]) => accountsApi.createSubscription(data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['subscriptions'] }),
+  });
+};
+
+export const useUpdateSubscription = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Parameters<typeof accountsApi.updateSubscription>[1] }) =>
+      accountsApi.updateSubscription(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['subscriptions'] }),
+  });
+};
+
+export const useDeleteSubscription = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => accountsApi.deleteSubscription(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['subscriptions'] }),
   });
 };
 

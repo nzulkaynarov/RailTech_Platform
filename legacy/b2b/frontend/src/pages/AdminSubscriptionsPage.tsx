@@ -1,22 +1,33 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { CreditCard, Play, Pause, Eye, Search } from 'lucide-react';
+import { CreditCard, Play, Pause, Pencil, Trash2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Separator } from '@/components/ui/separator';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Table, TableBody, TableCell, TableHeader, TableRow,
 } from '@/components/ui/table';
+import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/AdminTable';
 import {
-  Sheet, SheetContent, SheetHeader, SheetTitle,
+  Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter,
 } from '@/components/ui/sheet';
-import { useSubscriptions, useActivateSubscription, useSuspendSubscription } from '@/hooks/useAccounts';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  useSubscriptions, useActivateSubscription, useSuspendSubscription,
+  useCreateSubscription, useUpdateSubscription, useDeleteSubscription,
+  useCompanies,
+} from '@/hooks/useAccounts';
+import { useCurrencies } from '@/hooks/useMasterData';
 import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
 import type { Subscription } from '@/api/accountsApi';
 
@@ -40,91 +51,157 @@ const planVariant = (plan: string) => {
 const PLAN_OPTIONS = ['BASIC', 'STANDARD', 'PREMIUM'] as const;
 const STATUS_OPTIONS = ['ACTIVE', 'TRIAL', 'SUSPENDED', 'PAST_DUE', 'CANCELLED'] as const;
 
-/* ─── Detail Sheet ─────────────────────────────────────────────────── */
+/* ─── Form Sheet (create & edit) ───────────────────────────────────── */
 
-function DetailSheet({
-  sub,
-  open,
-  onOpenChange,
+type Draft = Partial<Subscription>;
+
+function FormSheet({
+  sub, open, onOpenChange,
 }: {
   sub: Subscription | null;
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onOpenChange: (o: boolean) => void;
 }) {
   const { t } = useTranslation();
-  if (!sub) return null;
+  const { data: companies } = useCompanies();
+  const { data: currencies } = useCurrencies();
+  const createMut = useCreateSubscription();
+  const updateMut = useUpdateSubscription();
 
-  const rows: { label: string; value: string }[] = [
-    { label: t('admin.subscriptions.detail.monthlyRate'), value: `${sub.monthly_rate} ${sub.currency_code || ''}` },
-    { label: t('admin.subscriptions.detail.validFrom'), value: sub.valid_from || '—' },
-    { label: t('admin.subscriptions.detail.validUntil'), value: sub.valid_until || '—' },
-    { label: t('admin.subscriptions.detail.lastPayment'), value: sub.last_payment_date || '—' },
-    { label: t('admin.subscriptions.detail.nextPayment'), value: sub.next_payment_date || '—' },
-    { label: t('admin.subscriptions.detail.created'), value: sub.created_at ? new Date(sub.created_at).toLocaleDateString() : '—' },
-    { label: t('admin.subscriptions.detail.updated'), value: sub.updated_at ? new Date(sub.updated_at).toLocaleDateString() : '—' },
-  ];
+  const [draft, setDraft] = useState<Draft>(() => sub ?? {
+    plan: 'BASIC', status: 'TRIAL', monthly_rate: '0',
+  });
+
+  useEffect(() => {
+    setDraft(sub ?? { plan: 'BASIC', status: 'TRIAL', monthly_rate: '0' });
+  }, [sub]);
+
+  const busy = createMut.isPending || updateMut.isPending;
+  const isEdit = Boolean(sub?.id);
+  const update = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
+
+  const submit = async () => {
+    if (!draft.company || !draft.plan || !draft.monthly_rate) {
+      toast.error(t('admin.subscriptions.requiredFields'));
+      return;
+    }
+    const payload: Partial<Subscription> = {
+      company: Number(draft.company),
+      plan: draft.plan,
+      status: draft.status,
+      monthly_rate: String(draft.monthly_rate),
+      currency: draft.currency ? Number(draft.currency) : null,
+      valid_from: draft.valid_from || null,
+      valid_until: draft.valid_until || null,
+      notes: draft.notes ?? '',
+    };
+    try {
+      if (isEdit && sub) {
+        await updateMut.mutateAsync({ id: sub.id, data: payload });
+        toast.success(t('admin.subscriptions.updated'));
+      } else {
+        await createMut.mutateAsync(payload);
+        toast.success(t('admin.subscriptions.created'));
+      }
+      onOpenChange(false);
+    } catch {
+      toast.error(t('admin.subscriptions.saveFailed'));
+    }
+  };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="overflow-y-auto sm:max-w-lg">
         <SheetHeader>
-          <SheetTitle>{t('admin.subscriptions.detail.title')}</SheetTitle>
+          <SheetTitle>{isEdit ? t('admin.subscriptions.edit') : t('admin.subscriptions.new')}</SheetTitle>
         </SheetHeader>
 
-        <div className="mt-2 space-y-6 px-4">
-          {/* Company info */}
-          <section className="space-y-2">
-            <h3 className="text-sm font-semibold">{t('admin.subscriptions.detail.companyInfo')}</h3>
-            <div className="rounded-lg border p-3 space-y-1">
-              <p className="text-sm font-medium">{sub.company_name}</p>
-              <p className="text-xs text-muted-foreground">
-                {t('admin.subscriptions.detail.inn')}: {sub.company_inn}
-              </p>
+        <div className="mt-4 space-y-4 px-4">
+          <div className="space-y-2">
+            <Label>{t('admin.subscriptions.fields.company')}</Label>
+            <Select
+              value={draft.company ? String(draft.company) : undefined}
+              onValueChange={(v) => update({ company: Number(v) })}
+              disabled={isEdit}
+            >
+              <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+              <SelectContent>
+                {(companies ?? []).map((c) => (
+                  <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>{t('admin.subscriptions.table.plan')}</Label>
+              <Select value={draft.plan ?? undefined} onValueChange={(v) => update({ plan: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {PLAN_OPTIONS.map((p) => (
+                    <SelectItem key={p} value={p}>{p}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          </section>
-
-          <Separator />
-
-          {/* Plan & Status */}
-          <section className="space-y-3">
-            <h3 className="text-sm font-semibold">{t('admin.subscriptions.detail.planAndStatus')}</h3>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">{t('admin.subscriptions.table.plan')}</span>
-              <Badge variant={planVariant(sub.plan)}>{sub.plan_display}</Badge>
+            <div className="space-y-2">
+              <Label>{t('admin.subscriptions.table.status')}</Label>
+              <Select value={draft.status ?? undefined} onValueChange={(v) => update({ status: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {STATUS_OPTIONS.map((s) => (
+                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">{t('admin.subscriptions.table.status')}</span>
-              <Badge variant={statusVariant(sub.status)}>{sub.status_display}</Badge>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>{t('admin.subscriptions.fields.monthlyRate')}</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={draft.monthly_rate ?? ''}
+                onChange={(e) => update({ monthly_rate: e.target.value })}
+              />
             </div>
-          </section>
-
-          <Separator />
-
-          {/* Billing */}
-          <section className="space-y-3">
-            <h3 className="text-sm font-semibold">{t('admin.subscriptions.detail.billing')}</h3>
-            {rows.map((r) => (
-              <div key={r.label} className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">{r.label}</span>
-                <span className="text-sm tabular-nums">{r.value}</span>
-              </div>
-            ))}
-          </section>
-
-          <Separator />
-
-          {/* Notes */}
-          <section className="space-y-2">
-            <h3 className="text-sm font-semibold">{t('admin.subscriptions.detail.notes')}</h3>
-            {sub.notes ? (
-              <div className="rounded-lg border bg-muted/50 p-3">
-                <p className="text-sm">{sub.notes}</p>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">{t('admin.subscriptions.detail.noNotes')}</p>
-            )}
-          </section>
+            <div className="space-y-2">
+              <Label>{t('admin.subscriptions.fields.currency')}</Label>
+              <Select
+                value={draft.currency ? String(draft.currency) : undefined}
+                onValueChange={(v) => update({ currency: Number(v) })}
+              >
+                <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                <SelectContent>
+                  {(currencies ?? []).map((c) => (
+                    <SelectItem key={c.id} value={String(c.id)}>{c.code}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>{t('admin.subscriptions.fields.validFrom')}</Label>
+              <Input type="date" value={draft.valid_from ?? ''} onChange={(e) => update({ valid_from: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>{t('admin.subscriptions.fields.validUntil')}</Label>
+              <Input type="date" value={draft.valid_until ?? ''} onChange={(e) => update({ valid_until: e.target.value })} />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>{t('admin.subscriptions.fields.notes')}</Label>
+            <Textarea rows={3} value={draft.notes ?? ''} onChange={(e) => update({ notes: e.target.value })} />
+          </div>
         </div>
+
+        <SheetFooter className="mt-6">
+          <Button onClick={submit} disabled={busy} className="w-full">
+            {isEdit ? t('admin.subscriptions.save') : t('admin.subscriptions.create')}
+          </Button>
+        </SheetFooter>
       </SheetContent>
     </Sheet>
   );
@@ -137,23 +214,12 @@ export function AdminSubscriptionsPage() {
   const { data: subscriptions, isLoading } = useSubscriptions();
   const activateMutation = useActivateSubscription();
   const suspendMutation = useSuspendSubscription();
+  const deleteMut = useDeleteSubscription();
 
-  const [search, setSearch] = useState('');
-  const [planFilter, setPlanFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [detailTarget, setDetailTarget] = useState<Subscription | null>(null);
-
-  const filtered = useMemo(() => {
-    if (!subscriptions) return [];
-    return subscriptions.filter((s) => {
-      const matchesSearch = !search ||
-        s.company_name.toLowerCase().includes(search.toLowerCase()) ||
-        s.company_inn.includes(search);
-      const matchesPlan = planFilter === 'all' || s.plan === planFilter;
-      const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
-      return matchesSearch && matchesPlan && matchesStatus;
-    });
-  }, [subscriptions, search, planFilter, statusFilter]);
+  const listParams = useListParams(['plan', 'status'] as const, { defaultOrdering: '-created_at' });
+  const [editTarget, setEditTarget] = useState<Subscription | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Subscription | null>(null);
 
   const handleActivate = async (id: number) => {
     try {
@@ -173,6 +239,20 @@ export function AdminSubscriptionsPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteMut.mutateAsync(deleteTarget.id);
+      toast.success(t('admin.subscriptions.deleted'));
+      setDeleteTarget(null);
+    } catch {
+      toast.error(t('admin.subscriptions.deleteFailed'));
+    }
+  };
+
+  const openNew = () => { setEditTarget(null); setSheetOpen(true); };
+  const openEdit = (s: Subscription) => { setEditTarget(s); setSheetOpen(true); };
+
   const stats = [
     { label: t('admin.subscriptions.stats.total'), value: String(subscriptions?.length ?? '—') },
     { label: t('admin.subscriptions.stats.active'), value: String(subscriptions?.filter(s => s.status === 'ACTIVE').length ?? '—') },
@@ -187,40 +267,29 @@ export function AdminSubscriptionsPage() {
       icon={<CreditCard className="h-5 w-5" />}
       stats={stats}
     >
-      {/* Filters */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder={t('admin.subscriptions.searchPlaceholder')}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <Select value={planFilter} onValueChange={setPlanFilter}>
-          <SelectTrigger className="w-full sm:w-40">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t('admin.subscriptions.allPlans')}</SelectItem>
-            {PLAN_OPTIONS.map((p) => (
-              <SelectItem key={p} value={p}>{p}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full sm:w-40">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t('admin.subscriptions.allStatuses')}</SelectItem>
-            {STATUS_OPTIONS.map((s) => (
-              <SelectItem key={s} value={s}>{s}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <Toolbar
+        searchValue={listParams.searchInput}
+        onSearchChange={listParams.setSearchInput}
+        searchPlaceholder={t('admin.subscriptions.searchPlaceholder')}
+        filters={[
+          {
+            key: 'plan',
+            value: listParams.filters.plan,
+            onChange: (v) => listParams.setFilter('plan', v),
+            allLabel: t('admin.subscriptions.allPlans'),
+            options: PLAN_OPTIONS.map((p) => ({ value: p, label: p })),
+          },
+          {
+            key: 'status',
+            value: listParams.filters.status,
+            onChange: (v) => listParams.setFilter('status', v),
+            allLabel: t('admin.subscriptions.allStatuses'),
+            options: STATUS_OPTIONS.map((s) => ({ value: s, label: s })),
+          },
+        ]}
+        newLabel={t('admin.subscriptions.new')}
+        onNew={openNew}
+      />
 
       <Card>
         <CardContent className="p-0">
@@ -243,7 +312,7 @@ export function AdminSubscriptionsPage() {
                   <TableRow
                     key={sub.id}
                     className="cursor-pointer"
-                    onClick={() => setDetailTarget(sub)}
+                    onClick={() => openEdit(sub)}
                   >
                     <TableCell>
                       <div>
@@ -290,10 +359,18 @@ export function AdminSubscriptionsPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => setDetailTarget(sub)}
-                          title={t('admin.subscriptions.detail.title')}
+                          onClick={() => openEdit(sub)}
+                          title={t('admin.subscriptions.edit')}
                         >
-                          <Eye className="h-3.5 w-3.5" />
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDeleteTarget(sub)}
+                          title={t('admin.subscriptions.delete')}
+                        >
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
                         </Button>
                       </div>
                     </TableCell>
@@ -305,11 +382,28 @@ export function AdminSubscriptionsPage() {
         </CardContent>
       </Card>
 
-      <DetailSheet
-        sub={detailTarget}
-        open={!!detailTarget}
-        onOpenChange={(open) => { if (!open) setDetailTarget(null); }}
+      <FormSheet
+        sub={editTarget}
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
       />
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('admin.subscriptions.confirmDelete')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('admin.subscriptions.confirmDeleteDesc', { name: deleteTarget?.company_name })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('admin.subscriptions.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={deleteMut.isPending}>
+              {t('admin.subscriptions.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PageShell>
   );
 }

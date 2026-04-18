@@ -179,9 +179,12 @@ function getBottomNavigation(role: UserRole, activePage: string, t: TFn): NavIte
   ];
   if (role === 'ADMIN') {
     items.push({ label: t('shell.users'), icon: <Users className="h-4 w-4" />, id: 'admin-users' });
+    items.push({ label: t('shell.companies'), icon: <Store className="h-4 w-4" />, id: 'admin-companies' });
     items.push({ label: t('shell.kyc'), icon: <ShieldCheck className="h-4 w-4" />, id: 'admin-kyc' });
     items.push({ label: t('shell.subscriptions'), icon: <CreditCard className="h-4 w-4" />, id: 'admin-subscriptions' });
     items.push({ label: t('shell.roleApplications'), icon: <ClipboardList className="h-4 w-4" />, id: 'admin-role-apps' });
+    items.push({ label: t('shell.adminDeals'), icon: <Handshake className="h-4 w-4" />, id: 'admin-deals' });
+    items.push({ label: t('shell.masterData'), icon: <Layers className="h-4 w-4" />, id: 'admin-master-data' });
     items.push({
       label: t('shell.adminCatalog'),
       icon: <Package className="h-4 w-4" />,

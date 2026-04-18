@@ -13,11 +13,12 @@ from catalog.views import (
 )
 from crm.views import (
     DealViewSet, QuoteViewSet, QuoteItemViewSet, MessageViewSet,
-    LeadCreateView, CRMAnalyticsView, ActivityLogViewSet, DashboardAnalyticsView
+    LeadCreateView, CRMAnalyticsView, ActivityLogViewSet, DashboardAnalyticsView,
+    DealStageViewSet, QuoteStatusViewSet,
 )
 from accounts.views import (
     CompanyViewSet, UserViewSet, RegisterView, SetupPasswordView, SubmitProfileView, MeView,
-    SupplierSubscriptionViewSet, CompanyRoleApplicationViewSet,
+    SupplierSubscriptionViewSet, CompanyRoleApplicationViewSet, SystemRoleViewSet,
 )
 from notifications.views import NotificationViewSet
 from master_data.views import (
@@ -43,11 +44,14 @@ router.register(r'crm/quotes', QuoteViewSet, basename='quote')
 router.register(r'crm/quote-items', QuoteItemViewSet, basename='quoteitem')
 router.register(r'crm/messages', MessageViewSet, basename='message')
 router.register(r'crm/activity-logs', ActivityLogViewSet, basename='activitylog')
+router.register(r'crm/deal-stages', DealStageViewSet, basename='dealstage')
+router.register(r'crm/quote-statuses', QuoteStatusViewSet, basename='quotestatus')
 
 router.register(r'accounts/companies', CompanyViewSet)
 router.register(r'accounts/users', UserViewSet)
 router.register(r'accounts/subscriptions', SupplierSubscriptionViewSet, basename='subscription')
 router.register(r'accounts/role-applications', CompanyRoleApplicationViewSet, basename='roleapplication')
+router.register(r'accounts/system-roles', SystemRoleViewSet, basename='systemrole')
 router.register(r'notifications', NotificationViewSet, basename='notification')
 
 # Master Data

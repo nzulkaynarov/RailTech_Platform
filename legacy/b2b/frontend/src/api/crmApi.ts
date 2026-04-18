@@ -138,6 +138,24 @@ export const crmApi = {
 		const response = await apiClient.post<Deal>(`crm/deals/${dealId}/change-stage/`, { stage_code: stageCode });
 		return response.data;
 	},
+	forceChangeDealStage: async (dealId: number, stageCode: string, reason?: string) => {
+		const response = await apiClient.post<Deal>(
+			`crm/deals/${dealId}/force-change-stage/`,
+			{ stage_code: stageCode, reason: reason || '' },
+		);
+		return response.data;
+	},
+	deleteDeal: async (id: number) => {
+		await apiClient.delete(`crm/deals/${id}/`);
+	},
+	getDealStages: async () => {
+		const response = await apiClient.get<{ code: string; name: string }[]>('crm/deal-stages/');
+		return response.data;
+	},
+	getQuoteStatuses: async () => {
+		const response = await apiClient.get<{ code: string; name: string }[]>('crm/quote-statuses/');
+		return response.data;
+	},
 	getQuoteItems: async (params?: { deal_id?: number, product_is_null?: boolean }) => {
 		let url = 'crm/quote-items/';
 		if (params) {

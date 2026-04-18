@@ -1,0 +1,148 @@
+<mxfile host="app.diagrams.net" modified="2026-04-18T00:00:00.000Z" agent="RailTech-SJM" version="24.0.0">
+  <diagram name="seller" id="seller">
+    <mxGraphModel dx="2000" dy="1200" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="2400" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="SELLER / Поставщик (CompanyType=SUPPLIER) — End-to-End" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="40" y="10" width="1400" height="40" as="geometry" /></mxCell>
+        <mxCell id="legend_title" value="LEGEND" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;;fontSize=12" vertex="1" parent="1"><mxGeometry x="1460" y="10" width="180" height="22" as="geometry" /></mxCell>
+        <mxCell id="legend_0" value="Start / Terminal" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontSize=12;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="1460" y="38" width="180" height="36" as="geometry" /></mxCell>
+        <mxCell id="legend_1" value="Happy path step" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1"><mxGeometry x="1460" y="80" width="180" height="36" as="geometry" /></mxCell>
+        <mxCell id="legend_2" value="Decision / gate" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1"><mxGeometry x="1460" y="122" width="180" height="36" as="geometry" /></mxCell>
+        <mxCell id="legend_3" value="Bottleneck (delay)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="1460" y="164" width="180" height="36" as="geometry" /></mxCell>
+        <mxCell id="legend_4" value="Dead-end / missing" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="1460" y="206" width="180" height="36" as="geometry" /></mxCell>
+        <mxCell id="legend_5" value="Admin action" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1"><mxGeometry x="1460" y="248" width="180" height="36" as="geometry" /></mxCell>
+        <mxCell id="legend_6" value="External system" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fontStyle=2;" vertex="1" parent="1"><mxGeometry x="1460" y="290" width="180" height="36" as="geometry" /></mxCell>
+        <mxCell id="s_start" value="Старт
+Регистрация идентична
+BUYER (type=CLIENT)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontSize=12;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="60" y="80" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="s_kyc" value="Прохождение базового KYC
+PROFILE_SUBMITTED → L2_VERIFIED
+(см. buyer.drawio)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1"><mxGeometry x="60" y="180" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="s_apply" value="Подать заявку
+CompanyRoleApplication
+(requested_type=SUPPLIER,
+contract_file + nda_file)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1"><mxGeometry x="60" y="280" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="s_files_de" value="⚠ DEAD-END:
+SUPPLIER: contract + NDA обязательны
+(accounts/services.py:260)
+Без файлов approve невозможен —
+статус DOCUMENTS_REQUIRED" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="340" y="280" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="s_wait" value="⏳ BOTTLENECK:
+Ожидание approve —
+только @superuser_only_action
+в Django Unfold
+(accounts/admin.py:294)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="340" y="380" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="s_ui_de" value="⚠ DEAD-END:
+Frontend AdminRoleApplicationsPage.tsx
+существует, но REST-endpoint
+approve/reject отсутствует —
+в React Admin эту заявку
+не закрыть" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="620" y="380" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="s_admin" value="Admin (Unfold):
+approve_application →
+approve_role_application()
+company.types.add(SUPPLIER)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1"><mxGeometry x="60" y="380" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="s_sub" value="SupplierSubscription
+(plan, monthly_rate, valid_until)
+— информационно" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1"><mxGeometry x="60" y="480" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="s_sub_de" value="⚠ DEAD-END:
+Subscription.is_active НЕ ПРОВЕРЯЕТСЯ
+ни в одной бизнес-логике.
+Фичи доступны без оплаты.
+CLAUDE.md:294 «no payments»" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="340" y="480" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="s_login" value="Login → AppShell
+activeStatus=SELLER
+(userStore.loadFromAuth)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1"><mxGeometry x="60" y="580" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="s_nav" value="Sidebar SELLER:
+Dashboard, Каталог, Sourcing, CRM" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1"><mxGeometry x="60" y="680" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="s_cat" value="Catalog → Nomenclature
+Создать Category,
+EquipmentGroup, Product" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1"><mxGeometry x="60" y="780" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="s_rail" value="⏳ Валидация:
+RAILWAY_MACHINERY требует
+≥1 equipment_group
+(catalog/models.py:309)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="340" y="780" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="s_prod" value="POST /catalog/products/
+Product.status=DRAFT
+(+ images, documents, specs)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1"><mxGeometry x="60" y="880" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="s_pub_de" value="⚠ DEAD-END:
+Продукт может остаться в DRAFT.
+publish_products() — только
+@admin.action в Unfold
+(catalog/admin.py:193).
+Нет «Submit for review» UX." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="340" y="880" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="s_offer" value="SupplierOffer
+(product, base_price, currency,
+delivery_basis, valid_from/until,
+min_order_qty)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1"><mxGeometry x="60" y="980" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="s_offer_de" value="⚠ DEAD-END:
+Оферы ПУБЛИКУЮТСЯ СРАЗУ.
+Нет модерации / review queue.
+Supplier может обнулить
+старый оффер soft-delete only." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="340" y="980" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="s_xls" value="Sourcing → Excel Import
+POST /sourcing/import-catalog/
+Celery process_catalog_import" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1"><mxGeometry x="60" y="1080" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="s_xls_de" value="⚠ DEAD-END:
+Глобальный catalog import —
+без привязки к supplier/company.
+Перезапись product SKU
+конфликтует между поставщиками." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="340" y="1080" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="s_rfq" value="Sourcing → Requests
+посмотреть активные
+запросы покупателей" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1"><mxGeometry x="60" y="1180" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="s_rfq_de" value="⚠ DEAD-END:
+В коде нет явного механизма
+маршрутизации RFQ к supplier —
+Quote создаёт только Manager.
+Seller пассивен." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="340" y="1180" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="s_crm" value="CRM → Deals / Quotes
+фильтр по supplier=self
+(ownership via SupplierOffer)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1"><mxGeometry x="60" y="1280" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="s_crm_de" value="⚠ DEAD-END:
+Seller не может САМ создать Quote.
+Только Manager (IsManagerOrAdmin).
+Реактивная роль, нет bid-flow." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="340" y="1280" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="s_notif" value="🔔 WebSocket notifications:
+new deal / approved / rejected
+(notifications/services.py)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1"><mxGeometry x="60" y="1380" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="s_track" value="Analytics (только если ADMIN)
+sales trends, top products" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1"><mxGeometry x="60" y="1480" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="s_term" value="Roll-up в сделку BUYER
+(стадии идут на стороне Manager)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8e8e8;strokeColor=#666666;fontSize=12;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="60" y="1580" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="note_0" value="КРИТИЧЕСКИЕ ТУПИКИ SELLER:
+• Нет REST-endpoint для approve/reject CompanyRoleApplication — всё руками в Unfold.
+• Subscription не гейтит фичи — поставщик работает без оплаты.
+• Поставщик ПАССИВЕН: не может сам котировать RFQ, Quote создаёт только Manager.
+• Оферы публикуются без модерации — нет контроля качества цен.
+• Catalog-import не разделяет namespace по supplier&#x27;ам — конфликт SKU." style="text;html=1;strokeColor=#d6b656;fillColor=#ffffc0;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="1"><mxGeometry x="60" y="1640" width="900" height="120" as="geometry" /></mxCell>
+        <mxCell id="e_0" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="s_start" target="s_kyc"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_1" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="s_kyc" target="s_apply"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_2" value="no files" style="endArrow=classic;html=1;rounded=0;strokeColor=#b85450;dashed=1;fontSize=10;" edge="1" parent="1" source="s_apply" target="s_files_de"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_3" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="s_apply" target="s_wait"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_4" value="no REST" style="endArrow=classic;html=1;rounded=0;strokeColor=#b85450;dashed=1;fontSize=10;" edge="1" parent="1" source="s_wait" target="s_ui_de"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_5" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="s_wait" target="s_admin"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_6" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="s_admin" target="s_sub"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_7" value="unused" style="endArrow=classic;html=1;rounded=0;strokeColor=#b85450;dashed=1;fontSize=10;" edge="1" parent="1" source="s_sub" target="s_sub_de"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_8" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="s_sub" target="s_login"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_9" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="s_login" target="s_nav"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_10" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="s_nav" target="s_cat"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_11" value="railway" style="endArrow=classic;html=1;rounded=0;strokeColor=#b85450;dashed=1;fontSize=10;" edge="1" parent="1" source="s_cat" target="s_rail"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_12" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="s_cat" target="s_prod"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_13" value="no flow" style="endArrow=classic;html=1;rounded=0;strokeColor=#b85450;dashed=1;fontSize=10;" edge="1" parent="1" source="s_prod" target="s_pub_de"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_14" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="s_prod" target="s_offer"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_15" value="no moderation" style="endArrow=classic;html=1;rounded=0;strokeColor=#b85450;dashed=1;fontSize=10;" edge="1" parent="1" source="s_offer" target="s_offer_de"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_16" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="s_offer" target="s_xls"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_17" value="SKU conflict" style="endArrow=classic;html=1;rounded=0;strokeColor=#b85450;dashed=1;fontSize=10;" edge="1" parent="1" source="s_xls" target="s_xls_de"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_18" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="s_xls" target="s_rfq"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_19" value="no routing" style="endArrow=classic;html=1;rounded=0;strokeColor=#b85450;dashed=1;fontSize=10;" edge="1" parent="1" source="s_rfq" target="s_rfq_de"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_20" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="s_rfq" target="s_crm"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_21" value="no bid" style="endArrow=classic;html=1;rounded=0;strokeColor=#b85450;dashed=1;fontSize=10;" edge="1" parent="1" source="s_crm" target="s_crm_de"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_22" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="s_crm" target="s_notif"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_23" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="s_notif" target="s_track"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_24" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="s_track" target="s_term"><mxGeometry relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

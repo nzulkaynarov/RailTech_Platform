@@ -1,0 +1,171 @@
+<mxfile host="app.diagrams.net" modified="2026-04-18T00:00:00.000Z" agent="RailTech-SJM" version="24.0.0">
+  <diagram name="manager" id="manager">
+    <mxGraphModel dx="2000" dy="1200" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="2400" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="MANAGER / Sales &amp; Account Manager (SystemRole) — End-to-End Business Process" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="40" y="10" width="1400" height="40" as="geometry" /></mxCell>
+        <mxCell id="legend_title" value="LEGEND" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;;fontSize=12" vertex="1" parent="1"><mxGeometry x="1460" y="10" width="180" height="22" as="geometry" /></mxCell>
+        <mxCell id="legend_0" value="Start / Terminal" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontSize=12;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="1460" y="38" width="180" height="36" as="geometry" /></mxCell>
+        <mxCell id="legend_1" value="Happy path step" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1"><mxGeometry x="1460" y="80" width="180" height="36" as="geometry" /></mxCell>
+        <mxCell id="legend_2" value="Decision / gate" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1"><mxGeometry x="1460" y="122" width="180" height="36" as="geometry" /></mxCell>
+        <mxCell id="legend_3" value="Bottleneck (delay)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="1460" y="164" width="180" height="36" as="geometry" /></mxCell>
+        <mxCell id="legend_4" value="Dead-end / missing" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="1460" y="206" width="180" height="36" as="geometry" /></mxCell>
+        <mxCell id="legend_5" value="Admin action" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1"><mxGeometry x="1460" y="248" width="180" height="36" as="geometry" /></mxCell>
+        <mxCell id="legend_6" value="External system" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fontStyle=2;" vertex="1" parent="1"><mxGeometry x="1460" y="290" width="180" height="36" as="geometry" /></mxCell>
+        <mxCell id="mg_start" value="Старт
+MENEDŽER создан ВРУЧНУЮ
+(нет self-service регистрации)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontSize=12;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="60" y="80" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="mg_create_de" value="⚠ BOTTLENECK:
+Manager создаётся ТОЛЬКО
+через Django Unfold или
+init_superadmin (.env).
+Нет React Admin UI
+«Добавить менеджера»." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="340" y="80" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="mg_assign" value="Admin в Unfold:
+UserAdmin.make_staff →
+assign_sales_manager_role()
+role=SALES_MANAGER или
+ACCOUNT_MANAGER" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1"><mxGeometry x="60" y="180" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="mg_login" value="Login → AppShell
+is_manager_or_admin=True
+role=MANAGER / ADMIN" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1"><mxGeometry x="60" y="280" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="mg_nav" value="Sidebar: Deals, Quotes,
+Clients, Sourcing,
+Analytics (full access)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1"><mxGeometry x="60" y="380" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="mg_lead" value="Landing page →
+Lead model создана
+(name, company, phone, email)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1"><mxGeometry x="-220" y="480" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="mg_lead_de" value="⚠ DEAD-END:
+Lead → Deal НЕ АВТОМАТИЧЕСКИ.
+В коде нет convert_lead_to_deal().
+Mark processed = только в Unfold
+(crm/admin.py:198)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="60" y="480" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="mg_manualnew" value="Manager вручную создаёт Deal
+POST /crm/deals/
+client = select user" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1"><mxGeometry x="340" y="480" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="mg_draft" value="Deal(stage=DRAFT)
+assigned_manager = self" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1"><mxGeometry x="60" y="580" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="mg_kycchk" value="Проверить KYC клиента?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1"><mxGeometry x="60" y="680" width="200" height="80" as="geometry" /></mxCell>
+        <mxCell id="mg_kyctrans" value="DRAFT → KYC_PENDING
+transition_deal_stage()" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1"><mxGeometry x="-220" y="780" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="mg_kycwait" value="⏳ BOTTLENECK:
+Ждём KYC клиента —
+нет SLA / auto-reminder" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="-220" y="880" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="mg_src" value="(KYC ok) → SOURCING
+transition_deal_stage(SOURCING)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1"><mxGeometry x="340" y="780" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="mg_import" value="Sourcing → Excel Import
+POST /sourcing/import-deal/{id}
+Celery process_excel_import" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1"><mxGeometry x="60" y="980" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="mg_celery" value="Celery worker:
+route_domain + smart_match
+bulk_create(QuoteItem)
++ recalculate_totals" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fontStyle=2;" vertex="1" parent="1"><mxGeometry x="60" y="1080" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="mg_lim" value="⏳ BOTTLENECK:
+max 5000 rows, 600s timeout
+больше — падает" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="340" y="1080" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="mg_match_de" value="⚠ DEAD-END:
+Smart Match threshold 0.3 —
+ложные срабатывания.
+Manager матчит вручную
+(нет UI для re-match)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="-220" y="1080" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="mg_calc1" value="SOURCING → CALCULATING
+transition_deal_stage()" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1"><mxGeometry x="60" y="1180" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="mg_edit" value="Редактирование QuoteItem:
+frozen_base_price,
+logistics_cost, customs_duty,
+margin_percent, vat_rate" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1"><mxGeometry x="60" y="1280" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="mg_hist" value="QuoteItemHistory
+(audit trail на каждое
+изменение field)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fontStyle=2;" vertex="1" parent="1"><mxGeometry x="340" y="1280" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="mg_recalc" value="recalculate_quote()
+subtotal_excl_vat,
+vat_amount,
+total_incl_vat" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fontStyle=2;" vertex="1" parent="1"><mxGeometry x="60" y="1380" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="mg_pdf" value="generate_pdf(quote_id)
+WeasyPrint → private MinIO" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fontStyle=2;" vertex="1" parent="1"><mxGeometry x="60" y="1480" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="mg_pdf_de" value="⚠ DEAD-END:
+НЕТ шаблона контракта —
+Только quote PDF.
+Шаблонизатор invoice/act отсутствует." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="340" y="1480" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="mg_send" value="send_to_client(quote_id)
+status=SENT
+frozen_at=now()
+Deal → QUOTE_SENT
++ Notification client" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1"><mxGeometry x="60" y="1580" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="mg_wait_cl" value="⏳ BOTTLENECK:
+Ждём клиента —
+нет auto-reminder,
+valid_until не enforced" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="60" y="1680" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="mg_dec2" value="Реакция клиента?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1"><mxGeometry x="60" y="1780" width="200" height="80" as="geometry" /></mxCell>
+        <mxCell id="mg_appr" value="client approve_quote()
+Deal → CONTRACT_SIGNED" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1"><mxGeometry x="-220" y="1880" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="mg_rej" value="client reject_quote(reason)
+Deal → CALCULATING
+loop: edit → recalc → send" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1"><mxGeometry x="340" y="1880" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="mg_noresp" value="⚠ DEAD-END:
+Нет ответа — нет авто-эскалации.
+Manager должен помнить сам." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="620" y="1880" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="mg_won" value="Manager: transition_deal_stage
+CONTRACT_SIGNED → CLOSED_WON
+(mark_closed_lost only in Unfold)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1"><mxGeometry x="60" y="1980" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="mg_term" value="CLOSED_WON — terminal
+(no reopen, ALLOWED_STAGE_TRANSITIONS=[])" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8e8e8;strokeColor=#666666;fontSize=12;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="60" y="2080" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="mg_no_wf" value="⚠ DEAD-END:
+НЕТ post-sale workflow:
+— инвойс, акт, счёт-фактура
+— доставка / fulfillment
+— payment reconciliation
+— ретроспектива" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="340" y="2080" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="mg_msg" value="CRM Messages
+(чат внутри сделки)
+CRUD, archive_selected (Unfold)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1"><mxGeometry x="-220" y="2080" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="mg_activity" value="ActivityLog
+(audit каждого действия —
+transition_deal_stage пишет сам)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fontStyle=2;" vertex="1" parent="1"><mxGeometry x="620" y="2080" width="240" height="70" as="geometry" /></mxCell>
+        <mxCell id="note_0" value="КРИТИЧЕСКИЕ ТУПИКИ MANAGER:
+• Сам menedžer не зарегистрируется — нужно Unfold или init_superadmin.
+• Lead → Deal не автоматизировано — окно потерь клиентов.
+• Smart Match с threshold 0.3 даёт FP; нет UI для ручного re-match.
+• Нет шаблонизатора контракта / инвойса — CONTRACT_SIGNED нелегитимен для делопроизводства.
+• Нет SLA, auto-reminder, expiry-task для QUOTE_SENT.
+• Post-sale workflow полностью отсутствует — после CLOSED_WON система «забывает» сделку.
+• mark_closed_lost доступен только из Unfold (массово) — нет кнопки в React." style="text;html=1;strokeColor=#d6b656;fillColor=#ffffc0;align=left;verticalAlign=top;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="1"><mxGeometry x="60" y="2280" width="1000" height="130" as="geometry" /></mxCell>
+        <mxCell id="e_0" value="no self-signup" style="endArrow=classic;html=1;rounded=0;strokeColor=#b85450;dashed=1;fontSize=10;" edge="1" parent="1" source="mg_start" target="mg_create_de"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_1" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="mg_start" target="mg_assign"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_2" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="mg_assign" target="mg_login"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_3" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="mg_login" target="mg_nav"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_4" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="mg_nav" target="mg_lead"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_5" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="mg_nav" target="mg_manualnew"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_6" value="no convert" style="endArrow=classic;html=1;rounded=0;strokeColor=#b85450;dashed=1;fontSize=10;" edge="1" parent="1" source="mg_lead" target="mg_lead_de"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_7" value="manually" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="mg_lead" target="mg_manualnew"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_8" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="mg_manualnew" target="mg_draft"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_9" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="mg_draft" target="mg_kycchk"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_10" value="new client" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="mg_kycchk" target="mg_kyctrans"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_11" value="verified" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="mg_kycchk" target="mg_src"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_12" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="mg_kyctrans" target="mg_kycwait"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_13" value="L2_VERIFIED" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="mg_kycwait" target="mg_src"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_14" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="mg_src" target="mg_import"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_15" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="mg_import" target="mg_celery"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_16" value="&gt;5000" style="endArrow=classic;html=1;rounded=0;strokeColor=#b85450;dashed=1;fontSize=10;" edge="1" parent="1" source="mg_celery" target="mg_lim"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_17" value="no hit" style="endArrow=classic;html=1;rounded=0;strokeColor=#b85450;dashed=1;fontSize=10;" edge="1" parent="1" source="mg_celery" target="mg_match_de"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_18" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="mg_celery" target="mg_calc1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_19" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="mg_calc1" target="mg_edit"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_20" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="mg_edit" target="mg_hist"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_21" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="mg_edit" target="mg_recalc"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_22" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="mg_recalc" target="mg_pdf"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_23" value="no contract" style="endArrow=classic;html=1;rounded=0;strokeColor=#b85450;dashed=1;fontSize=10;" edge="1" parent="1" source="mg_pdf" target="mg_pdf_de"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_24" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="mg_pdf" target="mg_send"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_25" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="mg_send" target="mg_wait_cl"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_26" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="mg_wait_cl" target="mg_dec2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_27" value="approve" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="mg_dec2" target="mg_appr"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_28" value="reject" style="endArrow=classic;html=1;rounded=0;strokeColor=#b85450;dashed=1;fontSize=10;" edge="1" parent="1" source="mg_dec2" target="mg_rej"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_29" value="silence" style="endArrow=classic;html=1;rounded=0;strokeColor=#b85450;dashed=1;fontSize=10;" edge="1" parent="1" source="mg_dec2" target="mg_noresp"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_30" value="loop" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="mg_rej" target="mg_edit"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_31" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="mg_appr" target="mg_won"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_32" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#555555;fontSize=10;" edge="1" parent="1" source="mg_won" target="mg_term"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_33" value="missing" style="endArrow=classic;html=1;rounded=0;strokeColor=#b85450;dashed=1;fontSize=10;" edge="1" parent="1" source="mg_term" target="mg_no_wf"><mxGeometry relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

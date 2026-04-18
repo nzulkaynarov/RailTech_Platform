@@ -10,10 +10,17 @@ import App from './App';
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 2,
+      retry: (failureCount, error) => {
+        // Don't retry 4xx client errors (auth, not-found, etc) — they won't succeed
+        const status = (error as { response?: { status?: number } })?.response?.status;
+        if (status && status >= 400 && status < 500) return false;
+        return failureCount < 1;
+      },
       refetchOnWindowFocus: false,
-      staleTime: 60_000,
-      gcTime: 5 * 60_000,
+      refetchOnReconnect: false,
+      refetchOnMount: false,
+      staleTime: 2 * 60_000,
+      gcTime: 10 * 60_000,
     },
   },
 });

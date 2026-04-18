@@ -446,6 +446,28 @@
       "description": "Подписки поставщиков на платформе",
       "activated": "Подписка активирована",
       "suspended": "Подписка приостановлена",
+      "new": "Новая подписка",
+      "edit": "Редактировать подписку",
+      "save": "Сохранить",
+      "create": "Создать",
+      "delete": "Удалить",
+      "cancel": "Отмена",
+      "created": "Подписка создана",
+      "updated": "Подписка обновлена",
+      "deleted": "Подписка удалена",
+      "saveFailed": "Не удалось сохранить",
+      "deleteFailed": "Не удалось удалить",
+      "requiredFields": "Укажите компанию, план и тариф",
+      "confirmDelete": "Удалить подписку?",
+      "confirmDeleteDesc": "Подписка компании «{{name}}» будет удалена.",
+      "fields": {
+        "company": "Компания",
+        "monthlyRate": "Месячный тариф",
+        "currency": "Валюта",
+        "validFrom": "Действует с",
+        "validUntil": "Действует до",
+        "notes": "Заметки"
+      },
       "searchPlaceholder": "Поиск по компании...",
       "allPlans": "Все планы",
       "allStatuses": "Все статусы",
@@ -1088,6 +1110,9 @@
     "kyc": "KYC верификация",
     "subscriptions": "Подписки",
     "roleApplications": "Заявки на роли",
+    "companies": "Компании",
+    "adminDeals": "Сделки (админ)",
+    "masterData": "Справочники",
     "adminCatalog": "Каталог (админ)",
     "adminCatalogProducts": "Товары",
     "adminCatalogCategories": "Категории",
@@ -1631,7 +1656,23 @@
       "appearance": "Внешний вид",
       "business": "Бизнес",
       "company": "Компания",
-      "system": "Система"
+      "system": "Система",
+      "platform": "Платформа"
+    },
+    "platform": {
+      "title": "Системные настройки",
+      "description": "Глобальные параметры платформы (только для администратора)",
+      "vatRate": "Ставка НДС (%)",
+      "standardMargin": "Стандартная маржа (%)",
+      "exchangeRate": "Курс USD→UZS",
+      "platformName": "Название платформы",
+      "maintenance": "Режим обслуживания",
+      "maintenanceDesc": "Временно отключить доступ для не-админов",
+      "twoFactor": "Обязательная 2FA",
+      "twoFactorDesc": "Двухфакторная аутентификация для всех пользователей",
+      "save": "Сохранить",
+      "saved": "Настройки сохранены",
+      "saveFailed": "Не удалось сохранить"
     },
     "general": {
       "title": "Основные настройки",
@@ -2377,19 +2418,42 @@
         "actions": "Действия"
       },
       "searchPlaceholder": "Поиск по имени или email...",
+      "allRoles": "Все роли",
+      "allStatuses": "Все статусы",
       "toggleActive": "Вкл/выкл пользователя",
       "activated": "{{name}} активирован",
       "deactivated": "{{name}} деактивирован",
       "detail": {
         "info": "Контактная информация",
         "access": "Доступ и роли",
+        "editPersonal": "Личные данные",
         "joined": "Дата регистрации",
         "lastLogin": "Последний вход",
         "phone": "Телефон",
         "company": "Компания",
         "noData": "Не указано",
         "noRole": "Роль не назначена"
-      }
+      },
+      "fields": {
+        "email": "Email",
+        "firstName": "Имя",
+        "lastName": "Фамилия",
+        "phone": "Телефон"
+      },
+      "newUser": "Новый пользователь",
+      "create": "Создать",
+      "save": "Сохранить",
+      "delete": "Удалить",
+      "cancel": "Отмена",
+      "saved": "Изменения сохранены",
+      "saveFailed": "Не удалось сохранить",
+      "created": "Пользователь создан",
+      "createFailed": "Не удалось создать",
+      "deleted": "Пользователь удалён",
+      "deleteFailed": "Не удалось удалить",
+      "emailRequired": "Укажите email",
+      "confirmDelete": "Удалить пользователя?",
+      "confirmDeleteDesc": "Пользователь {{email}} будет удалён без возможности восстановления."
     }
   },
   "dealSplit": {
@@ -2416,5 +2480,313 @@
     "removeItem": "Удалить",
     "decreaseQuantity": "Уменьшить количество",
     "increaseQuantity": "Увеличить количество"
+  },
+  "adminTable": {
+    "search": "Поиск…",
+    "new": "Новое",
+    "prev": "Назад",
+    "next": "Далее",
+    "showing": "Показано {{from}}–{{to}} из {{total}}"
+  },
+  "adminMasterData": {
+    "title": "Справочники",
+    "description": "Справочные данные: страны, валюты, единицы измерения, базисы поставки",
+    "new": "Новая запись",
+    "edit": "Редактировать",
+    "empty": "Записей нет",
+    "save": "Сохранить",
+    "create": "Создать",
+    "delete": "Удалить",
+    "cancel": "Отмена",
+    "actions": "Действия",
+    "yes": "Да",
+    "no": "Нет",
+    "created": "Запись создана",
+    "updated": "Запись обновлена",
+    "deleted": "Запись удалена",
+    "saveFailed": "Не удалось сохранить",
+    "deleteFailed": "Не удалось удалить",
+    "requiredFields": "Укажите код и название",
+    "confirmDelete": "Удалить запись?",
+    "confirmDeleteDesc": "Запись «{{code}}» будет удалена.",
+    "tabs": {
+      "countries": "Страны",
+      "currencies": "Валюты",
+      "units": "Единицы измерения",
+      "deliveryBasis": "Базисы поставки"
+    },
+    "fields": {
+      "code": "Код",
+      "name": "Название",
+      "sortOrder": "Порядок",
+      "isActive": "Активно"
+    },
+    "countryFields": {
+      "alpha2": "ISO alpha-2",
+      "vatRate": "Ставка НДС"
+    },
+    "currencyFields": {
+      "symbol": "Символ"
+    },
+    "stats": {
+      "countries": "Страны",
+      "currencies": "Валюты",
+      "units": "Единицы",
+      "deliveryBases": "Базисы"
+    }
+  },
+  "adminDeals": {
+    "title": "Сделки (админ)",
+    "description": "Просмотр, принудительная смена стадии и удаление сделок",
+    "searchPlaceholder": "Поиск по названию или компании",
+    "allStages": "Все стадии",
+    "allCompanies": "Все компании",
+    "empty": "Сделки не найдены",
+    "currentStage": "Текущая стадия",
+    "newStage": "Новая стадия",
+    "forceChangeStage": "Принудительно сменить стадию",
+    "stageChanged": "Стадия обновлена",
+    "stageChangeFailed": "Не удалось сменить стадию",
+    "reason": "Причина",
+    "reasonPlaceholder": "Опишите причину принудительной смены...",
+    "apply": "Применить",
+    "delete": "Удалить",
+    "deleted": "Сделка удалена",
+    "deleteFailed": "Не удалось удалить",
+    "cancel": "Отмена",
+    "confirmDelete": "Удалить сделку?",
+    "confirmDeleteDesc": "Сделка #{{id}} будет удалена без возможности восстановления.",
+    "stats": {
+      "total": "Всего",
+      "open": "Открытых",
+      "won": "Выиграно",
+      "lost": "Проиграно"
+    },
+    "table": {
+      "id": "ID",
+      "title": "Название",
+      "company": "Компания",
+      "stage": "Стадия",
+      "value": "Сумма",
+      "actions": "Действия"
+    }
+  },
+  "adminCompanies": {
+    "title": "Компании",
+    "description": "Реестр компаний, редактирование и управление командой",
+    "new": "Новая компания",
+    "edit": "Редактировать компанию",
+    "allKyc": "Все KYC-статусы",
+    "allTypes": "Все типы",
+    "searchPlaceholder": "Поиск по названию или ИНН",
+    "emptyState": "Компании не найдены",
+    "created": "Компания создана",
+    "updated": "Компания обновлена",
+    "deleted": "Компания удалена",
+    "saveFailed": "Не удалось сохранить",
+    "deleteFailed": "Не удалось удалить",
+    "requiredFields": "Укажите название и ИНН",
+    "save": "Сохранить",
+    "create": "Создать",
+    "delete": "Удалить",
+    "cancel": "Отмена",
+    "invited": "Приглашение отправлено",
+    "inviteFailed": "Не удалось отправить приглашение",
+    "emailRequired": "Укажите email",
+    "confirmDelete": "Удалить компанию?",
+    "confirmDeleteDesc": "Компания «{{name}}» будет удалена со всеми связанными данными.",
+    "tabs": {
+      "registry": "Реквизиты",
+      "members": "Команда"
+    },
+    "fields": {
+      "name": "Название",
+      "inn": "ИНН",
+      "mfo": "МФО",
+      "bankAccount": "Расчётный счёт",
+      "legalAddress": "Юридический адрес",
+      "contactPerson": "Контактное лицо",
+      "contactInfo": "Контакт (телефон)",
+      "email": "Email",
+      "website": "Сайт"
+    },
+    "members": {
+      "inviteEmail": "Email приглашаемого",
+      "role": "Роль",
+      "roleOwner": "Владелец",
+      "roleProcurement": "Закупки",
+      "roleMember": "Участник",
+      "invite": "Пригласить",
+      "current": "Текущая команда",
+      "empty": "Нет участников"
+    },
+    "stats": {
+      "total": "Всего"
+    },
+    "table": {
+      "name": "Название",
+      "inn": "ИНН",
+      "kyc": "KYC",
+      "types": "Роли",
+      "actions": "Действия"
+    }
+  },
+  "adminCatalog": {
+    "title": "Каталог · Товары",
+    "description": "Создание, редактирование и публикация товаров PIM",
+    "newProduct": "Новый товар",
+    "editProduct": "Редактировать товар",
+    "searchPlaceholder": "Поиск по названию, SKU, ГОСТ...",
+    "allDomains": "Все домены",
+    "allStatuses": "Все статусы",
+    "emptyState": "Товары не найдены",
+    "created": "Товар создан",
+    "updated": "Товар обновлён",
+    "deleted": "Товар удалён",
+    "saveFailed": "Не удалось сохранить",
+    "deleteFailed": "Не удалось удалить",
+    "nameRequired": "Укажите название",
+    "save": "Сохранить",
+    "create": "Создать",
+    "delete": "Удалить",
+    "cancel": "Отмена",
+    "confirmDelete": "Удалить товар?",
+    "confirmDeleteDesc": "Товар «{{name}}» будет удалён без возможности восстановления.",
+    "fields": {
+      "name": "Название",
+      "description": "Описание",
+      "domainType": "Домен",
+      "status": "Статус",
+      "category": "Категория",
+      "uom": "Ед. изм.",
+      "manufacturer": "Производитель",
+      "gost": "ГОСТ / Чертёж",
+      "sku": "SKU"
+    },
+    "stats": {
+      "total": "Всего",
+      "published": "Опубликовано",
+      "draft": "Черновики"
+    },
+    "table": {
+      "sku": "SKU",
+      "name": "Название",
+      "domain": "Домен",
+      "status": "Статус",
+      "manufacturer": "Производитель",
+      "actions": "Действия"
+    }
+  },
+  "adminCategories": {
+    "title": "Каталог · Категории",
+    "description": "Иерархические категории товаров",
+    "new": "Новая категория",
+    "edit": "Редактировать категорию",
+    "emptyState": "Категории не найдены",
+    "created": "Категория создана",
+    "updated": "Категория обновлена",
+    "deleted": "Категория удалена",
+    "saveFailed": "Не удалось сохранить",
+    "deleteFailed": "Не удалось удалить",
+    "nameRequired": "Укажите название",
+    "save": "Сохранить",
+    "create": "Создать",
+    "delete": "Удалить",
+    "cancel": "Отмена",
+    "confirmDelete": "Удалить категорию?",
+    "confirmDeleteDesc": "Категория «{{name}}» будет удалена.",
+    "fields": {
+      "name": "Название",
+      "domainType": "Домен",
+      "parent": "Родительская категория",
+      "sortOrder": "Порядок сортировки"
+    },
+    "stats": {
+      "total": "Всего",
+      "roots": "Корневых"
+    },
+    "table": {
+      "name": "Название",
+      "parent": "Родитель",
+      "order": "Порядок",
+      "actions": "Действия"
+    }
+  },
+  "adminEquipmentGroups": {
+    "title": "Каталог · Группы оборудования",
+    "description": "Иерархия типов оборудования (Домен ж/д техники)",
+    "new": "Новая группа",
+    "edit": "Редактировать группу",
+    "emptyState": "Группы не найдены",
+    "created": "Группа создана",
+    "updated": "Группа обновлена",
+    "deleted": "Группа удалена",
+    "saveFailed": "Не удалось сохранить",
+    "deleteFailed": "Не удалось удалить",
+    "nameRequired": "Укажите название",
+    "save": "Сохранить",
+    "create": "Создать",
+    "delete": "Удалить",
+    "cancel": "Отмена",
+    "confirmDelete": "Удалить группу оборудования?",
+    "confirmDeleteDesc": "«{{name}}» и все её дочерние группы будут удалены.",
+    "fields": {
+      "name": "Название",
+      "parent": "Родительская группа",
+      "description": "Описание",
+      "sortOrder": "Порядок сортировки"
+    },
+    "stats": {
+      "total": "Всего",
+      "roots": "Корневых"
+    },
+    "table": {
+      "path": "Путь",
+      "actions": "Действия"
+    }
+  },
+  "adminOffers": {
+    "title": "Каталог · Офферы поставщиков",
+    "description": "Цены, наличие, условия поставки",
+    "new": "Новый оффер",
+    "edit": "Редактировать оффер",
+    "emptyState": "Офферы не найдены",
+    "created": "Оффер создан",
+    "updated": "Оффер обновлён",
+    "deleted": "Оффер удалён",
+    "saveFailed": "Не удалось сохранить",
+    "deleteFailed": "Не удалось удалить",
+    "missingFields": "Заполните товар, поставщика и цену",
+    "save": "Сохранить",
+    "create": "Создать",
+    "delete": "Удалить",
+    "cancel": "Отмена",
+    "yes": "Да",
+    "no": "Нет",
+    "confirmDelete": "Удалить оффер?",
+    "confirmDeleteDesc": "Оффер будет удалён.",
+    "fields": {
+      "product": "Товар",
+      "supplier": "Поставщик",
+      "supplierSku": "Артикул поставщика",
+      "basePrice": "Базовая цена",
+      "currency": "Валюта",
+      "deliveryBasis": "Базис поставки",
+      "stockStatus": "Статус наличия",
+      "leadTime": "Срок поставки",
+      "minQty": "Мин. заказ"
+    },
+    "stats": {
+      "total": "Всего",
+      "active": "Активных"
+    },
+    "table": {
+      "product": "Товар",
+      "supplier": "Поставщик",
+      "price": "Цена",
+      "status": "Наличие",
+      "active": "Активен",
+      "actions": "Действия"
+    }
   }
 }

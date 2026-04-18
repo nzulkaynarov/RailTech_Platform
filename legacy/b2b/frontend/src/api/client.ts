@@ -5,6 +5,7 @@ const API_URL = BASE_ENV_URL.endsWith('/api/v1') ? BASE_ENV_URL : `${BASE_ENV_UR
 
 export const apiClient = axios.create({
 	baseURL: API_URL,
+	timeout: 30_000,
 	headers: {
 		'Content-Type': 'application/json',
 	},

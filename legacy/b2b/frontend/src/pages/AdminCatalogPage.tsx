@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Package, Search, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Package, Pencil, Trash2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,8 +10,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHeader, TableRow } from '@/components/ui/table';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
+import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/AdminTable';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -205,13 +206,13 @@ function ProductFormSheet({
 
 export function AdminCatalogPage() {
   const { t } = useTranslation();
-  const [search, setSearch] = useState('');
-  const [domainFilter, setDomainFilter] = useState<string>('all');
+  const listParams = useListParams(['domain', 'status'] as const, { defaultOrdering: 'name' });
   const { data: products, isLoading } = useProducts({
-    search: search || undefined,
-    domain_type: domainFilter === 'all' ? undefined : domainFilter,
+    search: listParams.search || undefined,
+    domain_type: listParams.filters.domain === 'all' ? undefined : listParams.filters.domain,
   });
   const { data: domainTypes } = useDomainTypes();
+  const { data: statuses } = useProductStatuses();
   const deleteMut = useDeleteProduct();
 
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -256,53 +257,64 @@ export function AdminCatalogPage() {
       description={t('adminCatalog.description')}
       icon={<Package className="h-5 w-5" />}
       stats={stats}
-      actions={[{ label: t('adminCatalog.newProduct'), onClick: onNew }]}
     >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder={t('adminCatalog.searchPlaceholder')}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <Select value={domainFilter} onValueChange={setDomainFilter}>
-          <SelectTrigger className="w-full sm:w-60">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t('adminCatalog.allDomains')}</SelectItem>
-            {(domainTypes ?? []).map((d) => (
-              <SelectItem key={d.id} value={d.code}>{d.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button onClick={onNew} className="gap-2">
-          <Plus className="h-4 w-4" />
-          {t('adminCatalog.newProduct')}
-        </Button>
-      </div>
+      <Toolbar
+        searchValue={listParams.searchInput}
+        onSearchChange={listParams.setSearchInput}
+        searchPlaceholder={t('adminCatalog.searchPlaceholder')}
+        filters={[
+          {
+            key: 'domain',
+            value: listParams.filters.domain,
+            onChange: (v) => listParams.setFilter('domain', v),
+            allLabel: t('adminCatalog.allDomains'),
+            options: (domainTypes ?? []).map((d) => ({ value: d.code, label: d.name })),
+          },
+          {
+            key: 'status',
+            value: listParams.filters.status,
+            onChange: (v) => listParams.setFilter('status', v),
+            allLabel: t('adminCatalog.allStatuses'),
+            options: (statuses ?? []).map((s) => ({ value: s.code, label: s.name })),
+          },
+        ]}
+        newLabel={t('adminCatalog.newProduct')}
+        onNew={onNew}
+      />
 
       <Card>
         <CardContent className="p-0">
-          {isLoading ? <LoadingRows rows={6} /> : !products?.length ? (
-            <EmptyState icon={<Package className="h-5 w-5" />} message={t('adminCatalog.emptyState')} />
-          ) : (
+          {(() => {
+            const { items: pageItems, total } = applyListParams(products ?? [], listParams, {
+              searchFields: () => [],
+              filterPredicates: {
+                status: (p, v) => (p.status_name ?? '') === v || String(p.status ?? '') === v,
+              },
+              sortAccessors: {
+                sku: (p) => p.sku ?? '',
+                name: (p) => p.name ?? '',
+                domain: (p) => p.domain_type_name ?? '',
+                status: (p) => p.status_name ?? '',
+                manufacturer: (p) => p.manufacturer_data?.name ?? '',
+              },
+            });
+            if (isLoading) return <LoadingRows rows={6} />;
+            if (!pageItems.length) return <EmptyState icon={<Package className="h-5 w-5" />} message={t('adminCatalog.emptyState')} />;
+            return (
+            <>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t('adminCatalog.table.sku')}</TableHead>
-                  <TableHead>{t('adminCatalog.table.name')}</TableHead>
-                  <TableHead>{t('adminCatalog.table.domain')}</TableHead>
-                  <TableHead>{t('adminCatalog.table.status')}</TableHead>
-                  <TableHead>{t('adminCatalog.table.manufacturer')}</TableHead>
-                  <TableHead className="text-right">{t('adminCatalog.table.actions')}</TableHead>
+                  <SortableHead sortKey="sku" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('adminCatalog.table.sku')}</SortableHead>
+                  <SortableHead sortKey="name" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('adminCatalog.table.name')}</SortableHead>
+                  <SortableHead sortKey="domain" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('adminCatalog.table.domain')}</SortableHead>
+                  <SortableHead sortKey="status" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('adminCatalog.table.status')}</SortableHead>
+                  <SortableHead sortKey="manufacturer" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('adminCatalog.table.manufacturer')}</SortableHead>
+                  <SortableHead sortKey="" current="" onChange={() => {}} className="text-right">{t('adminCatalog.table.actions')}</SortableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {products.map((p) => (
+                {pageItems.map((p) => (
                   <TableRow key={p.id}>
                     <TableCell className="font-mono text-xs">{p.sku ?? '—'}</TableCell>
                     <TableCell>{p.name}</TableCell>
@@ -323,7 +335,10 @@ export function AdminCatalogPage() {
                 ))}
               </TableBody>
             </Table>
-          )}
+            <Pager page={listParams.page} pageSize={listParams.pageSize} total={total} onPageChange={listParams.setPage} />
+            </>
+            );
+          })()}
         </CardContent>
       </Card>
 

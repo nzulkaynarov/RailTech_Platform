@@ -92,9 +92,16 @@ export const accountsApi = {
 		const response = await apiClient.get<Company>(`accounts/companies/${id}/`);
 		return response.data;
 	},
+	createCompany: async (data: Partial<Company>) => {
+		const response = await apiClient.post<Company>('accounts/companies/', data);
+		return response.data;
+	},
 	updateCompany: async (id: number, data: Partial<Company>) => {
 		const response = await apiClient.patch<Company>(`accounts/companies/${id}/`, data);
 		return response.data;
+	},
+	deleteCompany: async (id: number) => {
+		await apiClient.delete(`accounts/companies/${id}/`);
 	},
 	verifyCompany: async (id: number, statusCode: string, comment?: string) => {
 		const response = await apiClient.post(`accounts/companies/${id}/verify-kyc/`, { status_code: statusCode, comment });
@@ -183,6 +190,23 @@ export const accountsApi = {
 	},
 	suspendSubscription: async (id: number) => {
 		const response = await apiClient.post<Subscription>(`accounts/subscriptions/${id}/suspend/`);
+		return response.data;
+	},
+	createSubscription: async (data: Partial<Subscription>) => {
+		const response = await apiClient.post<Subscription>('accounts/subscriptions/', data);
+		return response.data;
+	},
+	updateSubscription: async (id: number, data: Partial<Subscription>) => {
+		const response = await apiClient.patch<Subscription>(`accounts/subscriptions/${id}/`, data);
+		return response.data;
+	},
+	deleteSubscription: async (id: number) => {
+		await apiClient.delete(`accounts/subscriptions/${id}/`);
+	},
+
+	// ─── System Roles (admin) ──────────────────────────────────────────
+	getSystemRoles: async () => {
+		const response = await apiClient.get<{ code: string; name: string; is_staff_level: boolean }[]>('accounts/system-roles/');
 		return response.data;
 	},
 

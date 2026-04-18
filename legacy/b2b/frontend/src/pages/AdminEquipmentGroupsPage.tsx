@@ -158,7 +158,6 @@ export function AdminEquipmentGroupsPage() {
       description={t('adminEquipmentGroups.description')}
       icon={<Factory className="h-5 w-5" />}
       stats={stats}
-      actions={[{ label: t('adminEquipmentGroups.new'), onClick: onNew }]}
     >
       <div className="flex">
         <Button onClick={onNew} className="gap-2 ml-auto">

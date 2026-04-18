@@ -1,13 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import {
   Globe, Palette, Bell, Database, FileText, Monitor,
-  Factory, Store, Building2,
+  Factory, Store, Building2, ShieldCheck,
 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -15,6 +19,7 @@ import {
 
 import { useUserStore, companyStatusLabels } from '@/store/userStore';
 import { useThemeStore } from '@/store/themeStore';
+import { useSystemSettings, useUpdateSystemSettings } from '@/hooks/useSystemSettings';
 
 function SettingRow({ icon: Icon, title, description, children }: {
   icon: React.ComponentType<{ className?: string }>;
@@ -65,6 +70,7 @@ export function SettingsPage() {
             <TabsTrigger value="business">{t('settings.tabs.business')}</TabsTrigger>
           )}
           {isAdmin && <TabsTrigger value="company">{t('settings.tabs.company')}</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="platform">{t('settings.tabs.platform')}</TabsTrigger>}
         </TabsList>
 
         {/* General */}
@@ -273,6 +279,13 @@ export function SettingsPage() {
           </TabsContent>
         )}
 
+        {/* Platform (Admin only) */}
+        {isAdmin && (
+          <TabsContent value="platform" className="space-y-4">
+            <PlatformSettings />
+          </TabsContent>
+        )}
+
         {/* Company (Admin only) */}
         {isAdmin && (
           <TabsContent value="company" className="space-y-4">
@@ -303,5 +316,102 @@ export function SettingsPage() {
         )}
       </Tabs>
     </div>
+  );
+}
+
+function PlatformSettings() {
+  const { t } = useTranslation();
+  const { data, isLoading } = useSystemSettings();
+  const updateMut = useUpdateSystemSettings();
+
+  const [vatRate, setVatRate] = useState('');
+  const [standardMargin, setStandardMargin] = useState('');
+  const [exchangeRate, setExchangeRate] = useState('');
+  const [platformName, setPlatformName] = useState('');
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [twoFactor, setTwoFactor] = useState(false);
+
+  useEffect(() => {
+    if (data) {
+      setVatRate(data.vat_rate ?? '');
+      setStandardMargin(data.standard_margin ?? '');
+      setExchangeRate(data.exchange_rate_usd_uzs ?? '');
+      setPlatformName(data.platform_name ?? '');
+      setMaintenanceMode(Boolean(data.maintenance_mode));
+      setTwoFactor(Boolean(data.is_two_factor_required));
+    }
+  }, [data]);
+
+  const handleSave = async () => {
+    try {
+      await updateMut.mutateAsync({
+        vat_rate: vatRate,
+        standard_margin: standardMargin,
+        exchange_rate_usd_uzs: exchangeRate,
+        platform_name: platformName,
+        maintenance_mode: maintenanceMode,
+        is_two_factor_required: twoFactor,
+      });
+      toast.success(t('settings.platform.saved'));
+    } catch {
+      toast.error(t('settings.platform.saveFailed'));
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <ShieldCheck className="h-4 w-4" />
+          {t('settings.platform.title')}
+        </CardTitle>
+        <CardDescription>{t('settings.platform.description')}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>{t('settings.platform.vatRate')}</Label>
+                <Input type="number" step="0.01" value={vatRate} onChange={(e) => setVatRate(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>{t('settings.platform.standardMargin')}</Label>
+                <Input type="number" step="0.01" value={standardMargin} onChange={(e) => setStandardMargin(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>{t('settings.platform.exchangeRate')}</Label>
+                <Input type="number" step="0.0001" value={exchangeRate} onChange={(e) => setExchangeRate(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>{t('settings.platform.platformName')}</Label>
+                <Input value={platformName} onChange={(e) => setPlatformName(e.target.value)} />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div>
+                <p className="text-sm font-medium">{t('settings.platform.maintenance')}</p>
+                <p className="text-xs text-muted-foreground">{t('settings.platform.maintenanceDesc')}</p>
+              </div>
+              <Switch checked={maintenanceMode} onCheckedChange={setMaintenanceMode} />
+            </div>
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div>
+                <p className="text-sm font-medium">{t('settings.platform.twoFactor')}</p>
+                <p className="text-xs text-muted-foreground">{t('settings.platform.twoFactorDesc')}</p>
+              </div>
+              <Switch checked={twoFactor} onCheckedChange={setTwoFactor} />
+            </div>
+
+            <Button onClick={handleSave} disabled={updateMut.isPending}>
+              {t('settings.platform.save')}
+            </Button>
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }

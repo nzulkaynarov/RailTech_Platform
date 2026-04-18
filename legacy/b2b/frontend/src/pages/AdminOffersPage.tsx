@@ -60,16 +60,14 @@ function OfferFormSheet({
       base_price: String(draft.base_price),
       currency: draft.currency ? Number(draft.currency) : null,
       delivery_basis: draft.delivery_basis ? Number(draft.delivery_basis) : null,
-      stock_status: (draft.stock_status as unknown as number) || null,
+      stock_status: draft.stock_status ? Number(draft.stock_status) : null,
       delivery_lead_time: draft.delivery_lead_time ?? '',
       min_order_qty: draft.min_order_qty ?? 1,
       is_active: draft.is_active ?? true,
     };
     // product is immutable after create
-    if (!isEdit) {
-      (payload as Draft & { product?: number }).product = Number(
-        (draft as Draft & { product?: number }).product,
-      );
+    if (!isEdit && draft.product) {
+      payload.product = Number(draft.product);
     }
     try {
       if (isEdit && target) {
@@ -97,8 +95,8 @@ function OfferFormSheet({
             <div className="space-y-2">
               <Label>{t('adminOffers.fields.product')}</Label>
               <Select
-                value={(draft as Draft & { product?: number }).product ? String((draft as Draft & { product?: number }).product) : undefined}
-                onValueChange={(v) => update({ ...(draft as Draft), ...({ product: Number(v) } as Draft) } as Draft)}
+                value={draft.product ? String(draft.product) : undefined}
+                onValueChange={(v) => update({ product: Number(v) })}
               >
                 <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
                 <SelectContent>
@@ -171,7 +169,7 @@ function OfferFormSheet({
               <Label>{t('adminOffers.fields.stockStatus')}</Label>
               <Select
                 value={draft.stock_status ? String(draft.stock_status) : undefined}
-                onValueChange={(v) => update({ stock_status: v as unknown as string })}
+                onValueChange={(v) => update({ stock_status: Number(v) })}
               >
                 <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
                 <SelectContent>
@@ -254,7 +252,6 @@ export function AdminOffersPage() {
       description={t('adminOffers.description')}
       icon={<Tags className="h-5 w-5" />}
       stats={stats}
-      actions={[{ label: t('adminOffers.new'), onClick: onNew }]}
     >
       <div className="flex">
         <Button onClick={onNew} className="gap-2 ml-auto">
@@ -283,7 +280,7 @@ export function AdminOffersPage() {
                 {offers.map((o) => (
                   <TableRow key={o.id}>
                     <TableCell className="text-sm">
-                      {productNameById.get((o as SupplierOffer & { product: number }).product) ?? '—'}
+                      {o.product ? productNameById.get(o.product) ?? '—' : '—'}
                     </TableCell>
                     <TableCell className="text-sm">{o.supplier_data?.name ?? '—'}</TableCell>
                     <TableCell className="font-mono text-xs">

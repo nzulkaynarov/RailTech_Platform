@@ -446,6 +446,28 @@
       "description": "Supplier subscriptions on the platform",
       "activated": "Subscription activated",
       "suspended": "Subscription suspended",
+      "new": "New subscription",
+      "edit": "Edit subscription",
+      "save": "Save",
+      "create": "Create",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "created": "Subscription created",
+      "updated": "Subscription updated",
+      "deleted": "Subscription deleted",
+      "saveFailed": "Failed to save",
+      "deleteFailed": "Failed to delete",
+      "requiredFields": "Company, plan and rate are required",
+      "confirmDelete": "Delete subscription?",
+      "confirmDeleteDesc": "Subscription for \"{{name}}\" will be deleted.",
+      "fields": {
+        "company": "Company",
+        "monthlyRate": "Monthly rate",
+        "currency": "Currency",
+        "validFrom": "Valid from",
+        "validUntil": "Valid until",
+        "notes": "Notes"
+      },
       "searchPlaceholder": "Search by company...",
       "allPlans": "All plans",
       "allStatuses": "All statuses",
@@ -1088,6 +1110,9 @@
     "kyc": "KYC verification",
     "subscriptions": "Subscriptions",
     "roleApplications": "Role Applications",
+    "companies": "Companies",
+    "adminDeals": "Deals (admin)",
+    "masterData": "Master data",
     "adminCatalog": "Catalog (admin)",
     "adminCatalogProducts": "Products",
     "adminCatalogCategories": "Categories",
@@ -1466,7 +1491,23 @@
       "appearance": "Appearance",
       "business": "Business",
       "company": "Company",
-      "system": "System"
+      "system": "System",
+      "platform": "Platform"
+    },
+    "platform": {
+      "title": "Platform settings",
+      "description": "Global platform parameters (admin only)",
+      "vatRate": "VAT rate (%)",
+      "standardMargin": "Standard margin (%)",
+      "exchangeRate": "USD→UZS exchange rate",
+      "platformName": "Platform name",
+      "maintenance": "Maintenance mode",
+      "maintenanceDesc": "Temporarily disable access for non-admins",
+      "twoFactor": "Require 2FA",
+      "twoFactorDesc": "Two-factor authentication for all users",
+      "save": "Save",
+      "saved": "Settings saved",
+      "saveFailed": "Failed to save"
     },
     "general": {
       "title": "General Settings",
@@ -2377,19 +2418,42 @@
         "actions": "Actions"
       },
       "searchPlaceholder": "Search by name or email...",
+      "allRoles": "All roles",
+      "allStatuses": "All statuses",
       "toggleActive": "Toggle user active",
       "activated": "{{name}} activated",
       "deactivated": "{{name}} deactivated",
       "detail": {
         "info": "Contact Information",
         "access": "Access & Roles",
+        "editPersonal": "Personal data",
         "joined": "Date joined",
         "lastLogin": "Last login",
         "phone": "Phone",
         "company": "Company",
         "noData": "Not specified",
         "noRole": "No role assigned"
-      }
+      },
+      "fields": {
+        "email": "Email",
+        "firstName": "First name",
+        "lastName": "Last name",
+        "phone": "Phone"
+      },
+      "newUser": "New user",
+      "create": "Create",
+      "save": "Save",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "saved": "Changes saved",
+      "saveFailed": "Failed to save",
+      "created": "User created",
+      "createFailed": "Failed to create",
+      "deleted": "User deleted",
+      "deleteFailed": "Failed to delete",
+      "emailRequired": "Email is required",
+      "confirmDelete": "Delete user?",
+      "confirmDeleteDesc": "User {{email}} will be permanently deleted."
     }
   },
   "dealSplit": {
@@ -2416,5 +2480,313 @@
     "removeItem": "Remove",
     "decreaseQuantity": "Decrease quantity",
     "increaseQuantity": "Increase quantity"
+  },
+  "adminTable": {
+    "search": "Search…",
+    "new": "New",
+    "prev": "Prev",
+    "next": "Next",
+    "showing": "Showing {{from}}–{{to}} of {{total}}"
+  },
+  "adminMasterData": {
+    "title": "Master data",
+    "description": "Reference data: countries, currencies, units of measure, delivery bases",
+    "new": "New entry",
+    "edit": "Edit",
+    "empty": "No entries",
+    "save": "Save",
+    "create": "Create",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "actions": "Actions",
+    "yes": "Yes",
+    "no": "No",
+    "created": "Entry created",
+    "updated": "Entry updated",
+    "deleted": "Entry deleted",
+    "saveFailed": "Failed to save",
+    "deleteFailed": "Failed to delete",
+    "requiredFields": "Code and name are required",
+    "confirmDelete": "Delete entry?",
+    "confirmDeleteDesc": "Entry \"{{code}}\" will be deleted.",
+    "tabs": {
+      "countries": "Countries",
+      "currencies": "Currencies",
+      "units": "Units",
+      "deliveryBasis": "Delivery basis"
+    },
+    "fields": {
+      "code": "Code",
+      "name": "Name",
+      "sortOrder": "Order",
+      "isActive": "Active"
+    },
+    "countryFields": {
+      "alpha2": "ISO alpha-2",
+      "vatRate": "VAT rate"
+    },
+    "currencyFields": {
+      "symbol": "Symbol"
+    },
+    "stats": {
+      "countries": "Countries",
+      "currencies": "Currencies",
+      "units": "Units",
+      "deliveryBases": "Bases"
+    }
+  },
+  "adminDeals": {
+    "title": "Deals (admin)",
+    "description": "View, force stage change and delete deals",
+    "searchPlaceholder": "Search by title or company",
+    "allStages": "All stages",
+    "allCompanies": "All companies",
+    "empty": "No deals found",
+    "currentStage": "Current stage",
+    "newStage": "New stage",
+    "forceChangeStage": "Force change stage",
+    "stageChanged": "Stage updated",
+    "stageChangeFailed": "Failed to change stage",
+    "reason": "Reason",
+    "reasonPlaceholder": "Describe why you're forcing the change...",
+    "apply": "Apply",
+    "delete": "Delete",
+    "deleted": "Deal deleted",
+    "deleteFailed": "Failed to delete",
+    "cancel": "Cancel",
+    "confirmDelete": "Delete deal?",
+    "confirmDeleteDesc": "Deal #{{id}} will be permanently deleted.",
+    "stats": {
+      "total": "Total",
+      "open": "Open",
+      "won": "Won",
+      "lost": "Lost"
+    },
+    "table": {
+      "id": "ID",
+      "title": "Title",
+      "company": "Company",
+      "stage": "Stage",
+      "value": "Value",
+      "actions": "Actions"
+    }
+  },
+  "adminCompanies": {
+    "title": "Companies",
+    "description": "Company registry, details and team management",
+    "new": "New company",
+    "edit": "Edit company",
+    "allKyc": "All KYC statuses",
+    "allTypes": "All types",
+    "searchPlaceholder": "Search by name or INN",
+    "emptyState": "No companies found",
+    "created": "Company created",
+    "updated": "Company updated",
+    "deleted": "Company deleted",
+    "saveFailed": "Failed to save",
+    "deleteFailed": "Failed to delete",
+    "requiredFields": "Name and INN are required",
+    "save": "Save",
+    "create": "Create",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "invited": "Invitation sent",
+    "inviteFailed": "Failed to send invitation",
+    "emailRequired": "Email is required",
+    "confirmDelete": "Delete company?",
+    "confirmDeleteDesc": "Company \"{{name}}\" and all related data will be removed.",
+    "tabs": {
+      "registry": "Registry",
+      "members": "Team"
+    },
+    "fields": {
+      "name": "Name",
+      "inn": "INN",
+      "mfo": "MFO",
+      "bankAccount": "Bank account",
+      "legalAddress": "Legal address",
+      "contactPerson": "Contact person",
+      "contactInfo": "Contact (phone)",
+      "email": "Email",
+      "website": "Website"
+    },
+    "members": {
+      "inviteEmail": "Invitee email",
+      "role": "Role",
+      "roleOwner": "Owner",
+      "roleProcurement": "Procurement",
+      "roleMember": "Member",
+      "invite": "Invite",
+      "current": "Current team",
+      "empty": "No members"
+    },
+    "stats": {
+      "total": "Total"
+    },
+    "table": {
+      "name": "Name",
+      "inn": "INN",
+      "kyc": "KYC",
+      "types": "Types",
+      "actions": "Actions"
+    }
+  },
+  "adminCatalog": {
+    "title": "Catalog · Products",
+    "description": "Create, edit and publish PIM products",
+    "newProduct": "New product",
+    "editProduct": "Edit product",
+    "searchPlaceholder": "Search by name, SKU, GOST...",
+    "allDomains": "All domains",
+    "allStatuses": "All statuses",
+    "emptyState": "No products found",
+    "created": "Product created",
+    "updated": "Product updated",
+    "deleted": "Product deleted",
+    "saveFailed": "Failed to save",
+    "deleteFailed": "Failed to delete",
+    "nameRequired": "Name is required",
+    "save": "Save",
+    "create": "Create",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "confirmDelete": "Delete product?",
+    "confirmDeleteDesc": "Product \"{{name}}\" will be permanently deleted.",
+    "fields": {
+      "name": "Name",
+      "description": "Description",
+      "domainType": "Domain",
+      "status": "Status",
+      "category": "Category",
+      "uom": "UOM",
+      "manufacturer": "Manufacturer",
+      "gost": "GOST / Drawing",
+      "sku": "SKU"
+    },
+    "stats": {
+      "total": "Total",
+      "published": "Published",
+      "draft": "Drafts"
+    },
+    "table": {
+      "sku": "SKU",
+      "name": "Name",
+      "domain": "Domain",
+      "status": "Status",
+      "manufacturer": "Manufacturer",
+      "actions": "Actions"
+    }
+  },
+  "adminCategories": {
+    "title": "Catalog · Categories",
+    "description": "Hierarchical product categories",
+    "new": "New category",
+    "edit": "Edit category",
+    "emptyState": "No categories found",
+    "created": "Category created",
+    "updated": "Category updated",
+    "deleted": "Category deleted",
+    "saveFailed": "Failed to save",
+    "deleteFailed": "Failed to delete",
+    "nameRequired": "Name is required",
+    "save": "Save",
+    "create": "Create",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "confirmDelete": "Delete category?",
+    "confirmDeleteDesc": "Category \"{{name}}\" will be deleted.",
+    "fields": {
+      "name": "Name",
+      "domainType": "Domain",
+      "parent": "Parent category",
+      "sortOrder": "Sort order"
+    },
+    "stats": {
+      "total": "Total",
+      "roots": "Root-level"
+    },
+    "table": {
+      "name": "Name",
+      "parent": "Parent",
+      "order": "Order",
+      "actions": "Actions"
+    }
+  },
+  "adminEquipmentGroups": {
+    "title": "Catalog · Equipment groups",
+    "description": "Hierarchy of equipment types (railway domain)",
+    "new": "New group",
+    "edit": "Edit group",
+    "emptyState": "No groups found",
+    "created": "Group created",
+    "updated": "Group updated",
+    "deleted": "Group deleted",
+    "saveFailed": "Failed to save",
+    "deleteFailed": "Failed to delete",
+    "nameRequired": "Name is required",
+    "save": "Save",
+    "create": "Create",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "confirmDelete": "Delete equipment group?",
+    "confirmDeleteDesc": "\"{{name}}\" and all descendant groups will be deleted.",
+    "fields": {
+      "name": "Name",
+      "parent": "Parent group",
+      "description": "Description",
+      "sortOrder": "Sort order"
+    },
+    "stats": {
+      "total": "Total",
+      "roots": "Root-level"
+    },
+    "table": {
+      "path": "Path",
+      "actions": "Actions"
+    }
+  },
+  "adminOffers": {
+    "title": "Catalog · Supplier offers",
+    "description": "Prices, stock, delivery terms",
+    "new": "New offer",
+    "edit": "Edit offer",
+    "emptyState": "No offers found",
+    "created": "Offer created",
+    "updated": "Offer updated",
+    "deleted": "Offer deleted",
+    "saveFailed": "Failed to save",
+    "deleteFailed": "Failed to delete",
+    "missingFields": "Product, supplier and price are required",
+    "save": "Save",
+    "create": "Create",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "yes": "Yes",
+    "no": "No",
+    "confirmDelete": "Delete offer?",
+    "confirmDeleteDesc": "The offer will be deleted.",
+    "fields": {
+      "product": "Product",
+      "supplier": "Supplier",
+      "supplierSku": "Supplier SKU",
+      "basePrice": "Base price",
+      "currency": "Currency",
+      "deliveryBasis": "Delivery basis",
+      "stockStatus": "Stock status",
+      "leadTime": "Lead time",
+      "minQty": "Min. order"
+    },
+    "stats": {
+      "total": "Total",
+      "active": "Active"
+    },
+    "table": {
+      "product": "Product",
+      "supplier": "Supplier",
+      "price": "Price",
+      "status": "Stock",
+      "active": "Active",
+      "actions": "Actions"
+    }
   }
 }
