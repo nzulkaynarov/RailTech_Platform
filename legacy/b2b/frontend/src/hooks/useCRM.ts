@@ -147,3 +147,41 @@ export const useApproveQuote = () => {
         },
     });
 };
+
+
+export const useLeads = () => useQuery({
+  queryKey: ["leads"],
+  queryFn: crmApi.listLeads,
+});
+
+export const useConvertLead = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ leadId, companyId }: { leadId: number; companyId?: number }) =>
+      crmApi.convertLead(leadId, companyId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["leads"] });
+      qc.invalidateQueries({ queryKey: ["deals"] });
+    },
+  });
+};
+
+export const useMatchCandidates = (quoteItemId: number | null) => useQuery({
+  queryKey: ["match-candidates", quoteItemId],
+  queryFn: () => crmApi.matchCandidates(quoteItemId as number),
+  enabled: !!quoteItemId,
+  staleTime: 0,
+});
+
+export const useReassignProduct = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ quoteItemId, productId }: { quoteItemId: number; productId: number | null }) =>
+      crmApi.reassignProduct(quoteItemId, productId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["quote-items"] });
+      qc.invalidateQueries({ queryKey: ["quotes"] });
+      qc.invalidateQueries({ queryKey: ["deals"] });
+    },
+  });
+};

@@ -103,11 +103,14 @@ export interface ActivityLog {
 }
 
 export interface Lead {
+	id?: number;
 	name: string;
 	company?: string;
 	phone: string;
 	email: string;
 	message?: string;
+	is_processed?: boolean;
+	created_at?: string;
 }
 
 export const crmApi = {
@@ -308,13 +311,3 @@ export const crmApi = {
 	},
 };
 
-export interface Lead {
-	id: number;
-	name: string;
-	company: string;
-	phone: string;
-	email: string;
-	message: string;
-	is_processed: boolean;
-	created_at: string;
-}

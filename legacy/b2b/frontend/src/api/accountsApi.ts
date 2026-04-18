@@ -192,6 +192,13 @@ export const accountsApi = {
 		const response = await apiClient.post<Subscription>(`accounts/subscriptions/${id}/suspend/`);
 		return response.data;
 	},
+	paySubscription: async (id: number, amount: string, months = 1) => {
+		const response = await apiClient.post<Subscription>(
+			`accounts/subscriptions/${id}/pay/`,
+			{ amount, months },
+		);
+		return response.data;
+	},
 	createSubscription: async (data: Partial<Subscription>) => {
 		const response = await apiClient.post<Subscription>('accounts/subscriptions/', data);
 		return response.data;

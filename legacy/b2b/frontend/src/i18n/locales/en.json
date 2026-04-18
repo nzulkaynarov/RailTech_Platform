@@ -1119,6 +1119,15 @@
     "adminCatalogCategories": "Categories",
     "adminCatalogGroups": "Equipment groups",
     "adminCatalogOffers": "Supplier offers",
+    "contracts": "Contracts",
+    "invoices": "Invoices",
+    "payments": "Payments",
+    "acts": "Acts",
+    "fulfillments": "Fulfillment",
+    "supplierBids": "Supplier bids",
+    "rfq": "RFQ",
+    "leads": "Leads",
+    "billing": "Billing",
     "integrations": "Integrations",
     "help": "Help",
     "b2bPlatform": "B2B Platform",
@@ -2798,5 +2807,250 @@
       "active": "Active",
       "actions": "Actions"
     }
+  },
+  "contractsPage": {
+    "title": "Contracts",
+    "description": "Agreements between client and RailTech, two-party signed",
+    "new": "New contract",
+    "searchPlaceholder": "Search by number or deal",
+    "emptyState": "No contracts found",
+    "generatedFromQuote": "Contract created from quote",
+    "signedClient": "Signed by client",
+    "signedManager": "Signed by manager",
+    "uploadedSigned": "Signed copy uploaded",
+    "cancelled": "Contract cancelled",
+    "downloadPdf": "Download PDF",
+    "uploadSigned": "Upload signed copy",
+    "signClient": "Sign as client",
+    "signManager": "Sign as RailTech",
+    "cancel": "Cancel contract",
+    "confirmCancel": "Confirm cancel",
+    "cancelReason": "Reason",
+    "allStatuses": "All statuses",
+    "stats": {
+      "total": "Total",
+      "pending": "Awaiting signature",
+      "signed": "Signed"
+    },
+    "table": {
+      "number": "Number",
+      "deal": "Deal",
+      "total": "Total",
+      "status": "Status",
+      "created": "Created",
+      "actions": "Actions"
+    },
+    "status": {
+      "DRAFT": "Draft",
+      "PENDING_CLIENT": "Awaiting client",
+      "PENDING_MANAGER": "Awaiting manager",
+      "SIGNED": "Signed",
+      "CANCELLED": "Cancelled"
+    }
+  },
+  "invoicesPage": {
+    "title": "Invoices",
+    "description": "Invoices issued against signed contracts",
+    "searchPlaceholder": "Search by number",
+    "emptyState": "No invoices found",
+    "generated": "Invoice issued",
+    "paymentRecorded": "Payment recorded",
+    "actGenerated": "Act generated",
+    "allStatuses": "All statuses",
+    "downloadPdf": "Download PDF",
+    "recordPayment": "Record payment",
+    "generateAct": "Generate act",
+    "stats": {
+      "total": "Total",
+      "unpaid": "Unpaid",
+      "paid": "Paid"
+    },
+    "table": {
+      "number": "Number",
+      "deal": "Deal",
+      "total": "Total",
+      "paid": "Paid",
+      "status": "Status",
+      "issued": "Issued",
+      "due": "Due",
+      "actions": "Actions"
+    },
+    "status": {
+      "DRAFT": "Draft",
+      "ISSUED": "Issued",
+      "PARTIAL": "Partially paid",
+      "PAID": "Paid",
+      "OVERDUE": "Overdue",
+      "CANCELLED": "Cancelled"
+    },
+    "form": {
+      "amount": "Amount",
+      "paidAt": "Paid at",
+      "method": "Method",
+      "reference": "Reference",
+      "proofFile": "Proof"
+    },
+    "method": {
+      "BANK_TRANSFER": "Bank transfer",
+      "CARD": "Card",
+      "CASH": "Cash",
+      "OTHER": "Other"
+    }
+  },
+  "paymentsPage": {
+    "title": "Payments",
+    "description": "Recorded invoice payments",
+    "emptyState": "No payments",
+    "table": {
+      "invoice": "Invoice",
+      "amount": "Amount",
+      "method": "Method",
+      "paidAt": "Paid at",
+      "reference": "Reference"
+    }
+  },
+  "actsPage": {
+    "title": "Acts",
+    "description": "Hand-over acts for closed deals",
+    "emptyState": "No acts found",
+    "sign": "Sign",
+    "downloadPdf": "Download PDF",
+    "signed": "Act signed",
+    "allStatuses": "All statuses",
+    "stats": {
+      "total": "Total",
+      "issued": "Issued",
+      "signed": "Signed"
+    },
+    "table": {
+      "number": "Number",
+      "deal": "Deal",
+      "total": "Total",
+      "status": "Status",
+      "issued": "Issued",
+      "actions": "Actions"
+    },
+    "status": {
+      "DRAFT": "Draft",
+      "ISSUED": "Issued",
+      "SIGNED": "Signed",
+      "CANCELLED": "Cancelled"
+    }
+  },
+  "fulfillmentPage": {
+    "title": "Deal fulfillment",
+    "description": "Shipping, delivery, acceptance",
+    "emptyState": "No fulfillments",
+    "updateStatus": "Update status",
+    "statusUpdated": "Status updated",
+    "allStatuses": "All statuses",
+    "stats": {
+      "total": "Total",
+      "inTransit": "In transit",
+      "accepted": "Accepted"
+    },
+    "table": {
+      "deal": "Deal",
+      "status": "Status",
+      "expected": "Expected",
+      "tracking": "Tracking",
+      "carrier": "Carrier",
+      "actions": "Actions"
+    },
+    "status": {
+      "PENDING": "Pending shipment",
+      "SHIPPED": "Shipped",
+      "IN_TRANSIT": "In transit",
+      "DELIVERED": "Delivered",
+      "ACCEPTED": "Accepted",
+      "DISPUTED": "Disputed"
+    },
+    "form": {
+      "status": "New status",
+      "trackingNumber": "Tracking number",
+      "carrier": "Carrier",
+      "expectedDeliveryDate": "Expected date",
+      "notes": "Notes"
+    }
+  },
+  "supplierBidsPage": {
+    "title": "Supplier bids",
+    "description": "Supplier offers against open RFQs",
+    "emptyState": "No bids",
+    "submit": "Submit bid",
+    "accept": "Accept",
+    "reject": "Reject",
+    "submitted": "Bid submitted",
+    "accepted": "Bid accepted",
+    "rejected": "Bid rejected",
+    "allStatuses": "All statuses",
+    "stats": {
+      "total": "Total",
+      "submitted": "Submitted",
+      "accepted": "Accepted"
+    },
+    "table": {
+      "deal": "Deal",
+      "supplier": "Supplier",
+      "total": "Total",
+      "leadTime": "Lead time (days)",
+      "status": "Status",
+      "submittedAt": "Submitted",
+      "actions": "Actions"
+    },
+    "status": {
+      "DRAFT": "Draft",
+      "SUBMITTED": "Submitted",
+      "ACCEPTED": "Accepted",
+      "REJECTED": "Rejected",
+      "WITHDRAWN": "Withdrawn"
+    }
+  },
+  "leadsPage": {
+    "title": "Leads",
+    "description": "Landing-page inquiries",
+    "emptyState": "No leads",
+    "convert": "Convert to deal",
+    "converted": "Lead converted to deal",
+    "table": {
+      "name": "Name",
+      "company": "Company",
+      "phone": "Phone",
+      "email": "Email",
+      "message": "Message",
+      "processed": "Processed",
+      "created": "Received",
+      "actions": "Actions"
+    }
+  },
+  "rematchDialog": {
+    "title": "Reassign product",
+    "rawLabel": "Imported name",
+    "candidatesLabel": "Suggested candidates",
+    "noCandidates": "No candidates found",
+    "apply": "Apply",
+    "clear": "Clear assignment",
+    "assigned": "Product reassigned"
+  },
+  "rfqDialog": {
+    "title": "Open RFQ",
+    "description": "Move deal to RFQ_OPEN and invite suppliers",
+    "selectSuppliers": "Select suppliers (optional)",
+    "open": "Open RFQ",
+    "opened": "RFQ opened"
+  },
+  "contractGenerateDialog": {
+    "title": "Generate contract",
+    "description": "Creates a contract from approved quote",
+    "notesLabel": "Notes",
+    "generate": "Create contract",
+    "success": "Contract created"
+  },
+  "subscriptionPay": {
+    "title": "Pay subscription",
+    "amount": "Amount",
+    "months": "Number of months",
+    "pay": "Pay",
+    "paid": "Payment recorded, subscription activated"
   }
 }

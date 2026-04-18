@@ -23,10 +23,11 @@ from rest_framework.permissions import IsAuthenticated
 from core.permissions import IsManagerOrAdmin, IsOwnerOrManagerOrAdmin
 from django.db.models import Count, Sum, Q, Subquery, OuterRef, Max, Prefetch
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 from datetime import timedelta
 from decimal import Decimal
 
-from .services import transition_deal_stage
+from .services import transition_deal_stage, register_new_deal
 from . import services as crm_services
 
 
@@ -91,31 +92,19 @@ class DealViewSet(viewsets.ModelViewSet):
         return queryset.filter(company_id__in=user_company_ids)
 
     def perform_create(self, serializer):
-        # Auto-assign the primary company if not provided
         primary_company = self.request.user.primary_company
         if not primary_company:
             from rest_framework.exceptions import ValidationError
-            raise ValidationError(
-                {"company": "У вас нет привязанной компании. Заполните профиль компании."}
-            )
-        # Auto-assign DRAFT stage if not provided
+            raise ValidationError({
+                "company": _("User has no associated company. Please complete your company profile."),
+            })
         save_kwargs = dict(client=self.request.user, company=primary_company)
         if not serializer.validated_data.get('stage'):
             draft_stage = DealStage.objects.filter(code='DRAFT').first()
             if draft_stage:
                 save_kwargs['stage'] = draft_stage
         deal = serializer.save(**save_kwargs)
-
-        ActivityLog.objects.create(
-            action="Сделка создана",
-            detail=(
-                f"Пользователь {self.request.user.email} инициировал "
-                f"новую сделку #{deal.id} для компании "
-                f"{deal.company.name if deal.company else 'N/A'}"
-            ),
-            user=self.request.user,
-            level='INFO'
-        )
+        register_new_deal(deal, self.request.user)
 
     @extend_schema(
         summary="Change deal stage",

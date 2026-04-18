@@ -155,6 +155,15 @@ export const useSuspendSubscription = () => {
   });
 };
 
+export const usePaySubscription = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, amount, months }: { id: number; amount: string; months?: number }) =>
+      accountsApi.paySubscription(id, amount, months ?? 1),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['subscriptions'] }),
+  });
+};
+
 export const useCreateSubscription = () => {
   const qc = useQueryClient();
   return useMutation({

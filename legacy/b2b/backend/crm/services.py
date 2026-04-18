@@ -343,6 +343,28 @@ def get_allowed_transitions(stage_code: str) -> list[str]:
     return ALLOWED_STAGE_TRANSITIONS.get(stage_code, [])
 
 
+def register_new_deal(deal: Deal, actor: CustomUser) -> Deal:
+    """
+    Post-create hook for new deals: writes ActivityLog entry.
+
+    The Deal itself is created by the ViewSet's perform_create
+    (auto-assigning client, company, and DRAFT stage). This function
+    records the audit trail so the ViewSet stays a thin wrapper
+    (Rule 8).
+    """
+    ActivityLog.objects.create(
+        action="Сделка создана",
+        detail=(
+            f"Пользователь {actor.email} инициировал "
+            f"новую сделку #{deal.id} для компании "
+            f"{deal.company.name if deal.company else 'N/A'}"
+        ),
+        user=actor,
+        level='INFO',
+    )
+    return deal
+
+
 def transition_deal_stage(
     deal: Deal,
     target_stage_code: str,

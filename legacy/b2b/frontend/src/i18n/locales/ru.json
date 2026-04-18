@@ -1119,6 +1119,15 @@
     "adminCatalogCategories": "Категории",
     "adminCatalogGroups": "Группы оборудования",
     "adminCatalogOffers": "Офферы поставщиков",
+    "contracts": "Контракты",
+    "invoices": "Инвойсы",
+    "payments": "Платежи",
+    "acts": "Акты",
+    "fulfillments": "Исполнение",
+    "supplierBids": "Тендер-предложения",
+    "rfq": "RFQ",
+    "leads": "Лиды",
+    "billing": "Биллинг",
     "integrations": "Интеграции",
     "help": "Помощь",
     "b2bPlatform": "B2B Платформа",
@@ -2798,5 +2807,250 @@
       "active": "Активен",
       "actions": "Действия"
     }
+  },
+  "contractsPage": {
+    "title": "Контракты",
+    "description": "Договоры между клиентом и RailTech, двусторонняя подпись",
+    "new": "Создать контракт",
+    "searchPlaceholder": "Поиск по номеру или сделке",
+    "emptyState": "Контракты не найдены",
+    "generatedFromQuote": "Контракт сформирован из КП",
+    "signedClient": "Подпись клиента поставлена",
+    "signedManager": "Подпись менеджера поставлена",
+    "uploadedSigned": "Подписанная копия загружена",
+    "cancelled": "Контракт отменён",
+    "downloadPdf": "Скачать PDF",
+    "uploadSigned": "Загрузить скан",
+    "signClient": "Подписать (клиент)",
+    "signManager": "Подписать (RailTech)",
+    "cancel": "Отменить контракт",
+    "confirmCancel": "Подтвердите отмену",
+    "cancelReason": "Причина отмены",
+    "allStatuses": "Все статусы",
+    "stats": {
+      "total": "Всего",
+      "pending": "Ожидают подписи",
+      "signed": "Подписаны"
+    },
+    "table": {
+      "number": "Номер",
+      "deal": "Сделка",
+      "total": "Сумма",
+      "status": "Статус",
+      "created": "Создан",
+      "actions": "Действия"
+    },
+    "status": {
+      "DRAFT": "Черновик",
+      "PENDING_CLIENT": "Ожидает клиента",
+      "PENDING_MANAGER": "Ожидает менеджера",
+      "SIGNED": "Подписан",
+      "CANCELLED": "Отменён"
+    }
+  },
+  "invoicesPage": {
+    "title": "Инвойсы",
+    "description": "Счета на оплату, выставляемые по подписанным контрактам",
+    "searchPlaceholder": "Поиск по номеру",
+    "emptyState": "Инвойсы не найдены",
+    "generated": "Инвойс выставлен",
+    "paymentRecorded": "Платёж зафиксирован",
+    "actGenerated": "Акт сформирован",
+    "allStatuses": "Все статусы",
+    "downloadPdf": "Скачать PDF",
+    "recordPayment": "Зафиксировать платёж",
+    "generateAct": "Сформировать акт",
+    "stats": {
+      "total": "Всего",
+      "unpaid": "Неоплачено",
+      "paid": "Оплачено"
+    },
+    "table": {
+      "number": "Номер",
+      "deal": "Сделка",
+      "total": "Сумма",
+      "paid": "Оплачено",
+      "status": "Статус",
+      "issued": "Выставлен",
+      "due": "Срок",
+      "actions": "Действия"
+    },
+    "status": {
+      "DRAFT": "Черновик",
+      "ISSUED": "Выставлен",
+      "PARTIAL": "Частично оплачен",
+      "PAID": "Оплачен",
+      "OVERDUE": "Просрочен",
+      "CANCELLED": "Отменён"
+    },
+    "form": {
+      "amount": "Сумма",
+      "paidAt": "Дата платежа",
+      "method": "Способ",
+      "reference": "Референс",
+      "proofFile": "Подтверждение"
+    },
+    "method": {
+      "BANK_TRANSFER": "Банковский перевод",
+      "CARD": "Карта",
+      "CASH": "Наличные",
+      "OTHER": "Другое"
+    }
+  },
+  "paymentsPage": {
+    "title": "Платежи",
+    "description": "Зафиксированные платежи по инвойсам",
+    "emptyState": "Платежи не найдены",
+    "table": {
+      "invoice": "Инвойс",
+      "amount": "Сумма",
+      "method": "Способ",
+      "paidAt": "Дата",
+      "reference": "Референс"
+    }
+  },
+  "actsPage": {
+    "title": "Акты",
+    "description": "Акты приёма-передачи по сделкам",
+    "emptyState": "Акты не найдены",
+    "sign": "Подписать",
+    "downloadPdf": "Скачать PDF",
+    "signed": "Акт подписан",
+    "allStatuses": "Все статусы",
+    "stats": {
+      "total": "Всего",
+      "issued": "Выставлены",
+      "signed": "Подписаны"
+    },
+    "table": {
+      "number": "Номер",
+      "deal": "Сделка",
+      "total": "Сумма",
+      "status": "Статус",
+      "issued": "Выставлен",
+      "actions": "Действия"
+    },
+    "status": {
+      "DRAFT": "Черновик",
+      "ISSUED": "Выставлен",
+      "SIGNED": "Подписан",
+      "CANCELLED": "Отменён"
+    }
+  },
+  "fulfillmentPage": {
+    "title": "Исполнение сделок",
+    "description": "Отгрузка, доставка, приёмка",
+    "emptyState": "Исполнения не найдены",
+    "updateStatus": "Обновить статус",
+    "statusUpdated": "Статус обновлён",
+    "allStatuses": "Все статусы",
+    "stats": {
+      "total": "Всего",
+      "inTransit": "В пути",
+      "accepted": "Приняты"
+    },
+    "table": {
+      "deal": "Сделка",
+      "status": "Статус",
+      "expected": "Ожидается",
+      "tracking": "Трекинг",
+      "carrier": "Перевозчик",
+      "actions": "Действия"
+    },
+    "status": {
+      "PENDING": "Ожидает отгрузки",
+      "SHIPPED": "Отгружено",
+      "IN_TRANSIT": "В пути",
+      "DELIVERED": "Доставлено",
+      "ACCEPTED": "Принято",
+      "DISPUTED": "Спор"
+    },
+    "form": {
+      "status": "Новый статус",
+      "trackingNumber": "Трек-номер",
+      "carrier": "Перевозчик",
+      "expectedDeliveryDate": "Ожидаемая дата",
+      "notes": "Заметки"
+    }
+  },
+  "supplierBidsPage": {
+    "title": "Предложения поставщиков",
+    "description": "Заявки поставщиков по открытым RFQ",
+    "emptyState": "Предложений нет",
+    "submit": "Подать предложение",
+    "accept": "Принять",
+    "reject": "Отклонить",
+    "submitted": "Предложение подано",
+    "accepted": "Предложение принято",
+    "rejected": "Предложение отклонено",
+    "allStatuses": "Все статусы",
+    "stats": {
+      "total": "Всего",
+      "submitted": "Подано",
+      "accepted": "Принято"
+    },
+    "table": {
+      "deal": "Сделка",
+      "supplier": "Поставщик",
+      "total": "Сумма",
+      "leadTime": "Срок (дней)",
+      "status": "Статус",
+      "submittedAt": "Подано",
+      "actions": "Действия"
+    },
+    "status": {
+      "DRAFT": "Черновик",
+      "SUBMITTED": "Подано",
+      "ACCEPTED": "Принято",
+      "REJECTED": "Отклонено",
+      "WITHDRAWN": "Отозвано"
+    }
+  },
+  "leadsPage": {
+    "title": "Лиды",
+    "description": "Заявки с публичного лендинга",
+    "emptyState": "Лидов нет",
+    "convert": "Конвертировать в сделку",
+    "converted": "Лид конвертирован в сделку",
+    "table": {
+      "name": "Имя",
+      "company": "Компания",
+      "phone": "Телефон",
+      "email": "Email",
+      "message": "Сообщение",
+      "processed": "Обработан",
+      "created": "Получен",
+      "actions": "Действия"
+    }
+  },
+  "rematchDialog": {
+    "title": "Переназначение товара",
+    "rawLabel": "Импортированное наименование",
+    "candidatesLabel": "Предложенные варианты",
+    "noCandidates": "Кандидаты не найдены",
+    "apply": "Применить",
+    "clear": "Очистить привязку",
+    "assigned": "Товар переназначен"
+  },
+  "rfqDialog": {
+    "title": "Открыть RFQ",
+    "description": "Переведите сделку в статус RFQ_OPEN и пригласите поставщиков",
+    "selectSuppliers": "Выбрать поставщиков (необязательно)",
+    "open": "Открыть RFQ",
+    "opened": "RFQ открыт"
+  },
+  "contractGenerateDialog": {
+    "title": "Сформировать контракт",
+    "description": "Создаётся контракт из одобренного КП",
+    "notesLabel": "Примечания",
+    "generate": "Создать контракт",
+    "success": "Контракт создан"
+  },
+  "subscriptionPay": {
+    "title": "Оплатить подписку",
+    "amount": "Сумма",
+    "months": "Количество месяцев",
+    "pay": "Оплатить",
+    "paid": "Оплата зафиксирована, подписка активирована"
   }
 }
