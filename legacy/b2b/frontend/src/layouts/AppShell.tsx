@@ -100,10 +100,11 @@ function getBuyerNavigation(activePage: string, role: UserRole, t: TFn): NavItem
     { label: t('shell.dashboard'), icon: <LayoutDashboard className="h-4 w-4" />, id: 'dashboard', active: activePage === 'dashboard' },
     { label: t('shell.catalog'), icon: <Package className="h-4 w-4" />, id: 'products', active: activePage === 'products' },
     { label: t('shell.myRequests'), icon: <ClipboardList className="h-4 w-4" />, id: 'my-requests', active: activePage === 'my-requests' },
+    // Buyer now sees his own Deals — backend filters by company membership via IsOwnerOrManagerOrAdmin.
+    { label: t('shell.deals'), icon: <Handshake className="h-4 w-4" />, id: 'crm-deals', active: activePage === 'crm-deals' },
     { label: t('shell.commercialOffers'), icon: <Calculator className="h-4 w-4" />, id: 'crm-quotes', active: activePage === 'crm-quotes' },
   ];
   if (role === 'ADMIN' || role === 'MANAGER') {
-    items.push({ label: t('shell.deals'), icon: <Handshake className="h-4 w-4" />, id: 'crm-deals', active: activePage === 'crm-deals' });
     items.push({ label: t('shell.clients'), icon: <Users className="h-4 w-4" />, id: 'crm-clients', active: activePage === 'crm-clients' });
     items.push({ label: t('shell.analytics'), icon: <BarChart3 className="h-4 w-4" />, id: 'analytics', active: activePage === 'analytics' });
   }
@@ -119,6 +120,14 @@ function getManufacturerNavigation(activePage: string, role: UserRole, t: TFn): 
         { label: t('shell.products'), id: 'products', active: activePage === 'products' },
         { label: t('shell.categories'), id: 'categories', active: activePage === 'categories' },
         { label: t('shell.equipmentGroups'), id: 'equipment-groups', active: activePage === 'equipment-groups' },
+      ],
+    },
+    // Manufacturers now see Sourcing — they need to submit bids on open RFQs
+    {
+      label: t('shell.sourcing'), icon: <ShoppingCart className="h-4 w-4" />,
+      children: [
+        { label: t('shell.requests'), id: 'sourcing-requests', active: activePage === 'sourcing-requests' },
+        { label: t('shell.smartMatch'), id: 'sourcing-match', active: activePage === 'sourcing-match' },
       ],
     },
     { label: t('shell.deals'), icon: <Handshake className="h-4 w-4" />, id: 'crm-deals', active: activePage === 'crm-deals' },

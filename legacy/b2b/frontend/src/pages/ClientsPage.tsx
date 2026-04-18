@@ -7,10 +7,19 @@ import {
 import { Users, Check, Clock } from 'lucide-react';
 import { useCompanies } from '@/hooks/useAccounts';
 import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
+import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/DataTable';
 import type { Company } from '@/api/accountsApi';
+
+const KYC_OPTIONS = [
+  { value: 'L1_UNVERIFIED', labelKey: 'kycManager.status.P_PENDING' },
+  { value: 'PROFILE_SUBMITTED', labelKey: 'kycManager.status.P_SUBMITTED' },
+  { value: 'L2_VERIFIED', labelKey: 'kycManager.status.V_VERIFIED_L2' },
+  { value: 'L3_CONTRACTED', labelKey: 'kycManager.status.V_PARTNER_L3' },
+];
 
 export function ClientsPage() {
   const { t } = useTranslation();
+  const listParams = useListParams(['kyc'] as const, { defaultOrdering: 'name' });
   const { data: companies, isLoading } = useCompanies();
 
   return (
@@ -25,29 +34,57 @@ export function ClientsPage() {
         { label: t('pages.clients.stats.guests'), value: String(companies?.filter(c => c.verification_status_code === 'L1_UNVERIFIED').length ?? 0) },
       ]}
     >
+      <Toolbar
+        searchValue={listParams.searchInput}
+        onSearchChange={listParams.setSearchInput}
+        searchPlaceholder={t('pages.clients.searchPlaceholder')}
+        filters={[
+          {
+            key: 'kyc',
+            value: listParams.filters.kyc,
+            onChange: (v) => listParams.setFilter('kyc', v),
+            allLabel: t('pages.clients.allKyc'),
+            options: KYC_OPTIONS.map((o) => ({ value: o.value, label: t(o.labelKey) })),
+          },
+        ]}
+      />
       <Card>
         <CardContent className="p-0">
-          {isLoading ? <LoadingRows rows={5} /> : !companies?.length ? (
-            <EmptyState icon={<Users className="h-5 w-5" />} message={t('pages.common.noData')} />
-          ) : (
+          {(() => {
+            const { items: pageItems, total } = applyListParams(companies ?? [], listParams, {
+              searchFields: (c) => [c.name, c.inn, c.email],
+              filterPredicates: {
+                kyc: (c, v) => c.verification_status_code === v,
+              },
+              sortAccessors: {
+                name: (c) => c.name,
+                inn: (c) => c.inn,
+                kyc: (c) => c.verification_status_code ?? '',
+                created_at: (c) => c.created_at ?? '',
+              },
+            });
+            if (isLoading) return <LoadingRows rows={5} />;
+            if (!pageItems.length) return <EmptyState icon={<Users className="h-5 w-5" />} message={t('pages.common.noData')} />;
+            return (
+            <>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t('pages.clients.table.company')}</TableHead>
-                  <TableHead>{t('pages.clients.table.inn')}</TableHead>
-                  <TableHead>{t('pages.clients.table.kyc')}</TableHead>
+                  <SortableHead sortKey="name" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('pages.clients.table.company')}</SortableHead>
+                  <SortableHead sortKey="inn" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('pages.clients.table.inn')}</SortableHead>
+                  <SortableHead sortKey="kyc" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('pages.clients.table.kyc')}</SortableHead>
                   <TableHead className="text-center">{t('pages.clients.table.deals')}</TableHead>
-                  <TableHead>{t('pages.clients.table.lastActivity')}</TableHead>
+                  <SortableHead sortKey="created_at" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('pages.clients.table.lastActivity')}</SortableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {companies.map((company: Company) => (
+                {pageItems.map((company: Company) => (
                   <TableRow key={company.id}>
                     <TableCell className="font-medium">{company.name}</TableCell>
                     <TableCell className="font-mono text-xs text-muted-foreground">{company.inn}</TableCell>
                     <TableCell>
-                      <Badge variant={company.verification_status === 'VERIFIED' ? 'default' : 'secondary'} className="gap-1">
-                        {company.verification_status === 'VERIFIED'
+                      <Badge variant={company.verification_status_code === 'L2_VERIFIED' || company.verification_status_code === 'L3_CONTRACTED' ? 'default' : 'secondary'} className="gap-1">
+                        {company.verification_status_code === 'L2_VERIFIED' || company.verification_status_code === 'L3_CONTRACTED'
                           ? <><Check className="h-3 w-3" /> {t('pages.clients.kycStatus.verified')}</>
                           : <><Clock className="h-3 w-3" /> {t('pages.clients.kycStatus.pending')}</>}
                       </Badge>
@@ -58,7 +95,10 @@ export function ClientsPage() {
                 ))}
               </TableBody>
             </Table>
-          )}
+            <Pager page={listParams.page} pageSize={listParams.pageSize} total={total} onPageChange={listParams.setPage} />
+            </>
+            );
+          })()}
         </CardContent>
       </Card>
     </PageShell>

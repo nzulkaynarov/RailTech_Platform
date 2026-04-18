@@ -99,6 +99,36 @@ def quote_pdf_path(instance, filename):
     return f"deals/{instance.deal_id}/quotes/{name}"
 
 
+def contract_pdf_path(instance, filename):
+    """deals/{deal_id}/contracts/{uuid}.pdf"""
+    name = _uuid_filename(instance, filename)
+    return f"deals/{instance.deal_id}/contracts/{name}"
+
+
+def contract_signed_path(instance, filename):
+    """deals/{deal_id}/contracts/signed/{uuid}.{ext}"""
+    name = _uuid_filename(instance, filename)
+    return f"deals/{instance.deal_id}/contracts/signed/{name}"
+
+
+def invoice_pdf_path(instance, filename):
+    """deals/{deal_id}/invoices/{uuid}.pdf"""
+    name = _uuid_filename(instance, filename)
+    return f"deals/{instance.deal_id}/invoices/{name}"
+
+
+def act_pdf_path(instance, filename):
+    """deals/{deal_id}/acts/{uuid}.pdf"""
+    name = _uuid_filename(instance, filename)
+    return f"deals/{instance.deal_id}/acts/{name}"
+
+
+def payment_proof_path(instance, filename):
+    """deals/{deal_id}/payments/{uuid}.{ext}"""
+    name = _uuid_filename(instance, filename)
+    return f"deals/{instance.invoice.deal_id}/payments/{name}"
+
+
 def import_source_path(instance, filename):
     """sourcing/imports/{task_id}/{uuid}.{ext}"""
     name = _uuid_filename(instance, filename)

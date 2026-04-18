@@ -345,8 +345,15 @@ class SupplierOfferViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
             return [permissions.AllowAny()]
-        from core.permissions import IsManagerOrAdmin
-        return [permissions.IsAuthenticated(), IsManagerOrAdmin()]
+        # Write: manager/admin OR supplier with operational subscription
+        from core.permissions import IsManagerOrAdmin, IsSupplierWithActiveSubscription
+
+        class _ManagerOrOperationalSupplier(permissions.BasePermission):
+            def has_permission(self, request, view):
+                return IsManagerOrAdmin().has_permission(request, view) or \
+                       IsSupplierWithActiveSubscription().has_permission(request, view)
+
+        return [permissions.IsAuthenticated(), _ManagerOrOperationalSupplier()]
 
 
 @extend_schema_view(

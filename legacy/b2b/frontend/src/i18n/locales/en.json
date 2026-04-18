@@ -213,7 +213,8 @@
       "toOrder": "To Order",
       "sourcing": "Sourcing",
       "inactive": "Inactive",
-      "unknown": "Unknown"
+      "unknown": "Unknown",
+      "allManufacturers": "All manufacturers"
     },
     "cardSize": {
       "compact": "Compact",
@@ -1929,6 +1930,8 @@
     "sourcingRequests": {
       "title": "Purchase Requests",
       "description": "Manage incoming requests from clients",
+      "searchPlaceholder": "Search by title or client",
+      "allStages": "All stages",
       "stats": {
         "total": "Total requests",
         "new": "New",
@@ -2038,6 +2041,8 @@
       "sellerTitle": "Quotes",
       "sellerDescription": "Quote Builder — Landed Cost calculation and quote generation",
       "createQuote": "Create quote",
+      "searchPlaceholder": "Search by quote / deal",
+      "allStatuses": "All statuses",
       "stats": {
         "total": "Total quotes",
         "underReview": "Under review",
@@ -2090,6 +2095,8 @@
     "clients": {
       "title": "Clients",
       "description": "Counterparty database and KYC verification",
+      "searchPlaceholder": "Search by name or INN",
+      "allKyc": "All KYC statuses",
       "stats": {
         "total": "Total",
         "verified": "Verified",
@@ -2334,6 +2341,8 @@
       "title": "My Requests",
       "description": "Track your requests and orders",
       "deal": "Request",
+      "searchPlaceholder": "Search by title or company",
+      "allStages": "All stages",
       "stats": {
         "active": "Active",
         "quoteReceived": "Quote received",
@@ -2763,6 +2772,7 @@
     "cancel": "Cancel",
     "yes": "Yes",
     "no": "No",
+    "allActive": "All entries",
     "confirmDelete": "Delete offer?",
     "confirmDeleteDesc": "The offer will be deleted.",
     "fields": {

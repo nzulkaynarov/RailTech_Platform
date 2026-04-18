@@ -69,6 +69,7 @@ export interface Product {
     sku: string | null;
     status: number;
     status_name: string;
+    status_code?: string;
     domain_type: number | string;
     domain_type_name: string;
     domain_type_code?: string;

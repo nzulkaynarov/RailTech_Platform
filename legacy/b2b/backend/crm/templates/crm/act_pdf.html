@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body { font-family: 'Arial', sans-serif; font-size: 12px; color: #333; margin: 40px; }
+  h1 { font-size: 22px; color: #1a1a2e; margin-bottom: 4px; }
+  .subtitle { color: #666; font-size: 13px; margin-bottom: 24px; }
+  .info { background: #f8f9fa; padding: 14px; border-radius: 6px; margin-bottom: 20px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+  th { background: #1a1a2e; color: white; padding: 8px; text-align: left; font-size: 11px; }
+  td { padding: 7px 8px; border-bottom: 1px solid #e0e0e0; font-size: 11px; }
+  .signatures { margin-top: 80px; display: table; width: 100%; }
+  .signature { display: table-cell; width: 50%; padding: 24px 12px 0; border-top: 1px solid #999; font-size: 11px; }
+  .footer { margin-top: 60px; font-size: 10px; color: #999; text-align: center; border-top: 1px solid #e0e0e0; padding-top: 10px; }
+</style>
+</head>
+<body>
+  <h1>Акт приёма-передачи № {{ act.number }}</h1>
+  <p class="subtitle">Дата: {{ act.issued_at|date:"d.m.Y" }}</p>
+
+  <div class="info">
+    <strong>Покупатель:</strong> {{ company.name }} (ИНН {{ company.inn }})<br>
+    <strong>Сделка:</strong> #{{ act.deal_id }}<br>
+    {% if act.contract %}<strong>Договор:</strong> {{ act.contract.number }} от {{ act.contract.created_at|date:"d.m.Y" }}<br>{% endif %}
+    {% if act.invoice %}<strong>Инвойс:</strong> {{ act.invoice.number }} на {{ act.invoice.total_incl_vat }}{% endif %}
+  </div>
+
+  <p>Стороны подтверждают, что услуги / товары по указанной сделке оказаны / поставлены в полном объёме. Сумма: <strong>{{ act.total_amount|floatformat:2 }}</strong>.</p>
+
+  <div class="signatures">
+    <div class="signature">
+      <strong>От Поставщика:</strong><br>
+      ________________________
+    </div>
+    <div class="signature">
+      <strong>От Покупателя:</strong><br>
+      ________________________
+    </div>
+  </div>
+  <div class="footer">RailTech B2B Ecosystem | © 2026</div>
+</body>
+</html>

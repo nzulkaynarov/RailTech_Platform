@@ -1,14 +1,15 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Layers, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Layers, Pencil, Trash2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHeader, TableRow } from '@/components/ui/table';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
+import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/DataTable';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -135,6 +136,7 @@ export function AdminCategoriesPage() {
   const { data: categories, isLoading } = useCategories();
   const deleteMut = useDeleteCategory();
 
+  const listParams = useListParams([], { defaultOrdering: 'sort_order' });
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Category | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
@@ -176,29 +178,38 @@ export function AdminCategoriesPage() {
       icon={<Layers className="h-5 w-5" />}
       stats={stats}
     >
-      <div className="flex">
-        <Button onClick={onNew} className="gap-2 ml-auto">
-          <Plus className="h-4 w-4" />
-          {t('adminCategories.new')}
-        </Button>
-      </div>
+      <Toolbar
+        searchValue={listParams.searchInput}
+        onSearchChange={listParams.setSearchInput}
+        newLabel={t('adminCategories.new')}
+        onNew={onNew}
+      />
 
       <Card>
         <CardContent className="p-0">
-          {isLoading ? <LoadingRows rows={5} /> : !categories?.length ? (
-            <EmptyState icon={<Layers className="h-5 w-5" />} message={t('adminCategories.emptyState')} />
-          ) : (
+          {(() => {
+            const { items: pageItems, total } = applyListParams(categories ?? [], listParams, {
+              searchFields: (c) => [c.name],
+              sortAccessors: {
+                name: (c) => c.name,
+                sort_order: (c) => c.sort_order ?? 0,
+              },
+            });
+            if (isLoading) return <LoadingRows rows={5} />;
+            if (!pageItems.length) return <EmptyState icon={<Layers className="h-5 w-5" />} message={t('adminCategories.emptyState')} />;
+            return (
+            <>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t('adminCategories.table.name')}</TableHead>
-                  <TableHead>{t('adminCategories.table.parent')}</TableHead>
-                  <TableHead>{t('adminCategories.table.order')}</TableHead>
-                  <TableHead className="text-right">{t('adminCategories.table.actions')}</TableHead>
+                  <SortableHead sortKey="name" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('adminCategories.table.name')}</SortableHead>
+                  <SortableHead sortKey="" current="" onChange={() => {}}>{t('adminCategories.table.parent')}</SortableHead>
+                  <SortableHead sortKey="sort_order" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('adminCategories.table.order')}</SortableHead>
+                  <SortableHead sortKey="" current="" onChange={() => {}} className="text-right">{t('adminCategories.table.actions')}</SortableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {categories.map((c) => (
+                {pageItems.map((c) => (
                   <TableRow key={c.id}>
                     <TableCell>{c.name}</TableCell>
                     <TableCell className="text-muted-foreground text-xs">
@@ -219,7 +230,10 @@ export function AdminCategoriesPage() {
                 ))}
               </TableBody>
             </Table>
-          )}
+            <Pager page={listParams.page} pageSize={listParams.pageSize} total={total} onPageChange={listParams.setPage} />
+            </>
+            );
+          })()}
         </CardContent>
       </Card>
 

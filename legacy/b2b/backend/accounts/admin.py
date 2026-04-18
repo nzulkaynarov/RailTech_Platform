@@ -153,6 +153,8 @@ class CompanyAdmin(ReadOnlyInspectionMixin, ImportExportModelAdmin, ModelAdmin):
     list_per_page = 25
     inlines = [CompanyMemberInline, KYCDocumentInline]
     autocomplete_fields = ["verification_status", "country", "types"]
+    # Business actions moved to React Admin — this action kept ONLY as emergency
+    # engineering escape-hatch (superuser-only). Use /admin/kyc/ in React SPA instead.
     actions = ["verify_kyc"]
     warn_unsaved_form = True
 

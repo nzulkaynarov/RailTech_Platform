@@ -276,5 +276,45 @@ export const crmApi = {
 		document.body.appendChild(link);
 		link.click();
 		link.remove();
-	}
+	},
+
+	// ─── Lead ops ─────────────────────────────────────────────
+	listLeads: async () => {
+		const response = await apiClient.get<PaginatedResponse<Lead>>('crm/leads/');
+		return response.data.results;
+	},
+	convertLead: async (leadId: number, companyId?: number) => {
+		const response = await apiClient.post<{ deal_id: number; stage: string }>(
+			`crm/leads/${leadId}/convert/`,
+			companyId ? { company_id: companyId } : {},
+		);
+		return response.data;
+	},
+
+	// ─── Quote item re-match ─────────────────────────────────
+	matchCandidates: async (quoteItemId: number) => {
+		const response = await apiClient.get<{
+			raw: string;
+			candidates: Array<{ product_id: number; sku: string; name: string; gost: string; score: number }>;
+		}>(`crm/quote-items/${quoteItemId}/match-candidates/`);
+		return response.data;
+	},
+	reassignProduct: async (quoteItemId: number, productId: number | null) => {
+		const response = await apiClient.post<QuoteItem>(
+			`crm/quote-items/${quoteItemId}/reassign-product/`,
+			{ product_id: productId },
+		);
+		return response.data;
+	},
 };
+
+export interface Lead {
+	id: number;
+	name: string;
+	company: string;
+	phone: string;
+	email: string;
+	message: string;
+	is_processed: boolean;
+	created_at: string;
+}

@@ -213,7 +213,8 @@
       "toOrder": "Под заказ",
       "sourcing": "Поиск",
       "inactive": "Неактивно",
-      "unknown": "Не указан"
+      "unknown": "Не указан",
+      "allManufacturers": "Все производители"
     },
     "cardSize": {
       "compact": "Компактные",
@@ -1929,6 +1930,8 @@
     "sourcingRequests": {
       "title": "Заявки на закупку",
       "description": "Управление входящими заявками от клиентов",
+      "searchPlaceholder": "Поиск по названию или клиенту",
+      "allStages": "Все стадии",
       "stats": {
         "total": "Всего заявок",
         "new": "Новые",
@@ -2038,6 +2041,8 @@
       "sellerTitle": "Котировки",
       "sellerDescription": "Quote Builder — расчёт Landed Cost и формирование КП",
       "createQuote": "Создать котировку",
+      "searchPlaceholder": "Поиск по номеру КП / сделке",
+      "allStatuses": "Все статусы",
       "stats": {
         "total": "Всего КП",
         "underReview": "На рассмотрении",
@@ -2090,6 +2095,8 @@
     "clients": {
       "title": "Клиенты",
       "description": "База контрагентов и KYC верификация",
+      "searchPlaceholder": "Поиск по названию или ИНН",
+      "allKyc": "Все KYC-статусы",
       "stats": {
         "total": "Всего",
         "verified": "Верифицированы",
@@ -2334,6 +2341,8 @@
       "title": "Мои заявки",
       "description": "Отслеживание ваших запросов и заказов",
       "deal": "Заявка",
+      "searchPlaceholder": "Поиск по названию или компании",
+      "allStages": "Все стадии",
       "stats": {
         "active": "Активные",
         "quoteReceived": "КП получено",
@@ -2763,6 +2772,7 @@
     "cancel": "Отмена",
     "yes": "Да",
     "no": "Нет",
+    "allActive": "Все записи",
     "confirmDelete": "Удалить оффер?",
     "confirmDeleteDesc": "Оффер будет удалён.",
     "fields": {

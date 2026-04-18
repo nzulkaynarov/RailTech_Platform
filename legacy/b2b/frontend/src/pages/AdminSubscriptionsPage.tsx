@@ -14,7 +14,7 @@ import {
 import {
   Table, TableBody, TableCell, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/AdminTable';
+import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/DataTable';
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter,
 } from '@/components/ui/sheet';
@@ -293,22 +293,39 @@ export function AdminSubscriptionsPage() {
 
       <Card>
         <CardContent className="p-0">
-          {isLoading ? <LoadingRows rows={5} /> : !filtered.length ? (
-            <EmptyState icon={<CreditCard className="h-5 w-5" />} message={t('pages.common.noData')} />
-          ) : (
+          {(() => {
+            const { items: pageItems, total } = applyListParams(subscriptions ?? [], listParams, {
+              searchFields: (s) => [s.company_name, s.company_inn, s.plan, s.status],
+              filterPredicates: {
+                plan: (s, v) => s.plan === v,
+                status: (s, v) => s.status === v,
+              },
+              sortAccessors: {
+                company: (s) => s.company_name ?? '',
+                plan: (s) => s.plan ?? '',
+                status: (s) => s.status ?? '',
+                rate: (s) => Number(s.monthly_rate) || 0,
+                valid_until: (s) => s.valid_until ?? '',
+                created_at: (s) => s.created_at ?? '',
+              },
+            });
+            if (isLoading) return <LoadingRows rows={5} />;
+            if (!pageItems.length) return <EmptyState icon={<CreditCard className="h-5 w-5" />} message={t('pages.common.noData')} />;
+            return (
+            <>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t('admin.subscriptions.table.company')}</TableHead>
-                  <TableHead>{t('admin.subscriptions.table.plan')}</TableHead>
-                  <TableHead>{t('admin.subscriptions.table.status')}</TableHead>
-                  <TableHead>{t('admin.subscriptions.table.rate')}</TableHead>
-                  <TableHead>{t('admin.subscriptions.table.validUntil')}</TableHead>
-                  <TableHead className="text-center">{t('admin.subscriptions.table.actions')}</TableHead>
+                  <SortableHead sortKey="company" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('admin.subscriptions.table.company')}</SortableHead>
+                  <SortableHead sortKey="plan" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('admin.subscriptions.table.plan')}</SortableHead>
+                  <SortableHead sortKey="status" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('admin.subscriptions.table.status')}</SortableHead>
+                  <SortableHead sortKey="rate" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('admin.subscriptions.table.rate')}</SortableHead>
+                  <SortableHead sortKey="valid_until" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('admin.subscriptions.table.validUntil')}</SortableHead>
+                  <SortableHead sortKey="" current="" onChange={() => {}} className="text-center">{t('admin.subscriptions.table.actions')}</SortableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((sub: Subscription) => (
+                {pageItems.map((sub: Subscription) => (
                   <TableRow
                     key={sub.id}
                     className="cursor-pointer"
@@ -378,7 +395,10 @@ export function AdminSubscriptionsPage() {
                 ))}
               </TableBody>
             </Table>
-          )}
+            <Pager page={listParams.page} pageSize={listParams.pageSize} total={total} onPageChange={listParams.setPage} />
+            </>
+            );
+          })()}
         </CardContent>
       </Card>
 

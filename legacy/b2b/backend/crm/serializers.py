@@ -1,5 +1,9 @@
 from rest_framework import serializers
-from .models import Deal, Quote, QuoteItem, Message, ActivityLog, Lead
+from .models import (
+    Deal, Quote, QuoteItem, Message, ActivityLog, Lead,
+    Contract, Invoice, InvoiceItem, Payment, Act, Fulfillment,
+    SupplierBid, SupplierBidItem,
+)
 
 
 class QuoteItemSerializer(serializers.ModelSerializer):
@@ -114,3 +118,122 @@ class ActivityLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = ActivityLog
         fields = ['id', 'action', 'detail', 'user_name', 'level', 'timestamp']
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Contracts / Invoices / Payments / Acts / Fulfillment / SupplierBids
+# ──────────────────────────────────────────────────────────────────────────
+
+
+class ContractSerializer(serializers.ModelSerializer):
+    client_signer_name = serializers.CharField(source='client_signer.get_full_name', read_only=True, default=None)
+    manager_signer_name = serializers.CharField(source='manager_signer.get_full_name', read_only=True, default=None)
+    pdf_url = serializers.SerializerMethodField()
+    signed_file_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Contract
+        fields = [
+            'id', 'deal', 'quote', 'number', 'status',
+            'total_amount', 'currency',
+            'pdf_file', 'pdf_url', 'signed_file', 'signed_file_url',
+            'client_signer', 'client_signer_name', 'client_signed_at',
+            'manager_signer', 'manager_signer_name', 'manager_signed_at',
+            'valid_from', 'valid_until', 'notes',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['number', 'status', 'total_amount', 'pdf_file',
+                            'client_signer', 'client_signed_at',
+                            'manager_signer', 'manager_signed_at',
+                            'created_at', 'updated_at']
+
+    def get_pdf_url(self, obj):
+        return obj.pdf_file.url if obj.pdf_file else None
+
+    def get_signed_file_url(self, obj):
+        return obj.signed_file.url if obj.signed_file else None
+
+
+class InvoiceItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InvoiceItem
+        fields = ['id', 'description', 'quantity', 'unit_price_excl_vat', 'line_total_excl_vat', 'source_quote_item']
+
+
+class PaymentSerializer(serializers.ModelSerializer):
+    proof_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Payment
+        fields = ['id', 'invoice', 'amount', 'method', 'paid_at', 'reference',
+                  'proof_file', 'proof_url', 'recorded_by', 'created_at']
+        read_only_fields = ['recorded_by', 'created_at']
+
+    def get_proof_url(self, obj):
+        return obj.proof_file.url if obj.proof_file else None
+
+
+class InvoiceSerializer(serializers.ModelSerializer):
+    items = InvoiceItemSerializer(many=True, read_only=True)
+    payments = PaymentSerializer(many=True, read_only=True)
+    balance_due = serializers.DecimalField(read_only=True, max_digits=14, decimal_places=2)
+    pdf_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Invoice
+        fields = ['id', 'deal', 'contract', 'number', 'status',
+                  'issued_at', 'due_date', 'subtotal_excl_vat',
+                  'vat_amount', 'total_incl_vat', 'amount_paid',
+                  'balance_due', 'currency', 'pdf_file', 'pdf_url',
+                  'notes', 'items', 'payments', 'created_at', 'updated_at']
+        read_only_fields = ['number', 'amount_paid', 'pdf_file', 'created_at', 'updated_at']
+
+    def get_pdf_url(self, obj):
+        return obj.pdf_file.url if obj.pdf_file else None
+
+
+class ActSerializer(serializers.ModelSerializer):
+    pdf_url = serializers.SerializerMethodField()
+    signed_file_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Act
+        fields = ['id', 'deal', 'contract', 'invoice', 'number', 'status',
+                  'issued_at', 'signed_at', 'total_amount',
+                  'pdf_file', 'pdf_url', 'signed_file', 'signed_file_url',
+                  'notes', 'created_at', 'updated_at']
+        read_only_fields = ['number', 'pdf_file', 'signed_at']
+
+    def get_pdf_url(self, obj):
+        return obj.pdf_file.url if obj.pdf_file else None
+
+    def get_signed_file_url(self, obj):
+        return obj.signed_file.url if obj.signed_file else None
+
+
+class FulfillmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Fulfillment
+        fields = ['id', 'deal', 'contract', 'status',
+                  'shipped_at', 'delivered_at', 'accepted_at', 'expected_delivery_date',
+                  'tracking_number', 'carrier', 'notes', 'created_at', 'updated_at']
+
+
+class SupplierBidItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SupplierBidItem
+        fields = ['id', 'quote_item', 'product', 'description', 'quantity', 'unit_price', 'lead_time_days']
+
+
+class SupplierBidSerializer(serializers.ModelSerializer):
+    items = SupplierBidItemSerializer(many=True, read_only=True)
+    supplier_name = serializers.CharField(source='supplier.name', read_only=True)
+
+    class Meta:
+        model = SupplierBid
+        fields = ['id', 'deal', 'supplier', 'supplier_name', 'submitted_by',
+                  'status', 'total_amount', 'currency', 'lead_time_days',
+                  'notes', 'submitted_at', 'accepted_at',
+                  'items', 'created_at', 'updated_at']
+        read_only_fields = ['status', 'total_amount', 'submitted_at', 'accepted_at',
+                            'created_at', 'updated_at']

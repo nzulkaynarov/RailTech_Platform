@@ -1,15 +1,16 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Factory, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Factory, Pencil, Trash2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHeader, TableRow } from '@/components/ui/table';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
+import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/DataTable';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -124,6 +125,7 @@ export function AdminEquipmentGroupsPage() {
   const { data: groups, isLoading } = useEquipmentGroups();
   const deleteMut = useDeleteEquipmentGroup();
 
+  const listParams = useListParams([], { defaultOrdering: 'path' });
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<EquipmentGroup | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<EquipmentGroup | null>(null);
@@ -159,27 +161,35 @@ export function AdminEquipmentGroupsPage() {
       icon={<Factory className="h-5 w-5" />}
       stats={stats}
     >
-      <div className="flex">
-        <Button onClick={onNew} className="gap-2 ml-auto">
-          <Plus className="h-4 w-4" />
-          {t('adminEquipmentGroups.new')}
-        </Button>
-      </div>
+      <Toolbar
+        searchValue={listParams.searchInput}
+        onSearchChange={listParams.setSearchInput}
+        newLabel={t('adminEquipmentGroups.new')}
+        onNew={onNew}
+      />
 
       <Card>
         <CardContent className="p-0">
-          {isLoading ? <LoadingRows rows={5} /> : !groups?.length ? (
-            <EmptyState icon={<Factory className="h-5 w-5" />} message={t('adminEquipmentGroups.emptyState')} />
-          ) : (
+          {(() => {
+            const { items: pageItems, total } = applyListParams(groups ?? [], listParams, {
+              searchFields: (g) => [g.full_path, g.name],
+              sortAccessors: {
+                path: (g) => g.full_path || g.name,
+              },
+            });
+            if (isLoading) return <LoadingRows rows={5} />;
+            if (!pageItems.length) return <EmptyState icon={<Factory className="h-5 w-5" />} message={t('adminEquipmentGroups.emptyState')} />;
+            return (
+            <>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t('adminEquipmentGroups.table.path')}</TableHead>
-                  <TableHead className="text-right">{t('adminEquipmentGroups.table.actions')}</TableHead>
+                  <SortableHead sortKey="path" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('adminEquipmentGroups.table.path')}</SortableHead>
+                  <SortableHead sortKey="" current="" onChange={() => {}} className="text-right">{t('adminEquipmentGroups.table.actions')}</SortableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {groups.map((g) => (
+                {pageItems.map((g) => (
                   <TableRow key={g.id}>
                     <TableCell className="text-sm">{g.full_path || g.name}</TableCell>
                     <TableCell>
@@ -196,7 +206,10 @@ export function AdminEquipmentGroupsPage() {
                 ))}
               </TableBody>
             </Table>
-          )}
+            <Pager page={listParams.page} pageSize={listParams.pageSize} total={total} onPageChange={listParams.setPage} />
+            </>
+            );
+          })()}
         </CardContent>
       </Card>
 

@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHeader, TableRow } from '@/components
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/AdminTable';
+import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/DataTable';
 
 const KYC_BADGE: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; labelKey: string }> = {
   L1_UNVERIFIED: { variant: 'secondary', labelKey: 'kycManager.status.P_PENDING' },

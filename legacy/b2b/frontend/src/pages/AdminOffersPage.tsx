@@ -1,15 +1,16 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Tags, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Tags, Pencil, Trash2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHeader, TableRow } from '@/components/ui/table';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
+import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/DataTable';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -212,6 +213,7 @@ export function AdminOffersPage() {
   const { data: products } = useProducts();
   const deleteMut = useDeleteOffer();
 
+  const listParams = useListParams(['active'] as const, { defaultOrdering: '-created_at' });
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<SupplierOffer | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<SupplierOffer | null>(null);
@@ -253,31 +255,61 @@ export function AdminOffersPage() {
       icon={<Tags className="h-5 w-5" />}
       stats={stats}
     >
-      <div className="flex">
-        <Button onClick={onNew} className="gap-2 ml-auto">
-          <Plus className="h-4 w-4" />
-          {t('adminOffers.new')}
-        </Button>
-      </div>
+      <Toolbar
+        searchValue={listParams.searchInput}
+        onSearchChange={listParams.setSearchInput}
+        filters={[
+          {
+            key: 'active',
+            value: listParams.filters.active,
+            onChange: (v) => listParams.setFilter('active', v),
+            allLabel: t('adminOffers.allActive'),
+            options: [
+              { value: 'yes', label: t('adminOffers.yes') },
+              { value: 'no', label: t('adminOffers.no') },
+            ],
+          },
+        ]}
+        newLabel={t('adminOffers.new')}
+        onNew={onNew}
+      />
 
       <Card>
         <CardContent className="p-0">
-          {isLoading ? <LoadingRows rows={5} /> : !offers?.length ? (
-            <EmptyState icon={<Tags className="h-5 w-5" />} message={t('adminOffers.emptyState')} />
-          ) : (
+          {(() => {
+            const { items: pageItems, total } = applyListParams(offers ?? [], listParams, {
+              searchFields: (o) => [
+                o.supplier_data?.name,
+                o.product ? productNameById.get(o.product) : '',
+                o.supplier_sku,
+                o.base_price,
+              ],
+              filterPredicates: {
+                active: (o, v) => (v === 'yes' ? !!o.is_active : !o.is_active),
+              },
+              sortAccessors: {
+                product: (o) => o.product ? productNameById.get(o.product) ?? '' : '',
+                supplier: (o) => o.supplier_data?.name ?? '',
+                price: (o) => Number(o.base_price) || 0,
+              },
+            });
+            if (isLoading) return <LoadingRows rows={5} />;
+            if (!pageItems.length) return <EmptyState icon={<Tags className="h-5 w-5" />} message={t('adminOffers.emptyState')} />;
+            return (
+            <>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t('adminOffers.table.product')}</TableHead>
-                  <TableHead>{t('adminOffers.table.supplier')}</TableHead>
-                  <TableHead>{t('adminOffers.table.price')}</TableHead>
-                  <TableHead>{t('adminOffers.table.status')}</TableHead>
-                  <TableHead>{t('adminOffers.table.active')}</TableHead>
-                  <TableHead className="text-right">{t('adminOffers.table.actions')}</TableHead>
+                  <SortableHead sortKey="product" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('adminOffers.table.product')}</SortableHead>
+                  <SortableHead sortKey="supplier" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('adminOffers.table.supplier')}</SortableHead>
+                  <SortableHead sortKey="price" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('adminOffers.table.price')}</SortableHead>
+                  <SortableHead sortKey="" current="" onChange={() => {}}>{t('adminOffers.table.status')}</SortableHead>
+                  <SortableHead sortKey="" current="" onChange={() => {}}>{t('adminOffers.table.active')}</SortableHead>
+                  <SortableHead sortKey="" current="" onChange={() => {}} className="text-right">{t('adminOffers.table.actions')}</SortableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {offers.map((o) => (
+                {pageItems.map((o) => (
                   <TableRow key={o.id}>
                     <TableCell className="text-sm">
                       {o.product ? productNameById.get(o.product) ?? '—' : '—'}
@@ -306,7 +338,10 @@ export function AdminOffersPage() {
                 ))}
               </TableBody>
             </Table>
-          )}
+            <Pager page={listParams.page} pageSize={listParams.pageSize} total={total} onPageChange={listParams.setPage} />
+            </>
+            );
+          })()}
         </CardContent>
       </Card>
 

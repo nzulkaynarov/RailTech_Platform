@@ -15,6 +15,8 @@ from crm.views import (
     DealViewSet, QuoteViewSet, QuoteItemViewSet, MessageViewSet,
     LeadCreateView, CRMAnalyticsView, ActivityLogViewSet, DashboardAnalyticsView,
     DealStageViewSet, QuoteStatusViewSet,
+    ContractViewSet, InvoiceViewSet, PaymentViewSet, ActViewSet,
+    FulfillmentViewSet, SupplierBidViewSet, LeadViewSet,
 )
 from accounts.views import (
     CompanyViewSet, UserViewSet, RegisterView, SetupPasswordView, SubmitProfileView, MeView,
@@ -46,6 +48,13 @@ router.register(r'crm/messages', MessageViewSet, basename='message')
 router.register(r'crm/activity-logs', ActivityLogViewSet, basename='activitylog')
 router.register(r'crm/deal-stages', DealStageViewSet, basename='dealstage')
 router.register(r'crm/quote-statuses', QuoteStatusViewSet, basename='quotestatus')
+router.register(r'crm/contracts', ContractViewSet, basename='contract')
+router.register(r'crm/invoices', InvoiceViewSet, basename='invoice')
+router.register(r'crm/payments', PaymentViewSet, basename='payment')
+router.register(r'crm/acts', ActViewSet, basename='act')
+router.register(r'crm/fulfillments', FulfillmentViewSet, basename='fulfillment')
+router.register(r'crm/supplier-bids', SupplierBidViewSet, basename='supplierbid')
+router.register(r'crm/leads', LeadViewSet, basename='lead')
 
 router.register(r'accounts/companies', CompanyViewSet)
 router.register(r'accounts/users', UserViewSet)

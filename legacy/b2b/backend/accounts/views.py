@@ -7,6 +7,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResponse, inline_serializer
 
 from django.db.models import Prefetch
+from django.utils.translation import gettext_lazy as _
 
 from core.permissions import IsAdminUser, IsManagerOrAdmin
 
@@ -287,7 +288,7 @@ class UserViewSet(viewsets.ModelViewSet):
         )
         if error:
             return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
-        return Response({'message': 'Пароль успешно изменён'})
+        return Response({'message': str(_('Password changed successfully'))})
 
     @extend_schema(
         summary="Update current user profile",
@@ -564,6 +565,17 @@ class SupplierSubscriptionViewSet(viewsets.ModelViewSet):
             SupplierSubscription.objects.filter(pk=sub.pk), 'SUSPENDED'
         )
         sub.refresh_from_db()
+        return Response(self.get_serializer(sub).data)
+
+    @extend_schema(summary="Record subscription payment — extends validity and activates",
+                   tags=['Accounts'])
+    @action(detail=True, methods=['post'], url_path='pay',
+            permission_classes=[permissions.IsAuthenticated])
+    def pay(self, request, pk=None):
+        sub = self.get_object()
+        amount = request.data.get('amount', 0)
+        months = int(request.data.get('months', 1))
+        sub = services.record_subscription_payment(sub, amount, months=months)
         return Response(self.get_serializer(sub).data)
 
 

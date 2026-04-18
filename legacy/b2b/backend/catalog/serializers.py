@@ -117,6 +117,7 @@ class ProductSerializer(serializers.ModelSerializer):
 
     # Computed display fields
     status_name = serializers.SerializerMethodField()
+    status_code = serializers.SerializerMethodField()
     domain_type_name = serializers.SerializerMethodField()
     domain_type_code = serializers.SerializerMethodField()
     stock_status = serializers.SerializerMethodField()
@@ -125,7 +126,7 @@ class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = [
-            'id', 'sku', 'name', 'description', 'status', 'status_name',
+            'id', 'sku', 'name', 'description', 'status', 'status_name', 'status_code',
             'domain_type', 'domain_type_name', 'domain_type_code',
             'category', 'category_data',
             'manufacturer', 'manufacturer_data',
@@ -140,6 +141,9 @@ class ProductSerializer(serializers.ModelSerializer):
 
     def get_status_name(self, obj):
         return obj.status.name if obj.status else None
+
+    def get_status_code(self, obj):
+        return obj.status.code if obj.status else None
 
     def get_domain_type_name(self, obj):
         return obj.domain_type.name if obj.domain_type else None
@@ -198,6 +202,7 @@ class ProductListSerializer(serializers.ModelSerializer):
 
     main_image_url = serializers.SerializerMethodField()
     status_name = serializers.SerializerMethodField()
+    status_code = serializers.SerializerMethodField()
     domain_type_name = serializers.SerializerMethodField()
     domain_type_code = serializers.SerializerMethodField()
     stock_status = serializers.SerializerMethodField()
@@ -206,7 +211,7 @@ class ProductListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = [
-            'id', 'sku', 'name', 'status', 'status_name',
+            'id', 'sku', 'name', 'status', 'status_name', 'status_code',
             'domain_type', 'domain_type_name', 'domain_type_code',
             'category', 'category_data',
             'manufacturer', 'manufacturer_data',
@@ -219,6 +224,9 @@ class ProductListSerializer(serializers.ModelSerializer):
 
     def get_status_name(self, obj):
         return obj.status.name if obj.status else None
+
+    def get_status_code(self, obj):
+        return obj.status.code if obj.status else None
 
     def get_domain_type_name(self, obj):
         return obj.domain_type.name if obj.domain_type else None

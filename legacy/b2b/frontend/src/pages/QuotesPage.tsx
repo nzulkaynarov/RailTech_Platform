@@ -16,11 +16,12 @@ import {
 } from 'lucide-react';
 import { useUserStore } from '@/store/userStore';
 import { useCurrencyStore } from '@/store/currencyStore';
-import { useQuotes, useSendQuoteToClient, useApproveQuote } from '@/hooks/useCRM';
+import { useQuotes, useSendQuoteToClient, useApproveQuote, useQuoteStatuses } from '@/hooks/useCRM';
 import { crmApi } from '@/api/crmApi';
 import type { Quote } from '@/api/crmApi';
 import { toast } from 'sonner';
 import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
+import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/DataTable';
 
 export function QuotesPage() {
   const { t } = useTranslation();
@@ -32,6 +33,8 @@ export function QuotesPage() {
   const isBuyer = activeStatus === 'BUYER';
 
   const quotesList = quotes ?? [];
+  const { data: statuses } = useQuoteStatuses();
+  const listParams = useListParams(['status'] as const, { defaultOrdering: '-created_at' });
 
   const title = isBuyer ? t('pages.quotes.buyerTitle') : t('pages.quotes.sellerTitle');
   const description = isBuyer ? t('pages.quotes.buyerDescription') : t('pages.quotes.sellerDescription');
@@ -112,25 +115,53 @@ export function QuotesPage() {
       stats={stats}
       actions={isBuyer ? undefined : [{ label: t('pages.quotes.createQuote') }]}
     >
+      <Toolbar
+        searchValue={listParams.searchInput}
+        onSearchChange={listParams.setSearchInput}
+        searchPlaceholder={t('pages.quotes.searchPlaceholder')}
+        filters={[
+          {
+            key: 'status',
+            value: listParams.filters.status,
+            onChange: (v) => listParams.setFilter('status', v),
+            allLabel: t('pages.quotes.allStatuses'),
+            options: (statuses ?? []).map((s) => ({ value: s.code, label: s.name })),
+          },
+        ]}
+      />
       <Card>
         <CardContent className="p-0">
-          {isLoading ? <LoadingRows rows={5} /> : quotesList.length === 0 ? (
-            <EmptyState icon={<Calculator className="h-5 w-5" />} message={t('pages.common.noData')} />
-          ) : (
+          {(() => {
+            const { items: pageItems, total } = applyListParams(quotesList, listParams, {
+              searchFields: (q) => [String(q.id), String(q.deal), q.status_name],
+              filterPredicates: {
+                status: (q, v) => q.status_code === v,
+              },
+              sortAccessors: {
+                id: (q) => q.id,
+                amount: (q) => Number(q.total_incl_vat) || 0,
+                status: (q) => q.status_name ?? '',
+                created_at: (q) => q.created_at ?? '',
+              },
+            });
+            if (isLoading) return <LoadingRows rows={5} />;
+            if (!pageItems.length) return <EmptyState icon={<Calculator className="h-5 w-5" />} message={t('pages.common.noData')} />;
+            return (
+            <>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t('pages.quotes.table.number')}</TableHead>
+                  <SortableHead sortKey="id" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('pages.quotes.table.number')}</SortableHead>
                   <TableHead>{isBuyer ? t('pages.quotes.table.supplier') : t('pages.quotes.table.client')}</TableHead>
                   <TableHead className="text-center">{t('pages.quotes.table.items')}</TableHead>
-                  <TableHead className="text-right">{t('pages.quotes.table.amount')}</TableHead>
-                  <TableHead>{t('pages.quotes.table.status')}</TableHead>
-                  <TableHead>{t('pages.quotes.table.date')}</TableHead>
+                  <SortableHead sortKey="amount" current={listParams.ordering} onChange={listParams.toggleOrdering} className="text-right">{t('pages.quotes.table.amount')}</SortableHead>
+                  <SortableHead sortKey="status" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('pages.quotes.table.status')}</SortableHead>
+                  <SortableHead sortKey="created_at" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('pages.quotes.table.date')}</SortableHead>
                   <TableHead className="text-center">{t('pages.quotes.table.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {quotesList.map((q: Quote) => (
+                {pageItems.map((q: Quote) => (
                   <TableRow key={q.id}>
                     <TableCell className="font-medium">#{q.id}-v{q.version}</TableCell>
                     <TableCell>{t('pages.quotes.dealRef', { id: q.deal })}</TableCell>
@@ -185,7 +216,10 @@ export function QuotesPage() {
                 ))}
               </TableBody>
             </Table>
-          )}
+            <Pager page={listParams.page} pageSize={listParams.pageSize} total={total} onPageChange={listParams.setPage} />
+            </>
+            );
+          })()}
         </CardContent>
       </Card>
     </PageShell>

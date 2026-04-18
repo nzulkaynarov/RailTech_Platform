@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body { font-family: 'Arial', sans-serif; font-size: 12px; color: #333; margin: 40px; }
+  h1 { font-size: 22px; color: #1a1a2e; margin-bottom: 4px; }
+  .subtitle { color: #666; font-size: 13px; margin-bottom: 24px; }
+  .parties { display: table; width: 100%; margin: 16px 0 24px; }
+  .party { display: table-cell; width: 50%; padding: 12px; background: #f8f9fa; border-radius: 6px; vertical-align: top; }
+  .party + .party { border-left: 8px solid white; }
+  .party h3 { margin: 0 0 6px 0; color: #1a1a2e; font-size: 13px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+  th { background: #1a1a2e; color: white; padding: 8px; text-align: left; font-size: 11px; }
+  td { padding: 7px 8px; border-bottom: 1px solid #e0e0e0; font-size: 11px; }
+  .total-row td { font-weight: bold; background: #1a1a2e; color: white; }
+  .signatures { margin-top: 60px; display: table; width: 100%; }
+  .signature { display: table-cell; width: 50%; padding: 24px 12px 0; border-top: 1px solid #999; font-size: 11px; }
+  .footer { margin-top: 60px; font-size: 10px; color: #999; text-align: center; border-top: 1px solid #e0e0e0; padding-top: 10px; }
+</style>
+</head>
+<body>
+  <h1>Договор поставки</h1>
+  <p class="subtitle">№ {{ contract.number }} от {{ contract.created_at|date:"d.m.Y" }}</p>
+
+  <div class="parties">
+    <div class="party">
+      <h3>Поставщик (RailTech)</h3>
+      <p>ООО «RailTech»</p>
+      <p>ИНН 300000000001</p>
+      <p>Ташкент, Узбекистан</p>
+    </div>
+    <div class="party">
+      <h3>Покупатель</h3>
+      <p>{{ company.name }}</p>
+      <p>ИНН {{ company.inn }}</p>
+      <p>{{ company.legal_address }}</p>
+      <p>Контактное лицо: {{ company.contact_person }}</p>
+    </div>
+  </div>
+
+  <p><strong>Предмет договора:</strong> Поставка товаров/услуг согласно приложению (спецификации) на базе КП v{{ quote.version }} от {{ quote.frozen_at|date:"d.m.Y"|default:quote.created_at|date:"d.m.Y" }}.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Наименование</th>
+        <th>Кол-во</th>
+        <th>Цена, без НДС</th>
+        <th>Сумма, без НДС</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in items %}
+      <tr>
+        <td>{{ forloop.counter }}</td>
+        <td>{% if item.product %}{{ item.product.name }}{% else %}{{ item.imported_raw_name }}{% endif %}</td>
+        <td>{{ item.quantity }}</td>
+        <td>{{ item.final_price_excl_vat }}</td>
+        <td>{{ item.final_price_excl_vat|floatformat:2 }}</td>
+      </tr>
+      {% endfor %}
+      <tr class="total-row">
+        <td colspan="4">Итого с НДС ({{ quote.vat_rate }}%)</td>
+        <td>{{ contract.total_amount }}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  {% if contract.notes %}
+  <p style="margin-top:20px"><strong>Примечания:</strong> {{ contract.notes }}</p>
+  {% endif %}
+
+  <div class="signatures">
+    <div class="signature">
+      <strong>От Поставщика:</strong><br>
+      {% if contract.manager_signer %}{{ contract.manager_signer.get_full_name|default:contract.manager_signer.email }}<br>
+      Подписано {{ contract.manager_signed_at|date:"d.m.Y H:i" }}{% else %}________________________{% endif %}
+    </div>
+    <div class="signature">
+      <strong>От Покупателя:</strong><br>
+      {% if contract.client_signer %}{{ contract.client_signer.get_full_name|default:contract.client_signer.email }}<br>
+      Подписано {{ contract.client_signed_at|date:"d.m.Y H:i" }}{% else %}________________________{% endif %}
+    </div>
+  </div>
+
+  <div class="footer">RailTech B2B Ecosystem | © 2026 | Сгенерировано автоматически</div>
+</body>
+</html>

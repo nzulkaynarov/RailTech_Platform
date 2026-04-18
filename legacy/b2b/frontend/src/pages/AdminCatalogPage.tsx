@@ -12,7 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHeader, TableRow } from '@/components/ui/table';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
-import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/AdminTable';
+import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/DataTable';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -243,11 +243,11 @@ export function AdminCatalogPage() {
     { label: t('adminCatalog.stats.total'), value: String(products?.length ?? '—') },
     {
       label: t('adminCatalog.stats.published'),
-      value: String(products?.filter((p) => p.status_name === 'PUBLISHED' || p.status_name?.toLowerCase().includes('публ')).length ?? '—'),
+      value: String(products?.filter((p) => p.status_code === 'PUBLISHED').length ?? '—'),
     },
     {
       label: t('adminCatalog.stats.draft'),
-      value: String(products?.filter((p) => p.status_name === 'DRAFT' || p.status_name?.toLowerCase().includes('черн')).length ?? '—'),
+      value: String(products?.filter((p) => p.status_code === 'DRAFT').length ?? '—'),
     },
   ];
 
@@ -288,7 +288,7 @@ export function AdminCatalogPage() {
             const { items: pageItems, total } = applyListParams(products ?? [], listParams, {
               searchFields: () => [],
               filterPredicates: {
-                status: (p, v) => (p.status_name ?? '') === v || String(p.status ?? '') === v,
+                status: (p, v) => p.status_code === v,
               },
               sortAccessors: {
                 sku: (p) => p.sku ?? '',

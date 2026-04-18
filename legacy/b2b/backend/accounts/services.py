@@ -217,8 +217,64 @@ def verify_company_kyc(
 
     company.verification_status = target_status
     company.save(update_fields=['verification_status'])
-    # TODO: hook for pghistory event / notification when triggers wired
+    # Notify owner(s) by email and in-app
+    try:
+        _send_kyc_status_email(company, level_code)
+    except Exception:
+        pass  # email failure shouldn't roll back KYC
+    try:
+        _create_kyc_notification(company, level_code)
+    except Exception:
+        pass
     return company, None
+
+
+def _send_kyc_status_email(company: Company, level_code: str) -> None:
+    owners = CustomUser.objects.filter(
+        memberships__company=company, memberships__is_primary=True, memberships__is_active=True,
+    ).distinct()
+    if not owners.exists():
+        return
+    subject_map = {
+        'L2_VERIFIED': f"RailTech: KYC компании {company.name} подтверждён",
+        'L3_CONTRACTED': f"RailTech: контракт с RailTech активирован",
+    }
+    body_map = {
+        'L2_VERIFIED': (
+            "Здравствуйте!\n\n"
+            f"KYC уровень L2 для компании {company.name} (ИНН {company.inn}) успешно подтверждён.\n"
+            "Теперь вы можете работать в полном объёме в RailTech.\n\n"
+            "— RailTech B2B"
+        ),
+        'L3_CONTRACTED': (
+            "Здравствуйте!\n\n"
+            f"Контракт для компании {company.name} активирован. Все премиум-функции открыты.\n\n"
+            "— RailTech B2B"
+        ),
+    }
+    subject = subject_map.get(level_code, f"RailTech: обновление статуса KYC → {level_code}")
+    body = body_map.get(level_code, f"Статус верификации изменён на {level_code}.")
+    send_mail(
+        subject, body,
+        getattr(settings, 'DEFAULT_FROM_EMAIL', 'no-reply@railtech.uz'),
+        list(owners.values_list('email', flat=True)),
+        fail_silently=True,
+    )
+
+
+def _create_kyc_notification(company: Company, level_code: str) -> None:
+    from notifications.models import Notification, NotificationType
+    owners = CustomUser.objects.filter(
+        memberships__company=company, memberships__is_primary=True, memberships__is_active=True,
+    ).distinct()
+    nt = NotificationType.objects.filter(code='SUCCESS').first()
+    for u in owners:
+        Notification.objects.create(
+            user=u, type=nt,
+            title="Статус KYC обновлён",
+            message=f"KYC для {company.name} — {level_code}",
+            link="/cabinet/profile",
+        )
 
 
 def bulk_verify_kyc(
@@ -269,7 +325,101 @@ def approve_role_application(
     application.save(update_fields=['status', 'reviewed_by', 'reviewed_at', 'updated_at'])
 
     application.company.types.add(application.requested_type)
+
+    # Auto-create TRIAL subscription for SUPPLIER / MANUFACTURER — 30 days
+    if requested_code in ('SUPPLIER', 'MANUFACTURER'):
+        try:
+            ensure_trial_subscription(application.company)
+        except Exception:
+            pass  # don't roll back approval
+
+    # Notify applicant
+    try:
+        _send_role_application_email(application, approved=True)
+    except Exception:
+        pass
+
     return application, None
+
+
+def ensure_trial_subscription(company: Company, trial_days: int = 30) -> SupplierSubscription:
+    """Create a TRIAL subscription for the company if missing."""
+    from datetime import timedelta
+    sub = getattr(company, 'subscription', None)
+    if sub:
+        return sub
+    today = timezone.now().date()
+    sub = SupplierSubscription.objects.create(
+        company=company, plan='BASIC', status='TRIAL',
+        monthly_rate=0, valid_from=today,
+        valid_until=today + timedelta(days=trial_days),
+        next_payment_date=today + timedelta(days=trial_days),
+        notes=f"Auto-created TRIAL on {today}",
+    )
+    return sub
+
+
+def _send_role_application_email(app: CompanyRoleApplication, approved: bool) -> None:
+    owners = CustomUser.objects.filter(
+        memberships__company=app.company, memberships__is_primary=True, memberships__is_active=True,
+    ).distinct()
+    if not owners.exists():
+        return
+    subject = (
+        f"RailTech: заявка на роль {app.requested_type.name} одобрена"
+        if approved else
+        f"RailTech: заявка на роль {app.requested_type.name} отклонена"
+    )
+    if approved:
+        body = (
+            f"Заявка компании {app.company.name} на роль {app.requested_type.name} одобрена.\n"
+            f"Для поставщиков/производителей активирован пробный период 30 дней.\n\n— RailTech B2B"
+        )
+    else:
+        body = (
+            f"К сожалению, заявка на роль {app.requested_type.name} отклонена.\n"
+            f"Комментарий: {app.review_notes or '—'}\n\n— RailTech B2B"
+        )
+    send_mail(
+        subject, body,
+        getattr(settings, 'DEFAULT_FROM_EMAIL', 'no-reply@railtech.uz'),
+        list(owners.values_list('email', flat=True)),
+        fail_silently=True,
+    )
+
+
+def record_subscription_payment(
+    subscription: SupplierSubscription, amount, months: int = 1,
+) -> SupplierSubscription:
+    """Extend subscription and set ACTIVE after a successful payment."""
+    from datetime import timedelta
+    today = timezone.now().date()
+    base = max(today, subscription.valid_until or today)
+    subscription.valid_until = base + timedelta(days=30 * months)
+    subscription.last_payment_date = today
+    subscription.next_payment_date = subscription.valid_until
+    subscription.status = 'ACTIVE'
+    subscription.save(update_fields=[
+        'valid_until', 'last_payment_date', 'next_payment_date', 'status', 'updated_at',
+    ])
+    return subscription
+
+
+def check_and_expire_subscriptions() -> dict:
+    """Move expired TRIAL/ACTIVE subscriptions to PAST_DUE, then to SUSPENDED if 14+ days overdue."""
+    from datetime import timedelta
+    today = timezone.now().date()
+    # Step 1: fresh expirations → PAST_DUE
+    just_expired = SupplierSubscription.objects.filter(
+        status__in=['TRIAL', 'ACTIVE'], valid_until__lt=today,
+    )
+    past_due_count = just_expired.update(status='PAST_DUE')
+    # Step 2: PAST_DUE >= 14 days → SUSPENDED
+    threshold = today - timedelta(days=14)
+    suspended_count = SupplierSubscription.objects.filter(
+        status='PAST_DUE', valid_until__lt=threshold,
+    ).update(status='SUSPENDED')
+    return {'past_due': past_due_count, 'suspended': suspended_count}
 
 
 def reject_role_application(

@@ -143,3 +143,53 @@ def archive_old_messages(self, days: int = 90, batch_size: int = 500) -> dict:
         'archived': archived_count,
         'files': files_written,
     }
+
+
+@shared_task(name='crm.check_overdue_deliveries')
+def check_overdue_deliveries() -> dict:
+    """Flag fulfillments whose expected_delivery_date passed without status change.
+    Sends in-app notification to the deal manager.
+    """
+    from .models import Fulfillment
+    from notifications.models import Notification, NotificationType
+    today = timezone.now().date()
+    overdue_qs = Fulfillment.objects.filter(
+        expected_delivery_date__lt=today,
+        status__in=['PENDING', 'SHIPPED', 'IN_TRANSIT'],
+    ).select_related('deal__manager')
+    warn_type = NotificationType.objects.filter(code='WARNING').first()
+    count = 0
+    for ff in overdue_qs:
+        mgr = ff.deal.manager
+        if mgr:
+            Notification.objects.create(
+                user=mgr, type=warn_type,
+                title='Просрочка по доставке',
+                message=f'Сделка #{ff.deal_id}: ожидали {ff.expected_delivery_date}, статус {ff.status}',
+                link='/crm/deals',
+                deal=ff.deal,
+            )
+        count += 1
+    return {'overdue_flagged': count}
+
+
+@shared_task(name='crm.auto_invoice_on_closed_won')
+def auto_invoice_on_closed_won(deal_id: int) -> dict:
+    """Triggered after a deal transitions to CLOSED_WON: create invoice+act skeletons."""
+    from .models import Deal
+    from .services import generate_invoice_from_contract, generate_act, ensure_fulfillment
+    try:
+        deal = Deal.objects.get(pk=deal_id)
+    except Deal.DoesNotExist:
+        return {'error': 'deal not found'}
+    contract = deal.contracts.filter(status='SIGNED').order_by('-created_at').first()
+    result = {'deal_id': deal_id, 'invoice': None, 'act': None, 'fulfillment': True}
+    ensure_fulfillment(deal)
+    if contract:
+        invoice, err = generate_invoice_from_contract(contract.id)
+        if invoice:
+            result['invoice'] = invoice.id
+            act, err2 = generate_act(invoice.id)
+            if act:
+                result['act'] = act.id
+    return result

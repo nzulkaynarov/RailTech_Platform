@@ -59,6 +59,31 @@ class IsAdminOrReadOnly(BasePermission):
         return False
 
 
+class IsSupplierWithActiveSubscription(BasePermission):
+    """
+    Permits write-methods only to supplier companies with an operational subscription
+    (ACTIVE or TRIAL within validity). Managers/Admins bypass.
+    Read-only methods pass through.
+    """
+    message = "Supplier subscription inactive or expired."
+
+    def has_permission(self, request, view):
+        user = request.user
+        if request.method in SAFE_METHODS:
+            return True
+        if not (user and user.is_authenticated):
+            return False
+        if user.is_superuser or getattr(user, 'is_manager_or_admin', False):
+            return True
+        # Find user's active supplier companies with operational subscription
+        from accounts.models import SupplierSubscription
+        supplier_company_ids = user.memberships.filter(
+            is_active=True, company__types__code__in=['SUPPLIER', 'MANUFACTURER'],
+        ).values_list('company_id', flat=True)
+        subs = SupplierSubscription.objects.filter(company_id__in=list(supplier_company_ids))
+        return any(s.is_operational for s in subs)
+
+
 class IsOwnerOrManagerOrAdmin(BasePermission):
     """
     Object-level permission.

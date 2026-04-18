@@ -1,12 +1,8 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FileText, Search, Clock, Eye } from 'lucide-react';
+import { FileText, Clock, Eye } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
@@ -15,8 +11,9 @@ import {
 } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
 import { StatusBadge, getDealStageVariant } from '@/components/ui/StatusBadge';
+import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/DataTable';
 import { useCurrencyStore } from '@/store/currencyStore';
-import { useDeals } from '@/hooks/useCRM';
+import { useDeals, useDealStages } from '@/hooks/useCRM';
 import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
 import type { Deal } from '@/api/crmApi';
 
@@ -94,39 +91,16 @@ function DealDetailSheet({
 export function DealsPage() {
   const { t } = useTranslation();
   const { data: deals, isLoading } = useDeals();
+  const { data: stages } = useDealStages();
   const formatCurrency = useCurrencyStore((s) => s.format);
 
-  const [search, setSearch] = useState('');
-  const [stageFilter, setStageFilter] = useState('all');
+  const listParams = useListParams(['stage'] as const, { defaultOrdering: '-created_at' });
   const [detailTarget, setDetailTarget] = useState<Deal | null>(null);
 
   const selectedDeal = useMemo(() => {
     if (!detailTarget || !deals) return null;
     return deals.find((d) => d.id === detailTarget.id) ?? detailTarget;
   }, [deals, detailTarget]);
-
-  // Get unique stages from real data
-  const stages = useMemo(() => {
-    if (!deals) return [];
-    const map = new Map<string, string>();
-    deals.forEach(d => {
-      if (d.stage_code && d.stage_name) map.set(d.stage_code, d.stage_name);
-    });
-    return Array.from(map.entries()).map(([code, name]) => ({ code, name }));
-  }, [deals]);
-
-  const filtered = useMemo(() => {
-    if (!deals) return [];
-    return deals.filter((d) => {
-      const matchesSearch = !search ||
-        (d.title ?? '').toLowerCase().includes(search.toLowerCase()) ||
-        (d.client_name ?? '').toLowerCase().includes(search.toLowerCase()) ||
-        (d.company_name ?? '').toLowerCase().includes(search.toLowerCase()) ||
-        String(d.id).includes(search);
-      const matchesStage = stageFilter === 'all' || d.stage_code === stageFilter;
-      return matchesSearch && matchesStage;
-    });
-  }, [deals, search, stageFilter]);
 
   const stats = [
     { label: t('pages.deals.stats.total'), value: String(deals?.length ?? 0) },
@@ -142,50 +116,56 @@ export function DealsPage() {
       icon={<FileText className="h-5 w-5" />}
       stats={stats}
     >
-      {/* Filters */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder={t('pages.deals.searchPlaceholder')}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <Select value={stageFilter} onValueChange={setStageFilter}>
-          <SelectTrigger className="w-full sm:w-48">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t('pages.deals.allStages')}</SelectItem>
-            {stages.map((s) => (
-              <SelectItem key={s.code} value={s.code}>{s.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <Toolbar
+        searchValue={listParams.searchInput}
+        onSearchChange={listParams.setSearchInput}
+        searchPlaceholder={t('pages.deals.searchPlaceholder')}
+        filters={[
+          {
+            key: 'stage',
+            value: listParams.filters.stage,
+            onChange: (v) => listParams.setFilter('stage', v),
+            allLabel: t('pages.deals.allStages'),
+            options: (stages ?? []).map((s) => ({ value: s.code, label: s.name })),
+          },
+        ]}
+      />
 
-      {/* Table */}
       <Card>
         <CardContent className="p-0">
-          {isLoading ? <LoadingRows rows={5} /> : !filtered.length ? (
-            <EmptyState icon={<FileText className="h-5 w-5" />} message={t('pages.common.noData')} />
-          ) : (
+          {(() => {
+            const { items: pageItems, total } = applyListParams(deals ?? [], listParams, {
+              searchFields: (d) => [d.title, d.client_name, d.company_name, String(d.id)],
+              filterPredicates: {
+                stage: (d, v) => d.stage_code === v,
+              },
+              sortAccessors: {
+                id: (d) => d.id,
+                title: (d) => d.title ?? '',
+                client: (d) => d.client_name ?? d.company_name ?? '',
+                stage: (d) => d.stage_name ?? '',
+                value: (d) => Number(d.total_value) || 0,
+                created_at: (d) => d.created_at ?? '',
+              },
+            });
+            if (isLoading) return <LoadingRows rows={5} />;
+            if (!pageItems.length) return <EmptyState icon={<FileText className="h-5 w-5" />} message={t('pages.common.noData')} />;
+            return (
+            <>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t('pages.deals.table.deal')}</TableHead>
-                  <TableHead>{t('pages.deals.table.client')}</TableHead>
-                  <TableHead>{t('pages.deals.table.stage')}</TableHead>
-                  <TableHead className="text-right">{t('pages.deals.table.value')}</TableHead>
+                  <SortableHead sortKey="id" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('pages.deals.table.deal')}</SortableHead>
+                  <SortableHead sortKey="client" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('pages.deals.table.client')}</SortableHead>
+                  <SortableHead sortKey="stage" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('pages.deals.table.stage')}</SortableHead>
+                  <SortableHead sortKey="value" current={listParams.ordering} onChange={listParams.toggleOrdering} className="text-right">{t('pages.deals.table.value')}</SortableHead>
                   <TableHead>{t('pages.deals.table.manager')}</TableHead>
-                  <TableHead>{t('pages.deals.table.date')}</TableHead>
+                  <SortableHead sortKey="created_at" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('pages.deals.table.date')}</SortableHead>
                   <TableHead className="w-10" />
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((deal) => (
+                {pageItems.map((deal) => (
                   <TableRow
                     key={deal.id}
                     className="cursor-pointer"
@@ -226,7 +206,10 @@ export function DealsPage() {
                 ))}
               </TableBody>
             </Table>
-          )}
+            <Pager page={listParams.page} pageSize={listParams.pageSize} total={total} onPageChange={listParams.setPage} />
+            </>
+            );
+          })()}
         </CardContent>
       </Card>
 

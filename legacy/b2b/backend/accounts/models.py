@@ -530,3 +530,14 @@ class SupplierSubscription(models.Model):
             and self.valid_until
             and self.valid_until >= today
         )
+
+    @property
+    def is_operational(self) -> bool:
+        """Subscription permits supplier operations (ACTIVE or TRIAL within validity)."""
+        from django.utils import timezone
+        today = timezone.now().date()
+        if self.status not in ('ACTIVE', 'TRIAL'):
+            return False
+        if self.valid_until and self.valid_until < today:
+            return False
+        return True

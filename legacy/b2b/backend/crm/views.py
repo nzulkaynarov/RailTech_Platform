@@ -7,10 +7,17 @@ from drf_spectacular.utils import (
     OpenApiParameter, inline_serializer,
 )
 from rest_framework import serializers as drf_serializers
-from .models import Deal, DealStage, Quote, QuoteItem, QuoteStatus, Message, ActivityLog
+from .models import (
+    Deal, DealStage, Quote, QuoteItem, QuoteStatus, Message, ActivityLog,
+    Contract, Invoice, InvoiceItem, Payment, Act, Fulfillment,
+    SupplierBid, SupplierBidItem, Lead,
+)
 from .serializers import (
     DealListSerializer, DealDetailSerializer, QuoteSerializer, QuoteItemSerializer,
-    MessageSerializer, ActivityLogSerializer, LeadSerializer
+    MessageSerializer, ActivityLogSerializer, LeadSerializer,
+    ContractSerializer, InvoiceSerializer, InvoiceItemSerializer,
+    PaymentSerializer, ActSerializer, FulfillmentSerializer,
+    SupplierBidSerializer,
 )
 from rest_framework.permissions import IsAuthenticated
 from core.permissions import IsManagerOrAdmin, IsOwnerOrManagerOrAdmin
@@ -20,6 +27,7 @@ from datetime import timedelta
 from decimal import Decimal
 
 from .services import transition_deal_stage
+from . import services as crm_services
 
 
 @extend_schema_view(
@@ -196,6 +204,21 @@ class DealViewSet(viewsets.ModelViewSet):
         },
         tags=['CRM'],
     )
+    @extend_schema(summary="Open RFQ — move deal to RFQ_OPEN and notify suppliers", tags=['CRM'],
+                   request=inline_serializer('OpenRFQ', fields={
+                       'supplier_ids': drf_serializers.ListField(child=drf_serializers.IntegerField(), required=False),
+                   }))
+    @action(detail=True, methods=['post'], url_path='open-rfq',
+            permission_classes=[IsAuthenticated, IsManagerOrAdmin])
+    def open_rfq(self, request, pk=None):
+        deal, err = crm_services.open_rfq(
+            int(pk), request.user,
+            supplier_ids=request.data.get('supplier_ids') or None,
+        )
+        if err:
+            return Response({'detail': err}, status=400)
+        return Response(DealDetailSerializer(deal).data)
+
     @action(detail=True, methods=['get'], url_path='export-pdf')
     def export_pdf(self, request, pk=None):
         """Export PDF of the deal's active quote."""
@@ -460,6 +483,32 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
         user_company_ids = user.memberships.filter(
             is_active=True).values_list('company_id', flat=True)
         return queryset.filter(quote__deal__company_id__in=user_company_ids)
+
+    @extend_schema(summary="Manually reassign product for a quote item", tags=['CRM'],
+                   request=inline_serializer('ReassignProduct', fields={
+                       'product_id': drf_serializers.IntegerField(allow_null=True),
+                   }))
+    @action(detail=True, methods=['post'], url_path='reassign-product',
+            permission_classes=[IsAuthenticated, IsManagerOrAdmin])
+    def reassign_product(self, request, pk=None):
+        product_id = request.data.get('product_id')
+        item, err = crm_services.reassign_quote_item_product(
+            int(pk), request.user, product_id=int(product_id) if product_id else None,
+        )
+        if err:
+            return Response({'detail': err}, status=400)
+        return Response(QuoteItemSerializer(item).data)
+
+    @extend_schema(summary="Get top-N smart-match candidates for this item", tags=['CRM'])
+    @action(detail=True, methods=['get'], url_path='match-candidates',
+            permission_classes=[IsAuthenticated, IsManagerOrAdmin])
+    def match_candidates(self, request, pk=None):
+        from sourcing.services import smart_match_candidates
+        item = self.get_object()
+        raw = item.imported_raw_name or (item.product.name if item.product else '')
+        domain_hint = item.product.domain_type.code if (item.product and item.product.domain_type) else None
+        candidates = smart_match_candidates(raw, limit=5, domain_hint=domain_hint)
+        return Response({'raw': raw, 'candidates': candidates})
 
 
 @extend_schema_view(
@@ -901,3 +950,300 @@ class QuoteStatusViewSet(viewsets.ReadOnlyModelViewSet):
     def list(self, request, *args, **kwargs):
         data = [{'code': s.code, 'name': s.name} for s in self.get_queryset()]
         return Response(data)
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Contracts / Invoices / Payments / Acts / Fulfillment / SupplierBids / Leads
+# ──────────────────────────────────────────────────────────────────────────
+
+
+class LeadViewSet(viewsets.ModelViewSet):
+    """Manager/admin CRUD for leads + convert-to-deal."""
+    serializer_class = LeadSerializer
+    permission_classes = [IsAuthenticated, IsManagerOrAdmin]
+    queryset = Lead.objects.all().order_by('-created_at')
+
+    @extend_schema(summary="Convert lead to deal", tags=['CRM'],
+                   request=inline_serializer('ConvertLead', fields={
+                       'company_id': drf_serializers.IntegerField(required=False),
+                   }))
+    @action(detail=True, methods=['post'], url_path='convert')
+    def convert(self, request, pk=None):
+        from accounts.models import Company
+        lead = self.get_object()
+        company = None
+        if request.data.get('company_id'):
+            company = Company.objects.filter(pk=request.data['company_id']).first()
+        deal, err = crm_services.convert_lead_to_deal(lead, request.user, company=company)
+        if err:
+            return Response({'detail': err}, status=400)
+        return Response({'deal_id': deal.id, 'stage': deal.stage.code if deal.stage else None}, status=201)
+
+
+class ContractViewSet(viewsets.ModelViewSet):
+    """Contracts — generated from approved quotes, double-signed."""
+    serializer_class = ContractSerializer
+    permission_classes = [IsAuthenticated, IsOwnerOrManagerOrAdmin]
+
+    def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Contract.objects.none()
+        u = self.request.user
+        qs = Contract.objects.select_related('deal__company', 'quote', 'currency',
+                                             'client_signer', 'manager_signer').order_by('-created_at')
+        if u.is_superuser or getattr(u, 'is_manager_or_admin', False):
+            return qs
+        user_company_ids = u.memberships.filter(is_active=True).values_list('company_id', flat=True)
+        return qs.filter(deal__company_id__in=user_company_ids)
+
+    @extend_schema(summary="Generate contract from a quote", tags=['CRM'],
+                   request=inline_serializer('GenContract', fields={
+                       'quote_id': drf_serializers.IntegerField(),
+                       'notes': drf_serializers.CharField(required=False, default=''),
+                   }))
+    @action(detail=False, methods=['post'], url_path='generate-from-quote',
+            permission_classes=[IsAuthenticated, IsManagerOrAdmin])
+    def generate_from_quote(self, request):
+        quote_id = request.data.get('quote_id')
+        if not quote_id:
+            return Response({'detail': 'quote_id is required'}, status=400)
+        contract, err = crm_services.generate_contract_from_quote(
+            int(quote_id), actor=request.user, notes=request.data.get('notes', ''),
+        )
+        if err:
+            return Response({'detail': err}, status=400)
+        return Response(ContractSerializer(contract).data, status=201)
+
+    @extend_schema(summary="Sign contract by client", tags=['CRM'])
+    @action(detail=True, methods=['post'], url_path='sign-client')
+    def sign_client(self, request, pk=None):
+        contract, err = crm_services.sign_contract_by_client(int(pk), request.user)
+        if err:
+            return Response({'detail': err}, status=400)
+        return Response(ContractSerializer(contract).data)
+
+    @extend_schema(summary="Sign contract by manager (RailTech side)", tags=['CRM'])
+    @action(detail=True, methods=['post'], url_path='sign-manager',
+            permission_classes=[IsAuthenticated, IsManagerOrAdmin])
+    def sign_manager(self, request, pk=None):
+        contract, err = crm_services.sign_contract_by_manager(int(pk), request.user)
+        if err:
+            return Response({'detail': err}, status=400)
+        return Response(ContractSerializer(contract).data)
+
+    @extend_schema(summary="Upload signed copy", tags=['CRM'])
+    @action(detail=True, methods=['post'], url_path='upload-signed',
+            parser_classes=[__import__('rest_framework').parsers.MultiPartParser,
+                            __import__('rest_framework').parsers.FormParser])
+    def upload_signed(self, request, pk=None):
+        contract = self.get_object()
+        file_obj = request.FILES.get('file')
+        if not file_obj:
+            return Response({'detail': 'No file provided'}, status=400)
+        contract.signed_file = file_obj
+        contract.save(update_fields=['signed_file', 'updated_at'])
+        return Response(ContractSerializer(contract).data)
+
+    @extend_schema(summary="Cancel contract", tags=['CRM'])
+    @action(detail=True, methods=['post'], url_path='cancel',
+            permission_classes=[IsAuthenticated, IsManagerOrAdmin])
+    def cancel(self, request, pk=None):
+        contract, err = crm_services.cancel_contract(int(pk), request.user, reason=request.data.get('reason', ''))
+        if err:
+            return Response({'detail': err}, status=400)
+        return Response(ContractSerializer(contract).data)
+
+
+class InvoiceViewSet(viewsets.ModelViewSet):
+    serializer_class = InvoiceSerializer
+    permission_classes = [IsAuthenticated, IsOwnerOrManagerOrAdmin]
+
+    def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Invoice.objects.none()
+        u = self.request.user
+        qs = Invoice.objects.select_related('deal__company', 'contract', 'currency').prefetch_related(
+            'items', 'payments',
+        ).order_by('-created_at')
+        if u.is_superuser or getattr(u, 'is_manager_or_admin', False):
+            return qs
+        user_company_ids = u.memberships.filter(is_active=True).values_list('company_id', flat=True)
+        return qs.filter(deal__company_id__in=user_company_ids)
+
+    @extend_schema(summary="Generate invoice from a signed contract", tags=['CRM'])
+    @action(detail=False, methods=['post'], url_path='generate-from-contract',
+            permission_classes=[IsAuthenticated, IsManagerOrAdmin])
+    def generate_from_contract(self, request):
+        contract_id = request.data.get('contract_id')
+        due_days = int(request.data.get('due_days', 14))
+        if not contract_id:
+            return Response({'detail': 'contract_id is required'}, status=400)
+        invoice, err = crm_services.generate_invoice_from_contract(
+            int(contract_id), actor=request.user, due_days=due_days,
+        )
+        if err:
+            return Response({'detail': err}, status=400)
+        return Response(InvoiceSerializer(invoice).data, status=201)
+
+    @extend_schema(summary="Record a payment against this invoice", tags=['CRM'],
+                   request=inline_serializer('RecordPayment', fields={
+                       'amount': drf_serializers.DecimalField(max_digits=14, decimal_places=2),
+                       'paid_at': drf_serializers.DateField(),
+                       'method': drf_serializers.CharField(required=False, default='BANK_TRANSFER'),
+                       'reference': drf_serializers.CharField(required=False, default=''),
+                   }))
+    @action(detail=True, methods=['post'], url_path='record-payment',
+            permission_classes=[IsAuthenticated, IsManagerOrAdmin])
+    def record_payment(self, request, pk=None):
+        payment, err = crm_services.record_payment(
+            int(pk), actor=request.user,
+            amount=request.data.get('amount'),
+            paid_at=request.data.get('paid_at'),
+            method=request.data.get('method', 'BANK_TRANSFER'),
+            reference=request.data.get('reference', ''),
+            proof_file=request.FILES.get('proof_file'),
+        )
+        if err:
+            return Response({'detail': err}, status=400)
+        return Response(PaymentSerializer(payment).data, status=201)
+
+    @extend_schema(summary="Generate Act for this invoice", tags=['CRM'])
+    @action(detail=True, methods=['post'], url_path='generate-act',
+            permission_classes=[IsAuthenticated, IsManagerOrAdmin])
+    def generate_act(self, request, pk=None):
+        act, err = crm_services.generate_act(int(pk), actor=request.user)
+        if err:
+            return Response({'detail': err}, status=400)
+        return Response(ActSerializer(act).data, status=201)
+
+
+class PaymentViewSet(viewsets.ModelViewSet):
+    serializer_class = PaymentSerializer
+    permission_classes = [IsAuthenticated, IsOwnerOrManagerOrAdmin]
+
+    def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Payment.objects.none()
+        u = self.request.user
+        qs = Payment.objects.select_related('invoice__deal__company').order_by('-paid_at')
+        if u.is_superuser or getattr(u, 'is_manager_or_admin', False):
+            return qs
+        user_company_ids = u.memberships.filter(is_active=True).values_list('company_id', flat=True)
+        return qs.filter(invoice__deal__company_id__in=user_company_ids)
+
+
+class ActViewSet(viewsets.ModelViewSet):
+    serializer_class = ActSerializer
+    permission_classes = [IsAuthenticated, IsOwnerOrManagerOrAdmin]
+
+    def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Act.objects.none()
+        u = self.request.user
+        qs = Act.objects.select_related('deal__company', 'contract', 'invoice').order_by('-created_at')
+        if u.is_superuser or getattr(u, 'is_manager_or_admin', False):
+            return qs
+        user_company_ids = u.memberships.filter(is_active=True).values_list('company_id', flat=True)
+        return qs.filter(deal__company_id__in=user_company_ids)
+
+    @extend_schema(summary="Sign act (mark as SIGNED)", tags=['CRM'])
+    @action(detail=True, methods=['post'], url_path='sign',
+            parser_classes=[__import__('rest_framework').parsers.MultiPartParser,
+                            __import__('rest_framework').parsers.FormParser])
+    def sign(self, request, pk=None):
+        act, err = crm_services.sign_act(int(pk), request.user, signed_file=request.FILES.get('signed_file'))
+        if err:
+            return Response({'detail': err}, status=400)
+        return Response(ActSerializer(act).data)
+
+
+class FulfillmentViewSet(viewsets.ModelViewSet):
+    serializer_class = FulfillmentSerializer
+    permission_classes = [IsAuthenticated, IsOwnerOrManagerOrAdmin]
+
+    def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Fulfillment.objects.none()
+        u = self.request.user
+        qs = Fulfillment.objects.select_related('deal__company').order_by('-updated_at')
+        if u.is_superuser or getattr(u, 'is_manager_or_admin', False):
+            return qs
+        user_company_ids = u.memberships.filter(is_active=True).values_list('company_id', flat=True)
+        return qs.filter(deal__company_id__in=user_company_ids)
+
+    @extend_schema(summary="Update fulfillment status", tags=['CRM'])
+    @action(detail=False, methods=['post'], url_path='update-status',
+            permission_classes=[IsAuthenticated, IsManagerOrAdmin])
+    def update_status(self, request):
+        deal_id = request.data.get('deal_id')
+        status_code = request.data.get('status')
+        if not deal_id or not status_code:
+            return Response({'detail': 'deal_id and status are required'}, status=400)
+        extra = {k: request.data.get(k) for k in ('tracking_number', 'carrier',
+                                                  'expected_delivery_date', 'notes')}
+        obj, err = crm_services.update_fulfillment_status(
+            int(deal_id), request.user, status_code, **extra,
+        )
+        if err:
+            return Response({'detail': err}, status=400)
+        return Response(FulfillmentSerializer(obj).data)
+
+
+class SupplierBidViewSet(viewsets.ModelViewSet):
+    serializer_class = SupplierBidSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return SupplierBid.objects.none()
+        u = self.request.user
+        qs = SupplierBid.objects.select_related('deal__company', 'supplier', 'currency').prefetch_related(
+            'items',
+        ).order_by('-created_at')
+        if u.is_superuser or getattr(u, 'is_manager_or_admin', False):
+            return qs
+        # Supplier sees only its own bids
+        supplier_ids = u.memberships.filter(is_active=True).values_list('company_id', flat=True)
+        return qs.filter(supplier_id__in=supplier_ids)
+
+    @extend_schema(summary="Submit bid for an RFQ", tags=['CRM'],
+                   request=inline_serializer('SubmitBid', fields={
+                       'deal_id': drf_serializers.IntegerField(),
+                       'supplier_id': drf_serializers.IntegerField(),
+                       'items': drf_serializers.ListField(child=drf_serializers.DictField()),
+                       'notes': drf_serializers.CharField(required=False, default=''),
+                       'lead_time_days': drf_serializers.IntegerField(required=False),
+                       'currency_id': drf_serializers.IntegerField(required=False),
+                   }))
+    @action(detail=False, methods=['post'], url_path='submit')
+    def submit(self, request):
+        bid, err = crm_services.submit_supplier_bid(
+            deal_id=int(request.data['deal_id']),
+            supplier_id=int(request.data['supplier_id']),
+            submitted_by=request.user,
+            items=request.data.get('items', []),
+            notes=request.data.get('notes', ''),
+            lead_time_days=request.data.get('lead_time_days'),
+            currency_id=request.data.get('currency_id'),
+        )
+        if err:
+            return Response({'detail': err}, status=400)
+        return Response(SupplierBidSerializer(bid).data, status=201)
+
+    @extend_schema(summary="Accept bid (manager-only)", tags=['CRM'])
+    @action(detail=True, methods=['post'], url_path='accept',
+            permission_classes=[IsAuthenticated, IsManagerOrAdmin])
+    def accept(self, request, pk=None):
+        bid, err = crm_services.accept_supplier_bid(int(pk), request.user)
+        if err:
+            return Response({'detail': err}, status=400)
+        return Response(SupplierBidSerializer(bid).data)
+
+    @extend_schema(summary="Reject bid", tags=['CRM'])
+    @action(detail=True, methods=['post'], url_path='reject',
+            permission_classes=[IsAuthenticated, IsManagerOrAdmin])
+    def reject(self, request, pk=None):
+        bid, err = crm_services.reject_supplier_bid(int(pk), request.user, reason=request.data.get('reason', ''))
+        if err:
+            return Response({'detail': err}, status=400)
+        return Response(SupplierBidSerializer(bid).data)
