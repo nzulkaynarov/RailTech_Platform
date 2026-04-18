@@ -20,6 +20,8 @@ import {
   Check,
   ShieldCheck,
   CreditCard,
+  Receipt,
+  Gavel,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -103,6 +105,16 @@ function getBuyerNavigation(activePage: string, role: UserRole, t: TFn): NavItem
     // Buyer now sees his own Deals — backend filters by company membership via IsOwnerOrManagerOrAdmin.
     { label: t('shell.deals'), icon: <Handshake className="h-4 w-4" />, id: 'crm-deals', active: activePage === 'crm-deals' },
     { label: t('shell.commercialOffers'), icon: <Calculator className="h-4 w-4" />, id: 'crm-quotes', active: activePage === 'crm-quotes' },
+    {
+      label: t('shell.billing'), icon: <Receipt className="h-4 w-4" />,
+      children: [
+        { label: t('shell.contracts'), id: 'contracts', active: activePage === 'contracts' },
+        { label: t('shell.invoices'), id: 'invoices', active: activePage === 'invoices' },
+        { label: t('shell.payments'), id: 'payments', active: activePage === 'payments' },
+        { label: t('shell.acts'), id: 'acts', active: activePage === 'acts' },
+        { label: t('shell.fulfillments'), id: 'fulfillments', active: activePage === 'fulfillments' },
+      ],
+    },
   ];
   if (role === 'ADMIN' || role === 'MANAGER') {
     items.push({ label: t('shell.clients'), icon: <Users className="h-4 w-4" />, id: 'crm-clients', active: activePage === 'crm-clients' });
@@ -132,6 +144,16 @@ function getManufacturerNavigation(activePage: string, role: UserRole, t: TFn): 
     },
     { label: t('shell.deals'), icon: <Handshake className="h-4 w-4" />, id: 'crm-deals', active: activePage === 'crm-deals' },
     { label: t('shell.quotes'), icon: <Calculator className="h-4 w-4" />, id: 'crm-quotes', active: activePage === 'crm-quotes' },
+    { label: t('shell.supplierBids'), icon: <Gavel className="h-4 w-4" />, id: 'supplier-bids', active: activePage === 'supplier-bids' },
+    {
+      label: t('shell.billing'), icon: <Receipt className="h-4 w-4" />,
+      children: [
+        { label: t('shell.contracts'), id: 'contracts', active: activePage === 'contracts' },
+        { label: t('shell.invoices'), id: 'invoices', active: activePage === 'invoices' },
+        { label: t('shell.acts'), id: 'acts', active: activePage === 'acts' },
+        { label: t('shell.fulfillments'), id: 'fulfillments', active: activePage === 'fulfillments' },
+      ],
+    },
   ];
   if (role === 'ADMIN' || role === 'MANAGER') {
     items.push({ label: t('shell.productionAnalytics'), icon: <BarChart3 className="h-4 w-4" />, id: 'analytics', active: activePage === 'analytics' });
@@ -164,6 +186,18 @@ function getSellerNavigation(activePage: string, role: UserRole, t: TFn): NavIte
         { label: t('shell.deals'), id: 'crm-deals', active: activePage === 'crm-deals' },
         { label: t('shell.quotes'), id: 'crm-quotes', active: activePage === 'crm-quotes' },
         { label: t('shell.clients'), id: 'crm-clients', active: activePage === 'crm-clients' },
+        { label: t('shell.leads'), id: 'leads', active: activePage === 'leads' },
+      ],
+    },
+    { label: t('shell.supplierBids'), icon: <Gavel className="h-4 w-4" />, id: 'supplier-bids', active: activePage === 'supplier-bids' },
+    {
+      label: t('shell.billing'), icon: <Receipt className="h-4 w-4" />,
+      children: [
+        { label: t('shell.contracts'), id: 'contracts', active: activePage === 'contracts' },
+        { label: t('shell.invoices'), id: 'invoices', active: activePage === 'invoices' },
+        { label: t('shell.payments'), id: 'payments', active: activePage === 'payments' },
+        { label: t('shell.acts'), id: 'acts', active: activePage === 'acts' },
+        { label: t('shell.fulfillments'), id: 'fulfillments', active: activePage === 'fulfillments' },
       ],
     },
   ];

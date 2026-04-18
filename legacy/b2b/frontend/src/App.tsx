@@ -45,6 +45,13 @@ const AdminOffersPage = lazy(() => import('./pages/AdminOffersPage'));
 const AdminCompaniesPage = lazy(() => import('./pages/AdminCompaniesPage'));
 const AdminDealsPage = lazy(() => import('./pages/AdminDealsPage'));
 const AdminMasterDataPage = lazy(() => import('./pages/AdminMasterDataPage'));
+const ContractsPage = lazy(() => import('./pages/ContractsPage'));
+const InvoicesPage = lazy(() => import('./pages/InvoicesPage'));
+const PaymentsPage = lazy(() => import('./pages/PaymentsPage'));
+const ActsPage = lazy(() => import('./pages/ActsPage'));
+const FulfillmentsPage = lazy(() => import('./pages/FulfillmentsPage'));
+const SupplierBidsPage = lazy(() => import('./pages/SupplierBidsPage'));
+const LeadsPage = lazy(() => import('./pages/LeadsPage'));
 
 import { LoadingSkeleton } from './components/LoadingSkeleton';
 
@@ -77,6 +84,13 @@ type Page =
   | { type: 'admin-companies' }
   | { type: 'admin-deals' }
   | { type: 'admin-master-data' }
+  | { type: 'contracts' }
+  | { type: 'invoices' }
+  | { type: 'payments' }
+  | { type: 'acts' }
+  | { type: 'fulfillments' }
+  | { type: 'supplier-bids' }
+  | { type: 'leads' }
 ;
 
 /** Parse URL path and query params for auth routes */
@@ -204,6 +218,7 @@ const ADMIN_PAGES = new Set([
   'admin-users', 'admin-kyc', 'admin-subscriptions', 'admin-role-apps',
   'admin-catalog', 'admin-categories', 'admin-equipment-groups', 'admin-offers',
   'admin-companies', 'admin-deals', 'admin-master-data',
+  'leads',
 ]);
 const KYC_ALLOWED_PAGES = new Set(['dashboard', 'profile', 'settings', 'help']);
 
@@ -276,6 +291,8 @@ function MainApp() {
       'admin-users', 'admin-kyc', 'admin-subscriptions', 'admin-role-apps',
       'admin-catalog', 'admin-categories', 'admin-equipment-groups', 'admin-offers',
       'admin-companies', 'admin-deals', 'admin-master-data',
+      'contracts', 'invoices', 'payments', 'acts', 'fulfillments',
+      'supplier-bids', 'leads',
     ];
     if (validTypes.includes(target)) {
       // Role guard: admin pages require ADMIN role
@@ -414,6 +431,27 @@ function MainApp() {
       break;
     case 'admin-master-data':
       content = <AdminMasterDataPage />;
+      break;
+    case 'contracts':
+      content = <ContractsPage />;
+      break;
+    case 'invoices':
+      content = <InvoicesPage />;
+      break;
+    case 'payments':
+      content = <PaymentsPage />;
+      break;
+    case 'acts':
+      content = <ActsPage />;
+      break;
+    case 'fulfillments':
+      content = <FulfillmentsPage />;
+      break;
+    case 'supplier-bids':
+      content = <SupplierBidsPage />;
+      break;
+    case 'leads':
+      content = <LeadsPage />;
       break;
     default:
       content = <Dashboard onProductClick={handleProductClick} onNavigate={handleNavigate} />;
