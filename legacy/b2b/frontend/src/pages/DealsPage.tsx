@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FileText, Clock, Eye } from 'lucide-react';
+import { FileText, Clock, Eye, Gavel, FileSignature } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,6 +15,8 @@ import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useDeals, useDealStages } from '@/hooks/useCRM';
 import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
+import { OpenRfqDialog } from '@/components/CRM/OpenRfqDialog';
+import { GenerateContractDialog } from '@/components/CRM/GenerateContractDialog';
 import type { Deal } from '@/api/crmApi';
 
 /* ─── Detail Sheet ─────────────────────────────────────────────────── */
@@ -30,7 +32,12 @@ function DealDetailSheet({
 }) {
   const { t } = useTranslation();
   const formatCurrency = useCurrencyStore((s) => s.format);
+  const [rfqOpen, setRfqOpen] = useState(false);
+  const [contractOpen, setContractOpen] = useState(false);
   if (!deal) return null;
+
+  const canOpenRfq = ['DRAFT', 'KYC_PENDING'].includes(deal.stage_code ?? '');
+  const approvedQuote = deal.active_quote && ['APPROVED', 'SENT'].includes(deal.active_quote.status_code ?? '');
 
   const rows = [
     { label: t('pages.deals.detail.client'), value: deal.client_name || deal.company_name },
@@ -80,7 +87,37 @@ function DealDetailSheet({
               </section>
             </>
           )}
+
+          <Separator />
+          <section className="space-y-2">
+            <h3 className="text-sm font-semibold">{t('shell.billing')}</h3>
+            <div className="flex flex-wrap gap-2">
+              {canOpenRfq && (
+                <Button size="sm" variant="outline" onClick={() => setRfqOpen(true)}>
+                  <Gavel className="mr-2 h-4 w-4" />
+                  {t('rfqDialog.open')}
+                </Button>
+              )}
+              {approvedQuote && (
+                <Button size="sm" onClick={() => setContractOpen(true)}>
+                  <FileSignature className="mr-2 h-4 w-4" />
+                  {t('contractGenerateDialog.generate')}
+                </Button>
+              )}
+            </div>
+          </section>
         </div>
+
+        <OpenRfqDialog
+          dealId={deal.id}
+          open={rfqOpen}
+          onOpenChange={setRfqOpen}
+        />
+        <GenerateContractDialog
+          quoteId={deal.active_quote?.id ?? null}
+          open={contractOpen}
+          onOpenChange={setContractOpen}
+        />
       </SheetContent>
     </Sheet>
   );

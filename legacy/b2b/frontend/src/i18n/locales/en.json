@@ -3052,5 +3052,9 @@
     "months": "Number of months",
     "pay": "Pay",
     "paid": "Payment recorded, subscription activated"
+  },
+  "manualMode": {
+    "payment": "Manual mode: payment is recorded by hand. A real payment provider (Click / Payme / Stripe) will be wired before production release.",
+    "esign": "Manual mode: click-to-sign. A legally binding e-signature (E-IMZO) will be wired before production release."
   }
 }

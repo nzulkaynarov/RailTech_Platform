@@ -120,3 +120,26 @@ def authenticated_user(user_factory):
         username='authuser',
         password='authpass123'
     )
+
+
+@pytest.fixture(scope='session')
+def django_db_setup(django_db_setup, django_db_blocker):
+    """Install pgtrigger triggers and the pghistory context stub.
+
+    --nomigrations short-circuits migrations so pgtrigger/pghistory schema
+    objects are never installed. We stub/install them once per session so
+    business-logic tests that trigger INSERT...DealEvent (via pghistory snapshot
+    triggers) don't fail with "_pgh_attach_context() does not exist".
+    """
+    from django.db import connection
+    with django_db_blocker.unblock():
+        with connection.cursor() as c:
+            c.execute(
+                "CREATE OR REPLACE FUNCTION _pgh_attach_context() "
+                "RETURNS uuid AS $$ SELECT NULL::uuid $$ LANGUAGE sql"
+            )
+        try:
+            import pgtrigger
+            pgtrigger.install()
+        except Exception:
+            pass

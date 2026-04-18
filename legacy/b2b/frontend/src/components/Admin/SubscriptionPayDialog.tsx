@@ -7,6 +7,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { ManualModeBanner } from '@/components/Shared/ManualModeBanner';
 import { usePaySubscription } from '@/hooks/useAccounts';
 
 interface SubscriptionPayDialogProps {
@@ -47,6 +48,7 @@ export function SubscriptionPayDialog({
           <DialogTitle>{t('subscriptionPay.title')}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
+          <ManualModeBanner kind="payment" />
           <div>
             <Label htmlFor="pay-amount">{t('subscriptionPay.amount')}</Label>
             <Input

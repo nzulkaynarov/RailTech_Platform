@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Search, Box, ExternalLink } from 'lucide-react';
+import { Search, Box, ExternalLink, Sparkles } from 'lucide-react';
 import { useQuoteItems, useUpdateQuoteItem } from '../../hooks/useCRM';
+import { ReassignProductDialog } from '@/components/CRM/ReassignProductDialog';
 import { useProducts } from '../../hooks/useCatalog';
 import { Product, QuoteItem } from '../../api/crmApi';
 import { getDomainLabelKey } from '../../config/domainConfig';
@@ -38,6 +39,7 @@ export const SourcingGrid: React.FC = () => {
     const [isProductPickerOpen, setIsProductPickerOpen] = useState(false);
     const [productSearch, setProductSearch] = useState('');
     const [domainFilter, setDomainFilter] = useState<string>('ALL');
+    const [rematchItemId, setRematchItemId] = useState<number | null>(null);
 
     // Regex to detect railway-related keywords in imported raw names
     const railwayKeywordPattern = /тепловоз|вагон|двигатель/i;
@@ -189,16 +191,26 @@ export const SourcingGrid: React.FC = () => {
                                             </span>
                                         </TableCell>
                                         <TableCell className="px-4 py-3.5 text-center">
-                                            <Button
-                                                size="sm"
-                                                onClick={() => {
-                                                    setSelectedItemId(item.id);
-                                                    setProductSearch(item.imported_raw_name);
-                                                    setIsProductPickerOpen(true);
-                                                }}
-                                            >
-                                                {t('sourcing.assignProduct')}
-                                            </Button>
+                                            <div className="flex justify-center gap-2">
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => setRematchItemId(item.id)}
+                                                >
+                                                    <Sparkles className="mr-1 h-3.5 w-3.5" />
+                                                    {t('rematchDialog.title')}
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        setSelectedItemId(item.id);
+                                                        setProductSearch(item.imported_raw_name);
+                                                        setIsProductPickerOpen(true);
+                                                    }}
+                                                >
+                                                    {t('sourcing.assignProduct')}
+                                                </Button>
+                                            </div>
                                         </TableCell>
                                     </TableRow>
                                 ))}
@@ -275,6 +287,12 @@ export const SourcingGrid: React.FC = () => {
                     </div>
                 </DialogContent>
             </Dialog>
+
+            <ReassignProductDialog
+                quoteItemId={rematchItemId}
+                open={!!rematchItemId}
+                onOpenChange={(o) => { if (!o) setRematchItemId(null); }}
+            />
         </div>
     );
 };

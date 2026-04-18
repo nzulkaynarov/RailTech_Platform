@@ -575,7 +575,9 @@ class SupplierSubscriptionViewSet(viewsets.ModelViewSet):
         sub = self.get_object()
         amount = request.data.get('amount', 0)
         months = int(request.data.get('months', 1))
-        sub = services.record_subscription_payment(sub, amount, months=months)
+        sub = services.record_subscription_payment(
+            sub, amount, months=months, actor=request.user, manual=True,
+        )
         return Response(self.get_serializer(sub).data)
 
 

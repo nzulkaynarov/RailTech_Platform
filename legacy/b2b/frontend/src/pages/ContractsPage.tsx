@@ -22,6 +22,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
+import { ManualModeBanner } from '@/components/Shared/ManualModeBanner';
 import {
   useContracts, useSignContractClient, useSignContractManager,
   useUploadSignedContract, useCancelContract,
@@ -122,6 +123,7 @@ export function ContractsPage() {
       icon={<FileSignature className="h-5 w-5" />}
       stats={stats}
     >
+      <ManualModeBanner kind="esign" />
       <Card>
         <CardContent className="flex flex-col gap-4 p-4">
           <div className="flex flex-wrap items-center gap-3">

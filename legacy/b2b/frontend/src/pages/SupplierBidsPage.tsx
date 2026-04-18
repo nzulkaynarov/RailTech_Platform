@@ -22,7 +22,9 @@ import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
+import { SupplierBidSubmitDialog } from '@/components/CRM/SupplierBidSubmitDialog';
 import { useSupplierBids, useAcceptBid, useRejectBid } from '@/hooks/useBidding';
+import { useUserStore } from '@/store/userStore';
 import type { SupplierBid, SupplierBidStatus } from '@/api/biddingApi';
 
 const STATUS_VARIANT: Record<SupplierBidStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -40,6 +42,12 @@ export function SupplierBidsPage() {
   const [selected, setSelected] = useState<SupplierBid | null>(null);
   const [rejectTarget, setRejectTarget] = useState<SupplierBid | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [submitOpen, setSubmitOpen] = useState(false);
+  const [submitDealId, setSubmitDealId] = useState('');
+  const activeStatus = useUserStore((s) => s.activeStatus);
+  const isSupplier = activeStatus === 'SELLER' || activeStatus === 'MANUFACTURER';
+  // Supplier id comes from auth store (primary_company.id). Fallback: let backend resolve.
+  const supplierCompanyId = useUserStore((s) => (s.company as { id?: number } | undefined)?.id ?? null);
 
   const queryParams = statusFilter !== 'all' ? { status: statusFilter } : undefined;
   const { data: bids, isLoading } = useSupplierBids(queryParams);
@@ -85,6 +93,27 @@ export function SupplierBidsPage() {
     >
       <Card>
         <CardContent className="flex flex-col gap-4 p-4">
+          {isSupplier && (
+            <div className="flex flex-wrap items-end gap-2">
+              <div>
+                <Label htmlFor="bid-deal-id">{t('supplierBidsPage.table.deal')}</Label>
+                <input
+                  id="bid-deal-id"
+                  type="number"
+                  className="mt-1 block w-32 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={submitDealId}
+                  onChange={(e) => setSubmitDealId(e.target.value)}
+                />
+              </div>
+              <Button
+                size="sm"
+                disabled={!submitDealId}
+                onClick={() => setSubmitOpen(true)}
+              >
+                {t('supplierBidsPage.submit')}
+              </Button>
+            </div>
+          )}
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-52"><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -201,6 +230,15 @@ export function SupplierBidsPage() {
             </div>
           </SheetContent>
         </Sheet>
+      )}
+
+      {isSupplier && submitDealId && supplierCompanyId && (
+        <SupplierBidSubmitDialog
+          dealId={Number(submitDealId)}
+          supplierId={supplierCompanyId}
+          open={submitOpen}
+          onOpenChange={setSubmitOpen}
+        />
       )}
 
       <AlertDialog open={!!rejectTarget} onOpenChange={(o) => !o && setRejectTarget(null)}>

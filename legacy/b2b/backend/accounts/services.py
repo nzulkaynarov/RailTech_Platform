@@ -390,9 +390,17 @@ def _send_role_application_email(app: CompanyRoleApplication, approved: bool) ->
 
 def record_subscription_payment(
     subscription: SupplierSubscription, amount, months: int = 1,
+    actor: Optional[CustomUser] = None, manual: bool = True,
 ) -> SupplierSubscription:
-    """Extend subscription and set ACTIVE after a successful payment."""
+    """Extend subscription and set ACTIVE after a successful payment.
+
+    NOTE: manual=True flag indicates the payment was recorded by hand (no provider webhook).
+    Logged in ActivityLog with MANUAL_MODE marker so reconciliation is possible later
+    when a real payment provider (Click/Payme/Stripe) replaces the manual flow.
+    See memory `tech_debt_payment_esign.md`.
+    """
     from datetime import timedelta
+    from crm.models import ActivityLog
     today = timezone.now().date()
     base = max(today, subscription.valid_until or today)
     subscription.valid_until = base + timedelta(days=30 * months)
@@ -402,6 +410,15 @@ def record_subscription_payment(
     subscription.save(update_fields=[
         'valid_until', 'last_payment_date', 'next_payment_date', 'status', 'updated_at',
     ])
+    marker = '[MANUAL_MODE] ' if manual else ''
+    ActivityLog.objects.create(
+        action=f"{marker}Оплата подписки",
+        detail=(
+            f"Подписка компании {subscription.company.name}: "
+            f"+{months} мес, сумма {amount}. Действует до {subscription.valid_until}."
+        ),
+        user=actor, level='SUCCESS',
+    )
     return subscription
 
 

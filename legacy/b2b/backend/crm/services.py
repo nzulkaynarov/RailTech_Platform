@@ -571,6 +571,9 @@ def _render_contract_pdf(contract) -> None:
 def sign_contract_by_client(
     contract_id: int, client_user: CustomUser,
 ) -> Tuple[Optional['Contract'], Optional[str]]:
+    """Click-to-sign by client. MANUAL MODE — to be replaced by E-IMZO/DocuSign.
+    See memory `tech_debt_payment_esign.md`.
+    """
     from django.utils import timezone
     from .models import Contract
     contract = Contract.objects.select_for_update().get(pk=contract_id)
@@ -580,6 +583,11 @@ def sign_contract_by_client(
     contract.client_signed_at = timezone.now()
     contract.status = 'PENDING_MANAGER' if not contract.manager_signed_at else 'SIGNED'
     contract.save(update_fields=['client_signer', 'client_signed_at', 'status', 'updated_at'])
+    ActivityLog.objects.create(
+        action="[MANUAL_MODE] Подписан контракт (сторона клиента)",
+        detail=f"Контракт {contract.number} / сделка #{contract.deal_id}",
+        user=client_user, level='INFO',
+    )
     _notify_contract_signed(contract)
     return contract, None
 
@@ -588,6 +596,9 @@ def sign_contract_by_client(
 def sign_contract_by_manager(
     contract_id: int, manager_user: CustomUser,
 ) -> Tuple[Optional['Contract'], Optional[str]]:
+    """Click-to-sign by RailTech manager. MANUAL MODE — to be replaced by E-IMZO.
+    See memory `tech_debt_payment_esign.md`.
+    """
     from django.utils import timezone
     from .models import Contract
     contract = Contract.objects.select_for_update().get(pk=contract_id)
@@ -597,6 +608,11 @@ def sign_contract_by_manager(
     contract.manager_signed_at = timezone.now()
     contract.status = 'SIGNED' if contract.client_signed_at else 'PENDING_CLIENT'
     contract.save(update_fields=['manager_signer', 'manager_signed_at', 'status', 'updated_at'])
+    ActivityLog.objects.create(
+        action="[MANUAL_MODE] Подписан контракт (сторона RailTech)",
+        detail=f"Контракт {contract.number} / сделка #{contract.deal_id}",
+        user=manager_user, level='INFO',
+    )
     _notify_contract_signed(contract)
     return contract, None
 
@@ -714,8 +730,15 @@ def _render_invoice_pdf(invoice) -> None:
 @transaction.atomic
 def record_payment(
     invoice_id: int, actor: CustomUser, amount, paid_at, method: str = 'BANK_TRANSFER',
-    reference: str = '', proof_file=None,
+    reference: str = '', proof_file=None, manual: bool = True,
 ) -> Tuple[Optional[object], Optional[str]]:
+    """Record payment against an invoice.
+
+    NOTE: manual=True marks the record as hand-entered (no payment-provider webhook).
+    Logged with [MANUAL_MODE] tag in ActivityLog — needed for later reconciliation
+    once Click/Payme/Stripe webhooks replace the manual flow. See memory
+    `tech_debt_payment_esign.md`.
+    """
     from decimal import Decimal as D
     from .models import Invoice, Payment
     invoice = Invoice.objects.select_for_update().get(pk=invoice_id)
@@ -738,8 +761,9 @@ def record_payment(
         invoice.status = 'PARTIAL'
     invoice.save(update_fields=['amount_paid', 'status', 'updated_at'])
 
+    marker = '[MANUAL_MODE] ' if manual else ''
     ActivityLog.objects.create(
-        action="Зафиксирован платёж",
+        action=f"{marker}Зафиксирован платёж",
         detail=f"Инвойс {invoice.number}: получено {amount_d} (итого {invoice.amount_paid}/{invoice.total_incl_vat})",
         user=actor, level='SUCCESS',
     )

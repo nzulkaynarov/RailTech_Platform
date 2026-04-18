@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
+import { ManualModeBanner } from '@/components/Shared/ManualModeBanner';
 import {
   useInvoices, useRecordPayment, useGenerateAct,
 } from '@/hooks/useBilling';
@@ -112,6 +113,7 @@ export function InvoicesPage() {
       icon={<Receipt className="h-5 w-5" />}
       stats={stats}
     >
+      <ManualModeBanner kind="payment" />
       <Card>
         <CardContent className="flex flex-col gap-4 p-4">
           <div className="flex flex-wrap items-center gap-3">
