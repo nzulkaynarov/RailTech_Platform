@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import {
   Package, Eye, ShoppingCart, LayoutGrid, List,
 } from 'lucide-react';
@@ -8,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { StatusBadge, getStockVariant } from '@/components/ui/StatusBadge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
@@ -263,26 +265,45 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
                       )}
                       <div className="flex items-center gap-1 flex-wrap mt-auto">
                         <Badge variant="secondary" className="text-xs">{product.domain_type_name}</Badge>
-                        {product.stock_status && (
-                          <StatusBadge
-                            label={t(`productStatuses.${product.stock_status === 'IN_STOCK' ? 'in_stock' : product.stock_status === 'ON_ORDER' ? 'to_order' : product.stock_status === 'EXPECTED' ? 'sourcing' : 'inactive'}`)}
-                            variant={getStockVariant(product.stock_status)}
-                          />
-                        )}
+                        {/* Fallback — если у товара нет stock_status, показываем «Под заказ»
+                            вместо пустого места: покупатель должен понимать, можно ли запрашивать. */}
+                        <StatusBadge
+                          label={t(`productStatuses.${
+                            product.stock_status === 'IN_STOCK' ? 'in_stock'
+                            : product.stock_status === 'ON_ORDER' ? 'to_order'
+                            : product.stock_status === 'EXPECTED' ? 'sourcing'
+                            : 'to_order'
+                          }`)}
+                          variant={getStockVariant(product.stock_status ?? 'ON_ORDER')}
+                        />
                       </div>
                     </div>
                     {canSendRequest && (
-                      <div className="flex items-center shrink-0" onClick={(e) => e.stopPropagation()}>
-                        <Button
-                          variant={isInCart ? 'secondary' : 'default'}
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => { if (!isInCart) cartStore.addItem(product); }}
-                          disabled={isInCart}
-                        >
-                          <ShoppingCart className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
+                      <TooltipProvider delayDuration={200}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center shrink-0" onClick={(e) => e.stopPropagation()}>
+                              <Button
+                                variant={isInCart ? 'secondary' : 'default'}
+                                size="icon"
+                                className="h-8 w-8"
+                                aria-label={isInCart ? t('cart.addedToCart') : t('catalog.card.requestQuote')}
+                                onClick={() => {
+                                  if (isInCart) return;
+                                  cartStore.addItem(product);
+                                  toast.success(t('cart.added', { name: product.name }));
+                                }}
+                                disabled={isInCart}
+                              >
+                                <ShoppingCart className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {isInCart ? t('cart.addedToCart') : t('catalog.card.requestQuote')}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     )}
                   </CardContent>
                 </Card>

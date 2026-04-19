@@ -175,7 +175,13 @@ export function ContractsPage() {
             });
             if (isLoading) return <LoadingRows rows={6} />;
             if (!pageItems.length) {
-              return <EmptyState icon={<FileSignature className="h-5 w-5" />} message={t('contractsPage.emptyState')} />;
+              return (
+                <EmptyState
+                  icon={<FileSignature className="h-5 w-5" />}
+                  message={t('contractsPage.emptyState')}
+                  hint={t('contractsPage.emptyStateHint')}
+                />
+              );
             }
             return (
               <>

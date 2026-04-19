@@ -424,8 +424,10 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
                   <Layers className="size-4" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">{company.name || t('nav.companyName')}</span>
-                  <span className="truncate text-xs text-muted-foreground">{t('shell.b2bPlatform')}</span>
+                  <span className="truncate font-semibold">{company.name || t('nav.myCompany')}</span>
+                  <span className="truncate text-xs text-muted-foreground">
+                    {company.inn ? `${t('nav.inn')} ${company.inn}` : t('shell.b2bPlatform')}
+                  </span>
                 </div>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -621,7 +623,7 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
                 </TooltipTrigger>
                 <TooltipContent>{t('cart.title')}</TooltipContent>
               </Tooltip>
-              <CartDrawer />
+              <CartDrawer onNavigate={onNavigate} />
               <ChatDrawer onNavigate={onNavigate} />
               <SupportButton />
               <NotificationCenter />

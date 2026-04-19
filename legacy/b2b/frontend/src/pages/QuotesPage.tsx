@@ -223,7 +223,7 @@ export function QuotesPage() {
                               </DropdownMenuItem>
                             </>
                           )}
-                          {isBuyer && (
+                          {isBuyer && q.status_code === 'SENT' && (
                             <>
                               <DropdownMenuItem onClick={() => handleApprove(q.id)}>
                                 <ThumbsUp className="mr-2 h-4 w-4" />

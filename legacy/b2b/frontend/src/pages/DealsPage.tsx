@@ -221,10 +221,12 @@ export function DealsPage() {
                       />
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">
-                      {deal.total_value ? formatCurrency(Number(deal.total_value)) : ''}
+                      {deal.total_value ? formatCurrency(Number(deal.total_value)) : <span className="text-muted-foreground">—</span>}
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {deal.manager_name || ''}
+                    <TableCell className="text-sm">
+                      {deal.manager_name
+                        ? <span>{deal.manager_name}</span>
+                        : <span className="text-muted-foreground italic">{t('pages.deals.table.managerUnassigned')}</span>}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-xs">
                       <div className="flex items-center gap-1">

@@ -38,7 +38,11 @@ const STATUS_VARIANT: Record<SupplierBidStatus, 'default' | 'secondary' | 'destr
 };
 const STATUS_CODES: SupplierBidStatus[] = ['DRAFT', 'SUBMITTED', 'ACCEPTED', 'REJECTED', 'WITHDRAWN'];
 
-export function SupplierBidsPage() {
+interface SupplierBidsPageProps {
+  onNavigate?: (target: string) => void;
+}
+
+export function SupplierBidsPage({ onNavigate }: SupplierBidsPageProps = {}) {
   const { t } = useTranslation();
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selected, setSelected] = useState<SupplierBid | null>(null);
@@ -130,7 +134,15 @@ export function SupplierBidsPage() {
           </Select>
 
           {isLoading ? <LoadingRows rows={6} /> : (bids?.length ?? 0) === 0 ? (
-            <EmptyState icon={<Gavel className="h-5 w-5" />} message={t('supplierBidsPage.emptyState')} />
+            <EmptyState
+              icon={<Gavel className="h-5 w-5" />}
+              message={t('supplierBidsPage.emptyState')}
+              hint={isSupplier ? t('supplierBidsPage.emptyStateSupplierHint') : t('supplierBidsPage.emptyStateBuyerHint')}
+              action={!isSupplier && onNavigate ? {
+                label: t('supplierBidsPage.goToDeals'),
+                onClick: () => onNavigate('crm-deals'),
+              } : undefined}
+            />
           ) : (
             <Table>
               <TableHeader>

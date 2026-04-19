@@ -41,11 +41,6 @@ import { useUserStore } from '@/store/userStore';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { dashboardApi, type DashboardStats } from '@/api/dashboardApi';
 
-// ─── Chart color constants ──────────────────────────────────────────────
-
-const buyerRequestsStatusColors = ['var(--color-chart-1)', 'var(--color-chart-2)', 'var(--color-chart-3)', 'var(--color-chart-4)', 'var(--color-chart-5)'];
-const chartDotClasses = ['bg-[var(--color-chart-1)]', 'bg-[var(--color-chart-2)]', 'bg-[var(--color-chart-3)]', 'bg-[var(--color-chart-4)]', 'bg-[var(--color-chart-5)]'];
-
 // ─── Top Products Table ─────────────────────────────────────────────────
 
 function TopProductsTable({ onProductClick, onShowAll, topProducts }: { onProductClick?: (id: string) => void; onShowAll?: () => void; topProducts: DashboardStats['top_products'] }) {
@@ -308,7 +303,6 @@ function BuyerWelcome({ onNavigate }: { onNavigate: (page: string) => void }) {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function BuyerDashboard({ onProductClick: _onProductClick, period: _period, stats, onNavigate }: { onProductClick?: (id: string) => void; period: string; stats: DashboardStats | null; onNavigate: (page: string) => void }) {
   const { t } = useTranslation();
-  const formatCurrency = useCurrencyStore((s) => s.format);
   const { company } = useUserStore();
 
   // State 1: KYC not verified — show verification status
@@ -325,49 +319,60 @@ function BuyerDashboard({ onProductClick: _onProductClick, period: _period, stat
     { name: t('dashboardPage.buyer.statusCompleted'), value: stats.deals_completed ?? 0 },
   ] : [], [stats, t]);
 
+  // Trend badge only when there is a previous-period baseline worth comparing.
+  // A 1400% delta on a 4→60 jump is technically correct but is visual noise
+  // for a buyer's personal dashboard — suppress until at least one side had
+  // meaningful volume.
+  const trendFor = (current: number, change: number, suffix: string) => {
+    if (!current || change === 0) return undefined;
+    return {
+      value: `${change > 0 ? '+' : ''}${change}% ${suffix}`,
+      direction: (change > 0 ? 'up' : 'down') as 'up' | 'down',
+    };
+  };
+  const vsPrev = t('dashboardPage.vsPrevPeriod');
+
   return (
     <div className="flex flex-col gap-6">
-      {/* KPI Row */}
+      {/* KPI Row — buyer-scoped: own activity, not platform totals. */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KPICard
           label={t('dashboardPage.kpi.activeRequests')}
           value={String(stats?.active_requests ?? 0)}
           icon={<ShoppingCart className="h-5 w-5 text-muted-foreground" />}
-          trend={{ value: `${stats?.active_requests_change ?? 0}% ${t('dashboardPage.vsPrevPeriod')}`, direction: (stats?.active_requests_change ?? 0) >= 0 ? "up" : "down" }}
+          trend={trendFor(stats?.active_requests ?? 0, stats?.active_requests_change ?? 0, vsPrev)}
         />
         <KPICard
-          label={t('dashboardPage.kpi.catalogItems')}
-          value={String(stats?.catalog_items ?? 0)}
-          icon={<FileText className="h-5 w-5 text-muted-foreground" />}
-          trend={{ value: `${stats?.catalog_items_change ?? 0}% ${t('dashboardPage.vsPrevPeriod')}`, direction: (stats?.catalog_items_change ?? 0) >= 0 ? "up" : "down" }}
-        />
-        <KPICard
-          label={t('dashboardPage.kpi.dealsVolume')}
-          value={formatCurrency(stats?.deals_volume ?? 0)}
-          icon={<DollarSign className="h-5 w-5 text-muted-foreground" />}
-          trend={{ value: `${stats?.deals_volume_change ?? 0}% ${t('dashboardPage.vsPrevPeriod')}`, direction: (stats?.deals_volume_change ?? 0) >= 0 ? "up" : "down" }}
+          label={t('dashboardPage.kpi.inProgress')}
+          value={String(stats?.deals_in_progress ?? 0)}
+          icon={<Clock className="h-5 w-5 text-muted-foreground" />}
         />
         <KPICard
           label={t('dashboardPage.kpi.quotesReceived')}
           value={String(stats?.quotes_received ?? 0)}
           icon={<FileText className="h-5 w-5 text-muted-foreground" />}
         />
+        <KPICard
+          label={t('dashboardPage.kpi.completed')}
+          value={String(stats?.deals_completed ?? 0)}
+          icon={<Package className="h-5 w-5 text-muted-foreground" />}
+        />
       </div>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {/* Bar Chart — Request Status */}
-        <Card className="lg:col-span-2 py-0 gap-0">
-          <CardHeader className="flex flex-row items-center justify-between px-4 py-3">
-            <CardTitle className="text-sm font-semibold">{t('dashboardPage.buyer.requestsByStatus')}</CardTitle>
-          </CardHeader>
-          <CardContent className="px-2 pb-4">
-            <div role="img" aria-label={t('dashboardPage.buyer.requestsByStatusChart')}>
-            <ResponsiveContainer width="100%" height={220}>
+      {/* Charts — one bar chart of buyer's requests by status. The previous
+          revision shipped both a bar and a pie with identical data; dropped
+          the pie to avoid visual duplication. */}
+      <Card className="py-0 gap-0">
+        <CardHeader className="flex flex-row items-center justify-between px-4 py-3">
+          <CardTitle className="text-sm font-semibold">{t('dashboardPage.buyer.requestsByStatus')}</CardTitle>
+        </CardHeader>
+        <CardContent className="px-2 pb-4">
+          <div role="img" aria-label={t('dashboardPage.buyer.requestsByStatusChart')}>
+            <ResponsiveContainer width="100%" height={240}>
               <BarChart data={buyerRequestsStatus}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
                 <XAxis dataKey="name" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+                <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} allowDecimals={false} />
                 <RechartsTooltip
                   formatter={(value: number) => [value, t('dashboardPage.requests')]}
                   contentStyle={{ borderRadius: '8px', fontSize: '12px', border: '1px solid var(--color-border)' }}
@@ -375,49 +380,9 @@ function BuyerDashboard({ onProductClick: _onProductClick, period: _period, stat
                 <Bar dataKey="value" fill="var(--color-chart-1)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Pie Chart — Request Status Distribution */}
-        <Card className="py-0 gap-0">
-          <CardHeader className="px-4 py-3">
-            <CardTitle className="text-sm font-semibold">{t('dashboardPage.buyer.requestStatuses')}</CardTitle>
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
-            <div className="flex items-center justify-center" role="img" aria-label={t('dashboardPage.buyer.requestStatusesChart')}>
-              <ResponsiveContainer width={160} height={160}>
-                <PieChart>
-                  <Pie
-                    data={buyerRequestsStatus}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={45}
-                    outerRadius={70}
-                    dataKey="value"
-                    strokeWidth={2}
-                  >
-                    {buyerRequestsStatus.map((_entry, i) => (
-                      <Cell key={i} fill={buyerRequestsStatusColors[i % buyerRequestsStatusColors.length]} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="mt-3 space-y-1.5">
-              {buyerRequestsStatus.map((item, i) => (
-                <div key={item.name} className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-1.5">
-                    <span className={`h-2.5 w-2.5 rounded-full ${chartDotClasses[i % chartDotClasses.length]}`} />
-                    <span className="font-medium">{item.name}</span>
-                  </div>
-                  <span className="text-muted-foreground">{item.value}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

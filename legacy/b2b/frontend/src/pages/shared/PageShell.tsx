@@ -72,16 +72,20 @@ export function LoadingRows({ rows = 5 }: { rows?: number }) {
 interface EmptyStateProps {
   icon: React.ReactNode;
   message: string;
+  /** Optional secondary explanation below the main message — why this list
+   * is empty and what the user should do next. */
+  hint?: string;
   /** Optional inline call-to-action. Label + click handler.
    * Used to close the "empty list without next step" UX dead-end. */
   action?: { label: string; onClick: () => void };
 }
 
-export function EmptyState({ icon, message, action }: EmptyStateProps) {
+export function EmptyState({ icon, message, hint, action }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
       <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">{icon}</div>
-      <p className="text-sm font-medium">{message}</p>
+      <p className="text-sm font-medium text-foreground">{message}</p>
+      {hint && <p className="mt-1 max-w-sm text-xs text-muted-foreground">{hint}</p>}
       {action && (
         <Button className="mt-4" size="sm" onClick={action.onClick}>
           {action.label}

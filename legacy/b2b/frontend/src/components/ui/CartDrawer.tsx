@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ShoppingCart, Trash2, Plus, Minus, Package, ArrowRight, Loader2 } from 'lucide-react';
 import { useCartStore } from '@/store/cartStore';
+import { useFlowStore } from '@/store/flowStore';
 import { crmApi } from '@/api/crmApi';
 import { toast } from 'sonner';
 import {
@@ -17,9 +18,14 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 
-export const CartDrawer: React.FC = () => {
+interface CartDrawerProps {
+    onNavigate?: (target: string) => void;
+}
+
+export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
     const { t } = useTranslation();
     const { isOpen, closeCart, items, removeItem, updateQuantity, clearCart } = useCartStore();
+    const setActiveDeal = useFlowStore((s) => s.setActiveDealId);
 
     const totalItems = items.reduce((sum, i) => sum + i.quantity, 0);
     const [submitting, setSubmitting] = useState(false);
@@ -30,10 +36,23 @@ export const CartDrawer: React.FC = () => {
         try {
             const deal = await crmApi.createDeal({
                 title: `${t('cart.requestFrom')} ${new Date().toLocaleDateString()}`,
-                notes: items.map((item) => `${item.product.name} x${item.quantity}`).join('\n'),
+                // Include SKU + quantity per line so the sales manager can match
+                // items without re-asking the buyer. Note: QuoteItems are
+                // created later by the sales manager from this spec — no
+                // silent data loss because each line is preserved in notes.
+                notes: items
+                    .map((item) => `• ${item.product.sku ?? '—'} · ${item.product.name} · ×${item.quantity}`)
+                    .join('\n'),
             });
             if (deal?.id) {
                 toast.success(t('cart.requestCreated', { id: deal.id }));
+                // Route the buyer into the newly created request so they can
+                // see its status and track progress — avoids "submitted → nothing
+                // happens" dead-end that confused the pilot tester.
+                if (onNavigate) {
+                    setActiveDeal(deal.id);
+                    onNavigate('request-detail');
+                }
             }
             clearCart();
             closeCart();

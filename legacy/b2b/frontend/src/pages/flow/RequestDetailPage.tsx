@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFlowStore } from '@/store/flowStore';
+import { useUserStore } from '@/store/userStore';
 import { ArrowLeft, Send, Calculator, ThumbsUp, ThumbsDown, User, Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +20,12 @@ export function RequestDetailPage({ onBack }: { onBack: () => void; onNavigate: 
   const [rejectOpen, setRejectOpen] = useState(false);
   const isViewer = useIsViewerMode();
   const viewerTip = t('apiErrors.ADMIN_VIEWER_CANNOT_ACT');
+  // Gate seller-side actions (start sourcing / calculation / send quote) to
+  // sellers. A buyer would only hit backend guards — and the buttons are
+  // meaningless on their screen.
+  const activeStatus = useUserStore((s) => s.activeStatus);
+  const isSellerSide = activeStatus === 'SELLER' || activeStatus === 'MANUFACTURER';
+  const isBuyerSide = activeStatus === 'BUYER';
 
   useEffect(() => {
     if (activeDealId) {
@@ -63,76 +70,95 @@ export function RequestDetailPage({ onBack }: { onBack: () => void; onNavigate: 
           </div>
         </div>
 
-        {/* Action Bar */}
-        <Card className="bg-muted/30">
-          <CardContent className="flex items-center gap-3 py-4">
-            <span className="text-sm font-medium">{t('requestDetailActions.actionsLabel')}:</span>
-            {isDraft && (
-              <Button
-                variant="default"
-                onClick={() => changeDealStage(deal.id, 'SOURCING')}
-                disabled={isViewer}
-                title={isViewer ? viewerTip : undefined}
-              >
-                {t('requestDetailActions.startSourcing')}
-              </Button>
-            )}
-            {isSourcing && (
-              <Button
-                variant="default"
-                onClick={() => changeDealStage(deal.id, 'CALCULATING')}
-                disabled={isViewer}
-                title={isViewer ? viewerTip : undefined}
-              >
-                <Calculator className="h-4 w-4 mr-2" />
-                {t('requestDetailActions.startCalculation')}
-              </Button>
-            )}
-            {isCalculating && quote && (
-              <Button
-                variant="default"
-                onClick={() => sendQuoteToClient(quote.id)}
-                disabled={isViewer}
-                title={isViewer ? viewerTip : undefined}
-              >
-                <Send className="h-4 w-4 mr-2" />
-                {t('requestDetailActions.sendQuote')}
-              </Button>
-            )}
-            {isQuoteSent && quote && (
-              <>
-                <Button
-                  variant="default"
-                  className="bg-success text-success-foreground hover:bg-success/90"
-                  onClick={() => approveQuote(quote.id)}
-                  disabled={isViewer}
-                  title={isViewer ? viewerTip : undefined}
-                >
-                  <ThumbsUp className="h-4 w-4 mr-2" />
-                  {t('requestDetailActions.approveQuote')}
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={() => setRejectOpen(true)}
-                  disabled={isViewer}
-                  title={isViewer ? viewerTip : undefined}
-                >
-                  <ThumbsDown className="h-4 w-4 mr-2" />
-                  {t('requestDetailActions.rejectQuote')}
-                </Button>
-              </>
-            )}
-            {isWon && (
-              <Badge variant="outline" className="bg-success/10 text-success border-success/20 py-1.5 px-3">
-                <ThumbsUp className="h-4 w-4 mr-2" />
-                {t('requestDetailActions.dealAccepted')}
-              </Badge>
-            )}
-            {!isDraft && !isSourcing && !isCalculating && !isQuoteSent && !isWon && (
-              <span className="text-sm text-muted-foreground">{t('requestDetailActions.noActions')}</span>
-            )}
-          </CardContent>
-        </Card>
+        {/* Action Bar. Seller-side actions (start sourcing / start calculation
+            / send quote) only show for SELLER / MANUFACTURER. Buyer only sees
+            approve / reject once the quote is sent. */}
+        {(() => {
+          const sellerActions = isSellerSide && (isDraft || isSourcing || (isCalculating && quote));
+          const buyerActions = isBuyerSide && isQuoteSent && quote;
+          const showActionBar = sellerActions || buyerActions || isWon;
+          if (!showActionBar) {
+            return (
+              <Card className="bg-muted/30">
+                <CardContent className="py-4">
+                  <span className="text-sm text-muted-foreground">
+                    {isBuyerSide
+                      ? t('requestDetailActions.buyerWaitHint')
+                      : t('requestDetailActions.noActions')}
+                  </span>
+                </CardContent>
+              </Card>
+            );
+          }
+          return (
+            <Card className="bg-muted/30">
+              <CardContent className="flex items-center gap-3 py-4">
+                <span className="text-sm font-medium">{t('requestDetailActions.actionsLabel')}:</span>
+                {isSellerSide && isDraft && (
+                  <Button
+                    variant="default"
+                    onClick={() => changeDealStage(deal.id, 'SOURCING')}
+                    disabled={isViewer}
+                    title={isViewer ? viewerTip : undefined}
+                  >
+                    {t('requestDetailActions.startSourcing')}
+                  </Button>
+                )}
+                {isSellerSide && isSourcing && (
+                  <Button
+                    variant="default"
+                    onClick={() => changeDealStage(deal.id, 'CALCULATING')}
+                    disabled={isViewer}
+                    title={isViewer ? viewerTip : undefined}
+                  >
+                    <Calculator className="h-4 w-4 mr-2" />
+                    {t('requestDetailActions.startCalculation')}
+                  </Button>
+                )}
+                {isSellerSide && isCalculating && quote && (
+                  <Button
+                    variant="default"
+                    onClick={() => sendQuoteToClient(quote.id)}
+                    disabled={isViewer}
+                    title={isViewer ? viewerTip : undefined}
+                  >
+                    <Send className="h-4 w-4 mr-2" />
+                    {t('requestDetailActions.sendQuote')}
+                  </Button>
+                )}
+                {buyerActions && (
+                  <>
+                    <Button
+                      variant="default"
+                      className="bg-success text-success-foreground hover:bg-success/90"
+                      onClick={() => approveQuote(quote!.id)}
+                      disabled={isViewer}
+                      title={isViewer ? viewerTip : undefined}
+                    >
+                      <ThumbsUp className="h-4 w-4 mr-2" />
+                      {t('requestDetailActions.approveQuote')}
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => setRejectOpen(true)}
+                      disabled={isViewer}
+                      title={isViewer ? viewerTip : undefined}
+                    >
+                      <ThumbsDown className="h-4 w-4 mr-2" />
+                      {t('requestDetailActions.rejectQuote')}
+                    </Button>
+                  </>
+                )}
+                {isWon && (
+                  <Badge variant="outline" className="bg-success/10 text-success border-success/20 py-1.5 px-3">
+                    <ThumbsUp className="h-4 w-4 mr-2" />
+                    {t('requestDetailActions.dealAccepted')}
+                  </Badge>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })()}
 
         {/* Quote Content */}
         {quote ? (

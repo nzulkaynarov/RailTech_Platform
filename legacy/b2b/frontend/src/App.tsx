@@ -489,7 +489,7 @@ function MainApp() {
       content = <FulfillmentsPage />;
       break;
     case 'supplier-bids':
-      content = <SupplierBidsPage />;
+      content = <SupplierBidsPage onNavigate={handleNavigate} />;
       break;
     case 'leads':
       content = <LeadsPage />;
