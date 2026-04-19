@@ -46,7 +46,7 @@ export function SettingsPage() {
   const { role, activeStatus, company } = useUserStore();
   const { theme, setTheme } = useThemeStore();
   const isAdmin = role === 'ADMIN';
-  const isManagerOrAdmin = role === 'ADMIN' || role === 'MANAGER';
+  const isManagerOrAdmin = role === 'ADMIN';
 
   // Local preferences (localStorage)
   const [currency, setCurrency] = useState(() => localStorage.getItem('railtech-currency') || 'usd');

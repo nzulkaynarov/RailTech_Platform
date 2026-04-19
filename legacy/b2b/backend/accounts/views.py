@@ -9,12 +9,12 @@ from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResp
 from django.db.models import Prefetch
 from django.utils.translation import gettext_lazy as _
 
-from core.permissions import IsAdminUser, IsManagerOrAdmin
+from core.permissions import IsPlatformAdmin, IsPlatformAdmin
 
 from . import services
 from .models import (
     Company, CompanyMember, CompanyRoleApplication, CustomUser,
-    SupplierSubscription, SystemRole,
+    SupplierSubscription, SystemRole, WorkspaceRole,
 )
 from .services import (
     create_pending_user, verify_and_setup_password,
@@ -75,7 +75,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
         'members',
     ).order_by('-created_at')
     serializer_class = CompanySerializer
-    permission_classes = [permissions.IsAuthenticated, IsManagerOrAdmin]
+    permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = {
         'verification_status__code': ['exact'],
@@ -85,10 +85,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
-        # Admin / Manager check via SystemRole
-        is_staff = request.user.is_staff or (request.user.role and request.user.role.is_staff_level)
-
-        if not is_staff:
+        if not request.user.is_platform_admin:
             # Check if user is a member of this company
             membership = CompanyMember.objects.filter(user=request.user, company=instance).exists()
             if not membership:
@@ -181,11 +178,8 @@ class CompanyViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def team(self, request, pk=None):
         company = self.get_object()
-        # Security check
         is_member = CompanyMember.objects.filter(user=request.user, company=company).exists()
-        is_staff = request.user.is_staff or (request.user.role and request.user.role.is_staff_level)
-
-        if not (is_member or is_staff):
+        if not (is_member or request.user.is_platform_admin):
             raise exceptions.PermissionDenied("You can only view your own team.")
 
         users = CustomUser.objects.filter(memberships__company=company).distinct()
@@ -213,7 +207,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
     def update_member_capabilities(self, request, pk=None):
         company = self.get_object()
         # Authorization: OWNER of this company, or platform staff/superuser.
-        is_staff = request.user.is_superuser or getattr(request.user, 'is_manager_or_admin', False)
+        is_staff = request.user.is_platform_admin
         if not is_staff:
             owner_membership = CompanyMember.objects.filter(
                 user=request.user, company=company, is_active=True,
@@ -269,7 +263,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
         ).select_related('role').first()
 
         if not membership or membership.role.code != 'OWNER':
-            is_staff = request.user.is_superuser or request.user.is_manager_or_admin
+            is_staff = request.user.is_platform_admin
             if not is_staff:
                 return Response({'error': 'Only company owner can invite members'},
                               status=status.HTTP_403_FORBIDDEN)
@@ -314,9 +308,9 @@ class UserViewSet(viewsets.ModelViewSet):
         ),
     ).order_by('-date_joined')
     serializer_class = UserSerializer
-    # Use custom IsAdminUser that checks SystemRole.code == 'ADMIN', not Django's is_staff
-    from core.permissions import IsAdminUser as CustomIsAdminUser
-    permission_classes = [permissions.IsAuthenticated, CustomIsAdminUser]
+    # Use custom IsPlatformAdmin that checks SystemRole.code == 'ADMIN', not Django's is_staff
+    from core.permissions import IsPlatformAdmin as CustomIsPlatformAdmin
+    permission_classes = [permissions.IsAuthenticated, CustomIsPlatformAdmin]
 
     @extend_schema(
         summary="Change password",
@@ -407,24 +401,72 @@ class UserViewSet(viewsets.ModelViewSet):
     )
     @action(detail=True, methods=['post'], url_path='change-role')
     def change_role(self, request, pk=None):
-        from .models import SystemRole
         user = self.get_object()
         role_code = request.data.get('role')
-        if not role_code:
-            return Response(
-                {'error': 'role is required'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        role = SystemRole.objects.filter(code=role_code).first()
-        if not role:
-            return Response(
-                {'error': f"Role '{role_code}' not found"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        user.role = role
-        user.save(update_fields=['role'])
+        result, error = services.change_user_role(user, role_code)
+        if error:
+            return Response({'detail': error}, status=status.HTTP_400_BAD_REQUEST)
         from .serializers import UserSerializer
-        return Response(UserSerializer(user).data)
+        return Response(UserSerializer(result).data)
+
+    @extend_schema(
+        summary="Add user to company (workspace membership)",
+        description="Platform Admin creates a CompanyMember link for the target user.",
+        request=inline_serializer('AddMembershipRequest', {
+            'company': __import__('rest_framework').serializers.IntegerField(),
+            'workspace_role': __import__('rest_framework').serializers.CharField(),
+            'is_primary': __import__('rest_framework').serializers.BooleanField(required=False, default=False),
+        }),
+        responses={
+            201: OpenApiResponse(description="Membership created"),
+            400: OpenApiResponse(description="Validation error (see error_code)"),
+            404: OpenApiResponse(description="Company not found"),
+        },
+        tags=['Accounts'],
+    )
+    @action(detail=True, methods=['post'], url_path='add-membership')
+    def add_membership(self, request, pk=None):
+        user = self.get_object()
+        company_id = request.data.get('company')
+        workspace_role_code = request.data.get('workspace_role')
+        is_primary = bool(request.data.get('is_primary', False))
+        if not company_id or not workspace_role_code:
+            return Response({'detail': 'COMPANY_AND_WORKSPACE_ROLE_REQUIRED'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        from .models import Company
+        company = Company.objects.filter(pk=company_id).first()
+        if not company:
+            return Response({'detail': 'COMPANY_NOT_FOUND'},
+                            status=status.HTTP_404_NOT_FOUND)
+        membership, error = services.add_company_member(
+            user, company, workspace_role_code, is_primary=is_primary,
+        )
+        if error:
+            return Response({'detail': error}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({
+            'id': membership.id,
+            'company_id': company.id,
+            'company_name': company.name,
+            'workspace_role': membership.role.code,
+            'is_primary': membership.is_primary,
+        }, status=status.HTTP_201_CREATED)
+
+    @extend_schema(
+        summary="Remove workspace membership",
+        description="Delete a CompanyMember link.",
+        responses={204: None, 404: OpenApiResponse(description="Membership not found")},
+        tags=['Accounts'],
+    )
+    @action(detail=True, methods=['delete'], url_path='remove-membership/(?P<membership_id>[0-9]+)')
+    def remove_membership(self, request, pk=None, membership_id=None):
+        user = self.get_object()
+        from .models import CompanyMember
+        membership = CompanyMember.objects.filter(pk=membership_id, user=user).first()
+        if not membership:
+            return Response({'detail': 'MEMBERSHIP_NOT_FOUND'},
+                            status=status.HTTP_404_NOT_FOUND)
+        membership.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 @extend_schema(
@@ -554,12 +596,43 @@ class MeView(RetrieveAPIView):
 )
 class SystemRoleViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = SystemRole.objects.all().order_by('sort_order', 'name')
-    permission_classes = [permissions.IsAuthenticated, IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
     pagination_class = None
 
     def list(self, request, *args, **kwargs):
-        data = [{'code': r.code, 'name': r.name, 'is_staff_level': r.is_staff_level}
-                for r in self.get_queryset()]
+        data = [{'code': r.code, 'name': r.name} for r in self.get_queryset()]
+        return Response(data)
+
+
+@extend_schema_view(
+    list=extend_schema(summary="List workspace roles", tags=['Accounts']),
+    retrieve=extend_schema(summary="Get workspace role", tags=['Accounts']),
+)
+class WorkspaceRoleViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Workspace roles (роли внутри компании) с типовой привязкой.
+
+    Query:
+      ?company_type=CLIENT — вернуть только роли, применимые к компаниям типа CLIENT
+                             (плюс универсальные роли без ограничения по типу).
+    """
+    queryset = WorkspaceRole.objects.filter(is_active=True).prefetch_related('applicable_to_types').order_by('sort_order', 'name')
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = None
+
+    def list(self, request, *args, **kwargs):
+        qs = self.get_queryset()
+        company_type = request.query_params.get('company_type')
+        data = []
+        for r in qs:
+            applicable = list(r.applicable_to_types.values_list('code', flat=True))
+            if company_type and applicable and company_type not in applicable:
+                continue
+            data.append({
+                'code': r.code,
+                'name': r.name,
+                'applicable_to_types': applicable,
+            })
         return Response(data)
 
 
@@ -577,7 +650,7 @@ class SupplierSubscriptionViewSet(viewsets.ModelViewSet):
     Admin/Manager only.
     """
     serializer_class = SupplierSubscriptionSerializer
-    permission_classes = [permissions.IsAuthenticated, IsManagerOrAdmin]
+    permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
     filterset_fields = ['plan', 'status', 'company']
     search_fields = ['company__name', 'company__inn']
     ordering = ['-created_at']
@@ -651,7 +724,7 @@ class CompanyRoleApplicationViewSet(viewsets.ModelViewSet):
     Admin/Manager only.
     """
     serializer_class = CompanyRoleApplicationSerializer
-    permission_classes = [permissions.IsAuthenticated, IsManagerOrAdmin]
+    permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
     filterset_fields = ['status', 'requested_type', 'company']
     search_fields = ['company__name', 'company__inn']
     ordering = ['-created_at']

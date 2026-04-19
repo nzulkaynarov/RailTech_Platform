@@ -37,7 +37,8 @@ def master_data(db):
     VerificationStatus.objects.get_or_create(code='PROFILE_SUBMITTED', defaults={'name': 'Submitted', 'sort_order': 20})
     VerificationStatus.objects.get_or_create(code='L2_VERIFIED', defaults={'name': 'L2', 'sort_order': 30})
     WorkspaceRole.objects.get_or_create(code='OWNER', defaults={'name': 'Owner', 'sort_order': 10})
-    SystemRole.objects.get_or_create(code='SALES_MANAGER', defaults={'name': 'SM', 'sort_order': 10, 'is_staff_level': True})
+    SystemRole.objects.get_or_create(code='USER', defaults={'name': 'User', 'sort_order': 10})
+    SystemRole.objects.get_or_create(code='ADMIN', defaults={'name': 'Platform Admin', 'sort_order': 0})
     QuoteStatus.objects.get_or_create(code='DRAFT', defaults={'name': 'Draft', 'sort_order': 10})
     QuoteStatus.objects.get_or_create(code='SENT', defaults={'name': 'Sent', 'sort_order': 20})
     QuoteStatus.objects.get_or_create(code='APPROVED', defaults={'name': 'Approved', 'sort_order': 30})
@@ -99,7 +100,7 @@ def manager(master_data):
         email='t.manager@example.com', username='t_manager', password='pw',
         is_active=True, is_staff=True, is_superuser=True,
         first_name='T', last_name='Manager',
-        role=SystemRole.objects.get(code='SALES_MANAGER'),
+        role=SystemRole.objects.get(code='ADMIN'),
     )
 
 

@@ -71,7 +71,7 @@ class Command(BaseCommand):
         supplier_type  = _must(CompanyType, 'SUPPLIER')
         l2_status      = _must(VerificationStatus, 'L2_VERIFIED')
         owner_role     = _must(WorkspaceRole, 'OWNER')
-        sales_mgr_role = _must(SystemRole, 'SALES_MANAGER')
+        admin_role = _must(SystemRole, 'ADMIN')
         draft_quote    = _must(QuoteStatus, 'DRAFT')
         _must(QuoteStatus, 'SENT')
         _must(QuoteStatus, 'APPROVED')
@@ -118,11 +118,11 @@ class Command(BaseCommand):
         manager, _ = CustomUser.objects.get_or_create(
             email='smoke.manager@railtech.test',
             defaults={'username': 'smoke.manager@railtech.test', 'is_active': True, 'is_staff': True,
-                      'first_name': 'Smoke', 'last_name': 'Manager', 'role': sales_mgr_role},
+                      'first_name': 'Smoke', 'last_name': 'Manager', 'role': admin_role},
         )
         if not manager.is_staff:
             manager.is_staff = True
-            manager.role = sales_mgr_role
+            manager.role = admin_role
             manager.save(update_fields=['is_staff', 'role'])
         info(f"manager={manager.email} role={manager.role.code if manager.role else '-'}")
 

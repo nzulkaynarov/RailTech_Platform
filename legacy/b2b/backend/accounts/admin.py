@@ -82,7 +82,6 @@ class UserAdmin(ImportExportModelAdmin, BaseUserAdmin, ModelAdmin):
     search_fields = ("email", "first_name", "last_name", "phone", "username")
     list_per_page = 25
     inlines = [CompanyMemberInline]
-    actions = ["make_staff"]
     warn_unsaved_form = True
 
     @display(header=True, description=_("Пользователь"))
@@ -93,23 +92,12 @@ class UserAdmin(ImportExportModelAdmin, BaseUserAdmin, ModelAdmin):
     @display(
         description=_("Роль"),
         label={
-            "Администратор": "danger",
-            "Менеджер по продажам": "info",
-            "Аккаунт-менеджер": "info",
-            "Клиент": "success",
-            "Гость (не подтверждён)": "warning",
+            "Администратор платформы": "danger",
+            "Пользователь": "info",
         },
     )
     def role_badge(self, obj):
         return obj.role.name if obj.role else "—"
-
-    @superuser_only_action(_("[Emergency] Назначить SALES_MANAGER + is_staff"))
-    def make_staff(self, request, queryset):
-        updated, error = services.assign_sales_manager_role(queryset)
-        if error:
-            self.message_user(request, error, level="error")
-            return
-        self.message_user(request, _("%(count)d пользователей обновлено.") % {"count": updated})
 
     fieldsets = (
         (None, {

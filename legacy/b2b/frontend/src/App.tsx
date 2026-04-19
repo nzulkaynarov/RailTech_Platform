@@ -2,6 +2,7 @@ import { Suspense, lazy, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { AppShell } from './layouts/AppShell';
+import { PlatformAdminShell } from './layouts/PlatformAdminShell';
 import { ErrorBoundary } from './components/Shared/ErrorBoundary';
 import { FABSupportButton } from './components/Shared/FABSupportButton';
 import { OnboardingTour } from './components/Shared/OnboardingTour';
@@ -225,7 +226,8 @@ const ADMIN_PAGES = new Set([
 ]);
 // CRIT-2 / MED-18: pages that require manager-level RBAC but are not pure ADMIN.
 // Accessible for ADMIN + MANAGER + SELLER (SELLER's CRM submenu exposes Leads).
-const MANAGER_PAGES = new Set(['leads']);
+// Leads — CRM-инструмент компании-продавца. Видимость регулируется по
+// workspace-роли внутри компании, а не по системной роли платформы.
 const KYC_ALLOWED_PAGES = new Set(['dashboard', 'profile', 'settings', 'help']);
 
 function MainApp() {
@@ -253,13 +255,6 @@ function MainApp() {
   useEffect(() => {
     if (ADMIN_PAGES.has(page.type) && role !== 'ADMIN') {
       toast.error(t('guards.adminRequired'));
-      setPage({ type: 'dashboard' });
-      window.history.replaceState(null, '', '#dashboard');
-      return;
-    }
-    // MED-18: manager-level pages (e.g. leads) require manager-or-admin, not regular employee.
-    if (MANAGER_PAGES.has(page.type) && role !== 'ADMIN' && role !== 'MANAGER') {
-      toast.error(t('guards.managerRequired'));
       setPage({ type: 'dashboard' });
       window.history.replaceState(null, '', '#dashboard');
     }
@@ -317,12 +312,6 @@ function MainApp() {
       // Role guard: admin pages require ADMIN role
       if (ADMIN_PAGES.has(target) && role !== 'ADMIN') {
         toast.error(t('guards.adminRequired'));
-        navigateTo({ type: 'dashboard' });
-        return;
-      }
-      // MED-18: manager-only pages.
-      if (MANAGER_PAGES.has(target) && role !== 'ADMIN' && role !== 'MANAGER') {
-        toast.error(t('guards.managerRequired'));
         navigateTo({ type: 'dashboard' });
         return;
       }
@@ -485,6 +474,20 @@ function MainApp() {
   }
 
   const breadcrumbs = getBreadcrumbs();
+  const isPlatformAdmin = useUserStore((s) => s.role === 'ADMIN');
+
+  if (isPlatformAdmin) {
+    return (
+      <PlatformAdminShell activePage={activePageId} onNavigate={handleNavigate}>
+        <Suspense fallback={<LoadingSkeleton />}>
+          {breadcrumbs.length > 0 && (
+            <PageBreadcrumb segments={breadcrumbs} onNavigate={handleNavigate} />
+          )}
+          {content}
+        </Suspense>
+      </PlatformAdminShell>
+    );
+  }
 
   return (
     <AppShell activePage={activePageId} onNavigate={handleNavigate} onStartTour={() => setShowTour(true)}>

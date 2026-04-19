@@ -17,32 +17,15 @@ from core.storage import (
 
 class SystemRole(AbstractLookup):
     """
-    Системная роль пользователя.
-    Seed: GUEST, CLIENT, SALES_MANAGER, ACCOUNT_MANAGER, ADMIN
+    Системная роль пользователя на уровне платформы.
+
+    Seed: ADMIN (Platform Admin), USER (обычный пользователь компании).
+    Больше ролей нет — права внутри компаний регулирует WorkspaceRole.
     """
-    is_staff_level = models.BooleanField(
-        default=False,
-        verbose_name=_("Уровень сотрудника"),
-        help_text=_(
-            "True для ролей сотрудников (менеджеры, админы). "
-            "Используется для программных проверок доступа."
-        ),
-    )
 
     class Meta(AbstractLookup.Meta):
         verbose_name = _("Системная роль")
         verbose_name_plural = _("Справочник: Системные роли")
-
-
-class WorkspaceRole(AbstractLookup):
-    """
-    Роль внутри рабочего пространства компании.
-    Seed: OWNER, ACCOUNTANT, PROCUREMENT_MANAGER
-    """
-
-    class Meta(AbstractLookup.Meta):
-        verbose_name = _("Роль в компании")
-        verbose_name_plural = _("Справочник: Роли в компании")
 
 
 class CompanyType(AbstractLookup):
@@ -54,6 +37,32 @@ class CompanyType(AbstractLookup):
     class Meta(AbstractLookup.Meta):
         verbose_name = _("Тип компании")
         verbose_name_plural = _("Справочник: Типы компаний")
+
+
+class WorkspaceRole(AbstractLookup):
+    """
+    Роль пользователя внутри компании.
+
+    Роли типа-специфичные. Пример seed:
+      BUYER  → OWNER, PROCUREMENT_MANAGER, MANAGER
+      SELLER → OWNER, SALES_MANAGER, LOGIST
+      MANUFACTURER → OWNER, CONTRACT_MANAGER, FOREIGN_TRADE_SPECIALIST
+
+    applicable_to_types ограничивает, в каких компаниях роль можно назначить.
+    Пустой набор = роль универсальная (например, OWNER).
+    """
+    applicable_to_types = models.ManyToManyField(
+        CompanyType, blank=True, related_name='workspace_roles',
+        verbose_name=_("Применимо к типам компаний"),
+        help_text=_(
+            "Если пусто — роль универсальна. Если указаны типы — роль "
+            "доступна только в компаниях этих типов."
+        ),
+    )
+
+    class Meta(AbstractLookup.Meta):
+        verbose_name = _("Роль в компании")
+        verbose_name_plural = _("Справочник: Роли в компании")
 
 
 class VerificationStatus(AbstractLookup):
@@ -236,11 +245,18 @@ class CustomUser(AbstractUser):
         return self.email
 
     @property
-    def is_manager_or_admin(self):
-        """Проверка через lookup: role.is_staff_level."""
-        if self.role:
-            return self.role.is_staff_level
-        return False
+    def is_platform_admin(self) -> bool:
+        """
+        Platform Admin — владелец платформы RailTech.
+
+        Инвариант: is_superuser ИЛИ носитель SystemRole='ADMIN' БЕЗ активных
+        членств в компаниях. Видит всё, регулирует платформу целиком.
+        """
+        if self.is_superuser:
+            return True
+        if not self.role or self.role.code != 'ADMIN':
+            return False
+        return not self.memberships.filter(is_active=True).exists()
 
     @cached_property
     def primary_company(self):

@@ -92,7 +92,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             deal = Deal.objects.select_related('company').get(pk=deal_id)
 
             # Staff-level users: check via SystemRole (not is_staff)
-            if hasattr(user, 'role') and user.role and user.role.is_staff_level:
+            if hasattr(user, 'role') and user.role and user.role.code == 'ADMIN':
                 return True
             if user.is_superuser:
                 return True

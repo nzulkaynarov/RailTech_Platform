@@ -119,7 +119,7 @@ function getBuyerNavigation(activePage: string, role: UserRole, t: TFn): NavItem
     },
   ];
   // HIGH-11: BuyerAnalytics is an empty page — show it only to mgr/admin.
-  if (role === 'ADMIN' || role === 'MANAGER') {
+  if (role === 'ADMIN') {
     items.push({ label: t('shell.clients'), icon: <Users className="h-4 w-4" />, id: 'crm-clients', active: activePage === 'crm-clients' });
     items.push({ label: t('shell.analytics'), icon: <BarChart3 className="h-4 w-4" />, id: 'analytics', active: activePage === 'analytics' });
   }
@@ -163,7 +163,7 @@ function getManufacturerNavigation(activePage: string, role: UserRole, t: TFn): 
     },
   ];
   // CRIT-4: MFG with MANAGER role needs full CRM access (Clients, Leads).
-  if (role === 'ADMIN' || role === 'MANAGER') {
+  if (role === 'ADMIN') {
     items.push({ label: t('shell.clients'), icon: <Users className="h-4 w-4" />, id: 'crm-clients', active: activePage === 'crm-clients' });
     items.push({ label: t('shell.leads'), icon: <ClipboardList className="h-4 w-4" />, id: 'leads', active: activePage === 'leads' });
     items.push({ label: t('shell.productionAnalytics'), icon: <BarChart3 className="h-4 w-4" />, id: 'analytics', active: activePage === 'analytics' });
@@ -211,7 +211,7 @@ function getSellerNavigation(activePage: string, role: UserRole, t: TFn): NavIte
       ],
     },
   ];
-  if (role === 'ADMIN' || role === 'MANAGER') {
+  if (role === 'ADMIN') {
     items.push({ label: t('shell.salesAnalytics'), icon: <BarChart3 className="h-4 w-4" />, id: 'analytics', active: activePage === 'analytics' });
   }
   return items;

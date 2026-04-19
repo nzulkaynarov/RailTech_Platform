@@ -22,6 +22,7 @@ from crm.views import (
 from accounts.views import (
     CompanyViewSet, UserViewSet, RegisterView, SetupPasswordView, SubmitProfileView, MeView,
     SupplierSubscriptionViewSet, CompanyRoleApplicationViewSet, SystemRoleViewSet,
+    WorkspaceRoleViewSet,
 )
 from notifications.views import NotificationViewSet
 from master_data.views import (
@@ -62,6 +63,7 @@ router.register(r'accounts/users', UserViewSet)
 router.register(r'accounts/subscriptions', SupplierSubscriptionViewSet, basename='subscription')
 router.register(r'accounts/role-applications', CompanyRoleApplicationViewSet, basename='roleapplication')
 router.register(r'accounts/system-roles', SystemRoleViewSet, basename='systemrole')
+router.register(r'accounts/workspace-roles', WorkspaceRoleViewSet, basename='workspacerole')
 router.register(r'notifications', NotificationViewSet, basename='notification')
 
 # Master Data

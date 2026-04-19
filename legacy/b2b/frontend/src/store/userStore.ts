@@ -32,18 +32,16 @@ export interface CompanyStatusEntry {
 }
 
 /* ─── User Role (exactly ONE per employee, assigned by company admin) ── */
-export type UserRole = 'ADMIN' | 'MANAGER' | 'EMPLOYEE';
+export type UserRole = 'ADMIN' | 'USER';
 
 export const roleLabels: Record<UserRole, string> = {
   ADMIN: 'roles.admin',
-  MANAGER: 'roles.manager',
-  EMPLOYEE: 'roles.employee',
+  USER: 'roles.user',
 };
 
 export const roleDescriptions: Record<UserRole, string> = {
   ADMIN: 'roles.adminDesc',
-  MANAGER: 'roles.managerDesc',
-  EMPLOYEE: 'roles.employeeDesc',
+  USER: 'roles.userDesc',
 };
 
 /* ─── User Profile ──────────────────────────────────────────────────── */
@@ -177,12 +175,13 @@ export const useUserStore = create<UserState>((set, _get) => ({
       const canSell = userPayload.can_sell !== false;
       const canBuy = userPayload.can_buy !== false;
 
-      // Platform-admin viewer mode: SystemRole.ADMIN user who isn't attached
-      // to any company. Gets to preview all 3 contexts (BUYER/SELLER/MFG) for
-      // moderation purposes, but business actions must be blocked by page-level
-      // guards / disabled buttons (see memory/admin_viewer_mode_*.md).
-      const isPlatformAdmin = role_code === 'ADMIN';
+      // Platform-admin viewer mode: SystemRole.ADMIN без company. Читаем флаг
+      // is_platform_admin (идёт с /me/). Админ работает в PlatformAdminShell —
+      // обычные контексты BUYER/SELLER/MANUFACTURER ему не нужны, но для
+      // обратной совместимости оставляем viewer-режим.
+      const backendFlag = (userPayload as { is_platform_admin?: boolean }).is_platform_admin;
       const hasCompany = !!company;
+      const isPlatformAdmin = backendFlag ?? (role_code === 'ADMIN' && !hasCompany);
       const isViewerMode = isPlatformAdmin && !hasCompany;
 
       let statusEntries: CompanyStatusEntry[];
@@ -217,8 +216,7 @@ export const useUserStore = create<UserState>((set, _get) => ({
         screen: 'main',
         activeStatus,
         isViewerMode,
-        role: (role_code === 'ADMIN' || role_code === 'SALES_MANAGER') ? 'ADMIN' :
-              role_code === 'ACCOUNT_MANAGER' ? 'MANAGER' : 'EMPLOYEE',
+        role: isPlatformAdmin ? 'ADMIN' : 'USER',
         profile: {
           firstName: first_name || '',
           lastName: last_name || '',

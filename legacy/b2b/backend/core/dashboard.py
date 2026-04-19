@@ -43,7 +43,7 @@ def dashboard_callback(request, context):
 
     # 8. Productivity (quotes per active manager)
     managers_count = CustomUser.objects.filter(
-        role__isnull=False, role__is_staff_level=True
+        role__code='ADMIN'
     ).count()
     total_quotes = Quote.objects.count()
     productivity = round(total_quotes / managers_count, 1) if managers_count > 0 else 0

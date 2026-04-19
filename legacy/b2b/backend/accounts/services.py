@@ -31,8 +31,8 @@ def create_pending_user(email: str, first_name: str, last_name: str) -> Tuple[Op
     if CustomUser.objects.filter(email=email).exists():
         return None, 'USER_EMAIL_ALREADY_EXISTS'
 
-    # Assign default GUEST role from Master Data
-    guest_role = SystemRole.objects.filter(code='GUEST').first()
+    # Default system role at registration: USER.
+    user_role = SystemRole.objects.filter(code='USER').first()
 
     user = CustomUser.objects.create(
         username=email,
@@ -40,7 +40,7 @@ def create_pending_user(email: str, first_name: str, last_name: str) -> Tuple[Op
         first_name=first_name,
         last_name=last_name,
         is_active=False,
-        role=guest_role
+        role=user_role,
     )
     user.set_unusable_password()
     user.save()
@@ -142,14 +142,14 @@ def invite_workspace_member(company: Company, email: str, role_code: str) -> Tup
     if not w_role:
         return None, 'SYSTEM_ROLE_NOT_FOUND'
 
-    # Assign default GUEST role (same as registration flow)
-    guest_role = SystemRole.objects.filter(code='GUEST').first()
+    # Default system role for invited member: USER (пользователь компании).
+    user_role = SystemRole.objects.filter(code='USER').first()
 
     user = CustomUser.objects.create(
         username=email,
         email=email,
         is_active=False,
-        role=guest_role
+        role=user_role,
     )
     user.set_unusable_password()
     user.save()
@@ -182,17 +182,62 @@ def invite_workspace_member(company: Company, email: str, role_code: str) -> Tup
 # ──────────────────────────────────────────────────────────────────────────
 
 
-def assign_sales_manager_role(users: QuerySet[CustomUser]) -> Tuple[int, Optional[str]]:
+def change_user_role(
+    user: CustomUser,
+    role_code: str,
+) -> Tuple[Optional[CustomUser], Optional[str]]:
     """
-    Assign SALES_MANAGER role to users and grant Django staff access.
+    Change SystemRole of a user.
 
-    Returns: (count_updated, error_message_or_None)
+    Инварианты платформы:
+      - ADMIN выдаётся только пользователям без активных memberships
+        (Platform Admin — владелец платформы, не привязан ни к одной компании).
+      - Понизить ADMIN → USER разрешено всегда.
+      - USER можно выдать любому юзеру.
     """
-    sales_role = SystemRole.objects.filter(code='SALES_MANAGER').first()
-    if not sales_role:
-        return 0, 'SALES_MANAGER_ROLE_NOT_FOUND'
-    updated = users.update(is_staff=True, role=sales_role)
-    return updated, None
+    if not role_code:
+        return None, 'ROLE_CODE_REQUIRED'
+    role = SystemRole.objects.filter(code=role_code).first()
+    if not role:
+        return None, 'SYSTEM_ROLE_NOT_FOUND'
+    if role.code == 'ADMIN':
+        has_active_memberships = user.memberships.filter(is_active=True).exists()
+        if has_active_memberships:
+            return None, 'ADMIN_ROLE_REQUIRES_NO_MEMBERSHIPS'
+    user.role = role
+    user.save(update_fields=['role'])
+    return user, None
+
+
+def add_company_member(
+    user: CustomUser,
+    company: Company,
+    workspace_role_code: str,
+    is_primary: bool = False,
+) -> Tuple[Optional['CompanyMember'], Optional[str]]:
+    """
+    Add or update a CompanyMember link between user and company.
+
+    Инварианты платформы:
+      - Platform Admin (role=ADMIN) не может быть членом компании.
+      - workspace_role должен быть применим к типам компании (applicable_to_types).
+    """
+    if user.role and user.role.code == 'ADMIN':
+        return None, 'PLATFORM_ADMIN_CANNOT_JOIN_COMPANY'
+    role = WorkspaceRole.objects.filter(code=workspace_role_code).first()
+    if not role:
+        return None, 'WORKSPACE_ROLE_NOT_FOUND'
+    applicable = role.applicable_to_types.all()
+    if applicable.exists():
+        company_type_codes = set(company.types.values_list('code', flat=True))
+        allowed_codes = set(applicable.values_list('code', flat=True))
+        if not (company_type_codes & allowed_codes):
+            return None, 'WORKSPACE_ROLE_NOT_APPLICABLE_TO_COMPANY_TYPE'
+    membership, _created = CompanyMember.objects.update_or_create(
+        user=user, company=company,
+        defaults={'role': role, 'is_primary': is_primary, 'is_active': True},
+    )
+    return membership, None
 
 
 def verify_company_kyc(

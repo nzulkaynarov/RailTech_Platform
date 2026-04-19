@@ -40,8 +40,9 @@ export interface User {
 	phone: string;
 	role?: number | string | null;
 	role_code?: string;
-	role_data?: { code: string; name: string; is_staff_level: boolean };
+	role_data?: { code: string; name: string };
 	workspace_role?: string | null;
+	is_platform_admin?: boolean;
 	kyc_status?: string | null;
 	// Per-membership capabilities from the primary company.
 	// OWNER distributes these inside the team; frontend filters

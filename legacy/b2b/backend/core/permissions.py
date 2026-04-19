@@ -1,69 +1,38 @@
 from rest_framework.permissions import BasePermission, SAFE_METHODS
 
 
-class IsManagerOrAdmin(BasePermission):
+class IsPlatformAdmin(BasePermission):
     """
-    Allows access only to users with SystemRole.is_staff_level=True.
-    Replacement for the hardcoded SALES_MANAGER/ADMIN checks.
+    Разрешает доступ только Platform Admin — владельцу платформы.
+
+    Инвариант: is_superuser ИЛИ носитель SystemRole='ADMIN' БЕЗ memberships.
+    Регулирует всю платформу, не привязан ни к одной компании.
     """
-    message = "Access restricted to RailTech managers and administrators."
+    message = "Access restricted to platform administrators."
 
     def has_permission(self, request, view):
         user = request.user
         if not (user and user.is_authenticated):
             return False
-        if user.is_superuser:
-            return True
-        return user.is_manager_or_admin
+        return user.is_platform_admin
 
 
-class IsAdminUser(BasePermission):
-    """
-    Allows access only to users with ADMIN code in SystemRole.
-    """
-    message = "Access restricted to super administrators."
-
-    def has_permission(self, request, view):
-        user = request.user
-        if not (user and user.is_authenticated):
-            return False
-
-        if user.is_superuser:
-            return True
-
-        if hasattr(user, 'role') and user.role:
-            return user.role.code == 'ADMIN'
-
-        return False
-
-
-class IsAdminOrReadOnly(BasePermission):
-    """
-    Allow read-only for anyone, write only for Admins.
-    """
+class IsPlatformAdminOrReadOnly(BasePermission):
+    """Публично читать, писать — только Platform Admin."""
 
     def has_permission(self, request, view):
         if request.method in SAFE_METHODS:
             return True
-
         user = request.user
         if not (user and user.is_authenticated):
             return False
-
-        if user.is_superuser:
-            return True
-
-        if hasattr(user, 'role') and user.role:
-            return user.role.code == 'ADMIN'
-
-        return False
+        return user.is_platform_admin
 
 
 class IsSupplierWithActiveSubscription(BasePermission):
     """
-    Permits write-methods only to supplier companies with an operational subscription
-    (ACTIVE or TRIAL within validity). Managers/Admins bypass.
-    Read-only methods pass through.
+    Запись разрешена компаниям-поставщикам с активной/триальной подпиской.
+    Platform Admin обходит проверку. Чтение свободно.
     """
     message = "Supplier subscription inactive or expired."
 
@@ -73,9 +42,8 @@ class IsSupplierWithActiveSubscription(BasePermission):
             return True
         if not (user and user.is_authenticated):
             return False
-        if user.is_superuser or getattr(user, 'is_manager_or_admin', False):
+        if user.is_platform_admin:
             return True
-        # Find user's active supplier companies with operational subscription
         from accounts.models import SupplierSubscription
         supplier_company_ids = user.memberships.filter(
             is_active=True, company__types__code__in=['SUPPLIER', 'MANUFACTURER'],
@@ -84,11 +52,12 @@ class IsSupplierWithActiveSubscription(BasePermission):
         return any(s.is_operational for s in subs)
 
 
-class IsOwnerOrManagerOrAdmin(BasePermission):
+class IsCompanyMemberOrPlatformAdmin(BasePermission):
     """
-    Object-level permission.
-    - Admins/Managers: full access based on is_staff_level.
-    - Clients: access only to their own objects.
+    Object-level permission для мульти-тенантных ресурсов (Deal, Quote, Message, QuoteItem).
+
+    - Platform Admin: полный доступ.
+    - Остальные: доступ только к объектам своей компании (через CompanyMember).
     """
     message = "You do not have permission to access this resource."
 
@@ -97,25 +66,20 @@ class IsOwnerOrManagerOrAdmin(BasePermission):
         if not (user and user.is_authenticated):
             return False
 
-        # 1. Staff/Manager check (RailTech employees have full access)
-        if user.is_superuser or user.is_manager_or_admin:
+        if user.is_platform_admin:
             return True
 
-        # 2. B2B Multi-tenancy check
-        # Get the target company for the object
         target_company = None
-
-        if hasattr(obj, 'company'):  # Deal
+        if hasattr(obj, 'company'):
             target_company = obj.company
-        elif hasattr(obj, 'deal'):  # Quote, Message
+        elif hasattr(obj, 'deal'):
             target_company = obj.deal.company
-        elif hasattr(obj, 'quote'):  # QuoteItem
+        elif hasattr(obj, 'quote'):
             target_company = obj.quote.deal.company
-        elif obj == user:  # User profile
+        elif obj == user:
             return True
 
         if target_company:
-            # Check if user is an active member of the target company
             return user.memberships.filter(company=target_company, is_active=True).exists()
 
         return False

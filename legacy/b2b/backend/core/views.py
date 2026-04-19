@@ -9,7 +9,7 @@ from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 from core.models import SystemSetting
-from core.permissions import IsManagerOrAdmin
+from core.permissions import IsPlatformAdmin
 
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -59,7 +59,7 @@ class SystemSettingsView(APIView):
         # Write requires elevated permissions
         if not (
             request.user.is_superuser
-            or getattr(request.user, 'is_manager_or_admin', False)
+            or request.user.is_platform_admin
         ):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied()
@@ -103,7 +103,7 @@ class PageStatsView(APIView):
         from notifications.models import Notification
 
         # B2B data isolation: staff sees everything, regular users — only their companies
-        is_staff = request.user.is_superuser or getattr(request.user, 'is_manager_or_admin', False)
+        is_staff = request.user.is_platform_admin
         if is_staff:
             deals_qs = Deal.objects.all()
             quotes_qs = Quote.objects.all()
@@ -188,17 +188,14 @@ class PageStatsView(APIView):
         ).count()
         offers_total = SupplierOffer.objects.filter(is_active=True).count()
 
-        # --- Users (staff-only section — non-staff get zeros) ---
+        # --- Users (platform-admin-only section — others get zeros) ---
         if is_staff:
             users_total = CustomUser.objects.filter(is_active=True).count()
             users_admins = CustomUser.objects.filter(
                 is_active=True, role__code='ADMIN'
             ).count()
-            users_managers = CustomUser.objects.filter(
-                is_active=True,
-                role__code__in=['SALES_MANAGER', 'ACCOUNT_MANAGER'],
-            ).count()
-            users_employees = users_total - users_admins - users_managers
+            users_managers = 0  # platform-staff concept retired
+            users_employees = users_total - users_admins
         else:
             users_total = users_admins = users_managers = users_employees = 0
 

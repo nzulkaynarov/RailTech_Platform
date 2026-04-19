@@ -1037,13 +1037,16 @@
     "SELLER": "Seller"
   },
   "roles": {
-    "ADMIN": "Administrator",
-    "MANAGER": "Manager",
-    "EMPLOYEE": "Employee",
-    "SALES_MANAGER": "Sales Manager",
-    "ACCOUNT_MANAGER": "Account Manager",
-    "CLIENT": "Client",
-    "GUEST": "Guest"
+    "ADMIN": "Platform Administrator",
+    "USER": "User",
+    "admin": "Platform Administrator",
+    "adminDesc": "Owner of the platform; governs the whole system",
+    "user": "User",
+    "userDesc": "Operates within their company"
+  },
+  "platformAdminShell": {
+    "title": "RailTech · Platform",
+    "subtitle": "Administrator"
   },
   "companyStatusDesc": {
     "BUYER": "Only requests quotes and purchases equipment",

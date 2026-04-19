@@ -72,8 +72,8 @@ class EquipmentGroupViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
             return [permissions.AllowAny()]
-        from core.permissions import IsAdminUser
-        return [permissions.IsAuthenticated(), IsAdminUser()]
+        from core.permissions import IsPlatformAdmin
+        return [permissions.IsAuthenticated(), IsPlatformAdmin()]
 
 
 @extend_schema_view(
@@ -111,8 +111,8 @@ class CategoryViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
             return [permissions.AllowAny()]
-        from core.permissions import IsAdminUser
-        return [permissions.IsAuthenticated(), IsAdminUser()]
+        from core.permissions import IsPlatformAdmin
+        return [permissions.IsAuthenticated(), IsPlatformAdmin()]
 
 
 @extend_schema_view(
@@ -180,7 +180,7 @@ class ProductViewSet(viewsets.ModelViewSet):
                 'offers__delivery_basis',
             )
         # Non-admins only see PUBLISHED products
-        if not (user.is_authenticated and (user.is_superuser or user.is_manager_or_admin)):
+        if not (user.is_authenticated and (user.is_platform_admin)):
             queryset = queryset.filter(status__code='PUBLISHED')
 
         # Filter by stock_status (from supplier offers)
@@ -204,8 +204,8 @@ class ProductViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
             return [permissions.AllowAny()]
-        from core.permissions import IsAdminUser
-        return [permissions.IsAuthenticated(), IsAdminUser()]
+        from core.permissions import IsPlatformAdmin
+        return [permissions.IsAuthenticated(), IsPlatformAdmin()]
 
     @extend_schema(
         summary="Bulk publish products",
@@ -338,7 +338,7 @@ class SupplierOfferViewSet(viewsets.ModelViewSet):
         )
         # Non-admin users only see active offers
         user = self.request.user
-        if not (user.is_authenticated and (user.is_superuser or getattr(user, 'is_manager_or_admin', False))):
+        if not (user.is_authenticated and (user.is_platform_admin)):
             qs = qs.filter(is_active=True)
         return qs
 
@@ -346,11 +346,11 @@ class SupplierOfferViewSet(viewsets.ModelViewSet):
         if self.action in ['list', 'retrieve']:
             return [permissions.AllowAny()]
         # Write: manager/admin OR supplier with operational subscription
-        from core.permissions import IsManagerOrAdmin, IsSupplierWithActiveSubscription
+        from core.permissions import IsPlatformAdmin, IsSupplierWithActiveSubscription
 
         class _ManagerOrOperationalSupplier(permissions.BasePermission):
             def has_permission(self, request, view):
-                return IsManagerOrAdmin().has_permission(request, view) or \
+                return IsPlatformAdmin().has_permission(request, view) or \
                        IsSupplierWithActiveSubscription().has_permission(request, view)
 
         return [permissions.IsAuthenticated(), _ManagerOrOperationalSupplier()]

@@ -20,7 +20,7 @@ from .serializers import (
     SupplierBidSerializer,
 )
 from rest_framework.permissions import IsAuthenticated
-from core.permissions import IsManagerOrAdmin, IsOwnerOrManagerOrAdmin
+from core.permissions import IsPlatformAdmin, IsCompanyMemberOrPlatformAdmin
 from django.db.models import Count, Sum, Q, Subquery, OuterRef, Max, Prefetch
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -68,7 +68,7 @@ class DealViewSet(viewsets.ModelViewSet):
         if self.action == 'list':
             return DealListSerializer
         return DealDetailSerializer
-    permission_classes = [IsAuthenticated, IsOwnerOrManagerOrAdmin]
+    permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
 
     def get_queryset(self):
         if getattr(self, 'swagger_fake_view', False):
@@ -84,7 +84,7 @@ class DealViewSet(viewsets.ModelViewSet):
             'client', 'manager', 'company', 'stage'
         ).prefetch_related(Prefetch('quotes', queryset=quotes_qs))
 
-        if user.is_superuser or user.is_manager_or_admin:
+        if user.is_platform_admin:
             return queryset
 
         user_company_ids = user.memberships.filter(
@@ -164,7 +164,7 @@ class DealViewSet(viewsets.ModelViewSet):
     )
     @action(
         detail=True, methods=['post'], url_path='force-change-stage',
-        permission_classes=[IsAuthenticated, IsManagerOrAdmin],
+        permission_classes=[IsAuthenticated, IsPlatformAdmin],
     )
     def force_change_stage(self, request, pk=None):
         deal = self.get_object()
@@ -198,7 +198,7 @@ class DealViewSet(viewsets.ModelViewSet):
                        'supplier_ids': drf_serializers.ListField(child=drf_serializers.IntegerField(), required=False),
                    }))
     @action(detail=True, methods=['post'], url_path='open-rfq',
-            permission_classes=[IsAuthenticated, IsManagerOrAdmin])
+            permission_classes=[IsAuthenticated, IsPlatformAdmin])
     def open_rfq(self, request, pk=None):
         deal, err = crm_services.open_rfq(
             int(pk), request.user,
@@ -266,7 +266,7 @@ class QuoteViewSet(viewsets.ModelViewSet):
     Includes PDF generation, send-to-client, approve, and reject actions.
     """
     serializer_class = QuoteSerializer
-    permission_classes = [IsAuthenticated, IsOwnerOrManagerOrAdmin]
+    permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
 
     def get_queryset(self):
         if getattr(self, 'swagger_fake_view', False):
@@ -278,7 +278,7 @@ class QuoteViewSet(viewsets.ModelViewSet):
             'items', 'items__product', 'items__product__domain_type',
             'items__offer', 'items__offer__supplier', 'items__frozen_currency'
         )
-        if user.is_superuser or user.is_manager_or_admin:
+        if user.is_platform_admin:
             return queryset
 
         user_company_ids = user.memberships.filter(
@@ -333,7 +333,7 @@ class QuoteViewSet(viewsets.ModelViewSet):
         tags=['CRM'],
     )
     @action(detail=True, methods=['post'], url_path='send-to-client',
-            permission_classes=[IsAuthenticated, IsManagerOrAdmin])
+            permission_classes=[IsAuthenticated, IsPlatformAdmin])
     def send_to_client(self, request, pk=None):
         """Send quote to client (manager only). Freezes prices."""
         quote = self.get_object()
@@ -357,7 +357,7 @@ class QuoteViewSet(viewsets.ModelViewSet):
         quote = self.get_object()
         # Verify the user is the deal's client or company member
         user = request.user
-        if not (user.is_superuser or user.is_manager_or_admin):
+        if not (user.is_platform_admin):
             if not user.memberships.filter(
                 company=quote.deal.company, is_active=True
             ).exists():
@@ -388,7 +388,7 @@ class QuoteViewSet(viewsets.ModelViewSet):
         """Client rejects the quote."""
         quote = self.get_object()
         user = request.user
-        if not (user.is_superuser or user.is_manager_or_admin):
+        if not (user.is_platform_admin):
             if not user.memberships.filter(
                 company=quote.deal.company, is_active=True
             ).exists():
@@ -471,7 +471,7 @@ class QuoteViewSet(viewsets.ModelViewSet):
 class QuoteItemViewSet(viewsets.ModelViewSet):
     """CRUD for quote line items (products, quantities, pricing)."""
     serializer_class = QuoteItemSerializer
-    permission_classes = [IsAuthenticated, IsOwnerOrManagerOrAdmin]
+    permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
     filterset_fields = {
         'quote__deal_id': ['exact'],
         'product': ['isnull', 'exact'],
@@ -485,7 +485,7 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
             'product', 'product__domain_type', 'quote',
             'offer', 'offer__supplier', 'frozen_currency'
         )
-        if user.is_superuser or user.is_manager_or_admin:
+        if user.is_platform_admin:
             return queryset
 
         user_company_ids = user.memberships.filter(
@@ -497,7 +497,7 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
                        'product_id': drf_serializers.IntegerField(allow_null=True),
                    }))
     @action(detail=True, methods=['post'], url_path='reassign-product',
-            permission_classes=[IsAuthenticated, IsManagerOrAdmin])
+            permission_classes=[IsAuthenticated, IsPlatformAdmin])
     def reassign_product(self, request, pk=None):
         product_id = request.data.get('product_id')
         item, err = crm_services.reassign_quote_item_product(
@@ -509,7 +509,7 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
 
     @extend_schema(summary="Get top-N smart-match candidates for this item", tags=['CRM'])
     @action(detail=True, methods=['get'], url_path='match-candidates',
-            permission_classes=[IsAuthenticated, IsManagerOrAdmin])
+            permission_classes=[IsAuthenticated, IsPlatformAdmin])
     def match_candidates(self, request, pk=None):
         from sourcing.services import smart_match_candidates
         item = self.get_object()
@@ -543,7 +543,7 @@ class MessageViewSet(viewsets.ModelViewSet):
     to the current user on creation.
     """
     serializer_class = MessageSerializer
-    permission_classes = [IsAuthenticated, IsOwnerOrManagerOrAdmin]
+    permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
     filterset_fields = ['deal_id']
 
     def get_queryset(self):
@@ -552,7 +552,7 @@ class MessageViewSet(viewsets.ModelViewSet):
         user = self.request.user
         queryset = Message.objects.all().order_by(
             'timestamp').select_related('sender', 'deal')
-        if user.is_superuser or user.is_manager_or_admin:
+        if user.is_platform_admin:
             return queryset
 
         user_company_ids = user.memberships.filter(
@@ -597,7 +597,7 @@ class DashboardAnalyticsView(APIView):
         from accounts.models import Company
 
         # B2B data isolation
-        is_staff = request.user.is_superuser or getattr(request.user, 'is_manager_or_admin', False)
+        is_staff = request.user.is_platform_admin
         if is_staff:
             user_company_ids = None
         else:
@@ -856,7 +856,7 @@ class DashboardAnalyticsView(APIView):
 )
 class CRMAnalyticsView(APIView):
     """CRM analytics endpoint for managers and admins."""
-    permission_classes = [IsAuthenticated, IsManagerOrAdmin]
+    permission_classes = [IsAuthenticated, IsPlatformAdmin]
 
     def get(self, request):
         from .services import get_crm_analytics_data
@@ -878,7 +878,7 @@ class CRMAnalyticsView(APIView):
 class ActivityLogViewSet(viewsets.ReadOnlyModelViewSet):
     """Read-only access to activity logs for audit trail."""
     serializer_class = ActivityLogSerializer
-    permission_classes = [IsAuthenticated, IsManagerOrAdmin]
+    permission_classes = [IsAuthenticated, IsPlatformAdmin]
 
     def get_queryset(self):
         """Staff see all logs. Non-admin managers see only their own."""
@@ -990,7 +990,7 @@ class Phase2StatusChoicesView(APIView):
 class LeadViewSet(viewsets.ModelViewSet):
     """Manager/admin CRUD for leads + convert-to-deal."""
     serializer_class = LeadSerializer
-    permission_classes = [IsAuthenticated, IsManagerOrAdmin]
+    permission_classes = [IsAuthenticated, IsPlatformAdmin]
     queryset = Lead.objects.all().order_by('-created_at')
 
     @extend_schema(summary="Convert lead to deal", tags=['CRM'],
@@ -1013,7 +1013,7 @@ class LeadViewSet(viewsets.ModelViewSet):
 class ContractViewSet(viewsets.ModelViewSet):
     """Contracts — generated from approved quotes, double-signed."""
     serializer_class = ContractSerializer
-    permission_classes = [IsAuthenticated, IsOwnerOrManagerOrAdmin]
+    permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
 
     def get_queryset(self):
         if getattr(self, 'swagger_fake_view', False):
@@ -1021,7 +1021,7 @@ class ContractViewSet(viewsets.ModelViewSet):
         u = self.request.user
         qs = Contract.objects.select_related('deal__company', 'quote', 'currency',
                                              'client_signer', 'manager_signer').order_by('-created_at')
-        if u.is_superuser or getattr(u, 'is_manager_or_admin', False):
+        if u.is_platform_admin:
             return qs
         user_company_ids = u.memberships.filter(is_active=True).values_list('company_id', flat=True)
         return qs.filter(deal__company_id__in=user_company_ids)
@@ -1032,7 +1032,7 @@ class ContractViewSet(viewsets.ModelViewSet):
                        'notes': drf_serializers.CharField(required=False, default=''),
                    }))
     @action(detail=False, methods=['post'], url_path='generate-from-quote',
-            permission_classes=[IsAuthenticated, IsManagerOrAdmin])
+            permission_classes=[IsAuthenticated, IsPlatformAdmin])
     def generate_from_quote(self, request):
         quote_id = request.data.get('quote_id')
         if not quote_id:
@@ -1054,7 +1054,7 @@ class ContractViewSet(viewsets.ModelViewSet):
 
     @extend_schema(summary="Sign contract by manager (RailTech side)", tags=['CRM'])
     @action(detail=True, methods=['post'], url_path='sign-manager',
-            permission_classes=[IsAuthenticated, IsManagerOrAdmin])
+            permission_classes=[IsAuthenticated, IsPlatformAdmin])
     def sign_manager(self, request, pk=None):
         contract, err = crm_services.sign_contract_by_manager(int(pk), request.user)
         if err:
@@ -1076,7 +1076,7 @@ class ContractViewSet(viewsets.ModelViewSet):
 
     @extend_schema(summary="Cancel contract", tags=['CRM'])
     @action(detail=True, methods=['post'], url_path='cancel',
-            permission_classes=[IsAuthenticated, IsManagerOrAdmin])
+            permission_classes=[IsAuthenticated, IsPlatformAdmin])
     def cancel(self, request, pk=None):
         contract, err = crm_services.cancel_contract(int(pk), request.user, reason=request.data.get('reason', ''))
         if err:
@@ -1093,7 +1093,7 @@ class ContractViewSet(viewsets.ModelViewSet):
         tags=['CRM'],
     )
     @action(detail=True, methods=['post'], url_path='force-cancel',
-            permission_classes=[IsAuthenticated, IsManagerOrAdmin])
+            permission_classes=[IsAuthenticated, IsPlatformAdmin])
     def force_cancel(self, request, pk=None):
         contract, err = crm_services.force_cancel_contract(
             int(pk), request.user, reason=request.data.get('reason', ''),
@@ -1105,7 +1105,7 @@ class ContractViewSet(viewsets.ModelViewSet):
 
 class InvoiceViewSet(viewsets.ModelViewSet):
     serializer_class = InvoiceSerializer
-    permission_classes = [IsAuthenticated, IsOwnerOrManagerOrAdmin]
+    permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
 
     def get_queryset(self):
         if getattr(self, 'swagger_fake_view', False):
@@ -1114,14 +1114,14 @@ class InvoiceViewSet(viewsets.ModelViewSet):
         qs = Invoice.objects.select_related('deal__company', 'contract', 'currency').prefetch_related(
             'items', 'payments',
         ).order_by('-created_at')
-        if u.is_superuser or getattr(u, 'is_manager_or_admin', False):
+        if u.is_platform_admin:
             return qs
         user_company_ids = u.memberships.filter(is_active=True).values_list('company_id', flat=True)
         return qs.filter(deal__company_id__in=user_company_ids)
 
     @extend_schema(summary="Generate invoice from a signed contract", tags=['CRM'])
     @action(detail=False, methods=['post'], url_path='generate-from-contract',
-            permission_classes=[IsAuthenticated, IsManagerOrAdmin])
+            permission_classes=[IsAuthenticated, IsPlatformAdmin])
     def generate_from_contract(self, request):
         contract_id = request.data.get('contract_id')
         due_days = int(request.data.get('due_days', 14))
@@ -1142,7 +1142,7 @@ class InvoiceViewSet(viewsets.ModelViewSet):
                        'reference': drf_serializers.CharField(required=False, default=''),
                    }))
     @action(detail=True, methods=['post'], url_path='record-payment',
-            permission_classes=[IsAuthenticated, IsManagerOrAdmin])
+            permission_classes=[IsAuthenticated, IsPlatformAdmin])
     def record_payment(self, request, pk=None):
         payment, err = crm_services.record_payment(
             int(pk), actor=request.user,
@@ -1158,7 +1158,7 @@ class InvoiceViewSet(viewsets.ModelViewSet):
 
     @extend_schema(summary="Generate Act for this invoice", tags=['CRM'])
     @action(detail=True, methods=['post'], url_path='generate-act',
-            permission_classes=[IsAuthenticated, IsManagerOrAdmin])
+            permission_classes=[IsAuthenticated, IsPlatformAdmin])
     def generate_act(self, request, pk=None):
         act, err = crm_services.generate_act(int(pk), actor=request.user)
         if err:
@@ -1168,14 +1168,14 @@ class InvoiceViewSet(viewsets.ModelViewSet):
 
 class PaymentViewSet(viewsets.ModelViewSet):
     serializer_class = PaymentSerializer
-    permission_classes = [IsAuthenticated, IsOwnerOrManagerOrAdmin]
+    permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
 
     def get_queryset(self):
         if getattr(self, 'swagger_fake_view', False):
             return Payment.objects.none()
         u = self.request.user
         qs = Payment.objects.select_related('invoice__deal__company').order_by('-paid_at')
-        if u.is_superuser or getattr(u, 'is_manager_or_admin', False):
+        if u.is_platform_admin:
             return qs
         user_company_ids = u.memberships.filter(is_active=True).values_list('company_id', flat=True)
         return qs.filter(invoice__deal__company_id__in=user_company_ids)
@@ -1183,14 +1183,14 @@ class PaymentViewSet(viewsets.ModelViewSet):
 
 class ActViewSet(viewsets.ModelViewSet):
     serializer_class = ActSerializer
-    permission_classes = [IsAuthenticated, IsOwnerOrManagerOrAdmin]
+    permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
 
     def get_queryset(self):
         if getattr(self, 'swagger_fake_view', False):
             return Act.objects.none()
         u = self.request.user
         qs = Act.objects.select_related('deal__company', 'contract', 'invoice').order_by('-created_at')
-        if u.is_superuser or getattr(u, 'is_manager_or_admin', False):
+        if u.is_platform_admin:
             return qs
         user_company_ids = u.memberships.filter(is_active=True).values_list('company_id', flat=True)
         return qs.filter(deal__company_id__in=user_company_ids)
@@ -1208,21 +1208,21 @@ class ActViewSet(viewsets.ModelViewSet):
 
 class FulfillmentViewSet(viewsets.ModelViewSet):
     serializer_class = FulfillmentSerializer
-    permission_classes = [IsAuthenticated, IsOwnerOrManagerOrAdmin]
+    permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
 
     def get_queryset(self):
         if getattr(self, 'swagger_fake_view', False):
             return Fulfillment.objects.none()
         u = self.request.user
         qs = Fulfillment.objects.select_related('deal__company').order_by('-updated_at')
-        if u.is_superuser or getattr(u, 'is_manager_or_admin', False):
+        if u.is_platform_admin:
             return qs
         user_company_ids = u.memberships.filter(is_active=True).values_list('company_id', flat=True)
         return qs.filter(deal__company_id__in=user_company_ids)
 
     @extend_schema(summary="Update fulfillment status", tags=['CRM'])
     @action(detail=False, methods=['post'], url_path='update-status',
-            permission_classes=[IsAuthenticated, IsManagerOrAdmin])
+            permission_classes=[IsAuthenticated, IsPlatformAdmin])
     def update_status(self, request):
         deal_id = request.data.get('deal_id')
         status_code = request.data.get('status')
@@ -1249,7 +1249,7 @@ class SupplierBidViewSet(viewsets.ModelViewSet):
         qs = SupplierBid.objects.select_related('deal__company', 'supplier', 'currency').prefetch_related(
             'items',
         ).order_by('-created_at')
-        if u.is_superuser or getattr(u, 'is_manager_or_admin', False):
+        if u.is_platform_admin:
             return qs
         # B2B visibility:
         #  * Supplier sees bids its company submitted.

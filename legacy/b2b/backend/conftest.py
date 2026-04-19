@@ -83,15 +83,11 @@ def company_factory(db):
 
 @pytest.fixture
 def system_role_factory(db):
-    """Factory for creating system roles."""
-    def create_role(
-        code='CLIENT',
-        name='Client',
-        is_staff_level=False
-    ):
+    """Factory for creating system roles. Canonical: ADMIN, USER."""
+    def create_role(code='USER', name='User'):
         role, _ = SystemRole.objects.get_or_create(
             code=code,
-            defaults={'name': name, 'is_staff_level': is_staff_level}
+            defaults={'name': name},
         )
         return role
     return create_role

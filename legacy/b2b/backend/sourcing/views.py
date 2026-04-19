@@ -10,7 +10,7 @@ from rest_framework.throttling import ScopedRateThrottle
 from celery.result import AsyncResult
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResponse
 
-from core.permissions import IsManagerOrAdmin
+from core.permissions import IsPlatformAdmin
 from .models import ImportTask
 from .tasks import process_excel_import, process_catalog_import
 
@@ -30,9 +30,7 @@ def _validate_xlsx_signature(file_bytes: bytes) -> bool:
 
 def _check_deal_access(user, deal) -> bool:
     """Centralized deal access check to prevent IDOR."""
-    if user.is_superuser:
-        return True
-    if hasattr(user, 'role') and user.role and user.role.is_staff_level:
+    if user.is_platform_admin:
         return True
     if deal.manager_id == user.id:
         return True
@@ -155,7 +153,7 @@ class ExcelImportView(APIView):
 class CatalogImportView(APIView):
     """Endpoint for bulk supplier catalog imports (staff only)."""
     parser_classes = [MultiPartParser]
-    permission_classes = [IsAuthenticated, IsManagerOrAdmin]
+    permission_classes = [IsAuthenticated, IsPlatformAdmin]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = 'import_upload'
 
@@ -220,12 +218,7 @@ class ImportStatusView(APIView):
 
     def get(self, request, task_id):
         # IDOR protection: verify task ownership via DB (not cache)
-        is_staff = request.user.is_superuser or (
-            hasattr(request.user, 'role') and request.user.role
-            and request.user.role.is_staff_level
-        )
-
-        if not is_staff:
+        if not request.user.is_platform_admin:
             task_exists = ImportTask.objects.filter(
                 celery_task_id=task_id, owner=request.user
             ).exists()
@@ -296,7 +289,7 @@ class SourcingRequestViewSet(viewsets.ReadOnlyModelViewSet):
         )
 
         # B2B Filter: User sees deals from their active companies
-        if not (user.is_superuser or user.is_manager_or_admin):
+        if not (user.is_platform_admin):
             user_company_ids = user.memberships.filter(
                 is_active=True
             ).values_list('company_id', flat=True)

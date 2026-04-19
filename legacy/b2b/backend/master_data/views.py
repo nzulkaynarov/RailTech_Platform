@@ -3,7 +3,7 @@ from drf_spectacular.utils import extend_schema, extend_schema_view
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from django.views.decorators.vary import vary_on_headers
-from core.permissions import IsAdminOrReadOnly
+from core.permissions import IsPlatformAdminOrReadOnly
 from .models import Country, Currency, UnitOfMeasure, DeliveryBasis
 from .serializers import (
     CountrySerializer, CurrencySerializer,
@@ -27,7 +27,7 @@ class CountryViewSet(viewsets.ModelViewSet):
     """CRUD for countries (read: public; write: admin)."""
     queryset = Country.objects.all().order_by('sort_order', 'name')
     serializer_class = CountrySerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [IsPlatformAdminOrReadOnly]
     pagination_class = None
 
 
@@ -45,7 +45,7 @@ class CurrencyViewSet(viewsets.ModelViewSet):
     """CRUD for currencies (read: public; write: admin)."""
     queryset = Currency.objects.all().order_by('sort_order', 'code')
     serializer_class = CurrencySerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [IsPlatformAdminOrReadOnly]
     pagination_class = None
 
 
@@ -63,7 +63,7 @@ class UnitOfMeasureViewSet(viewsets.ModelViewSet):
     """CRUD for units of measure (read: public; write: admin)."""
     queryset = UnitOfMeasure.objects.all().order_by('sort_order', 'code')
     serializer_class = UnitOfMeasureSerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [IsPlatformAdminOrReadOnly]
     pagination_class = None
 
 
@@ -81,5 +81,5 @@ class DeliveryBasisViewSet(viewsets.ModelViewSet):
     """CRUD for delivery basis terms (Incoterms). Read: public; write: admin."""
     queryset = DeliveryBasis.objects.all().order_by('sort_order', 'code')
     serializer_class = DeliveryBasisSerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [IsPlatformAdminOrReadOnly]
     pagination_class = None

@@ -102,7 +102,6 @@ class UserSerializer(serializers.ModelSerializer):
             return {
                 'code': obj.role.code,
                 'name': obj.role.name,
-                'is_staff_level': obj.role.is_staff_level,
             }
         return None
 
@@ -128,6 +127,7 @@ class MeSerializer(serializers.ModelSerializer):
     role_data = serializers.SerializerMethodField()
     workspace_role = serializers.SerializerMethodField()
     kyc_status = serializers.SerializerMethodField()
+    is_platform_admin = serializers.BooleanField(read_only=True)
     # Per-membership flags for the primary company. Frontend uses these to
     # filter the BUYER/SELLER/MANUFACTURER context-switcher.
     can_sell = serializers.SerializerMethodField()
@@ -139,6 +139,7 @@ class MeSerializer(serializers.ModelSerializer):
             'id', 'username', 'email', 'first_name', 'last_name',
             'phone', 'avatar', 'role', 'role_code', 'role_name',
             'role_data', 'workspace_role', 'kyc_status',
+            'is_platform_admin',
             'can_sell', 'can_buy',
             'is_active', 'primary_company',
             'last_login', 'date_joined',
@@ -150,7 +151,6 @@ class MeSerializer(serializers.ModelSerializer):
             return {
                 'code': obj.role.code,
                 'name': obj.role.name,
-                'is_staff_level': obj.role.is_staff_level,
             }
         return None
 

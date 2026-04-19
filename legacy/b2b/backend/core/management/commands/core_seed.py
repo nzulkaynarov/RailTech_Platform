@@ -19,7 +19,8 @@ SEED_DATA_PATH = Path(__file__).resolve().parent.parent.parent / 'data' / 'seed_
 
 def _seed(model, code, **defaults):
     """update_or_create by code — обновляет name и прочие поля если запись уже есть."""
-    model.objects.update_or_create(code=code, defaults=defaults)
+    obj, _created = model.objects.update_or_create(code=code, defaults=defaults)
+    return obj
 
 
 class Command(BaseCommand):
@@ -79,24 +80,34 @@ class Command(BaseCommand):
             _seed(DeliveryBasis, code, name=name)
 
         # ─── 5. Системные роли ───
+        # Только две: ADMIN (Platform Admin, владелец платформы) и USER.
+        # Права внутри компаний регулируются WorkspaceRole.
         system_roles = [
-            ('ADMIN', 'Администратор', True),
-            ('SALES_MANAGER', 'Менеджер по продажам', True),
-            ('ACCOUNT_MANAGER', 'Аккаунт-менеджер', True),
-            ('CLIENT', 'Клиент', False),
-            ('GUEST', 'Гость (не подтверждён)', False),
+            ('ADMIN', 'Администратор платформы'),
+            ('USER', 'Пользователь'),
         ]
-        for code, name, is_staff in system_roles:
-            _seed(SystemRole, code, name=name, is_staff_level=is_staff)
+        for code, name in system_roles:
+            _seed(SystemRole, code, name=name)
 
-        # ─── 6. Роли в компании ───
+        # ─── 6. Роли в компании (типо-специфичные) ───
+        from accounts.models import CompanyType
         workspace_roles = [
-            ('OWNER', 'Владелец'),
-            ('PROCUREMENT_MANAGER', 'Менеджер по закупкам'),
-            ('ACCOUNTANT', 'Бухгалтер'),
+            # (code, name, applicable_company_type_codes)
+            ('OWNER', 'Владелец', []),
+            ('PROCUREMENT_MANAGER', 'Снабженец', ['CLIENT']),
+            ('BUYER_MANAGER', 'Менеджер (Покупатель)', ['CLIENT']),
+            ('SALES_MANAGER', 'Продавец', ['SUPPLIER']),
+            ('LOGIST', 'Логист', ['SUPPLIER']),
+            ('CONTRACT_MANAGER', 'Договорник', ['MANUFACTURER']),
+            ('FOREIGN_TRADE_SPECIALIST', 'Специалист ВЭД', ['MANUFACTURER']),
         ]
-        for code, name in workspace_roles:
-            _seed(WorkspaceRole, code, name=name)
+        for code, name, applicable_codes in workspace_roles:
+            wr = _seed(WorkspaceRole, code, name=name)
+            if applicable_codes:
+                types = CompanyType.objects.filter(code__in=applicable_codes)
+                wr.applicable_to_types.set(list(types))
+            else:
+                wr.applicable_to_types.clear()
 
         # ─── 7. Типы компаний ───
         company_types = [

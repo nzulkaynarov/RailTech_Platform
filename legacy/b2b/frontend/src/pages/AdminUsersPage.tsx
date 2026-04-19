@@ -323,7 +323,7 @@ export function AdminUsersPage() {
   const stats = [
     { label: t('pages.adminUsers.stats.total'), value: String(users?.length ?? '—') },
     { label: t('pages.adminUsers.stats.active'), value: String(users?.filter((u) => u.is_active).length ?? '—') },
-    { label: t('pages.adminUsers.stats.staff'), value: String(users?.filter((u) => u.role_data?.is_staff_level).length ?? '—') },
+    { label: t('pages.adminUsers.stats.staff'), value: String(users?.filter((u) => u.role_data?.code === 'ADMIN').length ?? '—') },
     { label: t('pages.adminUsers.stats.inactive'), value: String(users?.filter((u) => !u.is_active).length ?? '—') },
   ];
 
@@ -411,7 +411,7 @@ export function AdminUsersPage() {
                     <TableCell><span className="font-medium">{user.first_name} {user.last_name}</span></TableCell>
                     <TableCell className="text-muted-foreground">{user.email}</TableCell>
                     <TableCell>
-                      <Badge variant={user.role_data?.is_staff_level ? 'default' : 'outline'}>
+                      <Badge variant={user.role_data?.code === 'ADMIN' ? 'default' : 'outline'}>
                         {user.role_data?.name ?? '—'}
                       </Badge>
                     </TableCell>

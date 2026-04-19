@@ -523,7 +523,7 @@ def convert_lead_to_deal(
     deal = Deal.objects.create(
         company=company,
         client=CustomUser.objects.filter(email__iexact=lead.email).first(),
-        manager=actor if (actor and getattr(actor, 'is_manager_or_admin', False)) else None,
+        manager=actor if (actor and actor.is_platform_admin) else None,
         stage=draft_stage,
         title=(lead.message[:200] if lead.message else f"Лид: {lead.name}"),
         notes=f"Создано из Lead #{lead.id}\nEmail: {lead.email}\nТелефон: {lead.phone}",
