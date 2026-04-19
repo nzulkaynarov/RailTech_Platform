@@ -555,6 +555,20 @@
         "actions": "Actions"
       }
     },
+    "palette": {
+      "title": "Command palette",
+      "description": "Quick navigation across the admin panel",
+      "placeholder": "Type a command or search...",
+      "empty": "No results",
+      "triggerHint": "Search...",
+      "groups": {
+        "overview": "Overview",
+        "users": "Users & KYC",
+        "business": "Business operations",
+        "catalog": "Catalog",
+        "system": "System"
+      }
+    },
     "support": {
       "title": "Support Tickets",
       "description": "Direct client-to-admin support channel",
@@ -1052,7 +1066,14 @@
     "adminCompanies": "Companies (admin)",
     "adminDeals": "Deals (admin)",
     "logistics": "Logistics",
-    "purchaseTemplates": "Purchase Templates"
+    "purchaseTemplates": "Purchase Templates",
+    "contracts": "Contracts",
+    "invoices": "Invoices",
+    "payments": "Payments",
+    "acts": "Acts",
+    "fulfillments": "Fulfillments",
+    "supplierBids": "Tender Bids",
+    "leads": "Leads"
   },
   "onboarding": {
     "companyRegistration": "Company Registration",

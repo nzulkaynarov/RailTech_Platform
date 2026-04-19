@@ -55,6 +55,14 @@ const pageI18nKeys: Record<string, string> = {
   'admin-deals': 'breadcrumbs.adminDeals',
   logistics: 'breadcrumbs.logistics',
   'purchase-templates': 'breadcrumbs.purchaseTemplates',
+  // Billing children
+  contracts: 'breadcrumbs.contracts',
+  invoices: 'breadcrumbs.invoices',
+  payments: 'breadcrumbs.payments',
+  acts: 'breadcrumbs.acts',
+  fulfillments: 'breadcrumbs.fulfillments',
+  'supplier-bids': 'breadcrumbs.supplierBids',
+  leads: 'breadcrumbs.leads',
 };
 
 export function getPageLabel(pageId: string, t: TFunction): string {

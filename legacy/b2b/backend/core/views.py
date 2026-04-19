@@ -346,8 +346,12 @@ class PlatformDashboardView(APIView):
             'SELLER': companies_qs.filter(types__code='SUPPLIER').distinct().count(),
             'MANUFACTURER': companies_qs.filter(types__code='MANUFACTURER').distinct().count(),
         }
+        # "Requires admin action" — only PROFILE_SUBMITTED: the user actually
+        # submitted the profile and is waiting for verification. L1_UNVERIFIED
+        # means they haven't even filled the form yet — there is nothing for
+        # the admin to do until they do, so it must not inflate the KYC badge.
         companies_pending_kyc = companies_qs.filter(
-            verification_status__code__in=['L1_UNVERIFIED', 'PROFILE_SUBMITTED'],
+            verification_status__code='PROFILE_SUBMITTED',
         ).count()
         companies_verified = companies_qs.filter(
             verification_status__code__in=['L2_VERIFIED', 'L3_CONTRACTED'],

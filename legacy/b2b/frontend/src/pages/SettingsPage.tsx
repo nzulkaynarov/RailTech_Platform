@@ -1,10 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import {
-  Globe, Palette, Bell, Database, FileText, Monitor,
-  Factory, Store, Building2, ShieldCheck,
-} from 'lucide-react';
+import { Globe, Palette, Store, Building2, ShieldCheck } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -43,17 +40,12 @@ function SettingRow({ icon: Icon, title, description, children }: {
 
 export function SettingsPage() {
   const { t, i18n } = useTranslation();
-  const { role, activeStatus, company } = useUserStore();
+  const { role, company } = useUserStore();
   const { theme, setTheme } = useThemeStore();
   const isAdmin = role === 'ADMIN';
-  const isManagerOrAdmin = role === 'ADMIN';
-
-  // Local preferences (localStorage)
-  const [currency, setCurrency] = useState(() => localStorage.getItem('railtech-currency') || 'usd');
-  const [timezone, setTimezone] = useState(() => localStorage.getItem('railtech-timezone') || 'tashkent');
-  const [dateFormat, setDateFormat] = useState(() => localStorage.getItem('railtech-dateformat') || 'dmy');
-  const [density, setDensity] = useState(() => localStorage.getItem('railtech-density') || 'normal');
-  const [sidebarMode, setSidebarMode] = useState(() => localStorage.getItem('railtech-sidebar') || 'expanded');
+  // Fake rows trimmed — currency/timezone/dateFormat/density/sidebar didn't
+  // feed back into any consumer and made the panel feel like a mock. Only
+  // Language (i18next) and Theme (themeStore) actually change the UI.
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl">
@@ -65,15 +57,11 @@ export function SettingsPage() {
       <Tabs defaultValue="general">
         <TabsList>
           <TabsTrigger value="general">{t('settings.tabs.general')}</TabsTrigger>
-          <TabsTrigger value="appearance">{t('settings.tabs.appearance')}</TabsTrigger>
-          {isManagerOrAdmin && (activeStatus === 'SELLER' || activeStatus === 'MANUFACTURER') && (
-            <TabsTrigger value="business">{t('settings.tabs.business')}</TabsTrigger>
-          )}
           {isAdmin && <TabsTrigger value="company">{t('settings.tabs.company')}</TabsTrigger>}
           {isAdmin && <TabsTrigger value="platform">{t('settings.tabs.platform')}</TabsTrigger>}
         </TabsList>
 
-        {/* General */}
+        {/* General — language + theme, both actually wired. */}
         <TabsContent value="general" className="space-y-4">
           <Card>
             <CardHeader>
@@ -82,7 +70,7 @@ export function SettingsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <SettingRow icon={Globe} title={t('settings.general.language')} description={t('settings.general.languageDesc')}>
-                <Select value={i18n.language?.startsWith('ru') ? 'ru' : i18n.language?.startsWith('en') ? 'en' : 'ru'} onValueChange={(val) => i18n.changeLanguage(val)}>
+                <Select value={i18n.language?.startsWith('ru') ? 'ru' : 'en'} onValueChange={(val) => i18n.changeLanguage(val)}>
                   <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="ru">{t('settings.general.langRu')}</SelectItem>
@@ -91,69 +79,6 @@ export function SettingsPage() {
                 </Select>
               </SettingRow>
 
-              <SettingRow icon={Database} title={t('settings.general.currency')} description={t('settings.general.currencyDesc')}>
-                <Select
-                  value={currency}
-                  onValueChange={(val) => {
-                    setCurrency(val);
-                    localStorage.setItem('railtech-currency', val);
-                  }}
-                >
-                  <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="usd">{t('settings.general.currencyUSD')}</SelectItem>
-                    <SelectItem value="uzs">{t('settings.general.currencyUZS')}</SelectItem>
-                    <SelectItem value="eur">EUR</SelectItem>
-                    <SelectItem value="rub">{t('settings.general.currencyRUB')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </SettingRow>
-
-              <SettingRow icon={Globe} title={t('settings.general.timezone')} description={t('settings.general.timezoneDesc')}>
-                <Select
-                  value={timezone}
-                  onValueChange={(val) => {
-                    setTimezone(val);
-                    localStorage.setItem('railtech-timezone', val);
-                  }}
-                >
-                  <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="tashkent">{t('settings.general.tzTashkent')}</SelectItem>
-                    <SelectItem value="moscow">{t('settings.general.tzMoscow')}</SelectItem>
-                    <SelectItem value="almaty">{t('settings.general.tzAlmaty')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </SettingRow>
-
-              <SettingRow icon={FileText} title={t('settings.general.dateFormat')} description={t('settings.general.dateFormatDesc')}>
-                <Select
-                  value={dateFormat}
-                  onValueChange={(val) => {
-                    setDateFormat(val);
-                    localStorage.setItem('railtech-dateformat', val);
-                  }}
-                >
-                  <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="dmy">{t('settings.general.dateDMY')}</SelectItem>
-                    <SelectItem value="mdy">{t('settings.general.dateMDY')}</SelectItem>
-                    <SelectItem value="ymd">{t('settings.general.dateYMD')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </SettingRow>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Appearance */}
-        <TabsContent value="appearance" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">{t('settings.appearance.title')}</CardTitle>
-              <CardDescription>{t('settings.appearance.description')}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
               <SettingRow icon={Palette} title={t('settings.appearance.theme')} description={t('settings.appearance.themeDesc')}>
                 <Select value={theme} onValueChange={(val) => setTheme(val as 'light' | 'dark')}>
                   <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
@@ -163,130 +88,18 @@ export function SettingsPage() {
                   </SelectContent>
                 </Select>
               </SettingRow>
-
-              <SettingRow icon={Monitor} title={t('settings.appearance.density')} description={t('settings.appearance.densityDesc')}>
-                <Select
-                  value={density}
-                  onValueChange={(val) => {
-                    setDensity(val);
-                    localStorage.setItem('railtech-density', val);
-                  }}
-                >
-                  <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="compact">{t('settings.appearance.densityCompact')}</SelectItem>
-                    <SelectItem value="normal">{t('settings.appearance.densityNormal')}</SelectItem>
-                    <SelectItem value="comfortable">{t('settings.appearance.densityComfortable')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </SettingRow>
-
-              <SettingRow icon={Monitor} title={t('settings.appearance.sidebar')} description={t('settings.appearance.sidebarDesc')}>
-                <Select
-                  value={sidebarMode}
-                  onValueChange={(val) => {
-                    setSidebarMode(val);
-                    localStorage.setItem('railtech-sidebar', val);
-                  }}
-                >
-                  <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="expanded">{t('settings.appearance.sidebarExpanded')}</SelectItem>
-                    <SelectItem value="collapsed">{t('settings.appearance.sidebarCollapsed')}</SelectItem>
-                    <SelectItem value="hover">{t('settings.appearance.sidebarHover')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </SettingRow>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* Business Settings (Seller/Manufacturer, Manager+) */}
-        {isManagerOrAdmin && (activeStatus === 'SELLER' || activeStatus === 'MANUFACTURER') && (
-          <TabsContent value="business" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">
-                  {activeStatus === 'SELLER' ? t('settings.business.sellerTitle') : t('settings.business.manufacturerTitle')}
-                </CardTitle>
-                <CardDescription>
-                  {activeStatus === 'SELLER'
-                    ? t('settings.business.sellerDescription')
-                    : t('settings.business.manufacturerDescription')
-                  }
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {activeStatus === 'SELLER' && (
-                  <>
-                    <SettingRow icon={FileText} title={t('settings.business.autoNumbering')} description={t('settings.business.autoNumberingDesc')}>
-                      <Switch defaultChecked />
-                    </SettingRow>
-                    <SettingRow icon={Bell} title={t('settings.business.reminders')} description={t('settings.business.remindersDesc')}>
-                      <Switch defaultChecked />
-                    </SettingRow>
-                    <SettingRow icon={Database} title={t('settings.business.defaultMargin')} description={t('settings.business.defaultMarginDesc')}>
-                      <Select defaultValue="15">
-                        <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="10">10%</SelectItem>
-                          <SelectItem value="15">15%</SelectItem>
-                          <SelectItem value="20">20%</SelectItem>
-                          <SelectItem value="25">25%</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </SettingRow>
-                    <SettingRow icon={Database} title={t('settings.business.vat')} description={t('settings.business.vatDesc')}>
-                      <Select defaultValue="12">
-                        <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="12">12%</SelectItem>
-                          <SelectItem value="0">{t('settings.business.vatExport')}</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </SettingRow>
-                  </>
-                )}
-                {activeStatus === 'MANUFACTURER' && (
-                  <>
-                    <SettingRow icon={Factory} title={t('settings.business.orderMode')} description={t('settings.business.orderModeDesc')}>
-                      <Select defaultValue="manual">
-                        <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="auto">{t('settings.business.orderModeAuto')}</SelectItem>
-                          <SelectItem value="manual">{t('settings.business.orderModeManual')}</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </SettingRow>
-                    <SettingRow icon={Bell} title={t('settings.business.orderNotifications')} description={t('settings.business.orderNotificationsDesc')}>
-                      <Switch defaultChecked />
-                    </SettingRow>
-                    <SettingRow icon={Database} title={t('settings.business.minOrder')} description={t('settings.business.minOrderDesc')}>
-                      <Select defaultValue="1000">
-                        <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="0">{t('settings.business.noLimit')}</SelectItem>
-                          <SelectItem value="500">{t('settings.business.minOrderValue', { amount: '500' })}</SelectItem>
-                          <SelectItem value="1000">{t('settings.business.minOrderValue', { amount: '1 000' })}</SelectItem>
-                          <SelectItem value="5000">{t('settings.business.minOrderValue', { amount: '5 000' })}</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </SettingRow>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        )}
-
-        {/* Platform (Admin only) */}
+        {/* Platform (Admin only) — full SystemSettings CRUD */}
         {isAdmin && (
           <TabsContent value="platform" className="space-y-4">
             <PlatformSettings />
           </TabsContent>
         )}
 
-        {/* Company (Admin only) */}
+        {/* Company context (Admin only) — read-only preview */}
         {isAdmin && (
           <TabsContent value="company" className="space-y-4">
             <Card>
@@ -297,12 +110,14 @@ export function SettingsPage() {
               <CardContent className="space-y-4">
                 <SettingRow icon={Building2} title={t('settings.company.statuses')} description={t('settings.company.statusesDesc')}>
                   <div className="flex gap-1.5">
-                    {company.statusEntries.map((entry) => (
-                      <Badge key={entry.status} variant="secondary" className="text-xs">
-                        {t(companyStatusLabels[entry.status])}
-                        {entry.verification === 'pending' && ` (${t('settings.company.pending')})`}
-                      </Badge>
-                    ))}
+                    {company.statusEntries.length === 0
+                      ? <span className="text-xs text-muted-foreground">—</span>
+                      : company.statusEntries.map((entry) => (
+                          <Badge key={entry.status} variant="secondary" className="text-xs">
+                            {t(companyStatusLabels[entry.status])}
+                            {entry.verification === 'pending' && ` (${t('settings.company.pending')})`}
+                          </Badge>
+                        ))}
                   </div>
                 </SettingRow>
                 <SettingRow icon={Store} title={t('settings.company.companyInfo')} description={t('settings.company.companyInfoDesc')}>

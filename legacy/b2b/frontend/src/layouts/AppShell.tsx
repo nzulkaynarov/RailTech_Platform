@@ -73,6 +73,7 @@ import { useCartStore, useCartCount } from '@/store/cartStore';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useAuthStore } from '@/store/authStore';
 import { NotificationCenter } from '@/components/Layout/NotificationCenter';
+import { SupportButton } from '@/components/Layout/SupportButton';
 import { ChatDrawer } from '@/components/Layout/ChatDrawer';
 import { CartDrawer } from '@/components/ui/CartDrawer';
 
@@ -290,11 +291,15 @@ function SidebarNavItem({
   const [open, setOpen] = useState(hasActiveChild);
 
   if (item.children) {
+    // Radix `asChild` must chain to a single DOM element. Tooltip between
+    // CollapsibleTrigger and <Button> breaks the handler forwarding, making
+    // the collapsible header unclickable. Tooltip → Collapsible → Button fixes
+    // it — same pattern as PlatformAdminShell.
     return (
-      <Collapsible open={disabled ? false : open} onOpenChange={disabled ? undefined : setOpen}>
-        <CollapsibleTrigger asChild>
-          <Tooltip>
-            <TooltipTrigger asChild>
+      <Tooltip>
+        <Collapsible open={disabled ? false : open} onOpenChange={disabled ? undefined : setOpen}>
+          <TooltipTrigger asChild>
+            <CollapsibleTrigger asChild>
               <Button
                 variant="ghost"
                 disabled={disabled}
@@ -318,30 +323,30 @@ function SidebarNavItem({
                   </>
                 )}
               </Button>
-            </TooltipTrigger>
-            {collapsed && <TooltipContent side="right">{item.label}</TooltipContent>}
-          </Tooltip>
-        </CollapsibleTrigger>
-        {!collapsed && !disabled && (
-          <CollapsibleContent>
-            <div className="ml-4 mt-1 flex flex-col gap-0.5 border-l pl-3">
-              {item.children.map((child) => (
-                <Button
-                  key={child.id}
-                  variant="ghost"
-                  className={cn(
-                    'rounded-md px-3 py-1.5 text-left text-sm transition-colors hover:bg-accent hover:text-accent-foreground h-auto w-full justify-start',
-                    child.active ? 'bg-accent font-medium text-foreground' : 'text-muted-foreground'
-                  )}
-                  onClick={() => onNavigate(child.id)}
-                >
-                  {child.label}
-                </Button>
-              ))}
-            </div>
-          </CollapsibleContent>
-        )}
-      </Collapsible>
+            </CollapsibleTrigger>
+          </TooltipTrigger>
+          {collapsed && <TooltipContent side="right">{item.label}</TooltipContent>}
+          {!collapsed && !disabled && (
+            <CollapsibleContent>
+              <div className="ml-4 mt-1 flex flex-col gap-0.5 border-l pl-3">
+                {item.children.map((child) => (
+                  <Button
+                    key={child.id}
+                    variant="ghost"
+                    className={cn(
+                      'rounded-md px-3 py-1.5 text-left text-sm transition-colors hover:bg-accent hover:text-accent-foreground h-auto w-full justify-start',
+                      child.active ? 'bg-accent font-medium text-foreground' : 'text-muted-foreground'
+                    )}
+                    onClick={() => onNavigate(child.id)}
+                  >
+                    {child.label}
+                  </Button>
+                ))}
+              </div>
+            </CollapsibleContent>
+          )}
+        </Collapsible>
+      </Tooltip>
     );
   }
 
@@ -589,15 +594,16 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
                 </Button>
               </div>
 
-              {/* Tour button */}
+              {/* Tour button — launches the onboarding walkthrough. Hidden for users
+                  who already completed it or dismissed the prompt. */}
               {onStartTour && (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button variant="outline" size="sm" className="text-xs gap-1.5 h-8" onClick={onStartTour}>
-                      {t('shell.demoMode')}
+                      {t('shell.startTour')}
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>{t('shell.demoMode')}</TooltipContent>
+                  <TooltipContent>{t('shell.startTourTooltip')}</TooltipContent>
                 </Tooltip>
               )}
 
@@ -617,6 +623,7 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
               </Tooltip>
               <CartDrawer />
               <ChatDrawer onNavigate={onNavigate} />
+              <SupportButton />
               <NotificationCenter />
             </div>
           </header>

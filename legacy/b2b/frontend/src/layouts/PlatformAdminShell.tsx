@@ -61,6 +61,11 @@ import { useTranslation } from 'react-i18next';
 import { useUserStore } from '@/store/userStore';
 import { useAuthStore } from '@/store/authStore';
 import { NotificationCenter } from '@/components/Layout/NotificationCenter';
+import {
+  CommandPalette,
+  CommandPaletteTrigger,
+  useCommandPaletteShortcut,
+} from '@/components/Layout/CommandPalette';
 import { usePlatformDashboard } from '@/hooks/usePageStats';
 
 /* ─── Types ─────────────────────────────────────────────────────────── */
@@ -139,11 +144,17 @@ function SidebarNavItem({
   const [open, setOpen] = useState(hasActiveChild);
 
   if (item.children) {
+    // Radix `asChild` chains must forward to a single DOM element. Putting a
+    // <Tooltip> provider between CollapsibleTrigger and <Button> breaks the
+    // handler chain and the Button never receives the open-toggle onClick —
+    // that's why the "Catalog" item in the sidebar was unclickable. Nesting
+    // Tooltip outside Collapsible (and putting asChild on every link to a
+    // single Button) fixes it.
     return (
-      <Collapsible open={open} onOpenChange={setOpen}>
-        <CollapsibleTrigger asChild>
-          <Tooltip>
-            <TooltipTrigger asChild>
+      <Tooltip>
+        <Collapsible open={open} onOpenChange={setOpen}>
+          <TooltipTrigger asChild>
+            <CollapsibleTrigger asChild>
               <Button
                 variant="ghost"
                 className={cn(
@@ -160,30 +171,30 @@ function SidebarNavItem({
                   </>
                 )}
               </Button>
-            </TooltipTrigger>
-            {collapsed && <TooltipContent side="right">{item.label}</TooltipContent>}
-          </Tooltip>
-        </CollapsibleTrigger>
-        {!collapsed && (
-          <CollapsibleContent>
-            <div className="ml-4 mt-1 flex flex-col gap-0.5 border-l pl-3">
-              {item.children.map((child) => (
-                <Button
-                  key={child.id}
-                  variant="ghost"
-                  className={cn(
-                    'rounded-md px-3 py-1.5 text-left text-sm transition-colors hover:bg-accent hover:text-accent-foreground h-auto w-full justify-start',
-                    child.active ? 'bg-accent font-medium text-foreground' : 'text-muted-foreground',
-                  )}
-                  onClick={() => onNavigate(child.id)}
-                >
-                  {child.label}
-                </Button>
-              ))}
-            </div>
-          </CollapsibleContent>
-        )}
-      </Collapsible>
+            </CollapsibleTrigger>
+          </TooltipTrigger>
+          {collapsed && <TooltipContent side="right">{item.label}</TooltipContent>}
+          {!collapsed && (
+            <CollapsibleContent>
+              <div className="ml-4 mt-1 flex flex-col gap-0.5 border-l pl-3">
+                {item.children.map((child) => (
+                  <Button
+                    key={child.id}
+                    variant="ghost"
+                    className={cn(
+                      'rounded-md px-3 py-1.5 text-left text-sm transition-colors hover:bg-accent hover:text-accent-foreground h-auto w-full justify-start',
+                      child.active ? 'bg-accent font-medium text-foreground' : 'text-muted-foreground',
+                    )}
+                    onClick={() => onNavigate(child.id)}
+                  >
+                    {child.label}
+                  </Button>
+                ))}
+              </div>
+            </CollapsibleContent>
+          )}
+        </Collapsible>
+      </Tooltip>
     );
   }
 
@@ -239,6 +250,8 @@ function PlatformAdminShellInner({ children, activePage, onNavigate }: PlatformA
   const { state } = useSidebar();
   const sidebarCollapsed = state === 'collapsed';
   const { data: platformDashboard } = usePlatformDashboard();
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  useCommandPaletteShortcut(() => setPaletteOpen(true));
 
   const attention: AttentionCounts = useMemo(() => {
     const a = platformDashboard?.attention;
@@ -363,11 +376,17 @@ function PlatformAdminShellInner({ children, activePage, onNavigate }: PlatformA
             <span className="hidden sm:inline">{t('platformAdminShell.title')}</span>
           </div>
           <div className="flex items-center gap-2">
+            <CommandPaletteTrigger onOpen={() => setPaletteOpen(true)} />
             <NotificationCenter />
           </div>
         </header>
         <main className="flex-1 overflow-y-auto p-6">{children}</main>
       </SidebarInset>
+      <CommandPalette
+        open={paletteOpen}
+        onOpenChange={setPaletteOpen}
+        onNavigate={onNavigate}
+      />
     </TooltipProvider>
   );
 }

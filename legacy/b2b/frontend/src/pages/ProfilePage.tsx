@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Shield, Save, KeyRound, Globe,
-} from 'lucide-react';
+import { Shield, Save, KeyRound } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,7 +9,6 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
@@ -213,7 +210,6 @@ export function ProfilePage() {
           <TabsTrigger value="personal">{t('profile.tabs.personal')}</TabsTrigger>
           <TabsTrigger value="company">{t('profile.tabs.company')}</TabsTrigger>
           <TabsTrigger value="security">{t('profile.tabs.security')}</TabsTrigger>
-          <TabsTrigger value="notifications">{t('profile.tabs.notifications')}</TabsTrigger>
         </TabsList>
 
         {/* Personal Data Tab */}
@@ -249,16 +245,8 @@ export function ProfilePage() {
                   <Input id="firstName" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="patronymic">{t('profile.fields.patronymic')}</Label>
-                  <Input id="patronymic" value={form.patronymic} onChange={(e) => setForm({ ...form, patronymic: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="position">{t('profile.fields.position')}</Label>
-                  <Input id="position" value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })} />
-                </div>
-                <div className="space-y-2">
                   <Label htmlFor="email">{t('profile.fields.email')}</Label>
-                  <Input id="email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                  <Input id="email" type="email" value={form.email} disabled />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phone">{t('profile.fields.phone')}</Label>
@@ -288,7 +276,8 @@ export function ProfilePage() {
           <CompanyTab />
         </TabsContent>
 
-        {/* Security Tab */}
+        {/* Security Tab — only password change is real; 2FA + active-sessions
+            were UI placeholders and were removed until backend supports them. */}
         <TabsContent value="security">
           <Card>
             <CardHeader>
@@ -308,56 +297,6 @@ export function ProfilePage() {
                   {t('profile.security.change')}
                 </Button>
               </div>
-
-              <div className="flex items-center justify-between rounded-lg border p-4">
-                <div className="flex items-center gap-3">
-                  <Shield className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">{t('profile.security.twoFactor')}</p>
-                    <p className="text-xs text-muted-foreground">{t('profile.security.twoFactorDesc')}</p>
-                  </div>
-                </div>
-                <Switch />
-              </div>
-
-              <div className="flex items-center justify-between rounded-lg border p-4">
-                <div className="flex items-center gap-3">
-                  <Globe className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">{t('profile.security.activeSessions')}</p>
-                    <p className="text-xs text-muted-foreground">{t('profile.security.activeDevices')}</p>
-                  </div>
-                </div>
-                <Badge variant="secondary">{t('profile.security.currentDevice')}</Badge>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Notifications Tab */}
-        <TabsContent value="notifications">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">{t('profile.notifications.title')}</CardTitle>
-              <CardDescription>{t('profile.notifications.description')}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {[
-                { titleKey: 'profile.notifications.newDeals', descKey: 'profile.notifications.newDealsDesc', defaultOn: true },
-                { titleKey: 'profile.notifications.requestStatus', descKey: 'profile.notifications.requestStatusDesc', defaultOn: true },
-                { titleKey: 'profile.notifications.chatMessages', descKey: 'profile.notifications.chatMessagesDesc', defaultOn: true },
-                { titleKey: 'profile.notifications.excelImport', descKey: 'profile.notifications.excelImportDesc', defaultOn: true },
-                { titleKey: 'profile.notifications.system', descKey: 'profile.notifications.systemDesc', defaultOn: false },
-                { titleKey: 'profile.notifications.emailDigest', descKey: 'profile.notifications.emailDigestDesc', defaultOn: false },
-              ].map((item) => (
-                <div key={item.titleKey} className="flex items-center justify-between rounded-lg border p-4">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium">{t(item.titleKey)}</p>
-                    <p className="text-xs text-muted-foreground">{t(item.descKey)}</p>
-                  </div>
-                  <Switch defaultChecked={item.defaultOn} />
-                </div>
-              ))}
             </CardContent>
           </Card>
         </TabsContent>

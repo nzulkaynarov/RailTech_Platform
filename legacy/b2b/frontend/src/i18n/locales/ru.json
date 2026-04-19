@@ -555,6 +555,20 @@
         "actions": "Действия"
       }
     },
+    "palette": {
+      "title": "Командная палитра",
+      "description": "Быстрая навигация по админ-панели",
+      "placeholder": "Введите команду или запрос...",
+      "empty": "Ничего не найдено",
+      "triggerHint": "Поиск...",
+      "groups": {
+        "overview": "Обзор",
+        "users": "Пользователи и KYC",
+        "business": "Бизнес-операции",
+        "catalog": "Каталог",
+        "system": "Система"
+      }
+    },
     "support": {
       "title": "Тикеты поддержки",
       "description": "Прямой канал связи клиента с администратором",
@@ -1052,7 +1066,14 @@
     "adminCompanies": "Компании (админ)",
     "adminDeals": "Сделки (админ)",
     "logistics": "Логистика",
-    "purchaseTemplates": "Шаблоны закупок"
+    "purchaseTemplates": "Шаблоны закупок",
+    "contracts": "Контракты",
+    "invoices": "Инвойсы",
+    "payments": "Платежи",
+    "acts": "Акты",
+    "fulfillments": "Исполнение",
+    "supplierBids": "Тендер-предложения",
+    "leads": "Лиды"
   },
   "onboarding": {
     "companyRegistration": "Регистрация компании",
