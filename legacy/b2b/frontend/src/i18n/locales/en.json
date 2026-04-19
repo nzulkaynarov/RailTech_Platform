@@ -2092,15 +2092,21 @@
         "approve": "Approve",
         "reject": "Reject",
         "downloadPDF": "Download PDF",
-        "generatePDF": "Generate PDF"
+        "generatePDF": "Generate PDF",
+        "forceApprove": "Force-approve (admin)"
       },
       "toast": {
         "sentSuccess": "Quote #{{id}} sent to client",
         "approvedSuccess": "Quote #{{id}} approved",
         "rejectedSuccess": "Quote #{{id}} rejected",
         "pdfGenerated": "PDF generated",
-        "actionError": "Failed to perform action"
-      }
+        "actionError": "Failed to perform action",
+        "forceReasonRequired": "Force-approve reason is required",
+        "forceApproved": "Quote #{{id}} force-approved by platform admin"
+      },
+      "confirmForceApprove": "Force-approve quote (platform admin)",
+      "forceApproveHint": "Quote #{{id}} will be moved to APPROVED regardless of its current status. The action is audit-logged with [FORCE_ADMIN] marker.",
+      "forceApproveReason": "Reason (required, written to audit log)"
     },
     "clients": {
       "title": "Clients",
@@ -2901,6 +2907,12 @@
     "cancel": "Cancel contract",
     "confirmCancel": "Confirm cancel",
     "cancelReason": "Reason",
+    "forceCancel": "Force-cancel (admin)",
+    "forceCancelled": "Contract force-cancelled by platform admin",
+    "forceCancelReason": "Reason (required, written to audit log)",
+    "forceCancelReasonRequired": "Force-cancel reason is required",
+    "confirmForceCancel": "Force-cancel contract (platform admin)",
+    "forceCancelHint": "Contract {{number}} will be cancelled regardless of its current status. The action is audit-logged with [FORCE_ADMIN] marker.",
     "allStatuses": "All statuses",
     "stats": {
       "total": "Total",
@@ -3198,6 +3210,10 @@
     "NOT_AUTHORIZED_FOR_BID": "You are not allowed to manage this bid",
     "ADMIN_VIEWER_CANNOT_ACT": "Platform admin does not execute business actions — admins moderate only",
     "MEMBER_REQUIRED_FOR_ACTION": "Only a company member (buyer or seller side) can perform this action",
+    "PLATFORM_ADMIN_REQUIRED": "This action is restricted to platform administrators",
+    "FORCE_REASON_REQUIRED": "Force-action requires a mandatory reason (written to the audit log)",
+    "QUOTE_STATUS_NOT_FOUND": "Quote status not found in the lookup table",
+    "SUBSCRIPTION_NOT_OPERATIONAL": "Company subscription is not operational — please pay the subscription to continue selling",
     "ONLY_OWNER_CAN_DISTRIBUTE_CAPABILITIES": "Only the company OWNER can distribute sell / buy rights",
     "MEMBER_ID_REQUIRED": "member_id is required",
     "MEMBER_NOT_FOUND": "Member not found in this company",

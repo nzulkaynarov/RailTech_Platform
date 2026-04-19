@@ -26,6 +26,7 @@ import {
 import {
   useInvoices, useRecordPayment, useGenerateAct,
 } from '@/hooks/useBilling';
+import { useIsViewerMode } from '@/hooks/useViewerMode';
 import type { Invoice, InvoiceStatus } from '@/api/billingApi';
 
 const STATUS_VARIANT: Record<InvoiceStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -55,6 +56,8 @@ export function InvoicesPage() {
   const { data: invoices, isLoading } = useInvoices(undefined);
   const recordPayment = useRecordPayment();
   const generateAct = useGenerateAct();
+  const isViewer = useIsViewerMode();
+  const viewerTip = t('apiErrors.ADMIN_VIEWER_CANNOT_ACT');
 
   const stats = useMemo(() => {
     const list = invoices ?? [];
@@ -233,12 +236,21 @@ export function InvoicesPage() {
                   </Button>
                 )}
                 {selected.status !== 'PAID' && selected.status !== 'CANCELLED' && (
-                  <Button onClick={() => setPayOpen(true)}>
+                  <Button
+                    onClick={() => setPayOpen(true)}
+                    disabled={isViewer}
+                    title={isViewer ? viewerTip : undefined}
+                  >
                     <DollarSign className="mr-2 h-4 w-4" />
                     {t('invoicesPage.recordPayment')}
                   </Button>
                 )}
-                <Button variant="outline" onClick={onGenerateAct} disabled={generateAct.isPending}>
+                <Button
+                  variant="outline"
+                  onClick={onGenerateAct}
+                  disabled={generateAct.isPending || isViewer}
+                  title={isViewer ? viewerTip : undefined}
+                >
                   <ScrollText className="mr-2 h-4 w-4" />
                   {t('invoicesPage.generateAct')}
                 </Button>
@@ -311,7 +323,12 @@ export function InvoicesPage() {
             </div>
           </div>
           <SheetFooter>
-            <Button onClick={onRecordPayment} disabled={recordPayment.isPending || !payForm.amount} className="w-full">
+            <Button
+              onClick={onRecordPayment}
+              disabled={recordPayment.isPending || !payForm.amount || isViewer}
+              title={isViewer ? viewerTip : undefined}
+              className="w-full"
+            >
               {t('invoicesPage.recordPayment')}
             </Button>
           </SheetFooter>

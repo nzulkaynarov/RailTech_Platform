@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { CreditCard, Play, Pause, Pencil, Trash2 } from 'lucide-react';
+import { CreditCard, Play, Pause, Pencil, Trash2, Wallet } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,7 @@ import {
 } from '@/hooks/useAccounts';
 import { useCurrencies } from '@/hooks/useMasterData';
 import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
+import { SubscriptionPayDialog } from '@/components/Admin/SubscriptionPayDialog';
 import type { Subscription } from '@/api/accountsApi';
 
 const statusVariant = (status: string) => {
@@ -220,6 +221,7 @@ export function AdminSubscriptionsPage() {
   const [editTarget, setEditTarget] = useState<Subscription | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Subscription | null>(null);
+  const [payTargetId, setPayTargetId] = useState<number | null>(null);
 
   const handleActivate = async (id: number) => {
     try {
@@ -373,6 +375,16 @@ export function AdminSubscriptionsPage() {
                             <Pause className="h-3.5 w-3.5 text-warning" />
                           </Button>
                         )}
+                        {sub.status !== 'CANCELLED' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setPayTargetId(sub.id)}
+                            title={t('subscriptionPay.title')}
+                          >
+                            <Wallet className="h-3.5 w-3.5 text-primary" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"
@@ -406,6 +418,12 @@ export function AdminSubscriptionsPage() {
         sub={editTarget}
         open={sheetOpen}
         onOpenChange={setSheetOpen}
+      />
+
+      <SubscriptionPayDialog
+        subscriptionId={payTargetId}
+        open={payTargetId !== null}
+        onOpenChange={(o) => !o && setPayTargetId(null)}
       />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>

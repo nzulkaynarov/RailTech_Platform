@@ -22,6 +22,8 @@ export function LeadsPage() {
     try {
       const res = await convert.mutateAsync({ leadId: lead.id });
       toast.success(`${t('leadsPage.converted')} #${res.deal_id}`);
+      // Jump to the deals section so the freshly created deal is visible.
+      window.location.hash = 'crm-deals';
     } catch (e) {
       toast.error(translateApiError(e));
     }

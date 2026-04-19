@@ -26,6 +26,7 @@ import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
 import { SupplierBidSubmitDialog } from '@/components/CRM/SupplierBidSubmitDialog';
 import { useSupplierBids, useAcceptBid, useRejectBid } from '@/hooks/useBidding';
 import { useUserStore } from '@/store/userStore';
+import { useIsViewerMode } from '@/hooks/useViewerMode';
 import type { SupplierBid, SupplierBidStatus } from '@/api/biddingApi';
 
 const STATUS_VARIANT: Record<SupplierBidStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -54,6 +55,8 @@ export function SupplierBidsPage() {
   const { data: bids, isLoading } = useSupplierBids(queryParams);
   const acceptMut = useAcceptBid();
   const rejectMut = useRejectBid();
+  const isViewer = useIsViewerMode();
+  const viewerTip = t('apiErrors.ADMIN_VIEWER_CANNOT_ACT');
 
   const stats = useMemo(() => {
     const list = bids ?? [];
@@ -108,7 +111,8 @@ export function SupplierBidsPage() {
               </div>
               <Button
                 size="sm"
-                disabled={!submitDealId}
+                disabled={!submitDealId || isViewer}
+                title={isViewer ? viewerTip : undefined}
                 onClick={() => setSubmitOpen(true)}
               >
                 {t('supplierBidsPage.submit')}
@@ -162,10 +166,22 @@ export function SupplierBidsPage() {
                         </Button>
                         {b.status === 'SUBMITTED' && (
                           <>
-                            <Button variant="ghost" size="sm" onClick={() => onAccept(b)}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => onAccept(b)}
+                              disabled={isViewer}
+                              title={isViewer ? viewerTip : undefined}
+                            >
                               <Check className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="sm" onClick={() => setRejectTarget(b)}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setRejectTarget(b)}
+                              disabled={isViewer}
+                              title={isViewer ? viewerTip : undefined}
+                            >
                               <X className="h-4 w-4 text-destructive" />
                             </Button>
                           </>

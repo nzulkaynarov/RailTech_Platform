@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import { DealChatPanel } from '@/components/Sourcing/DealChatPanel';
 import { useCurrencyStore } from '@/store/currencyStore';
+import { useIsViewerMode } from '@/hooks/useViewerMode';
 import { RejectQuoteDialog } from '@/components/CRM/RejectQuoteDialog';
 
 export function RequestDetailPage({ onBack }: { onBack: () => void; onNavigate: (t: string) => void }) {
@@ -16,6 +17,8 @@ export function RequestDetailPage({ onBack }: { onBack: () => void; onNavigate: 
   const { activeDealId, deal, quote, loadDeal, loading, changeDealStage, approveQuote, rejectQuote, sendQuoteToClient } = useFlowStore();
   const formatCurrency = useCurrencyStore((s) => s.format);
   const [rejectOpen, setRejectOpen] = useState(false);
+  const isViewer = useIsViewerMode();
+  const viewerTip = t('apiErrors.ADMIN_VIEWER_CANNOT_ACT');
 
   useEffect(() => {
     if (activeDealId) {
@@ -65,29 +68,55 @@ export function RequestDetailPage({ onBack }: { onBack: () => void; onNavigate: 
           <CardContent className="flex items-center gap-3 py-4">
             <span className="text-sm font-medium">{t('requestDetailActions.actionsLabel')}:</span>
             {isDraft && (
-              <Button variant="default" onClick={() => changeDealStage(deal.id, 'SOURCING')}>
+              <Button
+                variant="default"
+                onClick={() => changeDealStage(deal.id, 'SOURCING')}
+                disabled={isViewer}
+                title={isViewer ? viewerTip : undefined}
+              >
                 {t('requestDetailActions.startSourcing')}
               </Button>
             )}
             {isSourcing && (
-              <Button variant="default" onClick={() => changeDealStage(deal.id, 'CALCULATING')}>
+              <Button
+                variant="default"
+                onClick={() => changeDealStage(deal.id, 'CALCULATING')}
+                disabled={isViewer}
+                title={isViewer ? viewerTip : undefined}
+              >
                 <Calculator className="h-4 w-4 mr-2" />
                 {t('requestDetailActions.startCalculation')}
               </Button>
             )}
             {isCalculating && quote && (
-              <Button variant="default" onClick={() => sendQuoteToClient(quote.id)}>
+              <Button
+                variant="default"
+                onClick={() => sendQuoteToClient(quote.id)}
+                disabled={isViewer}
+                title={isViewer ? viewerTip : undefined}
+              >
                 <Send className="h-4 w-4 mr-2" />
                 {t('requestDetailActions.sendQuote')}
               </Button>
             )}
             {isQuoteSent && quote && (
               <>
-                <Button variant="default" className="bg-success text-success-foreground hover:bg-success/90" onClick={() => approveQuote(quote.id)}>
+                <Button
+                  variant="default"
+                  className="bg-success text-success-foreground hover:bg-success/90"
+                  onClick={() => approveQuote(quote.id)}
+                  disabled={isViewer}
+                  title={isViewer ? viewerTip : undefined}
+                >
                   <ThumbsUp className="h-4 w-4 mr-2" />
                   {t('requestDetailActions.approveQuote')}
                 </Button>
-                <Button variant="destructive" onClick={() => setRejectOpen(true)}>
+                <Button
+                  variant="destructive"
+                  onClick={() => setRejectOpen(true)}
+                  disabled={isViewer}
+                  title={isViewer ? viewerTip : undefined}
+                >
                   <ThumbsDown className="h-4 w-4 mr-2" />
                   {t('requestDetailActions.rejectQuote')}
                 </Button>

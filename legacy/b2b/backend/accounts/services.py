@@ -636,3 +636,16 @@ def is_platform_admin_viewer(user: 'CustomUser') -> bool:
     if role_code != 'ADMIN':
         return False
     return not user.memberships.filter(is_active=True).exists()
+
+
+def company_has_operational_subscription(company_id: int) -> bool:
+    """True if the company has a SupplierSubscription that is_operational right now.
+
+    Seller-side write operations (bid submit, offer CRUD, product CRUD) must be
+    gated by this — SELLER / MANUFACTURER companies without a valid subscription
+    cannot sell on the platform. CLIENTs don't need a subscription to buy.
+    """
+    sub = SupplierSubscription.objects.filter(company_id=company_id).order_by('-updated_at').first()
+    if sub is None:
+        return False
+    return sub.is_operational

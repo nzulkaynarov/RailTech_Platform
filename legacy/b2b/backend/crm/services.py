@@ -268,6 +268,45 @@ class QuoteLifecycleService:
 
     @staticmethod
     @transaction.atomic
+    def force_approve_quote(
+        quote_id: int, admin_user: CustomUser, reason: str = '',
+    ) -> Tuple[Optional[Quote], Optional[str]]:
+        """Platform-admin force override: approve a quote regardless of its current status.
+
+        Used for escalations (e.g. client unreachable but verbally approved offline).
+        Logged with [FORCE_ADMIN] marker so audit can distinguish from normal flow.
+        Caller must have SystemRole.ADMIN or be is_superuser. Viewer-mode admins
+        (ADMIN without a CompanyMember) are explicitly permitted — force-actions
+        are platform-admin moderation, not bound to membership.
+        """
+        from django.utils import timezone
+        if not (getattr(admin_user, 'is_superuser', False)
+                or (admin_user.role and admin_user.role.code == 'ADMIN')):
+            return None, 'PLATFORM_ADMIN_REQUIRED'
+        if not reason.strip():
+            return None, 'FORCE_REASON_REQUIRED'
+        quote = Quote.objects.select_for_update().select_related('deal', 'status').get(pk=quote_id)
+        approved = QuoteStatus.objects.filter(code='APPROVED').first()
+        if not approved:
+            return None, 'QUOTE_STATUS_NOT_FOUND'
+        old_code = quote.status.code if quote.status else 'None'
+        quote.status = approved
+        quote.approved_at = timezone.now()
+        quote.approved_by = admin_user
+        quote.notes = (
+            f"{quote.notes}\n[FORCE_ADMIN] {admin_user.email}: {reason}"
+            if quote.notes else f"[FORCE_ADMIN] {admin_user.email}: {reason}"
+        )
+        quote.save(update_fields=['status', 'approved_at', 'approved_by', 'notes', 'updated_at'])
+        ActivityLog.objects.create(
+            action="[FORCE_ADMIN] КП одобрено платформенным админом",
+            detail=f"КП #{quote_id} ({old_code} → APPROVED). Причина: {reason}",
+            user=admin_user, level='WARNING',
+        )
+        return quote, None
+
+    @staticmethod
+    @transaction.atomic
     def reject_quote(quote_id: int, rejected_by_user, reason: str = '') -> Quote:
         """Client rejects the quote. Only SENT quotes can be rejected."""
         from notifications.models import Notification, NotificationType
@@ -683,6 +722,39 @@ def cancel_contract(contract_id: int, actor: CustomUser, reason: str = '') -> Tu
     return contract, None
 
 
+@transaction.atomic
+def force_cancel_contract(
+    contract_id: int, admin_user: CustomUser, reason: str = '',
+) -> Tuple[Optional['Contract'], Optional[str]]:
+    """Platform-admin force override: cancel a contract regardless of its status.
+
+    Used for escalations (e.g. fraud, court order, mutual annulment after signing).
+    Logged with [FORCE_ADMIN] marker. Reason is mandatory for audit. Viewer-mode
+    admins are permitted — force-actions are platform-admin moderation, not bound
+    to a CompanyMember.
+    """
+    from .models import Contract
+    if not (getattr(admin_user, 'is_superuser', False)
+            or (admin_user.role and admin_user.role.code == 'ADMIN')):
+        return None, 'PLATFORM_ADMIN_REQUIRED'
+    if not reason.strip():
+        return None, 'FORCE_REASON_REQUIRED'
+    contract = Contract.objects.select_for_update().get(pk=contract_id)
+    old_status = contract.status
+    contract.status = 'CANCELLED'
+    contract.notes = (
+        f"{contract.notes}\n[FORCE_ADMIN] {admin_user.email}: {reason}"
+        if contract.notes else f"[FORCE_ADMIN] {admin_user.email}: {reason}"
+    )
+    contract.save(update_fields=['status', 'notes', 'updated_at'])
+    ActivityLog.objects.create(
+        action="[FORCE_ADMIN] Контракт отменён платформенным админом",
+        detail=f"Контракт #{contract_id} ({old_status} → CANCELLED). Причина: {reason}",
+        user=admin_user, level='WARNING',
+    )
+    return contract, None
+
+
 # ──────────────────────────────────────────────────────────────────────────
 # Invoices, Payments, Acts
 # ──────────────────────────────────────────────────────────────────────────
@@ -968,7 +1040,9 @@ def submit_supplier_bid(
     """Create or update a SupplierBid for the given deal+supplier."""
     from decimal import Decimal as D
     from django.utils import timezone
-    from accounts.services import is_member_of, is_platform_admin_viewer
+    from accounts.services import (
+        company_has_operational_subscription, is_member_of, is_platform_admin_viewer,
+    )
     from .models import SupplierBid, SupplierBidItem
     if is_platform_admin_viewer(submitted_by):
         return None, 'ADMIN_VIEWER_CANNOT_ACT'
@@ -979,6 +1053,11 @@ def submit_supplier_bid(
     if not (getattr(submitted_by, 'is_superuser', False)
             or is_member_of(submitted_by, supplier_id, capability='sell')):
         return None, 'NOT_A_SUPPLIER_MEMBER'
+    # Feature gate: supplier company must have an operational subscription.
+    # Superusers bypass for emergency fixes only.
+    if not (getattr(submitted_by, 'is_superuser', False)
+            or company_has_operational_subscription(supplier_id)):
+        return None, 'SUBSCRIPTION_NOT_OPERATIONAL'
     bid, _ = SupplierBid.objects.get_or_create(deal_id=deal_id, supplier_id=supplier_id)
     bid.items.all().delete()
     total = D('0')

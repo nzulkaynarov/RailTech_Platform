@@ -2092,15 +2092,21 @@
         "approve": "Согласовать",
         "reject": "Отклонить",
         "downloadPDF": "Скачать PDF",
-        "generatePDF": "Сформировать PDF"
+        "generatePDF": "Сформировать PDF",
+        "forceApprove": "Force-согласовать (админ)"
       },
       "toast": {
         "sentSuccess": "КП #{{id}} отправлено клиенту",
         "approvedSuccess": "КП #{{id}} согласовано",
         "rejectedSuccess": "КП #{{id}} отклонено",
         "pdfGenerated": "PDF сформирован",
-        "actionError": "Не удалось выполнить действие"
-      }
+        "actionError": "Не удалось выполнить действие",
+        "forceReasonRequired": "Укажите причину force-согласования",
+        "forceApproved": "КП #{{id}} force-согласовано платформенным админом"
+      },
+      "confirmForceApprove": "Force-согласование КП (платформенный админ)",
+      "forceApproveHint": "КП #{{id}} будет переведено в APPROVED независимо от текущего статуса. Действие логируется маркером [FORCE_ADMIN].",
+      "forceApproveReason": "Причина (обязательна, попадёт в audit-лог)"
     },
     "clients": {
       "title": "Клиенты",
@@ -2901,6 +2907,12 @@
     "cancel": "Отменить контракт",
     "confirmCancel": "Подтвердите отмену",
     "cancelReason": "Причина отмены",
+    "forceCancel": "Force-отмена (админ)",
+    "forceCancelled": "Контракт отменён платформенным админом",
+    "forceCancelReason": "Причина (обязательна, попадёт в audit-лог)",
+    "forceCancelReasonRequired": "Укажите причину force-отмены",
+    "confirmForceCancel": "Force-отмена контракта (платформенный админ)",
+    "forceCancelHint": "Будет отменён контракт {{number}} независимо от его текущего статуса. Действие логируется маркером [FORCE_ADMIN].",
     "allStatuses": "Все статусы",
     "stats": {
       "total": "Всего",
@@ -3198,6 +3210,10 @@
     "NOT_AUTHORIZED_FOR_BID": "Вы не можете управлять этим предложением",
     "ADMIN_VIEWER_CANNOT_ACT": "Администратор платформы не совершает бизнес-операции — только наблюдает и модерирует",
     "MEMBER_REQUIRED_FOR_ACTION": "Действие доступно только членам компании (buyer или seller)",
+    "PLATFORM_ADMIN_REQUIRED": "Действие доступно только платформенному администратору",
+    "FORCE_REASON_REQUIRED": "Force-действие требует обязательной причины (попадает в audit-лог)",
+    "QUOTE_STATUS_NOT_FOUND": "Статус КП не найден в справочнике",
+    "SUBSCRIPTION_NOT_OPERATIONAL": "Подписка компании не активна — оплатите подписку, чтобы продолжить продажи",
     "ONLY_OWNER_CAN_DISTRIBUTE_CAPABILITIES": "Только владелец компании может распределять права продавать/покупать",
     "MEMBER_ID_REQUIRED": "Не указан member_id",
     "MEMBER_NOT_FOUND": "Сотрудник не найден в этой компании",

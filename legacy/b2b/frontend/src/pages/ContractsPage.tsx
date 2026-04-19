@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { translateApiError } from '@/lib/apiError';
-import { FileText, Download, PenLine, Upload, Ban, FileSignature } from 'lucide-react';
+import { FileText, Download, PenLine, Upload, Ban, FileSignature, ShieldAlert } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -25,8 +25,10 @@ import {
 } from '@/components/DataTable';
 import {
   useContracts, useSignContractClient, useSignContractManager,
-  useUploadSignedContract, useCancelContract,
+  useUploadSignedContract, useCancelContract, useForceCancelContract,
 } from '@/hooks/useBilling';
+import { useUserStore } from '@/store/userStore';
+import { useIsViewerMode } from '@/hooks/useViewerMode';
 import type { Contract, ContractStatus } from '@/api/contractsApi';
 
 const STATUS_VARIANT: Record<ContractStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -47,12 +49,19 @@ export function ContractsPage() {
   const [selected, setSelected] = useState<Contract | null>(null);
   const [cancelTarget, setCancelTarget] = useState<Contract | null>(null);
   const [cancelReason, setCancelReason] = useState('');
+  const [forceCancelTarget, setForceCancelTarget] = useState<Contract | null>(null);
+  const [forceCancelReason, setForceCancelReason] = useState('');
 
+  const role = useUserStore((s) => s.role);
+  const isPlatformAdmin = role === 'ADMIN';
+  const isViewer = useIsViewerMode();
+  const viewerTip = t('apiErrors.ADMIN_VIEWER_CANNOT_ACT');
   const { data: contracts, isLoading } = useContracts(undefined);
   const signClient = useSignContractClient();
   const signManager = useSignContractManager();
   const uploadSigned = useUploadSignedContract();
   const cancelMut = useCancelContract();
+  const forceCancelMut = useForceCancelContract();
 
   const stats = useMemo(() => {
     const list = contracts ?? [];
@@ -103,6 +112,23 @@ export function ContractsPage() {
       toast.success(t('contractsPage.cancelled'));
       setCancelTarget(null);
       setCancelReason('');
+    } catch (e) {
+      toast.error(translateApiError(e));
+    }
+  };
+
+  const onForceCancel = async () => {
+    if (!forceCancelTarget) return;
+    if (!forceCancelReason.trim()) {
+      toast.error(t('contractsPage.forceCancelReasonRequired'));
+      return;
+    }
+    try {
+      await forceCancelMut.mutateAsync({ id: forceCancelTarget.id, reason: forceCancelReason });
+      toast.success(t('contractsPage.forceCancelled'));
+      setForceCancelTarget(null);
+      setForceCancelReason('');
+      setSelected(null);
     } catch (e) {
       toast.error(translateApiError(e));
     }
@@ -252,24 +278,36 @@ export function ContractsPage() {
                   </Button>
                 )}
                 {(selected.status === 'PENDING_CLIENT' || selected.status === 'DRAFT') && (
-                  <Button onClick={() => onSignClient(selected)} disabled={signClient.isPending}>
+                  <Button
+                    onClick={() => onSignClient(selected)}
+                    disabled={signClient.isPending || isViewer}
+                    title={isViewer ? viewerTip : undefined}
+                  >
                     <PenLine className="mr-2 h-4 w-4" />
                     {t('contractsPage.signClient')}
                   </Button>
                 )}
                 {(selected.status === 'PENDING_MANAGER' || selected.status === 'PENDING_CLIENT' || selected.status === 'DRAFT') && (
-                  <Button onClick={() => onSignManager(selected)} disabled={signManager.isPending}>
+                  <Button
+                    onClick={() => onSignManager(selected)}
+                    disabled={signManager.isPending || isViewer}
+                    title={isViewer ? viewerTip : undefined}
+                  >
                     <PenLine className="mr-2 h-4 w-4" />
                     {t('contractsPage.signManager')}
                   </Button>
                 )}
-                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-border px-3 py-2 text-sm hover:bg-accent">
+                <label
+                  className={`flex items-center justify-center gap-2 rounded-md border border-dashed border-border px-3 py-2 text-sm ${isViewer ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-accent'}`}
+                  title={isViewer ? viewerTip : undefined}
+                >
                   <Upload className="h-4 w-4" />
                   <span>{t('contractsPage.uploadSigned')}</span>
                   <input
                     type="file"
                     className="hidden"
                     accept=".pdf,.jpg,.jpeg,.png"
+                    disabled={isViewer}
                     onChange={(e) => {
                       const f = e.target.files?.[0];
                       if (f) onUploadFile(selected, f);
@@ -277,9 +315,24 @@ export function ContractsPage() {
                   />
                 </label>
                 {selected.status !== 'CANCELLED' && selected.status !== 'SIGNED' && (
-                  <Button variant="destructive" onClick={() => setCancelTarget(selected)}>
+                  <Button
+                    variant="destructive"
+                    onClick={() => setCancelTarget(selected)}
+                    disabled={isViewer}
+                    title={isViewer ? viewerTip : undefined}
+                  >
                     <Ban className="mr-2 h-4 w-4" />
                     {t('contractsPage.cancel')}
+                  </Button>
+                )}
+                {isPlatformAdmin && selected.status !== 'CANCELLED' && (
+                  <Button
+                    variant="outline"
+                    className="border-warning text-warning hover:bg-warning/10"
+                    onClick={() => setForceCancelTarget(selected)}
+                  >
+                    <ShieldAlert className="mr-2 h-4 w-4" />
+                    {t('contractsPage.forceCancel')}
                   </Button>
                 )}
               </div>
@@ -307,6 +360,37 @@ export function ContractsPage() {
             <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={onCancel} disabled={cancelMut.isPending}>
               {t('contractsPage.cancel')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={!!forceCancelTarget}
+        onOpenChange={(o) => { if (!o) { setForceCancelTarget(null); setForceCancelReason(''); } }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-warning">
+              <ShieldAlert className="h-4 w-4" />
+              {t('contractsPage.confirmForceCancel')}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('contractsPage.forceCancelHint', { number: forceCancelTarget?.number })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="forceCancelReason">{t('contractsPage.forceCancelReason')}</Label>
+            <Textarea
+              id="forceCancelReason"
+              value={forceCancelReason}
+              onChange={(e) => setForceCancelReason(e.target.value)}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={onForceCancel} disabled={forceCancelMut.isPending}>
+              {t('contractsPage.forceCancel')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

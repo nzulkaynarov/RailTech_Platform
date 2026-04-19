@@ -148,6 +148,18 @@ export const useApproveQuote = () => {
     });
 };
 
+export const useForceApproveQuote = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, reason }: { id: number; reason: string }) =>
+            crmApi.forceApproveQuote(id, reason),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['quotes'] });
+            queryClient.invalidateQueries({ queryKey: ['deals'] });
+        },
+    });
+};
+
 
 export const useLeads = () => useQuery({
   queryKey: ["leads"],

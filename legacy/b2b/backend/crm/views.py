@@ -406,6 +406,25 @@ class QuoteViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     @extend_schema(
+        summary="Force-approve quote (Platform Admin escalation)",
+        description="Bypass status guard and mark quote as APPROVED. ADMIN role required. Audit-logged with [FORCE_ADMIN].",
+        request=inline_serializer('ForceApproveQuoteRequest', fields={
+            'reason': drf_serializers.CharField(required=True),
+        }),
+        responses={200: QuoteSerializer, 400: OpenApiResponse(description="Validation error")},
+        tags=['CRM'],
+    )
+    @action(detail=True, methods=['post'], url_path='force-approve')
+    def force_approve(self, request, pk=None):
+        """Platform admin force-overrides quote status to APPROVED."""
+        from .services import QuoteLifecycleService
+        reason = request.data.get('reason', '')
+        quote, error = QuoteLifecycleService.force_approve_quote(int(pk), request.user, reason)
+        if error:
+            return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(self.get_serializer(quote).data)
+
+    @extend_schema(
         summary="Download quote PDF",
         description="Download the previously generated PDF file for a quote.",
         responses={
@@ -1062,6 +1081,25 @@ class ContractViewSet(viewsets.ModelViewSet):
         contract, err = crm_services.cancel_contract(int(pk), request.user, reason=request.data.get('reason', ''))
         if err:
             return Response({'detail': err}, status=400)
+        return Response(ContractSerializer(contract).data)
+
+    @extend_schema(
+        summary="Force-cancel contract (Platform Admin escalation)",
+        description="Bypass SIGNED guard and mark contract CANCELLED. ADMIN role required. Audit-logged with [FORCE_ADMIN].",
+        request=inline_serializer('ForceCancelContractRequest', fields={
+            'reason': drf_serializers.CharField(required=True),
+        }),
+        responses={200: ContractSerializer, 400: OpenApiResponse(description="Validation error")},
+        tags=['CRM'],
+    )
+    @action(detail=True, methods=['post'], url_path='force-cancel',
+            permission_classes=[IsAuthenticated, IsManagerOrAdmin])
+    def force_cancel(self, request, pk=None):
+        contract, err = crm_services.force_cancel_contract(
+            int(pk), request.user, reason=request.data.get('reason', ''),
+        )
+        if err:
+            return Response({'error': err}, status=400)
         return Response(ContractSerializer(contract).data)
 
 

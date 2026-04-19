@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/select';
 import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
 import { useFulfillments, useUpdateFulfillmentStatus } from '@/hooks/useBilling';
+import { useIsViewerMode } from '@/hooks/useViewerMode';
 import type { Fulfillment, FulfillmentStatus } from '@/api/fulfillmentApi';
 
 const STATUS_VARIANT: Record<FulfillmentStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -49,6 +50,8 @@ export function FulfillmentsPage() {
   const queryParams = statusFilter !== 'all' ? { status: statusFilter } : undefined;
   const { data: list, isLoading } = useFulfillments(queryParams);
   const updateMut = useUpdateFulfillmentStatus();
+  const isViewer = useIsViewerMode();
+  const viewerTip = t('apiErrors.ADMIN_VIEWER_CANNOT_ACT');
 
   const stats = useMemo(() => {
     const l = list ?? [];
@@ -136,7 +139,13 @@ export function FulfillmentsPage() {
                     <TableCell>{f.tracking_number || '—'}</TableCell>
                     <TableCell>{f.carrier || '—'}</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" onClick={() => startEdit(f)}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => startEdit(f)}
+                        disabled={isViewer}
+                        title={isViewer ? viewerTip : undefined}
+                      >
                         {t('fulfillmentPage.updateStatus')}
                       </Button>
                     </TableCell>
@@ -187,7 +196,12 @@ export function FulfillmentsPage() {
             </div>
           </div>
           <SheetFooter>
-            <Button onClick={submit} disabled={updateMut.isPending} className="w-full">
+            <Button
+              onClick={submit}
+              disabled={updateMut.isPending || isViewer}
+              title={isViewer ? viewerTip : undefined}
+              className="w-full"
+            >
               {t('fulfillmentPage.updateStatus')}
             </Button>
           </SheetFooter>

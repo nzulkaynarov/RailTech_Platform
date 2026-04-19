@@ -272,6 +272,10 @@ export const crmApi = {
 		const response = await apiClient.post<Quote>(`crm/quotes/${id}/reject/`);
 		return response.data;
 	},
+	forceApproveQuote: async (id: number, reason: string) => {
+		const response = await apiClient.post<Quote>(`crm/quotes/${id}/force-approve/`, { reason });
+		return response.data;
+	},
 	downloadQuotePDF: async (id: number) => {
 		const response = await apiClient.get(`crm/quotes/${id}/download-pdf/`, {
 			responseType: 'blob'

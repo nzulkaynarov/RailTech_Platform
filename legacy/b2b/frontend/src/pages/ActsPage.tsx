@@ -14,6 +14,7 @@ import {
   Toolbar, SortableHead, Pager, useListParams, applyListParams,
 } from '@/components/DataTable';
 import { useActs, useSignAct } from '@/hooks/useBilling';
+import { useIsViewerMode } from '@/hooks/useViewerMode';
 import type { ActStatus } from '@/api/billingApi';
 
 const STATUS_VARIANT: Record<ActStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -29,6 +30,8 @@ export function ActsPage() {
   const listParams = useListParams(['status'] as const, { defaultOrdering: '-created_at' });
   const { data: acts, isLoading } = useActs(undefined);
   const signAct = useSignAct();
+  const isViewer = useIsViewerMode();
+  const viewerTip = t('apiErrors.ADMIN_VIEWER_CANNOT_ACT');
 
   const stats = useMemo(() => {
     const list = acts ?? [];
@@ -129,12 +132,16 @@ export function ActsPage() {
                               </Button>
                             )}
                             {a.status === 'ISSUED' && (
-                              <label className="inline-flex cursor-pointer items-center rounded-md px-2 py-1 text-xs hover:bg-accent">
+                              <label
+                                className={`inline-flex items-center rounded-md px-2 py-1 text-xs ${isViewer ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-accent'}`}
+                                title={isViewer ? viewerTip : undefined}
+                              >
                                 <PenLine className="h-4 w-4" />
                                 <input
                                   type="file"
                                   className="hidden"
                                   accept=".pdf,.jpg,.png"
+                                  disabled={isViewer}
                                   onChange={(e) => {
                                     const f = e.target.files?.[0];
                                     onSign(a.id, f);

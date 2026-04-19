@@ -13,11 +13,18 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-  Calculator, FileText, MoreHorizontal, Send, ThumbsUp, ThumbsDown, FileDown,
+  Calculator, FileText, MoreHorizontal, Send, ThumbsUp, ThumbsDown, FileDown, ShieldAlert,
 } from 'lucide-react';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { translateApiError } from '@/lib/apiError';
 import { useUserStore } from '@/store/userStore';
 import { useCurrencyStore } from '@/store/currencyStore';
-import { useQuotes, useSendQuoteToClient, useApproveQuote, useQuoteStatuses } from '@/hooks/useCRM';
+import { useQuotes, useSendQuoteToClient, useApproveQuote, useQuoteStatuses, useForceApproveQuote } from '@/hooks/useCRM';
 import { crmApi } from '@/api/crmApi';
 import type { Quote } from '@/api/crmApi';
 import { toast } from 'sonner';
@@ -27,17 +34,21 @@ import { CreateQuoteDialog } from '@/components/CRM/CreateQuoteDialog';
 
 export function QuotesPage() {
   const { t } = useTranslation();
-  const { activeStatus } = useUserStore();
+  const { activeStatus, role } = useUserStore();
   const { data: quotes, isLoading } = useQuotes();
   const sendToClient = useSendQuoteToClient();
   const approveQuote = useApproveQuote();
+  const forceApproveMut = useForceApproveQuote();
   const formatCurrency = useCurrencyStore((s) => s.format);
   const isBuyer = activeStatus === 'BUYER';
+  const isPlatformAdmin = role === 'ADMIN';
 
   const quotesList = quotes ?? [];
   const { data: statuses } = useQuoteStatuses();
   const listParams = useListParams(['status'] as const, { defaultOrdering: '-created_at' });
   const [createOpen, setCreateOpen] = useState(false);
+  const [forceApproveTarget, setForceApproveTarget] = useState<Quote | null>(null);
+  const [forceApproveReason, setForceApproveReason] = useState('');
 
   const title = isBuyer ? t('pages.quotes.buyerTitle') : t('pages.quotes.sellerTitle');
   const description = isBuyer ? t('pages.quotes.buyerDescription') : t('pages.quotes.sellerDescription');
@@ -96,6 +107,22 @@ export function QuotesPage() {
       toast.success(t('pages.quotes.toast.pdfGenerated'));
     } catch {
       toast.error(t('pages.quotes.toast.actionError'));
+    }
+  };
+
+  const handleForceApprove = async () => {
+    if (!forceApproveTarget) return;
+    if (!forceApproveReason.trim()) {
+      toast.error(t('pages.quotes.toast.forceReasonRequired'));
+      return;
+    }
+    try {
+      await forceApproveMut.mutateAsync({ id: forceApproveTarget.id, reason: forceApproveReason });
+      toast.success(t('pages.quotes.toast.forceApproved', { id: forceApproveTarget.id }));
+      setForceApproveTarget(null);
+      setForceApproveReason('');
+    } catch (e) {
+      toast.error(translateApiError(e));
     }
   };
 
@@ -212,6 +239,15 @@ export function QuotesPage() {
                             <FileDown className="mr-2 h-4 w-4" />
                             {t('pages.quotes.actions.downloadPDF')}
                           </DropdownMenuItem>
+                          {isPlatformAdmin && q.status_code !== 'APPROVED' && (
+                            <DropdownMenuItem
+                              onClick={() => setForceApproveTarget(q)}
+                              className="text-warning"
+                            >
+                              <ShieldAlert className="mr-2 h-4 w-4" />
+                              {t('pages.quotes.actions.forceApprove')}
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -226,6 +262,37 @@ export function QuotesPage() {
         </CardContent>
       </Card>
       <CreateQuoteDialog open={createOpen} onOpenChange={setCreateOpen} />
+
+      <AlertDialog
+        open={!!forceApproveTarget}
+        onOpenChange={(o) => { if (!o) { setForceApproveTarget(null); setForceApproveReason(''); } }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-warning">
+              <ShieldAlert className="h-4 w-4" />
+              {t('pages.quotes.confirmForceApprove')}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('pages.quotes.forceApproveHint', { id: forceApproveTarget?.id })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="forceApproveReason">{t('pages.quotes.forceApproveReason')}</Label>
+            <Textarea
+              id="forceApproveReason"
+              value={forceApproveReason}
+              onChange={(e) => setForceApproveReason(e.target.value)}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleForceApprove} disabled={forceApproveMut.isPending}>
+              {t('pages.quotes.actions.forceApprove')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PageShell>
   );
 }

@@ -80,6 +80,10 @@ export const contractsApi = {
     });
     return response.data;
   },
+  forceCancel: async (id: number, reason: string) => {
+    const response = await apiClient.post<Contract>(`crm/contracts/${id}/force-cancel/`, { reason });
+    return response.data;
+  },
   remove: async (id: number) => {
     await apiClient.delete(`crm/contracts/${id}/`);
   },
