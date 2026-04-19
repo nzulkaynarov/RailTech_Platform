@@ -555,6 +555,82 @@
         "actions": "Actions"
       }
     },
+    "support": {
+      "title": "Support Tickets",
+      "description": "Direct client-to-admin support channel",
+      "searchPlaceholder": "Search subject, description, email...",
+      "empty": "No support tickets yet",
+      "stats": {
+        "total": "Total",
+        "open": "Open",
+        "inProgress": "In progress",
+        "urgent": "Urgent"
+      },
+      "filters": {
+        "allStatuses": "All statuses",
+        "allPriorities": "All priorities",
+        "allCategories": "All categories"
+      },
+      "status": {
+        "OPEN": "Open",
+        "IN_PROGRESS": "In progress",
+        "RESOLVED": "Resolved",
+        "CLOSED": "Closed"
+      },
+      "priority": {
+        "LOW": "Low",
+        "NORMAL": "Normal",
+        "HIGH": "High",
+        "URGENT": "Urgent"
+      },
+      "category": {
+        "BUG": "Bug",
+        "QUESTION": "Question",
+        "BILLING": "Billing",
+        "FEATURE": "Feature request",
+        "OTHER": "Other"
+      },
+      "table": {
+        "id": "ID",
+        "subject": "Subject",
+        "status": "Status",
+        "priority": "Priority",
+        "createdAt": "Created"
+      },
+      "detail": {
+        "title": "Ticket details",
+        "status": "Status",
+        "assigned": "Assigned to",
+        "unassigned": "Unassigned",
+        "assignToMe": "Assign to me",
+        "messages": "Conversation",
+        "noMessages": "No messages yet",
+        "adminBadge": "admin",
+        "reply": "Reply",
+        "replyPlaceholder": "Write your reply...",
+        "send": "Send",
+        "internalNote": "Internal note (visible only to admins)"
+      },
+      "toast": {
+        "messageSent": "Message sent",
+        "statusChanged": "Status updated",
+        "assigned": "Ticket assigned"
+      },
+      "userForm": {
+        "title": "Contact Support",
+        "subtitle": "Describe your issue and we'll get back to you shortly",
+        "subject": "Subject",
+        "subjectPlaceholder": "Brief summary of your issue",
+        "description": "Description",
+        "descriptionPlaceholder": "Provide as much detail as possible...",
+        "category": "Category",
+        "priority": "Priority",
+        "submit": "Submit ticket",
+        "cancel": "Cancel",
+        "success": "Ticket created — we will get back to you soon",
+        "fab": "Support"
+      }
+    },
     "systemSettings": {
       "title": "System",
       "titleHighlight": "Settings",
@@ -967,6 +1043,14 @@
     "adminKyc": "KYC verification",
     "adminSubscriptions": "Subscriptions",
     "adminRoleApps": "Role Applications",
+    "adminMasterData": "Master Data",
+    "adminSupport": "Support Tickets",
+    "adminCatalog": "Catalog (admin)",
+    "adminCategories": "Categories (admin)",
+    "adminEquipmentGroups": "Equipment Groups (admin)",
+    "adminOffers": "Supplier Offers (admin)",
+    "adminCompanies": "Companies (admin)",
+    "adminDeals": "Deals (admin)",
     "logistics": "Logistics",
     "purchaseTemplates": "Purchase Templates"
   },
@@ -1177,6 +1261,7 @@
     "companies": "Companies",
     "adminDeals": "Deals (admin)",
     "masterData": "Master data",
+    "support": "Support tickets",
     "adminCatalog": "Catalog (admin)",
     "adminCatalogProducts": "Products",
     "adminCatalogCategories": "Categories",

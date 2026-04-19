@@ -32,8 +32,16 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
         if getattr(self, 'swagger_fake_view', False):
             return Notification.objects.none()
         from django.db.models import Q
+        user = self.request.user
+        # Аудитория видимости: USER-канал — только для не-админов; PLATFORM_ADMIN-канал — только
+        # для Platform Admin. Админ НЕ видит клиентские уведомления; USER НЕ видит platform-алёрты.
+        if user.is_platform_admin:
+            audience = Notification.AUDIENCE_PLATFORM_ADMIN
+        else:
+            audience = Notification.AUDIENCE_USER
         return Notification.objects.filter(
-            Q(user=self.request.user) | Q(user__isnull=True)
+            Q(audience=audience)
+            & (Q(user=user) | Q(user__isnull=True))
         )
 
     @extend_schema(

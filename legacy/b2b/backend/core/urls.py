@@ -31,7 +31,10 @@ from master_data.views import (
 )
 from sourcing.views import ExcelImportView, CatalogImportView, ImportStatusView, SourcingRequestViewSet
 from core.health import health_check
-from core.views import PageStatsView, SystemSettingsView, PlatformDashboardView
+from core.views import (
+    PageStatsView, SystemSettingsView, PlatformDashboardView,
+    SupportTicketViewSet,
+)
 
 router = DefaultRouter()
 router.register(r'catalog/products', ProductViewSet, basename='product')
@@ -65,6 +68,9 @@ router.register(r'accounts/role-applications', CompanyRoleApplicationViewSet, ba
 router.register(r'accounts/system-roles', SystemRoleViewSet, basename='systemrole')
 router.register(r'accounts/workspace-roles', WorkspaceRoleViewSet, basename='workspacerole')
 router.register(r'notifications', NotificationViewSet, basename='notification')
+
+# Support tickets
+router.register(r'support/tickets', SupportTicketViewSet, basename='support-ticket')
 
 # Master Data
 router.register(r'master-data/countries', CountryViewSet)

@@ -555,6 +555,82 @@
         "actions": "Действия"
       }
     },
+    "support": {
+      "title": "Тикеты поддержки",
+      "description": "Прямой канал связи клиента с администратором",
+      "searchPlaceholder": "Поиск по теме, описанию, email...",
+      "empty": "Тикетов пока нет",
+      "stats": {
+        "total": "Всего",
+        "open": "Открыты",
+        "inProgress": "В работе",
+        "urgent": "Срочные"
+      },
+      "filters": {
+        "allStatuses": "Все статусы",
+        "allPriorities": "Все приоритеты",
+        "allCategories": "Все категории"
+      },
+      "status": {
+        "OPEN": "Открыт",
+        "IN_PROGRESS": "В работе",
+        "RESOLVED": "Решён",
+        "CLOSED": "Закрыт"
+      },
+      "priority": {
+        "LOW": "Низкий",
+        "NORMAL": "Обычный",
+        "HIGH": "Высокий",
+        "URGENT": "Срочный"
+      },
+      "category": {
+        "BUG": "Ошибка",
+        "QUESTION": "Вопрос",
+        "BILLING": "Оплата/биллинг",
+        "FEATURE": "Пожелание",
+        "OTHER": "Другое"
+      },
+      "table": {
+        "id": "ID",
+        "subject": "Тема",
+        "status": "Статус",
+        "priority": "Приоритет",
+        "createdAt": "Создан"
+      },
+      "detail": {
+        "title": "Детали тикета",
+        "status": "Статус",
+        "assigned": "Назначен",
+        "unassigned": "Не назначен",
+        "assignToMe": "Назначить на меня",
+        "messages": "Переписка",
+        "noMessages": "Сообщений пока нет",
+        "adminBadge": "админ",
+        "reply": "Ответить",
+        "replyPlaceholder": "Напишите ваш ответ...",
+        "send": "Отправить",
+        "internalNote": "Внутренняя заметка (видна только админам)"
+      },
+      "toast": {
+        "messageSent": "Сообщение отправлено",
+        "statusChanged": "Статус обновлён",
+        "assigned": "Тикет назначен"
+      },
+      "userForm": {
+        "title": "Связаться с поддержкой",
+        "subtitle": "Опишите проблему — мы скоро ответим",
+        "subject": "Тема",
+        "subjectPlaceholder": "Краткая суть вопроса",
+        "description": "Описание",
+        "descriptionPlaceholder": "Опишите как можно подробнее...",
+        "category": "Категория",
+        "priority": "Приоритет",
+        "submit": "Создать тикет",
+        "cancel": "Отмена",
+        "success": "Тикет создан — мы скоро свяжемся с вами",
+        "fab": "Поддержка"
+      }
+    },
     "systemSettings": {
       "title": "Настройки",
       "titleHighlight": "Системы",
@@ -967,6 +1043,14 @@
     "adminKyc": "KYC верификация",
     "adminSubscriptions": "Подписки",
     "adminRoleApps": "Заявки на роли",
+    "adminMasterData": "Справочники",
+    "adminSupport": "Тикеты поддержки",
+    "adminCatalog": "Каталог (админ)",
+    "adminCategories": "Категории (админ)",
+    "adminEquipmentGroups": "Группы оборудования (админ)",
+    "adminOffers": "Предложения поставщиков (админ)",
+    "adminCompanies": "Компании (админ)",
+    "adminDeals": "Сделки (админ)",
     "logistics": "Логистика",
     "purchaseTemplates": "Шаблоны закупок"
   },
@@ -1177,6 +1261,7 @@
     "companies": "Компании",
     "adminDeals": "Сделки (админ)",
     "masterData": "Справочники",
+    "support": "Тикеты поддержки",
     "adminCatalog": "Каталог (админ)",
     "adminCatalogProducts": "Товары",
     "adminCatalogCategories": "Категории",

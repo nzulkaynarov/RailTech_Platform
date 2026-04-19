@@ -24,6 +24,31 @@ def mark_notifications_read(notifications: QuerySet[Notification]) -> int:
     return notifications.filter(is_read=False).update(is_read=True)
 
 
+def notify_platform_admins(
+    title: str,
+    message: str,
+    link: str = '',
+    type_code: str = 'WARNING',
+) -> Notification:
+    """
+    Создаёт broadcast-уведомление для всех Platform Admin (audience=PLATFORM_ADMIN, user=NULL).
+
+    Используется для операционных алёртов платформы: failed payments, expired subscriptions,
+    stuck Celery tasks, KYC queue growing и т.п. Обычные пользователи этот канал НЕ видят.
+    """
+    from .models import NotificationType
+    ntype = NotificationType.objects.filter(code=type_code).first()
+    notification = Notification.objects.create(
+        audience=Notification.AUDIENCE_PLATFORM_ADMIN,
+        user=None,
+        type=ntype,
+        title=title,
+        message=message,
+        link=link,
+    )
+    return notification
+
+
 def push_notification_ws(notification: Notification):
     """Push a notification to the user via WebSocket channel layer."""
     if not notification.user_id:

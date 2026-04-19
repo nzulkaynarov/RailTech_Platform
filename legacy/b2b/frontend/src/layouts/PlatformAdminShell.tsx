@@ -16,6 +16,7 @@ import {
   ClipboardList,
   Layers,
   Building2,
+  LifeBuoy,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -105,6 +106,7 @@ function getAdminNavigation(activePage: string, t: TFn, attention: AttentionCoun
     { label: t('shell.roleApplications'), icon: <ClipboardList className="h-4 w-4" />, id: 'admin-role-apps', active: activePage === 'admin-role-apps', badge: attention.roleApps },
     { label: t('shell.adminDeals'), icon: <Handshake className="h-4 w-4" />, id: 'admin-deals', active: activePage === 'admin-deals' },
     { label: t('shell.masterData'), icon: <Layers className="h-4 w-4" />, id: 'admin-master-data', active: activePage === 'admin-master-data' },
+    { label: t('shell.support'), icon: <LifeBuoy className="h-4 w-4" />, id: 'admin-support', active: activePage === 'admin-support' },
     {
       label: t('shell.adminCatalog'), icon: <Package className="h-4 w-4" />,
       children: [

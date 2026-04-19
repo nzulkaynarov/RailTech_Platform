@@ -48,6 +48,7 @@ const AdminOffersPage = lazy(() => import('./pages/AdminOffersPage'));
 const AdminCompaniesPage = lazy(() => import('./pages/AdminCompaniesPage'));
 const AdminDealsPage = lazy(() => import('./pages/AdminDealsPage'));
 const AdminMasterDataPage = lazy(() => import('./pages/AdminMasterDataPage'));
+const AdminSupportPage = lazy(() => import('./pages/AdminSupportPage'));
 const ContractsPage = lazy(() => import('./pages/ContractsPage'));
 const InvoicesPage = lazy(() => import('./pages/InvoicesPage'));
 const PaymentsPage = lazy(() => import('./pages/PaymentsPage'));
@@ -87,6 +88,7 @@ type Page =
   | { type: 'admin-companies' }
   | { type: 'admin-deals' }
   | { type: 'admin-master-data' }
+  | { type: 'admin-support' }
   | { type: 'contracts' }
   | { type: 'invoices' }
   | { type: 'payments' }
@@ -223,7 +225,7 @@ function App() {
 const ADMIN_PAGES = new Set([
   'admin-users', 'admin-kyc', 'admin-subscriptions', 'admin-role-apps',
   'admin-catalog', 'admin-categories', 'admin-equipment-groups', 'admin-offers',
-  'admin-companies', 'admin-deals', 'admin-master-data',
+  'admin-companies', 'admin-deals', 'admin-master-data', 'admin-support',
 ]);
 // CRM-pages that need a management WorkspaceRole inside the user's company
 // (not a platform-level SystemRole). Buyers don't see these by design.
@@ -318,7 +320,7 @@ function MainApp() {
       'help', 'my-requests', 'request-detail',
       'admin-users', 'admin-kyc', 'admin-subscriptions', 'admin-role-apps',
       'admin-catalog', 'admin-categories', 'admin-equipment-groups', 'admin-offers',
-      'admin-companies', 'admin-deals', 'admin-master-data',
+      'admin-companies', 'admin-deals', 'admin-master-data', 'admin-support',
       'contracts', 'invoices', 'payments', 'acts', 'fulfillments',
       'supplier-bids', 'leads',
     ];
@@ -467,6 +469,9 @@ function MainApp() {
       break;
     case 'admin-master-data':
       content = <AdminMasterDataPage />;
+      break;
+    case 'admin-support':
+      content = <AdminSupportPage />;
       break;
     case 'contracts':
       content = <ContractsPage />;
