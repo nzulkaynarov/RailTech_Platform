@@ -12,8 +12,11 @@ from .models import DomainKeyword
 
 logger = logging.getLogger(__name__)
 
-# Safety limits for Excel processing
-MAX_EXCEL_ROWS = 5000
+# Safety limits for Excel processing. Enterprise clients upload catalogs with
+# tens of thousands of lines — we allow up to 50k rows and write them in
+# fixed-size DB batches to keep memory bounded and DB round-trips reasonable.
+MAX_EXCEL_ROWS = 50_000
+BULK_CHUNK = 1_000
 
 
 def route_domain(text: str) -> str:
@@ -42,7 +45,21 @@ def route_domain(text: str) -> str:
     return 'GENERAL_GOODS'
 
 
-@shared_task(bind=True, time_limit=600, soft_time_limit=540)
+def _flush_catalog_chunk(Product, chunk):
+    """Write one chunk of catalog rows in a single short transaction.
+
+    Keeps update_or_create semantics (sku is the unique key). Chunk is a list
+    of {sku, data} dicts prepared by the caller.
+    """
+    with transaction.atomic():
+        for entry in chunk:
+            if entry['sku']:
+                Product.objects.update_or_create(sku=entry['sku'], defaults=entry['data'])
+            else:
+                Product.objects.create(**entry['data'])
+
+
+@shared_task(bind=True, time_limit=1800, soft_time_limit=1700)
 def process_excel_import(self, deal_id: int, file_content_b64: str, user_id: int = None):
     """
     Processes uploaded Excel file and creates QuoteItems for the active Quote.
@@ -112,9 +129,11 @@ def process_excel_import(self, deal_id: int, file_content_b64: str, user_id: int
         if not items_to_create:
             return {'status': 'error', 'message': 'Файл обработан, но не найдено ни одной строки.'}
 
-        # Bulk create all items at once (bypasses QuoteItem.save() and its recalculation)
+        # Bulk create in fixed-size batches. `batch_size` caps the number of
+        # rows per INSERT so we don't explode Postgres parameter limits or
+        # Celery worker memory on 10k+ row imports.
         with transaction.atomic():
-            QuoteItem.objects.bulk_create(items_to_create)
+            QuoteItem.objects.bulk_create(items_to_create, batch_size=BULK_CHUNK)
 
         # Single final recalculation of the entire quote
         quote.recalculate_totals()
@@ -127,7 +146,7 @@ def process_excel_import(self, deal_id: int, file_content_b64: str, user_id: int
         return {'status': 'error', 'message': 'Import failed. Please check the file format and try again.'}
 
 
-@shared_task(bind=True, time_limit=600, soft_time_limit=540)
+@shared_task(bind=True, time_limit=1800, soft_time_limit=1700)
 def process_catalog_import(self, file_content_b64: str):
     """
     Processes uploaded Excel file to populate the global Product catalog (PIM).
@@ -161,40 +180,46 @@ def process_catalog_import(self, file_content_b64: str):
 
         items_processed = 0
         total_rows = len(df)
+        # Process in chunks so a 50k-row import doesn't hold one giant
+        # transaction open (which would bloat WAL and risk lock contention).
+        chunk = []
+        for idx, row in df.iterrows():
+            raw_name = str(row.get(col_map['name'], '')).strip()
+            if not raw_name or raw_name == 'nan':
+                continue
 
-        with transaction.atomic():
-            for idx, row in df.iterrows():
-                raw_name = str(row.get(col_map['name'], '')).strip()
-                if not raw_name or raw_name == 'nan':
-                    continue
+            sku = str(row.get(col_map['sku'], '')).strip()
+            if sku == 'nan':
+                sku = None
 
-                sku = str(row.get(col_map['sku'], '')).strip()
-                if sku == 'nan':
-                    sku = None
+            uom_code = str(row.get(col_map['uom'], 'шт')).strip().lower()
+            uom_obj = uom_cache.get(uom_code)
 
-                uom_code = str(row.get(col_map['uom'], 'шт')).strip().lower()
-                uom_obj = uom_cache.get(uom_code)
+            domain_code = route_domain(raw_name)
+            domain_obj = domain_cache.get(domain_code)
 
-                domain_code = route_domain(raw_name)
-                domain_obj = domain_cache.get(domain_code)
-
-                product_data = {
+            chunk.append({
+                'sku': sku,
+                'data': {
                     'name': raw_name,
                     'description': (str(row.get(col_map['description'], '')).strip()
                                     if row.get(col_map['description']) != 'nan' else ''),
                     'domain_type': domain_obj,
                     'status': status_draft,
                     'uom': uom_obj,
-                }
+                },
+            })
 
-                if sku:
-                    Product.objects.update_or_create(sku=sku, defaults=product_data)
-                else:
-                    Product.objects.create(**product_data)
+            if len(chunk) >= BULK_CHUNK:
+                _flush_catalog_chunk(Product, chunk)
+                items_processed += len(chunk)
+                chunk = []
+                self.update_state(state='PROGRESS', meta={'current': items_processed, 'total': total_rows})
 
-                items_processed += 1
-                if items_processed % 20 == 0 or items_processed == total_rows:
-                    self.update_state(state='PROGRESS', meta={'current': items_processed, 'total': total_rows})
+        if chunk:
+            _flush_catalog_chunk(Product, chunk)
+            items_processed += len(chunk)
+            self.update_state(state='PROGRESS', meta={'current': items_processed, 'total': total_rows})
 
         return {'status': 'success', 'items_processed': items_processed}
     except Exception as e:

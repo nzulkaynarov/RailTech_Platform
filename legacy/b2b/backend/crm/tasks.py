@@ -217,3 +217,44 @@ def auto_invoice_on_closed_won(deal_id: int) -> dict:
     if act is not None:
         result['act'] = act.id
     return result
+
+
+@shared_task(name='crm.expire_stale_quotes')
+def expire_stale_quotes() -> dict:
+    """Move SENT quotes past `valid_until` to EXPIRED and notify the deal manager.
+
+    Runs on a daily Beat schedule. Ignores DRAFT (not yet sent) and APPROVED /
+    REJECTED (terminal) quotes. Each transition is audit-logged in ActivityLog.
+    """
+    from .models import Quote, QuoteStatus, ActivityLog
+    from notifications.models import Notification, NotificationType
+    today = timezone.now().date()
+    expired_status = QuoteStatus.objects.filter(code='EXPIRED').first()
+    if expired_status is None:
+        logger.error("QuoteStatus 'EXPIRED' missing — seed migration not applied")
+        return {'expired': 0, 'error': 'expired_status_missing'}
+    stale_qs = Quote.objects.select_related('status', 'deal__manager').filter(
+        status__code='SENT',
+        valid_until__isnull=False,
+        valid_until__lt=today,
+    )
+    warn_type = NotificationType.objects.filter(code='WARNING').first()
+    count = 0
+    for q in stale_qs:
+        q.status = expired_status
+        q.save(update_fields=['status', 'updated_at'])
+        ActivityLog.objects.create(
+            action='КП просрочено',
+            detail=f"Quote #{q.id} v{q.version} (deal #{q.deal_id}) — valid_until={q.valid_until}",
+            user=None, level='WARNING',
+        )
+        if q.deal.manager and warn_type:
+            Notification.objects.create(
+                user=q.deal.manager, type=warn_type,
+                title='КП просрочено',
+                message=f"Срок действия КП v{q.version} по сделке #{q.deal_id} истёк",
+                link='/crm/quotes',
+                deal=q.deal,
+            )
+        count += 1
+    return {'expired': count}
