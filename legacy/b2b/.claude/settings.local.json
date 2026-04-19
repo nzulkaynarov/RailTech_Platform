@@ -44,7 +44,8 @@
       "Bash(gh pr *)",
       "Bash(node -e ' *)",
       "Bash(DOCKER_BUILDKIT=1 docker compose build frontend)",
-      "Bash(chmod +x /Users/znz/Downloads/IT-projects/RailTech_SaaS_B2B/scripts/check_i18n_symmetry.py)"
+      "Bash(chmod +x /Users/znz/Downloads/IT-projects/RailTech_SaaS_B2B/scripts/check_i18n_symmetry.py)",
+      "Bash(git commit *)"
     ]
   }
 }
