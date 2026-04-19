@@ -238,10 +238,12 @@ export const useUserStore = create<UserState>((set, _get) => ({
         } : {
           name: '',
           inn: '',
-          kycStatus: 'not_started',
+          // Viewer-mode platform admin has no company and therefore no KYC to
+          // pass — treat as 'verified' so KYC banners/guards don't gate the UI.
+          kycStatus: isViewerMode ? 'verified' : 'not_started',
           country: '',
           city: '',
-          statusEntries: [],
+          statusEntries: isViewerMode ? statusEntries : [],
         },
       });
     }
