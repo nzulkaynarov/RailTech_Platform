@@ -379,6 +379,14 @@ def transition_deal_stage(
     Logs the change to ActivityLog.
     Returns: (deal, error_or_None)
     """
+    # Actor-guard: when called by a real user (not internal/system), block
+    # platform-admin viewers. Internal callers (auto-tasks, smoke scripts) pass
+    # actor=None and bypass this check intentionally.
+    if actor is not None:
+        from accounts.services import is_platform_admin_viewer
+        if is_platform_admin_viewer(actor):
+            return None, 'ADMIN_VIEWER_CANNOT_ACT'
+
     target_stage = DealStage.objects.filter(code=target_stage_code).first()
     if not target_stage:
         return None, 'DEAL_STAGE_NOT_FOUND'
@@ -459,6 +467,9 @@ def convert_lead_to_deal(
 
     If `company` is not provided, tries to resolve one via the lead email.
     """
+    from accounts.services import is_platform_admin_viewer
+    if is_platform_admin_viewer(actor):
+        return None, 'ADMIN_VIEWER_CANNOT_ACT'
     if lead.is_processed:
         return None, 'LEAD_ALREADY_PROCESSED'
 
@@ -507,7 +518,10 @@ def generate_contract_from_quote(
     quote_id: int, actor: Optional[CustomUser] = None, notes: str = '',
 ) -> Tuple[Optional['Contract'], Optional[str]]:
     """Create a Contract tied to an approved Quote, render its PDF."""
+    from accounts.services import is_platform_admin_viewer
     from .models import Contract
+    if actor is not None and is_platform_admin_viewer(actor):
+        return None, 'ADMIN_VIEWER_CANNOT_ACT'
     quote = Quote.objects.select_related('deal__company', 'status').get(pk=quote_id)
 
     if not quote.status or quote.status.code not in {'APPROVED', 'SENT'}:
@@ -656,7 +670,10 @@ def _notify_contract_signed(contract) -> None:
 
 @transaction.atomic
 def cancel_contract(contract_id: int, actor: CustomUser, reason: str = '') -> Tuple[Optional['Contract'], Optional[str]]:
+    from accounts.services import is_platform_admin_viewer
     from .models import Contract
+    if is_platform_admin_viewer(actor):
+        return None, 'ADMIN_VIEWER_CANNOT_ACT'
     contract = Contract.objects.select_for_update().get(pk=contract_id)
     if contract.status == 'SIGNED':
         return None, 'CONTRACT_SIGNED_CANNOT_CANCEL'
@@ -693,7 +710,10 @@ def generate_invoice_from_contract(
 ) -> Tuple[Optional['Invoice'], Optional[str]]:
     from datetime import timedelta
     from django.utils import timezone
+    from accounts.services import is_platform_admin_viewer
     from .models import Contract, Invoice, InvoiceItem
+    if actor is not None and is_platform_admin_viewer(actor):
+        return None, 'ADMIN_VIEWER_CANNOT_ACT'
     contract = Contract.objects.select_related('quote__deal').get(pk=contract_id)
 
     if contract.status != 'SIGNED':
@@ -803,7 +823,10 @@ def generate_act(
     invoice_id: int, actor: Optional[CustomUser] = None,
 ) -> Tuple[Optional[object], Optional[str]]:
     from django.utils import timezone
+    from accounts.services import is_platform_admin_viewer
     from .models import Invoice, Act
+    if actor is not None and is_platform_admin_viewer(actor):
+        return None, 'ADMIN_VIEWER_CANNOT_ACT'
     invoice = Invoice.objects.select_related('contract', 'deal').get(pk=invoice_id)
     if invoice.status not in {'PAID', 'PARTIAL', 'ISSUED'}:
         return None, 'ACT_INVALID_INVOICE_STATUS'
@@ -836,7 +859,10 @@ def _render_act_pdf(act) -> None:
 @transaction.atomic
 def sign_act(act_id: int, actor: CustomUser, signed_file=None) -> Tuple[Optional[object], Optional[str]]:
     from django.utils import timezone
+    from accounts.services import is_platform_admin_viewer
     from .models import Act
+    if is_platform_admin_viewer(actor):
+        return None, 'ADMIN_VIEWER_CANNOT_ACT'
     act = Act.objects.select_for_update().get(pk=act_id)
     if act.status != 'ISSUED':
         return None, 'ACT_SIGN_NOT_ALLOWED'
@@ -865,7 +891,10 @@ def update_fulfillment_status(
     deal_id: int, actor: CustomUser, status_code: str, **extra,
 ) -> Tuple[Optional[object], Optional[str]]:
     from django.utils import timezone
+    from accounts.services import is_platform_admin_viewer
     from .models import Fulfillment
+    if is_platform_admin_viewer(actor):
+        return None, 'ADMIN_VIEWER_CANNOT_ACT'
     valid = {'PENDING', 'SHIPPED', 'IN_TRANSIT', 'DELIVERED', 'ACCEPTED', 'DISPUTED'}
     if status_code not in valid:
         return None, 'FULFILLMENT_INVALID_STATUS'
@@ -898,8 +927,15 @@ def open_rfq(
     deal_id: int, actor: CustomUser, supplier_ids: Optional[list[int]] = None,
 ) -> Tuple[Optional[Deal], Optional[str]]:
     """Move deal into RFQ_OPEN and notify invited suppliers."""
+    from accounts.services import is_member_of, is_platform_admin_viewer
     from notifications.models import Notification, NotificationType
+    if is_platform_admin_viewer(actor):
+        return None, 'ADMIN_VIEWER_CANNOT_ACT'
     deal = Deal.objects.select_for_update().get(pk=deal_id)
+    # RFQ is buyer-side: must be a can_buy member of the deal company.
+    if not (getattr(actor, 'is_superuser', False)
+            or is_member_of(actor, deal.company_id, capability='buy')):
+        return None, 'MEMBER_REQUIRED_FOR_ACTION'
 
     deal, err = transition_deal_stage(deal, 'RFQ_OPEN', actor=actor, reason="Открыт RFQ")
     if err:
@@ -1016,7 +1052,10 @@ def reassign_quote_item_product(
     quote_item_id: int, actor: CustomUser, product_id: Optional[int],
 ) -> Tuple[Optional[QuoteItem], Optional[str]]:
     """Allow manager to override Smart Match result by picking a different product."""
+    from accounts.services import is_platform_admin_viewer
     from catalog.models import Product
+    if is_platform_admin_viewer(actor):
+        return None, 'ADMIN_VIEWER_CANNOT_ACT'
     item = QuoteItem.objects.select_for_update().select_related('quote').get(pk=quote_item_id)
     if item.quote.frozen_at:
         return None, 'QUOTE_FROZEN_CANNOT_REASSIGN'

@@ -2,11 +2,23 @@ import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
-import { HelpCircle, FileText, MessageSquare, Mail, ChevronDown } from 'lucide-react';
+import { HelpCircle, FileText, MessageSquare, Mail, ChevronDown, Wrench, ShieldCheck, Briefcase, Handshake, Building2 } from 'lucide-react';
 import { PageShell } from './shared/PageShell';
 
 export function HelpPage() {
   const { t } = useTranslation();
+
+  const roles: Array<{
+    icon: React.ReactNode;
+    key: 'platformEngineer' | 'platformAdmin' | 'salesManager' | 'accountManager' | 'companyOwner';
+  }> = [
+    { icon: <Wrench className="h-4 w-4" />, key: 'platformEngineer' },
+    { icon: <ShieldCheck className="h-4 w-4" />, key: 'platformAdmin' },
+    { icon: <Briefcase className="h-4 w-4" />, key: 'salesManager' },
+    { icon: <Handshake className="h-4 w-4" />, key: 'accountManager' },
+    { icon: <Building2 className="h-4 w-4" />, key: 'companyOwner' },
+  ];
+
   const categories = [
     {
       title: t('pages.help.sections.gettingStarted'),
@@ -67,6 +79,65 @@ export function HelpPage() {
               </CardContent>
             </Card>
           ))}
+        </div>
+
+        {/* Role Responsibilities (ADR-0002) */}
+        <div className="lg:col-span-3">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+            {t('pages.help.sections.roleResponsibilities')}
+          </h3>
+          <p className="text-xs text-muted-foreground mb-3">
+            {t('pages.help.roleResponsibilities.intro')}
+          </p>
+          <div className="space-y-2">
+            {roles.map((role) => (
+              <Collapsible key={role.key}>
+                <Card className="border">
+                  <CardContent className="p-0">
+                    <CollapsibleTrigger asChild>
+                      <Button variant="ghost" className="w-full p-4 flex items-center justify-between hover:bg-muted/50 transition-colors h-auto">
+                        <span className="flex items-center gap-2 font-medium text-sm text-left">
+                          <span className="h-7 w-7 rounded-md flex items-center justify-center bg-primary/10 text-primary">
+                            {role.icon}
+                          </span>
+                          {t(`pages.help.roleResponsibilities.${role.key}.title`)}
+                        </span>
+                        <ChevronDown className="h-4 w-4 transition-transform flex-shrink-0 ml-2" />
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="border-t bg-muted/30 p-4 text-sm space-y-3">
+                        <p className="text-muted-foreground">
+                          {t(`pages.help.roleResponsibilities.${role.key}.summary`)}
+                        </p>
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+                            {t('pages.help.roleResponsibilities.does')}
+                          </p>
+                          <ul className="list-disc pl-5 space-y-1 text-sm">
+                            {(t(`pages.help.roleResponsibilities.${role.key}.does`, { returnObjects: true }) as string[]).map((item, i) => (
+                              <li key={i}>{item}</li>
+                            ))}
+                          </ul>
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+                            {t('pages.help.roleResponsibilities.doesNot')}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {t(`pages.help.roleResponsibilities.${role.key}.doesNot`)}
+                          </p>
+                        </div>
+                      </div>
+                    </CollapsibleContent>
+                  </CardContent>
+                </Card>
+              </Collapsible>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground mt-3">
+            {t('pages.help.roleResponsibilities.escalation')}
+          </p>
         </div>
 
         {/* FAQ Sections */}

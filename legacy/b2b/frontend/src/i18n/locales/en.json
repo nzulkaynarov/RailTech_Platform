@@ -2313,7 +2313,81 @@
         "gettingStarted": "Getting Started",
         "procurement": "Procurement & Requests",
         "quotesAndPricing": "Quotes & Pricing",
-        "securityAndAccess": "Security & Access"
+        "securityAndAccess": "Security & Access",
+        "roleResponsibilities": "Roles & Responsibilities"
+      },
+      "roleResponsibilities": {
+        "intro": "Five platform roles and their areas of responsibility (per ADR-0002). Expand a role card to see what it does and does not do.",
+        "does": "What it does",
+        "doesNot": "What it does NOT do",
+        "escalation": "Escalation: Owner → Account Manager → Sales Manager → Platform Admin → Platform Engineer. Don't escalate to Platform Engineer before checking the React Admin loop.",
+        "platformEngineer": {
+          "title": "Platform Engineer",
+          "summary": "Technical owner of the platform. Works via Django Unfold (/admin/) and terminal. is_superuser=True.",
+          "does": [
+            "Deployment, DB migrations, Celery Beat schedule",
+            "Master data CRUD: currencies, countries, units, DeliveryBasis",
+            "Assigning system roles (ADMIN / SALES_MANAGER / ACCOUNT_MANAGER) via Django",
+            "Emergency data fixes via Unfold (temporarily removing ReadOnlyInspectionMixin)",
+            "Superadmin seed: init_superadmin, core_seed",
+            "Viewing ActivityLog, QuoteItemHistory, pghistory"
+          ],
+          "doesNot": "Does not work with clients, deals, contracts — that's the business roles' domain."
+        },
+        "platformAdmin": {
+          "title": "Platform Admin",
+          "summary": "Moderates the platform: users, companies, KYC, subscriptions, role applications. Works only in the React Admin SPA. Does NOT execute business actions on behalf of companies (viewer mode).",
+          "does": [
+            "Users: create, edit, change role, toggle-active, delete",
+            "Companies: registry, edit details, team (invite members)",
+            "KYC verification: L1→L2→L3, revoke, upload documents",
+            "Supplier subscriptions: create, activate, suspend, renew, record payment",
+            "Role applications SUPPLIER / MANUFACTURER: approve / reject",
+            "Force-change Deal stage on escalation from a manager",
+            "SystemSettings: VAT / margin / exchange rate / maintenance / 2FA"
+          ],
+          "doesNot": "Does not perform technical deploy, DB migrations, direct model edits via shell. Does not execute business actions on behalf of companies (buy, sell, sign contract, pay, submit/accept bid)."
+        },
+        "salesManager": {
+          "title": "Sales Manager",
+          "summary": "Drives deals from request to close. Builds quotes, signs contracts, sends invoices.",
+          "does": [
+            "Deal FSM: DRAFT → SOURCING → CALCULATING → QUOTE_SENT → CONTRACT_SIGNED → CLOSED_WON",
+            "Building a Quote from QuoteItems (after Excel import or Smart Match)",
+            "Landed Cost calculation (logistics / customs / margin)",
+            "Quote PDF and send_to_client (freezes prices)",
+            "Quote → APPROVED / REJECTED",
+            "After CLOSED_WON: generating Contract / Invoice / Act",
+            "Leads → Convert to Deal",
+            "Sales analytics"
+          ],
+          "doesNot": "Does not handle KYC verification, company creation, or master data edits."
+        },
+        "accountManager": {
+          "title": "Account Manager",
+          "summary": "Supports verified clients, assists with KYC, manages correspondence.",
+          "does": [
+            "Supporting existing clients",
+            "KYC assist: helping upload documents, escalating approve to Platform Admin",
+            "Deal chat and messages",
+            "Viewing Acts / Fulfillments (delivery status)",
+            "Repeat sales and cross-sell"
+          ],
+          "doesNot": "Does not change Deal stage in CALCULATING / QUOTE_SENT (Sales Manager's domain) or perform force-actions."
+        },
+        "companyOwner": {
+          "title": "Company Owner",
+          "summary": "Head of a client company. Works within the context of their own company, not the platform. Distributes can_sell/can_buy among team members.",
+          "does": [
+            "Profile / Company registry edits (pre-verification only)",
+            "Inviting team members",
+            "Distributing can_sell / can_buy across team members",
+            "Uploading KYC documents",
+            "Submitting CompanyRoleApplication to upgrade CLIENT → SUPPLIER / MANUFACTURER",
+            "Paying SupplierSubscription (if SELLER / MANUFACTURER)"
+          ],
+          "doesNot": "Sees only their own data. No access to other companies' data — multi-tenancy via CompanyMember."
+        }
       },
       "quickActions": {
         "apiDocs": "API Documentation",

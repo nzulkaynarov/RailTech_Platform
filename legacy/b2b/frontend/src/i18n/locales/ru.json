@@ -2313,7 +2313,81 @@
         "gettingStarted": "Начало работы",
         "procurement": "Закупки и заявки",
         "quotesAndPricing": "Котировки и ценообразование",
-        "securityAndAccess": "Безопасность и доступ"
+        "securityAndAccess": "Безопасность и доступ",
+        "roleResponsibilities": "Роли и обязанности"
+      },
+      "roleResponsibilities": {
+        "intro": "Пять ролей платформы и их зоны ответственности (согласно ADR-0002). Разверните карточку роли, чтобы увидеть, что она делает и чего не делает.",
+        "does": "Что делает",
+        "doesNot": "Что НЕ делает",
+        "escalation": "Эскалация: Owner → Account Manager → Sales Manager → Platform Admin → Platform Engineer. Не эскалируйте на Platform Engineer, пока не проверен React Admin контур.",
+        "platformEngineer": {
+          "title": "Platform Engineer (инженер платформы)",
+          "summary": "Технический владелец платформы. Работает через Django Unfold (/admin/) и терминал. is_superuser=True.",
+          "does": [
+            "Развёртывание, миграции БД, расписание Celery Beat",
+            "CRUD справочников: валюты, страны, единицы измерения, DeliveryBasis",
+            "Назначение системных ролей (ADMIN / SALES_MANAGER / ACCOUNT_MANAGER) через Django",
+            "Аварийные фиксы данных через Unfold (временно сняв ReadOnlyInspectionMixin)",
+            "Seed суперадмина: init_superadmin, core_seed",
+            "Просмотр ActivityLog, QuoteItemHistory, pghistory"
+          ],
+          "doesNot": "Не работает с клиентами, сделками, контрактами — это зона бизнес-ролей."
+        },
+        "platformAdmin": {
+          "title": "Platform Admin (бизнес-админ платформы)",
+          "summary": "Модерирует платформу: пользователи, компании, KYC, подписки, заявки на роли. Работает только в React Admin SPA. Бизнес-операции от лица компаний НЕ совершает (viewer mode).",
+          "does": [
+            "Пользователи: создание, редактирование, смена роли, toggle-active, удаление",
+            "Компании: реестр, правка реквизитов, команда (invite members)",
+            "KYC-верификация: L1→L2→L3, revoke, загрузка документов",
+            "Подписки поставщиков: создание, активация, приостановка, продление, фиксация оплаты",
+            "Заявки на роли SUPPLIER / MANUFACTURER: approve / reject",
+            "Force-change Deal stage при эскалации от менеджера",
+            "SystemSettings: VAT / margin / exchange rate / maintenance / 2FA"
+          ],
+          "doesNot": "Не делает технический deploy, миграции БД, прямые правки моделей через shell. Не совершает бизнес-операции от лица компаний (покупать, продавать, подписывать контракт, платить, подавать/принимать bid)."
+        },
+        "salesManager": {
+          "title": "Sales Manager (менеджер по продажам)",
+          "summary": "Ведёт сделки от заявки до закрытия. Формирует КП, подписывает контракты, отправляет инвойсы.",
+          "does": [
+            "FSM сделки: DRAFT → SOURCING → CALCULATING → QUOTE_SENT → CONTRACT_SIGNED → CLOSED_WON",
+            "Формирование Quote из QuoteItems (после импорта Excel или Smart Match)",
+            "Расчёт Landed Cost (logistics / customs / margin)",
+            "PDF КП и send_to_client (замораживает цены)",
+            "Quote → APPROVED / REJECTED",
+            "После CLOSED_WON: генерация Contract / Invoice / Act",
+            "Leads → Convert to Deal",
+            "Аналитика продаж"
+          ],
+          "doesNot": "Не делает KYC-верификацию, создание компаний, правку master data."
+        },
+        "accountManager": {
+          "title": "Account Manager (аккаунт-менеджер)",
+          "summary": "Сопровождает верифицированных клиентов, помогает с KYC, ведёт переписку.",
+          "does": [
+            "Сопровождение существующих клиентов",
+            "KYC-ассист: помогает загрузить документы, эскалирует Platform Admin на approve",
+            "Чат в сделке, сообщения",
+            "Просмотр Acts / Fulfillments (статус поставки)",
+            "Повторные продажи, cross-sell"
+          ],
+          "doesNot": "Не меняет Deal stage в CALCULATING / QUOTE_SENT (это зона Sales Manager) и не делает force-actions."
+        },
+        "companyOwner": {
+          "title": "Company Owner (владелец компании-клиента)",
+          "summary": "Руководитель клиентской компании. Работает в контексте своей компании, не платформы. Distributes can_sell/can_buy between team members.",
+          "does": [
+            "Profile / Company registry правка (только до верификации)",
+            "Приглашение членов команды",
+            "Распределение can_sell / can_buy между членами команды",
+            "Загрузка KYC документов",
+            "Подача CompanyRoleApplication для апгрейда CLIENT → SUPPLIER / MANUFACTURER",
+            "Оплата SupplierSubscription (если SELLER / MANUFACTURER)"
+          ],
+          "doesNot": "Видит только свои данные. Не имеет доступа к данным других компаний — multi-tenancy через CompanyMember."
+        }
       },
       "quickActions": {
         "apiDocs": "Документация API",

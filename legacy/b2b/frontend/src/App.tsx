@@ -265,15 +265,18 @@ function MainApp() {
     }
   }, [page.type, role, t]);
 
-  // KYC guard: if not verified, only allow dashboard/profile/settings/help
+  // KYC guard: if not verified, only allow dashboard/profile/settings/help.
+  // Platform admins are moderators, not business actors — their personal
+  // company's KYC must not gate platform-admin navigation (see ADR-0002).
   useEffect(() => {
+    if (role === 'ADMIN') return;
     if (kycStatus !== 'verified' && !KYC_ALLOWED_PAGES.has(page.type)) {
       // LOW-20: surface why the user was bounced back instead of silent redirect.
       toast.info(t('guards.kycRequired'));
       setPage({ type: 'dashboard' });
       window.history.replaceState(null, '', '#dashboard');
     }
-  }, [page.type, kycStatus, t]);
+  }, [page.type, kycStatus, role, t]);
 
   // Handle browser back/forward
   useEffect(() => {

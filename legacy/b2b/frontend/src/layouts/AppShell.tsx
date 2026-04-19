@@ -401,7 +401,9 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
   const { currency, setCurrency } = useCurrencyStore();
   const { state } = useSidebar();
   const sidebarCollapsed = state === 'collapsed';
-  const isKycVerified = company.kycStatus === 'verified';
+  // Platform admins aren't business actors; their company's KYC must not disable
+  // admin navigation (see ADR-0002). For all other roles we keep the gating.
+  const isKycVerified = role === 'ADMIN' || company.kycStatus === 'verified';
   const navigation = useMemo(() => getNavigation(activeStatus, activePage, role, t), [activeStatus, activePage, role, t]);
   const bottomNav = useMemo(() => getBottomNavigation(role, activePage, t), [role, activePage, t]);
 

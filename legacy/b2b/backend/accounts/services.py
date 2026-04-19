@@ -391,16 +391,27 @@ def _send_role_application_email(app: CompanyRoleApplication, approved: bool) ->
 def record_subscription_payment(
     subscription: SupplierSubscription, amount, months: int = 1,
     actor: Optional[CustomUser] = None, manual: bool = True,
-) -> SupplierSubscription:
+) -> Tuple[Optional[SupplierSubscription], Optional[str]]:
     """Extend subscription and set ACTIVE after a successful payment.
 
     NOTE: manual=True flag indicates the payment was recorded by hand (no provider webhook).
     Logged in ActivityLog with MANUAL_MODE marker so reconciliation is possible later
     when a real payment provider (Click/Payme/Stripe) replaces the manual flow.
     See memory `tech_debt_payment_esign.md`.
+
+    Returns (subscription, error_or_None). Platform-admin viewers cannot pay
+    on behalf of a company (`ADMIN_VIEWER_CANNOT_ACT`); the paying user must be
+    an active member of the subscription's company with `can_sell` (subscription
+    is a seller-side billing concern), or a superuser.
     """
     from datetime import timedelta
     from crm.models import ActivityLog
+    if actor is not None:
+        if is_platform_admin_viewer(actor):
+            return None, 'ADMIN_VIEWER_CANNOT_ACT'
+        if not (getattr(actor, 'is_superuser', False)
+                or is_member_of(actor, subscription.company_id, capability='sell')):
+            return None, 'MEMBER_REQUIRED_FOR_ACTION'
     today = timezone.now().date()
     base = max(today, subscription.valid_until or today)
     subscription.valid_until = base + timedelta(days=30 * months)
@@ -419,7 +430,7 @@ def record_subscription_payment(
         ),
         user=actor, level='SUCCESS',
     )
-    return subscription
+    return subscription, None
 
 
 def check_and_expire_subscriptions() -> dict:

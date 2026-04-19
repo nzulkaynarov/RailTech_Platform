@@ -289,6 +289,25 @@ def verify_kyc(self, request, pk=None):
 - Unfold is reserved for: master data CRUD (lookups), read-only audit inspection, Celery beat schedule, Django auth groups, emergency data fixes by DBA.
 - Adding a new `@admin.action` with business logic? STOP — implement it as a React page + DRF endpoint instead. The action can come later as a thin wrapper if engineers need it.
 
+## Role Responsibilities (ADR-0002)
+
+Canonical source: `Docs/adr/0002-role-responsibilities.md`. Quick reference — when planning a feature, find the right role and periphery first.
+
+| Role | Tool | Owns | Does NOT |
+|---|---|---|---|
+| **Platform Engineer** (`is_superuser=True`) | Unfold + terminal | Deploy, migrations, master data CRUD, Celery Beat, emergency data fixes, `init_superadmin` | Business operations (deals, quotes, KYC approve) |
+| **Platform Admin** (`role=ADMIN`, viewer mode) | React Admin SPA | Users / Companies / KYC L1→L2→L3 / Subscriptions / Role applications / Force-change Deal stage / SystemSettings | Business actions on behalf of any company (buy, sell, sign, pay, bid) — backend returns `ADMIN_VIEWER_CANNOT_ACT` |
+| **Sales Manager** (`role=SALES_MANAGER`) | React SPA (CRM) | Deal FSM DRAFT→CLOSED_WON, Quote build / PDF / send, Contract / Invoice / Act generate, Lead convert, sales analytics | KYC verification, master data, company creation |
+| **Account Manager** (`role=ACCOUNT_MANAGER`) | React SPA (CRM) | Client support, KYC assist (view + escalate), deal chat, Acts/Fulfillments view | Deal stage changes in CALCULATING / QUOTE_SENT, force-actions |
+| **Company Owner** (`workspace_role=OWNER`) | React SPA (Cabinet) | Own profile, team invites, distribute `can_sell` / `can_buy`, KYC upload, role application, pay own subscription | See other companies' data |
+
+**Escalation path:** Owner → Account Manager → Sales Manager → Platform Admin → Platform Engineer. Don't escalate to Platform Engineer until the React Admin loop (KYC, subscriptions, role apps) has been checked — ~90% of "it broke" is solvable by Platform Admin without touching Unfold.
+
+**When adding a new feature:**
+1. Find the role that should own it in `0002-role-responsibilities.md`.
+2. Business action on behalf of a company → guard with `is_platform_admin_viewer` + `is_member_of(..., capability=...)` in `services.py` (see `memory/admin_viewer_mode_*.md`).
+3. Platform moderation action → React Admin page + DRF endpoint, never new `@admin.action` with logic (Rule 8).
+
 ## ANTI-HALLUCINATION — What does NOT exist
 
 ### Tables that DON'T exist

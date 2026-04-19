@@ -92,9 +92,12 @@ def supplier(master_data):
 
 @pytest.fixture
 def manager(master_data):
+    # Test fixture acting as platform-side staff. is_superuser=True bypasses
+    # the per-company `can_sell` / `can_buy` member checks so cycle smoke tests
+    # can drive both sides of a deal without setting up two distinct memberships.
     return CustomUser.objects.create_user(
         email='t.manager@example.com', username='t_manager', password='pw',
-        is_active=True, is_staff=True,
+        is_active=True, is_staff=True, is_superuser=True,
         first_name='T', last_name='Manager',
         role=SystemRole.objects.get(code='SALES_MANAGER'),
     )
@@ -149,10 +152,16 @@ def test_subscription_past_due_suspends_after_14_days(supplier):
 
 @pytest.mark.django_db
 def test_record_subscription_payment_extends_and_activates(supplier, manager):
-    _, company = supplier
+    supplier_user, company = supplier
     sub = acc_services.ensure_trial_subscription(company)
     initial_until = sub.valid_until
-    sub = acc_services.record_subscription_payment(sub, '100.00', months=2, actor=manager, manual=True)
+    # Subscription payment is a seller-side act — the actor must be a member of
+    # the supplier company with can_sell. SALES_MANAGER has no membership in
+    # the supplier company and would be rejected (MEMBER_REQUIRED_FOR_ACTION).
+    sub, err = acc_services.record_subscription_payment(
+        sub, '100.00', months=2, actor=supplier_user, manual=True,
+    )
+    assert err is None
     assert sub.status == 'ACTIVE'
     assert sub.valid_until > initial_until
 

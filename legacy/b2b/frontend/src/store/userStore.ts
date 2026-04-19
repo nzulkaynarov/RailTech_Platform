@@ -231,7 +231,13 @@ export const useUserStore = create<UserState>((set, _get) => ({
         company: company ? {
           name: company.name || '',
           inn: company.inn || '',
-          kycStatus: (['L2_VERIFIED', 'L3_CONTRACTED'].includes(company.verification_status_code ?? '') ? 'verified' : 'pending') as 'verified' | 'pending' | 'not_started',
+          // Platform admin is a moderator, not a business actor — their personal
+          // company's KYC state must not gate admin navigation. For regular users
+          // we keep the real verification_status_code mapping.
+          kycStatus: (isPlatformAdmin
+            ? 'verified'
+            : (['L2_VERIFIED', 'L3_CONTRACTED'].includes(company.verification_status_code ?? '') ? 'verified' : 'pending')
+          ) as 'verified' | 'pending' | 'not_started',
           country: company.country || '',
           city: '',
           statusEntries,
