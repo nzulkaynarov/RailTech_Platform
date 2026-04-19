@@ -3,7 +3,12 @@ import { persist } from 'zustand/middleware';
 import { apiClient } from '../api/client';
 import { User } from '../api/accountsApi';
 
-export type UserRole = 'GUEST' | 'CLIENT' | 'SALES_MANAGER' | 'ACCOUNT_MANAGER' | 'ADMIN';
+// Backend SystemRole vocabulary after migration accounts/0010_platform_admin_model.
+// Only ADMIN (Platform Admin — owns the platform, not attached to any company)
+// and USER (everyone else; their actual permissions come from CompanyMember.role
+// = WorkspaceRole within their company). Legacy MANAGER / SALES_MANAGER /
+// ACCOUNT_MANAGER / GUEST / CLIENT no longer exist as SystemRoles — see ADR-0002.
+export type UserRole = 'ADMIN' | 'USER';
 type KYCStatus = 'L1_UNVERIFIED' | 'PROFILE_SUBMITTED' | 'L2_VERIFIED' | 'L3_CONTRACTED' | null;
 
 interface AuthState {
@@ -104,9 +109,11 @@ export const useAuthStore = create<AuthState>()(
             },
 
             setUser: (user: User) => {
-                // Use role_code if available, fallback to role as string if it was somehow passed that way
-                const rawRole = user.role_code || (user.role as unknown as string) || 'CLIENT';
-                const role = (rawRole === 'MANAGER' ? 'SALES_MANAGER' : rawRole) as UserRole;
+                // Backend returns either 'ADMIN' or 'USER' (see migration 0010);
+                // anything else from older builds is collapsed to 'USER' so the
+                // typed literal never goes undefined downstream.
+                const rawRole = user.role_code ?? '';
+                const role: UserRole = rawRole === 'ADMIN' ? 'ADMIN' : 'USER';
 
                 // Backend returns `primary_company`, frontend expects `company`
                 const apiUser = user as User & { primary_company?: typeof user.company };

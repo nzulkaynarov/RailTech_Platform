@@ -60,6 +60,7 @@ import { useTranslation } from 'react-i18next';
 import { useUserStore } from '@/store/userStore';
 import { useAuthStore } from '@/store/authStore';
 import { NotificationCenter } from '@/components/Layout/NotificationCenter';
+import { usePlatformDashboard } from '@/hooks/usePageStats';
 
 /* ─── Types ─────────────────────────────────────────────────────────── */
 
@@ -74,21 +75,34 @@ interface NavItem {
   icon: React.ReactNode;
   id?: string;
   active?: boolean;
+  badge?: number;
   children?: NavChild[];
 }
 
 type TFn = (key: string) => string;
 
+interface AttentionCounts {
+  kyc?: number;
+  roleApps?: number;
+  subsPastDue?: number;
+  subsExpiring?: number;
+  overdueInvoices?: number;
+}
+
 /* ─── Platform-admin-only navigation ────────────────────────────────── */
 
-function getAdminNavigation(activePage: string, t: TFn): NavItem[] {
+function getAdminNavigation(activePage: string, t: TFn, attention: AttentionCounts): NavItem[] {
   return [
     { label: t('shell.dashboard'), icon: <LayoutDashboard className="h-4 w-4" />, id: 'dashboard', active: activePage === 'dashboard' },
     { label: t('shell.users'), icon: <Users className="h-4 w-4" />, id: 'admin-users', active: activePage === 'admin-users' },
     { label: t('shell.companies'), icon: <Store className="h-4 w-4" />, id: 'admin-companies', active: activePage === 'admin-companies' },
-    { label: t('shell.kyc'), icon: <ShieldCheck className="h-4 w-4" />, id: 'admin-kyc', active: activePage === 'admin-kyc' },
-    { label: t('shell.subscriptions'), icon: <CreditCard className="h-4 w-4" />, id: 'admin-subscriptions', active: activePage === 'admin-subscriptions' },
-    { label: t('shell.roleApplications'), icon: <ClipboardList className="h-4 w-4" />, id: 'admin-role-apps', active: activePage === 'admin-role-apps' },
+    { label: t('shell.kyc'), icon: <ShieldCheck className="h-4 w-4" />, id: 'admin-kyc', active: activePage === 'admin-kyc', badge: attention.kyc },
+    {
+      label: t('shell.subscriptions'), icon: <CreditCard className="h-4 w-4" />, id: 'admin-subscriptions',
+      active: activePage === 'admin-subscriptions',
+      badge: (attention.subsPastDue ?? 0) + (attention.subsExpiring ?? 0) || undefined,
+    },
+    { label: t('shell.roleApplications'), icon: <ClipboardList className="h-4 w-4" />, id: 'admin-role-apps', active: activePage === 'admin-role-apps', badge: attention.roleApps },
     { label: t('shell.adminDeals'), icon: <Handshake className="h-4 w-4" />, id: 'admin-deals', active: activePage === 'admin-deals' },
     { label: t('shell.masterData'), icon: <Layers className="h-4 w-4" />, id: 'admin-master-data', active: activePage === 'admin-master-data' },
     {
@@ -184,10 +198,19 @@ function SidebarNavItem({
           onClick={() => item.id && onNavigate(item.id)}
         >
           {item.icon}
-          {!collapsed && <span className="flex-1 text-left truncate">{item.label}</span>}
+          {!collapsed && (
+            <>
+              <span className="flex-1 text-left truncate">{item.label}</span>
+              {item.badge != null && item.badge > 0 && (
+                <Badge variant="destructive" className="h-5 min-w-5 justify-center rounded-full px-1.5 text-xs tabular-nums">
+                  {item.badge}
+                </Badge>
+              )}
+            </>
+          )}
         </Button>
       </TooltipTrigger>
-      {collapsed && <TooltipContent side="right">{item.label}</TooltipContent>}
+      {collapsed && <TooltipContent side="right">{item.label}{item.badge ? ` (${item.badge})` : ''}</TooltipContent>}
     </Tooltip>
   );
 }
@@ -213,7 +236,20 @@ function PlatformAdminShellInner({ children, activePage, onNavigate }: PlatformA
   const { profile } = useUserStore();
   const { state } = useSidebar();
   const sidebarCollapsed = state === 'collapsed';
-  const navigation = useMemo(() => getAdminNavigation(activePage, t), [activePage, t]);
+  const { data: platformDashboard } = usePlatformDashboard();
+
+  const attention: AttentionCounts = useMemo(() => {
+    const a = platformDashboard?.attention;
+    return {
+      kyc: a?.kyc || undefined,
+      roleApps: a?.role_applications || undefined,
+      subsPastDue: a?.subscriptions_past_due || undefined,
+      subsExpiring: a?.subscriptions_expiring_7d || undefined,
+      overdueInvoices: a?.overdue_invoices || undefined,
+    };
+  }, [platformDashboard]);
+
+  const navigation = useMemo(() => getAdminNavigation(activePage, t, attention), [activePage, t, attention]);
   const bottomNav = useMemo(() => getBottomNavigation(t), [t]);
 
   return (

@@ -17,11 +17,28 @@ class NotificationType(AbstractLookup):
 
 class Notification(models.Model):
     """Системные уведомления."""
+
+    AUDIENCE_USER = 'USER'
+    AUDIENCE_PLATFORM_ADMIN = 'PLATFORM_ADMIN'
+    AUDIENCE_CHOICES = [
+        (AUDIENCE_USER, _('Пользователь')),
+        (AUDIENCE_PLATFORM_ADMIN, _('Platform Admin')),
+    ]
+
+    audience = models.CharField(
+        max_length=20, choices=AUDIENCE_CHOICES, default=AUDIENCE_USER,
+        db_index=True,
+        verbose_name=_("Аудитория"),
+        help_text=_(
+            "USER — персональное или broadcast для обычных пользователей. "
+            "PLATFORM_ADMIN — операционные алёрты платформы (видит только admin)."
+        ),
+    )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
         related_name='notifications', null=True, blank=True,
         verbose_name=_("Получатель"),
-        help_text=_("Пользователь-получатель. Пусто = глобальное уведомление."),
+        help_text=_("Пользователь-получатель. Пусто = broadcast для всей аудитории."),
     )
     type = models.ForeignKey(
         NotificationType, on_delete=models.PROTECT, related_name='notifications',

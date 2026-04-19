@@ -31,6 +31,19 @@ export interface Company {
 	user_count?: number;
 }
 
+export interface UserMembership {
+	id: number;
+	company: number;
+	company_name?: string;
+	role?: number | null;
+	role_code?: string;
+	role_name?: string;
+	is_primary?: boolean;
+	is_active?: boolean;
+	can_sell?: boolean;
+	can_buy?: boolean;
+}
+
 export interface User {
 	id: number;
 	username: string;
@@ -43,6 +56,7 @@ export interface User {
 	role_data?: { code: string; name: string };
 	workspace_role?: string | null;
 	is_platform_admin?: boolean;
+	memberships?: UserMembership[];
 	kyc_status?: string | null;
 	// Per-membership capabilities from the primary company.
 	// OWNER distributes these inside the team; frontend filters
@@ -220,8 +234,29 @@ export const accountsApi = {
 
 	// ─── System Roles (admin) ──────────────────────────────────────────
 	getSystemRoles: async () => {
-		const response = await apiClient.get<{ code: string; name: string; is_staff_level: boolean }[]>('accounts/system-roles/');
+		const response = await apiClient.get<{ code: string; name: string }[]>('accounts/system-roles/');
 		return response.data;
+	},
+
+	// ─── Workspace Roles ───────────────────────────────────────────────
+	getWorkspaceRoles: async (companyType?: string) => {
+		const url = companyType
+			? `accounts/workspace-roles/?company_type=${encodeURIComponent(companyType)}`
+			: 'accounts/workspace-roles/';
+		const response = await apiClient.get<{ code: string; name: string; applicable_to_types: string[] }[]>(url);
+		return response.data;
+	},
+
+	// ─── User Memberships (admin) ──────────────────────────────────────
+	addUserMembership: async (userId: number, data: { company: number; workspace_role: string; is_primary?: boolean }) => {
+		const response = await apiClient.post<{
+			id: number; company_id: number; company_name: string;
+			workspace_role: string; is_primary: boolean;
+		}>(`accounts/users/${userId}/add-membership/`, data);
+		return response.data;
+	},
+	removeUserMembership: async (userId: number, membershipId: number) => {
+		await apiClient.delete(`accounts/users/${userId}/remove-membership/${membershipId}/`);
 	},
 
 	// ─── Role Applications (admin) ─────────────────────────────────────

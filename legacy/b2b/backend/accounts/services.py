@@ -670,17 +670,24 @@ def is_member_of(user: 'CustomUser', company_id: int, *, capability: Optional[st
 
 
 def is_platform_admin_viewer(user: 'CustomUser') -> bool:
-    """Platform admin without any company membership — viewer mode.
+    """Platform Admin acting on platform-level — never acts on behalf of a company.
 
-    Such users may READ all company data (moderation), but business services
-    must refuse write operations. See memory/admin_viewer_mode_*.md.
+    `is_superuser` is intentionally *excluded*: superuser is the DBA emergency
+    bypass and must be able to fix any business record, even on behalf of a
+    company. Migration accounts/0010_platform_admin_model removes any
+    CompanyMember rows for users with SystemRole.ADMIN, so admin-viewer equals
+    "role.code == 'ADMIN' and not is_superuser".
+
+    Kept as a function because business services use the error code
+    `ADMIN_VIEWER_CANNOT_ACT`, which conveys intent better than a generic
+    "member required" when a platform admin tries to act for a company.
     """
     if not user or not user.is_authenticated:
         return False
-    role_code = getattr(getattr(user, 'role', None), 'code', None)
-    if role_code != 'ADMIN':
+    if getattr(user, 'is_superuser', False):
         return False
-    return not user.memberships.filter(is_active=True).exists()
+    role_code = getattr(getattr(user, 'role', None), 'code', None)
+    return role_code == 'ADMIN'
 
 
 def company_has_operational_subscription(company_id: int) -> bool:

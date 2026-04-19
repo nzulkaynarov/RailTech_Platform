@@ -27,11 +27,13 @@ export const verificationLabels: Record<VerificationStatus, string> = {
 export interface CompanyStatusEntry {
   status: CompanyStatus;
   verification: VerificationStatus;
-  /** For SELLER: manufacturer must confirm the seller relationship */
-  manufacturerConfirmation?: 'pending' | 'confirmed' | 'rejected';
 }
 
-/* ─── User Role (exactly ONE per employee, assigned by company admin) ── */
+/* ─── System Role (Platform-level) ─────────────────────────────────────
+ * After accounts/0010_platform_admin_model the only SystemRoles are ADMIN
+ * (Platform Admin — owns the platform, no CompanyMember) and USER (everyone
+ * else). The fine-grained "what can this user do inside their company" lives
+ * in CompanyMember.role (WorkspaceRole) + can_sell / can_buy. See ADR-0002. */
 export type UserRole = 'ADMIN' | 'USER';
 
 export const roleLabels: Record<UserRole, string> = {
@@ -79,56 +81,31 @@ interface UserState {
   activeStatus: CompanyStatus;
   profile: UserProfile;
   company: Company;
-  /** Platform admin acts as viewer: sees all 3 contexts (BUYER/SELLER/MFG) but
-   * cannot execute business actions (purchase, sign, pay, bid, etc.).
-   * True when role === 'ADMIN' AND user has no active CompanyMember, i.e. admin
-   * is not attached to any company and observes the platform from outside. */
+  /** True iff `role === 'ADMIN'`. Kept under its old name to avoid a wave of
+   * renames across the call sites that still consume `isViewerMode`; semantics
+   * are now simple: platform admin never operates within a company (migration
+   * accounts/0010_platform_admin_model). The historical three-context synthetic
+   * switcher has been replaced by `PlatformAdminShell` at the app level. */
   isViewerMode: boolean;
 
   /* ── Auth integration ── */
   loadFromAuth: () => Promise<void>;
 
-  /* ── Onboarding actions ── */
-  completeOnboarding: (data: {
-    email: string;
-    companyName: string;
-    companyInn: string;
-    selectedStatus: CompanyStatus;
-    firstName: string;
-    lastName: string;
-  }) => void;
-
-  /* ── Admin approval simulation ── */
-  adminApproveStatus: (status: CompanyStatus) => void;
-  adminRejectStatus: (status: CompanyStatus) => void;
-
-  /* ── Manufacturer confirms seller ── */
-  manufacturerConfirmSeller: (status: CompanyStatus) => void;
-
-  /* ── Add additional status (company already verified) ── */
-  addCompanyStatus: (status: CompanyStatus) => void;
-
   /* ── Navigation ── */
   setActiveStatus: (status: CompanyStatus) => void;
   setRole: (role: UserRole) => void;
   updateProfile: (profile: Partial<UserProfile>) => void;
-  enterMainApp: () => void;
-  resetToOnboarding: () => void;
-}
-
-/* ─── Helpers ──────────────────────────────────────────────────────── */
-
-function getVerifiedStatuses(entries: CompanyStatusEntry[]): CompanyStatus[] {
-  return entries.filter((e) => e.verification === 'verified').map((e) => e.status);
 }
 
 /* ─── Store ─────────────────────────────────────────────────────────── */
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const useUserStore = create<UserState>((set, _get) => ({
-  /* Default: empty until loaded from auth */
+  /* Default: empty until loaded from auth. Default role is USER — an admin
+   * default would make short-lived UI before auth finishes resolve into
+   * admin-only screens. */
   screen: 'onboarding',
-  role: 'ADMIN',
+  role: 'USER',
   activeStatus: 'SELLER',
   isViewerMode: false,
   profile: {
@@ -175,37 +152,25 @@ export const useUserStore = create<UserState>((set, _get) => ({
       const canSell = userPayload.can_sell !== false;
       const canBuy = userPayload.can_buy !== false;
 
-      // Platform-admin viewer mode: SystemRole.ADMIN без company. Читаем флаг
-      // is_platform_admin (идёт с /me/). Админ работает в PlatformAdminShell —
-      // обычные контексты BUYER/SELLER/MANUFACTURER ему не нужны, но для
-      // обратной совместимости оставляем viewer-режим.
+      // Platform admin is decided purely by the backend-computed flag (see
+      // CustomUser.is_platform_admin property) with a local fallback on role
+      // code. Admins are rendered by PlatformAdminShell and never see the
+      // three-context switcher, so no synthetic statusEntries are needed.
       const backendFlag = (userPayload as { is_platform_admin?: boolean }).is_platform_admin;
-      const hasCompany = !!company;
-      const isPlatformAdmin = backendFlag ?? (role_code === 'ADMIN' && !hasCompany);
-      const isViewerMode = isPlatformAdmin && !hasCompany;
+      const isPlatformAdmin = backendFlag ?? role_code === 'ADMIN';
 
-      let statusEntries: CompanyStatusEntry[];
-      if (isViewerMode) {
-        // Admin without company — synthetic 3-context switcher for observation only.
-        statusEntries = [
-          { status: 'BUYER', verification: 'verified' as const },
-          { status: 'SELLER', verification: 'verified' as const },
-          { status: 'MANUFACTURER', verification: 'verified' as const },
-        ];
-      } else {
-        const rawEntries: CompanyStatusEntry[] = companyTypes.map((code) => ({
-          status: typeMap[code] || 'BUYER',
-          verification: 'verified' as const,
-        }));
-        // Filter out contexts the member may not use:
-        //   can_sell=false → drop SELLER / MANUFACTURER
-        //   can_buy=false  → drop BUYER
-        statusEntries = rawEntries.filter((e) => {
-          if ((e.status === 'SELLER' || e.status === 'MANUFACTURER') && !canSell) return false;
-          if (e.status === 'BUYER' && !canBuy) return false;
-          return true;
-        });
-      }
+      const rawEntries: CompanyStatusEntry[] = companyTypes.map((code) => ({
+        status: typeMap[code] || 'BUYER',
+        verification: 'verified' as const,
+      }));
+      // Filter out contexts the member may not use:
+      //   can_sell=false → drop SELLER / MANUFACTURER
+      //   can_buy=false  → drop BUYER
+      const statusEntries: CompanyStatusEntry[] = rawEntries.filter((e) => {
+        if ((e.status === 'SELLER' || e.status === 'MANUFACTURER') && !canSell) return false;
+        if (e.status === 'BUYER' && !canBuy) return false;
+        return true;
+      });
       // If OWNER revoked every capability we still keep BUYER as a safe fallback
       // so the app stays navigable (page-level guards do the fine-grained gating).
       const activeStatus: CompanyStatus = statusEntries.length > 0
@@ -215,7 +180,9 @@ export const useUserStore = create<UserState>((set, _get) => ({
       set({
         screen: 'main',
         activeStatus,
-        isViewerMode,
+        // Kept for backwards compatibility with call sites still reading
+        // `isViewerMode`; see the UserState comment above.
+        isViewerMode: isPlatformAdmin,
         role: isPlatformAdmin ? 'ADMIN' : 'USER',
         profile: {
           firstName: first_name || '',
@@ -242,123 +209,19 @@ export const useUserStore = create<UserState>((set, _get) => ({
         } : {
           name: '',
           inn: '',
-          // Viewer-mode platform admin has no company and therefore no KYC to
-          // pass — treat as 'verified' so KYC banners/guards don't gate the UI.
-          kycStatus: isViewerMode ? 'verified' : 'not_started',
+          // Platform admin has no company — KYC is not applicable, so we mark
+          // 'verified' to keep KYC banners / guards out of admin nav.
+          kycStatus: isPlatformAdmin ? 'verified' : 'not_started',
           country: '',
           city: '',
-          statusEntries: isViewerMode ? statusEntries : [],
+          statusEntries: [],
         },
       });
     }
   },
 
-  completeOnboarding: (data) => {
-    const initials = `${data.firstName[0] ?? ''}${data.lastName[0] ?? ''}`.toUpperCase();
-    set({
-      screen: 'pending_verification',
-      role: 'ADMIN', // First user is always admin
-      activeStatus: data.selectedStatus,
-      profile: {
-        firstName: data.firstName,
-        lastName: data.lastName,
-        patronymic: '',
-        email: data.email,
-        phone: '',
-        position: '',
-        avatarInitials: initials,
-      },
-      company: {
-        name: data.companyName,
-        inn: data.companyInn,
-        kycStatus: 'pending',
-        country: '',
-        city: '',
-        statusEntries: [
-          { status: data.selectedStatus, verification: 'pending' },
-        ],
-      },
-    });
-  },
-
-  adminApproveStatus: (status) =>
-    set((s) => {
-      const entries = s.company.statusEntries.map((e) =>
-        e.status === status ? { ...e, verification: 'verified' as const } : e
-      );
-      const hasVerified = entries.some((e) => e.verification === 'verified');
-      return {
-        company: { ...s.company, statusEntries: entries, kycStatus: hasVerified ? 'verified' : s.company.kycStatus },
-        screen: hasVerified ? 'main' : s.screen,
-      };
-    }),
-
-  adminRejectStatus: (status) =>
-    set((s) => ({
-      company: {
-        ...s.company,
-        statusEntries: s.company.statusEntries.map((e) =>
-          e.status === status ? { ...e, verification: 'rejected' as const } : e
-        ),
-      },
-    })),
-
-  manufacturerConfirmSeller: (status) =>
-    set((s) => ({
-      company: {
-        ...s.company,
-        statusEntries: s.company.statusEntries.map((e) =>
-          e.status === status ? { ...e, manufacturerConfirmation: 'confirmed' as const } : e
-        ),
-      },
-    })),
-
-  addCompanyStatus: (status) =>
-    set((s) => {
-      const exists = s.company.statusEntries.some((e) => e.status === status);
-      if (exists) return {};
-      return {
-        company: {
-          ...s.company,
-          statusEntries: [
-            ...s.company.statusEntries,
-            {
-              status,
-              verification: 'pending',
-              ...(status === 'SELLER' ? { manufacturerConfirmation: 'pending' as const } : {}),
-            },
-          ],
-        },
-      };
-    }),
-
   setActiveStatus: (status) => set({ activeStatus: status }),
   setRole: (role) => set({ role }),
   updateProfile: (partial) =>
     set((s) => ({ profile: { ...s.profile, ...partial } })),
-  enterMainApp: () => set({ screen: 'main' }),
-  resetToOnboarding: () =>
-    set({
-      screen: 'onboarding',
-      company: {
-        name: '',
-        inn: '',
-        kycStatus: 'not_started',
-        country: '',
-        city: '',
-        statusEntries: [],
-      },
-    }),
 }));
-
-/* ─── Selectors ────────────────────────────────────────────────────── */
-
-export function useVerifiedStatuses(): CompanyStatus[] {
-  const entries = useUserStore((s) => s.company.statusEntries);
-  return getVerifiedStatuses(entries);
-}
-
-export function useIsStatusVerified(status: CompanyStatus): boolean {
-  const entries = useUserStore((s) => s.company.statusEntries);
-  return entries.some((e) => e.status === status && e.verification === 'verified');
-}

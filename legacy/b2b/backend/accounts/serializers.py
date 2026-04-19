@@ -18,13 +18,15 @@ class KYCDocumentSerializer(serializers.ModelSerializer):
 class CompanyMemberSerializer(serializers.ModelSerializer):
     user_email = serializers.EmailField(source='user.email', read_only=True)
     role_name = serializers.CharField(source='role.name', read_only=True)
+    role_code = serializers.CharField(source='role.code', read_only=True)
     company_name = serializers.CharField(source='company.name', read_only=True)
 
     class Meta:
         model = CompanyMember
         fields = [
             'id', 'user', 'user_email', 'company', 'company_name',
-            'role', 'role_name', 'is_primary', 'is_active', 'joined_at'
+            'role', 'role_code', 'role_name', 'is_primary', 'is_active',
+            'can_sell', 'can_buy', 'joined_at',
         ]
 
 

@@ -1048,6 +1048,66 @@
     "title": "RailTech · Platform",
     "subtitle": "Administrator"
   },
+  "platformDashboard": {
+    "title": "Platform dashboard",
+    "subtitle": "Overview of the whole system: users, companies, deals, subscriptions",
+    "kpi": {
+      "users": "Users",
+      "usersSub": "Active: {{active}} · New in 7 days: {{new}}",
+      "companies": "Companies",
+      "companiesSub": "Buyers: {{buyers}} · Sellers: {{sellers}} · Manufacturers: {{mfg}}",
+      "deals": "Deals",
+      "dealsSub": "Active: {{active}} · Won: {{won}}",
+      "pipeline": "Pipeline",
+      "wonValue": "Won: {{value}}"
+    },
+    "attention": {
+      "title": "Needs attention",
+      "total": "{{count}} pending",
+      "empty": "All clear — no pending items",
+      "kyc": "Companies awaiting KYC verification",
+      "roleApps": "Role applications — unreviewed",
+      "subsPastDue": "Subscriptions past due",
+      "subsExpiring": "Subscriptions expiring in 7 days",
+      "overdueInvoices": "Overdue invoices"
+    },
+    "dealsByStage": {
+      "title": "Deals by stage",
+      "openAll": "All deals",
+      "empty": "No deals yet"
+    },
+    "subscriptions": {
+      "title": "Subscriptions",
+      "active": "Active",
+      "trial": "Trial",
+      "pastDue": "Past due",
+      "suspended": "Suspended",
+      "manage": "Manage subscriptions"
+    },
+    "companies": {
+      "title": "Companies",
+      "verified": "Verified",
+      "pendingKyc": "Awaiting KYC",
+      "buyers": "Buyers",
+      "sellers": "Sellers",
+      "manufacturers": "Manufacturers",
+      "manage": "Manage companies"
+    },
+    "quickActions": {
+      "title": "Quick actions",
+      "users": "Users",
+      "companies": "Companies",
+      "kyc": "KYC",
+      "masterData": "Master data",
+      "catalog": "Catalog",
+      "settings": "Settings"
+    },
+    "recentActivity": {
+      "title": "Recent activity",
+      "empty": "No recent events",
+      "system": "System"
+    }
+  },
   "companyStatusDesc": {
     "BUYER": "Only requests quotes and purchases equipment",
     "MANUFACTURER": "Produces, sells directly or through sellers, can also purchase",
@@ -2326,76 +2386,58 @@
         "roleResponsibilities": "Roles & Responsibilities"
       },
       "roleResponsibilities": {
-        "intro": "Five platform roles and their areas of responsibility (per ADR-0002). Expand a role card to see what it does and does not do.",
+        "intro": "Platform roles live on three layers: SystemRole (platform: ADMIN / USER), WorkspaceRole (role inside a company), and per-member capabilities can_sell / can_buy. See ADR-0002 for the canonical reference.",
         "does": "What it does",
         "doesNot": "What it does NOT do",
-        "escalation": "Escalation: Owner → Account Manager → Sales Manager → Platform Admin → Platform Engineer. Don't escalate to Platform Engineer before checking the React Admin loop.",
+        "escalation": "Escalation: employee → company OWNER → Platform Admin → Platform Engineer. Don't escalate to the engineer before checking the React Admin loop (KYC, subscriptions, role applications).",
         "platformEngineer": {
-          "title": "Platform Engineer",
-          "summary": "Technical owner of the platform. Works via Django Unfold (/admin/) and terminal. is_superuser=True.",
+          "title": "Platform Engineer (is_superuser)",
+          "summary": "Technical owner. Works via Django Unfold (/admin/) and terminal. Superuser bypasses every commercial check — DBA escape hatch.",
           "does": [
             "Deployment, DB migrations, Celery Beat schedule",
-            "Master data CRUD: currencies, countries, units, DeliveryBasis",
-            "Assigning system roles (ADMIN / SALES_MANAGER / ACCOUNT_MANAGER) via Django",
+            "Master data CRUD: currencies, countries, units, DeliveryBasis, WorkspaceRole",
+            "Assigning SystemRole ADMIN / USER via Django shell or React Admin",
             "Emergency data fixes via Unfold (temporarily removing ReadOnlyInspectionMixin)",
-            "Superadmin seed: init_superadmin, core_seed",
+            "Seed: init_superadmin, core_seed",
             "Viewing ActivityLog, QuoteItemHistory, pghistory"
           ],
-          "doesNot": "Does not work with clients, deals, contracts — that's the business roles' domain."
+          "doesNot": "Does not work with clients, deals, contracts — that's the domain of commercial company staff."
         },
         "platformAdmin": {
-          "title": "Platform Admin",
-          "summary": "Moderates the platform: users, companies, KYC, subscriptions, role applications. Works only in the React Admin SPA. Does NOT execute business actions on behalf of companies (viewer mode).",
+          "title": "Platform Admin (SystemRole.ADMIN)",
+          "summary": "Moderates the platform: users, companies, KYC, subscriptions, role applications. Invariant: cannot be a CompanyMember — admins have no commercial stake in any deal. Works in PlatformAdminShell inside the SPA.",
           "does": [
-            "Users: create, edit, change role, toggle-active, delete",
-            "Companies: registry, edit details, team (invite members)",
-            "KYC verification: L1→L2→L3, revoke, upload documents",
-            "Supplier subscriptions: create, activate, suspend, renew, record payment",
+            "Users: create, edit, change SystemRole, toggle-active, delete",
+            "Companies: registry, edit details, invite members into other companies",
+            "KYC verification: L1→L2→L3, revoke",
+            "SELLER / MANUFACTURER subscriptions: create, activate, suspend, renew, record payment",
             "Role applications SUPPLIER / MANUFACTURER: approve / reject",
-            "Force-change Deal stage on escalation from a manager",
+            "Force-change Deal stage / Force-approve Quote / Force-cancel Contract (reason required, audit-logged with [FORCE_ADMIN])",
             "SystemSettings: VAT / margin / exchange rate / maintenance / 2FA"
           ],
-          "doesNot": "Does not perform technical deploy, DB migrations, direct model edits via shell. Does not execute business actions on behalf of companies (buy, sell, sign contract, pay, submit/accept bid)."
+          "doesNot": "Does not perform technical deploy / migrations. Cannot become a CompanyMember. Does not buy, sell, sign or pay on behalf of any company — backend refuses with ADMIN_VIEWER_CANNOT_ACT."
         },
-        "salesManager": {
-          "title": "Sales Manager",
-          "summary": "Drives deals from request to close. Builds quotes, signs contracts, sends invoices.",
+        "supplierTeam": {
+          "title": "SUPPLIER / MANUFACTURER team (WorkspaceRoles inside the seller company)",
+          "summary": "SystemRole is USER for everyone. Actual rights come from WorkspaceRole + can_sell / can_buy. Requires an operational subscription (TRIAL or ACTIVE).",
           "does": [
-            "Deal FSM: DRAFT → SOURCING → CALCULATING → QUOTE_SENT → CONTRACT_SIGNED → CLOSED_WON",
-            "Building a Quote from QuoteItems (after Excel import or Smart Match)",
-            "Landed Cost calculation (logistics / customs / margin)",
-            "Quote PDF and send_to_client (freezes prices)",
-            "Quote → APPROVED / REJECTED",
-            "After CLOSED_WON: generating Contract / Invoice / Act",
-            "Leads → Convert to Deal",
-            "Sales analytics"
+            "OWNER — runs the team, distributes can_sell / can_buy, pays the subscription, invites team members",
+            "SALES_MANAGER — submits SupplierBid, builds and sends Quote, signs Contract, client chat, sales analytics (only if can_sell)",
+            "LOGIST — manages Fulfillment after CLOSED_WON (shipment, tracking)",
+            "CONTRACT_MANAGER (MANUFACTURER) — signs manufacturer contracts, owns the contract flow",
+            "FOREIGN_TRADE_SPECIALIST (MANUFACTURER) — foreign trade and export documentation"
           ],
-          "doesNot": "Does not handle KYC verification, company creation, or master data edits."
+          "doesNot": "Does not touch other companies. Does not moderate the platform. Does not perform buyer-side actions on behalf of a CLIENT."
         },
-        "accountManager": {
-          "title": "Account Manager",
-          "summary": "Supports verified clients, assists with KYC, manages correspondence.",
+        "clientTeam": {
+          "title": "CLIENT team (WorkspaceRoles inside the buyer company)",
+          "summary": "SystemRole is USER for everyone. No subscription required — any KYC-verified CLIENT can buy.",
           "does": [
-            "Supporting existing clients",
-            "KYC assist: helping upload documents, escalating approve to Platform Admin",
-            "Deal chat and messages",
-            "Viewing Acts / Fulfillments (delivery status)",
-            "Repeat sales and cross-sell"
+            "OWNER — company profile, KYC, invites, capabilities",
+            "PROCUREMENT_MANAGER — creates RFQs, imports Excel requests, evaluates SupplierBid (if can_buy)",
+            "BUYER_MANAGER — runs deals, chats with sellers, records payments, accepts Fulfillment deliveries"
           ],
-          "doesNot": "Does not change Deal stage in CALCULATING / QUOTE_SENT (Sales Manager's domain) or perform force-actions."
-        },
-        "companyOwner": {
-          "title": "Company Owner",
-          "summary": "Head of a client company. Works within the context of their own company, not the platform. Distributes can_sell/can_buy among team members.",
-          "does": [
-            "Profile / Company registry edits (pre-verification only)",
-            "Inviting team members",
-            "Distributing can_sell / can_buy across team members",
-            "Uploading KYC documents",
-            "Submitting CompanyRoleApplication to upgrade CLIENT → SUPPLIER / MANUFACTURER",
-            "Paying SupplierSubscription (if SELLER / MANUFACTURER)"
-          ],
-          "doesNot": "Sees only their own data. No access to other companies' data — multi-tenancy via CompanyMember."
+          "doesNot": "Does not see or interfere with other companies. Does not perform seller-side operations (submit bid, offer CRUD)."
         }
       },
       "quickActions": {
@@ -2535,6 +2577,45 @@
         "company": "Company",
         "noData": "Not specified",
         "noRole": "No role assigned"
+      },
+      "tabs": {
+        "profile": "Profile",
+        "role": "System role",
+        "memberships": "Companies"
+      },
+      "roleTab": {
+        "explanation": "System role defines platform-level access. ADMIN is the platform owner — not tied to any company. USER is a regular user who works through company memberships.",
+        "systemRole": "System role",
+        "blockedByMembership": "unavailable: user is in a company"
+      },
+      "memberships": {
+        "existing": "Current companies",
+        "empty": "No memberships",
+        "addNew": "Add to company",
+        "company": "Company",
+        "workspaceRole": "Workspace role",
+        "selectCompanyFirst": "Select company first",
+        "setPrimary": "Set as primary",
+        "add": "Add",
+        "added": "Added to company",
+        "removed": "Removed from company",
+        "addFailed": "Failed to add",
+        "removeFailed": "Failed to remove",
+        "companyAndRoleRequired": "Company and role required",
+        "primary": "Primary",
+        "platformAdminTitle": "Platform Admin is not tied to companies",
+        "platformAdminDesc": "To add a membership, first change the system role to USER."
+      },
+      "errors": {
+        "ADMIN_ROLE_REQUIRES_NO_MEMBERSHIPS": "Cannot grant ADMIN to a user with memberships — remove memberships first.",
+        "PLATFORM_ADMIN_CANNOT_JOIN_COMPANY": "Platform Admin cannot join a company.",
+        "WORKSPACE_ROLE_NOT_APPLICABLE_TO_COMPANY_TYPE": "This role is not applicable to the company type.",
+        "WORKSPACE_ROLE_NOT_FOUND": "Workspace role not found.",
+        "SYSTEM_ROLE_NOT_FOUND": "System role not found.",
+        "COMPANY_AND_WORKSPACE_ROLE_REQUIRED": "Company and workspace role are required.",
+        "COMPANY_NOT_FOUND": "Company not found.",
+        "MEMBERSHIP_NOT_FOUND": "Membership not found.",
+        "ROLE_CODE_REQUIRED": "Role code is required."
       },
       "fields": {
         "email": "Email",
@@ -3217,6 +3298,12 @@
     "FORCE_REASON_REQUIRED": "Force-action requires a mandatory reason (written to the audit log)",
     "QUOTE_STATUS_NOT_FOUND": "Quote status not found in the lookup table",
     "SUBSCRIPTION_NOT_OPERATIONAL": "Company subscription is not operational — please pay the subscription to continue selling",
+    "PLATFORM_ADMIN_CANNOT_JOIN_COMPANY": "A platform administrator cannot join a company — admins have no commercial stake in any deal",
+    "ADMIN_ROLE_REQUIRES_NO_MEMBERSHIPS": "The platform admin role can only be assigned to users with no company memberships",
+    "WORKSPACE_ROLE_NOT_APPLICABLE_TO_COMPANY_TYPE": "This workspace role is not applicable to the selected company type",
+    "WORKSPACE_ROLE_NOT_FOUND": "Workspace role not found in the lookup table",
+    "ROLE_CODE_REQUIRED": "Role code is required",
+    "SYSTEM_ROLE_NOT_FOUND": "System role not found in the lookup table",
     "ONLY_OWNER_CAN_DISTRIBUTE_CAPABILITIES": "Only the company OWNER can distribute sell / buy rights",
     "MEMBER_ID_REQUIRED": "member_id is required",
     "MEMBER_NOT_FOUND": "Member not found in this company",

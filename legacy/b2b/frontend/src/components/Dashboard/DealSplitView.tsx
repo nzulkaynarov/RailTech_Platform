@@ -68,7 +68,15 @@ export const DealSplitView: React.FC = () => {
     const [isCreating, setIsCreating] = useState(false);
     const [newDealTitle, setNewDealTitle] = useState('');
     const [createDialogOpen, setCreateDialogOpen] = useState(false);
-    const { role } = useAuthStore();
+    const { role, user } = useAuthStore();
+    // Stage workflow is a CRM action — visible to platform admin OR to a member
+    // whose workspace_role inside the company is one of the management roles.
+    // Maps to ADR-0002: SystemRole = ADMIN/USER, "manager" semantics live in
+    // CompanyMember.role (WorkspaceRole).
+    const wsRole = user?.workspace_role ?? null;
+    const canManageStages = role === 'ADMIN' || (
+        wsRole !== null && ['OWNER', 'SALES_MANAGER', 'CONTRACT_MANAGER', 'PROCUREMENT_MANAGER', 'BUYER_MANAGER'].includes(wsRole)
+    );
 
     const handleCreateDeal = async () => {
         setIsCreating(true);
@@ -313,8 +321,8 @@ export const DealSplitView: React.FC = () => {
                             </div>
                         )}
 
-                        {/* Stage workflow (managers only) */}
-                        {role && ['SALES_MANAGER', 'ACCOUNT_MANAGER', 'ADMIN'].includes(role) && (
+                        {/* Stage workflow (platform admin or company-side managers only) */}
+                        {canManageStages && (
                             <div className="border-b px-3 py-1.5 flex items-center gap-1.5 shrink-0 overflow-x-auto bg-muted/50">
                                 <span className="text-xs text-muted-foreground mr-1 shrink-0">{t('dealSplit.stageLabel')}:</span>
                                 {stages.map(s => {

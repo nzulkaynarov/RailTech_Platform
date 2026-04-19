@@ -1048,6 +1048,66 @@
     "title": "RailTech · Платформа",
     "subtitle": "Администратор"
   },
+  "platformDashboard": {
+    "title": "Дашборд платформы",
+    "subtitle": "Обзор всей системы: пользователи, компании, сделки, подписки",
+    "kpi": {
+      "users": "Пользователи",
+      "usersSub": "Активных: {{active}} · За 7 дней: {{new}}",
+      "companies": "Компании",
+      "companiesSub": "Покупателей: {{buyers}} · Продавцов: {{sellers}} · Производителей: {{mfg}}",
+      "deals": "Сделки",
+      "dealsSub": "Активных: {{active}} · Выиграно: {{won}}",
+      "pipeline": "Пайплайн",
+      "wonValue": "Выиграно: {{value}}"
+    },
+    "attention": {
+      "title": "Требует внимания",
+      "total": "{{count}} задач",
+      "empty": "Всё в порядке — нерешённых задач нет",
+      "kyc": "Компании ждут KYC-верификацию",
+      "roleApps": "Заявки на роли — не рассмотрены",
+      "subsPastDue": "Подписки просрочены",
+      "subsExpiring": "Подписки истекают в ближайшую неделю",
+      "overdueInvoices": "Просроченные инвойсы"
+    },
+    "dealsByStage": {
+      "title": "Сделки по стадиям",
+      "openAll": "Все сделки",
+      "empty": "Сделок пока нет"
+    },
+    "subscriptions": {
+      "title": "Подписки",
+      "active": "Активные",
+      "trial": "Триал",
+      "pastDue": "Просрочены",
+      "suspended": "Приостановлены",
+      "manage": "Управление подписками"
+    },
+    "companies": {
+      "title": "Компании",
+      "verified": "Верифицированы",
+      "pendingKyc": "Ждут KYC",
+      "buyers": "Покупатели",
+      "sellers": "Продавцы",
+      "manufacturers": "Производители",
+      "manage": "Управление компаниями"
+    },
+    "quickActions": {
+      "title": "Быстрые действия",
+      "users": "Пользователи",
+      "companies": "Компании",
+      "kyc": "KYC",
+      "masterData": "Справочники",
+      "catalog": "Каталог",
+      "settings": "Настройки"
+    },
+    "recentActivity": {
+      "title": "Последняя активность",
+      "empty": "Нет недавних событий",
+      "system": "Система"
+    }
+  },
   "companyStatusDesc": {
     "BUYER": "Только запрашивает КП и закупает оборудование",
     "MANUFACTURER": "Производит, продаёт напрямую или через продавцов, может закупать",
@@ -2326,76 +2386,58 @@
         "roleResponsibilities": "Роли и обязанности"
       },
       "roleResponsibilities": {
-        "intro": "Пять ролей платформы и их зоны ответственности (согласно ADR-0002). Разверните карточку роли, чтобы увидеть, что она делает и чего не делает.",
+        "intro": "Роли в платформе организованы на трёх уровнях: SystemRole (платформа: ADMIN / USER), WorkspaceRole (роль в конкретной компании) и per-member capabilities can_sell / can_buy. Подробности см. в ADR-0002.",
         "does": "Что делает",
         "doesNot": "Что НЕ делает",
-        "escalation": "Эскалация: Owner → Account Manager → Sales Manager → Platform Admin → Platform Engineer. Не эскалируйте на Platform Engineer, пока не проверен React Admin контур.",
+        "escalation": "Эскалация: сотрудник → OWNER компании → Platform Admin → Platform Engineer. Не эскалируйте на инженера, пока не проверен React Admin контур (KYC, подписки, заявки на роли).",
         "platformEngineer": {
-          "title": "Platform Engineer (инженер платформы)",
-          "summary": "Технический владелец платформы. Работает через Django Unfold (/admin/) и терминал. is_superuser=True.",
+          "title": "Platform Engineer (инженер платформы, is_superuser)",
+          "summary": "Технический владелец. Работает через Django Unfold (/admin/) и терминал. Суперпользователь обходит все коммерческие проверки — DBA escape hatch.",
           "does": [
             "Развёртывание, миграции БД, расписание Celery Beat",
-            "CRUD справочников: валюты, страны, единицы измерения, DeliveryBasis",
-            "Назначение системных ролей (ADMIN / SALES_MANAGER / ACCOUNT_MANAGER) через Django",
+            "CRUD справочников: валюты, страны, единицы измерения, DeliveryBasis, WorkspaceRole",
+            "Назначение SystemRole ADMIN / USER через Django shell или React Admin",
             "Аварийные фиксы данных через Unfold (временно сняв ReadOnlyInspectionMixin)",
-            "Seed суперадмина: init_superadmin, core_seed",
+            "Seed: init_superadmin, core_seed",
             "Просмотр ActivityLog, QuoteItemHistory, pghistory"
           ],
-          "doesNot": "Не работает с клиентами, сделками, контрактами — это зона бизнес-ролей."
+          "doesNot": "Не работает с клиентами, сделками, контрактами — это зона коммерческих сотрудников компаний."
         },
         "platformAdmin": {
-          "title": "Platform Admin (бизнес-админ платформы)",
-          "summary": "Модерирует платформу: пользователи, компании, KYC, подписки, заявки на роли. Работает только в React Admin SPA. Бизнес-операции от лица компаний НЕ совершает (viewer mode).",
+          "title": "Platform Admin (SystemRole.ADMIN)",
+          "summary": "Модерирует платформу: пользователи, компании, KYC, подписки, заявки на роли. По инварианту не может быть CompanyMember — у него нет коммерческого интереса в сделках. Работает в PlatformAdminShell в SPA.",
           "does": [
-            "Пользователи: создание, редактирование, смена роли, toggle-active, удаление",
-            "Компании: реестр, правка реквизитов, команда (invite members)",
-            "KYC-верификация: L1→L2→L3, revoke, загрузка документов",
-            "Подписки поставщиков: создание, активация, приостановка, продление, фиксация оплаты",
+            "Пользователи: создание, редактирование, смена SystemRole, toggle-active, удаление",
+            "Компании: реестр, правка реквизитов, invite members в чужие компании",
+            "KYC-верификация: L1→L2→L3, revoke",
+            "Подписки SELLER / MANUFACTURER: создание, активация, приостановка, продление, фиксация оплаты",
             "Заявки на роли SUPPLIER / MANUFACTURER: approve / reject",
-            "Force-change Deal stage при эскалации от менеджера",
+            "Force-change Deal stage / Force-approve Quote / Force-cancel Contract (с обязательным reason, audit-лог с [FORCE_ADMIN])",
             "SystemSettings: VAT / margin / exchange rate / maintenance / 2FA"
           ],
-          "doesNot": "Не делает технический deploy, миграции БД, прямые правки моделей через shell. Не совершает бизнес-операции от лица компаний (покупать, продавать, подписывать контракт, платить, подавать/принимать bid)."
+          "doesNot": "Не делает технический deploy / миграции. Не становится CompanyMember. Не покупает, не продаёт, не подписывает и не платит от лица ни одной компании — backend отвергает с ADMIN_VIEWER_CANNOT_ACT."
         },
-        "salesManager": {
-          "title": "Sales Manager (менеджер по продажам)",
-          "summary": "Ведёт сделки от заявки до закрытия. Формирует КП, подписывает контракты, отправляет инвойсы.",
+        "supplierTeam": {
+          "title": "Команда SUPPLIER / MANUFACTURER (WorkspaceRoles внутри компании-продавца)",
+          "summary": "SystemRole у всех USER. Реальные права определяются WorkspaceRole + can_sell/can_buy. Обязательно — операционная подписка (TRIAL или ACTIVE).",
           "does": [
-            "FSM сделки: DRAFT → SOURCING → CALCULATING → QUOTE_SENT → CONTRACT_SIGNED → CLOSED_WON",
-            "Формирование Quote из QuoteItems (после импорта Excel или Smart Match)",
-            "Расчёт Landed Cost (logistics / customs / margin)",
-            "PDF КП и send_to_client (замораживает цены)",
-            "Quote → APPROVED / REJECTED",
-            "После CLOSED_WON: генерация Contract / Invoice / Act",
-            "Leads → Convert to Deal",
-            "Аналитика продаж"
+            "OWNER — управляет командой, распределяет can_sell/can_buy, оплачивает подписку, приглашает сотрудников",
+            "SALES_MANAGER — подаёт SupplierBid, формирует Quote, отправляет клиенту, подписывает Contract, чат с клиентом, sales-аналитика (только если can_sell)",
+            "LOGIST — управляет Fulfillment после CLOSED_WON (отгрузка, трекинг)",
+            "CONTRACT_MANAGER (MANUFACTURER) — подписывает контракты производителя, ведёт договорной флоу",
+            "FOREIGN_TRADE_SPECIALIST (MANUFACTURER) — ВЭД и экспортная документация"
           ],
-          "doesNot": "Не делает KYC-верификацию, создание компаний, правку master data."
+          "doesNot": "Не работает с чужими компаниями. Не модерирует платформу. Не совершает buyer-side операции от лица CLIENT."
         },
-        "accountManager": {
-          "title": "Account Manager (аккаунт-менеджер)",
-          "summary": "Сопровождает верифицированных клиентов, помогает с KYC, ведёт переписку.",
+        "clientTeam": {
+          "title": "Команда CLIENT (WorkspaceRoles внутри компании-покупателя)",
+          "summary": "SystemRole у всех USER. Подписка не требуется — покупать может любая CLIENT-компания после KYC.",
           "does": [
-            "Сопровождение существующих клиентов",
-            "KYC-ассист: помогает загрузить документы, эскалирует Platform Admin на approve",
-            "Чат в сделке, сообщения",
-            "Просмотр Acts / Fulfillments (статус поставки)",
-            "Повторные продажи, cross-sell"
+            "OWNER — профиль компании, KYC, инвайты, capabilities",
+            "PROCUREMENT_MANAGER — создаёт RFQ, импортирует Excel-заявки, оценивает SupplierBid (если can_buy)",
+            "BUYER_MANAGER — сопровождает сделки, чат с продавцом, фиксация платежей, приёмка по Fulfillment"
           ],
-          "doesNot": "Не меняет Deal stage в CALCULATING / QUOTE_SENT (это зона Sales Manager) и не делает force-actions."
-        },
-        "companyOwner": {
-          "title": "Company Owner (владелец компании-клиента)",
-          "summary": "Руководитель клиентской компании. Работает в контексте своей компании, не платформы. Distributes can_sell/can_buy between team members.",
-          "does": [
-            "Profile / Company registry правка (только до верификации)",
-            "Приглашение членов команды",
-            "Распределение can_sell / can_buy между членами команды",
-            "Загрузка KYC документов",
-            "Подача CompanyRoleApplication для апгрейда CLIENT → SUPPLIER / MANUFACTURER",
-            "Оплата SupplierSubscription (если SELLER / MANUFACTURER)"
-          ],
-          "doesNot": "Видит только свои данные. Не имеет доступа к данным других компаний — multi-tenancy через CompanyMember."
+          "doesNot": "Не видит и не вмешивается в другие компании. Не совершает продавающих операций (submit bid, offer CRUD)."
         }
       },
       "quickActions": {
@@ -2535,6 +2577,45 @@
         "company": "Компания",
         "noData": "Не указано",
         "noRole": "Роль не назначена"
+      },
+      "tabs": {
+        "profile": "Профиль",
+        "role": "Системная роль",
+        "memberships": "Компании"
+      },
+      "roleTab": {
+        "explanation": "Системная роль определяет права на уровне платформы. ADMIN — владелец платформы, не привязан ни к одной компании. USER — обычный пользователь, работающий через членство в компаниях.",
+        "systemRole": "Системная роль",
+        "blockedByMembership": "недоступно: юзер состоит в компании"
+      },
+      "memberships": {
+        "existing": "Текущие компании",
+        "empty": "Нет членств",
+        "addNew": "Добавить в компанию",
+        "company": "Компания",
+        "workspaceRole": "Роль в компании",
+        "selectCompanyFirst": "Сначала выберите компанию",
+        "setPrimary": "Сделать основной",
+        "add": "Добавить",
+        "added": "Добавлено в компанию",
+        "removed": "Удалено из компании",
+        "addFailed": "Не удалось добавить",
+        "removeFailed": "Не удалось удалить",
+        "companyAndRoleRequired": "Укажите компанию и роль",
+        "primary": "Основная",
+        "platformAdminTitle": "Platform Admin не привязан к компаниям",
+        "platformAdminDesc": "Чтобы добавить этому пользователю членство, сначала смените системную роль на USER."
+      },
+      "errors": {
+        "ADMIN_ROLE_REQUIRES_NO_MEMBERSHIPS": "ADMIN нельзя выдать юзеру с членствами — сначала удалите членства.",
+        "PLATFORM_ADMIN_CANNOT_JOIN_COMPANY": "Platform Admin не может состоять в компании.",
+        "WORKSPACE_ROLE_NOT_APPLICABLE_TO_COMPANY_TYPE": "Эта роль неприменима к типу компании.",
+        "WORKSPACE_ROLE_NOT_FOUND": "Роль в компании не найдена.",
+        "SYSTEM_ROLE_NOT_FOUND": "Системная роль не найдена.",
+        "COMPANY_AND_WORKSPACE_ROLE_REQUIRED": "Укажите компанию и роль.",
+        "COMPANY_NOT_FOUND": "Компания не найдена.",
+        "MEMBERSHIP_NOT_FOUND": "Членство не найдено.",
+        "ROLE_CODE_REQUIRED": "Укажите код роли."
       },
       "fields": {
         "email": "Email",
@@ -3217,6 +3298,12 @@
     "FORCE_REASON_REQUIRED": "Force-действие требует обязательной причины (попадает в audit-лог)",
     "QUOTE_STATUS_NOT_FOUND": "Статус КП не найден в справочнике",
     "SUBSCRIPTION_NOT_OPERATIONAL": "Подписка компании не активна — оплатите подписку, чтобы продолжить продажи",
+    "PLATFORM_ADMIN_CANNOT_JOIN_COMPANY": "Платформенный администратор не может быть членом компании — у него нет коммерческих интересов внутри сделок",
+    "ADMIN_ROLE_REQUIRES_NO_MEMBERSHIPS": "Роль администратора платформы можно назначить только пользователю без членств в компаниях",
+    "WORKSPACE_ROLE_NOT_APPLICABLE_TO_COMPANY_TYPE": "Эта рабочая роль не применима к типу выбранной компании",
+    "WORKSPACE_ROLE_NOT_FOUND": "Рабочая роль не найдена в справочнике",
+    "ROLE_CODE_REQUIRED": "Не указан код роли",
+    "SYSTEM_ROLE_NOT_FOUND": "Системная роль не найдена в справочнике",
     "ONLY_OWNER_CAN_DISTRIBUTE_CAPABILITIES": "Только владелец компании может распределять права продавать/покупать",
     "MEMBER_ID_REQUIRED": "Не указан member_id",
     "MEMBER_NOT_FOUND": "Сотрудник не найден в этой компании",

@@ -31,7 +31,7 @@ from master_data.views import (
 )
 from sourcing.views import ExcelImportView, CatalogImportView, ImportStatusView, SourcingRequestViewSet
 from core.health import health_check
-from core.views import PageStatsView, SystemSettingsView
+from core.views import PageStatsView, SystemSettingsView, PlatformDashboardView
 
 router = DefaultRouter()
 router.register(r'catalog/products', ProductViewSet, basename='product')
@@ -101,6 +101,7 @@ urlpatterns = [
     path('api/v1/crm/analytics/', CRMAnalyticsView.as_view(), name='crm-analytics'),
     path('api/v1/crm/analytics/dashboard/', DashboardAnalyticsView.as_view(), name='dashboard-analytics'),
     path('api/v1/analytics/page-stats/', PageStatsView.as_view(), name='page-stats'),
+    path('api/v1/analytics/platform-dashboard/', PlatformDashboardView.as_view(), name='platform-dashboard'),
     path('api/v1/crm/leads/', LeadCreateView.as_view(), name='lead-create'),
     path('api/v1/crm/status-choices/', Phase2StatusChoicesView.as_view(), name='phase2-status-choices'),
     path('api/v1/system-settings/', SystemSettingsView.as_view(), name='system-settings'),

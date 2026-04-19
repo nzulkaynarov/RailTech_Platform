@@ -26,6 +26,7 @@ const RequestDetailPage = lazy(() => import('./pages/flow/RequestDetailPage').th
 const SourcingHub = lazy(() => import('./components/Sourcing/SourcingHub').then(m => ({ default: m.SourcingHub })));
 
 // Lazy load individual page modules
+const PlatformAdminDashboard = lazy(() => import('./pages/PlatformAdminDashboard'));
 const SourcingRequestsPage = lazy(() => import('./pages/SourcingRequestsPage'));
 const SourcingImportPage = lazy(() => import('./pages/SourcingImportPage'));
 const DealsPage = lazy(() => import('./pages/DealsPage'));
@@ -224,16 +225,23 @@ const ADMIN_PAGES = new Set([
   'admin-catalog', 'admin-categories', 'admin-equipment-groups', 'admin-offers',
   'admin-companies', 'admin-deals', 'admin-master-data',
 ]);
-// CRIT-2 / MED-18: pages that require manager-level RBAC but are not pure ADMIN.
-// Accessible for ADMIN + MANAGER + SELLER (SELLER's CRM submenu exposes Leads).
-// Leads — CRM-инструмент компании-продавца. Видимость регулируется по
-// workspace-роли внутри компании, а не по системной роли платформы.
+// CRM-pages that need a management WorkspaceRole inside the user's company
+// (not a platform-level SystemRole). Buyers don't see these by design.
+// See ADR-0002 — Sales Manager / Account Manager are WorkspaceRoles.
+const CRM_MANAGER_PAGES = new Set(['leads']);
+const CRM_MANAGER_WORKSPACE_ROLES = new Set([
+  'OWNER', 'SALES_MANAGER', 'CONTRACT_MANAGER', 'PROCUREMENT_MANAGER', 'BUYER_MANAGER',
+]);
 const KYC_ALLOWED_PAGES = new Set(['dashboard', 'profile', 'settings', 'help']);
 
 function MainApp() {
   const { t } = useTranslation();
   const role = useUserStore((s) => s.role);
   const kycStatus = useUserStore((s) => s.company.kycStatus);
+  const workspaceRole = useAuthStore((s) => s.user?.workspace_role ?? null);
+  const canUseCrmManagerPages =
+    role === 'ADMIN' ||
+    (workspaceRole !== null && CRM_MANAGER_WORKSPACE_ROLES.has(workspaceRole));
   const [page, setPage] = useState<Page>(() => {
     // Restore page from URL hash on initial load
     const hash = window.location.hash.replace('#', '');
@@ -257,8 +265,14 @@ function MainApp() {
       toast.error(t('guards.adminRequired'));
       setPage({ type: 'dashboard' });
       window.history.replaceState(null, '', '#dashboard');
+      return;
     }
-  }, [page.type, role, t]);
+    if (CRM_MANAGER_PAGES.has(page.type) && !canUseCrmManagerPages) {
+      toast.error(t('guards.managerRequired'));
+      setPage({ type: 'dashboard' });
+      window.history.replaceState(null, '', '#dashboard');
+    }
+  }, [page.type, role, canUseCrmManagerPages, t]);
 
   // KYC guard: if not verified, only allow dashboard/profile/settings/help.
   // Platform admins are moderators, not business actors — their personal
@@ -315,6 +329,11 @@ function MainApp() {
         navigateTo({ type: 'dashboard' });
         return;
       }
+      if (CRM_MANAGER_PAGES.has(target) && !canUseCrmManagerPages) {
+        toast.error(t('guards.managerRequired'));
+        navigateTo({ type: 'dashboard' });
+        return;
+      }
       navigateTo({ type: target } as Page);
     } else {
       navigateTo({ type: 'dashboard' });
@@ -350,7 +369,9 @@ function MainApp() {
 
   switch (page.type) {
     case 'dashboard':
-      content = <Dashboard onProductClick={handleProductClick} onNavigate={handleNavigate} />;
+      content = role === 'ADMIN'
+        ? <PlatformAdminDashboard onNavigate={handleNavigate} />
+        : <Dashboard onProductClick={handleProductClick} onNavigate={handleNavigate} />;
       break;
     case 'product_detail':
       content = (

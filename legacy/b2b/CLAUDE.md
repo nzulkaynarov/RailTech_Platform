@@ -291,22 +291,27 @@ def verify_kyc(self, request, pk=None):
 
 ## Role Responsibilities (ADR-0002)
 
-Canonical source: `Docs/adr/0002-role-responsibilities.md`. Quick reference — when planning a feature, find the right role and periphery first.
+Canonical source: `Docs/adr/0002-role-responsibilities.md`. Quick reference when planning a feature — pick the right layer first.
 
-| Role | Tool | Owns | Does NOT |
+**Three layers (not interchangeable):**
+- **SystemRole** on `CustomUser.role` — only `ADMIN` (Platform Admin, no memberships) and `USER` (everyone else). Enforced by `accounts/migrations/0010_platform_admin_model`.
+- **WorkspaceRole** on `CompanyMember.role` — `OWNER`, `SALES_MANAGER`, `LOGIST`, `CONTRACT_MANAGER`, `FOREIGN_TRADE_SPECIALIST`, `PROCUREMENT_MANAGER`, `BUYER_MANAGER`. Each is restricted to matching CompanyType via `applicable_to_types`.
+- **Per-member capabilities** on `CompanyMember.can_sell` / `can_buy` — distributed by `OWNER`.
+
+| Layer | Tool | Owns | Does NOT |
 |---|---|---|---|
-| **Platform Engineer** (`is_superuser=True`) | Unfold + terminal | Deploy, migrations, master data CRUD, Celery Beat, emergency data fixes, `init_superadmin` | Business operations (deals, quotes, KYC approve) |
-| **Platform Admin** (`role=ADMIN`, viewer mode) | React Admin SPA | Users / Companies / KYC L1→L2→L3 / Subscriptions / Role applications / Force-change Deal stage / SystemSettings | Business actions on behalf of any company (buy, sell, sign, pay, bid) — backend returns `ADMIN_VIEWER_CANNOT_ACT` |
-| **Sales Manager** (`role=SALES_MANAGER`) | React SPA (CRM) | Deal FSM DRAFT→CLOSED_WON, Quote build / PDF / send, Contract / Invoice / Act generate, Lead convert, sales analytics | KYC verification, master data, company creation |
-| **Account Manager** (`role=ACCOUNT_MANAGER`) | React SPA (CRM) | Client support, KYC assist (view + escalate), deal chat, Acts/Fulfillments view | Deal stage changes in CALCULATING / QUOTE_SENT, force-actions |
-| **Company Owner** (`workspace_role=OWNER`) | React SPA (Cabinet) | Own profile, team invites, distribute `can_sell` / `can_buy`, KYC upload, role application, pay own subscription | See other companies' data |
+| **Platform Engineer** (`is_superuser=True`) | Unfold + terminal | Deploy, migrations, master data CRUD, Celery Beat, emergency fixes, `init_superadmin` | Business operations on behalf of companies |
+| **Platform Admin** (`SystemRole.ADMIN`, no memberships) | `PlatformAdminShell` in SPA | Users / Companies / KYC L1→L2→L3 / Subscriptions / Role applications / Force-change Deal stage / Force-approve Quote / Force-cancel Contract | Becoming a `CompanyMember`. Buy / sell / sign / pay / bid from any company — backend returns `ADMIN_VIEWER_CANNOT_ACT` |
+| **SUPPLIER / MANUFACTURER team** (`SystemRole.USER` + WorkspaceRole in SUPPLIER/MFG) | `AppShell` SELLER context | Submit SupplierBid, build / send Quote, sign contracts, update fulfillment, sales analytics (only with `can_sell`) | Operations on other companies; platform moderation |
+| **CLIENT team** (`SystemRole.USER` + WorkspaceRole in CLIENT) | `AppShell` BUYER context | Open RFQ, import Excel, accept / reject SupplierBid, sign contract as buyer, record payment, acceptance (only with `can_buy`) | Operations on other companies; seller-side actions |
 
-**Escalation path:** Owner → Account Manager → Sales Manager → Platform Admin → Platform Engineer. Don't escalate to Platform Engineer until the React Admin loop (KYC, subscriptions, role apps) has been checked — ~90% of "it broke" is solvable by Platform Admin without touching Unfold.
+**Escalation path:** company member → company OWNER → Platform Admin → Platform Engineer. Don't escalate to Platform Engineer until the React Admin loop (KYC, subscriptions, role apps) has been checked — ~90% of "it broke" is solvable by Platform Admin without touching Unfold.
 
 **When adding a new feature:**
-1. Find the role that should own it in `0002-role-responsibilities.md`.
-2. Business action on behalf of a company → guard with `is_platform_admin_viewer` + `is_member_of(..., capability=...)` in `services.py` (see `memory/admin_viewer_mode_*.md`).
-3. Platform moderation action → React Admin page + DRF endpoint, never new `@admin.action` with logic (Rule 8).
+1. Find the layer that should own it in `0002-role-responsibilities.md`.
+2. Business action on behalf of a company → guard with `is_platform_admin_viewer` + `is_member_of(user, company_id, capability='sell'|'buy')` in `services.py`. Subscription-gated seller writes → add `company_has_operational_subscription(company_id)`.
+3. Platform moderation action → React Admin page + DRF endpoint, never a new `@admin.action` with business logic (Rule 8).
+4. Never hard-code "Sales Manager" / "Account Manager" as `SystemRole` — they were removed by migration `accounts/0010_platform_admin_model`. Those names live only as WorkspaceRole codes now.
 
 ## ANTI-HALLUCINATION — What does NOT exist
 

@@ -8,7 +8,7 @@ const mockUser = (overrides = {}) => ({
   first_name: 'Test',
   last_name: 'User',
   phone: '+1234567890',
-  role_code: 'CLIENT',
+  role_code: 'USER',
   kyc_status: 'L1_UNVERIFIED',
   company: undefined,
   ...overrides,
@@ -44,27 +44,37 @@ describe('authStore', () => {
     expect(useAuthStore.getState().isAuthenticated).toBe(false);
   });
 
-  it('should set user with correct role mapping', () => {
+  it('should map non-ADMIN role_code to USER', () => {
     const state = useAuthStore.getState();
 
-    const user = mockUser({ kyc_status: 'L2_VERIFIED' });
+    const user = mockUser({ role_code: 'USER', kyc_status: 'L2_VERIFIED' });
     state.setUser(user);
 
     const currentState = useAuthStore.getState();
     expect(currentState.user).toEqual(user);
-    expect(currentState.role).toBe('CLIENT');
+    expect(currentState.role).toBe('USER');
     expect(currentState.kyc_status).toBe('L2_VERIFIED');
   });
 
-  it('should map MANAGER role to SALES_MANAGER', () => {
+  it('should map ADMIN role_code to ADMIN', () => {
+    const state = useAuthStore.getState();
+
+    const user = mockUser({ role_code: 'ADMIN', kyc_status: null });
+    state.setUser(user);
+
+    expect(useAuthStore.getState().role).toBe('ADMIN');
+  });
+
+  it('should collapse legacy MANAGER / SALES_MANAGER role_code to USER', () => {
     const state = useAuthStore.getState();
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const user = mockUser({ role_code: 'MANAGER' as any, kyc_status: null });
-    state.setUser(user);
+    state.setUser(mockUser({ role_code: 'MANAGER' as any, kyc_status: null }));
+    expect(useAuthStore.getState().role).toBe('USER');
 
-    const currentState = useAuthStore.getState();
-    expect(currentState.role).toBe('SALES_MANAGER');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    state.setUser(mockUser({ role_code: 'SALES_MANAGER' as any, kyc_status: null }));
+    expect(useAuthStore.getState().role).toBe('USER');
   });
 
   it('should handle primary_company mapping', () => {

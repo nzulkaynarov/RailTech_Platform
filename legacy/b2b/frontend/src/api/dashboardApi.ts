@@ -35,6 +35,47 @@ export interface PageStats {
   notifications_unread: number;
 }
 
+export interface PlatformDashboard {
+  users: { total: number; active: number; new_7d: number; admins: number };
+  companies: {
+    total: number;
+    by_type: { BUYER: number; SELLER: number; MANUFACTURER: number };
+    pending_kyc: number;
+    verified: number;
+  };
+  deals: {
+    total: number;
+    active: number;
+    won: number;
+    lost: number;
+    by_stage: { stage__code: string; stage__name: string; count: number }[];
+    pipeline_value: string;
+    won_value: string;
+  };
+  subscriptions: {
+    active: number;
+    trial: number;
+    past_due: number;
+    suspended: number;
+    expiring_7d: number;
+  };
+  attention: {
+    kyc: number;
+    role_applications: number;
+    subscriptions_past_due: number;
+    subscriptions_expiring_7d: number;
+    overdue_invoices: number;
+  };
+  recent_activity: {
+    id: number;
+    action: string;
+    detail: string;
+    level: 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR';
+    user_email: string | null;
+    timestamp: string;
+  }[];
+}
+
 export const dashboardApi = {
   getStats: async (period?: string): Promise<DashboardStats> => {
     const url = period ? `crm/analytics/dashboard/?period=${period}` : 'crm/analytics/dashboard/';
@@ -43,6 +84,10 @@ export const dashboardApi = {
   },
   getPageStats: async (): Promise<PageStats> => {
     const response = await apiClient.get<PageStats>('analytics/page-stats/');
+    return response.data;
+  },
+  getPlatformDashboard: async (): Promise<PlatformDashboard> => {
+    const response = await apiClient.get<PlatformDashboard>('analytics/platform-dashboard/');
     return response.data;
   },
 };

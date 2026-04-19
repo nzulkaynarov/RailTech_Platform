@@ -1,4 +1,4 @@
-from rest_framework import viewsets, status, views, permissions, exceptions, filters
+from rest_framework import viewsets, status, views, permissions, exceptions, filters, serializers as drf_serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.generics import RetrieveAPIView
@@ -9,7 +9,7 @@ from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResp
 from django.db.models import Prefetch
 from django.utils.translation import gettext_lazy as _
 
-from core.permissions import IsPlatformAdmin, IsPlatformAdmin
+from core.permissions import IsPlatformAdmin
 
 from . import services
 from .models import (
@@ -147,7 +147,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
         company = self.get_object()
         file_obj = request.FILES.get('file')
         if not file_obj:
-            return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'NO_FILE_PROVIDED'}, status=status.HTTP_400_BAD_REQUEST)
 
         doc_type_code = request.data.get('doc_type', 'OTHER')
         doc, error = services.upload_kyc_document(company, file_obj, doc_type_code)
@@ -192,9 +192,9 @@ class CompanyViewSet(viewsets.ModelViewSet):
             "Only OWNER of the same company (or platform ADMIN/superuser) may call this."
         ),
         request=inline_serializer('MemberCapabilities', fields={
-            'member_id': __import__('rest_framework').serializers.IntegerField(),
-            'can_sell': __import__('rest_framework').serializers.BooleanField(required=False),
-            'can_buy': __import__('rest_framework').serializers.BooleanField(required=False),
+            'member_id': drf_serializers.IntegerField(),
+            'can_sell': drf_serializers.BooleanField(required=False),
+            'can_buy': drf_serializers.BooleanField(required=False),
         }),
         responses={
             200: OpenApiResponse(description="Capabilities updated"),
@@ -246,8 +246,8 @@ class CompanyViewSet(viewsets.ModelViewSet):
             "Only the company owner or staff can invite. Default role: PROCUREMENT_MANAGER."
         ),
         request=inline_serializer('InviteRequest', fields={
-            'email': __import__('rest_framework').serializers.EmailField(),
-            'role': __import__('rest_framework').serializers.CharField(default='PROCUREMENT_MANAGER'),
+            'email': drf_serializers.EmailField(),
+            'role': drf_serializers.CharField(default='PROCUREMENT_MANAGER'),
         }),
         responses={201: UserSerializer, 400: OpenApiResponse(description="Invalid email or role"), 403: OpenApiResponse(description="Not authorized")},
         tags=['Accounts'],
@@ -265,7 +265,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
         if not membership or membership.role.code != 'OWNER':
             is_staff = request.user.is_platform_admin
             if not is_staff:
-                return Response({'error': 'Only company owner can invite members'},
+                return Response({'detail': 'ONLY_COMPANY_OWNER_CAN_INVITE'},
                               status=status.HTTP_403_FORBIDDEN)
 
         email = request.data.get('email')
@@ -308,16 +308,14 @@ class UserViewSet(viewsets.ModelViewSet):
         ),
     ).order_by('-date_joined')
     serializer_class = UserSerializer
-    # Use custom IsPlatformAdmin that checks SystemRole.code == 'ADMIN', not Django's is_staff
-    from core.permissions import IsPlatformAdmin as CustomIsPlatformAdmin
-    permission_classes = [permissions.IsAuthenticated, CustomIsPlatformAdmin]
+    permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
 
     @extend_schema(
         summary="Change password",
         description="Change the current user's password. Requires current password for verification.",
         request=inline_serializer('ChangePasswordRequest', fields={
-            'current_password': __import__('rest_framework').serializers.CharField(),
-            'new_password': __import__('rest_framework').serializers.CharField(min_length=8),
+            'current_password': drf_serializers.CharField(),
+            'new_password': drf_serializers.CharField(min_length=8),
         }),
         responses={200: OpenApiResponse(description="Password changed"), 400: OpenApiResponse(description="Invalid current password")},
         tags=['Accounts'],
@@ -394,7 +392,7 @@ class UserViewSet(viewsets.ModelViewSet):
         summary="Change user role",
         description="Change the system role of a user. Admin only.",
         request=inline_serializer('ChangeRoleRequest', {
-            'role': __import__('rest_framework').serializers.CharField(),
+            'role': drf_serializers.CharField(),
         }),
         responses={200: OpenApiResponse(description="Role updated")},
         tags=['Accounts'],
@@ -413,9 +411,9 @@ class UserViewSet(viewsets.ModelViewSet):
         summary="Add user to company (workspace membership)",
         description="Platform Admin creates a CompanyMember link for the target user.",
         request=inline_serializer('AddMembershipRequest', {
-            'company': __import__('rest_framework').serializers.IntegerField(),
-            'workspace_role': __import__('rest_framework').serializers.CharField(),
-            'is_primary': __import__('rest_framework').serializers.BooleanField(required=False, default=False),
+            'company': drf_serializers.IntegerField(),
+            'workspace_role': drf_serializers.CharField(),
+            'is_primary': drf_serializers.BooleanField(required=False, default=False),
         }),
         responses={
             201: OpenApiResponse(description="Membership created"),
@@ -755,7 +753,7 @@ class CompanyRoleApplicationViewSet(viewsets.ModelViewSet):
         summary="Reject role application",
         description="Reject a pending role application with an optional reason.",
         request=inline_serializer('RejectRequest', fields={
-            'reason': __import__('rest_framework').serializers.CharField(required=False, default=''),
+            'reason': drf_serializers.CharField(required=False, default=''),
         }),
         responses={200: CompanyRoleApplicationSerializer, 400: OpenApiResponse(description="Already processed")},
         tags=['Accounts'],

@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
-import { HelpCircle, FileText, MessageSquare, Mail, ChevronDown, Wrench, ShieldCheck, Briefcase, Handshake, Building2 } from 'lucide-react';
+import { HelpCircle, FileText, MessageSquare, Mail, ChevronDown, Wrench, ShieldCheck, Factory, Store } from 'lucide-react';
 import { PageShell } from './shared/PageShell';
 
 export function HelpPage() {
@@ -10,13 +10,12 @@ export function HelpPage() {
 
   const roles: Array<{
     icon: React.ReactNode;
-    key: 'platformEngineer' | 'platformAdmin' | 'salesManager' | 'accountManager' | 'companyOwner';
+    key: 'platformEngineer' | 'platformAdmin' | 'supplierTeam' | 'clientTeam';
   }> = [
     { icon: <Wrench className="h-4 w-4" />, key: 'platformEngineer' },
     { icon: <ShieldCheck className="h-4 w-4" />, key: 'platformAdmin' },
-    { icon: <Briefcase className="h-4 w-4" />, key: 'salesManager' },
-    { icon: <Handshake className="h-4 w-4" />, key: 'accountManager' },
-    { icon: <Building2 className="h-4 w-4" />, key: 'companyOwner' },
+    { icon: <Factory className="h-4 w-4" />, key: 'supplierTeam' },
+    { icon: <Store className="h-4 w-4" />, key: 'clientTeam' },
   ];
 
   const categories = [

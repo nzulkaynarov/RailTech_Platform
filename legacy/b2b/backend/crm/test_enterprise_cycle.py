@@ -93,14 +93,16 @@ def supplier(master_data):
 
 @pytest.fixture
 def manager(master_data):
-    # Test fixture acting as platform-side staff. is_superuser=True bypasses
-    # the per-company `can_sell` / `can_buy` member checks so cycle smoke tests
-    # can drive both sides of a deal without setting up two distinct memberships.
+    # Test fixture acting as platform-side engineer (is_superuser bypasses every
+    # per-company can_sell/can_buy check). Role is USER so the platform-admin
+    # invariant from migration 0010 (ADMIN ⇒ no memberships) is not violated
+    # when this fixture later becomes a Deal.manager — superuser is the proper
+    # escape hatch for tests that need cross-company write access.
     return CustomUser.objects.create_user(
         email='t.manager@example.com', username='t_manager', password='pw',
         is_active=True, is_staff=True, is_superuser=True,
         first_name='T', last_name='Manager',
-        role=SystemRole.objects.get(code='ADMIN'),
+        role=SystemRole.objects.get(code='USER'),
     )
 
 

@@ -266,8 +266,12 @@ class Command(BaseCommand):
                 self.stdout.write(f"  Пользователь создан: {email}")
 
             # Company membership
+            # Platform Admin (SystemRole=ADMIN) cannot be a CompanyMember —
+            # invariant enforced by accounts/migrations/0010_platform_admin_model.
             company_inn = user_data.get('company_inn')
             ws_role_code = user_data.get('workspace_role')
+            if sys_role and sys_role.code == 'ADMIN':
+                continue
             if company_inn and ws_role_code:
                 company = Company.objects.filter(inn=company_inn).first()
                 ws_role = WorkspaceRole.objects.filter(code=ws_role_code).first()

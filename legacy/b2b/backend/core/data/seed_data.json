@@ -280,9 +280,7 @@
       "role": "ADMIN",
       "is_superuser": true,
       "is_staff": true,
-      "is_active": true,
-      "company_inn": "309876543",
-      "workspace_role": "OWNER"
+      "is_active": true
     },
     {
       "email_default": "aziz.kodirov@railtech.uz",
@@ -290,7 +288,7 @@
       "first_name": "Aziz",
       "last_name": "Kodirov",
       "full_name_ru": "Азиз Кодиров",
-      "role": "ADMIN",
+      "role": "USER",
       "is_superuser": false,
       "is_staff": true,
       "is_active": true,
@@ -303,7 +301,7 @@
       "first_name": "Diana",
       "last_name": "Rakhimova",
       "full_name_ru": "Диана Рахимова",
-      "role": "SALES_MANAGER",
+      "role": "USER",
       "is_superuser": false,
       "is_staff": true,
       "is_active": true,
@@ -316,7 +314,7 @@
       "first_name": "Farhod",
       "last_name": "Mahmudov",
       "full_name_ru": "Фарход Махмудов",
-      "role": "SALES_MANAGER",
+      "role": "USER",
       "is_superuser": false,
       "is_staff": true,
       "is_active": true,
@@ -329,7 +327,7 @@
       "first_name": "Lola",
       "last_name": "Iskandarova",
       "full_name_ru": "Лола Искандарова",
-      "role": "ADMIN",
+      "role": "USER",
       "is_superuser": false,
       "is_staff": true,
       "is_active": true,
@@ -342,12 +340,12 @@
       "first_name": "Umid",
       "last_name": "Abdullaev",
       "full_name_ru": "Умид Абдуллаев",
-      "role": "ACCOUNT_MANAGER",
+      "role": "USER",
       "is_superuser": false,
       "is_staff": true,
       "is_active": true,
       "company_inn": "309876543",
-      "workspace_role": "ACCOUNT_MANAGER"
+      "workspace_role": "SALES_MANAGER"
     },
     {
       "email_default": "natalia.petrova@railtech.uz",
@@ -355,7 +353,7 @@
       "first_name": "Natalia",
       "last_name": "Petrova",
       "full_name_ru": "Наталья Петрова",
-      "role": "SALES_MANAGER",
+      "role": "USER",
       "is_superuser": false,
       "is_staff": true,
       "is_active": false,
@@ -368,12 +366,12 @@
       "first_name": "Kamol",
       "last_name": "Zarifov",
       "full_name_ru": "Камол Зарифов",
-      "role": "ACCOUNT_MANAGER",
+      "role": "USER",
       "is_superuser": false,
       "is_staff": true,
       "is_active": true,
       "company_inn": "309876543",
-      "workspace_role": "ACCOUNT_MANAGER"
+      "workspace_role": "SALES_MANAGER"
     },
     {
       "email_default": "evgeny.smirnov@railtech.uz",
@@ -381,12 +379,12 @@
       "first_name": "Evgeny",
       "last_name": "Smirnov",
       "full_name_ru": "Евгений Смирнов",
-      "role": "ACCOUNT_MANAGER",
+      "role": "USER",
       "is_superuser": false,
       "is_staff": true,
       "is_active": true,
       "company_inn": "309876543",
-      "workspace_role": "ACCOUNT_MANAGER"
+      "workspace_role": "SALES_MANAGER"
     },
     {
       "email_env": "CLIENT_EMAIL",
@@ -396,12 +394,12 @@
       "first_name": "Alexandr",
       "last_name": "Ivanov",
       "full_name_ru": "Иванов А.П.",
-      "role": "CLIENT",
+      "role": "USER",
       "is_superuser": false,
       "is_staff": false,
       "is_active": true,
       "company_inn": "200100100",
-      "workspace_role": "CLIENT"
+      "workspace_role": "BUYER_MANAGER"
     }
   ],
   "categories": [

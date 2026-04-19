@@ -43,10 +43,40 @@ export const useSystemRoles = () => useQuery({
   staleTime: 30 * 60_000,
 });
 
+export const useWorkspaceRoles = (companyType?: string) => useQuery({
+  queryKey: ['workspace-roles', companyType ?? 'all'],
+  queryFn: () => accountsApi.getWorkspaceRoles(companyType),
+  staleTime: 30 * 60_000,
+});
+
 export const useChangeUserRole = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, role }: { id: number; role: string }) => accountsApi.updateUserRole(id, role),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
+  });
+};
+
+export const useAddUserMembership = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (
+      params: { userId: number; company: number; workspaceRole: string; isPrimary?: boolean },
+    ) =>
+      accountsApi.addUserMembership(params.userId, {
+        company: params.company,
+        workspace_role: params.workspaceRole,
+        is_primary: params.isPrimary ?? false,
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
+  });
+};
+
+export const useRemoveUserMembership = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, membershipId }: { userId: number; membershipId: number }) =>
+      accountsApi.removeUserMembership(userId, membershipId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
   });
 };
