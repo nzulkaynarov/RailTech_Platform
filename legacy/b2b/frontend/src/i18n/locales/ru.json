@@ -1763,7 +1763,8 @@
       "role": "Роль",
       "saved": "Сохранено!",
       "saveChanges": "Сохранить изменения",
-      "saveError": "Ошибка сохранения профиля"
+      "saveError": "Ошибка сохранения профиля",
+      "avatar": "Аватар"
     },
     "fields": {
       "lastName": "Фамилия",
@@ -1787,7 +1788,12 @@
       "kycVerified": "Верифицирован",
       "kycPending": "На проверке",
       "save": "Сохранить данные",
-      "saved": "Данные компании сохранены"
+      "saved": "Данные компании сохранены",
+      "logo": "Логотип компании",
+      "logoDescription": "Будет отображаться в карточке компании и документах",
+      "kycDocuments": "Документы KYC",
+      "kycDocumentsHelp": "Учредительные документы, ИНН, лицензии, сертификаты",
+      "docsLoadError": "Не удалось загрузить документы компании"
     },
     "kyc": {
       "verified": "Верифицирован",
@@ -2972,7 +2978,13 @@
       "status": "Статус",
       "manufacturer": "Производитель",
       "actions": "Действия"
-    }
+    },
+    "media": {
+      "images": "Фотографии товара",
+      "documents": "Документы (паспорта, сертификаты)",
+      "documentsHelp": "PDF, DOCX, XLSX — технические документы"
+    },
+    "mediaAfterCreate": "Фото и документы можно загрузить после создания товара"
   },
   "adminCategories": {
     "title": "Каталог · Категории",
@@ -3420,9 +3432,9 @@
     "PLATFORM_ADMIN_CANNOT_JOIN_COMPANY": "Платформенный администратор не может быть членом компании — у него нет коммерческих интересов внутри сделок",
     "ADMIN_ROLE_REQUIRES_NO_MEMBERSHIPS": "Роль администратора платформы можно назначить только пользователю без членств в компаниях",
     "WORKSPACE_ROLE_NOT_APPLICABLE_TO_COMPANY_TYPE": "Эта рабочая роль не применима к типу выбранной компании",
-    "WORKSPACE_ROLE_NOT_FOUND": "Рабочая роль не найдена в справочнике",
+    "WORKSPACE_ROLE_NOT_FOUND": "Роль не найдена в справочнике",
     "ROLE_CODE_REQUIRED": "Не указан код роли",
-    "SYSTEM_ROLE_NOT_FOUND": "Системная роль не найдена в справочнике",
+    "SYSTEM_ROLE_NOT_FOUND": "Системная роль не найдена",
     "ONLY_OWNER_CAN_DISTRIBUTE_CAPABILITIES": "Только владелец компании может распределять права продавать/покупать",
     "MEMBER_ID_REQUIRED": "Не указан member_id",
     "MEMBER_NOT_FOUND": "Сотрудник не найден в этой компании",
@@ -3440,8 +3452,6 @@
     "SETUP_PASSWORD_INVALID_USER": "Недействительный пользователь",
     "SETUP_PASSWORD_INVALID_TOKEN": "Недействительный или истёкший токен",
     "PROFILE_FIELDS_REQUIRED": "Заполните ИНН, название компании и роль",
-    "WORKSPACE_ROLE_NOT_FOUND": "Роль не найдена в справочнике",
-    "SYSTEM_ROLE_NOT_FOUND": "Системная роль не найдена",
     "SALES_MANAGER_ROLE_NOT_FOUND": "Роль SALES_MANAGER не найдена",
     "VERIFICATION_STATUS_NOT_FOUND": "Статус верификации не найден",
     "KYC_DOCUMENTS_MISSING": "У компании нет загруженных KYC-документов",
@@ -3458,5 +3468,26 @@
     "NO_FILE_PROVIDED": "Файл не передан",
     "DEAL_ID_AND_STATUS_REQUIRED": "Параметры deal_id и status обязательны",
     "UNKNOWN": "Неизвестная ошибка"
+  },
+  "fileUpload": {
+    "upload": "Загрузить",
+    "replace": "Заменить",
+    "remove": "Удалить",
+    "download": "Скачать",
+    "uploaded": "Файл загружен",
+    "removed": "Файл удалён",
+    "dragDrop": "Перетащите файлы сюда или нажмите, чтобы выбрать",
+    "maxSize": "Макс. размер: {{max}} МБ",
+    "imageHelp": "PNG, JPG, WEBP, до {{max}} МБ",
+    "noFiles": "Нет загруженных файлов",
+    "addImage": "Добавить фото",
+    "main": "Главное",
+    "setMain": "Сделать главным",
+    "errors": {
+      "tooLarge": "Файл слишком большой (макс. {{max}} МБ)",
+      "invalidImageType": "Недопустимый тип изображения",
+      "uploadFailed": "Не удалось загрузить файл",
+      "removeFailed": "Не удалось удалить файл"
+    }
   }
 }

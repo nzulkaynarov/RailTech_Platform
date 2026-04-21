@@ -412,6 +412,7 @@ MINIO_ACCESS_KEY = os.environ.get('MINIO_ACCESS_KEY', '')
 MINIO_SECRET_KEY = os.environ.get('MINIO_SECRET_KEY', '')
 MINIO_PUBLIC_BUCKET = os.environ.get('MINIO_PUBLIC_BUCKET', 'railtech-public')
 MINIO_PRIVATE_BUCKET = os.environ.get('MINIO_PRIVATE_BUCKET', 'railtech-private')
+MINIO_TEMP_BUCKET = os.environ.get('MINIO_TEMP_BUCKET', 'railtech-temp')
 # Domain used for public URLs (served via nginx proxy)
 # e.g. "localhost/storage" or "cdn.railtech.uz"
 MINIO_PUBLIC_DOMAIN = os.environ.get('MINIO_PUBLIC_DOMAIN', '')

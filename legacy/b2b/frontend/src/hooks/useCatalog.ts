@@ -187,3 +187,50 @@ export const useStockStatuses = () => useQuery({
   queryFn: catalogApi.getStockStatuses,
   staleTime: 30 * 60_000,
 });
+
+export const useUploadProductImage = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ productId, file, isMain, altText }: {
+      productId: number; file: File; isMain?: boolean; altText?: string;
+    }) => catalogApi.uploadProductImage(productId, file, { is_main: isMain, alt_text: altText }),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['product', String(vars.productId)] });
+      qc.invalidateQueries({ queryKey: ['products'] });
+    },
+  });
+};
+
+export const useDeleteProductImage = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ productId, imageId }: { productId: number; imageId: number }) =>
+      catalogApi.deleteProductImage(productId, imageId),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['product', String(vars.productId)] });
+      qc.invalidateQueries({ queryKey: ['products'] });
+    },
+  });
+};
+
+export const useUploadProductDocument = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ productId, file, name }: { productId: number; file: File; name?: string }) =>
+      catalogApi.uploadProductDocument(productId, file, name),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['product', String(vars.productId)] });
+    },
+  });
+};
+
+export const useDeleteProductDocument = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ productId, docId }: { productId: number; docId: number }) =>
+      catalogApi.deleteProductDocument(productId, docId),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['product', String(vars.productId)] });
+    },
+  });
+};

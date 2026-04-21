@@ -1598,7 +1598,8 @@
       "role": "Role",
       "saved": "Saved!",
       "saveChanges": "Save changes",
-      "saveError": "Failed to save profile"
+      "saveError": "Failed to save profile",
+      "avatar": "Avatar"
     },
     "fields": {
       "lastName": "Last name",
@@ -1622,7 +1623,12 @@
       "kycVerified": "Verified",
       "kycPending": "Under review",
       "save": "Save company data",
-      "saved": "Company data saved"
+      "saved": "Company data saved",
+      "logo": "Company logo",
+      "logoDescription": "Shown on company card and documents",
+      "kycDocuments": "KYC documents",
+      "kycDocumentsHelp": "Incorporation docs, tax ID, licenses, certificates",
+      "docsLoadError": "Failed to load company documents"
     },
     "kyc": {
       "verified": "Verified",
@@ -2972,7 +2978,13 @@
       "status": "Status",
       "manufacturer": "Manufacturer",
       "actions": "Actions"
-    }
+    },
+    "media": {
+      "images": "Product images",
+      "documents": "Documents (datasheets, certificates)",
+      "documentsHelp": "PDF, DOCX, XLSX — technical documents"
+    },
+    "mediaAfterCreate": "Images and documents can be uploaded after creating the product"
   },
   "adminCategories": {
     "title": "Catalog · Categories",
@@ -3420,9 +3432,9 @@
     "PLATFORM_ADMIN_CANNOT_JOIN_COMPANY": "A platform administrator cannot join a company — admins have no commercial stake in any deal",
     "ADMIN_ROLE_REQUIRES_NO_MEMBERSHIPS": "The platform admin role can only be assigned to users with no company memberships",
     "WORKSPACE_ROLE_NOT_APPLICABLE_TO_COMPANY_TYPE": "This workspace role is not applicable to the selected company type",
-    "WORKSPACE_ROLE_NOT_FOUND": "Workspace role not found in the lookup table",
+    "WORKSPACE_ROLE_NOT_FOUND": "Workspace role not found",
     "ROLE_CODE_REQUIRED": "Role code is required",
-    "SYSTEM_ROLE_NOT_FOUND": "System role not found in the lookup table",
+    "SYSTEM_ROLE_NOT_FOUND": "System role not found",
     "ONLY_OWNER_CAN_DISTRIBUTE_CAPABILITIES": "Only the company OWNER can distribute sell / buy rights",
     "MEMBER_ID_REQUIRED": "member_id is required",
     "MEMBER_NOT_FOUND": "Member not found in this company",
@@ -3440,8 +3452,6 @@
     "SETUP_PASSWORD_INVALID_USER": "Invalid user",
     "SETUP_PASSWORD_INVALID_TOKEN": "Invalid or expired token",
     "PROFILE_FIELDS_REQUIRED": "Fill in INN, company name and role",
-    "WORKSPACE_ROLE_NOT_FOUND": "Workspace role not found",
-    "SYSTEM_ROLE_NOT_FOUND": "System role not found",
     "SALES_MANAGER_ROLE_NOT_FOUND": "Sales manager role not found",
     "VERIFICATION_STATUS_NOT_FOUND": "Verification status not found",
     "KYC_DOCUMENTS_MISSING": "Company has no KYC documents uploaded",
@@ -3458,5 +3468,26 @@
     "NO_FILE_PROVIDED": "No file provided",
     "DEAL_ID_AND_STATUS_REQUIRED": "deal_id and status are required",
     "UNKNOWN": "Unknown error"
+  },
+  "fileUpload": {
+    "upload": "Upload",
+    "replace": "Replace",
+    "remove": "Remove",
+    "download": "Download",
+    "uploaded": "File uploaded",
+    "removed": "File removed",
+    "dragDrop": "Drag files here or click to select",
+    "maxSize": "Max size: {{max}} MB",
+    "imageHelp": "PNG, JPG, WEBP, up to {{max}} MB",
+    "noFiles": "No files uploaded",
+    "addImage": "Add image",
+    "main": "Main",
+    "setMain": "Set as main",
+    "errors": {
+      "tooLarge": "File is too large (max {{max}} MB)",
+      "invalidImageType": "Invalid image type",
+      "uploadFailed": "Failed to upload file",
+      "removeFailed": "Failed to remove file"
+    }
   }
 }

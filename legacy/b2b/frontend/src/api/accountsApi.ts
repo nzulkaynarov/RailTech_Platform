@@ -5,6 +5,7 @@ export interface KYCDocument {
 	id: number;
 	doc_type: number;
 	doc_type_display: string;
+	file?: string | null;
 	original_filename: string;
 	uploaded_at: string;
 }
@@ -24,6 +25,7 @@ export interface Company {
 	country?: string;
 	website?: string;
 	email?: string;
+	logo?: string | null;
 	kyc_notes?: string;
 	created_at?: string;
 	kyc_documents?: KYCDocument[];
@@ -141,6 +143,32 @@ export const accountsApi = {
 	},
 	deleteDocument: async (companyId: number, docId: number) => {
 		await apiClient.delete(`accounts/companies/${companyId}/delete-document/${docId}/`);
+	},
+	uploadCompanyLogo: async (companyId: number, file: File) => {
+		const formData = new FormData();
+		formData.append('logo', file);
+		const response = await apiClient.post<Company>(
+			`accounts/companies/${companyId}/upload-logo/`,
+			formData,
+			{ headers: { 'Content-Type': 'multipart/form-data' } },
+		);
+		return response.data;
+	},
+	deleteCompanyLogo: async (companyId: number) => {
+		await apiClient.delete(`accounts/companies/${companyId}/delete-logo/`);
+	},
+	uploadAvatar: async (file: File) => {
+		const formData = new FormData();
+		formData.append('avatar', file);
+		const response = await apiClient.post<User>(
+			'accounts/users/upload-avatar/',
+			formData,
+			{ headers: { 'Content-Type': 'multipart/form-data' } },
+		);
+		return response.data;
+	},
+	deleteAvatar: async () => {
+		await apiClient.delete('accounts/users/delete-avatar/');
 	},
 	getTeam: async (companyId: number) => {
 		const response = await apiClient.get<User[]>(`accounts/companies/${companyId}/team/`);

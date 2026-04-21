@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Shield, Save, KeyRound } from 'lucide-react';
 
@@ -8,15 +8,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
 
 import { useUserStore, roleLabels, companyStatusLabels } from '@/store/userStore';
-import { accountsApi } from '@/api/accountsApi';
+import { accountsApi, type KYCDocument } from '@/api/accountsApi';
 import { toast } from 'sonner';
+import { ImageUpload } from '@/components/Shared/ImageUpload';
+import { FileUpload } from '@/components/Shared/FileUpload';
 
 function PasswordChangeForm({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
@@ -70,19 +71,30 @@ function PasswordChangeForm({ onClose }: { onClose: () => void }) {
 
 function CompanyTab() {
   const { t } = useTranslation();
-  const { company, activeStatus } = useUserStore();
+  const { company, activeStatus, updateCompany } = useUserStore();
   const canEdit = company.kycStatus !== 'verified';
   const [companyName, setCompanyName] = useState(company.name);
   const [companyInn, setCompanyInn] = useState(company.inn);
   const [savingCompany, setSavingCompany] = useState(false);
+  const [docs, setDocs] = useState<KYCDocument[]>([]);
+  const [loadingDocs, setLoadingDocs] = useState(false);
+
+  const companyId = company.id;
+
+  useEffect(() => {
+    if (!companyId) return;
+    setLoadingDocs(true);
+    accountsApi.getCompanyDetail(companyId)
+      .then(c => setDocs(c.kyc_documents ?? []))
+      .catch(() => toast.error(t('profile.companyInfo.docsLoadError')))
+      .finally(() => setLoadingDocs(false));
+  }, [companyId, t]);
 
   const kycBadge = company.kycStatus === 'verified'
     ? { variant: 'default' as const, label: t('profile.companyInfo.kycVerified'), className: '' }
     : { variant: 'secondary' as const, label: t('profile.companyInfo.kycPending'), className: 'text-warning' };
 
   const handleSaveCompany = async () => {
-    // Find company ID from statusEntries or primary company
-    const companyId = (company as unknown as { id?: number }).id;
     if (!companyId) {
       toast.error(t('common.error'));
       return;
@@ -93,12 +105,37 @@ function CompanyTab() {
         name: companyName,
         inn: companyInn,
       });
+      updateCompany({ name: companyName, inn: companyInn });
       toast.success(t('profile.companyInfo.saved'));
     } catch {
       toast.error(t('common.error'));
     } finally {
       setSavingCompany(false);
     }
+  };
+
+  const handleLogoUpload = async (file: File) => {
+    if (!companyId) throw new Error('NO_COMPANY');
+    const updated = await accountsApi.uploadCompanyLogo(companyId, file);
+    updateCompany({ logoUrl: updated.logo ?? null });
+  };
+
+  const handleLogoRemove = async () => {
+    if (!companyId) return;
+    await accountsApi.deleteCompanyLogo(companyId);
+    updateCompany({ logoUrl: null });
+  };
+
+  const handleDocUpload = async (file: File) => {
+    if (!companyId) throw new Error('NO_COMPANY');
+    const doc = await accountsApi.uploadDocument(companyId, file, 'OTHER');
+    setDocs(prev => [doc, ...prev]);
+  };
+
+  const handleDocRemove = async (id: string | number) => {
+    if (!companyId) return;
+    await accountsApi.deleteDocument(companyId, Number(id));
+    setDocs(prev => prev.filter(d => d.id !== id));
   };
 
   return (
@@ -108,6 +145,19 @@ function CompanyTab() {
         <CardDescription>{t('profile.companyInfo.description')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {companyId && (
+          <ImageUpload
+            value={company.logoUrl}
+            onUpload={handleLogoUpload}
+            onRemove={handleLogoRemove}
+            fallback={company.name ? company.name.slice(0, 2).toUpperCase() : '—'}
+            label={t('profile.companyInfo.logo')}
+            description={t('profile.companyInfo.logoDescription')}
+          />
+        )}
+
+        <Separator />
+
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label>{t('profile.companyInfo.name')}</Label>
@@ -154,6 +204,30 @@ function CompanyTab() {
           </div>
         </div>
 
+        {companyId && (
+          <>
+            <Separator />
+            <div>
+              <Label className="text-sm font-medium">{t('profile.companyInfo.kycDocuments')}</Label>
+              <FileUpload
+                className="mt-2"
+                disabled={loadingDocs}
+                files={docs.map(d => ({
+                  id: d.id,
+                  name: d.doc_type_display
+                    ? `${d.doc_type_display} — ${d.original_filename}`
+                    : d.original_filename,
+                  url: d.file ?? null,
+                  uploaded_at: d.uploaded_at,
+                }))}
+                onUpload={handleDocUpload}
+                onRemove={handleDocRemove}
+                description={t('profile.companyInfo.kycDocumentsHelp')}
+              />
+            </div>
+          </>
+        )}
+
         {canEdit && (
           <div className="flex justify-end">
             <Button onClick={handleSaveCompany} disabled={savingCompany} className="gap-2">
@@ -197,6 +271,15 @@ export function ProfilePage() {
     }
   };
 
+  const handleAvatarUpload = async (file: File) => {
+    const updated = await accountsApi.uploadAvatar(file);
+    updateProfile({ avatarUrl: updated.avatar ?? null });
+  };
+  const handleAvatarRemove = async () => {
+    await accountsApi.deleteAvatar();
+    updateProfile({ avatarUrl: null });
+  };
+
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl">
@@ -220,18 +303,15 @@ export function ProfilePage() {
               <CardDescription>{t('profile.personalInfo.description')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Avatar */}
-              <div className="flex items-center gap-4">
-                <Avatar className="h-20 w-20">
-                  <AvatarFallback className="bg-primary text-primary-foreground text-lg">
-                    {profile.avatarInitials}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="text-sm font-medium">{profile.firstName} {profile.lastName}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{profile.email}</p>
-                </div>
-              </div>
+              <ImageUpload
+                value={profile.avatarUrl}
+                onUpload={handleAvatarUpload}
+                onRemove={handleAvatarRemove}
+                fallback={profile.avatarInitials}
+                shape="circle"
+                label={t('profile.personalInfo.avatar')}
+                description={`${profile.firstName} ${profile.lastName} · ${profile.email}`}
+              />
 
               <Separator />
 

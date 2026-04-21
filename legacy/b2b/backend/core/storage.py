@@ -135,6 +135,36 @@ def import_source_path(instance, filename):
     return f"sourcing/imports/{instance.pk}/{name}"
 
 
+def company_application_contract_path(instance, filename):
+    """companies/{company_id}/applications/{pk}/contract/{uuid}.{ext}"""
+    name = _uuid_filename(instance, filename)
+    return f"companies/{instance.company_id}/applications/{instance.pk or 'new'}/contract/{name}"
+
+
+def company_application_nda_path(instance, filename):
+    """companies/{company_id}/applications/{pk}/nda/{uuid}.{ext}"""
+    name = _uuid_filename(instance, filename)
+    return f"companies/{instance.company_id}/applications/{instance.pk or 'new'}/nda/{name}"
+
+
+def company_application_partnership_path(instance, filename):
+    """companies/{company_id}/applications/{pk}/partnership/{uuid}.{ext}"""
+    name = _uuid_filename(instance, filename)
+    return f"companies/{instance.company_id}/applications/{instance.pk or 'new'}/partnership/{name}"
+
+
+def company_document_path(instance, filename):
+    """companies/{company_id}/documents/{uuid}.{ext}"""
+    name = _uuid_filename(instance, filename)
+    return f"companies/{instance.company_id}/documents/{name}"
+
+
+def temp_upload_path(instance, filename):
+    """temp/{uuid}.{ext} — short-lived staging before promotion to private bucket"""
+    name = _uuid_filename(instance, filename)
+    return f"temp/{name}"
+
+
 # ────────────────────────────────────────────
 # Storage backend instances (lazy, configured in settings.py)
 # ────────────────────────────────────────────
@@ -143,6 +173,12 @@ def get_public_storage():
     """Return the public storage backend (for product images, logos, etc.)."""
     if _minio_is_configured():
         from storages.backends.s3boto3 import S3Boto3Storage
+        # Match URL scheme to environment: https in production, http in dev.
+        # Heuristic: if MINIO_PUBLIC_DOMAIN targets localhost or 127.0.0.1, we
+        # are in dev and TLS is not terminated, so emit http. Otherwise https.
+        public_domain = settings.MINIO_PUBLIC_DOMAIN or ''
+        is_local = any(h in public_domain for h in ('localhost', '127.0.0.1'))
+        url_protocol = 'http:' if is_local else 'https:'
         return S3Boto3Storage(
             endpoint_url=settings.MINIO_ENDPOINT,
             access_key=settings.MINIO_ACCESS_KEY,
@@ -150,6 +186,7 @@ def get_public_storage():
             bucket_name=settings.MINIO_PUBLIC_BUCKET,
             querystring_auth=False,
             custom_domain=settings.MINIO_PUBLIC_DOMAIN,
+            url_protocol=url_protocol,
             file_overwrite=False,
         )
     return default_storage
@@ -187,6 +224,39 @@ def get_private_storage():
             bucket_name=settings.MINIO_PRIVATE_BUCKET,
             querystring_auth=True,
             querystring_expire=900,  # 15 minutes
+            file_overwrite=False,
+        )
+    return default_storage
+
+
+def get_temp_storage():
+    """
+    Return the temp storage backend — short-lived uploads (Excel staging, image previews)
+    that are later promoted to public/private or purged by lifecycle rules.
+    """
+    if _minio_is_configured():
+        from storages.backends.s3boto3 import S3Boto3Storage
+
+        external = getattr(settings, 'MINIO_EXTERNAL_ENDPOINT', '') or settings.MINIO_ENDPOINT
+        internal = settings.MINIO_ENDPOINT
+        temp_bucket = getattr(settings, 'MINIO_TEMP_BUCKET', '') or 'railtech-temp'
+
+        class TempS3Storage(S3Boto3Storage):
+            def url(self, name, parameters=None, expire=None, http_method=None):
+                raw_url = super().url(
+                    name, parameters=parameters, expire=expire, http_method=http_method,
+                )
+                if internal != external and internal in raw_url:
+                    return raw_url.replace(internal, external, 1)
+                return raw_url
+
+        return TempS3Storage(
+            endpoint_url=internal,
+            access_key=settings.MINIO_ACCESS_KEY,
+            secret_key=settings.MINIO_SECRET_KEY,
+            bucket_name=temp_bucket,
+            querystring_auth=True,
+            querystring_expire=3600,  # 1 hour
             file_overwrite=False,
         )
     return default_storage

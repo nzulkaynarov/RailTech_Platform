@@ -55,15 +55,18 @@ export interface UserProfile {
   phone: string;
   position: string;
   avatarInitials: string;
+  avatarUrl: string | null;
 }
 
 /* ─── Company ───────────────────────────────────────────────────────── */
 export interface Company {
+  id: number | null;
   name: string;
   inn: string;
   kycStatus: 'verified' | 'pending' | 'not_started';
   country: string;
   city: string;
+  logoUrl: string | null;
   /**
    * Each entry has its own verification status.
    * All statuses start as 'pending' until system admin approves.
@@ -95,6 +98,7 @@ interface UserState {
   setActiveStatus: (status: CompanyStatus) => void;
   setRole: (role: UserRole) => void;
   updateProfile: (profile: Partial<UserProfile>) => void;
+  updateCompany: (company: Partial<Company>) => void;
 }
 
 /* ─── Store ─────────────────────────────────────────────────────────── */
@@ -116,13 +120,16 @@ export const useUserStore = create<UserState>((set, _get) => ({
     phone: '',
     position: '',
     avatarInitials: '',
+    avatarUrl: null,
   },
   company: {
+    id: null,
     name: '',
     inn: '',
     kycStatus: 'not_started',
     country: '',
     city: '',
+    logoUrl: null,
     statusEntries: [],
   },
 
@@ -131,7 +138,7 @@ export const useUserStore = create<UserState>((set, _get) => ({
     const { useAuthStore: authStoreHook } = await import('../store/authStore');
     const authState = authStoreHook.getState();
     if (authState.user) {
-      const { first_name, last_name, email, role_code, company } = authState.user;
+      const { first_name, last_name, email, role_code, company, avatar } = authState.user;
       const initials = `${(first_name || '')[0] || ''}${(last_name || '')[0] || ''}`.toUpperCase();
 
       // Map backend company_types to frontend CompanyStatus
@@ -192,8 +199,10 @@ export const useUserStore = create<UserState>((set, _get) => ({
           phone: '',
           position: '',
           avatarInitials: initials || '??',
+          avatarUrl: avatar ?? null,
         },
         company: company ? {
+          id: company.id ?? null,
           name: company.name || '',
           inn: company.inn || '',
           // Platform admin is a moderator, not a business actor — their personal
@@ -205,8 +214,10 @@ export const useUserStore = create<UserState>((set, _get) => ({
           ) as 'verified' | 'pending' | 'not_started',
           country: company.country || '',
           city: '',
+          logoUrl: company.logo ?? null,
           statusEntries,
         } : {
+          id: null,
           name: '',
           inn: '',
           // Platform admin has no company — KYC is not applicable, so we mark
@@ -214,6 +225,7 @@ export const useUserStore = create<UserState>((set, _get) => ({
           kycStatus: isPlatformAdmin ? 'verified' : 'not_started',
           country: '',
           city: '',
+          logoUrl: null,
           statusEntries: [],
         },
       });
@@ -224,4 +236,6 @@ export const useUserStore = create<UserState>((set, _get) => ({
   setRole: (role) => set({ role }),
   updateProfile: (partial) =>
     set((s) => ({ profile: { ...s.profile, ...partial } })),
+  updateCompany: (partial) =>
+    set((s) => ({ company: { ...s.company, ...partial } })),
 }));

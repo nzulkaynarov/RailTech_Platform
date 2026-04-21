@@ -8,6 +8,8 @@ from master_data.models import AbstractLookup, Country
 from core.storage import (
     get_public_storage, get_private_storage,
     company_logo_path, user_avatar_path, kyc_document_path,
+    company_application_contract_path, company_application_nda_path,
+    company_application_partnership_path, company_document_path,
 )
 
 
@@ -417,17 +419,23 @@ class CompanyRoleApplication(models.Model):
 
     # Documents
     contract_file = models.FileField(
-        upload_to='company_applications/%Y/%m/', null=True, blank=True,
+        upload_to=company_application_contract_path,
+        storage=get_private_storage,
+        null=True, blank=True,
         verbose_name=_("Договор"),
         help_text=_("Подписанный договор (обязательно для SUPPLIER)"),
     )
     nda_file = models.FileField(
-        upload_to='company_applications/%Y/%m/', null=True, blank=True,
+        upload_to=company_application_nda_path,
+        storage=get_private_storage,
+        null=True, blank=True,
         verbose_name=_("NDA"),
         help_text=_("Соглашение о неразглашении (обязательно для SUPPLIER)"),
     )
     partnership_agreement = models.FileField(
-        upload_to='company_applications/%Y/%m/', null=True, blank=True,
+        upload_to=company_application_partnership_path,
+        storage=get_private_storage,
+        null=True, blank=True,
         verbose_name=_("Договор о партнёрстве"),
         help_text=_("Партнёрское соглашение (обязательно для MANUFACTURER)"),
     )

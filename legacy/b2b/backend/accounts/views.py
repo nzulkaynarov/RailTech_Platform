@@ -83,6 +83,27 @@ class CompanyViewSet(viewsets.ModelViewSet):
     }
     search_fields = ['name', 'inn', 'mfo', 'contact_person', 'email']
 
+    # Actions that a company member may perform on their own company
+    # (logo upload, KYC document upload/delete, partial update of profile fields).
+    _MEMBER_ALLOWED_ACTIONS = {
+        'retrieve', 'upload_document', 'delete_document',
+        'upload_logo', 'delete_logo', 'team',
+    }
+
+    def get_permissions(self):
+        if self.action in self._MEMBER_ALLOWED_ACTIONS:
+            return [permissions.IsAuthenticated()]
+        return super().get_permissions()
+
+    def _assert_member_or_admin(self, company):
+        user = self.request.user
+        if user.is_platform_admin:
+            return
+        if not CompanyMember.objects.filter(
+            user=user, company=company, is_active=True,
+        ).exists():
+            raise exceptions.PermissionDenied("ONLY_COMPANY_MEMBER_OR_ADMIN")
+
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
         if not request.user.is_platform_admin:
@@ -145,6 +166,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
     )
     def upload_document(self, request, pk=None):
         company = self.get_object()
+        self._assert_member_or_admin(company)
         file_obj = request.FILES.get('file')
         if not file_obj:
             return Response({'detail': 'NO_FILE_PROVIDED'}, status=status.HTTP_400_BAD_REQUEST)
@@ -164,9 +186,50 @@ class CompanyViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['delete'], url_path='delete-document/(?P<doc_id>[0-9]+)', url_name='delete-document')
     def delete_document(self, request, pk=None, doc_id=None):
         company = self.get_object()
+        self._assert_member_or_admin(company)
         success, error = services.delete_kyc_document(company, int(doc_id))
         if error:
             return Response({'detail': error}, status=status.HTTP_404_NOT_FOUND)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @extend_schema(
+        summary="Upload company logo",
+        description="Upload or replace a company's logo (multipart/form-data).",
+        request={'multipart/form-data': {'type': 'object', 'properties': {
+            'logo': {'type': 'string', 'format': 'binary'},
+        }}},
+        responses={200: CompanySerializer},
+        tags=['Accounts'],
+    )
+    @action(
+        detail=True, methods=['post'], url_path='upload-logo',
+        parser_classes=[MultiPartParser, FormParser],
+    )
+    def upload_logo(self, request, pk=None):
+        company = self.get_object()
+        self._assert_member_or_admin(company)
+        logo_file = request.FILES.get('logo')
+        if not logo_file:
+            return Response({'detail': 'NO_FILE_PROVIDED'}, status=status.HTTP_400_BAD_REQUEST)
+        if company.logo:
+            company.logo.delete(save=False)
+        company.logo = logo_file
+        company.save(update_fields=['logo'])
+        return Response(CompanySerializer(company, context={'request': request}).data)
+
+    @extend_schema(
+        summary="Delete company logo",
+        responses={204: None},
+        tags=['Accounts'],
+    )
+    @action(detail=True, methods=['delete'], url_path='delete-logo')
+    def delete_logo(self, request, pk=None):
+        company = self.get_object()
+        self._assert_member_or_admin(company)
+        if company.logo:
+            company.logo.delete(save=False)
+            company.logo = None
+            company.save(update_fields=['logo'])
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @extend_schema(
@@ -350,6 +413,48 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
+
+    @extend_schema(
+        summary="Upload user avatar",
+        description="Upload or replace the authenticated user's avatar (multipart/form-data).",
+        request={'multipart/form-data': {'type': 'object', 'properties': {
+            'avatar': {'type': 'string', 'format': 'binary'},
+        }}},
+        responses={200: UserSerializer},
+        tags=['Accounts'],
+    )
+    @action(
+        detail=False, methods=['post'], url_path='upload-avatar',
+        permission_classes=[permissions.IsAuthenticated],
+        parser_classes=[MultiPartParser, FormParser],
+    )
+    def upload_avatar(self, request):
+        avatar = request.FILES.get('avatar')
+        if not avatar:
+            return Response({'detail': 'NO_FILE_PROVIDED'}, status=status.HTTP_400_BAD_REQUEST)
+        user = request.user
+        if user.avatar:
+            user.avatar.delete(save=False)
+        user.avatar = avatar
+        user.save(update_fields=['avatar'])
+        return Response(UserSerializer(user, context={'request': request}).data)
+
+    @extend_schema(
+        summary="Delete user avatar",
+        responses={204: None},
+        tags=['Accounts'],
+    )
+    @action(
+        detail=False, methods=['delete'], url_path='delete-avatar',
+        permission_classes=[permissions.IsAuthenticated],
+    )
+    def delete_avatar(self, request):
+        user = request.user
+        if user.avatar:
+            user.avatar.delete(save=False)
+            user.avatar = None
+            user.save(update_fields=['avatar'])
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @extend_schema(
         summary="Get current user (via users endpoint)",

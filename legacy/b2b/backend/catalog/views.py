@@ -1,15 +1,20 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResponse, OpenApiParameter
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from django.views.decorators.vary import vary_on_headers
-from .models import Product, EquipmentGroup, Category, DomainType, SupplierOffer, ProductStatus, StockStatus
+from .models import (
+    Product, EquipmentGroup, Category, DomainType, SupplierOffer,
+    ProductStatus, StockStatus, ProductImage, ProductDocument,
+)
 from .serializers import (
     ProductSerializer, ProductListSerializer, EquipmentGroupSerializer,
     CategorySerializer, DomainTypeSerializer, SupplierOfferSerializer,
     ProductStatusSerializer, StockStatusSerializer,
+    ProductImageSerializer, ProductDocumentSerializer,
 )
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
@@ -304,6 +309,101 @@ class ProductViewSet(viewsets.ModelViewSet):
         )
         wb.save(response)
         return response
+
+    @extend_schema(
+        summary="Upload product image",
+        description="Attach an image file to a product. Multipart upload.",
+        request={'multipart/form-data': {'type': 'object', 'properties': {
+            'image': {'type': 'string', 'format': 'binary'},
+            'is_main': {'type': 'boolean', 'default': False},
+            'alt_text': {'type': 'string'},
+        }}},
+        responses={201: ProductImageSerializer},
+        tags=['Catalog'],
+    )
+    @action(
+        detail=True, methods=['post'], url_path='upload-image',
+        parser_classes=[MultiPartParser, FormParser],
+    )
+    def upload_image(self, request, pk=None):
+        product = self.get_object()
+        image_file = request.FILES.get('image')
+        if not image_file:
+            return Response({'detail': 'NO_FILE_PROVIDED'}, status=status.HTTP_400_BAD_REQUEST)
+
+        is_main = str(request.data.get('is_main', 'false')).lower() in ('true', '1')
+        alt_text = request.data.get('alt_text', '')
+
+        if is_main:
+            ProductImage.objects.filter(product=product, is_main=True).update(is_main=False)
+
+        img = ProductImage.objects.create(
+            product=product, image=image_file, is_main=is_main, alt_text=alt_text,
+        )
+        return Response(ProductImageSerializer(img).data, status=status.HTTP_201_CREATED)
+
+    @extend_schema(
+        summary="Delete product image",
+        responses={204: None, 404: OpenApiResponse(description="Image not found")},
+        tags=['Catalog'],
+    )
+    @action(
+        detail=True, methods=['delete'],
+        url_path='delete-image/(?P<image_id>[0-9]+)',
+        url_name='delete-image',
+    )
+    def delete_image(self, request, pk=None, image_id=None):
+        product = self.get_object()
+        img = ProductImage.objects.filter(pk=image_id, product=product).first()
+        if not img:
+            return Response({'detail': 'IMAGE_NOT_FOUND'}, status=status.HTTP_404_NOT_FOUND)
+        if img.image:
+            img.image.delete(save=False)
+        img.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @extend_schema(
+        summary="Upload product document",
+        description="Attach a technical document (PDF, DOCX) to a product.",
+        request={'multipart/form-data': {'type': 'object', 'properties': {
+            'file': {'type': 'string', 'format': 'binary'},
+            'name': {'type': 'string'},
+        }}},
+        responses={201: ProductDocumentSerializer},
+        tags=['Catalog'],
+    )
+    @action(
+        detail=True, methods=['post'], url_path='upload-document',
+        parser_classes=[MultiPartParser, FormParser],
+    )
+    def upload_document(self, request, pk=None):
+        product = self.get_object()
+        file_obj = request.FILES.get('file')
+        if not file_obj:
+            return Response({'detail': 'NO_FILE_PROVIDED'}, status=status.HTTP_400_BAD_REQUEST)
+        name = request.data.get('name') or file_obj.name
+        doc = ProductDocument.objects.create(product=product, file=file_obj, name=name)
+        return Response(ProductDocumentSerializer(doc).data, status=status.HTTP_201_CREATED)
+
+    @extend_schema(
+        summary="Delete product document",
+        responses={204: None, 404: OpenApiResponse(description="Document not found")},
+        tags=['Catalog'],
+    )
+    @action(
+        detail=True, methods=['delete'],
+        url_path='delete-document/(?P<doc_id>[0-9]+)',
+        url_name='delete-document',
+    )
+    def delete_document(self, request, pk=None, doc_id=None):
+        product = self.get_object()
+        doc = ProductDocument.objects.filter(pk=doc_id, product=product).first()
+        if not doc:
+            return Response({'detail': 'DOCUMENT_NOT_FOUND'}, status=status.HTTP_404_NOT_FOUND)
+        if doc.file:
+            doc.file.delete(save=False)
+        doc.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 @extend_schema_view(

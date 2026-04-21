@@ -254,5 +254,59 @@ export const catalogApi = {
         document.body.appendChild(link);
         link.click();
         link.remove();
-    }
+    },
+
+    uploadProductImage: async (
+        productId: number,
+        file: File,
+        opts?: { is_main?: boolean; alt_text?: string },
+    ): Promise<ProductImage> => {
+        const formData = new FormData();
+        formData.append('image', file);
+        if (opts?.is_main) formData.append('is_main', 'true');
+        if (opts?.alt_text) formData.append('alt_text', opts.alt_text);
+        const response = await apiClient.post<ProductImage>(
+            `catalog/products/${productId}/upload-image/`,
+            formData,
+            { headers: { 'Content-Type': 'multipart/form-data' } },
+        );
+        return response.data;
+    },
+    deleteProductImage: async (productId: number, imageId: number): Promise<void> => {
+        await apiClient.delete(`catalog/products/${productId}/delete-image/${imageId}/`);
+    },
+    uploadProductDocument: async (
+        productId: number,
+        file: File,
+        name?: string,
+    ): Promise<ProductDocument> => {
+        const formData = new FormData();
+        formData.append('file', file);
+        if (name) formData.append('name', name);
+        const response = await apiClient.post<ProductDocument>(
+            `catalog/products/${productId}/upload-document/`,
+            formData,
+            { headers: { 'Content-Type': 'multipart/form-data' } },
+        );
+        return response.data;
+    },
+    deleteProductDocument: async (productId: number, docId: number): Promise<void> => {
+        await apiClient.delete(`catalog/products/${productId}/delete-document/${docId}/`);
+    },
 };
+
+export interface ProductImage {
+    id: number;
+    image: string | null;
+    image_url: string | null;
+    is_main: boolean;
+    alt_text?: string;
+}
+
+export interface ProductDocument {
+    id: number;
+    file: string | null;
+    file_url: string | null;
+    name: string;
+    uploaded_at?: string;
+}
