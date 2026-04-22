@@ -170,6 +170,19 @@ export const accountsApi = {
 	deleteAvatar: async () => {
 		await apiClient.delete('accounts/users/delete-avatar/');
 	},
+	uploadUserAvatar: async (userId: number, file: File) => {
+		const formData = new FormData();
+		formData.append('avatar', file);
+		const response = await apiClient.post<User>(
+			`accounts/users/${userId}/upload-avatar/`,
+			formData,
+			{ headers: { 'Content-Type': 'multipart/form-data' } },
+		);
+		return response.data;
+	},
+	deleteUserAvatar: async (userId: number) => {
+		await apiClient.delete(`accounts/users/${userId}/delete-avatar/`);
+	},
 	getTeam: async (companyId: number) => {
 		const response = await apiClient.get<User[]>(`accounts/companies/${companyId}/team/`);
 		return response.data;

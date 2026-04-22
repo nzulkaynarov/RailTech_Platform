@@ -162,6 +162,51 @@ export const useUploadDocument = () => {
   });
 };
 
+export const useDeleteDocument = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ companyId, docId }: { companyId: number; docId: number }) =>
+      accountsApi.deleteDocument(companyId, docId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['companies'] });
+    },
+  });
+};
+
+export const useUploadCompanyLogo = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ companyId, file }: { companyId: number; file: File }) =>
+      accountsApi.uploadCompanyLogo(companyId, file),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['companies'] }),
+  });
+};
+
+export const useDeleteCompanyLogo = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (companyId: number) => accountsApi.deleteCompanyLogo(companyId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['companies'] }),
+  });
+};
+
+export const useUploadUserAvatar = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, file }: { userId: number; file: File }) =>
+      accountsApi.uploadUserAvatar(userId, file),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
+  });
+};
+
+export const useDeleteUserAvatar = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: number) => accountsApi.deleteUserAvatar(userId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
+  });
+};
+
 // ─── Subscriptions ─────────────────────────────────────────────────────
 
 export const useSubscriptions = () => useQuery({

@@ -2,8 +2,8 @@ import { useState, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import {
-  ShieldCheck, Search, FileText, Upload,
-  BadgeCheck, XCircle, FileQuestion, CheckCircle2, Eye,
+  ShieldCheck, Search, FileText, Upload, Download, Trash2,
+  BadgeCheck, XCircle, FileQuestion, Eye,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,7 +20,7 @@ import {
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter,
 } from '@/components/ui/sheet';
-import { useCompanies, useVerifyCompany, useUploadDocument } from '@/hooks/useAccounts';
+import { useCompanies, useVerifyCompany, useUploadDocument, useDeleteDocument } from '@/hooks/useAccounts';
 import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
 import type { Company } from '@/api/accountsApi';
 
@@ -66,6 +66,7 @@ function DetailSheet({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const verifyMutation = useVerifyCompany();
   const uploadMutation = useUploadDocument();
+  const deleteMutation = useDeleteDocument();
 
   if (!company) return null;
 
@@ -90,6 +91,15 @@ function DetailSheet({
       toast.success(t('kycManager.importDoc'));
     } catch {
       toast.error(t('kycManager.uploadFailure'));
+    }
+  };
+
+  const handleDeleteDoc = async (docId: number) => {
+    try {
+      await deleteMutation.mutateAsync({ companyId: company.id, docId });
+      toast.success(t('fileUpload.removed'));
+    } catch {
+      toast.error(t('fileUpload.errors.removeFailed'));
     }
   };
 
@@ -151,9 +161,34 @@ function DetailSheet({
                     <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm truncate">{doc.original_filename}</p>
-                      <p className="text-xs text-muted-foreground">{doc.doc_type_display}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {doc.doc_type_display}
+                        {doc.uploaded_at ? ` · ${new Date(doc.uploaded_at).toLocaleDateString()}` : ''}
+                      </p>
                     </div>
-                    <CheckCircle2 className="h-3.5 w-3.5 text-success shrink-0" />
+                    {doc.file && (
+                      <Button
+                        asChild
+                        type="button"
+                        size="icon-sm"
+                        variant="ghost"
+                        aria-label={t('fileUpload.download')}
+                      >
+                        <a href={doc.file} target="_blank" rel="noreferrer">
+                          <Download className="h-3.5 w-3.5" />
+                        </a>
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      size="icon-sm"
+                      variant="ghost"
+                      aria-label={t('fileUpload.remove')}
+                      disabled={deleteMutation.isPending}
+                      onClick={() => handleDeleteDoc(doc.id)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                    </Button>
                   </div>
                 ))}
               </div>

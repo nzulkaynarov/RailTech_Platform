@@ -2900,7 +2900,8 @@
     "confirmDeleteDesc": "Company \"{{name}}\" and all related data will be removed.",
     "tabs": {
       "registry": "Registry",
-      "members": "Team"
+      "members": "Team",
+      "files": "Files"
     },
     "fields": {
       "name": "Name",

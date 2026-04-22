@@ -30,10 +30,11 @@ import {
   useUsers, useToggleUserActive, useSystemRoles, useChangeUserRole,
   useCreateUser, useUpdateUser, useDeleteUser,
   useWorkspaceRoles, useAddUserMembership, useRemoveUserMembership,
-  useCompanies,
+  useCompanies, useUploadUserAvatar, useDeleteUserAvatar,
 } from '@/hooks/useAccounts';
 import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
 import type { User as UserType } from '@/api/accountsApi';
+import { ImageUpload } from '@/components/Shared/ImageUpload';
 
 type Draft = Partial<UserType>;
 
@@ -186,6 +187,8 @@ function DetailSheet({
   const toggleMut = useToggleUserActive();
   const changeRoleMut = useChangeUserRole();
   const updateMut = useUpdateUser();
+  const uploadAvatarMut = useUploadUserAvatar();
+  const deleteAvatarMut = useDeleteUserAvatar();
 
   const [draft, setDraft] = useState<Draft>(() => user ?? {});
   const [roleCode, setRoleCode] = useState<string>('');
@@ -271,6 +274,18 @@ function DetailSheet({
             </TabsList>
 
             <TabsContent value="profile" className="mt-4 space-y-4">
+              <ImageUpload
+                value={user.avatar ?? null}
+                onUpload={async (file) => {
+                  await uploadAvatarMut.mutateAsync({ userId: user.id, file });
+                }}
+                onRemove={async () => {
+                  await deleteAvatarMut.mutateAsync(user.id);
+                }}
+                fallback={((user.first_name?.[0] || '') + (user.last_name?.[0] || '')).toUpperCase() || user.email.slice(0, 2).toUpperCase()}
+                shape="circle"
+                label={t('profile.personalInfo.avatar')}
+              />
               <div className="rounded-lg border p-3 space-y-2.5">
                 {infoRows.map((r, i) => (
                   <div key={i} className="flex items-center gap-3">

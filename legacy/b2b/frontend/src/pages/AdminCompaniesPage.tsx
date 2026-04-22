@@ -36,8 +36,14 @@ import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
 import {
   useCompanies, useCreateCompany, useUpdateCompany, useDeleteCompany,
   useCompanyTeam, useInviteMember,
+  useUploadCompanyLogo, useDeleteCompanyLogo,
+  useUploadDocument, useDeleteDocument,
 } from '@/hooks/useAccounts';
+import { accountsApi } from '@/api/accountsApi';
+import { useQuery } from '@tanstack/react-query';
 import type { Company } from '@/api/accountsApi';
+import { ImageUpload } from '@/components/Shared/ImageUpload';
+import { FileUpload } from '@/components/Shared/FileUpload';
 
 type Draft = Partial<Company>;
 
@@ -114,6 +120,68 @@ function MembersPanel({ companyId }: { companyId: number }) {
   );
 }
 
+function CompanyFilesPanel({ companyId }: { companyId: number }) {
+  const { t } = useTranslation();
+  const { data: company, refetch } = useQuery({
+    queryKey: ['company-detail', companyId],
+    queryFn: () => accountsApi.getCompanyDetail(companyId),
+  });
+  const uploadLogo = useUploadCompanyLogo();
+  const deleteLogo = useDeleteCompanyLogo();
+  const uploadDoc = useUploadDocument();
+  const deleteDoc = useDeleteDocument();
+
+  const handleLogoUpload = async (file: File) => {
+    await uploadLogo.mutateAsync({ companyId, file });
+    await refetch();
+  };
+  const handleLogoRemove = async () => {
+    await deleteLogo.mutateAsync(companyId);
+    await refetch();
+  };
+  const handleDocUpload = async (file: File) => {
+    await uploadDoc.mutateAsync({ companyId, file, docType: 'OTHER' });
+    await refetch();
+  };
+  const handleDocRemove = async (id: string | number) => {
+    await deleteDoc.mutateAsync({ companyId, docId: Number(id) });
+    await refetch();
+  };
+
+  const docs = (company?.kyc_documents ?? []).map(d => ({
+    id: d.id,
+    name: d.doc_type_display
+      ? `${d.doc_type_display} — ${d.original_filename}`
+      : d.original_filename,
+    url: d.file ?? null,
+    uploaded_at: d.uploaded_at,
+  }));
+
+  return (
+    <div className="space-y-4">
+      <ImageUpload
+        value={company?.logo ?? null}
+        onUpload={handleLogoUpload}
+        onRemove={handleLogoRemove}
+        fallback={company?.name ? company.name.slice(0, 2).toUpperCase() : '—'}
+        label={t('profile.companyInfo.logo')}
+        description={t('profile.companyInfo.logoDescription')}
+      />
+      <Separator />
+      <div>
+        <Label className="text-sm font-medium">{t('profile.companyInfo.kycDocuments')}</Label>
+        <FileUpload
+          className="mt-2"
+          files={docs}
+          onUpload={handleDocUpload}
+          onRemove={handleDocRemove}
+          description={t('profile.companyInfo.kycDocumentsHelp')}
+        />
+      </div>
+    </div>
+  );
+}
+
 function CompanyFormSheet({
   open, onOpenChange, target,
 }: {
@@ -170,10 +238,13 @@ function CompanyFormSheet({
         </SheetHeader>
 
         <Tabs defaultValue="registry" className="mt-4 px-4">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="registry">{t('adminCompanies.tabs.registry')}</TabsTrigger>
             <TabsTrigger value="members" disabled={!isEdit}>
               {t('adminCompanies.tabs.members')}
+            </TabsTrigger>
+            <TabsTrigger value="files" disabled={!isEdit}>
+              {t('adminCompanies.tabs.files')}
             </TabsTrigger>
           </TabsList>
 
@@ -220,6 +291,10 @@ function CompanyFormSheet({
 
           <TabsContent value="members" className="mt-4">
             {isEdit && target ? <MembersPanel companyId={target.id} /> : null}
+          </TabsContent>
+
+          <TabsContent value="files" className="mt-4">
+            {isEdit && target ? <CompanyFilesPanel companyId={target.id} /> : null}
           </TabsContent>
         </Tabs>
 

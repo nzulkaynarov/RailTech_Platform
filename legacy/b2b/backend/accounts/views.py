@@ -457,6 +457,52 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @extend_schema(
+        summary="Upload avatar for a user (admin or self)",
+        description="Platform admin may set avatar on behalf of any user; users may set their own.",
+        request={'multipart/form-data': {'type': 'object', 'properties': {
+            'avatar': {'type': 'string', 'format': 'binary'},
+        }}},
+        responses={200: UserSerializer},
+        tags=['Accounts'],
+    )
+    @action(
+        detail=True, methods=['post'], url_path='upload-avatar',
+        permission_classes=[permissions.IsAuthenticated],
+        parser_classes=[MultiPartParser, FormParser],
+    )
+    def upload_avatar_for(self, request, pk=None):
+        target = self.get_object()
+        if not (request.user.is_platform_admin or request.user.pk == target.pk):
+            raise exceptions.PermissionDenied("ONLY_ADMIN_OR_SELF_CAN_SET_AVATAR")
+        avatar = request.FILES.get('avatar')
+        if not avatar:
+            return Response({'detail': 'NO_FILE_PROVIDED'}, status=status.HTTP_400_BAD_REQUEST)
+        if target.avatar:
+            target.avatar.delete(save=False)
+        target.avatar = avatar
+        target.save(update_fields=['avatar'])
+        return Response(UserSerializer(target, context={'request': request}).data)
+
+    @extend_schema(
+        summary="Delete avatar for a user (admin or self)",
+        responses={204: None},
+        tags=['Accounts'],
+    )
+    @action(
+        detail=True, methods=['delete'], url_path='delete-avatar',
+        permission_classes=[permissions.IsAuthenticated],
+    )
+    def delete_avatar_for(self, request, pk=None):
+        target = self.get_object()
+        if not (request.user.is_platform_admin or request.user.pk == target.pk):
+            raise exceptions.PermissionDenied("ONLY_ADMIN_OR_SELF_CAN_DELETE_AVATAR")
+        if target.avatar:
+            target.avatar.delete(save=False)
+            target.avatar = None
+            target.save(update_fields=['avatar'])
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @extend_schema(
         summary="Get current user (via users endpoint)",
         description="Returns the authenticated user's profile via the users ViewSet.",
         responses={200: UserSerializer},
