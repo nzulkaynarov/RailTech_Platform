@@ -257,15 +257,15 @@ export function InvoicesPage() {
               </div>
               {selected.items?.length > 0 && (
                 <div>
-                  <Label>Items</Label>
+                  <Label>{t('invoicesPage.items')}</Label>
                   <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>#</TableHead>
-                        <TableHead>Description</TableHead>
-                        <TableHead>Qty</TableHead>
-                        <TableHead>Price</TableHead>
-                        <TableHead>Line</TableHead>
+                        <TableHead>{t('invoicesPage.itemHeaders.description')}</TableHead>
+                        <TableHead>{t('invoicesPage.itemHeaders.qty')}</TableHead>
+                        <TableHead>{t('invoicesPage.itemHeaders.price')}</TableHead>
+                        <TableHead>{t('invoicesPage.itemHeaders.line')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>

@@ -3193,6 +3193,13 @@
       "CARD": "Card",
       "CASH": "Cash",
       "OTHER": "Other"
+    },
+    "items": "Items",
+    "itemHeaders": {
+      "description": "Description",
+      "qty": "Qty",
+      "price": "Price",
+      "line": "Line"
     }
   },
   "paymentsPage": {
@@ -3305,6 +3312,11 @@
       "ACCEPTED": "Accepted",
       "REJECTED": "Rejected",
       "WITHDRAWN": "Withdrawn"
+    },
+    "itemHeaders": {
+      "description": "Description",
+      "qty": "Qty",
+      "unit": "Unit"
     }
   },
   "leadsPage": {

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { Search, Box, ExternalLink, Sparkles } from 'lucide-react';
 import { useQuoteItems, useUpdateQuoteItem } from '../../hooks/useCRM';
 import { ReassignProductDialog } from '@/components/CRM/ReassignProductDialog';
@@ -52,7 +53,7 @@ export const SourcingGrid: React.FC = () => {
             setIsProductPickerOpen(false);
             setSelectedItemId(null);
         } catch (error) {
-            console.error('Error linking product:', error);
+            toast.error(t('errors.operationFailed'));
         }
     };
 

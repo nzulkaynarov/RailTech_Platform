@@ -68,8 +68,7 @@ export const CompanyProfile: React.FC = () => {
             const refreshed = await accountsApi.getCompanyDetail(company.id);
             setCompany(refreshed);
         } catch (err) {
-            console.error('Operation failed', err);
-            toast.error(t('company.deleteDocError'));
+            toast.error(t('errors.operationFailed'));
         } finally {
             setDeleteDocTarget(null);
         }
@@ -83,7 +82,7 @@ export const CompanyProfile: React.FC = () => {
             // Reload company data via detail endpoint (getCompanies is manager-only)
             const refreshed = await accountsApi.getCompanyDetail(company.id);
             setCompany(refreshed);
-        } catch (err) { console.error('Operation failed', err); toast.error(t('company.uploadError')); }
+        } catch (err) { toast.error(t('errors.operationFailed')); }
         finally { setUploading(false); }
     };
 
