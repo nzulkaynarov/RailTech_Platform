@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { QuoteItem, crmApi } from '@/api/crmApi';
 import { Loader2, Save, FileDown, AlertTriangle, Plus, Trash2 } from 'lucide-react';
 import { useParams } from 'react-router-dom';
@@ -79,7 +80,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 			}
 			if (onSave) onSave();
 		} catch (error) {
-			console.error('Failed to save items:', error);
+			toast.error(t('errors.operationFailed'));
 		}
 	};
 
@@ -88,7 +89,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 		try {
 			await crmApi.exportDealPDF(dealId);
 		} catch (error) {
-			console.error('Failed to export PDF:', error);
+			toast.error(t('errors.operationFailed'));
 		} finally {
 			setIsExporting(false);
 		}
@@ -107,7 +108,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 			setNewItemName('');
 			setShowAddRow(false);
 		} catch (err) {
-			console.error('Failed to add item:', err);
+			toast.error(t('errors.operationFailed'));
 		}
 	};
 
@@ -123,7 +124,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 			await deleteItemMutation.mutateAsync(deleteTarget);
 			setDeleteTarget(null);
 		} catch (err) {
-			console.error('Failed to delete item:', err);
+			toast.error(t('errors.operationFailed'));
 			setDeleteTarget(null);
 		}
 	};

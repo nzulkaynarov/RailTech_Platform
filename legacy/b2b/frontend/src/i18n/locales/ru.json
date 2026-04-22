@@ -3193,6 +3193,13 @@
       "CARD": "Карта",
       "CASH": "Наличные",
       "OTHER": "Другое"
+    },
+    "items": "Позиции",
+    "itemHeaders": {
+      "description": "Описание",
+      "qty": "Кол-во",
+      "price": "Цена",
+      "line": "Сумма"
     }
   },
   "paymentsPage": {
@@ -3305,6 +3312,11 @@
       "ACCEPTED": "Принято",
       "REJECTED": "Отклонено",
       "WITHDRAWN": "Отозвано"
+    },
+    "itemHeaders": {
+      "description": "Описание",
+      "qty": "Кол-во",
+      "unit": "Ед. изм."
     }
   },
   "leadsPage": {

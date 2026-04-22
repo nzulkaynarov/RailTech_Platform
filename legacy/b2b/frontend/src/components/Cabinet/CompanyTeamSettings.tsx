@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Users, UserPlus, Shield, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { accountsApi, User } from '../../api/accountsApi';
 import { useAuthStore } from '../../store/authStore';
 import { Button } from '@/components/ui/button';
@@ -36,7 +37,7 @@ export const CompanyTeamSettings: React.FC = () => {
                     const data = await accountsApi.getTeam(user.company.id);
                     setTeam(data);
                 } catch (err) {
-                    console.error('Failed to load team', err);
+                    toast.error(t('errors.operationFailed'));
                 }
             }
             setLoading(false);

@@ -238,9 +238,9 @@ export function SupplierBidsPage({ onNavigate }: SupplierBidsPageProps = {}) {
                     <TableHeader>
                       <TableRow>
                         <TableHead>#</TableHead>
-                        <TableHead>Description</TableHead>
-                        <TableHead>Qty</TableHead>
-                        <TableHead>Unit</TableHead>
+                        <TableHead>{t('supplierBidsPage.itemHeaders.description')}</TableHead>
+                        <TableHead>{t('supplierBidsPage.itemHeaders.qty')}</TableHead>
+                        <TableHead>{t('supplierBidsPage.itemHeaders.unit')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
