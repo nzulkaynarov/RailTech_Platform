@@ -521,11 +521,36 @@ class ActivityLog(models.Model):
         auto_now_add=True, db_index=True,
         verbose_name=_("Время события"),
     )
+    entity_type = models.CharField(
+        max_length=40, blank=True, default='', db_index=True,
+        verbose_name=_("Тип сущности"),
+        help_text=_("Код сущности, к которой относится запись (company, user, deal, subscription, ...)"),
+    )
+    entity_id = models.PositiveIntegerField(
+        null=True, blank=True, db_index=True,
+        verbose_name=_("ID сущности"),
+    )
+    reason = models.TextField(
+        blank=True, default='',
+        verbose_name=_("Причина"),
+        help_text=_("Обязательная причина для override/force-действий"),
+    )
+    before_data = models.JSONField(
+        null=True, blank=True,
+        verbose_name=_("Состояние до"),
+    )
+    after_data = models.JSONField(
+        null=True, blank=True,
+        verbose_name=_("Состояние после"),
+    )
 
     class Meta:
         verbose_name = _("Запись активности")
         verbose_name_plural = _("Журнал активности")
         ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['entity_type', 'entity_id', '-timestamp']),
+        ]
 
     def __str__(self):
         return f"[{self.level}] {self.action}"

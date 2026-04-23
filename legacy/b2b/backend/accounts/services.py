@@ -1,13 +1,15 @@
+import logging
 from typing import List, Optional, Tuple
 
 from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator
-from django.core.mail import send_mail
 from django.db import transaction
 from django.db.models import QuerySet
 from django.utils import timezone
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+
+from notifications.emails import EmailDeliveryError, send_templated_email
 
 from .models import (
     Company,
@@ -19,6 +21,8 @@ from .models import (
     VerificationStatus,
     WorkspaceRole,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def create_pending_user(email: str, first_name: str, last_name: str) -> Tuple[Optional[CustomUser], Optional[str]]:
@@ -51,14 +55,14 @@ def create_pending_user(email: str, first_name: str, last_name: str) -> Tuple[Op
     setup_url = f"{base_url}/setup-password?uid={uid}&token={token}"
 
     try:
-        send_mail(
-            "Подтверждение регистрации RailTech B2B",
-            f"Здравствуйте, {first_name}!\n\nДля завершения регистрации перейдите по ссылке:\n{setup_url}",
-            settings.DEFAULT_FROM_EMAIL,
-            [email],
-            fail_silently=False,
+        send_templated_email(
+            'setup_password',
+            {'first_name': first_name, 'setup_url': setup_url},
+            to=[email],
+            channel='transactional',
+            user=user,
         )
-    except Exception:
+    except EmailDeliveryError:
         # Email failed — clean up the orphaned user so they can retry
         user.delete()
         return None, 'EMAIL_SEND_FAILED'
@@ -166,11 +170,13 @@ def invite_workspace_member(company: Company, email: str, role_code: str) -> Tup
     base_url = settings.FRONTEND_URL
     setup_url = f"{base_url}/setup-password?uid={uid}&token={token}"
 
-    send_mail(
-        "Приглашение в команду RailTech B2B",
-        f"Вас пригласили в команду {company.name}. Установите пароль: {setup_url}",
-        settings.DEFAULT_FROM_EMAIL,
-        [email]
+    send_templated_email(
+        'invite_member',
+        {'company_name': company.name, 'setup_url': setup_url},
+        to=[email],
+        channel='transactional',
+        user=user,
+        fail_silently=True,
     )
     return user, None
 
@@ -245,66 +251,88 @@ def verify_company_kyc(
     approver: CustomUser,
     level_code: str = 'L2_VERIFIED',
     require_documents: bool = True,
+    reason: str = '',
 ) -> Tuple[Optional[Company], Optional[str]]:
     """
     Move a company through KYC verification levels (L1 → L2 → L3).
 
     - level_code: target VerificationStatus.code
     - require_documents: when True, refuse to verify if no KYC documents uploaded
+    - reason: required when moving DOWN (e.g. revoking to L1_UNVERIFIED)
     Returns: (company, error_message_or_None)
     """
     target_status = VerificationStatus.objects.filter(code=level_code).first()
     if not target_status:
         return None, 'VERIFICATION_STATUS_NOT_FOUND'
 
-    if require_documents and not company.kyc_documents.exists():
+    # Downgrades/revokes must carry a reason for audit purposes.
+    LEVEL_RANK = {
+        'L1_UNVERIFIED': 0,
+        'PROFILE_SUBMITTED': 1,
+        'L2_VERIFIED': 2,
+        'L3_CONTRACTED': 3,
+    }
+    current_code = company.verification_status.code if company.verification_status_id else 'L1_UNVERIFIED'
+    is_downgrade = LEVEL_RANK.get(level_code, 0) < LEVEL_RANK.get(current_code, 0)
+    if is_downgrade and not (reason or '').strip():
+        return None, 'REASON_REQUIRED'
+
+    if require_documents and not is_downgrade and not company.kyc_documents.exists():
         return None, 'KYC_DOCUMENTS_MISSING'
 
+    before_code = current_code
+    before_name = company.verification_status.name if company.verification_status_id else ''
     company.verification_status = target_status
     company.save(update_fields=['verification_status'])
-    # Notify owner(s) by email and in-app
-    try:
-        _send_kyc_status_email(company, level_code)
-    except Exception:
-        pass  # email failure shouldn't roll back KYC
-    try:
-        _create_kyc_notification(company, level_code)
-    except Exception:
-        pass
+
+    from core.audit import log_admin_action
+    log_admin_action(
+        entity_type='company',
+        entity_id=company.id,
+        action='KYC: понижение уровня' if is_downgrade else 'KYC: подтверждение',
+        detail=f"{company.name}: {before_name or before_code} → {target_status.name}",
+        actor=approver,
+        reason=reason,
+        before={'verification_status': before_code},
+        after={'verification_status': level_code},
+        level='WARNING' if is_downgrade else 'SUCCESS',
+    )
+
+    # Notify owner(s) by email and in-app (only on upgrades)
+    if not is_downgrade:
+        try:
+            _send_kyc_status_email(company, level_code)
+        except Exception:
+            pass  # email failure shouldn't roll back KYC
+        try:
+            _create_kyc_notification(company, level_code)
+        except Exception:
+            pass
     return company, None
 
 
 def _send_kyc_status_email(company: Company, level_code: str) -> None:
-    owners = CustomUser.objects.filter(
+    owners = list(CustomUser.objects.filter(
         memberships__company=company, memberships__is_primary=True, memberships__is_active=True,
-    ).distinct()
-    if not owners.exists():
+    ).distinct())
+    if not owners:
         return
-    subject_map = {
-        'L2_VERIFIED': f"RailTech: KYC компании {company.name} подтверждён",
-        'L3_CONTRACTED': f"RailTech: контракт с RailTech активирован",
+    context = {
+        'company_name': company.name,
+        'company_inn': company.inn,
+        'level_code': level_code,
+        'frontend_url': getattr(settings, 'FRONTEND_URL', 'http://localhost:5173'),
     }
-    body_map = {
-        'L2_VERIFIED': (
-            "Здравствуйте!\n\n"
-            f"KYC уровень L2 для компании {company.name} (ИНН {company.inn}) успешно подтверждён.\n"
-            "Теперь вы можете работать в полном объёме в RailTech.\n\n"
-            "— RailTech B2B"
-        ),
-        'L3_CONTRACTED': (
-            "Здравствуйте!\n\n"
-            f"Контракт для компании {company.name} активирован. Все премиум-функции открыты.\n\n"
-            "— RailTech B2B"
-        ),
-    }
-    subject = subject_map.get(level_code, f"RailTech: обновление статуса KYC → {level_code}")
-    body = body_map.get(level_code, f"Статус верификации изменён на {level_code}.")
-    send_mail(
-        subject, body,
-        getattr(settings, 'DEFAULT_FROM_EMAIL', 'no-reply@railtech.uz'),
-        list(owners.values_list('email', flat=True)),
-        fail_silently=True,
-    )
+    # Send one email per owner so each row in EmailLog is searchable by user.
+    for owner in owners:
+        send_templated_email(
+            'kyc_verified',
+            context,
+            to=[owner.email],
+            channel='transactional',
+            user=owner,
+            fail_silently=True,
+        )
 
 
 def _create_kyc_notification(company: Company, level_code: str) -> None:
@@ -326,18 +354,22 @@ def bulk_verify_kyc(
     companies: QuerySet[Company],
     approver: CustomUser,
     level_code: str = 'L2_VERIFIED',
-) -> Tuple[int, List[str]]:
+    reason: str = '',
+) -> Tuple[int, List[dict]]:
     """
     Bulk wrapper around verify_company_kyc for admin actions.
 
-    Returns: (approved_count, list_of_skipped_company_names)
+    Returns: (approved_count, list_of_skipped_reports [{company_id, name, error}])
     """
     approved = 0
-    skipped: List[str] = []
+    skipped: List[dict] = []
     for company in companies:
-        _, error = verify_company_kyc(company, approver, level_code, require_documents=True)
+        _, error = verify_company_kyc(
+            company, approver, level_code,
+            require_documents=True, reason=reason,
+        )
         if error:
-            skipped.append(company.name)
+            skipped.append({'company_id': company.id, 'name': company.name, 'error': error})
         else:
             approved += 1
     return approved, skipped
@@ -364,12 +396,34 @@ def approve_role_application(
         if not application.partnership_agreement:
             return None, 'ROLE_APPLICATION_MISSING_PARTNERSHIP'
 
+    before_status = application.status
     application.status = 'APPROVED'
     application.reviewed_by = reviewer
     application.reviewed_at = timezone.now()
     application.save(update_fields=['status', 'reviewed_by', 'reviewed_at', 'updated_at'])
 
     application.company.types.add(application.requested_type)
+
+    from core.audit import log_admin_action
+    log_admin_action(
+        entity_type='role_application',
+        entity_id=application.id,
+        action='Заявка на роль одобрена',
+        detail=f"{application.company.name} → {application.requested_type.name}",
+        actor=reviewer,
+        before={'status': before_status},
+        after={'status': 'APPROVED'},
+        level='SUCCESS',
+    )
+    log_admin_action(
+        entity_type='company',
+        entity_id=application.company_id,
+        action=f'Добавлена роль: {application.requested_type.code}',
+        detail=f"Одобрена заявка #{application.id}",
+        actor=reviewer,
+        after={'added_type': application.requested_type.code},
+        level='SUCCESS',
+    )
 
     # Auto-create TRIAL subscription for SUPPLIER / MANUFACTURER — 30 days
     if requested_code in ('SUPPLIER', 'MANUFACTURER'):
@@ -405,32 +459,28 @@ def ensure_trial_subscription(company: Company, trial_days: int = 30) -> Supplie
 
 
 def _send_role_application_email(app: CompanyRoleApplication, approved: bool) -> None:
-    owners = CustomUser.objects.filter(
+    owners = list(CustomUser.objects.filter(
         memberships__company=app.company, memberships__is_primary=True, memberships__is_active=True,
-    ).distinct()
-    if not owners.exists():
+    ).distinct())
+    if not owners:
         return
-    subject = (
-        f"RailTech: заявка на роль {app.requested_type.name} одобрена"
-        if approved else
-        f"RailTech: заявка на роль {app.requested_type.name} отклонена"
-    )
-    if approved:
-        body = (
-            f"Заявка компании {app.company.name} на роль {app.requested_type.name} одобрена.\n"
-            f"Для поставщиков/производителей активирован пробный период 30 дней.\n\n— RailTech B2B"
+    template = 'role_application_approved' if approved else 'role_application_rejected'
+    context = {
+        'company_name': app.company.name,
+        'requested_type_name': app.requested_type.name,
+        'review_notes': app.review_notes or '',
+        'trial_granted': approved and app.requested_type.code in ('SUPPLIER', 'MANUFACTURER'),
+        'frontend_url': getattr(settings, 'FRONTEND_URL', 'http://localhost:5173'),
+    }
+    for owner in owners:
+        send_templated_email(
+            template,
+            context,
+            to=[owner.email],
+            channel='transactional',
+            user=owner,
+            fail_silently=True,
         )
-    else:
-        body = (
-            f"К сожалению, заявка на роль {app.requested_type.name} отклонена.\n"
-            f"Комментарий: {app.review_notes or '—'}\n\n— RailTech B2B"
-        )
-    send_mail(
-        subject, body,
-        getattr(settings, 'DEFAULT_FROM_EMAIL', 'no-reply@railtech.uz'),
-        list(owners.values_list('email', flat=True)),
-        fail_silently=True,
-    )
 
 
 def record_subscription_payment(
@@ -500,18 +550,37 @@ def reject_role_application(
     reviewer: CustomUser,
     reason: str = '',
 ) -> Tuple[Optional[CompanyRoleApplication], Optional[str]]:
-    """Reject a CompanyRoleApplication. Returns (app, error_or_None)."""
+    """Reject a CompanyRoleApplication. Reason is required for audit. Returns (app, error_or_None)."""
     if application.status not in ('PENDING', 'PAYMENT_REQUIRED', 'DOCUMENTS_REQUIRED'):
         return None, 'ROLE_APPLICATION_CANNOT_REJECT'
+    if not (reason or '').strip():
+        return None, 'REASON_REQUIRED'
 
+    before_status = application.status
     application.status = 'REJECTED'
     application.reviewed_by = reviewer
     application.reviewed_at = timezone.now()
-    if reason:
-        application.review_notes = reason
-        application.save(update_fields=['status', 'reviewed_by', 'reviewed_at', 'review_notes', 'updated_at'])
-    else:
-        application.save(update_fields=['status', 'reviewed_by', 'reviewed_at', 'updated_at'])
+    application.review_notes = reason
+    application.save(update_fields=['status', 'reviewed_by', 'reviewed_at', 'review_notes', 'updated_at'])
+
+    from core.audit import log_admin_action
+    log_admin_action(
+        entity_type='role_application',
+        entity_id=application.id,
+        action='Заявка на роль отклонена',
+        detail=f"{application.company.name} → {application.requested_type.name}",
+        actor=reviewer,
+        reason=reason,
+        before={'status': before_status},
+        after={'status': 'REJECTED'},
+        level='WARNING',
+    )
+
+    try:
+        _send_role_application_email(application, approved=False)
+    except Exception:
+        pass
+
     return application, None
 
 

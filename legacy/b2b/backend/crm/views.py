@@ -27,7 +27,7 @@ from django.utils.translation import gettext_lazy as _
 from datetime import timedelta
 from decimal import Decimal
 
-from .services import transition_deal_stage, register_new_deal, send_deal_message
+from .services import transition_deal_stage, force_transition_deal_stage, register_new_deal, send_deal_message
 from . import services as crm_services
 
 
@@ -169,15 +169,19 @@ class DealViewSet(viewsets.ModelViewSet):
     def force_change_stage(self, request, pk=None):
         deal = self.get_object()
         stage_code = request.data.get('stage_code')
-        reason = request.data.get('reason', '')
+        reason = (request.data.get('reason') or '').strip()
         if not stage_code:
             return Response({'detail': 'STAGE_CODE_REQUIRED'},
                             status=status.HTTP_400_BAD_REQUEST)
-        deal, error = transition_deal_stage(
-            deal, stage_code, actor=request.user, reason=reason, validate_fsm=False,
+        if not reason:
+            return Response({'detail': 'REASON_REQUIRED'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        deal, error = force_transition_deal_stage(
+            deal, stage_code, actor=request.user, reason=reason,
         )
         if error:
-            return Response({'detail': error}, status=status.HTTP_400_BAD_REQUEST)
+            code = status.HTTP_400_BAD_REQUEST
+            return Response({'detail': error}, status=code)
         return Response(DealDetailSerializer(deal).data)
 
     @extend_schema(

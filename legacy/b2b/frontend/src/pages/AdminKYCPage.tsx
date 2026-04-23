@@ -76,7 +76,7 @@ function DetailSheet({
 
   const handleVerify = async (targetStatus: string) => {
     try {
-      await verifyMutation.mutateAsync({ id: company.id, statusCode: targetStatus, comment: comment.trim() || undefined });
+      await verifyMutation.mutateAsync({ companyId: company.id, status_code: targetStatus, comment: comment.trim() || undefined });
       toast.success(t('kycManager.verified'));
       onOpenChange(false);
       setComment('');

@@ -41,7 +41,19 @@
     "saving": "Сохранение...",
     "unitHours": "ч",
     "select": "Выбрать",
-    "selectAll": "Выбрать все"
+    "selectAll": "Выбрать все",
+    "approve": "Одобрить",
+    "reject": "Отклонить",
+    "revoke": "Отозвать",
+    "activate": "Активировать",
+    "suspend": "Приостановить",
+    "confirm": "Подтвердить",
+    "clear": "Очистить",
+    "prev": "Назад",
+    "next": "Далее",
+    "period7d": "7 дней",
+    "period30d": "30 дней",
+    "period90d": "90 дней"
   },
   "auth": {
     "loginTitle": "Вход в кабинет",
@@ -2791,7 +2803,89 @@
     "new": "Новое",
     "prev": "Назад",
     "next": "Далее",
-    "showing": "Показано {{from}}–{{to}} из {{total}}"
+    "showing": "Показано {{from}}–{{to}} из {{total}}",
+    "columns": "Колонки",
+    "density": "Плотность",
+    "export": "Экспорт",
+    "exportCsv": "Экспорт в CSV",
+    "exportXlsx": "Экспорт в Excel (XLSX)",
+    "empty": "Записей нет",
+    "selected": "Выбрано: {{count}}",
+    "selectAll": "Выбрать все",
+    "selectRow": "Выбрать строку",
+    "rowActions": "Действия",
+    "paginationLabel": "{{from}}–{{to}} из {{total}}"
+  },
+  "adminDetail": {
+    "dangerZone": "Опасная зона",
+    "timelineEmpty": "История изменений пуста",
+    "reason": "Причина"
+  },
+  "confirmDialog": {
+    "reason": "Причина",
+    "reasonPlaceholder": "Опишите причину действия…",
+    "templates": "Выбрать шаблон",
+    "typeToConfirm": "Введите «{{value}}» для подтверждения",
+    "kycLevel": "Уровень KYC"
+  },
+  "adminQueue": {
+    "severity": {
+      "critical": "Срочно",
+      "warning": "Требует внимания",
+      "info": "Инфо"
+    },
+    "kycApproved": "KYC подтверждён",
+    "kycRevoked": "KYC откатан",
+    "subscriptionActivated": "Подписка активирована",
+    "confirm": {
+      "kycApproveTitle": "Подтвердить KYC до L2",
+      "kycApproveDescription": "Компания {{name}} получит статус L2 и полный доступ.",
+      "kycRevokeTitle": "Откатить KYC",
+      "kycRevokeDescription": "Компания {{name}} будет возвращена на L1. Укажите причину — она попадёт в журнал аудита.",
+      "subActivateTitle": "Активировать подписку",
+      "commentOptional": "Комментарий (необязательно)"
+    },
+    "reasonTemplates": {
+      "docsInvalid": "Документы нечитабельны или не соответствуют требованиям",
+      "innMismatch": "Указанный ИНН не совпадает с документами",
+      "other": "Другое (уточнить в комментарии)"
+    }
+  },
+  "platformAdmin": {
+    "dashboard": {
+      "title": "Командный центр",
+      "subtitle": "Что требует вашего внимания прямо сейчас"
+    },
+    "pulse": {
+      "newCompanies": "Новые компании",
+      "newDeals": "Новые сделки",
+      "signedValue": "Сумма согласованных КП",
+      "mrr": "MRR",
+      "activeSubscriptions": "Активных подписок: {{count}}"
+    },
+    "queue": {
+      "title": "Очередь задач",
+      "emptyTitle": "Всё под контролем",
+      "emptyHint": "Новые задачи появятся здесь автоматически",
+      "filters": {
+        "all": "Все",
+        "kyc_pending": "KYC",
+        "role_application": "Заявки на роль",
+        "subscription_past_due": "Просроченные подписки",
+        "subscription_expiring": "Истекают подписки",
+        "invoice_overdue": "Просроченные счета",
+        "support_urgent": "Срочные тикеты"
+      }
+    },
+    "activity": {
+      "title": "Последние события",
+      "empty": "Записей нет"
+    },
+    "summary": {
+      "title": "Срезы",
+      "subsExpiring": "Подписки (просрочка/истекают)",
+      "overdueInvoices": "Просроченные счета"
+    }
   },
   "adminMasterData": {
     "title": "Справочники",

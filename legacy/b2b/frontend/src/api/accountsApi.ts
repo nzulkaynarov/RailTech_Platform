@@ -126,8 +126,11 @@ export const accountsApi = {
 	deleteCompany: async (id: number) => {
 		await apiClient.delete(`accounts/companies/${id}/`);
 	},
-	verifyCompany: async (id: number, statusCode: string, comment?: string) => {
-		const response = await apiClient.post(`accounts/companies/${id}/verify-kyc/`, { status_code: statusCode, comment });
+	verifyCompany: async (id: number, statusCode: string, comment?: string, reason?: string) => {
+		const response = await apiClient.post(
+			`accounts/companies/${id}/verify-kyc/`,
+			{ status_code: statusCode, comment, reason },
+		);
 		return response.data;
 	},
 	uploadDocument: async (companyId: number, file: File, docType: string) => {

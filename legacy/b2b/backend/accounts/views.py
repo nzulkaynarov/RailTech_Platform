@@ -134,9 +134,11 @@ class CompanyViewSet(viewsets.ModelViewSet):
         if serializer.is_valid():
             code = serializer.validated_data['status_code']
             comment = serializer.validated_data.get('comment', '')
+            reason = (request.data.get('reason') or comment or '').strip()
 
             result, error = services.verify_company_kyc(
-                company, request.user, level_code=code, require_documents=True
+                company, request.user, level_code=code,
+                require_documents=True, reason=reason,
             )
             if error:
                 return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
@@ -147,6 +149,62 @@ class CompanyViewSet(viewsets.ModelViewSet):
 
             return Response({'status': 'Status updated', 'new_status': result.verification_status.name})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @extend_schema(
+        summary="Bulk verify KYC",
+        description="Platform Admin: verify KYC for multiple companies in one request.",
+        request={'application/json': {
+            'type': 'object',
+            'properties': {
+                'ids': {'type': 'array', 'items': {'type': 'integer'}},
+                'level': {'type': 'string', 'default': 'L2_VERIFIED'},
+                'reason': {'type': 'string'},
+            },
+            'required': ['ids'],
+        }},
+        responses={200: OpenApiResponse(description='approved count + skipped')},
+        tags=['Accounts'],
+    )
+    @extend_schema(
+        summary='Export companies',
+        description='Export filtered companies list as CSV or XLSX (format=csv|xlsx).',
+        tags=['Accounts'],
+    )
+    @action(detail=False, methods=['get'], url_path='export')
+    def export(self, request):
+        from core.exporters import export_queryset
+        qs = self.filter_queryset(self.get_queryset())
+        def _types(c):
+            return ','.join(sorted(t.code for t in c.types.all()))
+        return export_queryset(
+            qs, request=request, filename='companies',
+            columns=[
+                ('id', 'ID', lambda c: c.id),
+                ('name', 'Name', lambda c: c.name),
+                ('inn', 'INN', lambda c: c.inn or ''),
+                ('verification', 'KYC', lambda c: c.verification_status.code if c.verification_status_id else ''),
+                ('types', 'Types', _types),
+                ('email', 'Email', lambda c: c.email or ''),
+                ('phone', 'Phone', lambda c: c.phone or ''),
+                ('contact_person', 'Contact', lambda c: c.contact_person or ''),
+                ('created_at', 'Created', lambda c: c.created_at.isoformat() if c.created_at else ''),
+            ],
+        )
+
+    @action(detail=False, methods=['post'], url_path='bulk-verify-kyc',
+            permission_classes=[permissions.IsAuthenticated, IsPlatformAdmin])
+    def bulk_verify_kyc(self, request):
+        ids = request.data.get('ids') or []
+        level = request.data.get('level') or 'L2_VERIFIED'
+        reason = (request.data.get('reason') or '').strip()
+        if not isinstance(ids, list) or not ids:
+            return Response({'detail': 'ids (non-empty list) is required'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        companies = Company.objects.filter(id__in=ids)
+        approved, skipped = services.bulk_verify_kyc(
+            companies, request.user, level_code=level, reason=reason,
+        )
+        return Response({'approved': approved, 'skipped': skipped})
 
     @extend_schema(
         summary="Upload KYC document",
@@ -372,6 +430,32 @@ class UserViewSet(viewsets.ModelViewSet):
     ).order_by('-date_joined')
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['is_active', 'role__code']
+    search_fields = ['email', 'first_name', 'last_name', 'phone']
+
+    @extend_schema(
+        summary='Export users',
+        description='Export filtered users list as CSV or XLSX.',
+        tags=['Accounts'],
+    )
+    @action(detail=False, methods=['get'], url_path='export')
+    def export(self, request):
+        from core.exporters import export_queryset
+        qs = self.filter_queryset(self.get_queryset())
+        return export_queryset(
+            qs, request=request, filename='users',
+            columns=[
+                ('id', 'ID', lambda u: u.id),
+                ('email', 'Email', lambda u: u.email),
+                ('first_name', 'First name', lambda u: u.first_name or ''),
+                ('last_name', 'Last name', lambda u: u.last_name or ''),
+                ('role', 'Role', lambda u: u.role.code if u.role_id else ''),
+                ('is_active', 'Active', lambda u: u.is_active),
+                ('last_login', 'Last login', lambda u: u.last_login.isoformat() if u.last_login else ''),
+                ('date_joined', 'Joined', lambda u: u.date_joined.isoformat() if u.date_joined else ''),
+            ],
+        )
 
     @extend_schema(
         summary="Change password",
@@ -857,6 +941,75 @@ class SupplierSubscriptionViewSet(viewsets.ModelViewSet):
         )
         sub.refresh_from_db()
         return Response(self.get_serializer(sub).data)
+
+    @extend_schema(
+        summary='Export subscriptions',
+        description='Export filtered subscriptions as CSV or XLSX.',
+        tags=['Accounts'],
+    )
+    @action(detail=False, methods=['get'], url_path='export')
+    def export(self, request):
+        from core.exporters import export_queryset
+        qs = self.filter_queryset(self.get_queryset())
+        return export_queryset(
+            qs, request=request, filename='subscriptions',
+            columns=[
+                ('id', 'ID', lambda s: s.id),
+                ('company', 'Company', lambda s: s.company.name if s.company_id else ''),
+                ('inn', 'INN', lambda s: s.company.inn if s.company_id else ''),
+                ('plan', 'Plan', lambda s: s.plan),
+                ('status', 'Status', lambda s: s.status),
+                ('monthly_rate', 'Monthly rate', lambda s: s.monthly_rate),
+                ('currency', 'Currency', lambda s: s.currency.code if s.currency_id else ''),
+                ('valid_from', 'Valid from', lambda s: s.valid_from.isoformat() if s.valid_from else ''),
+                ('valid_until', 'Valid until', lambda s: s.valid_until.isoformat() if s.valid_until else ''),
+            ],
+        )
+
+    @extend_schema(
+        summary="Bulk set subscription status",
+        description="Platform Admin: apply a target status (ACTIVE | SUSPENDED) to multiple subscriptions.",
+        request={'application/json': {
+            'type': 'object',
+            'properties': {
+                'ids': {'type': 'array', 'items': {'type': 'integer'}},
+                'status': {'type': 'string', 'enum': ['ACTIVE', 'SUSPENDED']},
+                'reason': {'type': 'string'},
+            },
+            'required': ['ids', 'status'],
+        }},
+        responses={200: OpenApiResponse(description='affected count')},
+        tags=['Accounts'],
+    )
+    @action(detail=False, methods=['post'], url_path='bulk-set-status')
+    def bulk_set_status(self, request):
+        ids = request.data.get('ids') or []
+        target = (request.data.get('status') or '').upper()
+        reason = (request.data.get('reason') or '').strip()
+        if not isinstance(ids, list) or not ids:
+            return Response({'detail': 'ids (non-empty list) is required'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        if target not in ('ACTIVE', 'SUSPENDED'):
+            return Response({'detail': "status must be one of ACTIVE, SUSPENDED"},
+                            status=status.HTTP_400_BAD_REQUEST)
+        if target == 'SUSPENDED' and not reason:
+            return Response({'detail': 'REASON_REQUIRED'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        subs = SupplierSubscription.objects.filter(id__in=ids).select_related('company')
+        affected_rows = services.change_subscription_status(subs, target)
+        from core.audit import log_admin_action
+        for sub in subs:
+            log_admin_action(
+                entity_type='subscription',
+                entity_id=sub.id,
+                action=f'Bulk: статус подписки → {target}',
+                detail=f"{sub.company.name} · {target}" if sub.company_id else str(sub.id),
+                actor=request.user,
+                reason=reason,
+                after={'status': target},
+                level='WARNING' if target == 'SUSPENDED' else 'SUCCESS',
+            )
+        return Response({'affected': affected_rows, 'target': target})
 
     @extend_schema(summary="Record subscription payment — extends validity and activates",
                    tags=['Accounts'])

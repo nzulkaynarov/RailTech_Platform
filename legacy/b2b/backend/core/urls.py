@@ -38,6 +38,9 @@ from core.views import (
     PageStatsView, SystemSettingsView, PlatformDashboardView,
     SupportTicketViewSet,
 )
+from core.admin_api import (
+    AdminTriageQueueView, AdminPulseView, AdminSearchView, AdminActivityView,
+)
 
 router = DefaultRouter()
 router.register(r'catalog/products', ProductViewSet, basename='product')
@@ -113,6 +116,11 @@ urlpatterns = [
     path('api/v1/crm/analytics/dashboard/', DashboardAnalyticsView.as_view(), name='dashboard-analytics'),
     path('api/v1/analytics/page-stats/', PageStatsView.as_view(), name='page-stats'),
     path('api/v1/analytics/platform-dashboard/', PlatformDashboardView.as_view(), name='platform-dashboard'),
+    # Admin Platform API
+    path('api/v1/admin/queue/', AdminTriageQueueView.as_view(), name='admin-queue'),
+    path('api/v1/admin/pulse/', AdminPulseView.as_view(), name='admin-pulse'),
+    path('api/v1/admin/search/', AdminSearchView.as_view(), name='admin-search'),
+    path('api/v1/admin/activity/', AdminActivityView.as_view(), name='admin-activity'),
     path('api/v1/crm/leads/', LeadCreateView.as_view(), name='lead-create'),
     path('api/v1/crm/status-choices/', Phase2StatusChoicesView.as_view(), name='phase2-status-choices'),
     path('api/v1/system-settings/', SystemSettingsView.as_view(), name='system-settings'),

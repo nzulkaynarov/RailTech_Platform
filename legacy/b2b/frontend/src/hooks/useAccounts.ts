@@ -143,10 +143,21 @@ export const useInviteMember = () => {
 export const useVerifyCompany = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, statusCode, comment }: { id: number; statusCode: string; comment?: string }) =>
-      accountsApi.verifyCompany(id, statusCode, comment),
+    mutationFn: ({
+      companyId,
+      status_code,
+      comment,
+      reason,
+    }: {
+      companyId: number;
+      status_code: string;
+      comment?: string;
+      reason?: string;
+    }) => accountsApi.verifyCompany(companyId, status_code, comment, reason),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['companies'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-queue'] });
+      queryClient.invalidateQueries({ queryKey: ['platform-dashboard'] });
     },
   });
 };

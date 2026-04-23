@@ -41,7 +41,19 @@
     "saving": "Saving...",
     "unitHours": "h",
     "select": "Select",
-    "selectAll": "Select all"
+    "selectAll": "Select all",
+    "approve": "Approve",
+    "reject": "Reject",
+    "revoke": "Revoke",
+    "activate": "Activate",
+    "suspend": "Suspend",
+    "confirm": "Confirm",
+    "clear": "Clear",
+    "prev": "Prev",
+    "next": "Next",
+    "period7d": "7 days",
+    "period30d": "30 days",
+    "period90d": "90 days"
   },
   "auth": {
     "loginTitle": "Sign in",
@@ -2791,7 +2803,89 @@
     "new": "New",
     "prev": "Prev",
     "next": "Next",
-    "showing": "Showing {{from}}–{{to}} of {{total}}"
+    "showing": "Showing {{from}}–{{to}} of {{total}}",
+    "columns": "Columns",
+    "density": "Density",
+    "export": "Export",
+    "exportCsv": "Export to CSV",
+    "exportXlsx": "Export to Excel (XLSX)",
+    "empty": "No entries",
+    "selected": "Selected: {{count}}",
+    "selectAll": "Select all",
+    "selectRow": "Select row",
+    "rowActions": "Actions",
+    "paginationLabel": "{{from}}–{{to}} of {{total}}"
+  },
+  "adminDetail": {
+    "dangerZone": "Danger zone",
+    "timelineEmpty": "No activity yet",
+    "reason": "Reason"
+  },
+  "confirmDialog": {
+    "reason": "Reason",
+    "reasonPlaceholder": "Describe the reason for this action…",
+    "templates": "Choose a template",
+    "typeToConfirm": "Type \"{{value}}\" to confirm",
+    "kycLevel": "KYC level"
+  },
+  "adminQueue": {
+    "severity": {
+      "critical": "Urgent",
+      "warning": "Attention",
+      "info": "Info"
+    },
+    "kycApproved": "KYC approved",
+    "kycRevoked": "KYC revoked",
+    "subscriptionActivated": "Subscription activated",
+    "confirm": {
+      "kycApproveTitle": "Approve KYC to L2",
+      "kycApproveDescription": "Company {{name}} will receive L2 status and full access.",
+      "kycRevokeTitle": "Revoke KYC",
+      "kycRevokeDescription": "Company {{name}} will be reverted to L1. Provide a reason — it will be recorded in the audit log.",
+      "subActivateTitle": "Activate subscription",
+      "commentOptional": "Comment (optional)"
+    },
+    "reasonTemplates": {
+      "docsInvalid": "Documents are unreadable or do not meet requirements",
+      "innMismatch": "INN does not match the documents",
+      "other": "Other (specify in comment)"
+    }
+  },
+  "platformAdmin": {
+    "dashboard": {
+      "title": "Command center",
+      "subtitle": "What requires your attention right now"
+    },
+    "pulse": {
+      "newCompanies": "New companies",
+      "newDeals": "New deals",
+      "signedValue": "Quotes signed value",
+      "mrr": "MRR",
+      "activeSubscriptions": "Active subscriptions: {{count}}"
+    },
+    "queue": {
+      "title": "Triage queue",
+      "emptyTitle": "Everything is under control",
+      "emptyHint": "New items will show up here automatically",
+      "filters": {
+        "all": "All",
+        "kyc_pending": "KYC",
+        "role_application": "Role applications",
+        "subscription_past_due": "Subscriptions past due",
+        "subscription_expiring": "Subscriptions expiring",
+        "invoice_overdue": "Overdue invoices",
+        "support_urgent": "Urgent tickets"
+      }
+    },
+    "activity": {
+      "title": "Recent activity",
+      "empty": "No entries"
+    },
+    "summary": {
+      "title": "Overview",
+      "subsExpiring": "Subscriptions (past due/expiring)",
+      "overdueInvoices": "Overdue invoices"
+    }
   },
   "adminMasterData": {
     "title": "Master data",

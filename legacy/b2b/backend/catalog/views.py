@@ -305,6 +305,29 @@ class ProductViewSet(viewsets.ModelViewSet):
         },
         tags=['Catalog'],
     )
+    @extend_schema(
+        summary='Export products list',
+        description='Export filtered product list as CSV or XLSX.',
+        tags=['Catalog'],
+    )
+    @action(detail=False, methods=['get'], url_path='export')
+    def export(self, request):
+        from core.exporters import export_queryset
+        qs = self.filter_queryset(self.get_queryset())
+        return export_queryset(
+            qs, request=request, filename='products',
+            columns=[
+                ('id', 'ID', lambda p: p.id),
+                ('sku', 'SKU', lambda p: p.sku or ''),
+                ('name', 'Name', lambda p: p.name),
+                ('domain_type', 'Domain', lambda p: p.domain_type.code if p.domain_type_id else ''),
+                ('category', 'Category', lambda p: p.category.name if p.category_id else ''),
+                ('status', 'Status', lambda p: p.status.code if p.status_id else ''),
+                ('manufacturer', 'Manufacturer', lambda p: p.manufacturer.name if p.manufacturer_id else ''),
+                ('created_at', 'Created', lambda p: p.created_at.isoformat() if p.created_at else ''),
+            ],
+        )
+
     @action(
         detail=False, methods=['get'], url_path='export-template',
         permission_classes=[permissions.IsAuthenticated],

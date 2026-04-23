@@ -83,3 +83,79 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"{self.type}: {self.title}"
+
+
+class EmailLog(models.Model):
+    """Audit log of every email the platform attempts to send.
+
+    Populated by notifications.emails.send_templated_email. Viewable in Unfold
+    admin — answers "what was sent to this user and when". Stores both plain
+    and HTML bodies for inspection; failed sends are recorded with error text.
+    """
+
+    STATUS_SENT = 'SENT'
+    STATUS_FAILED = 'FAILED'
+    STATUS_CHOICES = [
+        (STATUS_SENT, _('Отправлено')),
+        (STATUS_FAILED, _('Ошибка')),
+    ]
+
+    template = models.CharField(
+        max_length=100, db_index=True,
+        verbose_name=_("Шаблон"),
+        help_text=_("Код шаблона, например 'setup_password', 'kyc_verified'"),
+    )
+    channel = models.CharField(
+        max_length=40, db_index=True, default='transactional',
+        verbose_name=_("Канал"),
+        help_text=_("Ключ из settings.EMAIL_CHANNELS: transactional / marketing / system"),
+    )
+    subject = models.CharField(
+        max_length=255,
+        verbose_name=_("Тема"),
+    )
+    from_email = models.CharField(
+        max_length=255,
+        verbose_name=_("Отправитель"),
+    )
+    to_emails = models.JSONField(
+        default=list,
+        verbose_name=_("Получатели"),
+        help_text=_("Список email-адресов"),
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='email_logs',
+        verbose_name=_("Пользователь"),
+        help_text=_("Основной адресат, если известен (для поиска по user__email)"),
+    )
+    body_text = models.TextField(
+        blank=True,
+        verbose_name=_("Текст (plain)"),
+    )
+    body_html = models.TextField(
+        blank=True,
+        verbose_name=_("Тело (HTML)"),
+    )
+    status = models.CharField(
+        max_length=10, choices=STATUS_CHOICES, default=STATUS_SENT, db_index=True,
+        verbose_name=_("Статус"),
+    )
+    error = models.TextField(
+        blank=True,
+        verbose_name=_("Ошибка"),
+        help_text=_("Текст исключения, если отправка не удалась"),
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True, db_index=True,
+        verbose_name=_("Время"),
+    )
+
+    class Meta:
+        verbose_name = _("Журнал email")
+        verbose_name_plural = _("Журнал email-рассылок")
+        ordering = ['-created_at']
+
+    def __str__(self):
+        recipients = ', '.join(self.to_emails) if self.to_emails else '—'
+        return f"[{self.status}] {self.template} → {recipients}"

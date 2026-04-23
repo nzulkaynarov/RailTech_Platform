@@ -235,15 +235,17 @@ class CompanyWizardView(SessionWizardView):
             base_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173')
             setup_url = f"{base_url}/setup-password?uid={uid}&token={token}"
             try:
-                from django.core.mail import send_mail
-                send_mail(
-                    "Настройка пароля RailTech B2B",
-                    f"Здравствуйте, {data.get('owner_first_name', '')}!\n\n"
-                    f"Для вас создан аккаунт на платформе RailTech.\n"
-                    f"Для установки пароля перейдите по ссылке:\n{setup_url}",
-                    settings.DEFAULT_FROM_EMAIL,
-                    [owner_email],
-                    fail_silently=False,
+                from notifications.emails import send_templated_email
+                send_templated_email(
+                    'setup_password',
+                    {
+                        'first_name': data.get('owner_first_name', ''),
+                        'setup_url': setup_url,
+                    },
+                    to=[owner_email],
+                    channel='transactional',
+                    user=user,
+                    fail_silently=True,
                 )
             except Exception:
                 logger.exception(f"Failed to send setup email to {owner_email}")
