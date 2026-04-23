@@ -184,9 +184,18 @@ class ProductViewSet(viewsets.ModelViewSet):
                 'offers__currency',
                 'offers__delivery_basis',
             )
-        # Non-admins only see PUBLISHED products
-        if not (user.is_authenticated and (user.is_platform_admin)):
-            queryset = queryset.filter(status__code='PUBLISHED')
+        # Non-admins see PUBLISHED + products manufactured by their own company
+        if not (user.is_authenticated and user.is_platform_admin):
+            from django.db.models import Q
+            if user.is_authenticated:
+                own_mfg_ids = user.memberships.filter(
+                    is_active=True,
+                ).values_list('company_id', flat=True)
+                queryset = queryset.filter(
+                    Q(status__code='PUBLISHED') | Q(manufacturer_id__in=list(own_mfg_ids)),
+                )
+            else:
+                queryset = queryset.filter(status__code='PUBLISHED')
 
         # Filter by stock_status (from supplier offers)
         stock_status = self.request.query_params.get('stock_status')
@@ -209,8 +218,25 @@ class ProductViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
             return [permissions.AllowAny()]
-        from core.permissions import IsPlatformAdmin
-        return [permissions.IsAuthenticated(), IsPlatformAdmin()]
+        if self.action == 'bulk_publish':
+            from core.permissions import IsPlatformAdmin
+            return [permissions.IsAuthenticated(), IsPlatformAdmin()]
+        from core.permissions import IsProductManagerOrAdmin
+        return [permissions.IsAuthenticated(), IsProductManagerOrAdmin()]
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        if user.is_platform_admin:
+            serializer.save()
+            return
+        mfg_membership = user.memberships.filter(
+            is_active=True,
+            company__types__code__in=['MANUFACTURER', 'SUPPLIER'],
+        ).select_related('company').first()
+        if not mfg_membership:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("NO_MANUFACTURER_MEMBERSHIP")
+        serializer.save(manufacturer=mfg_membership.company)
 
     @extend_schema(
         summary="Bulk publish products",

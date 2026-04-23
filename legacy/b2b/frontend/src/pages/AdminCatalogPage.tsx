@@ -87,7 +87,7 @@ function ProductMediaSection({ productId }: { productId: number }) {
   );
 }
 
-function ProductFormSheet({
+export function ProductFormSheet({
   open, onOpenChange, target,
 }: {
   open: boolean;

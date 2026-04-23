@@ -14,6 +14,8 @@ import {
     AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
     AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { ImageUpload } from '@/components/Shared/ImageUpload';
+import { RoleApplicationForm } from './RoleApplicationForm';
 
 const STATUS_CONFIG: Record<string, { icon: React.ElementType; color: string; bg: string; border: string }> = {
     L1_UNVERIFIED: { icon: AlertTriangle, color: 'text-warning', bg: 'bg-warning/10', border: 'border-warning/20' },
@@ -86,6 +88,20 @@ export const CompanyProfile: React.FC = () => {
         finally { setUploading(false); }
     };
 
+    const handleLogoUpload = async (file: File) => {
+        if (!company) return;
+        await accountsApi.uploadCompanyLogo(company.id, file);
+        const refreshed = await accountsApi.getCompanyDetail(company.id);
+        setCompany(refreshed);
+    };
+
+    const handleLogoRemove = async () => {
+        if (!company) return;
+        await accountsApi.deleteCompanyLogo(company.id);
+        const refreshed = await accountsApi.getCompanyDetail(company.id);
+        setCompany(refreshed);
+    };
+
     if (loading) return (
         <div className="flex h-full items-center justify-center">
             <Loader2 className="w-8 h-8 text-muted-foreground animate-spin" />
@@ -120,6 +136,20 @@ export const CompanyProfile: React.FC = () => {
                                         : t('company.statusHint.verified')}
                                 </p>
                             </div>
+                        </div>
+                    )}
+
+                    {/* Company Logo */}
+                    {company && (
+                        <div className="bg-card border border-border rounded-3xl p-6">
+                            <ImageUpload
+                                value={company.logo ?? null}
+                                onUpload={handleLogoUpload}
+                                onRemove={handleLogoRemove}
+                                fallback={company.name ? company.name.slice(0, 2).toUpperCase() : '—'}
+                                label={t('profile.companyInfo.logo')}
+                                description={t('profile.companyInfo.logoDescription')}
+                            />
                         </div>
                     )}
 
@@ -225,6 +255,10 @@ export const CompanyProfile: React.FC = () => {
 
             <div className="mt-8 border-t border-border pt-8">
                 <CompanyTeamSettings />
+            </div>
+
+            <div className="mt-8 border-t border-border pt-8">
+                <RoleApplicationForm />
             </div>
 
             <AlertDialog open={deleteDocTarget != null} onOpenChange={(o) => !o && setDeleteDocTarget(null)}>

@@ -228,7 +228,7 @@ export function RequestDetailPage({ onBack }: { onBack: () => void; onNavigate: 
 
       {/* Chat Panel */}
       <div className="flex-[3] min-w-72 max-w-sm sticky top-0 self-start">
-        <DealChatPanel />
+        <DealChatPanel dealId={deal.id} />
       </div>
 
       {/* HIGH-10: ask user for a reason instead of a hardcoded EN string */}

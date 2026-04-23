@@ -16,6 +16,20 @@ export interface SourcingRequest {
   created_at: string;
 }
 
+export interface Attachment {
+  id: number;
+  file: string | null;
+  original_filename: string;
+  uploaded_by: number | null;
+  uploaded_by_email: string | null;
+  uploaded_at: string;
+  deal?: number | null;
+  message?: number | null;
+  quote?: number | null;
+  company?: number | null;
+  product?: number | null;
+}
+
 export const sourcingApi = {
   getRequests: async (): Promise<SourcingRequest[]> => {
     const response = await apiClient.get<PaginatedResponse<SourcingRequest>>('sourcing/requests/');
@@ -24,5 +38,28 @@ export const sourcingApi = {
   getRequestDetail: async (id: number) => {
     const response = await apiClient.get(`sourcing/requests/${id}/`);
     return response.data;
+  },
+  listAttachments: async (params: {
+    deal?: number; message?: number; quote?: number; company?: number; product?: number;
+  }): Promise<Attachment[]> => {
+    const response = await apiClient.get<PaginatedResponse<Attachment>>('sourcing/attachments/', { params });
+    return response.data.results;
+  },
+  uploadAttachment: async (
+    parent: { deal?: number; message?: number; quote?: number; company?: number; product?: number },
+    file: File,
+  ): Promise<Attachment> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    Object.entries(parent).forEach(([k, v]) => {
+      if (v != null) formData.append(k, String(v));
+    });
+    const response = await apiClient.post<Attachment>('sourcing/attachments/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+  deleteAttachment: async (id: number): Promise<void> => {
+    await apiClient.delete(`sourcing/attachments/${id}/`);
   },
 };

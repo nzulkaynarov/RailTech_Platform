@@ -287,3 +287,12 @@ export const useRejectRoleApplication = () => {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['roleApplications'] }); },
   });
 };
+
+export const useCreateRoleApplication = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Parameters<typeof accountsApi.createRoleApplication>[0]) =>
+      accountsApi.createRoleApplication(data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['roleApplications'] }),
+  });
+};

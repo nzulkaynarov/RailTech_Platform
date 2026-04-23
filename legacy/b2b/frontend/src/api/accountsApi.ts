@@ -279,6 +279,12 @@ export const accountsApi = {
 		return response.data;
 	},
 
+	// ─── Company Types (authenticated lookup) ──────────────────────────
+	getCompanyTypes: async () => {
+		const response = await apiClient.get<{ id: number; code: string; name: string }[]>('accounts/company-types/');
+		return response.data;
+	},
+
 	// ─── Workspace Roles ───────────────────────────────────────────────
 	getWorkspaceRoles: async (companyType?: string) => {
 		const url = companyType
@@ -300,10 +306,30 @@ export const accountsApi = {
 		await apiClient.delete(`accounts/users/${userId}/remove-membership/${membershipId}/`);
 	},
 
-	// ─── Role Applications (admin) ─────────────────────────────────────
+	// ─── Role Applications (admin + owner self-service) ────────────────
 	getRoleApplications: async () => {
 		const response = await apiClient.get<PaginatedResponse<RoleApplication>>('accounts/role-applications/');
 		return response.data.results;
+	},
+	createRoleApplication: async (data: {
+		company: number;
+		requested_type: number;
+		contract_file?: File | null;
+		nda_file?: File | null;
+		partnership_agreement?: File | null;
+	}) => {
+		const formData = new FormData();
+		formData.append('company', String(data.company));
+		formData.append('requested_type', String(data.requested_type));
+		if (data.contract_file) formData.append('contract_file', data.contract_file);
+		if (data.nda_file) formData.append('nda_file', data.nda_file);
+		if (data.partnership_agreement) formData.append('partnership_agreement', data.partnership_agreement);
+		const response = await apiClient.post<RoleApplication>(
+			'accounts/role-applications/',
+			formData,
+			{ headers: { 'Content-Type': 'multipart/form-data' } },
+		);
+		return response.data;
 	},
 	approveRoleApplication: async (id: number) => {
 		const response = await apiClient.post<RoleApplication>(`accounts/role-applications/${id}/approve/`);

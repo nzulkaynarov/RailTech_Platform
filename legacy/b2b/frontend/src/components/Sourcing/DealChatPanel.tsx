@@ -12,12 +12,11 @@ import {
   MessageSquare,
   FileText,
   Send,
-  Paperclip,
-  Clock,
   User,
   CheckCheck,
   Info,
 } from 'lucide-react';
+import { DealAttachmentsPanel } from './DealAttachmentsPanel';
 
 interface ChatMessage {
   id: number;
@@ -30,16 +29,7 @@ interface ChatMessage {
 
 const initialMessages: ChatMessage[] = [];
 
-interface DemoDocument {
-  nameKey: string;
-  name: string;
-  size: string;
-  date: string;
-}
-
-const documents: DemoDocument[] = [];
-
-export function DealChatPanel(): React.ReactNode {
+export function DealChatPanel({ dealId }: { dealId?: number | null } = {}): React.ReactNode {
   const { t } = useTranslation();
   const [messages] = useState<ChatMessage[]>(initialMessages);
   const [inputValue, setInputValue] = useState('');
@@ -125,9 +115,6 @@ export function DealChatPanel(): React.ReactNode {
           <Separator />
 
           <div className="flex items-center gap-1.5 p-2">
-            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
-              <Paperclip className="h-3.5 w-3.5" />
-            </Button>
             <Input
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
@@ -142,42 +129,11 @@ export function DealChatPanel(): React.ReactNode {
 
         <TabsContent value="documents" className="mt-0 flex-1 overflow-hidden">
           <ScrollArea className="h-full px-3 py-2">
-            <div className="flex flex-col gap-1">
-              {documents.map((doc) => {
-                const isPdf = doc.name.endsWith('.pdf');
-                return (
-                  <div
-                    key={doc.name}
-                    className="hover:bg-muted/50 flex items-center gap-2.5 rounded-md px-2 py-2 transition-colors"
-                  >
-                    <div
-                      className={cn(
-                        'flex h-8 w-8 shrink-0 items-center justify-center rounded',
-                        isPdf ? 'bg-muted text-muted-foreground' : 'bg-muted text-muted-foreground',
-                      )}
-                    >
-                      <FileText className="h-4 w-4" />
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs font-medium">{doc.name}</p>
-                      <div className="text-muted-foreground flex items-center gap-2 text-xs">
-                        <span>{doc.size}</span>
-                        <span className="text-muted-foreground/40">|</span>
-                        <span className="flex items-center gap-0.5">
-                          <Clock className="h-2.5 w-2.5" />
-                          {doc.date}
-                        </span>
-                      </div>
-                    </div>
-
-                    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
-                      <FileText className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                );
-              })}
-            </div>
+            {dealId ? (
+              <DealAttachmentsPanel dealId={dealId} />
+            ) : (
+              <p className="text-xs text-muted-foreground">{t('dealAttachments.noDeal')}</p>
+            )}
           </ScrollArea>
         </TabsContent>
       </Tabs>

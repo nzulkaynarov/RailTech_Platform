@@ -2,8 +2,9 @@ import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import {
-  Package, Eye, ShoppingCart, LayoutGrid, List,
+  Package, Eye, ShoppingCart, LayoutGrid, List, Pencil,
 } from 'lucide-react';
+import { ProductFormSheet } from './AdminCatalogPage';
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -39,9 +40,12 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
 
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [viewMode, setViewMode] = useState<'list' | 'grid'>(activeStatus === 'BUYER' ? 'grid' : 'list');
+  const [editTarget, setEditTarget] = useState<Product | null>(null);
+  const [editSheetOpen, setEditSheetOpen] = useState(false);
 
   const canSendRequest = activeStatus === 'BUYER';
   const showPrices = activeStatus === 'SELLER' || activeStatus === 'MANUFACTURER';
+  const canManageCatalog = activeStatus === 'SELLER' || activeStatus === 'MANUFACTURER';
 
   const listParams = useListParams(['domain', 'stock', 'manufacturer'] as const, { defaultOrdering: 'name' });
 
@@ -111,15 +115,27 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
       description={activeStatus === 'BUYER' ? t('productManagement.subtitle.buyer') : activeStatus === 'MANUFACTURER' ? t('productManagement.subtitle.manufacturer') : t('productManagement.subtitle.seller')}
       icon={<Package className="h-5 w-5" />}
       stats={stats}
-      actions={canSendRequest && selectedIds.size > 0 ? [{
-        label: `${t('productManagement.createRequest')} (${selectedIds.size})`,
-        onClick: () => {
-          const selected = paginated.filter((p) => selectedIds.has(p.id));
-          cartStore.addBulk(selected);
-          cartStore.openCart();
-          setSelectedIds(new Set());
-        },
-      }] : undefined}
+      actions={
+        canSendRequest && selectedIds.size > 0
+          ? [{
+              label: `${t('productManagement.createRequest')} (${selectedIds.size})`,
+              onClick: () => {
+                const selected = paginated.filter((p) => selectedIds.has(p.id));
+                cartStore.addBulk(selected);
+                cartStore.openCart();
+                setSelectedIds(new Set());
+              },
+            }]
+          : canManageCatalog
+            ? [{
+                label: t('productManagement.addProduct'),
+                onClick: () => {
+                  setEditTarget(null);
+                  setEditSheetOpen(true);
+                },
+              }]
+            : undefined
+      }
     >
       <Toolbar
         searchValue={listParams.searchInput}
@@ -231,9 +247,21 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
                       )}
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleRowClick(product)}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleRowClick(product)}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        {canManageCatalog && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => { setEditTarget(product); setEditSheetOpen(true); }}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -312,6 +340,14 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
           </div>
           <Pager page={listParams.page} pageSize={listParams.pageSize} total={total} onPageChange={listParams.setPage} />
         </>
+      )}
+
+      {canManageCatalog && (
+        <ProductFormSheet
+          open={editSheetOpen}
+          onOpenChange={setEditSheetOpen}
+          target={editTarget}
+        />
       )}
     </PageShell>
   );

@@ -26,7 +26,7 @@ import {
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -499,6 +499,7 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
                   sidebarCollapsed ? 'justify-center w-full' : 'gap-3 w-full items-center px-2 py-2'
                 )}>
                   <Avatar className="h-8 w-8 flex-shrink-0">
+                    {profile.avatarUrl && <AvatarImage src={profile.avatarUrl} alt={profile.firstName} />}
                     <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                       {profile.avatarInitials}
                     </AvatarFallback>

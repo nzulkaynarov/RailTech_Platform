@@ -22,14 +22,17 @@ from crm.views import (
 from accounts.views import (
     CompanyViewSet, UserViewSet, RegisterView, SetupPasswordView, SubmitProfileView, MeView,
     SupplierSubscriptionViewSet, CompanyRoleApplicationViewSet, SystemRoleViewSet,
-    WorkspaceRoleViewSet,
+    WorkspaceRoleViewSet, CompanyTypeViewSet,
 )
 from notifications.views import NotificationViewSet
 from master_data.views import (
     CountryViewSet, CurrencyViewSet,
     UnitOfMeasureViewSet, DeliveryBasisViewSet
 )
-from sourcing.views import ExcelImportView, CatalogImportView, ImportStatusView, SourcingRequestViewSet
+from sourcing.views import (
+    ExcelImportView, CatalogImportView, ImportStatusView,
+    SourcingRequestViewSet, AttachmentViewSet,
+)
 from core.health import health_check
 from core.views import (
     PageStatsView, SystemSettingsView, PlatformDashboardView,
@@ -67,6 +70,7 @@ router.register(r'accounts/subscriptions', SupplierSubscriptionViewSet, basename
 router.register(r'accounts/role-applications', CompanyRoleApplicationViewSet, basename='roleapplication')
 router.register(r'accounts/system-roles', SystemRoleViewSet, basename='systemrole')
 router.register(r'accounts/workspace-roles', WorkspaceRoleViewSet, basename='workspacerole')
+router.register(r'accounts/company-types', CompanyTypeViewSet, basename='companytype')
 router.register(r'notifications', NotificationViewSet, basename='notification')
 
 # Support tickets
@@ -80,6 +84,7 @@ router.register(r'master-data/delivery-basis', DeliveryBasisViewSet)
 
 # Sourcing
 router.register(r'sourcing/requests', SourcingRequestViewSet, basename='sourcing-request')
+router.register(r'sourcing/attachments', AttachmentViewSet, basename='attachment')
 
 from accounts.wizard import CompanyWizardView, WIZARD_FORMS
 

@@ -301,3 +301,122 @@ class SourcingRequestViewSet(viewsets.ReadOnlyModelViewSet):
         # Use DealListSerializer for consistency with existing CRM endpoints
         from crm.serializers import DealListSerializer
         return DealListSerializer
+
+
+class AttachmentViewSet(viewsets.ModelViewSet):
+    """
+    Uploads/lists/deletes private attachments tied to exactly one parent
+    (deal, message, quote, company, or product).
+
+    - list: filter by deal/message/quote/company/product query params.
+    - create: requires ONE of deal/message/quote/company/product, plus `file`.
+    - destroy: only uploader or platform admin.
+
+    Access to the attached entity is checked via the deal's company membership
+    (or the product's manufacturer, or the company directly).
+    """
+    from .serializers import AttachmentSerializer
+    from .models import Attachment as _AttachmentModel
+
+    serializer_class = AttachmentSerializer
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser]
+
+    def get_queryset(self):
+        from .models import Attachment
+        from crm.models import Deal
+        if getattr(self, 'swagger_fake_view', False):
+            return Attachment.objects.none()
+        user = self.request.user
+        qs = Attachment.objects.select_related(
+            'deal__company', 'message__deal__company',
+            'quote__deal__company', 'company', 'product__manufacturer',
+        ).order_by('-uploaded_at')
+
+        params = self.request.query_params
+        if params.get('deal'):
+            qs = qs.filter(deal_id=params['deal'])
+        if params.get('message'):
+            qs = qs.filter(message_id=params['message'])
+        if params.get('quote'):
+            qs = qs.filter(quote_id=params['quote'])
+        if params.get('company'):
+            qs = qs.filter(company_id=params['company'])
+        if params.get('product'):
+            qs = qs.filter(product_id=params['product'])
+
+        if user.is_platform_admin:
+            return qs
+
+        user_company_ids = list(user.memberships.filter(
+            is_active=True).values_list('company_id', flat=True))
+
+        # Allow only attachments whose parent entity's company is in user's companies.
+        # Deals accessible to deal manager/client too.
+        from django.db.models import Q
+        accessible_deal_ids = list(Deal.objects.filter(
+            Q(company_id__in=user_company_ids)
+            | Q(manager_id=user.id)
+            | Q(client_id=user.id),
+        ).values_list('id', flat=True))
+
+        return qs.filter(
+            Q(deal_id__in=accessible_deal_ids)
+            | Q(message__deal_id__in=accessible_deal_ids)
+            | Q(quote__deal_id__in=accessible_deal_ids)
+            | Q(company_id__in=user_company_ids)
+            | Q(product__manufacturer_id__in=user_company_ids),
+        )
+
+    def _assert_parent_access(self, validated):
+        """Before create, verify user can attach to the chosen parent."""
+        from rest_framework.exceptions import PermissionDenied
+        user = self.request.user
+        if user.is_platform_admin:
+            return
+
+        user_company_ids = set(user.memberships.filter(
+            is_active=True).values_list('company_id', flat=True))
+
+        deal = validated.get('deal')
+        message = validated.get('message')
+        quote = validated.get('quote')
+        company = validated.get('company')
+        product = validated.get('product')
+
+        target_deal = deal or (message.deal if message else None) or (quote.deal if quote else None)
+        if target_deal:
+            if (target_deal.company_id in user_company_ids
+                    or target_deal.manager_id == user.id
+                    or target_deal.client_id == user.id):
+                return
+            raise PermissionDenied("NO_ACCESS_TO_DEAL")
+        if company:
+            if company.id in user_company_ids:
+                return
+            raise PermissionDenied("NO_ACCESS_TO_COMPANY")
+        if product:
+            if product.manufacturer_id and product.manufacturer_id in user_company_ids:
+                return
+            raise PermissionDenied("NO_ACCESS_TO_PRODUCT")
+        raise PermissionDenied("NO_PARENT_PROVIDED")
+
+    def perform_create(self, serializer):
+        self._assert_parent_access(serializer.validated_data)
+        file_obj = self.request.FILES.get('file')
+        if not file_obj:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({'file': 'NO_FILE_PROVIDED'})
+        serializer.save(
+            uploaded_by=self.request.user,
+            original_filename=file_obj.name,
+        )
+
+    def perform_destroy(self, instance):
+        user = self.request.user
+        if not (user.is_platform_admin or instance.uploaded_by_id == user.id):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("ONLY_UPLOADER_OR_ADMIN_CAN_DELETE")
+        if instance.file:
+            instance.file.delete(save=False)
+        instance.delete()

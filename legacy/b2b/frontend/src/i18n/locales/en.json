@@ -194,7 +194,7 @@
     "uploadRequest": "Upload Request",
     "createRequest": "Create Request",
     "exportCsv": "Export CSV",
-    "addProduct": "Add Product",
+    "addProduct": "Add product",
     "export": "Export",
     "requestProduct": "Request Product",
     "searchPlaceholder": {
@@ -3502,5 +3502,25 @@
       "uploadFailed": "Failed to upload file",
       "removeFailed": "Failed to remove file"
     }
+  },
+  "roleApplication": {
+    "title": "Apply for supplier / manufacturer role",
+    "description": "Submit documents to upgrade your company to SUPPLIER or MANUFACTURER. Platform admins will review and activate.",
+    "requestedType": "Requested role",
+    "contract": "Contract (required for supplier)",
+    "nda": "NDA (required for supplier)",
+    "partnership": "Partnership agreement (required for manufacturer)",
+    "submit": "Submit application",
+    "submitted": "Application submitted",
+    "errors": {
+      "typeRequired": "Select a role",
+      "contractAndNdaRequired": "Contract and NDA are required",
+      "partnershipRequired": "Partnership agreement is required"
+    }
+  },
+  "dealAttachments": {
+    "title": "Deal attachments",
+    "description": "Excel specs, drawings, supporting documents",
+    "noDeal": "No deal selected"
   }
 }

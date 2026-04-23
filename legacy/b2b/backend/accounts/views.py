@@ -740,6 +740,21 @@ class MeView(RetrieveAPIView):
 
 
 @extend_schema_view(
+    list=extend_schema(summary="List company types", tags=['Accounts']),
+)
+class CompanyTypeViewSet(viewsets.ReadOnlyModelViewSet):
+    """Lightweight public lookup for CompanyType (CLIENT / SUPPLIER / MANUFACTURER / …)."""
+    from .models import CompanyType
+    queryset = CompanyType.objects.filter(is_active=True).order_by('sort_order', 'name')
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = None
+
+    def list(self, request, *args, **kwargs):
+        data = [{'id': c.id, 'code': c.code, 'name': c.name} for c in self.get_queryset()]
+        return Response(data)
+
+
+@extend_schema_view(
     list=extend_schema(summary="List system roles", tags=['Accounts']),
     retrieve=extend_schema(summary="Get system role", tags=['Accounts']),
 )
@@ -869,21 +884,59 @@ class SupplierSubscriptionViewSet(viewsets.ModelViewSet):
 )
 class CompanyRoleApplicationViewSet(viewsets.ModelViewSet):
     """
-    CRUD + approve/reject for company role applications.
-    Admin/Manager only.
+    Company role applications:
+      - Admin: full CRUD + approve/reject across all companies.
+      - Company OWNER: may list/create/update only their own company's applications.
     """
     serializer_class = CompanyRoleApplicationSerializer
-    permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
     filterset_fields = ['status', 'requested_type', 'company']
     search_fields = ['company__name', 'company__inn']
     ordering = ['-created_at']
 
+    _OWNER_ALLOWED_ACTIONS = {'list', 'retrieve', 'create', 'partial_update', 'update'}
+    _ADMIN_ONLY_ACTIONS = {'approve', 'reject', 'destroy'}
+
+    def get_permissions(self):
+        if self.action in self._ADMIN_ONLY_ACTIONS:
+            return [permissions.IsAuthenticated(), IsPlatformAdmin()]
+        return [permissions.IsAuthenticated()]
+
     def get_queryset(self):
-        return (
+        qs = (
             CompanyRoleApplication.objects
             .select_related('company', 'requested_type', 'submitted_by', 'reviewed_by')
             .order_by('-created_at')
         )
+        user = self.request.user
+        if user.is_platform_admin:
+            return qs
+        own_company_ids = list(user.memberships.filter(
+            is_active=True, role__code='OWNER',
+        ).values_list('company_id', flat=True))
+        return qs.filter(company_id__in=own_company_ids)
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        company = serializer.validated_data.get('company')
+        if not user.is_platform_admin:
+            is_owner = user.memberships.filter(
+                is_active=True, role__code='OWNER', company=company,
+            ).exists()
+            if not is_owner:
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied("ONLY_COMPANY_OWNER_CAN_APPLY")
+        serializer.save(submitted_by=user)
+
+    def perform_update(self, serializer):
+        user = self.request.user
+        if not user.is_platform_admin:
+            app = serializer.instance
+            if app.status != 'PENDING':
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied("APPLICATION_ALREADY_PROCESSED")
+        serializer.save()
 
     @extend_schema(
         summary="Approve role application",
