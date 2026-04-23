@@ -3,13 +3,14 @@ import { useTranslation } from 'react-i18next';
 import {
     LayoutDashboard, Users, Store, ShieldCheck, CreditCard, ClipboardList,
     Handshake, Layers, LifeBuoy, Package, Settings, HelpCircle, Building2,
-    FolderTree, Boxes, Tag,
+    FolderTree, Boxes, Tag, Search, UserRound, FileText, Ticket,
 } from 'lucide-react';
 
 import {
     CommandDialog, CommandInput, CommandList, CommandEmpty,
     CommandGroup, CommandItem, CommandSeparator,
 } from '@/components/ui/command';
+import { useAdminSearch } from '@/hooks/useAdmin';
 
 interface CommandPaletteProps {
     open: boolean;
@@ -67,13 +68,39 @@ const ADMIN_GROUPS: { labelKey: string; items: PaletteItem[] }[] = [
     },
 ];
 
+const ENTITY_ICON: Record<string, React.ComponentType<{ className?: string }>> = {
+    company: Building2,
+    user: UserRound,
+    deal: Handshake,
+    offer: Tag,
+    support_ticket: Ticket,
+    offer_generic: FileText,
+};
+
+const ENTITY_TARGET_PAGE: Record<string, string> = {
+    company: 'admin-companies',
+    user: 'admin-users',
+    deal: 'admin-deals',
+    offer: 'admin-offers',
+    support_ticket: 'admin-support',
+};
+
 export function CommandPalette({ open, onOpenChange, onNavigate }: CommandPaletteProps) {
     const { t } = useTranslation();
+    const [query, setQuery] = useState('');
+    const debouncedQuery = useDebouncedValue(query, 250);
+    const search = useAdminSearch(debouncedQuery);
+
+    useEffect(() => {
+        if (!open) setQuery('');
+    }, [open]);
 
     const handleSelect = (id: string) => {
         onOpenChange(false);
         onNavigate(id);
     };
+
+    const groups = search.data?.groups ?? [];
 
     return (
         <CommandDialog
@@ -82,9 +109,59 @@ export function CommandPalette({ open, onOpenChange, onNavigate }: CommandPalett
             title={t('admin.palette.title')}
             description={t('admin.palette.description')}
         >
-            <CommandInput placeholder={t('admin.palette.placeholder')} />
+            <CommandInput
+                placeholder={t('admin.palette.placeholder')}
+                value={query}
+                onValueChange={setQuery}
+            />
             <CommandList>
-                <CommandEmpty>{t('admin.palette.empty')}</CommandEmpty>
+                <CommandEmpty>
+                    {debouncedQuery.length >= 2 && !search.isLoading
+                        ? t('admin.palette.empty')
+                        : t('admin.palette.placeholderHint', {
+                              defaultValue: t('admin.palette.placeholder'),
+                          })}
+                </CommandEmpty>
+
+                {groups.length > 0 ? (
+                    <>
+                        {groups.map((group) => {
+                            const Icon = ENTITY_ICON[group.type] ?? Search;
+                            return (
+                                <CommandGroup
+                                    key={group.type}
+                                    heading={t(`admin.palette.entityGroups.${group.label}`, {
+                                        defaultValue: group.label,
+                                    })}
+                                >
+                                    {group.items.map((item) => (
+                                        <CommandItem
+                                            key={`${group.type}:${item.id}`}
+                                            value={`${item.title} ${item.subtitle} ${group.type}`}
+                                            onSelect={() =>
+                                                handleSelect(
+                                                    ENTITY_TARGET_PAGE[group.type] ?? 'dashboard',
+                                                )
+                                            }
+                                        >
+                                            <Icon className="h-4 w-4" />
+                                            <div className="flex min-w-0 flex-col">
+                                                <span className="truncate">{item.title}</span>
+                                                {item.subtitle ? (
+                                                    <span className="truncate text-xs text-muted-foreground">
+                                                        {item.subtitle}
+                                                    </span>
+                                                ) : null}
+                                            </div>
+                                        </CommandItem>
+                                    ))}
+                                </CommandGroup>
+                            );
+                        })}
+                        <CommandSeparator />
+                    </>
+                ) : null}
+
                 {ADMIN_GROUPS.map((group, groupIdx) => (
                     <div key={group.labelKey}>
                         {groupIdx > 0 && <CommandSeparator />}
@@ -105,6 +182,15 @@ export function CommandPalette({ open, onOpenChange, onNavigate }: CommandPalett
             </CommandList>
         </CommandDialog>
     );
+}
+
+function useDebouncedValue<T>(value: T, delayMs: number): T {
+    const [v, setV] = useState(value);
+    useEffect(() => {
+        const id = setTimeout(() => setV(value), delayMs);
+        return () => clearTimeout(id);
+    }, [value, delayMs]);
+    return v;
 }
 
 export function useCommandPaletteShortcut(onOpen: () => void) {

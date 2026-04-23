@@ -6,7 +6,6 @@ import {
   Mail, Phone, Building2, Calendar, User,
   Pencil, Trash2, Plus, AlertTriangle,
 } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,10 +14,8 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Table, TableBody, TableCell, TableHeader, TableRow,
-} from '@/components/ui/table';
-import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/DataTable';
+import { AdminDataTable, useAdminTableQueryState } from '@/components/Admin/AdminDataTable';
+import { AdminActivityTimeline } from '@/components/Admin/AdminActivityTimeline';
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter,
 } from '@/components/ui/sheet';
@@ -32,7 +29,7 @@ import {
   useWorkspaceRoles, useAddUserMembership, useRemoveUserMembership,
   useCompanies, useUploadUserAvatar, useDeleteUserAvatar,
 } from '@/hooks/useAccounts';
-import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
+import { PageShell, EmptyState } from './shared/PageShell';
 import type { User as UserType } from '@/api/accountsApi';
 import { ImageUpload } from '@/components/Shared/ImageUpload';
 
@@ -264,12 +261,15 @@ function DetailSheet({
 
         <div className="mt-4 px-4">
           <Tabs defaultValue="profile">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="profile">{t('pages.adminUsers.tabs.profile')}</TabsTrigger>
-              <TabsTrigger value="role">{t('pages.adminUsers.tabs.role')}</TabsTrigger>
-              <TabsTrigger value="memberships">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="profile" className="text-xs">{t('pages.adminUsers.tabs.profile')}</TabsTrigger>
+              <TabsTrigger value="role" className="text-xs">{t('pages.adminUsers.tabs.role')}</TabsTrigger>
+              <TabsTrigger value="memberships" className="text-xs">
                 {t('pages.adminUsers.tabs.memberships')}
-                {hasMemberships && <Badge variant="outline" className="ml-1.5 text-xs">{memberships.length}</Badge>}
+                {hasMemberships && <Badge variant="outline" className="ml-1.5 text-[10px]">{memberships.length}</Badge>}
+              </TabsTrigger>
+              <TabsTrigger value="timeline" className="text-xs">
+                {t('platformAdmin.activity.title')}
               </TabsTrigger>
             </TabsList>
 
@@ -362,6 +362,10 @@ function DetailSheet({
 
             <TabsContent value="memberships" className="mt-4">
               <MembershipsPanel user={user} />
+            </TabsContent>
+
+            <TabsContent value="timeline" className="mt-4">
+              <AdminActivityTimeline entityType="user" entityId={user.id} />
             </TabsContent>
           </Tabs>
         </div>
@@ -469,9 +473,11 @@ function CreateUserSheet({
   );
 }
 
+const STORAGE_KEY = 'adminUsers';
+
 export function AdminUsersPage() {
   const { t } = useTranslation();
-  const { data: users, isLoading } = useUsers();
+  const { data: users = [], isLoading } = useUsers();
   const { data: roles } = useSystemRoles();
   const deleteMut = useDeleteUser();
 
@@ -479,32 +485,44 @@ export function AdminUsersPage() {
   const [deleteTarget, setDeleteTarget] = useState<UserType | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
 
-  const params = useListParams(['role', 'status'] as const, { defaultOrdering: '-date_joined' });
+  const tableState = useAdminTableQueryState(STORAGE_KEY);
 
   const selectedUser = useMemo(() => {
-    if (!detailTarget || !users) return null;
+    if (!detailTarget) return null;
     return users.find((u) => u.id === detailTarget.id) ?? detailTarget;
   }, [users, detailTarget]);
 
-  const { items: pageItems, total } = useMemo(() => applyListParams(users ?? [], params, {
-    searchFields: (u: UserType) => [u.email, u.first_name, u.last_name, u.phone, String(u.id)],
-    filterPredicates: {
-      role: (u, v) => (u.role_code ?? u.role_data?.code ?? '') === v,
-      status: (u, v) => (v === 'active' ? !!u.is_active : !u.is_active),
-    },
-    sortAccessors: {
-      email: (u) => u.email,
-      name: (u) => `${u.last_name ?? ''} ${u.first_name ?? ''}`,
-      date_joined: (u) => u.date_joined ?? '',
-      last_login: (u) => u.last_login ?? '',
-    },
-  }), [users, params.search, params.filters, params.ordering, params.page, params.pageSize]);
+  const filtered = useMemo(() => {
+    const q = tableState.search.toLowerCase();
+    const tab = tableState.tab || 'all';
+    return users.filter((u) => {
+      if (tab === 'active' && !u.is_active) return false;
+      if (tab === 'inactive' && u.is_active) return false;
+      if (tab.startsWith('role:') && (u.role_code ?? u.role_data?.code ?? '') !== tab.slice(5)) {
+        return false;
+      }
+      if (!q) return true;
+      return (
+        u.email.toLowerCase().includes(q) ||
+        (u.first_name || '').toLowerCase().includes(q) ||
+        (u.last_name || '').toLowerCase().includes(q) ||
+        (u.phone || '').toLowerCase().includes(q)
+      );
+    });
+  }, [users, tableState.search, tableState.tab]);
+
+  const counts = useMemo(() => ({
+    all: users.length,
+    active: users.filter((u) => u.is_active).length,
+    inactive: users.filter((u) => !u.is_active).length,
+    admin: users.filter((u) => u.role_data?.code === 'ADMIN').length,
+  }), [users]);
 
   const stats = [
-    { label: t('pages.adminUsers.stats.total'), value: String(users?.length ?? '—') },
-    { label: t('pages.adminUsers.stats.active'), value: String(users?.filter((u) => u.is_active).length ?? '—') },
-    { label: t('pages.adminUsers.stats.staff'), value: String(users?.filter((u) => u.role_data?.code === 'ADMIN').length ?? '—') },
-    { label: t('pages.adminUsers.stats.inactive'), value: String(users?.filter((u) => !u.is_active).length ?? '—') },
+    { label: t('pages.adminUsers.stats.total'), value: String(counts.all) },
+    { label: t('pages.adminUsers.stats.active'), value: String(counts.active) },
+    { label: t('pages.adminUsers.stats.staff'), value: String(counts.admin) },
+    { label: t('pages.adminUsers.stats.inactive'), value: String(counts.inactive) },
   ];
 
   const onDelete = async () => {
@@ -526,103 +544,98 @@ export function AdminUsersPage() {
       icon={<Shield className="h-5 w-5" />}
       stats={stats}
     >
-      <Toolbar
-        searchValue={params.searchInput}
-        onSearchChange={params.setSearchInput}
+      <AdminDataTable<UserType>
+        storageKey={STORAGE_KEY}
+        rows={filtered}
+        getRowId={(u) => u.id}
+        isLoading={isLoading}
+        onRowClick={(u) => setDetailTarget(u)}
         searchPlaceholder={t('pages.adminUsers.searchPlaceholder')}
-        filters={[
+        exportUrl={`${window.location.origin}/api/v1/accounts/users/export/`}
+        primaryAction={
+          <Button size="sm" className="h-8 text-xs" onClick={() => setCreateOpen(true)}>
+            {t('pages.adminUsers.newUser')}
+          </Button>
+        }
+        tabs={[
+          { id: 'all', label: t('common.all'), count: counts.all },
+          { id: 'active', label: t('pages.adminUsers.statusLabel.active'), count: counts.active },
+          { id: 'inactive', label: t('pages.adminUsers.statusLabel.inactive'), count: counts.inactive },
+          ...(roles?.map((r) => ({
+            id: `role:${r.code}`,
+            label: r.name,
+          })) ?? []),
+        ]}
+        columns={[
           {
-            key: 'role',
-            value: params.filters.role,
-            onChange: (v) => params.setFilter('role', v),
-            allLabel: t('pages.adminUsers.allRoles'),
-            options: (roles ?? []).map((r) => ({ value: r.code, label: r.name })),
+            id: 'name',
+            header: t('pages.adminUsers.table.name'),
+            cell: (u) => (
+              <span className="font-medium">
+                {u.first_name || u.last_name ? `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() : '—'}
+              </span>
+            ),
+            alwaysVisible: true,
           },
           {
-            key: 'status',
-            value: params.filters.status,
-            onChange: (v) => params.setFilter('status', v),
-            allLabel: t('pages.adminUsers.allStatuses'),
-            options: [
-              { value: 'active', label: t('pages.adminUsers.statusLabel.active') },
-              { value: 'inactive', label: t('pages.adminUsers.statusLabel.inactive') },
-            ],
+            id: 'email',
+            header: t('pages.adminUsers.table.email'),
+            cell: (u) => <span className="text-muted-foreground">{u.email}</span>,
+          },
+          {
+            id: 'role',
+            header: t('pages.adminUsers.table.role'),
+            cell: (u) => (
+              <Badge variant={u.role_data?.code === 'ADMIN' ? 'default' : 'outline'}>
+                {u.role_data?.name ?? '—'}
+              </Badge>
+            ),
+          },
+          {
+            id: 'status',
+            header: t('pages.adminUsers.table.status'),
+            cell: (u) => (
+              <Badge variant={u.is_active ? 'default' : 'secondary'} className="gap-1">
+                {u.is_active ? (
+                  <>
+                    <Check className="h-3 w-3" /> {t('pages.adminUsers.statusLabel.active')}
+                  </>
+                ) : (
+                  <>
+                    <Pause className="h-3 w-3" /> {t('pages.adminUsers.statusLabel.inactive')}
+                  </>
+                )}
+              </Badge>
+            ),
+          },
+          {
+            id: 'lastLogin',
+            header: t('pages.adminUsers.table.lastLogin'),
+            cell: (u) => (
+              <span className="text-muted-foreground">
+                {u.last_login ? new Date(u.last_login).toLocaleDateString() : '—'}
+              </span>
+            ),
           },
         ]}
-        newLabel={t('pages.adminUsers.newUser')}
-        onNew={() => setCreateOpen(true)}
+        rowActions={[
+          {
+            id: 'edit',
+            label: t('common.open'),
+            icon: <Pencil className="h-3.5 w-3.5" />,
+            onRun: (u) => setDetailTarget(u),
+          },
+          {
+            id: 'delete',
+            label: t('pages.adminUsers.delete'),
+            icon: <Trash2 className="h-3.5 w-3.5" />,
+            variant: 'destructive',
+            onRun: (u) => setDeleteTarget(u),
+          },
+        ]}
+        emptyIcon={<Shield className="h-5 w-5 text-muted-foreground" />}
+        emptyTitle={t('pages.common.noData')}
       />
-
-      <Card>
-        <CardContent className="p-0">
-          {isLoading ? <LoadingRows rows={5} /> : !pageItems.length ? (
-            <EmptyState icon={<Shield className="h-5 w-5" />} message={t('pages.common.noData')} />
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <SortableHead sortKey="name" current={params.ordering} onChange={params.toggleOrdering}>
-                    {t('pages.adminUsers.table.name')}
-                  </SortableHead>
-                  <SortableHead sortKey="email" current={params.ordering} onChange={params.toggleOrdering}>
-                    {t('pages.adminUsers.table.email')}
-                  </SortableHead>
-                  <SortableHead sortKey="role" current={params.ordering} onChange={params.toggleOrdering}>
-                    {t('pages.adminUsers.table.role')}
-                  </SortableHead>
-                  <SortableHead sortKey="status" current={params.ordering} onChange={params.toggleOrdering}>
-                    {t('pages.adminUsers.table.status')}
-                  </SortableHead>
-                  <SortableHead sortKey="last_login" current={params.ordering} onChange={params.toggleOrdering}>
-                    {t('pages.adminUsers.table.lastLogin')}
-                  </SortableHead>
-                  <SortableHead sortKey="" current="" onChange={() => {}} className="text-right">
-                    {t('pages.adminUsers.table.actions')}
-                  </SortableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pageItems.map((user) => (
-                  <TableRow
-                    key={user.id}
-                    className="cursor-pointer"
-                    onClick={() => setDetailTarget(user)}
-                  >
-                    <TableCell><span className="font-medium">{user.first_name} {user.last_name}</span></TableCell>
-                    <TableCell className="text-muted-foreground">{user.email}</TableCell>
-                    <TableCell>
-                      <Badge variant={user.role_data?.code === 'ADMIN' ? 'default' : 'outline'}>
-                        {user.role_data?.name ?? '—'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={user.is_active ? 'default' : 'secondary'} className="gap-1">
-                        {user.is_active
-                          ? <><Check className="h-3 w-3" /> {t('pages.adminUsers.statusLabel.active')}</>
-                          : <><Pause className="h-3 w-3" /> {t('pages.adminUsers.statusLabel.inactive')}</>}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-xs">
-                      {user.last_login ? new Date(user.last_login).toLocaleDateString() : '—'}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="sm" onClick={() => setDetailTarget(user)}>
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(user)}>
-                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-          <Pager page={params.page} pageSize={params.pageSize} total={total} onPageChange={params.setPage} />
-        </CardContent>
-      </Card>
 
       <DetailSheet
         user={selectedUser}

@@ -1,45 +1,41 @@
-import { useState, useMemo, useRef } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import {
-  ShieldCheck, Search, FileText, Upload, Download, Trash2,
-  BadgeCheck, XCircle, FileQuestion, Eye,
+  ShieldCheck, FileText, Upload, Download, Trash2,
+  BadgeCheck, XCircle, FileQuestion,
 } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
-import {
-  Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter,
+  Sheet, SheetContent, SheetHeader, SheetTitle,
 } from '@/components/ui/sheet';
 import { useCompanies, useVerifyCompany, useUploadDocument, useDeleteDocument } from '@/hooks/useAccounts';
-import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
+import { useBulkVerifyKYC } from '@/hooks/useAdmin';
+import { AdminDataTable, useAdminTableQueryState } from '@/components/Admin/AdminDataTable';
+import { AdminDetailLayout } from '@/components/Admin/AdminDetailLayout';
+import { AdminActivityTimeline } from '@/components/Admin/AdminActivityTimeline';
+import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
+import { PageShell } from './shared/PageShell';
 import type { Company } from '@/api/accountsApi';
 
-/* ─── Helpers ──────────────────────────────────────────────────────── */
+type KYCCode = 'L1_UNVERIFIED' | 'PROFILE_SUBMITTED' | 'L2_VERIFIED' | 'L3_CONTRACTED';
 
-type FilterStatus = 'all' | 'L1_UNVERIFIED' | 'PROFILE_SUBMITTED' | 'L2_VERIFIED' | 'L3_CONTRACTED';
+const STORAGE_KEY = 'adminKyc';
 
-function getStatusCode(company: Company): string {
-  return (company.verification_status_code || String(company.verification_status)) as string;
-}
-
-const STATUS_BADGE_MAP: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string }> = {
+const STATUS_BADGE_MAP: Record<
+  string,
+  { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string }
+> = {
   L1_UNVERIFIED: { variant: 'secondary', label: 'kycManager.status.P_PENDING' },
   PROFILE_SUBMITTED: { variant: 'outline', label: 'kycManager.status.P_SUBMITTED' },
   L2_VERIFIED: { variant: 'default', label: 'kycManager.status.V_VERIFIED_L2' },
   L3_CONTRACTED: { variant: 'default', label: 'kycManager.status.V_PARTNER_L3' },
 };
-
-const STATUS_FILTER_OPTIONS: FilterStatus[] = ['L1_UNVERIFIED', 'PROFILE_SUBMITTED', 'L2_VERIFIED', 'L3_CONTRACTED'];
 
 const DOC_TYPE_OPTIONS = [
   { value: 'CHARTER', labelKey: 'kycManager.docTypes.charter' },
@@ -49,7 +45,13 @@ const DOC_TYPE_OPTIONS = [
   { value: 'OTHER', labelKey: 'kycManager.docTypes.other' },
 ];
 
-/* ─── Detail Sheet ─────────────────────────────────────────────────── */
+function getStatusCode(company: Company): string {
+  return (company.verification_status_code || String(company.verification_status)) as string;
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// Detail sheet (uses AdminDetailLayout internally)
+// ───────────────────────────────────────────────────────────────────────
 
 function DetailSheet({
   company,
@@ -61,358 +63,554 @@ function DetailSheet({
   onOpenChange: (open: boolean) => void;
 }) {
   const { t } = useTranslation();
-  const [comment, setComment] = useState('');
-  const [selectedDocType, setSelectedDocType] = useState('CHARTER');
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const verifyMutation = useVerifyCompany();
   const uploadMutation = useUploadDocument();
   const deleteMutation = useDeleteDocument();
+  const [selectedDocType, setSelectedDocType] = useState('CHARTER');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [confirmAction, setConfirmAction] = useState<null | 'approve-l2' | 'upgrade-l3' | 'revoke-l1'>(null);
 
   if (!company) return null;
 
-  const statusCode = getStatusCode(company);
+  const statusCode = getStatusCode(company) as KYCCode;
   const badge = STATUS_BADGE_MAP[statusCode] || STATUS_BADGE_MAP.L1_UNVERIFIED;
-  const busy = verifyMutation.isPending || uploadMutation.isPending;
 
-  const handleVerify = async (targetStatus: string) => {
-    try {
-      await verifyMutation.mutateAsync({ companyId: company.id, status_code: targetStatus, comment: comment.trim() || undefined });
-      toast.success(t('kycManager.verified'));
-      onOpenChange(false);
-      setComment('');
-    } catch {
-      toast.error(t('kycManager.operationFailure'));
-    }
-  };
+  async function runVerify(target: string, reason: string) {
+    if (!company) return;
+    await verifyMutation.mutateAsync({
+      companyId: company.id,
+      status_code: target,
+      reason: reason || undefined,
+    });
+    toast.success(t('kycManager.verified'));
+    setConfirmAction(null);
+  }
 
-  const handleUpload = async (file: File) => {
+  async function handleUpload(file: File) {
+    if (!company) return;
     try {
       await uploadMutation.mutateAsync({ companyId: company.id, file, docType: selectedDocType });
       toast.success(t('kycManager.importDoc'));
     } catch {
       toast.error(t('kycManager.uploadFailure'));
     }
-  };
+  }
 
-  const handleDeleteDoc = async (docId: number) => {
+  async function handleDeleteDoc(docId: number) {
+    if (!company) return;
     try {
       await deleteMutation.mutateAsync({ companyId: company.id, docId });
       toast.success(t('fileUpload.removed'));
     } catch {
       toast.error(t('fileUpload.errors.removeFailed'));
     }
-  };
+  }
 
-  const infoRows = [
-    { label: t('kycManager.registryFields.taxId'), value: company.inn },
-    { label: t('kycManager.registryFields.mfoCode'), value: company.mfo || '—' },
-    { label: t('kycManager.registryFields.bankAcc'), value: company.bank_account || '—' },
-    { label: t('kycManager.registryFields.opContact'), value: company.contact_person || '—' },
-  ];
+  const overview = (
+    <div className="space-y-4">
+      <dl className="grid grid-cols-1 gap-2 rounded-md border p-3 text-xs sm:grid-cols-2">
+        {[
+          { label: t('kycManager.registryFields.taxId'), value: company.inn },
+          { label: t('kycManager.registryFields.mfoCode'), value: company.mfo || '—' },
+          { label: t('kycManager.registryFields.bankAcc'), value: company.bank_account || '—' },
+          { label: t('kycManager.registryFields.opContact'), value: company.contact_person || '—' },
+        ].map((r) => (
+          <div key={r.label} className="flex items-start justify-between gap-2">
+            <dt className="text-muted-foreground">{r.label}</dt>
+            <dd className="text-right font-medium tabular-nums">{r.value}</dd>
+          </div>
+        ))}
+      </dl>
+      {company.legal_address ? (
+        <div className="rounded-md border p-3 text-xs">
+          <div className="mb-1 text-muted-foreground">{t('kycManager.physicalAddress')}</div>
+          <div>{company.legal_address}</div>
+        </div>
+      ) : null}
+    </div>
+  );
+
+  const documents = (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xs font-semibold">
+          {t('kycManager.docRecords')}
+          <span className="ml-1 text-muted-foreground">
+            ({company.kyc_documents?.length || 0})
+          </span>
+        </h3>
+      </div>
+      {(company.kyc_documents || []).length > 0 ? (
+        <div className="space-y-2">
+          {company.kyc_documents!.map((doc) => (
+            <div key={doc.id} className="flex items-center gap-2 rounded-md border p-2 text-xs">
+              <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
+              <div className="min-w-0 flex-1">
+                <div className="truncate font-medium">{doc.original_filename}</div>
+                <div className="text-muted-foreground">
+                  {doc.doc_type_display}
+                  {doc.uploaded_at ? ` · ${new Date(doc.uploaded_at).toLocaleDateString()}` : ''}
+                </div>
+              </div>
+              {doc.file ? (
+                <Button asChild size="icon" variant="ghost" className="h-7 w-7" aria-label={t('fileUpload.download')}>
+                  <a href={doc.file} target="_blank" rel="noreferrer">
+                    <Download className="h-3.5 w-3.5" />
+                  </a>
+                </Button>
+              ) : null}
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7 text-destructive"
+                disabled={deleteMutation.isPending}
+                onClick={() => handleDeleteDoc(doc.id)}
+                aria-label={t('fileUpload.remove')}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center rounded-md border border-dashed py-6 text-xs text-muted-foreground">
+          <FileQuestion className="mb-1.5 h-5 w-5" />
+          {t('kycManager.noDocuments')}
+        </div>
+      )}
+      <div className="flex items-center gap-2">
+        <Select value={selectedDocType} onValueChange={setSelectedDocType}>
+          <SelectTrigger className="h-8 flex-1 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {DOC_TYPE_OPTIONS.map((dt) => (
+              <SelectItem key={dt.value} value={dt.value} className="text-xs">
+                {t(dt.labelKey)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <input
+          ref={fileInputRef}
+          type="file"
+          className="hidden"
+          accept=".pdf,.doc,.docx,.jpg,.png"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) handleUpload(f);
+            e.target.value = '';
+          }}
+        />
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 gap-1.5 text-xs"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploadMutation.isPending}
+        >
+          <Upload className="h-3.5 w-3.5" />
+          {t('kycManager.importDoc')}
+        </Button>
+      </div>
+    </div>
+  );
+
+  const dangerZone = (
+    <div className="space-y-3 rounded-md border border-destructive/40 p-3">
+      <h3 className="text-xs font-semibold text-destructive">
+        {t('adminDetail.dangerZone')}
+      </h3>
+      <p className="text-xs text-muted-foreground">
+        {t('kycManager.revokeHint')}
+      </p>
+      <Button
+        size="sm"
+        variant="destructive"
+        className="h-8 gap-1.5 text-xs"
+        disabled={statusCode === 'L1_UNVERIFIED'}
+        onClick={() => setConfirmAction('revoke-l1')}
+      >
+        <XCircle className="h-3.5 w-3.5" />
+        {t('kycManager.revokeL1')}
+      </Button>
+    </div>
+  );
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="overflow-y-auto sm:max-w-lg">
-        <SheetHeader>
+      <SheetContent className="flex w-full flex-col overflow-y-auto p-0 sm:max-w-2xl">
+        <SheetHeader className="sr-only">
           <SheetTitle>{company.name}</SheetTitle>
         </SheetHeader>
-
-        <div className="mt-2 space-y-6 px-4">
-          {/* Status */}
-          <section className="space-y-2">
-            <h3 className="text-sm font-semibold">{t('kycManager.authStatus')}</h3>
-            <Badge variant={badge.variant}>{t(badge.label)}</Badge>
-          </section>
-
-          <Separator />
-
-          {/* Company Info */}
-          <section className="space-y-3">
-            <h3 className="text-sm font-semibold">{t('kycManager.registryData')}</h3>
-            {infoRows.map((r) => (
-              <div key={r.label} className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">{r.label}</span>
-                <span className="text-sm tabular-nums">{r.value}</span>
+        <div className="p-4 md:p-5">
+          <AdminDetailLayout
+            title={company.name}
+            subtitle={company.inn ? `INN ${company.inn}` : undefined}
+            leading={
+              <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">
+                <ShieldCheck className="h-5 w-5" />
               </div>
-            ))}
-            {company.legal_address && (
-              <div className="rounded-lg border bg-muted/50 p-3">
-                <p className="text-xs text-muted-foreground mb-1">{t('kycManager.physicalAddress')}</p>
-                <p className="text-sm">{company.legal_address}</p>
-              </div>
-            )}
-          </section>
-
-          <Separator />
-
-          {/* Documents */}
-          <section className="space-y-3">
-            <h3 className="text-sm font-semibold flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              {t('kycManager.docRecords')}
-              <span className="text-xs text-muted-foreground ml-auto">
-                {t('kycManager.docCount', { count: company.kyc_documents?.length || 0 })}
-              </span>
-            </h3>
-            {(company.kyc_documents || []).length > 0 ? (
-              <div className="space-y-2">
-                {company.kyc_documents!.map((doc) => (
-                  <div key={doc.id} className="flex items-center gap-2 rounded-lg border p-2">
-                    <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm truncate">{doc.original_filename}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {doc.doc_type_display}
-                        {doc.uploaded_at ? ` · ${new Date(doc.uploaded_at).toLocaleDateString()}` : ''}
-                      </p>
-                    </div>
-                    {doc.file && (
-                      <Button
-                        asChild
-                        type="button"
-                        size="icon-sm"
-                        variant="ghost"
-                        aria-label={t('fileUpload.download')}
-                      >
-                        <a href={doc.file} target="_blank" rel="noreferrer">
-                          <Download className="h-3.5 w-3.5" />
-                        </a>
-                      </Button>
-                    )}
-                    <Button
-                      type="button"
-                      size="icon-sm"
-                      variant="ghost"
-                      aria-label={t('fileUpload.remove')}
-                      disabled={deleteMutation.isPending}
-                      onClick={() => handleDeleteDoc(doc.id)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-6 text-muted-foreground">
-                <FileQuestion className="h-6 w-6 mb-1.5" />
-                <p className="text-sm">{t('kycManager.noDocuments')}</p>
-              </div>
-            )}
-
-            {/* Upload */}
-            <div className="flex items-center gap-2">
-              <Select value={selectedDocType} onValueChange={setSelectedDocType}>
-                <SelectTrigger className="flex-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {DOC_TYPE_OPTIONS.map((dt) => (
-                    <SelectItem key={dt.value} value={dt.value}>{t(dt.labelKey)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <input
-                ref={fileInputRef}
-                type="file"
-                className="hidden"
-                accept=".pdf,.doc,.docx,.jpg,.png"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) handleUpload(f);
-                  e.target.value = '';
-                }}
-              />
-              <Button
-                variant="outline"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={busy}
-                className="gap-2"
-              >
-                <Upload className="h-3.5 w-3.5" />
-                {t('kycManager.importDoc')}
-              </Button>
-            </div>
-          </section>
-
-          <Separator />
-
-          {/* Notes */}
-          <section className="space-y-2">
-            <h3 className="text-sm font-semibold">{t('kycManager.observations')}</h3>
-            <Textarea
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              placeholder={t('kycManager.observationsPlaceholder')}
-              rows={3}
-            />
-          </section>
+            }
+            badges={[{ label: t(badge.label), variant: badge.variant }]}
+            actions={
+              <>
+                {(statusCode === 'L1_UNVERIFIED' || statusCode === 'PROFILE_SUBMITTED') ? (
+                  <Button
+                    size="sm"
+                    className="h-8 gap-1.5 text-xs"
+                    onClick={() => setConfirmAction('approve-l2')}
+                  >
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    {t('kycManager.approveL2')}
+                  </Button>
+                ) : null}
+                {statusCode === 'L2_VERIFIED' ? (
+                  <Button
+                    size="sm"
+                    className="h-8 gap-1.5 text-xs"
+                    onClick={() => setConfirmAction('upgrade-l3')}
+                  >
+                    <BadgeCheck className="h-3.5 w-3.5" />
+                    {t('kycManager.upgradeL3')}
+                  </Button>
+                ) : null}
+              </>
+            }
+            tabs={[
+              { id: 'overview', label: t('kycManager.registryData'), content: overview },
+              { id: 'documents', label: t('kycManager.docRecords'), content: documents },
+              {
+                id: 'timeline',
+                label: t('platformAdmin.activity.title'),
+                content: <AdminActivityTimeline entityType="company" entityId={company.id} />,
+              },
+            ]}
+            dangerZone={dangerZone}
+          />
         </div>
 
-        <SheetFooter className="mt-6 flex flex-col gap-2 sm:flex-col">
-          {(statusCode === 'L1_UNVERIFIED' || statusCode === 'PROFILE_SUBMITTED') && (
-            <Button
-              onClick={() => handleVerify('L2_VERIFIED')}
-              disabled={busy}
-              className="w-full gap-2"
-            >
-              <ShieldCheck className="h-3.5 w-3.5" />
-              {t('kycManager.approveL2')}
-            </Button>
-          )}
-          {statusCode === 'L2_VERIFIED' && (
-            <Button
-              onClick={() => handleVerify('L3_CONTRACTED')}
-              disabled={busy}
-              className="w-full gap-2"
-            >
-              <BadgeCheck className="h-3.5 w-3.5" />
-              {t('kycManager.upgradeL3')}
-            </Button>
-          )}
-          {statusCode !== 'L1_UNVERIFIED' && (
-            <Button
-              variant="destructive"
-              onClick={() => handleVerify('L1_UNVERIFIED')}
-              disabled={busy}
-              className="w-full gap-2"
-            >
-              <XCircle className="h-3.5 w-3.5" />
-              {t('kycManager.revokeL1')}
-            </Button>
-          )}
-        </SheetFooter>
+        <ConfirmActionDialog
+          open={confirmAction === 'approve-l2'}
+          onOpenChange={(v) => !v && setConfirmAction(null)}
+          title={t('adminQueue.confirm.kycApproveTitle')}
+          description={t('adminQueue.confirm.kycApproveDescription', { name: company.name })}
+          diff={[{ label: t('confirmDialog.kycLevel'), before: statusCode, after: 'L2_VERIFIED' }]}
+          showReason
+          reasonLabel={t('adminQueue.confirm.commentOptional')}
+          confirmLabel={t('common.approve')}
+          variant="primary"
+          onConfirm={(p) => runVerify('L2_VERIFIED', p.reason)}
+        />
+        <ConfirmActionDialog
+          open={confirmAction === 'upgrade-l3'}
+          onOpenChange={(v) => !v && setConfirmAction(null)}
+          title={t('kycManager.upgradeL3')}
+          description={company.name}
+          diff={[{ label: t('confirmDialog.kycLevel'), before: 'L2_VERIFIED', after: 'L3_CONTRACTED' }]}
+          showReason
+          reasonLabel={t('adminQueue.confirm.commentOptional')}
+          confirmLabel={t('common.confirm')}
+          variant="primary"
+          onConfirm={(p) => runVerify('L3_CONTRACTED', p.reason)}
+        />
+        <ConfirmActionDialog
+          open={confirmAction === 'revoke-l1'}
+          onOpenChange={(v) => !v && setConfirmAction(null)}
+          title={t('adminQueue.confirm.kycRevokeTitle')}
+          description={t('adminQueue.confirm.kycRevokeDescription', { name: company.name })}
+          diff={[{ label: t('confirmDialog.kycLevel'), before: statusCode, after: 'L1_UNVERIFIED' }]}
+          requireReason
+          reasonTemplates={[
+            t('adminQueue.reasonTemplates.docsInvalid'),
+            t('adminQueue.reasonTemplates.innMismatch'),
+            t('adminQueue.reasonTemplates.other'),
+          ]}
+          confirmLabel={t('common.revoke')}
+          variant="destructive"
+          onConfirm={(p) => runVerify('L1_UNVERIFIED', p.reason)}
+        />
       </SheetContent>
     </Sheet>
   );
 }
 
-/* ─── Main Page ────────────────────────────────────────────────────── */
+// ───────────────────────────────────────────────────────────────────────
+// List page
+// ───────────────────────────────────────────────────────────────────────
 
 export function AdminKYCPage() {
   const { t } = useTranslation();
-  const { data: companies, isLoading } = useCompanies();
+  const { data: companies = [], isLoading } = useCompanies();
+  const verifyMutation = useVerifyCompany();
+  const bulkVerify = useBulkVerifyKYC();
 
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<FilterStatus>('all');
   const [detailTarget, setDetailTarget] = useState<Company | null>(null);
+  const [confirmRow, setConfirmRow] = useState<null | {
+    kind: 'approve-l2' | 'revoke-l1';
+    company: Company;
+  }>(null);
+  const [confirmBulk, setConfirmBulk] = useState<null | { companies: Company[] }>(null);
 
-  // Keep selected company fresh after refetch
+  const tableState = useAdminTableQueryState(STORAGE_KEY);
+
+  const kept = useMemo(() => {
+    const q = tableState.search.toLowerCase();
+    return companies.filter((c) => {
+      const code = getStatusCode(c);
+      if (tableState.tab && tableState.tab !== 'all' && tableState.tab !== code) return false;
+      if (!q) return true;
+      return c.name.toLowerCase().includes(q) || (c.inn || '').toLowerCase().includes(q);
+    });
+  }, [companies, tableState.search, tableState.tab]);
+
   const selectedCompany = useMemo(() => {
-    if (!detailTarget || !companies) return null;
+    if (!detailTarget) return null;
     return companies.find((c) => c.id === detailTarget.id) ?? detailTarget;
   }, [companies, detailTarget]);
 
-  const filtered = useMemo(() => {
-    if (!companies) return [];
-    return companies.filter((c) => {
-      const matchesSearch = !search ||
-        c.name.toLowerCase().includes(search.toLowerCase()) ||
-        c.inn.includes(search);
-      const matchesStatus = statusFilter === 'all' || getStatusCode(c) === statusFilter;
-      return matchesSearch && matchesStatus;
+  const counts = useMemo(() => {
+    const buckets: Record<string, number> = {
+      all: companies.length,
+      L1_UNVERIFIED: 0,
+      PROFILE_SUBMITTED: 0,
+      L2_VERIFIED: 0,
+      L3_CONTRACTED: 0,
+    };
+    companies.forEach((c) => {
+      const code = getStatusCode(c);
+      if (code in buckets) buckets[code] += 1;
     });
-  }, [companies, search, statusFilter]);
+    return buckets;
+  }, [companies]);
 
-  const stats = [
-    { label: t('kycManager.stats.total'), value: String(companies?.length ?? '—') },
-    { label: t('kycManager.stats.pending'), value: String(companies?.filter((c) => getStatusCode(c) === 'L1_UNVERIFIED' || getStatusCode(c) === 'PROFILE_SUBMITTED').length ?? '—') },
-    { label: t('kycManager.stats.verified'), value: String(companies?.filter((c) => getStatusCode(c) === 'L2_VERIFIED').length ?? '—') },
-    { label: t('kycManager.stats.partner'), value: String(companies?.filter((c) => getStatusCode(c) === 'L3_CONTRACTED').length ?? '—') },
-  ];
+  async function runRowApprove(company: Company, reason: string) {
+    await verifyMutation.mutateAsync({
+      companyId: company.id,
+      status_code: 'L2_VERIFIED',
+      reason: reason || undefined,
+    });
+    toast.success(t('kycManager.verified'));
+    setConfirmRow(null);
+  }
+
+  async function runRowRevoke(company: Company, reason: string) {
+    await verifyMutation.mutateAsync({
+      companyId: company.id,
+      status_code: 'L1_UNVERIFIED',
+      reason,
+    });
+    toast.success(t('adminQueue.kycRevoked'));
+    setConfirmRow(null);
+  }
+
+  async function runBulkApprove(rows: Company[], reason: string) {
+    const res = await bulkVerify.mutateAsync({
+      ids: rows.map((r) => r.id),
+      level: 'L2_VERIFIED',
+      reason: reason || undefined,
+    });
+    toast.success(
+      t('kycManager.bulkApprovedResult', {
+        approved: res.approved,
+        skipped: res.skipped.length,
+      }),
+    );
+    if (res.skipped.length) {
+      toast.warning(res.skipped.map((s) => `${s.name}: ${s.error}`).join('; '));
+    }
+    setConfirmBulk(null);
+  }
 
   return (
     <PageShell
-      title={t('kycManager.title') + ' ' + t('kycManager.titleHighlight')}
+      title={t('kycManager.title')}
       description={t('kycManager.description')}
       icon={<ShieldCheck className="h-5 w-5" />}
-      stats={stats}
+      stats={[
+        { label: t('kycManager.stats.total'), value: String(counts.all) },
+        {
+          label: t('kycManager.stats.pending'),
+          value: String(counts.L1_UNVERIFIED + counts.PROFILE_SUBMITTED),
+        },
+        { label: t('kycManager.stats.verified'), value: String(counts.L2_VERIFIED) },
+        { label: t('kycManager.stats.partner'), value: String(counts.L3_CONTRACTED) },
+      ]}
     >
-      {/* Filters */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder={t('kycManager.searchPlaceholder')}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as FilterStatus)}>
-          <SelectTrigger className="w-full sm:w-48">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t('kycManager.allStatuses')}</SelectItem>
-            {STATUS_FILTER_OPTIONS.map((s) => (
-              <SelectItem key={s} value={s}>{t(STATUS_BADGE_MAP[s].label)}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <AdminDataTable<Company>
+        storageKey={STORAGE_KEY}
+        rows={kept}
+        getRowId={(c) => c.id}
+        isLoading={isLoading}
+        onRowClick={(c) => setDetailTarget(c)}
+        searchPlaceholder={t('kycManager.searchPlaceholder')}
+        exportUrl={`${window.location.origin}/api/v1/accounts/companies/export/`}
+        tabs={[
+          { id: 'all', label: t('kycManager.allStatuses'), count: counts.all },
+          { id: 'PROFILE_SUBMITTED', label: t('kycManager.status.P_SUBMITTED'), count: counts.PROFILE_SUBMITTED },
+          { id: 'L1_UNVERIFIED', label: t('kycManager.status.P_PENDING'), count: counts.L1_UNVERIFIED },
+          { id: 'L2_VERIFIED', label: t('kycManager.status.V_VERIFIED_L2'), count: counts.L2_VERIFIED },
+          { id: 'L3_CONTRACTED', label: t('kycManager.status.V_PARTNER_L3'), count: counts.L3_CONTRACTED },
+        ]}
+        columns={[
+          {
+            id: 'name',
+            header: t('kycManager.table.company'),
+            cell: (c) => <span className="font-medium">{c.name}</span>,
+            alwaysVisible: true,
+          },
+          {
+            id: 'inn',
+            header: t('kycManager.table.inn'),
+            cell: (c) => <span className="font-mono tabular-nums">{c.inn}</span>,
+          },
+          {
+            id: 'status',
+            header: t('kycManager.table.status'),
+            cell: (c) => {
+              const code = getStatusCode(c);
+              const b = STATUS_BADGE_MAP[code] || STATUS_BADGE_MAP.L1_UNVERIFIED;
+              return <Badge variant={b.variant}>{t(b.label)}</Badge>;
+            },
+          },
+          {
+            id: 'docs',
+            header: t('kycManager.table.docs'),
+            cell: (c) => (
+              <span className="text-muted-foreground tabular-nums">
+                {c.kyc_documents?.length || 0}
+              </span>
+            ),
+          },
+          {
+            id: 'created',
+            header: t('kycManager.table.date'),
+            cell: (c) =>
+              c.created_at ? (
+                <span className="text-muted-foreground">
+                  {new Date(c.created_at).toLocaleDateString()}
+                </span>
+              ) : (
+                <span className="text-muted-foreground">—</span>
+              ),
+          },
+        ]}
+        rowActions={[
+          {
+            id: 'approve-l2',
+            label: t('kycManager.approveL2'),
+            icon: <ShieldCheck className="h-3.5 w-3.5" />,
+            onRun: (c) => setConfirmRow({ kind: 'approve-l2', company: c }),
+          },
+          {
+            id: 'revoke',
+            label: t('kycManager.revokeL1'),
+            icon: <XCircle className="h-3.5 w-3.5" />,
+            variant: 'destructive',
+            onRun: (c) => setConfirmRow({ kind: 'revoke-l1', company: c }),
+          },
+        ]}
+        bulkActions={[
+          {
+            id: 'bulk-approve',
+            label: t('kycManager.bulkApproveL2'),
+            onRun: (rows) => {
+              setConfirmBulk({ companies: rows });
+            },
+          },
+        ]}
+        emptyIcon={<ShieldCheck className="h-5 w-5 text-muted-foreground" />}
+        emptyTitle={t('kycManager.emptyState')}
+      />
 
-      <Card>
-        <CardContent className="p-0">
-          {isLoading ? <LoadingRows rows={5} /> : !filtered.length ? (
-            <EmptyState icon={<ShieldCheck className="h-5 w-5" />} message={t('kycManager.emptyState')} />
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('kycManager.table.company')}</TableHead>
-                  <TableHead>{t('kycManager.table.inn')}</TableHead>
-                  <TableHead>{t('kycManager.table.status')}</TableHead>
-                  <TableHead>{t('kycManager.table.docs')}</TableHead>
-                  <TableHead>{t('kycManager.table.date')}</TableHead>
-                  <TableHead className="text-center">{t('kycManager.table.actions')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((company) => {
-                  const code = getStatusCode(company);
-                  const badge = STATUS_BADGE_MAP[code] || STATUS_BADGE_MAP.L1_UNVERIFIED;
-                  return (
-                    <TableRow
-                      key={company.id}
-                      className="cursor-pointer"
-                      onClick={() => setDetailTarget(company)}
-                    >
-                      <TableCell>
-                        <span className="font-medium">{company.name}</span>
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">
-                        {company.inn}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={badge.variant}>{t(badge.label)}</Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-xs">
-                        {company.kyc_documents?.length || 0}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-xs">
-                        {company.created_at ? new Date(company.created_at).toLocaleDateString() : '—'}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex justify-center" onClick={(e) => e.stopPropagation()}>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setDetailTarget(company)}
-                            title={t('kycManager.entityReview')}
-                          >
-                            <Eye className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      {/* Row-level confirms */}
+      <ConfirmActionDialog
+        open={confirmRow?.kind === 'approve-l2'}
+        onOpenChange={(v) => !v && setConfirmRow(null)}
+        title={t('adminQueue.confirm.kycApproveTitle')}
+        description={
+          confirmRow?.kind === 'approve-l2'
+            ? t('adminQueue.confirm.kycApproveDescription', { name: confirmRow.company.name })
+            : ''
+        }
+        diff={
+          confirmRow?.kind === 'approve-l2'
+            ? [
+                {
+                  label: t('confirmDialog.kycLevel'),
+                  before: getStatusCode(confirmRow.company),
+                  after: 'L2_VERIFIED',
+                },
+              ]
+            : undefined
+        }
+        showReason
+        reasonLabel={t('adminQueue.confirm.commentOptional')}
+        confirmLabel={t('common.approve')}
+        variant="primary"
+        onConfirm={(p) =>
+          confirmRow?.kind === 'approve-l2'
+            ? runRowApprove(confirmRow.company, p.reason)
+            : Promise.resolve()
+        }
+      />
+      <ConfirmActionDialog
+        open={confirmRow?.kind === 'revoke-l1'}
+        onOpenChange={(v) => !v && setConfirmRow(null)}
+        title={t('adminQueue.confirm.kycRevokeTitle')}
+        description={
+          confirmRow?.kind === 'revoke-l1'
+            ? t('adminQueue.confirm.kycRevokeDescription', { name: confirmRow.company.name })
+            : ''
+        }
+        diff={
+          confirmRow?.kind === 'revoke-l1'
+            ? [
+                {
+                  label: t('confirmDialog.kycLevel'),
+                  before: getStatusCode(confirmRow.company),
+                  after: 'L1_UNVERIFIED',
+                },
+              ]
+            : undefined
+        }
+        requireReason
+        reasonTemplates={[
+          t('adminQueue.reasonTemplates.docsInvalid'),
+          t('adminQueue.reasonTemplates.innMismatch'),
+          t('adminQueue.reasonTemplates.other'),
+        ]}
+        confirmLabel={t('common.revoke')}
+        variant="destructive"
+        onConfirm={(p) =>
+          confirmRow?.kind === 'revoke-l1'
+            ? runRowRevoke(confirmRow.company, p.reason)
+            : Promise.resolve()
+        }
+      />
 
+      {/* Bulk */}
+      <ConfirmActionDialog
+        open={Boolean(confirmBulk)}
+        onOpenChange={(v) => !v && setConfirmBulk(null)}
+        title={t('kycManager.bulkApproveL2')}
+        description={
+          confirmBulk
+            ? t('kycManager.bulkApproveDesc', { count: confirmBulk.companies.length })
+            : ''
+        }
+        showReason
+        reasonLabel={t('adminQueue.confirm.commentOptional')}
+        confirmLabel={t('common.approve')}
+        variant="primary"
+        onConfirm={(p) =>
+          confirmBulk
+            ? runBulkApprove(confirmBulk.companies, p.reason)
+            : Promise.resolve()
+        }
+      />
+
+      <Separator />
       <DetailSheet
         company={selectedCompany}
         open={!!detailTarget}

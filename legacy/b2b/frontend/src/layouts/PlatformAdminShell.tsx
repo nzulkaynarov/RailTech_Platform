@@ -66,6 +66,7 @@ import {
   CommandPaletteTrigger,
   useCommandPaletteShortcut,
 } from '@/components/Layout/CommandPalette';
+import { AdminShortcuts } from '@/components/Admin/AdminShortcuts';
 import { usePlatformDashboard } from '@/hooks/usePageStats';
 
 /* ─── Types ─────────────────────────────────────────────────────────── */
@@ -388,6 +389,7 @@ function PlatformAdminShellInner({ children, activePage, onNavigate }: PlatformA
         onOpenChange={setPaletteOpen}
         onNavigate={onNavigate}
       />
+      <AdminShortcuts onNavigate={onNavigate} onOpenPalette={() => setPaletteOpen(true)} />
     </TooltipProvider>
   );
 }

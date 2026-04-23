@@ -2,17 +2,16 @@ import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Building2, Pencil, Trash2, UserPlus } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Table, TableBody, TableCell, TableHeader, TableRow } from '@/components/ui/table';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/DataTable';
+import { AdminDataTable, useAdminTableQueryState } from '@/components/Admin/AdminDataTable';
+import { AdminActivityTimeline } from '@/components/Admin/AdminActivityTimeline';
 
 const KYC_BADGE: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; labelKey: string }> = {
   L1_UNVERIFIED: { variant: 'secondary', labelKey: 'kycManager.status.P_PENDING' },
@@ -27,7 +26,6 @@ const TYPE_LABEL_KEY: Record<string, string> = {
   MANUFACTURER: 'companyStatus.MANUFACTURER',
 };
 
-const KYC_FILTER_OPTIONS = ['L1_UNVERIFIED', 'PROFILE_SUBMITTED', 'L2_VERIFIED', 'L3_CONTRACTED'];
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -238,13 +236,16 @@ function CompanyFormSheet({
         </SheetHeader>
 
         <Tabs defaultValue="registry" className="mt-4 px-4">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="registry">{t('adminCompanies.tabs.registry')}</TabsTrigger>
-            <TabsTrigger value="members" disabled={!isEdit}>
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="registry" className="text-xs">{t('adminCompanies.tabs.registry')}</TabsTrigger>
+            <TabsTrigger value="members" disabled={!isEdit} className="text-xs">
               {t('adminCompanies.tabs.members')}
             </TabsTrigger>
-            <TabsTrigger value="files" disabled={!isEdit}>
+            <TabsTrigger value="files" disabled={!isEdit} className="text-xs">
               {t('adminCompanies.tabs.files')}
+            </TabsTrigger>
+            <TabsTrigger value="timeline" disabled={!isEdit} className="text-xs">
+              {t('platformAdmin.activity.title')}
             </TabsTrigger>
           </TabsList>
 
@@ -296,6 +297,12 @@ function CompanyFormSheet({
           <TabsContent value="files" className="mt-4">
             {isEdit && target ? <CompanyFilesPanel companyId={target.id} /> : null}
           </TabsContent>
+
+          <TabsContent value="timeline" className="mt-4">
+            {isEdit && target ? (
+              <AdminActivityTimeline entityType="company" entityId={target.id} />
+            ) : null}
+          </TabsContent>
         </Tabs>
 
         <SheetFooter className="mt-6">
@@ -308,17 +315,23 @@ function CompanyFormSheet({
   );
 }
 
+const STORAGE_KEY = 'adminCompanies';
+
 export function AdminCompaniesPage() {
   const { t } = useTranslation();
-  const listParams = useListParams(['kyc', 'type'] as const, { defaultOrdering: 'name' });
+  const tableState = useAdminTableQueryState(STORAGE_KEY);
   const queryParams = useMemo(() => {
     const p: Record<string, string> = {};
-    if (listParams.search) p.search = listParams.search;
-    if (listParams.filters.kyc !== 'all') p.verification_status__code = listParams.filters.kyc;
-    if (listParams.filters.type !== 'all') p.types__code = listParams.filters.type;
+    if (tableState.search) p.search = tableState.search;
+    const tab = tableState.tab || 'all';
+    if (tab.startsWith('kyc:')) {
+      p.verification_status__code = tab.slice(4);
+    } else if (tab.startsWith('type:')) {
+      p['types__code'] = tab.slice(5);
+    }
     return Object.keys(p).length ? p : undefined;
-  }, [listParams.search, listParams.filters]);
-  const { data: companies, isLoading } = useCompanies(queryParams);
+  }, [tableState.search, tableState.tab]);
+  const { data: companies = [], isLoading } = useCompanies(queryParams);
   const deleteMut = useDeleteCompany();
 
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -345,7 +358,7 @@ export function AdminCompaniesPage() {
   };
 
   const stats = [
-    { label: t('adminCompanies.stats.total'), value: String(companies?.length ?? '—') },
+    { label: t('adminCompanies.stats.total'), value: String(companies.length) },
   ];
 
   return (
@@ -355,105 +368,99 @@ export function AdminCompaniesPage() {
       icon={<Building2 className="h-5 w-5" />}
       stats={stats}
     >
-      <Toolbar
-        searchValue={listParams.searchInput}
-        onSearchChange={listParams.setSearchInput}
+      <AdminDataTable<Company>
+        storageKey={STORAGE_KEY}
+        rows={companies}
+        getRowId={(c) => c.id}
+        isLoading={isLoading}
+        onRowClick={(c) => onEdit(c)}
         searchPlaceholder={t('adminCompanies.searchPlaceholder')}
-        filters={[
+        exportUrl={`${window.location.origin}/api/v1/accounts/companies/export/`}
+        primaryAction={
+          <Button size="sm" className="h-8 text-xs" onClick={onNew}>
+            {t('adminCompanies.new')}
+          </Button>
+        }
+        tabs={[
+          { id: 'all', label: t('common.all') },
+          { id: 'kyc:PROFILE_SUBMITTED', label: t('kycManager.status.P_SUBMITTED') },
+          { id: 'kyc:L2_VERIFIED', label: t('kycManager.status.V_VERIFIED_L2') },
+          { id: 'kyc:L1_UNVERIFIED', label: t('kycManager.status.P_PENDING') },
+          { id: 'type:CLIENT', label: t('companyStatus.BUYER') },
+          { id: 'type:SUPPLIER', label: t('companyStatus.SELLER') },
+          { id: 'type:MANUFACTURER', label: t('companyStatus.MANUFACTURER') },
+        ]}
+        columns={[
           {
-            key: 'kyc',
-            value: listParams.filters.kyc,
-            onChange: (v) => listParams.setFilter('kyc', v),
-            allLabel: t('adminCompanies.allKyc'),
-            options: KYC_FILTER_OPTIONS.map((k) => ({ value: k, label: t(KYC_BADGE[k].labelKey) })),
+            id: 'name',
+            header: t('adminCompanies.table.name'),
+            cell: (c) => <span className="font-medium">{c.name}</span>,
+            alwaysVisible: true,
+            sortKey: 'name',
           },
           {
-            key: 'type',
-            value: listParams.filters.type,
-            onChange: (v) => listParams.setFilter('type', v),
-            allLabel: t('adminCompanies.allTypes'),
-            options: Object.entries(TYPE_LABEL_KEY).map(([code, labelKey]) => ({
-              value: code, label: t(labelKey),
-            })),
+            id: 'inn',
+            header: t('adminCompanies.table.inn'),
+            cell: (c) => <span className="font-mono tabular-nums">{c.inn}</span>,
+          },
+          {
+            id: 'kyc',
+            header: t('adminCompanies.table.kyc'),
+            cell: (c) => {
+              const code = c.verification_status_code ?? '';
+              const badge = KYC_BADGE[code];
+              return badge ? (
+                <Badge variant={badge.variant}>{t(badge.labelKey)}</Badge>
+              ) : (
+                <Badge variant="outline">—</Badge>
+              );
+            },
+          },
+          {
+            id: 'types',
+            header: t('adminCompanies.table.types'),
+            cell: (c) => (
+              <span className="text-muted-foreground">
+                {(c.company_types ?? [])
+                  .map((code2) =>
+                    TYPE_LABEL_KEY[code2] ? t(TYPE_LABEL_KEY[code2]) : code2,
+                  )
+                  .join(', ') || '—'}
+              </span>
+            ),
+          },
+          {
+            id: 'created',
+            header: t('adminCompanies.table.created'),
+            cell: (c) =>
+              c.created_at ? (
+                <span className="text-muted-foreground">
+                  {new Date(c.created_at).toLocaleDateString()}
+                </span>
+              ) : (
+                <span className="text-muted-foreground">—</span>
+              ),
+            hideByDefault: true,
           },
         ]}
-        newLabel={t('adminCompanies.new')}
-        onNew={onNew}
+        rowActions={[
+          {
+            id: 'edit',
+            label: t('adminCompanies.edit'),
+            icon: <Pencil className="h-3.5 w-3.5" />,
+            onRun: (c) => onEdit(c),
+          },
+          {
+            id: 'delete',
+            label: t('adminCompanies.delete'),
+            icon: <Trash2 className="h-3.5 w-3.5" />,
+            variant: 'destructive',
+            onRun: (c) => setDeleteTarget(c),
+          },
+        ]}
+        emptyIcon={<Building2 className="h-5 w-5 text-muted-foreground" />}
+        emptyTitle={t('adminCompanies.emptyState')}
       />
-
-      <Card>
-        <CardContent className="p-0">
-          {(() => {
-            const { items: pageItems, total } = applyListParams(companies ?? [], listParams, {
-              searchFields: (c) => [c.name, c.inn, c.mfo, c.contact_person, c.email],
-              sortAccessors: {
-                name: (c) => c.name,
-                inn: (c) => c.inn,
-                kyc: (c) => c.verification_status_code ?? '',
-              },
-            });
-            if (isLoading) return <LoadingRows rows={5} />;
-            if (!pageItems.length) return <EmptyState icon={<Building2 className="h-5 w-5" />} message={t('adminCompanies.emptyState')} />;
-            return (
-            <>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <SortableHead sortKey="name" current={listParams.ordering} onChange={listParams.toggleOrdering}>
-                    {t('adminCompanies.table.name')}
-                  </SortableHead>
-                  <SortableHead sortKey="inn" current={listParams.ordering} onChange={listParams.toggleOrdering}>
-                    {t('adminCompanies.table.inn')}
-                  </SortableHead>
-                  <SortableHead sortKey="kyc" current={listParams.ordering} onChange={listParams.toggleOrdering}>
-                    {t('adminCompanies.table.kyc')}
-                  </SortableHead>
-                  <SortableHead sortKey="" current="" onChange={() => {}}>
-                    {t('adminCompanies.table.types')}
-                  </SortableHead>
-                  <SortableHead sortKey="" current="" onChange={() => {}} className="text-right">
-                    {t('adminCompanies.table.actions')}
-                  </SortableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pageItems.map((c) => {
-                  const code = c.verification_status_code ?? '';
-                  const badge = KYC_BADGE[code];
-                  return (
-                  <TableRow key={c.id}>
-                    <TableCell className="font-medium">{c.name}</TableCell>
-                    <TableCell className="font-mono text-xs">{c.inn}</TableCell>
-                    <TableCell>
-                      {badge
-                        ? <Badge variant={badge.variant}>{t(badge.labelKey)}</Badge>
-                        : <Badge variant="outline">—</Badge>}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-xs">
-                      {(c.company_types ?? []).map((code2) =>
-                        TYPE_LABEL_KEY[code2] ? t(TYPE_LABEL_KEY[code2]) : code2
-                      ).join(', ') || '—'}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => onEdit(c)}>
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(c)}>
-                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );})}
-              </TableBody>
-            </Table>
-            <Pager page={listParams.page} pageSize={listParams.pageSize} total={total} onPageChange={listParams.setPage} />
-            </>
-            );
-          })()}
-        </CardContent>
-      </Card>
 
       <CompanyFormSheet open={sheetOpen} onOpenChange={setSheetOpen} target={editTarget} />
 

@@ -473,6 +473,18 @@
       "requiredFields": "Company, plan and rate are required",
       "confirmDelete": "Delete subscription?",
       "confirmDeleteDesc": "Subscription for \"{{name}}\" will be deleted.",
+      "tabs": {
+        "details": "Details"
+      },
+      "bulkActivate": "Activate (bulk)",
+      "bulkSuspend": "Suspend (bulk)",
+      "bulkSuspendDesc": "{{count}} subscriptions will be suspended. Provide a reason — it will be recorded in the audit log.",
+      "bulkResult": "Affected: {{affected}}",
+      "suspendTemplates": {
+        "nonPayment": "Non-payment for the current period",
+        "fraud": "Suspected fraud",
+        "other": "Other (specify in comment)"
+      },
       "fields": {
         "company": "Company",
         "monthlyRate": "Monthly rate",
@@ -532,6 +544,14 @@
         "confirm": "Reject Application",
         "cancel": "Cancel"
       },
+      "rejectTemplates": {
+        "docsInvalid": "Documents are unreadable or do not meet requirements",
+        "outOfScope": "Application does not match the requested role",
+        "other": "Other (specify in comment)"
+      },
+      "confirmApproveTitle": "Approve application",
+      "confirmApproveDescription": "Company {{company}} will receive the {{role}} role. Suppliers/Manufacturers get a TRIAL subscription for 30 days automatically.",
+      "notPending": "Application is already reviewed",
       "detail": {
         "title": "Application Details",
         "companyInfo": "Company Information",
@@ -579,6 +599,13 @@
         "business": "Business operations",
         "catalog": "Catalog",
         "system": "System"
+      },
+      "entityGroups": {
+        "companies": "Companies",
+        "users": "Users",
+        "deals": "Deals",
+        "offers": "Offers",
+        "tickets": "Tickets"
       }
     },
     "support": {
@@ -998,6 +1025,10 @@
     "approveL2": "Approve KYC (L2)",
     "upgradeL3": "Upgrade to Partner (L3)",
     "revokeL1": "Revoke verification (L1)",
+    "revokeHint": "Revoking sends the company back to L1 and removes supplier capabilities. This action is audit-logged.",
+    "bulkApproveL2": "Approve L2 (bulk)",
+    "bulkApproveDesc": "KYC will be approved to L2 for {{count}} companies. Skipped items (missing documents, etc.) will be listed separately.",
+    "bulkApprovedResult": "Approved: {{approved}}, skipped: {{skipped}}",
     "operationFailure": "Operation failed",
     "uploadFailure": "Document upload failed",
     "status": {
@@ -2851,6 +2882,24 @@
       "other": "Other (specify in comment)"
     }
   },
+  "adminShortcuts": {
+    "title": "Keyboard shortcuts",
+    "description": "Speed up admin work. Press ? to open this cheat sheet.",
+    "palette": "Open command palette",
+    "help": "Show keyboard shortcuts",
+    "focusSearch": "Focus search",
+    "goDashboard": "Go to Dashboard",
+    "goKyc": "KYC",
+    "goCompanies": "Companies",
+    "goUsers": "Users",
+    "goDeals": "Deals",
+    "goSubscriptions": "Subscriptions",
+    "goRoleApps": "Role applications",
+    "goSupport": "Support",
+    "tableNav": "Navigate rows",
+    "tableOpen": "Open focused row",
+    "tableSelect": "Toggle row selection"
+  },
   "platformAdmin": {
     "dashboard": {
       "title": "Command center",
@@ -2948,6 +2997,12 @@
     "stageChangeFailed": "Failed to change stage",
     "reason": "Reason",
     "reasonPlaceholder": "Describe why you're forcing the change...",
+    "reasonRequired": "Reason is required",
+    "transitionNotAllowed": "FSM forbids this transition. Pick a valid stage.",
+    "closedWonRequiresContract": "Moving to CLOSED_WON requires a signed contract",
+    "stageNotFound": "Stage not found",
+    "pickStage": "Pick a target stage",
+    "forceDescription": "Deal #{{id}} {{title}}. Force-override is audit-logged.",
     "apply": "Apply",
     "delete": "Delete",
     "deleted": "Deal deleted",
@@ -3028,7 +3083,8 @@
       "inn": "INN",
       "kyc": "KYC",
       "types": "Types",
-      "actions": "Actions"
+      "actions": "Actions",
+      "created": "Created"
     }
   },
   "adminCatalog": {

@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { CreditCard, Play, Pause, Pencil, Trash2, Wallet } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,10 +10,11 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import {
-  Table, TableBody, TableCell, TableHeader, TableRow,
-} from '@/components/ui/table';
-import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/DataTable';
+import { AdminDataTable, useAdminTableQueryState } from '@/components/Admin/AdminDataTable';
+import { AdminActivityTimeline } from '@/components/Admin/AdminActivityTimeline';
+import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
+import { useBulkSubscriptionStatus } from '@/hooks/useAdmin';
+import { Tabs as TabsRoot, TabsList as TabsListRoot, TabsTrigger as TabsTriggerRoot, TabsContent as TabsContentRoot } from '@/components/ui/tabs';
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter,
 } from '@/components/ui/sheet';
@@ -28,7 +28,7 @@ import {
   useCompanies,
 } from '@/hooks/useAccounts';
 import { useCurrencies } from '@/hooks/useMasterData';
-import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
+import { PageShell } from './shared/PageShell';
 import { SubscriptionPayDialog } from '@/components/Admin/SubscriptionPayDialog';
 import type { Subscription } from '@/api/accountsApi';
 
@@ -117,7 +117,21 @@ function FormSheet({
           <SheetTitle>{isEdit ? t('admin.subscriptions.edit') : t('admin.subscriptions.new')}</SheetTitle>
         </SheetHeader>
 
-        <div className="mt-4 space-y-4 px-4">
+        <TabsRoot defaultValue="details" className="mt-4 px-4">
+          <TabsListRoot className="grid w-full grid-cols-2">
+            <TabsTriggerRoot value="details" className="text-xs">
+              {t('admin.subscriptions.tabs.details')}
+            </TabsTriggerRoot>
+            <TabsTriggerRoot value="timeline" disabled={!isEdit} className="text-xs">
+              {t('platformAdmin.activity.title')}
+            </TabsTriggerRoot>
+          </TabsListRoot>
+          <TabsContentRoot value="timeline" className="mt-4">
+            {isEdit && sub ? (
+              <AdminActivityTimeline entityType="subscription" entityId={sub.id} />
+            ) : null}
+          </TabsContentRoot>
+          <TabsContentRoot value="details" className="mt-4 space-y-4">
           <div className="space-y-2">
             <Label>{t('admin.subscriptions.fields.company')}</Label>
             <Select
@@ -196,7 +210,8 @@ function FormSheet({
             <Label>{t('admin.subscriptions.fields.notes')}</Label>
             <Textarea rows={3} value={draft.notes ?? ''} onChange={(e) => update({ notes: e.target.value })} />
           </div>
-        </div>
+          </TabsContentRoot>
+        </TabsRoot>
 
         <SheetFooter className="mt-6">
           <Button onClick={submit} disabled={busy} className="w-full">
@@ -210,38 +225,64 @@ function FormSheet({
 
 /* ─── Main Page ────────────────────────────────────────────────────── */
 
+const STORAGE_KEY = 'adminSubscriptions';
+
 export function AdminSubscriptionsPage() {
   const { t } = useTranslation();
-  const { data: subscriptions, isLoading } = useSubscriptions();
+  const { data: subscriptions = [], isLoading } = useSubscriptions();
   const activateMutation = useActivateSubscription();
   const suspendMutation = useSuspendSubscription();
   const deleteMut = useDeleteSubscription();
+  const bulkStatus = useBulkSubscriptionStatus();
 
-  const listParams = useListParams(['plan', 'status'] as const, { defaultOrdering: '-created_at' });
+  const tableState = useAdminTableQueryState(STORAGE_KEY);
   const [editTarget, setEditTarget] = useState<Subscription | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Subscription | null>(null);
   const [payTargetId, setPayTargetId] = useState<number | null>(null);
+  const [confirmBulkSuspend, setConfirmBulkSuspend] = useState<Subscription[] | null>(null);
 
-  const handleActivate = async (id: number) => {
+  const filtered = useMemo(() => {
+    const q = tableState.search.toLowerCase();
+    const tab = tableState.tab || 'all';
+    return subscriptions.filter((s) => {
+      if (tab.startsWith('status:') && s.status !== tab.slice(7)) return false;
+      if (tab.startsWith('plan:') && s.plan !== tab.slice(5)) return false;
+      if (!q) return true;
+      return (
+        (s.company_name || '').toLowerCase().includes(q) ||
+        (s.company_inn || '').toLowerCase().includes(q)
+      );
+    });
+  }, [subscriptions, tableState.search, tableState.tab]);
+
+  const counts = useMemo(() => ({
+    all: subscriptions.length,
+    active: subscriptions.filter((s) => s.status === 'ACTIVE').length,
+    trial: subscriptions.filter((s) => s.status === 'TRIAL').length,
+    suspended: subscriptions.filter((s) => s.status === 'SUSPENDED').length,
+    pastDue: subscriptions.filter((s) => s.status === 'PAST_DUE').length,
+  }), [subscriptions]);
+
+  async function handleActivate(id: number) {
     try {
       await activateMutation.mutateAsync(id);
       toast.success(t('admin.subscriptions.activated'));
     } catch {
       toast.error(t('common.error'));
     }
-  };
+  }
 
-  const handleSuspend = async (id: number) => {
+  async function handleSuspend(id: number) {
     try {
       await suspendMutation.mutateAsync(id);
       toast.success(t('admin.subscriptions.suspended'));
     } catch {
       toast.error(t('common.error'));
     }
-  };
+  }
 
-  const handleDelete = async () => {
+  async function handleDelete() {
     if (!deleteTarget) return;
     try {
       await deleteMut.mutateAsync(deleteTarget.id);
@@ -250,16 +291,34 @@ export function AdminSubscriptionsPage() {
     } catch {
       toast.error(t('admin.subscriptions.deleteFailed'));
     }
-  };
+  }
+
+  async function runBulkSuspend(rows: Subscription[], reason: string) {
+    const res = await bulkStatus.mutateAsync({
+      ids: rows.map((r) => r.id),
+      status: 'SUSPENDED',
+      reason,
+    });
+    toast.success(t('admin.subscriptions.bulkResult', { affected: res.affected }));
+    setConfirmBulkSuspend(null);
+  }
+
+  async function runBulkActivate(rows: Subscription[]) {
+    const res = await bulkStatus.mutateAsync({
+      ids: rows.map((r) => r.id),
+      status: 'ACTIVE',
+    });
+    toast.success(t('admin.subscriptions.bulkResult', { affected: res.affected }));
+  }
 
   const openNew = () => { setEditTarget(null); setSheetOpen(true); };
   const openEdit = (s: Subscription) => { setEditTarget(s); setSheetOpen(true); };
 
   const stats = [
-    { label: t('admin.subscriptions.stats.total'), value: String(subscriptions?.length ?? '—') },
-    { label: t('admin.subscriptions.stats.active'), value: String(subscriptions?.filter(s => s.status === 'ACTIVE').length ?? '—') },
-    { label: t('admin.subscriptions.stats.trial'), value: String(subscriptions?.filter(s => s.status === 'TRIAL').length ?? '—') },
-    { label: t('admin.subscriptions.stats.suspended'), value: String(subscriptions?.filter(s => s.status === 'SUSPENDED').length ?? '—') },
+    { label: t('admin.subscriptions.stats.total'), value: String(counts.all) },
+    { label: t('admin.subscriptions.stats.active'), value: String(counts.active) },
+    { label: t('admin.subscriptions.stats.trial'), value: String(counts.trial) },
+    { label: t('admin.subscriptions.stats.suspended'), value: String(counts.suspended) },
   ];
 
   return (
@@ -269,150 +328,124 @@ export function AdminSubscriptionsPage() {
       icon={<CreditCard className="h-5 w-5" />}
       stats={stats}
     >
-      <Toolbar
-        searchValue={listParams.searchInput}
-        onSearchChange={listParams.setSearchInput}
+      <AdminDataTable<Subscription>
+        storageKey={STORAGE_KEY}
+        rows={filtered}
+        getRowId={(s) => s.id}
+        isLoading={isLoading}
+        onRowClick={openEdit}
         searchPlaceholder={t('admin.subscriptions.searchPlaceholder')}
-        filters={[
+        exportUrl={`${window.location.origin}/api/v1/accounts/subscriptions/export/`}
+        primaryAction={
+          <Button size="sm" className="h-8 text-xs" onClick={openNew}>
+            {t('admin.subscriptions.new')}
+          </Button>
+        }
+        tabs={[
+          { id: 'all', label: t('common.all'), count: counts.all },
+          { id: 'status:ACTIVE', label: t('admin.subscriptions.stats.active'), count: counts.active },
+          { id: 'status:TRIAL', label: t('admin.subscriptions.stats.trial'), count: counts.trial },
+          { id: 'status:PAST_DUE', label: 'PAST_DUE', count: counts.pastDue },
+          { id: 'status:SUSPENDED', label: t('admin.subscriptions.stats.suspended'), count: counts.suspended },
+          { id: 'plan:BASIC', label: 'BASIC' },
+          { id: 'plan:STANDARD', label: 'STANDARD' },
+          { id: 'plan:PREMIUM', label: 'PREMIUM' },
+        ]}
+        columns={[
           {
-            key: 'plan',
-            value: listParams.filters.plan,
-            onChange: (v) => listParams.setFilter('plan', v),
-            allLabel: t('admin.subscriptions.allPlans'),
-            options: PLAN_OPTIONS.map((p) => ({ value: p, label: p })),
+            id: 'company',
+            header: t('admin.subscriptions.table.company'),
+            cell: (s) => (
+              <div>
+                <div className="font-medium">{s.company_name}</div>
+                <div className="text-[11px] text-muted-foreground">{s.company_inn}</div>
+              </div>
+            ),
+            alwaysVisible: true,
           },
           {
-            key: 'status',
-            value: listParams.filters.status,
-            onChange: (v) => listParams.setFilter('status', v),
-            allLabel: t('admin.subscriptions.allStatuses'),
-            options: STATUS_OPTIONS.map((s) => ({ value: s, label: s })),
+            id: 'plan',
+            header: t('admin.subscriptions.table.plan'),
+            cell: (s) => <Badge variant={planVariant(s.plan)}>{s.plan_display}</Badge>,
+          },
+          {
+            id: 'status',
+            header: t('admin.subscriptions.table.status'),
+            cell: (s) => <Badge variant={statusVariant(s.status)}>{s.status_display}</Badge>,
+          },
+          {
+            id: 'rate',
+            header: t('admin.subscriptions.table.rate'),
+            cell: (s) => (
+              <span className="tabular-nums">
+                {s.monthly_rate} {s.currency_code || ''}
+              </span>
+            ),
+          },
+          {
+            id: 'validUntil',
+            header: t('admin.subscriptions.table.validUntil'),
+            cell: (s) => <span className="text-muted-foreground">{s.valid_until || '—'}</span>,
           },
         ]}
-        newLabel={t('admin.subscriptions.new')}
-        onNew={openNew}
+        rowActions={[
+          {
+            id: 'activate',
+            label: t('admin.subscriptions.activated'),
+            icon: <Play className="h-3.5 w-3.5 text-success" />,
+            onRun: (s) => {
+              if (s.status === 'ACTIVE') return;
+              handleActivate(s.id);
+            },
+          },
+          {
+            id: 'suspend',
+            label: t('admin.subscriptions.suspended'),
+            icon: <Pause className="h-3.5 w-3.5 text-warning" />,
+            onRun: (s) => {
+              if (s.status !== 'ACTIVE') return;
+              handleSuspend(s.id);
+            },
+          },
+          {
+            id: 'pay',
+            label: t('subscriptionPay.title'),
+            icon: <Wallet className="h-3.5 w-3.5 text-primary" />,
+            onRun: (s) => {
+              if (s.status === 'CANCELLED') return;
+              setPayTargetId(s.id);
+            },
+          },
+          {
+            id: 'edit',
+            label: t('admin.subscriptions.edit'),
+            icon: <Pencil className="h-3.5 w-3.5" />,
+            onRun: openEdit,
+          },
+          {
+            id: 'delete',
+            label: t('admin.subscriptions.delete'),
+            icon: <Trash2 className="h-3.5 w-3.5" />,
+            variant: 'destructive',
+            onRun: (s) => setDeleteTarget(s),
+          },
+        ]}
+        bulkActions={[
+          {
+            id: 'bulk-activate',
+            label: t('admin.subscriptions.bulkActivate'),
+            onRun: (rows) => runBulkActivate(rows),
+          },
+          {
+            id: 'bulk-suspend',
+            label: t('admin.subscriptions.bulkSuspend'),
+            variant: 'destructive',
+            onRun: (rows) => setConfirmBulkSuspend(rows),
+          },
+        ]}
+        emptyIcon={<CreditCard className="h-5 w-5 text-muted-foreground" />}
+        emptyTitle={t('pages.common.noData')}
       />
-
-      <Card>
-        <CardContent className="p-0">
-          {(() => {
-            const { items: pageItems, total } = applyListParams(subscriptions ?? [], listParams, {
-              searchFields: (s) => [s.company_name, s.company_inn, s.plan, s.status],
-              filterPredicates: {
-                plan: (s, v) => s.plan === v,
-                status: (s, v) => s.status === v,
-              },
-              sortAccessors: {
-                company: (s) => s.company_name ?? '',
-                plan: (s) => s.plan ?? '',
-                status: (s) => s.status ?? '',
-                rate: (s) => Number(s.monthly_rate) || 0,
-                valid_until: (s) => s.valid_until ?? '',
-                created_at: (s) => s.created_at ?? '',
-              },
-            });
-            if (isLoading) return <LoadingRows rows={5} />;
-            if (!pageItems.length) return <EmptyState icon={<CreditCard className="h-5 w-5" />} message={t('pages.common.noData')} />;
-            return (
-            <>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <SortableHead sortKey="company" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('admin.subscriptions.table.company')}</SortableHead>
-                  <SortableHead sortKey="plan" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('admin.subscriptions.table.plan')}</SortableHead>
-                  <SortableHead sortKey="status" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('admin.subscriptions.table.status')}</SortableHead>
-                  <SortableHead sortKey="rate" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('admin.subscriptions.table.rate')}</SortableHead>
-                  <SortableHead sortKey="valid_until" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('admin.subscriptions.table.validUntil')}</SortableHead>
-                  <SortableHead sortKey="" current="" onChange={() => {}} className="text-center">{t('admin.subscriptions.table.actions')}</SortableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pageItems.map((sub: Subscription) => (
-                  <TableRow
-                    key={sub.id}
-                    className="cursor-pointer"
-                    onClick={() => openEdit(sub)}
-                  >
-                    <TableCell>
-                      <div>
-                        <span className="font-medium">{sub.company_name}</span>
-                        <span className="block text-xs text-muted-foreground">{sub.company_inn}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={planVariant(sub.plan)}>{sub.plan_display}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={statusVariant(sub.status)}>{sub.status_display}</Badge>
-                    </TableCell>
-                    <TableCell className="tabular-nums">
-                      {sub.monthly_rate} {sub.currency_code || ''}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-xs">
-                      {sub.valid_until || '—'}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <div className="flex justify-center gap-1" onClick={(e) => e.stopPropagation()}>
-                        {sub.status !== 'ACTIVE' && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleActivate(sub.id)}
-                            disabled={activateMutation.isPending}
-                            title={t('admin.subscriptions.activated')}
-                          >
-                            <Play className="h-3.5 w-3.5 text-success" />
-                          </Button>
-                        )}
-                        {sub.status === 'ACTIVE' && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleSuspend(sub.id)}
-                            disabled={suspendMutation.isPending}
-                            title={t('admin.subscriptions.suspended')}
-                          >
-                            <Pause className="h-3.5 w-3.5 text-warning" />
-                          </Button>
-                        )}
-                        {sub.status !== 'CANCELLED' && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setPayTargetId(sub.id)}
-                            title={t('subscriptionPay.title')}
-                          >
-                            <Wallet className="h-3.5 w-3.5 text-primary" />
-                          </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEdit(sub)}
-                          title={t('admin.subscriptions.edit')}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setDeleteTarget(sub)}
-                          title={t('admin.subscriptions.delete')}
-                        >
-                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            <Pager page={listParams.page} pageSize={listParams.pageSize} total={total} onPageChange={listParams.setPage} />
-            </>
-            );
-          })()}
-        </CardContent>
-      </Card>
 
       <FormSheet
         sub={editTarget}
@@ -424,6 +457,28 @@ export function AdminSubscriptionsPage() {
         subscriptionId={payTargetId}
         open={payTargetId !== null}
         onOpenChange={(o) => !o && setPayTargetId(null)}
+      />
+
+      <ConfirmActionDialog
+        open={Boolean(confirmBulkSuspend)}
+        onOpenChange={(v) => !v && setConfirmBulkSuspend(null)}
+        title={t('admin.subscriptions.bulkSuspend')}
+        description={
+          confirmBulkSuspend
+            ? t('admin.subscriptions.bulkSuspendDesc', { count: confirmBulkSuspend.length })
+            : ''
+        }
+        requireReason
+        reasonTemplates={[
+          t('admin.subscriptions.suspendTemplates.nonPayment'),
+          t('admin.subscriptions.suspendTemplates.fraud'),
+          t('admin.subscriptions.suspendTemplates.other'),
+        ]}
+        confirmLabel={t('admin.subscriptions.suspended')}
+        variant="destructive"
+        onConfirm={(p) =>
+          confirmBulkSuspend ? runBulkSuspend(confirmBulkSuspend, p.reason) : Promise.resolve()
+        }
       />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
