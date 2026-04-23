@@ -1846,6 +1846,8 @@
       "documents": "Documents"
     },
     "placeholder": "Write a message...",
+    "loadError": "Failed to load messages",
+    "sendError": "Failed to send message",
     "messages": {
       "requestAccepted": "Good day! Request ZK-2026-0047 has been accepted.",
       "whenQuote": "Thank you! When can we expect the quote?",

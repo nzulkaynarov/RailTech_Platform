@@ -46,7 +46,9 @@
       "Bash(DOCKER_BUILDKIT=1 docker compose build frontend)",
       "Bash(chmod +x /Users/znz/Downloads/IT-projects/RailTech_SaaS_B2B/scripts/check_i18n_symmetry.py)",
       "Bash(git commit *)",
-      "Bash(find *)"
+      "Bash(find *)",
+      "Bash(find backend *)",
+      "Bash(cat backend/core/asgi.py)"
     ]
   }
 }

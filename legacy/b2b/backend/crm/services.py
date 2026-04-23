@@ -6,7 +6,7 @@ from django.db.models import Count, QuerySet, Sum
 
 from accounts.models import Company, CustomUser
 
-from .models import ActivityLog, Deal, DealStage, Lead, Quote, QuoteItem, QuoteItemHistory, QuoteStatus
+from .models import ActivityLog, Deal, DealStage, Lead, Message, Quote, QuoteItem, QuoteItemHistory, QuoteStatus
 
 
 class QuoteCalculationService:
@@ -1152,3 +1152,39 @@ def reassign_quote_item_product(
         user=actor, level='INFO',
     )
     return item, None
+
+
+MAX_MESSAGE_LENGTH = 5000
+
+
+def user_can_access_deal_chat(user: CustomUser, deal: Deal) -> bool:
+    """Platform admin, deal manager, deal client, or any active member of deal.company."""
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_superuser or getattr(user, 'is_platform_admin', False):
+        return True
+    if deal.manager_id == user.id or deal.client_id == user.id:
+        return True
+    if deal.company_id:
+        return user.memberships.filter(
+            company_id=deal.company_id, is_active=True
+        ).exists()
+    return False
+
+
+def send_deal_message(user: CustomUser, deal: Deal, text: str) -> Tuple[Optional[Message], Optional[str]]:
+    """
+    Create a chat message for a deal after authorization + validation.
+    Broadcast happens via Message post_save signal — do not group_send here.
+    """
+    if not user_can_access_deal_chat(user, deal):
+        return None, 'NOT_DEAL_MEMBER'
+    clean = (text or '').strip()
+    if not clean:
+        return None, 'EMPTY_MESSAGE'
+    message = Message.objects.create(
+        deal=deal,
+        sender=user,
+        text=clean[:MAX_MESSAGE_LENGTH],
+    )
+    return message, None

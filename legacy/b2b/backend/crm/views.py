@@ -27,7 +27,7 @@ from django.utils.translation import gettext_lazy as _
 from datetime import timedelta
 from decimal import Decimal
 
-from .services import transition_deal_stage, register_new_deal
+from .services import transition_deal_stage, register_new_deal, send_deal_message
 from . import services as crm_services
 
 
@@ -544,7 +544,7 @@ class MessageViewSet(viewsets.ModelViewSet):
     """
     serializer_class = MessageSerializer
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
-    filterset_fields = ['deal_id']
+    filterset_fields = ['deal', 'deal_id', 'message_type']
 
     def get_queryset(self):
         if getattr(self, 'swagger_fake_view', False):
@@ -557,10 +557,39 @@ class MessageViewSet(viewsets.ModelViewSet):
 
         user_company_ids = user.memberships.filter(
             is_active=True).values_list('company_id', flat=True)
-        return queryset.filter(deal__company_id__in=user_company_ids)
+        return queryset.filter(
+            Q(deal__company_id__in=user_company_ids)
+            | Q(deal__manager_id=user.id)
+            | Q(deal__client_id=user.id)
+        ).distinct()
 
-    def perform_create(self, serializer):
-        serializer.save(sender=self.request.user)
+    def create(self, request, *args, **kwargs):
+        deal_id = request.data.get('deal')
+        text = request.data.get('text', '')
+        if not deal_id:
+            return Response(
+                {'detail': 'deal is required'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            deal = Deal.objects.get(pk=deal_id)
+        except Deal.DoesNotExist:
+            return Response(
+                {'detail': 'DEAL_NOT_FOUND'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        message, error = send_deal_message(request.user, deal, text)
+        if error == 'NOT_DEAL_MEMBER':
+            return Response({'detail': error}, status=status.HTTP_403_FORBIDDEN)
+        if error == 'EMPTY_MESSAGE':
+            return Response({'detail': error}, status=status.HTTP_400_BAD_REQUEST)
+        if error or message is None:
+            return Response(
+                {'detail': error or 'UNKNOWN_ERROR'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        data = MessageSerializer(message, context={'request': request}).data
+        return Response(data, status=status.HTTP_201_CREATED)
 
 
 @extend_schema(

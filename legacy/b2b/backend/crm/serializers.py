@@ -87,7 +87,7 @@ class DealDetailSerializer(serializers.ModelSerializer):
 
 
 class MessageSerializer(serializers.ModelSerializer):
-    sender_name = serializers.CharField(source='sender.get_full_name', read_only=True)
+    sender_name = serializers.SerializerMethodField()
     is_me = serializers.SerializerMethodField()
 
     class Meta:
@@ -96,12 +96,19 @@ class MessageSerializer(serializers.ModelSerializer):
             'id', 'deal', 'sender', 'sender_name', 'text',
             'message_type', 'timestamp', 'is_me',
         ]
-        read_only_fields = ['sender', 'timestamp']
+        read_only_fields = ['sender', 'timestamp', 'message_type']
+
+    def get_sender_name(self, obj):
+        sender = obj.sender
+        if not sender:
+            return ''
+        full = sender.get_full_name()
+        return full or sender.email
 
     def get_is_me(self, obj):
         request = self.context.get('request')
         if request and request.user.is_authenticated:
-            return obj.sender == request.user
+            return obj.sender_id == request.user.id
         return False
 
 
