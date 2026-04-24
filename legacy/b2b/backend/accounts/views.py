@@ -271,6 +271,13 @@ class CompanyViewSet(viewsets.ModelViewSet):
         logo_file = request.FILES.get('logo')
         if not logo_file:
             return Response({'detail': 'NO_FILE_PROVIDED'}, status=status.HTTP_400_BAD_REQUEST)
+
+        from core.validators import validate_image_upload
+        try:
+            validate_image_upload(logo_file)
+        except Exception as e:
+            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
         if company.logo:
             company.logo.delete(save=False)
         company.logo = logo_file
@@ -518,6 +525,13 @@ class UserViewSet(viewsets.ModelViewSet):
         avatar = request.FILES.get('avatar')
         if not avatar:
             return Response({'detail': 'NO_FILE_PROVIDED'}, status=status.HTTP_400_BAD_REQUEST)
+
+        from core.validators import validate_avatar_upload
+        try:
+            validate_avatar_upload(avatar)
+        except Exception as e:
+            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
         user = request.user
         if user.avatar:
             user.avatar.delete(save=False)

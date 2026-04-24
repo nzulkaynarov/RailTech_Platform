@@ -1,5 +1,6 @@
 from rest_framework import viewsets, status, throttling
 from rest_framework.decorators import action
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from drf_spectacular.utils import (
@@ -1096,13 +1097,19 @@ class ContractViewSet(viewsets.ModelViewSet):
 
     @extend_schema(summary="Upload signed copy", tags=['CRM'])
     @action(detail=True, methods=['post'], url_path='upload-signed',
-            parser_classes=[__import__('rest_framework').parsers.MultiPartParser,
-                            __import__('rest_framework').parsers.FormParser])
+            parser_classes=[MultiPartParser, FormParser])
     def upload_signed(self, request, pk=None):
         contract = self.get_object()
         file_obj = request.FILES.get('file')
         if not file_obj:
             return Response({'detail': 'NO_FILE_PROVIDED'}, status=400)
+
+        from core.validators import validate_document_upload
+        try:
+            validate_document_upload(file_obj)
+        except Exception as e:
+            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
         contract.signed_file = file_obj
         contract.save(update_fields=['signed_file', 'updated_at'])
         return Response(ContractSerializer(contract).data)
@@ -1230,10 +1237,17 @@ class ActViewSet(viewsets.ModelViewSet):
 
     @extend_schema(summary="Sign act (mark as SIGNED)", tags=['CRM'])
     @action(detail=True, methods=['post'], url_path='sign',
-            parser_classes=[__import__('rest_framework').parsers.MultiPartParser,
-                            __import__('rest_framework').parsers.FormParser])
+            parser_classes=[MultiPartParser, FormParser])
     def sign(self, request, pk=None):
-        act, err = crm_services.sign_act(int(pk), request.user, signed_file=request.FILES.get('signed_file'))
+        signed_file = request.FILES.get('signed_file')
+        if signed_file:
+            from core.validators import validate_document_upload
+            try:
+                validate_document_upload(signed_file)
+            except Exception as e:
+                return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        act, err = crm_services.sign_act(int(pk), request.user, signed_file=signed_file)
         if err:
             return Response({'detail': err}, status=400)
         return Response(ActSerializer(act).data)
@@ -1274,6 +1288,7 @@ class FulfillmentViewSet(viewsets.ModelViewSet):
 class SupplierBidViewSet(viewsets.ModelViewSet):
     serializer_class = SupplierBidSerializer
     permission_classes = [IsAuthenticated]
+    http_method_names = ['get', 'head', 'options']
     filterset_fields = ['status', 'supplier', 'deal']
     search_fields = ['deal__title', 'deal__company__name', 'supplier__name', 'notes']
 

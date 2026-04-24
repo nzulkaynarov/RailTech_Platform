@@ -273,7 +273,7 @@
       "email_env": "SUPERADMIN_EMAIL",
       "password_env": "SUPERADMIN_PASSWORD",
       "email_default": "admin@railtech.uz",
-      "password_default": "admin123",
+      "password_default": null,
       "first_name": "Nurbek",
       "last_name": "Zulkainarov",
       "full_name_ru": "Нурбек Зулкайнаров",
@@ -284,7 +284,7 @@
     },
     {
       "email_default": "aziz.kodirov@railtech.uz",
-      "password_default": "aziz123",
+      "password_default": null, "password_env": "SEED_USER_PASSWORD",
       "first_name": "Aziz",
       "last_name": "Kodirov",
       "full_name_ru": "Азиз Кодиров",
@@ -297,7 +297,7 @@
     },
     {
       "email_default": "diana.rakhimova@railtech.uz",
-      "password_default": "diana123",
+      "password_default": null, "password_env": "SEED_USER_PASSWORD",
       "first_name": "Diana",
       "last_name": "Rakhimova",
       "full_name_ru": "Диана Рахимова",
@@ -310,7 +310,7 @@
     },
     {
       "email_default": "farhod.mahmudov@railtech.uz",
-      "password_default": "farhod123",
+      "password_default": null, "password_env": "SEED_USER_PASSWORD",
       "first_name": "Farhod",
       "last_name": "Mahmudov",
       "full_name_ru": "Фарход Махмудов",
@@ -323,7 +323,7 @@
     },
     {
       "email_default": "lola.iskandarova@railtech.uz",
-      "password_default": "lola123",
+      "password_default": null, "password_env": "SEED_USER_PASSWORD",
       "first_name": "Lola",
       "last_name": "Iskandarova",
       "full_name_ru": "Лола Искандарова",
@@ -336,7 +336,7 @@
     },
     {
       "email_default": "umid.abdullaev@railtech.uz",
-      "password_default": "umid123",
+      "password_default": null, "password_env": "SEED_USER_PASSWORD",
       "first_name": "Umid",
       "last_name": "Abdullaev",
       "full_name_ru": "Умид Абдуллаев",
@@ -349,7 +349,7 @@
     },
     {
       "email_default": "natalia.petrova@railtech.uz",
-      "password_default": "natalia123",
+      "password_default": null, "password_env": "SEED_USER_PASSWORD",
       "first_name": "Natalia",
       "last_name": "Petrova",
       "full_name_ru": "Наталья Петрова",
@@ -362,7 +362,7 @@
     },
     {
       "email_default": "kamol.zarifov@railtech.uz",
-      "password_default": "kamol123",
+      "password_default": null, "password_env": "SEED_USER_PASSWORD",
       "first_name": "Kamol",
       "last_name": "Zarifov",
       "full_name_ru": "Камол Зарифов",
@@ -375,7 +375,7 @@
     },
     {
       "email_default": "evgeny.smirnov@railtech.uz",
-      "password_default": "evgeny123",
+      "password_default": null, "password_env": "SEED_USER_PASSWORD",
       "first_name": "Evgeny",
       "last_name": "Smirnov",
       "full_name_ru": "Евгений Смирнов",
@@ -390,7 +390,7 @@
       "email_env": "CLIENT_EMAIL",
       "password_env": "CLIENT_PASSWORD",
       "email_default": "client@uty.uz",
-      "password_default": "client123",
+      "password_default": null,
       "first_name": "Alexandr",
       "last_name": "Ivanov",
       "full_name_ru": "Иванов А.П.",

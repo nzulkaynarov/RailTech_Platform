@@ -448,6 +448,9 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+DATA_UPLOAD_MAX_MEMORY_SIZE = 25 * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE = 25 * 1024 * 1024
+
 # ─── MinIO / S3 Storage ───────────────────────────────────────────────────────
 # When MINIO_ENDPOINT is set, file uploads go to MinIO buckets.
 # When not set, falls back to local FileSystemStorage (MEDIA_ROOT).

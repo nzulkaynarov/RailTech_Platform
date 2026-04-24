@@ -380,6 +380,12 @@ class ProductViewSet(viewsets.ModelViewSet):
         if not image_file:
             return Response({'detail': 'NO_FILE_PROVIDED'}, status=status.HTTP_400_BAD_REQUEST)
 
+        from core.validators import validate_image_upload
+        try:
+            validate_image_upload(image_file)
+        except Exception as e:
+            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
         is_main = str(request.data.get('is_main', 'false')).lower() in ('true', '1')
         alt_text = request.data.get('alt_text', '')
 
@@ -430,6 +436,13 @@ class ProductViewSet(viewsets.ModelViewSet):
         file_obj = request.FILES.get('file')
         if not file_obj:
             return Response({'detail': 'NO_FILE_PROVIDED'}, status=status.HTTP_400_BAD_REQUEST)
+
+        from core.validators import validate_document_upload
+        try:
+            validate_document_upload(file_obj)
+        except Exception as e:
+            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
         name = request.data.get('name') or file_obj.name
         doc = ProductDocument.objects.create(product=product, file=file_obj, name=name)
         return Response(ProductDocumentSerializer(doc).data, status=status.HTTP_201_CREATED)

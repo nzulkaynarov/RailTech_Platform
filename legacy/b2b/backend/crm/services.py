@@ -960,6 +960,10 @@ def record_payment(
     if amount_d <= 0:
         return None, 'PAYMENT_AMOUNT_MUST_BE_POSITIVE'
 
+    if proof_file:
+        from core.validators import validate_document_upload
+        validate_document_upload(proof_file)
+
     payment = Payment.objects.create(
         invoice=invoice, amount=amount_d, method=method,
         paid_at=paid_at, reference=reference, proof_file=proof_file,
