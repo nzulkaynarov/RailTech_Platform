@@ -23,6 +23,7 @@ from accounts.views import (
     CompanyViewSet, UserViewSet, RegisterView, SetupPasswordView, SubmitProfileView, MeView,
     SupplierSubscriptionViewSet, CompanyRoleApplicationViewSet, SystemRoleViewSet,
     WorkspaceRoleViewSet, CompanyTypeViewSet,
+    ForgotPasswordView, ResetPasswordView,
 )
 from notifications.views import NotificationViewSet
 from master_data.views import (
@@ -100,6 +101,10 @@ urlpatterns = [
     path('api/v1/auth/register/', RegisterView.as_view(), name='register'),
     path('api/v1/auth/setup-password/',
          SetupPasswordView.as_view(), name='setup-password'),
+    path('api/v1/auth/forgot-password/',
+         ForgotPasswordView.as_view(), name='forgot-password'),
+    path('api/v1/auth/reset-password/',
+         ResetPasswordView.as_view(), name='reset-password'),
     path('api/v1/auth/submit-profile/',
          SubmitProfileView.as_view(), name='submit-profile'),
     path('api/v1/auth/token/',

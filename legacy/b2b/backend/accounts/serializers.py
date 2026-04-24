@@ -199,6 +199,16 @@ class SetupPasswordSerializer(serializers.Serializer):
     password = serializers.CharField(min_length=8)
 
 
+class ForgotPasswordSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class ResetPasswordSerializer(serializers.Serializer):
+    uid = serializers.CharField()
+    token = serializers.CharField()
+    password = serializers.CharField(min_length=8)
+
+
 class SubmitProfileSerializer(serializers.Serializer):
     inn = serializers.CharField(max_length=20)
     companyName = serializers.CharField(max_length=255)

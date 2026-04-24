@@ -1,7 +1,54 @@
+import json
+
+from django.core.serializers.json import DjangoJSONEncoder
 from django.utils.translation import gettext_lazy as _
 from django.db.models import Sum, Count, Q
-from accounts.models import Company, CustomUser, CompanyRoleApplication
-from crm.models import Deal, DealStage, Lead, Quote, QuoteStatus, QuoteItem
+
+from accounts.models import Company, CompanyRoleApplication, CustomUser
+from crm.models import Deal, Lead, Quote, QuoteItem
+
+# Palette for Chart.js — matches Unfold's primary/accent scale + semantic tokens.
+# One colour per dataset bar; Chart.js cycles if labels > colours.
+_CHART_PALETTE = [
+    "#2563eb",  # primary
+    "#10b981",  # success
+    "#f59e0b",  # warning
+    "#ef4444",  # danger
+    "#8b5cf6",  # violet
+    "#06b6d4",  # cyan
+    "#ec4899",  # pink
+]
+
+
+def _chart_json(labels: list, data: list, label: str) -> str:
+    """Serialize a chart config into a JSON string ready for Chart.js data-value."""
+    payload = {
+        "labels": [str(lbl) for lbl in labels],
+        "datasets": [{
+            "label": str(label),
+            "data": data,
+            "backgroundColor": [_CHART_PALETTE[i % len(_CHART_PALETTE)] for i in range(len(data))],
+            "borderRadius": 6,
+            "borderSkipped": False,
+            "maxBarThickness": 64,
+        }],
+    }
+    return json.dumps(payload, cls=DjangoJSONEncoder, ensure_ascii=False)
+
+
+_CHART_OPTIONS_JSON = json.dumps({
+    # Fill the card height instead of honouring Chart.js's default 2:1 aspect.
+    "responsive": True,
+    "maintainAspectRatio": False,
+    # Remove Chart.js's default ~8px padding around the plot area — cards are
+    # already using Unfold's p-6, any extra internal padding reads as dead space.
+    "layout": {"padding": {"top": 4, "right": 0, "bottom": 0, "left": 0}},
+    "plugins": {"legend": {"display": False}},
+    "scales": {
+        "y": {"beginAtZero": True, "grid": {"drawBorder": False}},
+        "x": {"grid": {"display": False}, "ticks": {"padding": 4}},
+    },
+})
 
 
 def dashboard_callback(request, context):
@@ -119,20 +166,24 @@ def dashboard_callback(request, context):
         "charts": [
             {
                 "title": _("Воронка сделок"),
-                "labels": [s["stage__name"] or "Без стадии" for s in deal_stats],
-                "datasets": [{
-                    "label": _("Сделки"),
-                    "data": [s["count"] for s in deal_stats],
-                }]
+                "data": _chart_json(
+                    labels=[s["stage__name"] or _("Без стадии") for s in deal_stats],
+                    data=[s["count"] for s in deal_stats],
+                    label=_("Сделки"),
+                ),
+                "options": _CHART_OPTIONS_JSON,
+                "empty": not deal_stats,
             },
             {
-                "title": _("Выручка по регионам"),
-                "labels": [s["tax_country__name"] for s in region_stats],
-                "datasets": [{
-                    "label": _("Сумма (UZS)"),
-                    "data": [float(s["revenue"]) for s in region_stats],
-                }]
-            }
+                "title": _("Выручка по регионам (UZS)"),
+                "data": _chart_json(
+                    labels=[s["tax_country__name"] for s in region_stats],
+                    data=[float(s["revenue"] or 0) for s in region_stats],
+                    label=_("Сумма"),
+                ),
+                "options": _CHART_OPTIONS_JSON,
+                "empty": not region_stats,
+            },
         ],
     })
 

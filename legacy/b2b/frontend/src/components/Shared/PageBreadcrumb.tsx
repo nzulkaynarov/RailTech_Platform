@@ -63,6 +63,9 @@ const pageI18nKeys: Record<string, string> = {
   fulfillments: 'breadcrumbs.fulfillments',
   'supplier-bids': 'breadcrumbs.supplierBids',
   leads: 'breadcrumbs.leads',
+  'my-subscription': 'breadcrumbs.mySubscription',
+  'forgot-password': 'breadcrumbs.forgotPassword',
+  'reset-password': 'breadcrumbs.resetPassword',
 };
 
 export function getPageLabel(pageId: string, t: TFunction): string {

@@ -127,13 +127,22 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
               },
             }]
           : canManageCatalog
-            ? [{
-                label: t('productManagement.addProduct'),
-                onClick: () => {
-                  setEditTarget(null);
-                  setEditSheetOpen(true);
+            ? [
+                {
+                  label: t('productManagement.bulkImport'),
+                  variant: 'outline' as const,
+                  onClick: () => {
+                    window.location.hash = 'sourcing-import';
+                  },
                 },
-              }]
+                {
+                  label: t('productManagement.addProduct'),
+                  onClick: () => {
+                    setEditTarget(null);
+                    setEditSheetOpen(true);
+                  },
+                },
+              ]
             : undefined
       }
     >

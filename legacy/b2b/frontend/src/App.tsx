@@ -12,6 +12,8 @@ import { useAuthStore } from './store/authStore';
 import { LoginPage } from './components/Auth/LoginPage';
 import { KYCRegistrationForm } from './components/Auth/KYCRegistrationForm';
 import { PasswordSetupPage } from './components/Auth/PasswordSetupPage';
+import { ForgotPasswordPage } from './components/Auth/ForgotPasswordPage';
+import { ResetPasswordPage } from './components/Auth/ResetPasswordPage';
 import { ProfileCompletionForm } from './components/Cabinet/ProfileCompletionForm';
 
 // Lazy load page components
@@ -56,6 +58,7 @@ const ActsPage = lazy(() => import('./pages/ActsPage'));
 const FulfillmentsPage = lazy(() => import('./pages/FulfillmentsPage'));
 const SupplierBidsPage = lazy(() => import('./pages/SupplierBidsPage'));
 const LeadsPage = lazy(() => import('./pages/LeadsPage'));
+const MySubscriptionPage = lazy(() => import('./pages/MySubscriptionPage'));
 
 import { LoadingSkeleton } from './components/LoadingSkeleton';
 
@@ -96,47 +99,54 @@ type Page =
   | { type: 'fulfillments' }
   | { type: 'supplier-bids' }
   | { type: 'leads' }
+  | { type: 'my-subscription' }
 ;
 
 /** Parse URL path and query params for auth routes */
-function useAuthRoute() {
-  const [route, setRoute] = useState(() => {
-    const url = new URL(window.location.href);
-    const path = url.pathname;
-    if (path === '/setup-password') {
-      return {
-        view: 'setup-password' as const,
-        uid: url.searchParams.get('uid'),
-        token: url.searchParams.get('token'),
-      };
-    }
-    if (path === '/register') return { view: 'register' as const, uid: null, token: null };
-    return { view: 'login' as const, uid: null, token: null };
-  });
+type AuthRouteView = 'login' | 'register' | 'setup-password' | 'forgot-password' | 'reset-password';
 
-  const navigate = (view: 'login' | 'register') => {
-    const newPath = view === 'register' ? '/register' : '/';
-    window.history.pushState(null, '', newPath);
+function parseAuthRoute(): { view: AuthRouteView; uid: string | null; token: string | null } {
+  const url = new URL(window.location.href);
+  const path = url.pathname;
+  if (path === '/setup-password') {
+    return {
+      view: 'setup-password',
+      uid: url.searchParams.get('uid'),
+      token: url.searchParams.get('token'),
+    };
+  }
+  if (path === '/reset-password') {
+    return {
+      view: 'reset-password',
+      uid: url.searchParams.get('uid'),
+      token: url.searchParams.get('token'),
+    };
+  }
+  if (path === '/forgot-password') {
+    return { view: 'forgot-password', uid: null, token: null };
+  }
+  if (path === '/register') {
+    return { view: 'register', uid: null, token: null };
+  }
+  return { view: 'login', uid: null, token: null };
+}
+
+function useAuthRoute() {
+  const [route, setRoute] = useState(parseAuthRoute);
+
+  const navigate = (view: Extract<AuthRouteView, 'login' | 'register' | 'forgot-password'>) => {
+    const pathMap: Record<typeof view, string> = {
+      login: '/',
+      register: '/register',
+      'forgot-password': '/forgot-password',
+    };
+    window.history.pushState(null, '', pathMap[view]);
     setRoute({ view, uid: null, token: null });
   };
 
   // Handle browser back/forward
   useEffect(() => {
-    const onPopState = () => {
-      const url = new URL(window.location.href);
-      const path = url.pathname;
-      if (path === '/setup-password') {
-        setRoute({
-          view: 'setup-password',
-          uid: url.searchParams.get('uid'),
-          token: url.searchParams.get('token'),
-        });
-      } else if (path === '/register') {
-        setRoute({ view: 'register', uid: null, token: null });
-      } else {
-        setRoute({ view: 'login', uid: null, token: null });
-      }
-    };
+    const onPopState = () => setRoute(parseAuthRoute());
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
@@ -185,6 +195,21 @@ function App() {
     );
   }
 
+  if (route.view === 'forgot-password') {
+    return <ForgotPasswordPage onLogin={() => navigate('login')} />;
+  }
+
+  if (route.view === 'reset-password') {
+    return (
+      <ResetPasswordPage
+        uid={route.uid}
+        token={route.token}
+        onLogin={() => navigate('login')}
+        onForgot={() => navigate('forgot-password')}
+      />
+    );
+  }
+
   // Not authenticated — show login or registration
   if (!isAuthenticated) {
     if (route.view === 'register') {
@@ -194,6 +219,7 @@ function App() {
       <LoginPage
         onNavigate={() => {}}
         onRegister={() => navigate('register')}
+        onForgotPassword={() => navigate('forgot-password')}
       />
     );
   }
@@ -322,7 +348,7 @@ function MainApp() {
       'admin-catalog', 'admin-categories', 'admin-equipment-groups', 'admin-offers',
       'admin-companies', 'admin-deals', 'admin-master-data', 'admin-support',
       'contracts', 'invoices', 'payments', 'acts', 'fulfillments',
-      'supplier-bids', 'leads',
+      'supplier-bids', 'leads', 'my-subscription',
     ];
     if (validTypes.includes(target)) {
       // Role guard: admin pages require ADMIN role
@@ -493,6 +519,9 @@ function MainApp() {
       break;
     case 'leads':
       content = <LeadsPage />;
+      break;
+    case 'my-subscription':
+      content = <MySubscriptionPage />;
       break;
     default:
       content = <Dashboard onProductClick={handleProductClick} onNavigate={handleNavigate} />;

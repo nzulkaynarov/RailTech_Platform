@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Progress } from '@/components/ui/progress';
 import { KPICard } from '@/components/ui/KPICard';
+import { OnboardingChecklist } from '@/components/Shared/OnboardingChecklist';
 
 import { useTranslation } from 'react-i18next';
 import { useUserStore } from '@/store/userStore';
@@ -691,6 +692,7 @@ export function Dashboard({ onProductClick, onNavigate }: DashboardProps) {
 
   return (
     <div className="flex flex-col gap-6">
+      <OnboardingChecklist onNavigate={onNavigate} />
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">{t('dashboardPage.title')}</h1>

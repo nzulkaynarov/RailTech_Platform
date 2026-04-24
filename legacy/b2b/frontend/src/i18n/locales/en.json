@@ -70,7 +70,161 @@
     "forgotPassword": "Forgot password?",
     "showPassword": "Show password",
     "hidePassword": "Hide password",
-    "login": "Sign in"
+    "login": "Sign in",
+    "validation": {
+      "emailInvalid": "Enter a valid email"
+    }
+  },
+  "onboarding": {
+    "title": "Getting started",
+    "progress": "{{done}} of {{total}} steps",
+    "hide": "Hide",
+    "steps": {
+      "profile": {
+        "label": "Complete your profile",
+        "hint": "First and last name — so teammates recognise you in activity logs.",
+        "cta": "Open profile"
+      },
+      "kyc": {
+        "label": "Verify KYC",
+        "hint": "Upload documents to reach level L2 and unlock transactions.",
+        "hintSubmitted": "Documents submitted. Awaiting platform admin approval.",
+        "cta": "Upload documents"
+      },
+      "subscription": {
+        "label": "Activate subscription",
+        "hint": "Suppliers and manufacturers need an active subscription to bid.",
+        "cta": "Pay now"
+      },
+      "firstRfq": {
+        "label": "Create your first request",
+        "hint": "Describe what you need — we'll match suppliers.",
+        "cta": "Create"
+      },
+      "firstBid": {
+        "label": "Submit your first bid",
+        "hint": "Find open RFQs and submit a quote.",
+        "cta": "Open bids"
+      }
+    }
+  },
+  "generateQuote": {
+    "title": "Build a quote",
+    "description": "Start a quote for this deal. Line items and pricing are edited on the deal detail page afterwards.",
+    "submit": "Create quote",
+    "submitAndSend": "Create & send",
+    "created": "Quote created",
+    "sent": "Quote sent to the client",
+    "sendOption": "Send to the client immediately",
+    "sendOptionHint": "Generates the PDF, freezes prices and moves the deal to QUOTE_SENT.",
+    "fields": {
+      "validUntil": "Valid until",
+      "validUntilHint": "Date the quote stays valid through. Defaults to +14 days.",
+      "notes": "Notes",
+      "notesPlaceholder": "Terms, caveats, cover note…"
+    },
+    "nextSteps": {
+      "title": "What's next",
+      "item1": "Add line items and prices in the Quote Builder",
+      "item2": "Click \"Send to client\" — we'll freeze prices and generate the PDF",
+      "item3": "After the client approves — generate the contract"
+    }
+  },
+  "recordPayment": {
+    "cta": "Record payment",
+    "title": "Record payment",
+    "description": "Register a received payment against an invoice. The invoice status will update automatically.",
+    "submit": "Save",
+    "success": "Payment recorded",
+    "balanceDue": "Balance due: {{value}}",
+    "noPayableInvoices": "No invoices with status \"Issued\", \"Partial\" or \"Overdue\".",
+    "fields": {
+      "invoice": "Invoice",
+      "invoicePlaceholder": "Select an invoice",
+      "amount": "Amount",
+      "paidAt": "Paid at",
+      "method": "Method",
+      "reference": "Reference",
+      "referencePlaceholder": "e.g. wire transfer number",
+      "proof": "Payment proof (optional)"
+    },
+    "errors": {
+      "invoiceRequired": "Select an invoice",
+      "amountInvalid": "Amount must be greater than zero",
+      "amountExceedsBalance": "Amount exceeds balance due ({{balance}})"
+    }
+  },
+  "mySubscription": {
+    "title": "My subscription",
+    "description": "Plan, status and payment history for your company",
+    "payNow": "Pay now",
+    "noneTitle": "No subscription",
+    "noneHint": "Your company doesn't have an active subscription yet. Contact the platform admin or support to get started.",
+    "kpi": {
+      "plan": "Plan",
+      "status": "Status",
+      "monthly": "Monthly rate",
+      "validUntil": "Valid until",
+      "remaining_one": "{{count}} day left",
+      "remaining_other": "{{count}} days left"
+    },
+    "alerts": {
+      "suspendedTitle": "Subscription suspended",
+      "suspendedHint": "While the subscription is suspended, seller features are unavailable. Clear the balance to resume.",
+      "pastDueTitle": "Payment overdue",
+      "pastDueHint": "Pay the next cycle to keep access to seller features.",
+      "expiringTitle": "Subscription expires in {{days}} days",
+      "expiringHint": "Renew early to avoid interruption."
+    },
+    "billing": {
+      "title": "Billing & payments",
+      "company": "Company",
+      "validFrom": "Valid from",
+      "lastPayment": "Last payment",
+      "nextPayment": "Next payment",
+      "manualModeHint": "Payments are currently processed manually. Once a payment provider is wired up, this button will extend the period automatically."
+    }
+  },
+  "createDeal": {
+    "title": "New request (RFQ)",
+    "description": "Create a new procurement request. You can import line items from Excel and invite suppliers later.",
+    "submit": "Create",
+    "titleRequired": "Title is required",
+    "created": "Request created",
+    "importOption": "Import line items from Excel right away",
+    "importOptionHint": "We'll open the import page after the request is created.",
+    "fields": {
+      "title": "Title",
+      "titlePlaceholder": "e.g. Q2 2026 bearings procurement",
+      "notes": "Notes",
+      "notesPlaceholder": "Context, deadlines, constraints…"
+    }
+  },
+  "forgotPassword": {
+    "title": "Reset password",
+    "step": "Step 1 of 2",
+    "emailLabel": "Account email",
+    "emailPlaceholder": "user@company.com",
+    "submit": "Send reset link",
+    "backToLogin": "Back to sign in",
+    "goToLogin": "Sign in",
+    "resend": "Send again",
+    "sent": "An email was sent to {{email}}.",
+    "sentHint": "Check your inbox (and spam folder). The link is valid for 24 hours.",
+    "genericError": "Could not send the reset link. Try again later."
+  },
+  "resetPassword": {
+    "title": "New password",
+    "step": "Step 2 of 2",
+    "submit": "Save password",
+    "invalidLink": "The link is invalid or expired. Please request a new one.",
+    "invalidUser": "User not found.",
+    "invalidToken": "The link is invalid or expired.",
+    "weak": "Password is too weak. Minimum 8 characters.",
+    "genericError": "Could not reset password. Try again later.",
+    "requestNew": "Request new",
+    "success": "Password updated",
+    "successHint": "You can now sign in with your new password."
   },
   "landing": {
     "heroTitle": "Unified digital environment for <highlight>industrial procurement</highlight>",
@@ -207,6 +361,7 @@
     "createRequest": "Create Request",
     "exportCsv": "Export CSV",
     "addProduct": "Add product",
+    "bulkImport": "Import from Excel",
     "export": "Export",
     "requestProduct": "Request Product",
     "searchPlaceholder": {
@@ -819,7 +974,13 @@
     "emailPlaceholder": "Employee email",
     "inviteSuccess": "User {{email}} has been invited.",
     "inviteError": "Failed to send invitation.",
+    "inviteHint": "Roles and capabilities can be changed later — Buy/Sell switches control deal access and subscription scope.",
     "ownerOnly": "Only the company Owner can invite new employees.",
+    "capabilityUpdated": "Capabilities updated",
+    "capabilities": {
+      "canBuy": "Buy",
+      "canSell": "Sell"
+    },
     "roles": {
       "OWNER": "Owner",
       "ACCOUNTANT": "Accountant",
@@ -1123,7 +1284,16 @@
     "acts": "Acts",
     "fulfillments": "Fulfillments",
     "supplierBids": "Tender Bids",
-    "leads": "Leads"
+    "leads": "Leads",
+    "mySubscription": "My subscription",
+    "forgotPassword": "Reset password",
+    "resetPassword": "New password"
+  },
+  "dealsKanban": {
+    "list": "List",
+    "kanban": "Kanban",
+    "empty": "No deals",
+    "untitled": "Deal #{{id}}"
   },
   "onboarding": {
     "companyRegistration": "Company Registration",
@@ -1347,6 +1517,7 @@
     "rfq": "RFQ",
     "leads": "Leads",
     "billing": "Billing",
+    "mySubscription": "My subscription",
     "integrations": "Integrations",
     "help": "Help",
     "b2bPlatform": "B2B Platform",
@@ -3365,6 +3536,9 @@
     "title": "Payments",
     "description": "Recorded invoice payments",
     "emptyState": "No payments",
+    "stats": {
+      "total": "Total payments"
+    },
     "table": {
       "invoice": "Invoice",
       "amount": "Amount",
@@ -3444,6 +3618,8 @@
     "emptyStateBuyerHint": "Open an RFQ from the Deals section — supplier responses will appear here.",
     "emptyStateSupplierHint": "When an RFQ is open to you, submit a bid using the form above.",
     "goToDeals": "Open deals",
+    "pickDealPlaceholder": "Select a deal",
+    "noOpenDeals": "No deals are available for bidding right now.",
     "submit": "Submit bid",
     "accept": "Accept",
     "reject": "Reject",

@@ -1,26 +1,45 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Wallet } from 'lucide-react';
+import { Wallet, Plus } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
 import { usePayments } from '@/hooks/useBilling';
+import { RecordPaymentDialog } from '@/components/Billing/RecordPaymentDialog';
 
 export function PaymentsPage() {
   const { t } = useTranslation();
-  const { data: payments, isLoading } = usePayments();
+  const { data: payments, isLoading, refetch } = usePayments();
+  const [recordOpen, setRecordOpen] = useState(false);
+
+  const stats = [
+    { label: t('paymentsPage.stats.total'), value: String(payments?.length ?? 0) },
+  ];
 
   return (
     <PageShell
       title={t('paymentsPage.title')}
       description={t('paymentsPage.description')}
       icon={<Wallet className="h-5 w-5" />}
+      stats={stats}
     >
+      <div className="flex items-center justify-end">
+        <Button onClick={() => setRecordOpen(true)} className="gap-2">
+          <Plus className="h-4 w-4" aria-hidden="true" />
+          {t('recordPayment.cta')}
+        </Button>
+      </div>
       <Card>
         <CardContent className="p-0">
           {isLoading ? <LoadingRows rows={6} /> : (payments?.length ?? 0) === 0 ? (
-            <EmptyState icon={<Wallet className="h-5 w-5" />} message={t('paymentsPage.emptyState')} />
+            <EmptyState
+              icon={<Wallet className="h-5 w-5" />}
+              message={t('paymentsPage.emptyState')}
+              action={{ label: t('recordPayment.cta'), onClick: () => setRecordOpen(true) }}
+            />
           ) : (
             <Table>
               <TableHeader>
@@ -37,7 +56,7 @@ export function PaymentsPage() {
                   <TableRow key={p.id}>
                     <TableCell>#{p.invoice}</TableCell>
                     <TableCell className="tabular-nums">{p.amount}</TableCell>
-                    <TableCell>{t(`invoicesPage.method.${p.method}`)}</TableCell>
+                    <TableCell>{t(`invoicesPage.method.${p.method}`, p.method)}</TableCell>
                     <TableCell>{new Date(p.paid_at).toLocaleDateString()}</TableCell>
                     <TableCell className="text-muted-foreground">{p.reference || '—'}</TableCell>
                   </TableRow>
@@ -47,6 +66,12 @@ export function PaymentsPage() {
           )}
         </CardContent>
       </Card>
+
+      <RecordPaymentDialog
+        open={recordOpen}
+        onOpenChange={setRecordOpen}
+        onRecorded={() => refetch()}
+      />
     </PageShell>
   );
 }

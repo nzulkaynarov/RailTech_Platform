@@ -23,9 +23,10 @@ type LoginFormData = z.infer<typeof loginSchema>;
 interface LoginPageProps {
     onNavigate?: (target: string) => void;
     onRegister?: () => void;
+    onForgotPassword?: () => void;
 }
 
-export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, onRegister }) => {
+export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, onRegister, onForgotPassword }) => {
     const { t } = useTranslation();
     const { login, isLoading } = useAuthStore();
     const [showPassword, setShowPassword] = useState(false);
@@ -150,6 +151,18 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, onRegister }) 
                                     {isLoading && <Loader2 className="size-4 animate-spin" />}
                                     {t('auth.submitButton')}
                                 </Button>
+                                {onForgotPassword ? (
+                                    <div className="text-center">
+                                        <Button
+                                            type="button"
+                                            variant="link"
+                                            className="h-auto p-0 text-xs"
+                                            onClick={onForgotPassword}
+                                        >
+                                            {t('auth.forgotPassword')}
+                                        </Button>
+                                    </div>
+                                ) : null}
                             </form>
                         </Form>
                     </CardContent>

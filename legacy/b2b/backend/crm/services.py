@@ -531,6 +531,65 @@ def mark_leads_processed(leads: QuerySet[Lead]) -> int:
     return leads.filter(is_processed=False).update(is_processed=True)
 
 
+def archive_messages_sync(messages: QuerySet[Message]) -> dict:
+    """Move a specific set of deal-chat messages to S3 cold storage synchronously.
+
+    Shares the JSONL format with the Celery task `crm.tasks.archive_old_messages`
+    (same `_archive_path_for` + `_serialize_message`), so archives from the
+    admin emergency action and the scheduled task are interleaved in the
+    same daily files.
+
+    Skips already-archived rows. Returns a summary dict:
+        {'archived': <int>, 'files': <int>, 'errors': [str, ...]}
+    """
+    import json
+
+    from django.core.files.base import ContentFile
+    from django.utils import timezone
+
+    from core.storage import get_private_storage
+
+    from .tasks import _archive_path_for, _serialize_message
+
+    storage = get_private_storage()
+    pending = list(messages.filter(is_archived=False).select_related('sender'))
+    if not pending:
+        return {'archived': 0, 'files': 0, 'errors': []}
+
+    groups: dict = {}
+    for msg in pending:
+        path = _archive_path_for(msg.timestamp.date())
+        groups.setdefault(path, []).append(msg)
+
+    archived = 0
+    errors: list[str] = []
+    for path, group_msgs in groups.items():
+        jsonl = '\n'.join(
+            json.dumps(_serialize_message(m), ensure_ascii=False) for m in group_msgs
+        ) + '\n'
+        try:
+            if storage.exists(path):
+                with storage.open(path, 'rb') as f:
+                    existing = f.read().decode('utf-8')
+                content = existing + jsonl
+                storage.delete(path)
+            else:
+                content = jsonl
+            storage.save(path, ContentFile(content.encode('utf-8')))
+        except Exception as exc:
+            errors.append(f"{path}: {exc}")
+            continue
+
+        Message.objects.filter(id__in=[m.id for m in group_msgs]).update(
+            is_archived=True,
+            archived_at=timezone.now(),
+            archive_path=path,
+        )
+        archived += len(group_msgs)
+
+    return {'archived': archived, 'files': len(groups) - len(errors), 'errors': errors}
+
+
 @transaction.atomic
 def convert_lead_to_deal(
     lead: Lead, actor: CustomUser, company: Optional[Company] = None,

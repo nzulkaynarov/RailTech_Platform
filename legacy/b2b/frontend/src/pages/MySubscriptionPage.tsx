@@ -1,0 +1,221 @@
+import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+  CreditCard,
+  Calendar,
+  AlertCircle,
+  CheckCircle2,
+  Wallet,
+  Pause,
+  Play,
+} from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Separator } from '@/components/ui/separator';
+import { PageShell } from './shared/PageShell';
+import { DetailKPIGrid } from '@/components/Admin/DetailKPIGrid';
+import { SubscriptionPayDialog } from '@/components/Admin/SubscriptionPayDialog';
+import { useMySubscription } from '@/hooks/useAccounts';
+
+function statusTone(status?: string | null): 'success' | 'warning' | 'destructive' | 'info' | 'default' {
+  switch (status) {
+    case 'ACTIVE':
+      return 'success';
+    case 'TRIAL':
+      return 'info';
+    case 'PAST_DUE':
+    case 'SUSPENDED':
+    case 'CANCELLED':
+      return 'destructive';
+    default:
+      return 'default';
+  }
+}
+
+function daysUntil(dateStr?: string | null): number | null {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return null;
+  const diff = d.getTime() - Date.now();
+  return Math.ceil(diff / 86_400_000);
+}
+
+export function MySubscriptionPage() {
+  const { t } = useTranslation();
+  const { data: sub, isLoading, refetch } = useMySubscription();
+  const [payOpen, setPayOpen] = useState(false);
+
+  const remainingDays = useMemo(() => daysUntil(sub?.valid_until), [sub]);
+  const isExpiringSoon = remainingDays !== null && remainingDays <= 7 && remainingDays >= 0;
+  const isPastDue = sub?.status === 'PAST_DUE' || (remainingDays !== null && remainingDays < 0);
+  const isSuspended = sub?.status === 'SUSPENDED';
+
+  return (
+    <PageShell
+      title={t('mySubscription.title')}
+      description={t('mySubscription.description')}
+      icon={<CreditCard className="h-5 w-5" />}
+    >
+      {isLoading ? (
+        <Card>
+          <CardContent className="p-6">
+            <Skeleton className="h-20 w-full" />
+          </CardContent>
+        </Card>
+      ) : !sub ? (
+        <Card>
+          <CardContent className="flex flex-col items-center gap-3 p-8 text-center">
+            <AlertCircle className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
+            <div>
+              <h3 className="text-base font-semibold">{t('mySubscription.noneTitle')}</h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t('mySubscription.noneHint')}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          {isSuspended ? (
+            <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-xs">
+              <Pause className="mt-0.5 h-3.5 w-3.5 text-destructive" aria-hidden="true" />
+              <div>
+                <div className="font-medium text-destructive">
+                  {t('mySubscription.alerts.suspendedTitle')}
+                </div>
+                <div className="text-muted-foreground">
+                  {t('mySubscription.alerts.suspendedHint')}
+                </div>
+              </div>
+            </div>
+          ) : isPastDue ? (
+            <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-xs">
+              <AlertCircle className="mt-0.5 h-3.5 w-3.5 text-destructive" aria-hidden="true" />
+              <div>
+                <div className="font-medium text-destructive">
+                  {t('mySubscription.alerts.pastDueTitle')}
+                </div>
+                <div className="text-muted-foreground">
+                  {t('mySubscription.alerts.pastDueHint')}
+                </div>
+              </div>
+            </div>
+          ) : isExpiringSoon ? (
+            <div className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/5 p-3 text-xs">
+              <Calendar className="mt-0.5 h-3.5 w-3.5 text-warning" aria-hidden="true" />
+              <div>
+                <div className="font-medium text-warning">
+                  {t('mySubscription.alerts.expiringTitle', { days: remainingDays })}
+                </div>
+                <div className="text-muted-foreground">
+                  {t('mySubscription.alerts.expiringHint')}
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          <DetailKPIGrid
+            columns={4}
+            items={[
+              {
+                label: t('mySubscription.kpi.plan'),
+                value: sub.plan_display ?? sub.plan,
+                icon: <CreditCard className="h-3.5 w-3.5" aria-hidden="true" />,
+              },
+              {
+                label: t('mySubscription.kpi.status'),
+                value: sub.status_display ?? sub.status,
+                icon:
+                  sub.status === 'ACTIVE'
+                    ? <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+                    : <AlertCircle className="h-3.5 w-3.5" aria-hidden="true" />,
+                tone: statusTone(sub.status),
+              },
+              {
+                label: t('mySubscription.kpi.monthly'),
+                value:
+                  sub.monthly_rate
+                    ? `${sub.monthly_rate} ${sub.currency_code ?? ''}`.trim()
+                    : '—',
+              },
+              {
+                label: t('mySubscription.kpi.validUntil'),
+                value: sub.valid_until ?? '—',
+                hint:
+                  remainingDays != null
+                    ? t('mySubscription.kpi.remaining', { count: Math.max(0, remainingDays) })
+                    : undefined,
+              },
+            ]}
+          />
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">{t('mySubscription.billing.title')}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-xs">
+              <dl className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <Row label={t('mySubscription.billing.lastPayment')} value={sub.last_payment_date ?? '—'} />
+                <Row label={t('mySubscription.billing.nextPayment')} value={sub.next_payment_date ?? '—'} />
+                <Row label={t('mySubscription.billing.validFrom')} value={sub.valid_from ?? '—'} />
+                <Row label={t('mySubscription.billing.company')} value={sub.company_name ?? '—'} />
+              </dl>
+
+              <Separator />
+
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                <div className="text-muted-foreground">
+                  {t('mySubscription.billing.manualModeHint')}
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => refetch()}
+                    className="h-8 text-xs"
+                  >
+                    <Play className="h-3.5 w-3.5" aria-hidden="true" />
+                    {t('common.refresh', { defaultValue: 'Refresh' })}
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => setPayOpen(true)}
+                    disabled={sub.status === 'CANCELLED'}
+                    className="h-8 text-xs"
+                  >
+                    <Wallet className="h-3.5 w-3.5" aria-hidden="true" />
+                    {t('mySubscription.payNow')}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <SubscriptionPayDialog
+            subscriptionId={sub.id}
+            open={payOpen}
+            onOpenChange={(v) => {
+              setPayOpen(v);
+              if (!v) refetch();
+            }}
+          />
+        </>
+      )}
+    </PageShell>
+  );
+}
+
+function Row({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="flex items-start justify-between gap-2 rounded-md border border-muted/50 p-2">
+      <dt className="text-muted-foreground">
+        <Badge variant="outline" className="text-[10px]">{label}</Badge>
+      </dt>
+      <dd className="text-right font-medium tabular-nums">{value}</dd>
+    </div>
+  );
+}
+
+export default MySubscriptionPage;

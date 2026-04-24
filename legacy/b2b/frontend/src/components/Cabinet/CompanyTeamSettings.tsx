@@ -1,198 +1,300 @@
-import React, { useEffect, useState } from 'react';
-import { Users, UserPlus, Shield, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { FormEvent, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { accountsApi, User } from '../../api/accountsApi';
+import {
+  Users,
+  UserPlus,
+  Shield,
+  CheckCircle2,
+  Loader2,
+  ShoppingBag,
+  Wallet,
+} from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
+import { useUserStore } from '../../store/userStore';
+import {
+  useCompanyTeam,
+  useInviteMember,
+  useUpdateMemberCapabilities,
+  useWorkspaceRoles,
+} from '../../hooks/useAccounts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 
-const ROLE_BADGE_COLORS: Record<string, string> = {
-    OWNER: 'bg-muted text-foreground border-border',
-    ACCOUNTANT: 'bg-success/10 text-success border-success/20',
-    MANAGER: 'bg-muted text-foreground border-border',
-};
+export function CompanyTeamSettings() {
+  const { t } = useTranslation();
+  const { user } = useAuthStore();
+  const activeStatus = useUserStore((s) => s.activeStatus);
 
-export const CompanyTeamSettings: React.FC = () => {
-    const { user } = useAuthStore();
-    const { t } = useTranslation();
-    const [team, setTeam] = useState<User[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [inviting, setInviting] = useState(false);
+  // Map frontend CompanyStatus → backend CompanyType code for workspace-role filter
+  const companyTypeForRoles =
+    activeStatus === 'BUYER'
+      ? 'CLIENT'
+      : activeStatus === 'SELLER'
+        ? 'SUPPLIER'
+        : 'MANUFACTURER';
 
-    // Form state
-    const [email, setEmail] = useState('');
-    const [role, setRole] = useState('MANAGER');
-    const [error, setError] = useState('');
-    const [success, setSuccess] = useState('');
+  const companyId = user?.company?.id ?? user?.primary_company?.id ?? null;
+  const isOwner = user?.workspace_role === 'OWNER';
 
-    const isOwner = user?.workspace_role === 'OWNER';
+  const { data: team = [], isLoading, refetch } = useCompanyTeam(companyId);
+  const { data: workspaceRoles = [] } = useWorkspaceRoles(companyTypeForRoles);
+  const inviteMut = useInviteMember();
+  const capMut = useUpdateMemberCapabilities();
 
-    useEffect(() => {
-        const load = async () => {
-            if (user?.company?.id) {
-                try {
-                    const data = await accountsApi.getTeam(user.company.id);
-                    setTeam(data);
-                } catch (err) {
-                    toast.error(t('errors.operationFailed'));
-                }
-            }
-            setLoading(false);
-        };
-        load();
-    }, [user]);
+  const availableRoles = useMemo(
+    () => workspaceRoles.filter((r) => r.code !== 'OWNER'),
+    [workspaceRoles],
+  );
+  const defaultRole = availableRoles[0]?.code ?? 'PROCUREMENT_MANAGER';
 
-    const handleInvite = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!user?.company?.id) return;
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState<string>(defaultRole);
 
-        setError('');
-        setSuccess('');
-        setInviting(true);
+  // Keep the selected role in sync with the fetched list on first load.
+  useMemo(() => {
+    if (!role && defaultRole) setRole(defaultRole);
+  }, [role, defaultRole]);
 
-        try {
-            const newUser = await accountsApi.inviteUser(user.company.id, { email, role });
-            setTeam(prev => [...prev, newUser]);
-            setSuccess(t('team.inviteSuccess', { email }));
-            setEmail('');
-        } catch (err: unknown) {
-            const errorMessage = err instanceof Error ? err.message : t('team.inviteError');
-            setError(errorMessage);
-        } finally {
-            setInviting(false);
-        }
-    };
+  async function handleInvite(e: FormEvent) {
+    e.preventDefault();
+    if (!companyId) return;
+    try {
+      await inviteMut.mutateAsync({ companyId, email, role });
+      toast.success(t('team.inviteSuccess', { email }));
+      setEmail('');
+      refetch();
+    } catch (err) {
+      type AxiosLike = { response?: { data?: { detail?: string; error?: string } } };
+      const detail =
+        (err as AxiosLike)?.response?.data?.detail ||
+        (err as AxiosLike)?.response?.data?.error ||
+        (err instanceof Error ? err.message : t('team.inviteError'));
+      toast.error(String(detail));
+    }
+  }
 
-    if (loading) return (
-        <div className="flex p-10 justify-center">
-            <Loader2 className="w-8 h-8 text-muted-foreground animate-spin" />
-        </div>
-    );
+  async function toggleCapability(
+    memberId: number,
+    field: 'can_sell' | 'can_buy',
+    value: boolean,
+  ) {
+    if (!companyId) return;
+    try {
+      await capMut.mutateAsync({
+        companyId,
+        member_id: memberId,
+        [field]: value,
+      } as Parameters<typeof capMut.mutateAsync>[0]);
+      toast.success(t('team.capabilityUpdated'));
+    } catch (err) {
+      type AxiosLike = { response?: { data?: { detail?: string } } };
+      toast.error(
+        (err as AxiosLike)?.response?.data?.detail ??
+          (err instanceof Error ? err.message : t('team.inviteError')),
+      );
+    }
+  }
 
+  if (isLoading) {
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
-                        <Users className="w-5 h-5 text-primary" />
-                        {t('team.title')}
-                    </h3>
-                    <p className="text-sm text-muted-foreground mt-1">{t('team.subtitle')}</p>
-                </div>
-            </div>
-
-            {/* Team List */}
-            <div className="bg-card border border-border rounded-2xl overflow-hidden">
-                <div className="overflow-x-auto">
-                    <Table className="w-full text-left border-collapse">
-                        <TableHeader>
-                            <TableRow className="bg-muted border-b border-border text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                <TableHead className="p-4">{t('team.employee')}</TableHead>
-                                <TableHead className="p-4">{t('team.role')}</TableHead>
-                                <TableHead className="p-4">{t('team.status')}</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody className="divide-y divide-border">
-                            {team.map((member) => (
-                                <TableRow key={member.id} className="hover:bg-muted transition-colors">
-                                    <TableCell className="p-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground font-bold">
-                                                {member.email.charAt(0).toUpperCase()}
-                                            </div>
-                                            <div>
-                                                <div className="font-bold text-foreground text-sm">
-                                                    {member.first_name || member.username} {member.id === user?.id && <span className="text-xs text-muted-foreground ml-2 font-normal">{t('team.itsYou')}</span>}
-                                                </div>
-                                                <div className="text-xs text-muted-foreground">{member.email}</div>
-                                            </div>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="p-4">
-                                        <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold border ${member.workspace_role ? ROLE_BADGE_COLORS[member.workspace_role] : 'bg-muted text-muted-foreground border-border'}`}>
-                                            {member.workspace_role ? t(`team.roles.${member.workspace_role}`) : t('team.employee')}
-                                        </span>
-                                    </TableCell>
-                                    <TableCell className="p-4">
-                                        <div className="flex items-center gap-1.5 text-xs font-medium text-success">
-                                            <CheckCircle2 className="w-4 h-4" /> {t('team.active')}
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                            {team.length === 0 && (
-                                <TableRow>
-                                    <TableCell colSpan={3} className="p-8 text-center text-muted-foreground">{t('team.noMembers')}</TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </div>
-            </div>
-
-            {/* Invite Form (Owners only) */}
-            {isOwner && (
-                <div className="bg-muted border border-border rounded-2xl p-6">
-                    <h4 className="text-base font-bold text-foreground mb-4 flex items-center gap-2">
-                        <UserPlus className="w-4 h-4 text-primary" />
-                        {t('team.invite')}
-                    </h4>
-
-                    <form onSubmit={handleInvite} className="flex flex-col md:flex-row gap-4 items-start">
-                        <div className="flex-1 w-full">
-                            <label className="sr-only">Email</label>
-                            <Input
-                                type="email"
-                                value={email}
-                                onChange={e => setEmail(e.target.value)}
-                                placeholder={t('team.emailPlaceholder')}
-                                required
-                            />
-                        </div>
-                        <div className="w-full md:w-48">
-                            <label className="sr-only">{t('team.role')}</label>
-                            <Select value={role} onValueChange={setRole}>
-                                <SelectTrigger className="w-full">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="MANAGER">{t('team.roleOptions.MANAGER')}</SelectItem>
-                                    <SelectItem value="ACCOUNTANT">{t('team.roleOptions.ACCOUNTANT')}</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <Button
-                            type="submit"
-                            disabled={inviting || !email}
-                            className="w-full md:w-auto"
-                        >
-                            {inviting ? <Loader2 className="w-4 h-4 animate-spin" /> : t('common.send')}
-                        </Button>
-                    </form>
-
-                    {error && (
-                        <div className="mt-4 flex items-center gap-2 text-sm text-destructive font-medium bg-destructive/10 p-3 rounded-lg border border-destructive/20">
-                            <AlertCircle className="w-4 h-4 shrink-0" /> {error}
-                        </div>
-                    )}
-
-                    {success && (
-                        <div className="mt-4 flex items-center gap-2 text-sm text-success font-medium bg-success/10 p-3 rounded-lg border border-success/20">
-                            <CheckCircle2 className="w-4 h-4 shrink-0" /> {success}
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {!isOwner && (
-                <div className="flex items-center gap-3 p-4 bg-muted rounded-xl border border-border">
-                    <Shield className="w-5 h-5 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground font-medium">{t('team.ownerOnly')}</p>
-                </div>
-            )}
-        </div>
+      <div className="flex p-10 justify-center" role="status">
+        <Loader2 className="h-8 w-8 text-muted-foreground animate-spin" aria-hidden="true" />
+        <span className="sr-only">{t('common.loading')}</span>
+      </div>
     );
-};
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="flex items-center gap-2 text-xl font-bold text-foreground">
+            <Users className="h-5 w-5 text-primary" aria-hidden="true" />
+            {t('team.title')}
+          </h3>
+          <p className="mt-1 text-sm text-muted-foreground">{t('team.subtitle')}</p>
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-2xl border border-border bg-card">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-b border-border bg-muted/50 text-xs">
+                <TableHead className="p-4">{t('team.employee')}</TableHead>
+                <TableHead className="p-4">{t('team.role')}</TableHead>
+                <TableHead className="p-4 text-center">
+                  <span className="inline-flex items-center gap-1">
+                    <Wallet className="h-3.5 w-3.5" aria-hidden="true" />
+                    {t('team.capabilities.canBuy')}
+                  </span>
+                </TableHead>
+                <TableHead className="p-4 text-center">
+                  <span className="inline-flex items-center gap-1">
+                    <ShoppingBag className="h-3.5 w-3.5" aria-hidden="true" />
+                    {t('team.capabilities.canSell')}
+                  </span>
+                </TableHead>
+                <TableHead className="p-4">{t('team.status')}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {team.map((member) => {
+                type MemberExt = typeof member & {
+                  membership_id?: number;
+                  workspace_role_name?: string;
+                };
+                const m = member as MemberExt;
+                // Prefer the CompanyMember.id exposed by the team serializer.
+                // Fall back to user.id when the backend hasn't provided it yet.
+                const memberId = m.membership_id ?? m.id;
+                const canBuy = m.can_buy ?? false;
+                const canSell = m.can_sell ?? false;
+                const isSelf = member.id === user?.id;
+                const canEdit = isOwner && !isSelf;
+                return (
+                  <TableRow key={memberId} className="transition-colors hover:bg-muted/40">
+                    <TableCell className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-sm font-semibold uppercase text-muted-foreground">
+                          {member.email.charAt(0)}
+                        </div>
+                        <div>
+                          <div className="text-sm font-semibold text-foreground">
+                            {member.first_name || member.username}
+                            {isSelf ? (
+                              <span className="ml-2 text-xs font-normal text-muted-foreground">
+                                {t('team.itsYou')}
+                              </span>
+                            ) : null}
+                          </div>
+                          <div className="text-xs text-muted-foreground">{member.email}</div>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="p-4">
+                      <Badge variant={member.workspace_role === 'OWNER' ? 'default' : 'outline'}>
+                        {m.workspace_role_name
+                          ?? (member.workspace_role ? t(`team.roles.${member.workspace_role}`, member.workspace_role) : t('team.employee'))}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="p-4 text-center">
+                      <Switch
+                        checked={canBuy}
+                        disabled={!canEdit || capMut.isPending}
+                        onCheckedChange={(v) => toggleCapability(memberId, 'can_buy', v)}
+                        aria-label={t('team.capabilities.canBuy')}
+                      />
+                    </TableCell>
+                    <TableCell className="p-4 text-center">
+                      <Switch
+                        checked={canSell}
+                        disabled={!canEdit || capMut.isPending}
+                        onCheckedChange={(v) => toggleCapability(memberId, 'can_sell', v)}
+                        aria-label={t('team.capabilities.canSell')}
+                      />
+                    </TableCell>
+                    <TableCell className="p-4">
+                      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-success">
+                        <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                        {t('team.active')}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+              {team.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="p-8 text-center text-muted-foreground">
+                    {t('team.noMembers')}
+                  </TableCell>
+                </TableRow>
+              ) : null}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+
+      {isOwner ? (
+        <div className="rounded-2xl border border-border bg-muted/40 p-6">
+          <h4 className="mb-4 flex items-center gap-2 text-base font-bold text-foreground">
+            <UserPlus className="h-4 w-4 text-primary" aria-hidden="true" />
+            {t('team.invite')}
+          </h4>
+          <form
+            onSubmit={handleInvite}
+            className="flex flex-col items-end gap-3 md:flex-row"
+          >
+            <div className="w-full flex-1 space-y-1">
+              <Label htmlFor="team-invite-email" className="sr-only">
+                {t('team.emailPlaceholder')}
+              </Label>
+              <Input
+                id="team-invite-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder={t('team.emailPlaceholder')}
+                required
+              />
+            </div>
+            <div className="w-full space-y-1 md:w-64">
+              <Label htmlFor="team-invite-role" className="sr-only">
+                {t('team.role')}
+              </Label>
+              <Select value={role} onValueChange={setRole}>
+                <SelectTrigger id="team-invite-role" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableRoles.map((r) => (
+                    <SelectItem key={r.code} value={r.code}>
+                      {r.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              type="submit"
+              disabled={inviteMut.isPending || !email}
+              className="w-full md:w-auto"
+            >
+              {inviteMut.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              ) : null}
+              {t('common.send')}
+            </Button>
+          </form>
+          <p className="mt-3 text-xs text-muted-foreground">{t('team.inviteHint')}</p>
+        </div>
+      ) : (
+        <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/40 p-4">
+          <Shield className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
+          <p className="text-sm font-medium text-muted-foreground">{t('team.ownerOnly')}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default CompanyTeamSettings;

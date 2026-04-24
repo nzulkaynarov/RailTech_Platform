@@ -43,6 +43,23 @@ export const useSystemRoles = () => useQuery({
   staleTime: 30 * 60_000,
 });
 
+export const useUpdateMemberCapabilities = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { companyId: number; member_id: number; can_sell?: boolean; can_buy?: boolean }) =>
+      accountsApi.updateMemberCapabilities(params.companyId, {
+        member_id: params.member_id,
+        can_sell: params.can_sell,
+        can_buy: params.can_buy,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['company-team'] });
+      qc.invalidateQueries({ queryKey: ['companies'] });
+      qc.invalidateQueries({ queryKey: ['me'] });
+    },
+  });
+};
+
 export const useWorkspaceRoles = (companyType?: string) => useQuery({
   queryKey: ['workspace-roles', companyType ?? 'all'],
   queryFn: () => accountsApi.getWorkspaceRoles(companyType),
@@ -223,6 +240,12 @@ export const useDeleteUserAvatar = () => {
 export const useSubscriptions = (params?: { search?: string; status?: string; plan?: string; ordering?: string }) => useQuery({
   queryKey: ['subscriptions', params],
   queryFn: () => accountsApi.getSubscriptions(params),
+});
+
+export const useMySubscription = () => useQuery({
+  queryKey: ['my-subscription'],
+  queryFn: () => accountsApi.getMySubscription(),
+  staleTime: 60_000,
 });
 
 export const useActivateSubscription = () => {

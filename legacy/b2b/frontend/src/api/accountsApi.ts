@@ -202,6 +202,14 @@ export const accountsApi = {
 		const response = await apiClient.post<{ message: string; user: User }>('auth/setup-password/', data);
 		return response.data.user;
 	},
+	forgotPassword: async (email: string) => {
+		const response = await apiClient.post<{ message: string }>('auth/forgot-password/', { email });
+		return response.data;
+	},
+	resetPassword: async (data: { uid: string; token: string; password: string }) => {
+		const response = await apiClient.post<{ message: string; email: string }>('auth/reset-password/', data);
+		return response.data;
+	},
 	submitProfile: async (data: { inn: string; companyName: string; role: string; company_type?: string }) => {
 		const response = await apiClient.post<{ message: string; user: User }>('auth/submit-profile/', {
 			inn: data.inn,
@@ -252,6 +260,13 @@ export const accountsApi = {
 		);
 		return response.data.results;
 	},
+	getMySubscription: async (): Promise<Subscription | null> => {
+		const response = await apiClient.get<Subscription>('accounts/subscriptions/mine/', {
+			validateStatus: (s) => s === 200 || s === 204 || s === 403,
+		});
+		if (response.status === 200) return response.data;
+		return null;
+	},
 	activateSubscription: async (id: number) => {
 		const response = await apiClient.post<Subscription>(`accounts/subscriptions/${id}/activate/`);
 		return response.data;
@@ -292,6 +307,15 @@ export const accountsApi = {
 	},
 
 	// ─── Workspace Roles ───────────────────────────────────────────────
+	updateMemberCapabilities: async (
+		companyId: number,
+		payload: { member_id: number; can_sell?: boolean; can_buy?: boolean },
+	) => {
+		const response = await apiClient.post<{
+			id: number; user_id: number; can_sell: boolean; can_buy: boolean;
+		}>(`accounts/companies/${companyId}/update-member-capabilities/`, payload);
+		return response.data;
+	},
 	getWorkspaceRoles: async (companyType?: string) => {
 		const url = companyType
 			? `accounts/workspace-roles/?company_type=${encodeURIComponent(companyType)}`

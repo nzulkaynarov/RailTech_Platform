@@ -16,6 +16,9 @@ import { useCurrencyStore } from '@/store/currencyStore';
 import { useDeals, useDealStages } from '@/hooks/useCRM';
 import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
 import { OpenRfqDialog } from '@/components/CRM/OpenRfqDialog';
+import { CreateDealDialog } from '@/components/CRM/CreateDealDialog';
+import { GenerateQuoteDialog } from '@/components/CRM/GenerateQuoteDialog';
+import { DealsKanban } from '@/components/CRM/DealsKanban';
 import { GenerateContractDialog } from '@/components/CRM/GenerateContractDialog';
 import type { Deal } from '@/api/crmApi';
 
@@ -33,10 +36,13 @@ function DealDetailSheet({
   const { t } = useTranslation();
   const formatCurrency = useCurrencyStore((s) => s.format);
   const [rfqOpen, setRfqOpen] = useState(false);
+  const [quoteOpen, setQuoteOpen] = useState(false);
   const [contractOpen, setContractOpen] = useState(false);
   if (!deal) return null;
 
   const canOpenRfq = ['DRAFT', 'KYC_PENDING'].includes(deal.stage_code ?? '');
+  const canBuildQuote = ['SOURCING', 'CALCULATING'].includes(deal.stage_code ?? '')
+    && !deal.active_quote;
   const approvedQuote = deal.active_quote && ['APPROVED', 'SENT'].includes(deal.active_quote.status_code ?? '');
 
   const rows = [
@@ -98,6 +104,12 @@ function DealDetailSheet({
                   {t('rfqDialog.open')}
                 </Button>
               )}
+              {canBuildQuote && (
+                <Button size="sm" onClick={() => setQuoteOpen(true)}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  {t('generateQuote.submit')}
+                </Button>
+              )}
               {approvedQuote && (
                 <Button size="sm" onClick={() => setContractOpen(true)}>
                   <FileSignature className="mr-2 h-4 w-4" />
@@ -112,6 +124,11 @@ function DealDetailSheet({
           dealId={deal.id}
           open={rfqOpen}
           onOpenChange={setRfqOpen}
+        />
+        <GenerateQuoteDialog
+          dealId={deal.id}
+          open={quoteOpen}
+          onOpenChange={setQuoteOpen}
         />
         <GenerateContractDialog
           quoteId={deal.active_quote?.id ?? null}
@@ -133,6 +150,16 @@ export function DealsPage() {
 
   const listParams = useListParams(['stage'] as const, { defaultOrdering: '-created_at' });
   const [detailTarget, setDetailTarget] = useState<Deal | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [view, setView] = useState<'list' | 'kanban'>(() => {
+    try {
+      return (localStorage.getItem('deals.view') as 'list' | 'kanban') || 'list';
+    } catch { return 'list'; }
+  });
+  const setViewPersisted = (v: 'list' | 'kanban') => {
+    setView(v);
+    try { localStorage.setItem('deals.view', v); } catch { /* ignore */ }
+  };
 
   const selectedDeal = useMemo(() => {
     if (!detailTarget || !deals) return null;
@@ -166,8 +193,42 @@ export function DealsPage() {
             options: (stages ?? []).map((s) => ({ value: s.code, label: s.name })),
           },
         ]}
+        newLabel={t('createDeal.title')}
+        onNew={() => setCreateOpen(true)}
+        extra={
+          <div className="inline-flex rounded-md border p-0.5 text-xs">
+            <button
+              type="button"
+              className={`rounded-sm px-2 py-1 ${view === 'list' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
+              onClick={() => setViewPersisted('list')}
+            >
+              {t('dealsKanban.list')}
+            </button>
+            <button
+              type="button"
+              className={`rounded-sm px-2 py-1 ${view === 'kanban' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
+              onClick={() => setViewPersisted('kanban')}
+            >
+              {t('dealsKanban.kanban')}
+            </button>
+          </div>
+        }
+      />
+      <CreateDealDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onCreated={() => {
+          // Keep user on deals list; dialog already routed to import if chosen.
+        }}
       />
 
+      {view === 'kanban' ? (
+        <DealsKanban
+          deals={deals ?? []}
+          stages={stages}
+          onOpen={(d) => setDetailTarget(d)}
+        />
+      ) : (
       <Card>
         <CardContent className="p-0">
           {(() => {
@@ -251,6 +312,7 @@ export function DealsPage() {
           })()}
         </CardContent>
       </Card>
+      )}
 
       <DealDetailSheet
         deal={selectedDeal}

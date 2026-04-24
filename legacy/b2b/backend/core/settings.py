@@ -110,7 +110,11 @@ UNFOLD = {
     },
     "SIDEBAR": {
         "show_search": True,
-        "show_all_applications": False,
+        # True = показывать fallback "All applications" в конце sidebar.
+        # Обеспечивает доступ ко всем orphan-моделям (SystemRole, VerificationStatus,
+        # KYCDocType и т.п.), которых нет в явной навигации выше. Инженер не
+        # должен помнить прямые URL, чтобы добраться до любого лукапа.
+        "show_all_applications": True,
         "navigation": [
             {
                 "title": _("Каталог"),
@@ -174,7 +178,7 @@ UNFOLD = {
                 ],
             },
             {
-                "title": _("Справочники"),
+                "title": _("Справочники: география и логистика"),
                 "separator": True,
                 "items": [
                     {"title": _("Страны"), "icon": "public",
@@ -187,6 +191,34 @@ UNFOLD = {
                         "link": "/admin/master_data/deliverybasis/"},
                     {"title": _("Ключевые слова Smart Match"), "icon": "label",
                         "link": "/admin/sourcing/domainkeyword/"},
+                ],
+            },
+            {
+                "title": _("Справочники: роли и статусы"),
+                "separator": True,
+                "items": [
+                    {"title": _("Системные роли"), "icon": "admin_panel_settings",
+                        "link": "/admin/accounts/systemrole/"},
+                    {"title": _("Роли в команде"), "icon": "badge",
+                        "link": "/admin/accounts/workspacerole/"},
+                    {"title": _("Типы компаний"), "icon": "category",
+                        "link": "/admin/accounts/companytype/"},
+                    {"title": _("Статусы верификации"), "icon": "verified",
+                        "link": "/admin/accounts/verificationstatus/"},
+                    {"title": _("Типы KYC-документов"), "icon": "description",
+                        "link": "/admin/accounts/kycdoctype/"},
+                    {"title": _("Этапы сделки"), "icon": "timeline",
+                        "link": "/admin/crm/dealstage/"},
+                    {"title": _("Статусы КП"), "icon": "flag",
+                        "link": "/admin/crm/quotestatus/"},
+                    {"title": _("Домены каталога"), "icon": "widgets",
+                        "link": "/admin/catalog/domaintype/"},
+                    {"title": _("Статусы товара"), "icon": "toggle_on",
+                        "link": "/admin/catalog/productstatus/"},
+                    {"title": _("Статусы наличия"), "icon": "inventory",
+                        "link": "/admin/catalog/stockstatus/"},
+                    {"title": _("Типы уведомлений"), "icon": "notifications_active",
+                        "link": "/admin/notifications/notificationtype/"},
                 ],
             },
             {

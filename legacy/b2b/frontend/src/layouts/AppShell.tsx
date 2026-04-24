@@ -75,6 +75,7 @@ import { useAuthStore } from '@/store/authStore';
 import { NotificationCenter } from '@/components/Layout/NotificationCenter';
 import { SupportButton } from '@/components/Layout/SupportButton';
 import { ChatDrawer } from '@/components/Layout/ChatDrawer';
+import { SubscriptionStatusBanner } from '@/components/Shared/SubscriptionStatusBanner';
 import { CartDrawer } from '@/components/ui/CartDrawer';
 
 /* ─── Types ─────────────────────────────────────────────────────────── */
@@ -154,6 +155,7 @@ function getManufacturerNavigation(activePage: string, role: UserRole, t: TFn): 
     {
       label: t('shell.billing'), icon: <Receipt className="h-4 w-4" />,
       children: [
+        { label: t('shell.mySubscription'), id: 'my-subscription', active: activePage === 'my-subscription' },
         { label: t('shell.contracts'), id: 'contracts', active: activePage === 'contracts' },
         { label: t('shell.invoices'), id: 'invoices', active: activePage === 'invoices' },
         // CRIT-5: MFG must see Payments in billing just like BUYER/SELLER.
@@ -204,6 +206,7 @@ function getSellerNavigation(activePage: string, role: UserRole, t: TFn): NavIte
     {
       label: t('shell.billing'), icon: <Receipt className="h-4 w-4" />,
       children: [
+        { label: t('shell.mySubscription'), id: 'my-subscription', active: activePage === 'my-subscription' },
         { label: t('shell.contracts'), id: 'contracts', active: activePage === 'contracts' },
         { label: t('shell.invoices'), id: 'invoices', active: activePage === 'invoices' },
         { label: t('shell.payments'), id: 'payments', active: activePage === 'payments' },
@@ -630,7 +633,12 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
               <NotificationCenter />
             </div>
           </header>
-          <main className="flex-1 overflow-y-auto p-6">{children}</main>
+          <main className="flex-1 overflow-y-auto p-6">
+            <div className="mb-4 space-y-2">
+              <SubscriptionStatusBanner onNavigate={onNavigate} />
+            </div>
+            {children}
+          </main>
       </SidebarInset>
 
 

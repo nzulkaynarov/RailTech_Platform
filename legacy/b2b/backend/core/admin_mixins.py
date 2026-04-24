@@ -20,6 +20,7 @@ Usage:
 from functools import wraps
 
 from django.contrib import admin
+from django.utils.translation import gettext_lazy as _
 
 
 def superuser_only_action(description):
@@ -39,7 +40,7 @@ def superuser_only_action(description):
             if not request.user.is_superuser:
                 self.message_user(
                     request,
-                    "Только суперпользователь может выполнить это действие.",
+                    _("Только суперпользователь может выполнить это действие."),
                     level="error",
                 )
                 return

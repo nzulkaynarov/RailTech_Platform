@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Bell, Info, AlertTriangle, CheckCircle, Clock, Check, ExternalLink, BellOff } from 'lucide-react';
 import { notificationsApi, Notification } from '@/api/notificationsApi';
 import { formatDistanceToNow } from 'date-fns';
 import { ru, enUS } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/store/authStore';
 
 import {
     Sheet,
@@ -74,6 +75,55 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = () => {
             document.removeEventListener('visibilitychange', onVisibility);
         };
     }, [fetchNotifications]);
+
+    // Realtime WebSocket subscription — falls back to the poll above if WS fails.
+    const accessToken = useAuthStore((s) => s.accessToken);
+    const socketRef = useRef<WebSocket | null>(null);
+    useEffect(() => {
+        if (!accessToken) return;
+        const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const envHost = import.meta.env.VITE_WS_URL as string | undefined;
+        const host = envHost || `${proto}//${window.location.host}`;
+        const url = `${host}/ws/notifications/?token=${encodeURIComponent(accessToken)}`;
+
+        let stopped = false;
+        let retry = 0;
+        const connect = () => {
+            if (stopped) return;
+            const ws = new WebSocket(url);
+            socketRef.current = ws;
+            ws.onmessage = (ev) => {
+                try {
+                    const payload = JSON.parse(ev.data);
+                    if (payload?.type === 'notification' && payload.data?.id) {
+                        const incoming = payload.data as Notification;
+                        setNotifications((prev) => {
+                            if (prev.some((n) => n.id === incoming.id)) return prev;
+                            return [incoming, ...prev];
+                        });
+                        setUnreadCount((c) => c + 1);
+                    }
+                } catch {
+                    // malformed — ignore
+                }
+            };
+            ws.onclose = () => {
+                if (stopped) return;
+                // Exponential backoff up to 30s
+                retry = Math.min(retry + 1, 5);
+                setTimeout(connect, 1000 * 2 ** retry);
+            };
+            ws.onerror = () => {
+                ws.close();
+            };
+        };
+        connect();
+        return () => {
+            stopped = true;
+            socketRef.current?.close();
+            socketRef.current = null;
+        };
+    }, [accessToken]);
 
     const handleMarkAsRead = async (id: number) => {
         try {

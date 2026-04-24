@@ -269,65 +269,28 @@ class MessageAdmin(ReadOnlyInspectionMixin, ModelAdmin):
 
     @superuser_only_action(_("[Emergency] Архивировать в S3 (sync)"))
     def archive_selected(self, request, queryset):
-        """
-        Synchronously archive the selected messages.
+        """Synchronously archive the selected messages to S3 cold storage.
 
-        For bulk/scheduled use prefer the management command or Celery beat schedule:
+        For bulk/scheduled use prefer the Celery beat schedule or:
             python manage.py archive_messages --older-than 90 --async
         """
-        from .tasks import archive_old_messages
-        # Trick: temporarily mark these specific rows as old by passing days=0
-        # via subset; we run the task directly instead of via celery so engineer
-        # gets immediate feedback in admin.
-        from django.utils import timezone
-        # Direct path: mimic task logic on the explicit queryset
-        from io import BytesIO
-        import json
-        from django.core.files.base import ContentFile
-        from core.storage import get_private_storage
-        from .tasks import _serialize_message, _archive_path_for
+        from . import services
+        result = services.archive_messages_sync(queryset)
 
-        storage = get_private_storage()
-        msgs = list(queryset.filter(is_archived=False).select_related('sender'))
-        if not msgs:
+        if not result['archived'] and not result['errors']:
             self.message_user(request, _("Нет сообщений для архивации"), level="warning")
             return
 
-        groups: dict = {}
-        for m in msgs:
-            path = _archive_path_for(m.timestamp.date())
-            groups.setdefault(path, []).append(m)
+        for err in result['errors']:
+            self.message_user(request, _("Ошибка записи: %(err)s") % {"err": err}, level="error")
 
-        archived = 0
-        for path, group_msgs in groups.items():
-            jsonl = '\n'.join(json.dumps(_serialize_message(m), ensure_ascii=False) for m in group_msgs) + '\n'
-            try:
-                if storage.exists(path):
-                    with storage.open(path, 'rb') as f:
-                        existing = f.read().decode('utf-8')
-                    content = existing + jsonl
-                    storage.delete(path)
-                else:
-                    content = jsonl
-                storage.save(path, ContentFile(content.encode('utf-8')))
-            except Exception as e:
-                self.message_user(request, f"Ошибка записи {path}: {e}", level="error")
-                continue
-
-            now = timezone.now()
-            ids = [m.id for m in group_msgs]
-            from .models import Message as M
-            M.objects.filter(id__in=ids).update(
-                is_archived=True, archived_at=now, archive_path=path
+        if result['archived']:
+            self.message_user(
+                request,
+                _("%(count)d сообщений архивировано в %(files)d файл(ах)") % {
+                    "count": result['archived'], "files": result['files']
+                },
             )
-            archived += len(group_msgs)
-
-        self.message_user(
-            request,
-            _("%(count)d сообщений архивировано в %(files)d файл(ах)") % {
-                "count": archived, "files": len(groups)
-            },
-        )
 
 
 # ────────────────────────────────────────────

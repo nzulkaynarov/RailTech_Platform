@@ -19,11 +19,13 @@ from .models import (
 from .services import (
     create_pending_user, verify_and_setup_password,
     submit_company_profile,
+    send_password_reset_email, reset_password,
 )
 from .serializers import (
     CompanyRoleApplicationSerializer, CompanySerializer,
     KYCDocumentSerializer, KYCVerificationSerializer,
     RegisterInterestSerializer, SetupPasswordSerializer,
+    ForgotPasswordSerializer, ResetPasswordSerializer,
     SubmitProfileSerializer, SupplierSubscriptionSerializer,
     UserSerializer,
 )
@@ -767,6 +769,56 @@ class SetupPasswordView(views.APIView):
 
 
 @extend_schema(
+    summary="Request password reset",
+    description=(
+        "Trigger a password-reset email. Always returns 200 to prevent user "
+        "enumeration — the caller should show the same outcome regardless of "
+        "whether the email exists."
+    ),
+    request=ForgotPasswordSerializer,
+    responses={200: OpenApiResponse(description="Reset email dispatched if account exists")},
+    tags=['Auth'],
+)
+class ForgotPasswordView(views.APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        serializer = ForgotPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        ok, error = send_password_reset_email(serializer.validated_data['email'])
+        if error == 'EMAIL_SEND_FAILED':
+            return Response({'error': error}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        # Neutral 200 regardless of whether the email was found.
+        return Response({'message': 'If an account exists, a reset link was sent.'})
+
+
+@extend_schema(
+    summary="Reset password",
+    description="Complete a password reset using uid + token from the email link.",
+    request=ResetPasswordSerializer,
+    responses={
+        200: OpenApiResponse(description="Password updated"),
+        400: OpenApiResponse(description="Invalid token or weak password"),
+    },
+    tags=['Auth'],
+)
+class ResetPasswordView(views.APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        serializer = ResetPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user, error = reset_password(
+            uidb64=serializer.validated_data['uid'],
+            token=serializer.validated_data['token'],
+            password=serializer.validated_data['password'],
+        )
+        if error:
+            return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'message': 'Password has been reset.', 'email': user.email})
+
+
+@extend_schema(
     summary="Submit company profile",
     description=(
         "Submit company profile after registration. Creates or links a Company "
@@ -909,6 +961,45 @@ class SupplierSubscriptionViewSet(viewsets.ModelViewSet):
             .select_related('company', 'currency')
             .order_by('-created_at')
         )
+
+    @extend_schema(
+        summary="My subscription",
+        description=(
+            "Returns the SupplierSubscription of the caller's primary company, "
+            "if any. Available to any authenticated user with can_sell capability "
+            "on a SUPPLIER/MANUFACTURER company. Platform admin viewers see 204."
+        ),
+        responses={
+            200: SupplierSubscriptionSerializer,
+            204: OpenApiResponse(description="No subscription for this user's company"),
+            403: OpenApiResponse(description="Platform admin viewer cannot own a subscription"),
+        },
+        tags=['Accounts'],
+    )
+    @action(
+        detail=False, methods=['get'], url_path='mine',
+        permission_classes=[permissions.IsAuthenticated],
+    )
+    def mine(self, request):
+        """GET /api/v1/accounts/subscriptions/mine/ — subscription of the current user's company."""
+        user = request.user
+        if getattr(user, 'is_platform_admin', False):
+            return Response(status=status.HTTP_403_FORBIDDEN)
+        company_ids = list(
+            user.memberships.filter(is_active=True).values_list('company_id', flat=True)
+        )
+        if not company_ids:
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        sub = (
+            SupplierSubscription.objects
+            .select_related('company', 'currency')
+            .filter(company_id__in=company_ids)
+            .order_by('-updated_at')
+            .first()
+        )
+        if not sub:
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(self.get_serializer(sub).data)
 
     @extend_schema(
         summary="Activate subscription",

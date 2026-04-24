@@ -70,6 +70,62 @@ def create_pending_user(email: str, first_name: str, last_name: str) -> Tuple[Op
     return user, None
 
 
+def send_password_reset_email(email: str) -> Tuple[bool, Optional[str]]:
+    """
+    Triggers a password-reset email for an existing active user. Silently
+    succeeds when the email is unknown to avoid user enumeration.
+    Returns: (delivered, error_code_or_None). `delivered=False` + no error
+    means email was unknown; we still return True/None to the caller so the
+    frontend shows the same outcome either way.
+    """
+    email = (email or '').strip().lower()
+    if not email:
+        return False, 'EMAIL_REQUIRED'
+    user = CustomUser.objects.filter(email__iexact=email).first()
+    if not user:
+        # Do not leak account existence — caller should show "if an account
+        # exists, a link was sent" regardless.
+        return True, None
+    if not user.is_active:
+        return True, None
+
+    token = default_token_generator.make_token(user)
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    base_url = settings.FRONTEND_URL
+    reset_url = f"{base_url}/reset-password?uid={uid}&token={token}"
+
+    try:
+        send_templated_email(
+            'reset_password',
+            {'first_name': user.first_name or '', 'reset_url': reset_url},
+            to=[user.email],
+            channel='transactional',
+            user=user,
+        )
+    except EmailDeliveryError:
+        logger.exception('Failed to send password reset email to %s', user.email)
+        return False, 'EMAIL_SEND_FAILED'
+    return True, None
+
+
+def reset_password(uidb64: str, token: str, password: str) -> Tuple[Optional[CustomUser], Optional[str]]:
+    """Verify reset token and set a new password. Reuses Django's default token generator."""
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = CustomUser.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, CustomUser.DoesNotExist):
+        return None, 'RESET_PASSWORD_INVALID_USER'
+    if not default_token_generator.check_token(user, token):
+        return None, 'RESET_PASSWORD_INVALID_TOKEN'
+    if not password or len(password) < 8:
+        return None, 'RESET_PASSWORD_WEAK'
+    user.set_password(password)
+    if not user.is_active:
+        user.is_active = True
+    user.save(update_fields=['password', 'is_active'])
+    return user, None
+
+
 def verify_and_setup_password(uidb64: str, token: str, password: str) -> Tuple[Optional[CustomUser], Optional[str]]:
     try:
         uid = force_str(urlsafe_base64_decode(uidb64))

@@ -25,6 +25,7 @@ import { Label } from '@/components/ui/label';
 import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
 import { SupplierBidSubmitDialog } from '@/components/CRM/SupplierBidSubmitDialog';
 import { useSupplierBids, useAcceptBid, useRejectBid } from '@/hooks/useBidding';
+import { useDeals } from '@/hooks/useCRM';
 import { useUserStore } from '@/store/userStore';
 import { useIsViewerMode } from '@/hooks/useViewerMode';
 import type { SupplierBid, SupplierBidStatus } from '@/api/biddingApi';
@@ -57,6 +58,14 @@ export function SupplierBidsPage({ onNavigate }: SupplierBidsPageProps = {}) {
 
   const queryParams = statusFilter !== 'all' ? { status: statusFilter } : undefined;
   const { data: bids, isLoading } = useSupplierBids(queryParams);
+  const { data: allDeals = [] } = useDeals();
+  // Only surface deals that are "actionable" for the seller: DRAFT isn't,
+  // CLOSED_WON/LOST aren't. The intersection with FSM stays authoritative
+  // on the backend when the bid is actually submitted.
+  const openDeals = useMemo(
+    () => allDeals.filter((d) => !['DRAFT', 'CLOSED_WON', 'CLOSED_LOST'].includes(d.stage_code ?? '')),
+    [allDeals],
+  );
   const acceptMut = useAcceptBid();
   const rejectMut = useRejectBid();
   const isViewer = useIsViewerMode();
@@ -103,15 +112,26 @@ export function SupplierBidsPage({ onNavigate }: SupplierBidsPageProps = {}) {
         <CardContent className="flex flex-col gap-4 p-4">
           {isSupplier && (
             <div className="flex flex-wrap items-end gap-2">
-              <div>
-                <Label htmlFor="bid-deal-id">{t('supplierBidsPage.table.deal')}</Label>
-                <input
-                  id="bid-deal-id"
-                  type="number"
-                  className="mt-1 block w-32 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  value={submitDealId}
-                  onChange={(e) => setSubmitDealId(e.target.value)}
-                />
+              <div className="w-72">
+                <Label htmlFor="bid-deal-select">{t('supplierBidsPage.table.deal')}</Label>
+                <Select value={submitDealId || undefined} onValueChange={setSubmitDealId}>
+                  <SelectTrigger id="bid-deal-select">
+                    <SelectValue placeholder={t('supplierBidsPage.pickDealPlaceholder')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(openDeals ?? []).length === 0 ? (
+                      <div className="px-2 py-3 text-xs text-muted-foreground">
+                        {t('supplierBidsPage.noOpenDeals')}
+                      </div>
+                    ) : (
+                      (openDeals ?? []).map((d) => (
+                        <SelectItem key={d.id} value={String(d.id)}>
+                          #{d.id} · {d.title || d.company_name || '—'}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
               <Button
                 size="sm"
