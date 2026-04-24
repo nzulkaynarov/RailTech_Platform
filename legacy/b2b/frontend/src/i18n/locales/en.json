@@ -480,6 +480,7 @@
       "bulkSuspend": "Suspend (bulk)",
       "bulkSuspendDesc": "{{count}} subscriptions will be suspended. Provide a reason — it will be recorded in the audit log.",
       "bulkResult": "Affected: {{affected}}",
+      "validFromHint": "From {{date}}",
       "suspendTemplates": {
         "nonPayment": "Non-payment for the current period",
         "fraud": "Suspected fraud",
@@ -1029,6 +1030,9 @@
     "bulkApproveL2": "Approve L2 (bulk)",
     "bulkApproveDesc": "KYC will be approved to L2 for {{count}} companies. Skipped items (missing documents, etc.) will be listed separately.",
     "bulkApprovedResult": "Approved: {{approved}}, skipped: {{skipped}}",
+    "accountAge": "Account age",
+    "ageDays_one": "{{count}} day",
+    "ageDays_other": "{{count}} days",
     "operationFailure": "Operation failed",
     "uploadFailure": "Document upload failed",
     "status": {
@@ -2732,6 +2736,7 @@
       "toggleActive": "Toggle user active",
       "activated": "{{name}} activated",
       "deactivated": "{{name}} deactivated",
+      "joinedHint": "Joined: {{date}}",
       "detail": {
         "info": "Contact Information",
         "access": "Access & Roles",
@@ -3076,7 +3081,8 @@
       "empty": "No members"
     },
     "stats": {
-      "total": "Total"
+      "total": "Total",
+      "members": "Members"
     },
     "table": {
       "name": "Name",

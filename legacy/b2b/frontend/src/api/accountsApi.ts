@@ -245,8 +245,11 @@ export const accountsApi = {
 	},
 
 	// ─── Subscriptions (admin) ─────────────────────────────────────────
-	getSubscriptions: async () => {
-		const response = await apiClient.get<PaginatedResponse<Subscription>>('accounts/subscriptions/');
+	getSubscriptions: async (params?: { search?: string; status?: string; plan?: string; ordering?: string }) => {
+		const response = await apiClient.get<PaginatedResponse<Subscription>>(
+			'accounts/subscriptions/',
+			{ params },
+		);
 		return response.data.results;
 	},
 	activateSubscription: async (id: number) => {
@@ -310,8 +313,11 @@ export const accountsApi = {
 	},
 
 	// ─── Role Applications (admin + owner self-service) ────────────────
-	getRoleApplications: async () => {
-		const response = await apiClient.get<PaginatedResponse<RoleApplication>>('accounts/role-applications/');
+	getRoleApplications: async (params?: { search?: string; status?: string; requested_type?: string; ordering?: string }) => {
+		const response = await apiClient.get<PaginatedResponse<RoleApplication>>(
+			'accounts/role-applications/',
+			{ params },
+		);
 		return response.data.results;
 	},
 	createRoleApplication: async (data: {

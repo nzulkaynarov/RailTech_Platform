@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import {
   ShieldCheck, FileText, Upload, Download, Trash2,
   BadgeCheck, XCircle, FileQuestion,
+  Users as UsersIcon, Calendar as CalendarIcon, CheckCircle2,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,7 @@ import { AdminDataTable, useAdminTableQueryState } from '@/components/Admin/Admi
 import { AdminDetailLayout } from '@/components/Admin/AdminDetailLayout';
 import { AdminActivityTimeline } from '@/components/Admin/AdminActivityTimeline';
 import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
+import { DetailKPIGrid } from '@/components/Admin/DetailKPIGrid';
 import { PageShell } from './shared/PageShell';
 import type { Company } from '@/api/accountsApi';
 
@@ -106,18 +108,57 @@ function DetailSheet({
     }
   }
 
+  const createdDate = company.created_at ? new Date(company.created_at) : null;
+  const ageDays = createdDate
+    ? Math.max(0, Math.floor((Date.now() - createdDate.getTime()) / 86_400_000))
+    : null;
+
   const overview = (
     <div className="space-y-4">
+      <DetailKPIGrid
+        columns={4}
+        items={[
+          {
+            label: t('kycManager.stats.verified'),
+            value: t(STATUS_BADGE_MAP[statusCode]?.label || 'kycManager.status.P_PENDING'),
+            icon: <CheckCircle2 className="h-3.5 w-3.5" />,
+            tone:
+              statusCode === 'L2_VERIFIED' || statusCode === 'L3_CONTRACTED'
+                ? 'success'
+                : statusCode === 'PROFILE_SUBMITTED'
+                  ? 'warning'
+                  : 'default',
+          },
+          {
+            label: t('kycManager.docRecords'),
+            value: String(company.kyc_documents?.length || 0),
+            icon: <FileText className="h-3.5 w-3.5" />,
+          },
+          {
+            label: t('kycManager.registryFields.mfoCode'),
+            value: company.mfo || '—',
+            icon: <UsersIcon className="h-3.5 w-3.5" />,
+          },
+          {
+            label: t('kycManager.accountAge'),
+            value: ageDays != null ? t('kycManager.ageDays', { count: ageDays }) : '—',
+            icon: <CalendarIcon className="h-3.5 w-3.5" />,
+            hint: createdDate ? createdDate.toLocaleDateString() : undefined,
+          },
+        ]}
+      />
       <dl className="grid grid-cols-1 gap-2 rounded-md border p-3 text-xs sm:grid-cols-2">
         {[
           { label: t('kycManager.registryFields.taxId'), value: company.inn },
           { label: t('kycManager.registryFields.mfoCode'), value: company.mfo || '—' },
           { label: t('kycManager.registryFields.bankAcc'), value: company.bank_account || '—' },
           { label: t('kycManager.registryFields.opContact'), value: company.contact_person || '—' },
+          { label: t('kycManager.registryFields.email') ?? 'Email', value: company.email || '—' },
+          { label: t('kycManager.registryFields.website') ?? 'Website', value: company.website || '—' },
         ].map((r) => (
           <div key={r.label} className="flex items-start justify-between gap-2">
             <dt className="text-muted-foreground">{r.label}</dt>
-            <dd className="text-right font-medium tabular-nums">{r.value}</dd>
+            <dd className="truncate text-right font-medium tabular-nums">{r.value}</dd>
           </div>
         ))}
       </dl>
@@ -341,7 +382,6 @@ function DetailSheet({
 
 export function AdminKYCPage() {
   const { t } = useTranslation();
-  const { data: companies = [], isLoading } = useCompanies();
   const verifyMutation = useVerifyCompany();
   const bulkVerify = useBulkVerifyKYC();
 
@@ -353,36 +393,38 @@ export function AdminKYCPage() {
   const [confirmBulk, setConfirmBulk] = useState<null | { companies: Company[] }>(null);
 
   const tableState = useAdminTableQueryState(STORAGE_KEY);
+  const queryParams = useMemo(() => {
+    const p: Record<string, string> = {};
+    if (tableState.search) p.search = tableState.search;
+    const tab = tableState.tab || 'all';
+    if (tab !== 'all') p.verification_status__code = tab;
+    return Object.keys(p).length ? p : undefined;
+  }, [tableState.search, tableState.tab]);
 
-  const kept = useMemo(() => {
-    const q = tableState.search.toLowerCase();
-    return companies.filter((c) => {
-      const code = getStatusCode(c);
-      if (tableState.tab && tableState.tab !== 'all' && tableState.tab !== code) return false;
-      if (!q) return true;
-      return c.name.toLowerCase().includes(q) || (c.inn || '').toLowerCase().includes(q);
-    });
-  }, [companies, tableState.search, tableState.tab]);
+  // All-companies query for accurate tab counts
+  const { data: allCompanies = [] } = useCompanies();
+  const { data: companies = [], isLoading } = useCompanies(queryParams);
+  const kept = companies;
 
   const selectedCompany = useMemo(() => {
     if (!detailTarget) return null;
-    return companies.find((c) => c.id === detailTarget.id) ?? detailTarget;
-  }, [companies, detailTarget]);
+    return (allCompanies.find((c) => c.id === detailTarget.id) ?? detailTarget);
+  }, [allCompanies, detailTarget]);
 
   const counts = useMemo(() => {
     const buckets: Record<string, number> = {
-      all: companies.length,
+      all: allCompanies.length,
       L1_UNVERIFIED: 0,
       PROFILE_SUBMITTED: 0,
       L2_VERIFIED: 0,
       L3_CONTRACTED: 0,
     };
-    companies.forEach((c) => {
+    allCompanies.forEach((c) => {
       const code = getStatusCode(c);
       if (code in buckets) buckets[code] += 1;
     });
     return buckets;
-  }, [companies]);
+  }, [allCompanies]);
 
   async function runRowApprove(company: Company, reason: string) {
     await verifyMutation.mutateAsync({

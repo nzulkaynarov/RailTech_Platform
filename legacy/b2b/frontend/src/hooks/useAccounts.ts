@@ -220,9 +220,9 @@ export const useDeleteUserAvatar = () => {
 
 // ─── Subscriptions ─────────────────────────────────────────────────────
 
-export const useSubscriptions = () => useQuery({
-  queryKey: ['subscriptions'],
-  queryFn: () => accountsApi.getSubscriptions(),
+export const useSubscriptions = (params?: { search?: string; status?: string; plan?: string; ordering?: string }) => useQuery({
+  queryKey: ['subscriptions', params],
+  queryFn: () => accountsApi.getSubscriptions(params),
 });
 
 export const useActivateSubscription = () => {
@@ -277,9 +277,9 @@ export const useDeleteSubscription = () => {
 
 // ─── Role Applications ─────────────────────────────────────────────────
 
-export const useRoleApplications = () => useQuery({
-  queryKey: ['roleApplications'],
-  queryFn: () => accountsApi.getRoleApplications(),
+export const useRoleApplications = (params?: { search?: string; status?: string; requested_type?: string; ordering?: string }) => useQuery({
+  queryKey: ['roleApplications', params],
+  queryFn: () => accountsApi.getRoleApplications(params),
 });
 
 export const useApproveRoleApplication = () => {

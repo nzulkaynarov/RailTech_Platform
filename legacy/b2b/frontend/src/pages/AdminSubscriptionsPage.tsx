@@ -13,6 +13,7 @@ import {
 import { AdminDataTable, useAdminTableQueryState } from '@/components/Admin/AdminDataTable';
 import { AdminActivityTimeline } from '@/components/Admin/AdminActivityTimeline';
 import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
+import { DetailKPIGrid } from '@/components/Admin/DetailKPIGrid';
 import { useBulkSubscriptionStatus } from '@/hooks/useAdmin';
 import { Tabs as TabsRoot, TabsList as TabsListRoot, TabsTrigger as TabsTriggerRoot, TabsContent as TabsContentRoot } from '@/components/ui/tabs';
 import {
@@ -132,6 +133,44 @@ function FormSheet({
             ) : null}
           </TabsContentRoot>
           <TabsContentRoot value="details" className="mt-4 space-y-4">
+          {isEdit && sub ? (
+            <DetailKPIGrid
+              columns={4}
+              items={[
+                {
+                  label: t('admin.subscriptions.table.plan'),
+                  value: sub.plan_display,
+                },
+                {
+                  label: t('admin.subscriptions.table.status'),
+                  value: sub.status_display,
+                  tone:
+                    sub.status === 'ACTIVE'
+                      ? 'success'
+                      : sub.status === 'SUSPENDED' || sub.status === 'PAST_DUE'
+                        ? 'destructive'
+                        : sub.status === 'TRIAL'
+                          ? 'info'
+                          : 'default',
+                },
+                {
+                  label: t('admin.subscriptions.fields.monthlyRate'),
+                  value: sub.monthly_rate
+                    ? `${sub.monthly_rate} ${sub.currency_code || ''}`
+                    : '—',
+                },
+                {
+                  label: t('admin.subscriptions.fields.validUntil'),
+                  value: sub.valid_until || '—',
+                  hint: sub.valid_from
+                    ? t('admin.subscriptions.validFromHint', {
+                        date: sub.valid_from,
+                      })
+                    : undefined,
+                },
+              ]}
+            />
+          ) : null}
           <div className="space-y-2">
             <Label>{t('admin.subscriptions.fields.company')}</Label>
             <Select
@@ -229,40 +268,39 @@ const STORAGE_KEY = 'adminSubscriptions';
 
 export function AdminSubscriptionsPage() {
   const { t } = useTranslation();
-  const { data: subscriptions = [], isLoading } = useSubscriptions();
   const activateMutation = useActivateSubscription();
   const suspendMutation = useSuspendSubscription();
   const deleteMut = useDeleteSubscription();
   const bulkStatus = useBulkSubscriptionStatus();
 
   const tableState = useAdminTableQueryState(STORAGE_KEY);
+  const queryParams = useMemo(() => {
+    const p: Record<string, string> = {};
+    if (tableState.search) p.search = tableState.search;
+    const tab = tableState.tab || 'all';
+    if (tab.startsWith('status:')) p.status = tab.slice(7);
+    else if (tab.startsWith('plan:')) p.plan = tab.slice(5);
+    return Object.keys(p).length ? p : undefined;
+  }, [tableState.search, tableState.tab]);
+
+  const { data: allSubs = [] } = useSubscriptions();
+  const { data: subscriptions = [], isLoading } = useSubscriptions(queryParams);
+
   const [editTarget, setEditTarget] = useState<Subscription | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Subscription | null>(null);
   const [payTargetId, setPayTargetId] = useState<number | null>(null);
   const [confirmBulkSuspend, setConfirmBulkSuspend] = useState<Subscription[] | null>(null);
 
-  const filtered = useMemo(() => {
-    const q = tableState.search.toLowerCase();
-    const tab = tableState.tab || 'all';
-    return subscriptions.filter((s) => {
-      if (tab.startsWith('status:') && s.status !== tab.slice(7)) return false;
-      if (tab.startsWith('plan:') && s.plan !== tab.slice(5)) return false;
-      if (!q) return true;
-      return (
-        (s.company_name || '').toLowerCase().includes(q) ||
-        (s.company_inn || '').toLowerCase().includes(q)
-      );
-    });
-  }, [subscriptions, tableState.search, tableState.tab]);
+  const filtered = subscriptions;
 
   const counts = useMemo(() => ({
-    all: subscriptions.length,
-    active: subscriptions.filter((s) => s.status === 'ACTIVE').length,
-    trial: subscriptions.filter((s) => s.status === 'TRIAL').length,
-    suspended: subscriptions.filter((s) => s.status === 'SUSPENDED').length,
-    pastDue: subscriptions.filter((s) => s.status === 'PAST_DUE').length,
-  }), [subscriptions]);
+    all: allSubs.length,
+    active: allSubs.filter((s) => s.status === 'ACTIVE').length,
+    trial: allSubs.filter((s) => s.status === 'TRIAL').length,
+    suspended: allSubs.filter((s) => s.status === 'SUSPENDED').length,
+    pastDue: allSubs.filter((s) => s.status === 'PAST_DUE').length,
+  }), [allSubs]);
 
   async function handleActivate(id: number) {
     try {

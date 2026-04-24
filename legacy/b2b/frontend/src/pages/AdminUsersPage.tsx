@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AdminDataTable, useAdminTableQueryState } from '@/components/Admin/AdminDataTable';
 import { AdminActivityTimeline } from '@/components/Admin/AdminActivityTimeline';
+import { DetailKPIGrid } from '@/components/Admin/DetailKPIGrid';
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter,
 } from '@/components/ui/sheet';
@@ -274,6 +275,38 @@ function DetailSheet({
             </TabsList>
 
             <TabsContent value="profile" className="mt-4 space-y-4">
+              <DetailKPIGrid
+                columns={4}
+                items={[
+                  {
+                    label: t('pages.adminUsers.statusLabel.active'),
+                    value: user.is_active
+                      ? t('pages.adminUsers.statusLabel.active')
+                      : t('pages.adminUsers.statusLabel.inactive'),
+                    icon: user.is_active ? <Check className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />,
+                    tone: user.is_active ? 'success' : 'warning',
+                  },
+                  {
+                    label: t('pages.adminUsers.table.role'),
+                    value: user.role_data?.name ?? '—',
+                  },
+                  {
+                    label: t('pages.adminUsers.tabs.memberships'),
+                    value: String(memberships.length),
+                  },
+                  {
+                    label: t('pages.adminUsers.table.lastLogin'),
+                    value: user.last_login
+                      ? new Date(user.last_login).toLocaleDateString()
+                      : '—',
+                    hint: user.date_joined
+                      ? t('pages.adminUsers.joinedHint', {
+                          date: new Date(user.date_joined).toLocaleDateString(),
+                        })
+                      : undefined,
+                  },
+                ]}
+              />
               <ImageUpload
                 value={user.avatar ?? null}
                 onUpload={async (file) => {
@@ -477,7 +510,6 @@ const STORAGE_KEY = 'adminUsers';
 
 export function AdminUsersPage() {
   const { t } = useTranslation();
-  const { data: users = [], isLoading } = useUsers();
   const { data: roles } = useSystemRoles();
   const deleteMut = useDeleteUser();
 
@@ -486,37 +518,32 @@ export function AdminUsersPage() {
   const [createOpen, setCreateOpen] = useState(false);
 
   const tableState = useAdminTableQueryState(STORAGE_KEY);
+  const queryParams = useMemo(() => {
+    const p: Record<string, string | boolean> = {};
+    if (tableState.search) p.search = tableState.search;
+    const tab = tableState.tab || 'all';
+    if (tab === 'active') p.is_active = true;
+    else if (tab === 'inactive') p.is_active = false;
+    else if (tab.startsWith('role:')) p['role__code'] = tab.slice(5);
+    return Object.keys(p).length ? p : undefined;
+  }, [tableState.search, tableState.tab]);
+
+  const { data: allUsers = [] } = useUsers();
+  const { data: users = [], isLoading } = useUsers(queryParams);
 
   const selectedUser = useMemo(() => {
     if (!detailTarget) return null;
-    return users.find((u) => u.id === detailTarget.id) ?? detailTarget;
-  }, [users, detailTarget]);
+    return allUsers.find((u) => u.id === detailTarget.id) ?? detailTarget;
+  }, [allUsers, detailTarget]);
 
-  const filtered = useMemo(() => {
-    const q = tableState.search.toLowerCase();
-    const tab = tableState.tab || 'all';
-    return users.filter((u) => {
-      if (tab === 'active' && !u.is_active) return false;
-      if (tab === 'inactive' && u.is_active) return false;
-      if (tab.startsWith('role:') && (u.role_code ?? u.role_data?.code ?? '') !== tab.slice(5)) {
-        return false;
-      }
-      if (!q) return true;
-      return (
-        u.email.toLowerCase().includes(q) ||
-        (u.first_name || '').toLowerCase().includes(q) ||
-        (u.last_name || '').toLowerCase().includes(q) ||
-        (u.phone || '').toLowerCase().includes(q)
-      );
-    });
-  }, [users, tableState.search, tableState.tab]);
+  const filtered = users;
 
   const counts = useMemo(() => ({
-    all: users.length,
-    active: users.filter((u) => u.is_active).length,
-    inactive: users.filter((u) => !u.is_active).length,
-    admin: users.filter((u) => u.role_data?.code === 'ADMIN').length,
-  }), [users]);
+    all: allUsers.length,
+    active: allUsers.filter((u) => u.is_active).length,
+    inactive: allUsers.filter((u) => !u.is_active).length,
+    admin: allUsers.filter((u) => u.role_data?.code === 'ADMIN').length,
+  }), [allUsers]);
 
   const stats = [
     { label: t('pages.adminUsers.stats.total'), value: String(counts.all) },

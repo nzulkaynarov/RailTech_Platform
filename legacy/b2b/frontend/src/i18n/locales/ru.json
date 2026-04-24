@@ -480,6 +480,7 @@
       "bulkSuspend": "Приостановить (bulk)",
       "bulkSuspendDesc": "Будет приостановлено подписок: {{count}}. Укажите причину — она попадёт в журнал аудита.",
       "bulkResult": "Применено: {{affected}}",
+      "validFromHint": "С {{date}}",
       "suspendTemplates": {
         "nonPayment": "Неуплата за последний период",
         "fraud": "Подозрение в мошенничестве",
@@ -1029,6 +1030,11 @@
     "bulkApproveL2": "Одобрить L2 (bulk)",
     "bulkApproveDesc": "Будет одобрено KYC до L2 для {{count}} компаний. Пропуски (нет документов и т.п.) выведутся отдельно.",
     "bulkApprovedResult": "Одобрено: {{approved}}, пропущено: {{skipped}}",
+    "accountAge": "Возраст аккаунта",
+    "ageDays_one": "{{count}} день",
+    "ageDays_few": "{{count}} дня",
+    "ageDays_many": "{{count}} дней",
+    "ageDays_other": "{{count}} дн.",
     "operationFailure": "Ошибка операции",
     "uploadFailure": "Ошибка загрузки документа",
     "status": {
@@ -2732,6 +2738,7 @@
       "toggleActive": "Вкл/выкл пользователя",
       "activated": "{{name}} активирован",
       "deactivated": "{{name}} деактивирован",
+      "joinedHint": "Зарегистрирован: {{date}}",
       "detail": {
         "info": "Контактная информация",
         "access": "Доступ и роли",
@@ -3076,7 +3083,8 @@
       "empty": "Нет участников"
     },
     "stats": {
-      "total": "Всего"
+      "total": "Всего",
+      "members": "Участников"
     },
     "table": {
       "name": "Название",

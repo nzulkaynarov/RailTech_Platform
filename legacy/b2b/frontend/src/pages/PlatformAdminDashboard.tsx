@@ -6,12 +6,19 @@ import {
   LifeBuoy, Clock, TrendingUp, Loader2,
   Building2, Handshake, Users,
 } from 'lucide-react';
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from '@/components/ui/chart';
 import { useAdminQueue, useAdminPulse, useBulkSubscriptionStatus } from '@/hooks/useAdmin';
 import { usePlatformDashboard } from '@/hooks/usePageStats';
 import { useVerifyCompany } from '@/hooks/useAccounts';
@@ -53,42 +60,93 @@ function formatInt(n: number | null | undefined): string {
   return n.toLocaleString();
 }
 
-function Sparkline({
+type PulseTone = 'primary' | 'success' | 'info' | 'warning';
+
+const PULSE_TONE_CSS: Record<PulseTone, string> = {
+  primary: 'var(--primary)',
+  success: 'var(--success)',
+  info: 'var(--info)',
+  warning: 'var(--warning)',
+};
+
+function PulseChart({
   series,
-  height = 40,
   valueKey = 'count',
-  className,
+  tone,
+  valueFormatter,
+  ariaLabel,
 }: {
   series: AdminPulseDay[];
-  height?: number;
   valueKey?: 'count' | 'value';
-  className?: string;
+  tone: PulseTone;
+  valueFormatter?: (v: number) => string;
+  ariaLabel?: string;
 }) {
-  if (series.length === 0) return null;
-  const values = series.map((d) =>
-    valueKey === 'value' ? Number(d.value) : d.count,
+  const data = useMemo(
+    () =>
+      series.map((d) => ({
+        date: d.date,
+        value: valueKey === 'value' ? Number(d.value) : d.count,
+      })),
+    [series, valueKey],
   );
-  const max = Math.max(1, ...values);
-  const w = 100;
-  const step = values.length > 1 ? w / (values.length - 1) : w;
-  const path = values
-    .map((v, i) => {
-      const x = i * step;
-      const y = height - (v / max) * (height - 4) - 2;
-      return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(' ');
-  const area = `${path} L${(values.length - 1) * step},${height} L0,${height} Z`;
+
+  const config: ChartConfig = useMemo(
+    () => ({
+      value: {
+        label: ariaLabel ?? 'Value',
+        color: PULSE_TONE_CSS[tone],
+      },
+    }),
+    [tone, ariaLabel],
+  );
+
+  if (series.length === 0) {
+    return <div className="h-[90px] w-full" aria-hidden="true" />;
+  }
+
   return (
-    <svg
-      viewBox={`0 0 ${w} ${height}`}
-      className={cn('w-full', className)}
-      preserveAspectRatio="none"
-      aria-hidden="true"
-    >
-      <path d={area} fill="currentColor" opacity="0.12" />
-      <path d={path} fill="none" stroke="currentColor" strokeWidth="1.5" />
-    </svg>
+    <ChartContainer config={config} className="h-[90px] w-full">
+      <AreaChart
+        data={data}
+        margin={{ left: 4, right: 4, top: 4, bottom: 0 }}
+      >
+        <defs>
+          <linearGradient id={`pulse-grad-${tone}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor={`var(--color-value)`} stopOpacity={0.35} />
+            <stop offset="95%" stopColor={`var(--color-value)`} stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--border)" opacity={0.4} />
+        <XAxis
+          dataKey="date"
+          hide
+        />
+        <YAxis hide domain={[0, 'dataMax + 1']} />
+        <ChartTooltip
+          cursor={{ stroke: 'var(--border)', strokeDasharray: '3 3' }}
+          content={
+            <ChartTooltipContent
+              labelFormatter={(value) =>
+                new Date(value as string).toLocaleDateString([], {
+                  day: '2-digit',
+                  month: 'short',
+                })
+              }
+              formatter={(v) => (valueFormatter ? valueFormatter(Number(v)) : String(v))}
+              hideIndicator={false}
+            />
+          }
+        />
+        <Area
+          type="monotone"
+          dataKey="value"
+          stroke="var(--color-value)"
+          strokeWidth={2}
+          fill={`url(#pulse-grad-${tone})`}
+        />
+      </AreaChart>
+    </ChartContainer>
   );
 }
 
@@ -290,55 +348,69 @@ export default function PlatformAdminDashboard({ onNavigate }: PlatformAdminDash
       </div>
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-        <Card className="text-primary">
+        <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
               <TrendingUp className="h-3.5 w-3.5 text-primary" />
-              <span className="text-xs font-medium text-foreground">{t('platformAdmin.pulse.newCompanies')}</span>
+              <span className="text-xs font-medium">{t('platformAdmin.pulse.newCompanies')}</span>
             </div>
-            <div className="mt-1 text-2xl font-semibold tabular-nums text-foreground">
+            <div className="mt-1 text-2xl font-semibold tabular-nums">
               {pulse.isLoading ? <Skeleton className="h-7 w-16" /> : formatInt(pulseCompaniesTotal)}
             </div>
             <div className="mt-2">
-              <Sparkline series={pulse.data?.companies ?? []} />
+              <PulseChart
+                series={pulse.data?.companies ?? []}
+                tone="primary"
+                ariaLabel={t('platformAdmin.pulse.newCompanies')}
+              />
             </div>
           </CardContent>
         </Card>
-        <Card className="text-success">
+        <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
               <Handshake className="h-3.5 w-3.5 text-success" />
-              <span className="text-xs font-medium text-foreground">{t('platformAdmin.pulse.newDeals')}</span>
+              <span className="text-xs font-medium">{t('platformAdmin.pulse.newDeals')}</span>
             </div>
-            <div className="mt-1 text-2xl font-semibold tabular-nums text-foreground">
+            <div className="mt-1 text-2xl font-semibold tabular-nums">
               {pulse.isLoading ? <Skeleton className="h-7 w-16" /> : formatInt(pulseDealsTotal)}
             </div>
             <div className="mt-2">
-              <Sparkline series={pulse.data?.deals ?? []} />
+              <PulseChart
+                series={pulse.data?.deals ?? []}
+                tone="success"
+                ariaLabel={t('platformAdmin.pulse.newDeals')}
+              />
             </div>
           </CardContent>
         </Card>
-        <Card className="text-info">
+        <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
               <TrendingUp className="h-3.5 w-3.5 text-info" />
-              <span className="text-xs font-medium text-foreground">{t('platformAdmin.pulse.signedValue')}</span>
+              <span className="text-xs font-medium">{t('platformAdmin.pulse.signedValue')}</span>
             </div>
-            <div className="mt-1 text-2xl font-semibold tabular-nums text-foreground">
+            <div className="mt-1 text-2xl font-semibold tabular-nums">
               {pulse.isLoading ? <Skeleton className="h-7 w-16" /> : format(pulseSignedValue)}
             </div>
             <div className="mt-2">
-              <Sparkline series={pulse.data?.quotes_signed_value ?? []} valueKey="value" />
+              <PulseChart
+                series={pulse.data?.quotes_signed_value ?? []}
+                tone="info"
+                valueKey="value"
+                valueFormatter={format}
+                ariaLabel={t('platformAdmin.pulse.signedValue')}
+              />
             </div>
           </CardContent>
         </Card>
-        <Card className="text-warning">
+        <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
               <CreditCard className="h-3.5 w-3.5 text-warning" />
-              <span className="text-xs font-medium text-foreground">{t('platformAdmin.pulse.mrr')}</span>
+              <span className="text-xs font-medium">{t('platformAdmin.pulse.mrr')}</span>
             </div>
-            <div className="mt-1 text-2xl font-semibold tabular-nums text-foreground">
+            <div className="mt-1 text-2xl font-semibold tabular-nums">
               {pulse.isLoading ? (
                 <Skeleton className="h-7 w-16" />
               ) : (

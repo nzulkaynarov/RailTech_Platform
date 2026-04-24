@@ -14,6 +14,7 @@ import { AdminDataTable, useAdminTableQueryState } from '@/components/Admin/Admi
 import { AdminDetailLayout } from '@/components/Admin/AdminDetailLayout';
 import { AdminActivityTimeline } from '@/components/Admin/AdminActivityTimeline';
 import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
+import { DetailKPIGrid } from '@/components/Admin/DetailKPIGrid';
 import { PageShell } from './shared/PageShell';
 import type { RoleApplication } from '@/api/accountsApi';
 
@@ -69,8 +70,39 @@ function DetailSheet({
   const { t } = useTranslation();
   if (!app) return null;
 
+  const docCount = [app.contract_file, app.nda_file, app.partnership_agreement].filter(Boolean).length;
   const overview = (
     <div className="space-y-4">
+      <DetailKPIGrid
+        columns={4}
+        items={[
+          {
+            label: t('admin.roleApps.detail.currentStatus'),
+            value: app.status_display,
+            tone:
+              app.status === 'APPROVED'
+                ? 'success'
+                : app.status === 'REJECTED'
+                  ? 'destructive'
+                  : 'warning',
+          },
+          {
+            label: t('admin.roleApps.detail.requestedRole'),
+            value: app.requested_type_name,
+          },
+          {
+            label: t('admin.roleApps.detail.documents'),
+            value: `${docCount} / 3`,
+          },
+          {
+            label: t('admin.roleApps.detail.submittedAt'),
+            value: app.created_at
+              ? new Date(app.created_at).toLocaleDateString()
+              : '—',
+            hint: app.submitted_by_email || undefined,
+          },
+        ]}
+      />
       <dl className="grid grid-cols-1 gap-2 rounded-md border p-3 text-xs sm:grid-cols-2">
         <div className="flex items-start justify-between gap-2">
           <dt className="text-muted-foreground">{t('admin.roleApps.detail.inn')}</dt>
@@ -181,7 +213,6 @@ function DetailSheet({
 
 export function AdminRoleApplicationsPage() {
   const { t } = useTranslation();
-  const { data: apps = [], isLoading } = useRoleApplications();
   const approveMutation = useApproveRoleApplication();
   const rejectMutation = useRejectRoleApplication();
 
@@ -192,14 +223,26 @@ export function AdminRoleApplicationsPage() {
   }>(null);
 
   const tableState = useAdminTableQueryState(STORAGE_KEY);
+  const queryParams = useMemo(() => {
+    const p: Record<string, string> = {};
+    if (tableState.search) p.search = tableState.search;
+    const tab = tableState.tab || 'all';
+    if (tab === 'approved') p.status = 'APPROVED';
+    else if (tab === 'rejected') p.status = 'REJECTED';
+    // "pending" is server-side filter of 3 codes — keep client filter for that tab
+    return Object.keys(p).length ? p : undefined;
+  }, [tableState.search, tableState.tab]);
+
+  const { data: allApps = [] } = useRoleApplications();
+  const { data: apps = [], isLoading } = useRoleApplications(queryParams);
 
   const filtered = useMemo(() => {
+    // For the "pending" tab there are three backend statuses, so filter client-side over the allApps snapshot.
+    const tab = tableState.tab || 'all';
+    if (tab !== 'pending') return apps;
     const q = tableState.search.toLowerCase();
-    return apps.filter((a) => {
-      const tab = tableState.tab || 'all';
-      if (tab === 'pending' && !isPending(a.status)) return false;
-      if (tab === 'approved' && a.status !== 'APPROVED') return false;
-      if (tab === 'rejected' && a.status !== 'REJECTED') return false;
+    return allApps.filter((a) => {
+      if (!isPending(a.status)) return false;
       if (!q) return true;
       return (
         a.company_name.toLowerCase().includes(q) ||
@@ -207,14 +250,14 @@ export function AdminRoleApplicationsPage() {
         (a.submitted_by_email || '').toLowerCase().includes(q)
       );
     });
-  }, [apps, tableState.search, tableState.tab]);
+  }, [apps, allApps, tableState.search, tableState.tab]);
 
   const counts = useMemo(() => ({
-    all: apps.length,
-    pending: apps.filter((a) => isPending(a.status)).length,
-    approved: apps.filter((a) => a.status === 'APPROVED').length,
-    rejected: apps.filter((a) => a.status === 'REJECTED').length,
-  }), [apps]);
+    all: allApps.length,
+    pending: allApps.filter((a) => isPending(a.status)).length,
+    approved: allApps.filter((a) => a.status === 'APPROVED').length,
+    rejected: allApps.filter((a) => a.status === 'REJECTED').length,
+  }), [allApps]);
 
   async function runApprove(app: RoleApplication) {
     await approveMutation.mutateAsync(app.id);

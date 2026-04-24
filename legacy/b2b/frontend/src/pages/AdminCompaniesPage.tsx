@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AdminDataTable, useAdminTableQueryState } from '@/components/Admin/AdminDataTable';
 import { AdminActivityTimeline } from '@/components/Admin/AdminActivityTimeline';
+import { DetailKPIGrid } from '@/components/Admin/DetailKPIGrid';
 
 const KYC_BADGE: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; labelKey: string }> = {
   L1_UNVERIFIED: { variant: 'secondary', labelKey: 'kycManager.status.P_PENDING' },
@@ -250,6 +251,38 @@ function CompanyFormSheet({
           </TabsList>
 
           <TabsContent value="registry" className="mt-4 space-y-4">
+            {isEdit && target ? (
+              <DetailKPIGrid
+                columns={4}
+                items={[
+                  {
+                    label: t('adminCompanies.table.kyc'),
+                    value: target.verification_status_code ?? '—',
+                    tone:
+                      target.verification_status_code === 'L2_VERIFIED' ||
+                      target.verification_status_code === 'L3_CONTRACTED'
+                        ? 'success'
+                        : target.verification_status_code === 'PROFILE_SUBMITTED'
+                          ? 'warning'
+                          : 'default',
+                  },
+                  {
+                    label: t('adminCompanies.table.types'),
+                    value: (target.company_types ?? []).join(', ') || '—',
+                  },
+                  {
+                    label: t('adminCompanies.stats.members'),
+                    value: String(target.user_count ?? 0),
+                  },
+                  {
+                    label: t('adminCompanies.table.created'),
+                    value: target.created_at
+                      ? new Date(target.created_at).toLocaleDateString()
+                      : '—',
+                  },
+                ]}
+              />
+            ) : null}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2 col-span-2">
                 <Label>{t('adminCompanies.fields.name')}</Label>
