@@ -1274,6 +1274,32 @@ class FulfillmentViewSet(viewsets.ModelViewSet):
 class SupplierBidViewSet(viewsets.ModelViewSet):
     serializer_class = SupplierBidSerializer
     permission_classes = [IsAuthenticated]
+    filterset_fields = ['status', 'supplier', 'deal']
+    search_fields = ['deal__title', 'deal__company__name', 'supplier__name', 'notes']
+
+    @extend_schema(
+        summary='Export supplier bids',
+        description='Admin/member-scoped CSV/XLSX export of supplier bids.',
+        tags=['CRM'],
+    )
+    @action(detail=False, methods=['get'], url_path='export')
+    def export(self, request):
+        from core.exporters import export_queryset
+        qs = self.filter_queryset(self.get_queryset())
+        return export_queryset(
+            qs, request=request, filename='supplier_bids',
+            columns=[
+                ('id', 'ID', lambda b: b.id),
+                ('deal', 'Deal', lambda b: b.deal_id),
+                ('deal_title', 'Deal title', lambda b: b.deal.title if b.deal_id else ''),
+                ('supplier', 'Supplier', lambda b: b.supplier.name if b.supplier_id else ''),
+                ('status', 'Status', lambda b: b.status),
+                ('total_amount', 'Total', lambda b: b.total_amount),
+                ('lead_time_days', 'Lead days', lambda b: b.lead_time_days or ''),
+                ('submitted_at', 'Submitted', lambda b: b.submitted_at.isoformat() if b.submitted_at else ''),
+                ('created_at', 'Created', lambda b: b.created_at.isoformat() if b.created_at else ''),
+            ],
+        )
 
     def get_queryset(self):
         if getattr(self, 'swagger_fake_view', False):

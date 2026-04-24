@@ -10,7 +10,7 @@ import {
   ChevronUp,
   ChevronDown,
   Store,
-  Handshake,
+  Handshake, Gavel,
   ShieldCheck,
   CreditCard,
   ClipboardList,
@@ -111,6 +111,7 @@ function getAdminNavigation(activePage: string, t: TFn, attention: AttentionCoun
     },
     { label: t('shell.roleApplications'), icon: <ClipboardList className="h-4 w-4" />, id: 'admin-role-apps', active: activePage === 'admin-role-apps', badge: attention.roleApps },
     { label: t('shell.adminDeals'), icon: <Handshake className="h-4 w-4" />, id: 'admin-deals', active: activePage === 'admin-deals' },
+    { label: t('shell.adminBids'), icon: <Gavel className="h-4 w-4" />, id: 'admin-bids', active: activePage === 'admin-bids' },
     { label: t('shell.masterData'), icon: <Layers className="h-4 w-4" />, id: 'admin-master-data', active: activePage === 'admin-master-data' },
     { label: t('shell.support'), icon: <LifeBuoy className="h-4 w-4" />, id: 'admin-support', active: activePage === 'admin-support' },
     {

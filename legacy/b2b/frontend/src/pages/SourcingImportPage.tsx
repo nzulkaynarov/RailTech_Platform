@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Upload, FileSpreadsheet, Check } from 'lucide-react';
+import { Upload, FileSpreadsheet, Check, Download } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
@@ -11,17 +12,55 @@ import { ExcelUpload } from '@/components/Sourcing/ExcelUpload';
 import { PageShell } from './shared/PageShell';
 import type { Deal } from '@/api/crmApi';
 
+/**
+ * Parse the current URL hash for `deal=<id>` so that CreateDealDialog can
+ * deep-link straight into the import step with the new deal preselected.
+ */
+function readDealIdFromHash(): string {
+  if (typeof window === 'undefined') return '';
+  const raw = window.location.hash.startsWith('#')
+    ? window.location.hash.slice(1)
+    : window.location.hash;
+  const q = raw.includes('?') ? raw.slice(raw.indexOf('?') + 1) : '';
+  if (!q) return '';
+  const params = new URLSearchParams(q);
+  return params.get('deal') || '';
+}
+
 export function SourcingImportPage() {
   const { t } = useTranslation();
   const { data: deals } = useDeals();
-  const [selectedDealId, setSelectedDealId] = useState<string>('');
+  const [selectedDealId, setSelectedDealId] = useState<string>(() => readDealIdFromHash());
   const [importDone, setImportDone] = useState(false);
 
-  // Only show deals in stages where import makes sense
   const importableDeals = useMemo(() =>
     (deals ?? []).filter((d: Deal) =>
       ['DRAFT', 'SOURCING', 'CALCULATING'].includes(d.stage_code ?? '')
     ), [deals]);
+
+  // If the hash changes (user uses browser back/forward) keep the selection in sync.
+  useEffect(() => {
+    const onHashChange = () => {
+      const hashDeal = readDealIdFromHash();
+      if (hashDeal) {
+        setSelectedDealId(hashDeal);
+        setImportDone(false);
+      }
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
+  // Once deals load, if a hash-provided id is missing from the list (happens
+  // briefly right after creating a new deal), keep the value — SelectItem
+  // still renders correctly because Select just compares strings.
+
+  function downloadTemplate() {
+    // Backend: GET /api/v1/catalog/products/export-template/
+    // Serves an XLSX via Content-Disposition.
+    const url = `${window.location.origin}/api/v1/catalog/products/export-template/`;
+    window.open(url, '_blank', 'noopener');
+  }
 
   return (
     <PageShell
@@ -37,7 +76,10 @@ export function SourcingImportPage() {
               <Badge variant="outline" className="text-xs">1</Badge>
               {t('pages.sourcingImport.selectDeal')}
             </h3>
-            <Select value={selectedDealId} onValueChange={(v) => { setSelectedDealId(v); setImportDone(false); }}>
+            <Select
+              value={selectedDealId || undefined}
+              onValueChange={(v) => { setSelectedDealId(v); setImportDone(false); }}
+            >
               <SelectTrigger>
                 <SelectValue placeholder={t('pages.sourcingImport.selectDealPlaceholder')} />
               </SelectTrigger>
@@ -60,10 +102,22 @@ export function SourcingImportPage() {
         {selectedDealId && (
           <Card>
             <CardContent className="p-5 space-y-3">
-              <h3 className="text-sm font-semibold flex items-center gap-2">
-                <Badge variant="outline" className="text-xs">2</Badge>
-                {t('pages.sourcingImport.uploadFile')}
-              </h3>
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs">2</Badge>
+                  {t('pages.sourcingImport.uploadFile')}
+                </h3>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5 text-xs"
+                  onClick={downloadTemplate}
+                >
+                  <Download className="h-3.5 w-3.5" aria-hidden="true" />
+                  {t('pages.sourcingImport.downloadTemplate')}
+                </Button>
+              </div>
               <ExcelUpload
                 dealId={Number(selectedDealId)}
                 onUploadSuccess={() => setImportDone(true)}

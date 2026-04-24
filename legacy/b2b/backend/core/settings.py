@@ -168,6 +168,16 @@ UNFOLD = {
                 ],
             },
             {
+                "title": _("Инженерный доступ"),
+                "separator": True,
+                "items": [
+                    {"title": _("Django Groups"), "icon": "groups",
+                        "link": "/admin/auth/group/"},
+                    {"title": _("Django Permissions"), "icon": "key",
+                        "link": "/admin/auth/permission/"},
+                ],
+            },
+            {
                 "title": _("Импорт данных"),
                 "separator": True,
                 "items": [

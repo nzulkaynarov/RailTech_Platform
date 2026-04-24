@@ -80,6 +80,7 @@ class CategoryAdmin(ModelAdmin):
     autocomplete_fields = ["parent", "domain_type"]
     list_editable = ["sort_order", "is_active"]
     list_per_page = 30
+    list_select_related = ("domain_type", "parent")
 
     fieldsets = (
         (None, {
@@ -100,6 +101,7 @@ class EquipmentGroupAdmin(ModelAdmin):
     autocomplete_fields = ["parent"]
     readonly_fields = ("cached_path",)
     list_per_page = 30
+    list_select_related = ("parent",)
 
     fieldsets = (
         (None, {
@@ -139,6 +141,8 @@ class ProductAdmin(ReadOnlyInspectionMixin, ImportExportModelAdmin, ModelAdmin):
     inlines = [SupplierOfferInline, ProductImageInline, ProductDocumentInline]
     actions = ["publish_products"]
     list_per_page = 25
+    list_select_related = ("domain_type", "status", "category", "manufacturer")
+    show_full_result_count = False
     warn_unsaved_form = True
 
     @display(header=True, description=_("Товар"))
@@ -217,6 +221,8 @@ class SupplierOfferAdmin(ReadOnlyInspectionMixin, ImportExportModelAdmin, ModelA
     autocomplete_fields = ["product", "supplier", "currency", "delivery_basis", "stock_status"]
     readonly_fields = ("created_at", "updated_at")
     list_per_page = 25
+    list_select_related = ("product", "supplier", "currency", "stock_status")
+    show_full_result_count = False
     warn_unsaved_form = True
 
     @display(

@@ -154,6 +154,26 @@
       "amountExceedsBalance": "Amount exceeds balance due ({{balance}})"
     }
   },
+  "catalogImport": {
+    "title": "Catalog import",
+    "description": "Bulk-upload your product catalog to the PIM. Admin sees every import in the history.",
+    "template": "Excel template",
+    "templateHint": "Download the template — column headers must match, otherwise rows are skipped.",
+    "downloadTemplate": "Download template",
+    "uploadFile": "Upload file",
+    "pickFile": "Pick file",
+    "noFile": "No file selected",
+    "startImport": "Start import",
+    "queued": "Import task queued",
+    "progress": "Progress",
+    "successTitle": "Import finished",
+    "failed": "Import failed. Check the file and try again.",
+    "requirements": "File requirements",
+    "req1": "Format: .xlsx only",
+    "req2": "Required columns: name, sku, uom, domain_type",
+    "req3": "Optional: category, manufacturer, gost_drawing, description",
+    "req4": "Every import is logged — admin sees the owner of the task"
+  },
   "mySubscription": {
     "title": "My subscription",
     "description": "Plan, status and payment history for your company",
@@ -1286,6 +1306,7 @@
     "supplierBids": "Tender Bids",
     "leads": "Leads",
     "mySubscription": "My subscription",
+    "catalogImport": "Catalog import",
     "forgotPassword": "Reset password",
     "resetPassword": "New password"
   },
@@ -1514,10 +1535,12 @@
     "acts": "Acts",
     "fulfillments": "Fulfillment",
     "supplierBids": "Supplier bids",
+    "adminBids": "Supplier bids (admin)",
     "rfq": "RFQ",
     "leads": "Leads",
     "billing": "Billing",
     "mySubscription": "My subscription",
+    "catalogImport": "Catalog import",
     "integrations": "Integrations",
     "help": "Help",
     "b2bPlatform": "B2B Platform",
@@ -2367,6 +2390,7 @@
       "req2": "Required column: product name",
       "req3": "Optional: quantity, GOST, unit of measure",
       "req4": "Maximum 5000 rows per import",
+      "downloadTemplate": "Download Excel template",
       "dragDrop": "Drag and drop Excel file here",
       "orClick": "or click to upload",
       "lastImport": "Last import",
@@ -3099,7 +3123,8 @@
         "subscription_past_due": "Subscriptions past due",
         "subscription_expiring": "Subscriptions expiring",
         "invoice_overdue": "Overdue invoices",
-        "support_urgent": "Urgent tickets"
+        "support_urgent": "Urgent tickets",
+        "supplier_bid_pending": "Pending supplier bids"
       }
     },
     "activity": {
@@ -3157,6 +3182,47 @@
       "currencies": "Currencies",
       "units": "Units",
       "deliveryBases": "Bases"
+    }
+  },
+  "adminBids": {
+    "title": "Supplier bids",
+    "description": "All bids across all deals and companies. Admin-wide visibility + audit log.",
+    "searchPlaceholder": "Search by deal, supplier, notes",
+    "empty": "No bids found",
+    "notSubmitted": "Only SUBMITTED bids can be accepted/rejected",
+    "accepted": "Bid accepted",
+    "rejected": "Bid rejected",
+    "accept": "Accept",
+    "reject": "Reject",
+    "items": "Items",
+    "notes": "Notes",
+    "detailTitle": "Bid #{{id}}",
+    "stats": {
+      "total": "Total",
+      "submitted": "Submitted",
+      "accepted": "Accepted",
+      "rejected": "Rejected"
+    },
+    "table": {
+      "id": "ID",
+      "deal": "Deal",
+      "supplier": "Supplier",
+      "status": "Status",
+      "total": "Total",
+      "leadDays": "Lead (days)",
+      "submittedAt": "Submitted"
+    },
+    "detailTab": {
+      "overview": "Overview"
+    },
+    "confirmAcceptTitle": "Accept supplier bid?",
+    "confirmAcceptDescription": "Bid #{{id}} from {{supplier}} will be accepted. Competing SUBMITTED bids are auto-rejected and the deal moves to CALCULATING.",
+    "confirmRejectTitle": "Reject bid?",
+    "confirmRejectDescription": "Bid #{{id}} from {{supplier}} will be rejected. Reason is required and will be written to the audit log.",
+    "rejectTemplates": {
+      "price": "Price exceeds budget",
+      "leadTime": "Lead time unacceptable",
+      "other": "Other (specify in comment)"
     }
   },
   "adminDeals": {

@@ -62,4 +62,23 @@ export const sourcingApi = {
   deleteAttachment: async (id: number): Promise<void> => {
     await apiClient.delete(`sourcing/attachments/${id}/`);
   },
+  importCatalog: async (file: File): Promise<{ task_id: string; status: string }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await apiClient.post<{ task_id: string; status: string }>(
+      'sourcing/import-catalog/',
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    );
+    return response.data;
+  },
+  getImportStatus: async (taskId: string) => {
+    const response = await apiClient.get<{
+      task_id: string;
+      status: string;
+      result?: unknown;
+      meta?: { current?: number; total?: number };
+    }>(`sourcing/import-status/${taskId}/`);
+    return response.data;
+  },
 };

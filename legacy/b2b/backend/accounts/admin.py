@@ -22,13 +22,63 @@ admin.site.unregister(Group)
 
 @admin.register(Group)
 class GroupAdmin(ModelAdmin):
+    """Django auth Group — оставлен для инженерной инспекции.
+
+    В RailTech бизнес-RBAC живёт в SystemRole + CompanyMember.role (ADR-0002),
+    Django Groups НЕ используются для проверки прав в services.py. Этот экран —
+    для DBA, который хочет понять, какие Django-разрешения выданы группе.
+    """
+
+    list_display = ("name", "permissions_count")
     search_fields = ("name",)
+    filter_horizontal = ("permissions",)
+    list_per_page = 25
+
+    @display(description=_("Разрешений"))
+    def permissions_count(self, obj):
+        return obj.permissions.count()
+
+    def get_queryset(self, request):
+        # Аннотация через raw SQL была бы оптимальнее, но Group.permissions.count()
+        # вызывается только при рендере ~25 строк — дешевле, чем subquery.
+        return super().get_queryset(request).prefetch_related("permissions")
 
 
 @admin.register(Permission)
 class PermissionAdmin(ModelAdmin):
-    search_fields = ("name", "codename")
+    """Django Permission — 4 авто-разрешения на каждый ContentType (add/change/delete/view).
+
+    В RailTech НЕ используется для проверки бизнес-прав (услуги проверяют
+    is_member_of / role.code). Этот экран нужен только чтобы понять, что Django
+    знает о каждой модели — отладка, не повседневное использование.
+    """
+
+    list_display = ("permission_name", "app_label_col", "model_col", "codename")
+    list_filter = ("content_type__app_label", "content_type__model")
+    list_filter_submit = True
+    search_fields = ("name", "codename", "content_type__app_label", "content_type__model")
+    list_select_related = ("content_type",)
     list_per_page = 50
+    show_full_result_count = False
+
+    @display(description=_("Разрешение"), ordering="name")
+    def permission_name(self, obj):
+        # Bypass Permission.__str__ which dereferences content_type and would
+        # crash on any orphaned FK; just return the name field directly.
+        return obj.name
+
+    @display(description=_("Приложение"), ordering="content_type__app_label")
+    def app_label_col(self, obj):
+        ct = getattr(obj, "content_type", None)
+        return ct.app_label if ct else "—"
+
+    # Name is `model_col`, NOT `model` — ModelAdmin.model already shadows any
+    # list_display entry called "model" (it's the admin's bound model class),
+    # and Django's lookup_field resolves to the class, not to this callable.
+    @display(description=_("Модель"), ordering="content_type__model")
+    def model_col(self, obj):
+        ct = getattr(obj, "content_type", None)
+        return ct.model if ct else "—"
 
 
 # ────────────────────────────────────────────
@@ -81,6 +131,7 @@ class UserAdmin(ImportExportModelAdmin, BaseUserAdmin, ModelAdmin):
     list_filter_submit = True
     search_fields = ("email", "first_name", "last_name", "phone", "username")
     list_per_page = 25
+    list_select_related = ("role",)
     inlines = [CompanyMemberInline]
     warn_unsaved_form = True
 
@@ -139,12 +190,17 @@ class CompanyAdmin(ReadOnlyInspectionMixin, ImportExportModelAdmin, ModelAdmin):
     list_filter_submit = True
     search_fields = ("name", "inn")
     list_per_page = 25
+    list_select_related = ("verification_status", "country")
     inlines = [CompanyMemberInline, KYCDocumentInline]
     autocomplete_fields = ["verification_status", "country", "types"]
     # Business actions moved to React Admin — this action kept ONLY as emergency
     # engineering escape-hatch (superuser-only). Use /admin/kyc/ in React SPA instead.
     actions = ["verify_kyc"]
     warn_unsaved_form = True
+
+    def get_queryset(self, request):
+        # Prefetch M2M `types` so types_display() doesn't issue 1 query per row.
+        return super().get_queryset(request).prefetch_related("types")
 
     @display(
         description=_("Статус KYC"),
@@ -215,6 +271,8 @@ class KYCDocumentAdmin(ModelAdmin):
     autocomplete_fields = ["company", "doc_type"]
     readonly_fields = ["uploaded_at", "original_filename"]
     list_per_page = 25
+    list_select_related = ("company", "doc_type")
+    show_full_result_count = False
 
     fieldsets = (
         (None, {
@@ -240,6 +298,7 @@ class CompanyRoleApplicationAdmin(ReadOnlyInspectionMixin, ModelAdmin):
     autocomplete_fields = ["company", "requested_type", "submitted_by", "reviewed_by"]
     readonly_fields = ("created_at", "updated_at")
     list_per_page = 25
+    list_select_related = ("company", "requested_type", "submitted_by", "reviewed_by")
     actions = ["approve_application", "reject_application"]
     warn_unsaved_form = True
 
@@ -308,6 +367,7 @@ class SupplierSubscriptionAdmin(ReadOnlyInspectionMixin, ModelAdmin):
     autocomplete_fields = ["company", "currency"]
     readonly_fields = ("created_at", "updated_at")
     list_per_page = 25
+    list_select_related = ("company", "currency")
     actions = ["activate_subscription", "suspend_subscription"]
     warn_unsaved_form = True
 

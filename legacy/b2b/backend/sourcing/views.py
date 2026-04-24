@@ -10,7 +10,8 @@ from rest_framework.throttling import ScopedRateThrottle
 from celery.result import AsyncResult
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResponse
 
-from core.permissions import IsPlatformAdmin
+# IsPlatformAdmin previously required here — now inline member-check covers
+# the seller self-serve flow. Keeping the import removed for cleanliness.
 from .models import ImportTask
 from .tasks import process_excel_import, process_catalog_import
 
@@ -151,13 +152,38 @@ class ExcelImportView(APIView):
     tags=['Sourcing'],
 )
 class CatalogImportView(APIView):
-    """Endpoint for bulk supplier catalog imports (staff only)."""
+    """Bulk supplier catalog import.
+
+    Accessible to (a) platform admin and (b) any authenticated user who is an
+    active member of a SUPPLIER/MANUFACTURER company with `can_sell=True`.
+    Task actor is captured in ImportTask.owner so admin can trace who uploaded
+    what.
+    """
     parser_classes = [MultiPartParser]
-    permission_classes = [IsAuthenticated, IsPlatformAdmin]
+    permission_classes = [IsAuthenticated]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = 'import_upload'
 
     def post(self, request):
+        # Authorisation: allow platform admin OR a member with can_sell in
+        # at least one SUPPLIER/MANUFACTURER company.
+        user = request.user
+        is_admin = getattr(user, 'is_platform_admin', False) or user.is_superuser
+        if not is_admin:
+            # At least one active can_sell membership in a seller/mfg company
+            from accounts.models import CompanyMember
+            has_seller_capability = CompanyMember.objects.filter(
+                user=user,
+                is_active=True,
+                can_sell=True,
+                company__types__code__in=['SUPPLIER', 'MANUFACTURER'],
+            ).exists()
+            if not has_seller_capability:
+                return Response(
+                    {'error': 'NOT_A_SELLER_MEMBER'},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
         file_obj = request.FILES.get('file')
         if not file_obj:
             return Response(

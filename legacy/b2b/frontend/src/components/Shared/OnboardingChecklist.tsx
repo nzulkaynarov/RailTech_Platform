@@ -17,6 +17,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useUserStore } from '@/store/userStore';
 import { useMySubscription } from '@/hooks/useAccounts';
 import { useDeals } from '@/hooks/useCRM';
+import { useSupplierBids } from '@/hooks/useBidding';
 import { cn } from '@/lib/utils';
 
 interface OnboardingChecklistProps {
@@ -57,6 +58,7 @@ export function OnboardingChecklist({ onNavigate }: OnboardingChecklistProps) {
   const activeStatus = useUserStore((s) => s.activeStatus);
   const { data: sub } = useMySubscription();
   const { data: deals = [] } = useDeals();
+  const { data: bids = [] } = useSupplierBids();
 
   const isSeller = activeStatus === 'SELLER' || activeStatus === 'MANUFACTURER';
   const isBuyer = activeStatus === 'BUYER';
@@ -71,6 +73,7 @@ export function OnboardingChecklist({ onNavigate }: OnboardingChecklistProps) {
   const profileDone = Boolean(user?.first_name && user?.last_name);
   const hasSubscription = Boolean(sub && (sub.status === 'ACTIVE' || sub.status === 'TRIAL'));
   const hasDeal = deals.length > 0;
+  const hasBid = bids.length > 0;
 
   const steps: Step[] = useMemo(() => {
     const all: Step[] = [
@@ -117,13 +120,13 @@ export function OnboardingChecklist({ onNavigate }: OnboardingChecklistProps) {
         label: t('onboarding.steps.firstBid.label'),
         hint: t('onboarding.steps.firstBid.hint'),
         icon: Rocket,
-        done: hasDeal,
-        action: !hasDeal ? { label: t('onboarding.steps.firstBid.cta'), target: 'supplier-bids' } : undefined,
+        done: hasBid,
+        action: !hasBid ? { label: t('onboarding.steps.firstBid.cta'), target: 'supplier-bids' } : undefined,
         appliesTo: 'seller',
       },
     ];
     return all.filter((s) => s.appliesTo === 'all' || (s.appliesTo === 'seller' && isSeller) || (s.appliesTo === 'buyer' && isBuyer));
-  }, [profileDone, kycDone, kycSubmitted, hasSubscription, hasDeal, isSeller, isBuyer, t]);
+  }, [profileDone, kycDone, kycSubmitted, hasSubscription, hasDeal, hasBid, isSeller, isBuyer, t]);
 
   const doneCount = steps.filter((s) => s.done).length;
   const total = steps.length;

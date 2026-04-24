@@ -34,25 +34,41 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
         if (items.length === 0) return;
         setSubmitting(true);
         try {
+            // 1. Create the Deal in DRAFT with a human-readable summary in notes
+            //    (kept for historical context even though every line is also
+            //    stored as a structured QuoteItem below).
             const deal = await crmApi.createDeal({
                 title: `${t('cart.requestFrom')} ${new Date().toLocaleDateString()}`,
-                // Include SKU + quantity per line so the sales manager can match
-                // items without re-asking the buyer. Note: QuoteItems are
-                // created later by the sales manager from this spec — no
-                // silent data loss because each line is preserved in notes.
                 notes: items
                     .map((item) => `• ${item.product.sku ?? '—'} · ${item.product.name} · ×${item.quantity}`)
                     .join('\n'),
             });
-            if (deal?.id) {
-                toast.success(t('cart.requestCreated', { id: deal.id }));
-                // Route the buyer into the newly created request so they can
-                // see its status and track progress — avoids "submitted → nothing
-                // happens" dead-end that confused the pilot tester.
-                if (onNavigate) {
-                    setActiveDeal(deal.id);
-                    onNavigate('request-detail');
-                }
+            if (!deal?.id) throw new Error('DEAL_CREATE_FAILED');
+
+            // 2. Create an initial draft Quote on the deal — QuoteItems need it
+            //    as FK. This is the same pattern used by the Excel import task.
+            const quote = await crmApi.createQuote({ deal: deal.id });
+
+            // 3. Create structured QuoteItems for every cart line so the
+            //    sales manager never has to re-type them and smart-match
+            //    works out-of-the-box.
+            await Promise.all(
+                items.map((item) =>
+                    crmApi.createQuoteItem({
+                        quote: quote.id,
+                        imported_raw_name: item.product.name,
+                        quantity: item.quantity,
+                        // Note: backend allows product via update; createQuoteItem
+                        // payload here doesn't include product yet — extend API
+                        // if product FK must be carried through on create.
+                    }),
+                ),
+            );
+
+            toast.success(t('cart.requestCreated', { id: deal.id }));
+            if (onNavigate) {
+                setActiveDeal(deal.id);
+                onNavigate('request-detail');
             }
             clearCart();
             closeCart();

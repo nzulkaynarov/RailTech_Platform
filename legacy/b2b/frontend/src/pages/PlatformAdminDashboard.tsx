@@ -274,6 +274,7 @@ export default function PlatformAdminDashboard({ onNavigate }: PlatformAdminDash
       subscription_expiring: 'admin-subscriptions',
       invoice_overdue: 'admin-deals',
       support_urgent: 'admin-support',
+      supplier_bid_pending: 'admin-bids',
     };
     onNavigate(map[item.queue_type] ?? 'admin-companies');
   }

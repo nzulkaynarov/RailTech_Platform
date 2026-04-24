@@ -8,7 +8,7 @@ B2B marketplace for railway equipment (Uzbekistan). Monorepo: Django backend + R
 
 ## Tech Stack
 
-- **Backend:** Django 5.1, DRF, Daphne (ASGI), Channels (WebSocket), Celery + Redis, PostgreSQL (Neon Cloud)
+- **Backend:** Django 6.0, DRF, Daphne (ASGI), Channels (WebSocket), Celery + Redis, PostgreSQL (Neon Cloud)
 - **Frontend:** React 18, TypeScript 5.6, Vite 7, Tailwind CSS 4, shadcn/ui, Zustand 5, React Query 5, i18next (RU/EN)
 - **Infra:** Docker Compose (dev), Nginx (prod), MinIO (S3), GitHub Actions CI
 - **Auth:** JWT (simplejwt) — access 30min, refresh 7d, rotation enabled
@@ -186,10 +186,16 @@ make clean               # remove all containers, volumes, cache (DESTRUCTIVE)
 
 1. User opens app → `LoginPage` (or `/register` → `KYCRegistrationForm`)
 2. Registration: `POST /api/v1/auth/register/` → creates `CustomUser(is_active=False)` + sends email
-3. In DEBUG mode, email goes to **backend container logs** (`docker compose logs backend`)
+3. In DEBUG mode, email prints to **backend container logs** (`docker compose logs backend`). **Every email (DEBUG and prod) is also persisted in `EmailLog`** — view at `/admin/notifications/emaillog/` (Unfold → Аудит и мониторинг → Журнал email). Search by user email, filter by template / channel / status (SENT/FAILED)
 4. User clicks link `/setup-password?uid=...&token=...` → `PasswordSetupPage` → sets password → `is_active=True`
 5. Admin approves company via Django admin at `/admin/` (Unfold UI) → action "Подтвердить KYC (L2)"
 6. User logs in with JWT → `LoginPage` → main app
+
+**Email delivery** (as of 2026-04-23):
+
+- Single entry point: `notifications.emails.send_templated_email(template, context, to, channel, user)`
+- Three channels in `settings.EMAIL_CHANNELS`: `transactional` (registration/KYC/invites), `marketing` (reserved), `system` (ops alerts). Each channel can have own SMTP/ESP via `EMAIL_TX_* / EMAIL_MKT_* / EMAIL_SYS_*` env vars; default = single SMTP from block 7 of `.env.example`
+- Templates: `backend/templates/emails/{name}.{html,txt,_subject.txt}` — edit text/styling without touching code. Current templates: `setup_password`, `invite_member`, `kyc_verified`, `role_application_approved`, `role_application_rejected`, `reset_password`
 
 **Superadmin account:**
 - Created via `python manage.py init_superadmin` using `SUPERADMIN_EMAIL` / `SUPERADMIN_PASSWORD` from `.env`

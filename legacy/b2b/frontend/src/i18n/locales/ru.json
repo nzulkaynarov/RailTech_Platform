@@ -154,6 +154,26 @@
       "amountExceedsBalance": "Сумма превышает остаток ({{balance}})"
     }
   },
+  "catalogImport": {
+    "title": "Импорт каталога",
+    "description": "Массовая загрузка вашего каталога товаров в PIM. Админ видит историю импортов.",
+    "template": "Шаблон Excel",
+    "templateHint": "Скачайте шаблон — заголовки колонок должны совпадать, иначе строки будут пропущены.",
+    "downloadTemplate": "Скачать шаблон",
+    "uploadFile": "Загрузите файл",
+    "pickFile": "Выбрать файл",
+    "noFile": "Файл не выбран",
+    "startImport": "Начать импорт",
+    "queued": "Задача импорта поставлена в очередь",
+    "progress": "Прогресс",
+    "successTitle": "Импорт завершён",
+    "failed": "Импорт завершился с ошибкой. Проверьте файл и попробуйте снова.",
+    "requirements": "Требования к файлу",
+    "req1": "Формат: только .xlsx",
+    "req2": "Обязательные колонки: name, sku, uom, domain_type",
+    "req3": "Опционально: category, manufacturer, gost_drawing, description",
+    "req4": "Каждый импорт логируется, admin видит владельца задачи"
+  },
   "mySubscription": {
     "title": "Моя подписка",
     "description": "План, статус и история платежей вашей компании",
@@ -1290,6 +1310,7 @@
     "supplierBids": "Тендер-предложения",
     "leads": "Лиды",
     "mySubscription": "Моя подписка",
+    "catalogImport": "Импорт каталога",
     "forgotPassword": "Сброс пароля",
     "resetPassword": "Новый пароль"
   },
@@ -1518,10 +1539,12 @@
     "acts": "Акты",
     "fulfillments": "Исполнение",
     "supplierBids": "Тендер-предложения",
+    "adminBids": "Тендер-предложения (админ)",
     "rfq": "RFQ",
     "leads": "Лиды",
     "billing": "Биллинг",
     "mySubscription": "Моя подписка",
+    "catalogImport": "Импорт каталога",
     "integrations": "Интеграции",
     "help": "Помощь",
     "b2bPlatform": "B2B Платформа",
@@ -2371,6 +2394,7 @@
       "req2": "Обязательная колонка: наименование товара",
       "req3": "Опционально: количество, ГОСТ, единица измерения",
       "req4": "Максимум 5000 строк за один импорт",
+      "downloadTemplate": "Скачать шаблон Excel",
       "dragDrop": "Перетащите Excel файл сюда",
       "orClick": "или нажмите для загрузки",
       "lastImport": "Последний импорт",
@@ -3103,7 +3127,8 @@
         "subscription_past_due": "Просроченные подписки",
         "subscription_expiring": "Истекают подписки",
         "invoice_overdue": "Просроченные счета",
-        "support_urgent": "Срочные тикеты"
+        "support_urgent": "Срочные тикеты",
+        "supplier_bid_pending": "Предложения поставщиков (ожидают)"
       }
     },
     "activity": {
@@ -3161,6 +3186,47 @@
       "currencies": "Валюты",
       "units": "Единицы",
       "deliveryBases": "Базисы"
+    }
+  },
+  "adminBids": {
+    "title": "Тендер-предложения поставщиков",
+    "description": "Все bids по сделкам всех компаний. Видимость и аудит для platform admin.",
+    "searchPlaceholder": "Поиск по сделке, поставщику, заметкам",
+    "empty": "Предложений не найдено",
+    "notSubmitted": "Можно принимать/отклонять только предложения в статусе SUBMITTED",
+    "accepted": "Предложение принято",
+    "rejected": "Предложение отклонено",
+    "accept": "Принять",
+    "reject": "Отклонить",
+    "items": "Позиции",
+    "notes": "Комментарий",
+    "detailTitle": "Bid #{{id}}",
+    "stats": {
+      "total": "Всего",
+      "submitted": "Подано",
+      "accepted": "Принято",
+      "rejected": "Отклонено"
+    },
+    "table": {
+      "id": "ID",
+      "deal": "Сделка",
+      "supplier": "Поставщик",
+      "status": "Статус",
+      "total": "Сумма",
+      "leadDays": "Срок (дней)",
+      "submittedAt": "Подано"
+    },
+    "detailTab": {
+      "overview": "Обзор"
+    },
+    "confirmAcceptTitle": "Принять предложение поставщика?",
+    "confirmAcceptDescription": "Bid #{{id}} от {{supplier}} будет принят. Остальные SUBMITTED-предложения по этой сделке автоматически отклонятся, а стадия сделки перейдёт в CALCULATING.",
+    "confirmRejectTitle": "Отклонить предложение?",
+    "confirmRejectDescription": "Bid #{{id}} от {{supplier}} будет отклонён. Причина обязательна и попадёт в аудит.",
+    "rejectTemplates": {
+      "price": "Цена выше бюджета",
+      "leadTime": "Неприемлемый срок поставки",
+      "other": "Другое (уточнить в комментарии)"
     }
   },
   "adminDeals": {

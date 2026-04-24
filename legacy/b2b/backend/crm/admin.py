@@ -66,6 +66,7 @@ class DealAdmin(ReadOnlyInspectionMixin, ModelAdmin):
     inlines = [QuoteInline]
     actions = ["mark_closed_lost"]
     list_per_page = 25
+    list_select_related = ("company", "stage", "manager")
     warn_unsaved_form = True
 
     @display(header=True, description=_("Сделка"))
@@ -131,6 +132,7 @@ class QuoteAdmin(ModelAdmin):
         "frozen_at", "approved_at", "created_at", "updated_at",
     ]
     list_per_page = 25
+    list_select_related = ("deal", "status", "prepared_by")
     warn_unsaved_form = True
 
     @display(
@@ -237,6 +239,8 @@ class MessageAdmin(ReadOnlyInspectionMixin, ModelAdmin):
     search_fields = ("text", "sender__email", "deal__title", "deal__company__name")
     autocomplete_fields = ["deal", "sender"]
     list_per_page = 50
+    list_select_related = ("sender", "deal")
+    show_full_result_count = False
     actions = ["archive_selected"]
 
     fieldsets = (
@@ -305,6 +309,8 @@ class ActivityLogAdmin(ModelAdmin):
     search_fields = ("action", "detail", "user__email")
     readonly_fields = ("action", "detail", "user", "level", "timestamp")
     list_per_page = 50
+    list_select_related = ("user",)
+    show_full_result_count = False
 
     @display(
         description=_("Уровень"),
@@ -353,6 +359,8 @@ class QuoteItemHistoryAdmin(ModelAdmin):
         "change_reason", "created_at",
     )
     list_per_page = 30
+    list_select_related = ("quote_item", "quote_item__product", "changed_by")
+    show_full_result_count = False
 
     fieldsets = (
         (None, {
@@ -426,6 +434,7 @@ class ContractAdmin(ReadOnlyInspectionMixin, ModelAdmin):
         "created_by", "created_at", "updated_at",
     )
     list_per_page = 25
+    list_select_related = ("deal", "deal__company")
 
     @display(
         description=_("Статус"),
@@ -454,6 +463,7 @@ class InvoiceAdmin(ReadOnlyInspectionMixin, ModelAdmin):
     )
     inlines = [InvoiceItemInline, PaymentInline]
     list_per_page = 25
+    list_select_related = ("deal", "deal__company")
 
     @display(
         description=_("Статус"),
@@ -478,6 +488,7 @@ class PaymentAdmin(ReadOnlyInspectionMixin, ModelAdmin):
     autocomplete_fields = ("invoice", "recorded_by")
     readonly_fields = ("recorded_by", "created_at", "proof_file")
     list_per_page = 25
+    list_select_related = ("invoice", "recorded_by")
 
 
 @admin.register(Act)
@@ -492,6 +503,7 @@ class ActAdmin(ReadOnlyInspectionMixin, ModelAdmin):
         "created_by", "created_at", "updated_at",
     )
     list_per_page = 25
+    list_select_related = ("deal", "deal__company")
 
     @display(
         description=_("Статус"),
@@ -515,6 +527,7 @@ class FulfillmentAdmin(ReadOnlyInspectionMixin, ModelAdmin):
     autocomplete_fields = ("deal", "contract")
     readonly_fields = ("created_at", "updated_at")
     list_per_page = 25
+    list_select_related = ("deal", "deal__company")
 
     @display(
         description=_("Статус"),
@@ -541,6 +554,7 @@ class SupplierBidAdmin(ReadOnlyInspectionMixin, ModelAdmin):
     readonly_fields = ("submitted_at", "accepted_at", "created_at", "updated_at")
     inlines = [SupplierBidItemInline]
     list_per_page = 25
+    list_select_related = ("deal", "supplier")
 
     @display(
         description=_("Статус"),

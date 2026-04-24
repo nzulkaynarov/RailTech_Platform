@@ -27,6 +27,8 @@ class NotificationAdmin(ReadOnlyInspectionMixin, ModelAdmin):
     readonly_fields = ("created_at",)
     actions = ["mark_as_read"]
     list_per_page = 30
+    list_select_related = ("user", "type")
+    show_full_result_count = False
 
     @display(
         description=_("Прочитано"),
@@ -68,6 +70,8 @@ class EmailLogAdmin(ReadOnlyInspectionMixin, ModelAdmin):
     autocomplete_fields = ["user"]
     date_hierarchy = "created_at"
     list_per_page = 50
+    list_select_related = ("user",)
+    show_full_result_count = False
     readonly_fields = (
         "template", "channel", "subject", "from_email", "to_emails",
         "user", "body_text", "body_html_preview", "status", "error", "created_at",

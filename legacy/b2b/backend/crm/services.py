@@ -1175,6 +1175,34 @@ def submit_supplier_bid(
         bid.currency_id = currency_id
     bid.notes = notes
     bid.save()
+
+    # Audit — log to BOTH the bid itself and the parent deal so admin timeline
+    # on a deal surfaces supplier actions.
+    from core.audit import log_admin_action
+    snapshot = {
+        'status': bid.status,
+        'total_amount': str(bid.total_amount),
+        'lead_time_days': bid.lead_time_days,
+        'items_count': bid.items.count(),
+    }
+    log_admin_action(
+        entity_type='supplier_bid',
+        entity_id=bid.id,
+        action='SupplierBid submitted',
+        detail=f"Deal #{deal_id} · supplier #{supplier_id} · {bid.total_amount}",
+        actor=submitted_by,
+        after=snapshot,
+        level='INFO',
+    )
+    log_admin_action(
+        entity_type='deal',
+        entity_id=deal_id,
+        action=f'SupplierBid #{bid.id} submitted',
+        detail=f"supplier #{supplier_id} · {bid.total_amount}",
+        actor=submitted_by,
+        after=snapshot,
+        level='INFO',
+    )
     return bid, None
 
 
@@ -1187,14 +1215,36 @@ def accept_supplier_bid(
     bid = SupplierBid.objects.select_for_update().select_related('deal').get(pk=bid_id)
     if bid.status != 'SUBMITTED':
         return None, 'BID_ACCEPT_NOT_ALLOWED'
+    before_status = bid.status
     bid.status = 'ACCEPTED'
     bid.accepted_at = timezone.now()
     bid.save(update_fields=['status', 'accepted_at', 'updated_at'])
     # Reject competitors
-    SupplierBid.objects.filter(deal=bid.deal).exclude(pk=bid.pk).filter(
+    rejected_count = SupplierBid.objects.filter(deal=bid.deal).exclude(pk=bid.pk).filter(
         status='SUBMITTED',
     ).update(status='REJECTED')
     transition_deal_stage(bid.deal, 'CALCULATING', actor=actor, reason=f"Принят bid #{bid.id}")
+
+    from core.audit import log_admin_action
+    log_admin_action(
+        entity_type='supplier_bid',
+        entity_id=bid.id,
+        action='SupplierBid accepted',
+        detail=f"Deal #{bid.deal_id} · rejected {rejected_count} competing bid(s)",
+        actor=actor,
+        before={'status': before_status},
+        after={'status': 'ACCEPTED'},
+        level='SUCCESS',
+    )
+    log_admin_action(
+        entity_type='deal',
+        entity_id=bid.deal_id,
+        action=f'SupplierBid #{bid.id} accepted',
+        detail=f"competing bids auto-rejected: {rejected_count}",
+        actor=actor,
+        after={'status': 'ACCEPTED'},
+        level='SUCCESS',
+    )
     return bid, None
 
 
@@ -1206,10 +1256,33 @@ def reject_supplier_bid(
     bid = SupplierBid.objects.select_for_update().get(pk=bid_id)
     if bid.status not in {'SUBMITTED', 'DRAFT'}:
         return None, 'BID_REJECT_NOT_ALLOWED'
+    before_status = bid.status
     bid.status = 'REJECTED'
     if reason:
         bid.notes = f"{bid.notes}\nОтклонено: {reason}".strip()
     bid.save(update_fields=['status', 'notes', 'updated_at'])
+
+    from core.audit import log_admin_action
+    log_admin_action(
+        entity_type='supplier_bid',
+        entity_id=bid.id,
+        action='SupplierBid rejected',
+        detail=f"Deal #{bid.deal_id} · supplier #{bid.supplier_id}",
+        actor=actor,
+        reason=reason,
+        before={'status': before_status},
+        after={'status': 'REJECTED'},
+        level='WARNING',
+    )
+    log_admin_action(
+        entity_type='deal',
+        entity_id=bid.deal_id,
+        action=f'SupplierBid #{bid.id} rejected',
+        detail=f"supplier #{bid.supplier_id}",
+        actor=actor,
+        reason=reason,
+        level='WARNING',
+    )
     return bid, None
 
 
@@ -1278,5 +1351,19 @@ def send_deal_message(user: CustomUser, deal: Deal, text: str) -> Tuple[Optional
         deal=deal,
         sender=user,
         text=clean[:MAX_MESSAGE_LENGTH],
+    )
+
+    # Audit: attach a short entry to the deal timeline so admin sees
+    # who said what, without exposing the full chat log. Keep the detail
+    # short; the full message stays in crm_message.
+    from core.audit import log_admin_action
+    preview = clean[:120] + ('…' if len(clean) > 120 else '')
+    log_admin_action(
+        entity_type='deal',
+        entity_id=deal.id,
+        action='Сообщение в чате сделки',
+        detail=preview,
+        actor=user,
+        level='INFO',
     )
     return message, None

@@ -59,6 +59,8 @@ const FulfillmentsPage = lazy(() => import('./pages/FulfillmentsPage'));
 const SupplierBidsPage = lazy(() => import('./pages/SupplierBidsPage'));
 const LeadsPage = lazy(() => import('./pages/LeadsPage'));
 const MySubscriptionPage = lazy(() => import('./pages/MySubscriptionPage'));
+const AdminSupplierBidsPage = lazy(() => import('./pages/AdminSupplierBidsPage'));
+const CatalogImportPage = lazy(() => import('./pages/CatalogImportPage'));
 
 import { LoadingSkeleton } from './components/LoadingSkeleton';
 
@@ -92,6 +94,7 @@ type Page =
   | { type: 'admin-deals' }
   | { type: 'admin-master-data' }
   | { type: 'admin-support' }
+  | { type: 'admin-bids' }
   | { type: 'contracts' }
   | { type: 'invoices' }
   | { type: 'payments' }
@@ -100,6 +103,7 @@ type Page =
   | { type: 'supplier-bids' }
   | { type: 'leads' }
   | { type: 'my-subscription' }
+  | { type: 'catalog-import' }
 ;
 
 /** Parse URL path and query params for auth routes */
@@ -347,8 +351,9 @@ function MainApp() {
       'admin-users', 'admin-kyc', 'admin-subscriptions', 'admin-role-apps',
       'admin-catalog', 'admin-categories', 'admin-equipment-groups', 'admin-offers',
       'admin-companies', 'admin-deals', 'admin-master-data', 'admin-support',
+      'admin-bids',
       'contracts', 'invoices', 'payments', 'acts', 'fulfillments',
-      'supplier-bids', 'leads', 'my-subscription',
+      'supplier-bids', 'leads', 'my-subscription', 'catalog-import',
     ];
     if (validTypes.includes(target)) {
       // Role guard: admin pages require ADMIN role
@@ -499,6 +504,9 @@ function MainApp() {
     case 'admin-support':
       content = <AdminSupportPage />;
       break;
+    case 'admin-bids':
+      content = <AdminSupplierBidsPage />;
+      break;
     case 'contracts':
       content = <ContractsPage />;
       break;
@@ -522,6 +530,9 @@ function MainApp() {
       break;
     case 'my-subscription':
       content = <MySubscriptionPage />;
+      break;
+    case 'catalog-import':
+      content = <CatalogImportPage />;
       break;
     default:
       content = <Dashboard onProductClick={handleProductClick} onNavigate={handleNavigate} />;

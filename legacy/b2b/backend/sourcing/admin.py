@@ -16,6 +16,10 @@ class AttachmentAdmin(ReadOnlyInspectionMixin, ModelAdmin):
     readonly_fields = ("uploaded_at",)
     autocomplete_fields = ["uploaded_by", "product", "deal", "message", "quote", "company"]
     list_per_page = 30
+    # parent_entity() reads all 5 FK refs to pick the non-null one — без select_related
+    # это 5 SELECT на строку.
+    list_select_related = ("uploaded_by", "product", "deal", "quote", "company", "message")
+    show_full_result_count = False
 
     @display(description=_("Привязка"))
     def parent_entity(self, obj):
@@ -52,6 +56,7 @@ class DomainKeywordAdmin(ModelAdmin):
     search_fields = ("keyword",)
     autocomplete_fields = ["domain_type"]
     list_per_page = 30
+    list_select_related = ("domain_type",)
 
     fieldsets = (
         (None, {"fields": (("keyword", "domain_type"),)}),
@@ -66,6 +71,8 @@ class ImportTaskAdmin(ModelAdmin):
     search_fields = ("celery_task_id", "owner__email", "deal__title")
     readonly_fields = ("celery_task_id", "task_type", "owner", "deal", "created_at")
     list_per_page = 30
+    list_select_related = ("owner", "deal")
+    show_full_result_count = False
 
     @display(
         description=_("Тип"),

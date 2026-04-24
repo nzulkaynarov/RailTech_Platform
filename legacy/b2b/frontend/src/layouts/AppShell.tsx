@@ -137,6 +137,7 @@ function getManufacturerNavigation(activePage: string, role: UserRole, t: TFn): 
         { label: t('shell.products'), id: 'products', active: activePage === 'products' },
         { label: t('shell.categories'), id: 'categories', active: activePage === 'categories' },
         { label: t('shell.equipmentGroups'), id: 'equipment-groups', active: activePage === 'equipment-groups' },
+        { label: t('shell.catalogImport'), id: 'catalog-import', active: activePage === 'catalog-import' },
       ],
     },
     // CRIT-3: MFG needs Excel Import the same way as SELLER.
@@ -183,6 +184,7 @@ function getSellerNavigation(activePage: string, role: UserRole, t: TFn): NavIte
         { label: t('shell.nomenclature'), id: 'products', active: activePage === 'products' },
         { label: t('shell.categories'), id: 'categories', active: activePage === 'categories' },
         { label: t('shell.equipmentGroups'), id: 'equipment-groups', active: activePage === 'equipment-groups' },
+        { label: t('shell.catalogImport'), id: 'catalog-import', active: activePage === 'catalog-import' },
       ],
     },
     {

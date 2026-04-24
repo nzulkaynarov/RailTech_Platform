@@ -1,11 +1,19 @@
 import json
 
+from django.core.cache import cache
 from django.core.serializers.json import DjangoJSONEncoder
+from django.utils import translation
 from django.utils.translation import gettext_lazy as _
 from django.db.models import Sum, Count, Q
 
 from accounts.models import Company, CompanyRoleApplication, CustomUser
 from crm.models import Deal, Lead, Quote, QuoteItem
+
+# Dashboard payload is recomputed every DASHBOARD_CACHE_TTL seconds.
+# 5 minutes: fresh-enough for KPI read from Ops, avoids hammering Neon on every
+# /admin/ page load (every click counts the same aggregates otherwise).
+DASHBOARD_CACHE_TTL = 300
+DASHBOARD_CACHE_KEY_PREFIX = "admin:dashboard:v2"
 
 # Palette for Chart.js — matches Unfold's primary/accent scale + semantic tokens.
 # One colour per dataset bar; Chart.js cycles if labels > colours.
@@ -52,10 +60,25 @@ _CHART_OPTIONS_JSON = json.dumps({
 
 
 def dashboard_callback(request, context):
+    """RailTech B2B Control Center Dashboard.
+
+    Wraps the heavy computation in Django cache (5-min TTL). Cache key includes
+    current thread-local language so RU/EN sessions don't poison each other.
+    Lazy-translated strings inside the payload survive pickling: Promise objects
+    re-evaluate on render.
     """
-    RailTech B2B Control Center Dashboard.
-    Unfold 0.84+ compatible structure.
-    """
+    lang = translation.get_language() or "ru"
+    cache_key = f"{DASHBOARD_CACHE_KEY_PREFIX}:{lang}"
+    payload = cache.get(cache_key)
+    if payload is None:
+        payload = _compute_dashboard_payload()
+        cache.set(cache_key, payload, DASHBOARD_CACHE_TTL)
+    context.update(payload)
+    return context
+
+
+def _compute_dashboard_payload() -> dict:
+    """Build stats + charts dict. Extracted for caching; see dashboard_callback."""
 
     # ─── KPI Metrics ───
 
@@ -114,7 +137,7 @@ def dashboard_callback(request, context):
         ).order_by('-revenue')[:5]
     )
 
-    context.update({
+    return {
         "stats": [
             {
                 "title": _("Воронка продаж"),
@@ -185,6 +208,4 @@ def dashboard_callback(request, context):
                 "empty": not region_stats,
             },
         ],
-    })
-
-    return context
+    }
