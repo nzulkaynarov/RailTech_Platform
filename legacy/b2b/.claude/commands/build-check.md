@@ -34,8 +34,18 @@
    ls -la dist/assets/ | head -20
    ```
 
-6. **Итог:**
+6. **Проверка N+1 и aggregate паттернов:**
+   ```bash
+   echo "--- Individual .count() calls in views (should be minimal) ---"
+   grep -rn '\.count()' backend/*/views/ --include='*.py' | wc -l
+   echo "--- aggregate() usage (should be present in dashboard/stats views) ---"
+   grep -rn 'aggregate(' backend/ --include='*.py' | wc -l
+   ```
+   Если в views много `.count()` — рекомендуй рефакторинг на `aggregate()`.
+
+7. **Итог:**
    - ✅ TypeScript: OK / ❌ X ошибок
    - ✅ Build: OK / ❌ Failed
    - ✅ Design system: OK / ❌ X нарушений
+   - ✅ N+1 queries: OK / ⚠️ X подозрительных .count()
    - 📦 Bundle size: XX MB

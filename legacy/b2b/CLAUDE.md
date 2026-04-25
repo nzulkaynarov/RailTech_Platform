@@ -20,9 +20,12 @@ B2B marketplace for railway equipment (Uzbekistan). Monorepo: Django backend + R
 ```
 backend/                    # Django project
   core/                     # Settings, URLs, ASGI, Celery, middleware, permissions
+  core/validators.py        # Shared file upload validators (size, type, extension)
   accounts/                 # CustomUser, Company, CompanyMember, KYC, Subscriptions
+  accounts/views/           # Package: company, users, auth, applications, lookups (5 modules + __init__)
   catalog/                  # Product (PIM), Category, EquipmentGroup, SupplierOffer
   crm/                      # Deal, Quote, QuoteItem, Message, Lead, ActivityLog
+  crm/views/                # Package: deals, quotes, messages, analytics, billing, bids, leads (7 modules + __init__)
   sourcing/                 # Attachment, ImportTask, DomainKeyword, Excel import tasks
   master_data/              # AbstractLookup, Country, Currency, UOM, DeliveryBasis
   notifications/            # Notification, NotificationType
@@ -175,6 +178,22 @@ make clean               # remove all containers, volumes, cache (DESTRUCTIVE)
 - **Chart colors:** Use `bg-[var(--color-chart-N)]` for dynamic chart legend dots — this is the correct Tailwind pattern for CSS variable colors. NEVER use inline `style={{ backgroundColor }}` for chart legends
 - **Sidebar:** ALL shell layouts must use shadcn `<Sidebar>` + `<SidebarProvider>` + `<SidebarInset>` — NEVER custom `<aside>` with manual collapse state
 - **Zod validation messages:** For i18n, use factory pattern: `const createSchema = (t: TFn) => z.object(...)` — call inside component where `t()` is available
+- **Query optimization:** Use `aggregate(total=Count('id'), active=Count('id', filter=Q(...)))` for dashboard stats — NEVER fire individual `.count()` queries in loops
+- **Celery tasks:** ALL tasks must have `time_limit=600, soft_time_limit=540, max_retries=3, autoretry_for=(Exception,), retry_backoff=True`
+- **Exception handling:** Use specific exceptions (`ValidationError`, `OSError`, `ValueError`) — NEVER bare `except Exception`
+- **Variable naming:** Descriptive names always — NEVER single-letter variables (`u`, `m`, `d`, `f`) in business logic
+- **Function length:** Max 50 lines for production code (Clean Code). Extract into helper methods with clear names
+- **File length:** Max 500 lines per module. Split into packages (views/, services/) when exceeding
+- **Parameters:** Max 5 parameters per function. Use dataclasses for more complex signatures
+
+## Performance Conventions
+
+- Dashboard endpoints: `aggregate()` queries + per-user cache (30-60s TTL)
+- List endpoints: always `select_related`/`prefetch_related`, never N+1
+- Smart Match: requires GIN trigram indexes on `Product.name` and `gost_drawing`
+- Nginx: NEVER cache authenticated API responses (Authorization header bypass)
+- Channel layers: `capacity=300`, `expiry=60`
+- Frontend bundle: split vendor chunks (react, charts, i18n, state, radix, http)
 
 ## Testing
 
