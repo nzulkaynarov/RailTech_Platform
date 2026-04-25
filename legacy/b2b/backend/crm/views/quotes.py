@@ -90,7 +90,7 @@ class QuoteViewSet(viewsets.ModelViewSet):
                     if quote.pdf_file else None
                 ),
             })
-        except Exception as e:
+        except (OSError, ValueError, RuntimeError) as e:
             return Response(
                 {'error': str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,

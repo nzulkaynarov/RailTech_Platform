@@ -41,8 +41,6 @@ class DashboardAnalyticsView(APIView):
 
     def get(self, request):
         from django.core.cache import cache
-        from catalog.models import Product
-        from accounts.models import Company
 
         # B2B data isolation
         is_staff = request.user.is_platform_admin
@@ -60,15 +58,7 @@ class DashboardAnalyticsView(APIView):
         if cached:
             return Response(cached)
 
-        # Calculate period start date
-        if period == '30d':
-            period_start = timezone.now() - timedelta(days=30)
-        elif period == '7d':
-            period_start = timezone.now() - timedelta(days=7)
-        elif period == '90d':
-            period_start = timezone.now() - timedelta(days=90)
-        else:
-            period_start = timezone.now() - timedelta(days=30)
+        period_start = self._resolve_period_start(period)
 
         # Get deals -- scoped to user's companies for non-staff
         all_deals = Deal.objects.all()
@@ -76,16 +66,45 @@ class DashboardAnalyticsView(APIView):
             all_deals = all_deals.filter(company_id__in=user_company_ids)
         period_deals = all_deals.filter(created_at__gte=period_start)
 
-        # Get previous period deals for comparison (scoped same as all_deals)
+        # Previous period for comparison
         prev_period_start = period_start - (timezone.now() - period_start)
         prev_period_deals = Deal.objects.filter(
-            created_at__gte=prev_period_start,
-            created_at__lt=period_start
+            created_at__gte=prev_period_start, created_at__lt=period_start,
         )
         if user_company_ids is not None:
             prev_period_deals = prev_period_deals.filter(company_id__in=user_company_ids)
 
-        # Calculate deals volume via latest quote's total_incl_vat
+        volume_kpis = self._get_volume_kpis(period_deals, prev_period_deals, all_deals)
+        catalog_kpis = self._get_catalog_kpis(period_start)
+        client_kpis = self._get_client_kpis(period_start)
+        counterparties = self._get_counterparties()
+        completion = self._get_completion_stats(user_company_ids)
+        buyer_stats = self._get_buyer_stats(all_deals)
+
+        data = {
+            **volume_kpis,
+            **catalog_kpis,
+            **client_kpis,
+            'deals_by_month': self._get_deals_by_month(all_deals),
+            'activity_by_day': self._get_activity_by_day(user_company_ids),
+            'top_products': self._get_top_products(user_company_ids=user_company_ids),
+            'counterparties': counterparties,
+            'request_completion': completion['request_completion'],
+            'request_completion_goal': 80,
+            **buyer_stats,
+        }
+        cache.set(cache_key, data, 60)
+        return Response(data)
+
+    @staticmethod
+    def _resolve_period_start(period: str):
+        """Convert period string (7d/30d/90d) to a start datetime."""
+        days_map = {'7d': 7, '30d': 30, '90d': 90}
+        days = days_map.get(period, 30)
+        return timezone.now() - timedelta(days=days)
+
+    def _get_volume_kpis(self, period_deals, prev_period_deals, all_deals) -> dict:
+        """Compute deals volume and active request KPIs with period-over-period change."""
         latest_quote = Quote.objects.filter(
             deal=OuterRef('pk')
         ).order_by('-version').values('total_incl_vat')[:1]
@@ -96,127 +115,80 @@ class DashboardAnalyticsView(APIView):
         prev_volume = prev_period_deals.annotate(
             deal_value=Subquery(latest_quote)
         ).aggregate(total=Sum('deal_value'))['total'] or Decimal('0')
-        volume_change = self._calculate_percentage_change(
-            prev_volume, current_volume
-        )
 
-        # Active requests (not closed)
         current_active = all_deals.exclude(
             stage__code__in=['CLOSED_WON', 'CLOSED_LOST']
         ).count()
         prev_active = prev_period_deals.exclude(
             stage__code__in=['CLOSED_WON', 'CLOSED_LOST']
         ).count()
-        active_change = self._calculate_percentage_change(
-            prev_active if prev_active > 0 else current_active,
-            current_active
-        )
 
-        # Catalog items
-        published_products = Product.objects.filter(
-            status__code='PUBLISHED'
-        ).count()
-        prev_published = Product.objects.filter(
-            status__code='PUBLISHED',
-            created_at__lt=period_start
-        ).count()
-        catalog_change = self._calculate_percentage_change(
-            prev_published, published_products
-        )
-
-        # Clients count
-        from accounts.models import CompanyType
-        client_type = CompanyType.objects.filter(code='CLIENT').first()
-        if client_type:
-            current_clients = Company.objects.filter(
-                types=client_type
-            ).distinct().count()
-            prev_clients = current_clients - Company.objects.filter(
-                types=client_type,
-                created_at__gte=period_start
-            ).distinct().count()
-        else:
-            current_clients = 0
-            prev_clients = 0
-        clients_change = self._calculate_percentage_change(
-            prev_clients, current_clients
-        )
-
-        # Deals by month (last 6 months)
-        deals_by_month = self._get_deals_by_month(all_deals)
-
-        # Activity by day (last 30 days) -- scoped to user's companies
-        activity_by_day = self._get_activity_by_day(user_company_ids)
-
-        # Top products by deal frequency -- scoped to user's companies
-        top_products = self._get_top_products(user_company_ids=user_company_ids)
-
-        # Counterparties breakdown
-        manufacturer_type = CompanyType.objects.filter(
-            code='MANUFACTURER'
-        ).first()
-        supplier_type = CompanyType.objects.filter(code='SUPPLIER').first()
-
-        counterparties = {
-            'manufacturers': (
-                Company.objects.filter(types=manufacturer_type).count()
-                if manufacturer_type else 0
-            ),
-            'buyers': (
-                Company.objects.filter(types=client_type).count()
-                if client_type else 0
-            ),
-            'intermediaries': (
-                Company.objects.filter(types=supplier_type).count()
-                if supplier_type else 0
+        return {
+            'deals_volume': float(current_volume),
+            'deals_volume_change': self._calculate_percentage_change(prev_volume, current_volume),
+            'active_requests': current_active,
+            'active_requests_change': self._calculate_percentage_change(
+                prev_active if prev_active > 0 else current_active, current_active,
             ),
         }
 
-        # Request completion percentage (scoped)
+    def _get_catalog_kpis(self, period_start) -> dict:
+        """Compute catalog item counts with period-over-period change."""
+        from catalog.models import Product
+        published_products = Product.objects.filter(status__code='PUBLISHED').count()
+        prev_published = Product.objects.filter(
+            status__code='PUBLISHED', created_at__lt=period_start,
+        ).count()
+        return {
+            'catalog_items': published_products,
+            'catalog_items_change': self._calculate_percentage_change(prev_published, published_products),
+        }
+
+    def _get_client_kpis(self, period_start) -> dict:
+        """Compute client counts with period-over-period change."""
+        from accounts.models import Company, CompanyType
+        client_type = CompanyType.objects.filter(code='CLIENT').first()
+        if client_type:
+            current_clients = Company.objects.filter(types=client_type).distinct().count()
+            prev_clients = current_clients - Company.objects.filter(
+                types=client_type, created_at__gte=period_start,
+            ).distinct().count()
+        else:
+            current_clients = prev_clients = 0
+        return {
+            'clients_count': current_clients,
+            'clients_count_change': self._calculate_percentage_change(prev_clients, current_clients),
+        }
+
+    @staticmethod
+    def _get_counterparties() -> dict:
+        """Breakdown of companies by type."""
+        from accounts.models import Company, CompanyType
+        result = {}
+        for code, key in [('MANUFACTURER', 'manufacturers'), ('CLIENT', 'buyers'), ('SUPPLIER', 'intermediaries')]:
+            ct = CompanyType.objects.filter(code=code).first()
+            result[key] = Company.objects.filter(types=ct).count() if ct else 0
+        return result
+
+    @staticmethod
+    def _get_completion_stats(user_company_ids) -> dict:
+        """Compute request completion percentage."""
         quotes_qs = Quote.objects.all()
         if user_company_ids is not None:
             quotes_qs = quotes_qs.filter(deal__company_id__in=user_company_ids)
-        completed_quotes = quotes_qs.filter(
-            status__code__in=['APPROVED', 'SENT']
-        ).count()
-        total_quotes = quotes_qs.count()
-        completion_percentage = (
-            (completed_quotes / total_quotes * 100)
-            if total_quotes > 0 else 0
-        )
+        completed = quotes_qs.filter(status__code__in=['APPROVED', 'SENT']).count()
+        total = quotes_qs.count()
+        pct = (completed / total * 100) if total > 0 else 0
+        return {'request_completion': round(pct, 1)}
 
-        # Buyer-specific stats
-        deals_in_progress = all_deals.filter(
-            stage__code__in=['SOURCING', 'CALCULATING']
-        ).count()
-        quotes_received = all_deals.filter(
-            stage__code='QUOTE_SENT'
-        ).count()
-        deals_completed = all_deals.filter(
-            stage__code__in=['CLOSED_WON', 'CONTRACT_SIGNED']
-        ).count()
-
-        data = {
-            'deals_volume': float(current_volume),
-            'deals_volume_change': volume_change,
-            'active_requests': current_active,
-            'active_requests_change': active_change,
-            'catalog_items': published_products,
-            'catalog_items_change': catalog_change,
-            'clients_count': current_clients,
-            'clients_count_change': clients_change,
-            'deals_by_month': deals_by_month,
-            'activity_by_day': activity_by_day,
-            'top_products': top_products,
-            'counterparties': counterparties,
-            'request_completion': round(completion_percentage, 1),
-            'request_completion_goal': 80,
-            'deals_in_progress': deals_in_progress,
-            'quotes_received': quotes_received,
-            'deals_completed': deals_completed,
+    @staticmethod
+    def _get_buyer_stats(all_deals) -> dict:
+        """Buyer-specific stage counts."""
+        return {
+            'deals_in_progress': all_deals.filter(stage__code__in=['SOURCING', 'CALCULATING']).count(),
+            'quotes_received': all_deals.filter(stage__code='QUOTE_SENT').count(),
+            'deals_completed': all_deals.filter(stage__code__in=['CLOSED_WON', 'CONTRACT_SIGNED']).count(),
         }
-        cache.set(cache_key, data, 60)
-        return Response(data)
 
     def _calculate_percentage_change(self, previous, current):
         """Calculate percentage change between two values."""

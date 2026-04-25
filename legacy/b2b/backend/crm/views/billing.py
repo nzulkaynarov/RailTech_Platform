@@ -101,9 +101,10 @@ class ContractViewSet(viewsets.ModelViewSet):
             return Response({'detail': 'NO_FILE_PROVIDED'}, status=400)
 
         from core.validators import validate_document_upload
+        from django.core.exceptions import ValidationError
         try:
             validate_document_upload(file_obj)
-        except Exception as e:
+        except ValidationError as e:
             return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         contract.signed_file = file_obj
@@ -238,9 +239,10 @@ class ActViewSet(viewsets.ModelViewSet):
         signed_file = request.FILES.get('signed_file')
         if signed_file:
             from core.validators import validate_document_upload
+            from django.core.exceptions import ValidationError
             try:
                 validate_document_upload(signed_file)
-            except Exception as e:
+            except ValidationError as e:
                 return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         act, err = crm_services.sign_act(int(pk), request.user, signed_file=signed_file)

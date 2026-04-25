@@ -213,7 +213,7 @@ class DealViewSet(viewsets.ModelViewSet):
             from crm.services import QuoteLifecycleService
             try:
                 quote = QuoteLifecycleService.generate_pdf(quote.pk)
-            except Exception:
+            except (OSError, ValueError, RuntimeError):
                 return Response(
                     {'error': 'Failed to generate PDF'},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR

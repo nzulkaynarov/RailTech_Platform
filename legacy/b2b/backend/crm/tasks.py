@@ -106,7 +106,7 @@ def archive_old_messages(self, days: int = 90, batch_size: int = 500) -> dict:
                     content = existing + jsonl
                 else:
                     content = jsonl
-            except Exception as e:
+            except (IOError, OSError) as e:
                 logger.warning("archive_old_messages: failed to read %s: %s", path, e)
                 content = jsonl
 
@@ -115,7 +115,7 @@ def archive_old_messages(self, days: int = 90, batch_size: int = 500) -> dict:
                 if storage.exists(path):
                     storage.delete(path)
                 storage.save(path, ContentFile(content.encode('utf-8')))
-            except Exception as e:
+            except (IOError, OSError) as e:
                 logger.error("archive_old_messages: failed to write %s: %s", path, e)
                 continue
 
