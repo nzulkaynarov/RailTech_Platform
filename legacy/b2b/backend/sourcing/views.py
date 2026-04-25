@@ -374,22 +374,21 @@ class AttachmentViewSet(viewsets.ModelViewSet):
         if user.is_platform_admin:
             return qs
 
-        user_company_ids = list(user.memberships.filter(
-            is_active=True).values_list('company_id', flat=True))
+        user_company_ids = user.memberships.filter(
+            is_active=True).values('company_id')
 
-        # Allow only attachments whose parent entity's company is in user's companies.
-        # Deals accessible to deal manager/client too.
+        # Subquery: avoid loading all deal IDs into memory
         from django.db.models import Q
-        accessible_deal_ids = list(Deal.objects.filter(
+        accessible_deals = Deal.objects.filter(
             Q(company_id__in=user_company_ids)
             | Q(manager_id=user.id)
             | Q(client_id=user.id),
-        ).values_list('id', flat=True))
+        ).values('id')
 
         return qs.filter(
-            Q(deal_id__in=accessible_deal_ids)
-            | Q(message__deal_id__in=accessible_deal_ids)
-            | Q(quote__deal_id__in=accessible_deal_ids)
+            Q(deal_id__in=accessible_deals)
+            | Q(message__deal_id__in=accessible_deals)
+            | Q(quote__deal_id__in=accessible_deals)
             | Q(company_id__in=user_company_ids)
             | Q(product__manufacturer_id__in=user_company_ids),
         )

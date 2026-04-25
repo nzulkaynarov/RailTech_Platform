@@ -11,16 +11,16 @@ from . import services as accounts_services
 logger = logging.getLogger(__name__)
 
 
-@shared_task(name='accounts.expire_subscriptions')
-def expire_subscriptions_task() -> dict:
+@shared_task(bind=True, name='accounts.expire_subscriptions', time_limit=600, soft_time_limit=540, max_retries=3, autoretry_for=(Exception,), retry_backoff=True)
+def expire_subscriptions_task(self) -> dict:
     """Daily scan: demote expired subscriptions. Hook up via celery-beat."""
     result = accounts_services.check_and_expire_subscriptions()
     logger.info("expire_subscriptions_task: %s", result)
     return result
 
 
-@shared_task(name='accounts.send_kyc_email')
-def send_kyc_email_task(company_id: int, level_code: str) -> None:
+@shared_task(bind=True, name='accounts.send_kyc_email', time_limit=600, soft_time_limit=540, max_retries=3, autoretry_for=(Exception,), retry_backoff=True)
+def send_kyc_email_task(self, company_id: int, level_code: str) -> None:
     from .models import Company
     try:
         company = Company.objects.get(pk=company_id)

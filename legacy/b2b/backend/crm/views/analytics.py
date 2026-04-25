@@ -162,13 +162,20 @@ class DashboardAnalyticsView(APIView):
 
     @staticmethod
     def _get_counterparties() -> dict:
-        """Breakdown of companies by type."""
-        from accounts.models import Company, CompanyType
-        result = {}
-        for code, key in [('MANUFACTURER', 'manufacturers'), ('CLIENT', 'buyers'), ('SUPPLIER', 'intermediaries')]:
-            ct = CompanyType.objects.filter(code=code).first()
-            result[key] = Company.objects.filter(types=ct).count() if ct else 0
-        return result
+        """Breakdown of companies by type — single query via values().annotate()."""
+        from accounts.models import Company
+        type_counts = dict(
+            Company.objects.filter(
+                types__code__in=['MANUFACTURER', 'CLIENT', 'SUPPLIER'],
+            ).values_list('types__code').annotate(
+                count=Count('id', distinct=True),
+            ).values_list('types__code', 'count')
+        )
+        return {
+            'manufacturers': type_counts.get('MANUFACTURER', 0),
+            'buyers': type_counts.get('CLIENT', 0),
+            'intermediaries': type_counts.get('SUPPLIER', 0),
+        }
 
     @staticmethod
     def _get_completion_stats(user_company_ids) -> dict:

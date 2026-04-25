@@ -426,21 +426,20 @@ class PlatformDashboardView(APIView):
 
     @staticmethod
     def _get_subscription_stats(now, soon) -> dict:
-        """Aggregate subscription counts by status."""
+        """Aggregate subscription counts by status — single query via aggregate()."""
         from accounts.models import SupplierSubscription
-        subs_qs = SupplierSubscription.objects.all()
-        return {
-            'active': subs_qs.filter(status='ACTIVE').count(),
-            'trial': subs_qs.filter(status='TRIAL').count(),
-            'past_due': subs_qs.filter(status='PAST_DUE').count(),
-            'suspended': subs_qs.filter(status='SUSPENDED').count(),
-            'expiring_7d': subs_qs.filter(
+        return SupplierSubscription.objects.aggregate(
+            active=Count('id', filter=Q(status='ACTIVE')),
+            trial=Count('id', filter=Q(status='TRIAL')),
+            past_due=Count('id', filter=Q(status='PAST_DUE')),
+            suspended=Count('id', filter=Q(status='SUSPENDED')),
+            expiring_7d=Count('id', filter=Q(
                 status__in=['ACTIVE', 'TRIAL'],
                 valid_until__isnull=False,
                 valid_until__lte=soon.date(),
                 valid_until__gte=now.date(),
-            ).count(),
-        }
+            )),
+        )
 
     @staticmethod
     def _get_attention_counters(companies_pending_kyc: int, subscription_stats: dict, now) -> dict:
@@ -540,7 +539,7 @@ class SupportTicketSerializer(drf_serializers.ModelSerializer):
         return obj.created_by.get_full_name() or obj.created_by.email
 
     def get_messages_count(self, obj: SupportTicket) -> int:
-        return obj.messages.count()
+        return getattr(obj, 'messages_count_db', obj.messages.count())
 
 
 @extend_schema_view(
@@ -580,7 +579,7 @@ class SupportTicketViewSet(viewsets.ModelViewSet):
             return SupportTicket.objects.none()
         qs = SupportTicket.objects.select_related(
             'created_by', 'company', 'assigned_to',
-        )
+        ).annotate(messages_count_db=Count('messages'))
         user = self.request.user
         if user.is_platform_admin:
             return qs

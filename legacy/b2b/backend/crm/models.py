@@ -88,7 +88,7 @@ class Deal(models.Model):
     )
 
     created_at = models.DateTimeField(
-        auto_now_add=True,
+        auto_now_add=True, db_index=True,
         verbose_name=_("Дата создания"),
     )
     updated_at = models.DateTimeField(

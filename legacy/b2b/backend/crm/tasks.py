@@ -43,7 +43,7 @@ def _archive_path_for(date) -> str:
     return f"archive/messages/{date.year:04d}/{date.month:02d}/{date.day:02d}.jsonl"
 
 
-@shared_task(bind=True, name='crm.archive_old_messages')
+@shared_task(bind=True, name='crm.archive_old_messages', time_limit=600, soft_time_limit=540, max_retries=3, autoretry_for=(Exception,), retry_backoff=True)
 def archive_old_messages(self, days: int = 90, batch_size: int = 500) -> dict:
     """
     Move messages older than `days` days to S3 cold storage.
@@ -145,8 +145,8 @@ def archive_old_messages(self, days: int = 90, batch_size: int = 500) -> dict:
     }
 
 
-@shared_task(name='crm.check_overdue_deliveries')
-def check_overdue_deliveries() -> dict:
+@shared_task(bind=True, name='crm.check_overdue_deliveries', time_limit=600, soft_time_limit=540, max_retries=3, autoretry_for=(Exception,), retry_backoff=True)
+def check_overdue_deliveries(self) -> dict:
     """Flag fulfillments whose expected_delivery_date passed without status change.
     Sends in-app notification to the deal manager.
     """
@@ -173,8 +173,8 @@ def check_overdue_deliveries() -> dict:
     return {'overdue_flagged': count}
 
 
-@shared_task(name='crm.auto_invoice_on_closed_won')
-def auto_invoice_on_closed_won(deal_id: int) -> dict:
+@shared_task(bind=True, name='crm.auto_invoice_on_closed_won', time_limit=600, soft_time_limit=540, max_retries=3, autoretry_for=(Exception,), retry_backoff=True)
+def auto_invoice_on_closed_won(self, deal_id: int) -> dict:
     """Triggered after a deal transitions to CLOSED_WON: create invoice+act skeletons.
 
     Idempotent: safe to run multiple times for the same deal — reuses existing Invoice
@@ -219,8 +219,8 @@ def auto_invoice_on_closed_won(deal_id: int) -> dict:
     return result
 
 
-@shared_task(name='crm.expire_stale_quotes')
-def expire_stale_quotes() -> dict:
+@shared_task(bind=True, name='crm.expire_stale_quotes', time_limit=600, soft_time_limit=540, max_retries=3, autoretry_for=(Exception,), retry_backoff=True)
+def expire_stale_quotes(self) -> dict:
     """Move SENT quotes past `valid_until` to EXPIRED and notify the deal manager.
 
     Runs on a daily Beat schedule. Ignores DRAFT (not yet sent) and APPROVED /
