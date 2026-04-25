@@ -163,12 +163,12 @@ export function CompanyTeamSettings() {
                   membership_id?: number;
                   workspace_role_name?: string;
                 };
-                const m = member as MemberExt;
+                const extMember = member as MemberExt;
                 // Prefer the CompanyMember.id exposed by the team serializer.
                 // Fall back to user.id when the backend hasn't provided it yet.
-                const memberId = m.membership_id ?? m.id;
-                const canBuy = m.can_buy ?? false;
-                const canSell = m.can_sell ?? false;
+                const memberId = extMember.membership_id ?? extMember.id;
+                const canBuy = extMember.can_buy ?? false;
+                const canSell = extMember.can_sell ?? false;
                 const isSelf = member.id === user?.id;
                 const canEdit = isOwner && !isSelf;
                 return (
@@ -193,7 +193,7 @@ export function CompanyTeamSettings() {
                     </TableCell>
                     <TableCell className="p-4">
                       <Badge variant={member.workspace_role === 'OWNER' ? 'default' : 'outline'}>
-                        {m.workspace_role_name
+                        {extMember.workspace_role_name
                           ?? (member.workspace_role ? t(`team.roles.${member.workspace_role}`, member.workspace_role) : t('team.employee'))}
                       </Badge>
                     </TableCell>

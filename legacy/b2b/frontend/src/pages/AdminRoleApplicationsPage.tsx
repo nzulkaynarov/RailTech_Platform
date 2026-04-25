@@ -240,14 +240,14 @@ export function AdminRoleApplicationsPage() {
     // For the "pending" tab there are three backend statuses, so filter client-side over the allApps snapshot.
     const tab = tableState.tab || 'all';
     if (tab !== 'pending') return apps;
-    const q = tableState.search.toLowerCase();
+    const searchQuery = tableState.search.toLowerCase();
     return allApps.filter((a) => {
       if (!isPending(a.status)) return false;
-      if (!q) return true;
+      if (!searchQuery) return true;
       return (
-        a.company_name.toLowerCase().includes(q) ||
-        (a.company_inn || '').toLowerCase().includes(q) ||
-        (a.submitted_by_email || '').toLowerCase().includes(q)
+        a.company_name.toLowerCase().includes(searchQuery) ||
+        (a.company_inn || '').toLowerCase().includes(searchQuery) ||
+        (a.submitted_by_email || '').toLowerCase().includes(searchQuery)
       );
     });
   }, [apps, allApps, tableState.search, tableState.tab]);

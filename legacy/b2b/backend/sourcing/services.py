@@ -1,9 +1,12 @@
+import logging
 import os
 import re
 from typing import List, Optional
 from django.contrib.postgres.search import TrigramSimilarity
 from django.db.models import Q, Case, When, Value, FloatField, F
 from catalog.models import Product
+
+logger = logging.getLogger(__name__)
 
 # Threshold for Tier-3 fuzzy match. Configurable via env or SystemSetting.
 DEFAULT_MATCH_THRESHOLD = float(os.environ.get('SMART_MATCH_THRESHOLD', '0.45'))
@@ -17,7 +20,7 @@ def _current_threshold() -> float:
         if val:
             return float(val)
     except Exception:
-        pass
+        logger.exception('Failed to read smart_match_threshold from SystemSetting')
     return DEFAULT_MATCH_THRESHOLD
 
 

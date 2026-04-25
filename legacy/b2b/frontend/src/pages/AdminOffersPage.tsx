@@ -219,9 +219,9 @@ export function AdminOffersPage() {
   const [deleteTarget, setDeleteTarget] = useState<SupplierOffer | null>(null);
 
   const productNameById = useMemo(() => {
-    const m = new Map<number, string>();
-    (products ?? []).forEach((p) => m.set(p.id, `${p.name}${p.sku ? ' · ' + p.sku : ''}`));
-    return m;
+    const productMap = new Map<number, string>();
+    (products ?? []).forEach((p) => productMap.set(p.id, `${p.name}${p.sku ? ' · ' + p.sku : ''}`));
+    return productMap;
   }, [products]);
 
   const onEdit = (o: SupplierOffer) => {

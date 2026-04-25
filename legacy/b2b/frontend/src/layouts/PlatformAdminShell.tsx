@@ -256,13 +256,13 @@ function PlatformAdminShellInner({ children, activePage, onNavigate }: PlatformA
   useCommandPaletteShortcut(() => setPaletteOpen(true));
 
   const attention: AttentionCounts = useMemo(() => {
-    const a = platformDashboard?.attention;
+    const attentionData = platformDashboard?.attention;
     return {
-      kyc: a?.kyc || undefined,
-      roleApps: a?.role_applications || undefined,
-      subsPastDue: a?.subscriptions_past_due || undefined,
-      subsExpiring: a?.subscriptions_expiring_7d || undefined,
-      overdueInvoices: a?.overdue_invoices || undefined,
+      kyc: attentionData?.kyc || undefined,
+      roleApps: attentionData?.role_applications || undefined,
+      subsPastDue: attentionData?.subscriptions_past_due || undefined,
+      subsExpiring: attentionData?.subscriptions_expiring_7d || undefined,
+      overdueInvoices: attentionData?.overdue_invoices || undefined,
     };
   }, [platformDashboard]);
 

@@ -54,11 +54,11 @@ export function FulfillmentsPage() {
   const viewerTip = t('apiErrors.ADMIN_VIEWER_CANNOT_ACT');
 
   const stats = useMemo(() => {
-    const l = list ?? [];
+    const items = list ?? [];
     return [
-      { label: t('fulfillmentPage.stats.total'), value: String(l.length) },
-      { label: t('fulfillmentPage.stats.inTransit'), value: String(l.filter((f) => f.status === 'IN_TRANSIT' || f.status === 'SHIPPED').length) },
-      { label: t('fulfillmentPage.stats.accepted'), value: String(l.filter((f) => f.status === 'ACCEPTED').length) },
+      { label: t('fulfillmentPage.stats.total'), value: String(items.length) },
+      { label: t('fulfillmentPage.stats.inTransit'), value: String(items.filter((f) => f.status === 'IN_TRANSIT' || f.status === 'SHIPPED').length) },
+      { label: t('fulfillmentPage.stats.accepted'), value: String(items.filter((f) => f.status === 'ACCEPTED').length) },
     ];
   }, [list, t]);
 

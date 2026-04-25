@@ -72,4 +72,4 @@ def push_notification_ws(notification: Notification):
             },
         )
     except Exception:
-        logger.debug("WebSocket push failed for notification %s", notification.pk)
+        logger.exception("Failed to push WebSocket notification %s", notification.pk)

@@ -163,18 +163,18 @@ class MeSerializer(serializers.ModelSerializer):
         return None
 
     def get_workspace_role(self, obj):
-        m = self._primary_membership(obj)
-        return m.role.code if (m and m.role) else None
+        membership = self._primary_membership(obj)
+        return membership.role.code if (membership and membership.role) else None
 
     def get_can_sell(self, obj):
-        m = self._primary_membership(obj)
-        return bool(m and m.can_sell)
+        membership = self._primary_membership(obj)
+        return bool(membership and membership.can_sell)
 
     def get_can_buy(self, obj):
-        m = self._primary_membership(obj)
+        membership = self._primary_membership(obj)
         # If no primary membership (e.g. platform super-admin before seed),
         # default to True so UI isn't accidentally locked down.
-        return bool(m.can_buy) if m else True
+        return bool(membership.can_buy) if membership else True
 
     def get_kyc_status(self, obj):
         if obj.primary_company and obj.primary_company.verification_status:

@@ -1,3 +1,4 @@
+import logging
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Optional, Tuple
 
@@ -7,6 +8,8 @@ from django.db.models import Count, QuerySet, Sum
 from accounts.models import Company, CustomUser
 
 from .models import ActivityLog, Deal, DealStage, Lead, Message, Quote, QuoteItem, QuoteItemHistory, QuoteStatus
+
+logger = logging.getLogger(__name__)
 
 
 class QuoteCalculationService:
@@ -474,7 +477,7 @@ def transition_deal_stage(
             from .tasks import auto_invoice_on_closed_won
             auto_invoice_on_closed_won.delay(deal.id)
         except Exception:
-            pass
+            logger.exception('Failed to dispatch auto-invoice task for deal %s', deal.id)
 
     return deal, None
 

@@ -35,8 +35,8 @@ const LEVEL_STYLES: Record<ActivityEntry['level'], string> = {
 
 function formatTimestamp(iso: string): string {
   try {
-    const d = new Date(iso);
-    return d.toLocaleString([], {
+    const date = new Date(iso);
+    return date.toLocaleString([], {
       day: '2-digit',
       month: 'short',
       year: 'numeric',

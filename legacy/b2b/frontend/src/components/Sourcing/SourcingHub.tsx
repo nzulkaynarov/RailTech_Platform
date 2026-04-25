@@ -102,12 +102,12 @@ export function SourcingHub() {
 
   const filteredCatalog = useMemo(() => {
     if (!searchQuery.trim()) return masterCatalog;
-    const q = searchQuery.toLowerCase();
+    const lowerQuery = searchQuery.toLowerCase();
     return masterCatalog.filter(
       (p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.sku.toLowerCase().includes(q) ||
-        p.manufacturer.toLowerCase().includes(q)
+        p.name.toLowerCase().includes(lowerQuery) ||
+        p.sku.toLowerCase().includes(lowerQuery) ||
+        p.manufacturer.toLowerCase().includes(lowerQuery)
     );
   }, [searchQuery]);
 

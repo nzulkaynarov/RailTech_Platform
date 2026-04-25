@@ -359,11 +359,11 @@ def verify_company_kyc(
         try:
             _send_kyc_status_email(company, level_code)
         except Exception:
-            pass  # email failure shouldn't roll back KYC
+            logger.exception('Failed to send KYC status email for company %s', company.pk)
         try:
             _create_kyc_notification(company, level_code)
         except Exception:
-            pass
+            logger.exception('Failed to create KYC notification for company %s', company.pk)
     return company, None
 
 
@@ -486,13 +486,13 @@ def approve_role_application(
         try:
             ensure_trial_subscription(application.company)
         except Exception:
-            pass  # don't roll back approval
+            logger.exception('Failed to create trial subscription for company %s', application.company_id)
 
     # Notify applicant
     try:
         _send_role_application_email(application, approved=True)
     except Exception:
-        pass
+        logger.exception('Failed to send role application approval email for application %s', application.pk)
 
     return application, None
 
@@ -635,7 +635,7 @@ def reject_role_application(
     try:
         _send_role_application_email(application, approved=False)
     except Exception:
-        pass
+        logger.exception('Failed to send role application rejection email for application %s', application.pk)
 
     return application, None
 
@@ -784,13 +784,13 @@ def is_member_of(user: 'CustomUser', company_id: int, *, capability: Optional[st
     if not user or not user.is_authenticated:
         return False
     qs = user.memberships.filter(company_id=company_id, is_active=True)
-    m = qs.first()
-    if m is None:
+    membership = qs.first()
+    if membership is None:
         return False
     if capability == 'sell':
-        return bool(m.can_sell)
+        return bool(membership.can_sell)
     if capability == 'buy':
-        return bool(m.can_buy)
+        return bool(membership.can_buy)
     return True
 
 
