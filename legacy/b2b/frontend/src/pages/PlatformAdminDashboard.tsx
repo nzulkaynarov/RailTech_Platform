@@ -172,7 +172,7 @@ function QueueRow({ item, onOpen, onApprove, onReject }: QueueRowProps) {
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 text-xs">
-          <Badge variant={SEVERITY_BADGE[item.severity]} className="text-[10px]">
+          <Badge variant={SEVERITY_BADGE[item.severity]} className="text-xs">
             {t(`adminQueue.severity.${item.severity}`)}
           </Badge>
           <span className="truncate font-medium">{item.title}</span>
@@ -506,7 +506,7 @@ export default function PlatformAdminDashboard({ onNavigate }: PlatformAdminDash
                                 ? 'secondary'
                                 : 'outline'
                           }
-                          className="text-[10px]"
+                          className="text-xs"
                         >
                           {entry.level}
                         </Badge>

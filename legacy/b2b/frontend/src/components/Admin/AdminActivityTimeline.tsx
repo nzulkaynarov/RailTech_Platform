@@ -113,7 +113,7 @@ export function AdminActivityTimeline({
             <div className="flex flex-wrap items-center gap-2">
               <Badge
                 variant="outline"
-                className={cn('text-[10px]', LEVEL_STYLES[entry.level])}
+                className={cn('text-xs', LEVEL_STYLES[entry.level])}
               >
                 {entry.level}
               </Badge>

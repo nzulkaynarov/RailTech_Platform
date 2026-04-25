@@ -36,17 +36,12 @@ export const ContextualChat: React.FC<ContextualChatProps> = ({ dealId }) => {
 
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsHost = import.meta.env.VITE_WS_URL || `${wsProtocol}//${window.location.host}`;
-        // SEC-06: Token no longer in query string — sent via first message
-        const wsUrl = `${wsHost}/ws/chat/${dealId}/`;
+        const wsUrl = `${wsHost}/ws/chat/${dealId}/?token=${encodeURIComponent(accessToken || '')}`;
 
         const socket = new WebSocket(wsUrl);
         socketRef.current = socket;
 
         socket.onopen = () => {
-            // Send auth token as first message (not in URL)
-            if (accessToken) {
-                socket.send(JSON.stringify({ type: 'auth', token: accessToken }));
-            }
             setIsConnected(true);
         };
 

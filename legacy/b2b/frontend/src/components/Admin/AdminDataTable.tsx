@@ -348,7 +348,7 @@ export function AdminDataTable<T>(props: AdminDataTableProps<T>): React.ReactNod
                 <TabsTrigger key={tab.id} value={tab.id} className="text-xs">
                   {tab.label}
                   {typeof tab.count === 'number' ? (
-                    <Badge variant="secondary" className="ml-1.5 h-4 px-1 text-[10px]">
+                    <Badge variant="secondary" className="ml-1.5 h-4 px-1 text-xs">
                       {tab.count}
                     </Badge>
                   ) : null}

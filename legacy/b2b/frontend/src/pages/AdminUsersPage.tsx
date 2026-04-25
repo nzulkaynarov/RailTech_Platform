@@ -267,7 +267,7 @@ function DetailSheet({
               <TabsTrigger value="role" className="text-xs">{t('pages.adminUsers.tabs.role')}</TabsTrigger>
               <TabsTrigger value="memberships" className="text-xs">
                 {t('pages.adminUsers.tabs.memberships')}
-                {hasMemberships && <Badge variant="outline" className="ml-1.5 text-[10px]">{memberships.length}</Badge>}
+                {hasMemberships && <Badge variant="outline" className="ml-1.5 text-xs">{memberships.length}</Badge>}
               </TabsTrigger>
               <TabsTrigger value="timeline" className="text-xs">
                 {t('platformAdmin.activity.title')}

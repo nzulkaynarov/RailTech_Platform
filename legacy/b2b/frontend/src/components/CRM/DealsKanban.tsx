@@ -66,12 +66,12 @@ export function DealsKanban({ deals, stages, onOpen }: DealsKanbanProps) {
                   <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     {col.name}
                   </span>
-                  <Badge variant="secondary" className="text-[10px]">
+                  <Badge variant="secondary" className="text-xs">
                     {col.deals.length}
                   </Badge>
                 </div>
                 {total > 0 ? (
-                  <span className="text-[10px] tabular-nums text-muted-foreground">
+                  <span className="text-xs tabular-nums text-muted-foreground">
                     {format(total)}
                   </span>
                 ) : null}
@@ -95,12 +95,12 @@ export function DealsKanban({ deals, stages, onOpen }: DealsKanbanProps) {
                           <span className="truncate text-xs font-medium">
                             {d.title || t('dealsKanban.untitled', { id: d.id })}
                           </span>
-                          <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
+                          <span className="shrink-0 font-mono text-xs text-muted-foreground">
                             #{d.id}
                           </span>
                         </div>
                         {d.company_name ? (
-                          <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
                             <Handshake className="h-3 w-3" aria-hidden="true" />
                             <span className="truncate">{d.company_name}</span>
                           </div>

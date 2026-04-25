@@ -211,7 +211,7 @@ function Row({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="flex items-start justify-between gap-2 rounded-md border border-muted/50 p-2">
       <dt className="text-muted-foreground">
-        <Badge variant="outline" className="text-[10px]">{label}</Badge>
+        <Badge variant="outline" className="text-xs">{label}</Badge>
       </dt>
       <dd className="text-right font-medium tabular-nums">{value}</dd>
     </div>

@@ -303,7 +303,7 @@ export function AdminRoleApplicationsPage() {
             cell: (a) => (
               <div>
                 <div className="font-medium">{a.company_name}</div>
-                <div className="text-[11px] text-muted-foreground font-mono">{a.company_inn}</div>
+                <div className="text-xs text-muted-foreground font-mono">{a.company_inn}</div>
               </div>
             ),
             alwaysVisible: true,

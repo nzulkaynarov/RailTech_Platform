@@ -396,7 +396,7 @@ export function AdminSubscriptionsPage() {
             cell: (s) => (
               <div>
                 <div className="font-medium">{s.company_name}</div>
-                <div className="text-[11px] text-muted-foreground">{s.company_inn}</div>
+                <div className="text-xs text-muted-foreground">{s.company_inn}</div>
               </div>
             ),
             alwaysVisible: true,
