@@ -96,8 +96,14 @@ class PageStatsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        from django.core.cache import cache
         from crm.models import Deal, Quote, QuoteItem
         from notifications.models import Notification
+
+        cache_key = f'page_stats_{request.user.id}'
+        cached = cache.get(cache_key)
+        if cached:
+            return Response(cached)
 
         # B2B data isolation: staff sees everything, regular users — only their companies
         is_staff = request.user.is_platform_admin
@@ -127,7 +133,7 @@ class PageStatsView(APIView):
             user=request.user, is_read=False
         ).count()
 
-        return Response({
+        data = {
             'sourcing': {
                 'total': sourcing_stats['total'] + sourcing_stats['in_progress'],
                 'new': sourcing_stats['new'],
@@ -170,113 +176,102 @@ class PageStatsView(APIView):
             'admin_users': user_stats,
             'imports': import_stats,
             'notifications_unread': user_notifications,
-        })
+        }
+        cache.set(cache_key, data, timeout=30)
+        return Response(data)
 
     @staticmethod
     def _get_deal_stats(deals_qs) -> dict:
-        """Aggregate deal counts by stage."""
-        return {
-            'total': deals_qs.count(),
-            'active': deals_qs.exclude(
-                stage__code__in=['CLOSED_WON', 'CLOSED_LOST']
-            ).count(),
-            'quote_sent': deals_qs.filter(stage__code='QUOTE_SENT').count(),
-            'closed_won': deals_qs.filter(stage__code='CLOSED_WON').count(),
-        }
+        """Aggregate deal counts by stage — single query via aggregate()."""
+        return deals_qs.aggregate(
+            total=Count('id'),
+            active=Count('id', filter=~Q(stage__code__in=['CLOSED_WON', 'CLOSED_LOST'])),
+            quote_sent=Count('id', filter=Q(stage__code='QUOTE_SENT')),
+            closed_won=Count('id', filter=Q(stage__code='CLOSED_WON')),
+        )
 
     @staticmethod
     def _get_quote_stats(quotes_qs) -> dict:
-        """Aggregate quote counts and pipeline value."""
-        drafts = quotes_qs.filter(status__code='DRAFT').count()
-        sent = quotes_qs.filter(status__code='SENT').count()
-        approved = quotes_qs.filter(status__code='APPROVED').count()
-        pipeline_value = quotes_qs.filter(
-            status__code__in=['DRAFT', 'SENT']
-        ).aggregate(total=Sum('total_incl_vat'))['total'] or Decimal('0')
-        return {
-            'drafts': drafts,
-            'sent': sent,
-            'approved': approved,
-            'pipeline_value': pipeline_value,
-        }
+        """Aggregate quote counts and pipeline value — single query via aggregate()."""
+        stats = quotes_qs.aggregate(
+            drafts=Count('id', filter=Q(status__code='DRAFT')),
+            sent=Count('id', filter=Q(status__code='SENT')),
+            approved=Count('id', filter=Q(status__code='APPROVED')),
+            pipeline_value=Sum(
+                'total_incl_vat',
+                filter=Q(status__code__in=['DRAFT', 'SENT']),
+                default=Decimal('0'),
+            ),
+        )
+        stats['pipeline_value'] = stats['pipeline_value'] or Decimal('0')
+        return stats
 
     @staticmethod
     def _get_sourcing_stats(deals_qs) -> dict:
-        """Aggregate sourcing-related deal counts."""
-        return {
-            'total': deals_qs.filter(stage__code='SOURCING').count(),
-            'new': deals_qs.filter(stage__code='DRAFT').count(),
-            'in_progress': deals_qs.filter(
-                stage__code__in=['SOURCING', 'CALCULATING']
-            ).count(),
-            'completed': deals_qs.filter(
-                stage__code__in=['QUOTE_SENT', 'CONTRACT_SIGNED', 'CLOSED_WON']
-            ).count(),
-        }
+        """Aggregate sourcing-related deal counts — single query via aggregate()."""
+        return deals_qs.aggregate(
+            total=Count('id', filter=Q(stage__code='SOURCING')),
+            new=Count('id', filter=Q(stage__code='DRAFT')),
+            in_progress=Count('id', filter=Q(stage__code__in=['SOURCING', 'CALCULATING'])),
+            completed=Count('id', filter=Q(stage__code__in=['QUOTE_SENT', 'CONTRACT_SIGNED', 'CLOSED_WON'])),
+        )
 
     @staticmethod
     def _get_match_stats(quote_items_qs) -> dict:
-        """Aggregate Smart Match statistics."""
-        total = quote_items_qs.count()
-        matched = quote_items_qs.filter(product__isnull=False).count()
-        unmatched = quote_items_qs.filter(product__isnull=True).count()
-        accuracy = round((matched / total * 100) if total > 0 else 0)
-        return {
-            'total': total,
-            'matched': matched,
-            'unmatched': unmatched,
-            'accuracy': accuracy,
-        }
+        """Aggregate Smart Match statistics — single query via aggregate()."""
+        stats = quote_items_qs.aggregate(
+            total=Count('id'),
+            matched=Count('id', filter=Q(product__isnull=False)),
+            unmatched=Count('id', filter=Q(product__isnull=True)),
+        )
+        total = stats['total']
+        stats['accuracy'] = round((stats['matched'] / total * 100) if total > 0 else 0)
+        return stats
 
     @staticmethod
     def _get_client_stats() -> dict:
-        """Aggregate company/client verification statistics."""
+        """Aggregate company/client verification statistics — single query via aggregate()."""
         from accounts.models import Company
-        return {
-            'total': Company.objects.count(),
-            'verified': Company.objects.filter(
-                verification_status__code='L2_VERIFIED'
-            ).count(),
-            'awaiting_kyc': Company.objects.filter(
-                verification_status__code='PROFILE_SUBMITTED'
-            ).count(),
-            'unverified': Company.objects.filter(
-                verification_status__code='L1_UNVERIFIED'
-            ).count(),
-        }
+        return Company.objects.aggregate(
+            total=Count('id'),
+            verified=Count('id', filter=Q(verification_status__code='L2_VERIFIED')),
+            awaiting_kyc=Count('id', filter=Q(verification_status__code='PROFILE_SUBMITTED')),
+            unverified=Count('id', filter=Q(verification_status__code='L1_UNVERIFIED')),
+        )
 
     @staticmethod
     def _get_catalog_stats() -> dict:
-        """Aggregate product catalog statistics."""
+        """Aggregate product catalog statistics — 2 queries (products + rest)."""
         from catalog.models import Product, Category, EquipmentGroup, SupplierOffer
-        return {
-            'total': Product.objects.count(),
-            'published': Product.objects.filter(status__code='PUBLISHED').count(),
+        product_stats = Product.objects.aggregate(
+            total=Count('id'),
+            published=Count('id', filter=Q(status__code='PUBLISHED')),
+        )
+        # Categories, equipment groups, and offers are separate tables — one aggregate each
+        other_stats = {
             'categories': Category.objects.filter(is_active=True).count(),
             'equipment_groups': EquipmentGroup.objects.filter(is_active=True).count(),
             'offers': SupplierOffer.objects.filter(is_active=True).count(),
         }
+        return {**product_stats, **other_stats}
 
     @staticmethod
     def _get_user_stats(is_staff: bool) -> dict:
-        """Aggregate user statistics (platform-admin only; others get zeros)."""
+        """Aggregate user statistics (platform-admin only; others get zeros) — single query."""
         if not is_staff:
             return {'total': 0, 'admins': 0, 'managers': 0, 'employees': 0}
         from accounts.models import CustomUser
-        users_total = CustomUser.objects.filter(is_active=True).count()
-        users_admins = CustomUser.objects.filter(
-            is_active=True, role__code='ADMIN'
-        ).count()
-        return {
-            'total': users_total,
-            'admins': users_admins,
-            'managers': 0,
-            'employees': users_total - users_admins,
-        }
+        stats = CustomUser.objects.filter(is_active=True).aggregate(
+            total=Count('id'),
+            admins=Count('id', filter=Q(role__code='ADMIN')),
+        )
+        stats['managers'] = 0
+        stats['employees'] = stats['total'] - stats['admins']
+        return stats
 
     @staticmethod
     def _get_import_stats(is_staff: bool) -> dict:
-        """Aggregate import statistics (staff-only)."""
+        """Aggregate import statistics (staff-only). Already minimal queries (2 counts)."""
         if not is_staff:
             return {'total': 0, 'attachments': 0}
         from sourcing.models import ImportTask, Attachment
@@ -364,60 +359,69 @@ class PlatformDashboardView(APIView):
 
     @staticmethod
     def _get_user_stats(week_ago) -> dict:
-        """Aggregate user counts for the platform dashboard."""
+        """Aggregate user counts for the platform dashboard — single query."""
         from accounts.models import CustomUser
-        users_qs = CustomUser.objects.all()
-        return {
-            'total': users_qs.count(),
-            'active': users_qs.filter(is_active=True).count(),
-            'new_7d': users_qs.filter(date_joined__gte=week_ago).count(),
-            'admins': users_qs.filter(role__code='ADMIN').count(),
-        }
+        return CustomUser.objects.aggregate(
+            total=Count('id'),
+            active=Count('id', filter=Q(is_active=True)),
+            new_7d=Count('id', filter=Q(date_joined__gte=week_ago)),
+            admins=Count('id', filter=Q(role__code='ADMIN')),
+        )
 
     @staticmethod
     def _get_company_stats() -> dict:
-        """Aggregate company counts by type and KYC status."""
+        """Aggregate company counts by type and KYC status — 2 queries."""
         from accounts.models import Company
-        companies_qs = Company.objects.all()
-        pending_kyc = companies_qs.filter(
-            verification_status__code='PROFILE_SUBMITTED',
-        ).count()
+        # Main aggregation (1 query) — counts by KYC status
+        main_stats = Company.objects.aggregate(
+            total=Count('id'),
+            pending_kyc=Count('id', filter=Q(verification_status__code='PROFILE_SUBMITTED')),
+            verified=Count('id', filter=Q(verification_status__code__in=['L2_VERIFIED', 'L3_CONTRACTED'])),
+        )
+        # By-type breakdown via values().annotate() — 1 query for all types
+        type_counts = dict(
+            Company.objects.filter(
+                types__code__in=['CLIENT', 'SUPPLIER', 'MANUFACTURER'],
+            ).values_list('types__code').annotate(count=Count('id', distinct=True)).values_list('types__code', 'count')
+        )
         return {
-            'total': companies_qs.count(),
+            'total': main_stats['total'],
             'by_type': {
-                'BUYER': companies_qs.filter(types__code='CLIENT').distinct().count(),
-                'SELLER': companies_qs.filter(types__code='SUPPLIER').distinct().count(),
-                'MANUFACTURER': companies_qs.filter(types__code='MANUFACTURER').distinct().count(),
+                'BUYER': type_counts.get('CLIENT', 0),
+                'SELLER': type_counts.get('SUPPLIER', 0),
+                'MANUFACTURER': type_counts.get('MANUFACTURER', 0),
             },
-            'pending_kyc': pending_kyc,
-            'verified': companies_qs.filter(
-                verification_status__code__in=['L2_VERIFIED', 'L3_CONTRACTED'],
-            ).count(),
+            'pending_kyc': main_stats['pending_kyc'],
+            'verified': main_stats['verified'],
         }
 
     @staticmethod
     def _get_deal_dashboard_stats() -> dict:
-        """Aggregate deal counts and revenue for the platform dashboard."""
+        """Aggregate deal counts and revenue for the platform dashboard — 3 queries."""
         from crm.models import Deal, Quote
-        deals_qs = Deal.objects.all()
-        pipeline_value = Quote.objects.filter(
-            status__code__in=['SENT', 'APPROVED'],
-        ).aggregate(total=Sum('total_incl_vat'))['total'] or Decimal('0')
-        won_value = Quote.objects.filter(
-            deal__stage__code='CLOSED_WON',
-        ).aggregate(total=Sum('total_incl_vat'))['total'] or Decimal('0')
+        # 1 query: deal counts via aggregate
+        deal_stats = Deal.objects.aggregate(
+            total=Count('id'),
+            active=Count('id', filter=~Q(stage__code__in=['CLOSED_WON', 'CLOSED_LOST'])),
+            won=Count('id', filter=Q(stage__code='CLOSED_WON')),
+            lost=Count('id', filter=Q(stage__code='CLOSED_LOST')),
+        )
+        # 1 query: quote values via aggregate
+        quote_values = Quote.objects.aggregate(
+            pipeline_value=Sum('total_incl_vat', filter=Q(status__code__in=['SENT', 'APPROVED']), default=Decimal('0')),
+            won_value=Sum('total_incl_vat', filter=Q(deal__stage__code='CLOSED_WON'), default=Decimal('0')),
+        )
+        # 1 query: by_stage breakdown
+        by_stage = list(
+            Deal.objects.values('stage__code', 'stage__name')
+            .annotate(count=Count('id'))
+            .order_by('stage__sort_order')
+        )
         return {
-            'total': deals_qs.count(),
-            'active': deals_qs.exclude(stage__code__in=['CLOSED_WON', 'CLOSED_LOST']).count(),
-            'won': deals_qs.filter(stage__code='CLOSED_WON').count(),
-            'lost': deals_qs.filter(stage__code='CLOSED_LOST').count(),
-            'by_stage': list(
-                deals_qs.values('stage__code', 'stage__name')
-                .annotate(count=Count('id'))
-                .order_by('stage__sort_order')
-            ),
-            'pipeline_value': str(pipeline_value),
-            'won_value': str(won_value),
+            **deal_stats,
+            'by_stage': by_stage,
+            'pipeline_value': str(quote_values['pipeline_value'] or Decimal('0')),
+            'won_value': str(quote_values['won_value'] or Decimal('0')),
         }
 
     @staticmethod
