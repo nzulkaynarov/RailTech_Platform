@@ -80,6 +80,9 @@ class Notification(models.Model):
         verbose_name = _("Уведомление")
         verbose_name_plural = _("Уведомления")
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'is_read', 'audience'], name='notif_user_read_aud_idx'),
+        ]
 
     def __str__(self):
         return f"{self.type}: {self.title}"

@@ -308,10 +308,10 @@ def _daily_series(qs, date_field: str, days: int, value_aggr=None) -> list[dict[
     by_date: dict[date, dict[str, Any]] = {row['d']: row for row in annotated if row.get('d')}
     series: list[dict[str, Any]] = []
     for i in range(days):
-        d = start + timedelta(days=i)
-        row = by_date.get(d, {})
+        current_date = start + timedelta(days=i)
+        row = by_date.get(current_date, {})
         series.append({
-            'date': d.isoformat(),
+            'date': current_date.isoformat(),
             'count': int(row.get('c') or 0),
             'value': str(row.get('v') or '0'),
         })

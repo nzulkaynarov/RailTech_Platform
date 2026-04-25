@@ -141,8 +141,8 @@ def process_excel_import(self, deal_id: int, file_content_b64: str, user_id: int
 
     except Deal.DoesNotExist:
         return {'status': 'error', 'message': 'Deal not found.'}
-    except Exception as e:
-        logger.exception(f"Excel import failed for deal {deal_id}")
+    except (ValueError, KeyError, TypeError, OSError) as e:
+        logger.exception("Excel import failed for deal %s", deal_id)
         return {'status': 'error', 'message': 'Import failed. Please check the file format and try again.'}
 
 
@@ -222,6 +222,6 @@ def process_catalog_import(self, file_content_b64: str):
             self.update_state(state='PROGRESS', meta={'current': items_processed, 'total': total_rows})
 
         return {'status': 'success', 'items_processed': items_processed}
-    except Exception as e:
+    except (ValueError, KeyError, TypeError, OSError) as e:
         logger.exception("Catalog import failed")
         return {'status': 'error', 'message': 'Catalog import failed. Please check the file format and try again.'}

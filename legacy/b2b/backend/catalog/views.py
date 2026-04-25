@@ -381,9 +381,10 @@ class ProductViewSet(viewsets.ModelViewSet):
             return Response({'detail': 'NO_FILE_PROVIDED'}, status=status.HTTP_400_BAD_REQUEST)
 
         from core.validators import validate_image_upload
+        from django.core.exceptions import ValidationError
         try:
             validate_image_upload(image_file)
-        except Exception as e:
+        except ValidationError as e:
             return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         is_main = str(request.data.get('is_main', 'false')).lower() in ('true', '1')
@@ -438,9 +439,10 @@ class ProductViewSet(viewsets.ModelViewSet):
             return Response({'detail': 'NO_FILE_PROVIDED'}, status=status.HTTP_400_BAD_REQUEST)
 
         from core.validators import validate_document_upload
+        from django.core.exceptions import ValidationError
         try:
             validate_document_upload(file_obj)
-        except Exception as e:
+        except ValidationError as e:
             return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         name = request.data.get('name') or file_obj.name

@@ -36,9 +36,9 @@ function statusTone(status?: string | null): 'success' | 'warning' | 'destructiv
 
 function daysUntil(dateStr?: string | null): number | null {
   if (!dateStr) return null;
-  const d = new Date(dateStr);
-  if (Number.isNaN(d.getTime())) return null;
-  const diff = d.getTime() - Date.now();
+  const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return null;
+  const diff = date.getTime() - Date.now();
   return Math.ceil(diff / 86_400_000);
 }
 
@@ -211,7 +211,7 @@ function Row({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="flex items-start justify-between gap-2 rounded-md border border-muted/50 p-2">
       <dt className="text-muted-foreground">
-        <Badge variant="outline" className="text-[10px]">{label}</Badge>
+        <Badge variant="outline" className="text-xs">{label}</Badge>
       </dt>
       <dd className="text-right font-medium tabular-nums">{value}</dd>
     </div>

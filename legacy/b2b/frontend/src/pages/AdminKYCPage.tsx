@@ -511,8 +511,8 @@ export function AdminKYCPage() {
             header: t('kycManager.table.status'),
             cell: (c) => {
               const code = getStatusCode(c);
-              const b = STATUS_BADGE_MAP[code] || STATUS_BADGE_MAP.L1_UNVERIFIED;
-              return <Badge variant={b.variant}>{t(b.label)}</Badge>;
+              const badgeConfig = STATUS_BADGE_MAP[code] || STATUS_BADGE_MAP.L1_UNVERIFIED;
+              return <Badge variant={badgeConfig.variant}>{t(badgeConfig.label)}</Badge>;
             },
           },
           {

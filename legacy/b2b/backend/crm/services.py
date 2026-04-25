@@ -1,3 +1,5 @@
+import logging
+from dataclasses import dataclass, field
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Optional, Tuple
 
@@ -7,6 +9,36 @@ from django.db.models import Count, QuerySet, Sum
 from accounts.models import Company, CustomUser
 
 from .models import ActivityLog, Deal, DealStage, Lead, Message, Quote, QuoteItem, QuoteItemHistory, QuoteStatus
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Parameter dataclasses — reduce long argument lists (Sprint 4b).
+# ──────────────────────────────────────────────────────────────────────────
+
+
+@dataclass
+class PaymentData:
+    """Groups payment-related parameters for record_payment()."""
+    invoice_id: int
+    amount: object  # Decimal-coercible (str, int, float, Decimal)
+    paid_at: object  # date or datetime
+    method: str = 'BANK_TRANSFER'
+    reference: str = ''
+    proof_file: Optional[object] = None
+    manual: bool = True
+
+
+@dataclass
+class BidSubmission:
+    """Groups supplier bid parameters for submit_supplier_bid()."""
+    deal_id: int
+    supplier_id: int
+    items: list = field(default_factory=list)
+    notes: str = ''
+    lead_time_days: Optional[int] = None
+    currency_id: Optional[int] = None
+
+logger = logging.getLogger(__name__)
 
 
 class QuoteCalculationService:
@@ -474,7 +506,7 @@ def transition_deal_stage(
             from .tasks import auto_invoice_on_closed_won
             auto_invoice_on_closed_won.delay(deal.id)
         except Exception:
-            pass
+            logger.exception('Failed to dispatch auto-invoice task for deal %s', deal.id)
 
     return deal, None
 
@@ -933,16 +965,33 @@ def _render_invoice_pdf(invoice) -> None:
 
 @transaction.atomic
 def record_payment(
-    invoice_id: int, actor: CustomUser, amount, paid_at, method: str = 'BANK_TRANSFER',
-    reference: str = '', proof_file=None, manual: bool = True,
+    payment_data_or_invoice_id, actor: CustomUser, amount=None, paid_at=None,
+    method: str = 'BANK_TRANSFER', reference: str = '', proof_file=None,
+    manual: bool = True,
 ) -> Tuple[Optional[object], Optional[str]]:
     """Record payment against an invoice.
 
+    Accepts either a PaymentData dataclass or positional/keyword args for
+    backwards compatibility. New callers should prefer PaymentData.
+
     NOTE: manual=True marks the record as hand-entered (no payment-provider webhook).
-    Logged with [MANUAL_MODE] tag in ActivityLog — needed for later reconciliation
+    Logged with [MANUAL_MODE] tag in ActivityLog -- needed for later reconciliation
     once Click/Payme/Stripe webhooks replace the manual flow. See memory
     `tech_debt_payment_esign.md`.
     """
+    # Unpack PaymentData if provided
+    if isinstance(payment_data_or_invoice_id, PaymentData):
+        pd = payment_data_or_invoice_id
+        invoice_id = pd.invoice_id
+        amount = pd.amount
+        paid_at = pd.paid_at
+        method = pd.method
+        reference = pd.reference
+        proof_file = pd.proof_file
+        manual = pd.manual
+    else:
+        invoice_id = payment_data_or_invoice_id
+
     from decimal import Decimal as D
     from accounts.services import is_member_of, is_platform_admin_viewer
     from .models import Invoice, Payment
@@ -950,7 +999,7 @@ def record_payment(
     # Actor-guard: platform-admin viewer cannot execute business actions.
     if is_platform_admin_viewer(actor):
         return None, 'ADMIN_VIEWER_CANNOT_ACT'
-    # Payment is recorded by the buyer side of the deal — must be member w/ can_buy.
+    # Payment is recorded by the buyer side of the deal -- must be member w/ can_buy.
     if not (getattr(actor, 'is_superuser', False)
             or is_member_of(actor, invoice.deal.company_id, capability='buy')):
         return None, 'MEMBER_REQUIRED_FOR_ACTION'
@@ -1129,11 +1178,31 @@ def open_rfq(
 
 @transaction.atomic
 def submit_supplier_bid(
-    deal_id: int, supplier_id: int, submitted_by: CustomUser,
-    items: list[dict], notes: str = '', lead_time_days: Optional[int] = None,
+    bid_or_deal_id, supplier_id: Optional[int] = None,
+    submitted_by: Optional[CustomUser] = None,
+    items: Optional[list[dict]] = None, notes: str = '',
+    lead_time_days: Optional[int] = None,
     currency_id: Optional[int] = None,
 ) -> Tuple[Optional[object], Optional[str]]:
-    """Create or update a SupplierBid for the given deal+supplier."""
+    """Create or update a SupplierBid for the given deal+supplier.
+
+    Accepts either a BidSubmission dataclass or positional/keyword args for
+    backwards compatibility. New callers should prefer BidSubmission.
+    """
+    # Unpack BidSubmission if provided
+    if isinstance(bid_or_deal_id, BidSubmission):
+        bs = bid_or_deal_id
+        deal_id = bs.deal_id
+        supplier_id = bs.supplier_id
+        items = bs.items
+        notes = bs.notes
+        lead_time_days = bs.lead_time_days
+        currency_id = bs.currency_id
+    else:
+        deal_id = bid_or_deal_id
+    if items is None:
+        items = []
+
     from decimal import Decimal as D
     from django.utils import timezone
     from accounts.services import (
@@ -1180,7 +1249,7 @@ def submit_supplier_bid(
     bid.notes = notes
     bid.save()
 
-    # Audit — log to BOTH the bid itself and the parent deal so admin timeline
+    # Audit -- log to BOTH the bid itself and the parent deal so admin timeline
     # on a deal surfaces supplier actions.
     from core.audit import log_admin_action
     snapshot = {

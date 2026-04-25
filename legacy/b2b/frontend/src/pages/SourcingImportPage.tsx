@@ -21,9 +21,9 @@ function readDealIdFromHash(): string {
   const raw = window.location.hash.startsWith('#')
     ? window.location.hash.slice(1)
     : window.location.hash;
-  const q = raw.includes('?') ? raw.slice(raw.indexOf('?') + 1) : '';
-  if (!q) return '';
-  const params = new URLSearchParams(q);
+  const queryString = raw.includes('?') ? raw.slice(raw.indexOf('?') + 1) : '';
+  if (!queryString) return '';
+  const params = new URLSearchParams(queryString);
   return params.get('deal') || '';
 }
 

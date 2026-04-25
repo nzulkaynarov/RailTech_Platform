@@ -32,7 +32,7 @@ git diff --name-only HEAD
 - `#[0-9a-fA-F]{6}` (hex цвета) → замени на `var(--color-chart-N)` или семантический токен
 
 #### Запрещённые размеры
-- `text-[` (arbitrary text size, e.g. `text-[9px]`, `text-[8px]`, `text-[11px]`) → замени на `text-xs` (минимально допустимый размер)
+- `text-[` (arbitrary text size, e.g. `text-[8px]`, `text-[9px]`, `text-[10px]`, `text-[11px]`) → замени на `text-xs` (минимально допустимый размер)
 - `w-[` в SelectTrigger → замени на `w-32`, `w-40`, `w-48`
 
 #### Запрещённые паттерны

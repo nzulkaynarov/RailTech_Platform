@@ -39,7 +39,7 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
             audience = Notification.AUDIENCE_PLATFORM_ADMIN
         else:
             audience = Notification.AUDIENCE_USER
-        return Notification.objects.filter(
+        return Notification.objects.select_related('type').filter(
             Q(audience=audience)
             & (Q(user=user) | Q(user__isnull=True))
         )
