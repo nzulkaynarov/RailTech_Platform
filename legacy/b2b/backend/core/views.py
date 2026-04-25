@@ -321,6 +321,12 @@ class PlatformDashboardView(APIView):
     permission_classes = [IsAuthenticated, IsPlatformAdmin]
 
     def get(self, request):
+        from django.core.cache import cache
+
+        cached = cache.get('platform_dashboard_v1')
+        if cached:
+            return Response(cached)
+
         from datetime import timedelta
         from accounts.models import (
             Company, CustomUser, SupplierSubscription, CompanyRoleApplication,
@@ -423,7 +429,7 @@ class PlatformDashboardView(APIView):
             'overdue_invoices': overdue_invoices,
         }
 
-        return Response({
+        data = {
             'users': {
                 'total': users_total,
                 'active': users_active,
@@ -454,7 +460,9 @@ class PlatformDashboardView(APIView):
             },
             'attention': attention,
             'recent_activity': recent_activity,
-        })
+        }
+        cache.set('platform_dashboard_v1', data, timeout=60)
+        return Response(data)
 
 
 # ──────────────────────────────────────────────────────────────────────────
