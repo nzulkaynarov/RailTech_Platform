@@ -48,7 +48,7 @@ class SupplierBidViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
             return SupplierBid.objects.none()
-        u = self.request.user
+        user = self.request.user
         qs = (
             SupplierBid.objects.select_related("deal__company", "supplier", "currency")
             .prefetch_related(
@@ -56,14 +56,14 @@ class SupplierBidViewSet(viewsets.ModelViewSet):
             )
             .order_by("-created_at")
         )
-        if u.is_platform_admin:
+        if user.is_platform_admin:
             return qs
         # B2B visibility:
         #  * Supplier sees bids its company submitted.
         #  * Buyer (deal.company member) sees bids placed on their RFQs --
         #    required so the Buyer can pick a winner from the UI (CRIT-1).
         user_company_ids = list(
-            u.memberships.filter(is_active=True).values_list("company_id", flat=True),
+            user.memberships.filter(is_active=True).values_list("company_id", flat=True),
         )
         return qs.filter(
             Q(supplier_id__in=user_company_ids) | Q(deal__company_id__in=user_company_ids),

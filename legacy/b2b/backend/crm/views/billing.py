@@ -53,13 +53,13 @@ class ContractViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
             return Contract.objects.none()
-        u = self.request.user
+        user = self.request.user
         qs = Contract.objects.select_related(
             "deal__company", "quote", "currency", "client_signer", "manager_signer"
         ).order_by("-created_at")
-        if u.is_platform_admin:
+        if user.is_platform_admin:
             return qs
-        user_company_ids = u.memberships.filter(is_active=True).values_list("company_id", flat=True)
+        user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
         return qs.filter(deal__company_id__in=user_company_ids)
 
     @extend_schema(
@@ -172,7 +172,7 @@ class InvoiceViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
             return Invoice.objects.none()
-        u = self.request.user
+        user = self.request.user
         qs = (
             Invoice.objects.select_related("deal__company", "contract", "currency")
             .prefetch_related(
@@ -181,9 +181,9 @@ class InvoiceViewSet(viewsets.ModelViewSet):
             )
             .order_by("-created_at")
         )
-        if u.is_platform_admin:
+        if user.is_platform_admin:
             return qs
-        user_company_ids = u.memberships.filter(is_active=True).values_list("company_id", flat=True)
+        user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
         return qs.filter(deal__company_id__in=user_company_ids)
 
     @extend_schema(summary="Generate invoice from a signed contract", tags=["CRM"])
@@ -255,11 +255,11 @@ class PaymentViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
             return Payment.objects.none()
-        u = self.request.user
+        user = self.request.user
         qs = Payment.objects.select_related("invoice__deal__company").order_by("-paid_at")
-        if u.is_platform_admin:
+        if user.is_platform_admin:
             return qs
-        user_company_ids = u.memberships.filter(is_active=True).values_list("company_id", flat=True)
+        user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
         return qs.filter(invoice__deal__company_id__in=user_company_ids)
 
 
@@ -270,11 +270,11 @@ class ActViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
             return Act.objects.none()
-        u = self.request.user
+        user = self.request.user
         qs = Act.objects.select_related("deal__company", "contract", "invoice").order_by("-created_at")
-        if u.is_platform_admin:
+        if user.is_platform_admin:
             return qs
-        user_company_ids = u.memberships.filter(is_active=True).values_list("company_id", flat=True)
+        user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
         return qs.filter(deal__company_id__in=user_company_ids)
 
     @extend_schema(summary="Sign act (mark as SIGNED)", tags=["CRM"])
@@ -304,11 +304,11 @@ class FulfillmentViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
             return Fulfillment.objects.none()
-        u = self.request.user
+        user = self.request.user
         qs = Fulfillment.objects.select_related("deal__company").order_by("-updated_at")
-        if u.is_platform_admin:
+        if user.is_platform_admin:
             return qs
-        user_company_ids = u.memberships.filter(is_active=True).values_list("company_id", flat=True)
+        user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
         return qs.filter(deal__company_id__in=user_company_ids)
 
     @extend_schema(summary="Update fulfillment status", tags=["CRM"])
