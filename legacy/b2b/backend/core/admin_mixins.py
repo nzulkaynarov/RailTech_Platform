@@ -17,6 +17,7 @@ Usage:
         def close_deal(self, request, queryset):
             ...
 """
+
 from functools import wraps
 
 from django.contrib import admin
@@ -33,6 +34,7 @@ def superuser_only_action(description):
         def verify_kyc(self, request, queryset):
             ...
     """
+
     def decorator(func):
         @admin.action(description=description)
         @wraps(func)
@@ -45,7 +47,9 @@ def superuser_only_action(description):
                 )
                 return
             return func(self, request, queryset)
+
         return wrapper
+
     return decorator
 
 
@@ -78,10 +82,7 @@ class ReadOnlyInspectionMixin:
         if obj is None:
             return existing
 
-        all_fields = [
-            f.name for f in self.model._meta.get_fields()
-            if not f.many_to_many and not f.one_to_many
-        ]
+        all_fields = [f.name for f in self.model._meta.get_fields() if not f.many_to_many and not f.one_to_many]
         editable = set(self.inspection_editable_fields)
         for name in all_fields:
             if name not in editable and name not in existing:
@@ -93,8 +94,5 @@ class ReadOnlyInspectionMixin:
         actions = super().get_actions(request)
         if not request.user.is_superuser:
             # Keep only built-in actions (like select all)
-            actions = {
-                k: v for k, v in actions.items()
-                if not hasattr(v[0], '__wrapped__')
-            }
+            actions = {k: v for k, v in actions.items() if not hasattr(v[0], "__wrapped__")}
         return actions

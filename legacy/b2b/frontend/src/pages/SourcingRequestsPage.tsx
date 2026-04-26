@@ -18,7 +18,7 @@ export function SourcingRequestsPage({ onNavigate }: { onNavigate?: (t: string) 
   const { data: deals, isLoading } = useDeals();
   const { data: stages } = useDealStages();
   const formatCurrency = useCurrencyStore((s) => s.format);
-  const s = ps?.sourcing;
+  const sourcingStats = ps?.sourcing;
 
   const listParams = useListParams(['stage'] as const, { defaultOrdering: '-created_at', pageSize: 15 });
 
@@ -32,10 +32,10 @@ export function SourcingRequestsPage({ onNavigate }: { onNavigate?: (t: string) 
       description={t('pages.sourcingRequests.description')}
       icon={<ClipboardList className="h-5 w-5" />}
       stats={[
-        { label: t('pages.sourcingRequests.stats.total'), value: String(s?.total ?? sourcingDeals.length) },
-        { label: t('pages.sourcingRequests.stats.new'), value: String(s?.new ?? sourcingDeals.filter(d => d.stage_code === 'DRAFT').length) },
-        { label: t('pages.sourcingRequests.stats.inProgress'), value: String(s?.in_progress ?? sourcingDeals.filter(d => d.stage_code === 'SOURCING').length) },
-        { label: t('pages.sourcingRequests.stats.completed'), value: String(s?.completed ?? sourcingDeals.filter(d => d.stage_code === 'CALCULATING').length) },
+        { label: t('pages.sourcingRequests.stats.total'), value: String(sourcingStats?.total ?? sourcingDeals.length) },
+        { label: t('pages.sourcingRequests.stats.new'), value: String(sourcingStats?.new ?? sourcingDeals.filter(d => d.stage_code === 'DRAFT').length) },
+        { label: t('pages.sourcingRequests.stats.inProgress'), value: String(sourcingStats?.in_progress ?? sourcingDeals.filter(d => d.stage_code === 'SOURCING').length) },
+        { label: t('pages.sourcingRequests.stats.completed'), value: String(sourcingStats?.completed ?? sourcingDeals.filter(d => d.stage_code === 'CALCULATING').length) },
       ]}
       actions={[{ label: t('pages.sourcingRequests.createRequest'), onClick: () => onNavigate?.('products') }]}
     >

@@ -1,20 +1,28 @@
 from rest_framework import serializers
-from master_data.models import (
-    UnitOfMeasure, Currency, DeliveryBasis
-)
-from .models import (
-    Product, EquipmentGroup, Category, DomainType,
-    SupplierOffer, ProductImage, ProductDocument,
-    ProductStatus, StockStatus,
-)
+
 from accounts.models import Company
+from master_data.models import Currency, DeliveryBasis, UnitOfMeasure
+
+from .models import (
+    Category,
+    DomainType,
+    EquipmentGroup,
+    Product,
+    ProductDocument,
+    ProductImage,
+    ProductStatus,
+    StockStatus,
+    SupplierOffer,
+)
 
 
 class CompanyLightSerializer(serializers.ModelSerializer):
     """Lightweight company serializer for nested use — no extra queries."""
+
     class Meta:
         model = Company
-        fields = ['id', 'name', 'inn', 'logo']
+        fields = ["id", "name", "inn", "logo"]
+
 
 # --- Simple Reference Serializers ---
 
@@ -22,49 +30,50 @@ class CompanyLightSerializer(serializers.ModelSerializer):
 class DomainTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = DomainType
-        fields = ['id', 'code', 'name', 'sku_prefix', 'sort_order', 'is_active']
+        fields = ["id", "code", "name", "sku_prefix", "sort_order", "is_active"]
 
 
 class ProductStatusSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductStatus
-        fields = ['id', 'code', 'name']
+        fields = ["id", "code", "name"]
 
 
 class StockStatusSerializer(serializers.ModelSerializer):
     class Meta:
         model = StockStatus
-        fields = ['id', 'code', 'name']
+        fields = ["id", "code", "name"]
 
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ['id', 'name', 'parent', 'domain_type', 'icon']
+        fields = ["id", "name", "parent", "domain_type", "icon"]
 
 
 class UnitOfMeasureSerializer(serializers.ModelSerializer):
     class Meta:
         model = UnitOfMeasure
-        fields = ['id', 'code', 'name']
+        fields = ["id", "code", "name"]
 
 
 class CurrencySerializer(serializers.ModelSerializer):
     class Meta:
         model = Currency
-        fields = ['id', 'code', 'symbol']
+        fields = ["id", "code", "symbol"]
 
 
 class DeliveryBasisSerializer(serializers.ModelSerializer):
     class Meta:
         model = DeliveryBasis
-        fields = ['id', 'code', 'name', 'description']
+        fields = ["id", "code", "name", "description"]
 
 
 class EquipmentGroupSerializer(serializers.ModelSerializer):
     class Meta:
         model = EquipmentGroup
-        fields = ['id', 'name', 'full_path']
+        fields = ["id", "name", "full_path"]
+
 
 # --- Media Serializers ---
 
@@ -72,41 +81,51 @@ class EquipmentGroupSerializer(serializers.ModelSerializer):
 class ProductImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductImage
-        fields = ['id', 'image', 'image_url', 'is_main', 'alt_text']
+        fields = ["id", "image", "image_url", "is_main", "alt_text"]
 
 
 class ProductDocumentSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductDocument
-        fields = ['id', 'file', 'file_url', 'name', 'uploaded_at']
+        fields = ["id", "file", "file_url", "name", "uploaded_at"]
+
 
 # --- Supplier Offer Serializer ---
 
 
 class SupplierOfferSerializer(serializers.ModelSerializer):
-    supplier_data = CompanyLightSerializer(source='supplier', read_only=True)
-    currency_data = CurrencySerializer(source='currency', read_only=True)
-    delivery_basis_data = DeliveryBasisSerializer(source='delivery_basis', read_only=True)
+    supplier_data = CompanyLightSerializer(source="supplier", read_only=True)
+    currency_data = CurrencySerializer(source="currency", read_only=True)
+    delivery_basis_data = DeliveryBasisSerializer(source="delivery_basis", read_only=True)
 
     class Meta:
         model = SupplierOffer
         fields = [
-            'id', 'supplier', 'supplier_data', 'supplier_sku',
-            'base_price', 'currency', 'currency_data',
-            'delivery_basis', 'delivery_basis_data',
-            'stock_status', 'delivery_lead_time',
-            'min_order_qty', 'is_active'
+            "id",
+            "supplier",
+            "supplier_data",
+            "supplier_sku",
+            "base_price",
+            "currency",
+            "currency_data",
+            "delivery_basis",
+            "delivery_basis_data",
+            "stock_status",
+            "delivery_lead_time",
+            "min_order_qty",
+            "is_active",
         ]
+
 
 # --- Main Product Serializer (PIM) ---
 
 
 class ProductSerializer(serializers.ModelSerializer):
     # Readable Nested Objects (for GET)
-    category_data = CategorySerializer(source='category', read_only=True)
-    manufacturer_data = CompanyLightSerializer(source='manufacturer', read_only=True)
-    uom_data = UnitOfMeasureSerializer(source='uom', read_only=True)
-    equipment_groups_data = EquipmentGroupSerializer(source='equipment_groups', many=True, read_only=True)
+    category_data = CategorySerializer(source="category", read_only=True)
+    manufacturer_data = CompanyLightSerializer(source="manufacturer", read_only=True)
+    uom_data = UnitOfMeasureSerializer(source="uom", read_only=True)
+    equipment_groups_data = EquipmentGroupSerializer(source="equipment_groups", many=True, read_only=True)
 
     offers = SupplierOfferSerializer(many=True, read_only=True)
     images = ProductImageSerializer(many=True, read_only=True)
@@ -126,18 +145,37 @@ class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = [
-            'id', 'sku', 'name', 'description', 'status', 'status_name', 'status_code',
-            'domain_type', 'domain_type_name', 'domain_type_code',
-            'category', 'category_data',
-            'manufacturer', 'manufacturer_data',
-            'uom', 'uom_data',
-            'gost_drawing', 'specifications',
-            'equipment_groups', 'equipment_groups_data',
-            'offers', 'images', 'documents', 'main_image_url', 'main_document_url',
-            'stock_status', 'base_price',
-            'created_at', 'updated_at'
+            "id",
+            "sku",
+            "name",
+            "description",
+            "status",
+            "status_name",
+            "status_code",
+            "domain_type",
+            "domain_type_name",
+            "domain_type_code",
+            "category",
+            "category_data",
+            "manufacturer",
+            "manufacturer_data",
+            "uom",
+            "uom_data",
+            "gost_drawing",
+            "specifications",
+            "equipment_groups",
+            "equipment_groups_data",
+            "offers",
+            "images",
+            "documents",
+            "main_image_url",
+            "main_document_url",
+            "stock_status",
+            "base_price",
+            "created_at",
+            "updated_at",
         ]
-        read_only_fields = ['sku', 'created_at', 'updated_at']
+        read_only_fields = ["sku", "created_at", "updated_at"]
 
     def get_status_name(self, obj):
         return obj.status.name if obj.status else None
@@ -167,7 +205,7 @@ class ProductSerializer(serializers.ModelSerializer):
         offer = self._first_offer(obj)
         if offer:
             return str(offer.base_price)
-        return '0'
+        return "0"
 
     def get_main_image_url(self, obj):
         images = obj.images.all()
@@ -175,8 +213,8 @@ class ProductSerializer(serializers.ModelSerializer):
         if main_img:
             url = main_img.image.url if main_img.image else main_img.image_url
             if url:
-                request = self.context.get('request')
-                if request and not url.startswith('http'):
+                request = self.context.get("request")
+                if request and not url.startswith("http"):
                     return request.build_absolute_uri(url)
                 return url
         return None
@@ -187,8 +225,8 @@ class ProductSerializer(serializers.ModelSerializer):
         if doc:
             url = doc.file.url if doc.file else doc.file_url
             if url:
-                request = self.context.get('request')
-                if request and not url.startswith('http'):
+                request = self.context.get("request")
+                if request and not url.startswith("http"):
                     return request.build_absolute_uri(url)
                 return url
         return None
@@ -196,9 +234,10 @@ class ProductSerializer(serializers.ModelSerializer):
 
 class ProductListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for list endpoints — no nested offers/documents."""
-    category_data = CategorySerializer(source='category', read_only=True)
-    manufacturer_data = CompanyLightSerializer(source='manufacturer', read_only=True)
-    uom_data = UnitOfMeasureSerializer(source='uom', read_only=True)
+
+    category_data = CategorySerializer(source="category", read_only=True)
+    manufacturer_data = CompanyLightSerializer(source="manufacturer", read_only=True)
+    uom_data = UnitOfMeasureSerializer(source="uom", read_only=True)
 
     main_image_url = serializers.SerializerMethodField()
     status_name = serializers.SerializerMethodField()
@@ -211,15 +250,27 @@ class ProductListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = [
-            'id', 'sku', 'name', 'status', 'status_name', 'status_code',
-            'domain_type', 'domain_type_name', 'domain_type_code',
-            'category', 'category_data',
-            'manufacturer', 'manufacturer_data',
-            'uom', 'uom_data',
-            'gost_drawing',
-            'main_image_url',
-            'stock_status', 'base_price',
-            'created_at', 'updated_at',
+            "id",
+            "sku",
+            "name",
+            "status",
+            "status_name",
+            "status_code",
+            "domain_type",
+            "domain_type_name",
+            "domain_type_code",
+            "category",
+            "category_data",
+            "manufacturer",
+            "manufacturer_data",
+            "uom",
+            "uom_data",
+            "gost_drawing",
+            "main_image_url",
+            "stock_status",
+            "base_price",
+            "created_at",
+            "updated_at",
         ]
 
     def get_status_name(self, obj):
@@ -245,7 +296,7 @@ class ProductListSerializer(serializers.ModelSerializer):
 
     def get_base_price(self, obj):
         offer = self._first_offer(obj)
-        return str(offer.base_price) if offer else '0'
+        return str(offer.base_price) if offer else "0"
 
     def get_main_image_url(self, obj):
         images = obj.images.all()
@@ -253,8 +304,8 @@ class ProductListSerializer(serializers.ModelSerializer):
         if main_img:
             url = main_img.image.url if main_img.image else main_img.image_url
             if url:
-                request = self.context.get('request')
-                if request and not url.startswith('http'):
+                request = self.context.get("request")
+                if request and not url.startswith("http"):
                     return request.build_absolute_uri(url)
                 return url
         return None

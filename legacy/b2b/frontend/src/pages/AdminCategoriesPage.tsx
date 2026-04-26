@@ -142,9 +142,9 @@ export function AdminCategoriesPage() {
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
 
   const nameById = useMemo(() => {
-    const m = new Map<number, string>();
-    (categories ?? []).forEach((c) => m.set(c.id, c.name));
-    return m;
+    const categoryMap = new Map<number, string>();
+    (categories ?? []).forEach((c) => categoryMap.set(c.id, c.name));
+    return categoryMap;
   }, [categories]);
 
   const onEdit = (c: Category) => {

@@ -4,10 +4,11 @@ Notification business logic — single source of truth.
 Called from both Django Unfold actions and DRF endpoints.
 See ADR-0001 and CLAUDE.md IRON RULE 8.
 """
+
 import logging
 
-from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from django.db.models import QuerySet
 
 from .models import Notification
@@ -27,8 +28,8 @@ def mark_notifications_read(notifications: QuerySet[Notification]) -> int:
 def notify_platform_admins(
     title: str,
     message: str,
-    link: str = '',
-    type_code: str = 'WARNING',
+    link: str = "",
+    type_code: str = "WARNING",
 ) -> Notification:
     """
     Создаёт broadcast-уведомление для всех Platform Admin (audience=PLATFORM_ADMIN, user=NULL).
@@ -37,6 +38,7 @@ def notify_platform_admins(
     stuck Celery tasks, KYC queue growing и т.п. Обычные пользователи этот канал НЕ видят.
     """
     from .models import NotificationType
+
     ntype = NotificationType.objects.filter(code=type_code).first()
     notification = Notification.objects.create(
         audience=Notification.AUDIENCE_PLATFORM_ADMIN,
@@ -66,10 +68,9 @@ def push_notification_ws(notification: Notification):
                     "link": notification.link or "",
                     "type": notification.type.code if notification.type else "INFO",
                     "is_read": notification.is_read,
-                    "created_at": notification.created_at.isoformat()
-                    if notification.created_at else "",
+                    "created_at": notification.created_at.isoformat() if notification.created_at else "",
                 },
             },
         )
     except Exception:
-        logger.debug("WebSocket push failed for notification %s", notification.pk)
+        logger.exception("Failed to push WebSocket notification %s", notification.pk)

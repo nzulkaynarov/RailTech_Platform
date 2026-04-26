@@ -6,10 +6,10 @@ Currently:
     as JSONL files. Source of truth: ADR-0001 (Unfold = engineering inspection,
     history goes to S3).
 """
+
 import json
 import logging
 from datetime import timedelta
-from io import BytesIO
 
 from celery import shared_task
 from django.core.files.base import ContentFile
@@ -24,14 +24,14 @@ logger = logging.getLogger(__name__)
 def _serialize_message(msg) -> dict:
     """Convert a Message instance to a dict suitable for JSONL archiving."""
     return {
-        'id': msg.id,
-        'deal_id': msg.deal_id,
-        'sender_id': msg.sender_id,
-        'sender_email': getattr(msg.sender, 'email', None),
-        'sender_full_name': msg.sender.get_full_name() if msg.sender else None,
-        'text': msg.text,
-        'message_type': msg.message_type,
-        'timestamp': msg.timestamp.isoformat() if msg.timestamp else None,
+        "id": msg.id,
+        "deal_id": msg.deal_id,
+        "sender_id": msg.sender_id,
+        "sender_email": getattr(msg.sender, "email", None),
+        "sender_full_name": msg.sender.get_full_name() if msg.sender else None,
+        "text": msg.text,
+        "message_type": msg.message_type,
+        "timestamp": msg.timestamp.isoformat() if msg.timestamp else None,
     }
 
 
@@ -43,7 +43,15 @@ def _archive_path_for(date) -> str:
     return f"archive/messages/{date.year:04d}/{date.month:02d}/{date.day:02d}.jsonl"
 
 
-@shared_task(bind=True, name='crm.archive_old_messages')
+@shared_task(
+    bind=True,
+    name="crm.archive_old_messages",
+    time_limit=600,
+    soft_time_limit=540,
+    max_retries=3,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+)
 def archive_old_messages(self, days: int = 90, batch_size: int = 500) -> dict:
     """
     Move messages older than `days` days to S3 cold storage.
@@ -64,16 +72,13 @@ def archive_old_messages(self, days: int = 90, batch_size: int = 500) -> dict:
     storage = get_private_storage()
 
     queryset = (
-        Message.objects
-        .filter(timestamp__lt=cutoff, is_archived=False)
-        .select_related('sender')
-        .order_by('timestamp')
+        Message.objects.filter(timestamp__lt=cutoff, is_archived=False).select_related("sender").order_by("timestamp")
     )
 
     total = queryset.count()
     if total == 0:
         logger.info("archive_old_messages: nothing to archive")
-        return {'status': 'no_messages', 'archived': 0}
+        return {"status": "no_messages", "archived": 0}
 
     logger.info("archive_old_messages: %d messages to archive (cutoff=%s)", total, cutoff)
 
@@ -95,18 +100,18 @@ def archive_old_messages(self, days: int = 90, batch_size: int = 500) -> dict:
             groups.setdefault(path, []).append(msg)
 
         for path, msgs in groups.items():
-            jsonl = '\n'.join(json.dumps(_serialize_message(m), ensure_ascii=False) for m in msgs)
-            jsonl += '\n'
+            jsonl = "\n".join(json.dumps(_serialize_message(m), ensure_ascii=False) for m in msgs)
+            jsonl += "\n"
 
             # Append-or-create: read existing content if any, append new lines
             try:
                 if storage.exists(path):
-                    with storage.open(path, 'rb') as f:
-                        existing = f.read().decode('utf-8')
+                    with storage.open(path, "rb") as f:
+                        existing = f.read().decode("utf-8")
                     content = existing + jsonl
                 else:
                     content = jsonl
-            except Exception as e:
+            except (IOError, OSError) as e:
                 logger.warning("archive_old_messages: failed to read %s: %s", path, e)
                 content = jsonl
 
@@ -114,8 +119,8 @@ def archive_old_messages(self, days: int = 90, batch_size: int = 500) -> dict:
             try:
                 if storage.exists(path):
                     storage.delete(path)
-                storage.save(path, ContentFile(content.encode('utf-8')))
-            except Exception as e:
+                storage.save(path, ContentFile(content.encode("utf-8")))
+            except (IOError, OSError) as e:
                 logger.error("archive_old_messages: failed to write %s: %s", path, e)
                 continue
 
@@ -134,47 +139,63 @@ def archive_old_messages(self, days: int = 90, batch_size: int = 500) -> dict:
 
         last_id = batch[-1].id
 
-    logger.info(
-        "archive_old_messages: done — archived=%d files=%d",
-        archived_count, len(files_written)
-    )
+    logger.info("archive_old_messages: done — archived=%d files=%d", archived_count, len(files_written))
     return {
-        'status': 'success',
-        'archived': archived_count,
-        'files': files_written,
+        "status": "success",
+        "archived": archived_count,
+        "files": files_written,
     }
 
 
-@shared_task(name='crm.check_overdue_deliveries')
-def check_overdue_deliveries() -> dict:
+@shared_task(
+    bind=True,
+    name="crm.check_overdue_deliveries",
+    time_limit=600,
+    soft_time_limit=540,
+    max_retries=3,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+)
+def check_overdue_deliveries(self) -> dict:
     """Flag fulfillments whose expected_delivery_date passed without status change.
     Sends in-app notification to the deal manager.
     """
-    from .models import Fulfillment
     from notifications.models import Notification, NotificationType
+
+    from .models import Fulfillment
+
     today = timezone.now().date()
     overdue_qs = Fulfillment.objects.filter(
         expected_delivery_date__lt=today,
-        status__in=['PENDING', 'SHIPPED', 'IN_TRANSIT'],
-    ).select_related('deal__manager')
-    warn_type = NotificationType.objects.filter(code='WARNING').first()
+        status__in=["PENDING", "SHIPPED", "IN_TRANSIT"],
+    ).select_related("deal__manager")
+    warn_type = NotificationType.objects.filter(code="WARNING").first()
     count = 0
     for ff in overdue_qs:
         mgr = ff.deal.manager
         if mgr:
             Notification.objects.create(
-                user=mgr, type=warn_type,
-                title='Просрочка по доставке',
-                message=f'Сделка #{ff.deal_id}: ожидали {ff.expected_delivery_date}, статус {ff.status}',
-                link='/crm/deals',
+                user=mgr,
+                type=warn_type,
+                title="Просрочка по доставке",
+                message=f"Сделка #{ff.deal_id}: ожидали {ff.expected_delivery_date}, статус {ff.status}",
+                link="/crm/deals",
                 deal=ff.deal,
             )
         count += 1
-    return {'overdue_flagged': count}
+    return {"overdue_flagged": count}
 
 
-@shared_task(name='crm.auto_invoice_on_closed_won')
-def auto_invoice_on_closed_won(deal_id: int) -> dict:
+@shared_task(
+    bind=True,
+    name="crm.auto_invoice_on_closed_won",
+    time_limit=600,
+    soft_time_limit=540,
+    max_retries=3,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+)
+def auto_invoice_on_closed_won(self, deal_id: int) -> dict:
     """Triggered after a deal transitions to CLOSED_WON: create invoice+act skeletons.
 
     Idempotent: safe to run multiple times for the same deal — reuses existing Invoice
@@ -183,78 +204,101 @@ def auto_invoice_on_closed_won(deal_id: int) -> dict:
         reopen loop;
       * Celery task retries duplicate the call.
     """
-    from .models import Deal, Invoice, Act
-    from .services import generate_invoice_from_contract, generate_act, ensure_fulfillment
+    from .models import Act, Deal, Invoice
+    from .services import ensure_fulfillment, generate_act, generate_invoice_from_contract
+
     try:
         deal = Deal.objects.get(pk=deal_id)
     except Deal.DoesNotExist:
-        return {'error': 'deal not found'}
-    contract = deal.contracts.filter(status='SIGNED').order_by('-created_at').first()
-    result = {'deal_id': deal_id, 'invoice': None, 'act': None, 'fulfillment': True,
-              'idempotent_reuse': False}
+        return {"error": "deal not found"}
+    contract = deal.contracts.filter(status="SIGNED").order_by("-created_at").first()
+    result = {"deal_id": deal_id, "invoice": None, "act": None, "fulfillment": True, "idempotent_reuse": False}
     ensure_fulfillment(deal)
     if not contract:
         return result
 
     # Reuse existing Invoice for this contract if present (idempotency).
-    invoice = Invoice.objects.filter(
-        deal=deal, contract=contract,
-    ).exclude(status='CANCELLED').order_by('-created_at').first()
+    invoice = (
+        Invoice.objects.filter(
+            deal=deal,
+            contract=contract,
+        )
+        .exclude(status="CANCELLED")
+        .order_by("-created_at")
+        .first()
+    )
     if invoice is None:
         invoice, err = generate_invoice_from_contract(contract.id)
         if invoice is None:
             return result
     else:
-        result['idempotent_reuse'] = True
-    result['invoice'] = invoice.id
+        result["idempotent_reuse"] = True
+    result["invoice"] = invoice.id
 
     # Reuse existing Act for this invoice if present.
-    act = Act.objects.filter(
-        invoice=invoice,
-    ).exclude(status='CANCELLED').order_by('-created_at').first()
+    act = (
+        Act.objects.filter(
+            invoice=invoice,
+        )
+        .exclude(status="CANCELLED")
+        .order_by("-created_at")
+        .first()
+    )
     if act is None:
         act, err2 = generate_act(invoice.id)
     if act is not None:
-        result['act'] = act.id
+        result["act"] = act.id
     return result
 
 
-@shared_task(name='crm.expire_stale_quotes')
-def expire_stale_quotes() -> dict:
+@shared_task(
+    bind=True,
+    name="crm.expire_stale_quotes",
+    time_limit=600,
+    soft_time_limit=540,
+    max_retries=3,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+)
+def expire_stale_quotes(self) -> dict:
     """Move SENT quotes past `valid_until` to EXPIRED and notify the deal manager.
 
     Runs on a daily Beat schedule. Ignores DRAFT (not yet sent) and APPROVED /
     REJECTED (terminal) quotes. Each transition is audit-logged in ActivityLog.
     """
-    from .models import Quote, QuoteStatus, ActivityLog
     from notifications.models import Notification, NotificationType
+
+    from .models import ActivityLog, Quote, QuoteStatus
+
     today = timezone.now().date()
-    expired_status = QuoteStatus.objects.filter(code='EXPIRED').first()
+    expired_status = QuoteStatus.objects.filter(code="EXPIRED").first()
     if expired_status is None:
         logger.error("QuoteStatus 'EXPIRED' missing — seed migration not applied")
-        return {'expired': 0, 'error': 'expired_status_missing'}
-    stale_qs = Quote.objects.select_related('status', 'deal__manager').filter(
-        status__code='SENT',
+        return {"expired": 0, "error": "expired_status_missing"}
+    stale_qs = Quote.objects.select_related("status", "deal__manager").filter(
+        status__code="SENT",
         valid_until__isnull=False,
         valid_until__lt=today,
     )
-    warn_type = NotificationType.objects.filter(code='WARNING').first()
+    warn_type = NotificationType.objects.filter(code="WARNING").first()
     count = 0
     for q in stale_qs:
         q.status = expired_status
-        q.save(update_fields=['status', 'updated_at'])
+        q.save(update_fields=["status", "updated_at"])
         ActivityLog.objects.create(
-            action='КП просрочено',
+            action="КП просрочено",
             detail=f"Quote #{q.id} v{q.version} (deal #{q.deal_id}) — valid_until={q.valid_until}",
-            user=None, level='WARNING',
+            user=None,
+            level="WARNING",
         )
         if q.deal.manager and warn_type:
             Notification.objects.create(
-                user=q.deal.manager, type=warn_type,
-                title='КП просрочено',
+                user=q.deal.manager,
+                type=warn_type,
+                title="КП просрочено",
                 message=f"Срок действия КП v{q.version} по сделке #{q.deal_id} истёк",
-                link='/crm/quotes',
+                link="/crm/quotes",
                 deal=q.deal,
             )
         count += 1
-    return {'expired': count}
+    return {"expired": count}

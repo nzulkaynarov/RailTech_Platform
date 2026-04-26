@@ -34,9 +34,9 @@ export function GenerateQuoteDialog({ dealId, open, onOpenChange, onGenerated }:
   const { t } = useTranslation();
   const [notes, setNotes] = useState('');
   const [validUntil, setValidUntil] = useState<string>(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 14);
-    return d.toISOString().slice(0, 10);
+    const defaultDate = new Date();
+    defaultDate.setDate(defaultDate.getDate() + 14);
+    return defaultDate.toISOString().slice(0, 10);
   });
   const [sendImmediately, setSendImmediately] = useState(false);
 

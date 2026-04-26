@@ -1,32 +1,37 @@
-from django.core.management.base import BaseCommand
-from accounts.models import CustomUser, SystemRole
 import os
+
+from django.core.management.base import BaseCommand
+
+from accounts.models import CustomUser, SystemRole
 
 
 class Command(BaseCommand):
-    help = 'Creates or updates the superadmin user from environment variables'
+    help = "Creates or updates the superadmin user from environment variables"
 
     def handle(self, *args, **options):
-        email = os.environ.get('SUPERADMIN_EMAIL')
-        password = os.environ.get('SUPERADMIN_PASSWORD')
+        email = os.environ.get("SUPERADMIN_EMAIL")
+        password = os.environ.get("SUPERADMIN_PASSWORD")
 
         if not email or not password:
-            self.stdout.write(self.style.WARNING(
-                "SUPERADMIN_EMAIL and/or SUPERADMIN_PASSWORD not set in environment. Skipping superadmin creation."))
+            self.stdout.write(
+                self.style.WARNING(
+                    "SUPERADMIN_EMAIL and/or SUPERADMIN_PASSWORD not set in environment. Skipping superadmin creation."
+                )
+            )
             return
 
-        username = email.split('@')[0] if '@' in email else email
-        admin_role = SystemRole.objects.filter(code='ADMIN').first()
+        username = email.split("@")[0] if "@" in email else email
+        admin_role = SystemRole.objects.filter(code="ADMIN").first()
 
         user, created = CustomUser.objects.get_or_create(
             username=username,
             defaults={
-                'email': email,
-                'role': admin_role,
-                'is_staff': True,
-                'is_superuser': True,
-                'is_active': True,
-            }
+                "email": email,
+                "role": admin_role,
+                "is_staff": True,
+                "is_superuser": True,
+                "is_active": True,
+            },
         )
 
         user.set_password(password)
@@ -39,8 +44,8 @@ class Command(BaseCommand):
         user.save()
 
         if created:
-            self.stdout.write(self.style.SUCCESS(
-                f"Successfully created superadmin '{username}'"))
+            self.stdout.write(self.style.SUCCESS(f"Successfully created superadmin '{username}'"))
         else:
-            self.stdout.write(self.style.SUCCESS(
-                f"Successfully updated password and permissions for superadmin '{username}'"))
+            self.stdout.write(
+                self.style.SUCCESS(f"Successfully updated password and permissions for superadmin '{username}'")
+            )

@@ -203,12 +203,12 @@ export function applyListParams<T>(
     sortAccessors?: Record<string, (item: T) => string | number | null | undefined>;
   },
 ): { items: T[]; total: number } {
-  const q = params.search.trim().toLowerCase();
+  const searchQuery = params.search.trim().toLowerCase();
   let result = items;
 
-  if (q) {
+  if (searchQuery) {
     result = result.filter((it) =>
-      spec.searchFields(it).some((v) => (v ?? '').toString().toLowerCase().includes(q)),
+      spec.searchFields(it).some((v) => (v ?? '').toString().toLowerCase().includes(searchQuery)),
     );
   }
 

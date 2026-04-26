@@ -17,6 +17,7 @@ Usage:
         after={'verification_status': 'L2_VERIFIED'},
     )
 """
+
 from __future__ import annotations
 
 from typing import Any, Optional
@@ -27,12 +28,12 @@ def log_admin_action(
     entity_type: str,
     entity_id: int,
     action: str,
-    detail: str = '',
+    detail: str = "",
     actor=None,
-    reason: str = '',
+    reason: str = "",
     before: Optional[dict[str, Any]] = None,
     after: Optional[dict[str, Any]] = None,
-    level: str = 'INFO',
+    level: str = "INFO",
 ):
     """
     Create an ActivityLog entry scoped to a single entity.
@@ -41,6 +42,7 @@ def log_admin_action(
     remains consistent.
     """
     from crm.models import ActivityLog
+
     return ActivityLog.objects.create(
         action=action[:255],
         detail=detail,
@@ -48,7 +50,7 @@ def log_admin_action(
         level=level,
         entity_type=entity_type[:40],
         entity_id=int(entity_id) if entity_id else None,
-        reason=(reason or '')[:5000],
+        reason=(reason or "")[:5000],
         before_data=before,
         after_data=after,
     )

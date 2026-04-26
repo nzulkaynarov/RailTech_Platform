@@ -148,7 +148,7 @@ export function AdminShortcuts({ onNavigate, onOpenPalette }: AdminShortcutsProp
                 {s.keys.map((k, idx) => (
                   <kbd
                     key={idx}
-                    className="rounded border bg-muted px-1.5 py-0.5 font-mono text-[10px]"
+                    className="rounded border bg-muted px-1.5 py-0.5 font-mono text-xs"
                   >
                     {k}
                   </kbd>

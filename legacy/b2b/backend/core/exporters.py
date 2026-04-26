@@ -17,6 +17,7 @@ Usage in a ViewSet:
             ],
         )
 """
+
 from __future__ import annotations
 
 import csv
@@ -25,16 +26,15 @@ from typing import Callable, Iterable, Sequence
 
 from django.http import HttpResponse
 
-
 ColumnSpec = tuple[str, str, Callable[[object], object]]
 # (key, header_label, getter) — getter receives the row object, returns the cell value
 
 
 def _normalize_value(value) -> str:
     if value is None:
-        return ''
+        return ""
     if isinstance(value, bool):
-        return '1' if value else '0'
+        return "1" if value else "0"
     return str(value)
 
 
@@ -44,10 +44,10 @@ def export_queryset_csv(
     filename: str,
     columns: Sequence[ColumnSpec],
 ) -> HttpResponse:
-    response = HttpResponse(content_type='text/csv; charset=utf-8')
-    response['Content-Disposition'] = f'attachment; filename="{filename}.csv"'
-    response.write('﻿')  # BOM — Excel opens UTF-8 correctly
-    writer = csv.writer(response, delimiter=';', quoting=csv.QUOTE_MINIMAL)
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = f'attachment; filename="{filename}.csv"'
+    response.write("﻿")  # BOM — Excel opens UTF-8 correctly
+    writer = csv.writer(response, delimiter=";", quoting=csv.QUOTE_MINIMAL)
     writer.writerow([label for _, label, _ in columns])
     for row in queryset:
         writer.writerow([_normalize_value(getter(row)) for _, _, getter in columns])
@@ -67,10 +67,11 @@ def export_queryset_xlsx(
         return export_queryset_csv(queryset, filename=filename, columns=columns)
 
     wb = Workbook(write_only=True)
-    ws = wb.create_sheet('Export')
+    ws = wb.create_sheet("Export")
     header_font = Font(bold=True)
     header_row = []
     from openpyxl.cell import WriteOnlyCell
+
     for _, label, _ in columns:
         cell = WriteOnlyCell(ws, value=label)
         cell.font = header_font
@@ -85,9 +86,9 @@ def export_queryset_xlsx(
     buf.seek(0)
     response = HttpResponse(
         buf.read(),
-        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
-    response['Content-Disposition'] = f'attachment; filename="{filename}.xlsx"'
+    response["Content-Disposition"] = f'attachment; filename="{filename}.xlsx"'
     return response
 
 
@@ -103,7 +104,7 @@ def export_queryset(
     Uses `fmt` instead of `format` because DRF reserves `format` for content
     negotiation (format suffixes/renderers).
     """
-    fmt = (request.query_params.get('fmt') or 'xlsx').lower()
-    if fmt == 'csv':
+    fmt = (request.query_params.get("fmt") or "xlsx").lower()
+    if fmt == "csv":
         return export_queryset_csv(queryset, filename=filename, columns=columns)
     return export_queryset_xlsx(queryset, filename=filename, columns=columns)

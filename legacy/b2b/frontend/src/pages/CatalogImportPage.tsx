@@ -180,7 +180,7 @@ export function CatalogImportPage() {
                     <div className="font-medium text-success">
                       {t('catalogImport.successTitle')}
                     </div>
-                    <pre className="mt-1 whitespace-pre-wrap font-mono text-[11px] text-muted-foreground">
+                    <pre className="mt-1 whitespace-pre-wrap font-mono text-xs text-muted-foreground">
                       {typeof taskResult === 'string' ? taskResult : JSON.stringify(taskResult, null, 2)}
                     </pre>
                   </div>

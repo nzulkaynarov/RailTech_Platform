@@ -11,18 +11,19 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
-from urllib.parse import urlparse, parse_qsl
-from datetime import timedelta
-from django.utils.translation import gettext_lazy as _
 import os
+from datetime import timedelta
 from pathlib import Path
+from urllib.parse import parse_qsl, urlparse
+
+from django.utils.translation import gettext_lazy as _
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Load environment variables from .env file
-load_dotenv(BASE_DIR.parent / '.env')
+load_dotenv(BASE_DIR.parent / ".env")
 
 
 # Quick-start development settings - unsuitable for production
@@ -30,59 +31,59 @@ load_dotenv(BASE_DIR.parent / '.env')
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DJANGO_DEBUG', 'False') != 'False'
+DEBUG = os.environ.get("DJANGO_DEBUG", "False") != "False"
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 if not SECRET_KEY:
     if DEBUG:
-        SECRET_KEY = 'django-insecure-fallback-key-do-not-use-in-production'
+        SECRET_KEY = "django-insecure-fallback-key-do-not-use-in-production"
     else:
         from django.core.exceptions import ImproperlyConfigured
-        raise ImproperlyConfigured(
-            "DJANGO_SECRET_KEY environment variable is required in production.")
+
+        raise ImproperlyConfigured("DJANGO_SECRET_KEY environment variable is required in production.")
 
 ALLOWED_HOSTS = os.environ.get(
-    'ALLOWED_HOSTS',
-    'localhost,127.0.0.1,railtech.uz,b2b.railtech.uz,cabinet.railtech.uz,crm.railtech.uz,admin.railtech.uz'
-).split(',')
+    "ALLOWED_HOSTS",
+    "localhost,127.0.0.1,railtech.uz,b2b.railtech.uz,cabinet.railtech.uz,crm.railtech.uz,admin.railtech.uz",
+).split(",")
 
 
 # Application definition
 
 INSTALLED_APPS = [
-    'unfold',
-    'unfold.contrib.filters',
-    'unfold.contrib.forms',
-    'unfold.contrib.inlines',
-    'unfold.contrib.import_export',
-    'import_export',
-    'daphne',
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'rest_framework',
-    'drf_spectacular',
-    'rest_framework_simplejwt',
-    'rest_framework_simplejwt.token_blacklist',
-    'corsheaders',
-    'django.contrib.postgres',
-    'channels',
-    'pgtrigger',
-    'pghistory',
-    'catalog',
-    'crm',
-    'sourcing',
-    'django_filters',
-    'master_data',
-    'accounts.apps.AccountsConfig',
-    'notifications',
-    'core',
-    'django_celery_beat',
-    'storages',
+    "unfold",
+    "unfold.contrib.filters",
+    "unfold.contrib.forms",
+    "unfold.contrib.inlines",
+    "unfold.contrib.import_export",
+    "import_export",
+    "daphne",
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "rest_framework",
+    "drf_spectacular",
+    "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",
+    "corsheaders",
+    "django.contrib.postgres",
+    "channels",
+    "pgtrigger",
+    "pghistory",
+    "catalog",
+    "crm",
+    "sourcing",
+    "django_filters",
+    "master_data",
+    "accounts.apps.AccountsConfig",
+    "notifications",
+    "core",
+    "django_celery_beat",
+    "storages",
 ]
 
 # Unfold Configuration
@@ -120,129 +121,127 @@ UNFOLD = {
                 "title": _("Каталог"),
                 "separator": True,
                 "items": [
-                    {"title": _("Товары (PIM)"), "icon": "inventory_2",
-                     "link": "/admin/catalog/product/"},
-                    {"title": _("Офферы поставщиков"), "icon": "local_offer",
-                     "link": "/admin/catalog/supplieroffer/"},
-                    {"title": _("Категории"), "icon": "folder",
-                        "link": "/admin/catalog/category/"},
-                    {"title": _("Группы оборудования"), "icon": "precision_manufacturing",
-                        "link": "/admin/catalog/equipmentgroup/"},
+                    {"title": _("Товары (PIM)"), "icon": "inventory_2", "link": "/admin/catalog/product/"},
+                    {"title": _("Офферы поставщиков"), "icon": "local_offer", "link": "/admin/catalog/supplieroffer/"},
+                    {"title": _("Категории"), "icon": "folder", "link": "/admin/catalog/category/"},
+                    {
+                        "title": _("Группы оборудования"),
+                        "icon": "precision_manufacturing",
+                        "link": "/admin/catalog/equipmentgroup/",
+                    },
                 ],
             },
             {
                 "title": _("Продажи"),
                 "separator": True,
                 "items": [
-                    {"title": _("Сделки"), "icon": "handshake",
-                     "link": "/admin/crm/deal/"},
-                    {"title": _("Коммерческие предложения"), "icon": "request_quote",
-                        "link": "/admin/crm/quote/"},
-                    {"title": _("Лиды с сайта"), "icon": "contact_page",
-                        "link": "/admin/crm/lead/"},
-                    {"title": _("Сообщения"), "icon": "chat",
-                        "link": "/admin/crm/message/"},
+                    {"title": _("Сделки"), "icon": "handshake", "link": "/admin/crm/deal/"},
+                    {"title": _("Коммерческие предложения"), "icon": "request_quote", "link": "/admin/crm/quote/"},
+                    {"title": _("Лиды с сайта"), "icon": "contact_page", "link": "/admin/crm/lead/"},
+                    {"title": _("Сообщения"), "icon": "chat", "link": "/admin/crm/message/"},
                 ],
             },
             {
                 "title": _("Компании и верификация"),
                 "separator": True,
                 "items": [
-                    {"title": _("Все компании"), "icon": "domain",
-                        "link": "/admin/accounts/company/"},
-                    {"title": _("+ Создать компанию"), "icon": "add_business",
-                        "link": "/admin/accounts/company/wizard/"},
-                    {"title": _("Заявки на роли"), "icon": "assignment",
-                        "link": "/admin/accounts/companyroleapplication/"},
-                    {"title": _("Подписки поставщиков"), "icon": "credit_card",
-                        "link": "/admin/accounts/suppliersubscription/"},
-                    {"title": _("KYC документы"), "icon": "verified_user",
-                        "link": "/admin/accounts/kycdocument/"},
+                    {"title": _("Все компании"), "icon": "domain", "link": "/admin/accounts/company/"},
+                    {
+                        "title": _("+ Создать компанию"),
+                        "icon": "add_business",
+                        "link": "/admin/accounts/company/wizard/",
+                    },
+                    {
+                        "title": _("Заявки на роли"),
+                        "icon": "assignment",
+                        "link": "/admin/accounts/companyroleapplication/",
+                    },
+                    {
+                        "title": _("Подписки поставщиков"),
+                        "icon": "credit_card",
+                        "link": "/admin/accounts/suppliersubscription/",
+                    },
+                    {"title": _("KYC документы"), "icon": "verified_user", "link": "/admin/accounts/kycdocument/"},
                 ],
             },
             {
                 "title": _("Пользователи"),
                 "items": [
-                    {"title": _("Все пользователи"), "icon": "group",
-                        "link": "/admin/accounts/customuser/"},
+                    {"title": _("Все пользователи"), "icon": "group", "link": "/admin/accounts/customuser/"},
                 ],
             },
             {
                 "title": _("Инженерный доступ"),
                 "separator": True,
                 "items": [
-                    {"title": _("Django Groups"), "icon": "groups",
-                        "link": "/admin/auth/group/"},
-                    {"title": _("Django Permissions"), "icon": "key",
-                        "link": "/admin/auth/permission/"},
+                    {"title": _("Django Groups"), "icon": "groups", "link": "/admin/auth/group/"},
+                    {"title": _("Django Permissions"), "icon": "key", "link": "/admin/auth/permission/"},
                 ],
             },
             {
                 "title": _("Импорт данных"),
                 "separator": True,
                 "items": [
-                    {"title": _("Задачи импорта"), "icon": "upload_file",
-                        "link": "/admin/sourcing/importtask/"},
-                    {"title": _("Вложения"), "icon": "attach_file",
-                        "link": "/admin/sourcing/attachment/"},
+                    {"title": _("Задачи импорта"), "icon": "upload_file", "link": "/admin/sourcing/importtask/"},
+                    {"title": _("Вложения"), "icon": "attach_file", "link": "/admin/sourcing/attachment/"},
                 ],
             },
             {
                 "title": _("Справочники: география и логистика"),
                 "separator": True,
                 "items": [
-                    {"title": _("Страны"), "icon": "public",
-                        "link": "/admin/master_data/country/"},
-                    {"title": _("Валюты"), "icon": "payments",
-                        "link": "/admin/master_data/currency/"},
-                    {"title": _("Ед. измерения"), "icon": "straighten",
-                        "link": "/admin/master_data/unitofmeasure/"},
-                    {"title": _("Базис поставки"), "icon": "local_shipping",
-                        "link": "/admin/master_data/deliverybasis/"},
-                    {"title": _("Ключевые слова Smart Match"), "icon": "label",
-                        "link": "/admin/sourcing/domainkeyword/"},
+                    {"title": _("Страны"), "icon": "public", "link": "/admin/master_data/country/"},
+                    {"title": _("Валюты"), "icon": "payments", "link": "/admin/master_data/currency/"},
+                    {"title": _("Ед. измерения"), "icon": "straighten", "link": "/admin/master_data/unitofmeasure/"},
+                    {
+                        "title": _("Базис поставки"),
+                        "icon": "local_shipping",
+                        "link": "/admin/master_data/deliverybasis/",
+                    },
+                    {
+                        "title": _("Ключевые слова Smart Match"),
+                        "icon": "label",
+                        "link": "/admin/sourcing/domainkeyword/",
+                    },
                 ],
             },
             {
                 "title": _("Справочники: роли и статусы"),
                 "separator": True,
                 "items": [
-                    {"title": _("Системные роли"), "icon": "admin_panel_settings",
-                        "link": "/admin/accounts/systemrole/"},
-                    {"title": _("Роли в команде"), "icon": "badge",
-                        "link": "/admin/accounts/workspacerole/"},
-                    {"title": _("Типы компаний"), "icon": "category",
-                        "link": "/admin/accounts/companytype/"},
-                    {"title": _("Статусы верификации"), "icon": "verified",
-                        "link": "/admin/accounts/verificationstatus/"},
-                    {"title": _("Типы KYC-документов"), "icon": "description",
-                        "link": "/admin/accounts/kycdoctype/"},
-                    {"title": _("Этапы сделки"), "icon": "timeline",
-                        "link": "/admin/crm/dealstage/"},
-                    {"title": _("Статусы КП"), "icon": "flag",
-                        "link": "/admin/crm/quotestatus/"},
-                    {"title": _("Домены каталога"), "icon": "widgets",
-                        "link": "/admin/catalog/domaintype/"},
-                    {"title": _("Статусы товара"), "icon": "toggle_on",
-                        "link": "/admin/catalog/productstatus/"},
-                    {"title": _("Статусы наличия"), "icon": "inventory",
-                        "link": "/admin/catalog/stockstatus/"},
-                    {"title": _("Типы уведомлений"), "icon": "notifications_active",
-                        "link": "/admin/notifications/notificationtype/"},
+                    {
+                        "title": _("Системные роли"),
+                        "icon": "admin_panel_settings",
+                        "link": "/admin/accounts/systemrole/",
+                    },
+                    {"title": _("Роли в команде"), "icon": "badge", "link": "/admin/accounts/workspacerole/"},
+                    {"title": _("Типы компаний"), "icon": "category", "link": "/admin/accounts/companytype/"},
+                    {
+                        "title": _("Статусы верификации"),
+                        "icon": "verified",
+                        "link": "/admin/accounts/verificationstatus/",
+                    },
+                    {"title": _("Типы KYC-документов"), "icon": "description", "link": "/admin/accounts/kycdoctype/"},
+                    {"title": _("Этапы сделки"), "icon": "timeline", "link": "/admin/crm/dealstage/"},
+                    {"title": _("Статусы КП"), "icon": "flag", "link": "/admin/crm/quotestatus/"},
+                    {"title": _("Домены каталога"), "icon": "widgets", "link": "/admin/catalog/domaintype/"},
+                    {"title": _("Статусы товара"), "icon": "toggle_on", "link": "/admin/catalog/productstatus/"},
+                    {"title": _("Статусы наличия"), "icon": "inventory", "link": "/admin/catalog/stockstatus/"},
+                    {
+                        "title": _("Типы уведомлений"),
+                        "icon": "notifications_active",
+                        "link": "/admin/notifications/notificationtype/",
+                    },
                 ],
             },
             {
                 "title": _("Аудит и мониторинг"),
                 "separator": True,
                 "items": [
-                    {"title": _("Уведомления"), "icon": "notifications",
-                        "link": "/admin/notifications/notification/"},
-                    {"title": _("Журнал email"), "icon": "mail",
-                        "link": "/admin/notifications/emaillog/"},
-                    {"title": _("Журнал действий"), "icon": "history",
-                        "link": "/admin/crm/activitylog/"},
-                    {"title": _("История цен КП"), "icon": "fact_check",
-                        "link": "/admin/crm/quoteitemhistory/"},
+                    {"title": _("Уведомления"), "icon": "notifications", "link": "/admin/notifications/notification/"},
+                    {"title": _("Журнал email"), "icon": "mail", "link": "/admin/notifications/emaillog/"},
+                    {"title": _("Журнал действий"), "icon": "history", "link": "/admin/crm/activitylog/"},
+                    {"title": _("История цен КП"), "icon": "fact_check", "link": "/admin/crm/quoteitemhistory/"},
                 ],
             },
         ],
@@ -250,150 +249,156 @@ UNFOLD = {
 }
 
 # ASGI Support for Channels (Real-time chat)
-ASGI_APPLICATION = 'core.asgi.application'
+ASGI_APPLICATION = "core.asgi.application"
 
 # Redis Channel Layer
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [os.environ.get('REDIS_URL', 'redis://localhost:6379/0')],
+            "hosts": [os.environ.get("REDIS_URL", "redis://localhost:6379/0")],
+            "capacity": 300,
+            "expiry": 60,
         },
     },
 }
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
 CORS_ALLOW_ALL_ORIGINS = DEBUG
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-    'https://railtech.uz',
-    'https://b2b.railtech.uz',
-    'https://cabinet.railtech.uz',
-    'https://crm.railtech.uz',
-] if not DEBUG else [
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-]
+CORS_ALLOWED_ORIGINS = (
+    [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "https://railtech.uz",
+        "https://b2b.railtech.uz",
+        "https://cabinet.railtech.uz",
+        "https://crm.railtech.uz",
+    ]
+    if not DEBUG
+    else [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
+)
 
 CSRF_TRUSTED_ORIGINS = [
-    'http://localhost:5173',
-    'http://localhost:8000',
-    'http://127.0.0.1:5173',
-    'http://127.0.0.1:8000',
-    'https://railtech.uz',
-    'https://b2b.railtech.uz',
-    'https://cabinet.railtech.uz',
-    'https://crm.railtech.uz',
-    'https://admin.railtech.uz'
+    "http://localhost:5173",
+    "http://localhost:8000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:8000",
+    "https://railtech.uz",
+    "https://b2b.railtech.uz",
+    "https://cabinet.railtech.uz",
+    "https://crm.railtech.uz",
+    "https://admin.railtech.uz",
 ]
 
 # Production Cookie & Session Settings — only for real production domains (behind HTTPS nginx)
 # On localhost (even with DEBUG=False) these must NOT be set, otherwise cookies
 # are scoped to .railtech.uz domain and require HTTPS, breaking local admin login.
-_is_real_production = not DEBUG and os.environ.get('PRODUCTION', 'False').lower() == 'true'
+_is_real_production = not DEBUG and os.environ.get("PRODUCTION", "False").lower() == "true"
 
 # Security headers — always enabled (safe for localhost too)
 if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
-    X_FRAME_OPTIONS = 'DENY'
-    SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+    X_FRAME_OPTIONS = "DENY"
+    SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 
 if _is_real_production:
-    SESSION_COOKIE_DOMAIN = '.railtech.uz'
-    CSRF_COOKIE_DOMAIN = '.railtech.uz'
+    SESSION_COOKIE_DOMAIN = ".railtech.uz"
+    CSRF_COOKIE_DOMAIN = ".railtech.uz"
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SESSION_COOKIE_HTTPONLY = True
-    SESSION_COOKIE_SAMESITE = 'Lax'
+    SESSION_COOKIE_SAMESITE = "Lax"
 
     # HTTPS enforcement — opt-in via env so DEBUG=False can still be used for local testing
     # with remote DB. Enable these in real production deployment (behind HTTPS nginx).
-    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-    SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'False').lower() == 'true'
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_SSL_REDIRECT = os.environ.get("SECURE_SSL_REDIRECT", "False").lower() == "true"
 
     # HSTS — opt-in. Only enable when SSL is fully configured and you are ready
     # for browsers to cache the "HTTPS-only" policy. Do NOT enable for localhost.
-    SECURE_HSTS_SECONDS = int(os.environ.get('SECURE_HSTS_SECONDS', '0'))
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = os.environ.get('SECURE_HSTS_INCLUDE_SUBDOMAINS', 'False').lower() == 'true'
-    SECURE_HSTS_PRELOAD = os.environ.get('SECURE_HSTS_PRELOAD', 'False').lower() == 'true'
+    SECURE_HSTS_SECONDS = int(os.environ.get("SECURE_HSTS_SECONDS", "0"))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = os.environ.get("SECURE_HSTS_INCLUDE_SUBDOMAINS", "False").lower() == "true"
+    SECURE_HSTS_PRELOAD = os.environ.get("SECURE_HSTS_PRELOAD", "False").lower() == "true"
 
 
-ROOT_URLCONF = 'core.urls'
+ROOT_URLCONF = "core.urls"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [BASE_DIR / "templates"],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'core.wsgi.application'
+WSGI_APPLICATION = "core.wsgi.application"
 
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 
-if os.environ.get('DATABASE_URL'):
+if os.environ.get("DATABASE_URL"):
     tmpPostgres = urlparse(os.environ.get("DATABASE_URL"))
     DATABASES = {
-        'default': {
-            'ENGINE': 'dj_db_conn_pool.backends.postgresql',
-            'NAME': tmpPostgres.path.replace('/', ''),
-            'USER': tmpPostgres.username,
-            'PASSWORD': tmpPostgres.password,
-            'HOST': tmpPostgres.hostname,
-            'PORT': tmpPostgres.port or 5432,
-            'CONN_MAX_AGE': 600,
-            'CONN_HEALTH_CHECKS': True,
-            'POOL_OPTIONS': {
-                'POOL_SIZE': 10,
-                'MAX_OVERFLOW': 20,
-                'RECYCLE': 1800,
-                'PRE_PING': True,
+        "default": {
+            "ENGINE": "dj_db_conn_pool.backends.postgresql",
+            "NAME": tmpPostgres.path.replace("/", ""),
+            "USER": tmpPostgres.username,
+            "PASSWORD": tmpPostgres.password,
+            "HOST": tmpPostgres.hostname,
+            "PORT": tmpPostgres.port or 5432,
+            "CONN_MAX_AGE": 600,
+            "CONN_HEALTH_CHECKS": True,
+            "POOL_OPTIONS": {
+                "POOL_SIZE": 10,
+                "MAX_OVERFLOW": 20,
+                "RECYCLE": 1800,
+                "PRE_PING": True,
             },
-            'OPTIONS': dict(parse_qsl(tmpPostgres.query)),
+            "OPTIONS": dict(parse_qsl(tmpPostgres.query)),
         }
     }
 else:
     DATABASES = {
-        'default': {
-            'ENGINE': 'dj_db_conn_pool.backends.postgresql',
-            'NAME': os.environ.get('POSTGRES_DB', 'railtech'),
-            'USER': os.environ.get('POSTGRES_USER', 'postgres'),
-            'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'postgres'),
-            'HOST': os.environ.get('POSTGRES_HOST', 'db'),
-            'PORT': os.environ.get('POSTGRES_PORT', '5432'),
-            'CONN_MAX_AGE': 600,
-            'CONN_HEALTH_CHECKS': True,
-            'POOL_OPTIONS': {
-                'POOL_SIZE': 10,
-                'MAX_OVERFLOW': 20,
-                'RECYCLE': 1800,
-                'PRE_PING': True,
+        "default": {
+            "ENGINE": "dj_db_conn_pool.backends.postgresql",
+            "NAME": os.environ.get("POSTGRES_DB", "railtech"),
+            "USER": os.environ.get("POSTGRES_USER", "postgres"),
+            "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "postgres"),
+            "HOST": os.environ.get("POSTGRES_HOST", "db"),
+            "PORT": os.environ.get("POSTGRES_PORT", "5432"),
+            "CONN_MAX_AGE": 600,
+            "CONN_HEALTH_CHECKS": True,
+            "POOL_OPTIONS": {
+                "POOL_SIZE": 10,
+                "MAX_OVERFLOW": 20,
+                "RECYCLE": 1800,
+                "PRE_PING": True,
             },
         }
     }
@@ -404,16 +409,16 @@ else:
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
 
@@ -421,32 +426,32 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
-LANGUAGE_CODE = 'ru'
+LANGUAGE_CODE = "ru"
 
-TIME_ZONE = 'Asia/Tashkent'
+TIME_ZONE = "Asia/Tashkent"
 
 USE_I18N = True
 
 USE_TZ = True
 
 LOCALE_PATHS = [
-    BASE_DIR / 'locale',
+    BASE_DIR / "locale",
 ]
 
 LANGUAGES = [
-    ('ru', _('Русский')),
-    ('en', _('English')),
+    ("ru", _("Русский")),
+    ("en", _("English")),
 ]
 
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_URL = 'static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
 DATA_UPLOAD_MAX_MEMORY_SIZE = 25 * 1024 * 1024
 FILE_UPLOAD_MAX_MEMORY_SIZE = 25 * 1024 * 1024
@@ -454,154 +459,147 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 25 * 1024 * 1024
 # ─── MinIO / S3 Storage ───────────────────────────────────────────────────────
 # When MINIO_ENDPOINT is set, file uploads go to MinIO buckets.
 # When not set, falls back to local FileSystemStorage (MEDIA_ROOT).
-MINIO_ENDPOINT = os.environ.get('MINIO_ENDPOINT', '')
-MINIO_ACCESS_KEY = os.environ.get('MINIO_ACCESS_KEY', '')
-MINIO_SECRET_KEY = os.environ.get('MINIO_SECRET_KEY', '')
-MINIO_PUBLIC_BUCKET = os.environ.get('MINIO_PUBLIC_BUCKET', 'railtech-public')
-MINIO_PRIVATE_BUCKET = os.environ.get('MINIO_PRIVATE_BUCKET', 'railtech-private')
-MINIO_TEMP_BUCKET = os.environ.get('MINIO_TEMP_BUCKET', 'railtech-temp')
+MINIO_ENDPOINT = os.environ.get("MINIO_ENDPOINT", "")
+MINIO_ACCESS_KEY = os.environ.get("MINIO_ACCESS_KEY", "")
+MINIO_SECRET_KEY = os.environ.get("MINIO_SECRET_KEY", "")
+MINIO_PUBLIC_BUCKET = os.environ.get("MINIO_PUBLIC_BUCKET", "railtech-public")
+MINIO_PRIVATE_BUCKET = os.environ.get("MINIO_PRIVATE_BUCKET", "railtech-private")
+MINIO_TEMP_BUCKET = os.environ.get("MINIO_TEMP_BUCKET", "railtech-temp")
 # Domain used for public URLs (served via nginx proxy)
 # e.g. "localhost/storage" or "cdn.railtech.uz"
-MINIO_PUBLIC_DOMAIN = os.environ.get('MINIO_PUBLIC_DOMAIN', '')
+MINIO_PUBLIC_DOMAIN = os.environ.get("MINIO_PUBLIC_DOMAIN", "")
 # External endpoint for presigned URLs (accessible from browser, not Docker internal)
 # e.g. "http://localhost:9000" — defaults to MINIO_ENDPOINT if not set
-MINIO_EXTERNAL_ENDPOINT = os.environ.get('MINIO_EXTERNAL_ENDPOINT', '') or MINIO_ENDPOINT
+MINIO_EXTERNAL_ENDPOINT = os.environ.get("MINIO_EXTERNAL_ENDPOINT", "") or MINIO_ENDPOINT
 
 # Auth
-AUTH_USER_MODEL = 'accounts.CustomUser'
+AUTH_USER_MODEL = "accounts.CustomUser"
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # DRF
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
-    'DEFAULT_PERMISSION_CLASSES': [
+    "DEFAULT_AUTHENTICATION_CLASSES": ("rest_framework_simplejwt.authentication.JWTAuthentication",),
+    "DEFAULT_PERMISSION_CLASSES": [
         # Production: all endpoints require auth by default
-        'rest_framework.permissions.IsAuthenticated',
+        "rest_framework.permissions.IsAuthenticated",
     ],
-    'DEFAULT_FILTER_BACKENDS': [
-        'django_filters.rest_framework.DjangoFilterBackend',
-        'rest_framework.filters.SearchFilter',
+    "DEFAULT_FILTER_BACKENDS": [
+        "django_filters.rest_framework.DjangoFilterBackend",
+        "rest_framework.filters.SearchFilter",
     ],
-    'DEFAULT_THROTTLE_CLASSES': [
-        'rest_framework.throttling.AnonRateThrottle',
-        'rest_framework.throttling.UserRateThrottle',
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
     ],
-    'DEFAULT_THROTTLE_RATES': {
-        'anon': '20/minute',
-        'user': '200/minute',
-        'lead_submit': '5/minute',
-        'import_upload': '10/hour',
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "20/minute",
+        "user": "200/minute",
+        "lead_submit": "5/minute",
+        "import_upload": "10/hour",
     },
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 20,
-    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 20,
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
 # JWT
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
-    'ROTATE_REFRESH_TOKENS': True,
-    'BLACKLIST_AFTER_ROTATION': True,
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
 }
 
 # DRF Spectacular (API Documentation)
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'RailTech B2B API',
-    'DESCRIPTION': (
-        'B2B marketplace API for railway equipment procurement in Uzbekistan. '
-        'Supports deal lifecycle management, quoting, product catalog (PIM), '
-        'KYC verification, Excel imports, and real-time notifications via WebSocket.'
+    "TITLE": "RailTech B2B API",
+    "DESCRIPTION": (
+        "B2B marketplace API for railway equipment procurement in Uzbekistan. "
+        "Supports deal lifecycle management, quoting, product catalog (PIM), "
+        "KYC verification, Excel imports, and real-time notifications via WebSocket."
     ),
-    'VERSION': '1.0.0',
-    'CONTACT': {'name': 'RailTech API Support', 'email': 'api@railtech.com'},
-    'LICENSE': {'name': 'Proprietary'},
-    'SERVE_INCLUDE_SCHEMA': False,
-    'COMPONENT_SPLIT_REQUEST': True,
-    'SCHEMA_PATH_PREFIX': '/api/v[0-9]+/',
-    'TAGS': [
-        {'name': 'Auth', 'description': 'Registration, password setup, JWT tokens'},
-        {'name': 'Accounts', 'description': 'Users, companies, KYC, team management'},
-        {'name': 'Catalog', 'description': 'Products (PIM), categories, equipment groups, supplier offers'},
-        {'name': 'CRM', 'description': 'Deals, quotes, quote items, messages, activity logs'},
-        {'name': 'Sourcing', 'description': 'Excel imports, catalog imports, sourcing requests'},
-        {'name': 'Master Data', 'description': 'Countries, currencies, units of measure, delivery basis'},
-        {'name': 'Notifications', 'description': 'User notifications with read/unread tracking'},
-        {'name': 'Analytics', 'description': 'Dashboard KPIs, CRM analytics, page stats'},
-        {'name': 'System', 'description': 'Health checks, system settings'},
+    "VERSION": "1.0.0",
+    "CONTACT": {"name": "RailTech API Support", "email": "api@railtech.com"},
+    "LICENSE": {"name": "Proprietary"},
+    "SERVE_INCLUDE_SCHEMA": False,
+    "COMPONENT_SPLIT_REQUEST": True,
+    "SCHEMA_PATH_PREFIX": "/api/v[0-9]+/",
+    "TAGS": [
+        {"name": "Auth", "description": "Registration, password setup, JWT tokens"},
+        {"name": "Accounts", "description": "Users, companies, KYC, team management"},
+        {"name": "Catalog", "description": "Products (PIM), categories, equipment groups, supplier offers"},
+        {"name": "CRM", "description": "Deals, quotes, quote items, messages, activity logs"},
+        {"name": "Sourcing", "description": "Excel imports, catalog imports, sourcing requests"},
+        {"name": "Master Data", "description": "Countries, currencies, units of measure, delivery basis"},
+        {"name": "Notifications", "description": "User notifications with read/unread tracking"},
+        {"name": "Analytics", "description": "Dashboard KPIs, CRM analytics, page stats"},
+        {"name": "System", "description": "Health checks, system settings"},
     ],
 }
 
 # Cache (Redis — already running for Channels)
 CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-        'LOCATION': os.environ.get('REDIS_URL', 'redis://redis:6379/0'),
-        'TIMEOUT': 300,
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": os.environ.get("REDIS_URL", "redis://redis:6379/0"),
+        "TIMEOUT": 300,
     }
 }
 
 # Celery Configuration Options
-CELERY_BROKER_URL = os.environ.get(
-    'CELERY_BROKER_URL', 'redis://localhost:6379/1')
-CELERY_RESULT_BACKEND = os.environ.get(
-    'CELERY_RESULT_BACKEND', 'redis://localhost:6379/1')
-CELERY_ACCEPT_CONTENT = ['application/json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
+CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/1")
+CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", "redis://localhost:6379/1")
+CELERY_ACCEPT_CONTENT = ["application/json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 
 # Removed duplicate declarations (now at the top)
 
 # Logging
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
-            'style': '{',
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
+            "style": "{",
         },
-        'simple': {
-            'format': '{levelname} {message}',
-            'style': '{',
-        },
-    },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'formatter': 'verbose',
+        "simple": {
+            "format": "{levelname} {message}",
+            "style": "{",
         },
     },
-    'root': {
-        'handlers': ['console'],
-        'level': os.environ.get('DJANGO_LOG_LEVEL', 'INFO'),
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": os.environ.get("DJANGO_LOG_LEVEL", "INFO"),
     },
 }
 
 # Validation Rules
-INN_VALIDATION_REGEX = r'^\d{9}$'
+INN_VALIDATION_REGEX = r"^\d{9}$"
 
 # Email — backend can be explicitly overridden via EMAIL_BACKEND env var.
 # Default: console in DEBUG, SMTP in production. For local testing with DEBUG=False
 # and no real SMTP credentials, set EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
 _default_email_backend = (
-    'django.core.mail.backends.console.EmailBackend'
-    if DEBUG
-    else 'django.core.mail.backends.smtp.EmailBackend'
+    "django.core.mail.backends.console.EmailBackend" if DEBUG else "django.core.mail.backends.smtp.EmailBackend"
 )
-EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', _default_email_backend)
-EMAIL_HOST = os.environ.get('EMAIL_HOST', 'localhost')
-EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
+EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", _default_email_backend)
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "localhost")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", 587))
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True") == "True"
 
-DEFAULT_FROM_EMAIL = os.environ.get(
-    'DEFAULT_FROM_EMAIL', 'noreply@railtech.uz')
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@railtech.uz")
 
 # ──────────────────────────────────────────────────────────────────────────
 # Email channels — one SMTP/ESP config per purpose.
@@ -625,30 +623,30 @@ def _email_channel(prefix: str, *, default_from: str) -> dict:
     """
     env = os.environ.get
     return {
-        'backend': env(f'EMAIL_{prefix}_BACKEND') or EMAIL_BACKEND,
-        'host': env(f'EMAIL_{prefix}_HOST') or EMAIL_HOST,
-        'port': int(env(f'EMAIL_{prefix}_PORT') or EMAIL_PORT),
-        'username': env(f'EMAIL_{prefix}_USER') or EMAIL_HOST_USER,
-        'password': env(f'EMAIL_{prefix}_PASSWORD') or EMAIL_HOST_PASSWORD,
-        'use_tls': (env(f'EMAIL_{prefix}_USE_TLS') or str(EMAIL_USE_TLS)) == 'True',
-        'from_email': env(f'EMAIL_{prefix}_FROM') or default_from,
+        "backend": env(f"EMAIL_{prefix}_BACKEND") or EMAIL_BACKEND,
+        "host": env(f"EMAIL_{prefix}_HOST") or EMAIL_HOST,
+        "port": int(env(f"EMAIL_{prefix}_PORT") or EMAIL_PORT),
+        "username": env(f"EMAIL_{prefix}_USER") or EMAIL_HOST_USER,
+        "password": env(f"EMAIL_{prefix}_PASSWORD") or EMAIL_HOST_PASSWORD,
+        "use_tls": (env(f"EMAIL_{prefix}_USE_TLS") or str(EMAIL_USE_TLS)) == "True",
+        "from_email": env(f"EMAIL_{prefix}_FROM") or default_from,
     }
 
 
 EMAIL_CHANNELS = {
     # Registration, setup-password, KYC, invitations, subscription alerts.
-    'transactional': _email_channel('TX', default_from=DEFAULT_FROM_EMAIL),
+    "transactional": _email_channel("TX", default_from=DEFAULT_FROM_EMAIL),
     # Digests, campaigns, broadcasts. Not used yet — reserved.
-    'marketing': _email_channel(
-        'MKT',
-        default_from=os.environ.get('EMAIL_MKT_FROM', DEFAULT_FROM_EMAIL),
+    "marketing": _email_channel(
+        "MKT",
+        default_from=os.environ.get("EMAIL_MKT_FROM", DEFAULT_FROM_EMAIL),
     ),
     # Platform-internal alerts to ops (failed jobs, error reports).
-    'system': _email_channel(
-        'SYS',
-        default_from=os.environ.get('EMAIL_SYS_FROM', DEFAULT_FROM_EMAIL),
+    "system": _email_channel(
+        "SYS",
+        default_from=os.environ.get("EMAIL_SYS_FROM", DEFAULT_FROM_EMAIL),
     ),
 }
 
 # Frontend URL for email links (password setup, invitations, etc.)
-FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")

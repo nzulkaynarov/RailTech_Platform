@@ -96,7 +96,7 @@ export function AdminDetailLayout(props: AdminDetailLayoutProps): React.ReactNod
                   <Badge
                     key={i}
                     variant={b.variant ?? 'secondary'}
-                    className={cn('text-[10px]', b.className)}
+                    className={cn('text-xs', b.className)}
                   >
                     {b.label}
                   </Badge>

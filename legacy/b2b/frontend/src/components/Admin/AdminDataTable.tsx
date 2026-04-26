@@ -348,7 +348,7 @@ export function AdminDataTable<T>(props: AdminDataTableProps<T>): React.ReactNod
                 <TabsTrigger key={tab.id} value={tab.id} className="text-xs">
                   {tab.label}
                   {typeof tab.count === 'number' ? (
-                    <Badge variant="secondary" className="ml-1.5 h-4 px-1 text-[10px]">
+                    <Badge variant="secondary" className="ml-1.5 h-4 px-1 text-xs">
                       {tab.count}
                     </Badge>
                   ) : null}
@@ -675,11 +675,11 @@ export function AdminDataTable<T>(props: AdminDataTableProps<T>): React.ReactNod
  */
 export function useAdminTableQueryState(storageKey: string) {
   const urlState = useUrlState();
-  const p = (k: keyof typeof QP_KEYS) => urlState.get(`${storageKey}.${QP_KEYS[k]}`);
+  const getParam = (k: keyof typeof QP_KEYS) => urlState.get(`${storageKey}.${QP_KEYS[k]}`);
   return {
-    search: p('search'),
-    tab: p('tab'),
-    sort: p('sort'),
-    page: Number(p('page') || '1') || 1,
+    search: getParam('search'),
+    tab: getParam('tab'),
+    sort: getParam('sort'),
+    page: Number(getParam('page') || '1') || 1,
   };
 }

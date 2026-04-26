@@ -44,7 +44,7 @@ export function DetailKPIGrid({
           <CardContent className="flex flex-col gap-1 p-3">
             <div className="flex items-center gap-1.5">
               {it.icon ? <span className="text-muted-foreground">{it.icon}</span> : null}
-              <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground">
                 {it.label}
               </span>
             </div>

@@ -7,6 +7,7 @@ Exit code 0 = sync OK, exit code 1 = mismatch found.
 """
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -43,25 +44,43 @@ def main() -> int:
     ru_keys = collect_keys(ru)
     en_keys = collect_keys(en)
 
-    only_ru = ru_keys - en_keys
-    only_en = en_keys - ru_keys
+    # i18next pluralization suffixes that are language-specific.
+    # Russian uses _one/_few/_many/_other; English uses _one/_other.
+    # These asymmetric keys are expected and should not be flagged.
+    _PLURAL_SUFFIX_RE = re.compile(r'_(?:zero|one|two|few|many|other)$')
+
+    def strip_plural_keys(keys):
+        """Return base keys with plural suffixes removed."""
+        bases = set()
+        for k in keys:
+            bases.add(_PLURAL_SUFFIX_RE.sub('', k))
+        return bases
+
+    raw_only_ru = ru_keys - en_keys
+    raw_only_en = en_keys - ru_keys
+
+    ru_bases = strip_plural_keys(ru_keys)
+    en_bases = strip_plural_keys(en_keys)
+
+    only_ru = sorted(k for k in raw_only_ru if _PLURAL_SUFFIX_RE.sub('', k) not in en_bases)
+    only_en = sorted(k for k in raw_only_en if _PLURAL_SUFFIX_RE.sub('', k) not in ru_bases)
 
     ok = True
 
     if only_ru:
         ok = False
         print(f"\n{len(only_ru)} key(s) in ru.json but MISSING from en.json:")
-        for k in sorted(only_ru):
+        for k in only_ru:
             print(f"  - {k}")
 
     if only_en:
         ok = False
         print(f"\n{len(only_en)} key(s) in en.json but MISSING from ru.json:")
-        for k in sorted(only_en):
+        for k in only_en:
             print(f"  - {k}")
 
     if ok:
-        print(f"i18n sync OK: {len(ru_keys)} keys in ru.json, {len(en_keys)} keys in en.json")
+        print(f"i18n sync OK: {len(ru_keys)} keys in ru.json, {len(en_keys)} keys in en.json (pluralization-aware)")
         return 0
     else:
         print(f"\ni18n DESYNC: ru={len(ru_keys)} keys, en={len(en_keys)} keys")

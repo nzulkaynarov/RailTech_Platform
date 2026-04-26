@@ -56,9 +56,9 @@ export function SupplierBidSubmitDialog({
 
   const total = useMemo(() => {
     return items.reduce((sum, it) => {
-      const q = Number(it.quantity) || 0;
-      const p = Number(it.unit_price) || 0;
-      return sum + q * p;
+      const quantity = Number(it.quantity) || 0;
+      const unitPrice = Number(it.unit_price) || 0;
+      return sum + quantity * unitPrice;
     }, 0);
   }, [items]);
 

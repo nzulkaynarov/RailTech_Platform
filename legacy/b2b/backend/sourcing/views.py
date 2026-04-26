@@ -1,19 +1,19 @@
 import base64
 import logging
 
-from rest_framework.views import APIView
-from rest_framework.response import Response
+from celery.result import AsyncResult
+from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
 from rest_framework import status, viewsets
 from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
-from celery.result import AsyncResult
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResponse
+from rest_framework.views import APIView
 
 # IsPlatformAdmin previously required here — now inline member-check covers
 # the seller self-serve flow. Keeping the import removed for cleanliness.
 from .models import ImportTask
-from .tasks import process_excel_import, process_catalog_import
+from .tasks import process_catalog_import, process_excel_import
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 MAX_EXCEL_FILE_SIZE = 20 * 1024 * 1024
 
 # XLSX magic bytes (ZIP/PK header)
-XLSX_MAGIC = b'PK\x03\x04'
+XLSX_MAGIC = b"PK\x03\x04"
 
 
 def _validate_xlsx_signature(file_bytes: bytes) -> bool:
@@ -36,9 +36,7 @@ def _check_deal_access(user, deal) -> bool:
     if deal.manager_id == user.id:
         return True
     if deal.company:
-        return user.memberships.filter(
-            company=deal.company, is_active=True
-        ).exists()
+        return user.memberships.filter(company=deal.company, is_active=True).exists()
     return deal.client_id == user.id
 
 
@@ -50,31 +48,38 @@ def _check_deal_access(user, deal) -> bool:
         "Max file size: 20MB. Only .xlsx format accepted. "
         "Returns a Celery task_id for polling import status."
     ),
-    request={'multipart/form-data': {'type': 'object', 'properties': {
-        'file': {'type': 'string', 'format': 'binary', 'description': 'XLSX file'},
-    }}},
+    request={
+        "multipart/form-data": {
+            "type": "object",
+            "properties": {
+                "file": {"type": "string", "format": "binary", "description": "XLSX file"},
+            },
+        }
+    },
     responses={
         202: OpenApiResponse(description="Import task queued, task_id returned"),
         400: OpenApiResponse(description="No file, invalid format, or file too large"),
         403: OpenApiResponse(description="No access to this deal"),
         404: OpenApiResponse(description="Deal not found"),
     },
-    tags=['Sourcing'],
+    tags=["Sourcing"],
 )
 class ExcelImportView(APIView):
     """Endpoint for deal-specific excel imports.
     Both clients (for own deals) and managers can import.
     Deal access is verified inside the view via _check_deal_access.
     """
+
     parser_classes = [MultiPartParser]
     permission_classes = [IsAuthenticated]
     throttle_classes = [ScopedRateThrottle]
-    throttle_scope = 'import_upload'
+    throttle_scope = "import_upload"
 
     def post(self, request, deal_id):
         from crm.models import Deal
+
         try:
-            deal = Deal.objects.select_related('company').get(pk=deal_id)
+            deal = Deal.objects.select_related("company").get(pk=deal_id)
         except Deal.DoesNotExist:
             return Response(
                 {"error": "Deal not found"},
@@ -83,12 +88,9 @@ class ExcelImportView(APIView):
 
         # IDOR protection: verify deal access
         if not _check_deal_access(request.user, deal):
-            return Response(
-                {"error": "You do not have access to this deal"},
-                status=status.HTTP_403_FORBIDDEN
-            )
+            return Response({"error": "You do not have access to this deal"}, status=status.HTTP_403_FORBIDDEN)
 
-        file_obj = request.FILES.get('file')
+        file_obj = request.FILES.get("file")
         if not file_obj:
             return Response(
                 {"error": "No file uploaded"},
@@ -99,7 +101,7 @@ class ExcelImportView(APIView):
         if file_obj.size > MAX_EXCEL_FILE_SIZE:
             return Response(
                 {"error": f"File too large (max {MAX_EXCEL_FILE_SIZE // (1024*1024)}MB)"},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         try:
@@ -108,31 +110,25 @@ class ExcelImportView(APIView):
             # MIME/magic byte validation
             if not _validate_xlsx_signature(file_content):
                 return Response(
-                    {"error": "Invalid file format. Only .xlsx files are accepted."},
-                    status=status.HTTP_400_BAD_REQUEST
+                    {"error": "Invalid file format. Only .xlsx files are accepted."}, status=status.HTTP_400_BAD_REQUEST
                 )
 
-            file_content_b64 = base64.b64encode(file_content).decode('ascii')
-            task = process_excel_import.delay(
-                deal_id, file_content_b64, request.user.id
-            )
+            file_content_b64 = base64.b64encode(file_content).decode("ascii")
+            task = process_excel_import.delay(deal_id, file_content_b64, request.user.id)
 
             # Store task ownership in DB (not volatile cache)
             ImportTask.objects.create(
                 celery_task_id=task.id,
                 owner=request.user,
                 deal_id=deal_id,
-                task_type='DEAL_IMPORT',
+                task_type="DEAL_IMPORT",
             )
 
-            return Response(
-                {"task_id": task.id}, status=status.HTTP_202_ACCEPTED
-            )
+            return Response({"task_id": task.id}, status=status.HTTP_202_ACCEPTED)
         except Exception:
             logger.exception("Failed to queue Excel import task")
             return Response(
-                {"error": "Failed to process import. Please try again."},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": "Failed to process import. Please try again."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
 
@@ -142,14 +138,19 @@ class ExcelImportView(APIView):
         "Upload an XLSX file to bulk-import products to the PIM catalog. "
         "Staff only. Max file size: 20MB. Returns a Celery task_id."
     ),
-    request={'multipart/form-data': {'type': 'object', 'properties': {
-        'file': {'type': 'string', 'format': 'binary', 'description': 'XLSX file'},
-    }}},
+    request={
+        "multipart/form-data": {
+            "type": "object",
+            "properties": {
+                "file": {"type": "string", "format": "binary", "description": "XLSX file"},
+            },
+        }
+    },
     responses={
         202: OpenApiResponse(description="Import task queued"),
         400: OpenApiResponse(description="No file, invalid format, or too large"),
     },
-    tags=['Sourcing'],
+    tags=["Sourcing"],
 )
 class CatalogImportView(APIView):
     """Bulk supplier catalog import.
@@ -159,32 +160,34 @@ class CatalogImportView(APIView):
     Task actor is captured in ImportTask.owner so admin can trace who uploaded
     what.
     """
+
     parser_classes = [MultiPartParser]
     permission_classes = [IsAuthenticated]
     throttle_classes = [ScopedRateThrottle]
-    throttle_scope = 'import_upload'
+    throttle_scope = "import_upload"
 
     def post(self, request):
         # Authorisation: allow platform admin OR a member with can_sell in
         # at least one SUPPLIER/MANUFACTURER company.
         user = request.user
-        is_admin = getattr(user, 'is_platform_admin', False) or user.is_superuser
+        is_admin = getattr(user, "is_platform_admin", False) or user.is_superuser
         if not is_admin:
             # At least one active can_sell membership in a seller/mfg company
             from accounts.models import CompanyMember
+
             has_seller_capability = CompanyMember.objects.filter(
                 user=user,
                 is_active=True,
                 can_sell=True,
-                company__types__code__in=['SUPPLIER', 'MANUFACTURER'],
+                company__types__code__in=["SUPPLIER", "MANUFACTURER"],
             ).exists()
             if not has_seller_capability:
                 return Response(
-                    {'error': 'NOT_A_SELLER_MEMBER'},
+                    {"error": "NOT_A_SELLER_MEMBER"},
                     status=status.HTTP_403_FORBIDDEN,
                 )
 
-        file_obj = request.FILES.get('file')
+        file_obj = request.FILES.get("file")
         if not file_obj:
             return Response(
                 {"error": "No file uploaded"},
@@ -194,7 +197,7 @@ class CatalogImportView(APIView):
         if file_obj.size > MAX_EXCEL_FILE_SIZE:
             return Response(
                 {"error": f"File too large (max {MAX_EXCEL_FILE_SIZE // (1024*1024)}MB)"},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         try:
@@ -202,27 +205,23 @@ class CatalogImportView(APIView):
 
             if not _validate_xlsx_signature(file_content):
                 return Response(
-                    {"error": "Invalid file format. Only .xlsx files are accepted."},
-                    status=status.HTTP_400_BAD_REQUEST
+                    {"error": "Invalid file format. Only .xlsx files are accepted."}, status=status.HTTP_400_BAD_REQUEST
                 )
 
-            file_content_b64 = base64.b64encode(file_content).decode('ascii')
+            file_content_b64 = base64.b64encode(file_content).decode("ascii")
             task = process_catalog_import.delay(file_content_b64)
 
             ImportTask.objects.create(
                 celery_task_id=task.id,
                 owner=request.user,
-                task_type='CATALOG_IMPORT',
+                task_type="CATALOG_IMPORT",
             )
 
-            return Response(
-                {"task_id": task.id}, status=status.HTTP_202_ACCEPTED
-            )
+            return Response({"task_id": task.id}, status=status.HTTP_202_ACCEPTED)
         except Exception:
             logger.exception("Failed to queue catalog import task")
             return Response(
-                {"error": "Failed to process import. Please try again."},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": "Failed to process import. Please try again."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
 
@@ -236,23 +235,19 @@ class CatalogImportView(APIView):
         200: OpenApiResponse(description="Task status with result data if completed"),
         403: OpenApiResponse(description="No access to this task"),
     },
-    tags=['Sourcing'],
+    tags=["Sourcing"],
 )
 class ImportStatusView(APIView):
     """Endpoint to check the status of a background import task."""
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request, task_id):
         # IDOR protection: verify task ownership via DB (not cache)
         if not request.user.is_platform_admin:
-            task_exists = ImportTask.objects.filter(
-                celery_task_id=task_id, owner=request.user
-            ).exists()
+            task_exists = ImportTask.objects.filter(celery_task_id=task_id, owner=request.user).exists()
             if not task_exists:
-                return Response(
-                    {"error": "You do not have access to this task"},
-                    status=status.HTTP_403_FORBIDDEN
-                )
+                return Response({"error": "You do not have access to this task"}, status=status.HTTP_403_FORBIDDEN)
 
         res = AsyncResult(task_id)
         result_data = None
@@ -260,36 +255,26 @@ class ImportStatusView(APIView):
             raw_result = res.result
             if isinstance(raw_result, dict):
                 result_data = {
-                    'status': raw_result.get('status'),
-                    'items_processed': raw_result.get('items_processed'),
-                    'message': (
-                        raw_result.get('message')
-                        if raw_result.get('status') == 'error' else None
-                    ),
+                    "status": raw_result.get("status"),
+                    "items_processed": raw_result.get("items_processed"),
+                    "message": (raw_result.get("message") if raw_result.get("status") == "error" else None),
                 }
             else:
-                result_data = {'status': 'completed'}
+                result_data = {"status": "completed"}
 
-        return Response({
-            "task_id": task_id,
-            "status": res.status,
-            "result": result_data
-        })
+        return Response({"task_id": task_id, "status": res.status, "result": result_data})
 
 
 @extend_schema_view(
     list=extend_schema(
         summary="List sourcing requests",
-        description=(
-            "Returns deals in SOURCING stage. "
-            "B2B filtered: users see only their company's deals."
-        ),
-        tags=['Sourcing'],
+        description=("Returns deals in SOURCING stage. " "B2B filtered: users see only their company's deals."),
+        tags=["Sourcing"],
     ),
     retrieve=extend_schema(
         summary="Get sourcing request details",
         description="Returns details of a specific sourcing request (deal in SOURCING stage).",
-        tags=['Sourcing'],
+        tags=["Sourcing"],
     ),
 )
 class SourcingRequestViewSet(viewsets.ReadOnlyModelViewSet):
@@ -298,27 +283,24 @@ class SourcingRequestViewSet(viewsets.ReadOnlyModelViewSet):
     GET /api/v1/sourcing/requests/ - List all sourcing requests
     GET /api/v1/sourcing/requests/{id}/ - Get details of a specific request
     """
+
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         from crm.models import Deal
 
-        if getattr(self, 'swagger_fake_view', False):
+        if getattr(self, "swagger_fake_view", False):
             return Deal.objects.none()
         user = self.request.user
-        queryset = Deal.objects.filter(
-            stage__code='SOURCING'
-        ).select_related(
-            'company', 'client', 'manager', 'stage'
-        ).prefetch_related(
-            'quotes', 'quotes__items'
+        queryset = (
+            Deal.objects.filter(stage__code="SOURCING")
+            .select_related("company", "client", "manager", "stage")
+            .prefetch_related("quotes", "quotes__items")
         )
 
         # B2B Filter: User sees deals from their active companies
         if not (user.is_platform_admin):
-            user_company_ids = user.memberships.filter(
-                is_active=True
-            ).values_list('company_id', flat=True)
+            user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
             queryset = queryset.filter(company_id__in=user_company_ids)
 
         return queryset
@@ -326,6 +308,7 @@ class SourcingRequestViewSet(viewsets.ReadOnlyModelViewSet):
     def get_serializer_class(self):
         # Use DealListSerializer for consistency with existing CRM endpoints
         from crm.serializers import DealListSerializer
+
         return DealListSerializer
 
 
@@ -341,55 +324,58 @@ class AttachmentViewSet(viewsets.ModelViewSet):
     Access to the attached entity is checked via the deal's company membership
     (or the product's manufacturer, or the company directly).
     """
-    from .serializers import AttachmentSerializer
+
     from .models import Attachment as _AttachmentModel
+    from .serializers import AttachmentSerializer
 
     serializer_class = AttachmentSerializer
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser]
 
     def get_queryset(self):
-        from .models import Attachment
         from crm.models import Deal
-        if getattr(self, 'swagger_fake_view', False):
+
+        from .models import Attachment
+
+        if getattr(self, "swagger_fake_view", False):
             return Attachment.objects.none()
         user = self.request.user
         qs = Attachment.objects.select_related(
-            'deal__company', 'message__deal__company',
-            'quote__deal__company', 'company', 'product__manufacturer',
-        ).order_by('-uploaded_at')
+            "deal__company",
+            "message__deal__company",
+            "quote__deal__company",
+            "company",
+            "product__manufacturer",
+        ).order_by("-uploaded_at")
 
         params = self.request.query_params
-        if params.get('deal'):
-            qs = qs.filter(deal_id=params['deal'])
-        if params.get('message'):
-            qs = qs.filter(message_id=params['message'])
-        if params.get('quote'):
-            qs = qs.filter(quote_id=params['quote'])
-        if params.get('company'):
-            qs = qs.filter(company_id=params['company'])
-        if params.get('product'):
-            qs = qs.filter(product_id=params['product'])
+        if params.get("deal"):
+            qs = qs.filter(deal_id=params["deal"])
+        if params.get("message"):
+            qs = qs.filter(message_id=params["message"])
+        if params.get("quote"):
+            qs = qs.filter(quote_id=params["quote"])
+        if params.get("company"):
+            qs = qs.filter(company_id=params["company"])
+        if params.get("product"):
+            qs = qs.filter(product_id=params["product"])
 
         if user.is_platform_admin:
             return qs
 
-        user_company_ids = list(user.memberships.filter(
-            is_active=True).values_list('company_id', flat=True))
+        user_company_ids = user.memberships.filter(is_active=True).values("company_id")
 
-        # Allow only attachments whose parent entity's company is in user's companies.
-        # Deals accessible to deal manager/client too.
+        # Subquery: avoid loading all deal IDs into memory
         from django.db.models import Q
-        accessible_deal_ids = list(Deal.objects.filter(
-            Q(company_id__in=user_company_ids)
-            | Q(manager_id=user.id)
-            | Q(client_id=user.id),
-        ).values_list('id', flat=True))
+
+        accessible_deals = Deal.objects.filter(
+            Q(company_id__in=user_company_ids) | Q(manager_id=user.id) | Q(client_id=user.id),
+        ).values("id")
 
         return qs.filter(
-            Q(deal_id__in=accessible_deal_ids)
-            | Q(message__deal_id__in=accessible_deal_ids)
-            | Q(quote__deal_id__in=accessible_deal_ids)
+            Q(deal_id__in=accessible_deals)
+            | Q(message__deal_id__in=accessible_deals)
+            | Q(quote__deal_id__in=accessible_deals)
             | Q(company_id__in=user_company_ids)
             | Q(product__manufacturer_id__in=user_company_ids),
         )
@@ -397,24 +383,26 @@ class AttachmentViewSet(viewsets.ModelViewSet):
     def _assert_parent_access(self, validated):
         """Before create, verify user can attach to the chosen parent."""
         from rest_framework.exceptions import PermissionDenied
+
         user = self.request.user
         if user.is_platform_admin:
             return
 
-        user_company_ids = set(user.memberships.filter(
-            is_active=True).values_list('company_id', flat=True))
+        user_company_ids = set(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
 
-        deal = validated.get('deal')
-        message = validated.get('message')
-        quote = validated.get('quote')
-        company = validated.get('company')
-        product = validated.get('product')
+        deal = validated.get("deal")
+        message = validated.get("message")
+        quote = validated.get("quote")
+        company = validated.get("company")
+        product = validated.get("product")
 
         target_deal = deal or (message.deal if message else None) or (quote.deal if quote else None)
         if target_deal:
-            if (target_deal.company_id in user_company_ids
-                    or target_deal.manager_id == user.id
-                    or target_deal.client_id == user.id):
+            if (
+                target_deal.company_id in user_company_ids
+                or target_deal.manager_id == user.id
+                or target_deal.client_id == user.id
+            ):
                 return
             raise PermissionDenied("NO_ACCESS_TO_DEAL")
         if company:
@@ -429,10 +417,11 @@ class AttachmentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         self._assert_parent_access(serializer.validated_data)
-        file_obj = self.request.FILES.get('file')
+        file_obj = self.request.FILES.get("file")
         if not file_obj:
             from rest_framework.exceptions import ValidationError
-            raise ValidationError({'file': 'NO_FILE_PROVIDED'})
+
+            raise ValidationError({"file": "NO_FILE_PROVIDED"})
         serializer.save(
             uploaded_by=self.request.user,
             original_filename=file_obj.name,
@@ -442,6 +431,7 @@ class AttachmentViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if not (user.is_platform_admin or instance.uploaded_by_id == user.id):
             from rest_framework.exceptions import PermissionDenied
+
             raise PermissionDenied("ONLY_UPLOADER_OR_ADMIN_CAN_DELETE")
         if instance.file:
             instance.file.delete(save=False)

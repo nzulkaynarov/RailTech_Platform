@@ -1,23 +1,29 @@
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
+from import_export.admin import ImportExportModelAdmin
 from unfold.admin import ModelAdmin, TabularInline
 from unfold.contrib.import_export.forms import ExportForm, ImportForm
 from unfold.decorators import display
-from import_export.admin import ImportExportModelAdmin
 
 from core.admin_mixins import ReadOnlyInspectionMixin, superuser_only_action
 
 from .models import (
-    DomainType, ProductStatus, StockStatus,
-    Category, EquipmentGroup, Product, SupplierOffer,
-    ProductImage, ProductDocument
+    Category,
+    DomainType,
+    EquipmentGroup,
+    Product,
+    ProductDocument,
+    ProductImage,
+    ProductStatus,
+    StockStatus,
+    SupplierOffer,
 )
 from .resources import ProductResource, SupplierOfferResource
-
 
 # ────────────────────────────────────────────
 # Inlines
 # ────────────────────────────────────────────
+
 
 class SupplierOfferInline(TabularInline):
     model = SupplierOffer
@@ -45,6 +51,7 @@ class ProductDocumentInline(TabularInline):
 # Lookups
 # ────────────────────────────────────────────
 
+
 @admin.register(DomainType)
 class DomainTypeAdmin(ModelAdmin):
     list_display = ["name", "code", "sku_prefix", "sort_order", "is_active"]
@@ -53,9 +60,12 @@ class DomainTypeAdmin(ModelAdmin):
     list_per_page = 15
 
     fieldsets = (
-        (None, {
-            "fields": (("name", "code"), ("sku_prefix", "sort_order"), "is_active"),
-        }),
+        (
+            None,
+            {
+                "fields": (("name", "code"), ("sku_prefix", "sort_order"), "is_active"),
+            },
+        ),
     )
 
 
@@ -71,6 +81,7 @@ class CatalogLookupAdmin(ModelAdmin):
 # Hierarchy
 # ────────────────────────────────────────────
 
+
 @admin.register(Category)
 class CategoryAdmin(ModelAdmin):
     list_display = ("name", "domain_type", "parent", "sort_order", "is_active")
@@ -83,13 +94,16 @@ class CategoryAdmin(ModelAdmin):
     list_select_related = ("domain_type", "parent")
 
     fieldsets = (
-        (None, {
-            "fields": (
-                ("name", "domain_type"),
-                "parent",
-                ("icon", "sort_order", "is_active"),
-            ),
-        }),
+        (
+            None,
+            {
+                "fields": (
+                    ("name", "domain_type"),
+                    "parent",
+                    ("icon", "sort_order", "is_active"),
+                ),
+            },
+        ),
     )
 
 
@@ -104,13 +118,16 @@ class EquipmentGroupAdmin(ModelAdmin):
     list_select_related = ("parent",)
 
     fieldsets = (
-        (None, {
-            "fields": (
-                ("name", "parent"),
-                "description",
-                ("cached_path", "sort_order", "is_active"),
-            ),
-        }),
+        (
+            None,
+            {
+                "fields": (
+                    ("name", "parent"),
+                    "description",
+                    ("cached_path", "sort_order", "is_active"),
+                ),
+            },
+        ),
     )
 
     def get_readonly_fields(self, request, obj=None):
@@ -124,6 +141,7 @@ class EquipmentGroupAdmin(ModelAdmin):
 # Products (PIM)
 # ────────────────────────────────────────────
 
+
 @admin.register(Product)
 class ProductAdmin(ReadOnlyInspectionMixin, ImportExportModelAdmin, ModelAdmin):
     resource_classes = [ProductResource]
@@ -135,8 +153,12 @@ class ProductAdmin(ReadOnlyInspectionMixin, ImportExportModelAdmin, ModelAdmin):
     search_fields = ("name", "sku", "gost_drawing")
     readonly_fields = ("sku", "created_at", "updated_at")
     autocomplete_fields = [
-        "domain_type", "status", "category", "uom",
-        "manufacturer", "equipment_groups",
+        "domain_type",
+        "status",
+        "category",
+        "uom",
+        "manufacturer",
+        "equipment_groups",
     ]
     inlines = [SupplierOfferInline, ProductImageInline, ProductDocumentInline]
     actions = ["publish_products"]
@@ -168,35 +190,48 @@ class ProductAdmin(ReadOnlyInspectionMixin, ImportExportModelAdmin, ModelAdmin):
         return obj.status.name if obj.status else "—"
 
     fieldsets = (
-        (None, {
-            "fields": (
-                ("name", "sku"),
-                ("domain_type", "status"),
-                ("category", "uom"),
-            ),
-        }),
-        (_("Характеристики"), {
-            "classes": ["tab"],
-            "fields": (
-                "description",
-                "manufacturer",
-                "gost_drawing",
-                "specifications",
-            ),
-        }),
-        (_("Оборудование"), {
-            "classes": ["tab"],
-            "fields": ("equipment_groups",),
-        }),
-        (_("Системное"), {
-            "classes": ["tab"],
-            "fields": (("created_at", "updated_at"),),
-        }),
+        (
+            None,
+            {
+                "fields": (
+                    ("name", "sku"),
+                    ("domain_type", "status"),
+                    ("category", "uom"),
+                ),
+            },
+        ),
+        (
+            _("Характеристики"),
+            {
+                "classes": ["tab"],
+                "fields": (
+                    "description",
+                    "manufacturer",
+                    "gost_drawing",
+                    "specifications",
+                ),
+            },
+        ),
+        (
+            _("Оборудование"),
+            {
+                "classes": ["tab"],
+                "fields": ("equipment_groups",),
+            },
+        ),
+        (
+            _("Системное"),
+            {
+                "classes": ["tab"],
+                "fields": (("created_at", "updated_at"),),
+            },
+        ),
     )
 
     @superuser_only_action(_("[Emergency] Опубликовать (PUBLISHED)"))
     def publish_products(self, request, queryset):
         from . import services
+
         updated, skipped = services.publish_products(queryset)
         if skipped:
             names = ", ".join(skipped[:5])
@@ -208,6 +243,7 @@ class ProductAdmin(ReadOnlyInspectionMixin, ImportExportModelAdmin, ModelAdmin):
 # ────────────────────────────────────────────
 # Supplier Offers
 # ────────────────────────────────────────────
+
 
 @admin.register(SupplierOffer)
 class SupplierOfferAdmin(ReadOnlyInspectionMixin, ImportExportModelAdmin, ModelAdmin):
@@ -238,26 +274,35 @@ class SupplierOfferAdmin(ReadOnlyInspectionMixin, ImportExportModelAdmin, ModelA
         return obj.stock_status.name if obj.stock_status else "—"
 
     fieldsets = (
-        (None, {
-            "fields": (
-                ("product", "supplier"),
-                "supplier_sku",
-            ),
-        }),
-        (_("Цена и условия"), {
-            "classes": ["tab"],
-            "fields": (
-                ("base_price", "currency"),
-                ("delivery_basis", "stock_status"),
-                ("delivery_lead_time", "min_order_qty"),
-            ),
-        }),
-        (_("Срок действия"), {
-            "classes": ["tab"],
-            "fields": (
-                ("valid_from", "valid_until"),
-                "is_active",
-                ("created_at", "updated_at"),
-            ),
-        }),
+        (
+            None,
+            {
+                "fields": (
+                    ("product", "supplier"),
+                    "supplier_sku",
+                ),
+            },
+        ),
+        (
+            _("Цена и условия"),
+            {
+                "classes": ["tab"],
+                "fields": (
+                    ("base_price", "currency"),
+                    ("delivery_basis", "stock_status"),
+                    ("delivery_lead_time", "min_order_qty"),
+                ),
+            },
+        ),
+        (
+            _("Срок действия"),
+            {
+                "classes": ["tab"],
+                "fields": (
+                    ("valid_from", "valid_until"),
+                    "is_active",
+                    ("created_at", "updated_at"),
+                ),
+            },
+        ),
     )
