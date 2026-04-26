@@ -52,7 +52,7 @@ export const SourcingGrid: React.FC = () => {
             await updateMutation.mutateAsync({ id: itemId, data: { product: productId } });
             setIsProductPickerOpen(false);
             setSelectedItemId(null);
-        } catch (error) {
+        } catch {
             toast.error(t('errors.operationFailed'));
         }
     };

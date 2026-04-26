@@ -79,7 +79,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 				}
 			}
 			if (onSave) onSave();
-		} catch (error) {
+		} catch {
 			toast.error(t('errors.operationFailed'));
 		}
 	};
@@ -88,7 +88,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 		setIsExporting(true);
 		try {
 			await crmApi.exportDealPDF(dealId);
-		} catch (error) {
+		} catch {
 			toast.error(t('errors.operationFailed'));
 		} finally {
 			setIsExporting(false);
@@ -107,7 +107,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 			});
 			setNewItemName('');
 			setShowAddRow(false);
-		} catch (err) {
+		} catch {
 			toast.error(t('errors.operationFailed'));
 		}
 	};
@@ -123,7 +123,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 		try {
 			await deleteItemMutation.mutateAsync(deleteTarget);
 			setDeleteTarget(null);
-		} catch (err) {
+		} catch {
 			toast.error(t('errors.operationFailed'));
 			setDeleteTarget(null);
 		}

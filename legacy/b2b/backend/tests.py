@@ -7,39 +7,38 @@ Covers the three most critical areas:
 3. Smart Match domain routing
 """
 
-from django.test import TestCase
+from decimal import Decimal
+
 from django.core.cache import cache
-from rest_framework.test import APIClient
+from django.test import TestCase
 from rest_framework import status
-from accounts.models import CustomUser, Company
+from rest_framework.test import APIClient
+
+from accounts.models import Company, CustomUser
 from catalog.models import DomainType
 from crm.models import Deal, Quote, QuoteItem
 from sourcing.tasks import route_domain
-from decimal import Decimal
 
 
 def make_user(username, is_staff=False, company=None):
     user = CustomUser.objects.create_user(
         username=username,
-        password='testpass123',
-        email=f'{username}@test.com',
+        password="testpass123",
+        email=f"{username}@test.com",
         is_staff=is_staff,
     )
     if company:
         from accounts.models import CompanyMember, WorkspaceRole
-        role, _ = WorkspaceRole.objects.get_or_create(
-            code='OWNER', defaults={'name': 'Owner'}
-        )
-        CompanyMember.objects.create(
-            user=user, company=company, role=role, is_primary=True
-        )
+
+        role, _ = WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner"})
+        CompanyMember.objects.create(user=user, company=company, role=role, is_primary=True)
     return user
 
 
 def make_company():
     return Company.objects.create(
-        name='Test Company',
-        inn='123456789',
+        name="Test Company",
+        inn="123456789",
     )
 
 
@@ -48,11 +47,9 @@ class LandedCostPipelineTest(TestCase):
 
     def setUp(self):
         self.company = make_company()
-        self.client_user = make_user('client1', company=self.company)
-        self.deal = Deal.objects.create(
-            client=self.client_user, company=self.company
-        )
-        self.quote = Quote.objects.create(deal=self.deal, vat_rate=Decimal('12.00'))
+        self.client_user = make_user("client1", company=self.company)
+        self.deal = Deal.objects.create(client=self.client_user, company=self.company)
+        self.quote = Quote.objects.create(deal=self.deal, vat_rate=Decimal("12.00"))
 
     def test_landed_cost_calculation_saves_to_db(self):
         """
@@ -61,29 +58,29 @@ class LandedCostPipelineTest(TestCase):
         """
         item = QuoteItem.objects.create(
             quote=self.quote,
-            frozen_base_price=Decimal('1000.00'),
-            logistics_cost=Decimal('200.00'),
-            customs_duty=Decimal('50.00'),
-            margin_percent=Decimal('15.00'),
+            frozen_base_price=Decimal("1000.00"),
+            logistics_cost=Decimal("200.00"),
+            customs_duty=Decimal("50.00"),
+            margin_percent=Decimal("15.00"),
             quantity=1,
         )
         # landed_cost = 1000 + 200 + 50 = 1250
-        self.assertEqual(item.landed_cost, Decimal('1250.00'))
+        self.assertEqual(item.landed_cost, Decimal("1250.00"))
         # final_price_excl_vat = 1250 * 1.15 = 1437.50
-        self.assertEqual(item.final_price_excl_vat, Decimal('1437.50'))
+        self.assertEqual(item.final_price_excl_vat, Decimal("1437.50"))
 
     def test_zero_margin_is_valid(self):
         """Edge case: margin of 0% must not break the pipeline."""
         item = QuoteItem.objects.create(
             quote=self.quote,
-            frozen_base_price=Decimal('500.00'),
-            logistics_cost=Decimal('100.00'),
-            customs_duty=Decimal('0.00'),
-            margin_percent=Decimal('0.00'),
+            frozen_base_price=Decimal("500.00"),
+            logistics_cost=Decimal("100.00"),
+            customs_duty=Decimal("0.00"),
+            margin_percent=Decimal("0.00"),
             quantity=1,
         )
-        self.assertEqual(item.landed_cost, Decimal('600.00'))
-        self.assertEqual(item.final_price_excl_vat, Decimal('600.00'))
+        self.assertEqual(item.landed_cost, Decimal("600.00"))
+        self.assertEqual(item.final_price_excl_vat, Decimal("600.00"))
 
 
 class RBACSecurityTest(TestCase):
@@ -91,35 +88,33 @@ class RBACSecurityTest(TestCase):
 
     def setUp(self):
         company_a = make_company()
-        Company.objects.create(name='Company B', inn='987654321')
-        self.client_a = make_user('client_a', company=company_a)
-        self.client_b = make_user('client_b')
-        self.manager = make_user('manager1', is_staff=True)
+        Company.objects.create(name="Company B", inn="987654321")
+        self.client_a = make_user("client_a", company=company_a)
+        self.client_b = make_user("client_b")
+        self.manager = make_user("manager1", is_staff=True)
 
-        self.deal_a = Deal.objects.create(
-            client=self.client_a, company=company_a
-        )
+        self.deal_a = Deal.objects.create(client=self.client_a, company=company_a)
         self.api_client = APIClient()
 
     def test_unauthenticated_user_cannot_access_deals(self):
         """Unauthenticated requests must return 401."""
-        response = self.api_client.get('/api/v1/crm/deals/')
+        response = self.api_client.get("/api/v1/crm/deals/")
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_client_b_cannot_see_client_a_deal(self):
         """Client B must not see Deal belonging to Client A (returns empty list)."""
         self.api_client.force_authenticate(user=self.client_b)
-        response = self.api_client.get('/api/v1/crm/deals/')
+        response = self.api_client.get("/api/v1/crm/deals/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        deal_ids = [d['id'] for d in response.data['results']]
+        deal_ids = [d["id"] for d in response.data["results"]]
         self.assertNotIn(self.deal_a.id, deal_ids)
 
     def test_manager_sees_all_deals(self):
         """Staff user must see all deals in the system."""
         self.api_client.force_authenticate(user=self.manager)
-        response = self.api_client.get('/api/v1/crm/deals/')
+        response = self.api_client.get("/api/v1/crm/deals/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        deal_ids = [d['id'] for d in response.data['results']]
+        deal_ids = [d["id"] for d in response.data["results"]]
         self.assertIn(self.deal_a.id, deal_ids)
 
 
@@ -128,31 +123,28 @@ class SmartMatchDomainRouterTest(TestCase):
 
     def setUp(self):
         from sourcing.models import DomainKeyword
+
         cache.clear()
-        railway = DomainType.objects.create(
-            name='Railway Machinery', code='RAILWAY_MACHINERY', sku_prefix='RM'
-        )
-        services = DomainType.objects.create(
-            name='Services', code='SERVICES', sku_prefix='SV'
-        )
-        DomainKeyword.objects.create(keyword='колесная пара', domain_type=railway)
-        DomainKeyword.objects.create(keyword='тэм18', domain_type=railway)
-        DomainKeyword.objects.create(keyword='тяговый двигатель', domain_type=railway)
-        DomainKeyword.objects.create(keyword='вл80', domain_type=railway)
-        DomainKeyword.objects.create(keyword='услуга', domain_type=services)
-        DomainKeyword.objects.create(keyword='delivery', domain_type=services)
+        railway = DomainType.objects.create(name="Railway Machinery", code="RAILWAY_MACHINERY", sku_prefix="RM")
+        services = DomainType.objects.create(name="Services", code="SERVICES", sku_prefix="SV")
+        DomainKeyword.objects.create(keyword="колесная пара", domain_type=railway)
+        DomainKeyword.objects.create(keyword="тэм18", domain_type=railway)
+        DomainKeyword.objects.create(keyword="тяговый двигатель", domain_type=railway)
+        DomainKeyword.objects.create(keyword="вл80", domain_type=railway)
+        DomainKeyword.objects.create(keyword="услуга", domain_type=services)
+        DomainKeyword.objects.create(keyword="delivery", domain_type=services)
 
     def tearDown(self):
         cache.clear()
 
     def test_routes_railway_keywords(self):
-        self.assertEqual(route_domain('Колесная пара для ТЭМ18'), 'RAILWAY_MACHINERY')
-        self.assertEqual(route_domain('Тяговый двигатель вл80'), 'RAILWAY_MACHINERY')
+        self.assertEqual(route_domain("Колесная пара для ТЭМ18"), "RAILWAY_MACHINERY")
+        self.assertEqual(route_domain("Тяговый двигатель вл80"), "RAILWAY_MACHINERY")
 
     def test_routes_service_keywords(self):
-        self.assertEqual(route_domain('Услуга по монтажу'), 'SERVICES')
-        self.assertEqual(route_domain('Delivery from Moscow'), 'SERVICES')
+        self.assertEqual(route_domain("Услуга по монтажу"), "SERVICES")
+        self.assertEqual(route_domain("Delivery from Moscow"), "SERVICES")
 
     def test_fallback_to_general_goods(self):
-        self.assertEqual(route_domain('Болт М6 оцинкованный'), 'GENERAL_GOODS')
-        self.assertEqual(route_domain('Краска акриловая серая'), 'GENERAL_GOODS')
+        self.assertEqual(route_domain("Болт М6 оцинкованный"), "GENERAL_GOODS")
+        self.assertEqual(route_domain("Краска акриловая серая"), "GENERAL_GOODS")

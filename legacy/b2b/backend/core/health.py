@@ -1,9 +1,11 @@
 import time
-from django.http import JsonResponse
+
 from django.db import connection
+from django.http import JsonResponse
 
 _cache = {"result": None, "ts": 0}
 _TTL = 10  # seconds
+
 
 def health_check(request):
     """

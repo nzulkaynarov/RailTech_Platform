@@ -4,6 +4,7 @@ Core business logic — SupportTicket workflow.
 Per IRON RULE 8, all business logic (status transitions, notifications,
 side effects) lives here. Views and admin actions are thin wrappers.
 """
+
 from django.utils import timezone
 
 from core.models import SupportTicket, SupportTicketMessage
@@ -11,7 +12,10 @@ from notifications.services import notify_platform_admins
 
 
 def create_support_ticket(
-    *, author, subject: str, description: str,
+    *,
+    author,
+    subject: str,
+    description: str,
     category: str = SupportTicket.CATEGORY_QUESTION,
     priority: str = SupportTicket.PRIORITY_NORMAL,
 ) -> SupportTicket:
@@ -22,7 +26,7 @@ def create_support_ticket(
     - связывает тикет с primary_company автора (если есть);
     - уведомляет Platform Admin через broadcast-канал.
     """
-    company = getattr(author, 'primary_company', None)
+    company = getattr(author, "primary_company", None)
     ticket = SupportTicket.objects.create(
         subject=subject,
         description=description,
@@ -32,16 +36,20 @@ def create_support_ticket(
         company=company,
     )
     notify_platform_admins(
-        title='support.alert.new_ticket_title',
-        message='support.alert.new_ticket_message',
-        link=f'/admin/support/{ticket.pk}',
-        type_code='INFO',
+        title="support.alert.new_ticket_title",
+        message="support.alert.new_ticket_message",
+        link=f"/admin/support/{ticket.pk}",
+        type_code="INFO",
     )
     return ticket
 
 
 def add_ticket_message(
-    *, ticket: SupportTicket, author, text: str, is_internal: bool = False,
+    *,
+    ticket: SupportTicket,
+    author,
+    text: str,
+    is_internal: bool = False,
 ) -> SupportTicketMessage:
     """
     Добавляет сообщение в тикет.
@@ -55,13 +63,9 @@ def add_ticket_message(
         text=text,
         is_internal=is_internal,
     )
-    if (
-        author and author.is_platform_admin
-        and ticket.status == SupportTicket.STATUS_OPEN
-        and not is_internal
-    ):
+    if author and author.is_platform_admin and ticket.status == SupportTicket.STATUS_OPEN and not is_internal:
         ticket.status = SupportTicket.STATUS_IN_PROGRESS
-        ticket.save(update_fields=['status', 'updated_at'])
+        ticket.save(update_fields=["status", "updated_at"])
     return message
 
 
@@ -73,7 +77,7 @@ def change_ticket_status(*, ticket: SupportTicket, status: str, actor) -> Suppor
     ticket.status = status
     if status == SupportTicket.STATUS_RESOLVED and not ticket.resolved_at:
         ticket.resolved_at = timezone.now()
-    ticket.save(update_fields=['status', 'resolved_at', 'updated_at'])
+    ticket.save(update_fields=["status", "resolved_at", "updated_at"])
     return ticket
 
 
@@ -82,5 +86,5 @@ def assign_ticket(*, ticket: SupportTicket, assignee) -> SupportTicket:
     ticket.assigned_to = assignee
     if ticket.status == SupportTicket.STATUS_OPEN:
         ticket.status = SupportTicket.STATUS_IN_PROGRESS
-    ticket.save(update_fields=['assigned_to', 'status', 'updated_at'])
+    ticket.save(update_fields=["assigned_to", "status", "updated_at"])
     return ticket

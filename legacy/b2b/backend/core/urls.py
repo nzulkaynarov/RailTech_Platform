@@ -1,141 +1,176 @@
-from django.contrib import admin
-from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.contrib import admin
+from django.urls import include, path
+from drf_spectacular.utils import extend_schema
+from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
-from drf_spectacular.utils import extend_schema
-from catalog.views import (
-    ProductViewSet, EquipmentGroupViewSet, CategoryViewSet,
-    ManufacturerViewSet, SupplierOfferViewSet, DomainTypeViewSet,
-    ProductStatusViewSet, StockStatusViewSet,
-)
-from crm.views import (
-    DealViewSet, QuoteViewSet, QuoteItemViewSet, MessageViewSet,
-    LeadCreateView, CRMAnalyticsView, ActivityLogViewSet, DashboardAnalyticsView,
-    DealStageViewSet, QuoteStatusViewSet,
-    ContractViewSet, InvoiceViewSet, PaymentViewSet, ActViewSet,
-    FulfillmentViewSet, SupplierBidViewSet, LeadViewSet,
-    Phase2StatusChoicesView,
-)
+
 from accounts.views import (
-    CompanyViewSet, UserViewSet, RegisterView, SetupPasswordView, SubmitProfileView, MeView,
-    SupplierSubscriptionViewSet, CompanyRoleApplicationViewSet, SystemRoleViewSet,
-    WorkspaceRoleViewSet, CompanyTypeViewSet,
-    ForgotPasswordView, ResetPasswordView,
+    CompanyRoleApplicationViewSet,
+    CompanyTypeViewSet,
+    CompanyViewSet,
+    ForgotPasswordView,
+    MeView,
+    RegisterView,
+    ResetPasswordView,
+    SetupPasswordView,
+    SubmitProfileView,
+    SupplierSubscriptionViewSet,
+    SystemRoleViewSet,
+    UserViewSet,
+    WorkspaceRoleViewSet,
 )
-from notifications.views import NotificationViewSet
-from master_data.views import (
-    CountryViewSet, CurrencyViewSet,
-    UnitOfMeasureViewSet, DeliveryBasisViewSet
+from accounts.wizard import WIZARD_FORMS, CompanyWizardView
+from catalog.views import (
+    CategoryViewSet,
+    DomainTypeViewSet,
+    EquipmentGroupViewSet,
+    ManufacturerViewSet,
+    ProductStatusViewSet,
+    ProductViewSet,
+    StockStatusViewSet,
+    SupplierOfferViewSet,
 )
-from sourcing.views import (
-    ExcelImportView, CatalogImportView, ImportStatusView,
-    SourcingRequestViewSet, AttachmentViewSet,
-)
+from core.admin_api import AdminActivityView, AdminPulseView, AdminSearchView, AdminTriageQueueView
 from core.health import health_check
-from core.views import (
-    PageStatsView, SystemSettingsView, PlatformDashboardView,
-    SupportTicketViewSet,
+from core.views import PageStatsView, PlatformDashboardView, SupportTicketViewSet, SystemSettingsView
+from crm.views import (
+    ActivityLogViewSet,
+    ActViewSet,
+    ContractViewSet,
+    CRMAnalyticsView,
+    DashboardAnalyticsView,
+    DealStageViewSet,
+    DealViewSet,
+    FulfillmentViewSet,
+    InvoiceViewSet,
+    LeadCreateView,
+    LeadViewSet,
+    MessageViewSet,
+    PaymentViewSet,
+    Phase2StatusChoicesView,
+    QuoteItemViewSet,
+    QuoteStatusViewSet,
+    QuoteViewSet,
+    SupplierBidViewSet,
 )
-from core.admin_api import (
-    AdminTriageQueueView, AdminPulseView, AdminSearchView, AdminActivityView,
+from master_data.views import CountryViewSet, CurrencyViewSet, DeliveryBasisViewSet, UnitOfMeasureViewSet
+from notifications.views import NotificationViewSet
+from sourcing.views import (
+    AttachmentViewSet,
+    CatalogImportView,
+    ExcelImportView,
+    ImportStatusView,
+    SourcingRequestViewSet,
 )
 
 router = DefaultRouter()
-router.register(r'catalog/products', ProductViewSet, basename='product')
-router.register(r'catalog/offers', SupplierOfferViewSet, basename='offer')
-router.register(r'catalog/equipment-groups', EquipmentGroupViewSet, basename='equipmentgroup')
-router.register(r'catalog/categories', CategoryViewSet, basename='category')
-router.register(r'catalog/manufacturers', ManufacturerViewSet, basename='manufacturer')
-router.register(r'catalog/domain-types', DomainTypeViewSet, basename='domaintype')
-router.register(r'catalog/product-statuses', ProductStatusViewSet, basename='productstatus')
-router.register(r'catalog/stock-statuses', StockStatusViewSet, basename='stockstatus')
+router.register(r"catalog/products", ProductViewSet, basename="product")
+router.register(r"catalog/offers", SupplierOfferViewSet, basename="offer")
+router.register(r"catalog/equipment-groups", EquipmentGroupViewSet, basename="equipmentgroup")
+router.register(r"catalog/categories", CategoryViewSet, basename="category")
+router.register(r"catalog/manufacturers", ManufacturerViewSet, basename="manufacturer")
+router.register(r"catalog/domain-types", DomainTypeViewSet, basename="domaintype")
+router.register(r"catalog/product-statuses", ProductStatusViewSet, basename="productstatus")
+router.register(r"catalog/stock-statuses", StockStatusViewSet, basename="stockstatus")
 
-router.register(r'crm/deals', DealViewSet, basename='deal')
-router.register(r'crm/quotes', QuoteViewSet, basename='quote')
-router.register(r'crm/quote-items', QuoteItemViewSet, basename='quoteitem')
-router.register(r'crm/messages', MessageViewSet, basename='message')
-router.register(r'crm/activity-logs', ActivityLogViewSet, basename='activitylog')
-router.register(r'crm/deal-stages', DealStageViewSet, basename='dealstage')
-router.register(r'crm/quote-statuses', QuoteStatusViewSet, basename='quotestatus')
-router.register(r'crm/contracts', ContractViewSet, basename='contract')
-router.register(r'crm/invoices', InvoiceViewSet, basename='invoice')
-router.register(r'crm/payments', PaymentViewSet, basename='payment')
-router.register(r'crm/acts', ActViewSet, basename='act')
-router.register(r'crm/fulfillments', FulfillmentViewSet, basename='fulfillment')
-router.register(r'crm/supplier-bids', SupplierBidViewSet, basename='supplierbid')
-router.register(r'crm/leads', LeadViewSet, basename='lead')
+router.register(r"crm/deals", DealViewSet, basename="deal")
+router.register(r"crm/quotes", QuoteViewSet, basename="quote")
+router.register(r"crm/quote-items", QuoteItemViewSet, basename="quoteitem")
+router.register(r"crm/messages", MessageViewSet, basename="message")
+router.register(r"crm/activity-logs", ActivityLogViewSet, basename="activitylog")
+router.register(r"crm/deal-stages", DealStageViewSet, basename="dealstage")
+router.register(r"crm/quote-statuses", QuoteStatusViewSet, basename="quotestatus")
+router.register(r"crm/contracts", ContractViewSet, basename="contract")
+router.register(r"crm/invoices", InvoiceViewSet, basename="invoice")
+router.register(r"crm/payments", PaymentViewSet, basename="payment")
+router.register(r"crm/acts", ActViewSet, basename="act")
+router.register(r"crm/fulfillments", FulfillmentViewSet, basename="fulfillment")
+router.register(r"crm/supplier-bids", SupplierBidViewSet, basename="supplierbid")
+router.register(r"crm/leads", LeadViewSet, basename="lead")
 
-router.register(r'accounts/companies', CompanyViewSet)
-router.register(r'accounts/users', UserViewSet)
-router.register(r'accounts/subscriptions', SupplierSubscriptionViewSet, basename='subscription')
-router.register(r'accounts/role-applications', CompanyRoleApplicationViewSet, basename='roleapplication')
-router.register(r'accounts/system-roles', SystemRoleViewSet, basename='systemrole')
-router.register(r'accounts/workspace-roles', WorkspaceRoleViewSet, basename='workspacerole')
-router.register(r'accounts/company-types', CompanyTypeViewSet, basename='companytype')
-router.register(r'notifications', NotificationViewSet, basename='notification')
+router.register(r"accounts/companies", CompanyViewSet)
+router.register(r"accounts/users", UserViewSet)
+router.register(r"accounts/subscriptions", SupplierSubscriptionViewSet, basename="subscription")
+router.register(r"accounts/role-applications", CompanyRoleApplicationViewSet, basename="roleapplication")
+router.register(r"accounts/system-roles", SystemRoleViewSet, basename="systemrole")
+router.register(r"accounts/workspace-roles", WorkspaceRoleViewSet, basename="workspacerole")
+router.register(r"accounts/company-types", CompanyTypeViewSet, basename="companytype")
+router.register(r"notifications", NotificationViewSet, basename="notification")
 
 # Support tickets
-router.register(r'support/tickets', SupportTicketViewSet, basename='support-ticket')
+router.register(r"support/tickets", SupportTicketViewSet, basename="support-ticket")
 
 # Master Data
-router.register(r'master-data/countries', CountryViewSet)
-router.register(r'master-data/currencies', CurrencyViewSet)
-router.register(r'master-data/units', UnitOfMeasureViewSet)
-router.register(r'master-data/delivery-basis', DeliveryBasisViewSet)
+router.register(r"master-data/countries", CountryViewSet)
+router.register(r"master-data/currencies", CurrencyViewSet)
+router.register(r"master-data/units", UnitOfMeasureViewSet)
+router.register(r"master-data/delivery-basis", DeliveryBasisViewSet)
 
 # Sourcing
-router.register(r'sourcing/requests', SourcingRequestViewSet, basename='sourcing-request')
-router.register(r'sourcing/attachments', AttachmentViewSet, basename='attachment')
+router.register(r"sourcing/requests", SourcingRequestViewSet, basename="sourcing-request")
+router.register(r"sourcing/attachments", AttachmentViewSet, basename="attachment")
 
-from accounts.wizard import CompanyWizardView, WIZARD_FORMS
-
-urlpatterns = [
-    path('admin/accounts/company/wizard/',
-         CompanyWizardView.as_view(WIZARD_FORMS),
-         name='company-wizard'),
-    path('admin/', admin.site.urls),
-    path('api/v1/', include(router.urls)),
-    path('api/v1/auth/register/', RegisterView.as_view(), name='register'),
-    path('api/v1/auth/setup-password/',
-         SetupPasswordView.as_view(), name='setup-password'),
-    path('api/v1/auth/forgot-password/',
-         ForgotPasswordView.as_view(), name='forgot-password'),
-    path('api/v1/auth/reset-password/',
-         ResetPasswordView.as_view(), name='reset-password'),
-    path('api/v1/auth/submit-profile/',
-         SubmitProfileView.as_view(), name='submit-profile'),
-    path('api/v1/auth/token/',
-         extend_schema(summary="Obtain JWT token pair", description="Authenticate with email and password to receive access and refresh tokens.", tags=['Auth'])(TokenObtainPairView).as_view(),
-         name='token_obtain_pair'),
-    path('api/v1/auth/token/refresh/',
-         extend_schema(summary="Refresh JWT token", description="Exchange a valid refresh token for a new access token.", tags=['Auth'])(TokenRefreshView).as_view(),
-         name='token_refresh'),
-    # Sourcing & Imports
-    path('api/v1/sourcing/import-deal/<int:deal_id>/', ExcelImportView.as_view(), name='import-deal'),
-    path('api/v1/sourcing/import-catalog/', CatalogImportView.as_view(), name='import-catalog'),
-    path('api/v1/sourcing/import-status/<str:task_id>/', ImportStatusView.as_view(), name='import-status'),
-    path('api/v1/crm/analytics/', CRMAnalyticsView.as_view(), name='crm-analytics'),
-    path('api/v1/crm/analytics/dashboard/', DashboardAnalyticsView.as_view(), name='dashboard-analytics'),
-    path('api/v1/analytics/page-stats/', PageStatsView.as_view(), name='page-stats'),
-    path('api/v1/analytics/platform-dashboard/', PlatformDashboardView.as_view(), name='platform-dashboard'),
-    # Admin Platform API
-    path('api/v1/admin/queue/', AdminTriageQueueView.as_view(), name='admin-queue'),
-    path('api/v1/admin/pulse/', AdminPulseView.as_view(), name='admin-pulse'),
-    path('api/v1/admin/search/', AdminSearchView.as_view(), name='admin-search'),
-    path('api/v1/admin/activity/', AdminActivityView.as_view(), name='admin-activity'),
-    path('api/v1/crm/leads/', LeadCreateView.as_view(), name='lead-create'),
-    path('api/v1/crm/status-choices/', Phase2StatusChoicesView.as_view(), name='phase2-status-choices'),
-    path('api/v1/system-settings/', SystemSettingsView.as_view(), name='system-settings'),
-    path('api/v1/accounts/me/', MeView.as_view(), name='current-user'),
-    path('api/v1/health/', health_check, name='health_check'),
-    # Root-level health endpoint for Docker/K8s healthchecks
-    path('health/', health_check, name='health_check_root'),
-    # API Documentation (drf-spectacular) — protected in production
-    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
-] + ([
-    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
-    path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
-] if settings.DEBUG else []) + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+urlpatterns = (
+    [
+        path("admin/accounts/company/wizard/", CompanyWizardView.as_view(WIZARD_FORMS), name="company-wizard"),
+        path("admin/", admin.site.urls),
+        path("api/v1/", include(router.urls)),
+        path("api/v1/auth/register/", RegisterView.as_view(), name="register"),
+        path("api/v1/auth/setup-password/", SetupPasswordView.as_view(), name="setup-password"),
+        path("api/v1/auth/forgot-password/", ForgotPasswordView.as_view(), name="forgot-password"),
+        path("api/v1/auth/reset-password/", ResetPasswordView.as_view(), name="reset-password"),
+        path("api/v1/auth/submit-profile/", SubmitProfileView.as_view(), name="submit-profile"),
+        path(
+            "api/v1/auth/token/",
+            extend_schema(
+                summary="Obtain JWT token pair",
+                description="Authenticate with email and password to receive access and refresh tokens.",
+                tags=["Auth"],
+            )(TokenObtainPairView).as_view(),
+            name="token_obtain_pair",
+        ),
+        path(
+            "api/v1/auth/token/refresh/",
+            extend_schema(
+                summary="Refresh JWT token",
+                description="Exchange a valid refresh token for a new access token.",
+                tags=["Auth"],
+            )(TokenRefreshView).as_view(),
+            name="token_refresh",
+        ),
+        # Sourcing & Imports
+        path("api/v1/sourcing/import-deal/<int:deal_id>/", ExcelImportView.as_view(), name="import-deal"),
+        path("api/v1/sourcing/import-catalog/", CatalogImportView.as_view(), name="import-catalog"),
+        path("api/v1/sourcing/import-status/<str:task_id>/", ImportStatusView.as_view(), name="import-status"),
+        path("api/v1/crm/analytics/", CRMAnalyticsView.as_view(), name="crm-analytics"),
+        path("api/v1/crm/analytics/dashboard/", DashboardAnalyticsView.as_view(), name="dashboard-analytics"),
+        path("api/v1/analytics/page-stats/", PageStatsView.as_view(), name="page-stats"),
+        path("api/v1/analytics/platform-dashboard/", PlatformDashboardView.as_view(), name="platform-dashboard"),
+        # Admin Platform API
+        path("api/v1/admin/queue/", AdminTriageQueueView.as_view(), name="admin-queue"),
+        path("api/v1/admin/pulse/", AdminPulseView.as_view(), name="admin-pulse"),
+        path("api/v1/admin/search/", AdminSearchView.as_view(), name="admin-search"),
+        path("api/v1/admin/activity/", AdminActivityView.as_view(), name="admin-activity"),
+        path("api/v1/crm/leads/", LeadCreateView.as_view(), name="lead-create"),
+        path("api/v1/crm/status-choices/", Phase2StatusChoicesView.as_view(), name="phase2-status-choices"),
+        path("api/v1/system-settings/", SystemSettingsView.as_view(), name="system-settings"),
+        path("api/v1/accounts/me/", MeView.as_view(), name="current-user"),
+        path("api/v1/health/", health_check, name="health_check"),
+        # Root-level health endpoint for Docker/K8s healthchecks
+        path("health/", health_check, name="health_check_root"),
+        # API Documentation (drf-spectacular) — protected in production
+        path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+    ]
+    + (
+        [
+            path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
+            path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
+        ]
+        if settings.DEBUG
+        else []
+    )
+    + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+)

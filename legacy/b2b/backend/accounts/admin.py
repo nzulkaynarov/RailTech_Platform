@@ -2,20 +2,29 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group, Permission
 from django.utils.translation import gettext_lazy as _
+from import_export.admin import ImportExportModelAdmin
 from unfold.admin import ModelAdmin, TabularInline
 from unfold.contrib.import_export.forms import ExportForm, ImportForm
 from unfold.decorators import display
-from unfold.forms import UserChangeForm, UserCreationForm
-from import_export.admin import ImportExportModelAdmin
+from unfold.forms import UserChangeForm, UserCreationForm  # noqa: F401
+
 from core.admin_mixins import ReadOnlyInspectionMixin, superuser_only_action
 
+from . import services
 from .models import (
-    CustomUser, Company, CompanyMember, KYCDocument,
-    SystemRole, WorkspaceRole, CompanyType, VerificationStatus, KYCDocType,
-    CompanyRoleApplication, SupplierSubscription
+    Company,
+    CompanyMember,
+    CompanyRoleApplication,
+    CompanyType,
+    CustomUser,
+    KYCDocType,
+    KYCDocument,
+    SupplierSubscription,
+    SystemRole,
+    VerificationStatus,
+    WorkspaceRole,
 )
 from .resources import CompanyResource, UserResource
-from . import services
 
 admin.site.unregister(Group)
 
@@ -85,6 +94,7 @@ class PermissionAdmin(ModelAdmin):
 # Inlines
 # ────────────────────────────────────────────
 
+
 class CompanyMemberInline(TabularInline):
     model = CompanyMember
     extra = 0
@@ -109,6 +119,7 @@ class KYCDocumentInline(TabularInline):
 # Lookups
 # ────────────────────────────────────────────
 
+
 @admin.register(SystemRole, WorkspaceRole, CompanyType, VerificationStatus, KYCDocType)
 class LookupAdmin(ModelAdmin):
     list_display = ["name", "code", "sort_order", "is_active"]
@@ -120,6 +131,7 @@ class LookupAdmin(ModelAdmin):
 # ────────────────────────────────────────────
 # Users
 # ────────────────────────────────────────────
+
 
 @admin.register(CustomUser)
 class UserAdmin(ImportExportModelAdmin, BaseUserAdmin, ModelAdmin):
@@ -151,26 +163,35 @@ class UserAdmin(ImportExportModelAdmin, BaseUserAdmin, ModelAdmin):
         return obj.role.name if obj.role else "—"
 
     fieldsets = (
-        (None, {
-            "fields": (("email", "password"),),
-        }),
-        (_("Профиль"), {
-            "classes": ["tab"],
-            "fields": (
-                ("first_name", "last_name"),
-                ("username", "phone"),
-                "avatar",
-            ),
-        }),
-        (_("Доступ"), {
-            "classes": ["tab"],
-            "fields": (
-                ("is_active", "is_staff", "is_superuser"),
-                "role",
-                "groups",
-                "user_permissions",
-            ),
-        }),
+        (
+            None,
+            {
+                "fields": (("email", "password"),),
+            },
+        ),
+        (
+            _("Профиль"),
+            {
+                "classes": ["tab"],
+                "fields": (
+                    ("first_name", "last_name"),
+                    ("username", "phone"),
+                    "avatar",
+                ),
+            },
+        ),
+        (
+            _("Доступ"),
+            {
+                "classes": ["tab"],
+                "fields": (
+                    ("is_active", "is_staff", "is_superuser"),
+                    "role",
+                    "groups",
+                    "user_permissions",
+                ),
+            },
+        ),
     )
     filter_horizontal = ("groups", "user_permissions")
     autocomplete_fields = ("role",)
@@ -179,6 +200,7 @@ class UserAdmin(ImportExportModelAdmin, BaseUserAdmin, ModelAdmin):
 # ────────────────────────────────────────────
 # Companies
 # ────────────────────────────────────────────
+
 
 @admin.register(Company)
 class CompanyAdmin(ReadOnlyInspectionMixin, ImportExportModelAdmin, ModelAdmin):
@@ -222,7 +244,7 @@ class CompanyAdmin(ReadOnlyInspectionMixin, ImportExportModelAdmin, ModelAdmin):
 
     @superuser_only_action(_("[Emergency] Подтвердить KYC (L2)"))
     def verify_kyc(self, request, queryset):
-        approved, skipped = services.bulk_verify_kyc(queryset, request.user, level_code='L2_VERIFIED')
+        approved, skipped = services.bulk_verify_kyc(queryset, request.user, level_code="L2_VERIFIED")
         if skipped:
             self.message_user(
                 request,
@@ -233,32 +255,42 @@ class CompanyAdmin(ReadOnlyInspectionMixin, ImportExportModelAdmin, ModelAdmin):
             self.message_user(request, _("%(count)d компаний подтверждено.") % {"count": approved})
 
     fieldsets = (
-        (None, {
-            "fields": (
-                ("name", "inn"),
-                ("verification_status", "country"),
-                "types",
-            ),
-        }),
-        (_("Контакты"), {
-            "classes": ["tab"],
-            "fields": (
-                ("contact_person", "phone"),
-                ("email", "website"),
-                "legal_address",
-                "logo",
-            ),
-        }),
-        (_("Банк"), {
-            "classes": ["tab"],
-            "fields": (
-                ("bank_account", "mfo"),
-            ),
-        }),
-        (_("KYC"), {
-            "classes": ["tab"],
-            "fields": ("kyc_notes",),
-        }),
+        (
+            None,
+            {
+                "fields": (
+                    ("name", "inn"),
+                    ("verification_status", "country"),
+                    "types",
+                ),
+            },
+        ),
+        (
+            _("Контакты"),
+            {
+                "classes": ["tab"],
+                "fields": (
+                    ("contact_person", "phone"),
+                    ("email", "website"),
+                    "legal_address",
+                    "logo",
+                ),
+            },
+        ),
+        (
+            _("Банк"),
+            {
+                "classes": ["tab"],
+                "fields": (("bank_account", "mfo"),),
+            },
+        ),
+        (
+            _("KYC"),
+            {
+                "classes": ["tab"],
+                "fields": ("kyc_notes",),
+            },
+        ),
     )
 
 
@@ -275,19 +307,23 @@ class KYCDocumentAdmin(ModelAdmin):
     show_full_result_count = False
 
     fieldsets = (
-        (None, {
-            "fields": (
-                ("company", "doc_type"),
-                ("file", "original_filename"),
-                "uploaded_at",
-            ),
-        }),
+        (
+            None,
+            {
+                "fields": (
+                    ("company", "doc_type"),
+                    ("file", "original_filename"),
+                    "uploaded_at",
+                ),
+            },
+        ),
     )
 
 
 # ────────────────────────────────────────────
 # Role Applications
 # ────────────────────────────────────────────
+
 
 @admin.register(CompanyRoleApplication)
 class CompanyRoleApplicationAdmin(ReadOnlyInspectionMixin, ModelAdmin):
@@ -316,28 +352,37 @@ class CompanyRoleApplicationAdmin(ReadOnlyInspectionMixin, ModelAdmin):
         return obj.get_status_display()
 
     fieldsets = (
-        (None, {
-            "fields": (
-                ("company", "requested_type"),
-                ("status", "submitted_by"),
-            ),
-        }),
-        (_("Документы"), {
-            "classes": ["tab"],
-            "fields": (
-                "contract_file",
-                "nda_file",
-                "partnership_agreement",
-            ),
-        }),
-        (_("Рассмотрение"), {
-            "classes": ["tab"],
-            "fields": (
-                ("reviewed_by", "reviewed_at"),
-                "review_notes",
-                ("created_at", "updated_at"),
-            ),
-        }),
+        (
+            None,
+            {
+                "fields": (
+                    ("company", "requested_type"),
+                    ("status", "submitted_by"),
+                ),
+            },
+        ),
+        (
+            _("Документы"),
+            {
+                "classes": ["tab"],
+                "fields": (
+                    "contract_file",
+                    "nda_file",
+                    "partnership_agreement",
+                ),
+            },
+        ),
+        (
+            _("Рассмотрение"),
+            {
+                "classes": ["tab"],
+                "fields": (
+                    ("reviewed_by", "reviewed_at"),
+                    "review_notes",
+                    ("created_at", "updated_at"),
+                ),
+            },
+        ),
     )
 
     @superuser_only_action(_("[Emergency] Одобрить (с проверкой документов)"))
@@ -357,6 +402,7 @@ class CompanyRoleApplicationAdmin(ReadOnlyInspectionMixin, ModelAdmin):
 # ────────────────────────────────────────────
 # Subscriptions
 # ────────────────────────────────────────────
+
 
 @admin.register(SupplierSubscription)
 class SupplierSubscriptionAdmin(ReadOnlyInspectionMixin, ModelAdmin):
@@ -392,35 +438,44 @@ class SupplierSubscriptionAdmin(ReadOnlyInspectionMixin, ModelAdmin):
         return obj.get_status_display()
 
     fieldsets = (
-        (None, {
-            "fields": (
-                "company",
-                ("plan", "status"),
-            ),
-        }),
-        (_("Биллинг"), {
-            "classes": ["tab"],
-            "fields": (
-                ("monthly_rate", "currency"),
-                ("valid_from", "valid_until"),
-                ("last_payment_date", "next_payment_date"),
-            ),
-        }),
-        (_("Заметки"), {
-            "classes": ["tab"],
-            "fields": (
-                "notes",
-                ("created_at", "updated_at"),
-            ),
-        }),
+        (
+            None,
+            {
+                "fields": (
+                    "company",
+                    ("plan", "status"),
+                ),
+            },
+        ),
+        (
+            _("Биллинг"),
+            {
+                "classes": ["tab"],
+                "fields": (
+                    ("monthly_rate", "currency"),
+                    ("valid_from", "valid_until"),
+                    ("last_payment_date", "next_payment_date"),
+                ),
+            },
+        ),
+        (
+            _("Заметки"),
+            {
+                "classes": ["tab"],
+                "fields": (
+                    "notes",
+                    ("created_at", "updated_at"),
+                ),
+            },
+        ),
     )
 
     @superuser_only_action(_("[Emergency] Активировать"))
     def activate_subscription(self, request, queryset):
-        updated = services.change_subscription_status(queryset, 'ACTIVE')
+        updated = services.change_subscription_status(queryset, "ACTIVE")
         self.message_user(request, _("%(count)d активировано.") % {"count": updated})
 
     @superuser_only_action(_("[Emergency] Приостановить"))
     def suspend_subscription(self, request, queryset):
-        updated = services.change_subscription_status(queryset, 'SUSPENDED')
+        updated = services.change_subscription_status(queryset, "SUSPENDED")
         self.message_user(request, _("%(count)d приостановлено.") % {"count": updated})

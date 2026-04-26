@@ -1,22 +1,23 @@
-from rest_framework import viewsets, permissions
+from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
+from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResponse
+
+from . import services
 from .models import Notification
 from .serializers import NotificationSerializer
-from . import services
 
 
 @extend_schema_view(
     list=extend_schema(
         summary="List notifications",
         description="Returns all notifications for the current user.",
-        tags=['Notifications'],
+        tags=["Notifications"],
     ),
     retrieve=extend_schema(
         summary="Get notification",
         description="Returns a single notification by ID.",
-        tags=['Notifications'],
+        tags=["Notifications"],
     ),
 )
 class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
@@ -25,13 +26,15 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
 
     Includes actions to mark individual or all notifications as read.
     """
+
     serializer_class = NotificationSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        if getattr(self, 'swagger_fake_view', False):
+        if getattr(self, "swagger_fake_view", False):
             return Notification.objects.none()
         from django.db.models import Q
+
         user = self.request.user
         # Аудитория видимости: USER-канал — только для не-админов; PLATFORM_ADMIN-канал — только
         # для Platform Admin. Админ НЕ видит клиентские уведомления; USER НЕ видит platform-алёрты.
@@ -39,35 +42,34 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
             audience = Notification.AUDIENCE_PLATFORM_ADMIN
         else:
             audience = Notification.AUDIENCE_USER
-        return Notification.objects.select_related('type').filter(
-            Q(audience=audience)
-            & (Q(user=user) | Q(user__isnull=True))
+        return Notification.objects.select_related("type").filter(
+            Q(audience=audience) & (Q(user=user) | Q(user__isnull=True))
         )
 
     @extend_schema(
         summary="Mark notification as read",
         description="Mark a single notification as read by its ID.",
         responses={200: OpenApiResponse(description="Notification marked as read")},
-        tags=['Notifications'],
+        tags=["Notifications"],
     )
-    @action(detail=True, methods=['patch'])
+    @action(detail=True, methods=["patch"])
     def mark_read(self, request, pk=None):
         notification = self.get_object()
-        services.mark_notifications_read(
-            Notification.objects.filter(pk=notification.pk)
-        )
-        return Response({'status': 'notification marked as read'})
+        services.mark_notifications_read(Notification.objects.filter(pk=notification.pk))
+        return Response({"status": "notification marked as read"})
 
     @extend_schema(
         summary="Mark all notifications as read",
         description="Mark all of the current user's notifications as read.",
         responses={200: OpenApiResponse(description="All notifications marked as read")},
-        tags=['Notifications'],
+        tags=["Notifications"],
     )
-    @action(detail=False, methods=['patch'])
+    @action(detail=False, methods=["patch"])
     def mark_all_read(self, request):
         count = services.mark_notifications_read(self.get_queryset())
-        return Response({
-            'status': 'all notifications marked as read',
-            'count': count,
-        })
+        return Response(
+            {
+                "status": "all notifications marked as read",
+                "count": count,
+            }
+        )

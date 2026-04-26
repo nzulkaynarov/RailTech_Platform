@@ -9,6 +9,7 @@ Usage:
     python manage.py grant_engineer dev@railtech.uz
     python manage.py grant_engineer dev@railtech.uz --revoke
 """
+
 from django.contrib.auth.models import Group
 from django.core.management.base import BaseCommand, CommandError
 
@@ -38,22 +39,15 @@ class Command(BaseCommand):
         try:
             group = Group.objects.get(name="system_engineers")
         except Group.DoesNotExist:
-            raise CommandError(
-                "Group 'system_engineers' does not exist. "
-                "Run `python manage.py migrate` first."
-            )
+            raise CommandError("Group 'system_engineers' does not exist. " "Run `python manage.py migrate` first.")
 
         if revoke:
             user.groups.remove(group)
             user.is_staff = False
             user.save(update_fields=["is_staff"])
-            self.stdout.write(self.style.SUCCESS(
-                f"Revoked Unfold admin access from {email}"
-            ))
+            self.stdout.write(self.style.SUCCESS(f"Revoked Unfold admin access from {email}"))
         else:
             user.groups.add(group)
             user.is_staff = True
             user.save(update_fields=["is_staff"])
-            self.stdout.write(self.style.SUCCESS(
-                f"Granted Unfold admin access to {email} (system_engineers group)"
-            ))
+            self.stdout.write(self.style.SUCCESS(f"Granted Unfold admin access to {email} (system_engineers group)"))

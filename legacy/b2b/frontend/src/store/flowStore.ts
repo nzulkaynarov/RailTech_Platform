@@ -38,8 +38,8 @@ export const useFlowStore = create<FlowState>((set, get) => ({
         : null;
       
       set({ deal: dealData, quote, loading: false });
-    } catch (e: any) {
-      set({ error: e.message || 'Failed to load deal', loading: false });
+    } catch (e: unknown) {
+      set({ error: e instanceof Error ? e.message : 'Failed to load deal', loading: false });
     }
   },
 
@@ -49,8 +49,8 @@ export const useFlowStore = create<FlowState>((set, get) => ({
       const { crmApi } = await import('../api/crmApi');
       await crmApi.changeDealStage(id, stage);
       get().loadDeal(id);
-    } catch (e: any) {
-      set({ error: e.message, loading: false });
+    } catch (e: unknown) {
+      set({ error: e instanceof Error ? e.message : 'Operation failed', loading: false });
     }
   },
 
@@ -61,8 +61,8 @@ export const useFlowStore = create<FlowState>((set, get) => ({
       await crmApi.approveQuote(quoteId);
       const dealId = get().deal?.id;
       if (dealId) get().loadDeal(dealId);
-    } catch (e: any) {
-      set({ error: e.message, loading: false });
+    } catch (e: unknown) {
+      set({ error: e instanceof Error ? e.message : 'Operation failed', loading: false });
     }
   },
 
@@ -74,8 +74,8 @@ export const useFlowStore = create<FlowState>((set, get) => ({
       await crmApi.rejectQuote(quoteId);
       const dealId = get().deal?.id;
       if (dealId) get().loadDeal(dealId);
-    } catch (e: any) {
-      set({ error: e.message, loading: false });
+    } catch (e: unknown) {
+      set({ error: e instanceof Error ? e.message : 'Operation failed', loading: false });
     }
   },
 
@@ -86,8 +86,8 @@ export const useFlowStore = create<FlowState>((set, get) => ({
       await crmApi.sendQuoteToClient(quoteId);
       const dealId = get().deal?.id;
       if (dealId) get().loadDeal(dealId);
-    } catch (e: any) {
-      set({ error: e.message, loading: false });
+    } catch (e: unknown) {
+      set({ error: e instanceof Error ? e.message : 'Operation failed', loading: false });
     }
   },
 
