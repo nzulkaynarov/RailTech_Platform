@@ -80,8 +80,9 @@ jobs:
       - name: Run tests with coverage
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DJANGO_SECRET_KEY: 'ci-test-secret-key-not-for-production'
           REDIS_URL: redis://localhost:6379/0
-          DEBUG: 'False'
+          DEBUG: 'True'
         run: |
           cd backend
           pytest --cov=. --cov-report=xml --cov-report=html
