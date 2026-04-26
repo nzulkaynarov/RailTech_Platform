@@ -6,16 +6,29 @@ from unfold.decorators import display
 from core.admin_mixins import ReadOnlyInspectionMixin, superuser_only_action
 
 from .models import (
-    DealStage, QuoteStatus, Deal, Quote, QuoteItem,
-    Message, Lead, ActivityLog, QuoteItemHistory,
-    Contract, Invoice, InvoiceItem, Payment, Act,
-    Fulfillment, SupplierBid, SupplierBidItem,
+    Act,
+    ActivityLog,
+    Contract,
+    Deal,
+    DealStage,
+    Fulfillment,
+    Invoice,
+    InvoiceItem,
+    Lead,
+    Message,
+    Payment,
+    Quote,
+    QuoteItem,
+    QuoteItemHistory,
+    QuoteStatus,
+    SupplierBid,
+    SupplierBidItem,
 )
-
 
 # ────────────────────────────────────────────
 # Inlines
 # ────────────────────────────────────────────
+
 
 class QuoteItemInline(TabularInline):
     model = QuoteItem
@@ -23,9 +36,15 @@ class QuoteItemInline(TabularInline):
     tab = True
     autocomplete_fields = ["product", "offer", "frozen_currency"]
     fields = [
-        "product", "imported_raw_name", "quantity",
-        "frozen_base_price", "logistics_cost", "customs_duty",
-        "margin_percent", "landed_cost", "final_price_excl_vat",
+        "product",
+        "imported_raw_name",
+        "quantity",
+        "frozen_base_price",
+        "logistics_cost",
+        "customs_duty",
+        "margin_percent",
+        "landed_cost",
+        "final_price_excl_vat",
     ]
     readonly_fields = ["landed_cost", "final_price_excl_vat"]
 
@@ -43,6 +62,7 @@ class QuoteInline(TabularInline):
 # Lookups
 # ────────────────────────────────────────────
 
+
 @admin.register(DealStage, QuoteStatus)
 class CRMLookupAdmin(ModelAdmin):
     list_display = ["name", "code", "sort_order", "is_active"]
@@ -54,6 +74,7 @@ class CRMLookupAdmin(ModelAdmin):
 # ────────────────────────────────────────────
 # Deals
 # ────────────────────────────────────────────
+
 
 @admin.register(Deal)
 class DealAdmin(ReadOnlyInspectionMixin, ModelAdmin):
@@ -91,26 +112,36 @@ class DealAdmin(ReadOnlyInspectionMixin, ModelAdmin):
         return obj.stage.name if obj.stage else "—"
 
     fieldsets = (
-        (None, {
-            "fields": (
-                "title",
-                ("company", "client"),
-                ("stage", "manager"),
-            ),
-        }),
-        (_("Заметки"), {
-            "classes": ["tab"],
-            "fields": ("notes",),
-        }),
-        (_("Системное"), {
-            "classes": ["tab"],
-            "fields": (("created_at", "updated_at"),),
-        }),
+        (
+            None,
+            {
+                "fields": (
+                    "title",
+                    ("company", "client"),
+                    ("stage", "manager"),
+                ),
+            },
+        ),
+        (
+            _("Заметки"),
+            {
+                "classes": ["tab"],
+                "fields": ("notes",),
+            },
+        ),
+        (
+            _("Системное"),
+            {
+                "classes": ["tab"],
+                "fields": (("created_at", "updated_at"),),
+            },
+        ),
     )
 
     @superuser_only_action(_("[Emergency] Закрыть как проигранную"))
     def mark_closed_lost(self, request, queryset):
         from . import services
+
         updated = services.bulk_close_deals_lost(queryset, actor=request.user)
         self.message_user(request, _("%(count)d сделок закрыто.") % {"count": updated})
 
@@ -118,6 +149,7 @@ class DealAdmin(ReadOnlyInspectionMixin, ModelAdmin):
 # ────────────────────────────────────────────
 # Quotes
 # ────────────────────────────────────────────
+
 
 @admin.register(Quote)
 class QuoteAdmin(ModelAdmin):
@@ -128,8 +160,13 @@ class QuoteAdmin(ModelAdmin):
     autocomplete_fields = ["deal", "status", "prepared_by", "tax_country", "approved_by"]
     inlines = [QuoteItemInline]
     readonly_fields = [
-        "subtotal_excl_vat", "vat_amount", "total_incl_vat",
-        "frozen_at", "approved_at", "created_at", "updated_at",
+        "subtotal_excl_vat",
+        "vat_amount",
+        "total_incl_vat",
+        "frozen_at",
+        "approved_at",
+        "created_at",
+        "updated_at",
     ]
     list_per_page = 25
     list_select_related = ("deal", "status", "prepared_by")
@@ -149,32 +186,44 @@ class QuoteAdmin(ModelAdmin):
         return obj.status.name if obj.status else "—"
 
     fieldsets = (
-        (None, {
-            "fields": (
-                ("deal", "version"),
-                ("status", "prepared_by"),
-            ),
-        }),
-        (_("Суммы"), {
-            "classes": ["tab"],
-            "fields": (
-                ("tax_country", "vat_rate"),
-                ("subtotal_excl_vat", "vat_amount", "total_incl_vat"),
-            ),
-        }),
-        (_("Сроки"), {
-            "classes": ["tab"],
-            "fields": (
-                "valid_until",
-                "notes",
-                ("frozen_at", "approved_at"),
-                "approved_by",
-            ),
-        }),
-        (_("Системное"), {
-            "classes": ["tab"],
-            "fields": (("created_at", "updated_at"),),
-        }),
+        (
+            None,
+            {
+                "fields": (
+                    ("deal", "version"),
+                    ("status", "prepared_by"),
+                ),
+            },
+        ),
+        (
+            _("Суммы"),
+            {
+                "classes": ["tab"],
+                "fields": (
+                    ("tax_country", "vat_rate"),
+                    ("subtotal_excl_vat", "vat_amount", "total_incl_vat"),
+                ),
+            },
+        ),
+        (
+            _("Сроки"),
+            {
+                "classes": ["tab"],
+                "fields": (
+                    "valid_until",
+                    "notes",
+                    ("frozen_at", "approved_at"),
+                    "approved_by",
+                ),
+            },
+        ),
+        (
+            _("Системное"),
+            {
+                "classes": ["tab"],
+                "fields": (("created_at", "updated_at"),),
+            },
+        ),
     )
 
     def get_readonly_fields(self, request, obj=None):
@@ -191,6 +240,7 @@ class QuoteAdmin(ModelAdmin):
 # ────────────────────────────────────────────
 # Leads
 # ────────────────────────────────────────────
+
 
 @admin.register(Lead)
 class LeadAdmin(ReadOnlyInspectionMixin, ModelAdmin):
@@ -210,19 +260,23 @@ class LeadAdmin(ReadOnlyInspectionMixin, ModelAdmin):
         return obj.is_processed
 
     fieldsets = (
-        (None, {
-            "fields": (
-                ("name", "company"),
-                ("email", "phone"),
-                "message",
-                ("is_processed", "created_at"),
-            ),
-        }),
+        (
+            None,
+            {
+                "fields": (
+                    ("name", "company"),
+                    ("email", "phone"),
+                    "message",
+                    ("is_processed", "created_at"),
+                ),
+            },
+        ),
     )
 
     @superuser_only_action(_("[Emergency] Пометить обработанными"))
     def mark_processed(self, request, queryset):
         from . import services
+
         updated = services.mark_leads_processed(queryset)
         self.message_user(request, _("%(count)d обработано.") % {"count": updated})
 
@@ -230,6 +284,7 @@ class LeadAdmin(ReadOnlyInspectionMixin, ModelAdmin):
 # ────────────────────────────────────────────
 # Messages
 # ────────────────────────────────────────────
+
 
 @admin.register(Message)
 class MessageAdmin(ReadOnlyInspectionMixin, ModelAdmin):
@@ -244,20 +299,26 @@ class MessageAdmin(ReadOnlyInspectionMixin, ModelAdmin):
     actions = ["archive_selected"]
 
     fieldsets = (
-        (None, {
-            "fields": (
-                ("deal", "sender"),
-                "text",
-                ("message_type", "timestamp"),
-            ),
-        }),
-        (_("Архив"), {
-            "classes": ["tab"],
-            "fields": (
-                "is_archived",
-                ("archived_at", "archive_path"),
-            ),
-        }),
+        (
+            None,
+            {
+                "fields": (
+                    ("deal", "sender"),
+                    "text",
+                    ("message_type", "timestamp"),
+                ),
+            },
+        ),
+        (
+            _("Архив"),
+            {
+                "classes": ["tab"],
+                "fields": (
+                    "is_archived",
+                    ("archived_at", "archive_path"),
+                ),
+            },
+        ),
     )
 
     @display(description=_("Текст"))
@@ -279,27 +340,28 @@ class MessageAdmin(ReadOnlyInspectionMixin, ModelAdmin):
             python manage.py archive_messages --older-than 90 --async
         """
         from . import services
+
         result = services.archive_messages_sync(queryset)
 
-        if not result['archived'] and not result['errors']:
+        if not result["archived"] and not result["errors"]:
             self.message_user(request, _("Нет сообщений для архивации"), level="warning")
             return
 
-        for err in result['errors']:
+        for err in result["errors"]:
             self.message_user(request, _("Ошибка записи: %(err)s") % {"err": err}, level="error")
 
-        if result['archived']:
+        if result["archived"]:
             self.message_user(
                 request,
-                _("%(count)d сообщений архивировано в %(files)d файл(ах)") % {
-                    "count": result['archived'], "files": result['files']
-                },
+                _("%(count)d сообщений архивировано в %(files)d файл(ах)")
+                % {"count": result["archived"], "files": result["files"]},
             )
 
 
 # ────────────────────────────────────────────
 # Audit (read-only)
 # ────────────────────────────────────────────
+
 
 @admin.register(ActivityLog)
 class ActivityLogAdmin(ModelAdmin):
@@ -325,13 +387,16 @@ class ActivityLogAdmin(ModelAdmin):
         return obj.get_level_display()
 
     fieldsets = (
-        (None, {
-            "fields": (
-                ("action", "level"),
-                "detail",
-                ("user", "timestamp"),
-            ),
-        }),
+        (
+            None,
+            {
+                "fields": (
+                    ("action", "level"),
+                    "detail",
+                    ("user", "timestamp"),
+                ),
+            },
+        ),
     )
 
     def has_add_permission(self, request):
@@ -347,36 +412,54 @@ class ActivityLogAdmin(ModelAdmin):
 @admin.register(QuoteItemHistory)
 class QuoteItemHistoryAdmin(ModelAdmin):
     list_display = (
-        "quote_item", "changed_by", "frozen_base_price",
-        "margin_percent", "final_price_excl_vat", "quantity", "created_at"
+        "quote_item",
+        "changed_by",
+        "frozen_base_price",
+        "margin_percent",
+        "final_price_excl_vat",
+        "quantity",
+        "created_at",
     )
     list_filter = ("created_at",)
     search_fields = ("quote_item__product__name", "changed_by__email", "change_reason")
     readonly_fields = (
-        "quote_item", "changed_by", "frozen_base_price",
-        "logistics_cost", "customs_duty", "margin_percent",
-        "landed_cost", "final_price_excl_vat", "quantity",
-        "change_reason", "created_at",
+        "quote_item",
+        "changed_by",
+        "frozen_base_price",
+        "logistics_cost",
+        "customs_duty",
+        "margin_percent",
+        "landed_cost",
+        "final_price_excl_vat",
+        "quantity",
+        "change_reason",
+        "created_at",
     )
     list_per_page = 30
     list_select_related = ("quote_item", "quote_item__product", "changed_by")
     show_full_result_count = False
 
     fieldsets = (
-        (None, {
-            "fields": (
-                ("quote_item", "changed_by"),
-                ("change_reason", "created_at"),
-            ),
-        }),
-        (_("Финансовый снимок"), {
-            "classes": ["tab"],
-            "fields": (
-                ("frozen_base_price", "logistics_cost", "customs_duty"),
-                ("margin_percent", "landed_cost", "final_price_excl_vat"),
-                "quantity",
-            ),
-        }),
+        (
+            None,
+            {
+                "fields": (
+                    ("quote_item", "changed_by"),
+                    ("change_reason", "created_at"),
+                ),
+            },
+        ),
+        (
+            _("Финансовый снимок"),
+            {
+                "classes": ["tab"],
+                "fields": (
+                    ("frozen_base_price", "logistics_cost", "customs_duty"),
+                    ("margin_percent", "landed_cost", "final_price_excl_vat"),
+                    "quantity",
+                ),
+            },
+        ),
     )
 
     def has_add_permission(self, request):
@@ -428,10 +511,16 @@ class ContractAdmin(ReadOnlyInspectionMixin, ModelAdmin):
     search_fields = ("number", "deal__id", "deal__company__name", "deal__company__inn")
     autocomplete_fields = ("deal", "quote", "currency", "client_signer", "manager_signer", "created_by")
     readonly_fields = (
-        "number", "pdf_file", "signed_file",
-        "client_signer", "client_signed_at",
-        "manager_signer", "manager_signed_at",
-        "created_by", "created_at", "updated_at",
+        "number",
+        "pdf_file",
+        "signed_file",
+        "client_signer",
+        "client_signed_at",
+        "manager_signer",
+        "manager_signed_at",
+        "created_by",
+        "created_at",
+        "updated_at",
     )
     list_per_page = 25
     list_select_related = ("deal", "deal__company")
@@ -458,8 +547,12 @@ class InvoiceAdmin(ReadOnlyInspectionMixin, ModelAdmin):
     search_fields = ("number", "deal__id", "deal__company__name", "deal__company__inn", "contract__number")
     autocomplete_fields = ("deal", "contract", "currency", "created_by")
     readonly_fields = (
-        "number", "pdf_file", "amount_paid",
-        "created_by", "created_at", "updated_at",
+        "number",
+        "pdf_file",
+        "amount_paid",
+        "created_by",
+        "created_at",
+        "updated_at",
     )
     inlines = [InvoiceItemInline, PaymentInline]
     list_per_page = 25
@@ -499,8 +592,13 @@ class ActAdmin(ReadOnlyInspectionMixin, ModelAdmin):
     search_fields = ("number", "deal__id", "deal__company__name", "contract__number", "invoice__number")
     autocomplete_fields = ("deal", "contract", "invoice", "created_by")
     readonly_fields = (
-        "number", "pdf_file", "signed_file", "signed_at",
-        "created_by", "created_at", "updated_at",
+        "number",
+        "pdf_file",
+        "signed_file",
+        "signed_at",
+        "created_by",
+        "created_at",
+        "updated_at",
     )
     list_per_page = 25
     list_select_related = ("deal", "deal__company")

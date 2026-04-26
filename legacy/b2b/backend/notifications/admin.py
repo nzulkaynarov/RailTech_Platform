@@ -38,20 +38,24 @@ class NotificationAdmin(ReadOnlyInspectionMixin, ModelAdmin):
         return obj.is_read
 
     fieldsets = (
-        (None, {
-            "fields": (
-                ("title", "type"),
-                "message",
-                ("user", "deal"),
-                ("link", "is_read"),
-                "created_at",
-            ),
-        }),
+        (
+            None,
+            {
+                "fields": (
+                    ("title", "type"),
+                    "message",
+                    ("user", "deal"),
+                    ("link", "is_read"),
+                    "created_at",
+                ),
+            },
+        ),
     )
 
     @admin.action(description=_("Пометить прочитанными"))
     def mark_as_read(self, request, queryset):
         from . import services
+
         updated = services.mark_notifications_read(queryset)
         self.message_user(request, _("%(count)d прочитано.") % {"count": updated})
 
@@ -61,8 +65,13 @@ class EmailLogAdmin(ReadOnlyInspectionMixin, ModelAdmin):
     """Audit log of every outbound email. Populated by notifications.emails.send_templated_email."""
 
     list_display = (
-        "created_at", "status_badge", "template", "channel",
-        "subject", "recipients_short", "user",
+        "created_at",
+        "status_badge",
+        "template",
+        "channel",
+        "subject",
+        "recipients_short",
+        "user",
     )
     list_filter = ("status", "channel", "template", "created_at")
     list_filter_submit = True
@@ -73,27 +82,45 @@ class EmailLogAdmin(ReadOnlyInspectionMixin, ModelAdmin):
     list_select_related = ("user",)
     show_full_result_count = False
     readonly_fields = (
-        "template", "channel", "subject", "from_email", "to_emails",
-        "user", "body_text", "body_html_preview", "status", "error", "created_at",
+        "template",
+        "channel",
+        "subject",
+        "from_email",
+        "to_emails",
+        "user",
+        "body_text",
+        "body_html_preview",
+        "status",
+        "error",
+        "created_at",
     )
 
     fieldsets = (
-        (_("Метаданные"), {
-            "fields": (
-                ("template", "channel"),
-                ("status", "created_at"),
-                ("from_email", "user"),
-                "to_emails",
-                "subject",
-            ),
-        }),
-        (_("Тело письма"), {
-            "fields": ("body_html_preview", "body_text"),
-        }),
-        (_("Ошибка"), {
-            "fields": ("error",),
-            "classes": ("collapse",),
-        }),
+        (
+            _("Метаданные"),
+            {
+                "fields": (
+                    ("template", "channel"),
+                    ("status", "created_at"),
+                    ("from_email", "user"),
+                    "to_emails",
+                    "subject",
+                ),
+            },
+        ),
+        (
+            _("Тело письма"),
+            {
+                "fields": ("body_html_preview", "body_text"),
+            },
+        ),
+        (
+            _("Ошибка"),
+            {
+                "fields": ("error",),
+                "classes": ("collapse",),
+            },
+        ),
     )
 
     @display(

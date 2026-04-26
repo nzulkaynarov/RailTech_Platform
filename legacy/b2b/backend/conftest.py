@@ -2,7 +2,8 @@ import pytest
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
-from accounts.models import Company, CompanyMember, SystemRole, WorkspaceRole, VerificationStatus
+
+from accounts.models import Company, SystemRole, VerificationStatus, WorkspaceRole
 
 User = get_user_model()
 
@@ -18,21 +19,22 @@ def authenticated_client(api_client, user_factory):
     """API client with authenticated user."""
     user = user_factory()
     refresh = RefreshToken.for_user(user)
-    api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
+    api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
     return api_client
 
 
 @pytest.fixture
 def user_factory(db):
     """Factory for creating test users."""
+
     def create_user(
-        email='testuser@example.com',
-        username='testuser',
-        password='testpass123',
-        first_name='Test',
-        last_name='User',
+        email="testuser@example.com",
+        username="testuser",
+        password="testpass123",
+        first_name="Test",
+        last_name="User",
         is_active=True,
-        is_staff=False
+        is_staff=False,
     ):
         user = User.objects.create_user(
             email=email,
@@ -44,26 +46,27 @@ def user_factory(db):
             is_staff=is_staff,
         )
         return user
+
     return create_user
 
 
 @pytest.fixture
 def company_factory(db):
     """Factory for creating test companies."""
+
     def create_company(
-        name='Test Company',
-        inn='1234567890',
-        email='company@example.com',
-        phone='+1234567890',
-        legal_address='123 Main St',
-        website='https://example.com',
+        name="Test Company",
+        inn="1234567890",
+        email="company@example.com",
+        phone="+1234567890",
+        legal_address="123 Main St",
+        website="https://example.com",
         country=None,
-        kyc_notes='',
+        kyc_notes="",
     ):
         # Get or create verification status
         verification_status, _ = VerificationStatus.objects.get_or_create(
-            code='L1_UNVERIFIED',
-            defaults={'name': 'L1 Unverified'}
+            code="L1_UNVERIFIED", defaults={"name": "L1 Unverified"}
         )
 
         company = Company.objects.create(
@@ -78,47 +81,42 @@ def company_factory(db):
             verification_status=verification_status,
         )
         return company
+
     return create_company
 
 
 @pytest.fixture
 def system_role_factory(db):
     """Factory for creating system roles. Canonical: ADMIN, USER."""
-    def create_role(code='USER', name='User'):
+
+    def create_role(code="USER", name="User"):
         role, _ = SystemRole.objects.get_or_create(
             code=code,
-            defaults={'name': name},
+            defaults={"name": name},
         )
         return role
+
     return create_role
 
 
 @pytest.fixture
 def workspace_role_factory(db):
     """Factory for creating workspace roles."""
-    def create_role(
-        code='OWNER',
-        name='Owner'
-    ):
-        role, _ = WorkspaceRole.objects.get_or_create(
-            code=code,
-            defaults={'name': name}
-        )
+
+    def create_role(code="OWNER", name="Owner"):
+        role, _ = WorkspaceRole.objects.get_or_create(code=code, defaults={"name": name})
         return role
+
     return create_role
 
 
 @pytest.fixture
 def authenticated_user(user_factory):
     """Create a default authenticated user."""
-    return user_factory(
-        email='auth@example.com',
-        username='authuser',
-        password='authpass123'
-    )
+    return user_factory(email="auth@example.com", username="authuser", password="authpass123")
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def django_db_setup(django_db_setup, django_db_blocker):
     """Install pgtrigger triggers and the pghistory context stub.
 
@@ -128,6 +126,7 @@ def django_db_setup(django_db_setup, django_db_blocker):
     triggers) don't fail with "_pgh_attach_context() does not exist".
     """
     from django.db import connection
+
     with django_db_blocker.unblock():
         with connection.cursor() as c:
             c.execute(
@@ -136,6 +135,7 @@ def django_db_setup(django_db_setup, django_db_blocker):
             )
         try:
             import pgtrigger
+
             pgtrigger.install()
         except Exception:
             pass

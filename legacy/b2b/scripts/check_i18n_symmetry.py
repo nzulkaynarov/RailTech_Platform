@@ -11,6 +11,7 @@ Exit codes:
     2 — one of the files is invalid JSON
 """
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -39,11 +40,31 @@ def main() -> int:
         print(f'ERROR: invalid JSON — {e}')
         return 2
 
+    # i18next pluralization suffixes that are language-specific.
+    # Russian uses _one/_few/_many/_other; English uses _one/_other.
+    # These asymmetric keys are expected and should not be flagged.
+    _PLURAL_SUFFIX_RE = re.compile(r'_(?:zero|one|two|few|many|other)$')
+
+    def strip_plural_keys(keys):
+        """Return base keys with plural suffixes removed."""
+        bases = set()
+        for k in keys:
+            bases.add(_PLURAL_SUFFIX_RE.sub('', k))
+        return bases
+
     only_ru = sorted(ru_keys - en_keys)
     only_en = sorted(en_keys - ru_keys)
 
+    # Filter out keys that differ only in pluralization suffixes:
+    # if the base key (without suffix) exists in the other language, it's fine.
+    ru_bases = strip_plural_keys(ru_keys)
+    en_bases = strip_plural_keys(en_keys)
+
+    only_ru = [k for k in only_ru if _PLURAL_SUFFIX_RE.sub('', k) not in en_bases]
+    only_en = [k for k in only_en if _PLURAL_SUFFIX_RE.sub('', k) not in ru_bases]
+
     if not only_ru and not only_en:
-        print(f'OK: {len(ru_keys)} keys, symmetric.')
+        print(f'OK: {len(ru_keys)} RU keys, {len(en_keys)} EN keys, symmetric (pluralization-aware).')
         return 0
 
     if only_ru:

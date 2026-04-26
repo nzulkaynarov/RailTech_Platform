@@ -6,6 +6,7 @@ Usage:
     python manage.py archive_messages --older-than 30
     python manage.py archive_messages --async        # queue via Celery
 """
+
 from django.core.management.base import BaseCommand
 
 
@@ -35,12 +36,8 @@ class Command(BaseCommand):
 
         if run_async:
             task = archive_old_messages.delay(days)
-            self.stdout.write(self.style.SUCCESS(
-                f"Queued archive_old_messages(days={days}) — task id: {task.id}"
-            ))
+            self.stdout.write(self.style.SUCCESS(f"Queued archive_old_messages(days={days}) — task id: {task.id}"))
         else:
             self.stdout.write(f"Running archive_old_messages(days={days}) synchronously...")
             result = archive_old_messages(days)
-            self.stdout.write(self.style.SUCCESS(
-                f"Result: {result}"
-            ))
+            self.stdout.write(self.style.SUCCESS(f"Result: {result}"))

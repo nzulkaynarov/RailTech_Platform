@@ -36,16 +36,22 @@ class AttachmentAdmin(ReadOnlyInspectionMixin, ModelAdmin):
         return "—"
 
     fieldsets = (
-        (None, {
-            "fields": (
-                ("file", "original_filename"),
-                ("uploaded_by", "uploaded_at"),
-            ),
-        }),
-        (_("Привязка"), {
-            "classes": ["tab"],
-            "fields": ("product", "deal", "quote", "company", "message"),
-        }),
+        (
+            None,
+            {
+                "fields": (
+                    ("file", "original_filename"),
+                    ("uploaded_by", "uploaded_at"),
+                ),
+            },
+        ),
+        (
+            _("Привязка"),
+            {
+                "classes": ["tab"],
+                "fields": ("product", "deal", "quote", "company", "message"),
+            },
+        ),
     )
 
 
@@ -58,9 +64,7 @@ class DomainKeywordAdmin(ModelAdmin):
     list_per_page = 30
     list_select_related = ("domain_type",)
 
-    fieldsets = (
-        (None, {"fields": (("keyword", "domain_type"),)}),
-    )
+    fieldsets = ((None, {"fields": (("keyword", "domain_type"),)}),)
 
 
 @admin.register(ImportTask)
@@ -85,13 +89,16 @@ class ImportTaskAdmin(ModelAdmin):
         return obj.get_task_type_display()
 
     fieldsets = (
-        (None, {
-            "fields": (
-                ("celery_task_id", "task_type"),
-                ("owner", "deal"),
-                "created_at",
-            ),
-        }),
+        (
+            None,
+            {
+                "fields": (
+                    ("celery_task_id", "task_type"),
+                    ("owner", "deal"),
+                    "created_at",
+                ),
+            },
+        ),
     )
 
     def has_add_permission(self, request):

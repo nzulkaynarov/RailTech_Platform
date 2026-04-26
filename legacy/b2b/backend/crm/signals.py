@@ -26,18 +26,17 @@ def broadcast_new_message(sender, instance: Message, created: bool, **kwargs):
         return
     sender_user = instance.sender
     payload = {
-        'type': 'chat_message',
-        'id': instance.id,
-        'deal': instance.deal_id,
-        'text': instance.text,
-        'sender': sender_user.id if sender_user else None,
-        'sender_name': (
-            sender_user.get_full_name() if sender_user else ''
-        ) or (sender_user.email if sender_user else ''),
-        'message_type': instance.message_type,
-        'timestamp': instance.timestamp.isoformat(),
+        "type": "chat_message",
+        "id": instance.id,
+        "deal": instance.deal_id,
+        "text": instance.text,
+        "sender": sender_user.id if sender_user else None,
+        "sender_name": (sender_user.get_full_name() if sender_user else "")
+        or (sender_user.email if sender_user else ""),
+        "message_type": instance.message_type,
+        "timestamp": instance.timestamp.isoformat(),
     }
     async_to_sync(channel_layer.group_send)(
-        f'chat_deal_{instance.deal_id}',
+        f"chat_deal_{instance.deal_id}",
         payload,
     )

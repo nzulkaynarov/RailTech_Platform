@@ -9,23 +9,21 @@ Steps:
 """
 
 import logging
-from django import forms
-from django.contrib import messages
-from django.shortcuts import redirect
-from django.utils.translation import gettext_lazy as _
-from formtools.wizard.views import SessionWizardView
-from django.core.files.storage import default_storage
 
+from django import forms
+from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.tokens import default_token_generator
+from django.core.files.storage import default_storage
+from django.shortcuts import redirect
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
-from django.conf import settings
+from django.utils.translation import gettext_lazy as _
+from formtools.wizard.views import SessionWizardView
 
-from .models import (
-    Company, CompanyMember, CompanyType, CustomUser,
-    VerificationStatus, WorkspaceRole,
-)
 from master_data.models import Country
+
+from .models import Company, CompanyMember, CompanyType, CustomUser, VerificationStatus, WorkspaceRole
 
 logger = logging.getLogger(__name__)
 
@@ -34,8 +32,10 @@ logger = logging.getLogger(__name__)
 # Step forms
 # ────────────────────────────────────────────
 
+
 class Step1RequisitesForm(forms.Form):
     """Шаг 1: Реквизиты."""
+
     name = forms.CharField(
         max_length=255,
         label=_("Название компании"),
@@ -59,7 +59,7 @@ class Step1RequisitesForm(forms.Form):
     )
 
     def clean_inn(self):
-        inn = self.cleaned_data['inn']
+        inn = self.cleaned_data["inn"]
         if Company.objects.filter(inn=inn).exists():
             raise forms.ValidationError(_("Компания с таким ИНН уже существует."))
         return inn
@@ -67,8 +67,9 @@ class Step1RequisitesForm(forms.Form):
 
 class Step2ContactsForm(forms.Form):
     """Шаг 2: Контакты и реквизиты."""
+
     legal_address = forms.CharField(
-        widget=forms.Textarea(attrs={'rows': 2}),
+        widget=forms.Textarea(attrs={"rows": 2}),
         required=False,
         label=_("Юридический адрес"),
     )
@@ -107,13 +108,16 @@ class Step2ContactsForm(forms.Form):
 
 class Step3RoleForm(forms.Form):
     """Шаг 3: Роль на платформе."""
+
     types = forms.ModelMultipleChoiceField(
         queryset=CompanyType.objects.all(),
         widget=forms.CheckboxSelectMultiple,
         label=_("Роли компании"),
-        help_text=_("Выберите одну или несколько ролей. "
-                     "Клиент — покупает товары. Поставщик — продаёт. "
-                     "Производитель — OEM."),
+        help_text=_(
+            "Выберите одну или несколько ролей. "
+            "Клиент — покупает товары. Поставщик — продаёт. "
+            "Производитель — OEM."
+        ),
     )
     verification_status = forms.ModelChoiceField(
         queryset=VerificationStatus.objects.all(),
@@ -122,7 +126,7 @@ class Step3RoleForm(forms.Form):
         help_text=_("Начальный статус KYC. По умолчанию — не верифицирован."),
     )
     kyc_notes = forms.CharField(
-        widget=forms.Textarea(attrs={'rows': 3}),
+        widget=forms.Textarea(attrs={"rows": 3}),
         required=False,
         label=_("Заметки по KYC"),
         help_text=_("Внутренние комментарии (не видны клиенту)"),
@@ -131,10 +135,12 @@ class Step3RoleForm(forms.Form):
 
 class Step4MembersForm(forms.Form):
     """Шаг 4: Владелец/администратор компании."""
+
     owner_email = forms.EmailField(
         label=_("Email владельца"),
-        help_text=_("Если пользователь с таким email уже есть — он будет привязан. "
-                     "Если нет — будет создан новый аккаунт."),
+        help_text=_(
+            "Если пользователь с таким email уже есть — он будет привязан. " "Если нет — будет создан новый аккаунт."
+        ),
     )
     owner_first_name = forms.CharField(
         max_length=150,
@@ -178,8 +184,9 @@ class CompanyWizardView(SessionWizardView):
         context = super().get_context_data(**kwargs)
         # Add admin site context for base_site.html
         from django.contrib.admin import site
+
         context.update(site.each_context(self.request))
-        context['title'] = _("Создание компании")
+        context["title"] = _("Создание компании")
         return context
 
     def done(self, form_list, form_dict, **kwargs):
@@ -190,40 +197,41 @@ class CompanyWizardView(SessionWizardView):
 
         # Create company
         company = Company.objects.create(
-            name=data['name'],
-            inn=data['inn'],
-            country=data.get('country'),
-            logo=data.get('logo'),
-            legal_address=data.get('legal_address', ''),
-            contact_person=data.get('contact_person', ''),
-            phone=data.get('phone', ''),
-            email=data.get('email', ''),
-            website=data.get('website', ''),
-            bank_account=data.get('bank_account', ''),
-            mfo=data.get('mfo', ''),
-            verification_status=data.get('verification_status'),
-            kyc_notes=data.get('kyc_notes', ''),
+            name=data["name"],
+            inn=data["inn"],
+            country=data.get("country"),
+            logo=data.get("logo"),
+            legal_address=data.get("legal_address", ""),
+            contact_person=data.get("contact_person", ""),
+            phone=data.get("phone", ""),
+            email=data.get("email", ""),
+            website=data.get("website", ""),
+            bank_account=data.get("bank_account", ""),
+            mfo=data.get("mfo", ""),
+            verification_status=data.get("verification_status"),
+            kyc_notes=data.get("kyc_notes", ""),
         )
 
         # Set company types
-        types = data.get('types')
+        types = data.get("types")
         if types:
             company.types.set(types)
 
         # Create or get owner
-        owner_email = data['owner_email']
+        owner_email = data["owner_email"]
         from accounts.models import SystemRole
-        client_role = SystemRole.objects.filter(code='CLIENT').first()
+
+        client_role = SystemRole.objects.filter(code="CLIENT").first()
 
         user, created = CustomUser.objects.get_or_create(
             email=owner_email,
             defaults={
-                'username': owner_email,
-                'first_name': data.get('owner_first_name', ''),
-                'last_name': data.get('owner_last_name', ''),
-                'phone': data.get('owner_phone', ''),
-                'role': client_role,
-                'is_active': False,
+                "username": owner_email,
+                "first_name": data.get("owner_first_name", ""),
+                "last_name": data.get("owner_last_name", ""),
+                "phone": data.get("owner_phone", ""),
+                "role": client_role,
+                "is_active": False,
             },
         )
         if created:
@@ -232,18 +240,19 @@ class CompanyWizardView(SessionWizardView):
             # Send setup-password email (same flow as registration)
             token = default_token_generator.make_token(user)
             uid = urlsafe_base64_encode(force_bytes(user.pk))
-            base_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173')
+            base_url = getattr(settings, "FRONTEND_URL", "http://localhost:5173")
             setup_url = f"{base_url}/setup-password?uid={uid}&token={token}"
             try:
                 from notifications.emails import send_templated_email
+
                 send_templated_email(
-                    'setup_password',
+                    "setup_password",
                     {
-                        'first_name': data.get('owner_first_name', ''),
-                        'setup_url': setup_url,
+                        "first_name": data.get("owner_first_name", ""),
+                        "setup_url": setup_url,
                     },
                     to=[owner_email],
-                    channel='transactional',
+                    channel="transactional",
                     user=user,
                     fail_silently=True,
                 )
@@ -251,25 +260,25 @@ class CompanyWizardView(SessionWizardView):
                 logger.exception(f"Failed to send setup email to {owner_email}")
 
         # Create membership
-        owner_role = WorkspaceRole.objects.filter(code='OWNER').first()
+        owner_role = WorkspaceRole.objects.filter(code="OWNER").first()
         if owner_role:
             CompanyMember.objects.get_or_create(
                 user=user,
                 company=company,
                 defaults={
-                    'role': owner_role,
-                    'is_primary': True,
-                    'is_active': True,
+                    "role": owner_role,
+                    "is_primary": True,
+                    "is_active": True,
                 },
             )
 
         messages.success(
             self.request,
-            _("Компания «%(name)s» успешно создана! "
-              "Владелец: %(email)s") % {
+            _("Компания «%(name)s» успешно создана! " "Владелец: %(email)s")
+            % {
                 "name": company.name,
                 "email": owner_email,
-            }
+            },
         )
 
         return redirect(f"/admin/accounts/company/{company.pk}/change/")

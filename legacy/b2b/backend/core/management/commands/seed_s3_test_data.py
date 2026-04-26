@@ -9,10 +9,8 @@ Usage:
   python manage.py seed_s3_test_data
 """
 
-import io
-from django.core.management.base import BaseCommand
 from django.core.files.base import ContentFile
-from django.utils import timezone
+from django.core.management.base import BaseCommand
 
 
 def _make_svg(text, color="#3B82F6", bg="#EFF6FF"):
@@ -22,7 +20,7 @@ def _make_svg(text, color="#3B82F6", bg="#EFF6FF"):
         f'<rect width="400" height="300" fill="{bg}"/>'
         f'<text x="200" y="160" text-anchor="middle" font-family="Arial" '
         f'font-size="24" fill="{color}">{text}</text>'
-        f'</svg>'
+        f"</svg>"
     )
     return ContentFile(svg.encode(), name=f"{text.replace(' ', '_').lower()}.svg")
 
@@ -54,14 +52,10 @@ class Command(BaseCommand):
     help = "Seed MinIO/S3 with test data for all storage integration paths"
 
     def handle(self, *args, **options):
-        from accounts.models import Company, CustomUser, KYCDocument, KYCDocType
-        from catalog.models import (
-            Product, ProductImage, ProductDocument, Category,
-            DomainType, ProductStatus, EquipmentGroup
-        )
-        from crm.models import Deal, DealStage, Quote, QuoteStatus, Message
+        from accounts.models import Company, CustomUser, KYCDocType, KYCDocument
+        from catalog.models import Category, Product, ProductDocument, ProductImage
+        from crm.models import Deal, Quote, QuoteStatus
         from sourcing.models import Attachment
-        from notifications.models import Notification, NotificationType
 
         self.stdout.write("\n" + "=" * 60)
         self.stdout.write("  SEED S3 TEST DATA")
@@ -78,9 +72,7 @@ class Command(BaseCommand):
         companies = Company.objects.all()
         for company in companies:
             if not company.logo:
-                company.logo = _make_svg(
-                    company.name[:12], color="#1E40AF", bg="#DBEAFE"
-                )
+                company.logo = _make_svg(company.name[:12], color="#1E40AF", bg="#DBEAFE")
                 company.save(update_fields=["logo"])
                 self.stdout.write(f"   Logo: {company.name} -> {company.logo.name}")
             else:
@@ -165,9 +157,7 @@ class Command(BaseCommand):
                         file=_make_pdf(f"kyc_{company.inn}_{doc_type.code}"),
                         original_filename=f"{doc_type.name}_{company.name}.pdf",
                     )
-                    self.stdout.write(
-                        f"   KYC: {company.name} / {doc_type.name} -> {kyc.file.name}"
-                    )
+                    self.stdout.write(f"   KYC: {company.name} / {doc_type.name} -> {kyc.file.name}")
 
         # ─── 7. DEAL ATTACHMENTS (private) ───
 
@@ -209,7 +199,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.MIGRATE_HEADING("9. Quote PDFs (private bucket)"))
         # Create a quote if none exists
         if not Quote.objects.exists() and deals.exists():
-            draft_status = QuoteStatus.objects.filter(code='DRAFT').first()
+            draft_status = QuoteStatus.objects.filter(code="DRAFT").first()
             deal = deals.first()
             if draft_status and deal:
                 quote = Quote.objects.create(
@@ -221,16 +211,12 @@ class Command(BaseCommand):
                 )
                 quote.pdf_file = _make_pdf(f"quote_v{quote.version}_{deal.pk}")
                 quote.save(update_fields=["pdf_file"])
-                self.stdout.write(
-                    f"   Quote PDF: Deal #{deal.pk} v{quote.version} -> {quote.pdf_file.name}"
-                )
+                self.stdout.write(f"   Quote PDF: Deal #{deal.pk} v{quote.version} -> {quote.pdf_file.name}")
 
-        for quote in Quote.objects.filter(pdf_file=''):
+        for quote in Quote.objects.filter(pdf_file=""):
             quote.pdf_file = _make_pdf(f"quote_v{quote.version}_{quote.deal_id}")
             quote.save(update_fields=["pdf_file"])
-            self.stdout.write(
-                f"   Quote PDF: Deal #{quote.deal_id} v{quote.version} -> {quote.pdf_file.name}"
-            )
+            self.stdout.write(f"   Quote PDF: Deal #{quote.deal_id} v{quote.version} -> {quote.pdf_file.name}")
 
         # ─── SUMMARY ───
 
@@ -240,33 +226,34 @@ class Command(BaseCommand):
 
         # Count files in MinIO
         from core.storage import _minio_is_configured
-        if _minio_is_configured():
-            self.stdout.write(self.style.SUCCESS(f"  Storage: MinIO (S3)"))
-        else:
-            self.stdout.write(self.style.WARNING(f"  Storage: Local FileSystem (MinIO not configured)"))
 
-        self.stdout.write(f"\n  PUBLIC BUCKET (railtech-public):")
+        if _minio_is_configured():
+            self.stdout.write(self.style.SUCCESS("  Storage: MinIO (S3)"))
+        else:
+            self.stdout.write(self.style.WARNING("  Storage: Local FileSystem (MinIO not configured)"))
+
+        self.stdout.write("\n  PUBLIC BUCKET (railtech-public):")
         self.stdout.write(f"    Company logos:    {Company.objects.exclude(logo='').count()}")
         self.stdout.write(f"    User avatars:     {CustomUser.objects.exclude(avatar='').count()}")
         self.stdout.write(f"    Category icons:   {Category.objects.exclude(icon='').count()}")
         self.stdout.write(f"    Product images:   {ProductImage.objects.count()}")
         self.stdout.write(f"    Product docs:     {ProductDocument.objects.count()}")
 
-        self.stdout.write(f"\n  PRIVATE BUCKET (railtech-private):")
+        self.stdout.write("\n  PRIVATE BUCKET (railtech-private):")
         self.stdout.write(f"    KYC documents:    {KYCDocument.objects.count()}")
         self.stdout.write(f"    Deal attachments: {Attachment.objects.filter(deal__isnull=False).count()}")
         self.stdout.write(f"    Company docs:     {Attachment.objects.filter(company__isnull=False).count()}")
         self.stdout.write(f"    Quote PDFs:       {Quote.objects.exclude(pdf_file='').count()}")
 
         total = (
-            Company.objects.exclude(logo='').count()
-            + CustomUser.objects.exclude(avatar='').count()
-            + Category.objects.exclude(icon='').count()
+            Company.objects.exclude(logo="").count()
+            + CustomUser.objects.exclude(avatar="").count()
+            + Category.objects.exclude(icon="").count()
             + ProductImage.objects.count()
             + ProductDocument.objects.count()
             + KYCDocument.objects.count()
             + Attachment.objects.count()
-            + Quote.objects.exclude(pdf_file='').count()
+            + Quote.objects.exclude(pdf_file="").count()
         )
         self.stdout.write(f"\n  TOTAL FILES: {total}")
         self.stdout.write("=" * 60 + "\n")

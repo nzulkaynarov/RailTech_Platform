@@ -1,21 +1,26 @@
-from django.db import models
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import RegexValidator
-from django.conf import settings
+from django.db import models
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
-from master_data.models import AbstractLookup, Country
-from core.storage import (
-    get_public_storage, get_private_storage,
-    company_logo_path, user_avatar_path, kyc_document_path,
-    company_application_contract_path, company_application_nda_path,
-    company_application_partnership_path, company_document_path,
-)
 
+from core.storage import (
+    company_application_contract_path,
+    company_application_nda_path,
+    company_application_partnership_path,
+    company_logo_path,
+    get_private_storage,
+    get_public_storage,
+    kyc_document_path,
+    user_avatar_path,
+)
+from master_data.models import AbstractLookup, Country
 
 # ────────────────────────────────────────────
 # Справочники модуля Accounts
 # ────────────────────────────────────────────
+
 
 class SystemRole(AbstractLookup):
     """
@@ -53,12 +58,14 @@ class WorkspaceRole(AbstractLookup):
     applicable_to_types ограничивает, в каких компаниях роль можно назначить.
     Пустой набор = роль универсальная (например, OWNER).
     """
+
     applicable_to_types = models.ManyToManyField(
-        CompanyType, blank=True, related_name='workspace_roles',
+        CompanyType,
+        blank=True,
+        related_name="workspace_roles",
         verbose_name=_("Применимо к типам компаний"),
         help_text=_(
-            "Если пусто — роль универсальна. Если указаны типы — роль "
-            "доступна только в компаниях этих типов."
+            "Если пусто — роль универсальна. Если указаны типы — роль " "доступна только в компаниях этих типов."
         ),
     )
 
@@ -93,30 +100,40 @@ class KYCDocType(AbstractLookup):
 # Основные модели
 # ────────────────────────────────────────────
 
+
 class Company(models.Model):
     """
     Юридическое лицо / Организация.
     Одна компания может быть одновременно и поставщиком, и клиентом (через M2M types).
     """
+
     name = models.CharField(
-        max_length=255, db_index=True,
+        max_length=255,
+        db_index=True,
         verbose_name=_("Название"),
         help_text=_("Полное наименование организации"),
     )
     inn = models.CharField(
-        max_length=20, unique=True, db_index=True,
-        validators=[RegexValidator(settings.INN_VALIDATION_REGEX, _('Некорректный формат ИНН.'))],
+        max_length=20,
+        unique=True,
+        db_index=True,
+        validators=[RegexValidator(settings.INN_VALIDATION_REGEX, _("Некорректный формат ИНН."))],
         verbose_name=_("ИНН"),
         help_text=_("Идентификационный номер налогоплательщика"),
     )
     types = models.ManyToManyField(
-        CompanyType, related_name='companies', blank=True,
+        CompanyType,
+        related_name="companies",
+        blank=True,
         verbose_name=_("Роли на платформе"),
         help_text=_("Роли компании: клиент, поставщик, производитель"),
     )
     verification_status = models.ForeignKey(
-        VerificationStatus, on_delete=models.PROTECT,
-        related_name='+', null=True, blank=True,
+        VerificationStatus,
+        on_delete=models.PROTECT,
+        related_name="+",
+        null=True,
+        blank=True,
         verbose_name=_("Статус верификации"),
         help_text=_("Текущий статус KYC-проверки компании"),
     )
@@ -136,8 +153,11 @@ class Company(models.Model):
         help_text=_("Рейтинг доверия поставщика (0-100)"),
     )
     country = models.ForeignKey(
-        Country, on_delete=models.SET_NULL, null=True, blank=True,
-        related_name='companies',
+        Country,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="companies",
         verbose_name=_("Страна"),
         help_text=_("Страна регистрации юридического лица"),
     )
@@ -149,22 +169,26 @@ class Company(models.Model):
         help_text=_("Полный юридический адрес организации"),
     )
     bank_account = models.CharField(
-        max_length=50, blank=True,
+        max_length=50,
+        blank=True,
         verbose_name=_("Расчётный счёт"),
         help_text=_("Номер расчётного счёта в банке"),
     )
     mfo = models.CharField(
-        max_length=10, blank=True,
+        max_length=10,
+        blank=True,
         verbose_name=_("МФО"),
         help_text=_("Межфилиальный оборот (код банка)"),
     )
     contact_person = models.CharField(
-        max_length=255, blank=True,
+        max_length=255,
+        blank=True,
         verbose_name=_("Контактное лицо"),
         help_text=_("ФИО ответственного представителя компании"),
     )
     phone = models.CharField(
-        max_length=50, blank=True,
+        max_length=50,
+        blank=True,
         verbose_name=_("Телефон"),
         help_text=_("Контактный телефон компании"),
     )
@@ -174,13 +198,16 @@ class Company(models.Model):
         help_text=_("Основной email компании для уведомлений"),
     )
     website = models.URLField(
-        max_length=255, blank=True,
+        max_length=255,
+        blank=True,
         verbose_name=_("Веб-сайт"),
         help_text=_("Адрес корпоративного сайта"),
     )
     logo = models.ImageField(
-        upload_to=company_logo_path, storage=get_public_storage,
-        null=True, blank=True,
+        upload_to=company_logo_path,
+        storage=get_public_storage,
+        null=True,
+        blank=True,
         verbose_name=_("Логотип"),
         help_text=_("Логотип компании для отображения на платформе"),
     )
@@ -202,7 +229,7 @@ class Company(models.Model):
     class Meta:
         verbose_name = _("Компания")
         verbose_name_plural = _("Компании")
-        ordering = ['name']
+        ordering = ["name"]
 
     def __str__(self):
         return f"{self.name} ({self.inn})"
@@ -213,31 +240,38 @@ class CustomUser(AbstractUser):
     Пользователь системы.
     Привязка к компании — через промежуточную модель CompanyMember (Multi-tenancy).
     """
+
     email = models.EmailField(
         unique=True,
         verbose_name=_("Email"),
         help_text=_("Основной email для входа в систему"),
     )
     phone = models.CharField(
-        max_length=20, blank=True,
+        max_length=20,
+        blank=True,
         verbose_name=_("Телефон"),
         help_text=_("Мобильный или рабочий телефон"),
     )
     avatar = models.ImageField(
-        upload_to=user_avatar_path, storage=get_public_storage,
-        null=True, blank=True,
+        upload_to=user_avatar_path,
+        storage=get_public_storage,
+        null=True,
+        blank=True,
         verbose_name=_("Аватар"),
         help_text=_("Фото пользователя для профиля"),
     )
     role = models.ForeignKey(
-        SystemRole, on_delete=models.PROTECT,
-        related_name='users', null=True, blank=True,
+        SystemRole,
+        on_delete=models.PROTECT,
+        related_name="users",
+        null=True,
+        blank=True,
         verbose_name=_("Системная роль"),
         help_text=_("Глобальная роль: определяет права доступа на всей платформе"),
     )
 
-    USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['username']
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = ["username"]
 
     class Meta:
         verbose_name = _("Пользователь")
@@ -256,7 +290,7 @@ class CustomUser(AbstractUser):
         """
         if self.is_superuser:
             return True
-        if not self.role or self.role.code != 'ADMIN':
+        if not self.role or self.role.code != "ADMIN":
             return False
         return not self.memberships.filter(is_active=True).exists()
 
@@ -277,18 +311,25 @@ class CompanyMember(models.Model):
     Связь «Пользователь ↔ Компания» с ролью.
     Один пользователь может состоять в нескольких компаниях с разными ролями.
     """
+
     user = models.ForeignKey(
-        CustomUser, on_delete=models.CASCADE, related_name='memberships',
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name="memberships",
         verbose_name=_("Пользователь"),
         help_text=_("Участник компании"),
     )
     company = models.ForeignKey(
-        Company, on_delete=models.CASCADE, related_name='members',
+        Company,
+        on_delete=models.CASCADE,
+        related_name="members",
         verbose_name=_("Компания"),
         help_text=_("Организация, в которой состоит пользователь"),
     )
     role = models.ForeignKey(
-        WorkspaceRole, on_delete=models.PROTECT, related_name='+',
+        WorkspaceRole,
+        on_delete=models.PROTECT,
+        related_name="+",
         verbose_name=_("Роль в компании"),
         help_text=_("Функциональная роль внутри рабочего пространства"),
     )
@@ -317,8 +358,7 @@ class CompanyMember(models.Model):
         default=True,
         verbose_name=_("Может покупать"),
         help_text=_(
-            "Разрешено создавать заявки/сделки и принимать bid'ы от лица "
-            "компании. Выключается владельцем компании."
+            "Разрешено создавать заявки/сделки и принимать bid'ы от лица " "компании. Выключается владельцем компании."
         ),
     )
     joined_at = models.DateTimeField(
@@ -329,13 +369,13 @@ class CompanyMember(models.Model):
     class Meta:
         verbose_name = _("Участник компании")
         verbose_name_plural = _("Участники компаний")
-        unique_together = [('user', 'company')]
-        ordering = ['-is_primary', 'joined_at']
+        unique_together = [("user", "company")]
+        ordering = ["-is_primary", "joined_at"]
         constraints = [
             models.UniqueConstraint(
-                fields=['user'],
+                fields=["user"],
                 condition=models.Q(is_primary=True),
-                name='unique_primary_company_per_user',
+                name="unique_primary_company_per_user",
             ),
         ]
 
@@ -345,18 +385,24 @@ class CompanyMember(models.Model):
 
 class KYCDocument(models.Model):
     """Документы для верификации (KYC) компании."""
+
     company = models.ForeignKey(
-        Company, on_delete=models.CASCADE, related_name='kyc_documents',
+        Company,
+        on_delete=models.CASCADE,
+        related_name="kyc_documents",
         verbose_name=_("Компания"),
         help_text=_("Организация, к которой относится документ"),
     )
     doc_type = models.ForeignKey(
-        KYCDocType, on_delete=models.PROTECT, related_name='+',
+        KYCDocType,
+        on_delete=models.PROTECT,
+        related_name="+",
         verbose_name=_("Тип документа"),
         help_text=_("Вид документа из справочника (устав, лицензия, паспорт)"),
     )
     file = models.FileField(
-        upload_to=kyc_document_path, storage=get_private_storage,
+        upload_to=kyc_document_path,
+        storage=get_private_storage,
         verbose_name=_("Файл"),
         help_text=_("Загруженный скан документа (хранится в приватном хранилище)"),
     )
@@ -382,37 +428,48 @@ class KYCDocument(models.Model):
 # Онбординг и подписки
 # ────────────────────────────────────────────
 
+
 class CompanyRoleApplication(models.Model):
     """
     Заявка компании на получение роли (SUPPLIER или MANUFACTURER).
     CLIENT роль назначается автоматически при регистрации.
     """
+
     STATUS_CHOICES = [
-        ('PENDING', _('На рассмотрении')),
-        ('DOCUMENTS_REQUIRED', _('Требуются документы')),
-        ('PAYMENT_REQUIRED', _('Ожидание оплаты')),
-        ('APPROVED', _('Одобрено')),
-        ('REJECTED', _('Отклонено')),
+        ("PENDING", _("На рассмотрении")),
+        ("DOCUMENTS_REQUIRED", _("Требуются документы")),
+        ("PAYMENT_REQUIRED", _("Ожидание оплаты")),
+        ("APPROVED", _("Одобрено")),
+        ("REJECTED", _("Отклонено")),
     ]
 
     company = models.ForeignKey(
-        Company, on_delete=models.CASCADE, related_name='role_applications',
+        Company,
+        on_delete=models.CASCADE,
+        related_name="role_applications",
         verbose_name=_("Компания"),
         help_text=_("Организация, подавшая заявку"),
     )
     requested_type = models.ForeignKey(
-        CompanyType, on_delete=models.PROTECT, related_name='applications',
+        CompanyType,
+        on_delete=models.PROTECT,
+        related_name="applications",
         verbose_name=_("Запрашиваемая роль"),
         help_text=_("Роль, на которую подаётся заявка (SUPPLIER или MANUFACTURER)"),
     )
     status = models.CharField(
-        max_length=25, choices=STATUS_CHOICES, default='PENDING',
+        max_length=25,
+        choices=STATUS_CHOICES,
+        default="PENDING",
         verbose_name=_("Статус"),
         help_text=_("Текущий статус рассмотрения заявки"),
     )
     submitted_by = models.ForeignKey(
-        CustomUser, on_delete=models.SET_NULL, null=True, blank=True,
-        related_name='submitted_applications',
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="submitted_applications",
         verbose_name=_("Подал заявку"),
         help_text=_("Пользователь, инициировавший заявку"),
     )
@@ -421,29 +478,35 @@ class CompanyRoleApplication(models.Model):
     contract_file = models.FileField(
         upload_to=company_application_contract_path,
         storage=get_private_storage,
-        null=True, blank=True,
+        null=True,
+        blank=True,
         verbose_name=_("Договор"),
         help_text=_("Подписанный договор (обязательно для SUPPLIER)"),
     )
     nda_file = models.FileField(
         upload_to=company_application_nda_path,
         storage=get_private_storage,
-        null=True, blank=True,
+        null=True,
+        blank=True,
         verbose_name=_("NDA"),
         help_text=_("Соглашение о неразглашении (обязательно для SUPPLIER)"),
     )
     partnership_agreement = models.FileField(
         upload_to=company_application_partnership_path,
         storage=get_private_storage,
-        null=True, blank=True,
+        null=True,
+        blank=True,
         verbose_name=_("Договор о партнёрстве"),
         help_text=_("Партнёрское соглашение (обязательно для MANUFACTURER)"),
     )
 
     # Admin review
     reviewed_by = models.ForeignKey(
-        CustomUser, on_delete=models.SET_NULL, null=True, blank=True,
-        related_name='reviewed_applications',
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="reviewed_applications",
         verbose_name=_("Рассмотрел"),
         help_text=_("Администратор, рассмотревший заявку"),
     )
@@ -453,7 +516,8 @@ class CompanyRoleApplication(models.Model):
         help_text=_("Внутренний комментарий администратора"),
     )
     reviewed_at = models.DateTimeField(
-        null=True, blank=True,
+        null=True,
+        blank=True,
         verbose_name=_("Дата рассмотрения"),
     )
 
@@ -469,8 +533,8 @@ class CompanyRoleApplication(models.Model):
     class Meta:
         verbose_name = _("Заявка на роль компании")
         verbose_name_plural = _("Заявки на роли компаний")
-        ordering = ['-created_at']
-        unique_together = [('company', 'requested_type')]
+        ordering = ["-created_at"]
+        unique_together = [("company", "requested_type")]
 
     def __str__(self):
         return f"{self.company.name} → {self.requested_type.name} ({self.get_status_display()})"
@@ -481,64 +545,80 @@ class SupplierSubscription(models.Model):
     Подписка поставщика на платформу.
     Тарифы до конца календарного года + ежемесячная оплата.
     """
+
     PLAN_CHOICES = [
-        ('BASIC', _('Базовый')),
-        ('STANDARD', _('Стандартный')),
-        ('PREMIUM', _('Премиум')),
+        ("BASIC", _("Базовый")),
+        ("STANDARD", _("Стандартный")),
+        ("PREMIUM", _("Премиум")),
     ]
     STATUS_CHOICES = [
-        ('TRIAL', _('Пробный период')),
-        ('ACTIVE', _('Активна')),
-        ('PAST_DUE', _('Просрочена')),
-        ('SUSPENDED', _('Приостановлена')),
-        ('CANCELLED', _('Отменена')),
+        ("TRIAL", _("Пробный период")),
+        ("ACTIVE", _("Активна")),
+        ("PAST_DUE", _("Просрочена")),
+        ("SUSPENDED", _("Приостановлена")),
+        ("CANCELLED", _("Отменена")),
     ]
 
     company = models.OneToOneField(
-        Company, on_delete=models.CASCADE, related_name='subscription',
+        Company,
+        on_delete=models.CASCADE,
+        related_name="subscription",
         verbose_name=_("Компания"),
         help_text=_("Компания-поставщик (одна подписка на компанию)"),
     )
     plan = models.CharField(
-        max_length=20, choices=PLAN_CHOICES, default='BASIC',
+        max_length=20,
+        choices=PLAN_CHOICES,
+        default="BASIC",
         verbose_name=_("Тарифный план"),
         help_text=_("Базовый, Стандартный или Премиум"),
     )
     status = models.CharField(
-        max_length=20, choices=STATUS_CHOICES, default='TRIAL',
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="TRIAL",
         verbose_name=_("Статус"),
         help_text=_("Текущее состояние подписки"),
     )
 
     # Billing
     monthly_rate = models.DecimalField(
-        max_digits=12, decimal_places=2, default=0,
+        max_digits=12,
+        decimal_places=2,
+        default=0,
         verbose_name=_("Ежемесячная стоимость"),
         help_text=_("Сумма ежемесячного платежа"),
     )
     currency = models.ForeignKey(
-        'master_data.Currency', on_delete=models.PROTECT,
-        null=True, blank=True, related_name='+',
+        "master_data.Currency",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
         verbose_name=_("Валюта"),
         help_text=_("Валюта расчётов"),
     )
     valid_from = models.DateField(
-        null=True, blank=True,
+        null=True,
+        blank=True,
         verbose_name=_("Действует с"),
         help_text=_("Дата начала действия подписки"),
     )
     valid_until = models.DateField(
-        null=True, blank=True,
+        null=True,
+        blank=True,
         verbose_name=_("Действует до"),
         help_text=_("Дата окончания (обычно конец календарного года)"),
     )
     last_payment_date = models.DateField(
-        null=True, blank=True,
+        null=True,
+        blank=True,
         verbose_name=_("Последний платёж"),
         help_text=_("Дата последнего успешного платежа"),
     )
     next_payment_date = models.DateField(
-        null=True, blank=True,
+        null=True,
+        blank=True,
         verbose_name=_("Следующий платёж"),
         help_text=_("Дата ожидаемого следующего платежа"),
     )
@@ -567,19 +647,17 @@ class SupplierSubscription(models.Model):
     @property
     def is_active(self):
         from django.utils import timezone
+
         today = timezone.now().date()
-        return (
-            self.status == 'ACTIVE'
-            and self.valid_until
-            and self.valid_until >= today
-        )
+        return self.status == "ACTIVE" and self.valid_until and self.valid_until >= today
 
     @property
     def is_operational(self) -> bool:
         """Subscription permits supplier operations (ACTIVE or TRIAL within validity)."""
         from django.utils import timezone
+
         today = timezone.now().date()
-        if self.status not in ('ACTIVE', 'TRIAL'):
+        if self.status not in ("ACTIVE", "TRIAL"):
             return False
         if self.valid_until and self.valid_until < today:
             return False

@@ -10,13 +10,14 @@ All file names are UUID-based to prevent collisions and information leakage.
 """
 
 import uuid
+
 from django.conf import settings
 from django.core.files.storage import default_storage
 
 
 def _minio_is_configured():
     """Check if MinIO/S3 environment variables are set."""
-    return bool(getattr(settings, 'MINIO_ENDPOINT', None))
+    return bool(getattr(settings, "MINIO_ENDPOINT", None))
 
 
 def _uuid_filename(instance, filename):
@@ -24,13 +25,14 @@ def _uuid_filename(instance, filename):
     Generate a UUID-based filename preserving the original extension.
     Original filename is stored in the database, not in the S3 key.
     """
-    ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
     return f"{uuid.uuid4().hex}.{ext}" if ext else f"{uuid.uuid4().hex}"
 
 
 # ────────────────────────────────────────────
 # Upload path generators (used in model fields)
 # ────────────────────────────────────────────
+
 
 def product_image_path(instance, filename):
     """products/{product_id}/images/{uuid}.{ext}"""
@@ -169,16 +171,18 @@ def temp_upload_path(instance, filename):
 # Storage backend instances (lazy, configured in settings.py)
 # ────────────────────────────────────────────
 
+
 def get_public_storage():
     """Return the public storage backend (for product images, logos, etc.)."""
     if _minio_is_configured():
         from storages.backends.s3boto3 import S3Boto3Storage
+
         # Match URL scheme to environment: https in production, http in dev.
         # Heuristic: if MINIO_PUBLIC_DOMAIN targets localhost or 127.0.0.1, we
         # are in dev and TLS is not terminated, so emit http. Otherwise https.
-        public_domain = settings.MINIO_PUBLIC_DOMAIN or ''
-        is_local = any(h in public_domain for h in ('localhost', '127.0.0.1'))
-        url_protocol = 'http:' if is_local else 'https:'
+        public_domain = settings.MINIO_PUBLIC_DOMAIN or ""
+        is_local = any(h in public_domain for h in ("localhost", "127.0.0.1"))
+        url_protocol = "http:" if is_local else "https:"
         return S3Boto3Storage(
             endpoint_url=settings.MINIO_ENDPOINT,
             access_key=settings.MINIO_ACCESS_KEY,
@@ -203,7 +207,7 @@ def get_private_storage():
     if _minio_is_configured():
         from storages.backends.s3boto3 import S3Boto3Storage
 
-        external = getattr(settings, 'MINIO_EXTERNAL_ENDPOINT', '') or settings.MINIO_ENDPOINT
+        external = getattr(settings, "MINIO_EXTERNAL_ENDPOINT", "") or settings.MINIO_ENDPOINT
         internal = settings.MINIO_ENDPOINT
 
         class PrivateS3Storage(S3Boto3Storage):
@@ -211,7 +215,10 @@ def get_private_storage():
 
             def url(self, name, parameters=None, expire=None, http_method=None):
                 raw_url = super().url(
-                    name, parameters=parameters, expire=expire, http_method=http_method,
+                    name,
+                    parameters=parameters,
+                    expire=expire,
+                    http_method=http_method,
                 )
                 if internal != external and internal in raw_url:
                     return raw_url.replace(internal, external, 1)
@@ -237,14 +244,17 @@ def get_temp_storage():
     if _minio_is_configured():
         from storages.backends.s3boto3 import S3Boto3Storage
 
-        external = getattr(settings, 'MINIO_EXTERNAL_ENDPOINT', '') or settings.MINIO_ENDPOINT
+        external = getattr(settings, "MINIO_EXTERNAL_ENDPOINT", "") or settings.MINIO_ENDPOINT
         internal = settings.MINIO_ENDPOINT
-        temp_bucket = getattr(settings, 'MINIO_TEMP_BUCKET', '') or 'railtech-temp'
+        temp_bucket = getattr(settings, "MINIO_TEMP_BUCKET", "") or "railtech-temp"
 
         class TempS3Storage(S3Boto3Storage):
             def url(self, name, parameters=None, expire=None, http_method=None):
                 raw_url = super().url(
-                    name, parameters=parameters, expire=expire, http_method=http_method,
+                    name,
+                    parameters=parameters,
+                    expire=expire,
+                    http_method=http_method,
                 )
                 if internal != external and internal in raw_url:
                     return raw_url.replace(internal, external, 1)
