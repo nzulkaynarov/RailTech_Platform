@@ -7,7 +7,8 @@ describe('cn (className merger)', () => {
   });
 
   it('should handle conditional classes', () => {
-    expect(cn('base', false && 'hidden', 'extra')).toBe('base extra');
+    const isHidden = false;
+    expect(cn('base', isHidden && 'hidden', 'extra')).toBe('base extra');
   });
 
   it('should handle undefined and null', () => {
@@ -21,8 +22,10 @@ describe('cn (className merger)', () => {
   });
 
   it('should resolve complex Tailwind conflicts', () => {
+    /* eslint-disable railtech/no-hardcoded-colors */
     const result = cn('text-red-500', 'text-blue-500');
     expect(result).toBe('text-blue-500');
+    /* eslint-enable railtech/no-hardcoded-colors */
   });
 
   it('should handle empty input', () => {

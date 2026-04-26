@@ -1,13 +1,8 @@
 """Tests for CRM-related permissions and access control logic."""
 
-import pytest
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import MagicMock
 
-from core.permissions import (
-    IsPlatformAdmin,
-    IsPlatformAdminOrReadOnly,
-    IsCompanyMemberOrPlatformAdmin,
-)
+from core.permissions import IsCompanyMemberOrPlatformAdmin, IsPlatformAdmin, IsPlatformAdminOrReadOnly
 
 
 class TestIsPlatformAdmin:
@@ -50,7 +45,7 @@ class TestIsPlatformAdmin:
 class TestIsPlatformAdminOrReadOnly:
     """Tests for IsPlatformAdminOrReadOnly permission class."""
 
-    def _make_request(self, method='GET', user=None):
+    def _make_request(self, method="GET", user=None):
         request = MagicMock()
         request.method = method
         request.user = user
@@ -58,7 +53,7 @@ class TestIsPlatformAdminOrReadOnly:
 
     def test_safe_methods_allowed_for_anyone(self):
         perm = IsPlatformAdminOrReadOnly()
-        for method in ('GET', 'HEAD', 'OPTIONS'):
+        for method in ("GET", "HEAD", "OPTIONS"):
             request = self._make_request(method=method)
             assert perm.has_permission(request, None) is True
 
@@ -66,7 +61,7 @@ class TestIsPlatformAdminOrReadOnly:
         perm = IsPlatformAdminOrReadOnly()
         user = MagicMock()
         user.is_authenticated = False
-        request = self._make_request(method='POST', user=user)
+        request = self._make_request(method="POST", user=user)
         assert perm.has_permission(request, None) is False
 
     def test_write_denied_for_regular_user(self):
@@ -74,7 +69,7 @@ class TestIsPlatformAdminOrReadOnly:
         user = MagicMock()
         user.is_authenticated = True
         user.is_platform_admin = False
-        request = self._make_request(method='POST', user=user)
+        request = self._make_request(method="POST", user=user)
         assert perm.has_permission(request, None) is False
 
     def test_write_allowed_for_admin(self):
@@ -82,7 +77,7 @@ class TestIsPlatformAdminOrReadOnly:
         user = MagicMock()
         user.is_authenticated = True
         user.is_platform_admin = True
-        request = self._make_request(method='POST', user=user)
+        request = self._make_request(method="POST", user=user)
         assert perm.has_permission(request, None) is True
 
 

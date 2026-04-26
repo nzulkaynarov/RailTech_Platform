@@ -1,6 +1,7 @@
 import json
-from channels.generic.websocket import AsyncWebsocketConsumer
+
 from channels.db import database_sync_to_async
+from channels.generic.websocket import AsyncWebsocketConsumer
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
@@ -14,9 +15,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
     """
 
     async def connect(self):
-        self.deal_id = self.scope['url_route']['kwargs']['deal_id']
-        self.room_group_name = f'chat_deal_{self.deal_id}'
-        user = self.scope.get('user')
+        self.deal_id = self.scope["url_route"]["kwargs"]["deal_id"]
+        self.room_group_name = f"chat_deal_{self.deal_id}"
+        user = self.scope.get("user")
         from django.contrib.auth.models import AnonymousUser
 
         if not user or isinstance(user, AnonymousUser) or not user.is_authenticated:
@@ -35,7 +36,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.accept()
 
     async def disconnect(self, close_code):
-        if hasattr(self, 'room_group_name'):
+        if hasattr(self, "room_group_name"):
             await self.channel_layer.group_discard(
                 self.room_group_name,
                 self.channel_name,
@@ -46,33 +47,38 @@ class ChatConsumer(AsyncWebsocketConsumer):
             data = json.loads(text_data)
         except (TypeError, ValueError):
             return
-        text = (data.get('text') or '').strip()
+        text = (data.get("text") or "").strip()
         if not text:
             return
 
-        user = self.scope['user']
+        user = self.scope["user"]
         message, error = await self.create_message(user, self.deal_id, text)
         if error:
-            await self.send(text_data=json.dumps({'error': error}))
+            await self.send(text_data=json.dumps({"error": error}))
 
     async def chat_message(self, event):
         """Forward a Message payload (broadcast by post_save signal) to the client."""
-        await self.send(text_data=json.dumps({
-            'id': event['id'],
-            'deal': event.get('deal'),
-            'text': event['text'],
-            'sender': event.get('sender'),
-            'sender_name': event.get('sender_name', ''),
-            'message_type': event.get('message_type', 'CHAT'),
-            'timestamp': event['timestamp'],
-        }))
+        await self.send(
+            text_data=json.dumps(
+                {
+                    "id": event["id"],
+                    "deal": event.get("deal"),
+                    "text": event["text"],
+                    "sender": event.get("sender"),
+                    "sender_name": event.get("sender_name", ""),
+                    "message_type": event.get("message_type", "CHAT"),
+                    "timestamp": event["timestamp"],
+                }
+            )
+        )
 
     @database_sync_to_async
     def check_deal_access(self, user, deal_id):
         from crm.models import Deal
         from crm.services import user_can_access_deal_chat
+
         try:
-            deal = Deal.objects.select_related('company').get(pk=deal_id)
+            deal = Deal.objects.select_related("company").get(pk=deal_id)
         except Deal.DoesNotExist:
             return False
         return user_can_access_deal_chat(user, deal)
@@ -81,8 +87,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
     def create_message(self, user, deal_id, text):
         from crm.models import Deal
         from crm.services import send_deal_message
+
         try:
             deal = Deal.objects.get(pk=deal_id)
         except Deal.DoesNotExist:
-            return None, 'DEAL_NOT_FOUND'
+            return None, "DEAL_NOT_FOUND"
         return send_deal_message(user, deal, text)

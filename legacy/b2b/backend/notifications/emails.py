@@ -25,6 +25,7 @@ Why channels (transactional / marketing / system):
     The channel is chosen in code (service layer), never in admin UI:
     transport is infra configuration, not business data.
 """
+
 from __future__ import annotations
 
 import logging
@@ -48,20 +49,17 @@ def _channel_config(channel: str) -> dict:
     try:
         return settings.EMAIL_CHANNELS[channel]
     except KeyError as exc:
-        raise ValueError(
-            f"Unknown email channel '{channel}'. "
-            f"Available: {list(settings.EMAIL_CHANNELS)}"
-        ) from exc
+        raise ValueError(f"Unknown email channel '{channel}'. " f"Available: {list(settings.EMAIL_CHANNELS)}") from exc
 
 
 def _render_bodies(template_name: str, context: dict) -> tuple[str, str, str]:
     """Render subject, text body, HTML body. Raises TemplateDoesNotExist early."""
-    subject = render_to_string(f'emails/{template_name}_subject.txt', context).strip()
-    text_body = render_to_string(f'emails/{template_name}.txt', context)
+    subject = render_to_string(f"emails/{template_name}_subject.txt", context).strip()
+    text_body = render_to_string(f"emails/{template_name}.txt", context)
     try:
-        html_body = render_to_string(f'emails/{template_name}.html', context)
+        html_body = render_to_string(f"emails/{template_name}.html", context)
     except TemplateDoesNotExist:
-        html_body = ''
+        html_body = ""
     return subject, text_body, html_body
 
 
@@ -70,7 +68,7 @@ def send_templated_email(
     context: dict,
     to: Iterable[str],
     *,
-    channel: str = 'transactional',
+    channel: str = "transactional",
     user=None,
     cc: Optional[Iterable[str]] = None,
     bcc: Optional[Iterable[str]] = None,
@@ -90,29 +88,29 @@ def send_templated_email(
     subject, text_body, html_body = _render_bodies(template_name, context)
 
     connection = get_connection(
-        backend=cfg['backend'],
-        host=cfg['host'],
-        port=cfg['port'],
-        username=cfg['username'],
-        password=cfg['password'],
-        use_tls=cfg['use_tls'],
+        backend=cfg["backend"],
+        host=cfg["host"],
+        port=cfg["port"],
+        username=cfg["username"],
+        password=cfg["password"],
+        use_tls=cfg["use_tls"],
         fail_silently=False,
     )
 
     message = EmailMultiAlternatives(
         subject=subject,
         body=text_body,
-        from_email=cfg['from_email'],
+        from_email=cfg["from_email"],
         to=recipients,
         cc=list(cc) if cc else None,
         bcc=list(bcc) if bcc else None,
         connection=connection,
     )
     if html_body:
-        message.attach_alternative(html_body, 'text/html')
+        message.attach_alternative(html_body, "text/html")
 
     status = EmailLog.STATUS_SENT
-    error_text = ''
+    error_text = ""
     try:
         message.send(fail_silently=False)
     except Exception as exc:
@@ -120,25 +118,44 @@ def send_templated_email(
         error_text = f"{exc.__class__.__name__}: {exc}"
         logger.exception(
             "Email delivery failed: template=%s channel=%s to=%s",
-            template_name, channel, recipients,
+            template_name,
+            channel,
+            recipients,
         )
         if not fail_silently:
             # Persist the failure first so Ops can see it in Unfold,
             # THEN propagate so the caller can compensate (e.g. roll back user).
             _record_log(
-                template_name, channel, subject, cfg['from_email'],
-                recipients, user, text_body, html_body, status, error_text,
+                template_name,
+                channel,
+                subject,
+                cfg["from_email"],
+                recipients,
+                user,
+                text_body,
+                html_body,
+                status,
+                error_text,
             )
             raise EmailDeliveryError(error_text) from exc
 
     return _record_log(
-        template_name, channel, subject, cfg['from_email'],
-        recipients, user, text_body, html_body, status, error_text,
+        template_name,
+        channel,
+        subject,
+        cfg["from_email"],
+        recipients,
+        user,
+        text_body,
+        html_body,
+        status,
+        error_text,
     )
 
 
-def _record_log(template, channel, subject, from_email, recipients,
-                user, text_body, html_body, status, error_text) -> EmailLog:
+def _record_log(
+    template, channel, subject, from_email, recipients, user, text_body, html_body, status, error_text
+) -> EmailLog:
     try:
         return EmailLog.objects.create(
             template=template,

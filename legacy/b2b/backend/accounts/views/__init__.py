@@ -5,36 +5,36 @@ Re-exports all ViewSets and Views for backwards compatibility so that
 ``from accounts.views import CompanyViewSet`` continues to work unchanged.
 """
 
-from accounts.views.company import CompanyViewSet  # noqa: F401
-from accounts.views.users import UserViewSet  # noqa: F401
+from accounts.views.applications import CompanyRoleApplicationViewSet, SupplierSubscriptionViewSet  # noqa: F401
 from accounts.views.auth import (  # noqa: F401
-    RegisterView, SetupPasswordView, SubmitProfileView,
-    ForgotPasswordView, ResetPasswordView, MeView,
+    ForgotPasswordView,
+    MeView,
+    RegisterView,
+    ResetPasswordView,
+    SetupPasswordView,
+    SubmitProfileView,
 )
-from accounts.views.applications import (  # noqa: F401
-    SupplierSubscriptionViewSet, CompanyRoleApplicationViewSet,
-)
-from accounts.views.lookups import (  # noqa: F401
-    CompanyTypeViewSet, SystemRoleViewSet, WorkspaceRoleViewSet,
-)
+from accounts.views.company import CompanyViewSet  # noqa: F401
+from accounts.views.lookups import CompanyTypeViewSet, SystemRoleViewSet, WorkspaceRoleViewSet  # noqa: F401
+from accounts.views.users import UserViewSet  # noqa: F401
 
 __all__ = [
     # company
-    'CompanyViewSet',
+    "CompanyViewSet",
     # users
-    'UserViewSet',
+    "UserViewSet",
     # auth
-    'RegisterView',
-    'SetupPasswordView',
-    'SubmitProfileView',
-    'ForgotPasswordView',
-    'ResetPasswordView',
-    'MeView',
+    "RegisterView",
+    "SetupPasswordView",
+    "SubmitProfileView",
+    "ForgotPasswordView",
+    "ResetPasswordView",
+    "MeView",
     # applications & subscriptions
-    'SupplierSubscriptionViewSet',
-    'CompanyRoleApplicationViewSet',
+    "SupplierSubscriptionViewSet",
+    "CompanyRoleApplicationViewSet",
     # lookups
-    'CompanyTypeViewSet',
-    'SystemRoleViewSet',
-    'WorkspaceRoleViewSet',
+    "CompanyTypeViewSet",
+    "SystemRoleViewSet",
+    "WorkspaceRoleViewSet",
 ]

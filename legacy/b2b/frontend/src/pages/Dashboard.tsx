@@ -306,19 +306,19 @@ function BuyerDashboard({ onProductClick: _onProductClick, period: _period, stat
   const { t } = useTranslation();
   const { company } = useUserStore();
 
-  // State 1: KYC not verified — show verification status
-  if (company.kycStatus !== 'verified') return <KYCPendingBanner onNavigate={onNavigate} />;
-
-  // State 2: KYC verified but no activity — show welcome guide
-  const isEmpty = !stats || ((stats.active_requests ?? 0) === 0 && (stats.deals_completed ?? 0) === 0 && (stats.quotes_received ?? 0) === 0);
-  if (isEmpty) return <BuyerWelcome onNavigate={onNavigate} />;
-
   const buyerRequestsStatus = useMemo(() => stats ? [
     { name: t('dashboardPage.buyer.statusActive'), value: stats.active_requests ?? 0 },
     { name: t('dashboardPage.buyer.statusInProgress'), value: stats.deals_in_progress ?? 0 },
     { name: t('dashboardPage.buyer.statusQuoteReceived'), value: stats.quotes_received ?? 0 },
     { name: t('dashboardPage.buyer.statusCompleted'), value: stats.deals_completed ?? 0 },
   ] : [], [stats, t]);
+
+  // State 1: KYC not verified — show verification status
+  if (company.kycStatus !== 'verified') return <KYCPendingBanner onNavigate={onNavigate} />;
+
+  // State 2: KYC verified but no activity — show welcome guide
+  const isEmpty = !stats || ((stats.active_requests ?? 0) === 0 && (stats.deals_completed ?? 0) === 0 && (stats.quotes_received ?? 0) === 0);
+  if (isEmpty) return <BuyerWelcome onNavigate={onNavigate} />;
 
   // Trend badge only when there is a previous-period baseline worth comparing.
   // A 1400% delta on a 4→60 jump is technically correct but is visual noise
@@ -396,15 +396,16 @@ function SellerDashboard({ onProductClick, period: _period, stats, onNavigate }:
   const formatCurrency = useCurrencyStore((s) => s.format);
   const { company } = useUserStore();
 
-  if (company.kycStatus !== 'verified') return <KYCPendingBanner onNavigate={onNavigate} />;
-
-  const dealVolumeData = stats?.deals_by_month ?? [];
-  const activityByDay = stats?.activity_by_day ?? [];
   const counterpartyBreakdown = useMemo(() => stats ? [
     { name: t('dashboardPage.seller.manufacturers'), value: stats.counterparties.manufacturers, color: 'var(--color-chart-1)', dotClass: 'bg-[var(--color-chart-1)]' },
     { name: t('dashboardPage.seller.buyers'), value: stats.counterparties.buyers, color: 'var(--color-chart-2)', dotClass: 'bg-[var(--color-chart-2)]' },
     { name: t('dashboardPage.seller.intermediaries'), value: stats.counterparties.intermediaries, color: 'var(--color-chart-4)', dotClass: 'bg-[var(--color-chart-4)]' },
   ] : [], [stats, t]);
+
+  if (company.kycStatus !== 'verified') return <KYCPendingBanner onNavigate={onNavigate} />;
+
+  const dealVolumeData = stats?.deals_by_month ?? [];
+  const activityByDay = stats?.activity_by_day ?? [];
   const completionPct = stats?.request_completion ?? 0;
   const completionGoal = stats?.request_completion_goal ?? 80;
 

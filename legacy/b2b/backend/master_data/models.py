@@ -7,8 +7,11 @@ class AbstractLookup(models.Model):
     DRY-база для всех справочных таблиц.
     Администратор добавляет записи через админку без правки кода.
     """
+
     code = models.CharField(
-        max_length=50, unique=True, db_index=True,
+        max_length=50,
+        unique=True,
+        db_index=True,
         verbose_name=_("Код"),
         help_text=_("Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')"),
     )
@@ -30,7 +33,7 @@ class AbstractLookup(models.Model):
 
     class Meta:
         abstract = True
-        ordering = ['sort_order', 'name']
+        ordering = ["sort_order", "name"]
 
     def __str__(self):
         return f"{self.name} ({self.code})"
@@ -38,13 +41,17 @@ class AbstractLookup(models.Model):
 
 class Country(AbstractLookup):
     """Справочник стран (ISO 3166)."""
+
     alpha2 = models.CharField(
-        max_length=2, blank=True,
+        max_length=2,
+        blank=True,
         verbose_name=_("ISO Alpha-2"),
         help_text=_("Двухбуквенный код страны ISO 3166-1 (UZ, RU, CN)"),
     )
     vat_rate = models.DecimalField(
-        max_digits=5, decimal_places=2, default=12.00,
+        max_digits=5,
+        decimal_places=2,
+        default=12.00,
         verbose_name=_("Ставка НДС (%)"),
         help_text=_("Ставка НДС по умолчанию для данной страны"),
     )
@@ -56,8 +63,10 @@ class Country(AbstractLookup):
 
 class Currency(AbstractLookup):
     """Справочник валют (ISO 4217)."""
+
     symbol = models.CharField(
-        max_length=5, blank=True,
+        max_length=5,
+        blank=True,
         verbose_name=_("Символ"),
         help_text=_("Символ валюты (₽, $, €, сўм)"),
     )
@@ -77,6 +86,7 @@ class UnitOfMeasure(AbstractLookup):
 
 class DeliveryBasis(AbstractLookup):
     """Базисы поставок Incoterms (FCA, DAP, CIP, EXW)."""
+
     description = models.TextField(
         blank=True,
         verbose_name=_("Описание"),

@@ -98,7 +98,7 @@ export const DealSplitView: React.FC = () => {
         try {
             await crmApi.changeDealStage(dealId, stageCode);
             await loadDeals();
-        } catch (err) {
+        } catch {
             toast.error(t('errors.operationFailed'));
         }
     };
