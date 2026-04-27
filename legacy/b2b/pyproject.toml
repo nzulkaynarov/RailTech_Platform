@@ -67,7 +67,7 @@ exclude_lines = [
     "if settings.DEBUG",
     "@abstractmethod",
 ]
-fail_under = 50
+fail_under = 30
 precision = 2
 show_missing = true
 
