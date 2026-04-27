@@ -146,12 +146,13 @@ def process_excel_import(self, deal_id: int, file_content_b64: str, user_id: int
 
         # Single final recalculation of the entire quote
         quote.recalculate_totals()
+        logger.info("Excel import done: deal=%s user=%s rows=%s", deal_id, user_id, len(items_to_create))
         return {"status": "success", "items_processed": len(items_to_create)}
 
     except Deal.DoesNotExist:
         return {"status": "error", "message": "Deal not found."}
     except (ValueError, KeyError, TypeError, OSError):
-        logger.exception("Excel import failed for deal %s", deal_id)
+        logger.exception("Excel import failed: deal=%s user=%s", deal_id, user_id)
         return {"status": "error", "message": "Import failed. Please check the file format and try again."}
 
 
@@ -199,7 +200,7 @@ def process_catalog_import(self, file_content_b64: str):
         # Process in chunks so a 50k-row import doesn't hold one giant
         # transaction open (which would bloat WAL and risk lock contention).
         chunk = []
-        for idx, row in df.iterrows():
+        for _, row in df.iterrows():
             raw_name = str(row.get(col_map["name"], "")).strip()
             if not raw_name or raw_name == "nan":
                 continue

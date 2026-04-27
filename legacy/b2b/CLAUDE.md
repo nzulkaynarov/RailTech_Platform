@@ -179,7 +179,7 @@ make clean               # remove all containers, volumes, cache (DESTRUCTIVE)
 - **Sidebar:** ALL shell layouts must use shadcn `<Sidebar>` + `<SidebarProvider>` + `<SidebarInset>` — NEVER custom `<aside>` with manual collapse state
 - **Zod validation messages:** For i18n, use factory pattern: `const createSchema = (t: TFn) => z.object(...)` — call inside component where `t()` is available
 - **Query optimization:** Use `aggregate(total=Count('id'), active=Count('id', filter=Q(...)))` for dashboard stats — NEVER fire individual `.count()` queries in loops
-- **Celery tasks:** ALL tasks must have `time_limit=600, soft_time_limit=540, max_retries=3, autoretry_for=(Exception,), retry_backoff=True`
+- **Celery tasks:** ALL tasks must have `time_limit=600, soft_time_limit=540, max_retries=3, autoretry_for=(Exception,), retry_backoff=True`. Exception: bulk-import tasks in `sourcing/tasks.py` (`process_excel_import`, `process_catalog_import`) use `time_limit=1800, soft_time_limit=1700` because enterprise catalogs of up to 50k rows do not fit in 10 minutes — retry/backoff settings still apply
 - **Exception handling:** Use specific exceptions (`ValidationError`, `OSError`, `ValueError`) — NEVER bare `except Exception`
 - **Variable naming:** Descriptive names always — NEVER single-letter variables (`u`, `m`, `d`, `f`) in business logic
 - **Function length:** Max 50 lines for production code (Clean Code). Extract into helper methods with clear names
