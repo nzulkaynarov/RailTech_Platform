@@ -136,7 +136,7 @@ PDF КП рендерится через `WeasyPrint` по шаблону `crm/t
 - **State:** Zustand 5 (9 сторов: `auth`, `user`, `cart`, `currency`, `domain`, `flow`, `loading`, `task`, `theme`). `persist` middleware на `auth` и `theme`.
 - **Data:** `@tanstack/react-query` 5.90+ + axios 1.13.
 - **Formы:** react-hook-form 7.71 + zod 4.3 + `@hookform/resolvers`.
-- **i18n:** i18next 25.8 + react-i18next 16.5 (ru, en — `scripts/check-i18n-sync.py` проверяет паритет).
+- **i18n:** i18next 25.8 + react-i18next 16.5 (ru, en — `scripts/check_i18n_symmetry.py` проверяет паритет).
 - **Utilities:** decimal.js (финансовая точность), recharts (графики), sonner (toasts), date-fns, next-themes.
 
 ### Инфраструктура

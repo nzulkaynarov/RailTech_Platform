@@ -61,7 +61,15 @@ def _flush_catalog_chunk(Product, chunk):
                 Product.objects.create(**entry["data"])
 
 
-@shared_task(bind=True, time_limit=1800, soft_time_limit=1700)
+@shared_task(
+    bind=True,
+    # Higher than the 600s default — enterprise imports can be 50k rows.
+    time_limit=1800,
+    soft_time_limit=1700,
+    max_retries=3,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+)
 def process_excel_import(self, deal_id: int, file_content_b64: str, user_id: int = None):
     """
     Processes uploaded Excel file and creates QuoteItems for the active Quote.
@@ -147,7 +155,14 @@ def process_excel_import(self, deal_id: int, file_content_b64: str, user_id: int
         return {"status": "error", "message": "Import failed. Please check the file format and try again."}
 
 
-@shared_task(bind=True, time_limit=1800, soft_time_limit=1700)
+@shared_task(
+    bind=True,
+    time_limit=1800,
+    soft_time_limit=1700,
+    max_retries=3,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+)
 def process_catalog_import(self, file_content_b64: str):
     """
     Processes uploaded Excel file to populate the global Product catalog (PIM).

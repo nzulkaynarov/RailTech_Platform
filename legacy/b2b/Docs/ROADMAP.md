@@ -59,7 +59,7 @@
 - [x] 130+ i18n-ключей добавлены, паритет ru/en восстановлен.
 - [x] Custom ESLint `railtechPlugin`: `no-hardcoded-colors`, `no-arbitrary-text-size`.
 - [x] Husky 9 + lint-staged 15 pre-commit hooks.
-- [x] `scripts/check-i18n-sync.py` + CI step.
+- [x] `scripts/check_i18n_symmetry.py` + CI step.
 - [x] `AppShell` → `<Sidebar>` примитивы (убран custom `<aside>`).
 
 ---

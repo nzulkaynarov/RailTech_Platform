@@ -50,7 +50,7 @@ Audit date: April 2026. Based on the external 6-section audit + systematic CLAUD
 |---|------|--------|-------|
 | 6.1 | Custom ESLint rules enforcing CLAUDE.md | DONE | `railtechPlugin` in `eslint.config.js` — `no-hardcoded-colors` (catches `text-red-500`, `bg-amber-*`, `text-white`, `text-black`) + `no-arbitrary-text-size` (catches `text-[9px]`, `text-[11px]`) |
 | 6.2 | Husky + lint-staged pre-commit hooks | DONE | Root `package.json` with husky v9 + lint-staged v15; `.husky/pre-commit` runs `npx lint-staged` |
-| 6.3 | i18n sync check script | DONE | `scripts/check-i18n-sync.py` — validates ru.json ↔ en.json key parity (currently 1679 keys, perfect sync) |
+| 6.3 | i18n sync check script | DONE | `scripts/check_i18n_symmetry.py` — validates ru.json ↔ en.json key parity (currently 1679 keys, perfect sync) |
 | 6.4 | i18n check in CI pipeline | DONE | Added to `.github/workflows/ci.yml` in `frontend-lint` job |
 
 ---
@@ -74,7 +74,7 @@ docker compose exec backend python manage.py migrate
 **New files:**
 - `Docs/architecture-diagrams.md` — Mermaid diagrams
 - `Docs/websocket-messages.md` — WebSocket dictionary
-- `scripts/check-i18n-sync.py` — i18n validation script
+- `scripts/check_i18n_symmetry.py` — i18n validation script
 - `package.json` (root) — Husky + lint-staged config
 - `.husky/pre-commit` — Git pre-commit hook
 

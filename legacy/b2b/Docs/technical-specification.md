@@ -269,7 +269,7 @@ GitHub Actions (`.github/workflows/ci.yml`), 6 параллельных jobs:
 
 1. **backend-lint** — flake8, black --check, isort --check-only.
 2. **backend-test** — pytest с coverage (threshold 50%).
-3. **frontend-lint** — eslint (railtechPlugin: `no-hardcoded-colors`, `no-arbitrary-text-size`) + `scripts/check-i18n-sync.py`.
+3. **frontend-lint** — eslint (railtechPlugin: `no-hardcoded-colors`, `no-arbitrary-text-size`); `scripts/check_i18n_symmetry.py` запускается отдельной job `i18n-symmetry`.
 4. **frontend-build** — `tsc -b && vite build`.
 5. **docker-build** — сборка backend и frontend images.
 6. **security** — `pip audit`, `npm audit`.

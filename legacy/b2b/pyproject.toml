@@ -36,8 +36,8 @@ ensure_newline_before_comments = true
 DJANGO_SETTINGS_MODULE = "core.settings"
 pythonpath = "backend"
 testpaths = ["backend"]
-python_files = ["test_*.py", "*_test.py"]
-addopts = "--strict-markers --disable-warnings"
+python_files = ["test_*.py", "*_test.py", "*_tests.py", "tests.py"]
+addopts = "--strict-markers --disable-warnings --nomigrations --reuse-db"
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",
