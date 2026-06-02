@@ -190,8 +190,21 @@ class TestSubmitProfile:
     """Tests for profile submission endpoint."""
 
     @pytest.fixture
-    def client(self):
-        return APIClient()
+    def client(self, db):
+        # submit-profile requires an authenticated user (step 3 of onboarding).
+        from django.contrib.auth import get_user_model
+
+        user = get_user_model().objects.create_user(
+            email="profileuser@example.com",
+            username="profileuser",
+            password="testpass123",
+            first_name="Profile",
+            last_name="User",
+            is_active=True,
+        )
+        api = APIClient()
+        api.force_authenticate(user=user)
+        return api
 
     def test_submit_profile_valid_data(self, client):
         """Test submitting profile with valid data."""

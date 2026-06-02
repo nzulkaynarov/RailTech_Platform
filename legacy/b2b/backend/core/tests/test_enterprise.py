@@ -20,12 +20,13 @@ from crm.models import Deal, Quote, QuoteItem
 from sourcing.tasks import route_domain
 
 
-def make_user(username, is_staff=False, company=None):
+def make_user(username, is_staff=False, company=None, is_superuser=False):
     user = CustomUser.objects.create_user(
         username=username,
         password="testpass123",
         email=f"{username}@test.com",
         is_staff=is_staff,
+        is_superuser=is_superuser,
     )
     if company:
         from accounts.models import CompanyMember, WorkspaceRole
@@ -91,7 +92,10 @@ class RBACSecurityTest(TestCase):
         Company.objects.create(name="Company B", inn="987654321")
         self.client_a = make_user("client_a", company=company_a)
         self.client_b = make_user("client_b")
-        self.manager = make_user("manager1", is_staff=True)
+        # Only a Platform Admin sees every company's deals (DealViewSet.get_queryset
+        # checks is_platform_admin, which is_superuser satisfies). A plain is_staff
+        # user is not a platform admin under the ADR-0002 role model.
+        self.manager = make_user("manager1", is_superuser=True)
 
         self.deal_a = Deal.objects.create(client=self.client_a, company=company_a)
         self.api_client = APIClient()
@@ -125,8 +129,12 @@ class SmartMatchDomainRouterTest(TestCase):
         from sourcing.models import DomainKeyword
 
         cache.clear()
-        railway = DomainType.objects.create(name="Railway Machinery", code="RAILWAY_MACHINERY", sku_prefix="RM")
-        services = DomainType.objects.create(name="Services", code="SERVICES", sku_prefix="SV")
+        railway, _ = DomainType.objects.get_or_create(
+            code="RAILWAY_MACHINERY", defaults={"name": "Railway Machinery", "sku_prefix": "RM"}
+        )
+        services, _ = DomainType.objects.get_or_create(
+            code="SERVICES", defaults={"name": "Services", "sku_prefix": "SV"}
+        )
         DomainKeyword.objects.create(keyword="колесная пара", domain_type=railway)
         DomainKeyword.objects.create(keyword="тэм18", domain_type=railway)
         DomainKeyword.objects.create(keyword="тяговый двигатель", domain_type=railway)

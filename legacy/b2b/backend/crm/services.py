@@ -1276,7 +1276,7 @@ def open_rfq(
 
 @transaction.atomic
 def submit_supplier_bid(
-    bid_or_deal_id,
+    deal_id,
     supplier_id: Optional[int] = None,
     submitted_by: Optional[CustomUser] = None,
     items: Optional[list[dict]] = None,
@@ -1286,20 +1286,18 @@ def submit_supplier_bid(
 ) -> Tuple[Optional[object], Optional[str]]:
     """Create or update a SupplierBid for the given deal+supplier.
 
-    Accepts either a BidSubmission dataclass or positional/keyword args for
-    backwards compatibility. New callers should prefer BidSubmission.
+    Callers pass deal_id + supplier_id (+ items, ...). A BidSubmission dataclass
+    may also be passed as the first positional argument; its fields are unpacked.
     """
-    # Unpack BidSubmission if provided
-    if isinstance(bid_or_deal_id, BidSubmission):
-        bs = bid_or_deal_id
+    # Unpack a BidSubmission passed as the first positional argument.
+    if isinstance(deal_id, BidSubmission):
+        bs = deal_id
         deal_id = bs.deal_id
         supplier_id = bs.supplier_id
         items = bs.items
         notes = bs.notes
         lead_time_days = bs.lead_time_days
         currency_id = bs.currency_id
-    else:
-        deal_id = bid_or_deal_id
     if items is None:
         items = []
 
