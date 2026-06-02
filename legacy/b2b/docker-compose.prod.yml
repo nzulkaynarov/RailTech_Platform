@@ -50,25 +50,19 @@ services:
         max-file: "3"
 
   # ---------------------------------------------------------------------------
-  # MinIO (object storage) — production
+  # MinIO disabled on this VPS — CPU lacks x86-64-v2 (popcnt/sse4_*/ssse3),
+  # which modern minio/minio:latest requires (Fatal glibc error on boot).
+  # Storage falls back to Django FileSystemStorage when MINIO_ENDPOINT is unset
+  # (see backend/core/storage.py::_minio_is_configured). Files persist on the
+  # `backend_media_prod` volume and are served by backend at /media via Caddy.
+  # Gated behind a profile that the prod deploy never activates so `compose up`
+  # skips it without us having to remove the service from the base file.
   # ---------------------------------------------------------------------------
   minio:
-    restart: always
-    volumes:
-      - minio_data_prod:/minio_data
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 320M
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
+    profiles: ["with-minio"]
 
   minio-init:
-    restart: "no"
+    profiles: ["with-minio"]
 
   # ---------------------------------------------------------------------------
   # Django backend — gunicorn + uvicorn workers (ASGI)
@@ -103,12 +97,12 @@ services:
     volumes:
       - backend_static_prod:/app/staticfiles
       - backend_media_prod:/app/media
-    depends_on:
+    # `!reset` drops the inherited `minio: service_healthy` from the base file
+    # (minio is gated off in prod, see comment above).
+    depends_on: !reset
       redis:
         condition: service_healthy
       redis-celery:
-        condition: service_healthy
-      minio:
         condition: service_healthy
     networks:
       - railtech
@@ -197,8 +191,6 @@ services:
     restart: "no"
 
 volumes:
-  minio_data_prod:
-    driver: local
   backend_static_prod:
     driver: local
   backend_media_prod:

@@ -7,8 +7,11 @@ name: Deploy b2b.railtech.uz
 #
 # Secrets come from GitHub (Environment: production) and are rendered into
 # /opt/railtech-b2b/.env on the runner at deploy time. Required secrets:
-#   DATABASE_URL, DJANGO_SECRET_KEY, MINIO_SECRET_KEY, SUPERADMIN_PASSWORD
+#   DATABASE_URL, DJANGO_SECRET_KEY, SUPERADMIN_PASSWORD
 # Optional (email): EMAIL_HOST, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD
+#
+# Note: MinIO is disabled on this VPS (CPU lacks x86-64-v2). The stack falls
+# back to Django FileSystemStorage when MINIO_ENDPOINT is unset.
 
 on:
   push:
@@ -52,7 +55,6 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
-          MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
           SUPERADMIN_PASSWORD: ${{ secrets.SUPERADMIN_PASSWORD }}
           EMAIL_HOST: ${{ secrets.EMAIL_HOST }}
           EMAIL_HOST_USER: ${{ secrets.EMAIL_HOST_USER }}
@@ -71,13 +73,6 @@ jobs:
           REDIS_URL=redis://redis:6379/0
           CELERY_BROKER_URL=redis://redis-celery:6379/0
           CELERY_RESULT_BACKEND=redis://redis-celery:6379/0
-          MINIO_ENDPOINT=http://minio:9000
-          MINIO_ACCESS_KEY=railtech-b2b
-          MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
-          MINIO_PUBLIC_BUCKET=railtech-public
-          MINIO_PRIVATE_BUCKET=railtech-private
-          MINIO_TEMP_BUCKET=railtech-temp
-          MINIO_EXTERNAL_ENDPOINT=https://b2b.railtech.uz
           VITE_API_URL=/api
           VITE_WS_URL=/ws
           FRONTEND_URL=https://b2b.railtech.uz
