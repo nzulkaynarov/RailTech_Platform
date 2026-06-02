@@ -67,7 +67,7 @@ jobs:
           DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
           DJANGO_DEBUG=False
           PRODUCTION=true
-          ALLOWED_HOSTS=b2b.railtech.uz
+          ALLOWED_HOSTS=b2b.railtech.uz,localhost,127.0.0.1
           DATABASE_URL=${DATABASE_URL}
           DB_SSLMODE=require
           REDIS_URL=redis://redis:6379/0
