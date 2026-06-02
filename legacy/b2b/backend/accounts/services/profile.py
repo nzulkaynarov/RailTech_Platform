@@ -39,9 +39,21 @@ def submit_company_profile(
 
     company_type = CompanyType.objects.filter(code=company_type_code).first()
 
-    company, created = Company.objects.get_or_create(
-        inn=inn, defaults={"name": company_name, "verification_status": submitted_status}
-    )
+    # Reject onboarding into someone else's tenant by INN collision.
+    # `get_or_create(inn=...)` used to silently attach the new user as OWNER of
+    # whoever already claimed that INN; that's a cross-tenant data-leak vector
+    # (placeholder INNs like 123456789 caused four unrelated users to land in
+    # one company on prod, see project-known-bug-silent-company-merge).
+    existing = Company.objects.filter(inn=inn).first()
+    if existing and not CompanyMember.objects.filter(user=user, company=existing).exists():
+        return None, "COMPANY_INN_TAKEN"
+
+    if existing:
+        company = existing  # idempotent: same user re-submitting their own INN
+    else:
+        company = Company.objects.create(
+            inn=inn, name=company_name, verification_status=submitted_status
+        )
 
     # Assign company type
     if company_type and not company.types.filter(pk=company_type.pk).exists():

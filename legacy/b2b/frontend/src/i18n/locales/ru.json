@@ -3869,6 +3869,7 @@
     "SETUP_PASSWORD_INVALID_USER": "Недействительный пользователь",
     "SETUP_PASSWORD_INVALID_TOKEN": "Недействительный или истёкший токен",
     "PROFILE_FIELDS_REQUIRED": "Заполните ИНН, название компании и роль",
+    "COMPANY_INN_TAKEN": "Компания с таким ИНН уже зарегистрирована. Уточните ИНН или попросите владельца компании пригласить вас.",
     "SALES_MANAGER_ROLE_NOT_FOUND": "Роль SALES_MANAGER не найдена",
     "VERIFICATION_STATUS_NOT_FOUND": "Статус верификации не найден",
     "KYC_DOCUMENTS_MISSING": "У компании нет загруженных KYC-документов",

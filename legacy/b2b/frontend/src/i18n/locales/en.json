@@ -3865,6 +3865,7 @@
     "SETUP_PASSWORD_INVALID_USER": "Invalid user",
     "SETUP_PASSWORD_INVALID_TOKEN": "Invalid or expired token",
     "PROFILE_FIELDS_REQUIRED": "Fill in INN, company name and role",
+    "COMPANY_INN_TAKEN": "A company with this INN is already registered. Double-check the INN or ask the company owner to invite you.",
     "SALES_MANAGER_ROLE_NOT_FOUND": "Sales manager role not found",
     "VERIFICATION_STATUS_NOT_FOUND": "Verification status not found",
     "KYC_DOCUMENTS_MISSING": "Company has no KYC documents uploaded",

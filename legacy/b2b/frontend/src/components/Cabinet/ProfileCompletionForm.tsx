@@ -62,8 +62,11 @@ export const ProfileCompletionForm: React.FC<ProfileCompletionFormProps> = ({ on
             await initAuth();
             onComplete();
         } catch (err: unknown) {
-            const errorMessage =
-                err instanceof Error ? err.message : t('profileForm.saveError');
+            const axiosErr = err as { response?: { data?: { error?: string; detail?: string } } };
+            const code = axiosErr.response?.data?.error;
+            const errorMessage = code
+                ? t(`errors.${code}`, { defaultValue: code })
+                : axiosErr.response?.data?.detail || t('profileForm.saveError');
             setServerError(errorMessage);
         }
     };
