@@ -122,6 +122,12 @@ class Deal(models.Model):
         verbose_name = _("Сделка")
         verbose_name_plural = _("Сделки")
         ordering = ["-created_at"]
+        indexes = [
+            # Tenant-scoped list query: filter by company, order by -created_at.
+            models.Index(fields=["company", "-created_at"], name="deal_company_created_idx"),
+            # Pipeline/board grouping by stage within a company.
+            models.Index(fields=["company", "stage"], name="deal_company_stage_idx"),
+        ]
 
     def __str__(self):
         return self.title or f"Сделка #{self.pk}"

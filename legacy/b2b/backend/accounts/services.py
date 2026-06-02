@@ -25,6 +25,25 @@ from .models import (
 logger = logging.getLogger(__name__)
 
 
+def revoke_user_refresh_tokens(user: CustomUser) -> int:
+    """Blacklist every outstanding refresh token for the user.
+
+    Called after a password reset/change so previously issued refresh tokens
+    cannot be rotated into fresh access tokens by anyone holding a stolen copy.
+    Requires `rest_framework_simplejwt.token_blacklist` (installed).
+    Returns the number of tokens newly blacklisted.
+    """
+    from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
+
+    revoked = 0
+    outstanding = OutstandingToken.objects.filter(user=user).exclude(blacklistedtoken__isnull=False)
+    for token in outstanding:
+        _, created = BlacklistedToken.objects.get_or_create(token=token)
+        if created:
+            revoked += 1
+    return revoked
+
+
 def create_pending_user(email: str, first_name: str, last_name: str) -> Tuple[Optional[CustomUser], Optional[str]]:
     """
     Step 1: Create a user in a pending state and send verification email.
@@ -123,6 +142,7 @@ def reset_password(uidb64: str, token: str, password: str) -> Tuple[Optional[Cus
     if not user.is_active:
         user.is_active = True
     user.save(update_fields=["password", "is_active"])
+    revoke_user_refresh_tokens(user)
     return user, None
 
 
@@ -708,6 +728,7 @@ def change_user_password(
         return None, "CURRENT_PASSWORD_WRONG"
     user.set_password(new_password)
     user.save(update_fields=["password"])
+    revoke_user_refresh_tokens(user)
     return user, None
 
 
