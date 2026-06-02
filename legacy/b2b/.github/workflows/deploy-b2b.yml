@@ -73,7 +73,7 @@ jobs:
           REDIS_URL=redis://redis:6379/0
           CELERY_BROKER_URL=redis://redis-celery:6379/0
           CELERY_RESULT_BACKEND=redis://redis-celery:6379/0
-          VITE_API_URL=/api
+          VITE_API_URL=/api/v1
           VITE_WS_URL=/ws
           FRONTEND_URL=https://b2b.railtech.uz
           SUPERADMIN_EMAIL=admin@railtech.uz
