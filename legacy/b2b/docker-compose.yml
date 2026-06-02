@@ -12,8 +12,10 @@ services:
     image: redis:7-alpine
     container_name: railtech_redis_channels
     command: redis-server --appendonly yes
+    # Loopback-only: never expose Redis publicly. Docker inserts its own iptables
+    # rules ahead of ufw, so a 0.0.0.0 mapping would bypass the firewall.
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis_channels_data:/data
     healthcheck:
@@ -33,7 +35,7 @@ services:
     container_name: railtech_redis_celery
     command: redis-server --appendonly yes
     ports:
-      - "6380:6379"
+      - "127.0.0.1:6380:6379"
     volumes:
       - redis_celery_data:/data
     healthcheck:
@@ -56,8 +58,8 @@ services:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-railtech}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-railtech}
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
     volumes:
       - minio_data:/minio_data
     healthcheck:
@@ -108,7 +110,7 @@ services:
       DJANGO_SETTINGS_MODULE: core.settings
     command: daphne -b 0.0.0.0 -p 8000 core.asgi:application
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - ./backend:/app
       - backend_static:/app/staticfiles
@@ -187,7 +189,7 @@ services:
     container_name: railtech_frontend
     env_file: .env
     ports:
-      - "5173:80"
+      - "127.0.0.1:5173:80"
     volumes:
       - ./frontend:/app
       - /app/node_modules

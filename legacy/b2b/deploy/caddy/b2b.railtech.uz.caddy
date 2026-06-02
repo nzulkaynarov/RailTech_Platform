@@ -1,0 +1,49 @@
+# ═══════════════════════════════════════════════════════════════════════════
+#  b2b.railtech.uz — RailTech B2B SaaS
+#  Append this block to /etc/caddy/Caddyfile (the shared multi-tenant config),
+#  then:  caddy validate --config /etc/caddy/Caddyfile  &&  systemctl reload caddy
+#
+#  Caddy terminates TLS (auto Let's Encrypt) and routes:
+#    /api/*, /ws/*, /admin/*, /static/*, /media/*, /health, API docs -> Django (127.0.0.1:8000)
+#    everything else -> the built React SPA served from /var/www/railtech-b2b
+# ═══════════════════════════════════════════════════════════════════════════
+b2b.railtech.uz {
+    encode gzip zstd
+
+    root * /var/www/railtech-b2b
+
+    # Django backend (Daphne/gunicorn in Docker, loopback only).
+    # WhiteNoise serves /static/ (collectstatic) from the same app.
+    @backend {
+        path /api/* /ws/* /admin/* /static/* /media/* /health
+    }
+    handle @backend {
+        reverse_proxy 127.0.0.1:8000 {
+            # Preserve the original host so Django ALLOWED_HOSTS / CSRF see b2b.railtech.uz
+            header_up Host {host}
+            header_up X-Forwarded-Proto {scheme}
+            header_up X-Forwarded-For {remote_host}
+        }
+    }
+
+    # React SPA — client-side routing falls back to index.html.
+    handle {
+        try_files {path} /index.html
+        file_server
+    }
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    log {
+        output file /var/log/caddy/b2b.railtech.uz.log {
+            roll_size 20mb
+            roll_keep 5
+        }
+    }
+}
