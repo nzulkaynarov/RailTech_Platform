@@ -32,15 +32,27 @@ registered to this repo** (label `railtech-b2b`) living on the VPS. On push to `
 `/var/www/railtech-b2b`, `docker compose up -d --build` (migrations auto-apply on the
 web container), health-checks the backend.
 
-**Secrets never go to GitHub** — they live in `/opt/railtech-b2b/.env` on the server,
-created once during bootstrap and preserved by the workflow (`rsync --exclude .env`).
+**Secrets live in GitHub** (repo → Settings → Secrets and variables → Actions,
+Environment `production`). The workflow renders them into `/opt/railtech-b2b/.env`
+on the runner at deploy time. Add these secrets:
+
+| Secret | Value |
+|---|---|
+| `DATABASE_URL` | Neon prod connection string (`...?sslmode=require&channel_binding=require`) |
+| `DJANGO_SECRET_KEY` | `python3 -c "import secrets;print(secrets.token_urlsafe(64))"` |
+| `MINIO_SECRET_KEY` | `openssl rand -base64 32` |
+| `SUPERADMIN_PASSWORD` | `openssl rand -base64 24` |
+| `EMAIL_HOST`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` | SMTP (optional; email is skipped if unset) |
+
+> Recommended: use a **separate Neon branch/project for production**, not the dev DB.
 
 The GradeSentinel runner is repo-scoped and **cannot** run this repo's jobs, so a
 dedicated runner is registered below. Steps **B-1 … B-7 are one-time bootstrap**;
 after that, every `git push` to `main` deploys automatically.
 
-### B-1 … B-4: server prep, env, first artifacts
-Do sections **1–5** below once (swap, Docker, clone, `.env`, first SPA build).
+### B-1 … B-3: server prep
+Do sections **1–2** below once (swap, Docker). The repo, `.env` and SPA are handled
+by the pipeline (the workflow rsyncs code, renders `.env` from secrets, builds the SPA).
 
 ### B-5: register a self-hosted runner for THIS repo
 On GitHub: repo → Settings → Actions → Runners → **New self-hosted runner** (Linux/x64)
