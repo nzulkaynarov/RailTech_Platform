@@ -98,7 +98,10 @@ jobs:
         working-directory: /opt/railtech-b2b
         run: |
           $COMPOSE --profile frontend-build build frontend
-          IMG=$($COMPOSE --profile frontend-build images -q frontend)
+          # `compose images -q` only lists images for *created* containers, so
+          # for a build-only profile it returns empty. Compose tags built images
+          # as <project>-<service> where project = directory basename.
+          IMG="$(basename "$PWD")-frontend"
           CID=$(docker create "$IMG")
           mkdir -p "$WEB_ROOT"
           find "$WEB_ROOT" -mindepth 1 -delete
