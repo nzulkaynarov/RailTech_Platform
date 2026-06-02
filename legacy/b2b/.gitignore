@@ -68,3 +68,6 @@ docker-compose.override.yml
 # Temp/lock files
 *.tmp
 .~lock.*
+
+# Claude Code harness runtime artifacts
+.claude/scheduled_tasks.lock
