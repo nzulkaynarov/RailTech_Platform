@@ -1,0 +1,78 @@
+name: Deploy b2b.railtech.uz
+
+# Push-to-deploy onto the VPS via a self-hosted runner registered to THIS repo
+# (label: railtech-b2b). The runner executes on 176.101.56.141 alongside Caddy.
+# One-time bootstrap (Docker, runner registration, /opt/railtech-b2b/.env, Caddy
+# block) is documented in deploy/RUNBOOK-b2b-vps.md. Secrets live in the server's
+# .env (never in GitHub) — this workflow only syncs code, builds, and restarts.
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - 'Docs/**'
+      - '**/*.md'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-b2b
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, railtech-b2b]
+    environment: production
+    env:
+      DEPLOY_DIR: /opt/railtech-b2b
+      WEB_ROOT: /var/www/railtech-b2b
+      COMPOSE: docker compose -f docker-compose.yml -f docker-compose.prod.yml
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Sync source into deploy dir (preserve server-side .env)
+        run: |
+          mkdir -p "$DEPLOY_DIR"
+          rsync -a --delete \
+            --exclude '.git' \
+            --exclude '.env' \
+            --exclude 'node_modules' \
+            ./ "$DEPLOY_DIR/"
+
+      - name: Guard — .env must exist on the server
+        working-directory: /opt/railtech-b2b
+        run: |
+          test -f .env || { echo "::error::Missing $DEPLOY_DIR/.env — run the one-time bootstrap (see runbook)"; exit 1; }
+
+      - name: Build SPA and publish static for Caddy
+        working-directory: /opt/railtech-b2b
+        run: |
+          $COMPOSE --profile frontend-build build frontend
+          IMG=$($COMPOSE --profile frontend-build images -q frontend)
+          CID=$(docker create "$IMG")
+          mkdir -p "$WEB_ROOT"
+          find "$WEB_ROOT" -mindepth 1 -delete
+          docker cp "$CID":/usr/share/nginx/html/. "$WEB_ROOT"/
+          docker rm "$CID"
+
+      - name: Deploy backend stack (migrations auto-apply on the web container)
+        working-directory: /opt/railtech-b2b
+        run: |
+          $COMPOSE up -d --build
+          docker image prune -f
+
+      - name: Health check
+        run: |
+          for i in $(seq 1 12); do
+            if curl -fsS http://127.0.0.1:8000/health/ >/dev/null 2>&1; then
+              echo "backend healthy"; exit 0
+            fi
+            echo "waiting for backend... ($i/12)"; sleep 5
+          done
+          echo "::error::backend did not become healthy"
+          $COMPOSE logs --tail=80 backend
+          exit 1

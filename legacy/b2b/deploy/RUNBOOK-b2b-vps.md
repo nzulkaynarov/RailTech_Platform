@@ -24,6 +24,60 @@ an SMTP account for transactional email.
 
 ---
 
+## Deployment model: CI/CD (push-to-deploy)
+
+Deploys run through **`.github/workflows/deploy-b2b.yml`** on a **self-hosted runner
+registered to this repo** (label `railtech-b2b`) living on the VPS. On push to `main`
+(or manual *Run workflow*) it: syncs code → `/opt/railtech-b2b`, builds the SPA →
+`/var/www/railtech-b2b`, `docker compose up -d --build` (migrations auto-apply on the
+web container), health-checks the backend.
+
+**Secrets never go to GitHub** — they live in `/opt/railtech-b2b/.env` on the server,
+created once during bootstrap and preserved by the workflow (`rsync --exclude .env`).
+
+The GradeSentinel runner is repo-scoped and **cannot** run this repo's jobs, so a
+dedicated runner is registered below. Steps **B-1 … B-7 are one-time bootstrap**;
+after that, every `git push` to `main` deploys automatically.
+
+### B-1 … B-4: server prep, env, first artifacts
+Do sections **1–5** below once (swap, Docker, clone, `.env`, first SPA build).
+
+### B-5: register a self-hosted runner for THIS repo
+On GitHub: repo → Settings → Actions → Runners → **New self-hosted runner** (Linux/x64)
+to get a registration token. Then on the VPS, as a dedicated `deploy` user that is in
+the `docker` group and owns the deploy paths:
+```bash
+# as root: ensure a deploy user with docker access + path ownership
+id deploy &>/dev/null || useradd -m -s /bin/bash deploy
+usermod -aG docker deploy
+mkdir -p /opt/railtech-b2b /var/www/railtech-b2b
+chown -R deploy:deploy /opt/railtech-b2b /var/www/railtech-b2b
+# install the runner under the deploy user
+sudo -iu deploy bash -c '
+  mkdir -p ~/actions-runner-railtech && cd ~/actions-runner-railtech
+  curl -o r.tar.gz -L https://github.com/actions/runner/releases/download/v2.319.1/actions-runner-linux-x64-2.319.1.tar.gz
+  tar xzf r.tar.gz
+  ./config.sh --url https://github.com/nzulkaynarov/RailTech_SaaS_B2B \
+    --token <RUNNER_REGISTRATION_TOKEN> --labels railtech-b2b --name vps-b2b --unattended
+'
+# install as a service (run from the runner dir as root)
+cd /home/deploy/actions-runner-railtech && ./svc.sh install deploy && ./svc.sh start
+```
+
+### B-6: add the Caddy block (one-time) — see section 7
+### B-7: trigger the first deploy & create the superadmin
+```bash
+# from GitHub: Actions → "Deploy b2b.railtech.uz" → Run workflow (branch main)
+# after it goes green, once:
+DC="docker compose -f docker-compose.yml -f docker-compose.prod.yml"
+cd /opt/railtech-b2b && $DC exec backend python manage.py init_superadmin
+```
+
+> The sections below double as **the manual fallback** and as the reference for what
+> the pipeline automates. After bootstrap you normally only `git push`.
+
+---
+
 ## 0. Connect & sanity-check (don't break neighbors)
 ```bash
 ssh root@176.101.56.141
@@ -128,10 +182,12 @@ curl -sI https://grades.railtech.uz/ | head -1
 ---
 
 ## Updating / redeploying a new version
+**Normal path: just `git push` to `main`** — the deploy-b2b workflow rebuilds the SPA,
+restarts the backend (migrations auto-apply), and health-checks. Or trigger it manually
+from the Actions tab. Manual fallback (if the runner is down):
 ```bash
-cd /opt/railtech-b2b && git fetch && git checkout <new-tag>
-# rebuild + republish SPA (repeat step 5)
-# rebuild backend (migrations auto-apply on the web container):
+cd /opt/railtech-b2b && git fetch && git checkout <new-tag>   # (manual git needs repo creds)
+# rebuild + republish SPA (repeat step 5), then:
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 docker image prune -f
 ```
