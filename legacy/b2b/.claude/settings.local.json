@@ -48,7 +48,11 @@
       "Bash(git commit *)",
       "Bash(find *)",
       "Bash(find backend *)",
-      "Bash(cat backend/core/asgi.py)"
+      "Bash(cat backend/core/asgi.py)",
+      "Bash(echo \"=== ~/.ssh/config ===\" && cat ~/.ssh/config 2>/dev/null | grep -v -i \"identityfile\\\\|password\" || echo \"\\(нет ~/.ssh/config\\)\"; echo \"\"; echo \"=== known_hosts \\(хосты\\) ===\"; cut -d' ' -f1 ~/.ssh/known_hosts 2>/dev/null | tr ',' '\\\\n' | grep -v '^\\\\[' | sort -u | head -30 || echo \"\\(пусто\\)\"; echo \"\"; echo \"=== ключи ===\"; ls -1 ~/.ssh/*.pub 2>/dev/null || echo \"\\(нет .pub ключей\\)\")",
+      "Read(//Users/nurbekgb/.ssh/**)",
+      "Bash(ssh -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=accept-new root@176.101.56.141 'echo CONNECTED; whoami; hostname')",
+      "Bash(ssh -vv -o BatchMode=yes -o ConnectTimeout=20 -o StrictHostKeyChecking=accept-new root@176.101.56.141 'echo OK')"
     ]
   }
 }

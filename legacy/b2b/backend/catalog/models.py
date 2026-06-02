@@ -1,5 +1,6 @@
 import uuid
 
+from django.contrib.postgres.indexes import GinIndex
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -342,6 +343,13 @@ class Product(models.Model):
         verbose_name = _("Товар (PIM)")
         verbose_name_plural = _("Каталог: Товары (PIM)")
         ordering = ["name"]
+        indexes = [
+            # GIN trigram indexes power Smart Match (sourcing.services.smart_match_product)
+            # which runs TrigramSimilarity() on these fields. Without gin_trgm_ops the
+            # similarity query degrades to a full table scan on large catalogs.
+            GinIndex(name="product_name_trgm_idx", fields=["name"], opclasses=["gin_trgm_ops"]),
+            GinIndex(name="product_gost_trgm_idx", fields=["gost_drawing"], opclasses=["gin_trgm_ops"]),
+        ]
 
     def __str__(self):
         return f"{self.name} [{self.sku}]" if self.sku else self.name

@@ -11,6 +11,11 @@ channels>=4.3
 channels-redis>=4.3
 asgiref>=3.11
 
+# Production ASGI server (gunicorn process manager + uvicorn workers)
+# docker-compose.prod.yml runs: gunicorn --worker-class=uvicorn.workers.UvicornWorker core.asgi:application
+gunicorn>=23.0
+uvicorn[standard]>=0.34
+
 # Celery
 celery>=5.6
 django-celery-beat>=2.9
