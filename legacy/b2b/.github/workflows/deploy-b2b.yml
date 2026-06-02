@@ -102,9 +102,12 @@ jobs:
           # for a build-only profile it returns empty. Compose tags built images
           # as <project>-<service> where project = directory basename.
           IMG="$(basename "$PWD")-frontend"
-          CID=$(docker create "$IMG")
           mkdir -p "$WEB_ROOT"
-          find "$WEB_ROOT" -mindepth 1 -delete
+          # `docker cp` preserves the container's UIDs, leaving prior dist
+          # owned by uids that the deploy user can't unlink. Clean via root
+          # inside a container so the step is re-runnable.
+          docker run --rm -v "$WEB_ROOT":/out alpine find /out -mindepth 1 -delete
+          CID=$(docker create "$IMG")
           docker cp "$CID":/usr/share/nginx/html/. "$WEB_ROOT"/
           docker rm "$CID"
 
