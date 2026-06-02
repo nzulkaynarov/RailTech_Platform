@@ -41,7 +41,8 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('crm', '0009_beat_schedule'),
-        ('django_celery_beat', '0001_initial'),
+        # Needs CrontabSchedule.timezone (added in 0006); see 0009 for rationale.
+        ('django_celery_beat', '0006_auto_20180322_0932'),
     ]
 
     operations = [

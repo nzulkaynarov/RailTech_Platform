@@ -66,7 +66,10 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('crm', '0008_contract_fulfillment_invoice_act_invoiceitem_payment_and_more'),
-        ('django_celery_beat', '0001_initial'),
+        # Must be the migration that adds CrontabSchedule.timezone — the data
+        # migration below passes timezone='UTC'. Depending on 0001_initial pins
+        # the historical model before that field exists → TypeError on fresh migrate.
+        ('django_celery_beat', '0006_auto_20180322_0932'),
     ]
 
     operations = [
