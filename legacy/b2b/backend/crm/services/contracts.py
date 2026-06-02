@@ -1,0 +1,259 @@
+from typing import Optional, Tuple
+
+from django.db import transaction
+
+from accounts.models import CustomUser
+
+from ..models import ActivityLog, Quote
+
+# ──────────────────────────────────────────────────────────────────────────
+# Contracts
+# ──────────────────────────────────────────────────────────────────────────
+
+
+def _next_contract_number() -> str:
+    from django.utils import timezone
+
+    from ..models import Contract
+
+    today = timezone.now()
+    count = Contract.objects.filter(created_at__year=today.year).count() + 1
+    return f"CT-{today.year}-{count:05d}"
+
+
+@transaction.atomic
+def generate_contract_from_quote(
+    quote_id: int,
+    actor: Optional[CustomUser] = None,
+    notes: str = "",
+) -> Tuple[Optional["Contract"], Optional[str]]:  # noqa: F821
+    """Create a Contract tied to an approved Quote, render its PDF."""
+    from accounts.services import is_platform_admin_viewer
+
+    from ..models import Contract
+
+    if actor is not None and is_platform_admin_viewer(actor):
+        return None, "ADMIN_VIEWER_CANNOT_ACT"
+    quote = Quote.objects.select_related("deal__company", "status").get(pk=quote_id)
+
+    if not quote.status or quote.status.code not in {"APPROVED", "SENT"}:
+        return None, "CONTRACT_NEEDS_APPROVAL"
+
+    # Reuse existing draft contract if present
+    contract = (
+        Contract.objects.filter(deal=quote.deal, quote=quote)
+        .exclude(
+            status__in=["CANCELLED"],
+        )
+        .order_by("-created_at")
+        .first()
+    )
+
+    if not contract:
+        contract = Contract(
+            deal=quote.deal,
+            quote=quote,
+            number=_next_contract_number(),
+            status="DRAFT",
+            total_amount=quote.total_incl_vat,
+            currency=quote.items.first().frozen_currency if quote.items.exists() else None,
+            created_by=actor,
+            notes=notes,
+        )
+        contract.save()
+
+    # Render PDF
+    _render_contract_pdf(contract)
+
+    contract.status = "PENDING_CLIENT" if contract.status == "DRAFT" else contract.status
+    contract.save(update_fields=["status", "pdf_file", "updated_at"])
+
+    ActivityLog.objects.create(
+        action="Создан контракт",
+        detail=f"Контракт {contract.number} по сделке #{quote.deal_id}",
+        user=actor,
+        level="INFO",
+    )
+    return contract, None
+
+
+def _render_contract_pdf(contract) -> None:
+    from io import BytesIO
+
+    from django.core.files.base import ContentFile
+    from django.template.loader import render_to_string
+    from weasyprint import HTML
+
+    html_string = render_to_string(
+        "crm/contract_pdf.html",
+        {
+            "contract": contract,
+            "deal": contract.deal,
+            "company": contract.deal.company,
+            "quote": contract.quote,
+            "items": contract.quote.items.select_related("product", "frozen_currency").all(),
+        },
+    )
+    buf = BytesIO()
+    HTML(string=html_string).write_pdf(buf)
+    filename = f"Contract_{contract.number}.pdf"
+    contract.pdf_file.save(filename, ContentFile(buf.getvalue()), save=True)
+
+
+@transaction.atomic
+def sign_contract_by_client(
+    contract_id: int,
+    client_user: CustomUser,
+) -> Tuple[Optional["Contract"], Optional[str]]:  # noqa: F821
+    """Click-to-sign by client. MANUAL MODE — to be replaced by E-IMZO/DocuSign.
+    See memory `tech_debt_payment_esign.md`.
+    """
+    from django.utils import timezone
+
+    from accounts.services import is_member_of, is_platform_admin_viewer
+
+    from ..models import Contract
+
+    contract = Contract.objects.select_for_update().select_related("deal").get(pk=contract_id)
+    if is_platform_admin_viewer(client_user):
+        return None, "ADMIN_VIEWER_CANNOT_ACT"
+    if not (
+        getattr(client_user, "is_superuser", False)
+        or is_member_of(client_user, contract.deal.company_id, capability="buy")
+    ):
+        return None, "MEMBER_REQUIRED_FOR_ACTION"
+    if contract.status not in {"DRAFT", "PENDING_CLIENT"}:
+        return None, "CONTRACT_CLIENT_SIGN_NOT_ALLOWED"
+    contract.client_signer = client_user
+    contract.client_signed_at = timezone.now()
+    contract.status = "PENDING_MANAGER" if not contract.manager_signed_at else "SIGNED"
+    contract.save(update_fields=["client_signer", "client_signed_at", "status", "updated_at"])
+    ActivityLog.objects.create(
+        action="[MANUAL_MODE] Подписан контракт (сторона клиента)",
+        detail=f"Контракт {contract.number} / сделка #{contract.deal_id}",
+        user=client_user,
+        level="INFO",
+    )
+    _notify_contract_signed(contract)
+    return contract, None
+
+
+@transaction.atomic
+def sign_contract_by_manager(
+    contract_id: int,
+    manager_user: CustomUser,
+) -> Tuple[Optional["Contract"], Optional[str]]:  # noqa: F821
+    """Click-to-sign by seller-side company manager. MANUAL MODE — to be replaced by E-IMZO.
+    See memory `tech_debt_payment_esign.md`.
+
+    Seller side is represented by the accepted SupplierBid's supplier company
+    (if any) or — when a deal has no bid — by any member with can_sell on the
+    deal.company itself (self-service intra-company deals).
+    """
+    from django.utils import timezone
+
+    from accounts.services import is_member_of, is_platform_admin_viewer
+
+    from ..models import Contract, SupplierBid
+
+    contract = Contract.objects.select_for_update().select_related("deal").get(pk=contract_id)
+    if is_platform_admin_viewer(manager_user):
+        return None, "ADMIN_VIEWER_CANNOT_ACT"
+    seller_company_ids = list(
+        SupplierBid.objects.filter(deal_id=contract.deal_id, status="ACCEPTED").values_list("supplier_id", flat=True),
+    )
+    seller_company_ids.append(contract.deal.company_id)  # intra-company fallback
+    authorized = getattr(manager_user, "is_superuser", False) or any(
+        is_member_of(manager_user, cid, capability="sell") for cid in seller_company_ids
+    )
+    if not authorized:
+        return None, "MEMBER_REQUIRED_FOR_ACTION"
+    if contract.status not in {"DRAFT", "PENDING_MANAGER", "PENDING_CLIENT"}:
+        return None, "CONTRACT_MANAGER_SIGN_NOT_ALLOWED"
+    contract.manager_signer = manager_user
+    contract.manager_signed_at = timezone.now()
+    contract.status = "SIGNED" if contract.client_signed_at else "PENDING_CLIENT"
+    contract.save(update_fields=["manager_signer", "manager_signed_at", "status", "updated_at"])
+    ActivityLog.objects.create(
+        action="[MANUAL_MODE] Подписан контракт (сторона RailTech)",
+        detail=f"Контракт {contract.number} / сделка #{contract.deal_id}",
+        user=manager_user,
+        level="INFO",
+    )
+    _notify_contract_signed(contract)
+    return contract, None
+
+
+def _notify_contract_signed(contract) -> None:
+    from notifications.models import Notification, NotificationType
+
+    if contract.status != "SIGNED":
+        return
+    info = NotificationType.objects.filter(code="SUCCESS").first()
+    for recipient in {contract.deal.client, contract.deal.manager}:
+        if recipient is None:
+            continue
+        Notification.objects.create(
+            user=recipient,
+            type=info,
+            title="Контракт подписан",
+            message=f"Контракт {contract.number} по сделке #{contract.deal_id} подписан обеими сторонами",
+            link="/crm/deals",
+            deal=contract.deal,
+        )
+
+
+@transaction.atomic
+def cancel_contract(
+    contract_id: int, actor: CustomUser, reason: str = ""
+) -> Tuple[Optional["Contract"], Optional[str]]:  # noqa: F821
+    from accounts.services import is_platform_admin_viewer
+
+    from ..models import Contract
+
+    if is_platform_admin_viewer(actor):
+        return None, "ADMIN_VIEWER_CANNOT_ACT"
+    contract = Contract.objects.select_for_update().get(pk=contract_id)
+    if contract.status == "SIGNED":
+        return None, "CONTRACT_SIGNED_CANNOT_CANCEL"
+    contract.status = "CANCELLED"
+    contract.notes = f"{contract.notes}\nОтменён {actor}: {reason}".strip()
+    contract.save(update_fields=["status", "notes", "updated_at"])
+    return contract, None
+
+
+@transaction.atomic
+def force_cancel_contract(
+    contract_id: int,
+    admin_user: CustomUser,
+    reason: str = "",
+) -> Tuple[Optional["Contract"], Optional[str]]:  # noqa: F821
+    """Platform-admin force override: cancel a contract regardless of its status.
+
+    Used for escalations (e.g. fraud, court order, mutual annulment after signing).
+    Logged with [FORCE_ADMIN] marker. Reason is mandatory for audit. Viewer-mode
+    admins are permitted — force-actions are platform-admin moderation, not bound
+    to a CompanyMember.
+    """
+    from ..models import Contract
+
+    if not (getattr(admin_user, "is_superuser", False) or (admin_user.role and admin_user.role.code == "ADMIN")):
+        return None, "PLATFORM_ADMIN_REQUIRED"
+    if not reason.strip():
+        return None, "FORCE_REASON_REQUIRED"
+    contract = Contract.objects.select_for_update().get(pk=contract_id)
+    old_status = contract.status
+    contract.status = "CANCELLED"
+    contract.notes = (
+        f"{contract.notes}\n[FORCE_ADMIN] {admin_user.email}: {reason}"
+        if contract.notes
+        else f"[FORCE_ADMIN] {admin_user.email}: {reason}"
+    )
+    contract.save(update_fields=["status", "notes", "updated_at"])
+    ActivityLog.objects.create(
+        action="[FORCE_ADMIN] Контракт отменён платформенным админом",
+        detail=f"Контракт #{contract_id} ({old_status} → CANCELLED). Причина: {reason}",
+        user=admin_user,
+        level="WARNING",
+    )
+    return contract, None
