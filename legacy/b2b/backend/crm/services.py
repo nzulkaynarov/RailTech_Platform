@@ -955,6 +955,12 @@ def generate_invoice_from_contract(
     if contract.status != "SIGNED":
         return None, "INVOICE_REQUIRES_SIGNED_CONTRACT"
 
+    # Idempotency: one signed contract yields one invoice. Re-issuing would
+    # double-count receivables. Return the existing invoice instead.
+    existing_invoice = Invoice.objects.filter(contract=contract).first()
+    if existing_invoice is not None:
+        return existing_invoice, None
+
     quote = contract.quote
     invoice = Invoice.objects.create(
         deal=contract.deal,
@@ -1067,6 +1073,13 @@ def record_payment(
         from core.validators import validate_document_upload
 
         validate_document_upload(proof_file)
+
+    # Idempotency: a bank reference uniquely identifies a real-world payment.
+    # A double-submit with the same reference must not be counted twice.
+    if reference:
+        existing = Payment.objects.filter(invoice=invoice, reference=reference).first()
+        if existing is not None:
+            return existing, None
 
     payment = Payment.objects.create(
         invoice=invoice,
@@ -1303,19 +1316,24 @@ def submit_supplier_bid(
     deal = Deal.objects.get(pk=deal_id)
     if deal.stage and deal.stage.code not in {"RFQ_OPEN"}:
         return None, "BID_ONLY_IN_RFQ_OPEN"
+    is_superuser = getattr(submitted_by, "is_superuser", False)
     # Security: user must be active member of the supplier company with can_sell.
-    if not (getattr(submitted_by, "is_superuser", False) or is_member_of(submitted_by, supplier_id, capability="sell")):
+    if not (is_superuser or is_member_of(submitted_by, supplier_id, capability="sell")):
         return None, "NOT_A_SUPPLIER_MEMBER"
     # Feature gate: supplier company must have an operational subscription.
-    # Superusers bypass for emergency fixes only.
-    if not (getattr(submitted_by, "is_superuser", False) or company_has_operational_subscription(supplier_id)):
+    # Superusers bypass for emergency fixes only — flagged in the audit log below.
+    subscription_ok = company_has_operational_subscription(supplier_id)
+    if not (is_superuser or subscription_ok):
         return None, "SUBSCRIPTION_NOT_OPERATIONAL"
+    superuser_bypass = is_superuser and not subscription_ok
     bid, _ = SupplierBid.objects.get_or_create(deal_id=deal_id, supplier_id=supplier_id)
     bid.items.all().delete()
     total = D("0")
     for row in items:
         qty = int(row.get("quantity", 1) or 1)
         price = D(str(row.get("unit_price", 0) or 0))
+        if qty <= 0 or price < 0:
+            return None, "BID_ITEM_INVALID_AMOUNT"
         SupplierBidItem.objects.create(
             bid=bid,
             quote_item_id=row.get("quote_item_id"),
@@ -1340,20 +1358,22 @@ def submit_supplier_bid(
     # on a deal surfaces supplier actions.
     from core.audit import log_admin_action
 
+    bypass_marker = "[SUPERUSER_BYPASS] " if superuser_bypass else ""
     snapshot = {
         "status": bid.status,
         "total_amount": str(bid.total_amount),
         "lead_time_days": bid.lead_time_days,
         "items_count": bid.items.count(),
+        "superuser_subscription_bypass": superuser_bypass,
     }
     log_admin_action(
         entity_type="supplier_bid",
         entity_id=bid.id,
-        action="SupplierBid submitted",
+        action=f"{bypass_marker}SupplierBid submitted",
         detail=f"Deal #{deal_id} · supplier #{supplier_id} · {bid.total_amount}",
         actor=submitted_by,
         after=snapshot,
-        level="INFO",
+        level="WARNING" if superuser_bypass else "INFO",
     )
     log_admin_action(
         entity_type="deal",
