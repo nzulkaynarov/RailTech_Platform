@@ -138,15 +138,17 @@ def seed_all(apps, schema_editor):
     _seed_simple(StockStatus,        STOCK_STATUSES)
     _seed_simple(NotificationType,   NOTIFICATION_TYPES)
 
-    # SystemRole has is_staff_level flag
+    # SystemRole historically carried an is_staff_level flag. A later migration
+    # (accounts/0010_platform_admin_model) drops that field, and depending on the
+    # cross-app apply order the historical SystemRole at this point may no longer
+    # have it. Only pass the field when it actually exists, so a fresh `migrate`
+    # cannot fail with FieldError: Invalid field name(s) ... 'is_staff_level'.
+    role_field_names = {field.name for field in SystemRole._meta.get_fields()}
     for code, name, sort_order, is_staff_level in SYSTEM_ROLES:
-        SystemRole.objects.get_or_create(
-            code=code,
-            defaults={
-                'name': name, 'sort_order': sort_order,
-                'is_active': True, 'is_staff_level': is_staff_level,
-            },
-        )
+        defaults = {'name': name, 'sort_order': sort_order, 'is_active': True}
+        if 'is_staff_level' in role_field_names:
+            defaults['is_staff_level'] = is_staff_level
+        SystemRole.objects.get_or_create(code=code, defaults=defaults)
 
     # DomainType has sku_prefix
     for code, name, sku_prefix, sort_order in DOMAIN_TYPES:
