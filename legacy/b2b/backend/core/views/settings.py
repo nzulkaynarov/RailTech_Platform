@@ -1,0 +1,68 @@
+from drf_spectacular.utils import extend_schema
+from rest_framework import serializers as drf_serializers
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from core.models import SystemSetting
+
+# ──────────────────────────────────────────────────────────────────────────
+# System Settings (singleton)
+# ──────────────────────────────────────────────────────────────────────────
+
+
+class SystemSettingSerializer(drf_serializers.ModelSerializer):
+    class Meta:
+        model = SystemSetting
+        fields = [
+            "vat_rate",
+            "standard_margin",
+            "exchange_rate_usd_uzs",
+            "platform_name",
+            "maintenance_mode",
+            "is_two_factor_required",
+            "updated_at",
+        ]
+        read_only_fields = ["updated_at"]
+
+
+class SystemSettingsView(APIView):
+    """
+    GET  /api/v1/system-settings/ — read current settings (any authenticated user)
+    PATCH /api/v1/system-settings/ — update settings (admin/manager only)
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="Get system settings",
+        description=(
+            "Returns current platform settings: VAT rate, margin, exchange rate, etc. "
+            "Any authenticated user can read."
+        ),
+        responses={200: SystemSettingSerializer},
+        tags=["System"],
+    )
+    def get(self, request):
+        settings_obj = SystemSetting.load()
+        return Response(SystemSettingSerializer(settings_obj).data)
+
+    @extend_schema(
+        summary="Update system settings",
+        description="Partially update platform settings. Admin/Manager only.",
+        request=SystemSettingSerializer,
+        responses={200: SystemSettingSerializer},
+        tags=["System"],
+    )
+    def patch(self, request):
+        # Write requires elevated permissions
+        if not (request.user.is_superuser or request.user.is_platform_admin):
+            from rest_framework.exceptions import PermissionDenied
+
+            raise PermissionDenied()
+
+        settings_obj = SystemSetting.load()
+        serializer = SystemSettingSerializer(settings_obj, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)

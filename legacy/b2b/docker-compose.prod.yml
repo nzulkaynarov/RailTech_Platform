@@ -28,6 +28,11 @@ services:
     networks:
       - railtech
     restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "-", "http://localhost/health"]
       interval: 30s
@@ -74,7 +79,8 @@ services:
       DJANGO_SETTINGS_MODULE: core.settings
       DJANGO_DEBUG: "False"
       WORKERS: 4
-    # Production: gunicorn + daphne for ASGI with proper worker management
+    # Production: gunicorn process manager + uvicorn ASGI workers.
+    # --timeout=180 accommodates synchronous PDF/large-Excel responses.
     command: >
       gunicorn
       --worker-class=uvicorn.workers.UvicornWorker
@@ -82,15 +88,17 @@ services:
       --worker-connections=1000
       --max-requests=1000
       --max-requests-jitter=100
-      --timeout=120
+      --timeout=180
       --graceful-timeout=30
       --keep-alive=5
       --bind=0.0.0.0:8000
       --access-logfile=-
       --error-logfile=-
       core.asgi:application
+    # Bound to loopback only: nginx (same network) proxies to backend:8000.
+    # Never publish the app server straight to the VPS public interface.
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - backend_static_prod:/app/staticfiles
       - backend_media_prod:/app/media
@@ -104,6 +112,19 @@ services:
     networks:
       - railtech
     restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
       interval: 30s
@@ -129,6 +150,11 @@ services:
         reservations:
           cpus: '1'
           memory: 1G
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
 
   # ===========================================================================
   # Celery Beat (Production)
@@ -140,6 +166,11 @@ services:
       DJANGO_SETTINGS_MODULE: core.settings
       DJANGO_DEBUG: "False"
     restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # ===========================================================================
   # React Frontend (Production — Static)
@@ -152,15 +183,27 @@ services:
         VITE_API_URL: ${VITE_API_URL:-/api}
         VITE_WS_URL: ${VITE_WS_URL:-/ws}
     container_name: railtech_frontend_prod
+    # Loopback only: nginx is the single public entrypoint and proxies here.
     ports:
-      - "3000:80"
+      - "127.0.0.1:3000:80"
     depends_on:
       - backend
     networks:
       - railtech
     restart: always
-    # Remove volumes for production (immutable image)
-    # Remove healthcheck for production
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 64M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "-", "http://localhost/health"]
       interval: 30s

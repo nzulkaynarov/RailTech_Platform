@@ -29,7 +29,11 @@ backend/                    # Django project
   sourcing/                 # Attachment, ImportTask, DomainKeyword, Excel import tasks
   master_data/              # AbstractLookup, Country, Currency, UOM, DeliveryBasis
   notifications/            # Notification, NotificationType
-  */services.py             # Business logic layer (accounts, catalog, crm, notifications, sourcing)
+  */services.py             # Business logic layer (notifications, sourcing). accounts & crm use services/ packages (below)
+  accounts/services/        # Package: permissions, auth, profile, members, subscriptions, kyc, applications
+  crm/services/             # Package: _params, deals, quotes, contracts, billing, fulfillment, bids, messaging
+  {crm,accounts,catalog}/models/   # Packages (each split by domain). Same-app FKs use string refs ("app.Model")
+  {core/views, catalog/views, core/admin_api, crm/admin}/  # Packages re-exporting via __init__
 frontend/                   # React app
   src/api/                  # Axios client with JWT interceptor + refresh mutex
   src/store/                # 10 Zustand stores (auth, user, cart, flow, task, theme, currency, domain, demo, loading)

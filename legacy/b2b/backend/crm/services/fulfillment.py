@@ -1,0 +1,57 @@
+from typing import Optional, Tuple
+
+from django.db import transaction
+
+from accounts.models import CustomUser
+
+from ..models import Deal
+from .deals import transition_deal_stage
+
+# ──────────────────────────────────────────────────────────────────────────
+# Fulfillment (post-sale)
+# ──────────────────────────────────────────────────────────────────────────
+
+
+@transaction.atomic
+def ensure_fulfillment(deal: Deal) -> object:
+    from ..models import Fulfillment
+
+    obj, _ = Fulfillment.objects.get_or_create(deal=deal)
+    return obj
+
+
+@transaction.atomic
+def update_fulfillment_status(
+    deal_id: int,
+    actor: CustomUser,
+    status_code: str,
+    **extra,
+) -> Tuple[Optional[object], Optional[str]]:
+    from django.utils import timezone
+
+    from accounts.services import is_platform_admin_viewer
+
+    from ..models import Fulfillment
+
+    if is_platform_admin_viewer(actor):
+        return None, "ADMIN_VIEWER_CANNOT_ACT"
+    valid = {"PENDING", "SHIPPED", "IN_TRANSIT", "DELIVERED", "ACCEPTED", "DISPUTED"}
+    if status_code not in valid:
+        return None, "FULFILLMENT_INVALID_STATUS"
+    obj = Fulfillment.objects.select_for_update().select_related("deal").get(deal_id=deal_id)
+    obj.status = status_code
+    now = timezone.now()
+    if status_code == "SHIPPED" and not obj.shipped_at:
+        obj.shipped_at = now
+    if status_code == "DELIVERED" and not obj.delivered_at:
+        obj.delivered_at = now
+    if status_code == "ACCEPTED" and not obj.accepted_at:
+        obj.accepted_at = now
+    for key in ("tracking_number", "carrier", "expected_delivery_date", "notes"):
+        if key in extra and extra[key] is not None:
+            setattr(obj, key, extra[key])
+    obj.save()
+    # Auto-close deal when accepted by client
+    if status_code == "ACCEPTED":
+        transition_deal_stage(obj.deal, "CLOSED_WON", actor=actor, reason="Приёмка клиентом")
+    return obj, None

@@ -33,6 +33,37 @@ IMAGE_MAX_SIZE = 5 * 1024 * 1024  # 5 MB
 AVATAR_MAX_SIZE = 2 * 1024 * 1024  # 2 MB
 DOCUMENT_MAX_SIZE = 20 * 1024 * 1024  # 20 MB
 
+# Magic-byte signatures by extension. The client-supplied content_type is
+# spoofable, so for binary formats we additionally verify the file header.
+# Text formats (.svg, .csv, .txt) have no reliable signature and are skipped.
+_MAGIC_SIGNATURES = {
+    ".pdf": [b"%PDF"],
+    ".png": [b"\x89PNG\r\n\x1a\n"],
+    ".gif": [b"GIF87a", b"GIF89a"],
+    ".jpg": [b"\xff\xd8\xff"],
+    ".jpeg": [b"\xff\xd8\xff"],
+    ".webp": [b"RIFF"],  # bytes 0-3; "WEBP" lives at 8-11
+    # OOXML (xlsx/docx) and legacy OLE2 (xls/doc) containers
+    ".xlsx": [b"PK\x03\x04"],
+    ".docx": [b"PK\x03\x04"],
+    ".xls": [b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"],
+    ".doc": [b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"],
+}
+
+
+def _check_magic_bytes(file, ext, label):
+    """Verify the file header matches its extension. No-op for text formats."""
+    signatures = _MAGIC_SIGNATURES.get(ext)
+    if not signatures:
+        return
+    try:
+        file.seek(0)
+        header = file.read(16)
+    finally:
+        file.seek(0)
+    if not any(header.startswith(sig) for sig in signatures):
+        raise ValidationError(f"{label}: file content does not match its '{ext}' extension (possible spoofing).")
+
 
 def _validate_file(file, allowed_extensions, allowed_content_types, max_size, label="File"):
     """Common validation logic for uploaded files."""
@@ -49,6 +80,8 @@ def _validate_file(file, allowed_extensions, allowed_content_types, max_size, la
     if file.size > max_size:
         max_mb = max_size / (1024 * 1024)
         raise ValidationError(f"{label}: file size {file.size} bytes exceeds " f"the maximum of {max_mb:.0f} MB.")
+
+    _check_magic_bytes(file, ext, label)
 
 
 def validate_image_upload(file):

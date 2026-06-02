@@ -383,6 +383,9 @@ if os.environ.get("DATABASE_URL"):
             "OPTIONS": dict(parse_qsl(tmpPostgres.query)),
         }
     }
+    # Enforce TLS to the managed DB unless the URL already pins an sslmode.
+    # Neon Cloud requires SSL; this prevents an accidental plaintext connection.
+    DATABASES["default"]["OPTIONS"].setdefault("sslmode", os.environ.get("DB_SSLMODE", "require"))
 else:
     DATABASES = {
         "default": {
@@ -400,6 +403,8 @@ else:
                 "RECYCLE": 1800,
                 "PRE_PING": True,
             },
+            # 'prefer' keeps local docker-postgres (no TLS) working; set DB_SSLMODE=require in prod.
+            "OPTIONS": {"sslmode": os.environ.get("DB_SSLMODE", "prefer")},
         }
     }
 
