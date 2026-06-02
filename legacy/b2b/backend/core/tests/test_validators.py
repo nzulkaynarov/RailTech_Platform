@@ -23,7 +23,7 @@ class TestValidateImageUpload:
         validate_image_upload(f)
 
     def test_valid_png(self):
-        f = SimpleUploadedFile("test.png", b"\x89PNG" + b"\x00" * 100, content_type="image/png")
+        f = SimpleUploadedFile("test.png", b"\x89PNG\r\n\x1a\n" + b"\x00" * 100, content_type="image/png")
         validate_image_upload(f)
 
     def test_valid_svg(self):
@@ -46,16 +46,22 @@ class TestValidateImageUpload:
             validate_image_upload(f)
 
     def test_at_size_limit(self):
-        f = SimpleUploadedFile("ok.jpg", b"\x00" * IMAGE_MAX_SIZE, content_type="image/jpeg")
+        f = SimpleUploadedFile("ok.jpg", b"\xff\xd8\xff" + b"\x00" * (IMAGE_MAX_SIZE - 3), content_type="image/jpeg")
         # Should not raise
         validate_image_upload(f)
+
+    def test_rejects_content_type_spoof(self):
+        # .png extension + allowed content_type but body is not a PNG → magic-byte check fires.
+        f = SimpleUploadedFile("fake.png", b"GIF89a" + b"\x00" * 100, content_type="image/png")
+        with pytest.raises(ValidationError, match="does not match"):
+            validate_image_upload(f)
 
 
 class TestValidateAvatarUpload:
     """Tests for validate_avatar_upload (2MB limit)."""
 
     def test_valid_small_avatar(self):
-        f = SimpleUploadedFile("avatar.png", b"\x89PNG" + b"\x00" * 100, content_type="image/png")
+        f = SimpleUploadedFile("avatar.png", b"\x89PNG\r\n\x1a\n" + b"\x00" * 100, content_type="image/png")
         validate_avatar_upload(f)
 
     def test_exceeds_avatar_limit(self):
@@ -79,10 +85,25 @@ class TestValidateDocumentUpload:
     def test_valid_xlsx(self):
         f = SimpleUploadedFile(
             "data.xlsx",
-            b"\x00" * 100,
+            b"PK\x03\x04" + b"\x00" * 100,
             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
         validate_document_upload(f)
+
+    def test_rejects_xlsx_spoof(self):
+        # .xlsx but body is not a ZIP/OOXML container → rejected.
+        f = SimpleUploadedFile(
+            "fake.xlsx",
+            b"not-a-zip" + b"\x00" * 100,
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        with pytest.raises(ValidationError, match="does not match"):
+            validate_document_upload(f)
+
+    def test_rejects_pdf_spoof(self):
+        f = SimpleUploadedFile("fake.pdf", b"MZ\x90\x00" + b"\x00" * 100, content_type="application/pdf")
+        with pytest.raises(ValidationError, match="does not match"):
+            validate_document_upload(f)
 
     def test_valid_csv(self):
         f = SimpleUploadedFile("data.csv", b"a,b,c\n1,2,3", content_type="text/csv")
