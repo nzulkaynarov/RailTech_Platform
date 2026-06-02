@@ -34,7 +34,11 @@ boto3>=1.42
 whitenoise>=6.12
 
 # Data processing
-pandas>=2.2
+# NumPy 2.x ships only x86_64_v2 wheels (popcnt/sse4_*/ssse3 required);
+# the prod VPS is on x86_64_v1, so pin to the last 1.x line.
+# Drop this constraint once the VPS moves to a modern CPU.
+numpy>=1.26,<2
+pandas>=2.2,<2.3
 openpyxl>=3.1.5
 XlsxWriter>=3.2
 
