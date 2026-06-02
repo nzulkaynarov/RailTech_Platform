@@ -1,73 +1,78 @@
 # ==============================================================================
 # RailTech B2B SaaS — Production Docker Compose Override
-# Use: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up
-# Includes: nginx reverse proxy, gunicorn+daphne, no source mounting
+# Use: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Architecture on the shared railtech.uz VPS (see deploy/RUNBOOK-b2b-vps.md):
+#   - The host's existing Caddy owns 80/443 and terminates TLS. This stack runs
+#     NO reverse proxy of its own — Caddy proxies b2b.railtech.uz/api,/ws,/admin,
+#     /static -> backend (127.0.0.1:8000) and serves the built SPA as static files.
+#   - Therefore the frontend container is NOT run in production (build-only profile);
+#     its dist/ is built and copied to /var/www/railtech-b2b for Caddy to serve.
+#   - All published ports stay on 127.0.0.1 (see base compose) so Docker's iptables
+#     rules cannot bypass ufw and expose Redis/MinIO to the internet.
+#   - Resource limits are sized for a 2 vCPU / 3.8 GB box shared with other tenants.
+#   - Database is external (Neon Cloud); no postgres here.
 # ==============================================================================
 
-version: '3.9'
-
 services:
-  # ===========================================================================
-  # Nginx Reverse Proxy (Production)
-  # ===========================================================================
-  nginx:
-    image: nginx:stable-alpine
-    container_name: railtech_nginx
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
-      - nginx_cache:/var/cache/nginx
-    depends_on:
-      - backend
-      - frontend
-      - minio
-    networks:
-      - railtech
+  # ---------------------------------------------------------------------------
+  # Redis (Channels) — production
+  # ---------------------------------------------------------------------------
+  redis:
     restart: always
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 160M
     logging:
       driver: json-file
       options:
-        max-size: "20m"
-        max-file: "5"
-    healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+        max-size: "10m"
+        max-file: "3"
 
-  # ===========================================================================
-  # Redis for Channels (Production)
-  # ===========================================================================
-  redis:
-    restart: always
-
-  # ===========================================================================
-  # Redis for Celery (Production)
-  # ===========================================================================
+  # ---------------------------------------------------------------------------
+  # Redis (Celery broker/result) — production
+  # ---------------------------------------------------------------------------
   redis-celery:
     restart: always
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy noeviction
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 160M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  # ===========================================================================
-  # MinIO (Production)
-  # ===========================================================================
+  # ---------------------------------------------------------------------------
+  # MinIO (object storage) — production
+  # ---------------------------------------------------------------------------
   minio:
     restart: always
     volumes:
       - minio_data_prod:/minio_data
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 320M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  # ===========================================================================
-  # MinIO Initialization (Production)
-  # ===========================================================================
   minio-init:
     restart: "no"
 
-  # ===========================================================================
-  # Django Backend (Production with Gunicorn + Daphne)
-  # ===========================================================================
+  # ---------------------------------------------------------------------------
+  # Django backend — gunicorn + uvicorn workers (ASGI)
+  # ---------------------------------------------------------------------------
   backend:
     build:
       context: ./backend
@@ -78,13 +83,13 @@ services:
       PYTHONUNBUFFERED: 1
       DJANGO_SETTINGS_MODULE: core.settings
       DJANGO_DEBUG: "False"
-      WORKERS: 4
-    # Production: gunicorn process manager + uvicorn ASGI workers.
-    # --timeout=180 accommodates synchronous PDF/large-Excel responses.
+    # 2 workers fit a 2 vCPU box shared with other tenants. --timeout=180 covers
+    # synchronous PDF / large-Excel responses. Port binding is inherited from the
+    # base compose (127.0.0.1:8000) — Caddy on the host proxies to it.
     command: >
       gunicorn
       --worker-class=uvicorn.workers.UvicornWorker
-      --workers=4
+      --workers=2
       --worker-connections=1000
       --max-requests=1000
       --max-requests-jitter=100
@@ -95,10 +100,6 @@ services:
       --access-logfile=-
       --error-logfile=-
       core.asgi:application
-    # Bound to loopback only: nginx (same network) proxies to backend:8000.
-    # Never publish the app server straight to the VPS public interface.
-    ports:
-      - "127.0.0.1:8000:8000"
     volumes:
       - backend_static_prod:/app/staticfiles
       - backend_media_prod:/app/media
@@ -115,11 +116,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '2'
-          memory: 2G
+          cpus: '1.5'
+          memory: 1200M
         reservations:
-          cpus: '1'
-          memory: 1G
+          cpus: '0.5'
+          memory: 384M
     logging:
       driver: json-file
       options:
@@ -131,34 +132,35 @@ services:
       timeout: 10s
       retries: 3
 
-  # ===========================================================================
-  # Celery Worker (Production)
-  # ===========================================================================
+  # ---------------------------------------------------------------------------
+  # Celery worker
+  # ---------------------------------------------------------------------------
   celery-worker:
     env_file: .env
     environment:
       PYTHONUNBUFFERED: 1
       DJANGO_SETTINGS_MODULE: core.settings
       DJANGO_DEBUG: "False"
+    # Concurrency capped so Excel imports don't exhaust the shared box.
+    command: celery -A core worker -l info -Q default,pdf,imports --concurrency=2
     restart: always
-    # Limit resources in production
     deploy:
       resources:
         limits:
-          cpus: '2'
-          memory: 2G
-        reservations:
           cpus: '1'
-          memory: 1G
+          memory: 768M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
     logging:
       driver: json-file
       options:
         max-size: "20m"
         max-file: "5"
 
-  # ===========================================================================
-  # Celery Beat (Production)
-  # ===========================================================================
+  # ---------------------------------------------------------------------------
+  # Celery beat (scheduler)
+  # ---------------------------------------------------------------------------
   celery-beat:
     env_file: .env
     environment:
@@ -166,49 +168,33 @@ services:
       DJANGO_SETTINGS_MODULE: core.settings
       DJANGO_DEBUG: "False"
     restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 192M
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "3"
 
-  # ===========================================================================
-  # React Frontend (Production — Static)
-  # ===========================================================================
+  # ---------------------------------------------------------------------------
+  # Frontend — BUILD ONLY in production.
+  # Not started by `up` (gated behind the 'frontend-build' profile). The runbook
+  # builds the image, extracts dist/, and copies it to /var/www/railtech-b2b for
+  # Caddy to serve. VITE_*_URL stay relative so the SPA talks to the same origin.
+  # ---------------------------------------------------------------------------
   frontend:
+    profiles: ["frontend-build"]
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-/api}
         VITE_WS_URL: ${VITE_WS_URL:-/ws}
-    container_name: railtech_frontend_prod
-    # Loopback only: nginx is the single public entrypoint and proxies here.
-    ports:
-      - "127.0.0.1:3000:80"
-    depends_on:
-      - backend
-    networks:
-      - railtech
-    restart: always
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 256M
-        reservations:
-          cpus: '0.25'
-          memory: 64M
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
-    healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
+    container_name: railtech_frontend_build
+    restart: "no"
 
 volumes:
   minio_data_prod:
@@ -216,6 +202,4 @@ volumes:
   backend_static_prod:
     driver: local
   backend_media_prod:
-    driver: local
-  nginx_cache:
     driver: local
