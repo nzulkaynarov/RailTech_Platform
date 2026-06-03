@@ -78,7 +78,7 @@ jobs:
           pip install -r requirements.txt pytest-cov
 
       - name: Wake up Neon database
-        timeout-minutes: 3
+        timeout-minutes: 6
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
@@ -86,9 +86,13 @@ jobs:
           python -c "
           import psycopg2, os, sys, time
           last_error = None
-          for attempt in range(3):
+          # A suspended free-tier Neon project can take 30-60s to cold-start, and
+          # the first TCP connect may hang up to connect_timeout. Use a short
+          # per-attempt timeout with many attempts so a single slow cold-start
+          # doesn't blow the whole step's budget (10 x 20s + 9 x 5s = ~245s < 6m).
+          for attempt in range(10):
               try:
-                  conn = psycopg2.connect(os.environ['DATABASE_URL'], connect_timeout=30)
+                  conn = psycopg2.connect(os.environ['DATABASE_URL'], connect_timeout=20)
                   conn.cursor().execute('SELECT 1')
                   conn.close()
                   print(f'Neon awake (attempt {attempt+1})')
@@ -97,7 +101,7 @@ jobs:
                   last_error = e
                   print(f'Attempt {attempt+1} failed: {e}')
                   time.sleep(5)
-          print(f'Failed to wake Neon after 3 attempts: {last_error}')
+          print(f'Failed to wake Neon after 10 attempts: {last_error}')
           sys.exit(1)
           "
 
