@@ -13,6 +13,7 @@ import { StatusBadge, getDealStageVariant, getKycVariant } from '@/components/ui
 import { TableSkeleton } from '@/components/ui/LoadingSkeleton';
 import { Table } from '@/components/ui/table';
 import { useCurrencyStore } from '@/store/currencyStore';
+import { sumMoney } from '@/utils/decimal';
 
 export const ClientDashboard: React.FC = () => {
     const { t } = useTranslation();
@@ -38,17 +39,14 @@ export const ClientDashboard: React.FC = () => {
     const totalDeals = deals.length;
     const terminalStages = ['CLOSED_WON', 'CLOSED_LOST'];
     const inProgress = deals.filter(d => {
-        const code = String(d.stage || '');
-        return !terminalStages.includes(code);
+        const code = d.stage_code || '';
+        return code !== '' && !terminalStages.includes(code);
     }).length;
     const contracted = deals.filter(d => {
-        const code = String(d.stage || '');
+        const code = d.stage_code || '';
         return code === 'CLOSED_WON' || code === 'CONTRACT_SIGNED';
     }).length;
-    const totalSum = deals.reduce((sum, d) => {
-        const val = parseFloat(d.active_quote?.total_incl_vat || '0');
-        return sum + val;
-    }, 0);
+    const totalSum = sumMoney(deals.map(d => d.active_quote?.total_incl_vat ?? d.total_value));
 
     return (
         <div className="p-4 lg:p-6 h-full space-y-5">

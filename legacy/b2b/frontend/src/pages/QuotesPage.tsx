@@ -24,7 +24,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { translateApiError } from '@/lib/apiError';
 import { useUserStore } from '@/store/userStore';
 import { useCurrencyStore } from '@/store/currencyStore';
-import { useQuotes, useSendQuoteToClient, useApproveQuote, useQuoteStatuses, useForceApproveQuote } from '@/hooks/useCRM';
+import { useQuotes, useSendQuoteToClient, useApproveQuote, useQuoteStatuses, useForceApproveQuote, useRejectQuote, useGenerateQuotePDF } from '@/hooks/useCRM';
+import { sumMoney } from '@/utils/decimal';
 import { crmApi } from '@/api/crmApi';
 import type { Quote } from '@/api/crmApi';
 import { toast } from 'sonner';
@@ -38,6 +39,8 @@ export function QuotesPage() {
   const { data: quotes, isLoading } = useQuotes();
   const sendToClient = useSendQuoteToClient();
   const approveQuote = useApproveQuote();
+  const rejectQuote = useRejectQuote();
+  const generatePDF = useGenerateQuotePDF();
   const forceApproveMut = useForceApproveQuote();
   const formatCurrency = useCurrencyStore((s) => s.format);
   const isBuyer = activeStatus === 'BUYER';
@@ -57,7 +60,7 @@ export function QuotesPage() {
         { label: t('pages.quotes.stats.total'), value: String(quotesList.length) },
         { label: t('pages.quotes.stats.underReview'), value: String(quotesList.filter(q => q.status_code === 'SENT').length) },
         { label: t('pages.quotes.stats.accepted'), value: String(quotesList.filter(q => q.status_code === 'APPROVED').length) },
-        { label: t('pages.quotes.stats.totalAmount'), value: String(quotesList.length) },
+        { label: t('pages.quotes.stats.totalAmount'), value: formatCurrency(sumMoney(quotesList.map(q => q.total_incl_vat))) },
       ]
     : [
         { label: t('pages.quotes.stats.drafts'), value: String(quotesList.filter(q => q.status_code === 'DRAFT').length) },
@@ -86,10 +89,10 @@ export function QuotesPage() {
 
   const handleReject = async (id: number) => {
     try {
-      await crmApi.rejectQuote(id);
+      await rejectQuote.mutateAsync(id);
       toast.success(t('pages.quotes.toast.rejectedSuccess', { id }));
     } catch {
-      toast.error(t('pages.quotes.toast.actionError'));
+      /* error toast handled globally */
     }
   };
 
@@ -103,10 +106,10 @@ export function QuotesPage() {
 
   const handleGeneratePDF = async (id: number) => {
     try {
-      await crmApi.generateQuotePDF(id);
+      await generatePDF.mutateAsync(id);
       toast.success(t('pages.quotes.toast.pdfGenerated'));
     } catch {
-      toast.error(t('pages.quotes.toast.actionError'));
+      /* error toast handled globally */
     }
   };
 
