@@ -1,10 +1,7 @@
 import logging
 from typing import Optional
 
-from ..models import (
-    CustomUser,
-    SupplierSubscription,
-)
+from ..models import CustomUser, SupplierSubscription
 
 logger = logging.getLogger(__name__)
 

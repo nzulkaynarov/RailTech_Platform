@@ -4,11 +4,7 @@ from typing import Optional, Tuple
 from django.db.models import QuerySet
 from django.utils import timezone
 
-from ..models import (
-    Company,
-    CustomUser,
-    SupplierSubscription,
-)
+from ..models import Company, CustomUser, SupplierSubscription
 from .permissions import is_member_of, is_platform_admin_viewer
 
 logger = logging.getLogger(__name__)

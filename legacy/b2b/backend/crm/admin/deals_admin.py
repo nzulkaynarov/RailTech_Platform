@@ -5,14 +5,7 @@ from unfold.decorators import display
 
 from core.admin_mixins import ReadOnlyInspectionMixin, superuser_only_action
 
-from ..models import (
-    ActivityLog,
-    Deal,
-    DealStage,
-    Lead,
-    Message,
-    QuoteStatus,
-)
+from ..models import ActivityLog, Deal, DealStage, Lead, Message, QuoteStatus
 
 # ────────────────────────────────────────────
 # Inlines

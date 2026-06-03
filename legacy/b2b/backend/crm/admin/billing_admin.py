@@ -5,14 +5,7 @@ from unfold.decorators import display
 
 from core.admin_mixins import ReadOnlyInspectionMixin
 
-from ..models import (
-    Act,
-    Contract,
-    Fulfillment,
-    Invoice,
-    Payment,
-    SupplierBid,
-)
+from ..models import Act, Contract, Fulfillment, Invoice, Payment, SupplierBid
 
 # ────────────────────────────────────────────
 # Inlines

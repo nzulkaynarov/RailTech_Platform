@@ -7,10 +7,7 @@ from django.utils import timezone
 
 from notifications.emails import send_templated_email
 
-from ..models import (
-    CompanyRoleApplication,
-    CustomUser,
-)
+from ..models import CompanyRoleApplication, CustomUser
 from .subscriptions import ensure_trial_subscription
 
 logger = logging.getLogger(__name__)

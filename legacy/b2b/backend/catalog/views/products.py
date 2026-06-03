@@ -8,17 +8,8 @@ from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 
-from ..models import (
-    Product,
-    ProductDocument,
-    ProductImage,
-)
-from ..serializers import (
-    ProductDocumentSerializer,
-    ProductImageSerializer,
-    ProductListSerializer,
-    ProductSerializer,
-)
+from ..models import Product, ProductDocument, ProductImage
+from ..serializers import ProductDocumentSerializer, ProductImageSerializer, ProductListSerializer, ProductSerializer
 from .lookups import LIST_CACHE_TTL
 
 
