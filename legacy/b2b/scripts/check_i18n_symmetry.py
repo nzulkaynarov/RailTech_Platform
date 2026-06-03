@@ -28,15 +28,11 @@ _PLURAL_SUFFIX_RE = re.compile(r'_(?:zero|one|two|few|many|other)$')
 # Static translation-key calls: t('a.b.c') / t("a.b.c") / i18n.t('a.b.c').
 # Template-literal keys (t(`a.${x}`)) are dynamic and intentionally NOT matched.
 _T_CALL_RE = re.compile(r"""(?:\bi18n\.t|\bt)\(\s*['"]([a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+)+)['"]""")
-# Calls that pass an explicit defaultValue are intentional fallbacks — exclude.
-_T_DEFAULT_RE = re.compile(r"""(?:\bi18n\.t|\bt)\(\s*['"][^'"]+['"]\s*,\s*\{[^}]*defaultValue""")
-
-
 def load_with_dupes(path):
     """Load JSON, collecting any duplicate key paths (last-wins shadowing)."""
     dupes = []
 
-    def hook(pairs, _path=['']):
+    def hook(pairs):
         seen = {}
         out = {}
         for k, v in pairs:
