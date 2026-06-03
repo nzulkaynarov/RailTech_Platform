@@ -228,19 +228,15 @@ class TestSubmitProfile:
         company they are NOT a member of must be rejected with COMPANY_INN_TAKEN
         — protects against silent cross-tenant attachment (see
         project-known-bug-silent-company-merge)."""
-        from accounts.services import submit_company_profile
         from accounts.models import Company, CompanyMember, VerificationStatus
+        from accounts.services import submit_company_profile
 
-        owner = User.objects.create_user(
-            email="owner@example.com", username="owner", password="x", is_active=True
-        )
+        owner = User.objects.create_user(email="owner@example.com", username="owner", password="x", is_active=True)
         stranger = User.objects.create_user(
             email="stranger@example.com", username="stranger", password="x", is_active=True
         )
         role = workspace_role_factory(code="OWNER", name="Owner")
-        VerificationStatus.objects.get_or_create(
-            code="PROFILE_SUBMITTED", defaults={"name": "Profile submitted"}
-        )
+        VerificationStatus.objects.get_or_create(code="PROFILE_SUBMITTED", defaults={"name": "Profile submitted"})
 
         # owner claims INN 7707083893 first
         existing = Company.objects.create(inn="7707083893", name="Owner Co")
@@ -248,8 +244,11 @@ class TestSubmitProfile:
 
         # stranger tries the same INN with a different name — must be blocked
         _, error = submit_company_profile(
-            user=stranger, inn="7707083893", company_name="My Different Co",
-            workspace_role_code="OWNER", company_type_code="CLIENT",
+            user=stranger,
+            inn="7707083893",
+            company_name="My Different Co",
+            workspace_role_code="OWNER",
+            company_type_code="CLIENT",
         )
         assert error == "COMPANY_INN_TAKEN"
         assert not CompanyMember.objects.filter(user=stranger, company=existing).exists()
@@ -258,25 +257,27 @@ class TestSubmitProfile:
     def test_submit_profile_idempotent_for_same_user(self, db, workspace_role_factory):
         """Re-submitting the same INN by the same user should be a no-op success,
         not a COMPANY_INN_TAKEN error."""
-        from accounts.services import submit_company_profile
         from accounts.models import CompanyMember, VerificationStatus
+        from accounts.services import submit_company_profile
 
-        user = User.objects.create_user(
-            email="dup@example.com", username="dup", password="x", is_active=True
-        )
+        user = User.objects.create_user(email="dup@example.com", username="dup", password="x", is_active=True)
         workspace_role_factory(code="OWNER", name="Owner")
-        VerificationStatus.objects.get_or_create(
-            code="PROFILE_SUBMITTED", defaults={"name": "Profile submitted"}
-        )
+        VerificationStatus.objects.get_or_create(code="PROFILE_SUBMITTED", defaults={"name": "Profile submitted"})
 
         _, e1 = submit_company_profile(
-            user=user, inn="9999999999", company_name="My Co",
-            workspace_role_code="OWNER", company_type_code="CLIENT",
+            user=user,
+            inn="9999999999",
+            company_name="My Co",
+            workspace_role_code="OWNER",
+            company_type_code="CLIENT",
         )
         assert e1 is None
         _, e2 = submit_company_profile(
-            user=user, inn="9999999999", company_name="My Co",
-            workspace_role_code="OWNER", company_type_code="CLIENT",
+            user=user,
+            inn="9999999999",
+            company_name="My Co",
+            workspace_role_code="OWNER",
+            company_type_code="CLIENT",
         )
         assert e2 is None
         assert CompanyMember.objects.filter(user=user).count() == 1

@@ -107,9 +107,17 @@ jobs:
           DJANGO_SECRET_KEY: 'ci-test-secret-key-not-for-production'
           REDIS_URL: redis://localhost:6379/0
           DEBUG: 'True'
+          # In-memory email backend: no SMTP server exists in CI, so the real
+          # SMTP default would make registration (send setup-password email)
+          # fail with ConnectionRefused. Cascades to EMAIL_CHANNELS (settings.py).
+          EMAIL_BACKEND: 'django.core.mail.backends.locmem.EmailBackend'
         run: |
           cd backend
-          pytest --cov=. --cov-report=xml --cov-report=html --cov-fail-under=30
+          # --create-db: the test schema is built from current models (we run
+          # --nomigrations). The reused Neon test DB drifts when models gain
+          # fields (e.g. notifications.audience, activitylog.entity_type), so
+          # force a rebuild each run to keep the schema in sync with the models.
+          pytest --create-db --cov=. --cov-report=xml --cov-report=html --cov-fail-under=30
 
       - name: Upload coverage reports
         uses: codecov/codecov-action@v4
