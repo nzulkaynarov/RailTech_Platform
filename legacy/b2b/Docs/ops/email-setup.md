@@ -32,9 +32,9 @@ The deploy workflow (`.github/workflows/deploy-b2b.yml`) renders these into `/op
 | MX | ✅ | `mx.yandex.net.` (priority 10) |
 | TXT `@` (SPF) | ✅ | `v=spf1 redirect=_spf.yandex.net` |
 | TXT `mail._domainkey` (DKIM) | ✅ | RSA key published (rotate via Yandex 360 admin) |
-| TXT `_dmarc` | ⚠ pending | recommended: `v=DMARC1; p=none; rua=mailto:postmaster@railtech.uz` |
+| TXT `_dmarc` | ✅ | `v=DMARC1; p=none; rua=mailto:dmarc@railtech.uz; ruf=mailto:dmarc@railtech.uz; fo=1; adkim=r; aspf=r; pct=100` |
 
-Without DMARC, Gmail 2024+ may classify mail more harshly for bulk senders. Low-volume transactional mail mostly survives without it; add when volume justifies.
+DMARC is in `p=none` (monitor) mode — aggregate + forensic reports go to `dmarc@railtech.uz`. Once a few weeks of reports show no legitimate sources failing alignment, you can tighten to `p=quarantine` or `p=reject`.
 
 ## Verifying a stuck send
 

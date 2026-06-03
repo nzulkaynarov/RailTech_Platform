@@ -5,7 +5,7 @@ Open work after the 2026-06-02 production cutover. Not blockers, but tracked so 
 ## Infrastructure / ops
 
 - **Sentry / error aggregation.** ⚙️ Backend is wired (inert until `SENTRY_DSN` set); frontend is one `npm i @sentry/react` away. To activate, follow `Docs/ops/observability.md` — set the `SENTRY_DSN` secret in the `production` environment. Do this before real customer onboarding.
-- **DMARC record.** DNS has MX/SPF/DKIM (see `Docs/ops/email-setup.md`) but `_dmarc` TXT is missing. Plan: `v=DMARC1; p=none; rua=mailto:postmaster@railtech.uz`. Gmail 2024+ requires DMARC for bulk senders; low-volume transactional mail mostly survives without it, but spam classification will be borderline.
+- **DMARC tightening.** ✅ Record now in place (`p=none`, 2026-06-03) with aggregate + forensic reports to `dmarc@railtech.uz`. After a few weeks of clean reports, tighten to `p=quarantine` then `p=reject`. See `Docs/ops/email-setup.md`.
 - **MinIO replacement.** Currently gated off (CPU lacks x86_64_v2, see `Docs/ops/vps-cpu-constraints.md`). Files persist on the `backend_media_prod` Docker volume and are served by Django `/media` via Caddy — acceptable for low file volume. Revisit when (a) the VPS gets a modern CPU, or (b) media storage exceeds ~5 GB and a public CDN block on `files.b2b.railtech.uz` becomes worthwhile.
 - **Neon backups / PITR / branching policy.** Not yet documented; RTO/RPO undefined. Neon free plan covers ~7 days of history; write down the recovery procedure.
 - **Public file CDN.** Currently no separate file host. Future option: `files.b2b.railtech.uz` Caddy block → MinIO public bucket (only after CPU upgrade) or a public host directory.
