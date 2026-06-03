@@ -190,6 +190,10 @@ services:
         # frontend appends /ws/notifications/ itself. A "/ws" default would
         # double the prefix → ws/ws/notifications/ (Channels: No route found).
         VITE_WS_URL: ${VITE_WS_URL:-}
+        # Sentry — empty default keeps the build inert (observability.ts no-ops
+        # when DSN is unset); deploy workflow populates these from GitHub secrets.
+        VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
+        VITE_SENTRY_ENVIRONMENT: ${VITE_SENTRY_ENVIRONMENT:-production}
     container_name: railtech_frontend_build
     restart: "no"
 

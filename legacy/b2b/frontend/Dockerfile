@@ -24,9 +24,15 @@ COPY . .
 ARG VITE_API_URL=http://localhost:8000
 # Origin only (no /ws path): the frontend appends /ws/notifications/ itself.
 ARG VITE_WS_URL=ws://localhost:8000
+# Sentry — empty by default so dev builds stay inert; prod sets it via the
+# deploy workflow + compose build args. See Docs/ops/observability.md.
+ARG VITE_SENTRY_DSN=
+ARG VITE_SENTRY_ENVIRONMENT=production
 
 ENV VITE_API_URL=${VITE_API_URL} \
-    VITE_WS_URL=${VITE_WS_URL}
+    VITE_WS_URL=${VITE_WS_URL} \
+    VITE_SENTRY_DSN=${VITE_SENTRY_DSN} \
+    VITE_SENTRY_ENVIRONMENT=${VITE_SENTRY_ENVIRONMENT}
 
 # Build the application
 RUN npm run build
