@@ -186,7 +186,10 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-/api}
-        VITE_WS_URL: ${VITE_WS_URL:-/ws}
+        # No "/ws" default: VITE_WS_URL is an ORIGIN (set in deploy .env), the
+        # frontend appends /ws/notifications/ itself. A "/ws" default would
+        # double the prefix → ws/ws/notifications/ (Channels: No route found).
+        VITE_WS_URL: ${VITE_WS_URL:-}
     container_name: railtech_frontend_build
     restart: "no"
 

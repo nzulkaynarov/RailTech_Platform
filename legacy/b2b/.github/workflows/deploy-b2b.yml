@@ -75,7 +75,12 @@ jobs:
           CELERY_BROKER_URL=redis://redis-celery:6379/0
           CELERY_RESULT_BACKEND=redis://redis-celery:6379/0
           VITE_API_URL=/api/v1
-          VITE_WS_URL=/ws
+          # WS must be an ORIGIN, not a path: the frontend builds the URL as
+          # `${VITE_WS_URL}/ws/notifications/`, so a "/ws" value doubles the
+          # prefix → ws/ws/notifications/ → Channels "No route found" every
+          # reconnect. Caddy proxies /ws/* (no strip) to the backend's
+          # ws/notifications/ route, so the public origin is correct here.
+          VITE_WS_URL=wss://b2b.railtech.uz
           FRONTEND_URL=https://b2b.railtech.uz
           SUPERADMIN_EMAIL=admin@railtech.uz
           SUPERADMIN_PASSWORD=${SUPERADMIN_PASSWORD}
