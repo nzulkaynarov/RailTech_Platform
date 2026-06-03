@@ -62,6 +62,29 @@ jobs:
           --health-retries 5
         ports:
           - 6379:6379
+      # Ephemeral Postgres, NOT Neon. The suite builds its schema from models
+      # (--create-db --nomigrations), so it never needs Neon's data — and pointing
+      # it at the *shared* Neon instance caused a recurring class of CI flakes:
+      # cold-start hangs, a stale test_neondb held open by a pooled session, and
+      # the SSL connection dropping mid test-DB-create ("SSL connection has been
+      # closed unexpectedly" inside _configure_timezone). A throwaway local DB,
+      # fresh every run, removes that entire class. The real migration path is
+      # still exercised by the migration-check job. pg_trgm + the GIN trigram
+      # indexes live only in migration catalog/0006 (kept out of model state),
+      # which --nomigrations skips, so no extension is needed to build the schema.
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: railtech
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
 
     steps:
       - uses: actions/checkout@v4
@@ -77,65 +100,10 @@ jobs:
           cd backend
           pip install -r requirements.txt pytest-cov
 
-      - name: Wake up Neon database
-        timeout-minutes: 6
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: |
-          pip install psycopg2-binary
-          python -c "
-          import psycopg2, os, sys, time
-          last_error = None
-          # A suspended free-tier Neon project can take 30-60s to cold-start, and
-          # the first TCP connect may hang up to connect_timeout. Use a short
-          # per-attempt timeout with many attempts so a single slow cold-start
-          # doesn't blow the whole step's budget (10 x 20s + 9 x 5s = ~245s < 6m).
-          for attempt in range(10):
-              try:
-                  conn = psycopg2.connect(os.environ['DATABASE_URL'], connect_timeout=20)
-                  conn.cursor().execute('SELECT 1')
-                  conn.close()
-                  print(f'Neon awake (attempt {attempt+1})')
-                  sys.exit(0)
-              except Exception as e:
-                  last_error = e
-                  print(f'Attempt {attempt+1} failed: {e}')
-                  time.sleep(5)
-          print(f'Failed to wake Neon after 10 attempts: {last_error}')
-          sys.exit(1)
-          "
-
-      - name: Drop stale test database (Neon shared instance)
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: |
-          # Neon is a *shared* instance, not an ephemeral CI service: a prior run's
-          # test_neondb survives, and a stale pooled session (dj-db-conn-pool) holds
-          # it open. Then --create-db hits CREATE→"already exists"→DROP→"being
-          # accessed by other users"→SystemExit(2) at django_db_setup, erroring every
-          # DB-backed test before its body runs. Same root cause CLAUDE.md documents:
-          # pg_terminate_backend + DROP DATABASE IF EXISTS test_neondb, here automated.
-          # We connect to the configured DB (neondb) and drop the *separate* test DB.
-          python -c "
-          import psycopg2, os, time
-          conn = psycopg2.connect(os.environ['DATABASE_URL'], connect_timeout=20)
-          conn.autocommit = True  # DROP DATABASE cannot run inside a transaction
-          cur = conn.cursor()
-          for attempt in range(3):
-              cur.execute(\"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'test_neondb' AND pid <> pg_backend_pid();\")
-              try:
-                  cur.execute('DROP DATABASE IF EXISTS test_neondb;')
-                  print('Dropped stale test_neondb (if it existed)')
-                  break
-              except psycopg2.errors.ObjectInUse as e:
-                  print(f'Attempt {attempt+1}: still in use, retrying: {e}')
-                  time.sleep(3)
-          conn.close()
-          "
-
       - name: Run tests with coverage
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/railtech
+          DB_SSLMODE: disable
           DJANGO_SECRET_KEY: 'ci-test-secret-key-not-for-production'
           REDIS_URL: redis://localhost:6379/0
           DEBUG: 'True'
@@ -145,10 +113,8 @@ jobs:
           EMAIL_BACKEND: 'django.core.mail.backends.locmem.EmailBackend'
         run: |
           cd backend
-          # --create-db: the test schema is built from current models (we run
-          # --nomigrations). The reused Neon test DB drifts when models gain
-          # fields (e.g. notifications.audience, activitylog.entity_type), so
-          # force a rebuild each run to keep the schema in sync with the models.
+          # --create-db: build the test schema from current models on the fresh
+          # ephemeral Postgres (we run --nomigrations, and addopts sets --reuse-db).
           pytest --create-db --cov=. --cov-report=xml --cov-report=html --cov-fail-under=30
 
       - name: Upload coverage reports
