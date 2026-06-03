@@ -1,7 +1,8 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import include, path
+from django.urls import include, path, re_path
+from django.views.static import serve as _serve_media
 from drf_spectacular.utils import extend_schema
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from rest_framework.routers import DefaultRouter
@@ -172,5 +173,21 @@ urlpatterns = (
         if settings.DEBUG
         else []
     )
+    # Serve PUBLIC media (avatars, logos, product images, category/manufacturer
+    # assets) in production. When MinIO is disabled (VPS CPU lacks x86-64-v2,
+    # see Docs/ops/vps-cpu-constraints.md) storage falls back to FileSystemStorage,
+    # but Django doesn't serve MEDIA with DEBUG=False — so uploads saved but never
+    # displayed. This whitelists ONLY public display-asset prefixes; private files
+    # (companies/*/kyc, companies/*/documents, deals/**, sourcing/imports, temp)
+    # never match and stay unreachable via /media (served only through auth views).
+    + [
+        re_path(
+            r"^media/(?P<path>(?:users/\d+/avatar|companies/\d+/logo|manufacturers/\d+/logo"
+            r"|products/\d+/images|categories/\d+/icon)/[^/]+)$",
+            _serve_media,
+            {"document_root": settings.MEDIA_ROOT},
+            name="public-media",
+        ),
+    ]
     + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 )
