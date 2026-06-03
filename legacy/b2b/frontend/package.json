@@ -11,7 +11,9 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "gen:api-types": "openapi-typescript ../backend/schema.openapi.json -o src/api/schema.d.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",

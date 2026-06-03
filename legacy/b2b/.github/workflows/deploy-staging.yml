@@ -1,0 +1,122 @@
+name: Deploy staging.b2b.railtech.uz
+
+# Staging buffer on the SAME VPS as prod (176.101.56.141), in an isolated compose
+# project (/opt/railtech-staging) with its OWN database and subdomain.
+#
+# INERT until set up — manual trigger only. Before this can run, complete the 3
+# prerequisites in Docs/ops/staging.md:
+#   1. DNS A record  staging.b2b.railtech.uz → 176.101.56.141
+#   2. GitHub environment `staging` with its OWN secrets (separate Neon DB!)
+#   3. Caddy block for the new host → web root /var/www/railtech-staging,
+#      proxy /api + /ws to the staging backend container.
+#
+# Once live, add a push trigger on a `staging` branch (see commented block).
+
+on:
+  workflow_dispatch:
+  # push:
+  #   branches: [staging]
+  #   paths-ignore: ['docs/**', 'Docs/**', '**/*.md']
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, railtech-b2b]
+    environment: staging
+    env:
+      DEPLOY_DIR: /opt/railtech-staging
+      WEB_ROOT: /var/www/railtech-staging
+      COMPOSE: docker compose -f docker-compose.yml -f docker-compose.prod.yml
+      # Staging backend must bind a DIFFERENT host port than prod's 8000 to
+      # coexist on the box. Provide a docker-compose.staging.yml override that
+      # maps the backend to this port, or set it in the staging .env.
+      STAGING_BACKEND_PORT: '8001'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Sync source into staging deploy dir
+        run: |
+          mkdir -p "$DEPLOY_DIR"
+          rsync -a --delete \
+            --exclude '.git' \
+            --exclude '.env' \
+            --exclude 'node_modules' \
+            ./ "$DEPLOY_DIR/"
+
+      - name: Render staging .env from GitHub secrets
+        working-directory: /opt/railtech-staging
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+          SUPERADMIN_PASSWORD: ${{ secrets.SUPERADMIN_PASSWORD }}
+          EMAIL_HOST: ${{ secrets.EMAIL_HOST }}
+          EMAIL_HOST_USER: ${{ secrets.EMAIL_HOST_USER }}
+          EMAIL_HOST_PASSWORD: ${{ secrets.EMAIL_HOST_PASSWORD }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+        run: |
+          test -n "$DATABASE_URL" || { echo "::error::secret DATABASE_URL (staging) is not set"; exit 1; }
+          test -n "$DJANGO_SECRET_KEY" || { echo "::error::secret DJANGO_SECRET_KEY (staging) is not set"; exit 1; }
+          umask 077
+          cat > .env <<EOF
+          DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+          DJANGO_DEBUG=False
+          PRODUCTION=true
+          ALLOWED_HOSTS=staging.b2b.railtech.uz,localhost,127.0.0.1
+          DATABASE_URL=${DATABASE_URL}
+          DB_SSLMODE=require
+          REDIS_URL=redis://redis:6379/0
+          CELERY_BROKER_URL=redis://redis-celery:6379/0
+          CELERY_RESULT_BACKEND=redis://redis-celery:6379/0
+          VITE_API_URL=/api/v1
+          VITE_WS_URL=/ws
+          FRONTEND_URL=https://staging.b2b.railtech.uz
+          SUPERADMIN_EMAIL=admin@railtech.uz
+          SUPERADMIN_PASSWORD=${SUPERADMIN_PASSWORD}
+          EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+          EMAIL_HOST=${EMAIL_HOST:-localhost}
+          EMAIL_PORT=587
+          EMAIL_HOST_USER=${EMAIL_HOST_USER}
+          EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
+          EMAIL_USE_TLS=True
+          DEFAULT_FROM_EMAIL=noreply@railtech.uz
+          DJANGO_LOG_LEVEL=INFO
+          SENTRY_DSN=${SENTRY_DSN}
+          SENTRY_ENVIRONMENT=staging
+          EOF
+          chmod 600 .env
+
+      - name: Build SPA and publish static for Caddy
+        working-directory: /opt/railtech-staging
+        run: |
+          $COMPOSE --profile frontend-build build frontend
+          IMG="$(basename "$PWD")-frontend"
+          mkdir -p "$WEB_ROOT"
+          docker run --rm -v "$WEB_ROOT":/out alpine find /out -mindepth 1 -delete
+          CID=$(docker create "$IMG")
+          docker cp "$CID":/usr/share/nginx/html/. "$WEB_ROOT"/
+          docker rm "$CID"
+
+      - name: Deploy staging backend stack
+        working-directory: /opt/railtech-staging
+        run: |
+          $COMPOSE up -d --build
+          docker image prune -f
+
+      - name: Health check
+        run: |
+          for i in $(seq 1 12); do
+            if curl -fsS "http://127.0.0.1:${STAGING_BACKEND_PORT}/health/" >/dev/null 2>&1; then
+              echo "staging backend healthy"; exit 0
+            fi
+            echo "waiting for staging backend... ($i/12)"; sleep 5
+          done
+          echo "::error::staging backend did not become healthy"
+          cd /opt/railtech-staging && $COMPOSE logs --tail=80 backend
+          exit 1

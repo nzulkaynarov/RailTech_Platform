@@ -6,8 +6,12 @@ import { toast } from 'sonner';
 
 import i18n from './i18n';
 import { translateApiError } from './lib/apiError';
+import { ErrorBoundary } from './components/Shared/ErrorBoundary';
+import { initObservability } from './lib/observability';
 import './index.css';
 import App from './App';
+
+initObservability();
 
 const queryClient = new QueryClient({
   // Single source of truth for mutation errors: any mutation that does not opt out
@@ -40,7 +44,11 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <I18nextProvider i18n={i18n}>
       <QueryClientProvider client={queryClient}>
-        <App />
+        {/* Root-level boundary: a render crash anywhere shows the recovery UI
+            instead of a white screen. Inner boundaries can still scope errors. */}
+        <ErrorBoundary>
+          <App />
+        </ErrorBoundary>
       </QueryClientProvider>
     </I18nextProvider>
   </StrictMode>,
