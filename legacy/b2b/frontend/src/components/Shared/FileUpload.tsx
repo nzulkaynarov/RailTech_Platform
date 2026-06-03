@@ -52,6 +52,23 @@ export function FileUpload({
             toast.error(t('fileUpload.errors.tooLarge', { max: maxSizeMB }));
             return;
         }
+        // Validate against `accept` (extensions and/or MIME) — the browser's accept
+        // attribute is only a hint and is bypassed by drag-and-drop. Backend re-validates
+        // by magic bytes (authoritative); this is early client-side feedback.
+        const allowed = accept.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+        if (allowed.length) {
+            const ext = `.${(file.name.split('.').pop() || '').toLowerCase()}`;
+            const mime = (file.type || '').toLowerCase();
+            const ok = allowed.some((a) =>
+                a.startsWith('.') ? a === ext
+                : a.endsWith('/*') ? mime.startsWith(a.slice(0, -1))
+                : a === mime,
+            );
+            if (!ok) {
+                toast.error(t('fileUpload.errors.invalidType'));
+                return;
+            }
+        }
         setIsBusy(true);
         try {
             await onUpload(file);

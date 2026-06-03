@@ -3901,6 +3901,7 @@
     "errors": {
       "tooLarge": "File is too large (max {{max}} MB)",
       "invalidImageType": "Invalid image type",
+      "invalidType": "Invalid file type",
       "uploadFailed": "Failed to upload file",
       "removeFailed": "Failed to remove file"
     }
