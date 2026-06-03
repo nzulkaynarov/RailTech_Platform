@@ -53,7 +53,8 @@
     "next": "Next",
     "period7d": "7 days",
     "period30d": "30 days",
-    "period90d": "90 days"
+    "period90d": "90 days",
+    "id": "ID"
   },
   "auth": {
     "loginTitle": "Sign in",
@@ -397,7 +398,8 @@
       "dateAdded": "Date added",
       "stockQuantity": "Quantity in stock",
       "prevPeriod": "Previous period"
-    }
+    },
+    "productNotFound": "Product not found"
   },
   "productManagement": {
     "catalog": "Catalog",
@@ -1271,7 +1273,9 @@
       "taxId": "TIN",
       "mfoCode": "MFO code",
       "bankAcc": "Bank account",
-      "opContact": "Contact person"
+      "opContact": "Contact person",
+      "email": "Email",
+      "website": "Website"
     },
     "docTypes": {
       "CHARTER": "Company Charter",
@@ -1712,7 +1716,8 @@
       "quotesReceived": "Quotes Received",
       "inProgress": "In progress",
       "completed": "Completed",
-      "requestCompletion": "Request Completion"
+      "requestCompletion": "Request Completion",
+      "clients": "Clients"
     },
     "id": "ID",
     "name": "Name",

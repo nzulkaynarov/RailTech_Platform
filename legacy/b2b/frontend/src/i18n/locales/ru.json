@@ -53,7 +53,8 @@
     "next": "Далее",
     "period7d": "7 дней",
     "period30d": "30 дней",
-    "period90d": "90 дней"
+    "period90d": "90 дней",
+    "id": "ID"
   },
   "auth": {
     "loginTitle": "Вход в кабинет",
@@ -399,7 +400,8 @@
       "dateAdded": "Дата добавления",
       "stockQuantity": "Количество на складе",
       "prevPeriod": "Пред. период"
-    }
+    },
+    "productNotFound": "Товар не найден"
   },
   "productManagement": {
     "catalog": "Каталог",
@@ -1275,7 +1277,9 @@
       "taxId": "ИНН",
       "mfoCode": "МФО",
       "bankAcc": "Расчётный счёт",
-      "opContact": "Контактное лицо"
+      "opContact": "Контактное лицо",
+      "email": "Email",
+      "website": "Веб-сайт"
     },
     "docTypes": {
       "CHARTER": "Устав компании",
@@ -1716,7 +1720,8 @@
       "quotesReceived": "КП получено",
       "inProgress": "В работе",
       "completed": "Завершено",
-      "requestCompletion": "Выполнение заявок"
+      "requestCompletion": "Выполнение заявок",
+      "clients": "Клиенты"
     },
     "id": "ID",
     "name": "Наименование",
