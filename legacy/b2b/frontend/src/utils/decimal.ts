@@ -28,6 +28,14 @@ export const calculateLineTotal = (price: string | number, quantity: number): st
   return toDecimal(price).mul(quantity).toString();
 };
 
+/** Exact sum of money values (avoids float drift). Returns a JS number for display. */
+export const sumMoney = (values: Array<string | number | undefined | null>): number =>
+  values.reduce<Decimal>((acc, v) => acc.plus(toDecimal(v)), new Decimal(0)).toNumber();
+
+/** Exact line total (price × quantity) as a JS number for aggregation. */
+export const lineTotal = (price: string | number | undefined | null, quantity: number): number =>
+  toDecimal(price).mul(quantity).toNumber();
+
 export const calculateVAT = (subtotal: string | number, vatRate: string | number): string => {
   const rate = toDecimal(vatRate).div(100);
   return toDecimal(subtotal).mul(rate).toString();

@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/table';
 import { useSubmitBid } from '@/hooks/useBidding';
 import { ManualModeBanner } from '@/components/Shared/ManualModeBanner';
+import { sumMoney, lineTotal } from '@/utils/decimal';
 
 interface BidItemDraft {
   description: string;
@@ -54,13 +55,10 @@ export function SupplierBidSubmitDialog({
   const [notes, setNotes] = useState('');
   const [leadTime, setLeadTime] = useState('');
 
-  const total = useMemo(() => {
-    return items.reduce((sum, it) => {
-      const quantity = Number(it.quantity) || 0;
-      const unitPrice = Number(it.unit_price) || 0;
-      return sum + quantity * unitPrice;
-    }, 0);
-  }, [items]);
+  const total = useMemo(
+    () => sumMoney(items.map((it) => lineTotal(it.unit_price, Number(it.quantity) || 0))),
+    [items],
+  );
 
   const updateItem = (idx: number, patch: Partial<BidItemDraft>) => {
     setItems((prev) => prev.map((it, i) => (i === idx ? { ...it, ...patch } : it)));

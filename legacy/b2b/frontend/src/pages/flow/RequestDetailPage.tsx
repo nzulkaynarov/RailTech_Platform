@@ -188,7 +188,7 @@ export function RequestDetailPage({ onBack }: { onBack: () => void; onNavigate: 
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {quote.items.map(item => (
+                  {(quote.items ?? []).map(item => (
                     <TableRow key={item.id}>
                       <TableCell>
                         <span className="font-medium">{item.product_name || item.imported_raw_name}</span>
@@ -205,7 +205,7 @@ export function RequestDetailPage({ onBack }: { onBack: () => void; onNavigate: 
                       </TableCell>
                     </TableRow>
                   ))}
-                  {quote.items.length === 0 && (
+                  {(quote.items?.length ?? 0) === 0 && (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
                         {t('requestDetailActions.noItems')}

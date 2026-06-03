@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2, AlertCircle, ShoppingCart, Factory, Store, Building2 } from 'lucide-react';
 import { accountsApi } from '@/api/accountsApi';
+import { translateApiError } from '@/lib/apiError';
 import { useAuthStore } from '@/store/authStore';
 
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -62,12 +63,9 @@ export const ProfileCompletionForm: React.FC<ProfileCompletionFormProps> = ({ on
             await initAuth();
             onComplete();
         } catch (err: unknown) {
-            const axiosErr = err as { response?: { data?: { error?: string; detail?: string } } };
-            const code = axiosErr.response?.data?.error;
-            const errorMessage = code
-                ? t(`errors.${code}`, { defaultValue: code })
-                : axiosErr.response?.data?.detail || t('profileForm.saveError');
-            setServerError(errorMessage);
+            // translateApiError maps backend codes (COMPANY_INN_TAKEN, ...) via the
+            // apiErrors namespace; falls back to the raw code, then a generic message.
+            setServerError(translateApiError(err) || t('profileForm.saveError'));
         }
     };
 

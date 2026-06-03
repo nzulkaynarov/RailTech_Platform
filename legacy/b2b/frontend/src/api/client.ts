@@ -26,17 +26,36 @@ apiClient.interceptors.request.use((config) => {
 	return config;
 });
 
-// Token refresh mutex — prevents concurrent refresh attempts
+// Token refresh mutex — prevents concurrent refresh attempts.
+// Queued requests must be settled on BOTH success and failure, otherwise a failed
+// refresh leaves every queued request hanging forever (app appears frozen).
 let isRefreshing = false;
-let refreshSubscribers: ((token: string) => void)[] = [];
+type RefreshSubscriber = { resolve: (token: string) => void; reject: (err: unknown) => void };
+let refreshSubscribers: RefreshSubscriber[] = [];
 
 function onRefreshed(token: string) {
-	refreshSubscribers.forEach((cb) => cb(token));
+	const subs = refreshSubscribers;
 	refreshSubscribers = [];
+	subs.forEach((s) => s.resolve(token));
 }
 
-function addRefreshSubscriber(cb: (token: string) => void) {
-	refreshSubscribers.push(cb);
+function onRefreshFailed(err: unknown) {
+	const subs = refreshSubscribers;
+	refreshSubscribers = [];
+	subs.forEach((s) => s.reject(err));
+}
+
+async function failRefresh(err: unknown): Promise<void> {
+	// Side-effects only: reject every queued request, log out, bounce to login.
+	// The caller returns the rejection so this never throws back into the try/catch.
+	onRefreshFailed(err);
+	try {
+		const { useAuthStore } = await import('../store/authStore');
+		useAuthStore.getState().logout();
+	} catch {
+		localStorage.removeItem('railtech-auth');
+	}
+	if (window.location.pathname !== '/') window.location.href = '/';
 }
 
 // Response interceptor for token refresh
@@ -45,15 +64,18 @@ apiClient.interceptors.response.use(
 	async (error) => {
 		const originalRequest = error.config;
 
-		if (error.response?.status === 401 && !originalRequest._retry) {
+		if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
 			originalRequest._retry = true;
 
 			if (isRefreshing) {
-				// Another request is already refreshing — queue this one
-				return new Promise((resolve) => {
-					addRefreshSubscriber((newToken: string) => {
-						originalRequest.headers.Authorization = `Bearer ${newToken}`;
-						resolve(apiClient(originalRequest));
+				// Another request is already refreshing — queue this one (settled on both paths)
+				return new Promise((resolve, reject) => {
+					refreshSubscribers.push({
+						resolve: (newToken: string) => {
+							originalRequest.headers.Authorization = `Bearer ${newToken}`;
+							resolve(apiClient(originalRequest));
+						},
+						reject,
 					});
 				});
 			}
@@ -62,37 +84,26 @@ apiClient.interceptors.response.use(
 
 			try {
 				const raw = localStorage.getItem('railtech-auth');
-				if (raw) {
-					const authData = JSON.parse(raw);
-					const refreshToken = authData?.state?.refreshToken;
-					if (refreshToken) {
-						const response = await axios.post(`${API_URL}/auth/token/refresh/`, {
-							refresh: refreshToken,
-						});
-						const newToken = response.data.access;
-
-						// Update store via Zustand (keeps state and localStorage in sync)
-						const { useAuthStore } = await import('../store/authStore');
-						useAuthStore.getState().setTokens(newToken);
-
-						// Notify queued requests
-						onRefreshed(newToken);
-
-						// Retry original request
-						originalRequest.headers.Authorization = `Bearer ${newToken}`;
-						return apiClient(originalRequest);
-					}
+				const refreshToken = raw ? JSON.parse(raw)?.state?.refreshToken : null;
+				if (!refreshToken) {
+					await failRefresh(error);
+					return Promise.reject(error);
 				}
+				const response = await axios.post(`${API_URL}/auth/token/refresh/`, {
+					refresh: refreshToken,
+				});
+				const newToken = response.data.access;
+
+				// Update store via Zustand (keeps state and localStorage in sync)
+				const { useAuthStore } = await import('../store/authStore');
+				useAuthStore.getState().setTokens(newToken);
+
+				// Notify queued requests, then retry the original
+				onRefreshed(newToken);
+				originalRequest.headers.Authorization = `Bearer ${newToken}`;
+				return apiClient(originalRequest);
 			} catch (refreshError) {
-				// Refresh failed, logout user via store
-				refreshSubscribers = [];
-				try {
-					const { useAuthStore } = await import('../store/authStore');
-					useAuthStore.getState().logout();
-				} catch {
-					localStorage.removeItem('railtech-auth');
-				}
-				window.location.href = '/';
+				await failRefresh(refreshError);
 				return Promise.reject(refreshError);
 			} finally {
 				isRefreshing = false;

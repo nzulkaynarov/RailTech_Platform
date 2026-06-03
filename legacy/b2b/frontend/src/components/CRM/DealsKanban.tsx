@@ -12,6 +12,7 @@ interface DealStage {
   name: string;
 }
 import { useCurrencyStore } from '@/store/currencyStore';
+import { sumMoney } from '@/utils/decimal';
 
 interface DealsKanbanProps {
   deals: Deal[];
@@ -52,10 +53,7 @@ export function DealsKanban({ deals, stages, onOpen }: DealsKanbanProps) {
     <ScrollArea className="w-full">
       <div className="flex min-w-max gap-3 pb-2">
         {grouped.map((col) => {
-          const total = col.deals.reduce(
-            (sum, d) => sum + (Number(d.total_value) || 0),
-            0,
-          );
+          const total = sumMoney(col.deals.map((d) => d.total_value));
           return (
             <div
               key={col.code}

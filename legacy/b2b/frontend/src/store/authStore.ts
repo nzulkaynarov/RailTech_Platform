@@ -29,7 +29,12 @@ interface AuthState {
     clearError: () => void;
 }
 
-const API_URL = import.meta.env.VITE_API_URL || '';
+// Mirror api/client.ts: ensure the /api/v1 prefix regardless of whether
+// VITE_API_URL is "/api" or already "/api/v1". Login uses raw fetch (NOT apiClient)
+// on purpose — a 401 here means bad credentials and must NOT trigger the token-
+// refresh interceptor (which would redirect to login instead of showing the error).
+const _BASE = import.meta.env.VITE_API_URL || '';
+const API_URL = _BASE.endsWith('/api/v1') ? _BASE : `${_BASE}/api/v1`;
 
 export const useAuthStore = create<AuthState>()(
     persist(

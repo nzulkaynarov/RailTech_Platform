@@ -3832,6 +3832,7 @@
     "ACT_SIGN_NOT_ALLOWED": "Act cannot be signed in the current status",
     "FULFILLMENT_INVALID_STATUS": "Invalid fulfillment status",
     "BID_ONLY_IN_RFQ_OPEN": "Bid can only be submitted on a deal in RFQ_OPEN status",
+    "BID_ITEM_INVALID_AMOUNT": "Invalid quantity or price in a bid line item",
     "BID_ACCEPT_NOT_ALLOWED": "Cannot accept a bid in the current status",
     "BID_REJECT_NOT_ALLOWED": "Cannot reject a bid in the current status",
     "NOT_A_SUPPLIER_MEMBER": "You are not a member of this supplier company",
@@ -3900,6 +3901,7 @@
     "errors": {
       "tooLarge": "File is too large (max {{max}} MB)",
       "invalidImageType": "Invalid image type",
+      "invalidType": "Invalid file type",
       "uploadFailed": "Failed to upload file",
       "removeFailed": "Failed to remove file"
     }

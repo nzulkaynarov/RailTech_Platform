@@ -1,13 +1,24 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, MutationCache } from '@tanstack/react-query';
 import { I18nextProvider } from 'react-i18next';
+import { toast } from 'sonner';
 
 import i18n from './i18n';
+import { translateApiError } from './lib/apiError';
 import './index.css';
 import App from './App';
 
 const queryClient = new QueryClient({
+  // Single source of truth for mutation errors: any mutation that does not opt out
+  // surfaces a localised toast. Prevents the "action silently failed" class of bugs.
+  // A mutation can opt out with meta: { skipErrorToast: true } when it shows its own UI.
+  mutationCache: new MutationCache({
+    onError: (error, _vars, _ctx, mutation) => {
+      if (mutation.meta?.skipErrorToast) return;
+      toast.error(translateApiError(error));
+    },
+  }),
   defaultOptions: {
     queries: {
       retry: (failureCount, error) => {

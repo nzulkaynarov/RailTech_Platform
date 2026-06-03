@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { systemApi } from '@/api/systemApi';
+import { toDecimal } from '@/utils/decimal';
 
 export type Currency = 'USD' | 'UZS';
 
@@ -24,7 +25,7 @@ export const useCurrencyStore = create<CurrencyState>((set, get) => ({
     if (get().rateLoaded) return;
     try {
       const settings = await systemApi.getSettings();
-      const rate = parseFloat(settings.exchange_rate_usd_uzs);
+      const rate = toDecimal(settings.exchange_rate_usd_uzs).toNumber();
       if (rate > 0) {
         set({ rate, rateLoaded: true });
       }
@@ -35,7 +36,7 @@ export const useCurrencyStore = create<CurrencyState>((set, get) => ({
 
   convert: (amountUSD: number): number => {
     const { currency, rate } = get();
-    return currency === 'USD' ? amountUSD : amountUSD * rate;
+    return currency === 'USD' ? amountUSD : toDecimal(amountUSD).mul(rate).toNumber();
   },
 
   format: (amountUSD: number): string => {
@@ -46,7 +47,7 @@ export const useCurrencyStore = create<CurrencyState>((set, get) => ({
         maximumFractionDigits: 2,
       });
     }
-    const amountUZS = amountUSD * rate;
+    const amountUZS = toDecimal(amountUSD).mul(rate).toNumber();
     return amountUZS.toLocaleString('ru-RU') + ' сум';
   },
 }));

@@ -44,48 +44,50 @@ export const useFlowStore = create<FlowState>((set, get) => ({
   },
 
   changeDealStage: async (id: number, stage: string) => {
-    set({ loading: true });
+    set({ loading: true, error: null });
     try {
       const { crmApi } = await import('../api/crmApi');
       await crmApi.changeDealStage(id, stage);
-      get().loadDeal(id);
+      await get().loadDeal(id); // loadDeal manages loading:false on completion
     } catch (e: unknown) {
       set({ error: e instanceof Error ? e.message : 'Operation failed', loading: false });
     }
   },
 
   approveQuote: async (quoteId: number) => {
-    set({ loading: true });
+    set({ loading: true, error: null });
     try {
       const { crmApi } = await import('../api/crmApi');
       await crmApi.approveQuote(quoteId);
       const dealId = get().deal?.id;
-      if (dealId) get().loadDeal(dealId);
+      if (dealId) await get().loadDeal(dealId);
+      else set({ loading: false });
     } catch (e: unknown) {
       set({ error: e instanceof Error ? e.message : 'Operation failed', loading: false });
     }
   },
 
   rejectQuote: async (quoteId: number) => {
-    set({ loading: true });
+    set({ loading: true, error: null });
     try {
       const { crmApi } = await import('../api/crmApi');
-      // The API doesn't formally accept reason yet, maybe we just pass it or ignore
       await crmApi.rejectQuote(quoteId);
       const dealId = get().deal?.id;
-      if (dealId) get().loadDeal(dealId);
+      if (dealId) await get().loadDeal(dealId);
+      else set({ loading: false });
     } catch (e: unknown) {
       set({ error: e instanceof Error ? e.message : 'Operation failed', loading: false });
     }
   },
 
   sendQuoteToClient: async (quoteId: number) => {
-    set({ loading: true });
+    set({ loading: true, error: null });
     try {
       const { crmApi } = await import('../api/crmApi');
       await crmApi.sendQuoteToClient(quoteId);
       const dealId = get().deal?.id;
-      if (dealId) get().loadDeal(dealId);
+      if (dealId) await get().loadDeal(dealId);
+      else set({ loading: false });
     } catch (e: unknown) {
       set({ error: e instanceof Error ? e.message : 'Operation failed', loading: false });
     }
