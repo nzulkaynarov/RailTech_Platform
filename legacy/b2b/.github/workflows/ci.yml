@@ -105,6 +105,34 @@ jobs:
           sys.exit(1)
           "
 
+      - name: Drop stale test database (Neon shared instance)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          # Neon is a *shared* instance, not an ephemeral CI service: a prior run's
+          # test_neondb survives, and a stale pooled session (dj-db-conn-pool) holds
+          # it open. Then --create-db hits CREATE→"already exists"→DROP→"being
+          # accessed by other users"→SystemExit(2) at django_db_setup, erroring every
+          # DB-backed test before its body runs. Same root cause CLAUDE.md documents:
+          # pg_terminate_backend + DROP DATABASE IF EXISTS test_neondb, here automated.
+          # We connect to the configured DB (neondb) and drop the *separate* test DB.
+          python -c "
+          import psycopg2, os, time
+          conn = psycopg2.connect(os.environ['DATABASE_URL'], connect_timeout=20)
+          conn.autocommit = True  # DROP DATABASE cannot run inside a transaction
+          cur = conn.cursor()
+          for attempt in range(3):
+              cur.execute(\"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'test_neondb' AND pid <> pg_backend_pid();\")
+              try:
+                  cur.execute('DROP DATABASE IF EXISTS test_neondb;')
+                  print('Dropped stale test_neondb (if it existed)')
+                  break
+              except psycopg2.errors.ObjectInUse as e:
+                  print(f'Attempt {attempt+1}: still in use, retrying: {e}')
+                  time.sleep(3)
+          conn.close()
+          "
+
       - name: Run tests with coverage
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
