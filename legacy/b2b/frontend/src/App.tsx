@@ -158,6 +158,17 @@ function useAuthRoute() {
   return { route, navigate };
 }
 
+// Parse a URL hash back into a Page, restoring parameterised routes like
+// `product_detail/<id>` so deep links / refresh / back-forward work.
+function parseHashToPage(rawHash: string): Page {
+  const hash = rawHash.replace(/^#/, '');
+  if (!hash || hash === 'dashboard') return { type: 'dashboard' };
+  if (hash.startsWith('product_detail/')) {
+    return { type: 'product_detail', productId: hash.slice('product_detail/'.length) } as Page;
+  }
+  return { type: hash } as Page;
+}
+
 function App() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
@@ -292,14 +303,7 @@ function MainApp() {
   const canUseCrmManagerPages =
     role === 'ADMIN' ||
     (workspaceRole !== null && CRM_MANAGER_WORKSPACE_ROLES.has(workspaceRole));
-  const [page, setPage] = useState<Page>(() => {
-    // Restore page from URL hash on initial load
-    const hash = window.location.hash.replace('#', '');
-    if (hash && hash !== 'dashboard') {
-      return { type: hash } as Page;
-    }
-    return { type: 'dashboard' };
-  });
+  const [page, setPage] = useState<Page>(() => parseHashToPage(window.location.hash));
   const [showTour, setShowTour] = useState(false);
 
   const navigateTo = (p: Page) => {
@@ -343,12 +347,7 @@ function MainApp() {
       if (e.state?.page) {
         setPage(e.state.page);
       } else {
-        const hash = window.location.hash.replace('#', '');
-        if (hash) {
-          setPage({ type: hash } as Page);
-        } else {
-          setPage({ type: 'dashboard' });
-        }
+        setPage(parseHashToPage(window.location.hash));
       }
     };
     window.addEventListener('popstate', onPopState);
