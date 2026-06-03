@@ -4,21 +4,9 @@ Public API is re-exported here so `crm.services.X` and
 `from crm.services import X` keep working unchanged.
 """
 
-from ._params import (
-    BidSubmission,
-    PaymentData,
-)
-from .bids import (
-    accept_supplier_bid,
-    reject_supplier_bid,
-    submit_supplier_bid,
-)
-from .billing import (
-    generate_act,
-    generate_invoice_from_contract,
-    record_payment,
-    sign_act,
-)
+from ._params import BidSubmission, PaymentData
+from .bids import accept_supplier_bid, reject_supplier_bid, submit_supplier_bid
+from .billing import generate_act, generate_invoice_from_contract, record_payment, sign_act
 from .contracts import (
     cancel_contract,
     force_cancel_contract,
@@ -38,21 +26,9 @@ from .deals import (
     register_new_deal,
     transition_deal_stage,
 )
-from .fulfillment import (
-    ensure_fulfillment,
-    update_fulfillment_status,
-)
-from .messaging import (
-    archive_messages_sync,
-    send_deal_message,
-    user_can_access_deal_chat,
-)
-from .quotes import (
-    QuoteCalculationService,
-    QuoteLifecycleService,
-    get_crm_analytics_data,
-    reassign_quote_item_product,
-)
+from .fulfillment import ensure_fulfillment, update_fulfillment_status
+from .messaging import archive_messages_sync, send_deal_message, user_can_access_deal_chat
+from .quotes import QuoteCalculationService, QuoteLifecycleService, get_crm_analytics_data, reassign_quote_item_product
 
 __all__ = [
     "ALLOWED_STAGE_TRANSITIONS",

@@ -3,12 +3,7 @@ from decimal import Decimal
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from core.storage import (
-    act_pdf_path,
-    get_private_storage,
-    invoice_pdf_path,
-    payment_proof_path,
-)
+from core.storage import act_pdf_path, get_private_storage, invoice_pdf_path, payment_proof_path
 from master_data.models import Currency
 
 # ────────────────────────────────────────────

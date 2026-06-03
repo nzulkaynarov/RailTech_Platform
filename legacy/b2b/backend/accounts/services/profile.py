@@ -3,13 +3,7 @@ from typing import Optional, Tuple
 
 from django.db import transaction
 
-from ..models import (
-    Company,
-    CompanyMember,
-    CustomUser,
-    VerificationStatus,
-    WorkspaceRole,
-)
+from ..models import Company, CompanyMember, CustomUser, VerificationStatus, WorkspaceRole
 
 logger = logging.getLogger(__name__)
 
@@ -51,9 +45,7 @@ def submit_company_profile(
     if existing:
         company = existing  # idempotent: same user re-submitting their own INN
     else:
-        company = Company.objects.create(
-            inn=inn, name=company_name, verification_status=submitted_status
-        )
+        company = Company.objects.create(inn=inn, name=company_name, verification_status=submitted_status)
 
     # Assign company type
     if company_type and not company.types.filter(pk=company_type.pk).exists():

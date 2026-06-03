@@ -56,6 +56,9 @@ django-formtools>=2.5
 # API docs
 drf-spectacular>=0.29
 
+# Observability — error reporting. No-op unless SENTRY_DSN is set (see core/settings.py).
+sentry-sdk[django]>=2.20
+
 # Audit / history
 django-pghistory>=3.9
 django-pgtrigger>=4.9

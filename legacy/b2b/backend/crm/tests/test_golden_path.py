@@ -1,0 +1,310 @@
+"""
+GOLDEN PATH — the single end-to-end regression net for the core business value.
+
+This test drives the WHOLE product story through the real service layer, exactly
+as buyer / seller / manager would trigger it from the UI:
+
+    buyer opens RFQ  →  seller submits a bid  →  manager builds & sends the КП
+    →  buyer approves it  →  contract is double-signed  →  invoice is issued
+    →  payment is recorded  →  fulfillment accepted  →  deal CLOSED_WON.
+
+If this test is green, the core flow the platform exists for works. If a future
+change breaks any step, CI fails BEFORE it reaches production — this is the
+"know it's stable" net that replaces clicking through prod by hand.
+
+It exercises the REAL permission paths (a member buyer with can_buy opens the
+RFQ; a member seller with can_sell + an operational subscription bids), not just
+the superuser bypass — so it also guards the multi-tenant capability gates.
+
+Runs against the DB via pytest-django (see pyproject.toml). Marked `integration`.
+"""
+
+from decimal import Decimal
+
+import pytest
+from django.utils import timezone
+
+from accounts import services as acc_services
+from accounts.models import (
+    Company,
+    CompanyMember,
+    CompanyType,
+    CustomUser,
+    SystemRole,
+    VerificationStatus,
+    WorkspaceRole,
+)
+from catalog.models import DomainType, ProductStatus, StockStatus
+from crm import services as crm_services
+from crm.models import Deal, DealStage, Quote, QuoteItem, QuoteStatus
+from crm.services.quotes import QuoteCalculationService, QuoteLifecycleService
+from master_data.models import Country, Currency, UnitOfMeasure
+
+# ─── Lookup + actor fixtures (self-contained, no shared conftest coupling) ────
+
+
+@pytest.fixture
+def lookups(db):
+    """Seed every lookup code the golden path touches.
+
+    Tests run with --nomigrations (pyproject addopts), so the data migration
+    that normally seeds these (core/migrations/0002_seed_enterprise_lookups)
+    never runs — we recreate the codes the flow asserts on.
+    """
+    for code in [
+        "DRAFT",
+        "KYC_PENDING",
+        "RFQ_OPEN",
+        "SOURCING",
+        "CALCULATING",
+        "QUOTE_SENT",
+        "CONTRACT_SIGNED",
+        "CLOSED_WON",
+        "CLOSED_LOST",
+    ]:
+        DealStage.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
+    for code, name in [("DRAFT", "Draft"), ("SENT", "Sent"), ("APPROVED", "Approved"), ("REJECTED", "Rejected")]:
+        QuoteStatus.objects.get_or_create(code=code, defaults={"name": name, "sort_order": 10})
+    CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
+    CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
+    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
+    WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
+    SystemRole.objects.get_or_create(code="USER", defaults={"name": "User", "sort_order": 10})
+    Country.objects.get_or_create(code="UZ", defaults={"name": "Uzbekistan", "sort_order": 10})
+    Currency.objects.get_or_create(code="USD", defaults={"name": "US Dollar", "symbol": "$", "sort_order": 10})
+    UnitOfMeasure.objects.get_or_create(code="PCS", defaults={"name": "Piece", "sort_order": 10})
+    DomainType.objects.get_or_create(
+        code="GENERAL", defaults={"name": "General", "sku_prefix": "GEN", "sort_order": 10}
+    )
+    ProductStatus.objects.get_or_create(code="PUBLISHED", defaults={"name": "Published", "sort_order": 20})
+    StockStatus.objects.get_or_create(code="IN_STOCK", defaults={"name": "In stock", "sort_order": 10})
+
+
+def _make_company_with_owner(*, name, inn, type_code, email, username):
+    user = CustomUser.objects.create_user(
+        email=email,
+        username=username,
+        password="pw",
+        is_active=True,
+        first_name="T",
+        last_name=type_code.title(),
+    )
+    company = Company.objects.create(
+        name=name,
+        inn=inn,
+        verification_status=VerificationStatus.objects.get(code="L2_VERIFIED"),
+    )
+    company.types.add(CompanyType.objects.get(code=type_code))
+    # OWNER membership; can_sell / can_buy default to True (see CompanyMember model).
+    CompanyMember.objects.create(
+        user=user,
+        company=company,
+        role=WorkspaceRole.objects.get(code="OWNER"),
+        is_primary=True,
+        is_active=True,
+    )
+    return user, company
+
+
+@pytest.fixture
+def buyer(lookups):
+    return _make_company_with_owner(
+        name="Golden Buyer LLC",
+        inn="7700000001",
+        type_code="CLIENT",
+        email="g.buyer@example.com",
+        username="g_buyer",
+    )
+
+
+@pytest.fixture
+def seller(lookups):
+    user, company = _make_company_with_owner(
+        name="Golden Seller LLC",
+        inn="7700000002",
+        type_code="SUPPLIER",
+        email="g.seller@example.com",
+        username="g_seller",
+    )
+    # Sellers need an operational subscription to bid — give the real trial.
+    acc_services.ensure_trial_subscription(company)
+    return user, company
+
+
+@pytest.fixture
+def manager(lookups):
+    # Platform-side orchestrator. is_superuser bypasses per-company capability
+    # checks; role USER keeps the migration-0010 invariant (ADMIN ⇒ no member).
+    return CustomUser.objects.create_user(
+        email="g.manager@example.com",
+        username="g_manager",
+        password="pw",
+        is_active=True,
+        is_staff=True,
+        is_superuser=True,
+        first_name="T",
+        last_name="Manager",
+        role=SystemRole.objects.get(code="USER"),
+    )
+
+
+@pytest.fixture
+def deal(lookups, buyer, manager):
+    buyer_user, buyer_co = buyer
+    return Deal.objects.create(
+        title="Golden Path Deal",
+        company=buyer_co,
+        client=buyer_user,
+        manager=manager,
+        stage=DealStage.objects.get(code="DRAFT"),
+    )
+
+
+def _build_quote_with_items(deal, manager):
+    """Manager builds the КП: a draft quote with two priced line items."""
+    quote = Quote.objects.create(
+        deal=deal,
+        version=1,
+        status=QuoteStatus.objects.get(code="DRAFT"),
+        prepared_by=manager,
+        tax_country=Country.objects.get(code="UZ"),
+        vat_rate=Decimal("12.00"),
+        subtotal_excl_vat=Decimal("0"),
+        vat_amount=Decimal("0"),
+        total_incl_vat=Decimal("0"),
+    )
+    usd = Currency.objects.get(code="USD")
+    QuoteItem.objects.create(
+        quote=quote,
+        imported_raw_name="Rail clamp KP-1",
+        quantity=10,
+        frozen_base_price=Decimal("100.00"),
+        frozen_currency=usd,
+        margin_percent=Decimal("20.00"),
+        final_price_excl_vat=Decimal("0"),
+    )
+    QuoteItem.objects.create(
+        quote=quote,
+        imported_raw_name="Sleeper bolt M24",
+        quantity=4,
+        frozen_base_price=Decimal("50.00"),
+        frozen_currency=usd,
+        margin_percent=Decimal("10.00"),
+        final_price_excl_vat=Decimal("0"),
+    )
+    return quote
+
+
+# ─── THE golden path ──────────────────────────────────────────────────────
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_golden_path_rfq_to_closed_won(deal, buyer, seller, manager):
+    """One test, the whole story. Each assert is a step the business depends on."""
+    buyer_user, buyer_co = buyer
+    seller_user, seller_co = seller
+
+    # 1. Buyer opens the RFQ (real buyer-side capability path: member + can_buy).
+    opened, err = crm_services.open_rfq(deal.id, buyer_user, supplier_ids=[seller_co.id])
+    assert err is None, f"open_rfq failed: {err}"
+    assert opened.stage.code == "RFQ_OPEN"
+
+    # 2. Seller submits a bid (real seller path: member + can_sell + subscription).
+    bid, err = crm_services.submit_supplier_bid(
+        deal_id=deal.id,
+        supplier_id=seller_co.id,
+        submitted_by=seller_user,
+        items=[{"description": "Rail clamp KP-1", "quantity": 10, "unit_price": "100.00"}],
+    )
+    assert err is None, f"submit_supplier_bid failed: {err}"
+    assert bid.status == "SUBMITTED"
+
+    # 3. Bid accepted → deal moves to CALCULATING (competitors auto-rejected).
+    bid, err = crm_services.accept_supplier_bid(bid.id, manager)
+    assert err is None, f"accept_supplier_bid failed: {err}"
+    deal.refresh_from_db()
+    assert deal.stage.code == "CALCULATING"
+
+    # 4. Manager builds the КП and the calculation engine prices it.
+    quote = _build_quote_with_items(deal, manager)
+    quote = QuoteCalculationService.recalculate_quote(quote.id)
+    # 10×(100×1.20) + 4×(50×1.10) = 1200 + 220 = 1420 excl. VAT
+    assert quote.subtotal_excl_vat == Decimal("1420.00"), quote.subtotal_excl_vat
+    assert quote.vat_amount == Decimal("170.40")  # 12%
+    assert quote.total_incl_vat == Decimal("1590.40")
+
+    # 5. КП sent to client → deal QUOTE_SENT, quote SENT, PDF rendered.
+    quote = QuoteLifecycleService.send_to_client(quote.id, manager)
+    assert quote.status.code == "SENT"
+    deal.refresh_from_db()
+    assert deal.stage.code == "QUOTE_SENT"
+
+    # 6. Buyer approves the КП → deal CONTRACT_SIGNED.
+    quote = QuoteLifecycleService.approve_quote(quote.id, buyer_user)
+    assert quote.status.code == "APPROVED"
+    deal.refresh_from_db()
+    assert deal.stage.code == "CONTRACT_SIGNED"
+
+    # 7. Contract generated from the approved quote, then double-signed.
+    contract, err = crm_services.generate_contract_from_quote(quote.id, actor=manager)
+    assert err is None, f"generate_contract_from_quote failed: {err}"
+    contract, err = crm_services.sign_contract_by_client(contract.id, buyer_user)
+    assert err is None, f"sign_contract_by_client failed: {err}"
+    assert contract.status == "PENDING_MANAGER"
+    contract, err = crm_services.sign_contract_by_manager(contract.id, manager)
+    assert err is None, f"sign_contract_by_manager failed: {err}"
+    assert contract.status == "SIGNED"
+
+    # 8. Invoice issued from the signed contract, then paid in full.
+    invoice, err = crm_services.generate_invoice_from_contract(contract.id, actor=manager)
+    assert err is None, f"generate_invoice_from_contract failed: {err}"
+    _, err = crm_services.record_payment(
+        invoice.id,
+        manager,
+        amount=invoice.total_incl_vat,
+        paid_at=timezone.now().date(),
+        manual=True,
+    )
+    assert err is None, f"record_payment failed: {err}"
+    invoice.refresh_from_db()
+    assert invoice.status == "PAID"
+
+    # 9. Fulfillment accepted → deal auto-closes as CLOSED_WON. Story complete.
+    crm_services.ensure_fulfillment(deal)
+    _, err = crm_services.update_fulfillment_status(deal.id, manager, "ACCEPTED")
+    assert err is None, f"update_fulfillment_status failed: {err}"
+    deal.refresh_from_db()
+    assert deal.stage.code == "CLOSED_WON"
+
+
+# ─── Capability-gate guards on the same path (multi-tenant safety) ──────────
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_rfq_requires_buy_capability(deal, buyer):
+    """A buyer-company member WITHOUT can_buy cannot open an RFQ."""
+    buyer_user, buyer_co = buyer
+    CompanyMember.objects.filter(user=buyer_user, company=buyer_co).update(can_buy=False)
+    _, err = crm_services.open_rfq(deal.id, buyer_user)
+    assert err == "MEMBER_REQUIRED_FOR_ACTION"
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_bid_requires_operational_subscription(deal, buyer, seller, manager):
+    """A seller without an operational subscription is blocked from bidding."""
+    seller_user, seller_co = seller
+    # Kill the trial subscription's operability.
+    from accounts.models import SupplierSubscription
+
+    SupplierSubscription.objects.filter(company=seller_co).update(status="SUSPENDED", valid_until=timezone.now().date())
+    crm_services.open_rfq(deal.id, buyer[0], supplier_ids=[seller_co.id])
+    _, err = crm_services.submit_supplier_bid(
+        deal_id=deal.id,
+        supplier_id=seller_co.id,
+        submitted_by=seller_user,
+        items=[{"description": "X", "quantity": 1, "unit_price": "10.00"}],
+    )
+    assert err == "SUBSCRIPTION_NOT_OPERATIONAL"

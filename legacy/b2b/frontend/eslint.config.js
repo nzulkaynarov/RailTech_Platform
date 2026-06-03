@@ -55,7 +55,9 @@ const railtechPlugin = {
 };
 
 export default tseslint.config(
-  { ignores: ['dist'] },
+  // e2e/ holds Playwright browser specs that depend on @playwright/test (a
+  // separate, optional dev install). Keep them out of the app lint run.
+  { ignores: ['dist', 'e2e', 'playwright.config.ts'] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ['**/*.{ts,tsx}'],

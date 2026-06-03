@@ -1,10 +1,7 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from core.storage import (
-    get_private_storage,
-    kyc_document_path,
-)
+from core.storage import get_private_storage, kyc_document_path
 
 # ────────────────────────────────────────────
 # Справочники модуля Accounts

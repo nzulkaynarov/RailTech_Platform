@@ -13,12 +13,8 @@ from .lookups import (
     ProductStatusViewSet,
     StockStatusViewSet,
 )
-from .offers import (
-    SupplierOfferViewSet,
-)
-from .products import (
-    ProductViewSet,
-)
+from .offers import SupplierOfferViewSet
+from .products import ProductViewSet
 
 __all__ = [
     "CategoryViewSet",

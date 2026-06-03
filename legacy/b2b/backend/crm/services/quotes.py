@@ -273,7 +273,10 @@ class QuoteLifecycleService:
             return None, "PLATFORM_ADMIN_REQUIRED"
         if not reason.strip():
             return None, "FORCE_REASON_REQUIRED"
-        quote = Quote.objects.select_for_update().select_related("deal", "status").get(pk=quote_id)
+        # of=("self",): Quote.status is a nullable FK, so select_related("status")
+        # emits a LEFT OUTER JOIN, and Postgres rejects "FOR UPDATE" on the nullable
+        # side of an outer join. Lock only the crm_quote row, not the joined tables.
+        quote = Quote.objects.select_for_update(of=("self",)).select_related("deal", "status").get(pk=quote_id)
         approved = QuoteStatus.objects.filter(code="APPROVED").first()
         if not approved:
             return None, "QUOTE_STATUS_NOT_FOUND"

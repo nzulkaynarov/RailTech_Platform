@@ -4,10 +4,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from core.storage import (
-    get_private_storage,
-    quote_pdf_path,
-)
+from core.storage import get_private_storage, quote_pdf_path
 from master_data.models import Country, Currency
 
 # ────────────────────────────────────────────

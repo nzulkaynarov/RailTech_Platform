@@ -1,12 +1,6 @@
 from unfold.admin import TabularInline
 
-from ..models import (
-    InvoiceItem,
-    Payment,
-    Quote,
-    QuoteItem,
-    SupplierBidItem,
-)
+from ..models import InvoiceItem, Payment, Quote, QuoteItem, SupplierBidItem
 
 # ────────────────────────────────────────────
 # Inlines

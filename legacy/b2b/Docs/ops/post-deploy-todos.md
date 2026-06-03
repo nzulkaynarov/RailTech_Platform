@@ -4,7 +4,7 @@ Open work after the 2026-06-02 production cutover. Not blockers, but tracked so 
 
 ## Infrastructure / ops
 
-- **Sentry / error aggregation.** Production errors only land in container logs (`docker logs railtech_backend_prod`) and Caddy access logs. Hook up Sentry before real customer onboarding.
+- **Sentry / error aggregation.** ⚙️ Backend is wired (inert until `SENTRY_DSN` set); frontend is one `npm i @sentry/react` away. To activate, follow `Docs/ops/observability.md` — set the `SENTRY_DSN` secret in the `production` environment. Do this before real customer onboarding.
 - **DMARC record.** DNS has MX/SPF/DKIM (see `Docs/ops/email-setup.md`) but `_dmarc` TXT is missing. Plan: `v=DMARC1; p=none; rua=mailto:postmaster@railtech.uz`. Gmail 2024+ requires DMARC for bulk senders; low-volume transactional mail mostly survives without it, but spam classification will be borderline.
 - **MinIO replacement.** Currently gated off (CPU lacks x86_64_v2, see `Docs/ops/vps-cpu-constraints.md`). Files persist on the `backend_media_prod` Docker volume and are served by Django `/media` via Caddy — acceptable for low file volume. Revisit when (a) the VPS gets a modern CPU, or (b) media storage exceeds ~5 GB and a public CDN block on `files.b2b.railtech.uz` becomes worthwhile.
 - **Neon backups / PITR / branching policy.** Not yet documented; RTO/RPO undefined. Neon free plan covers ~7 days of history; write down the recovery procedure.
@@ -21,11 +21,27 @@ Open work after the 2026-06-02 production cutover. Not blockers, but tracked so 
 - **"Request to join existing company" flow.** After commit `8e7f046`, `submit-profile` rejects an INN that belongs to a stranger (`COMPANY_INN_TAKEN`). A proper join-request flow (gated by existing OWNER or platform admin approval) is still missing. Until then, the only way to join an existing tenant is through the invite-member flow from a current OWNER.
 - **Stricter INN validation.** `submit_company_profile` accepts any non-empty string. Realistic validation (regex per country, checksum for RU/UZ) would prevent typo-based collisions.
 
-## Test debt (informational — already noted in audit 2026-04-27)
+## Stability program (2026-06-03) — see `Docs/ops/stability-program.md`
 
-- `crm/services/` has no service-level tests for `force_approve_quote`, `send_deal_message`, `QuoteLifecycleService`, Deal FSM transitions — only the smoke `crm/test_enterprise_cycle.py` exercises them implicitly.
-- `accounts/services/` lacks unit tests for `verify_company_kyc`, `bulk_verify_kyc`, `upload_kyc_document`.
-- No DRF integration tests for new admin endpoints (force-approve quote, force-cancel contract, KYC actions).
-- Frontend has zero component tests for `AdminDataTable`, `DetailKPIGrid`, `DealsKanban`, `GenerateQuoteDialog`, `OnboardingChecklist` — only stores are covered.
+Done: golden-path E2E (`backend/crm/tests/test_golden_path.py`, CI gate);
+`frontend-test` CI job; root `ErrorBoundary`; frontend money/apiError unit tests;
+backend Sentry (inert); hardened i18n scanner. Closed test debt below.
+
+One manual step each to activate: frontend Sentry (`npm i @sentry/react`),
+Playwright E2E (`Docs/ops/e2e.md`), OpenAPI→TS types (`Docs/ops/api-types.md`),
+staging env (`Docs/ops/staging.md` — needs DNS + `staging` GitHub environment).
+
+## Test debt (mostly closed 2026-06-03)
+
+- ✅ `accounts/services` — `verify_company_kyc`, `bulk_verify_kyc`,
+  `upload_kyc_document` now tested (`accounts/tests/test_kyc_service.py`).
+- ✅ `crm/services` — `force_approve_quote`, `reject_quote`, `send_deal_message`
+  now tested (`crm/tests/test_quote_services.py`); full FSM + lifecycle covered
+  by `test_golden_path.py` + `test_enterprise_cycle.py`.
+- ⏳ No DRF integration tests for the admin endpoints (force-approve quote,
+  force-cancel contract, KYC actions) — service layer is covered; HTTP layer next.
+- ⏳ Frontend component tests for `AdminDataTable`, `DetailKPIGrid`, `DealsKanban`,
+  `GenerateQuoteDialog`, `OnboardingChecklist` — prerequisite for the T4
+  god-component splits. Pure-function tests (money, apiError) are in place.
 
 Coverage target: 50%+ (currently ~30%, enforced by `--cov-fail-under=30` in CI).

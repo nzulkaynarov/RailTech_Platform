@@ -8,13 +8,7 @@ from django.utils.http import urlsafe_base64_encode
 
 from notifications.emails import send_templated_email
 
-from ..models import (
-    Company,
-    CompanyMember,
-    CustomUser,
-    SystemRole,
-    WorkspaceRole,
-)
+from ..models import Company, CompanyMember, CustomUser, SystemRole, WorkspaceRole
 
 logger = logging.getLogger(__name__)
 

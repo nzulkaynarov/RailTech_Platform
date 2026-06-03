@@ -1,11 +1,7 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from core.storage import (
-    contract_pdf_path,
-    contract_signed_path,
-    get_private_storage,
-)
+from core.storage import contract_pdf_path, contract_signed_path, get_private_storage
 from master_data.models import Currency
 
 # ────────────────────────────────────────────

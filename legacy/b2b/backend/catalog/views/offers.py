@@ -2,12 +2,8 @@ from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import permissions, viewsets
 
-from ..models import (
-    SupplierOffer,
-)
-from ..serializers import (
-    SupplierOfferSerializer,
-)
+from ..models import SupplierOffer
+from ..serializers import SupplierOfferSerializer
 
 
 @extend_schema_view(

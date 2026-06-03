@@ -1,0 +1,50 @@
+name: E2E (Playwright)
+
+# Browser end-to-end of the golden path. MANUAL trigger only — it needs a running
+# target (staging once it exists) and the Playwright browsers, so it is kept out
+# of the per-push gate. Provide the target URL when dispatching.
+#
+# Activation: the spec selectors in frontend/e2e/ must be filled first
+# (see Docs/ops/e2e.md). Until then only the `smoke` block is meaningful.
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Target base URL (e.g. https://staging.b2b.railtech.uz)'
+        required: true
+        default: 'https://b2b.railtech.uz'
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: Install deps + Playwright
+        run: |
+          cd frontend
+          npm ci
+          npm i -D @playwright/test
+          npx playwright install --with-deps chromium
+
+      - name: Run E2E
+        env:
+          E2E_BASE_URL: ${{ github.event.inputs.base_url }}
+        run: |
+          cd frontend
+          npm run test:e2e
+
+      - name: Upload report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 7

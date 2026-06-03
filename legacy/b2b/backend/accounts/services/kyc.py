@@ -6,11 +6,7 @@ from django.db.models import QuerySet
 
 from notifications.emails import send_templated_email
 
-from ..models import (
-    Company,
-    CustomUser,
-    VerificationStatus,
-)
+from ..models import Company, CustomUser, VerificationStatus
 
 logger = logging.getLogger(__name__)
 
