@@ -44,10 +44,15 @@ jobs:
       - name: Sync source into deploy dir
         run: |
           mkdir -p "$DEPLOY_DIR"
+          # `backups/` is an out-of-tree dir where someone (sudo / docker exec)
+          # drops DB dumps; rsync --delete can't unlink root-owned files there
+          # and the step fails with exit 23. Keep it untouched — backups should
+          # arguably live under /var/backups/, but until that's set up, exclude.
           rsync -a --delete \
             --exclude '.git' \
             --exclude '.env' \
             --exclude 'node_modules' \
+            --exclude 'backups' \
             ./ "$DEPLOY_DIR/"
 
       - name: Render .env from GitHub secrets
