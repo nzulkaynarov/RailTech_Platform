@@ -106,6 +106,51 @@
         "hint": "Find open RFQs and submit a quote.",
         "cta": "Open bids"
       }
+    },
+    "companyRegistration": "Company Registration",
+    "companyRegistrationDesc": "Enter your organization details to get started",
+    "email": "Email",
+    "companyName": "Company Name",
+    "companyNamePlaceholder": "LLC «Company Name»",
+    "inn": "TIN (optional)",
+    "innPlaceholder": "123456789",
+    "next": "Next",
+    "back": "Back",
+    "selectCompanyStatus": "Select Company Status",
+    "selectCompanyStatusDesc": "Define your company's main role on the platform",
+    "statusUnderReview": "Status under review",
+    "statusUnderReviewDesc": "After registration, a platform administrator will review and confirm your company status. Until confirmation, access to main features will be limited.",
+    "contactPerson": "Contact Person",
+    "contactPersonDesc": "You will become the company administrator on the platform",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "registrationSummary": "Registration Summary",
+    "company": "Company",
+    "status": "Status",
+    "role": "Role",
+    "roleAdmin": "Administrator",
+    "registrationNote": "By clicking \"Register\", you are submitting a connection request. The platform administrator will review the data and confirm your company's status.",
+    "register": "Register",
+    "capabilities": {
+      "BUYER": [
+        "Browse product catalog",
+        "Import requests from Excel",
+        "Request commercial offers",
+        "Track deals"
+      ],
+      "SELLER": [
+        "Everything a Buyer can do",
+        "Add available products (with manufacturer info)",
+        "CRM, quotes and cost calculation",
+        "Work with partner manufacturers"
+      ],
+      "MANUFACTURER": [
+        "Everything a Buyer and Seller can do",
+        "Publish own products",
+        "Accept orders from partner sellers",
+        "Direct sales without intermediaries",
+        "Choose sellers and set prices"
+      ]
     }
   },
   "generateQuote": {
@@ -1315,53 +1360,6 @@
     "kanban": "Kanban",
     "empty": "No deals",
     "untitled": "Deal #{{id}}"
-  },
-  "onboarding": {
-    "companyRegistration": "Company Registration",
-    "companyRegistrationDesc": "Enter your organization details to get started",
-    "email": "Email",
-    "companyName": "Company Name",
-    "companyNamePlaceholder": "LLC «Company Name»",
-    "inn": "TIN (optional)",
-    "innPlaceholder": "123456789",
-    "next": "Next",
-    "back": "Back",
-    "selectCompanyStatus": "Select Company Status",
-    "selectCompanyStatusDesc": "Define your company's main role on the platform",
-    "statusUnderReview": "Status under review",
-    "statusUnderReviewDesc": "After registration, a platform administrator will review and confirm your company status. Until confirmation, access to main features will be limited.",
-    "contactPerson": "Contact Person",
-    "contactPersonDesc": "You will become the company administrator on the platform",
-    "firstName": "First Name",
-    "lastName": "Last Name",
-    "registrationSummary": "Registration Summary",
-    "company": "Company",
-    "status": "Status",
-    "role": "Role",
-    "roleAdmin": "Administrator",
-    "registrationNote": "By clicking \"Register\", you are submitting a connection request. The platform administrator will review the data and confirm your company's status.",
-    "register": "Register",
-    "capabilities": {
-      "BUYER": [
-        "Browse product catalog",
-        "Import requests from Excel",
-        "Request commercial offers",
-        "Track deals"
-      ],
-      "SELLER": [
-        "Everything a Buyer can do",
-        "Add available products (with manufacturer info)",
-        "CRM, quotes and cost calculation",
-        "Work with partner manufacturers"
-      ],
-      "MANUFACTURER": [
-        "Everything a Buyer and Seller can do",
-        "Publish own products",
-        "Accept orders from partner sellers",
-        "Direct sales without intermediaries",
-        "Choose sellers and set prices"
-      ]
-    }
   },
   "verification": {
     "applicationUnderReview": "Application Under Review",
