@@ -142,11 +142,12 @@ def bulk_verify_kyc(
     approved = 0
     skipped: List[dict] = []
     for company in companies:
+        # Owner decision 2026-06-03: KYC approval no longer requires uploaded docs.
         _, error = verify_company_kyc(
             company,
             approver,
             level_code,
-            require_documents=True,
+            require_documents=False,
             reason=reason,
         )
         if error:

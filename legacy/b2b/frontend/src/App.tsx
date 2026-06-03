@@ -186,6 +186,24 @@ function App() {
     }
   }, [isAuthenticated, loadFromAuth]);
 
+  // Radix workaround: opening a Dialog (e.g. ConfirmActionDialog) from a
+  // DropdownMenu/Select can leave document.body stuck at `pointer-events: none`
+  // after both close, making the whole UI unclickable ("button doesn't react").
+  // Clear it whenever NO modal layer (dialog/sheet/menu) remains open — open
+  // Sheets/Dialogs keep their own lock, so this never breaks an active modal.
+  useEffect(() => {
+    const clearStuckPointerEvents = () => {
+      if (document.body.style.pointerEvents !== 'none') return;
+      const layerOpen = document.querySelector(
+        '[data-state="open"][role="dialog"], [data-state="open"][role="menu"], [data-state="open"][role="listbox"]'
+      );
+      if (!layerOpen) document.body.style.pointerEvents = '';
+    };
+    const observer = new MutationObserver(clearStuckPointerEvents);
+    observer.observe(document.body, { attributes: true, attributeFilter: ['style'] });
+    return () => observer.disconnect();
+  }, []);
+
   if (isLoading) return <LoadingSkeleton />;
 
   // Password setup page — accessible without auth (from email link)

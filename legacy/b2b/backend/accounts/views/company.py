@@ -129,11 +129,14 @@ class CompanyViewSet(viewsets.ModelViewSet):
             comment = serializer.validated_data.get("comment", "")
             reason = (request.data.get("reason") or comment or "").strip()
 
+            # Policy (owner decision 2026-06-03): admins may approve KYC without
+            # requiring uploaded documents. The require_documents capability stays
+            # in the service for future tightening.
             result, error = services.verify_company_kyc(
                 company,
                 request.user,
                 level_code=code,
-                require_documents=True,
+                require_documents=False,
                 reason=reason,
             )
             if error:
