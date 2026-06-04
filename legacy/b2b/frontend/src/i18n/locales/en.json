@@ -209,16 +209,37 @@
     "uploadFile": "Upload file",
     "pickFile": "Pick file",
     "noFile": "No file selected",
-    "startImport": "Start import",
+    "checkFile": "Check file",
+    "checkQueued": "File check queued",
+    "checkFirstHint": "Check the file first — it previews what will be imported without writing to the catalog.",
+    "startImport": "Import",
     "queued": "Import task queued",
     "progress": "Progress",
+    "previewTitle": "Preview (check)",
+    "dryRunBadge": "Check",
+    "previewHint": "This is a preview — nothing was saved. Click \"Import\" to upload.",
     "successTitle": "Import finished",
     "failed": "Import failed. Check the file and try again.",
+    "errorsTitle": "Row errors: {{count}}",
+    "errRow": "Row",
+    "errReason": "Reason",
+    "stat": {
+      "created": "Created",
+      "updated": "Updated",
+      "offers": "Offers",
+      "skipped": "Skipped"
+    },
+    "err": {
+      "unknownCurrency": "Unknown currency code: {{code}}",
+      "unknownStock": "Unknown stock code: {{code}}",
+      "badPrice": "Price is not a number",
+      "rowFailed": "Failed to process row"
+    },
     "requirements": "File requirements",
     "req1": "Format: .xlsx only",
-    "req2": "Required columns: name, sku, uom, domain_type",
-    "req3": "Optional: category, manufacturer, gost_drawing, description",
-    "req4": "Every import is logged — admin sees the owner of the task"
+    "req2": "Required column: Name. For an offer add Price (and Currency/Stock).",
+    "req3": "For a shared product card provide Brand + Manufacturer part number (or GOST).",
+    "req4": "Check the file first, then Import. Every import is logged."
   },
   "mySubscription": {
     "title": "My subscription",

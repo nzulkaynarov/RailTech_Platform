@@ -62,6 +62,7 @@ from notifications.views import NotificationViewSet
 from sourcing.views import (
     AttachmentViewSet,
     CatalogImportView,
+    CatalogTemplateView,
     ExcelImportView,
     ImportStatusView,
     SourcingRequestViewSet,
@@ -145,6 +146,7 @@ urlpatterns = (
         # Sourcing & Imports
         path("api/v1/sourcing/import-deal/<int:deal_id>/", ExcelImportView.as_view(), name="import-deal"),
         path("api/v1/sourcing/import-catalog/", CatalogImportView.as_view(), name="import-catalog"),
+        path("api/v1/sourcing/catalog-template/", CatalogTemplateView.as_view(), name="catalog-template"),
         path("api/v1/sourcing/import-status/<str:task_id>/", ImportStatusView.as_view(), name="import-status"),
         path("api/v1/crm/analytics/", CRMAnalyticsView.as_view(), name="crm-analytics"),
         path("api/v1/crm/analytics/dashboard/", DashboardAnalyticsView.as_view(), name="dashboard-analytics"),
