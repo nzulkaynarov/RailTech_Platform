@@ -172,3 +172,70 @@ class EquipmentGroup(models.Model):
     @property
     def full_path(self):
         return self.cached_path
+
+
+# ────────────────────────────────────────────
+# Производитель / Бренд (OEM) — справочник, НЕ аккаунт
+# ────────────────────────────────────────────
+
+
+class Manufacturer(models.Model):
+    """
+    Производитель/бренд товара (OEM).
+
+    Это СПРАВОЧНИК, а не пользователь платформы: зарубежный бренд (напр. Siemens)
+    является производителем, но аккаунта не имеет. Локальный производитель может
+    быть связан с платформенной компанией через ``company``. Служит каноническим
+    якорем PIM: один эталонный товар одного бренда — много офферов от поставщиков.
+    """
+
+    name = models.CharField(
+        max_length=255,
+        unique=True,
+        verbose_name=_("Название"),
+        help_text=_("Название бренда/производителя (OEM)"),
+    )
+    country = models.ForeignKey(
+        "master_data.Country",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="manufacturers",
+        verbose_name=_("Страна"),
+        help_text=_("Страна происхождения производителя"),
+    )
+    website = models.URLField(
+        blank=True,
+        verbose_name=_("Сайт"),
+        help_text=_("Официальный сайт производителя"),
+    )
+    company = models.ForeignKey(
+        "accounts.Company",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="manufacturer_brands",
+        verbose_name=_("Связанная компания"),
+        help_text=_("Платформенная компания, если производитель зарегистрирован (местный)"),
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name=_("Активен"),
+        help_text=_("Неактивные бренды скрыты в формах выбора"),
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_("Дата создания"),
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name=_("Дата обновления"),
+    )
+
+    class Meta:
+        verbose_name = _("Производитель")
+        verbose_name_plural = _("Справочник: Производители")
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name

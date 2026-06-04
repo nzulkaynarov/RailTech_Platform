@@ -139,6 +139,8 @@ class ProductSerializer(serializers.ModelSerializer):
     status_code = serializers.SerializerMethodField()
     domain_type_name = serializers.SerializerMethodField()
     domain_type_code = serializers.SerializerMethodField()
+    brand_name = serializers.SerializerMethodField()
+    brand_country = serializers.SerializerMethodField()
     stock_status = serializers.SerializerMethodField()
     base_price = serializers.SerializerMethodField()
 
@@ -159,6 +161,10 @@ class ProductSerializer(serializers.ModelSerializer):
             "category_data",
             "manufacturer",
             "manufacturer_data",
+            "brand",
+            "brand_name",
+            "brand_country",
+            "manufacturer_part_number",
             "uom",
             "uom_data",
             "gost_drawing",
@@ -188,6 +194,12 @@ class ProductSerializer(serializers.ModelSerializer):
 
     def get_domain_type_code(self, obj):
         return obj.domain_type.code if obj.domain_type else None
+
+    def get_brand_name(self, obj):
+        return obj.brand.name if obj.brand else None
+
+    def get_brand_country(self, obj):
+        return obj.brand.country.name if obj.brand and obj.brand.country else None
 
     def _first_offer(self, obj):
         """Get first active offer from prefetched data (no extra query)."""
@@ -244,6 +256,8 @@ class ProductListSerializer(serializers.ModelSerializer):
     status_code = serializers.SerializerMethodField()
     domain_type_name = serializers.SerializerMethodField()
     domain_type_code = serializers.SerializerMethodField()
+    brand_name = serializers.SerializerMethodField()
+    brand_country = serializers.SerializerMethodField()
     stock_status = serializers.SerializerMethodField()
     base_price = serializers.SerializerMethodField()
 
@@ -263,6 +277,10 @@ class ProductListSerializer(serializers.ModelSerializer):
             "category_data",
             "manufacturer",
             "manufacturer_data",
+            "brand",
+            "brand_name",
+            "brand_country",
+            "manufacturer_part_number",
             "uom",
             "uom_data",
             "gost_drawing",
@@ -284,6 +302,12 @@ class ProductListSerializer(serializers.ModelSerializer):
 
     def get_domain_type_code(self, obj):
         return obj.domain_type.code if obj.domain_type else None
+
+    def get_brand_name(self, obj):
+        return obj.brand.name if obj.brand else None
+
+    def get_brand_country(self, obj):
+        return obj.brand.country.name if obj.brand and obj.brand.country else None
 
     def _first_offer(self, obj):
         offers = obj.offers.all()

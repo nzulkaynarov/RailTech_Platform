@@ -60,7 +60,9 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        base = Product.objects.all().select_related("category", "manufacturer", "domain_type", "status", "uom")
+        base = Product.objects.all().select_related(
+            "category", "manufacturer", "domain_type", "status", "uom", "brand", "brand__country"
+        )
         if self.action == "list":
             queryset = base.prefetch_related(
                 "images",
