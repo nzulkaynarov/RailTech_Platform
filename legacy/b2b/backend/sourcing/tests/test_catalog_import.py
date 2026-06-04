@@ -170,3 +170,18 @@ def test_no_name_column_raises(lookups, company_factory):
     supplier = company_factory(inn="111111111")
     with pytest.raises(ValueError):
         run_catalog_import(_xlsx([{"Цена": "10"}]), supplier_company_id=supplier.id)
+
+
+@pytest.mark.django_db
+def test_catalog_template_download(lookups, user_factory):
+    from rest_framework.test import APIClient
+
+    client = APIClient()
+    client.force_authenticate(user=user_factory(email="seller@example.com", username="seller"))
+
+    response = client.get("/api/v1/sourcing/catalog-template/")
+
+    assert response.status_code == 200
+    assert "spreadsheetml" in response["Content-Type"]
+    assert response["Content-Disposition"].endswith('.xlsx"')
+    assert len(response.content) > 0

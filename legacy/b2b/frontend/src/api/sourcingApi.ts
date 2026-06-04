@@ -62,9 +62,10 @@ export const sourcingApi = {
   deleteAttachment: async (id: number): Promise<void> => {
     await apiClient.delete(`sourcing/attachments/${id}/`);
   },
-  importCatalog: async (file: File): Promise<{ task_id: string; status: string }> => {
+  importCatalog: async (file: File, dryRun = false): Promise<{ task_id: string; status: string }> => {
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('dry_run', dryRun ? 'true' : 'false');
     const response = await apiClient.post<{ task_id: string; status: string }>(
       'sourcing/import-catalog/',
       formData,
@@ -72,13 +73,30 @@ export const sourcingApi = {
     );
     return response.data;
   },
+  downloadCatalogTemplate: async (): Promise<Blob> => {
+    const response = await apiClient.get('sourcing/catalog-template/', { responseType: 'blob' });
+    return response.data as Blob;
+  },
   getImportStatus: async (taskId: string) => {
     const response = await apiClient.get<{
       task_id: string;
       status: string;
-      result?: unknown;
+      result?: CatalogImportResult | null;
       meta?: { current?: number; total?: number };
     }>(`sourcing/import-status/${taskId}/`);
     return response.data;
   },
 };
+
+export interface CatalogImportResult {
+  status?: string;
+  message?: string | null;
+  dry_run?: boolean | null;
+  created?: number | null;
+  updated?: number | null;
+  offers_upserted?: number | null;
+  skipped?: number | null;
+  error_count?: number | null;
+  errors?: { row: number; message: string }[] | null;
+  items_processed?: number | null;
+}

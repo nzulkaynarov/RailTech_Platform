@@ -2,6 +2,7 @@ import base64
 import logging
 
 from celery.result import AsyncResult
+from django.http import HttpResponse
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
 from rest_framework import status, viewsets
 from rest_framework.parsers import MultiPartParser
@@ -217,7 +218,9 @@ class CatalogImportView(APIView):
                 )
 
             file_content_b64 = base64.b64encode(file_content).decode("ascii")
-            task = process_catalog_import.delay(file_content_b64, supplier_company_id)
+            # dry_run=true → validate + preview counts without persisting.
+            dry_run = str(request.data.get("dry_run", "")).lower() in ("1", "true", "yes")
+            task = process_catalog_import.delay(file_content_b64, supplier_company_id, dry_run)
 
             ImportTask.objects.create(
                 celery_task_id=task.id,
@@ -266,11 +269,92 @@ class ImportStatusView(APIView):
                     "status": raw_result.get("status"),
                     "items_processed": raw_result.get("items_processed"),
                     "message": (raw_result.get("message") if raw_result.get("status") == "error" else None),
+                    # Structured catalog-import fields (None for deal imports).
+                    "dry_run": raw_result.get("dry_run"),
+                    "created": raw_result.get("created"),
+                    "updated": raw_result.get("updated"),
+                    "offers_upserted": raw_result.get("offers_upserted"),
+                    "skipped": raw_result.get("skipped"),
+                    "error_count": raw_result.get("error_count"),
+                    "errors": raw_result.get("errors"),
                 }
             else:
                 result_data = {"status": "completed"}
 
         return Response({"task_id": task_id, "status": res.status, "result": result_data})
+
+
+# Exact headers the import engine recognizes (see sourcing/catalog_import.py).
+CATALOG_TEMPLATE_HEADERS = [
+    "Наименование",
+    "Бренд",
+    "Артикул производителя",
+    "ГОСТ / Чертёж",
+    "Артикул поставщика",
+    "Описание",
+    "Ед. изм.",
+    "Цена",
+    "Валюта",
+    "Наличие",
+    "Срок поставки",
+    "Мин. заказ",
+]
+CATALOG_TEMPLATE_EXAMPLE = [
+    "Тормозная колодка",
+    "Knorr-Bremse",
+    "KB-100",
+    "ГОСТ 1234-89",
+    "SUP-55",
+    "Композитная тормозная колодка",
+    "шт",
+    "150.50",
+    "UZS",
+    "IN_STOCK",
+    "14-21 дн.",
+    "5",
+]
+
+
+@extend_schema(
+    summary="Download catalog import template",
+    description=(
+        "Returns an .xlsx with the exact headers the importer recognizes, one "
+        "example row, and a reference sheet of allowed currency / stock / unit "
+        "codes (read live from the database)."
+    ),
+    responses={200: OpenApiResponse(description="XLSX template")},
+    tags=["Sourcing"],
+)
+class CatalogTemplateView(APIView):
+    """Seller-facing catalog import template (true-PIM headers + allowed codes)."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from openpyxl import Workbook
+
+        from catalog.models import StockStatus
+        from master_data.models import Currency, UnitOfMeasure
+
+        workbook = Workbook()
+        sheet = workbook.active
+        sheet.title = "Товары"
+        sheet.append(CATALOG_TEMPLATE_HEADERS)
+        sheet.append(CATALOG_TEMPLATE_EXAMPLE)
+
+        reference = workbook.create_sheet("Справочники (коды)")
+        reference.append(["Тип", "Код", "Название"])
+        for currency in Currency.objects.all().order_by("code"):
+            reference.append(["Валюта", currency.code, currency.name])
+        for stock in StockStatus.objects.all().order_by("code"):
+            reference.append(["Наличие", stock.code, stock.name])
+        for unit in UnitOfMeasure.objects.all().order_by("code"):
+            reference.append(["Ед. изм.", unit.code, unit.name])
+
+        response = HttpResponse(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        response["Content-Disposition"] = 'attachment; filename="railtech_catalog_template.xlsx"'
+        workbook.save(response)
+        return response
 
 
 @extend_schema_view(
