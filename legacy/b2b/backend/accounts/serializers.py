@@ -1,3 +1,5 @@
+from django.conf import settings
+from django.core.validators import RegexValidator
 from rest_framework import serializers
 
 from .models import Company, CompanyMember, CompanyRoleApplication, CustomUser, KYCDocument, SupplierSubscription
@@ -251,6 +253,11 @@ class RegisterInterestSerializer(serializers.Serializer):
     email = serializers.EmailField()
     first_name = serializers.CharField(max_length=150)
     last_name = serializers.CharField(max_length=150)
+    phone = serializers.CharField(
+        max_length=20,
+        validators=[RegexValidator(settings.UZ_PHONE_REGEX, "PHONE_INVALID")],
+        help_text="Uzbekistan format: +998XXXXXXXXX",
+    )
 
 
 class SetupPasswordSerializer(serializers.Serializer):
@@ -270,15 +277,11 @@ class ResetPasswordSerializer(serializers.Serializer):
 
 
 class SubmitProfileSerializer(serializers.Serializer):
-    inn = serializers.CharField(max_length=20)
+    # Minimal onboarding (Phase 1): everyone self-registers as a Buyer (CLIENT)
+    # and becomes OWNER of their own company. INN and company type are deferred —
+    # INN is collected later at KYC, selling is granted via CompanyRoleApplication.
     companyName = serializers.CharField(max_length=255)
-    role_code = serializers.CharField(max_length=50, help_text="WorkspaceRole code (e.g. 'OWNER')")
-    company_type = serializers.CharField(
-        max_length=50,
-        required=False,
-        default="CLIENT",
-        help_text="CompanyType code (e.g. 'CLIENT', 'MANUFACTURER', 'SUPPLIER')",
-    )
+    position = serializers.CharField(max_length=120, help_text="Free-text job title, e.g. 'Директор по закупкам'")
 
 
 class ChangePasswordSerializer(serializers.Serializer):

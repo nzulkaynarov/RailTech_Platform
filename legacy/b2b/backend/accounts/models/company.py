@@ -28,9 +28,15 @@ class Company(models.Model):
         verbose_name=_("Название"),
         help_text=_("Полное наименование организации"),
     )
+    # INN is deferred from registration (Phase 1) — collected later at KYC.
+    # null=True keeps the unique index valid for many INN-less companies
+    # (Postgres treats NULLs as distinct); the regex validator still runs once
+    # an INN is actually provided.
     inn = models.CharField(
         max_length=20,
         unique=True,
+        null=True,
+        blank=True,
         db_index=True,
         validators=[RegexValidator(settings.INN_VALIDATION_REGEX, _("Некорректный формат ИНН."))],
         verbose_name=_("ИНН"),

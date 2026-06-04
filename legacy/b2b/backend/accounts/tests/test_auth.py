@@ -87,7 +87,12 @@ class TestRegisterEndpoint:
     def test_register_user_success(self, client):
         """Test successful user registration."""
         url = "/api/v1/auth/register/"
-        data = {"email": "newuser@example.com", "first_name": "New", "last_name": "User"}
+        data = {
+            "email": "newuser@example.com",
+            "first_name": "New",
+            "last_name": "User",
+            "phone": "+998901234567",
+        }
         response = client.post(url, data, format="json")
 
         # Should return success - the register view creates a pending user
@@ -98,7 +103,12 @@ class TestRegisterEndpoint:
         user_factory(email="existing@example.com")
 
         url = "/api/v1/auth/register/"
-        data = {"email": "existing@example.com", "first_name": "New", "last_name": "User"}
+        data = {
+            "email": "existing@example.com",
+            "first_name": "New",
+            "last_name": "User",
+            "phone": "+998901234567",
+        }
         response = client.post(url, data, format="json")
 
         # Should fail due to duplicate email
@@ -109,7 +119,7 @@ class TestRegisterEndpoint:
         url = "/api/v1/auth/register/"
         data = {
             "email": "test@example.com"
-            # Missing first_name and last_name
+            # Missing first_name, last_name and phone
         }
         response = client.post(url, data, format="json")
 
@@ -118,7 +128,15 @@ class TestRegisterEndpoint:
     def test_register_invalid_email(self, client):
         """Test registration with invalid email."""
         url = "/api/v1/auth/register/"
-        data = {"email": "invalid-email", "first_name": "Test", "last_name": "User"}
+        data = {"email": "invalid-email", "first_name": "Test", "last_name": "User", "phone": "+998901234567"}
+        response = client.post(url, data, format="json")
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_register_invalid_phone(self, client):
+        """Phone must be Uzbekistan format +998XXXXXXXXX."""
+        url = "/api/v1/auth/register/"
+        data = {"email": "ph@example.com", "first_name": "Test", "last_name": "User", "phone": "12345"}
         response = client.post(url, data, format="json")
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -207,77 +225,63 @@ class TestSubmitProfile:
         return api
 
     def test_submit_profile_valid_data(self, client):
-        """Test submitting profile with valid data."""
+        """Test submitting profile with valid minimal data (company + position)."""
         url = "/api/v1/auth/submit-profile/"
-        data = {"inn": "1234567890", "companyName": "Test Company", "role_code": "OWNER"}
+        data = {"companyName": "Test Company", "position": "Директор по закупкам"}
         response = client.post(url, data, format="json")
 
-        # Endpoint might require authentication
+        # 200 when OWNER role/CLIENT type are seeded; 400 (WORKSPACE_ROLE_NOT_FOUND)
+        # on a bare test DB without the seed data migration.
         assert response.status_code in [status.HTTP_400_BAD_REQUEST, status.HTTP_201_CREATED, status.HTTP_200_OK]
 
-    def test_submit_profile_invalid_inn(self, client):
-        """Test profile submission with invalid INN."""
+    def test_submit_profile_missing_company_name(self, client):
+        """Company name is the only hard-required field now."""
         url = "/api/v1/auth/submit-profile/"
-        data = {"inn": "", "companyName": "Test Company", "role_code": "OWNER"}  # Invalid
+        data = {"companyName": "", "position": "Director"}  # Invalid: blank company name
         response = client.post(url, data, format="json")
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_submit_profile_rejects_existing_inn_from_stranger(self, db, workspace_role_factory):
-        """A user submitting profile with an INN that already belongs to a
-        company they are NOT a member of must be rejected with COMPANY_INN_TAKEN
-        — protects against silent cross-tenant attachment (see
-        project-known-bug-silent-company-merge)."""
-        from accounts.models import Company, CompanyMember, VerificationStatus
+    def test_submit_profile_creates_own_company_no_inn(self, db, workspace_role_factory):
+        """Minimal onboarding: each user gets a brand-new CLIENT company as OWNER,
+        with no INN (deferred to KYC). Two strangers never share a company —
+        the old INN-collision merge vector is gone entirely."""
+        from accounts.models import CompanyMember, CompanyType, VerificationStatus
         from accounts.services import submit_company_profile
 
-        owner = User.objects.create_user(email="owner@example.com", username="owner", password="x", is_active=True)
-        stranger = User.objects.create_user(
-            email="stranger@example.com", username="stranger", password="x", is_active=True
-        )
-        role = workspace_role_factory(code="OWNER", name="Owner")
+        workspace_role_factory(code="OWNER", name="Owner")
+        CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Покупатель"})
         VerificationStatus.objects.get_or_create(code="PROFILE_SUBMITTED", defaults={"name": "Profile submitted"})
 
-        # owner claims INN 7707083893 first
-        existing = Company.objects.create(inn="7707083893", name="Owner Co")
-        CompanyMember.objects.create(user=owner, company=existing, role=role, is_primary=True)
+        alice = User.objects.create_user(email="alice@example.com", username="alice", password="x", is_active=True)
+        bob = User.objects.create_user(email="bob@example.com", username="bob", password="x", is_active=True)
 
-        # stranger tries the same INN with a different name — must be blocked
-        _, error = submit_company_profile(
-            user=stranger,
-            inn="7707083893",
-            company_name="My Different Co",
-            workspace_role_code="OWNER",
-            company_type_code="CLIENT",
-        )
-        assert error == "COMPANY_INN_TAKEN"
-        assert not CompanyMember.objects.filter(user=stranger, company=existing).exists()
-        assert Company.objects.get(inn="7707083893").name == "Owner Co"
+        _, e_alice = submit_company_profile(user=alice, company_name="Acme", position="Снабженец")
+        _, e_bob = submit_company_profile(user=bob, company_name="Acme", position="Менеджер")
+
+        assert e_alice is None and e_bob is None
+        alice_co = CompanyMember.objects.get(user=alice).company
+        bob_co = CompanyMember.objects.get(user=bob).company
+        # Same name, different companies — no silent merge.
+        assert alice_co.pk != bob_co.pk
+        assert alice_co.inn is None and bob_co.inn is None
+        assert alice_co.types.filter(code="CLIENT").exists()
+        alice.refresh_from_db()
+        assert alice.position == "Снабженец"
 
     def test_submit_profile_idempotent_for_same_user(self, db, workspace_role_factory):
-        """Re-submitting the same INN by the same user should be a no-op success,
-        not a COMPANY_INN_TAKEN error."""
-        from accounts.models import CompanyMember, VerificationStatus
+        """A user who already has an active membership does not get a second
+        company on re-submit — it is a no-op success."""
+        from accounts.models import CompanyMember, CompanyType, VerificationStatus
         from accounts.services import submit_company_profile
 
         user = User.objects.create_user(email="dup@example.com", username="dup", password="x", is_active=True)
         workspace_role_factory(code="OWNER", name="Owner")
+        CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Покупатель"})
         VerificationStatus.objects.get_or_create(code="PROFILE_SUBMITTED", defaults={"name": "Profile submitted"})
 
-        _, e1 = submit_company_profile(
-            user=user,
-            inn="9999999999",
-            company_name="My Co",
-            workspace_role_code="OWNER",
-            company_type_code="CLIENT",
-        )
+        _, e1 = submit_company_profile(user=user, company_name="My Co", position="Dir")
         assert e1 is None
-        _, e2 = submit_company_profile(
-            user=user,
-            inn="9999999999",
-            company_name="My Co",
-            workspace_role_code="OWNER",
-            company_type_code="CLIENT",
-        )
+        _, e2 = submit_company_profile(user=user, company_name="Another Co", position="Dir")
         assert e2 is None
         assert CompanyMember.objects.filter(user=user).count() == 1

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, AlertCircle, ShoppingCart, Factory, Store, Building2 } from 'lucide-react';
+import { Loader2, AlertCircle, Building2 } from 'lucide-react';
 import { accountsApi } from '@/api/accountsApi';
 import { translateApiError } from '@/lib/apiError';
 import { useAuthStore } from '@/store/authStore';
@@ -12,21 +12,13 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { SelectableCard } from '@/components/ui/selectable-card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Separator } from '@/components/ui/separator';
 
-const COMPANY_TYPES = [
-    { code: 'CLIENT', icon: ShoppingCart, labelKey: 'profileForm.typeBuyer', descKey: 'profileForm.typeBuyerDesc' },
-    { code: 'MANUFACTURER', icon: Factory, labelKey: 'profileForm.typeManufacturer', descKey: 'profileForm.typeManufacturerDesc' },
-    { code: 'SUPPLIER', icon: Store, labelKey: 'profileForm.typeSupplier', descKey: 'profileForm.typeSupplierDesc' },
-] as const;
-
-const createProfileSchema = (t: (key: string) => string) => z.object({
-    companyName: z.string().min(2, t('profileForm.validation.minChars')),
-    inn: z.string().regex(/^\d{9}$/, t('profileForm.validation.innFormat')),
-    company_type: z.string().min(1, t('profileForm.validation.selectType')),
-});
+const createProfileSchema = (t: (key: string) => string) =>
+    z.object({
+        companyName: z.string().min(2, t('profileForm.validation.minChars')),
+        position: z.string().min(2, t('profileForm.validation.positionRequired')),
+    });
 
 type ProfileFormValues = z.infer<ReturnType<typeof createProfileSchema>>;
 
@@ -44,34 +36,29 @@ export const ProfileCompletionForm: React.FC<ProfileCompletionFormProps> = ({ on
         resolver: zodResolver(profileSchema),
         defaultValues: {
             companyName: '',
-            inn: '',
-            company_type: '',
+            position: '',
         },
     });
-
-    const selectedType = form.watch('company_type');
 
     const onSubmit = async (data: ProfileFormValues) => {
         setServerError('');
         try {
             await accountsApi.submitProfile({
-                inn: data.inn,
                 companyName: data.companyName,
-                role: 'OWNER',
-                company_type: data.company_type,
+                position: data.position,
             });
             await initAuth();
             onComplete();
         } catch (err: unknown) {
-            // translateApiError maps backend codes (COMPANY_INN_TAKEN, ...) via the
-            // apiErrors namespace; falls back to the raw code, then a generic message.
+            // translateApiError maps backend codes via the apiErrors namespace;
+            // falls back to the raw code, then a generic message.
             setServerError(translateApiError(err) || t('profileForm.saveError'));
         }
     };
 
     return (
         <div className="min-h-screen bg-background flex items-center justify-center p-6">
-            <Card className="w-full max-w-2xl">
+            <Card className="w-full max-w-xl">
                 <CardHeader className="text-center">
                     <div className="mx-auto mb-2 flex h-14 w-14 items-center justify-center rounded-full bg-muted">
                         <Building2 className="h-7 w-7 text-muted-foreground" />
@@ -83,32 +70,6 @@ export const ProfileCompletionForm: React.FC<ProfileCompletionFormProps> = ({ on
                 <CardContent>
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                            {/* Company type selection */}
-                            <FormField
-                                control={form.control}
-                                name="company_type"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>{t('profileForm.companyTypeLabel')}</FormLabel>
-                                        <div className="grid gap-3 md:grid-cols-3">
-                                            {COMPANY_TYPES.map(({ code, icon, labelKey, descKey }) => (
-                                                <SelectableCard
-                                                    key={code}
-                                                    icon={icon}
-                                                    label={t(labelKey)}
-                                                    description={t(descKey)}
-                                                    selected={selectedType === code}
-                                                    onClick={() => field.onChange(code)}
-                                                />
-                                            ))}
-                                        </div>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            <Separator />
-
                             {/* Company name */}
                             <FormField
                                 control={form.control}
@@ -124,15 +85,15 @@ export const ProfileCompletionForm: React.FC<ProfileCompletionFormProps> = ({ on
                                 )}
                             />
 
-                            {/* INN */}
+                            {/* Position / job title */}
                             <FormField
                                 control={form.control}
-                                name="inn"
+                                name="position"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>{t('profileForm.innLabel')}</FormLabel>
+                                        <FormLabel>{t('profileForm.positionLabel')}</FormLabel>
                                         <FormControl>
-                                            <Input placeholder={t('profileForm.innPlaceholder')} {...field} />
+                                            <Input placeholder={t('profileForm.positionPlaceholder')} {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>

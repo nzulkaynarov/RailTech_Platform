@@ -194,7 +194,7 @@ export const accountsApi = {
 		const response = await apiClient.post<User>(`accounts/companies/${companyId}/invite/`, data);
 		return response.data;
 	},
-	registerInterest: async (data: { email: string; first_name: string; last_name: string }) => {
+	registerInterest: async (data: { email: string; first_name: string; last_name: string; phone: string }) => {
 		const response = await apiClient.post<{ message: string; email: string }>('auth/register/', data);
 		return response.data;
 	},
@@ -210,12 +210,10 @@ export const accountsApi = {
 		const response = await apiClient.post<{ message: string; email: string }>('auth/reset-password/', data);
 		return response.data;
 	},
-	submitProfile: async (data: { inn: string; companyName: string; role: string; company_type?: string }) => {
+	submitProfile: async (data: { companyName: string; position: string }) => {
 		const response = await apiClient.post<{ message: string; user: User }>('auth/submit-profile/', {
-			inn: data.inn,
 			companyName: data.companyName,
-			role_code: data.role,
-			company_type: data.company_type || 'CLIENT',
+			position: data.position,
 		});
 		return response.data.user;
 	},

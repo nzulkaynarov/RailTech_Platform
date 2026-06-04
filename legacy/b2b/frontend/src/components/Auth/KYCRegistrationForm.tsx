@@ -24,12 +24,14 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { PhoneInputUz } from '@/components/Shared/PhoneInputUz';
 
 const createRegistrationSchema = (t: (key: string) => string) =>
 	z.object({
 		email: z.string().email(t('registration.validation.email')),
 		first_name: z.string().min(2, t('registration.validation.minChars')),
 		last_name: z.string().min(2, t('registration.validation.minChars')),
+		phone: z.string().regex(/^\+998\d{9}$/, t('registration.validation.phone')),
 	});
 
 type RegistrationData = z.infer<ReturnType<typeof createRegistrationSchema>>;
@@ -47,6 +49,7 @@ export const KYCRegistrationForm: React.FC = () => {
 			email: '',
 			first_name: '',
 			last_name: '',
+			phone: '+998',
 		},
 	});
 
@@ -141,6 +144,26 @@ export const KYCRegistrationForm: React.FC = () => {
 														<Input
 															placeholder={t('registration.lastNamePlaceholder')}
 															{...field}
+														/>
+													</FormControl>
+													<FormMessage />
+												</FormItem>
+											)}
+										/>
+
+										<FormField
+											control={form.control}
+											name="phone"
+											render={({ field }) => (
+												<FormItem className="col-span-2">
+													<FormLabel>{t('registration.phoneLabel')}</FormLabel>
+													<FormControl>
+														<PhoneInputUz
+															value={field.value}
+															onChange={field.onChange}
+															onBlur={field.onBlur}
+															name={field.name}
+															placeholder={t('registration.phonePlaceholder')}
 														/>
 													</FormControl>
 													<FormMessage />
