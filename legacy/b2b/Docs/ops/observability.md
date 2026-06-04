@@ -36,12 +36,15 @@ Vite bakes `VITE_*` vars at build time. The chain is:
 3. `frontend/Dockerfile` accepts `ARG VITE_SENTRY_DSN` and exports it as
    `ENV VITE_SENTRY_DSN=…` before `npm run build`, so Vite picks it up.
 
-**Activate:** add the `VITE_SENTRY_DSN` secret in the GitHub `production`
-environment (use the project's Sentry DSN — same value as `SENTRY_DSN` if you
-use a single Sentry project for both backend and frontend). Optionally set
-`VITE_SENTRY_ENVIRONMENT` (defaults to `production`). Push any commit to
-re-render `.env` and rebuild the SPA — the next deploy will ship a Sentry-aware
-bundle.
+**Default activation:** `VITE_SENTRY_DSN` falls back to `SENTRY_DSN` in the
+deploy workflow (single Sentry project on backend + frontend), so just setting
+`SENTRY_DSN` (which you already need for the backend) activates the SPA too.
+The next deploy will ship a Sentry-aware bundle.
+
+**Override (split projects):** add a separate `VITE_SENTRY_DSN` secret to the
+GitHub `production` environment to point the SPA at a different Sentry project
+than the backend. Optionally also set `VITE_SENTRY_ENVIRONMENT` (defaults to
+`production`).
 
 If the secret is unset, the SPA build stays inert: `VITE_SENTRY_DSN` becomes the
 empty string, `initObservability()` returns early, and `captureError()` logs to

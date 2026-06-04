@@ -65,7 +65,9 @@ jobs:
           EMAIL_HOST_USER: ${{ secrets.EMAIL_HOST_USER }}
           EMAIL_HOST_PASSWORD: ${{ secrets.EMAIL_HOST_PASSWORD }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-          VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
+          # Default the SPA DSN to the same value as backend (single Sentry project).
+          # Override by setting VITE_SENTRY_DSN secret separately if you ever split projects.
+          VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN || secrets.SENTRY_DSN }}
         run: |
           test -n "$DATABASE_URL" || { echo "::error::secret DATABASE_URL is not set"; exit 1; }
           test -n "$DJANGO_SECRET_KEY" || { echo "::error::secret DJANGO_SECRET_KEY is not set"; exit 1; }
