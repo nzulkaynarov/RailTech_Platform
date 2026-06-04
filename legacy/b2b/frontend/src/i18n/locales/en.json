@@ -1103,6 +1103,8 @@
     "step": "Step 3 of 4: Final details",
     "companyName": "Organization name",
     "companyNamePlaceholder": "LLC / Sole Proprietorship Name",
+    "positionLabel": "Your position",
+    "positionPlaceholder": "e.g. Head of Procurement",
     "innLabel": "Company TIN",
     "innPlaceholder": "9 digits",
     "companyTypeLabel": "Company type",
@@ -1123,7 +1125,8 @@
       "minChars": "Minimum 2 characters",
       "innFormat": "TIN must contain exactly 9 digits",
       "selectRole": "Select a role",
-      "selectType": "Select company type"
+      "selectType": "Select company type",
+      "positionRequired": "Enter your position"
     }
   },
   "passwordSetup": {
@@ -1155,6 +1158,8 @@
     "lastNamePlaceholder": "Last name",
     "emailLabel": "Work Email",
     "emailPlaceholder": "Work Email",
+    "phoneLabel": "Phone",
+    "phonePlaceholder": "90 123 45 67",
     "submit": "Register",
     "genericError": "Registration failed. Check your data.",
     "emailSent": "Email sent!",
@@ -1164,7 +1169,8 @@
     "progress": "Registration progress",
     "validation": {
       "email": "Enter a valid email",
-      "minChars": "Minimum 2 characters"
+      "minChars": "Minimum 2 characters",
+      "phone": "Enter a phone in +998 XX XXX XX XX format"
     }
   },
   "nomenclaturePanel": {

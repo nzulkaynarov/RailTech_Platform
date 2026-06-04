@@ -11,47 +11,44 @@ logger = logging.getLogger(__name__)
 @transaction.atomic
 def submit_company_profile(
     user: CustomUser,
-    inn: str,
     company_name: str,
-    workspace_role_code: str,
-    company_type_code: str = "CLIENT",
+    position: str = "",
 ) -> Tuple[Optional[CustomUser], Optional[str]]:
     """
-    Step 3: User fills in company info, assigns company type, and creates membership.
+    Step 3: minimal onboarding. Everyone self-registers as a Buyer (CLIENT) and
+    becomes OWNER of a brand-new company.
+
+    INN and company type are deferred (INN → KYC; selling → CompanyRoleApplication),
+    so there is no INN collision and no silent cross-tenant merge to guard against.
+    Idempotent: a user who already has a primary company is returned unchanged.
     """
-    if not all([inn, company_name, workspace_role_code]):
+    if not company_name:
         return None, "PROFILE_FIELDS_REQUIRED"
 
-    # Status lookups
-    submitted_status = VerificationStatus.objects.filter(code="PROFILE_SUBMITTED").first()
-    w_role = WorkspaceRole.objects.filter(code=workspace_role_code).first()
-
-    if not w_role:
-        return None, "WORKSPACE_ROLE_NOT_FOUND"
+    # Already onboarded — don't create a second company on a repeat submit.
+    if user.memberships.filter(is_active=True).exists():
+        if position and user.position != position:
+            user.position = position
+            user.save(update_fields=["position"])
+        return user, None
 
     from ..models import CompanyType
 
-    company_type = CompanyType.objects.filter(code=company_type_code).first()
+    submitted_status = VerificationStatus.objects.filter(code="PROFILE_SUBMITTED").first()
+    owner_role = WorkspaceRole.objects.filter(code="OWNER").first()
+    client_type = CompanyType.objects.filter(code="CLIENT").first()
 
-    # Reject onboarding into someone else's tenant by INN collision.
-    # `get_or_create(inn=...)` used to silently attach the new user as OWNER of
-    # whoever already claimed that INN; that's a cross-tenant data-leak vector
-    # (placeholder INNs like 123456789 caused four unrelated users to land in
-    # one company on prod, see project-known-bug-silent-company-merge).
-    existing = Company.objects.filter(inn=inn).first()
-    if existing and not CompanyMember.objects.filter(user=user, company=existing).exists():
-        return None, "COMPANY_INN_TAKEN"
+    if not owner_role:
+        return None, "WORKSPACE_ROLE_NOT_FOUND"
 
-    if existing:
-        company = existing  # idempotent: same user re-submitting their own INN
-    else:
-        company = Company.objects.create(inn=inn, name=company_name, verification_status=submitted_status)
+    company = Company.objects.create(name=company_name, verification_status=submitted_status)
+    if client_type:
+        company.types.add(client_type)
 
-    # Assign company type
-    if company_type and not company.types.filter(pk=company_type.pk).exists():
-        company.types.add(company_type)
+    CompanyMember.objects.create(user=user, company=company, role=owner_role, is_primary=True)
 
-    # Create membership (Multi-tenancy V2)
-    CompanyMember.objects.get_or_create(user=user, company=company, defaults={"role": w_role, "is_primary": True})
+    if position:
+        user.position = position
+        user.save(update_fields=["position"])
 
     return user, None

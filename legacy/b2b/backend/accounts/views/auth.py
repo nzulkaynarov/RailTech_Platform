@@ -43,6 +43,7 @@ class RegisterView(views.APIView):
             email=serializer.validated_data["email"],
             first_name=serializer.validated_data["first_name"],
             last_name=serializer.validated_data["last_name"],
+            phone=serializer.validated_data["phone"],
         )
         if error:
             return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
@@ -131,8 +132,8 @@ class ResetPasswordView(views.APIView):
 @extend_schema(
     summary="Submit company profile",
     description=(
-        "Submit company profile after registration. Creates or links a Company "
-        "by INN, assigns workspace role and company type."
+        "Minimal onboarding after registration. Creates a new Buyer (CLIENT) "
+        "company and makes the user its OWNER. INN and selling are deferred."
     ),
     request=SubmitProfileSerializer,
     responses={
@@ -149,10 +150,8 @@ class SubmitProfileView(views.APIView):
         serializer.is_valid(raise_exception=True)
         user, error = submit_company_profile(
             user=request.user,
-            inn=serializer.validated_data["inn"],
             company_name=serializer.validated_data["companyName"],
-            workspace_role_code=serializer.validated_data["role_code"],
-            company_type_code=serializer.validated_data.get("company_type", "CLIENT"),
+            position=serializer.validated_data.get("position", ""),
         )
         if error:
             return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)

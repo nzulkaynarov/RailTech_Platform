@@ -27,6 +27,12 @@ class CustomUser(AbstractUser):
         verbose_name=_("Телефон"),
         help_text=_("Мобильный или рабочий телефон"),
     )
+    position = models.CharField(
+        max_length=120,
+        blank=True,
+        verbose_name=_("Должность"),
+        help_text=_("Должность сотрудника в компании (свободный текст)"),
+    )
     avatar = models.ImageField(
         upload_to=user_avatar_path,
         storage=get_public_storage,

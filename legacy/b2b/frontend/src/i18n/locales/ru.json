@@ -1105,6 +1105,8 @@
     "step": "Заполните данные вашей компании для начала работы на платформе",
     "companyName": "Название организации",
     "companyNamePlaceholder": "ООО / ИП Название",
+    "positionLabel": "Ваша должность",
+    "positionPlaceholder": "Напр.: Директор по закупкам",
     "innLabel": "ИНН Компании",
     "innPlaceholder": "9 цифр",
     "companyTypeLabel": "Тип вашей компании на платформе",
@@ -1125,7 +1127,8 @@
       "minChars": "Минимум 2 символа",
       "innFormat": "ИНН должен содержать ровно 9 цифр",
       "selectRole": "Выберите роль",
-      "selectType": "Выберите тип компании"
+      "selectType": "Выберите тип компании",
+      "positionRequired": "Укажите вашу должность"
     }
   },
   "passwordSetup": {
@@ -1157,6 +1160,8 @@
     "lastNamePlaceholder": "Фамилия",
     "emailLabel": "Рабочий Email",
     "emailPlaceholder": "Рабочий Email",
+    "phoneLabel": "Телефон",
+    "phonePlaceholder": "90 123 45 67",
     "submit": "Зарегистрироваться",
     "genericError": "Ошибка регистрации. Проверьте данные.",
     "emailSent": "Письмо отправлено!",
@@ -1166,7 +1171,8 @@
     "progress": "Прогресс регистрации",
     "validation": {
       "email": "Введите корректный email",
-      "minChars": "Минимум 2 символа"
+      "minChars": "Минимум 2 символа",
+      "phone": "Введите номер в формате +998 XX XXX XX XX"
     }
   },
   "nomenclaturePanel": {

@@ -32,7 +32,9 @@ def revoke_user_refresh_tokens(user: CustomUser) -> int:
     return revoked
 
 
-def create_pending_user(email: str, first_name: str, last_name: str) -> Tuple[Optional[CustomUser], Optional[str]]:
+def create_pending_user(
+    email: str, first_name: str, last_name: str, phone: str = ""
+) -> Tuple[Optional[CustomUser], Optional[str]]:
     """
     Step 1: Create a user in a pending state and send verification email.
     """
@@ -50,6 +52,7 @@ def create_pending_user(email: str, first_name: str, last_name: str) -> Tuple[Op
         email=email,
         first_name=first_name,
         last_name=last_name,
+        phone=phone,
         is_active=False,
         role=user_role,
     )

@@ -590,6 +590,8 @@ LOGGING = {
 
 # Validation Rules
 INN_VALIDATION_REGEX = r"^\d{9}$"
+# Uzbekistan phone: +998 followed by 9 digits (e.g. +998901234567).
+UZ_PHONE_REGEX = r"^\+998\d{9}$"
 
 # Email — backend can be explicitly overridden via EMAIL_BACKEND env var.
 # Default: console in DEBUG, SMTP in production. For local testing with DEBUG=False
