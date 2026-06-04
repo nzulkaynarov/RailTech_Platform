@@ -85,6 +85,9 @@ class Product(models.Model):
         verbose_name=_("Единица измерения"),
         help_text=_("Базовая единица измерения (шт, кг, м)"),
     )
+    # DEPRECATED: производитель как платформенная компания. Заменяется на `brand`
+    # (catalog.Manufacturer) — бренд не обязан быть аккаунтом. Будет удалён
+    # отдельной миграцией (contract-фаза) после переноса данных/UI на brand.
     manufacturer = models.ForeignKey(
         "accounts.Company",
         on_delete=models.SET_NULL,
@@ -93,6 +96,22 @@ class Product(models.Model):
         related_name="manufactured_products",
         verbose_name=_("Производитель"),
         help_text=_("Компания-производитель (OEM)"),
+    )
+    brand = models.ForeignKey(
+        "catalog.Manufacturer",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="products",
+        verbose_name=_("Производитель (бренд)"),
+        help_text=_("Бренд/производитель из справочника (OEM). Канонический для PIM."),
+    )
+    manufacturer_part_number = models.CharField(
+        max_length=120,
+        blank=True,
+        db_index=True,
+        verbose_name=_("Артикул производителя (MPN)"),
+        help_text=_("Заводской артикул. Ключ дедупликации PIM: бренд + артикул."),
     )
 
     # Привязка к оборудованию (Домен 1)

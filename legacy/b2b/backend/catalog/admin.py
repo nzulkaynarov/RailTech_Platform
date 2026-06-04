@@ -11,6 +11,7 @@ from .models import (
     Category,
     DomainType,
     EquipmentGroup,
+    Manufacturer,
     Product,
     ProductDocument,
     ProductImage,
@@ -137,6 +138,15 @@ class EquipmentGroupAdmin(ModelAdmin):
         return readonly
 
 
+@admin.register(Manufacturer)
+class ManufacturerAdmin(ModelAdmin):
+    list_display = ("name", "country", "company", "is_active")
+    list_filter = ("is_active", "country")
+    search_fields = ("name",)
+    list_per_page = 30
+    list_select_related = ("country", "company")
+
+
 # ────────────────────────────────────────────
 # Products (PIM)
 # ────────────────────────────────────────────
@@ -158,12 +168,13 @@ class ProductAdmin(ReadOnlyInspectionMixin, ImportExportModelAdmin, ModelAdmin):
         "category",
         "uom",
         "manufacturer",
+        "brand",
         "equipment_groups",
     ]
     inlines = [SupplierOfferInline, ProductImageInline, ProductDocumentInline]
     actions = ["publish_products"]
     list_per_page = 25
-    list_select_related = ("domain_type", "status", "category", "manufacturer")
+    list_select_related = ("domain_type", "status", "category", "manufacturer", "brand")
     show_full_result_count = False
     warn_unsaved_form = True
 
