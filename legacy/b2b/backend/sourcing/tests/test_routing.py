@@ -10,13 +10,18 @@ class DomainRouterTest(TestCase):
         from sourcing.models import DomainKeyword
 
         cache.clear()
-        railway = DomainType.objects.create(name="Railway Machinery", code="RAILWAY_MACHINERY", sku_prefix="RM")
-        services = DomainType.objects.create(name="Services", code="SERVICES", sku_prefix="SV")
-        DomainKeyword.objects.create(keyword="вл80", domain_type=railway)
-        DomainKeyword.objects.create(keyword="тепловоз", domain_type=railway)
-        DomainKeyword.objects.create(keyword="тяговый", domain_type=railway)
-        DomainKeyword.objects.create(keyword="доставка", domain_type=services)
-        DomainKeyword.objects.create(keyword="ремонт", domain_type=services)
+        # Idempotent: DomainTypes may already be seeded (data migration / fixture),
+        # so get_or_create instead of create to keep the test environment-robust.
+        railway, _ = DomainType.objects.get_or_create(
+            code="RAILWAY_MACHINERY", defaults={"name": "Railway Machinery", "sku_prefix": "RM"}
+        )
+        services, _ = DomainType.objects.get_or_create(
+            code="SERVICES", defaults={"name": "Services", "sku_prefix": "SV"}
+        )
+        for keyword in ("вл80", "тепловоз", "тяговый"):
+            DomainKeyword.objects.get_or_create(keyword=keyword, domain_type=railway)
+        for keyword in ("доставка", "ремонт"):
+            DomainKeyword.objects.get_or_create(keyword=keyword, domain_type=services)
 
     def tearDown(self):
         cache.clear()
