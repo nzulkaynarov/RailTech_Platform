@@ -66,7 +66,9 @@ class EquipmentGroupViewSet(viewsets.ModelViewSet):
     Public read access; write operations require Admin role.
     """
 
-    queryset = EquipmentGroup.objects.select_related("domain_type").all()
+    # EquipmentGroup has no domain_type FK (only a self-referential `parent`);
+    # select_related("domain_type") raised FieldError → 500 on every list.
+    queryset = EquipmentGroup.objects.select_related("parent").all()
     serializer_class = EquipmentGroupSerializer
     filter_backends = [filters.SearchFilter]
     search_fields = ["name"]
