@@ -168,24 +168,32 @@ class CatalogImportView(APIView):
 
     def post(self, request):
         # Authorisation: allow platform admin OR a member with can_sell in
-        # at least one SUPPLIER/MANUFACTURER company.
+        # at least one SUPPLIER/MANUFACTURER company. The uploader's seller
+        # company becomes the supplier on every upserted offer (self-service
+        # path — supplier is NEVER a column in the file). Platform admin has no
+        # company → products-only (no offers); the Unfold path is theirs.
         user = request.user
         is_admin = getattr(user, "is_platform_admin", False) or user.is_superuser
+        supplier_company_id = None
         if not is_admin:
-            # At least one active can_sell membership in a seller/mfg company
             from accounts.models import CompanyMember
 
-            has_seller_capability = CompanyMember.objects.filter(
-                user=user,
-                is_active=True,
-                can_sell=True,
-                company__types__code__in=["SUPPLIER", "MANUFACTURER"],
-            ).exists()
-            if not has_seller_capability:
+            seller_membership = (
+                CompanyMember.objects.filter(
+                    user=user,
+                    is_active=True,
+                    can_sell=True,
+                    company__types__code__in=["SUPPLIER", "MANUFACTURER"],
+                )
+                .order_by("-is_primary")
+                .first()
+            )
+            if not seller_membership:
                 return Response(
                     {"error": "NOT_A_SELLER_MEMBER"},
                     status=status.HTTP_403_FORBIDDEN,
                 )
+            supplier_company_id = seller_membership.company_id
 
         file_obj = request.FILES.get("file")
         if not file_obj:
@@ -209,7 +217,7 @@ class CatalogImportView(APIView):
                 )
 
             file_content_b64 = base64.b64encode(file_content).decode("ascii")
-            task = process_catalog_import.delay(file_content_b64)
+            task = process_catalog_import.delay(file_content_b64, supplier_company_id)
 
             ImportTask.objects.create(
                 celery_task_id=task.id,

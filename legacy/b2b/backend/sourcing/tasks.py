@@ -47,20 +47,6 @@ def route_domain(text: str) -> str:
     return "GENERAL_GOODS"
 
 
-def _flush_catalog_chunk(Product, chunk):
-    """Write one chunk of catalog rows in a single short transaction.
-
-    Keeps update_or_create semantics (sku is the unique key). Chunk is a list
-    of {sku, data} dicts prepared by the caller.
-    """
-    with transaction.atomic():
-        for entry in chunk:
-            if entry["sku"]:
-                Product.objects.update_or_create(sku=entry["sku"], defaults=entry["data"])
-            else:
-                Product.objects.create(**entry["data"])
-
-
 @shared_task(
     bind=True,
     # Higher than the 600s default — enterprise imports can be 50k rows.
@@ -164,86 +150,31 @@ def process_excel_import(self, deal_id: int, file_content_b64: str, user_id: int
     autoretry_for=(Exception,),
     retry_backoff=True,
 )
-def process_catalog_import(self, file_content_b64: str):
+def process_catalog_import(self, file_content_b64: str, supplier_company_id=None, dry_run=False):
     """
-    Processes uploaded Excel file to populate the global Product catalog (PIM).
-    file_content_b64: base64-encoded XLSX file content (JSON-safe).
+    Thin wrapper around the true-PIM seller catalog import engine (Rule 8).
+
+    file_content_b64: base64-encoded XLSX (JSON-safe).
+    supplier_company_id: the UPLOADER's seller company — its SupplierOffers are
+        upserted. None ⇒ products-only (no offers).
+    dry_run: validate + report counts without persisting (preview).
     """
-    from catalog.models import DomainType, Product, ProductStatus
-    from master_data.models import UnitOfMeasure
+    from .catalog_import import run_catalog_import
+
+    def progress(current, total):
+        self.update_state(state="PROGRESS", meta={"current": current, "total": total})
 
     try:
         file_content = base64.b64decode(file_content_b64)
-        df = pd.read_excel(BytesIO(file_content), nrows=MAX_EXCEL_ROWS)
-        df.columns = [str(c).lower().strip() for c in df.columns]
-
-        def find_col(aliases, default):
-            for c in df.columns:
-                if any(alias in str(c).lower() for alias in aliases):
-                    return c
-            return default
-
-        col_map = {
-            "name": find_col(["name", "наименование", "товар", "название", "изделие"], "name"),
-            "sku": find_col(["sku", "артикул", "чертеж", "номер"], "sku"),
-            "description": find_col(["desc", "описание", "примечание"], "description"),
-            "uom": find_col(["uom", "ед", "изм"], "uom"),
-        }
-
-        uom_cache = {u.code.lower(): u for u in UnitOfMeasure.objects.all()}
-        # Cache domain types to avoid per-row DB queries
-        domain_cache = {d.code: d for d in DomainType.objects.all()}
-        status_draft = ProductStatus.objects.filter(code="DRAFT").first()
-
-        items_processed = 0
-        total_rows = len(df)
-        # Process in chunks so a 50k-row import doesn't hold one giant
-        # transaction open (which would bloat WAL and risk lock contention).
-        chunk = []
-        for _, row in df.iterrows():
-            raw_name = str(row.get(col_map["name"], "")).strip()
-            if not raw_name or raw_name == "nan":
-                continue
-
-            sku = str(row.get(col_map["sku"], "")).strip()
-            if sku == "nan":
-                sku = None
-
-            uom_code = str(row.get(col_map["uom"], "шт")).strip().lower()
-            uom_obj = uom_cache.get(uom_code)
-
-            domain_code = route_domain(raw_name)
-            domain_obj = domain_cache.get(domain_code)
-
-            chunk.append(
-                {
-                    "sku": sku,
-                    "data": {
-                        "name": raw_name,
-                        "description": (
-                            str(row.get(col_map["description"], "")).strip()
-                            if row.get(col_map["description"]) != "nan"
-                            else ""
-                        ),
-                        "domain_type": domain_obj,
-                        "status": status_draft,
-                        "uom": uom_obj,
-                    },
-                }
-            )
-
-            if len(chunk) >= BULK_CHUNK:
-                _flush_catalog_chunk(Product, chunk)
-                items_processed += len(chunk)
-                chunk = []
-                self.update_state(state="PROGRESS", meta={"current": items_processed, "total": total_rows})
-
-        if chunk:
-            _flush_catalog_chunk(Product, chunk)
-            items_processed += len(chunk)
-            self.update_state(state="PROGRESS", meta={"current": items_processed, "total": total_rows})
-
-        return {"status": "success", "items_processed": items_processed}
-    except (ValueError, KeyError, TypeError, OSError):
+        return run_catalog_import(
+            file_content,
+            supplier_company_id=supplier_company_id,
+            dry_run=dry_run,
+            progress_callback=progress,
+        )
+    except ValueError as exc:
+        # File-level fatal error (e.g. NAME_COLUMN_NOT_FOUND).
+        return {"status": "error", "message": str(exc)}
+    except (KeyError, TypeError, OSError):
         logger.exception("Catalog import failed")
         return {"status": "error", "message": "Catalog import failed. Please check the file format and try again."}
