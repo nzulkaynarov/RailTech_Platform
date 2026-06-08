@@ -33,8 +33,8 @@ from typing import Iterable, Optional
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives, get_connection
-from django.template import TemplateDoesNotExist
-from django.template.loader import render_to_string
+from django.template import Context, TemplateDoesNotExist
+from django.template.loader import get_template, render_to_string
 
 from .models import EmailLog
 
@@ -52,10 +52,24 @@ def _channel_config(channel: str) -> dict:
         raise ValueError(f"Unknown email channel '{channel}'. " f"Available: {list(settings.EMAIL_CHANNELS)}") from exc
 
 
+def _render_plaintext(template_path: str, context: dict) -> str:
+    """Render a text/plain template with HTML auto-escaping DISABLED.
+
+    Django escapes template output by default, which turns '&' in a URL query
+    into '&amp;'. That is correct inside an HTML body (the browser decodes it),
+    but a text/plain body has nothing to decode — so a setup link
+    '?uid=X&token=Y' arrives as '?uid=X&amp;token=Y' and the 'token' param is
+    silently lost, breaking the password-setup / reset flows. Plain text must
+    never be HTML-escaped.
+    """
+    template = get_template(template_path)
+    return template.template.render(Context(context, autoescape=False))
+
+
 def _render_bodies(template_name: str, context: dict) -> tuple[str, str, str]:
     """Render subject, text body, HTML body. Raises TemplateDoesNotExist early."""
-    subject = render_to_string(f"emails/{template_name}_subject.txt", context).strip()
-    text_body = render_to_string(f"emails/{template_name}.txt", context)
+    subject = _render_plaintext(f"emails/{template_name}_subject.txt", context).strip()
+    text_body = _render_plaintext(f"emails/{template_name}.txt", context)
     try:
         html_body = render_to_string(f"emails/{template_name}.html", context)
     except TemplateDoesNotExist:
