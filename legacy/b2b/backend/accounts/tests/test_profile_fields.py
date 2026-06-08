@@ -30,9 +30,7 @@ def _client_for(user):
 
 def _make_member(user, company, workspace_role_factory, *, role_code, role_name):
     role = workspace_role_factory(code=role_code, name=role_name)
-    return CompanyMember.objects.create(
-        user=user, company=company, role=role, is_primary=True, is_active=True
-    )
+    return CompanyMember.objects.create(user=user, company=company, role=role, is_primary=True, is_active=True)
 
 
 def test_me_returns_position(user_factory):
