@@ -9,12 +9,19 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
 
 import { useUserStore, roleLabels, companyStatusLabels } from '@/store/userStore';
-import { accountsApi, type KYCDocument } from '@/api/accountsApi';
+import { useAuthStore } from '@/store/authStore';
+import { useCountries } from '@/hooks/useMasterData';
+import { accountsApi, type KYCDocument, type Company } from '@/api/accountsApi';
 import { toast } from 'sonner';
 import { ImageUpload } from '@/components/Shared/ImageUpload';
 import { FileUpload } from '@/components/Shared/FileUpload';
@@ -72,20 +79,40 @@ function PasswordChangeForm({ onClose }: { onClose: () => void }) {
 function CompanyTab() {
   const { t } = useTranslation();
   const { company, activeStatus, updateCompany } = useUserStore();
-  const canEdit = company.kycStatus !== 'verified';
-  const [companyName, setCompanyName] = useState(company.name);
-  const [companyInn, setCompanyInn] = useState(company.inn);
+  const workspaceRole = useAuthStore((s) => s.user?.workspace_role ?? null);
+  const isViewerMode = useUserStore((s) => s.isViewerMode);
+  // Editing the company profile is an OWNER action (platform admin may also edit).
+  const canEdit = isViewerMode || workspaceRole === 'OWNER';
+  // INN is locked once KYC is verified — it becomes a checked legal identifier.
+  const innLocked = company.kycStatus === 'verified';
+
+  const { data: countries = [] } = useCountries();
+
+  const companyId = company.id;
   const [savingCompany, setSavingCompany] = useState(false);
   const [docs, setDocs] = useState<KYCDocument[]>([]);
   const [loadingDocs, setLoadingDocs] = useState(false);
+  const [cForm, setCForm] = useState({
+    name: company.name, inn: company.inn, contact_person: '', phone: '', email: '',
+    website: '', legal_address: '', bank_account: '', mfo: '',
+    country: '' as number | string, has_iso9001: false,
+  });
 
-  const companyId = company.id;
-
+  // The /me/ company is a lightweight projection (no contacts/requisites).
+  // Pull the full record so every editable field is populated, not blanked.
   useEffect(() => {
     if (!companyId) return;
     setLoadingDocs(true);
     accountsApi.getCompanyDetail(companyId)
-      .then(c => setDocs(c.kyc_documents ?? []))
+      .then((c) => {
+        setDocs(c.kyc_documents ?? []);
+        setCForm({
+          name: c.name ?? '', inn: c.inn ?? '', contact_person: c.contact_person ?? '',
+          phone: c.phone ?? '', email: c.email ?? '', website: c.website ?? '',
+          legal_address: c.legal_address ?? '', bank_account: c.bank_account ?? '',
+          mfo: c.mfo ?? '', country: c.country ?? '', has_iso9001: !!c.has_iso9001,
+        });
+      })
       .catch(() => toast.error(t('profile.companyInfo.docsLoadError')))
       .finally(() => setLoadingDocs(false));
   }, [companyId, t]);
@@ -101,11 +128,21 @@ function CompanyTab() {
     }
     setSavingCompany(true);
     try {
-      await accountsApi.updateCompany(companyId, {
-        name: companyName,
-        inn: companyInn,
-      });
-      updateCompany({ name: companyName, inn: companyInn });
+      const payload: Partial<Company> = {
+        name: cForm.name,
+        contact_person: cForm.contact_person,
+        phone: cForm.phone,
+        email: cForm.email,
+        website: cForm.website,
+        legal_address: cForm.legal_address,
+        bank_account: cForm.bank_account,
+        mfo: cForm.mfo,
+        country: cForm.country === '' ? null : Number(cForm.country),
+        has_iso9001: cForm.has_iso9001,
+      };
+      if (!innLocked) payload.inn = cForm.inn;
+      await accountsApi.updateCompany(companyId, payload);
+      updateCompany({ name: cForm.name });
       toast.success(t('profile.companyInfo.saved'));
     } catch {
       toast.error(t('common.error'));
@@ -161,27 +198,61 @@ function CompanyTab() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label>{t('profile.companyInfo.name')}</Label>
-            <Input
-              value={companyName}
-              onChange={(e) => setCompanyName(e.target.value)}
-              disabled={!canEdit}
-            />
+            <Input value={cForm.name} onChange={(e) => setCForm({ ...cForm, name: e.target.value })} disabled={!canEdit} />
           </div>
           <div className="space-y-2">
             <Label>{t('profile.companyInfo.inn')}</Label>
-            <Input
-              value={companyInn}
-              onChange={(e) => setCompanyInn(e.target.value)}
-              disabled={!canEdit}
-            />
+            <Input value={cForm.inn} onChange={(e) => setCForm({ ...cForm, inn: e.target.value })} disabled={!canEdit || innLocked} />
+          </div>
+          <div className="space-y-2">
+            <Label>{t('profile.companyInfo.contactPerson')}</Label>
+            <Input value={cForm.contact_person} onChange={(e) => setCForm({ ...cForm, contact_person: e.target.value })} disabled={!canEdit} />
+          </div>
+          <div className="space-y-2">
+            <Label>{t('profile.companyInfo.phone')}</Label>
+            <Input value={cForm.phone} onChange={(e) => setCForm({ ...cForm, phone: e.target.value })} disabled={!canEdit} />
+          </div>
+          <div className="space-y-2">
+            <Label>{t('profile.companyInfo.email')}</Label>
+            <Input type="email" value={cForm.email} onChange={(e) => setCForm({ ...cForm, email: e.target.value })} disabled={!canEdit} />
+          </div>
+          <div className="space-y-2">
+            <Label>{t('profile.companyInfo.website')}</Label>
+            <Input value={cForm.website} onChange={(e) => setCForm({ ...cForm, website: e.target.value })} disabled={!canEdit} />
           </div>
           <div className="space-y-2">
             <Label>{t('profile.companyInfo.country')}</Label>
-            <Input value={company.country} disabled />
+            <Select
+              value={cForm.country ? String(cForm.country) : undefined}
+              onValueChange={(v) => setCForm({ ...cForm, country: v })}
+              disabled={!canEdit}
+            >
+              <SelectTrigger><SelectValue placeholder={t('profile.companyInfo.countryPlaceholder')} /></SelectTrigger>
+              <SelectContent>
+                {countries.map((c) => (
+                  <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
-            <Label>{t('profile.companyInfo.city')}</Label>
-            <Input value={company.city} disabled />
+            <Label>{t('profile.companyInfo.bankAccount')}</Label>
+            <Input value={cForm.bank_account} onChange={(e) => setCForm({ ...cForm, bank_account: e.target.value })} disabled={!canEdit} />
+          </div>
+          <div className="space-y-2">
+            <Label>{t('profile.companyInfo.mfo')}</Label>
+            <Input value={cForm.mfo} onChange={(e) => setCForm({ ...cForm, mfo: e.target.value })} disabled={!canEdit} />
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label>{t('profile.companyInfo.legalAddress')}</Label>
+            <Textarea value={cForm.legal_address} onChange={(e) => setCForm({ ...cForm, legal_address: e.target.value })} disabled={!canEdit} rows={2} />
+          </div>
+          <div className="flex items-center justify-between rounded-lg border p-3 sm:col-span-2">
+            <div className="space-y-0.5">
+              <Label htmlFor="iso9001">{t('profile.companyInfo.iso9001')}</Label>
+              <p className="text-xs text-muted-foreground">{t('profile.companyInfo.iso9001Help')}</p>
+            </div>
+            <Switch id="iso9001" checked={cForm.has_iso9001} onCheckedChange={(v) => setCForm({ ...cForm, has_iso9001: v })} disabled={!canEdit} />
           </div>
         </div>
 
@@ -261,6 +332,7 @@ export function ProfilePage() {
         first_name: form.firstName,
         last_name: form.lastName,
         phone: form.phone,
+        position: form.position,
       });
       updateProfile(form);
       toast.success(t('profile.personalInfo.saved'));
@@ -331,6 +403,10 @@ export function ProfilePage() {
                 <div className="space-y-2">
                   <Label htmlFor="phone">{t('profile.fields.phone')}</Label>
                   <Input id="phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="position">{t('profile.fields.position')}</Label>
+                  <Input id="position" value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })} />
                 </div>
               </div>
 

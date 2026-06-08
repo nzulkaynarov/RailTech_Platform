@@ -17,12 +17,16 @@ export interface Company {
 	verification_status: number | string;
 	verification_status_code?: string;
 	verification_status_name?: string;
+	is_verified?: boolean;
+	has_iso9001?: boolean;
+	trust_score?: number;
 	bank_account?: string;
 	mfo?: string;
 	legal_address?: string;
 	contact_person?: string;
 	contact_info?: string;
-	country?: string;
+	phone?: string;
+	country?: number | string | null;
 	website?: string;
 	email?: string;
 	logo?: string | null;
@@ -53,6 +57,7 @@ export interface User {
 	first_name: string;
 	last_name: string;
 	phone: string;
+	position?: string;
 	role?: number | string | null;
 	role_code?: string;
 	role_data?: { code: string; name: string };

@@ -74,6 +74,8 @@ class CompanyViewSet(viewsets.ModelViewSet):
     # (logo upload, KYC document upload/delete, partial update of profile fields).
     _MEMBER_ALLOWED_ACTIONS = {
         "retrieve",
+        "update",
+        "partial_update",
         "upload_document",
         "delete_document",
         "upload_logo",
@@ -106,6 +108,31 @@ class CompanyViewSet(viewsets.ModelViewSet):
                 raise exceptions.PermissionDenied("You can only view your own company.")
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
+
+    def _assert_owner_or_admin(self, company):
+        """Editing the company profile is an OWNER action (or platform admin).
+        Plain members may view but not change company data. The serializer's
+        read_only_fields still protect KYC verdicts (verification_status /
+        is_verified / trust_score) from any non-admin write."""
+        user = self.request.user
+        if user.is_platform_admin:
+            return
+        is_owner = CompanyMember.objects.filter(
+            user=user,
+            company=company,
+            is_active=True,
+            role__code="OWNER",
+        ).exists()
+        if not is_owner:
+            raise exceptions.PermissionDenied("ONLY_COMPANY_OWNER_OR_ADMIN")
+
+    def update(self, request, *args, **kwargs):
+        self._assert_owner_or_admin(self.get_object())
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        self._assert_owner_or_admin(self.get_object())
+        return super().partial_update(request, *args, **kwargs)
 
     @extend_schema(
         summary="Verify company KYC",
