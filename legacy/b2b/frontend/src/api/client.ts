@@ -55,7 +55,14 @@ async function failRefresh(err: unknown): Promise<void> {
 	} catch {
 		localStorage.removeItem('railtech-auth');
 	}
-	if (window.location.pathname !== '/') window.location.href = '/';
+	// Don't bounce the user off public, unauthenticated routes (password setup/reset,
+	// registration). A background 401 there is expected — there's no session yet — and
+	// hard-redirecting to '/' interrupts the flow (e.g. a stale token makes initAuth's
+	// /me/ call 401 the moment the setup-password page mounts). Only force a redirect
+	// when an authenticated app page actually lost its session.
+	const PUBLIC_AUTH_PATHS = new Set(['/setup-password', '/reset-password', '/forgot-password', '/register']);
+	const path = window.location.pathname;
+	if (path !== '/' && !PUBLIC_AUTH_PATHS.has(path)) window.location.href = '/';
 }
 
 // Response interceptor for token refresh
