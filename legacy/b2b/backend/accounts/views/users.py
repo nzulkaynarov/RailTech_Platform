@@ -11,7 +11,7 @@ from rest_framework.response import Response
 
 from accounts import services
 from accounts.models import Company, CompanyMember, CustomUser
-from accounts.serializers import UserSerializer
+from accounts.serializers import SelfUpdateSerializer, UserSerializer
 from core.permissions import IsPlatformAdmin
 
 
@@ -122,13 +122,15 @@ class UserViewSet(viewsets.ModelViewSet):
     @extend_schema(
         summary="Update current user profile",
         description="Partial update of the authenticated user's own profile.",
-        request=UserSerializer,
-        responses={200: UserSerializer},
+        request=SelfUpdateSerializer,
+        responses={200: SelfUpdateSerializer},
         tags=["Accounts"],
     )
     @action(detail=False, methods=["patch"], url_path="update-me", permission_classes=[permissions.IsAuthenticated])
     def update_me(self, request):
-        serializer = self.get_serializer(request.user, data=request.data, partial=True)
+        # SelfUpdateSerializer (not the admin UserSerializer): a user may edit only
+        # their own name/phone/position/avatar — never email/username/is_active/role.
+        serializer = SelfUpdateSerializer(request.user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)

@@ -67,13 +67,15 @@ class CompanySerializer(serializers.ModelSerializer):
             "website",
             "email",
             "logo",
-            "kyc_notes",
             "created_at",
             "kyc_documents",
             "user_count",
             "company_types",
         ]
-        read_only_fields = ["verification_status", "created_at"]
+        # kyc_notes is intentionally NOT exposed — it holds internal KYC-manager
+        # notes ("не видны клиенту"). verify-kyc writes it directly on the model.
+        # Trust signals are platform verdicts: a company must not self-set them.
+        read_only_fields = ["verification_status", "is_verified", "trust_score", "created_at"]
 
     def get_user_count(self, obj):
         # Use len() to leverage prefetched members cache instead of extra COUNT query
@@ -132,6 +134,7 @@ class UserSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "phone",
+            "position",
             "avatar",
             "role",
             "role_code",
@@ -168,6 +171,20 @@ class UserSerializer(serializers.ModelSerializer):
         return None
 
 
+class SelfUpdateSerializer(serializers.ModelSerializer):
+    """Fields a user may edit on their OWN profile via /users/update-me/.
+
+    Deliberately narrow: email/username are the login identity (changing them
+    needs a separate verified flow), and is_active/role are platform-controlled.
+    The shared UserSerializer keeps those writable for admin user management —
+    self-service must not.
+    """
+
+    class Meta:
+        model = CustomUser
+        fields = ["first_name", "last_name", "phone", "position", "avatar"]
+
+
 class MeSerializer(serializers.ModelSerializer):
     """Lightweight serializer for /accounts/me/ — minimal queries.
     Skips nested memberships (frontend uses workspace_role + capabilities instead)."""
@@ -193,6 +210,7 @@ class MeSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "phone",
+            "position",
             "avatar",
             "role",
             "role_code",

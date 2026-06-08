@@ -138,7 +138,7 @@ export const useUserStore = create<UserState>((set, _get) => ({
     const { useAuthStore: authStoreHook } = await import('../store/authStore');
     const authState = authStoreHook.getState();
     if (authState.user) {
-      const { first_name, last_name, email, role_code, company, avatar } = authState.user;
+      const { first_name, last_name, email, phone, position, role_code, company, avatar } = authState.user;
       const initials = `${(first_name || '')[0] || ''}${(last_name || '')[0] || ''}`.toUpperCase();
 
       // Map backend company_types to frontend CompanyStatus
@@ -196,8 +196,8 @@ export const useUserStore = create<UserState>((set, _get) => ({
           lastName: last_name || '',
           patronymic: '',
           email: email || '',
-          phone: '',
-          position: '',
+          phone: phone || '',
+          position: position || '',
           avatarInitials: initials || '??',
           avatarUrl: avatar ?? null,
         },
@@ -212,7 +212,7 @@ export const useUserStore = create<UserState>((set, _get) => ({
             ? 'verified'
             : (['L2_VERIFIED', 'L3_CONTRACTED'].includes(company.verification_status_code ?? '') ? 'verified' : 'pending')
           ) as 'verified' | 'pending' | 'not_started',
-          country: company.country || '',
+          country: company.country != null ? String(company.country) : '',
           city: '',
           logoUrl: company.logo ?? null,
           statusEntries,
