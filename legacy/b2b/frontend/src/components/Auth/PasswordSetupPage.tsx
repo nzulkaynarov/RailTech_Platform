@@ -88,7 +88,7 @@ export const PasswordSetupPage: React.FC<PasswordSetupPageProps> = ({ uid, token
     };
 
     return (
-        <div className="min-h-screen bg-background flex items-center justify-center p-6 font-sans">
+        <div data-testid="password-setup-page" className="min-h-screen bg-background flex items-center justify-center p-6 font-sans">
             <Card className="w-full max-w-md">
                 <CardHeader>
                     <div className="flex items-center gap-3">
