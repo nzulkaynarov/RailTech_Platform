@@ -1,11 +1,10 @@
 name: E2E (Playwright)
 
-# Browser end-to-end of the golden path. MANUAL trigger only — it needs a running
-# target (staging once it exists) and the Playwright browsers, so it is kept out
-# of the per-push gate. Provide the target URL when dispatching.
-#
-# Activation: the spec selectors in frontend/e2e/ must be filled first
-# (see Docs/ops/e2e.md). Until then only the `smoke` block is meaningful.
+# Browser end-to-end against a RUNNING target. Runs nightly against prod plus on
+# manual dispatch — NOT a per-push gate (it needs a live app + Playwright
+# browsers). The active specs (smoke + auth-flow) are non-invasive (no user is
+# created, fake tokens), so prod is a safe default target. The golden-path
+# journey stays skipped until its selectors are filled (see Docs/ops/e2e.md).
 
 on:
   workflow_dispatch:
@@ -14,6 +13,10 @@ on:
         description: 'Target base URL (e.g. https://staging.b2b.railtech.uz)'
         required: true
         default: 'https://b2b.railtech.uz'
+  schedule:
+    # Nightly 03:00 UTC against prod — catches silent reg-flow regressions that
+    # throw no exception (so Sentry/unit tests miss them).
+    - cron: '0 3 * * *'
 
 jobs:
   e2e:
@@ -36,7 +39,9 @@ jobs:
 
       - name: Run E2E
         env:
-          E2E_BASE_URL: ${{ github.event.inputs.base_url }}
+          # Manual dispatch uses the provided URL; the nightly schedule has no
+          # input, so fall back to prod.
+          E2E_BASE_URL: ${{ github.event.inputs.base_url || 'https://b2b.railtech.uz' }}
         run: |
           cd frontend
           npm run test:e2e

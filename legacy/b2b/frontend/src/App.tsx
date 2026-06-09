@@ -191,11 +191,15 @@ function App() {
   useEffect(() => {
     if (isAuthenticated) {
       loadFromAuth();
-      if (window.location.pathname !== '/') {
+      // Don't rewrite the URL out from under a token-bearing public flow
+      // (password setup/reset): a stale persisted session (isAuthenticated:true
+      // in localStorage) must not hijack it. Mirrors the guard in api/client.ts.
+      const onTokenFlow = route.view === 'setup-password' || route.view === 'reset-password';
+      if (!onTokenFlow && window.location.pathname !== '/') {
         window.history.replaceState(null, '', '/');
       }
     }
-  }, [isAuthenticated, loadFromAuth]);
+  }, [isAuthenticated, loadFromAuth, route.view]);
 
   // Radix workaround: opening a Dialog (e.g. ConfirmActionDialog) from a
   // DropdownMenu/Select can leave document.body stuck at `pointer-events: none`

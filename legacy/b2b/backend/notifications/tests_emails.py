@@ -7,9 +7,9 @@ honest as they evolve.
 
 from django.conf import settings
 from django.core import mail
-from django.test import TestCase, override_settings
+from django.test import SimpleTestCase, TestCase, override_settings
 
-from notifications.emails import EmailDeliveryError, send_templated_email
+from notifications.emails import EmailDeliveryError, _render_bodies, send_templated_email
 from notifications.models import EmailLog
 
 TEMPLATE_CASES = [
@@ -132,3 +132,36 @@ class TemplatedEmailRenderingTests(TestCase):
             EmailLog.objects.filter(status=EmailLog.STATUS_FAILED).exists(),
             "failed attempt must be persisted for audit",
         )
+
+
+class EmailLinkIntegrityTests(SimpleTestCase):
+    """Regression guard for the &-escaping bug (2026-06-08).
+
+    A setup/reset link '?uid=X&token=Y' must survive in the PLAIN-TEXT body as a
+    clickable URL. Django auto-escaping turned '&' into '&amp;', which dropped the
+    'token' query param and bounced users off the password page. The HTML body
+    legitimately keeps '&amp;' (the browser decodes it on click). Pure rendering —
+    no DB, no SMTP — so it can never flake on the mail backend.
+    """
+
+    # (template, context key holding a URL with a query string)
+    LINK_TEMPLATES = [
+        ("setup_password", "setup_url"),
+        ("reset_password", "reset_url"),
+        ("invite_member", "setup_url"),
+    ]
+
+    def test_plaintext_query_links_are_not_html_escaped(self):
+        url = "https://b2b.railtech.uz/setup-password?uid=NDA&token=abc-123def"
+        for template, url_key in self.LINK_TEMPLATES:
+            with self.subTest(template=template):
+                context = {"first_name": "Тест", "company_name": "Acme", url_key: url}
+                _subject, text_body, html_body = _render_bodies(template, context)
+
+                # Plain text: the raw URL stays intact, so the token is not lost.
+                self.assertIn(url, text_body, f"{template}: plain-text link was mangled")
+                self.assertNotIn("&amp;", text_body, f"{template}: plain text must not be HTML-escaped")
+                self.assertIn("&token=", text_body, f"{template}: token param dropped from plain text")
+
+                # HTML body: '&' is correctly entity-escaped inside the href.
+                self.assertIn("&amp;token=", html_body, f"{template}: HTML href should escape '&'")
