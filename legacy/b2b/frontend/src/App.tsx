@@ -1,5 +1,6 @@
-import { Suspense, lazy, useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { lazyWithRetry } from './lib/lazyWithRetry';
 import { toast } from 'sonner';
 import { AppShell } from './layouts/AppShell';
 import { PlatformAdminShell } from './layouts/PlatformAdminShell';
@@ -17,50 +18,50 @@ import { ResetPasswordPage } from './components/Auth/ResetPasswordPage';
 import { ProfileCompletionForm } from './components/Cabinet/ProfileCompletionForm';
 
 // Lazy load page components
-const ProductManagement = lazy(() => import('./pages/ProductManagement').then(m => ({ default: m.ProductManagement })));
-const ProductDetail = lazy(() => import('./pages/ProductDetail').then(m => ({ default: m.ProductDetail })));
-const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
-const ProfilePage = lazy(() => import('./pages/ProfilePage').then(m => ({ default: m.ProfilePage })));
-const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
+const ProductManagement = lazyWithRetry(() => import('./pages/ProductManagement').then(m => ({ default: m.ProductManagement })));
+const ProductDetail = lazyWithRetry(() => import('./pages/ProductDetail').then(m => ({ default: m.ProductDetail })));
+const Dashboard = lazyWithRetry(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
+const ProfilePage = lazyWithRetry(() => import('./pages/ProfilePage').then(m => ({ default: m.ProfilePage })));
+const SettingsPage = lazyWithRetry(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
 // OnboardingPage and PendingVerificationPage removed — real auth flow via LoginPage + KYCRegistrationForm
 // Admin approves users via Django admin panel at /admin/
-const RequestDetailPage = lazy(() => import('./pages/flow/RequestDetailPage').then(m => ({ default: m.RequestDetailPage })));
-const SourcingHub = lazy(() => import('./components/Sourcing/SourcingHub').then(m => ({ default: m.SourcingHub })));
+const RequestDetailPage = lazyWithRetry(() => import('./pages/flow/RequestDetailPage').then(m => ({ default: m.RequestDetailPage })));
+const SourcingHub = lazyWithRetry(() => import('./components/Sourcing/SourcingHub').then(m => ({ default: m.SourcingHub })));
 
 // Lazy load individual page modules
-const PlatformAdminDashboard = lazy(() => import('./pages/PlatformAdminDashboard'));
-const SourcingRequestsPage = lazy(() => import('./pages/SourcingRequestsPage'));
-const SourcingImportPage = lazy(() => import('./pages/SourcingImportPage'));
-const DealsPage = lazy(() => import('./pages/DealsPage'));
-const QuotesPage = lazy(() => import('./pages/QuotesPage'));
-const ClientsPage = lazy(() => import('./pages/ClientsPage'));
-const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));
-const CategoriesPage = lazy(() => import('./pages/CategoriesPage'));
-const EquipmentGroupsPage = lazy(() => import('./pages/EquipmentGroupsPage'));
-const HelpPage = lazy(() => import('./pages/HelpPage'));
-const MyRequestsPage = lazy(() => import('./pages/MyRequestsPage'));
-const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'));
-const AdminKYCPage = lazy(() => import('./pages/AdminKYCPage'));
-const AdminSubscriptionsPage = lazy(() => import('./pages/AdminSubscriptionsPage'));
-const AdminRoleApplicationsPage = lazy(() => import('./pages/AdminRoleApplicationsPage'));
-const AdminCatalogPage = lazy(() => import('./pages/AdminCatalogPage'));
-const AdminCategoriesPage = lazy(() => import('./pages/AdminCategoriesPage'));
-const AdminEquipmentGroupsPage = lazy(() => import('./pages/AdminEquipmentGroupsPage'));
-const AdminOffersPage = lazy(() => import('./pages/AdminOffersPage'));
-const AdminCompaniesPage = lazy(() => import('./pages/AdminCompaniesPage'));
-const AdminDealsPage = lazy(() => import('./pages/AdminDealsPage'));
-const AdminMasterDataPage = lazy(() => import('./pages/AdminMasterDataPage'));
-const AdminSupportPage = lazy(() => import('./pages/AdminSupportPage'));
-const ContractsPage = lazy(() => import('./pages/ContractsPage'));
-const InvoicesPage = lazy(() => import('./pages/InvoicesPage'));
-const PaymentsPage = lazy(() => import('./pages/PaymentsPage'));
-const ActsPage = lazy(() => import('./pages/ActsPage'));
-const FulfillmentsPage = lazy(() => import('./pages/FulfillmentsPage'));
-const SupplierBidsPage = lazy(() => import('./pages/SupplierBidsPage'));
-const LeadsPage = lazy(() => import('./pages/LeadsPage'));
-const MySubscriptionPage = lazy(() => import('./pages/MySubscriptionPage'));
-const AdminSupplierBidsPage = lazy(() => import('./pages/AdminSupplierBidsPage'));
-const CatalogImportPage = lazy(() => import('./pages/CatalogImportPage'));
+const PlatformAdminDashboard = lazyWithRetry(() => import('./pages/PlatformAdminDashboard'));
+const SourcingRequestsPage = lazyWithRetry(() => import('./pages/SourcingRequestsPage'));
+const SourcingImportPage = lazyWithRetry(() => import('./pages/SourcingImportPage'));
+const DealsPage = lazyWithRetry(() => import('./pages/DealsPage'));
+const QuotesPage = lazyWithRetry(() => import('./pages/QuotesPage'));
+const ClientsPage = lazyWithRetry(() => import('./pages/ClientsPage'));
+const AnalyticsPage = lazyWithRetry(() => import('./pages/AnalyticsPage'));
+const CategoriesPage = lazyWithRetry(() => import('./pages/CategoriesPage'));
+const EquipmentGroupsPage = lazyWithRetry(() => import('./pages/EquipmentGroupsPage'));
+const HelpPage = lazyWithRetry(() => import('./pages/HelpPage'));
+const MyRequestsPage = lazyWithRetry(() => import('./pages/MyRequestsPage'));
+const AdminUsersPage = lazyWithRetry(() => import('./pages/AdminUsersPage'));
+const AdminKYCPage = lazyWithRetry(() => import('./pages/AdminKYCPage'));
+const AdminSubscriptionsPage = lazyWithRetry(() => import('./pages/AdminSubscriptionsPage'));
+const AdminRoleApplicationsPage = lazyWithRetry(() => import('./pages/AdminRoleApplicationsPage'));
+const AdminCatalogPage = lazyWithRetry(() => import('./pages/AdminCatalogPage'));
+const AdminCategoriesPage = lazyWithRetry(() => import('./pages/AdminCategoriesPage'));
+const AdminEquipmentGroupsPage = lazyWithRetry(() => import('./pages/AdminEquipmentGroupsPage'));
+const AdminOffersPage = lazyWithRetry(() => import('./pages/AdminOffersPage'));
+const AdminCompaniesPage = lazyWithRetry(() => import('./pages/AdminCompaniesPage'));
+const AdminDealsPage = lazyWithRetry(() => import('./pages/AdminDealsPage'));
+const AdminMasterDataPage = lazyWithRetry(() => import('./pages/AdminMasterDataPage'));
+const AdminSupportPage = lazyWithRetry(() => import('./pages/AdminSupportPage'));
+const ContractsPage = lazyWithRetry(() => import('./pages/ContractsPage'));
+const InvoicesPage = lazyWithRetry(() => import('./pages/InvoicesPage'));
+const PaymentsPage = lazyWithRetry(() => import('./pages/PaymentsPage'));
+const ActsPage = lazyWithRetry(() => import('./pages/ActsPage'));
+const FulfillmentsPage = lazyWithRetry(() => import('./pages/FulfillmentsPage'));
+const SupplierBidsPage = lazyWithRetry(() => import('./pages/SupplierBidsPage'));
+const LeadsPage = lazyWithRetry(() => import('./pages/LeadsPage'));
+const MySubscriptionPage = lazyWithRetry(() => import('./pages/MySubscriptionPage'));
+const AdminSupplierBidsPage = lazyWithRetry(() => import('./pages/AdminSupplierBidsPage'));
+const CatalogImportPage = lazyWithRetry(() => import('./pages/CatalogImportPage'));
 
 import { LoadingSkeleton } from './components/LoadingSkeleton';
 

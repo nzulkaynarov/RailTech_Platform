@@ -120,6 +120,12 @@ export const accountsApi = {
 		const response = await apiClient.get<Company>(`accounts/companies/${id}/`);
 		return response.data;
 	},
+	// Buyer-facing verified-supplier directory for the open-RFQ invite flow.
+	// Member-accessible (unlike the admin-only full company list); minimal fields.
+	getPartnerSuppliers: async (): Promise<{ id: number; name: string; inn: string }[]> => {
+		const response = await apiClient.get<{ id: number; name: string; inn: string }[]>('accounts/companies/suppliers/');
+		return response.data;
+	},
 	createCompany: async (data: Partial<Company>) => {
 		const response = await apiClient.post<Company>('accounts/companies/', data);
 		return response.data;

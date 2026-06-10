@@ -48,7 +48,11 @@ def verify_company_kyc(
     before_code = current_code
     before_name = company.verification_status.name if company.verification_status_id else ""
     company.verification_status = target_status
-    company.save(update_fields=["verification_status"])
+    # Keep the denormalised is_verified flag consistent with the status — L2+ is
+    # "verified". Without this the /me/ payload could show is_verified=False next
+    # to verification_status_code="L2_VERIFIED" (checkup 2026-06-10).
+    company.is_verified = LEVEL_RANK.get(level_code, 0) >= LEVEL_RANK["L2_VERIFIED"]
+    company.save(update_fields=["verification_status", "is_verified"])
 
     from core.audit import log_admin_action
 

@@ -88,6 +88,40 @@ class CompanyViewSet(viewsets.ModelViewSet):
             return [permissions.IsAuthenticated()]
         return super().get_permissions()
 
+    @extend_schema(
+        summary="List verified suppliers (for RFQ invitations)",
+        description=(
+            "Minimal directory of verified SUPPLIER / MANUFACTURER companies a buyer "
+            "can invite to an RFQ. Available to any authenticated member — returns only "
+            "id, name and INN, NOT the full admin company record (no KYC internals)."
+        ),
+        responses={200: OpenApiResponse(description="List of {id, name, inn}")},
+        tags=["Accounts"],
+    )
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="suppliers",
+        permission_classes=[permissions.IsAuthenticated],
+        pagination_class=None,
+    )
+    def suppliers(self, request):
+        """Buyer-facing supplier directory for the open-RFQ invite flow.
+
+        Deliberately narrow (id/name/inn) and capped to verified sellers, so the
+        full company list — protected by IsPlatformAdmin — stays admin-only.
+        """
+        verified_suppliers = (
+            Company.objects.filter(
+                types__code__in=["SUPPLIER", "MANUFACTURER"],
+                verification_status__code="L2_VERIFIED",
+            )
+            .distinct()
+            .order_by("name")
+            .values("id", "name", "inn")
+        )
+        return Response(list(verified_suppliers))
+
     def _assert_member_or_admin(self, company):
         user = self.request.user
         if user.is_platform_admin:
