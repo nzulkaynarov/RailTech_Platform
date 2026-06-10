@@ -63,7 +63,13 @@ def lookups(db):
         "CLOSED_LOST",
     ]:
         DealStage.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
-    for code, name in [("DRAFT", "Draft"), ("SENT", "Sent"), ("APPROVED", "Approved"), ("REJECTED", "Rejected")]:
+    for code, name in [
+        ("DRAFT", "Draft"),
+        ("READY_TO_SEND", "Ready"),
+        ("SENT", "Sent"),
+        ("APPROVED", "Approved"),
+        ("REJECTED", "Rejected"),
+    ]:
         QuoteStatus.objects.get_or_create(code=code, defaults={"name": name, "sort_order": 10})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
@@ -234,7 +240,10 @@ def test_golden_path_rfq_to_closed_won(deal, buyer, seller, manager):
     assert quote.vat_amount == Decimal("170.40")  # 12%
     assert quote.total_incl_vat == Decimal("1590.40")
 
-    # 5. КП sent to client → deal QUOTE_SENT, quote SENT, PDF rendered.
+    # 5. КП internally approved (chain is exercised in test_quote_approval_chain)
+    #    → READY_TO_SEND, then sent to client → deal QUOTE_SENT, quote SENT, PDF.
+    quote.status = QuoteStatus.objects.get(code="READY_TO_SEND")
+    quote.save(update_fields=["status"])
     quote = QuoteLifecycleService.send_to_client(quote.id, manager)
     assert quote.status.code == "SENT"
     deal.refresh_from_db()

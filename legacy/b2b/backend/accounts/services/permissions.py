@@ -32,6 +32,22 @@ def is_member_of(user: "CustomUser", company_id: int, *, capability: Optional[st
     return True
 
 
+def has_workspace_role(user: "CustomUser", company_id: int, role_codes) -> bool:
+    """True if `user` is an active member of `company_id` holding one of `role_codes`.
+
+    OWNER always passes — they administer the team and are the escape hatch. Used
+    to gate the КП approval chain so each step is advanced only by the right role,
+    and only inside the company that owns the quote (no cross-tenant action).
+    """
+    if not user or not user.is_authenticated:
+        return False
+    membership = user.memberships.filter(company_id=company_id, is_active=True).select_related("role").first()
+    if membership is None or membership.role is None:
+        return False
+    code = membership.role.code
+    return code == "OWNER" or code in set(role_codes)
+
+
 def is_platform_admin_viewer(user: "CustomUser") -> bool:
     """Platform Admin acting on platform-level — never acts on behalf of a company.
 

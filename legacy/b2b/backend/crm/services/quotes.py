@@ -4,10 +4,41 @@ from typing import Optional, Tuple
 from django.db import models, transaction
 from django.db.models import Count, Sum
 
-from accounts.models import Company, CustomUser
+from accounts.models import Company, CompanyMember, CustomUser
+from accounts.services.permissions import has_workspace_role
 
 from ..models import ActivityLog, Deal, Quote, QuoteItem, QuoteItemHistory, QuoteStatus
 from .deals import transition_deal_stage
+
+
+def _quote_owner_company_id(quote) -> Optional[int]:
+    """Company that owns the КП — the preparer's primary company (the seller team
+    that runs the approval chain). None if the quote has no preparer yet."""
+    if not quote.prepared_by_id:
+        return None
+    membership = (
+        CompanyMember.objects.filter(user_id=quote.prepared_by_id, is_primary=True, is_active=True)
+        .only("company_id")
+        .first()
+    )
+    return membership.company_id if membership else None
+
+
+def _set_quote_status(quote, code: str) -> None:
+    # .get (not get_or_create): the status MUST exist from the seed migration.
+    quote.status = QuoteStatus.objects.get(code=code)
+    quote.save(update_fields=["status", "updated_at"])
+
+
+def _log_quote(quote, actor, action: str, detail: str = "") -> None:
+    ActivityLog.objects.create(
+        action=action,
+        detail=detail,
+        user=actor,
+        level="INFO",
+        entity_type="quote",
+        entity_id=quote.id,
+    )
 
 
 class QuoteCalculationService:
@@ -159,7 +190,7 @@ class QuoteLifecycleService:
     def send_to_client(quote_id: int, sent_by_user) -> Quote:
         """
         Send quote to client:
-        1. Guard: only DRAFT quotes can be sent
+        1. Guard: only READY_TO_SEND (internally approved) quotes can be sent
         2. Generate PDF if not exists
         3. Set frozen_at timestamp
         4. Change status to SENT
@@ -172,9 +203,14 @@ class QuoteLifecycleService:
 
         quote = Quote.objects.select_related("deal__company", "deal__client", "deal__stage", "status").get(pk=quote_id)
 
-        # Status guard: only DRAFT can be sent
-        if quote.status and quote.status.code != "DRAFT":
-            raise ValueError(f"Cannot send quote in status '{quote.status.code}'. " "Only DRAFT quotes can be sent.")
+        # Status guard: only an internally-approved КП (READY_TO_SEND — it passed
+        # the sales → ВЭД → director chain) may go out to the client.
+        current = quote.status.code if quote.status else "None"
+        if current != "READY_TO_SEND":
+            raise ValueError(
+                f"Cannot send quote in status '{current}'. "
+                "Only READY_TO_SEND quotes (internally approved) can be sent to the client."
+            )
 
         # Generate PDF if missing
         if not quote.pdf_file:
@@ -251,6 +287,93 @@ class QuoteLifecycleService:
             )
 
         return quote
+
+    # ── Internal approval chain (документооборот) ──────────────────────────
+    # DRAFT → PENDING_TRADE_REVIEW → PENDING_APPROVAL → READY_TO_SEND → (send).
+    # Each step is gated by the actor's WorkspaceRole in the company that owns the
+    # КП (the preparer's company); OWNER may act on any step. Returns
+    # (quote, None) on success or (None, error_code) for views to map to HTTP.
+
+    @staticmethod
+    @transaction.atomic
+    def submit_for_review(quote_id: int, actor: CustomUser) -> Tuple[Optional[Quote], Optional[str]]:
+        """Sales submits a built КП into the chain. DRAFT → PENDING_TRADE_REVIEW,
+        or straight to PENDING_APPROVAL if the company has no ВЭД member."""
+        quote = Quote.objects.select_related("status", "prepared_by").get(pk=quote_id)
+        # The submitter anchors the owning company if no preparer is recorded yet.
+        if not quote.prepared_by_id:
+            quote.prepared_by = actor
+            quote.save(update_fields=["prepared_by", "updated_at"])
+        company_id = _quote_owner_company_id(quote)
+        if not company_id:
+            return None, "NO_QUOTE_COMPANY"
+        if not has_workspace_role(actor, company_id, ["SALES_MANAGER"]):
+            return None, "ROLE_NOT_PERMITTED"
+        if not quote.status or quote.status.code != "DRAFT":
+            return None, "INVALID_STATUS"
+        has_trade = CompanyMember.objects.filter(
+            company_id=company_id, is_active=True, role__code="FOREIGN_TRADE_SPECIALIST"
+        ).exists()
+        next_code = "PENDING_TRADE_REVIEW" if has_trade else "PENDING_APPROVAL"
+        _set_quote_status(quote, next_code)
+        _log_quote(quote, actor, "quote.submit_for_review", f"КП v{quote.version} на согласование → {next_code}")
+        return quote, None
+
+    @staticmethod
+    @transaction.atomic
+    def confirm_trade_review(quote_id: int, actor: CustomUser) -> Tuple[Optional[Quote], Optional[str]]:
+        """ВЭД confirms. PENDING_TRADE_REVIEW → PENDING_APPROVAL."""
+        quote = Quote.objects.select_related("status", "prepared_by").get(pk=quote_id)
+        company_id = _quote_owner_company_id(quote)
+        if not company_id:
+            return None, "NO_QUOTE_COMPANY"
+        if not has_workspace_role(actor, company_id, ["FOREIGN_TRADE_SPECIALIST"]):
+            return None, "ROLE_NOT_PERMITTED"
+        if not quote.status or quote.status.code != "PENDING_TRADE_REVIEW":
+            return None, "INVALID_STATUS"
+        _set_quote_status(quote, "PENDING_APPROVAL")
+        _log_quote(
+            quote, actor, "quote.confirm_trade_review", f"КП v{quote.version} подтверждено ВЭД → PENDING_APPROVAL"
+        )
+        return quote, None
+
+    @staticmethod
+    @transaction.atomic
+    def director_approve(quote_id: int, actor: CustomUser) -> Tuple[Optional[Quote], Optional[str]]:
+        """Director approves internally. PENDING_APPROVAL → READY_TO_SEND."""
+        quote = Quote.objects.select_related("status", "prepared_by").get(pk=quote_id)
+        company_id = _quote_owner_company_id(quote)
+        if not company_id:
+            return None, "NO_QUOTE_COMPANY"
+        if not has_workspace_role(actor, company_id, ["DIRECTOR"]):
+            return None, "ROLE_NOT_PERMITTED"
+        if not quote.status or quote.status.code != "PENDING_APPROVAL":
+            return None, "INVALID_STATUS"
+        _set_quote_status(quote, "READY_TO_SEND")
+        _log_quote(quote, actor, "quote.director_approve", f"КП v{quote.version} утверждено директором → READY_TO_SEND")
+        return quote, None
+
+    @staticmethod
+    @transaction.atomic
+    def send_back(quote_id: int, actor: CustomUser, reason: str = "") -> Tuple[Optional[Quote], Optional[str]]:
+        """Return a КП under review to sales for rework. Any review status → DRAFT.
+        Allowed for ВЭД, DIRECTOR (and OWNER)."""
+        quote = Quote.objects.select_related("status", "prepared_by").get(pk=quote_id)
+        company_id = _quote_owner_company_id(quote)
+        if not company_id:
+            return None, "NO_QUOTE_COMPANY"
+        if not has_workspace_role(actor, company_id, ["FOREIGN_TRADE_SPECIALIST", "DIRECTOR"]):
+            return None, "ROLE_NOT_PERMITTED"
+        review_states = {"PENDING_TRADE_REVIEW", "PENDING_APPROVAL", "READY_TO_SEND"}
+        if not quote.status or quote.status.code not in review_states:
+            return None, "INVALID_STATUS"
+        if reason:
+            note = f"Возврат на доработку: {reason}"
+            quote.notes = f"{quote.notes}\n{note}".strip() if quote.notes else note
+            quote.save(update_fields=["notes", "updated_at"])
+        _set_quote_status(quote, "DRAFT")
+        _log_quote(quote, actor, "quote.send_back", f"КП v{quote.version} возвращено на доработку. {reason}".strip())
+        return quote, None
 
     @staticmethod
     @transaction.atomic

@@ -238,6 +238,9 @@ class Command(BaseCommand):
         from crm.services import QuoteCalculationService, QuoteLifecycleService
 
         QuoteCalculationService.recalculate_quote(quote.id)
+        # КП must be internally approved (READY_TO_SEND) before it can go out.
+        quote.status = _must(QuoteStatus, "READY_TO_SEND")
+        quote.save(update_fields=["status"])
         quote = QuoteLifecycleService.send_to_client(quote.id, manager)
         info(f"quote sent, total_incl_vat={quote.total_incl_vat}")
         quote = QuoteLifecycleService.approve_quote(quote.id, buyer)
