@@ -79,6 +79,21 @@ class DealViewSet(viewsets.ModelViewSet):
         user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
         return queryset.filter(company_id__in=user_company_ids)
 
+    def destroy(self, request, *args, **kwargs):
+        """Members may delete only their own DRAFT deals; once a deal enters the
+        workflow (RFQ_OPEN and beyond) it carries bids/quotes/contracts and must
+        not be silently dropped — only a platform admin can remove it then
+        (checkup 2026-06-10: destroy was open to any member at any stage)."""
+        deal = self.get_object()
+        if not request.user.is_platform_admin:
+            stage_code = deal.stage.code if deal.stage_id else None
+            if stage_code and stage_code != "DRAFT":
+                return Response(
+                    {"detail": "DEAL_DELETE_ONLY_DRAFT"},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+        return super().destroy(request, *args, **kwargs)
+
     def perform_create(self, serializer):
         primary_company = self.request.user.primary_company
         if not primary_company:
@@ -203,7 +218,11 @@ class DealViewSet(viewsets.ModelViewSet):
             },
         ),
     )
-    @action(detail=True, methods=["post"], url_path="open-rfq", permission_classes=[IsAuthenticated, IsPlatformAdmin])
+    # NB: no IsPlatformAdmin override here — opening an RFQ is a BUYER action.
+    # The class-level [IsAuthenticated, IsCompanyMemberOrPlatformAdmin] applies and
+    # the service (open_rfq) does the real authz: rejects admin viewers and requires
+    # an is_member_of(..., capability="buy") member of the deal's company.
+    @action(detail=True, methods=["post"], url_path="open-rfq")
     def open_rfq(self, request, pk=None):
         deal, err = crm_services.open_rfq(
             int(pk),

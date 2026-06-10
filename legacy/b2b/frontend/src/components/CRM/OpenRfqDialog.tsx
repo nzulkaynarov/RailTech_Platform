@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { translateApiError } from '@/lib/apiError';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
@@ -10,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useOpenRfq } from '@/hooks/useBidding';
-import { useCompanies } from '@/hooks/useAccounts';
+import { usePartnerSuppliers } from '@/hooks/useAccounts';
 
 interface OpenRfqDialogProps {
   dealId: number | null;
@@ -21,7 +20,8 @@ interface OpenRfqDialogProps {
 export function OpenRfqDialog({ dealId, open, onOpenChange }: OpenRfqDialogProps) {
   const { t } = useTranslation();
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  const { data: companies } = useCompanies({ types__code: 'SUPPLIER' });
+  // Only fetch the supplier directory while the dialog is open.
+  const { data: companies } = usePartnerSuppliers(open);
   const openMut = useOpenRfq();
 
   const toggle = (id: number) => {
@@ -30,19 +30,23 @@ export function OpenRfqDialog({ dealId, open, onOpenChange }: OpenRfqDialogProps
     setSelectedIds(next);
   };
 
-  const submit = async () => {
+  const submit = () => {
     if (!dealId) return;
-    try {
-      await openMut.mutateAsync({
+    // Close only on success; on error the global MutationCache handler shows the
+    // toast (translateApiError) and the dialog stays open — no silent failure.
+    openMut.mutate(
+      {
         dealId,
         supplierIds: selectedIds.size > 0 ? Array.from(selectedIds) : undefined,
-      });
-      toast.success(t('rfqDialog.opened'));
-      onOpenChange(false);
-      setSelectedIds(new Set());
-    } catch (e) {
-      toast.error(translateApiError(e));
-    }
+      },
+      {
+        onSuccess: () => {
+          toast.success(t('rfqDialog.opened'));
+          onOpenChange(false);
+          setSelectedIds(new Set());
+        },
+      },
+    );
   };
 
   return (

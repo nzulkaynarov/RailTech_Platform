@@ -660,9 +660,22 @@ interface DashboardProps {
 }
 
 export function Dashboard({ onProductClick, onNavigate }: DashboardProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [period, setPeriod] = useState('30d');
   const activeStatus = useUserStore((s) => s.activeStatus);
+
+  // Locale-aware "start – end year" caption derived from the selected period
+  // (previously a hardcoded "1 Янв – 21 Мар 2026" that ignored the picker).
+  const dateRangeLabel = useMemo(() => {
+    const end = new Date();
+    const start = new Date(end);
+    if (period === '7d') start.setDate(end.getDate() - 7);
+    else if (period === '30d') start.setDate(end.getDate() - 30);
+    else if (period === '90d') start.setDate(end.getDate() - 90);
+    else if (period === '1y') start.setFullYear(end.getFullYear() - 1);
+    const fmt = (d: Date) => d.toLocaleDateString(i18n.language, { day: 'numeric', month: 'short' });
+    return `${fmt(start)} – ${fmt(end)} ${end.getFullYear()}`;
+  }, [period, i18n.language]);
 
   const { data, isLoading: loading, error: queryError, refetch } = useQuery({
     queryKey: ['dashboard-stats', period],
@@ -704,7 +717,7 @@ export function Dashboard({ onProductClick, onNavigate }: DashboardProps) {
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 rounded-lg border bg-background px-3 py-1.5 text-xs text-muted-foreground">
             <Calendar className="h-3.5 w-3.5" />
-            <span>1 {t('dashboardPage.months.jan')} – 21 {t('dashboardPage.months.mar')} 2026</span>
+            <span>{dateRangeLabel}</span>
           </div>
           <Select value={period} onValueChange={setPeriod}>
             <SelectTrigger className="h-8 w-36 text-xs" aria-label={t('dashboardPage.selectPeriod')}>

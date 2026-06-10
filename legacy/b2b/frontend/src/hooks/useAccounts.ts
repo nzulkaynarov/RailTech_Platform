@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { accountsApi, User, UserFilterParams, CompanyFilterParams } from '../api/accountsApi';
+import { useUserStore } from '../store/userStore';
 
 export const useUsers = (params?: UserFilterParams) => useQuery({
   queryKey: ['users', params],
@@ -111,6 +112,13 @@ export const useToggleUserActive = () => {
 export const useCompanies = (params?: CompanyFilterParams) => useQuery({
   queryKey: ['companies', params],
   queryFn: () => accountsApi.getCompanies(params),
+});
+
+/** Verified-supplier directory for the open-RFQ invite flow (member-accessible). */
+export const usePartnerSuppliers = (enabled = true) => useQuery({
+  queryKey: ['partner-suppliers'],
+  queryFn: () => accountsApi.getPartnerSuppliers(),
+  enabled,
 });
 
 export const useCreateCompany = () => {
@@ -242,11 +250,17 @@ export const useSubscriptions = (params?: { search?: string; status?: string; pl
   queryFn: () => accountsApi.getSubscriptions(params),
 });
 
-export const useMySubscription = () => useQuery({
-  queryKey: ['my-subscription'],
-  queryFn: () => accountsApi.getMySubscription(),
-  staleTime: 60_000,
-});
+export const useMySubscription = () => {
+  // Platform admins have no company → no subscription; the endpoint 403s for them.
+  // Skip the call entirely instead of firing a guaranteed-failing request.
+  const isPlatformAdmin = useUserStore((s) => s.isViewerMode);
+  return useQuery({
+    queryKey: ['my-subscription'],
+    queryFn: () => accountsApi.getMySubscription(),
+    staleTime: 60_000,
+    enabled: !isPlatformAdmin,
+  });
+};
 
 export const useActivateSubscription = () => {
   const qc = useQueryClient();

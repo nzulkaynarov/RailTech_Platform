@@ -53,6 +53,7 @@ const pageI18nKeys: Record<string, string> = {
   'admin-offers': 'breadcrumbs.adminOffers',
   'admin-companies': 'breadcrumbs.adminCompanies',
   'admin-deals': 'breadcrumbs.adminDeals',
+  'admin-bids': 'breadcrumbs.adminBids',
   logistics: 'breadcrumbs.logistics',
   'purchase-templates': 'breadcrumbs.purchaseTemplates',
   // Billing children
