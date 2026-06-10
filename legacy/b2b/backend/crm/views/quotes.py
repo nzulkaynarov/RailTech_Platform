@@ -107,21 +107,39 @@ class QuoteViewSet(viewsets.ModelViewSet):
 
     @extend_schema(
         summary="Send quote to client",
-        description=("Send the quote to the client. Freezes prices at current values. " "Manager/Admin only."),
-        responses={200: QuoteSerializer},
+        description=(
+            "Send an internally-approved (READY_TO_SEND) КП to the client. Freezes prices "
+            "at current values. Allowed for the КП-owning company's SALES_MANAGER / OWNER, "
+            "or a platform admin."
+        ),
+        responses={
+            200: QuoteSerializer,
+            400: OpenApiResponse(description="Quote not in READY_TO_SEND status"),
+            403: OpenApiResponse(description="Role not permitted"),
+        },
         tags=["CRM"],
     )
-    @action(
-        detail=True, methods=["post"], url_path="send-to-client", permission_classes=[IsAuthenticated, IsPlatformAdmin]
-    )
+    @action(detail=True, methods=["post"], url_path="send-to-client", permission_classes=[IsAuthenticated])
     def send_to_client(self, request, pk=None):
-        """Send quote to client (manager only). Freezes prices."""
-        quote = self.get_object()
-        from crm.services import QuoteLifecycleService
+        """Send an internally-approved КП to the client. Freezes prices.
 
-        quote = QuoteLifecycleService.send_to_client(quote.pk, request.user)
-        serializer = self.get_serializer(quote)
-        return Response(serializer.data)
+        Authorization is anchored to the КП's owning company (the seller team that
+        ran the approval chain), so this can't reuse the deal-company-scoped
+        get_queryset — it fetches the quote directly like the chain actions do.
+        """
+        from crm.services import QuoteLifecycleService
+        from crm.services.quotes import can_send_quote_to_client
+
+        quote = Quote.objects.select_related("status", "prepared_by", "deal").filter(pk=pk).first()
+        if quote is None:
+            return Response({"error": "QUOTE_NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)
+        if not can_send_quote_to_client(request.user, quote):
+            return _chain_error_response("ROLE_NOT_PERMITTED")
+        try:
+            quote = QuoteLifecycleService.send_to_client(int(pk), request.user)
+        except ValueError:
+            return _chain_error_response("INVALID_STATUS")
+        return Response(self.get_serializer(quote).data)
 
     @extend_schema(
         summary="Approve quote",

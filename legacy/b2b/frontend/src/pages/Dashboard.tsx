@@ -36,6 +36,7 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { KPICard } from '@/components/ui/KPICard';
 import { OnboardingChecklist } from '@/components/Shared/OnboardingChecklist';
+import { QuoteApprovalQueue } from '@/components/CRM/QuoteApprovalQueue';
 
 import { useTranslation } from 'react-i18next';
 import { useUserStore } from '@/store/userStore';
@@ -411,6 +412,9 @@ function SellerDashboard({ onProductClick, period: _period, stats, onNavigate }:
 
   return (
     <div className="flex flex-col gap-6">
+      {/* КП waiting on my approval (renders only when non-empty) */}
+      <QuoteApprovalQueue onNavigate={onNavigate} />
+
       {/* KPI Row */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KPICard

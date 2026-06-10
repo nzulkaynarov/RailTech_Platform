@@ -160,6 +160,54 @@ export const useForceApproveQuote = () => {
     });
 };
 
+/* ── КП internal approval chain (документооборот) ────────────────────────
+ * Each step invalidates quotes + deals + quote-items so the КП status badge,
+ * the deal card, and the builder grid all refresh after the transition. */
+const invalidateQuoteChain = (queryClient: ReturnType<typeof useQueryClient>) => {
+    queryClient.invalidateQueries({ queryKey: ['quotes'] });
+    queryClient.invalidateQueries({ queryKey: ['deals'] });
+    queryClient.invalidateQueries({ queryKey: ['quote-items'] });
+    queryClient.invalidateQueries({ queryKey: ['my-approval-queue'] });
+};
+
+export const useSubmitQuoteForReview = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (id: number) => crmApi.submitQuoteForReview(id),
+        onSuccess: () => invalidateQuoteChain(queryClient),
+    });
+};
+
+export const useConfirmQuoteTradeReview = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (id: number) => crmApi.confirmQuoteTradeReview(id),
+        onSuccess: () => invalidateQuoteChain(queryClient),
+    });
+};
+
+export const useDirectorApproveQuote = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (id: number) => crmApi.directorApproveQuote(id),
+        onSuccess: () => invalidateQuoteChain(queryClient),
+    });
+};
+
+export const useSendQuoteBack = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, reason }: { id: number; reason: string }) =>
+            crmApi.sendQuoteBack(id, reason),
+        onSuccess: () => invalidateQuoteChain(queryClient),
+    });
+};
+
+export const useMyApprovalQueue = () => useQuery({
+    queryKey: ['my-approval-queue'],
+    queryFn: crmApi.getMyApprovalQueue,
+});
+
 
 export const useLeads = () => useQuery({
   queryKey: ["leads"],

@@ -276,6 +276,31 @@ export const crmApi = {
 		const response = await apiClient.post<Quote>(`crm/quotes/${id}/force-approve/`, { reason });
 		return response.data;
 	},
+
+	// ─── КП internal approval chain (документооборот) ─────────
+	// DRAFT → PENDING_TRADE_REVIEW → PENDING_APPROVAL → READY_TO_SEND.
+	// Role gating lives in the backend service (anchored to the КП's owning
+	// company); a forbidden role returns { error: 'ROLE_NOT_PERMITTED' } → 403.
+	submitQuoteForReview: async (id: number) => {
+		const response = await apiClient.post<Quote>(`crm/quotes/${id}/submit-for-review/`);
+		return response.data;
+	},
+	confirmQuoteTradeReview: async (id: number) => {
+		const response = await apiClient.post<Quote>(`crm/quotes/${id}/confirm-trade-review/`);
+		return response.data;
+	},
+	directorApproveQuote: async (id: number) => {
+		const response = await apiClient.post<Quote>(`crm/quotes/${id}/director-approve/`);
+		return response.data;
+	},
+	sendQuoteBack: async (id: number, reason: string) => {
+		const response = await apiClient.post<Quote>(`crm/quotes/${id}/send-back/`, { reason });
+		return response.data;
+	},
+	getMyApprovalQueue: async () => {
+		const response = await apiClient.get<PaginatedResponse<Quote>>('crm/quotes/my-approval-queue/');
+		return response.data.results;
+	},
 	downloadQuotePDF: async (id: number) => {
 		const response = await apiClient.get(`crm/quotes/${id}/download-pdf/`, {
 			responseType: 'blob'
