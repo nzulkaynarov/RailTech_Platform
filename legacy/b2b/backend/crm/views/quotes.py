@@ -12,6 +12,12 @@ from crm.models import Quote, QuoteItem, QuoteStatus
 from crm.serializers import QuoteItemSerializer, QuoteSerializer
 
 
+def _chain_error_response(error):
+    """Map a КП approval-chain service error code to an HTTP response."""
+    http_status = status.HTTP_403_FORBIDDEN if error == "ROLE_NOT_PERMITTED" else status.HTTP_400_BAD_REQUEST
+    return Response({"error": error}, status=http_status)
+
+
 @extend_schema_view(
     list=extend_schema(
         summary="List quotes",
@@ -201,6 +207,102 @@ class QuoteViewSet(viewsets.ModelViewSet):
         if error:
             return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
         return Response(self.get_serializer(quote).data)
+
+    # ── Internal approval chain (документооборот) ──────────────────────────
+    # Role gating lives in the service (anchored to the КП's owning company), so
+    # these only need IsAuthenticated; the service returns ROLE_NOT_PERMITTED → 403.
+
+    @extend_schema(
+        summary="Submit КП into the approval chain (SALES_MANAGER)",
+        responses={
+            200: QuoteSerializer,
+            400: OpenApiResponse(description="Wrong status"),
+            403: OpenApiResponse(description="Role not permitted"),
+        },
+        tags=["CRM"],
+    )
+    @action(detail=True, methods=["post"], url_path="submit-for-review", permission_classes=[IsAuthenticated])
+    def submit_for_review(self, request, pk=None):
+        from crm.services import QuoteLifecycleService
+
+        quote, error = QuoteLifecycleService.submit_for_review(int(pk), request.user)
+        if error:
+            return _chain_error_response(error)
+        return Response(self.get_serializer(quote).data)
+
+    @extend_schema(
+        summary="Confirm trade review (FOREIGN_TRADE_SPECIALIST / ВЭД)",
+        responses={
+            200: QuoteSerializer,
+            400: OpenApiResponse(description="Wrong status"),
+            403: OpenApiResponse(description="Role not permitted"),
+        },
+        tags=["CRM"],
+    )
+    @action(detail=True, methods=["post"], url_path="confirm-trade-review", permission_classes=[IsAuthenticated])
+    def confirm_trade_review(self, request, pk=None):
+        from crm.services import QuoteLifecycleService
+
+        quote, error = QuoteLifecycleService.confirm_trade_review(int(pk), request.user)
+        if error:
+            return _chain_error_response(error)
+        return Response(self.get_serializer(quote).data)
+
+    @extend_schema(
+        summary="Approve КП internally (DIRECTOR)",
+        responses={
+            200: QuoteSerializer,
+            400: OpenApiResponse(description="Wrong status"),
+            403: OpenApiResponse(description="Role not permitted"),
+        },
+        tags=["CRM"],
+    )
+    @action(detail=True, methods=["post"], url_path="director-approve", permission_classes=[IsAuthenticated])
+    def director_approve(self, request, pk=None):
+        from crm.services import QuoteLifecycleService
+
+        quote, error = QuoteLifecycleService.director_approve(int(pk), request.user)
+        if error:
+            return _chain_error_response(error)
+        return Response(self.get_serializer(quote).data)
+
+    @extend_schema(
+        summary="Send КП back to sales for rework (ВЭД / DIRECTOR)",
+        request=inline_serializer(
+            "SendBackQuoteRequest", fields={"reason": drf_serializers.CharField(required=False, default="")}
+        ),
+        responses={
+            200: QuoteSerializer,
+            400: OpenApiResponse(description="Wrong status"),
+            403: OpenApiResponse(description="Role not permitted"),
+        },
+        tags=["CRM"],
+    )
+    @action(detail=True, methods=["post"], url_path="send-back", permission_classes=[IsAuthenticated])
+    def send_back(self, request, pk=None):
+        from crm.services import QuoteLifecycleService
+
+        reason = request.data.get("reason", "")
+        quote, error = QuoteLifecycleService.send_back(int(pk), request.user, reason)
+        if error:
+            return _chain_error_response(error)
+        return Response(self.get_serializer(quote).data)
+
+    @extend_schema(
+        summary="My КП approval queue",
+        description="Quotes in the company(ies) I belong to that are waiting on my workspace role's step.",
+        responses={200: QuoteSerializer(many=True)},
+        tags=["CRM"],
+    )
+    @action(detail=False, methods=["get"], url_path="my-approval-queue", permission_classes=[IsAuthenticated])
+    def my_approval_queue(self, request):
+        from crm.services.quotes import approval_queue_for
+
+        queryset = approval_queue_for(request.user)
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            return self.get_paginated_response(self.get_serializer(page, many=True).data)
+        return Response(self.get_serializer(queryset, many=True).data)
 
     @extend_schema(
         summary="Download quote PDF",
