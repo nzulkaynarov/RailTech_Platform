@@ -224,3 +224,35 @@ def test_my_approval_queue_endpoint(seller, deal):
     resp = _api(users["DIRECTOR"]).get("/api/v1/crm/quotes/my-approval-queue/")
     ids = [q["id"] for q in (resp.data["results"] if isinstance(resp.data, dict) else resp.data)]
     assert quote.id not in ids
+
+
+def test_send_to_client_allowed_for_sales_manager(seller, deal):
+    """ADR-0002: the seller team sends its own internally-approved КП — not
+    platform-admin-only. SALES_MANAGER on a READY_TO_SEND quote → 200 + SENT."""
+    users = seller["users"]
+    quote = _quote(deal, prepared_by=users["SALES_MANAGER"], status_code="READY_TO_SEND")
+    # Pre-set pdf_file so send_to_client skips WeasyPrint generation in the test.
+    quote.pdf_file = "kp/already.pdf"
+    quote.save(update_fields=["pdf_file"])
+
+    resp = _api(users["SALES_MANAGER"]).post(f"/api/v1/crm/quotes/{quote.id}/send-to-client/")
+    assert resp.status_code == 200, resp.data
+    assert _status(quote) == "SENT"
+
+
+def test_send_to_client_forbidden_for_non_sales_member(seller, deal):
+    """A plain MEMBER (no SALES_MANAGER/OWNER role) cannot send → 403, КП unchanged."""
+    users = seller["users"]
+    quote = _quote(deal, prepared_by=users["SALES_MANAGER"], status_code="READY_TO_SEND")
+    resp = _api(users["MEMBER"]).post(f"/api/v1/crm/quotes/{quote.id}/send-to-client/")
+    assert resp.status_code == 403
+    assert _status(quote) == "READY_TO_SEND"
+
+
+def test_send_to_client_rejects_unapproved_quote(seller, deal):
+    """A DRAFT КП cannot be sent even by SALES_MANAGER — status guard → 400."""
+    users = seller["users"]
+    quote = _quote(deal, prepared_by=users["SALES_MANAGER"])  # DRAFT
+    resp = _api(users["SALES_MANAGER"]).post(f"/api/v1/crm/quotes/{quote.id}/send-to-client/")
+    assert resp.status_code == 400
+    assert _status(quote) == "DRAFT"

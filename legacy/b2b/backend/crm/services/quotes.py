@@ -51,6 +51,24 @@ _ROLE_QUEUE_STATUSES = {
 }
 
 
+def can_send_quote_to_client(actor, quote) -> bool:
+    """Who may push an internally-approved КП out to the client.
+
+    The platform admin / superuser (escalation), or the SALES_MANAGER / OWNER of
+    the company that owns the КП (the preparer's company that ran the approval
+    chain). Mirrors ADR-0002: the seller team builds AND sends its own quotes;
+    sending is no longer platform-admin-only. The READY_TO_SEND status guard
+    itself stays in QuoteLifecycleService.send_to_client.
+    """
+    if getattr(actor, "is_superuser", False) or getattr(actor, "is_platform_admin", False):
+        return True
+    company_id = _quote_owner_company_id(quote)
+    if not company_id:
+        return False
+    # has_workspace_role already lets OWNER through as the escape hatch.
+    return has_workspace_role(actor, company_id, ["SALES_MANAGER"])
+
+
 def approval_queue_for(user):
     """КП waiting on this user's workspace-role step, scoped to the user's own
     companies. Each (company, role) the user holds contributes only the statuses

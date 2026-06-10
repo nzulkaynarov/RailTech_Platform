@@ -610,7 +610,32 @@
     "unitShort": "Ед.",
     "quantity": "Кол-во",
     "marginPercent": "Маржа %",
-    "lineTotal": "Итого"
+    "lineTotal": "Итого",
+    "approvalChain": {
+      "title": "Согласование КП",
+      "stepDraft": "Черновик",
+      "stepTradeReview": "Проверка ВЭД",
+      "stepApproval": "Утверждение",
+      "stepReady": "Готово к отправке",
+      "submit": "На согласование",
+      "confirmTradeReview": "Подтвердить (ВЭД)",
+      "directorApprove": "Утвердить",
+      "sendBack": "Вернуть на доработку",
+      "readyHint": "КП согласовано внутри компании и готово к отправке клиенту.",
+      "waitingTradeReview": "Ожидает подтверждения менеджера ВЭД.",
+      "waitingApproval": "Ожидает утверждения директором.",
+      "submitted": "КП отправлено на согласование",
+      "tradeConfirmed": "Проверка ВЭД подтверждена",
+      "approved": "КП утверждено директором",
+      "sentBack": "КП возвращено на доработку",
+      "sendBackTitle": "Вернуть КП на доработку",
+      "sendBackDesc": "Укажите причину возврата — она будет видна составителю КП.",
+      "sendBackReasonPlaceholder": "Например: пересчитайте логистику по позиции 3",
+      "queueTitle": "Очередь согласования",
+      "queueEmpty": "Нет КП, ожидающих вашего согласования",
+      "queueDeal": "Сделка #{{id}}",
+      "queueVersion": "Версия {{version}}"
+    }
   },
   "admin": {
     "dashboard": {
@@ -3926,6 +3951,9 @@
     "CONTRACT_ID_REQUIRED": "Параметр contract_id обязателен",
     "NO_FILE_PROVIDED": "Файл не передан",
     "DEAL_ID_AND_STATUS_REQUIRED": "Параметры deal_id и status обязательны",
+    "ROLE_NOT_PERMITTED": "Этот шаг согласования недоступен для вашей рабочей роли",
+    "INVALID_STATUS": "Действие недоступно в текущем статусе КП",
+    "NO_QUOTE_COMPANY": "Не определена компания-владелец КП — назначьте составителя",
     "UNKNOWN": "Неизвестная ошибка"
   },
   "fileUpload": {

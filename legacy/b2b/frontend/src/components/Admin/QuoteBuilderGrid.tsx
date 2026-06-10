@@ -19,6 +19,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { QuoteApprovalChain } from '@/components/CRM/QuoteApprovalChain';
 
 interface QuoteBuilderGridProps {
 	dealId?: number;
@@ -149,6 +150,9 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 
 	return (
 		<div className="flex flex-col h-full gap-3">
+			{/* КП internal approval chain (документооборот) */}
+			{activeQuote && <QuoteApprovalChain quote={activeQuote} />}
+
 			{/* Unsaved changes warning */}
 			{hasUnsavedChanges && (
 				<Alert>

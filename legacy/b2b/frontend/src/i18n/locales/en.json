@@ -608,7 +608,32 @@
     "unitShort": "Unit",
     "quantity": "Qty",
     "marginPercent": "Margin %",
-    "lineTotal": "Total"
+    "lineTotal": "Total",
+    "approvalChain": {
+      "title": "Quote approval",
+      "stepDraft": "Draft",
+      "stepTradeReview": "Trade review",
+      "stepApproval": "Approval",
+      "stepReady": "Ready to send",
+      "submit": "Submit for review",
+      "confirmTradeReview": "Confirm (trade)",
+      "directorApprove": "Approve",
+      "sendBack": "Send back for rework",
+      "readyHint": "The quote is internally approved and ready to send to the client.",
+      "waitingTradeReview": "Awaiting foreign-trade specialist confirmation.",
+      "waitingApproval": "Awaiting director approval.",
+      "submitted": "Quote submitted for review",
+      "tradeConfirmed": "Trade review confirmed",
+      "approved": "Quote approved by director",
+      "sentBack": "Quote sent back for rework",
+      "sendBackTitle": "Send quote back for rework",
+      "sendBackDesc": "Provide a reason for the return — it will be visible to the quote preparer.",
+      "sendBackReasonPlaceholder": "E.g. recalculate logistics for line 3",
+      "queueTitle": "Approval queue",
+      "queueEmpty": "No quotes are waiting on your approval",
+      "queueDeal": "Deal #{{id}}",
+      "queueVersion": "Version {{version}}"
+    }
   },
   "admin": {
     "dashboard": {
@@ -3922,6 +3947,9 @@
     "CONTRACT_ID_REQUIRED": "contract_id is required",
     "NO_FILE_PROVIDED": "No file provided",
     "DEAL_ID_AND_STATUS_REQUIRED": "deal_id and status are required",
+    "ROLE_NOT_PERMITTED": "This approval step is not available for your workspace role",
+    "INVALID_STATUS": "Action not available in the quote's current status",
+    "NO_QUOTE_COMPANY": "The quote has no owning company — assign a preparer first",
     "UNKNOWN": "Unknown error"
   },
   "fileUpload": {
