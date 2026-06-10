@@ -14,8 +14,12 @@ b2b.railtech.uz {
 
     # Django backend (Daphne/gunicorn in Docker, loopback only).
     # WhiteNoise serves /static/ (collectstatic) from the same app.
+    # NB: list BOTH /health and /health/ — Caddy path matching is exact, so a bare
+    # /health would never match the trailing-slash URL Django serves, and /health/
+    # would fall through to the SPA (200 index.html → external monitors get a fake
+    # "healthy"). See checkup 2026-06-09 #5.
     @backend {
-        path /api/* /ws/* /admin/* /static/* /media/* /health
+        path /api/* /ws/* /admin/* /static/* /media/* /health /health/
     }
     handle @backend {
         reverse_proxy 127.0.0.1:8000 {
