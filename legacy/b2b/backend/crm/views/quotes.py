@@ -61,20 +61,33 @@ class QuoteViewSet(viewsets.ModelViewSet):
                 "items__frozen_currency",
             )
         )
+        from accounts.services.permissions import is_seller
+
         if user.is_platform_admin:
             return queryset
-
+        # The seller builds КП across all buyer заявки → sees every quote.
+        if is_seller(user):
+            return queryset
+        # Buyer sees only quotes on their own company's deals.
         user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
         return queryset.filter(deal__company_id__in=user_company_ids)
 
     def perform_create(self, serializer):
-        """Auto-increment version for new quotes within a deal."""
+        """Building a КП is a SELLER action: only a can_sell member (or superuser)
+        may create one, and the server stamps prepared_by = the seller building it
+        (anchoring the КП-owning company + approval chain). Auto-increments version."""
+        from rest_framework.exceptions import PermissionDenied
+
+        from accounts.services.permissions import is_platform_admin_viewer, is_seller
+
+        user = self.request.user
+        if is_platform_admin_viewer(user):
+            raise PermissionDenied("ADMIN_VIEWER_CANNOT_ACT")
+        if not (getattr(user, "is_superuser", False) or is_seller(user)):
+            raise PermissionDenied("ONLY_SELLER_CAN_BUILD_QUOTE")
         deal = serializer.validated_data.get("deal")
-        if deal:
-            max_version = deal.quotes.aggregate(max_v=Max("version"))["max_v"] or 0
-            serializer.save(version=max_version + 1)
-        else:
-            serializer.save()
+        version = (deal.quotes.aggregate(max_v=Max("version"))["max_v"] or 0) + 1 if deal else 1
+        serializer.save(version=version, prepared_by=user)
 
     @extend_schema(
         summary="Generate quote PDF",
@@ -152,22 +165,30 @@ class QuoteViewSet(viewsets.ModelViewSet):
     )
     @action(detail=True, methods=["post"], url_path="approve")
     def approve(self, request, pk=None):
-        """Client approves the quote."""
-        quote = self.get_object()
-        # Verify the user is the deal's client or company member
-        user = request.user
-        if not (user.is_platform_admin):
-            if not user.memberships.filter(company=quote.deal.company, is_active=True).exists():
-                return Response(
-                    {"error": "Only the client company can approve"},
-                    status=status.HTTP_403_FORBIDDEN,
-                )
+        """Client approves the quote — buyer-side can_buy member only.
 
+        Approving moves the deal to CONTRACT_SIGNED, so it's a commitment that
+        must carry can_buy (parity with accept-bid / sign-contract). Platform
+        admins act via force-approve, never here (ADMIN_VIEWER_CANNOT_ACT)."""
+        quote = self.get_object()
+        denied = self._assert_buyer_can_buy(request.user, quote)
+        if denied:
+            return denied
         from crm.services import QuoteLifecycleService
 
         quote = QuoteLifecycleService.approve_quote(quote.pk, request.user)
-        serializer = self.get_serializer(quote)
-        return Response(serializer.data)
+        return Response(self.get_serializer(quote).data)
+
+    @staticmethod
+    def _assert_buyer_can_buy(user, quote):
+        """Return a 403 Response if `user` may not act as the deal's buyer, else None."""
+        from accounts.services.permissions import is_member_of, is_platform_admin_viewer
+
+        if is_platform_admin_viewer(user):
+            return Response({"error": "ADMIN_VIEWER_CANNOT_ACT"}, status=status.HTTP_403_FORBIDDEN)
+        if not (getattr(user, "is_superuser", False) or is_member_of(user, quote.deal.company_id, capability="buy")):
+            return Response({"error": "MEMBER_REQUIRED_FOR_ACTION"}, status=status.HTTP_403_FORBIDDEN)
+        return None
 
     @extend_schema(
         summary="Reject quote",
@@ -186,22 +207,16 @@ class QuoteViewSet(viewsets.ModelViewSet):
     )
     @action(detail=True, methods=["post"], url_path="reject")
     def reject(self, request, pk=None):
-        """Client rejects the quote."""
+        """Client rejects the quote — buyer-side can_buy member only."""
         quote = self.get_object()
-        user = request.user
-        if not (user.is_platform_admin):
-            if not user.memberships.filter(company=quote.deal.company, is_active=True).exists():
-                return Response(
-                    {"error": "Only the client company can reject"},
-                    status=status.HTTP_403_FORBIDDEN,
-                )
-
+        denied = self._assert_buyer_can_buy(request.user, quote)
+        if denied:
+            return denied
         reason = request.data.get("reason", "")
         from crm.services import QuoteLifecycleService
 
         quote = QuoteLifecycleService.reject_quote(quote.pk, request.user, reason)
-        serializer = self.get_serializer(quote)
-        return Response(serializer.data)
+        return Response(self.get_serializer(quote).data)
 
     @extend_schema(
         summary="Force-approve quote (Platform Admin escalation)",
@@ -381,14 +396,40 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
         if getattr(self, "swagger_fake_view", False):
             return QuoteItem.objects.none()
         user = self.request.user
+        from accounts.services.permissions import is_seller
+
         queryset = QuoteItem.objects.all().select_related(
             "product", "product__domain_type", "quote", "offer", "offer__supplier", "frozen_currency"
         )
-        if user.is_platform_admin:
+        if user.is_platform_admin or is_seller(user):
             return queryset
-
+        # Buyer sees line items only on their own deals (read-only — see _assert_seller).
         user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
         return queryset.filter(quote__deal__company_id__in=user_company_ids)
+
+    def _assert_seller(self):
+        """Building/editing КП line items is a seller action. Raise 403 otherwise."""
+        from rest_framework.exceptions import PermissionDenied
+
+        from accounts.services.permissions import is_platform_admin_viewer, is_seller
+
+        user = self.request.user
+        if is_platform_admin_viewer(user):
+            raise PermissionDenied("ADMIN_VIEWER_CANNOT_ACT")
+        if not (getattr(user, "is_superuser", False) or is_seller(user)):
+            raise PermissionDenied("ONLY_SELLER_CAN_BUILD_QUOTE")
+
+    def perform_create(self, serializer):
+        self._assert_seller()
+        serializer.save()
+
+    def perform_update(self, serializer):
+        self._assert_seller()
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        self._assert_seller()
+        instance.delete()
 
     @extend_schema(
         summary="Manually reassign product for a quote item",

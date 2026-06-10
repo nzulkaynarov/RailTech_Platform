@@ -7,6 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from accounts.services.permissions import is_seller
 from core.permissions import IsCompanyMemberOrPlatformAdmin, IsPlatformAdmin
 from crm import services as crm_services
 from crm.models import Act, Contract, Fulfillment, Invoice, Payment, SupplierBid
@@ -57,7 +58,8 @@ class ContractViewSet(viewsets.ModelViewSet):
         qs = Contract.objects.select_related(
             "deal__company", "quote", "currency", "client_signer", "manager_signer"
         ).order_by("-created_at")
-        if user.is_platform_admin:
+        # Seller operates across all buyer deals → sees every billing record.
+        if user.is_platform_admin or is_seller(user):
             return qs
         user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
         return qs.filter(deal__company_id__in=user_company_ids)
@@ -77,7 +79,7 @@ class ContractViewSet(viewsets.ModelViewSet):
         detail=False,
         methods=["post"],
         url_path="generate-from-quote",
-        permission_classes=[IsAuthenticated, IsPlatformAdmin],
+        permission_classes=[IsAuthenticated],
     )
     def generate_from_quote(self, request):
         quote_id = request.data.get("quote_id")
@@ -101,9 +103,7 @@ class ContractViewSet(viewsets.ModelViewSet):
         return Response(ContractSerializer(contract).data)
 
     @extend_schema(summary="Sign contract by manager (RailTech side)", tags=["CRM"])
-    @action(
-        detail=True, methods=["post"], url_path="sign-manager", permission_classes=[IsAuthenticated, IsPlatformAdmin]
-    )
+    @action(detail=True, methods=["post"], url_path="sign-manager", permission_classes=[IsAuthenticated])
     def sign_manager(self, request, pk=None):
         contract, err = crm_services.sign_contract_by_manager(int(pk), request.user)
         if err:
@@ -181,7 +181,8 @@ class InvoiceViewSet(viewsets.ModelViewSet):
             )
             .order_by("-created_at")
         )
-        if user.is_platform_admin:
+        # Seller operates across all buyer deals → sees every billing record.
+        if user.is_platform_admin or is_seller(user):
             return qs
         user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
         return qs.filter(deal__company_id__in=user_company_ids)
@@ -191,7 +192,7 @@ class InvoiceViewSet(viewsets.ModelViewSet):
         detail=False,
         methods=["post"],
         url_path="generate-from-contract",
-        permission_classes=[IsAuthenticated, IsPlatformAdmin],
+        permission_classes=[IsAuthenticated],
     )
     def generate_from_contract(self, request):
         contract_id = request.data.get("contract_id")
@@ -220,9 +221,7 @@ class InvoiceViewSet(viewsets.ModelViewSet):
             },
         ),
     )
-    @action(
-        detail=True, methods=["post"], url_path="record-payment", permission_classes=[IsAuthenticated, IsPlatformAdmin]
-    )
+    @action(detail=True, methods=["post"], url_path="record-payment", permission_classes=[IsAuthenticated])
     def record_payment(self, request, pk=None):
         payment, err = crm_services.record_payment(
             int(pk),
@@ -238,9 +237,7 @@ class InvoiceViewSet(viewsets.ModelViewSet):
         return Response(PaymentSerializer(payment).data, status=201)
 
     @extend_schema(summary="Generate Act for this invoice", tags=["CRM"])
-    @action(
-        detail=True, methods=["post"], url_path="generate-act", permission_classes=[IsAuthenticated, IsPlatformAdmin]
-    )
+    @action(detail=True, methods=["post"], url_path="generate-act", permission_classes=[IsAuthenticated])
     def generate_act(self, request, pk=None):
         act, err = crm_services.generate_act(int(pk), actor=request.user)
         if err:
@@ -257,7 +254,8 @@ class PaymentViewSet(viewsets.ModelViewSet):
             return Payment.objects.none()
         user = self.request.user
         qs = Payment.objects.select_related("invoice__deal__company").order_by("-paid_at")
-        if user.is_platform_admin:
+        # Seller operates across all buyer deals → sees every billing record.
+        if user.is_platform_admin or is_seller(user):
             return qs
         user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
         return qs.filter(invoice__deal__company_id__in=user_company_ids)
@@ -272,7 +270,8 @@ class ActViewSet(viewsets.ModelViewSet):
             return Act.objects.none()
         user = self.request.user
         qs = Act.objects.select_related("deal__company", "contract", "invoice").order_by("-created_at")
-        if user.is_platform_admin:
+        # Seller operates across all buyer deals → sees every billing record.
+        if user.is_platform_admin or is_seller(user):
             return qs
         user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
         return qs.filter(deal__company_id__in=user_company_ids)
@@ -306,15 +305,14 @@ class FulfillmentViewSet(viewsets.ModelViewSet):
             return Fulfillment.objects.none()
         user = self.request.user
         qs = Fulfillment.objects.select_related("deal__company").order_by("-updated_at")
-        if user.is_platform_admin:
+        # Seller operates across all buyer deals → sees every billing record.
+        if user.is_platform_admin or is_seller(user):
             return qs
         user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
         return qs.filter(deal__company_id__in=user_company_ids)
 
     @extend_schema(summary="Update fulfillment status", tags=["CRM"])
-    @action(
-        detail=False, methods=["post"], url_path="update-status", permission_classes=[IsAuthenticated, IsPlatformAdmin]
-    )
+    @action(detail=False, methods=["post"], url_path="update-status", permission_classes=[IsAuthenticated])
     def update_status(self, request):
         deal_id = request.data.get("deal_id")
         status_code = request.data.get("status")

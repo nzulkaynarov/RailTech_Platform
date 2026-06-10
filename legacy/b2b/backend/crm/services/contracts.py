@@ -28,12 +28,15 @@ def generate_contract_from_quote(
     notes: str = "",
 ) -> Tuple[Optional["Contract"], Optional[str]]:  # noqa: F821
     """Create a Contract tied to an approved Quote, render its PDF."""
-    from accounts.services import is_platform_admin_viewer
+    from accounts.services import is_platform_admin_viewer, is_seller
 
     from ..models import Contract
 
     if actor is not None and is_platform_admin_viewer(actor):
         return None, "ADMIN_VIEWER_CANNOT_ACT"
+    # Generating the contract (from the approved КП) is a seller-side action.
+    if actor is not None and not (getattr(actor, "is_superuser", False) or is_seller(actor)):
+        return None, "MEMBER_REQUIRED_FOR_ACTION"
     quote = Quote.objects.select_related("deal__company", "status").get(pk=quote_id)
 
     if not quote.status or quote.status.code not in {"APPROVED", "SENT"}:
@@ -152,21 +155,17 @@ def sign_contract_by_manager(
     """
     from django.utils import timezone
 
-    from accounts.services import is_member_of, is_platform_admin_viewer
+    from accounts.services import is_platform_admin_viewer, is_seller
 
-    from ..models import Contract, SupplierBid
+    from ..models import Contract
 
     contract = Contract.objects.select_for_update().select_related("deal").get(pk=contract_id)
     if is_platform_admin_viewer(manager_user):
         return None, "ADMIN_VIEWER_CANNOT_ACT"
-    seller_company_ids = list(
-        SupplierBid.objects.filter(deal_id=contract.deal_id, status="ACCEPTED").values_list("supplier_id", flat=True),
-    )
-    seller_company_ids.append(contract.deal.company_id)  # intra-company fallback
-    authorized = getattr(manager_user, "is_superuser", False) or any(
-        is_member_of(manager_user, cid, capability="sell") for cid in seller_company_ids
-    )
-    if not authorized:
+    # Seller side signs as "manager". Single-seller model: any can_sell member
+    # (RailTech). The accepted-bid-supplier check is subsumed by is_seller — a
+    # winning supplier's member also carries can_sell.
+    if not (getattr(manager_user, "is_superuser", False) or is_seller(manager_user)):
         return None, "MEMBER_REQUIRED_FOR_ACTION"
     if contract.status not in {"DRAFT", "PENDING_MANAGER", "PENDING_CLIENT"}:
         return None, "CONTRACT_MANAGER_SIGN_NOT_ALLOWED"

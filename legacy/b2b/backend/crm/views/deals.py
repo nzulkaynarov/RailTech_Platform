@@ -73,7 +73,10 @@ class DealViewSet(viewsets.ModelViewSet):
             .prefetch_related(Prefetch("quotes", queryset=quotes_qs))
         )
 
-        if user.is_platform_admin:
+        from accounts.services.permissions import is_seller
+
+        # Seller works every buyer заявка to build КП → sees all deals.
+        if user.is_platform_admin or is_seller(user):
             return queryset
 
         user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)

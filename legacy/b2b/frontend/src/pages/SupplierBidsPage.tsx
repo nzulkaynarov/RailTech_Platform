@@ -196,7 +196,9 @@ export function SupplierBidsPage({ onNavigate }: SupplierBidsPageProps = {}) {
                         <Button variant="ghost" size="sm" onClick={() => setSelected(b)}>
                           <Gavel className="h-4 w-4" />
                         </Button>
-                        {b.status === 'SUBMITTED' && (
+                        {/* Accepting/rejecting a bid is the BUYER's call (the seller
+                            submits bids, the buyer picks one). */}
+                        {!isSupplier && b.status === 'SUBMITTED' && (
                           <>
                             <Button
                               variant="ghost"

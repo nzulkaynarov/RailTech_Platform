@@ -42,12 +42,15 @@ def generate_invoice_from_contract(
 
     from django.utils import timezone
 
-    from accounts.services import is_platform_admin_viewer
+    from accounts.services import is_platform_admin_viewer, is_seller
 
     from ..models import Contract, Invoice, InvoiceItem
 
     if actor is not None and is_platform_admin_viewer(actor):
         return None, "ADMIN_VIEWER_CANNOT_ACT"
+    # Issuing the invoice is a seller-side action.
+    if actor is not None and not (getattr(actor, "is_superuser", False) or is_seller(actor)):
+        return None, "MEMBER_REQUIRED_FOR_ACTION"
     contract = Contract.objects.select_related("quote__deal").get(pk=contract_id)
 
     if contract.status != "SIGNED":
@@ -213,12 +216,15 @@ def generate_act(
 ) -> Tuple[Optional[object], Optional[str]]:
     from django.utils import timezone
 
-    from accounts.services import is_platform_admin_viewer
+    from accounts.services import is_platform_admin_viewer, is_seller
 
     from ..models import Act, Invoice
 
     if actor is not None and is_platform_admin_viewer(actor):
         return None, "ADMIN_VIEWER_CANNOT_ACT"
+    # Issuing the act (acceptance certificate) is a seller-side action.
+    if actor is not None and not (getattr(actor, "is_superuser", False) or is_seller(actor)):
+        return None, "MEMBER_REQUIRED_FOR_ACTION"
     invoice = Invoice.objects.select_related("contract", "deal").get(pk=invoice_id)
     if invoice.status not in {"PAID", "PARTIAL", "ISSUED"}:
         return None, "ACT_INVALID_INVOICE_STATUS"

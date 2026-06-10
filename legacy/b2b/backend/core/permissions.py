@@ -110,6 +110,15 @@ class IsCompanyMemberOrPlatformAdmin(BasePermission):
         if user.is_platform_admin:
             return True
 
+        # Seller team (can_sell) operates across all buyer заявки/deals in the
+        # single-seller model — they are not members of the buyer's deal.company,
+        # so grant access to CRM objects here (per-seller scoping comes with
+        # multi-seller). Buyer-side access falls through to the membership check.
+        from accounts.services.permissions import is_seller
+
+        if is_seller(user):
+            return True
+
         target_company = None
         if hasattr(obj, "company"):
             target_company = obj.company

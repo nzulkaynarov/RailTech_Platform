@@ -88,6 +88,10 @@ class QuoteSerializer(serializers.ModelSerializer):
             "approved_by",
             "approved_at",
             "created_at",
+            # prepared_by anchors the КП-owning (seller) company and the whole
+            # approval chain — the server sets it to the seller building the КП,
+            # never the client request body.
+            "prepared_by",
         ]
 
 

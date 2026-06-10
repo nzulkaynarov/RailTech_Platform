@@ -53,7 +53,11 @@ export function ContractsPage() {
   const [forceCancelReason, setForceCancelReason] = useState('');
 
   const role = useUserStore((s) => s.role);
+  const activeStatus = useUserStore((s) => s.activeStatus);
   const isPlatformAdmin = role === 'ADMIN';
+  // Contract is double-signed: the buyer signs as client, the seller as manager.
+  const isBuyer = activeStatus === 'BUYER';
+  const isSeller = !isBuyer; // SELLER / MANUFACTURER context
   const isViewer = useIsViewerMode();
   const viewerTip = t('apiErrors.ADMIN_VIEWER_CANNOT_ACT');
   const { data: contracts, isLoading } = useContracts(undefined);
@@ -283,7 +287,7 @@ export function ContractsPage() {
                     </a>
                   </Button>
                 )}
-                {(selected.status === 'PENDING_CLIENT' || selected.status === 'DRAFT') && (
+                {isBuyer && (selected.status === 'PENDING_CLIENT' || selected.status === 'DRAFT') && (
                   <Button
                     onClick={() => onSignClient(selected)}
                     disabled={signClient.isPending || isViewer}
@@ -293,7 +297,7 @@ export function ContractsPage() {
                     {t('contractsPage.signClient')}
                   </Button>
                 )}
-                {(selected.status === 'PENDING_MANAGER' || selected.status === 'PENDING_CLIENT' || selected.status === 'DRAFT') && (
+                {isSeller && (selected.status === 'PENDING_MANAGER' || selected.status === 'PENDING_CLIENT' || selected.status === 'DRAFT') && (
                   <Button
                     onClick={() => onSignManager(selected)}
                     disabled={signManager.isPending || isViewer}

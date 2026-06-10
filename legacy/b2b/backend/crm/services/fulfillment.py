@@ -29,7 +29,7 @@ def update_fulfillment_status(
 ) -> Tuple[Optional[object], Optional[str]]:
     from django.utils import timezone
 
-    from accounts.services import is_platform_admin_viewer
+    from accounts.services import is_member_of, is_platform_admin_viewer, is_seller
 
     from ..models import Fulfillment
 
@@ -39,6 +39,17 @@ def update_fulfillment_status(
     if status_code not in valid:
         return None, "FULFILLMENT_INVALID_STATUS"
     obj = Fulfillment.objects.select_for_update().select_related("deal").get(deal_id=deal_id)
+    # Seller drives shipping (PENDING→…→DELIVERED); the buyer ACCEPTS or DISPUTES on
+    # receipt. Authorize the actor against the side that owns the target status.
+    buyer_statuses = {"ACCEPTED", "DISPUTED"}
+    if getattr(actor, "is_superuser", False):
+        authorized = True
+    elif status_code in buyer_statuses:
+        authorized = is_member_of(actor, obj.deal.company_id, capability="buy")
+    else:
+        authorized = is_seller(actor)
+    if not authorized:
+        return None, "MEMBER_REQUIRED_FOR_ACTION"
     obj.status = status_code
     now = timezone.now()
     if status_code == "SHIPPED" and not obj.shipped_at:
