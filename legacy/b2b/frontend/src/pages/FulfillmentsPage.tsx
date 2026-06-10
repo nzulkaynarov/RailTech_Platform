@@ -21,6 +21,7 @@ import {
 import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
 import { useFulfillments, useUpdateFulfillmentStatus } from '@/hooks/useBilling';
 import { useIsViewerMode } from '@/hooks/useViewerMode';
+import { useUserStore } from '@/store/userStore';
 import type { Fulfillment, FulfillmentStatus } from '@/api/fulfillmentApi';
 
 const STATUS_VARIANT: Record<FulfillmentStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -51,6 +52,9 @@ export function FulfillmentsPage() {
   const { data: list, isLoading } = useFulfillments(queryParams);
   const updateMut = useUpdateFulfillmentStatus();
   const isViewer = useIsViewerMode();
+  // Driving the shipment (PENDING→…→DELIVERED) is a seller action. Buyer-side
+  // acceptance/dispute is handled separately (backend split); not surfaced here yet.
+  const isSeller = useUserStore((s) => s.activeStatus) !== 'BUYER';
   const viewerTip = t('apiErrors.ADMIN_VIEWER_CANNOT_ACT');
 
   const stats = useMemo(() => {
@@ -139,15 +143,17 @@ export function FulfillmentsPage() {
                     <TableCell>{f.tracking_number || '—'}</TableCell>
                     <TableCell>{f.carrier || '—'}</TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => startEdit(f)}
-                        disabled={isViewer}
-                        title={isViewer ? viewerTip : undefined}
-                      >
-                        {t('fulfillmentPage.updateStatus')}
-                      </Button>
+                      {isSeller && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => startEdit(f)}
+                          disabled={isViewer}
+                          title={isViewer ? viewerTip : undefined}
+                        >
+                          {t('fulfillmentPage.updateStatus')}
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

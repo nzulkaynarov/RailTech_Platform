@@ -9,11 +9,14 @@ import {
 import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
 import { usePayments } from '@/hooks/useBilling';
 import { RecordPaymentDialog } from '@/components/Billing/RecordPaymentDialog';
+import { useUserStore } from '@/store/userStore';
 
 export function PaymentsPage() {
   const { t } = useTranslation();
   const { data: payments, isLoading, refetch } = usePayments();
   const [recordOpen, setRecordOpen] = useState(false);
+  // Recording a payment is a BUYER action (the client pays the invoice).
+  const isBuyer = useUserStore((s) => s.activeStatus) === 'BUYER';
 
   const stats = [
     { label: t('paymentsPage.stats.total'), value: String(payments?.length ?? 0) },
@@ -26,19 +29,21 @@ export function PaymentsPage() {
       icon={<Wallet className="h-5 w-5" />}
       stats={stats}
     >
-      <div className="flex items-center justify-end">
-        <Button onClick={() => setRecordOpen(true)} className="gap-2">
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          {t('recordPayment.cta')}
-        </Button>
-      </div>
+      {isBuyer && (
+        <div className="flex items-center justify-end">
+          <Button onClick={() => setRecordOpen(true)} className="gap-2">
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            {t('recordPayment.cta')}
+          </Button>
+        </div>
+      )}
       <Card>
         <CardContent className="p-0">
           {isLoading ? <LoadingRows rows={6} /> : (payments?.length ?? 0) === 0 ? (
             <EmptyState
               icon={<Wallet className="h-5 w-5" />}
               message={t('paymentsPage.emptyState')}
-              action={{ label: t('recordPayment.cta'), onClick: () => setRecordOpen(true) }}
+              action={isBuyer ? { label: t('recordPayment.cta'), onClick: () => setRecordOpen(true) } : undefined}
             />
           ) : (
             <Table>

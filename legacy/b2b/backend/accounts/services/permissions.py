@@ -32,6 +32,29 @@ def is_member_of(user: "CustomUser", company_id: int, *, capability: Optional[st
     return True
 
 
+def is_seller(user: "CustomUser") -> bool:
+    """True if the user is on the seller team — any active membership with can_sell.
+
+    Single-seller model (today RailTech is the only seller): the seller operates
+    across ALL buyer заявки/deals to build КП, sign as manager, invoice, fulfill.
+    The seller is NOT a member of the buyer's deal.company, so seller-side authz
+    keys off this capability rather than deal-company membership. When multi-seller
+    lands, scope this per accepted SupplierBid instead of "sees everything".
+    """
+    if not user or not user.is_authenticated:
+        return False
+    return user.memberships.filter(is_active=True, can_sell=True).exists()
+
+
+def primary_seller_company_id(user: "CustomUser") -> Optional[int]:
+    """The seller company to anchor Quote.prepared_by on (prefers the primary
+    membership). None if the user has no can_sell membership."""
+    if not user or not user.is_authenticated:
+        return None
+    membership = user.memberships.filter(is_active=True, can_sell=True).order_by("-is_primary", "id").first()
+    return membership.company_id if membership else None
+
+
 def has_workspace_role(user: "CustomUser", company_id: int, role_codes) -> bool:
     """True if `user` is an active member of `company_id` holding one of `role_codes`.
 

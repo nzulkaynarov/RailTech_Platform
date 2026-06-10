@@ -13,6 +13,7 @@ import { Separator } from '@/components/ui/separator';
 import { StatusBadge, getDealStageVariant } from '@/components/ui/StatusBadge';
 import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/DataTable';
 import { useCurrencyStore } from '@/store/currencyStore';
+import { useUserStore } from '@/store/userStore';
 import { useDeals, useDealStages } from '@/hooks/useCRM';
 import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
 import { OpenRfqDialog } from '@/components/CRM/OpenRfqDialog';
@@ -35,15 +36,23 @@ function DealDetailSheet({
 }) {
   const { t } = useTranslation();
   const formatCurrency = useCurrencyStore((s) => s.format);
+  const activeStatus = useUserStore((s) => s.activeStatus);
   const [rfqOpen, setRfqOpen] = useState(false);
   const [quoteOpen, setQuoteOpen] = useState(false);
   const [contractOpen, setContractOpen] = useState(false);
   if (!deal) return null;
 
-  const canOpenRfq = ['DRAFT', 'KYC_PENDING'].includes(deal.stage_code ?? '');
-  const canBuildQuote = ['SOURCING', 'CALCULATING'].includes(deal.stage_code ?? '')
+  // Role split: opening the RFQ/заявка is a BUYER action; building the КП and
+  // generating the contract are SELLER actions. The backend enforces this too;
+  // gating here stops the wrong-role buttons from rendering (e.g. a buyer must
+  // never see "Создать КП").
+  const isBuyer = activeStatus === 'BUYER';
+  const isSeller = !isBuyer; // SELLER / MANUFACTURER context (store filters by can_sell)
+  const canOpenRfq = isBuyer && ['DRAFT', 'KYC_PENDING'].includes(deal.stage_code ?? '');
+  const canBuildQuote = isSeller
+    && ['SOURCING', 'CALCULATING'].includes(deal.stage_code ?? '')
     && !deal.active_quote;
-  const approvedQuote = deal.active_quote && ['APPROVED', 'SENT'].includes(deal.active_quote.status_code ?? '');
+  const approvedQuote = isSeller && deal.active_quote && ['APPROVED', 'SENT'].includes(deal.active_quote.status_code ?? '');
 
   const rows = [
     { label: t('pages.deals.detail.client'), value: deal.client_name || deal.company_name },
