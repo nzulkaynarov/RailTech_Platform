@@ -178,3 +178,49 @@ def test_send_to_client_blocked_until_ready(seller, deal):
     # A DRAFT КП may not be sent — it must pass the approval chain first.
     with pytest.raises(ValueError):
         QLS.send_to_client(quote.id, users["SALES_MANAGER"])
+
+
+# ─── DRF endpoint tests ─────────────────────────────────────────────────────
+
+
+def _api(user):
+    from rest_framework.test import APIClient
+    from rest_framework_simplejwt.tokens import RefreshToken
+
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(user).access_token}")
+    return client
+
+
+def test_submit_for_review_endpoint(seller, deal):
+    users = seller["users"]
+    quote = _quote(deal, prepared_by=users["SALES_MANAGER"])
+    resp = _api(users["SALES_MANAGER"]).post(f"/api/v1/crm/quotes/{quote.id}/submit-for-review/")
+    assert resp.status_code == 200
+    assert _status(quote) == "PENDING_TRADE_REVIEW"
+
+
+def test_wrong_role_endpoint_returns_403(seller, deal):
+    users = seller["users"]
+    quote = _quote(deal, prepared_by=users["SALES_MANAGER"])
+    # ВЭД cannot submit — the service refuses, the view maps it to 403.
+    resp = _api(users["FOREIGN_TRADE_SPECIALIST"]).post(f"/api/v1/crm/quotes/{quote.id}/submit-for-review/")
+    assert resp.status_code == 403
+    assert _status(quote) == "DRAFT"
+
+
+def test_my_approval_queue_endpoint(seller, deal):
+    users = seller["users"]
+    quote = _quote(deal, prepared_by=users["SALES_MANAGER"])
+    QLS.submit_for_review(quote.id, users["SALES_MANAGER"])  # → PENDING_TRADE_REVIEW
+
+    # ВЭД's queue contains the quote awaiting their confirmation.
+    resp = _api(users["FOREIGN_TRADE_SPECIALIST"]).get("/api/v1/crm/quotes/my-approval-queue/")
+    assert resp.status_code == 200
+    ids = [q["id"] for q in (resp.data["results"] if isinstance(resp.data, dict) else resp.data)]
+    assert quote.id in ids
+
+    # The director's queue does NOT (it is not at PENDING_APPROVAL yet).
+    resp = _api(users["DIRECTOR"]).get("/api/v1/crm/quotes/my-approval-queue/")
+    ids = [q["id"] for q in (resp.data["results"] if isinstance(resp.data, dict) else resp.data)]
+    assert quote.id not in ids

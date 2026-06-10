@@ -2,7 +2,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from typing import Optional, Tuple
 
 from django.db import models, transaction
-from django.db.models import Count, Sum
+from django.db.models import Count, Q, Sum
 
 from accounts.models import Company, CompanyMember, CustomUser
 from accounts.services.permissions import has_workspace_role
@@ -38,6 +38,47 @@ def _log_quote(quote, actor, action: str, detail: str = "") -> None:
         level="INFO",
         entity_type="quote",
         entity_id=quote.id,
+    )
+
+
+# Which КП statuses each WorkspaceRole is responsible for advancing — drives the
+# per-role "my approval queue".
+_ROLE_QUEUE_STATUSES = {
+    "SALES_MANAGER": {"DRAFT"},
+    "FOREIGN_TRADE_SPECIALIST": {"PENDING_TRADE_REVIEW"},
+    "DIRECTOR": {"PENDING_APPROVAL"},
+    "OWNER": {"DRAFT", "PENDING_TRADE_REVIEW", "PENDING_APPROVAL", "READY_TO_SEND"},
+}
+
+
+def approval_queue_for(user):
+    """КП waiting on this user's workspace-role step, scoped to the user's own
+    companies. Each (company, role) the user holds contributes only the statuses
+    that role advances — so a SALES_MANAGER in company A never sees company A's
+    director-stage quotes unless they are also OWNER/DIRECTOR there."""
+    memberships = user.memberships.filter(is_active=True).select_related("role")
+    condition = Q()
+    matched = False
+    for membership in memberships:
+        if not membership.role:
+            continue
+        statuses = _ROLE_QUEUE_STATUSES.get(membership.role.code)
+        if not statuses:
+            continue
+        matched = True
+        condition |= Q(
+            prepared_by__memberships__company_id=membership.company_id,
+            prepared_by__memberships__is_primary=True,
+            prepared_by__memberships__is_active=True,
+            status__code__in=statuses,
+        )
+    if not matched:
+        return Quote.objects.none()
+    return (
+        Quote.objects.filter(condition)
+        .select_related("deal", "deal__company", "status", "prepared_by")
+        .distinct()
+        .order_by("-updated_at")
     )
 
 
