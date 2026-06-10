@@ -16,7 +16,11 @@ const RELOAD_FLAG = 'chunk-reload-attempted';
  * import is genuinely broken for another reason — in that case we rethrow and let
  * the ErrorBoundary handle it.
  */
-export function lazyWithRetry<T extends ComponentType<unknown>>(importer: () => Promise<{ default: T }>) {
+// ComponentType<any> mirrors React.lazy's own signature — it's what lets each
+// page's specific props flow through to the call site. Narrowing to <unknown>
+// collapses every lazy page to no-props and breaks <Page onNavigate=… /> (CI tsc -b).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function lazyWithRetry<T extends ComponentType<any>>(importer: () => Promise<{ default: T }>) {
   return lazy(async () => {
     try {
       const component = await importer();
