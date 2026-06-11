@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toDecimal, calculateLineTotal, sumMoney, lineTotal, calculateVAT } from '../decimal';
+import { toDecimal, calculateLineTotal, sumMoney, lineTotal, calculateVAT, formatMoney } from '../decimal';
 
 // Money math is the highest-risk frontend area (it must agree with the backend's
 // DecimalField). These guard against the float-drift class of bugs that raw
@@ -47,5 +47,20 @@ describe('calculateVAT', () => {
   it('computes a percentage of the subtotal exactly', () => {
     expect(calculateVAT('100', '12')).toBe('12');
     expect(calculateVAT('1420.00', '12')).toBe('170.4');
+  });
+});
+
+describe('formatMoney', () => {
+  // Regression: an empty/malformed currency made Intl.NumberFormat throw
+  // RangeError and crashed DealsPage (prod 2026-06-11).
+  it('never throws on an empty or malformed currency code (falls back to USD)', () => {
+    expect(() => formatMoney('100', '')).not.toThrow();
+    expect(() => formatMoney('100', 'us')).not.toThrow();
+    expect(() => formatMoney('100', undefined)).not.toThrow();
+    expect(formatMoney('100', '')).toContain('100');
+  });
+  it('uses a valid ISO-4217 code as given', () => {
+    expect(() => formatMoney('100', 'EUR')).not.toThrow();
+    expect(() => formatMoney('100', 'usd')).not.toThrow(); // lowercased input is normalized
   });
 });
