@@ -49,7 +49,29 @@
       "Bash(find *)",
       "Bash(find backend *)",
       "Bash(cat backend/core/asgi.py)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(sed -n '1,8p' accounts/services/permissions.py)",
+      "Bash(grep -n \"SELLER_COMPANY_TYPES\\\\|class CompanyTypeCode\" accounts/constants.py)",
+      "Bash(git add *)",
+      "Bash(ssh -o BatchMode=yes -o ConnectTimeout=20 root@176.101.56.141 'docker exec railtech_backend_prod python manage.py shell -c \" *)",
+      "Bash(ssh -o BatchMode=yes -o ConnectTimeout=20 root@176.101.56.141 'BE=$\\(docker ps --format \"{{.Names}}\" | grep -i backend|head -1\\); docker exec \"$BE\" python manage.py shell -c \" *)",
+      "Bash(ssh -o BatchMode=yes -o ConnectTimeout=20 root@176.101.56.141 'BE=$\\(docker ps --format \"{{.Names}}\"|grep -i backend|head -1\\); docker exec \"$BE\" python manage.py shell -c \" *)",
+      "Bash(git fetch *)",
+      "Bash(git ls-tree *)",
+      "Bash(git checkout *)",
+      "Bash(git stash *)",
+      "Bash(wc -l backend/crm/views/quotes.py backend/crm/views/deals.py backend/crm/views/billing.py)",
+      "Bash(ls frontend/src/pages/ frontend/src/components/ui/CartDrawer.tsx)",
+      "Bash(pkill -f \"vite.js --port 5174\")",
+      "Bash(ls frontend/node_modules/@playwright/test/package.json)",
+      "Bash(ls frontend/node_modules/playwright-core)",
+      "Bash(ls frontend/e2e frontend/tests/e2e)",
+      "Bash(ls frontend/node_modules/@rollup/)",
+      "Bash(pkill -f \"vite\")",
+      "Bash(pkill -f \"vite.js\")",
+      "Bash(ls docs/)",
+      "Bash(ls docs/adr)",
+      "Bash(ls docs/ops)"
     ]
   }
 }
