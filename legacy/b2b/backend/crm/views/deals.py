@@ -9,6 +9,7 @@ from rest_framework.response import Response
 
 from core.permissions import IsCompanyMemberOrPlatformAdmin, IsPlatformAdmin
 from crm import services as crm_services
+from crm.constants import DealStageCode
 from crm.models import Deal, DealStage, Quote, QuoteItem
 from crm.serializers import DealDetailSerializer, DealListSerializer
 from crm.services import force_transition_deal_stage, register_new_deal, transition_deal_stage
@@ -90,7 +91,7 @@ class DealViewSet(viewsets.ModelViewSet):
         deal = self.get_object()
         if not request.user.is_platform_admin:
             stage_code = deal.stage.code if deal.stage_id else None
-            if stage_code and stage_code != "DRAFT":
+            if stage_code and stage_code != DealStageCode.DRAFT:
                 return Response(
                     {"detail": "DEAL_DELETE_ONLY_DRAFT"},
                     status=status.HTTP_403_FORBIDDEN,
@@ -109,7 +110,7 @@ class DealViewSet(viewsets.ModelViewSet):
             )
         save_kwargs = dict(client=self.request.user, company=primary_company)
         if not serializer.validated_data.get("stage"):
-            draft_stage = DealStage.objects.filter(code="DRAFT").first()
+            draft_stage = DealStage.objects.filter(code=DealStageCode.DRAFT).first()
             if draft_stage:
                 save_kwargs["stage"] = draft_stage
         deal = serializer.save(**save_kwargs)

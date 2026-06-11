@@ -4,6 +4,7 @@ from django.db import transaction
 
 from accounts.models import CustomUser
 
+from ..constants import DealStageCode
 from ..models import Deal
 from .deals import transition_deal_stage
 
@@ -64,5 +65,5 @@ def update_fulfillment_status(
     obj.save()
     # Auto-close deal when accepted by client
     if status_code == "ACCEPTED":
-        transition_deal_stage(obj.deal, "CLOSED_WON", actor=actor, reason="Приёмка клиентом")
+        transition_deal_stage(obj.deal, DealStageCode.CLOSED_WON, actor=actor, reason="Приёмка клиентом")
     return obj, None

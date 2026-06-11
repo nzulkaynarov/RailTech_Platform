@@ -6,9 +6,12 @@ from django.db.models import QuerySet
 
 from accounts.models import Company, CustomUser
 
+from ..constants import DealStageCode
 from ..models import ActivityLog, Deal, DealStage, Lead
 
 logger = logging.getLogger(__name__)
+
+_S = DealStageCode  # local alias to keep the FSM matrix readable
 
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -19,21 +22,21 @@ logger = logging.getLogger(__name__)
 
 
 ALLOWED_STAGE_TRANSITIONS = {
-    "DRAFT": ["KYC_PENDING", "RFQ_OPEN", "SOURCING", "CLOSED_LOST"],
-    "KYC_PENDING": ["RFQ_OPEN", "SOURCING", "CLOSED_LOST"],
-    "RFQ_OPEN": ["SOURCING", "CALCULATING", "CLOSED_LOST"],
-    "SOURCING": ["CALCULATING", "CLOSED_LOST"],
-    "CALCULATING": ["QUOTE_SENT", "SOURCING", "CLOSED_LOST"],
-    "QUOTE_SENT": ["CONTRACT_SIGNED", "CALCULATING", "CLOSED_LOST"],
-    "CONTRACT_SIGNED": ["CLOSED_WON", "CLOSED_LOST"],
+    _S.DRAFT: [_S.KYC_PENDING, _S.RFQ_OPEN, _S.SOURCING, _S.CLOSED_LOST],
+    _S.KYC_PENDING: [_S.RFQ_OPEN, _S.SOURCING, _S.CLOSED_LOST],
+    _S.RFQ_OPEN: [_S.SOURCING, _S.CALCULATING, _S.CLOSED_LOST],
+    _S.SOURCING: [_S.CALCULATING, _S.CLOSED_LOST],
+    _S.CALCULATING: [_S.QUOTE_SENT, _S.SOURCING, _S.CLOSED_LOST],
+    _S.QUOTE_SENT: [_S.CONTRACT_SIGNED, _S.CALCULATING, _S.CLOSED_LOST],
+    _S.CONTRACT_SIGNED: [_S.CLOSED_WON, _S.CLOSED_LOST],
     # Terminal states are reopenable by manager for rare legitimate cases.
-    "CLOSED_WON": ["CONTRACT_SIGNED"],
-    "CLOSED_LOST": ["CALCULATING", "SOURCING"],
+    _S.CLOSED_WON: [_S.CONTRACT_SIGNED],
+    _S.CLOSED_LOST: [_S.CALCULATING, _S.SOURCING],
 }
 
 
 # Stage codes that require a signed Contract before entering.
-STAGE_REQUIRES_SIGNED_CONTRACT = {"CLOSED_WON"}
+STAGE_REQUIRES_SIGNED_CONTRACT = {_S.CLOSED_WON}
 
 
 def get_allowed_transitions(stage_code: str) -> list[str]:
@@ -98,7 +101,7 @@ def transition_deal_stage(
         return deal, None  # already in target state, no-op
 
     if validate_fsm:
-        current_code = deal.stage.code if deal.stage else "DRAFT"
+        current_code = deal.stage.code if deal.stage else DealStageCode.DRAFT
         allowed = get_allowed_transitions(current_code)
         if target_stage_code not in allowed:
             return None, "FSM_TRANSITION_NOT_ALLOWED"
@@ -129,7 +132,7 @@ def transition_deal_stage(
     )
 
     # Post-sale hook: on CLOSED_WON, auto-generate Invoice + Act (async)
-    if target_stage_code == "CLOSED_WON":
+    if target_stage_code == DealStageCode.CLOSED_WON:
         try:
             from ..tasks import auto_invoice_on_closed_won
 
@@ -171,13 +174,13 @@ def bulk_close_deals_lost(
 
     Returns: count of deals updated.
     """
-    closed_lost = DealStage.objects.filter(code="CLOSED_LOST").first()
+    closed_lost = DealStage.objects.filter(code=DealStageCode.CLOSED_LOST).first()
     if not closed_lost:
         return 0
-    open_deals = deals.exclude(stage__code__in=["CLOSED_WON", "CLOSED_LOST"])
+    open_deals = deals.exclude(stage__code__in=[DealStageCode.CLOSED_WON, DealStageCode.CLOSED_LOST])
     count = 0
     for deal in open_deals:
-        _, error = transition_deal_stage(deal, "CLOSED_LOST", actor=actor)
+        _, error = transition_deal_stage(deal, DealStageCode.CLOSED_LOST, actor=actor)
         if not error:
             count += 1
     return count
@@ -217,7 +220,7 @@ def convert_lead_to_deal(
     if company is None:
         return None, "LEAD_NO_CLIENT_COMPANY"
 
-    draft_stage = DealStage.objects.filter(code="DRAFT").first()
+    draft_stage = DealStage.objects.filter(code=DealStageCode.DRAFT).first()
     deal = Deal.objects.create(
         company=company,
         client=CustomUser.objects.filter(email__iexact=lead.email).first(),
@@ -260,7 +263,7 @@ def open_rfq(
     if not (getattr(actor, "is_superuser", False) or is_member_of(actor, deal.company_id, capability="buy")):
         return None, "MEMBER_REQUIRED_FOR_ACTION"
 
-    deal, err = transition_deal_stage(deal, "RFQ_OPEN", actor=actor, reason="Открыт RFQ")
+    deal, err = transition_deal_stage(deal, DealStageCode.RFQ_OPEN, actor=actor, reason="Открыт RFQ")
     if err:
         return None, err
 

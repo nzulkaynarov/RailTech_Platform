@@ -4,9 +4,11 @@ from typing import Optional, Tuple
 from django.db import models, transaction
 from django.db.models import Count, Q, Sum
 
+from accounts.constants import SystemRoleCode, VerificationStatusCode, WorkspaceRoleCode
 from accounts.models import Company, CompanyMember, CustomUser
 from accounts.services.permissions import has_workspace_role
 
+from ..constants import DealStageCode, QuoteStatusCode
 from ..models import ActivityLog, Deal, Quote, QuoteItem, QuoteItemHistory, QuoteStatus
 from .deals import transition_deal_stage
 
@@ -44,10 +46,15 @@ def _log_quote(quote, actor, action: str, detail: str = "") -> None:
 # Which КП statuses each WorkspaceRole is responsible for advancing — drives the
 # per-role "my approval queue".
 _ROLE_QUEUE_STATUSES = {
-    "SALES_MANAGER": {"DRAFT"},
-    "FOREIGN_TRADE_SPECIALIST": {"PENDING_TRADE_REVIEW"},
-    "DIRECTOR": {"PENDING_APPROVAL"},
-    "OWNER": {"DRAFT", "PENDING_TRADE_REVIEW", "PENDING_APPROVAL", "READY_TO_SEND"},
+    WorkspaceRoleCode.SALES_MANAGER: {QuoteStatusCode.DRAFT},
+    WorkspaceRoleCode.FOREIGN_TRADE_SPECIALIST: {QuoteStatusCode.PENDING_TRADE_REVIEW},
+    WorkspaceRoleCode.DIRECTOR: {QuoteStatusCode.PENDING_APPROVAL},
+    WorkspaceRoleCode.OWNER: {
+        QuoteStatusCode.DRAFT,
+        QuoteStatusCode.PENDING_TRADE_REVIEW,
+        QuoteStatusCode.PENDING_APPROVAL,
+        QuoteStatusCode.READY_TO_SEND,
+    },
 }
 
 
@@ -66,7 +73,7 @@ def can_send_quote_to_client(actor, quote) -> bool:
     if not company_id:
         return False
     # has_workspace_role already lets OWNER through as the escape hatch.
-    return has_workspace_role(actor, company_id, ["SALES_MANAGER"])
+    return has_workspace_role(actor, company_id, [WorkspaceRoleCode.SALES_MANAGER])
 
 
 def approval_queue_for(user):
@@ -193,10 +200,15 @@ def get_crm_analytics_data():
     mapped_items = items.filter(product__isnull=False).count()
     mapped_items_percentage = (mapped_items / total_items * 100) if total_items > 0 else 0
 
-    kyc_backlog = Company.objects.filter(verification_status__code__in=["L1_UNVERIFIED", "PROFILE_SUBMITTED"]).count()
+    kyc_backlog = Company.objects.filter(
+        verification_status__code__in=[VerificationStatusCode.L1_UNVERIFIED, VerificationStatusCode.PROFILE_SUBMITTED]
+    ).count()
 
     total_pipeline_value = (
-        Quote.objects.filter(status__code__in=["SENT", "APPROVED"]).aggregate(total=Sum("total_incl_vat"))["total"] or 0
+        Quote.objects.filter(status__code__in=[QuoteStatusCode.SENT, QuoteStatusCode.APPROVED]).aggregate(
+            total=Sum("total_incl_vat")
+        )["total"]
+        or 0
     )
 
     return {
@@ -265,7 +277,7 @@ class QuoteLifecycleService:
         # Status guard: only an internally-approved КП (READY_TO_SEND — it passed
         # the sales → ВЭД → director chain) may go out to the client.
         current = quote.status.code if quote.status else "None"
-        if current != "READY_TO_SEND":
+        if current != QuoteStatusCode.READY_TO_SEND:
             raise ValueError(
                 f"Cannot send quote in status '{current}'. "
                 "Only READY_TO_SEND quotes (internally approved) can be sent to the client."
@@ -277,7 +289,7 @@ class QuoteLifecycleService:
             quote.refresh_from_db()
 
         # Freeze prices
-        sent_status = QuoteStatus.objects.filter(code="SENT").first()
+        sent_status = QuoteStatus.objects.filter(code=QuoteStatusCode.SENT).first()
         quote.status = sent_status
         quote.frozen_at = timezone.now()
         quote.save(update_fields=["status", "frozen_at", "updated_at"])
@@ -285,7 +297,7 @@ class QuoteLifecycleService:
         # Change deal stage via FSM
         transition_deal_stage(
             quote.deal,
-            "QUOTE_SENT",
+            DealStageCode.QUOTE_SENT,
             actor=sent_by_user,
             reason=f"КП v{quote.version} отправлено клиенту",
         )
@@ -316,10 +328,10 @@ class QuoteLifecycleService:
 
         # Status guard
         current = quote.status.code if quote.status else "None"
-        if current != "SENT":
+        if current != QuoteStatusCode.SENT:
             raise ValueError(f"Cannot approve quote in status '{current}'. " "Only SENT quotes can be approved.")
 
-        approved_status = QuoteStatus.objects.filter(code="APPROVED").first()
+        approved_status = QuoteStatus.objects.filter(code=QuoteStatusCode.APPROVED).first()
         quote.status = approved_status
         quote.approved_at = timezone.now()
         quote.approved_by = approved_by_user
@@ -328,7 +340,7 @@ class QuoteLifecycleService:
         # Change deal stage via FSM
         transition_deal_stage(
             quote.deal,
-            "CONTRACT_SIGNED",
+            DealStageCode.CONTRACT_SIGNED,
             actor=approved_by_user,
             reason=f"КП v{quote.version} одобрено клиентом",
         )
@@ -366,14 +378,14 @@ class QuoteLifecycleService:
         company_id = _quote_owner_company_id(quote)
         if not company_id:
             return None, "NO_QUOTE_COMPANY"
-        if not has_workspace_role(actor, company_id, ["SALES_MANAGER"]):
+        if not has_workspace_role(actor, company_id, [WorkspaceRoleCode.SALES_MANAGER]):
             return None, "ROLE_NOT_PERMITTED"
-        if not quote.status or quote.status.code != "DRAFT":
+        if not quote.status or quote.status.code != QuoteStatusCode.DRAFT:
             return None, "INVALID_STATUS"
         has_trade = CompanyMember.objects.filter(
-            company_id=company_id, is_active=True, role__code="FOREIGN_TRADE_SPECIALIST"
+            company_id=company_id, is_active=True, role__code=WorkspaceRoleCode.FOREIGN_TRADE_SPECIALIST
         ).exists()
-        next_code = "PENDING_TRADE_REVIEW" if has_trade else "PENDING_APPROVAL"
+        next_code = QuoteStatusCode.PENDING_TRADE_REVIEW if has_trade else QuoteStatusCode.PENDING_APPROVAL
         _set_quote_status(quote, next_code)
         _log_quote(quote, actor, "quote.submit_for_review", f"КП v{quote.version} на согласование → {next_code}")
         return quote, None
@@ -386,11 +398,11 @@ class QuoteLifecycleService:
         company_id = _quote_owner_company_id(quote)
         if not company_id:
             return None, "NO_QUOTE_COMPANY"
-        if not has_workspace_role(actor, company_id, ["FOREIGN_TRADE_SPECIALIST"]):
+        if not has_workspace_role(actor, company_id, [WorkspaceRoleCode.FOREIGN_TRADE_SPECIALIST]):
             return None, "ROLE_NOT_PERMITTED"
-        if not quote.status or quote.status.code != "PENDING_TRADE_REVIEW":
+        if not quote.status or quote.status.code != QuoteStatusCode.PENDING_TRADE_REVIEW:
             return None, "INVALID_STATUS"
-        _set_quote_status(quote, "PENDING_APPROVAL")
+        _set_quote_status(quote, QuoteStatusCode.PENDING_APPROVAL)
         _log_quote(
             quote, actor, "quote.confirm_trade_review", f"КП v{quote.version} подтверждено ВЭД → PENDING_APPROVAL"
         )
@@ -404,11 +416,11 @@ class QuoteLifecycleService:
         company_id = _quote_owner_company_id(quote)
         if not company_id:
             return None, "NO_QUOTE_COMPANY"
-        if not has_workspace_role(actor, company_id, ["DIRECTOR"]):
+        if not has_workspace_role(actor, company_id, [WorkspaceRoleCode.DIRECTOR]):
             return None, "ROLE_NOT_PERMITTED"
-        if not quote.status or quote.status.code != "PENDING_APPROVAL":
+        if not quote.status or quote.status.code != QuoteStatusCode.PENDING_APPROVAL:
             return None, "INVALID_STATUS"
-        _set_quote_status(quote, "READY_TO_SEND")
+        _set_quote_status(quote, QuoteStatusCode.READY_TO_SEND)
         _log_quote(quote, actor, "quote.director_approve", f"КП v{quote.version} утверждено директором → READY_TO_SEND")
         return quote, None
 
@@ -421,16 +433,22 @@ class QuoteLifecycleService:
         company_id = _quote_owner_company_id(quote)
         if not company_id:
             return None, "NO_QUOTE_COMPANY"
-        if not has_workspace_role(actor, company_id, ["FOREIGN_TRADE_SPECIALIST", "DIRECTOR"]):
+        if not has_workspace_role(
+            actor, company_id, [WorkspaceRoleCode.FOREIGN_TRADE_SPECIALIST, WorkspaceRoleCode.DIRECTOR]
+        ):
             return None, "ROLE_NOT_PERMITTED"
-        review_states = {"PENDING_TRADE_REVIEW", "PENDING_APPROVAL", "READY_TO_SEND"}
+        review_states = {
+            QuoteStatusCode.PENDING_TRADE_REVIEW,
+            QuoteStatusCode.PENDING_APPROVAL,
+            QuoteStatusCode.READY_TO_SEND,
+        }
         if not quote.status or quote.status.code not in review_states:
             return None, "INVALID_STATUS"
         if reason:
             note = f"Возврат на доработку: {reason}"
             quote.notes = f"{quote.notes}\n{note}".strip() if quote.notes else note
             quote.save(update_fields=["notes", "updated_at"])
-        _set_quote_status(quote, "DRAFT")
+        _set_quote_status(quote, QuoteStatusCode.DRAFT)
         _log_quote(quote, actor, "quote.send_back", f"КП v{quote.version} возвращено на доработку. {reason}".strip())
         return quote, None
 
@@ -451,7 +469,10 @@ class QuoteLifecycleService:
         """
         from django.utils import timezone
 
-        if not (getattr(admin_user, "is_superuser", False) or (admin_user.role and admin_user.role.code == "ADMIN")):
+        if not (
+            getattr(admin_user, "is_superuser", False)
+            or (admin_user.role and admin_user.role.code == SystemRoleCode.ADMIN)
+        ):
             return None, "PLATFORM_ADMIN_REQUIRED"
         if not reason.strip():
             return None, "FORCE_REASON_REQUIRED"
@@ -459,7 +480,7 @@ class QuoteLifecycleService:
         # emits a LEFT OUTER JOIN, and Postgres rejects "FOR UPDATE" on the nullable
         # side of an outer join. Lock only the crm_quote row, not the joined tables.
         quote = Quote.objects.select_for_update(of=("self",)).select_related("deal", "status").get(pk=quote_id)
-        approved = QuoteStatus.objects.filter(code="APPROVED").first()
+        approved = QuoteStatus.objects.filter(code=QuoteStatusCode.APPROVED).first()
         if not approved:
             return None, "QUOTE_STATUS_NOT_FOUND"
         old_code = quote.status.code if quote.status else "None"
@@ -490,10 +511,10 @@ class QuoteLifecycleService:
 
         # Status guard
         current = quote.status.code if quote.status else "None"
-        if current != "SENT":
+        if current != QuoteStatusCode.SENT:
             raise ValueError(f"Cannot reject quote in status '{current}'. " "Only SENT quotes can be rejected.")
 
-        rejected_status = QuoteStatus.objects.filter(code="REJECTED").first()
+        rejected_status = QuoteStatus.objects.filter(code=QuoteStatusCode.REJECTED).first()
         quote.status = rejected_status
         # Append rejection reason instead of replacing notes
         if reason:
@@ -504,7 +525,7 @@ class QuoteLifecycleService:
         # Move deal back to CALCULATING via FSM
         transition_deal_stage(
             quote.deal,
-            "CALCULATING",
+            DealStageCode.CALCULATING,
             actor=rejected_by_user,
             reason=f"КП v{quote.version} отклонено. {reason}",
         )

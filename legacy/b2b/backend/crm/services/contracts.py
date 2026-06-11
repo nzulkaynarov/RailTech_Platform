@@ -4,6 +4,7 @@ from django.db import transaction
 
 from accounts.models import CustomUser
 
+from ..constants import QuoteStatusCode
 from ..models import ActivityLog, Quote
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -39,7 +40,7 @@ def generate_contract_from_quote(
         return None, "MEMBER_REQUIRED_FOR_ACTION"
     quote = Quote.objects.select_related("deal__company", "status").get(pk=quote_id)
 
-    if not quote.status or quote.status.code not in {"APPROVED", "SENT"}:
+    if not quote.status or quote.status.code not in {QuoteStatusCode.APPROVED, QuoteStatusCode.SENT}:
         return None, "CONTRACT_NEEDS_APPROVAL"
 
     # Reuse existing draft contract if present

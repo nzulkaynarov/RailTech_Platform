@@ -1,6 +1,7 @@
 import logging
 from typing import Optional
 
+from ..constants import WorkspaceRoleCode
 from ..models import CustomUser, SupplierSubscription
 
 logger = logging.getLogger(__name__)
@@ -68,7 +69,7 @@ def has_workspace_role(user: "CustomUser", company_id: int, role_codes) -> bool:
     if membership is None or membership.role is None:
         return False
     code = membership.role.code
-    return code == "OWNER" or code in set(role_codes)
+    return code == WorkspaceRoleCode.OWNER or code in set(role_codes)
 
 
 def is_platform_admin_viewer(user: "CustomUser") -> bool:
