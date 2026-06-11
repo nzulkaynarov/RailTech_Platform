@@ -1581,6 +1581,8 @@
     "roleApplications": "Заявки на роли",
     "companies": "Компании",
     "adminDeals": "Сделки (админ)",
+    "adminQuotes": "КП (админ)",
+    "adminContracts": "Договоры (админ)",
     "masterData": "Справочники",
     "support": "Тикеты поддержки",
     "adminCatalog": "Каталог (админ)",
@@ -2527,7 +2529,8 @@
         "totalValue": "Сумма",
         "created": "Дата создания",
         "updated": "Обновлено",
-        "notes": "Заметки"
+        "notes": "Заметки",
+        "actions": "Действия"
       },
       "newDeal": "Новая сделка",
       "daysInStage": "дней в этапе",
@@ -3717,6 +3720,8 @@
     "emptyState": "Исполнения не найдены",
     "updateStatus": "Обновить статус",
     "statusUpdated": "Статус обновлён",
+    "accept": "Принять поставку",
+    "dispute": "Оспорить",
     "allStatuses": "Все статусы",
     "stats": {
       "total": "Всего",

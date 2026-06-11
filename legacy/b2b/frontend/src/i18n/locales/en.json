@@ -1577,6 +1577,8 @@
     "roleApplications": "Role Applications",
     "companies": "Companies",
     "adminDeals": "Deals (admin)",
+    "adminQuotes": "Quotes (admin)",
+    "adminContracts": "Contracts (admin)",
     "masterData": "Master data",
     "support": "Support tickets",
     "adminCatalog": "Catalog (admin)",
@@ -2523,7 +2525,8 @@
         "totalValue": "Total Value",
         "created": "Created",
         "updated": "Updated",
-        "notes": "Notes"
+        "notes": "Notes",
+        "actions": "Actions"
       },
       "newDeal": "New deal",
       "daysInStage": "days in stage",
@@ -3713,6 +3716,8 @@
     "emptyState": "No fulfillments",
     "updateStatus": "Update status",
     "statusUpdated": "Status updated",
+    "accept": "Accept delivery",
+    "dispute": "Dispute",
     "allStatuses": "All statuses",
     "stats": {
       "total": "Total",

@@ -289,7 +289,7 @@ function App() {
 const ADMIN_PAGES = new Set([
   'admin-users', 'admin-kyc', 'admin-subscriptions', 'admin-role-apps',
   'admin-catalog', 'admin-categories', 'admin-equipment-groups', 'admin-offers',
-  'admin-companies', 'admin-deals', 'admin-master-data', 'admin-support',
+  'admin-companies', 'admin-deals', 'admin-bids', 'admin-master-data', 'admin-support',
 ]);
 // CRM-pages that need a management WorkspaceRole inside the user's company
 // (not a platform-level SystemRole). Buyers don't see these by design.

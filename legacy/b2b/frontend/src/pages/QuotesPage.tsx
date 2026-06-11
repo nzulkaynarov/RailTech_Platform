@@ -23,6 +23,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { translateApiError } from '@/lib/apiError';
 import { useUserStore } from '@/store/userStore';
+import { QuoteStatus } from '@/lib/codes';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useQuotes, useSendQuoteToClient, useApproveQuote, useQuoteStatuses, useForceApproveQuote, useRejectQuote, useGenerateQuotePDF } from '@/hooks/useCRM';
 import { sumMoney } from '@/utils/decimal';
@@ -216,17 +217,22 @@ export function QuotesPage() {
                         <DropdownMenuContent align="end">
                           {!isBuyer && (
                             <>
-                              <DropdownMenuItem onClick={() => handleSendToClient(q.id)}>
-                                <Send className="mr-2 h-4 w-4" />
-                                {t('pages.quotes.actions.sendToClient')}
-                              </DropdownMenuItem>
+                              {/* Only an internally-approved КП can be sent — otherwise the
+                                  backend FSM rejects it. The actual chain steps live on the
+                                  КП builder (deal detail). */}
+                              {q.status_code === QuoteStatus.READY_TO_SEND && (
+                                <DropdownMenuItem onClick={() => handleSendToClient(q.id)}>
+                                  <Send className="mr-2 h-4 w-4" />
+                                  {t('pages.quotes.actions.sendToClient')}
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuItem onClick={() => handleGeneratePDF(q.id)}>
                                 <FileText className="mr-2 h-4 w-4" />
                                 {t('pages.quotes.actions.generatePDF')}
                               </DropdownMenuItem>
                             </>
                           )}
-                          {isBuyer && q.status_code === 'SENT' && (
+                          {isBuyer && q.status_code === QuoteStatus.SENT && (
                             <>
                               <DropdownMenuItem onClick={() => handleApprove(q.id)}>
                                 <ThumbsUp className="mr-2 h-4 w-4" />
@@ -242,7 +248,7 @@ export function QuotesPage() {
                             <FileDown className="mr-2 h-4 w-4" />
                             {t('pages.quotes.actions.downloadPDF')}
                           </DropdownMenuItem>
-                          {isPlatformAdmin && q.status_code !== 'APPROVED' && (
+                          {isPlatformAdmin && q.status_code !== QuoteStatus.APPROVED && (
                             <DropdownMenuItem
                               onClick={() => setForceApproveTarget(q)}
                               className="text-warning"

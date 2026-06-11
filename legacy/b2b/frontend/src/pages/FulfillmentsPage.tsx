@@ -22,6 +22,7 @@ import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
 import { useFulfillments, useUpdateFulfillmentStatus } from '@/hooks/useBilling';
 import { useIsViewerMode } from '@/hooks/useViewerMode';
 import { useUserStore } from '@/store/userStore';
+import { FulfillmentStatus as FStatusCode } from '@/lib/codes';
 import type { Fulfillment, FulfillmentStatus } from '@/api/fulfillmentApi';
 
 const STATUS_VARIANT: Record<FulfillmentStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -95,6 +96,16 @@ export function FulfillmentsPage() {
     }
   };
 
+  // Buyer-side one-click accept/dispute of a delivered shipment.
+  const buyerAct = async (f: Fulfillment, status: FulfillmentStatus) => {
+    try {
+      await updateMut.mutateAsync({ deal_id: f.deal, status });
+      toast.success(t('fulfillmentPage.statusUpdated'));
+    } catch (e) {
+      toast.error(translateApiError(e));
+    }
+  };
+
   return (
     <PageShell
       title={t('fulfillmentPage.title')}
@@ -153,6 +164,28 @@ export function FulfillmentsPage() {
                         >
                           {t('fulfillmentPage.updateStatus')}
                         </Button>
+                      )}
+                      {/* Buyer accepts or disputes the delivery — ACCEPTED auto-closes
+                          the deal (CLOSED_WON). Only once the seller marks DELIVERED. */}
+                      {!isSeller && f.status === FStatusCode.DELIVERED && (
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost" size="sm"
+                            disabled={isViewer || updateMut.isPending}
+                            title={isViewer ? viewerTip : undefined}
+                            onClick={() => buyerAct(f, FStatusCode.ACCEPTED)}
+                          >
+                            {t('fulfillmentPage.accept')}
+                          </Button>
+                          <Button
+                            variant="ghost" size="sm" className="text-destructive"
+                            disabled={isViewer || updateMut.isPending}
+                            title={isViewer ? viewerTip : undefined}
+                            onClick={() => buyerAct(f, FStatusCode.DISPUTED)}
+                          >
+                            {t('fulfillmentPage.dispute')}
+                          </Button>
+                        </div>
                       )}
                     </TableCell>
                   </TableRow>
