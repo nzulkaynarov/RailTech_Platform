@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -7,6 +8,8 @@ import { useDeals, useDealStages } from '@/hooks/useCRM';
 import { useFlowStore } from '@/store/flowStore';
 import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
 import { Toolbar, Pager, useListParams, applyListParams } from '@/components/DataTable';
+import { CreateDealDialog } from '@/components/CRM/CreateDealDialog';
+import { DealStage } from '@/lib/codes';
 import type { Deal } from '@/api/crmApi';
 
 export function MyRequestsPage({ onNavigate }: { onNavigate?: (t: string) => void }) {
@@ -15,6 +18,7 @@ export function MyRequestsPage({ onNavigate }: { onNavigate?: (t: string) => voi
   const { data: stages } = useDealStages();
   const formatCurrency = useCurrencyStore((s) => s.format);
   const setActiveDeal = useFlowStore((s) => s.setActiveDealId);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const listParams = useListParams(['stage'] as const, { defaultOrdering: '-created_at', pageSize: 15 });
   const myDeals = deals ?? [];
@@ -22,11 +26,12 @@ export function MyRequestsPage({ onNavigate }: { onNavigate?: (t: string) => voi
   // Counters computed directly from the same dataset the list renders — avoids
   // the "Completed: 1 but list shows 0 completed items" mismatch that page-stats
   // caused when the two endpoints disagreed on visibility.
+  const closed: string[] = [DealStage.CLOSED_WON, DealStage.CLOSED_LOST];
   const stats = [
-    { label: t('pages.myRequests.stats.active'), value: String(myDeals.filter((d) => !['CLOSED_WON', 'CLOSED_LOST'].includes(d.stage_code ?? '')).length) },
-    { label: t('pages.myRequests.stats.quoteReceived'), value: String(myDeals.filter((d) => d.stage_code === 'QUOTE_SENT').length) },
-    { label: t('pages.myRequests.stats.contract'), value: String(myDeals.filter((d) => d.stage_code === 'CONTRACT_SIGNED').length) },
-    { label: t('pages.myRequests.stats.completed'), value: String(myDeals.filter((d) => d.stage_code === 'CLOSED_WON').length) },
+    { label: t('pages.myRequests.stats.active'), value: String(myDeals.filter((d) => !closed.includes(d.stage_code ?? '')).length) },
+    { label: t('pages.myRequests.stats.quoteReceived'), value: String(myDeals.filter((d) => d.stage_code === DealStage.QUOTE_SENT).length) },
+    { label: t('pages.myRequests.stats.contract'), value: String(myDeals.filter((d) => d.stage_code === DealStage.CONTRACT_SIGNED).length) },
+    { label: t('pages.myRequests.stats.completed'), value: String(myDeals.filter((d) => d.stage_code === DealStage.CLOSED_WON).length) },
   ];
 
   const openDeal = (deal: Deal) => {
@@ -42,7 +47,7 @@ export function MyRequestsPage({ onNavigate }: { onNavigate?: (t: string) => voi
       description={t('pages.myRequests.description')}
       icon={<ShoppingCart className="h-5 w-5" />}
       stats={stats}
-      actions={[{ label: t('pages.myRequests.newRequest'), onClick: () => onNavigate?.('products') }]}
+      actions={[{ label: t('pages.myRequests.newRequest'), onClick: () => setCreateOpen(true) }]}
     >
       <Toolbar
         searchValue={listParams.searchInput}
@@ -74,7 +79,7 @@ export function MyRequestsPage({ onNavigate }: { onNavigate?: (t: string) => voi
           <EmptyState
             icon={<ShoppingCart className="h-5 w-5" />}
             message={t('pages.common.noData')}
-            action={{ label: t('pages.myRequests.newRequest'), onClick: () => onNavigate?.('products') }}
+            action={{ label: t('pages.myRequests.newRequest'), onClick: () => setCreateOpen(true) }}
           />
         );
         return (
@@ -116,6 +121,14 @@ export function MyRequestsPage({ onNavigate }: { onNavigate?: (t: string) => voi
           </>
         );
       })()}
+
+      {/* Create a заявка directly (catalog cart OR Excel-import path) instead of
+          dumping the buyer onto the (possibly empty) catalog. */}
+      <CreateDealDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onCreated={(dealId) => { setActiveDeal(dealId); onNavigate?.('request-detail'); }}
+      />
     </PageShell>
   );
 }
