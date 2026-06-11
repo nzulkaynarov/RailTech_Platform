@@ -180,3 +180,36 @@ def test_generate_contract_requires_seller(buyer):
     buyer_user, _ = buyer
     _, err = generate_contract_from_quote(999, actor=buyer_user)
     assert err == "MEMBER_REQUIRED_FOR_ACTION"
+
+
+# ── Tenant isolation regression (cross-tenant deal leak, 2026-06-11) ─────────
+# CompanyMember.can_sell DEFAULTS to True, so a CLIENT member has can_sell=True
+# out of the box. is_seller must NOT treat them as a seller, or they'd get the
+# "see all deals" queryset and read every other tenant's заявки.
+
+
+def test_client_with_default_can_sell_is_not_a_seller(buyer):
+    from accounts.services.permissions import is_seller
+
+    buyer_co = buyer[1]
+    # Mimic the real default: a CLIENT member with can_sell=True.
+    client_user = _member(buyer_co, "client-cansell@cl.test", can_sell=True, can_buy=True)
+    assert is_seller(client_user) is False
+
+
+def test_client_cannot_see_other_companies_deals(buyer, deal):
+    """The reported leak: a new client saw foreign заявки."""
+    other_co = Company.objects.create(name="Other Buyer LLC", inn="3300000099")
+    other_co.types.add(CompanyType.objects.get(code="CLIENT"))
+    other_client = _member(other_co, "other-buyer@cl.test", can_sell=True, can_buy=True)
+
+    resp = _api(other_client).get("/api/v1/crm/deals/")
+    ids = [d["id"] for d in (resp.data["results"] if isinstance(resp.data, dict) else resp.data)]
+    assert deal.id not in ids  # deal belongs to a DIFFERENT buyer company
+
+
+def test_real_seller_still_sees_all_deals(seller, deal):
+    """The fix must not break the legitimate seller's cross-deal visibility."""
+    resp = _api(seller[0]).get("/api/v1/crm/deals/")
+    ids = [d["id"] for d in (resp.data["results"] if isinstance(resp.data, dict) else resp.data)]
+    assert deal.id in ids

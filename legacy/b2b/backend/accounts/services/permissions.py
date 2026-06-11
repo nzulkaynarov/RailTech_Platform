@@ -1,7 +1,7 @@
 import logging
 from typing import Optional
 
-from ..constants import WorkspaceRoleCode
+from ..constants import SELLER_COMPANY_TYPES, WorkspaceRoleCode
 from ..models import CustomUser, SupplierSubscription
 
 logger = logging.getLogger(__name__)
@@ -34,25 +34,40 @@ def is_member_of(user: "CustomUser", company_id: int, *, capability: Optional[st
 
 
 def is_seller(user: "CustomUser") -> bool:
-    """True if the user is on the seller team — any active membership with can_sell.
+    """True if the user is on the seller team — an active can_sell membership in a
+    SELLER-type company (SUPPLIER / MANUFACTURER).
 
-    Single-seller model (today RailTech is the only seller): the seller operates
-    across ALL buyer заявки/deals to build КП, sign as manager, invoice, fulfill.
-    The seller is NOT a member of the buyer's deal.company, so seller-side authz
-    keys off this capability rather than deal-company membership. When multi-seller
-    lands, scope this per accepted SupplierBid instead of "sees everything".
+    CRITICAL: `can_sell` DEFAULTS TO TRUE on every CompanyMember, so checking
+    can_sell alone would make EVERY user (incl. brand-new CLIENTS) a "seller" and
+    grant them the cross-tenant "see all deals" queryset — a data leak. The
+    company-type filter is what keeps a client a client. Since the seller operates
+    across ALL buyer заявки/deals (single-seller model, RailTech) and is not a
+    member of the buyer's deal.company, seller-side authz keys off this rather than
+    deal-company membership. Multi-seller will scope per accepted SupplierBid.
     """
     if not user or not user.is_authenticated:
         return False
-    return user.memberships.filter(is_active=True, can_sell=True).exists()
+    return user.memberships.filter(
+        is_active=True,
+        can_sell=True,
+        company__types__code__in=SELLER_COMPANY_TYPES,
+    ).exists()
 
 
 def primary_seller_company_id(user: "CustomUser") -> Optional[int]:
     """The seller company to anchor Quote.prepared_by on (prefers the primary
-    membership). None if the user has no can_sell membership."""
+    membership). None if the user has no can_sell membership in a SELLER company."""
     if not user or not user.is_authenticated:
         return None
-    membership = user.memberships.filter(is_active=True, can_sell=True).order_by("-is_primary", "id").first()
+    membership = (
+        user.memberships.filter(
+            is_active=True,
+            can_sell=True,
+            company__types__code__in=SELLER_COMPANY_TYPES,
+        )
+        .order_by("-is_primary", "id")
+        .first()
+    )
     return membership.company_id if membership else None
 
 
