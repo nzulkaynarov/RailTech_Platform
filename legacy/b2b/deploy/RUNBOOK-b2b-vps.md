@@ -123,6 +123,14 @@ docker --version && docker compose version
 > iptables rules can't bypass ufw). Keep it that way — never publish a service to
 > `0.0.0.0`. Verify after first boot with: `ss -tlnp | grep -E '6379|6380|9000|8000'`
 > — every line must show `127.0.0.1:`.
+>
+> **Firewall must allow UDP 443 for Caddy HTTP/3 (QUIC).** Caddy advertises
+> `alt-svc: h3=":443"` and listens on UDP 443 by default; if ufw allows only
+> `443/tcp`, browsers cache the alt-svc, retry over QUIC, get their UDP packets
+> silently dropped, stall on the QUIC timeout, then fall back to TCP — the site
+> "opens on the tenth attempt". Open it: `ufw allow 443/udp` (and `443/tcp`).
+> If a region/ISP blocks UDP 443 outbound and flakiness persists, disable HTTP/3
+> instead via a Caddy global block: `{ servers { protocols h1 h2 } }`.
 
 ## 3. Clone the repo
 ```bash
