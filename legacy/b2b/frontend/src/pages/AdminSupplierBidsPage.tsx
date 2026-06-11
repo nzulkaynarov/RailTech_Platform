@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
-import { Gavel, Check, X, Eye } from 'lucide-react';
+import { Gavel, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
   Sheet,
@@ -9,12 +8,10 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
-import { translateApiError } from '@/lib/apiError';
-import { useSupplierBids, useAcceptBid, useRejectBid } from '@/hooks/useBidding';
+import { useSupplierBids } from '@/hooks/useBidding';
 import { AdminDataTable, useAdminTableQueryState } from '@/components/Admin/AdminDataTable';
 import { AdminDetailLayout } from '@/components/Admin/AdminDetailLayout';
 import { AdminActivityTimeline } from '@/components/Admin/AdminActivityTimeline';
-import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
 import { DetailKPIGrid } from '@/components/Admin/DetailKPIGrid';
 import { PageShell } from './shared/PageShell';
 import type { SupplierBid, SupplierBidStatus } from '@/api/biddingApi';
@@ -137,14 +134,7 @@ export function AdminSupplierBidsPage() {
   }, [tableState.tab]);
   const { data: allBids = [] } = useSupplierBids();
   const { data: bids = [], isLoading } = useSupplierBids(queryParams);
-  const acceptMut = useAcceptBid();
-  const rejectMut = useRejectBid();
-
   const [detail, setDetail] = useState<SupplierBid | null>(null);
-  const [confirm, setConfirm] = useState<null | {
-    kind: 'accept' | 'reject';
-    bid: SupplierBid;
-  }>(null);
 
   const counts = useMemo(
     () => ({
@@ -156,28 +146,6 @@ export function AdminSupplierBidsPage() {
     }),
     [allBids],
   );
-
-  async function runAccept(b: SupplierBid) {
-    try {
-      await acceptMut.mutateAsync(b.id);
-      toast.success(t('adminBids.accepted'));
-    } catch (e) {
-      toast.error(translateApiError(e));
-    } finally {
-      setConfirm(null);
-    }
-  }
-
-  async function runReject(b: SupplierBid, reason: string) {
-    try {
-      await rejectMut.mutateAsync({ id: b.id, reason });
-      toast.success(t('adminBids.rejected'));
-    } catch (e) {
-      toast.error(translateApiError(e));
-    } finally {
-      setConfirm(null);
-    }
-  }
 
   return (
     <PageShell
@@ -252,6 +220,8 @@ export function AdminSupplierBidsPage() {
             ),
           },
         ]}
+        // Accept/Reject is the BUYER's decision; the backend rejects the platform
+        // admin (ADMIN_VIEWER_CANNOT_ACT / NOT_AUTHORIZED_FOR_BID). Overview-only here.
         rowActions={[
           {
             id: 'view',
@@ -259,77 +229,9 @@ export function AdminSupplierBidsPage() {
             icon: <Eye className="h-3.5 w-3.5" />,
             onRun: (b) => setDetail(b),
           },
-          {
-            id: 'accept',
-            label: t('adminBids.accept'),
-            icon: <Check className="h-3.5 w-3.5 text-success" />,
-            onRun: (b) => {
-              if (b.status !== 'SUBMITTED') {
-                toast.error(t('adminBids.notSubmitted'));
-                return;
-              }
-              setConfirm({ kind: 'accept', bid: b });
-            },
-          },
-          {
-            id: 'reject',
-            label: t('adminBids.reject'),
-            icon: <X className="h-3.5 w-3.5 text-destructive" />,
-            variant: 'destructive',
-            onRun: (b) => {
-              if (b.status !== 'SUBMITTED') {
-                toast.error(t('adminBids.notSubmitted'));
-                return;
-              }
-              setConfirm({ kind: 'reject', bid: b });
-            },
-          },
         ]}
         emptyIcon={<Gavel className="h-5 w-5 text-muted-foreground" />}
         emptyTitle={t('adminBids.empty')}
-      />
-
-      <ConfirmActionDialog
-        open={confirm?.kind === 'accept'}
-        onOpenChange={(v) => !v && setConfirm(null)}
-        title={t('adminBids.confirmAcceptTitle')}
-        description={
-          confirm?.kind === 'accept'
-            ? t('adminBids.confirmAcceptDescription', {
-                id: confirm.bid.id,
-                supplier: confirm.bid.supplier_name,
-              })
-            : ''
-        }
-        confirmLabel={t('adminBids.accept')}
-        variant="primary"
-        onConfirm={() =>
-          confirm?.kind === 'accept' ? runAccept(confirm.bid) : Promise.resolve()
-        }
-      />
-      <ConfirmActionDialog
-        open={confirm?.kind === 'reject'}
-        onOpenChange={(v) => !v && setConfirm(null)}
-        title={t('adminBids.confirmRejectTitle')}
-        description={
-          confirm?.kind === 'reject'
-            ? t('adminBids.confirmRejectDescription', {
-                id: confirm.bid.id,
-                supplier: confirm.bid.supplier_name,
-              })
-            : ''
-        }
-        requireReason
-        reasonTemplates={[
-          t('adminBids.rejectTemplates.price'),
-          t('adminBids.rejectTemplates.leadTime'),
-          t('adminBids.rejectTemplates.other'),
-        ]}
-        confirmLabel={t('adminBids.reject')}
-        variant="destructive"
-        onConfirm={(p) =>
-          confirm?.kind === 'reject' ? runReject(confirm.bid, p.reason) : Promise.resolve()
-        }
       />
 
       <BidDetailSheet

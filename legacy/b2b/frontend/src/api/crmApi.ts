@@ -268,8 +268,8 @@ export const crmApi = {
 		const response = await apiClient.post<Quote>(`crm/quotes/${id}/approve/`);
 		return response.data;
 	},
-	rejectQuote: async (id: number) => {
-		const response = await apiClient.post<Quote>(`crm/quotes/${id}/reject/`);
+	rejectQuote: async (id: number, reason = '') => {
+		const response = await apiClient.post<Quote>(`crm/quotes/${id}/reject/`, { reason });
 		return response.data;
 	},
 	forceApproveQuote: async (id: number, reason: string) => {

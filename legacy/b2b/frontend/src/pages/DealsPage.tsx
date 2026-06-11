@@ -14,7 +14,7 @@ import { StatusBadge, getDealStageVariant } from '@/components/ui/StatusBadge';
 import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/DataTable';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useUserStore } from '@/store/userStore';
-import { useDeals, useDealStages } from '@/hooks/useCRM';
+import { useDeals, useDealStages, useChangeDealStage } from '@/hooks/useCRM';
 import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
 import { OpenRfqDialog } from '@/components/CRM/OpenRfqDialog';
 import { CreateDealDialog } from '@/components/CRM/CreateDealDialog';
@@ -43,6 +43,7 @@ function DealDetailSheet({
   const [rfqOpen, setRfqOpen] = useState(false);
   const [quoteOpen, setQuoteOpen] = useState(false);
   const [contractOpen, setContractOpen] = useState(false);
+  const changeStage = useChangeDealStage();
   if (!deal) return null;
 
   // Role split: opening the RFQ/заявка is a BUYER action; building the КП and
@@ -54,6 +55,11 @@ function DealDetailSheet({
   const stageCode = deal.stage_code ?? '';
   const quoteStatus = deal.active_quote?.status_code ?? '';
   const canOpenRfq = isBuyer && ([DealStage.DRAFT, DealStage.KYC_PENDING] as string[]).includes(stageCode);
+  // Seller "take into work": a fresh заявка lands in DRAFT; the seller advances it
+  // to SOURCING so the КП builder ("Создать КП") becomes available.
+  const canTakeIntoWork = isSeller
+    && !deal.active_quote
+    && ([DealStage.DRAFT, DealStage.KYC_PENDING, DealStage.RFQ_OPEN] as string[]).includes(stageCode);
   const canBuildQuote = isSeller
     && ([DealStage.SOURCING, DealStage.CALCULATING] as string[]).includes(stageCode)
     && !deal.active_quote;
@@ -119,6 +125,17 @@ function DealDetailSheet({
                 <Button size="sm" variant="outline" onClick={() => setRfqOpen(true)}>
                   <Gavel className="mr-2 h-4 w-4" />
                   {t('rfqDialog.open')}
+                </Button>
+              )}
+              {canTakeIntoWork && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={changeStage.isPending}
+                  onClick={() => changeStage.mutate({ id: deal.id, stage: DealStage.SOURCING })}
+                >
+                  <FileText className="mr-2 h-4 w-4" />
+                  {t('pages.deals.detail.takeIntoWork')}
                 </Button>
               )}
               {canBuildQuote && (

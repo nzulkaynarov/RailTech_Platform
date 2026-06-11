@@ -32,7 +32,7 @@ import type { Quote } from '@/api/crmApi';
 import { toast } from 'sonner';
 import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
 import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/DataTable';
-import { CreateQuoteDialog } from '@/components/CRM/CreateQuoteDialog';
+import { RejectQuoteDialog } from '@/components/CRM/RejectQuoteDialog';
 
 export function QuotesPage() {
   const { t } = useTranslation();
@@ -50,7 +50,7 @@ export function QuotesPage() {
   const quotesList = quotes ?? [];
   const { data: statuses } = useQuoteStatuses();
   const listParams = useListParams(['status'] as const, { defaultOrdering: '-created_at' });
-  const [createOpen, setCreateOpen] = useState(false);
+  const [rejectTarget, setRejectTarget] = useState<Quote | null>(null);
   const [forceApproveTarget, setForceApproveTarget] = useState<Quote | null>(null);
   const [forceApproveReason, setForceApproveReason] = useState('');
 
@@ -88,13 +88,11 @@ export function QuotesPage() {
     }
   };
 
-  const handleReject = async (id: number) => {
-    try {
-      await rejectQuote.mutateAsync(id);
-      toast.success(t('pages.quotes.toast.rejectedSuccess', { id }));
-    } catch {
-      /* error toast handled globally */
-    }
+  const handleReject = async (reason: string) => {
+    if (!rejectTarget) return;
+    await rejectQuote.mutateAsync({ id: rejectTarget.id, reason });
+    toast.success(t('pages.quotes.toast.rejectedSuccess', { id: rejectTarget.id }));
+    setRejectTarget(null);
   };
 
   const handleDownloadPDF = async (id: number) => {
@@ -147,7 +145,6 @@ export function QuotesPage() {
       description={description}
       icon={<Calculator className="h-5 w-5" />}
       stats={stats}
-      actions={isBuyer ? undefined : [{ label: t('pages.quotes.createQuote'), onClick: () => setCreateOpen(true) }]}
     >
       <Toolbar
         searchValue={listParams.searchInput}
@@ -238,7 +235,7 @@ export function QuotesPage() {
                                 <ThumbsUp className="mr-2 h-4 w-4" />
                                 {t('pages.quotes.actions.approve')}
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleReject(q.id)}>
+                              <DropdownMenuItem onClick={() => setRejectTarget(q)}>
                                 <ThumbsDown className="mr-2 h-4 w-4" />
                                 {t('pages.quotes.actions.reject')}
                               </DropdownMenuItem>
@@ -270,7 +267,12 @@ export function QuotesPage() {
           })()}
         </CardContent>
       </Card>
-      <CreateQuoteDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <RejectQuoteDialog
+        quoteId={rejectTarget?.id ?? null}
+        open={!!rejectTarget}
+        onOpenChange={(o) => !o && setRejectTarget(null)}
+        onConfirm={handleReject}
+      />
 
       <AlertDialog
         open={!!forceApproveTarget}
