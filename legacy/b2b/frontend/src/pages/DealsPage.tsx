@@ -21,6 +21,9 @@ import { CreateDealDialog } from '@/components/CRM/CreateDealDialog';
 import { GenerateQuoteDialog } from '@/components/CRM/GenerateQuoteDialog';
 import { DealsKanban } from '@/components/CRM/DealsKanban';
 import { GenerateContractDialog } from '@/components/CRM/GenerateContractDialog';
+import { QuoteBuilderGrid } from '@/components/Admin/QuoteBuilderGrid';
+import { QuoteApprovalChain } from '@/components/CRM/QuoteApprovalChain';
+import { DealStage, QuoteStatus } from '@/lib/codes';
 import type { Deal } from '@/api/crmApi';
 
 /* ─── Detail Sheet ─────────────────────────────────────────────────── */
@@ -48,11 +51,16 @@ function DealDetailSheet({
   // never see "Создать КП").
   const isBuyer = activeStatus === 'BUYER';
   const isSeller = !isBuyer; // SELLER / MANUFACTURER context (store filters by can_sell)
-  const canOpenRfq = isBuyer && ['DRAFT', 'KYC_PENDING'].includes(deal.stage_code ?? '');
+  const stageCode = deal.stage_code ?? '';
+  const quoteStatus = deal.active_quote?.status_code ?? '';
+  const canOpenRfq = isBuyer && ([DealStage.DRAFT, DealStage.KYC_PENDING] as string[]).includes(stageCode);
   const canBuildQuote = isSeller
-    && ['SOURCING', 'CALCULATING'].includes(deal.stage_code ?? '')
+    && ([DealStage.SOURCING, DealStage.CALCULATING] as string[]).includes(stageCode)
     && !deal.active_quote;
-  const approvedQuote = isSeller && deal.active_quote && ['APPROVED', 'SENT'].includes(deal.active_quote.status_code ?? '');
+  // The seller works the КП inline (builder + approval chain) whenever the deal has one.
+  const showQuoteWorkspace = isSeller && !!deal.active_quote;
+  const approvedQuote = isSeller && deal.active_quote
+    && ([QuoteStatus.APPROVED, QuoteStatus.SENT] as string[]).includes(quoteStatus);
 
   const rows = [
     { label: t('pages.deals.detail.client'), value: deal.client_name || deal.company_name },
@@ -65,7 +73,7 @@ function DealDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="overflow-y-auto sm:max-w-lg">
+      <SheetContent className={`overflow-y-auto ${showQuoteWorkspace ? 'sm:max-w-4xl' : 'sm:max-w-lg'}`}>
         <SheetHeader>
           <SheetTitle>{deal.title || `${t('pages.deals.deal')} #${deal.id}`}</SheetTitle>
           <SheetDescription>
@@ -105,7 +113,7 @@ function DealDetailSheet({
 
           <Separator />
           <section className="space-y-2">
-            <h3 className="text-sm font-semibold">{t('shell.billing')}</h3>
+            <h3 className="text-sm font-semibold">{t('pages.deals.detail.actions')}</h3>
             <div className="flex flex-wrap gap-2">
               {canOpenRfq && (
                 <Button size="sm" variant="outline" onClick={() => setRfqOpen(true)}>
@@ -127,6 +135,22 @@ function DealDetailSheet({
               )}
             </div>
           </section>
+
+          {/* Seller КП workspace — the approval chain + the line-item/price builder,
+              shown inline once the deal has a КП. This is where the seller actually
+              fills positions, sets margin, and runs документооборот. */}
+          {showQuoteWorkspace && deal.active_quote && (
+            <>
+              <Separator />
+              <section className="space-y-3">
+                <h3 className="text-sm font-semibold">{t('quote.title')}</h3>
+                <QuoteApprovalChain quote={deal.active_quote} />
+                <div className="h-[460px]">
+                  <QuoteBuilderGrid dealId={deal.id} />
+                </div>
+              </section>
+            </>
+          )}
         </div>
 
         <OpenRfqDialog

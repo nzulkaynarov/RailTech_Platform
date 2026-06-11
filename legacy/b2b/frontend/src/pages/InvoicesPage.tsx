@@ -27,6 +27,7 @@ import {
   useInvoices, useRecordPayment, useGenerateAct,
 } from '@/hooks/useBilling';
 import { useIsViewerMode } from '@/hooks/useViewerMode';
+import { useUserStore } from '@/store/userStore';
 import type { Invoice, InvoiceStatus } from '@/api/billingApi';
 
 const STATUS_VARIANT: Record<InvoiceStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -57,6 +58,8 @@ export function InvoicesPage() {
   const recordPayment = useRecordPayment();
   const generateAct = useGenerateAct();
   const isViewer = useIsViewerMode();
+  // Recording payment is a BUYER action; issuing the Act is a SELLER action.
+  const isBuyer = useUserStore((s) => s.activeStatus) === 'BUYER';
   const viewerTip = t('apiErrors.ADMIN_VIEWER_CANNOT_ACT');
 
   const stats = useMemo(() => {
@@ -235,7 +238,7 @@ export function InvoicesPage() {
                     </a>
                   </Button>
                 )}
-                {selected.status !== 'PAID' && selected.status !== 'CANCELLED' && (
+                {isBuyer && selected.status !== 'PAID' && selected.status !== 'CANCELLED' && (
                   <Button
                     onClick={() => setPayOpen(true)}
                     disabled={isViewer}
@@ -245,15 +248,17 @@ export function InvoicesPage() {
                     {t('invoicesPage.recordPayment')}
                   </Button>
                 )}
-                <Button
-                  variant="outline"
-                  onClick={onGenerateAct}
-                  disabled={generateAct.isPending || isViewer}
-                  title={isViewer ? viewerTip : undefined}
-                >
-                  <ScrollText className="mr-2 h-4 w-4" />
-                  {t('invoicesPage.generateAct')}
-                </Button>
+                {!isBuyer && (
+                  <Button
+                    variant="outline"
+                    onClick={onGenerateAct}
+                    disabled={generateAct.isPending || isViewer}
+                    title={isViewer ? viewerTip : undefined}
+                  >
+                    <ScrollText className="mr-2 h-4 w-4" />
+                    {t('invoicesPage.generateAct')}
+                  </Button>
+                )}
               </div>
               {selected.items?.length > 0 && (
                 <div>

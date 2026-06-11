@@ -44,7 +44,7 @@ export const QuoteApprovalQueue: React.FC<QuoteApprovalQueueProps> = ({ onNaviga
           <button
             key={quote.id}
             type="button"
-            onClick={() => onNavigate('deals')}
+            onClick={() => onNavigate('crm-deals')}
             className="flex items-center justify-between rounded-md border px-3 py-2 text-left transition-colors hover:bg-muted/50"
           >
             <div className="flex flex-col leading-tight">

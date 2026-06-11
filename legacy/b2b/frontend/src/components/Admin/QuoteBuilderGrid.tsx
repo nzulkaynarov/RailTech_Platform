@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { QuoteItem, crmApi } from '@/api/crmApi';
 import { Loader2, Save, FileDown, AlertTriangle, Plus, Trash2 } from 'lucide-react';
-import { useParams } from 'react-router-dom';
 import { useQuoteItems, useUpdateQuoteItem, useCreateQuoteItem, useDeleteQuoteItem, useDeal } from '@/hooks/useCRM';
 import { formatMoney, calculateLineTotal } from '@/utils/decimal';
 import { Button } from '@/components/ui/button';
@@ -28,8 +27,7 @@ interface QuoteBuilderGridProps {
 
 export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: propDealId, onSave }) => {
 	const { t } = useTranslation();
-	const { id: paramId } = useParams<{ id: string }>();
-	const dealId = propDealId || (paramId ? parseInt(paramId) : 0);
+	const dealId = propDealId || 0;
 
 	const { data: quoteItems = [], isLoading: itemsLoading } = useQuoteItems({ deal_id: dealId });
 	const { data: deal, isLoading: dealLoading } = useDeal(dealId);
