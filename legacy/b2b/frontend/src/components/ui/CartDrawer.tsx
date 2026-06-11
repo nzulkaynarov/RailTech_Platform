@@ -45,26 +45,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
             });
             if (!deal?.id) throw new Error('DEAL_CREATE_FAILED');
 
-            // 2. Create an initial draft Quote on the deal — QuoteItems need it
-            //    as FK. This is the same pattern used by the Excel import task.
-            const quote = await crmApi.createQuote({ deal: deal.id });
-
-            // 3. Create structured QuoteItems for every cart line so the
-            //    sales manager never has to re-type them and smart-match
-            //    works out-of-the-box.
-            await Promise.all(
-                items.map((item) =>
-                    crmApi.createQuoteItem({
-                        quote: quote.id,
-                        imported_raw_name: item.product.name,
-                        quantity: item.quantity,
-                        // Note: backend allows product via update; createQuoteItem
-                        // payload here doesn't include product yet — extend API
-                        // if product FK must be carried through on create.
-                    }),
-                ),
-            );
-
+            // The заявка is the Deal; the buyer's requested lines are captured in the
+            // deal notes above. Building the КП (Quote + priced items) is a SELLER
+            // action — the backend now blocks buyers from creating quotes/quote-items
+            // (ONLY_SELLER_CAN_BUILD_QUOTE), so the cart must NOT create them here.
             toast.success(t('cart.requestCreated', { id: deal.id }));
             if (onNavigate) {
                 setActiveDeal(deal.id);

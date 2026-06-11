@@ -61,6 +61,14 @@ export const useQuoteStatuses = () => useQuery({
   staleTime: 30 * 60_000,
 });
 
+export const useChangeDealStage = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, stage }: { id: number; stage: string }) => crmApi.changeDealStage(id, stage),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['deals'] }),
+  });
+};
+
 export const useForceChangeDealStage = () => {
   const qc = useQueryClient();
   return useMutation({

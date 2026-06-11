@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFlowStore } from '@/store/flowStore';
+import { QuoteStatus } from '@/lib/codes';
 import { useUserStore } from '@/store/userStore';
 import { ArrowLeft, Send, Calculator, ThumbsUp, ThumbsDown, User, Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -115,7 +116,10 @@ export function RequestDetailPage({ onBack }: { onBack: () => void; onNavigate: 
                     {t('requestDetailActions.startCalculation')}
                   </Button>
                 )}
-                {isSellerSide && isCalculating && quote && (
+                {/* Only an internally-approved КП can be sent (backend requires
+                    READY_TO_SEND). Getting there is done via the approval chain on
+                    the Deals page; this stays disabled until then. */}
+                {isSellerSide && quote?.status_code === QuoteStatus.READY_TO_SEND && (
                   <Button
                     variant="default"
                     onClick={() => sendQuoteToClient(quote.id)}

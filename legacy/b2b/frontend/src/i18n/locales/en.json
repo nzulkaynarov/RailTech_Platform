@@ -2526,7 +2526,8 @@
         "created": "Created",
         "updated": "Updated",
         "notes": "Notes",
-        "actions": "Actions"
+        "actions": "Actions",
+        "takeIntoWork": "Take into work"
       },
       "newDeal": "New deal",
       "daysInStage": "days in stage",
