@@ -16,9 +16,15 @@ export const toDecimal = (value: string | number | undefined | null): Decimal =>
 
 export const formatMoney = (value: string | number | undefined | null, currency = 'USD'): string => {
   const amount = toDecimal(value).toNumber();
+  // Guard against empty/malformed currency codes (e.g. a КП item with an unset
+  // frozen_currency). Intl.NumberFormat throws RangeError "currency is not a
+  // well-formed currency code" for anything that isn't an ISO-4217 3-letter code —
+  // the default param only covers `undefined`, NOT `''`. Fall back to USD.
+  const code = (typeof currency === 'string' ? currency : '').trim().toUpperCase();
+  const safeCode = /^[A-Z]{3}$/.test(code) ? code : 'USD';
   return new Intl.NumberFormat('uz-UZ', {
     style: 'currency',
-    currency: currency,
+    currency: safeCode,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(amount);
