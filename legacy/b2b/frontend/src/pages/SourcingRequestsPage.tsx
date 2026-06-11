@@ -8,9 +8,10 @@ import { useCurrencyStore } from '@/store/currencyStore';
 import { useFlowStore } from '@/store/flowStore';
 import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
 import { Toolbar, Pager, useListParams, applyListParams } from '@/components/DataTable';
+import { DealStage } from '@/lib/codes';
 import type { Deal } from '@/api/crmApi';
 
-const SOURCING_STAGES = new Set(['SOURCING', 'CALCULATING', 'DRAFT']);
+const SOURCING_STAGES = new Set<string>([DealStage.SOURCING, DealStage.CALCULATING, DealStage.DRAFT]);
 
 export function SourcingRequestsPage({ onNavigate }: { onNavigate?: (t: string) => void }) {
   const { t } = useTranslation();
@@ -33,9 +34,9 @@ export function SourcingRequestsPage({ onNavigate }: { onNavigate?: (t: string) 
       icon={<ClipboardList className="h-5 w-5" />}
       stats={[
         { label: t('pages.sourcingRequests.stats.total'), value: String(sourcingStats?.total ?? sourcingDeals.length) },
-        { label: t('pages.sourcingRequests.stats.new'), value: String(sourcingStats?.new ?? sourcingDeals.filter(d => d.stage_code === 'DRAFT').length) },
-        { label: t('pages.sourcingRequests.stats.inProgress'), value: String(sourcingStats?.in_progress ?? sourcingDeals.filter(d => d.stage_code === 'SOURCING').length) },
-        { label: t('pages.sourcingRequests.stats.completed'), value: String(sourcingStats?.completed ?? sourcingDeals.filter(d => d.stage_code === 'CALCULATING').length) },
+        { label: t('pages.sourcingRequests.stats.new'), value: String(sourcingStats?.new ?? sourcingDeals.filter(d => d.stage_code === DealStage.DRAFT).length) },
+        { label: t('pages.sourcingRequests.stats.inProgress'), value: String(sourcingStats?.in_progress ?? sourcingDeals.filter(d => d.stage_code === DealStage.SOURCING).length) },
+        { label: t('pages.sourcingRequests.stats.completed'), value: String(sourcingStats?.completed ?? sourcingDeals.filter(d => d.stage_code === DealStage.CALCULATING).length) },
       ]}
       actions={[{ label: t('pages.sourcingRequests.createRequest'), onClick: () => onNavigate?.('products') }]}
     >

@@ -8,7 +8,10 @@ import { Users, Check, Clock } from 'lucide-react';
 import { useCompanies } from '@/hooks/useAccounts';
 import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
 import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/DataTable';
+import { VerificationStatus } from '@/lib/codes';
 import type { Company } from '@/api/accountsApi';
+
+const VERIFIED_CODES: string[] = [VerificationStatus.L2_VERIFIED, VerificationStatus.L3_CONTRACTED];
 
 const KYC_OPTIONS = [
   { value: 'L1_UNVERIFIED', labelKey: 'kycManager.status.P_PENDING' },
@@ -29,9 +32,9 @@ export function ClientsPage() {
       icon={<Users className="h-5 w-5" />}
       stats={[
         { label: t('pages.clients.stats.total'), value: String(companies?.length ?? 0) },
-        { label: t('pages.clients.stats.verified'), value: String(companies?.filter(c => c.verification_status_code === 'L2_VERIFIED' || c.verification_status_code === 'L3_CONTRACTED').length ?? 0) },
-        { label: t('pages.clients.stats.awaitingKyc'), value: String(companies?.filter(c => c.verification_status_code === 'PROFILE_SUBMITTED').length ?? 0) },
-        { label: t('pages.clients.stats.guests'), value: String(companies?.filter(c => c.verification_status_code === 'L1_UNVERIFIED').length ?? 0) },
+        { label: t('pages.clients.stats.verified'), value: String(companies?.filter(c => VERIFIED_CODES.includes(c.verification_status_code ?? '')).length ?? 0) },
+        { label: t('pages.clients.stats.awaitingKyc'), value: String(companies?.filter(c => c.verification_status_code === VerificationStatus.PROFILE_SUBMITTED).length ?? 0) },
+        { label: t('pages.clients.stats.guests'), value: String(companies?.filter(c => c.verification_status_code === VerificationStatus.L1_UNVERIFIED).length ?? 0) },
       ]}
     >
       <Toolbar
@@ -83,8 +86,8 @@ export function ClientsPage() {
                     <TableCell className="font-medium">{company.name}</TableCell>
                     <TableCell className="font-mono text-xs text-muted-foreground">{company.inn}</TableCell>
                     <TableCell>
-                      <Badge variant={company.verification_status_code === 'L2_VERIFIED' || company.verification_status_code === 'L3_CONTRACTED' ? 'default' : 'secondary'} className="gap-1">
-                        {company.verification_status_code === 'L2_VERIFIED' || company.verification_status_code === 'L3_CONTRACTED'
+                      <Badge variant={VERIFIED_CODES.includes(company.verification_status_code ?? '') ? 'default' : 'secondary'} className="gap-1">
+                        {VERIFIED_CODES.includes(company.verification_status_code ?? '')
                           ? <><Check className="h-3 w-3" /> {t('pages.clients.kycStatus.verified')}</>
                           : <><Clock className="h-3 w-3" /> {t('pages.clients.kycStatus.pending')}</>}
                       </Badge>

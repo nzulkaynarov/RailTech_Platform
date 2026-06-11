@@ -10,7 +10,6 @@ import {
   Factory,
   Layers,
   ClipboardList,
-  Users,
   User,
   LogOut,
   ChevronUp,
@@ -18,8 +17,6 @@ import {
   Calculator,
   Handshake,
   Check,
-  ShieldCheck,
-  CreditCard,
   Receipt,
   Gavel,
 } from 'lucide-react';
@@ -67,7 +64,6 @@ import { useTranslation } from 'react-i18next';
 import {
   useUserStore,
   type CompanyStatus,
-  type UserRole,
 } from '@/store/userStore';
 import { useCartStore, useCartCount } from '@/store/cartStore';
 import { useCurrencyStore } from '@/store/currencyStore';
@@ -99,7 +95,7 @@ interface NavItem {
 
 type TFn = (key: string) => string;
 
-function getBuyerNavigation(activePage: string, role: UserRole, t: TFn): NavItem[] {
+function getBuyerNavigation(activePage: string, t: TFn): NavItem[] {
   const items: NavItem[] = [
     { label: t('shell.dashboard'), icon: <LayoutDashboard className="h-4 w-4" />, id: 'dashboard', active: activePage === 'dashboard' },
     { label: t('shell.catalog'), icon: <Package className="h-4 w-4" />, id: 'products', active: activePage === 'products' },
@@ -120,15 +116,13 @@ function getBuyerNavigation(activePage: string, role: UserRole, t: TFn): NavItem
       ],
     },
   ];
-  // HIGH-11: BuyerAnalytics is an empty page — show it only to mgr/admin.
-  if (role === 'ADMIN') {
-    items.push({ label: t('shell.clients'), icon: <Users className="h-4 w-4" />, id: 'crm-clients', active: activePage === 'crm-clients' });
-    items.push({ label: t('shell.analytics'), icon: <BarChart3 className="h-4 w-4" />, id: 'analytics', active: activePage === 'analytics' });
-  }
+  // (Buyers don't have "Clients"; BuyerAnalytics is an empty page — the dead
+  // role==='ADMIN' branch that used to add them was unreachable: admins use
+  // PlatformAdminShell, never AppShell.)
   return items;
 }
 
-function getManufacturerNavigation(activePage: string, role: UserRole, t: TFn): NavItem[] {
+function getManufacturerNavigation(activePage: string, t: TFn): NavItem[] {
   const items: NavItem[] = [
     { label: t('shell.dashboard'), icon: <LayoutDashboard className="h-4 w-4" />, id: 'dashboard', active: activePage === 'dashboard' },
     {
@@ -166,16 +160,10 @@ function getManufacturerNavigation(activePage: string, role: UserRole, t: TFn): 
       ],
     },
   ];
-  // CRIT-4: MFG with MANAGER role needs full CRM access (Clients, Leads).
-  if (role === 'ADMIN') {
-    items.push({ label: t('shell.clients'), icon: <Users className="h-4 w-4" />, id: 'crm-clients', active: activePage === 'crm-clients' });
-    items.push({ label: t('shell.leads'), icon: <ClipboardList className="h-4 w-4" />, id: 'leads', active: activePage === 'leads' });
-    items.push({ label: t('shell.productionAnalytics'), icon: <BarChart3 className="h-4 w-4" />, id: 'analytics', active: activePage === 'analytics' });
-  }
   return items;
 }
 
-function getSellerNavigation(activePage: string, role: UserRole, t: TFn): NavItem[] {
+function getSellerNavigation(activePage: string, t: TFn): NavItem[] {
   const items: NavItem[] = [
     { label: t('shell.dashboard'), icon: <LayoutDashboard className="h-4 w-4" />, id: 'dashboard', active: activePage === 'dashboard' },
     {
@@ -217,46 +205,29 @@ function getSellerNavigation(activePage: string, role: UserRole, t: TFn): NavIte
       ],
     },
   ];
-  if (role === 'ADMIN') {
-    items.push({ label: t('shell.salesAnalytics'), icon: <BarChart3 className="h-4 w-4" />, id: 'analytics', active: activePage === 'analytics' });
-  }
+  // The seller team gets sales analytics (was gated behind a dead role==='ADMIN'
+  // branch, so the seller never actually saw it).
+  items.push({ label: t('shell.salesAnalytics'), icon: <BarChart3 className="h-4 w-4" />, id: 'analytics', active: activePage === 'analytics' });
   return items;
 }
 
-function getNavigation(status: CompanyStatus, activePage: string, role: UserRole, t: TFn): NavItem[] {
+function getNavigation(status: CompanyStatus, activePage: string, t: TFn): NavItem[] {
   switch (status) {
-    case 'BUYER': return getBuyerNavigation(activePage, role, t);
-    case 'MANUFACTURER': return getManufacturerNavigation(activePage, role, t);
-    case 'SELLER': return getSellerNavigation(activePage, role, t);
-    default: return getSellerNavigation(activePage, role, t);
+    case 'BUYER': return getBuyerNavigation(activePage, t);
+    case 'MANUFACTURER': return getManufacturerNavigation(activePage, t);
+    case 'SELLER': return getSellerNavigation(activePage, t);
+    default: return getSellerNavigation(activePage, t);
   }
 }
 
-function getBottomNavigation(role: UserRole, activePage: string, t: TFn): NavItem[] {
-  const items: NavItem[] = [
+// AppShell never renders for a platform admin (App.tsx routes ADMIN to
+// PlatformAdminShell), so the bottom nav is just settings + help — the old
+// role==='ADMIN' admin-* block here was dead code.
+function getBottomNavigation(t: TFn): NavItem[] {
+  return [
     { label: t('shell.settings'), icon: <Settings className="h-4 w-4" />, id: 'settings' },
+    { label: t('shell.help'), icon: <HelpCircle className="h-4 w-4" />, id: 'help' },
   ];
-  if (role === 'ADMIN') {
-    items.push({ label: t('shell.users'), icon: <Users className="h-4 w-4" />, id: 'admin-users' });
-    items.push({ label: t('shell.companies'), icon: <Store className="h-4 w-4" />, id: 'admin-companies' });
-    items.push({ label: t('shell.kyc'), icon: <ShieldCheck className="h-4 w-4" />, id: 'admin-kyc' });
-    items.push({ label: t('shell.subscriptions'), icon: <CreditCard className="h-4 w-4" />, id: 'admin-subscriptions' });
-    items.push({ label: t('shell.roleApplications'), icon: <ClipboardList className="h-4 w-4" />, id: 'admin-role-apps' });
-    items.push({ label: t('shell.adminDeals'), icon: <Handshake className="h-4 w-4" />, id: 'admin-deals' });
-    items.push({ label: t('shell.masterData'), icon: <Layers className="h-4 w-4" />, id: 'admin-master-data' });
-    items.push({
-      label: t('shell.adminCatalog'),
-      icon: <Package className="h-4 w-4" />,
-      children: [
-        { label: t('shell.adminCatalogProducts'), id: 'admin-catalog', active: activePage === 'admin-catalog' },
-        { label: t('shell.adminCatalogCategories'), id: 'admin-categories', active: activePage === 'admin-categories' },
-        { label: t('shell.adminCatalogGroups'), id: 'admin-equipment-groups', active: activePage === 'admin-equipment-groups' },
-        { label: t('shell.adminCatalogOffers'), id: 'admin-offers', active: activePage === 'admin-offers' },
-      ],
-    });
-  }
-  items.push({ label: t('shell.help'), icon: <HelpCircle className="h-4 w-4" />, id: 'help' });
-  return items;
 }
 
 /* ─── Status icon helper ────────────────────────────────────────────── */
@@ -413,9 +384,9 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
   const sidebarCollapsed = state === 'collapsed';
   // Platform admins aren't business actors; their company's KYC must not disable
   // admin navigation (see ADR-0002). For all other roles we keep the gating.
-  const isKycVerified = role === 'ADMIN' || company.kycStatus === 'verified';
-  const navigation = useMemo(() => getNavigation(activeStatus, activePage, role, t), [activeStatus, activePage, role, t]);
-  const bottomNav = useMemo(() => getBottomNavigation(role, activePage, t), [role, activePage, t]);
+  const isKycVerified = company.kycStatus === 'verified';
+  const navigation = useMemo(() => getNavigation(activeStatus, activePage, t), [activeStatus, activePage, t]);
+  const bottomNav = useMemo(() => getBottomNavigation(t), [t]);
 
 
   return (
