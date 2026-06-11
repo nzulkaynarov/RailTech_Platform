@@ -63,3 +63,10 @@ export const CompanyType = {
   SUPPLIER: 'SUPPLIER',
   MANUFACTURER: 'MANUFACTURER',
 } as const;
+
+export const VerificationStatus = {
+  L1_UNVERIFIED: 'L1_UNVERIFIED',
+  PROFILE_SUBMITTED: 'PROFILE_SUBMITTED',
+  L2_VERIFIED: 'L2_VERIFIED',
+  L3_CONTRACTED: 'L3_CONTRACTED',
+} as const;

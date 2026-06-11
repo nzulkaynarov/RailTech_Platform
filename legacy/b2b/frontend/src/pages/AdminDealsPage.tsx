@@ -17,7 +17,10 @@ import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
 import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
 import { useDeals, useDealStages, useForceChangeDealStage, useDeleteDeal } from '@/hooks/useCRM';
 import { useCompanies } from '@/hooks/useAccounts';
+import { DealStage } from '@/lib/codes';
 import type { Deal } from '@/api/crmApi';
+
+const CLOSED_STAGES: string[] = [DealStage.CLOSED_WON, DealStage.CLOSED_LOST];
 
 export function AdminDealsPage() {
   const { t } = useTranslation();
@@ -57,9 +60,9 @@ export function AdminDealsPage() {
 
   const stats = [
     { label: t('adminDeals.stats.total'), value: String(deals?.length ?? '—') },
-    { label: t('adminDeals.stats.open'), value: String(deals?.filter((d) => !['CLOSED_WON', 'CLOSED_LOST'].includes(d.stage_code ?? '')).length ?? '—') },
-    { label: t('adminDeals.stats.won'), value: String(deals?.filter((d) => d.stage_code === 'CLOSED_WON').length ?? '—') },
-    { label: t('adminDeals.stats.lost'), value: String(deals?.filter((d) => d.stage_code === 'CLOSED_LOST').length ?? '—') },
+    { label: t('adminDeals.stats.open'), value: String(deals?.filter((d) => !CLOSED_STAGES.includes(d.stage_code ?? '')).length ?? '—') },
+    { label: t('adminDeals.stats.won'), value: String(deals?.filter((d) => d.stage_code === DealStage.CLOSED_WON).length ?? '—') },
+    { label: t('adminDeals.stats.lost'), value: String(deals?.filter((d) => d.stage_code === DealStage.CLOSED_LOST).length ?? '—') },
   ];
 
   const targetStageName = stages?.find((s) => s.code === targetStage)?.name ?? '';

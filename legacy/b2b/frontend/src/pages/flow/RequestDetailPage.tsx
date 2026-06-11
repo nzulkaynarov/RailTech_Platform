@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFlowStore } from '@/store/flowStore';
-import { QuoteStatus } from '@/lib/codes';
+import { QuoteStatus, DealStage } from '@/lib/codes';
 import { useUserStore } from '@/store/userStore';
 import { ArrowLeft, Send, Calculator, ThumbsUp, ThumbsDown, User, Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -37,11 +37,11 @@ export function RequestDetailPage({ onBack }: { onBack: () => void; onNavigate: 
   if (loading && !deal) return <LoadingSkeleton />;
   if (!deal) return <div className="p-8 text-center text-muted-foreground">{t('pages.common.noData')}</div>;
 
-  const isDraft = deal.stage_code === 'DRAFT';
-  const isSourcing = deal.stage_code === 'SOURCING';
-  const isCalculating = deal.stage_code === 'CALCULATING';
-  const isQuoteSent = deal.stage_code === 'QUOTE_SENT';
-  const isWon = deal.stage_code === 'CLOSED_WON' || deal.stage_code === 'CONTRACT_SIGNED';
+  const isDraft = deal.stage_code === DealStage.DRAFT;
+  const isSourcing = deal.stage_code === DealStage.SOURCING;
+  const isCalculating = deal.stage_code === DealStage.CALCULATING;
+  const isQuoteSent = deal.stage_code === DealStage.QUOTE_SENT;
+  const isWon = deal.stage_code === DealStage.CLOSED_WON || deal.stage_code === DealStage.CONTRACT_SIGNED;
 
   return (
     <div className="flex gap-4">
@@ -98,7 +98,7 @@ export function RequestDetailPage({ onBack }: { onBack: () => void; onNavigate: 
                 {isSellerSide && isDraft && (
                   <Button
                     variant="default"
-                    onClick={() => changeDealStage(deal.id, 'SOURCING')}
+                    onClick={() => changeDealStage(deal.id, DealStage.SOURCING)}
                     disabled={isViewer}
                     title={isViewer ? viewerTip : undefined}
                   >
@@ -108,7 +108,7 @@ export function RequestDetailPage({ onBack }: { onBack: () => void; onNavigate: 
                 {isSellerSide && isSourcing && (
                   <Button
                     variant="default"
-                    onClick={() => changeDealStage(deal.id, 'CALCULATING')}
+                    onClick={() => changeDealStage(deal.id, DealStage.CALCULATING)}
                     disabled={isViewer}
                     title={isViewer ? viewerTip : undefined}
                   >
