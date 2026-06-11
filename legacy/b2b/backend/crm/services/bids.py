@@ -4,6 +4,7 @@ from django.db import transaction
 
 from accounts.models import CustomUser
 
+from ..constants import DealStageCode
 from ..models import Deal
 from ._params import BidSubmission
 from .deals import transition_deal_stage
@@ -47,7 +48,7 @@ def submit_supplier_bid(
     if is_platform_admin_viewer(submitted_by):
         return None, "ADMIN_VIEWER_CANNOT_ACT"
     deal = Deal.objects.get(pk=deal_id)
-    if deal.stage and deal.stage.code not in {"RFQ_OPEN"}:
+    if deal.stage and deal.stage.code not in {DealStageCode.RFQ_OPEN}:
         return None, "BID_ONLY_IN_RFQ_OPEN"
     is_superuser = getattr(submitted_by, "is_superuser", False)
     # Security: user must be active member of the supplier company with can_sell.
@@ -145,7 +146,7 @@ def accept_supplier_bid(
         )
         .update(status="REJECTED")
     )
-    transition_deal_stage(bid.deal, "CALCULATING", actor=actor, reason=f"Принят bid #{bid.id}")
+    transition_deal_stage(bid.deal, DealStageCode.CALCULATING, actor=actor, reason=f"Принят bid #{bid.id}")
 
     from core.audit import log_admin_action
 

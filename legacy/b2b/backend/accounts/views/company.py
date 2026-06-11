@@ -8,6 +8,7 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 
 from accounts import services
+from accounts.constants import SELLER_COMPANY_TYPES, VerificationStatusCode, WorkspaceRoleCode
 from accounts.models import Company, CompanyMember, CustomUser
 from accounts.serializers import CompanySerializer, KYCDocumentSerializer, KYCVerificationSerializer, UserSerializer
 from core.permissions import IsPlatformAdmin
@@ -113,8 +114,8 @@ class CompanyViewSet(viewsets.ModelViewSet):
         """
         verified_suppliers = (
             Company.objects.filter(
-                types__code__in=["SUPPLIER", "MANUFACTURER"],
-                verification_status__code="L2_VERIFIED",
+                types__code__in=SELLER_COMPANY_TYPES,
+                verification_status__code=VerificationStatusCode.L2_VERIFIED,
             )
             .distinct()
             .order_by("name")
@@ -155,7 +156,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
             user=user,
             company=company,
             is_active=True,
-            role__code="OWNER",
+            role__code=WorkspaceRoleCode.OWNER,
         ).exists()
         if not is_owner:
             raise exceptions.PermissionDenied("ONLY_COMPANY_OWNER_OR_ADMIN")
@@ -266,7 +267,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
     )
     def bulk_verify_kyc(self, request):
         ids = request.data.get("ids") or []
-        level = request.data.get("level") or "L2_VERIFIED"
+        level = request.data.get("level") or VerificationStatusCode.L2_VERIFIED
         reason = (request.data.get("reason") or "").strip()
         if not isinstance(ids, list) or not ids:
             return Response({"detail": "ids (non-empty list) is required"}, status=status.HTTP_400_BAD_REQUEST)
@@ -427,7 +428,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
                 user=request.user,
                 company=company,
                 is_active=True,
-                role__code="OWNER",
+                role__code=WorkspaceRoleCode.OWNER,
             ).exists()
             if not owner_membership:
                 return Response({"detail": "ONLY_OWNER_CAN_DISTRIBUTE_CAPABILITIES"}, status=status.HTTP_403_FORBIDDEN)
@@ -489,7 +490,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
             .first()
         )
 
-        if not membership or membership.role.code != "OWNER":
+        if not membership or membership.role.code != WorkspaceRoleCode.OWNER:
             is_staff = request.user.is_platform_admin
             if not is_staff:
                 return Response({"detail": "ONLY_COMPANY_OWNER_CAN_INVITE"}, status=status.HTTP_403_FORBIDDEN)

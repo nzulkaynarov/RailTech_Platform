@@ -6,6 +6,7 @@ from django.db.models import QuerySet
 
 from notifications.emails import send_templated_email
 
+from ..constants import VerificationStatusCode
 from ..models import Company, CustomUser, VerificationStatus
 
 logger = logging.getLogger(__name__)
@@ -14,7 +15,7 @@ logger = logging.getLogger(__name__)
 def verify_company_kyc(
     company: Company,
     approver: CustomUser,
-    level_code: str = "L2_VERIFIED",
+    level_code: str = VerificationStatusCode.L2_VERIFIED,
     require_documents: bool = True,
     reason: str = "",
 ) -> Tuple[Optional[Company], Optional[str]]:
@@ -32,12 +33,14 @@ def verify_company_kyc(
 
     # Downgrades/revokes must carry a reason for audit purposes.
     LEVEL_RANK = {
-        "L1_UNVERIFIED": 0,
-        "PROFILE_SUBMITTED": 1,
-        "L2_VERIFIED": 2,
-        "L3_CONTRACTED": 3,
+        VerificationStatusCode.L1_UNVERIFIED: 0,
+        VerificationStatusCode.PROFILE_SUBMITTED: 1,
+        VerificationStatusCode.L2_VERIFIED: 2,
+        VerificationStatusCode.L3_CONTRACTED: 3,
     }
-    current_code = company.verification_status.code if company.verification_status_id else "L1_UNVERIFIED"
+    current_code = (
+        company.verification_status.code if company.verification_status_id else VerificationStatusCode.L1_UNVERIFIED
+    )
     is_downgrade = LEVEL_RANK.get(level_code, 0) < LEVEL_RANK.get(current_code, 0)
     if is_downgrade and not (reason or "").strip():
         return None, "REASON_REQUIRED"
@@ -51,7 +54,7 @@ def verify_company_kyc(
     # Keep the denormalised is_verified flag consistent with the status — L2+ is
     # "verified". Without this the /me/ payload could show is_verified=False next
     # to verification_status_code="L2_VERIFIED" (checkup 2026-06-10).
-    company.is_verified = LEVEL_RANK.get(level_code, 0) >= LEVEL_RANK["L2_VERIFIED"]
+    company.is_verified = LEVEL_RANK.get(level_code, 0) >= LEVEL_RANK[VerificationStatusCode.L2_VERIFIED]
     company.save(update_fields=["verification_status", "is_verified"])
 
     from core.audit import log_admin_action
@@ -131,7 +134,7 @@ def _create_kyc_notification(company: Company, level_code: str) -> None:
 def bulk_verify_kyc(
     companies: QuerySet[Company],
     approver: CustomUser,
-    level_code: str = "L2_VERIFIED",
+    level_code: str = VerificationStatusCode.L2_VERIFIED,
     reason: str = "",
 ) -> Tuple[int, List[dict]]:
     """

@@ -8,7 +8,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from accounts.constants import CompanyTypeCode
 from core.permissions import IsPlatformAdmin
+from crm.constants import DealStageCode, QuoteStatusCode
 from crm.models import Deal, Quote
 
 
@@ -116,8 +118,9 @@ class DashboardAnalyticsView(APIView):
             "total"
         ] or Decimal("0")
 
-        current_active = all_deals.exclude(stage__code__in=["CLOSED_WON", "CLOSED_LOST"]).count()
-        prev_active = prev_period_deals.exclude(stage__code__in=["CLOSED_WON", "CLOSED_LOST"]).count()
+        closed = [DealStageCode.CLOSED_WON, DealStageCode.CLOSED_LOST]
+        current_active = all_deals.exclude(stage__code__in=closed).count()
+        prev_active = prev_period_deals.exclude(stage__code__in=closed).count()
 
         return {
             "deals_volume": float(current_volume),
@@ -147,7 +150,7 @@ class DashboardAnalyticsView(APIView):
         """Compute client counts with period-over-period change."""
         from accounts.models import Company, CompanyType
 
-        client_type = CompanyType.objects.filter(code="CLIENT").first()
+        client_type = CompanyType.objects.filter(code=CompanyTypeCode.CLIENT).first()
         if client_type:
             current_clients = Company.objects.filter(types=client_type).distinct().count()
             prev_clients = (
@@ -173,7 +176,7 @@ class DashboardAnalyticsView(APIView):
 
         type_counts = dict(
             Company.objects.filter(
-                types__code__in=["MANUFACTURER", "CLIENT", "SUPPLIER"],
+                types__code__in=[CompanyTypeCode.MANUFACTURER, CompanyTypeCode.CLIENT, CompanyTypeCode.SUPPLIER],
             )
             .values_list("types__code")
             .annotate(
@@ -182,9 +185,9 @@ class DashboardAnalyticsView(APIView):
             .values_list("types__code", "count")
         )
         return {
-            "manufacturers": type_counts.get("MANUFACTURER", 0),
-            "buyers": type_counts.get("CLIENT", 0),
-            "intermediaries": type_counts.get("SUPPLIER", 0),
+            "manufacturers": type_counts.get(CompanyTypeCode.MANUFACTURER, 0),
+            "buyers": type_counts.get(CompanyTypeCode.CLIENT, 0),
+            "intermediaries": type_counts.get(CompanyTypeCode.SUPPLIER, 0),
         }
 
     @staticmethod
@@ -193,7 +196,7 @@ class DashboardAnalyticsView(APIView):
         quotes_qs = Quote.objects.all()
         if user_company_ids is not None:
             quotes_qs = quotes_qs.filter(deal__company_id__in=user_company_ids)
-        completed = quotes_qs.filter(status__code__in=["APPROVED", "SENT"]).count()
+        completed = quotes_qs.filter(status__code__in=[QuoteStatusCode.APPROVED, QuoteStatusCode.SENT]).count()
         total = quotes_qs.count()
         pct = (completed / total * 100) if total > 0 else 0
         return {"request_completion": round(pct, 1)}
@@ -202,9 +205,13 @@ class DashboardAnalyticsView(APIView):
     def _get_buyer_stats(all_deals) -> dict:
         """Buyer-specific stage counts."""
         return {
-            "deals_in_progress": all_deals.filter(stage__code__in=["SOURCING", "CALCULATING"]).count(),
-            "quotes_received": all_deals.filter(stage__code="QUOTE_SENT").count(),
-            "deals_completed": all_deals.filter(stage__code__in=["CLOSED_WON", "CONTRACT_SIGNED"]).count(),
+            "deals_in_progress": all_deals.filter(
+                stage__code__in=[DealStageCode.SOURCING, DealStageCode.CALCULATING]
+            ).count(),
+            "quotes_received": all_deals.filter(stage__code=DealStageCode.QUOTE_SENT).count(),
+            "deals_completed": all_deals.filter(
+                stage__code__in=[DealStageCode.CLOSED_WON, DealStageCode.CONTRACT_SIGNED]
+            ).count(),
         }
 
     def _calculate_percentage_change(self, previous, current):
