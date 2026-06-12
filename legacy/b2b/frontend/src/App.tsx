@@ -5,7 +5,6 @@ import { toast } from 'sonner';
 import { AppShell } from './layouts/AppShell';
 import { PlatformAdminShell } from './layouts/PlatformAdminShell';
 import { ErrorBoundary } from './components/Shared/ErrorBoundary';
-import { FABSupportButton } from './components/Shared/FABSupportButton';
 import { OnboardingTour } from './components/Shared/OnboardingTour';
 import { PageBreadcrumb, getPageLabel } from './components/Shared/PageBreadcrumb';
 import { useUserStore } from './store/userStore';
@@ -576,7 +575,6 @@ function MainApp() {
         )}
         {content}
       </Suspense>
-      <FABSupportButton />
       <OnboardingTour
         open={showTour}
         onClose={() => setShowTour(false)}

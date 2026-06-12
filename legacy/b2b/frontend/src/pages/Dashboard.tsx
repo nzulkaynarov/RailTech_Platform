@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell,
+  Tooltip as RechartsTooltip, ResponsiveContainer,
 } from 'recharts';
 
 import { cn } from '@/lib/utils';
@@ -307,13 +307,6 @@ function BuyerDashboard({ onProductClick: _onProductClick, period: _period, stat
   const { t } = useTranslation();
   const { company } = useUserStore();
 
-  const buyerRequestsStatus = useMemo(() => stats ? [
-    { name: t('dashboardPage.buyer.statusActive'), value: stats.active_requests ?? 0 },
-    { name: t('dashboardPage.buyer.statusInProgress'), value: stats.deals_in_progress ?? 0 },
-    { name: t('dashboardPage.buyer.statusQuoteReceived'), value: stats.quotes_received ?? 0 },
-    { name: t('dashboardPage.buyer.statusCompleted'), value: stats.deals_completed ?? 0 },
-  ] : [], [stats, t]);
-
   // State 1: KYC not verified — show verification status
   if (company.kycStatus !== 'verified') return <KYCPendingBanner onNavigate={onNavigate} />;
 
@@ -361,30 +354,6 @@ function BuyerDashboard({ onProductClick: _onProductClick, period: _period, stat
         />
       </div>
 
-      {/* Charts — one bar chart of buyer's requests by status. The previous
-          revision shipped both a bar and a pie with identical data; dropped
-          the pie to avoid visual duplication. */}
-      <Card className="py-0 gap-0">
-        <CardHeader className="flex flex-row items-center justify-between px-4 py-3">
-          <CardTitle className="text-sm font-semibold">{t('dashboardPage.buyer.requestsByStatus')}</CardTitle>
-        </CardHeader>
-        <CardContent className="px-2 pb-4">
-          <div role="img" aria-label={t('dashboardPage.buyer.requestsByStatusChart')}>
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={buyerRequestsStatus}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
-                <XAxis dataKey="name" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} allowDecimals={false} />
-                <RechartsTooltip
-                  formatter={(value: number) => [value, t('dashboardPage.requests')]}
-                  contentStyle={{ borderRadius: '8px', fontSize: '12px', border: '1px solid var(--color-border)' }}
-                />
-                <Bar dataKey="value" fill="var(--color-chart-1)" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
@@ -397,18 +366,10 @@ function SellerDashboard({ onProductClick, period: _period, stats, onNavigate }:
   const formatCurrency = useCurrencyStore((s) => s.format);
   const { company } = useUserStore();
 
-  const counterpartyBreakdown = useMemo(() => stats ? [
-    { name: t('dashboardPage.seller.manufacturers'), value: stats.counterparties.manufacturers, color: 'var(--color-chart-1)', dotClass: 'bg-[var(--color-chart-1)]' },
-    { name: t('dashboardPage.seller.buyers'), value: stats.counterparties.buyers, color: 'var(--color-chart-2)', dotClass: 'bg-[var(--color-chart-2)]' },
-    { name: t('dashboardPage.seller.intermediaries'), value: stats.counterparties.intermediaries, color: 'var(--color-chart-4)', dotClass: 'bg-[var(--color-chart-4)]' },
-  ] : [], [stats, t]);
-
   if (company.kycStatus !== 'verified') return <KYCPendingBanner onNavigate={onNavigate} />;
 
   const dealVolumeData = stats?.deals_by_month ?? [];
   const activityByDay = stats?.activity_by_day ?? [];
-  const completionPct = stats?.request_completion ?? 0;
-  const completionGoal = stats?.request_completion_goal ?? 80;
 
   return (
     <div className="flex flex-col gap-6">
@@ -506,65 +467,8 @@ function SellerDashboard({ onProductClick, period: _period, stats, onNavigate }:
         </Card>
       </div>
 
-      {/* Bottom Row */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {/* Top Products */}
-        <div className="lg:col-span-2">
-          <TopProductsTable onProductClick={onProductClick} onShowAll={() => onNavigate?.("products")} topProducts={stats?.top_products ?? []} />
-        </div>
-
-        {/* Right column */}
-        <div className="flex flex-col gap-4">
-          {/* Counterparty breakdown */}
-          <Card className="py-0 gap-0">
-            <CardHeader className="px-4 py-3">
-              <CardTitle className="text-sm font-semibold">{t('dashboardPage.seller.counterparties')}</CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-4">
-              <div className="flex items-center justify-center" role="img" aria-label={t('dashboardPage.seller.counterpartiesChart')}>
-                <ResponsiveContainer width={160} height={160}>
-                  <PieChart>
-                    <Pie
-                      data={counterpartyBreakdown}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={45}
-                      outerRadius={70}
-                      dataKey="value"
-                      strokeWidth={2}
-                    >
-                      {counterpartyBreakdown.map((entry, i) => (
-                        <Cell key={i} fill={entry.color} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="mt-2 flex justify-center gap-4">
-                {counterpartyBreakdown.map((c) => (
-                  <div key={c.name} className="flex items-center gap-1.5 text-xs">
-                    <span className={`h-2.5 w-2.5 rounded-full ${c.dotClass}`} />
-                    <span className="font-medium">{c.value}</span>
-                    <span className="text-muted-foreground">{c.name}</span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Fulfillment Rate */}
-          <Card className="py-0 gap-0">
-            <CardHeader className="flex flex-row items-center justify-between px-4 py-3">
-              <CardTitle className="text-sm font-semibold">{t('dashboardPage.seller.requestCompletion')}</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center gap-3 px-4 pb-4">
-              <span className="text-4xl font-bold text-primary tabular-nums">{completionPct}%</span>
-              <p className="text-xs text-muted-foreground">{t('dashboardPage.goal')}: {completionGoal}%</p>
-              <Progress value={completionPct} className="h-2 w-full" />
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+      {/* Top Products */}
+      <TopProductsTable onProductClick={onProductClick} onShowAll={() => onNavigate?.("products")} topProducts={stats?.top_products ?? []} />
     </div>
   );
 }
