@@ -50,6 +50,40 @@ class QuoteItemSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["landed_cost", "final_price_excl_vat"]
 
+    # Cost-structure fields that reveal the seller's markup. Visible to the
+    # seller team / platform admin / superuser only — NEVER to the buyer, who
+    # could otherwise derive the margin. (PDF is gated separately in
+    # crm/templates/crm/quote_pdf.html.)
+    _SELLER_ONLY_FIELDS = (
+        "frozen_base_price",
+        "logistics_cost",
+        "customs_duty",
+        "margin_percent",
+        "landed_cost",
+    )
+
+    def _viewer_is_privileged(self) -> bool:
+        if hasattr(self, "_priv_cache"):
+            return self._priv_cache
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        privileged = False
+        if user is not None and getattr(user, "is_authenticated", False):
+            from accounts.services.permissions import is_platform_admin_viewer, is_seller
+
+            privileged = bool(
+                getattr(user, "is_superuser", False) or is_platform_admin_viewer(user) or is_seller(user)
+            )
+        self._priv_cache = privileged
+        return privileged
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if not self._viewer_is_privileged():
+            for field_name in self._SELLER_ONLY_FIELDS:
+                data.pop(field_name, None)
+        return data
+
 
 class QuoteSerializer(serializers.ModelSerializer):
     items = QuoteItemSerializer(many=True, read_only=True)

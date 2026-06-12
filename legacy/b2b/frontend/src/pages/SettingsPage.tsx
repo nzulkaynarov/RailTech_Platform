@@ -17,6 +17,7 @@ import {
 import { useUserStore, companyStatusLabels } from '@/store/userStore';
 import { useThemeStore } from '@/store/themeStore';
 import { useSystemSettings, useUpdateSystemSettings } from '@/hooks/useSystemSettings';
+import { CompanyTeamSettings } from '@/components/Cabinet/CompanyTeamSettings';
 
 function SettingRow({ icon: Icon, title, description, children }: {
   icon: React.ComponentType<{ className?: string }>;
@@ -57,6 +58,9 @@ export function SettingsPage() {
       <Tabs defaultValue="general">
         <TabsList>
           <TabsTrigger value="general">{t('settings.tabs.general')}</TabsTrigger>
+          {/* Workspace members manage their team here; the OWNER also gets the
+              invite form (gated inside CompanyTeamSettings). Hidden for Platform Admin. */}
+          {!isAdmin && <TabsTrigger value="team">{t('settings.tabs.team')}</TabsTrigger>}
           {isAdmin && <TabsTrigger value="company">{t('settings.tabs.company')}</TabsTrigger>}
           {isAdmin && <TabsTrigger value="platform">{t('settings.tabs.platform')}</TabsTrigger>}
         </TabsList>
@@ -91,6 +95,13 @@ export function SettingsPage() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Team — invite/manage company members (OWNER) or view team (members) */}
+        {!isAdmin && (
+          <TabsContent value="team" className="space-y-4">
+            <CompanyTeamSettings />
+          </TabsContent>
+        )}
 
         {/* Platform (Admin only) — full SystemSettings CRUD */}
         {isAdmin && (

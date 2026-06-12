@@ -39,23 +39,23 @@
   <table>
     <thead>
       <tr>
-        <th style="width:5%">#</th>
-        <th style="width:35%">Наименование</th>
-        <th style="width:8%">Кол-во</th>
-        <th style="width:13%" class="text-right">Цена FCA</th>
-        <th style="width:13%" class="text-right">Логистика</th>
-        <th style="width:13%" class="text-right">Цена без НДС</th>
-        <th style="width:13%" class="text-right">Сумма</th>
+        <th style="width:6%">#</th>
+        <th style="width:46%">Наименование</th>
+        <th style="width:12%">Кол-во</th>
+        <th style="width:18%" class="text-right">Цена за ед., без НДС</th>
+        <th style="width:18%" class="text-right">Сумма, без НДС</th>
       </tr>
     </thead>
     <tbody>
+      {% comment %}
+        Client-facing КП: show ONLY the final per-unit price and line total. Never
+        expose the seller cost fields here — the buyer could derive the markup.
+      {% endcomment %}
       {% for item in items %}
       <tr>
         <td>{{ forloop.counter }}</td>
         <td>{{ item.product.name|default:item.imported_raw_name }}</td>
         <td>{{ item.quantity }}</td>
-        <td class="text-right">{{ item.frozen_base_price|floatformat:2 }}</td>
-        <td class="text-right">{{ item.logistics_cost|floatformat:2 }}</td>
         <td class="text-right">{{ item.final_price_excl_vat|floatformat:2 }}</td>
         <td class="text-right">{{ item.line_total|floatformat:2 }}</td>
       </tr>

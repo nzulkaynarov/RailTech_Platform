@@ -25,10 +25,16 @@
 
   <div class="parties">
     <div class="party">
-      <h3>Поставщик (RailTech)</h3>
+      <h3>Поставщик</h3>
+      {% if supplier %}
+      <p>{{ supplier.name }}</p>
+      <p>ИНН {{ supplier.inn }}</p>
+      {% if supplier.legal_address %}<p>{{ supplier.legal_address }}</p>{% endif %}
+      {% if supplier.contact_person %}<p>Контактное лицо: {{ supplier.contact_person }}</p>{% endif %}
+      {% else %}
       <p>ООО «RailTech»</p>
-      <p>ИНН 300000000001</p>
-      <p>Ташкент, Узбекистан</p>
+      <p>Узбекистан</p>
+      {% endif %}
     </div>
     <div class="party">
       <h3>Покупатель</h3>
@@ -76,14 +82,24 @@
     <div class="signature">
       <strong>От Поставщика:</strong><br>
       {% if contract.manager_signer %}{{ contract.manager_signer.get_full_name|default:contract.manager_signer.email }}<br>
-      Подписано {{ contract.manager_signed_at|date:"d.m.Y H:i" }}{% else %}________________________{% endif %}
+      <span style="color:#666;font-size:10px">Простая электронная подпись · {{ contract.manager_signed_at|date:"d.m.Y H:i" }}<br>
+      Идентификация: {{ contract.manager_signer.email }}</span>{% else %}________________________{% endif %}
     </div>
     <div class="signature">
       <strong>От Покупателя:</strong><br>
       {% if contract.client_signer %}{{ contract.client_signer.get_full_name|default:contract.client_signer.email }}<br>
-      Подписано {{ contract.client_signed_at|date:"d.m.Y H:i" }}{% else %}________________________{% endif %}
+      <span style="color:#666;font-size:10px">Простая электронная подпись · {{ contract.client_signed_at|date:"d.m.Y H:i" }}<br>
+      Идентификация: {{ contract.client_signer.email }}</span>{% else %}________________________{% endif %}
     </div>
   </div>
+
+  {% if contract.manager_signer or contract.client_signer %}
+  <p style="margin-top:18px;font-size:10px;color:#666">
+    Документ подписан простой электронной подписью (ПЭП) в соответствии с соглашением сторон
+    об электронном документообороте. Подписант идентифицирован по учётной записи платформы;
+    дата и время подписания зафиксированы системой.
+  </p>
+  {% endif %}
 
   <div class="footer">RailTech B2B Ecosystem | © 2026 | Сгенерировано автоматически</div>
 </body>

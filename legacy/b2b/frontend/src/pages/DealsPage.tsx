@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FileText, Clock, Eye, Gavel, FileSignature, Send } from 'lucide-react';
+import { FileText, Clock, Eye, Gavel, FileSignature, Send, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,10 +15,11 @@ import { StatusBadge, getDealStageVariant } from '@/components/ui/StatusBadge';
 import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/DataTable';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useUserStore } from '@/store/userStore';
-import { useDeals, useDealStages, useChangeDealStage, useSendQuoteToClient } from '@/hooks/useCRM';
+import { useDeals, useDealStages, useChangeDealStage, useSendQuoteToClient, useApproveQuote, useRejectQuote } from '@/hooks/useCRM';
 import { translateApiError } from '@/lib/apiError';
 import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
 import { OpenRfqDialog } from '@/components/CRM/OpenRfqDialog';
+import { RejectQuoteDialog } from '@/components/CRM/RejectQuoteDialog';
 import { CreateDealDialog } from '@/components/CRM/CreateDealDialog';
 import { GenerateQuoteDialog } from '@/components/CRM/GenerateQuoteDialog';
 import { DealsKanban } from '@/components/CRM/DealsKanban';
@@ -44,8 +45,11 @@ function DealDetailSheet({
   const [rfqOpen, setRfqOpen] = useState(false);
   const [quoteOpen, setQuoteOpen] = useState(false);
   const [contractOpen, setContractOpen] = useState(false);
+  const [rejectOpen, setRejectOpen] = useState(false);
   const changeStage = useChangeDealStage();
   const sendQuote = useSendQuoteToClient();
+  const approveQuote = useApproveQuote();
+  const rejectQuote = useRejectQuote();
   if (!deal) return null;
 
   // Role split: opening the RFQ/заявка is a BUYER action; building the КП and
@@ -70,6 +74,9 @@ function DealDetailSheet({
   // Once the КП is internally approved (READY_TO_SEND), the seller pushes it to the
   // client — the final step of the документооборот, otherwise the chain dead-ends.
   const canSendQuote = isSeller && quoteStatus === QuoteStatus.READY_TO_SEND;
+  // Buyer decision: once the seller has sent the КП (status SENT), the buyer
+  // accepts or rejects it right here. Backend re-checks can_buy on deal.company.
+  const canBuyerDecide = isBuyer && quoteStatus === QuoteStatus.SENT;
   const approvedQuote = isSeller && deal.active_quote
     && ([QuoteStatus.APPROVED, QuoteStatus.SENT] as string[]).includes(quoteStatus);
 
@@ -78,6 +85,16 @@ function DealDetailSheet({
     try {
       await sendQuote.mutateAsync(deal.active_quote.id);
       toast.success(t('pages.deals.detail.quoteSentToast'));
+    } catch (e) {
+      toast.error(translateApiError(e));
+    }
+  };
+
+  const handleApprove = async () => {
+    if (!deal.active_quote) return;
+    try {
+      await approveQuote.mutateAsync(deal.active_quote.id);
+      toast.success(t('pages.deals.detail.quoteApprovedToast'));
     } catch (e) {
       toast.error(translateApiError(e));
     }
@@ -165,6 +182,23 @@ function DealDetailSheet({
                   {t('requestDetailActions.sendQuote')}
                 </Button>
               )}
+              {canBuyerDecide && (
+                <>
+                  <Button
+                    size="sm"
+                    className="bg-success text-success-foreground hover:bg-success/90"
+                    disabled={approveQuote.isPending}
+                    onClick={handleApprove}
+                  >
+                    <ThumbsUp className="mr-2 h-4 w-4" />
+                    {t('requestDetailActions.approveQuote')}
+                  </Button>
+                  <Button size="sm" variant="destructive" onClick={() => setRejectOpen(true)}>
+                    <ThumbsDown className="mr-2 h-4 w-4" />
+                    {t('requestDetailActions.rejectQuote')}
+                  </Button>
+                </>
+              )}
               {approvedQuote && (
                 <Button size="sm" onClick={() => setContractOpen(true)}>
                   <FileSignature className="mr-2 h-4 w-4" />
@@ -205,6 +239,14 @@ function DealDetailSheet({
           quoteId={deal.active_quote?.id ?? null}
           open={contractOpen}
           onOpenChange={setContractOpen}
+        />
+        <RejectQuoteDialog
+          quoteId={deal.active_quote?.id ?? null}
+          open={rejectOpen}
+          onOpenChange={setRejectOpen}
+          onConfirm={async (reason) => {
+            if (deal.active_quote) await rejectQuote.mutateAsync({ id: deal.active_quote.id, reason });
+          }}
         />
       </SheetContent>
     </Sheet>

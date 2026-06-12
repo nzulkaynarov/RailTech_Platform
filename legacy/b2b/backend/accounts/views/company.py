@@ -1,3 +1,4 @@
+from django.db.models import Prefetch
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view, inline_serializer
 from rest_framework import exceptions, filters, permissions
@@ -73,6 +74,10 @@ class CompanyViewSet(viewsets.ModelViewSet):
 
     # Actions that a company member may perform on their own company
     # (logo upload, KYC document upload/delete, partial update of profile fields).
+    # Actions a company MEMBER (not just a platform admin) may reach — the class is
+    # otherwise IsPlatformAdmin. invite / update_member_capabilities enforce OWNER
+    # inside the action itself, so IsAuthenticated here is correct (without this the
+    # OWNER's own team-management is blocked with "platform administrators only").
     _MEMBER_ALLOWED_ACTIONS = {
         "retrieve",
         "update",
@@ -82,6 +87,8 @@ class CompanyViewSet(viewsets.ModelViewSet):
         "upload_logo",
         "delete_logo",
         "team",
+        "invite",
+        "update_member_capabilities",
     }
 
     def get_permissions(self):
@@ -394,8 +401,26 @@ class CompanyViewSet(viewsets.ModelViewSet):
         if not (is_member or request.user.is_platform_admin):
             raise exceptions.PermissionDenied("You can only view your own team.")
 
-        users = CustomUser.objects.filter(memberships__company=company).distinct()
-        return Response(UserSerializer(users, many=True).data)
+        # UserSerializer renders nested memberships + primary_company + types; without
+        # prefetching this is a severe N+1 (one extra query per member per relation),
+        # which over Neon's cross-region latency made this endpoint take ~23s and hang
+        # the team UI. Mirror the /me prefetch so it's a handful of queries total.
+        users = (
+            CustomUser.objects.filter(memberships__company=company)
+            .select_related("role")
+            .prefetch_related(
+                Prefetch(
+                    "memberships",
+                    queryset=CompanyMember.objects.select_related(
+                        "company__verification_status",
+                        "company__country",
+                        "role",
+                    ).prefetch_related("company__types"),
+                ),
+            )
+            .distinct()
+        )
+        return Response(UserSerializer(users, many=True, context={"request": request}).data)
 
     @extend_schema(
         summary="Update member capabilities (sell / buy flags)",

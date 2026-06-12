@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, FormEvent } from 'react';
+import { wsBase } from '@/lib/ws';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Card } from '@/components/ui/card';
@@ -89,10 +90,7 @@ export function DealChatPanel({ dealId }: DealChatPanelProps = {}): React.ReactN
       setIsConnected(false);
       return;
     }
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const envWsHost = import.meta.env.VITE_WS_URL as string | undefined;
-    const wsHost = envWsHost || `${wsProtocol}//${window.location.host}`;
-    const wsUrl = `${wsHost}/ws/chat/${dealId}/?token=${encodeURIComponent(accessToken)}`;
+    const wsUrl = `${wsBase()}/ws/chat/${dealId}/?token=${encodeURIComponent(accessToken)}`;
 
     const socket = new WebSocket(wsUrl);
     socketRef.current = socket;
