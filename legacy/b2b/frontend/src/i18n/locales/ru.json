@@ -2531,7 +2531,8 @@
         "updated": "Обновлено",
         "notes": "Заметки",
         "actions": "Действия",
-        "takeIntoWork": "Взять в работу"
+        "takeIntoWork": "Взять в работу",
+        "quoteSentToast": "КП отправлено клиенту"
       },
       "newDeal": "Новая сделка",
       "daysInStage": "дней в этапе",

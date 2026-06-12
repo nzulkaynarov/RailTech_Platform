@@ -33,11 +33,11 @@ date: 2026-04-17
 
 ### 1.3. Workspace-роли (внутри одной компании)
 
-Membership хранится в `CompanyMember` (`user`, `company`, `role` → `WorkspaceRole`):
-
-- **OWNER** — полный контроль, приглашения, управление подписками.
-- **PROCUREMENT_MANAGER** (Снабженец) — создаёт сделки, ведёт переписку.
-- **ACCOUNTANT** — финансы, закрывающие документы, счета.
+Membership хранится в `CompanyMember` (`user`, `company`, `role` → `WorkspaceRole`,
+`can_sell`/`can_buy`). Набор ролей зависит от стороны (seller: `SALES_MANAGER`, `ВЭД`,
+`CONTRACT_MANAGER`, `LOGIST`; buyer: `PROCUREMENT_MANAGER`, `BUYER_MANAGER`; везде —
+`OWNER`). Полный перечень и применимость к `CompanyType` — в
+[role-model.md](role-model.md) §2.
 
 Приглашение сотрудников: `POST /api/v1/accounts/companies/{id}/invite/` — отправка email со ссылкой setup-password.
 
@@ -119,17 +119,55 @@ Membership хранится в `CompanyMember` (`user`, `company`, `role` → `W
 
 ---
 
-## 5. Жизненный цикл КП
+## 5. Жизненный цикл КП (документооборот)
 
-1. **Генерация PDF** — `POST /api/v1/crm/quotes/{id}/generate-pdf/` → Celery очередь `pdf`, WeasyPrint рендер шаблона `crm/templates/quote_pdf.html`. PDF сохраняется в MinIO `railtech-private` bucket; `Quote.pdf_file` — presigned URL (15 мин).
-2. **Отправка клиенту** — `POST /api/v1/crm/quotes/{id}/send-to-client/`:
-   - `Quote.status = SENT`, `Deal.stage = QUOTE_SENT`.
-   - Email с ссылкой на PDF (Celery очередь `default`).
-   - Notification клиенту (`notifications.Notification`).
-3. **Клиент видит Amber Action Banner** на странице сделки — кнопки «Принять КП» / «Написать в чат».
-4. **Одобрение** — `POST /api/v1/crm/quotes/{id}/approve/`:
-   - `Quote.status = APPROVED`, `Quote.approved_at = now()`, `Quote.approved_by = user`.
-   - `Deal.stage = CONTRACT_SIGNED`.
+**КП — собственность ПРОДАВЦА.** Создавать/наполнять КП может только член
+seller-компании (`crm/views/quotes.py` `perform_create` → `is_seller`, иначе
+`ONLY_SELLER_CAN_BUILD_QUOTE`); `prepared_by` штампуется сервером. Покупатель
+КП не строит — только принимает/отклоняет (требуется `can_buy`).
+
+### 5.1. Внутренняя цепочка согласования (`QuoteStatus`)
+
+Перед отправкой клиенту КП проходит внутренний документооборот продавца:
+
+```
+DRAFT → PENDING_TRADE_REVIEW → PENDING_APPROVAL → READY_TO_SEND → SENT → APPROVED / REJECTED
+```
+
+| Статус | Кто двигает | Смысл |
+| --- | --- | --- |
+| `DRAFT` | Менеджер продаж | Сборка позиций/наценки в Quote Builder |
+| `PENDING_TRADE_REVIEW` | → ВЭД (`FOREIGN_TRADE_SPECIALIST`) | Проверка Landed Cost / импорта |
+| `PENDING_APPROVAL` | → Директор/OWNER | Финальное согласование |
+| `READY_TO_SEND` | — | Согласовано; **только теперь** можно отправить клиенту |
+| `SENT` | продавец | Отправлено покупателю |
+| `APPROVED` / `REJECTED` | покупатель (`can_buy`) | Решение покупателя |
+
+Эндпоинты переходов (`crm/views/quotes.py`, все `POST … /quotes/{id}/`):
+`submit-for-review` (DRAFT→PENDING_TRADE_REVIEW), `confirm-trade-review`
+(→PENDING_APPROVAL), `director-approve` (→READY_TO_SEND), `send-back` (возврат на шаг
+назад). Policy централизована: `_ROLE_QUEUE_STATUSES` (роль → его очередь) в
+`crm/services/quotes.py`. «Моя очередь»: `GET /api/v1/crm/quotes/my-approval-queue/`
+(`approval_queue_for(user)`).
+
+### 5.2. Отправка и одобрение
+
+1. **Генерация PDF** — `POST /api/v1/crm/quotes/{id}/generate-pdf/` → Celery `pdf`,
+   WeasyPrint `crm/templates/quote_pdf.html`. PDF в MinIO `railtech-private`;
+   `Quote.pdf_file` — presigned URL.
+2. **Отправка клиенту** — `POST /api/v1/crm/quotes/{id}/send-to-client/` —
+   **только из `READY_TO_SEND`**: `Quote.status = SENT`, `Deal.stage = QUOTE_SENT`,
+   email + Notification покупателю.
+3. **Покупатель** видит Action Banner — «Принять КП» / «Отклонить» (с причиной) / чат.
+4. **Одобрение** — `POST /api/v1/crm/quotes/{id}/approve/` (требует `can_buy`):
+   `Quote.status = APPROVED`, `Deal.stage = CONTRACT_SIGNED`; одобренное КП →
+   Спецификация договора.
+
+> ⚠️ **Известная проблема UI (2026-06-11, не закрыта):** экран продавца для сборки КП
+> (`QuoteBuilderGrid` + цепочка `QuoteApprovalChain`, встроенные в боковую панель
+> `DealsPage`) в живом приложении — тупик («полное отвратное решение», owner). Бэкенд
+> рабочий; UI требует переделки в **отдельную полноценную страницу** и проверки на
+> запущенном SPA. Решение об откате встроенного билдера — pending. См. `docs/ops/status-2026-06-11.md`.
 
 ---
 
@@ -156,24 +194,32 @@ Membership хранится в `CompanyMember` (`user`, `company`, `role` → `W
 
 ## 7. Multi-tenancy на уровне изоляции данных
 
-Все ViewSets переопределяют `get_queryset()`:
+Все ViewSets переопределяют `get_queryset()`. Изоляция строится на **трёх ветках**:
+Platform Admin (видит всё, но действовать не может), **продавец** (видит все сделки
+своего seller-домена — он готовит КП по чужим заявкам), **покупатель** (только сделки
+своей компании).
 
 ```python
-# DealViewSet (упрощённо)
+# DealViewSet (упрощённо, актуально 2026-06)
 def get_queryset(self):
     user = self.request.user
-    if user.role.code == 'ADMIN':
+    if is_platform_admin_viewer(user):          # SystemRole.ADMIN — read-only
         return Deal.objects.all()
-    if user.role.code in ('SALES_MANAGER', 'ACCOUNT_MANAGER'):
-        return Deal.objects.filter(Q(manager=user) | Q(manager__isnull=True))
-    # CLIENT
-    member = CompanyMember.objects.filter(user=user, is_active=True).first()
-    if not member:
-        return Deal.objects.none()
-    return Deal.objects.filter(company=member.company)
+    if is_seller(user):                          # член SUPPLIER/MANUFACTURER + can_sell
+        return Deal.objects.all()                # продавец готовит КП по всем заявкам
+    # покупатель: только сделки своей компании
+    company_ids = CompanyMember.objects.filter(
+        user=user, is_active=True
+    ).values_list('company_id', flat=True)
+    return Deal.objects.filter(company_id__in=company_ids)
 ```
 
-Object-level permission (`IsOwnerOrManagerOrAdmin`) дублирует проверку на detail-endpoint'ах для защиты от IDOR.
+> 🔴 `is_seller(user)` обязан проверять `CompanyType ∈ SELLER_COMPANY_TYPES`, а не
+> только `can_sell` (defaults `True`) — иначе свежий CLIENT проходит как продавец и
+> видит чужие сделки (реальная утечка, исправлена 2026-06-11). См. [role-model.md](role-model.md) §4.
+
+Object-level permission (`IsCompanyMemberOrPlatformAdmin`) дублирует проверку на
+detail-endpoint'ах для защиты от IDOR.
 
 ---
 

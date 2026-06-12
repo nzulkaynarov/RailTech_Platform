@@ -8,6 +8,7 @@ from rest_framework.response import Response
 
 from core.permissions import IsCompanyMemberOrPlatformAdmin, IsPlatformAdmin
 from crm import services as crm_services
+from crm.constants import QuoteStatusCode
 from crm.models import Quote, QuoteItem, QuoteStatus
 from crm.serializers import QuoteItemSerializer, QuoteSerializer
 
@@ -87,7 +88,11 @@ class QuoteViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("ONLY_SELLER_CAN_BUILD_QUOTE")
         deal = serializer.validated_data.get("deal")
         version = (deal.quotes.aggregate(max_v=Max("version"))["max_v"] or 0) + 1 if deal else 1
-        serializer.save(version=version, prepared_by=user)
+        # A brand-new КП always starts the approval chain at DRAFT. Without this the
+        # status FK stays NULL → QuoteApprovalChain renders no actions and the seller
+        # is stuck with no way to submit the КП for review (the "тупик" bug).
+        draft_status = QuoteStatus.objects.get(code=QuoteStatusCode.DRAFT)
+        serializer.save(version=version, prepared_by=user, status=draft_status)
 
     @extend_schema(
         summary="Generate quote PDF",
