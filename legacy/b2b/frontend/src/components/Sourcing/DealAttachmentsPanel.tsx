@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { sourcingApi } from '@/api/sourcingApi';
 import { FileUpload } from '@/components/Shared/FileUpload';
+import { downloadFile } from '@/lib/download';
 import { useTranslation } from 'react-i18next';
 
 interface DealAttachmentsPanelProps {
@@ -46,6 +47,7 @@ export function DealAttachmentsPanel({
             }))}
             onUpload={async (file) => { await uploadMut.mutateAsync(file); }}
             onRemove={async (id) => { await removeMut.mutateAsync(Number(id)); }}
+            onDownload={(id, name) => downloadFile(`sourcing/attachments/${id}/download/`, name)}
         />
     );
 }

@@ -17,6 +17,9 @@ export interface FileUploadProps {
     files: UploadedFile[];
     onUpload: (file: File) => Promise<void> | void;
     onRemove?: (id: string | number) => Promise<void> | void;
+    // Authenticated download (streams via an endpoint). Preferred over the raw
+    // file.url, which 404s on prod (local storage, no MinIO).
+    onDownload?: (id: string | number, name: string) => Promise<void> | void;
     disabled?: boolean;
     maxSizeMB?: number;
     accept?: string;
@@ -33,6 +36,7 @@ export function FileUpload({
     files,
     onUpload,
     onRemove,
+    onDownload,
     disabled,
     maxSizeMB = DEFAULT_MAX_SIZE_MB,
     accept = DEFAULT_ACCEPT,
@@ -174,7 +178,17 @@ export function FileUpload({
                                 </div>
                             </div>
                             <div className="flex shrink-0 gap-1">
-                                {file.url && (
+                                {onDownload ? (
+                                    <Button
+                                        type="button"
+                                        size="icon-sm"
+                                        variant="ghost"
+                                        aria-label={t('fileUpload.download')}
+                                        onClick={() => onDownload(file.id, file.name)}
+                                    >
+                                        <Download className="size-4" />
+                                    </Button>
+                                ) : file.url ? (
                                     <Button
                                         asChild
                                         type="button"
@@ -186,7 +200,7 @@ export function FileUpload({
                                             <Download className="size-4" />
                                         </a>
                                     </Button>
-                                )}
+                                ) : null}
                                 {onRemove && (
                                     <Button
                                         type="button"
