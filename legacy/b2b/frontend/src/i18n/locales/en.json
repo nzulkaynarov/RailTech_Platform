@@ -2527,7 +2527,8 @@
         "updated": "Updated",
         "notes": "Notes",
         "actions": "Actions",
-        "takeIntoWork": "Take into work"
+        "takeIntoWork": "Take into work",
+        "quoteSentToast": "Quote sent to client"
       },
       "newDeal": "New deal",
       "daysInStage": "days in stage",

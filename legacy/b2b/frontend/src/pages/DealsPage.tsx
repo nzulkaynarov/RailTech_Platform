@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FileText, Clock, Eye, Gavel, FileSignature } from 'lucide-react';
+import { FileText, Clock, Eye, Gavel, FileSignature, Send } from 'lucide-react';
+import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,7 +15,8 @@ import { StatusBadge, getDealStageVariant } from '@/components/ui/StatusBadge';
 import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/DataTable';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useUserStore } from '@/store/userStore';
-import { useDeals, useDealStages, useChangeDealStage } from '@/hooks/useCRM';
+import { useDeals, useDealStages, useChangeDealStage, useSendQuoteToClient } from '@/hooks/useCRM';
+import { translateApiError } from '@/lib/apiError';
 import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
 import { OpenRfqDialog } from '@/components/CRM/OpenRfqDialog';
 import { CreateDealDialog } from '@/components/CRM/CreateDealDialog';
@@ -22,7 +24,6 @@ import { GenerateQuoteDialog } from '@/components/CRM/GenerateQuoteDialog';
 import { DealsKanban } from '@/components/CRM/DealsKanban';
 import { GenerateContractDialog } from '@/components/CRM/GenerateContractDialog';
 import { QuoteBuilderGrid } from '@/components/Admin/QuoteBuilderGrid';
-import { QuoteApprovalChain } from '@/components/CRM/QuoteApprovalChain';
 import { DealStage, QuoteStatus } from '@/lib/codes';
 import type { Deal } from '@/api/crmApi';
 
@@ -44,6 +45,7 @@ function DealDetailSheet({
   const [quoteOpen, setQuoteOpen] = useState(false);
   const [contractOpen, setContractOpen] = useState(false);
   const changeStage = useChangeDealStage();
+  const sendQuote = useSendQuoteToClient();
   if (!deal) return null;
 
   // Role split: opening the RFQ/заявка is a BUYER action; building the КП and
@@ -65,8 +67,21 @@ function DealDetailSheet({
     && !deal.active_quote;
   // The seller works the КП inline (builder + approval chain) whenever the deal has one.
   const showQuoteWorkspace = isSeller && !!deal.active_quote;
+  // Once the КП is internally approved (READY_TO_SEND), the seller pushes it to the
+  // client — the final step of the документооборот, otherwise the chain dead-ends.
+  const canSendQuote = isSeller && quoteStatus === QuoteStatus.READY_TO_SEND;
   const approvedQuote = isSeller && deal.active_quote
     && ([QuoteStatus.APPROVED, QuoteStatus.SENT] as string[]).includes(quoteStatus);
+
+  const handleSendToClient = async () => {
+    if (!deal.active_quote) return;
+    try {
+      await sendQuote.mutateAsync(deal.active_quote.id);
+      toast.success(t('pages.deals.detail.quoteSentToast'));
+    } catch (e) {
+      toast.error(translateApiError(e));
+    }
+  };
 
   const rows = [
     { label: t('pages.deals.detail.client'), value: deal.client_name || deal.company_name },
@@ -79,7 +94,7 @@ function DealDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className={`overflow-y-auto ${showQuoteWorkspace ? 'sm:max-w-4xl' : 'sm:max-w-lg'}`}>
+      <SheetContent className={`overflow-y-auto ${showQuoteWorkspace ? 'sm:max-w-6xl' : 'sm:max-w-lg'}`}>
         <SheetHeader>
           <SheetTitle>{deal.title || `${t('pages.deals.deal')} #${deal.id}`}</SheetTitle>
           <SheetDescription>
@@ -144,6 +159,12 @@ function DealDetailSheet({
                   {t('generateQuote.submit')}
                 </Button>
               )}
+              {canSendQuote && (
+                <Button size="sm" disabled={sendQuote.isPending} onClick={handleSendToClient}>
+                  <Send className="mr-2 h-4 w-4" />
+                  {t('requestDetailActions.sendQuote')}
+                </Button>
+              )}
               {approvedQuote && (
                 <Button size="sm" onClick={() => setContractOpen(true)}>
                   <FileSignature className="mr-2 h-4 w-4" />
@@ -159,10 +180,10 @@ function DealDetailSheet({
           {showQuoteWorkspace && deal.active_quote && (
             <>
               <Separator />
+              {/* QuoteBuilderGrid renders its own approval-chain bar + toolbar
+                  (title, VAT, currency, add/save/PDF), so we don't repeat them here. */}
               <section className="space-y-3">
-                <h3 className="text-sm font-semibold">{t('quote.title')}</h3>
-                <QuoteApprovalChain quote={deal.active_quote} />
-                <div className="h-[460px]">
+                <div className="h-[520px]">
                   <QuoteBuilderGrid dealId={deal.id} />
                 </div>
               </section>
