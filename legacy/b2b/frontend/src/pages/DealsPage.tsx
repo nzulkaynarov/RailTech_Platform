@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FileText, Clock, Eye, Gavel, FileSignature, Send, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { FileText, Clock, Eye, FileSignature, Send, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,6 @@ import { useUserStore } from '@/store/userStore';
 import { useDeals, useDealStages, useChangeDealStage, useSendQuoteToClient, useApproveQuote, useRejectQuote } from '@/hooks/useCRM';
 import { translateApiError } from '@/lib/apiError';
 import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
-import { OpenRfqDialog } from '@/components/CRM/OpenRfqDialog';
 import { RejectQuoteDialog } from '@/components/CRM/RejectQuoteDialog';
 import { CreateDealDialog } from '@/components/CRM/CreateDealDialog';
 import { GenerateQuoteDialog } from '@/components/CRM/GenerateQuoteDialog';
@@ -42,7 +41,6 @@ function DealDetailSheet({
   const { t } = useTranslation();
   const formatCurrency = useCurrencyStore((s) => s.format);
   const activeStatus = useUserStore((s) => s.activeStatus);
-  const [rfqOpen, setRfqOpen] = useState(false);
   const [quoteOpen, setQuoteOpen] = useState(false);
   const [contractOpen, setContractOpen] = useState(false);
   const [rejectOpen, setRejectOpen] = useState(false);
@@ -60,7 +58,6 @@ function DealDetailSheet({
   const isSeller = !isBuyer; // SELLER / MANUFACTURER context (store filters by can_sell)
   const stageCode = deal.stage_code ?? '';
   const quoteStatus = deal.active_quote?.status_code ?? '';
-  const canOpenRfq = isBuyer && ([DealStage.DRAFT, DealStage.KYC_PENDING] as string[]).includes(stageCode);
   // Seller "take into work": a fresh заявка lands in DRAFT; the seller advances it
   // to SOURCING so the КП builder ("Создать КП") becomes available.
   const canTakeIntoWork = isSeller
@@ -153,12 +150,6 @@ function DealDetailSheet({
           <section className="space-y-2">
             <h3 className="text-sm font-semibold">{t('pages.deals.detail.actions')}</h3>
             <div className="flex flex-wrap gap-2">
-              {canOpenRfq && (
-                <Button size="sm" variant="outline" onClick={() => setRfqOpen(true)}>
-                  <Gavel className="mr-2 h-4 w-4" />
-                  {t('rfqDialog.open')}
-                </Button>
-              )}
               {canTakeIntoWork && (
                 <Button
                   size="sm"
@@ -225,11 +216,6 @@ function DealDetailSheet({
           )}
         </div>
 
-        <OpenRfqDialog
-          dealId={deal.id}
-          open={rfqOpen}
-          onOpenChange={setRfqOpen}
-        />
         <GenerateQuoteDialog
           dealId={deal.id}
           open={quoteOpen}

@@ -30,7 +30,6 @@ const pageI18nKeys: Record<string, string> = {
   'crm-clients': 'breadcrumbs.crmClients',
   'sourcing-requests': 'breadcrumbs.sourcingRequests',
   'sourcing-import': 'breadcrumbs.sourcingImport',
-  'sourcing-match': 'breadcrumbs.sourcingMatch',
   'production-orders': 'breadcrumbs.productionOrders',
   'production-schedule': 'breadcrumbs.productionSchedule',
   analytics: 'breadcrumbs.analytics',
@@ -53,7 +52,6 @@ const pageI18nKeys: Record<string, string> = {
   'admin-offers': 'breadcrumbs.adminOffers',
   'admin-companies': 'breadcrumbs.adminCompanies',
   'admin-deals': 'breadcrumbs.adminDeals',
-  'admin-bids': 'breadcrumbs.adminBids',
   logistics: 'breadcrumbs.logistics',
   'purchase-templates': 'breadcrumbs.purchaseTemplates',
   // Billing children
@@ -62,7 +60,6 @@ const pageI18nKeys: Record<string, string> = {
   payments: 'breadcrumbs.payments',
   acts: 'breadcrumbs.acts',
   fulfillments: 'breadcrumbs.fulfillments',
-  'supplier-bids': 'breadcrumbs.supplierBids',
   leads: 'breadcrumbs.leads',
   'my-subscription': 'breadcrumbs.mySubscription',
   'forgot-password': 'breadcrumbs.forgotPassword',
