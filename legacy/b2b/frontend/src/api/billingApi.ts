@@ -1,5 +1,6 @@
 import { apiClient } from './client';
 import { PaginatedResponse } from './types';
+import { downloadFile } from '@/lib/download';
 
 // ─── Invoices ─────────────────────────────────────────────────
 
@@ -69,6 +70,7 @@ export const invoicesApi = {
     const response = await apiClient.get<Invoice>(`crm/invoices/${id}/`);
     return response.data;
   },
+  downloadPdf: (id: number) => downloadFile(`crm/invoices/${id}/download-pdf/`, `RailTech_Invoice_${id}.pdf`),
   generateFromContract: async (contractId: number, dueDays = 14) => {
     const response = await apiClient.post<Invoice>('crm/invoices/generate-from-contract/', {
       contract_id: contractId,
@@ -158,6 +160,7 @@ export const actsApi = {
     const response = await apiClient.get<Act>(`crm/acts/${id}/`);
     return response.data;
   },
+  downloadPdf: (id: number) => downloadFile(`crm/acts/${id}/download-pdf/`, `RailTech_Act_${id}.pdf`),
   sign: async (id: number, signedFile?: File) => {
     if (signedFile) {
       const formData = new FormData();

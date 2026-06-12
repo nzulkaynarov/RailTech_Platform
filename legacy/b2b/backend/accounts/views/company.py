@@ -84,6 +84,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
         "partial_update",
         "upload_document",
         "delete_document",
+        "download_document",
         "upload_logo",
         "delete_logo",
         "team",
@@ -330,6 +331,24 @@ class CompanyViewSet(viewsets.ModelViewSet):
         if error:
             return Response({"detail": error}, status=status.HTTP_404_NOT_FOUND)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @extend_schema(
+        summary="Download a KYC document",
+        description="Stream a KYC document for review. Works with both MinIO and local storage "
+        "(prod has no MinIO, so the raw /media URL 404s — this authenticated stream is the only path).",
+        responses={200: OpenApiResponse(description="File stream"), 404: OpenApiResponse(description="Not found")},
+        tags=["Accounts"],
+    )
+    @action(detail=True, methods=["get"], url_path="download-document/(?P<doc_id>[0-9]+)", url_name="download-document")
+    def download_document(self, request, pk=None, doc_id=None):
+        from core.file_streaming import stream_file_field
+
+        company = self.get_object()
+        self._assert_member_or_admin(company)
+        doc = company.kyc_documents.filter(id=int(doc_id)).first()
+        if not doc:
+            return Response({"detail": "DOCUMENT_NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)
+        return stream_file_field(doc.file, content_type="application/octet-stream")
 
     @extend_schema(
         summary="Upload company logo",
