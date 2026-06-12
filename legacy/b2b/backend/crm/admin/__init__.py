@@ -3,9 +3,9 @@
 Public API re-exported so existing import paths keep working.
 """
 
-from .billing_admin import ActAdmin, ContractAdmin, FulfillmentAdmin, InvoiceAdmin, PaymentAdmin, SupplierBidAdmin
+from .billing_admin import ActAdmin, ContractAdmin, FulfillmentAdmin, InvoiceAdmin, PaymentAdmin
 from .deals_admin import ActivityLogAdmin, CRMLookupAdmin, DealAdmin, LeadAdmin, MessageAdmin
-from .inlines import InvoiceItemInline, PaymentInline, QuoteInline, QuoteItemInline, SupplierBidItemInline
+from .inlines import InvoiceItemInline, PaymentInline, QuoteInline, QuoteItemInline
 from .quotes_admin import QuoteAdmin, QuoteItemHistoryAdmin
 
 __all__ = [
@@ -25,6 +25,4 @@ __all__ = [
     "QuoteInline",
     "QuoteItemHistoryAdmin",
     "QuoteItemInline",
-    "SupplierBidAdmin",
-    "SupplierBidItemInline",
 ]

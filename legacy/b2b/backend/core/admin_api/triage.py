@@ -200,34 +200,6 @@ def _queue_invoices() -> list[dict[str, Any]]:
     return items
 
 
-def _queue_supplier_bids() -> list[dict[str, Any]]:
-    """Submitted supplier bids awaiting buyer/admin review."""
-    from crm.models import SupplierBid
-
-    qs = (
-        SupplierBid.objects.select_related("deal", "supplier", "deal__company")
-        .filter(status="SUBMITTED")
-        .order_by("submitted_at")
-    )
-    return [
-        {
-            "queue_type": "supplier_bid_pending",
-            "entity_type": "supplier_bid",
-            "entity_id": b.id,
-            "title": f'Bid #{b.id} · {b.supplier.name if b.supplier_id else "?"}',
-            "subtitle": (
-                f"Deal #{b.deal_id} " f'{b.deal.title or ""} · {b.total_amount} ' f'· lead {b.lead_time_days or "?"}d'
-            ).strip(),
-            "severity": "info",
-            "created_at": b.submitted_at.isoformat() if b.submitted_at else None,
-            "age": _fmt_age(b.submitted_at),
-            "actions": ["accept_bid", "reject_bid", "view"],
-            "link": f"/admin/bids?focus={b.id}",
-        }
-        for b in qs
-    ]
-
-
 def _queue_support() -> list[dict[str, Any]]:
     from core.models import SupportTicket
 
@@ -286,7 +258,6 @@ class AdminTriageQueueView(APIView):
             _queue_subscriptions,
             _queue_invoices,
             _queue_support,
-            _queue_supplier_bids,
         ]
         items: list[dict[str, Any]] = []
         for collect in collectors:

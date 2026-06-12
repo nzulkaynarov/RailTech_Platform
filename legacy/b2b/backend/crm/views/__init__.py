@@ -6,7 +6,6 @@ Re-exports all ViewSets and Views for backwards compatibility so that
 """
 
 from crm.views.analytics import CRMAnalyticsView, DashboardAnalyticsView  # noqa: F401
-from crm.views.bids import SupplierBidViewSet  # noqa: F401
 from crm.views.billing import (  # noqa: F401
     ActViewSet,
     ContractViewSet,
@@ -41,8 +40,6 @@ __all__ = [
     "ActViewSet",
     "FulfillmentViewSet",
     "Phase2StatusChoicesView",
-    # bids
-    "SupplierBidViewSet",
     # leads
     "LeadCreateView",
     "LeadViewSet",

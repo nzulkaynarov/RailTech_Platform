@@ -383,36 +383,3 @@ def test_fulfillment_accepted_auto_closes_deal(master_data, deal, manager, buyer
     assert err is None
     deal.refresh_from_db()
     assert deal.stage.code == "CLOSED_WON"
-
-
-# ─── Supplier bidding ─────────────────────────────────────────────────────
-
-
-@pytest.mark.django_db
-def test_submit_bid_only_when_rfq_open(master_data, deal, manager, supplier):
-    _, supplier_co = supplier
-    _, err = crm_services.submit_supplier_bid(
-        deal_id=deal.id,
-        supplier_id=supplier_co.id,
-        submitted_by=manager,
-        items=[{"description": "X", "quantity": 1, "unit_price": "10.00"}],
-    )
-    assert err is not None  # deal is DRAFT, not RFQ_OPEN
-
-
-@pytest.mark.django_db
-def test_accept_bid_moves_deal_to_calculating(master_data, deal, manager, supplier):
-    _, supplier_co = supplier
-    _, err = crm_services.open_rfq(deal.id, manager, supplier_ids=[supplier_co.id])
-    assert err is None
-    bid, err = crm_services.submit_supplier_bid(
-        deal_id=deal.id,
-        supplier_id=supplier_co.id,
-        submitted_by=manager,
-        items=[{"description": "X", "quantity": 1, "unit_price": "10.00"}],
-    )
-    assert err is None
-    bid, err = crm_services.accept_supplier_bid(bid.id, manager)
-    assert err is None
-    deal.refresh_from_db()
-    assert deal.stage.code == "CALCULATING"

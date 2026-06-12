@@ -4,17 +4,13 @@ GOLDEN PATH — the single end-to-end regression net for the core business value
 This test drives the WHOLE product story through the real service layer, exactly
 as buyer / seller / manager would trigger it from the UI:
 
-    buyer opens RFQ  →  seller submits a bid  →  manager builds & sends the КП
+    deal moves into CALCULATING  →  manager builds & sends the КП
     →  buyer approves it  →  contract is double-signed  →  invoice is issued
     →  payment is recorded  →  fulfillment accepted  →  deal CLOSED_WON.
 
 If this test is green, the core flow the platform exists for works. If a future
 change breaks any step, CI fails BEFORE it reaches production — this is the
 "know it's stable" net that replaces clicking through prod by hand.
-
-It exercises the REAL permission paths (a member buyer with can_buy opens the
-RFQ; a member seller with can_sell + an operational subscription bids), not just
-the superuser bypass — so it also guards the multi-tenant capability gates.
 
 Runs against the DB via pytest-django (see pyproject.toml). Marked `integration`.
 """
@@ -24,7 +20,6 @@ from decimal import Decimal
 import pytest
 from django.utils import timezone
 
-from accounts import services as acc_services
 from accounts.models import (
     Company,
     CompanyMember,
@@ -124,20 +119,6 @@ def buyer(lookups):
 
 
 @pytest.fixture
-def seller(lookups):
-    user, company = _make_company_with_owner(
-        name="Golden Seller LLC",
-        inn="7700000002",
-        type_code="SUPPLIER",
-        email="g.seller@example.com",
-        username="g_seller",
-    )
-    # Sellers need an operational subscription to bid — give the real trial.
-    acc_services.ensure_trial_subscription(company)
-    return user, company
-
-
-@pytest.fixture
 def manager(lookups):
     # Platform-side orchestrator. is_superuser bypasses per-company capability
     # checks; role USER keeps the migration-0010 invariant (ADMIN ⇒ no member).
@@ -206,29 +187,14 @@ def _build_quote_with_items(deal, manager):
 
 @pytest.mark.integration
 @pytest.mark.django_db
-def test_golden_path_rfq_to_closed_won(deal, buyer, seller, manager):
+def test_golden_path_rfq_to_closed_won(deal, buyer, manager):
     """One test, the whole story. Each assert is a step the business depends on."""
     buyer_user, buyer_co = buyer
-    seller_user, seller_co = seller
 
-    # 1. Buyer opens the RFQ (real buyer-side capability path: member + can_buy).
-    opened, err = crm_services.open_rfq(deal.id, buyer_user, supplier_ids=[seller_co.id])
-    assert err is None, f"open_rfq failed: {err}"
-    assert opened.stage.code == "RFQ_OPEN"
-
-    # 2. Seller submits a bid (real seller path: member + can_sell + subscription).
-    bid, err = crm_services.submit_supplier_bid(
-        deal_id=deal.id,
-        supplier_id=seller_co.id,
-        submitted_by=seller_user,
-        items=[{"description": "Rail clamp KP-1", "quantity": 10, "unit_price": "100.00"}],
-    )
-    assert err is None, f"submit_supplier_bid failed: {err}"
-    assert bid.status == "SUBMITTED"
-
-    # 3. Bid accepted → deal moves to CALCULATING (competitors auto-rejected).
-    bid, err = crm_services.accept_supplier_bid(bid.id, manager)
-    assert err is None, f"accept_supplier_bid failed: {err}"
+    # 1-3. Deal advances through the FSM into CALCULATING (DRAFT→SOURCING→CALCULATING).
+    for target in ["SOURCING", "CALCULATING"]:
+        moved, err = crm_services.transition_deal_stage(deal, target, actor=manager)
+        assert err is None, f"transition_deal_stage → {target} failed: {err}"
     deal.refresh_from_db()
     assert deal.stage.code == "CALCULATING"
 
@@ -285,35 +251,3 @@ def test_golden_path_rfq_to_closed_won(deal, buyer, seller, manager):
     assert err is None, f"update_fulfillment_status failed: {err}"
     deal.refresh_from_db()
     assert deal.stage.code == "CLOSED_WON"
-
-
-# ─── Capability-gate guards on the same path (multi-tenant safety) ──────────
-
-
-@pytest.mark.integration
-@pytest.mark.django_db
-def test_rfq_requires_buy_capability(deal, buyer):
-    """A buyer-company member WITHOUT can_buy cannot open an RFQ."""
-    buyer_user, buyer_co = buyer
-    CompanyMember.objects.filter(user=buyer_user, company=buyer_co).update(can_buy=False)
-    _, err = crm_services.open_rfq(deal.id, buyer_user)
-    assert err == "MEMBER_REQUIRED_FOR_ACTION"
-
-
-@pytest.mark.integration
-@pytest.mark.django_db
-def test_bid_requires_operational_subscription(deal, buyer, seller, manager):
-    """A seller without an operational subscription is blocked from bidding."""
-    seller_user, seller_co = seller
-    # Kill the trial subscription's operability.
-    from accounts.models import SupplierSubscription
-
-    SupplierSubscription.objects.filter(company=seller_co).update(status="SUSPENDED", valid_until=timezone.now().date())
-    crm_services.open_rfq(deal.id, buyer[0], supplier_ids=[seller_co.id])
-    _, err = crm_services.submit_supplier_bid(
-        deal_id=deal.id,
-        supplier_id=seller_co.id,
-        submitted_by=seller_user,
-        items=[{"description": "X", "quantity": 1, "unit_price": "10.00"}],
-    )
-    assert err == "SUBSCRIPTION_NOT_OPERATIONAL"

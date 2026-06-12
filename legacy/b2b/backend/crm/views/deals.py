@@ -8,7 +8,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from core.permissions import IsCompanyMemberOrPlatformAdmin, IsPlatformAdmin
-from crm import services as crm_services
 from crm.constants import DealStageCode
 from crm.models import Deal, DealStage, Quote, QuoteItem
 from crm.serializers import DealDetailSerializer, DealListSerializer
@@ -212,31 +211,6 @@ class DealViewSet(viewsets.ModelViewSet):
         },
         tags=["CRM"],
     )
-    @extend_schema(
-        summary="Open RFQ — move deal to RFQ_OPEN and notify suppliers",
-        tags=["CRM"],
-        request=inline_serializer(
-            "OpenRFQ",
-            fields={
-                "supplier_ids": drf_serializers.ListField(child=drf_serializers.IntegerField(), required=False),
-            },
-        ),
-    )
-    # NB: no IsPlatformAdmin override here — opening an RFQ is a BUYER action.
-    # The class-level [IsAuthenticated, IsCompanyMemberOrPlatformAdmin] applies and
-    # the service (open_rfq) does the real authz: rejects admin viewers and requires
-    # an is_member_of(..., capability="buy") member of the deal's company.
-    @action(detail=True, methods=["post"], url_path="open-rfq")
-    def open_rfq(self, request, pk=None):
-        deal, err = crm_services.open_rfq(
-            int(pk),
-            request.user,
-            supplier_ids=request.data.get("supplier_ids") or None,
-        )
-        if err:
-            return Response({"detail": err}, status=400)
-        return Response(DealDetailSerializer(deal).data)
-
     @action(detail=True, methods=["get"], url_path="export-pdf")
     def export_pdf(self, request, pk=None):
         """Export PDF of the deal's active quote."""

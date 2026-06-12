@@ -5,6 +5,7 @@ from celery.result import AsyncResult
 from django.http import HttpResponse
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
 from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -123,6 +124,20 @@ class ExcelImportView(APIView):
                 owner=request.user,
                 deal_id=deal_id,
                 task_type="DEAL_IMPORT",
+            )
+
+            # Persist the ORIGINAL uploaded file as the deal's source-of-truth
+            # attachment — both buyer and seller must always be able to download the
+            # exact file the КП was parsed from. Shown in the deal's Documents panel.
+            from django.core.files.base import ContentFile
+
+            from .models import Attachment
+
+            Attachment.objects.create(
+                deal_id=deal_id,
+                file=ContentFile(file_content, name=file_obj.name),
+                original_filename=file_obj.name,
+                uploaded_by=request.user,
             )
 
             return Response({"task_id": task.id}, status=status.HTTP_202_ACCEPTED)
@@ -423,6 +438,14 @@ class AttachmentViewSet(viewsets.ModelViewSet):
     serializer_class = AttachmentSerializer
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser]
+
+    @action(detail=True, methods=["get"], url_path="download")
+    def download(self, request, pk=None):
+        # Stream the file through this authenticated endpoint (get_object enforces
+        # tenant scope) — the raw .url 404s on prod (local storage, no MinIO).
+        from core.file_streaming import stream_file_field
+
+        return stream_file_field(self.get_object().file, content_type="application/octet-stream")
 
     def get_queryset(self):
         from crm.models import Deal

@@ -7,9 +7,12 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
 import { useDeals } from '@/hooks/useCRM';
 import { ExcelUpload } from '@/components/Sourcing/ExcelUpload';
 import { PageShell } from './shared/PageShell';
+import { downloadFile } from '@/lib/download';
+import { useFlowStore } from '@/store/flowStore';
 import type { Deal } from '@/api/crmApi';
 
 /**
@@ -32,6 +35,7 @@ export function SourcingImportPage() {
   const { data: deals } = useDeals();
   const [selectedDealId, setSelectedDealId] = useState<string>(() => readDealIdFromHash());
   const [importDone, setImportDone] = useState(false);
+  const setActiveDeal = useFlowStore((s) => s.setActiveDealId);
 
   const importableDeals = useMemo(() =>
     (deals ?? []).filter((d: Deal) =>
@@ -55,11 +59,21 @@ export function SourcingImportPage() {
   // briefly right after creating a new deal), keep the value — SelectItem
   // still renders correctly because Select just compares strings.
 
-  function downloadTemplate() {
-    // Backend: GET /api/v1/catalog/products/export-template/
-    // Serves an XLSX via Content-Disposition.
-    const url = `${window.location.origin}/api/v1/catalog/products/export-template/`;
-    window.open(url, '_blank', 'noopener');
+  async function downloadTemplate() {
+    // Must go through the authenticated client (blob) — opening the raw URL has no
+    // Authorization header, so on prod it 401s ("Учетные данные не предоставлены").
+    try {
+      await downloadFile('catalog/products/export-template/', 'RailTech_Import_Template.xlsx');
+    } catch {
+      toast.error(t('pages.sourcingImport.templateError'));
+    }
+  }
+
+  function openImportedDeal() {
+    // After import, the line items are added to this deal's КП — take the user
+    // straight to the request so they SEE the result (no more dead-end).
+    setActiveDeal(Number(selectedDealId));
+    window.location.hash = 'request-detail';
   }
 
   return (
@@ -126,15 +140,18 @@ export function SourcingImportPage() {
           </Card>
         )}
 
-        {/* Step 3: Success */}
+        {/* Step 3: Success + the next step (open the request to see the imported items) */}
         {importDone && (
           <Card className="border-success/30 bg-success/5">
             <CardContent className="p-5 flex items-center gap-3">
               <Check className="h-5 w-5 text-success shrink-0" />
-              <div>
+              <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold">{t('pages.sourcingImport.importSuccess')}</p>
                 <p className="text-xs text-muted-foreground">{t('pages.sourcingImport.importSuccessHint')}</p>
               </div>
+              <Button size="sm" onClick={openImportedDeal} className="shrink-0">
+                {t('pages.sourcingImport.openDeal')}
+              </Button>
             </CardContent>
           </Card>
         )}

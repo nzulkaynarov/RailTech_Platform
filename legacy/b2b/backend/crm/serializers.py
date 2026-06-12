@@ -13,8 +13,6 @@ from .models import (
     Payment,
     Quote,
     QuoteItem,
-    SupplierBid,
-    SupplierBidItem,
 )
 
 
@@ -237,7 +235,7 @@ class ActivityLogSerializer(serializers.ModelSerializer):
 
 
 # ──────────────────────────────────────────────────────────────────────────
-# Contracts / Invoices / Payments / Acts / Fulfillment / SupplierBids
+# Contracts / Invoices / Payments / Acts / Fulfillment
 # ──────────────────────────────────────────────────────────────────────────
 
 
@@ -409,35 +407,3 @@ class FulfillmentSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-
-
-class SupplierBidItemSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = SupplierBidItem
-        fields = ["id", "quote_item", "product", "description", "quantity", "unit_price", "lead_time_days"]
-
-
-class SupplierBidSerializer(serializers.ModelSerializer):
-    items = SupplierBidItemSerializer(many=True, read_only=True)
-    supplier_name = serializers.CharField(source="supplier.name", read_only=True)
-
-    class Meta:
-        model = SupplierBid
-        fields = [
-            "id",
-            "deal",
-            "supplier",
-            "supplier_name",
-            "submitted_by",
-            "status",
-            "total_amount",
-            "currency",
-            "lead_time_days",
-            "notes",
-            "submitted_at",
-            "accepted_at",
-            "items",
-            "created_at",
-            "updated_at",
-        ]
-        read_only_fields = ["status", "total_amount", "submitted_at", "accepted_at", "created_at", "updated_at"]
