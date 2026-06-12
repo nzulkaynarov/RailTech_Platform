@@ -71,9 +71,7 @@ class QuoteItemSerializer(serializers.ModelSerializer):
         if user is not None and getattr(user, "is_authenticated", False):
             from accounts.services.permissions import is_platform_admin_viewer, is_seller
 
-            privileged = bool(
-                getattr(user, "is_superuser", False) or is_platform_admin_viewer(user) or is_seller(user)
-            )
+            privileged = bool(getattr(user, "is_superuser", False) or is_platform_admin_viewer(user) or is_seller(user))
         self._priv_cache = privileged
         return privileged
 
