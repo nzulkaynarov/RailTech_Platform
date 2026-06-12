@@ -2161,6 +2161,7 @@
       "appearance": "Внешний вид",
       "business": "Бизнес",
       "company": "Компания",
+      "team": "Команда",
       "system": "Система",
       "platform": "Платформа"
     },
@@ -2532,7 +2533,8 @@
         "notes": "Заметки",
         "actions": "Действия",
         "takeIntoWork": "Взять в работу",
-        "quoteSentToast": "КП отправлено клиенту"
+        "quoteSentToast": "КП отправлено клиенту",
+        "quoteApprovedToast": "КП принято"
       },
       "newDeal": "Новая сделка",
       "daysInStage": "дней в этапе",

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { wsBase } from '@/lib/ws';
 import { useTranslation } from 'react-i18next';
 import { Bell, Info, AlertTriangle, CheckCircle, Clock, Check, ExternalLink, BellOff } from 'lucide-react';
 import { notificationsApi, Notification } from '@/api/notificationsApi';
@@ -81,10 +82,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = () => {
     const socketRef = useRef<WebSocket | null>(null);
     useEffect(() => {
         if (!accessToken) return;
-        const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const envHost = import.meta.env.VITE_WS_URL as string | undefined;
-        const host = envHost || `${proto}//${window.location.host}`;
-        const url = `${host}/ws/notifications/?token=${encodeURIComponent(accessToken)}`;
+        const url = `${wsBase()}/ws/notifications/?token=${encodeURIComponent(accessToken)}`;
 
         let stopped = false;
         let retry = 0;

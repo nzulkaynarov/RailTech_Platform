@@ -164,11 +164,14 @@ export function CompanyTeamSettings() {
                   workspace_role_name?: string;
                 };
                 const extMember = member as MemberExt;
-                // Prefer the CompanyMember.id exposed by the team serializer.
-                // Fall back to user.id when the backend hasn't provided it yet.
-                const memberId = extMember.membership_id ?? extMember.id;
-                const canBuy = extMember.can_buy ?? false;
-                const canSell = extMember.can_sell ?? false;
+                // Capabilities + the CompanyMember.id live on the membership for THIS
+                // company, not on the flat user object (where can_sell/can_buy are null
+                // in the team list) — so pick the membership matching the current company.
+                const myMembership =
+                  member.memberships?.find((m) => m.company === companyId) ?? member.memberships?.[0];
+                const memberId = myMembership?.id ?? extMember.membership_id ?? extMember.id;
+                const canBuy = myMembership?.can_buy ?? extMember.can_buy ?? false;
+                const canSell = myMembership?.can_sell ?? extMember.can_sell ?? false;
                 const isSelf = member.id === user?.id;
                 const canEdit = isOwner && !isSelf;
                 return (

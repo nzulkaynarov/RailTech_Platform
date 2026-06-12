@@ -1992,6 +1992,7 @@
       "appearance": "Appearance",
       "business": "Business",
       "company": "Company",
+      "team": "Team",
       "system": "System",
       "platform": "Platform"
     },
@@ -2528,7 +2529,8 @@
         "notes": "Notes",
         "actions": "Actions",
         "takeIntoWork": "Take into work",
-        "quoteSentToast": "Quote sent to client"
+        "quoteSentToast": "Quote sent to client",
+        "quoteApprovedToast": "Quote accepted"
       },
       "newDeal": "New deal",
       "daysInStage": "days in stage",

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { wsBase } from '@/lib/ws';
 import { useTranslation } from 'react-i18next';
 import { crmApi, Message } from '../../api/crmApi';
 import { Send, User, Bot, Loader2, Wifi, WifiOff } from 'lucide-react';
@@ -34,9 +35,7 @@ export const ContextualChat: React.FC<ContextualChatProps> = ({ dealId }) => {
 
         fetchInitialMessages();
 
-        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsHost = import.meta.env.VITE_WS_URL || `${wsProtocol}//${window.location.host}`;
-        const wsUrl = `${wsHost}/ws/chat/${dealId}/?token=${encodeURIComponent(accessToken || '')}`;
+        const wsUrl = `${wsBase()}/ws/chat/${dealId}/?token=${encodeURIComponent(accessToken || '')}`;
 
         const socket = new WebSocket(wsUrl);
         socketRef.current = socket;
