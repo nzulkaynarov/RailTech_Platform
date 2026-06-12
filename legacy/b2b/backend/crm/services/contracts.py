@@ -93,9 +93,7 @@ def _render_contract_pdf(contract) -> None:
     supplier = None
     preparer = contract.quote.prepared_by
     if preparer:
-        membership = (
-            preparer.memberships.filter(is_primary=True, is_active=True).select_related("company").first()
-        )
+        membership = preparer.memberships.filter(is_primary=True, is_active=True).select_related("company").first()
         supplier = membership.company if membership else None
 
     html_string = render_to_string(
