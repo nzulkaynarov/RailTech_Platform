@@ -1,7 +1,7 @@
 import { FormEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Loader2, FileText, Send, CheckCircle2 } from 'lucide-react';
+import { Loader2, FileText, CheckCircle2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { useCreateQuote, useSendQuoteToClient } from '@/hooks/useCRM';
+import { useCreateQuote } from '@/hooks/useCRM';
 import { translateApiError } from '@/lib/apiError';
 
 interface GenerateQuoteDialogProps {
@@ -38,10 +38,7 @@ export function GenerateQuoteDialog({ dealId, open, onOpenChange, onGenerated }:
     defaultDate.setDate(defaultDate.getDate() + 14);
     return defaultDate.toISOString().slice(0, 10);
   });
-  const [sendImmediately, setSendImmediately] = useState(false);
-
   const createMut = useCreateQuote();
-  const sendMut = useSendQuoteToClient();
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -53,24 +50,15 @@ export function GenerateQuoteDialog({ dealId, open, onOpenChange, onGenerated }:
         valid_until: validUntil || undefined,
       });
       toast.success(t('generateQuote.created'));
-      if (sendImmediately && quote?.id) {
-        try {
-          await sendMut.mutateAsync(quote.id);
-          toast.success(t('generateQuote.sent'));
-        } catch (e) {
-          toast.error(translateApiError(e));
-        }
-      }
       onGenerated?.(quote.id);
       onOpenChange(false);
       setNotes('');
-      setSendImmediately(false);
     } catch (e) {
       toast.error(translateApiError(e));
     }
   }
 
-  const busy = createMut.isPending || sendMut.isPending;
+  const busy = createMut.isPending;
 
   return (
     <Dialog
@@ -117,23 +105,6 @@ export function GenerateQuoteDialog({ dealId, open, onOpenChange, onGenerated }:
                 maxLength={2000}
               />
             </div>
-            <label className="flex items-start gap-2 rounded-md border bg-muted/30 p-2 text-xs">
-              <input
-                type="checkbox"
-                className="mt-0.5"
-                checked={sendImmediately}
-                onChange={(e) => setSendImmediately(e.target.checked)}
-              />
-              <span>
-                <span className="flex items-center gap-1 font-medium">
-                  <Send className="h-3 w-3" aria-hidden="true" />
-                  {t('generateQuote.sendOption')}
-                </span>
-                <span className="block text-muted-foreground">
-                  {t('generateQuote.sendOptionHint')}
-                </span>
-              </span>
-            </label>
             <div className="rounded-md border bg-muted/30 p-2 text-xs">
               <div className="flex items-center gap-1.5 font-medium">
                 <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
@@ -159,7 +130,7 @@ export function GenerateQuoteDialog({ dealId, open, onOpenChange, onGenerated }:
               {busy ? (
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
               ) : null}
-              {sendImmediately ? t('generateQuote.submitAndSend') : t('generateQuote.submit')}
+              {t('generateQuote.submit')}
             </Button>
           </DialogFooter>
         </form>
