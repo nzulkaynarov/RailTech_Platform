@@ -29,6 +29,7 @@ import {
 } from '@/hooks/useBilling';
 import { useUserStore } from '@/store/userStore';
 import { useIsViewerMode } from '@/hooks/useViewerMode';
+import { contractsApi } from '@/api/contractsApi';
 import type { Contract, ContractStatus } from '@/api/contractsApi';
 
 const STATUS_VARIANT: Record<ContractStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -280,11 +281,18 @@ export function ContractsPage() {
               )}
               <div className="flex flex-col gap-2">
                 {selected.pdf_url && (
-                  <Button variant="outline" asChild>
-                    <a href={selected.pdf_url} target="_blank" rel="noreferrer">
-                      <Download className="mr-2 h-4 w-4" />
-                      {t('contractsPage.downloadPdf')}
-                    </a>
+                  <Button
+                    variant="outline"
+                    onClick={async () => {
+                      try {
+                        await contractsApi.downloadPdf(selected.id);
+                      } catch (e) {
+                        toast.error(translateApiError(e));
+                      }
+                    }}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    {t('contractsPage.downloadPdf')}
                   </Button>
                 )}
                 {isBuyer && (selected.status === 'PENDING_CLIENT' || selected.status === 'DRAFT') && (

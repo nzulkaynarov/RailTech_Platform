@@ -15,6 +15,7 @@ import {
 } from '@/components/DataTable';
 import { useActs, useSignAct } from '@/hooks/useBilling';
 import { useIsViewerMode } from '@/hooks/useViewerMode';
+import { actsApi } from '@/api/billingApi';
 import type { ActStatus } from '@/api/billingApi';
 
 const STATUS_VARIANT: Record<ActStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -125,10 +126,18 @@ export function ActsPage() {
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
                             {a.pdf_url && (
-                              <Button variant="ghost" size="sm" asChild>
-                                <a href={a.pdf_url} target="_blank" rel="noreferrer">
-                                  <Download className="h-4 w-4" />
-                                </a>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={async () => {
+                                  try {
+                                    await actsApi.downloadPdf(a.id);
+                                  } catch (e) {
+                                    toast.error(translateApiError(e));
+                                  }
+                                }}
+                              >
+                                <Download className="h-4 w-4" />
                               </Button>
                             )}
                             {a.status === 'ISSUED' && (

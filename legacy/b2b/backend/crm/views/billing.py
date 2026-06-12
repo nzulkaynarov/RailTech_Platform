@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.services.permissions import is_seller
+from core.file_streaming import stream_file_field
 from core.permissions import IsCompanyMemberOrPlatformAdmin, IsPlatformAdmin
 from crm import services as crm_services
 from crm.models import Act, Contract, Fulfillment, Invoice, Payment, SupplierBid
@@ -63,6 +64,17 @@ class ContractViewSet(viewsets.ModelViewSet):
             return qs
         user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
         return qs.filter(deal__company_id__in=user_company_ids)
+
+    # Private PDFs are streamed through these authenticated endpoints (get_object
+    # enforces tenant scope) — NOT via the raw /media URL, which 404s on prod
+    # (local FileSystemStorage, no MinIO). See core/file_streaming.py.
+    @action(detail=True, methods=["get"], url_path="download-pdf")
+    def download_pdf(self, request, pk=None):
+        return stream_file_field(self.get_object().pdf_file)
+
+    @action(detail=True, methods=["get"], url_path="download-signed")
+    def download_signed(self, request, pk=None):
+        return stream_file_field(self.get_object().signed_file)
 
     @extend_schema(
         summary="Generate contract from a quote",
@@ -187,6 +199,10 @@ class InvoiceViewSet(viewsets.ModelViewSet):
         user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
         return qs.filter(deal__company_id__in=user_company_ids)
 
+    @action(detail=True, methods=["get"], url_path="download-pdf")
+    def download_pdf(self, request, pk=None):
+        return stream_file_field(self.get_object().pdf_file)
+
     @extend_schema(summary="Generate invoice from a signed contract", tags=["CRM"])
     @action(
         detail=False,
@@ -275,6 +291,14 @@ class ActViewSet(viewsets.ModelViewSet):
             return qs
         user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
         return qs.filter(deal__company_id__in=user_company_ids)
+
+    @action(detail=True, methods=["get"], url_path="download-pdf")
+    def download_pdf(self, request, pk=None):
+        return stream_file_field(self.get_object().pdf_file)
+
+    @action(detail=True, methods=["get"], url_path="download-signed")
+    def download_signed(self, request, pk=None):
+        return stream_file_field(self.get_object().signed_file)
 
     @extend_schema(summary="Sign act (mark as SIGNED)", tags=["CRM"])
     @action(detail=True, methods=["post"], url_path="sign", parser_classes=[MultiPartParser, FormParser])

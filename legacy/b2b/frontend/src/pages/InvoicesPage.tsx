@@ -28,6 +28,7 @@ import {
 } from '@/hooks/useBilling';
 import { useIsViewerMode } from '@/hooks/useViewerMode';
 import { useUserStore } from '@/store/userStore';
+import { invoicesApi } from '@/api/billingApi';
 import type { Invoice, InvoiceStatus } from '@/api/billingApi';
 
 const STATUS_VARIANT: Record<InvoiceStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -231,11 +232,18 @@ export function InvoicesPage() {
               <Separator />
               <div className="flex flex-col gap-2">
                 {selected.pdf_url && (
-                  <Button variant="outline" asChild>
-                    <a href={selected.pdf_url} target="_blank" rel="noreferrer">
-                      <Download className="mr-2 h-4 w-4" />
-                      {t('invoicesPage.downloadPdf')}
-                    </a>
+                  <Button
+                    variant="outline"
+                    onClick={async () => {
+                      try {
+                        await invoicesApi.downloadPdf(selected.id);
+                      } catch (e) {
+                        toast.error(translateApiError(e));
+                      }
+                    }}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    {t('invoicesPage.downloadPdf')}
                   </Button>
                 )}
                 {isBuyer && selected.status !== 'PAID' && selected.status !== 'CANCELLED' && (

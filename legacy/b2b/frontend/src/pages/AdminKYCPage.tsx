@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { downloadFile } from '@/lib/download';
 import {
   ShieldCheck, FileText, Upload, Download, Trash2,
   BadgeCheck, XCircle, FileQuestion,
@@ -194,10 +195,23 @@ function DetailSheet({
                 </div>
               </div>
               {doc.file ? (
-                <Button asChild size="icon" variant="ghost" className="h-7 w-7" aria-label={t('fileUpload.download')}>
-                  <a href={doc.file} target="_blank" rel="noreferrer">
-                    <Download className="h-3.5 w-3.5" />
-                  </a>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7"
+                  aria-label={t('fileUpload.download')}
+                  onClick={async () => {
+                    try {
+                      await downloadFile(
+                        `accounts/companies/${company.id}/download-document/${doc.id}/`,
+                        doc.original_filename || `document_${doc.id}`,
+                      );
+                    } catch {
+                      toast.error(t('fileUpload.errors.removeFailed'));
+                    }
+                  }}
+                >
+                  <Download className="h-3.5 w-3.5" />
                 </Button>
               ) : null}
               <Button
