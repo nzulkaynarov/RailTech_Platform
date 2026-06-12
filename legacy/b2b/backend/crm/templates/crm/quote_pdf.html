@@ -47,11 +47,12 @@
       </tr>
     </thead>
     <tbody>
+      {% comment %}
+        Client-facing КП: show ONLY the final per-unit price and line total. Never
+        expose the seller cost fields here — the buyer could derive the markup.
+      {% endcomment %}
       {% for item in items %}
       <tr>
-        {# Client-facing КП: show ONLY the final per-unit price and line total.
-           NEVER expose frozen_base_price / logistics_cost / customs_duty /
-           margin_percent here — the buyer could derive the seller's markup. #}
         <td>{{ forloop.counter }}</td>
         <td>{{ item.product.name|default:item.imported_raw_name }}</td>
         <td>{{ item.quantity }}</td>
