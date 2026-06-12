@@ -587,20 +587,26 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
               )}
 
               <Separator orientation="vertical" className="h-6" />
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="relative" aria-label={t('cart.title')} onClick={() => useCartStore.getState().openCart()}>
-                    <ShoppingCart className="h-4 w-4" />
-                    {cartCount > 0 && (
-                      <Badge className="absolute -top-1 -right-1 size-4 p-0 text-xs font-bold">
-                        {cartCount}
-                      </Badge>
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{t('cart.title')}</TooltipContent>
-              </Tooltip>
-              <CartDrawer onNavigate={onNavigate} />
+              {/* Cart is a BUYER affordance (cart → RFQ). A seller has nothing to add
+                  to a cart, so it's hidden in the seller/manufacturer context. */}
+              {activeStatus === 'BUYER' && (
+                <>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" className="relative" aria-label={t('cart.title')} onClick={() => useCartStore.getState().openCart()}>
+                        <ShoppingCart className="h-4 w-4" />
+                        {cartCount > 0 && (
+                          <Badge className="absolute -top-1 -right-1 size-4 p-0 text-xs font-bold">
+                            {cartCount}
+                          </Badge>
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t('cart.title')}</TooltipContent>
+                  </Tooltip>
+                  <CartDrawer onNavigate={onNavigate} />
+                </>
+              )}
               <ChatDrawer onNavigate={onNavigate} />
               <SupportButton />
               <NotificationCenter />

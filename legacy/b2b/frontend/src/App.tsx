@@ -163,11 +163,14 @@ function useAuthRoute() {
 // `product_detail/<id>` so deep links / refresh / back-forward work.
 function parseHashToPage(rawHash: string): Page {
   const hash = rawHash.replace(/^#/, '');
-  if (!hash || hash === 'dashboard') return { type: 'dashboard' };
-  if (hash.startsWith('product_detail/')) {
-    return { type: 'product_detail', productId: hash.slice('product_detail/'.length) } as Page;
+  // Drop any query suffix (e.g. `sourcing-import?deal=123`) — the target page reads
+  // its own params from the hash; the page TYPE must be the bare route.
+  const path = hash.split('?')[0];
+  if (!path || path === 'dashboard') return { type: 'dashboard' };
+  if (path.startsWith('product_detail/')) {
+    return { type: 'product_detail', productId: path.slice('product_detail/'.length) } as Page;
   }
-  return { type: hash } as Page;
+  return { type: path } as Page;
 }
 
 function App() {
@@ -355,8 +358,17 @@ function MainApp() {
         setPage(parseHashToPage(window.location.hash));
       }
     };
+    // Also react to direct `window.location.hash = …` assignments (used by a few
+    // deep-links: cart→import, lead→deal, catalog bulk-import). Those fire
+    // `hashchange`, not `popstate`, so without this listener the URL changed but
+    // the page never switched — a silent dead-end.
+    const onHashChange = () => setPage(parseHashToPage(window.location.hash));
     window.addEventListener('popstate', onPopState);
-    return () => window.removeEventListener('popstate', onPopState);
+    window.addEventListener('hashchange', onHashChange);
+    return () => {
+      window.removeEventListener('popstate', onPopState);
+      window.removeEventListener('hashchange', onHashChange);
+    };
   }, []);
 
   const handleProductClick = (productId: string) => {

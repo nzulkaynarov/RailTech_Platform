@@ -132,7 +132,9 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
                   label: t('productManagement.bulkImport'),
                   variant: 'outline' as const,
                   onClick: () => {
-                    window.location.hash = 'sourcing-import';
+                    // Catalog/PIM bulk import — NOT 'sourcing-import' (that's the
+                    // deal-RFQ Excel importer for QuoteItems, a different flow).
+                    window.location.hash = 'catalog-import';
                   },
                 },
                 {
