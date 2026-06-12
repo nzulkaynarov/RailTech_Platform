@@ -18,7 +18,6 @@ import {
   Handshake,
   Check,
   Receipt,
-  Gavel,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -96,29 +95,26 @@ interface NavItem {
 type TFn = (key: string) => string;
 
 function getBuyerNavigation(activePage: string, t: TFn): NavItem[] {
+  // Focused buyer flow: browse Catalog → create/track заявка in My Requests
+  // (opens the request detail where the КП is reviewed + accepted/rejected) →
+  // Billing. Removed the duplicate "Deals" (same data as My Requests), the
+  // separate "Commercial Offers" list (the КП lives inside the request), the
+  // tender "Supplier Bids" (not part of the buyer↔seller КП model), and "Acts"
+  // (no buyer action there).
   const items: NavItem[] = [
     { label: t('shell.dashboard'), icon: <LayoutDashboard className="h-4 w-4" />, id: 'dashboard', active: activePage === 'dashboard' },
     { label: t('shell.catalog'), icon: <Package className="h-4 w-4" />, id: 'products', active: activePage === 'products' },
     { label: t('shell.myRequests'), icon: <ClipboardList className="h-4 w-4" />, id: 'my-requests', active: activePage === 'my-requests' },
-    // Buyer now sees his own Deals — backend filters by company membership via IsOwnerOrManagerOrAdmin.
-    { label: t('shell.deals'), icon: <Handshake className="h-4 w-4" />, id: 'crm-deals', active: activePage === 'crm-deals' },
-    { label: t('shell.commercialOffers'), icon: <Calculator className="h-4 w-4" />, id: 'crm-quotes', active: activePage === 'crm-quotes' },
-    // CRIT-1: BUYER must see supplier bids on his open RFQs to pick a winner.
-    { label: t('shell.supplierBids'), icon: <Gavel className="h-4 w-4" />, id: 'supplier-bids', active: activePage === 'supplier-bids' },
     {
       label: t('shell.billing'), icon: <Receipt className="h-4 w-4" />,
       children: [
         { label: t('shell.contracts'), id: 'contracts', active: activePage === 'contracts' },
         { label: t('shell.invoices'), id: 'invoices', active: activePage === 'invoices' },
         { label: t('shell.payments'), id: 'payments', active: activePage === 'payments' },
-        { label: t('shell.acts'), id: 'acts', active: activePage === 'acts' },
         { label: t('shell.fulfillments'), id: 'fulfillments', active: activePage === 'fulfillments' },
       ],
     },
   ];
-  // (Buyers don't have "Clients"; BuyerAnalytics is an empty page — the dead
-  // role==='ADMIN' branch that used to add them was unreachable: admins use
-  // PlatformAdminShell, never AppShell.)
   return items;
 }
 
@@ -140,13 +136,11 @@ function getManufacturerNavigation(activePage: string, t: TFn): NavItem[] {
       children: [
         { label: t('shell.requests'), id: 'sourcing-requests', active: activePage === 'sourcing-requests' },
         { label: t('shell.excelImport'), id: 'sourcing-import', active: activePage === 'sourcing-import' },
-        { label: t('shell.smartMatch'), id: 'sourcing-match', active: activePage === 'sourcing-match' },
       ],
     },
     { label: t('shell.myRequests'), icon: <ClipboardList className="h-4 w-4" />, id: 'my-requests', active: activePage === 'my-requests' },
     { label: t('shell.deals'), icon: <Handshake className="h-4 w-4" />, id: 'crm-deals', active: activePage === 'crm-deals' },
     { label: t('shell.quotes'), icon: <Calculator className="h-4 w-4" />, id: 'crm-quotes', active: activePage === 'crm-quotes' },
-    { label: t('shell.supplierBids'), icon: <Gavel className="h-4 w-4" />, id: 'supplier-bids', active: activePage === 'supplier-bids' },
     {
       label: t('shell.billing'), icon: <Receipt className="h-4 w-4" />,
       children: [
@@ -180,7 +174,6 @@ function getSellerNavigation(activePage: string, t: TFn): NavItem[] {
       children: [
         { label: t('shell.requests'), id: 'sourcing-requests', active: activePage === 'sourcing-requests' },
         { label: t('shell.excelImport'), id: 'sourcing-import', active: activePage === 'sourcing-import' },
-        { label: t('shell.smartMatch'), id: 'sourcing-match', active: activePage === 'sourcing-match' },
       ],
     },
     {
@@ -192,7 +185,6 @@ function getSellerNavigation(activePage: string, t: TFn): NavItem[] {
         { label: t('shell.leads'), id: 'leads', active: activePage === 'leads' },
       ],
     },
-    { label: t('shell.supplierBids'), icon: <Gavel className="h-4 w-4" />, id: 'supplier-bids', active: activePage === 'supplier-bids' },
     {
       label: t('shell.billing'), icon: <Receipt className="h-4 w-4" />,
       children: [

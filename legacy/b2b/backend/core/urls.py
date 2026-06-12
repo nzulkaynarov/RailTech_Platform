@@ -55,7 +55,6 @@ from crm.views import (
     QuoteItemViewSet,
     QuoteStatusViewSet,
     QuoteViewSet,
-    SupplierBidViewSet,
 )
 from master_data.views import CountryViewSet, CurrencyViewSet, DeliveryBasisViewSet, UnitOfMeasureViewSet
 from notifications.views import NotificationViewSet
@@ -90,7 +89,6 @@ router.register(r"crm/invoices", InvoiceViewSet, basename="invoice")
 router.register(r"crm/payments", PaymentViewSet, basename="payment")
 router.register(r"crm/acts", ActViewSet, basename="act")
 router.register(r"crm/fulfillments", FulfillmentViewSet, basename="fulfillment")
-router.register(r"crm/supplier-bids", SupplierBidViewSet, basename="supplierbid")
 router.register(r"crm/leads", LeadViewSet, basename="lead")
 
 router.register(r"accounts/companies", CompanyViewSet)

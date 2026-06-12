@@ -26,7 +26,6 @@ const SettingsPage = lazyWithRetry(() => import('./pages/SettingsPage').then(m =
 // OnboardingPage and PendingVerificationPage removed — real auth flow via LoginPage + KYCRegistrationForm
 // Admin approves users via Django admin panel at /admin/
 const RequestDetailPage = lazyWithRetry(() => import('./pages/flow/RequestDetailPage').then(m => ({ default: m.RequestDetailPage })));
-const SourcingHub = lazyWithRetry(() => import('./components/Sourcing/SourcingHub').then(m => ({ default: m.SourcingHub })));
 
 // Lazy load individual page modules
 const PlatformAdminDashboard = lazyWithRetry(() => import('./pages/PlatformAdminDashboard'));
@@ -57,10 +56,8 @@ const InvoicesPage = lazyWithRetry(() => import('./pages/InvoicesPage'));
 const PaymentsPage = lazyWithRetry(() => import('./pages/PaymentsPage'));
 const ActsPage = lazyWithRetry(() => import('./pages/ActsPage'));
 const FulfillmentsPage = lazyWithRetry(() => import('./pages/FulfillmentsPage'));
-const SupplierBidsPage = lazyWithRetry(() => import('./pages/SupplierBidsPage'));
 const LeadsPage = lazyWithRetry(() => import('./pages/LeadsPage'));
 const MySubscriptionPage = lazyWithRetry(() => import('./pages/MySubscriptionPage'));
-const AdminSupplierBidsPage = lazyWithRetry(() => import('./pages/AdminSupplierBidsPage'));
 const CatalogImportPage = lazyWithRetry(() => import('./pages/CatalogImportPage'));
 
 import { LoadingSkeleton } from './components/LoadingSkeleton';
@@ -74,7 +71,6 @@ type Page =
   | { type: 'settings' }
   | { type: 'sourcing-requests' }
   | { type: 'sourcing-import' }
-  | { type: 'sourcing-match' }
   | { type: 'crm-deals' }
   | { type: 'crm-quotes' }
   | { type: 'crm-clients' }
@@ -95,13 +91,11 @@ type Page =
   | { type: 'admin-deals' }
   | { type: 'admin-master-data' }
   | { type: 'admin-support' }
-  | { type: 'admin-bids' }
   | { type: 'contracts' }
   | { type: 'invoices' }
   | { type: 'payments' }
   | { type: 'acts' }
   | { type: 'fulfillments' }
-  | { type: 'supplier-bids' }
   | { type: 'leads' }
   | { type: 'my-subscription' }
   | { type: 'catalog-import' }
@@ -292,7 +286,7 @@ function App() {
 const ADMIN_PAGES = new Set([
   'admin-users', 'admin-kyc', 'admin-subscriptions', 'admin-role-apps',
   'admin-catalog', 'admin-categories', 'admin-equipment-groups', 'admin-offers',
-  'admin-companies', 'admin-deals', 'admin-bids', 'admin-master-data', 'admin-support',
+  'admin-companies', 'admin-deals', 'admin-master-data', 'admin-support',
 ]);
 // CRM-pages that need a management WorkspaceRole inside the user's company
 // (not a platform-level SystemRole). Buyers don't see these by design.
@@ -378,16 +372,15 @@ function MainApp() {
   const handleNavigate = (target: string) => {
     const validTypes = [
       'dashboard', 'products', 'profile', 'settings',
-      'sourcing-requests', 'sourcing-import', 'sourcing-match',
+      'sourcing-requests', 'sourcing-import',
       'crm-deals', 'crm-quotes', 'crm-clients',
       'analytics', 'categories', 'equipment-groups',
       'help', 'my-requests', 'request-detail',
       'admin-users', 'admin-kyc', 'admin-subscriptions', 'admin-role-apps',
       'admin-catalog', 'admin-categories', 'admin-equipment-groups', 'admin-offers',
       'admin-companies', 'admin-deals', 'admin-master-data', 'admin-support',
-      'admin-bids',
       'contracts', 'invoices', 'payments', 'acts', 'fulfillments',
-      'supplier-bids', 'leads', 'my-subscription', 'catalog-import',
+      'leads', 'my-subscription', 'catalog-import',
     ];
     if (validTypes.includes(target)) {
       // Role guard: admin pages require ADMIN role
@@ -422,10 +415,6 @@ function MainApp() {
       case 'sourcing-import': return [
         { label: getPageLabel('sourcing-requests', t), pageId: 'sourcing-requests' },
         { label: getPageLabel('sourcing-import', t) },
-      ];
-      case 'sourcing-match': return [
-        { label: getPageLabel('sourcing-requests', t), pageId: 'sourcing-requests' },
-        { label: getPageLabel('sourcing-match', t) },
       ];
       default: return [{ label: getPageLabel(page.type, t) }];
     }
@@ -473,10 +462,6 @@ function MainApp() {
       break;
     case 'sourcing-import':
       content = <SourcingImportPage />;
-      break;
-    case 'sourcing-match':
-      content = <SourcingHub />;
-      activePageId = 'sourcing-match';
       break;
     case 'crm-deals':
       content = <DealsPage />;
@@ -538,9 +523,6 @@ function MainApp() {
     case 'admin-support':
       content = <AdminSupportPage />;
       break;
-    case 'admin-bids':
-      content = <AdminSupplierBidsPage />;
-      break;
     case 'contracts':
       content = <ContractsPage />;
       break;
@@ -555,9 +537,6 @@ function MainApp() {
       break;
     case 'fulfillments':
       content = <FulfillmentsPage />;
-      break;
-    case 'supplier-bids':
-      content = <SupplierBidsPage onNavigate={handleNavigate} />;
       break;
     case 'leads':
       content = <LeadsPage />;
