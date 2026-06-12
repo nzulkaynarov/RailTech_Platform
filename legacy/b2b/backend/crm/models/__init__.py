@@ -3,7 +3,6 @@
 Public API re-exported so existing import paths keep working.
 """
 
-from .bids import SupplierBid, SupplierBidItem
 from .billing import Act, Invoice, InvoiceItem, Payment
 from .contracts import Contract
 from .deals import ActivityLog, Deal, Lead, Message
@@ -27,6 +26,4 @@ __all__ = [
     "QuoteItem",
     "QuoteItemHistory",
     "QuoteStatus",
-    "SupplierBid",
-    "SupplierBidItem",
 ]

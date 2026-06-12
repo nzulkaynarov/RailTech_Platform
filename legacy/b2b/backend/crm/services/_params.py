@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -17,15 +17,3 @@ class PaymentData:
     reference: str = ""
     proof_file: Optional[object] = None
     manual: bool = True
-
-
-@dataclass
-class BidSubmission:
-    """Groups supplier bid parameters for submit_supplier_bid()."""
-
-    deal_id: int
-    supplier_id: int
-    items: list = field(default_factory=list)
-    notes: str = ""
-    lead_time_days: Optional[int] = None
-    currency_id: Optional[int] = None

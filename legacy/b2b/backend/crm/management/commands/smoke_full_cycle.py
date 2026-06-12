@@ -8,8 +8,8 @@ What it does:
     1. Create (or reuse) a BUYER company + user.
     2. Create (or reuse) a SUPPLIER company + user + TRIAL subscription.
     3. Create (or reuse) a MANAGER user.
-    4. Create a Deal (DRAFT → RFQ_OPEN → CALCULATING).
-    5. Submit SupplierBid → accept → Deal moves to CALCULATING.
+    4. Create a Deal (DRAFT).
+    5. Move Deal DRAFT → SOURCING → CALCULATING via the FSM.
     6. Create Quote + QuoteItem, send to client, approve.
     7. Generate Contract → sign client → sign manager (SIGNED).
     8. Generate Invoice → record Payment (PAID) → generate Act → sign Act.
@@ -174,27 +174,11 @@ class Command(BaseCommand):
             deal.save(update_fields=["stage"])
         info(f"deal=#{deal.id} stage={deal.stage.code}")
 
-        step(5, "Open RFQ → SUBMITTED bid → accept → CALCULATING")
-        if deal.stage.code == "DRAFT":
-            deal, err = crm_services.open_rfq(deal.id, manager, supplier_ids=[supplier_co.id])
+        step(5, "Move deal DRAFT → SOURCING → CALCULATING")
+        for target in ["SOURCING", "CALCULATING"]:
+            deal, err = crm_services.transition_deal_stage(deal, target, actor=manager)
             if err:
-                raise Exception(f"open_rfq failed: {err}")
-            info(f"deal.stage={deal.stage.code}")
-        bid, err = crm_services.submit_supplier_bid(
-            deal_id=deal.id,
-            supplier_id=supplier_co.id,
-            submitted_by=supplier,
-            items=[{"description": "Железный шпала", "quantity": 10, "unit_price": "100.00", "lead_time_days": 14}],
-            lead_time_days=14,
-            notes="smoke",
-            currency_id=usd.id,
-        )
-        if err:
-            raise Exception(f"submit_supplier_bid failed: {err}")
-        info(f"bid=#{bid.id} total={bid.total_amount}")
-        bid, err = crm_services.accept_supplier_bid(bid.id, manager)
-        if err:
-            raise Exception(f"accept_supplier_bid failed: {err}")
+                raise Exception(f"transition_deal_stage → {target} failed: {err}")
         deal.refresh_from_db()
         info(f"deal.stage={deal.stage.code} (expected CALCULATING)")
 

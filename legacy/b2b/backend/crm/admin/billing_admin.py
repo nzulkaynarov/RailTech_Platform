@@ -5,12 +5,12 @@ from unfold.decorators import display
 
 from core.admin_mixins import ReadOnlyInspectionMixin
 
-from ..models import Act, Contract, Fulfillment, Invoice, Payment, SupplierBid
+from ..models import Act, Contract, Fulfillment, Invoice, Payment
 
 # ────────────────────────────────────────────
 # Inlines
 # ────────────────────────────────────────────
-from .inlines import InvoiceItemInline, PaymentInline, SupplierBidItemInline
+from .inlines import InvoiceItemInline, PaymentInline
 
 
 @admin.register(Contract)
@@ -149,30 +149,4 @@ class FulfillmentAdmin(ReadOnlyInspectionMixin, ModelAdmin):
         },
     )
     def fulfillment_status(self, obj):
-        return obj.get_status_display()
-
-
-@admin.register(SupplierBid)
-class SupplierBidAdmin(ReadOnlyInspectionMixin, ModelAdmin):
-    list_display = ("deal", "supplier", "bid_status", "total_amount", "lead_time_days", "submitted_at")
-    list_filter = ("status",)
-    list_filter_submit = True
-    search_fields = ("deal__id", "supplier__name", "supplier__inn")
-    autocomplete_fields = ("deal", "supplier", "submitted_by", "currency")
-    readonly_fields = ("submitted_at", "accepted_at", "created_at", "updated_at")
-    inlines = [SupplierBidItemInline]
-    list_per_page = 25
-    list_select_related = ("deal", "supplier")
-
-    @display(
-        description=_("Статус"),
-        label={
-            "Черновик": "info",
-            "Подано": "warning",
-            "Принято": "success",
-            "Отклонено": "danger",
-            "Отозвано": "info",
-        },
-    )
-    def bid_status(self, obj):
         return obj.get_status_display()

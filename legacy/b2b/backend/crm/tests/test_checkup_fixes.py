@@ -2,9 +2,7 @@
 
 Covers the regressions a service-only test (golden_path) could not catch because
 it bypasses the view permission layer:
-  * open-rfq is a BUYER action — it was wrongly gated IsPlatformAdmin → 403 for
-    legitimate buyers, freezing the whole procurement cycle.
-  * the supplier directory is member-accessible (buyers invite suppliers to RFQ)
+  * the supplier directory is member-accessible (buyers can browse suppliers)
     without exposing the admin-only full company list.
   * deal destroy is restricted to DRAFT for non-admins.
 """
@@ -74,35 +72,6 @@ def draft_deal(buyer):
     return Deal.objects.create(
         title="Buyer Deal", company=company, client=user, stage=DealStage.objects.get(code="DRAFT")
     )
-
-
-# ── open-rfq permission (checkup blocker #1) ────────────────────────────────
-
-
-def test_buyer_can_open_rfq(buyer, draft_deal):
-    """The core fix: a can_buy member opens their own RFQ → 200 + RFQ_OPEN."""
-    user, _ = buyer
-    resp = _api(user).post(f"/api/v1/crm/deals/{draft_deal.id}/open-rfq/", {}, format="json")
-    assert resp.status_code == 200, resp.data
-    draft_deal.refresh_from_db()
-    assert draft_deal.stage.code == "RFQ_OPEN"
-
-
-def test_platform_admin_viewer_cannot_open_rfq(buyer, draft_deal):
-    """A platform-admin viewer (SystemRole ADMIN, no memberships) must not act on
-    behalf of a company — the service refuses with ADMIN_VIEWER_CANNOT_ACT."""
-    admin = CustomUser.objects.create_user(
-        email="padmin@checkup.test",
-        username="padmin_checkup",
-        password="pw",
-        is_active=True,
-        role=SystemRole.objects.get(code="ADMIN"),
-    )
-    resp = _api(admin).post(f"/api/v1/crm/deals/{draft_deal.id}/open-rfq/", {}, format="json")
-    assert resp.status_code == 400
-    assert resp.data["detail"] == "ADMIN_VIEWER_CANNOT_ACT"
-    draft_deal.refresh_from_db()
-    assert draft_deal.stage.code == "DRAFT"
 
 
 # ── supplier directory (checkup #1b) ────────────────────────────────────────

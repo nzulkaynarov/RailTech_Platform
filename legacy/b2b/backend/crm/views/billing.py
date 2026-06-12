@@ -11,7 +11,7 @@ from accounts.services.permissions import is_seller
 from core.file_streaming import stream_file_field
 from core.permissions import IsCompanyMemberOrPlatformAdmin, IsPlatformAdmin
 from crm import services as crm_services
-from crm.models import Act, Contract, Fulfillment, Invoice, Payment, SupplierBid
+from crm.models import Act, Contract, Fulfillment, Invoice, Payment
 from crm.serializers import (
     ActSerializer,
     ContractSerializer,
@@ -40,7 +40,6 @@ class Phase2StatusChoicesView(APIView):
                 "invoice": to_list(Invoice.STATUS_CHOICES),
                 "act": to_list(Act.STATUS_CHOICES),
                 "fulfillment": to_list(Fulfillment.STATUS_CHOICES),
-                "supplier_bid": to_list(SupplierBid.STATUS_CHOICES),
                 "payment_method": to_list(Payment.METHOD_CHOICES),
             }
         )

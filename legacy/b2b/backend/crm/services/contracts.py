@@ -159,9 +159,8 @@ def sign_contract_by_manager(
     """Click-to-sign by seller-side company manager. MANUAL MODE — to be replaced by E-IMZO.
     See memory `tech_debt_payment_esign.md`.
 
-    Seller side is represented by the accepted SupplierBid's supplier company
-    (if any) or — when a deal has no bid — by any member with can_sell on the
-    deal.company itself (self-service intra-company deals).
+    Seller side is represented by any member with can_sell on the deal.company
+    itself (self-service intra-company deals).
     """
     from django.utils import timezone
 

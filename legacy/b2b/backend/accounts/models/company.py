@@ -199,10 +199,7 @@ class CompanyMember(models.Model):
     can_sell = models.BooleanField(
         default=True,
         verbose_name=_("Может продавать"),
-        help_text=_(
-            "Разрешено подавать SupplierBid, управлять каталогом и офферами "
-            "от лица компании. Выключается владельцем компании."
-        ),
+        help_text=_("Разрешено управлять каталогом и офферами от лица компании. " "Выключается владельцем компании."),
     )
     can_buy = models.BooleanField(
         default=True,

@@ -43,7 +43,7 @@ def is_seller(user: "CustomUser") -> bool:
     company-type filter is what keeps a client a client. Since the seller operates
     across ALL buyer заявки/deals (single-seller model, RailTech) and is not a
     member of the buyer's deal.company, seller-side authz keys off this rather than
-    deal-company membership. Multi-seller will scope per accepted SupplierBid.
+    deal-company membership.
     """
     if not user or not user.is_authenticated:
         return False

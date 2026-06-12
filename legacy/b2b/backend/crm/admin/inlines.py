@@ -1,6 +1,6 @@
 from unfold.admin import TabularInline
 
-from ..models import InvoiceItem, Payment, Quote, QuoteItem, SupplierBidItem
+from ..models import InvoiceItem, Payment, Quote, QuoteItem
 
 # ────────────────────────────────────────────
 # Inlines
@@ -55,12 +55,4 @@ class PaymentInline(TabularInline):
     extra = 0
     can_delete = False
     fields = ("amount", "method", "paid_at", "reference", "recorded_by", "created_at")
-    readonly_fields = fields
-
-
-class SupplierBidItemInline(TabularInline):
-    model = SupplierBidItem
-    extra = 0
-    can_delete = False
-    fields = ("description", "quantity", "unit_price", "lead_time_days", "product", "quote_item")
     readonly_fields = fields
