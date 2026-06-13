@@ -1,6 +1,8 @@
 # ═══════════════════════════════════════════════════════════════════════════
 #  b2b.railtech.uz — RailTech B2B SaaS
-#  Append this block to /etc/caddy/Caddyfile (the shared multi-tenant config),
+#  Multi-tenant conf.d pattern: copy this file to /etc/caddy/conf.d/b2b.caddy
+#  (it is its OWN fragment — never edit the shared master /etc/caddy/Caddyfile,
+#  which only holds the global block + `import /etc/caddy/conf.d/*.caddy`).
 #  then:  caddy validate --config /etc/caddy/Caddyfile  &&  systemctl reload caddy
 #
 #  Caddy terminates TLS (auto Let's Encrypt) and routes:
