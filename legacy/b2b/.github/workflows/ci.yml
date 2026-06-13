@@ -117,12 +117,6 @@ jobs:
           # ephemeral Postgres (we run --nomigrations, and addopts sets --reuse-db).
           pytest --create-db --cov=. --cov-report=xml --cov-report=html --cov-fail-under=30
 
-      - name: Upload coverage reports
-        uses: codecov/codecov-action@v4
-        with:
-          files: ./backend/coverage.xml
-          fail_ci_if_error: false
-
   # The test job above runs with --nomigrations (pyproject addopts), so it builds
   # the schema from models and never exercises the migration graph. This job does:
   # it applies every migration to a clean Postgres, catching breakage that only
