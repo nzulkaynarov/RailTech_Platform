@@ -180,10 +180,19 @@ $DC exec backend python manage.py init_superadmin            # uses SUPERADMIN_*
 ```
 
 ## 7. Wire up Caddy (publish b2b.railtech.uz)
+
+Multi-tenant `import` / `conf.d` pattern: the master `/etc/caddy/Caddyfile`
+(global block + `import /etc/caddy/conf.d/*.caddy`) is **never** touched by a
+project deploy — each project owns exactly one fragment in `/etc/caddy/conf.d/`.
+This is what keeps a GradeSentinel deploy from clobbering b2b and vice-versa.
+
 ```bash
-mkdir -p /var/log/caddy
-# append the project's Caddy block to the shared config:
-cat /opt/railtech-b2b/deploy/caddy/b2b.railtech.uz.caddy >> /etc/caddy/Caddyfile
+mkdir -p /var/log/caddy /etc/caddy/conf.d
+# drop the project's fragment (own file — does NOT touch the shared master):
+cp /opt/railtech-b2b/deploy/caddy/b2b.railtech.uz.caddy /etc/caddy/conf.d/b2b.caddy
+# one-time: ensure the master imports conf.d (idempotent — skips if already set):
+grep -q 'import /etc/caddy/conf.d' /etc/caddy/Caddyfile || \
+  printf '{\n    email zulkaynarov@gmail.com\n}\n\nimport /etc/caddy/conf.d/*.caddy\n' > /etc/caddy/Caddyfile
 caddy validate --config /etc/caddy/Caddyfile      # MUST pass before reload
 systemctl reload caddy                             # zero-downtime; grades.railtech.uz unaffected
 ```
