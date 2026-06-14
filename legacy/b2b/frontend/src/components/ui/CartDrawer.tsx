@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ShoppingCart, Trash2, Plus, Minus, Package, ArrowRight, Loader2 } from 'lucide-react';
 import { useCartStore } from '@/store/cartStore';
-import { useFlowStore } from '@/store/flowStore';
 import { crmApi } from '@/api/crmApi';
 import { toast } from 'sonner';
 import {
@@ -18,14 +17,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 
-interface CartDrawerProps {
-    onNavigate?: (target: string) => void;
-}
-
-export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
+export const CartDrawer: React.FC = () => {
     const { t } = useTranslation();
     const { isOpen, closeCart, items, removeItem, updateQuantity, clearCart } = useCartStore();
-    const setActiveDeal = useFlowStore((s) => s.setActiveDealId);
 
     const totalItems = items.reduce((sum, i) => sum + i.quantity, 0);
     const [submitting, setSubmitting] = useState(false);
@@ -50,12 +44,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ onNavigate }) => {
             // action — the backend now blocks buyers from creating quotes/quote-items
             // (ONLY_SELLER_CAN_BUILD_QUOTE), so the cart must NOT create them here.
             toast.success(t('cart.requestCreated', { id: deal.id }));
-            if (onNavigate) {
-                setActiveDeal(deal.id);
-                onNavigate('request-detail');
-            }
             clearCart();
             closeCart();
+            window.location.hash = `request-detail/${deal.id}`;
         } catch {
             toast.error(t('cart.requestError'));
         } finally {
