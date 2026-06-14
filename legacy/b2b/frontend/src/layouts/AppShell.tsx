@@ -596,7 +596,7 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
                     </TooltipTrigger>
                     <TooltipContent>{t('cart.title')}</TooltipContent>
                   </Tooltip>
-                  <CartDrawer onNavigate={onNavigate} />
+                  <CartDrawer />
                 </>
               )}
               <ChatDrawer onNavigate={onNavigate} />

@@ -24,7 +24,7 @@ const ProfilePage = lazyWithRetry(() => import('./pages/ProfilePage').then(m => 
 const SettingsPage = lazyWithRetry(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
 // OnboardingPage and PendingVerificationPage removed — real auth flow via LoginPage + KYCRegistrationForm
 // Admin approves users via Django admin panel at /admin/
-const RequestDetailPage = lazyWithRetry(() => import('./pages/flow/RequestDetailPage').then(m => ({ default: m.RequestDetailPage })));
+const RequestDetailPage = lazyWithRetry(() => import('./pages/RequestDetailPage').then(m => ({ default: m.RequestDetailPage })));
 
 // Lazy load individual page modules
 const PlatformAdminDashboard = lazyWithRetry(() => import('./pages/PlatformAdminDashboard'));
@@ -65,7 +65,7 @@ import { LoadingSkeleton } from './components/LoadingSkeleton';
 type Page =
   | { type: 'dashboard' }
   | { type: 'products' }
-  | { type: 'request-detail' }
+  | { type: 'request-detail'; dealId: number }
   | { type: 'product_detail'; productId: string }
   | { type: 'profile' }
   | { type: 'settings' }
@@ -169,6 +169,11 @@ function parseHashToPage(rawHash: string): Page {
     const dealId = Number(path.slice('deal-quote/'.length));
     if (Number.isFinite(dealId) && dealId > 0) return { type: 'deal-quote', dealId };
     return { type: 'crm-deals' };
+  }
+  if (path === 'request-detail' || path.startsWith('request-detail/')) {
+    const dealId = Number(path.slice('request-detail/'.length));
+    if (Number.isFinite(dealId) && dealId > 0) return { type: 'request-detail', dealId };
+    return { type: 'my-requests' };
   }
   return { type: path } as Page;
 }
@@ -381,7 +386,7 @@ function MainApp() {
       'sourcing-requests', 'sourcing-import',
       'crm-deals', 'crm-quotes', 'crm-clients',
       'analytics', 'categories', 'equipment-groups',
-      'help', 'my-requests', 'request-detail',
+      'help', 'my-requests',
       'admin-users', 'admin-kyc', 'admin-subscriptions', 'admin-role-apps',
       'admin-catalog', 'admin-categories', 'admin-equipment-groups', 'admin-offers',
       'admin-companies', 'admin-deals', 'admin-master-data', 'admin-support',
@@ -461,8 +466,8 @@ function MainApp() {
     case 'request-detail':
       content = (
         <RequestDetailPage
+          dealId={page.dealId}
           onBack={() => navigateTo({ type: 'my-requests' })}
-          onNavigate={handleNavigate}
         />
       );
       activePageId = 'my-requests';
@@ -501,7 +506,7 @@ function MainApp() {
       content = <HelpPage />;
       break;
     case 'my-requests':
-      content = <MyRequestsPage onNavigate={handleNavigate} />;
+      content = <MyRequestsPage />;
       break;
     case 'admin-users':
       content = <AdminUsersPage />;

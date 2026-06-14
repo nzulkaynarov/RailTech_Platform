@@ -12,7 +12,6 @@ import { useDeals } from '@/hooks/useCRM';
 import { ExcelUpload } from '@/components/Sourcing/ExcelUpload';
 import { PageShell } from './shared/PageShell';
 import { downloadFile } from '@/lib/download';
-import { useFlowStore } from '@/store/flowStore';
 import type { Deal } from '@/api/crmApi';
 
 /**
@@ -35,7 +34,6 @@ export function SourcingImportPage() {
   const { data: deals } = useDeals();
   const [selectedDealId, setSelectedDealId] = useState<string>(() => readDealIdFromHash());
   const [importDone, setImportDone] = useState(false);
-  const setActiveDeal = useFlowStore((s) => s.setActiveDealId);
 
   const importableDeals = useMemo(() =>
     (deals ?? []).filter((d: Deal) =>
@@ -72,8 +70,7 @@ export function SourcingImportPage() {
   function openImportedDeal() {
     // After import, the line items are added to this deal's КП — take the user
     // straight to the request so they SEE the result (no more dead-end).
-    setActiveDeal(Number(selectedDealId));
-    window.location.hash = 'request-detail';
+    window.location.hash = `request-detail/${selectedDealId}`;
   }
 
   return (

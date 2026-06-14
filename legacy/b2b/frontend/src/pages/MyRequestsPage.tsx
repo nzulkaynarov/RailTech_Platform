@@ -5,19 +5,17 @@ import { Badge } from '@/components/ui/badge';
 import { ShoppingCart, FileText, ChevronRight } from 'lucide-react';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useDeals, useDealStages } from '@/hooks/useCRM';
-import { useFlowStore } from '@/store/flowStore';
 import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
 import { Toolbar, Pager, useListParams, applyListParams } from '@/components/DataTable';
 import { CreateDealDialog } from '@/components/CRM/CreateDealDialog';
 import { DealStage } from '@/lib/codes';
 import type { Deal } from '@/api/crmApi';
 
-export function MyRequestsPage({ onNavigate }: { onNavigate?: (t: string) => void }) {
+export function MyRequestsPage() {
   const { t } = useTranslation();
   const { data: deals, isLoading } = useDeals();
   const { data: stages } = useDealStages();
   const formatCurrency = useCurrencyStore((s) => s.format);
-  const setActiveDeal = useFlowStore((s) => s.setActiveDealId);
   const [createOpen, setCreateOpen] = useState(false);
 
   const listParams = useListParams(['stage'] as const, { defaultOrdering: '-created_at', pageSize: 15 });
@@ -35,10 +33,8 @@ export function MyRequestsPage({ onNavigate }: { onNavigate?: (t: string) => voi
   ];
 
   const openDeal = (deal: Deal) => {
-    // Route the user into the request-detail flow; FlowStore carries the deal
-    // id across the navigation so the detail view can load it.
-    setActiveDeal(deal.id);
-    onNavigate?.('request-detail');
+    // Param-based deep link; the detail page reads the id from the hash route.
+    window.location.hash = `request-detail/${deal.id}`;
   };
 
   return (
@@ -127,7 +123,7 @@ export function MyRequestsPage({ onNavigate }: { onNavigate?: (t: string) => voi
       <CreateDealDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
-        onCreated={(dealId) => { setActiveDeal(dealId); onNavigate?.('request-detail'); }}
+        onCreated={(dealId) => { window.location.hash = `request-detail/${dealId}`; }}
       />
     </PageShell>
   );
