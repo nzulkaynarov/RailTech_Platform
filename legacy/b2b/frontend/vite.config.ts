@@ -9,7 +9,16 @@ export default defineConfig({
 		react(),
 		tailwindcss(),
 	],
-	server: { port: 5174 },
+	// Dev-only: proxy API/WS to the local backend so the dev server is same-origin
+	// (no CORS setup needed for local development). Does not affect the production
+	// build — that bakes in VITE_API_URL and is served by Caddy.
+	server: {
+		port: 5174,
+		proxy: {
+			'/api': { target: 'http://localhost:8000', changeOrigin: true },
+			'/ws': { target: 'ws://localhost:8000', ws: true, changeOrigin: true },
+		},
+	},
 	resolve: {
 		alias: {
 			"@": path.resolve(__dirname, "./src"),
