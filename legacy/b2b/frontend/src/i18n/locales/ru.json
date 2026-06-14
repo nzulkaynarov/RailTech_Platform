@@ -2536,7 +2536,8 @@
         "actions": "Действия",
         "takeIntoWork": "Взять в работу",
         "quoteSentToast": "КП отправлено клиенту",
-        "quoteApprovedToast": "КП принято"
+        "quoteApprovedToast": "КП принято",
+        "openQuote": "Открыть КП"
       },
       "newDeal": "Новая сделка",
       "daysInStage": "дней в этапе",
@@ -3081,6 +3082,12 @@
       "emailRequired": "Укажите email",
       "confirmDelete": "Удалить пользователя?",
       "confirmDeleteDesc": "Пользователь {{email}} будет удалён без возможности восстановления."
+    },
+    "dealQuote": {
+      "title": "Сборка КП",
+      "noQuote": "КП ещё не создано",
+      "noQuoteHint": "Вернитесь к сделке и нажмите «Создать КП», чтобы начать.",
+      "notFound": "Сделка не найдена"
     }
   },
   "dealSplit": {

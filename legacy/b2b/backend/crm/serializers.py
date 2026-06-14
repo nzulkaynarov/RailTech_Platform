@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from master_data.models import Currency
+
 from .models import (
     Act,
     ActivityLog,
@@ -22,6 +24,14 @@ class QuoteItemSerializer(serializers.ModelSerializer):
     product_sku = serializers.CharField(source="product.sku", read_only=True)
     product_gost = serializers.CharField(source="product.gost_drawing", read_only=True)
     offer_supplier_name = serializers.CharField(source="offer.supplier.name", read_only=True)
+    # Currency travels as its code ("USD") in both directions — the frontend grid
+    # (formatMoney) and the manual "Add item" path use the code, never the PK.
+    frozen_currency = serializers.SlugRelatedField(
+        slug_field="code",
+        queryset=Currency.objects.all(),
+        required=False,
+        allow_null=True,
+    )
 
     class Meta:
         model = QuoteItem

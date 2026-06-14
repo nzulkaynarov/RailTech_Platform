@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FileText, Clock, Eye, FileSignature, Send, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { FileText, Clock, Eye, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,15 +15,13 @@ import { StatusBadge, getDealStageVariant } from '@/components/ui/StatusBadge';
 import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/DataTable';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useUserStore } from '@/store/userStore';
-import { useDeals, useDealStages, useChangeDealStage, useSendQuoteToClient, useApproveQuote, useRejectQuote } from '@/hooks/useCRM';
+import { useDeals, useDealStages, useChangeDealStage, useApproveQuote, useRejectQuote } from '@/hooks/useCRM';
 import { translateApiError } from '@/lib/apiError';
 import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
 import { RejectQuoteDialog } from '@/components/CRM/RejectQuoteDialog';
 import { CreateDealDialog } from '@/components/CRM/CreateDealDialog';
 import { GenerateQuoteDialog } from '@/components/CRM/GenerateQuoteDialog';
 import { DealsKanban } from '@/components/CRM/DealsKanban';
-import { GenerateContractDialog } from '@/components/CRM/GenerateContractDialog';
-import { QuoteBuilderGrid } from '@/components/Admin/QuoteBuilderGrid';
 import { DealStage, QuoteStatus } from '@/lib/codes';
 import type { Deal } from '@/api/crmApi';
 
@@ -42,10 +40,8 @@ function DealDetailSheet({
   const formatCurrency = useCurrencyStore((s) => s.format);
   const activeStatus = useUserStore((s) => s.activeStatus);
   const [quoteOpen, setQuoteOpen] = useState(false);
-  const [contractOpen, setContractOpen] = useState(false);
   const [rejectOpen, setRejectOpen] = useState(false);
   const changeStage = useChangeDealStage();
-  const sendQuote = useSendQuoteToClient();
   const approveQuote = useApproveQuote();
   const rejectQuote = useRejectQuote();
   if (!deal) return null;
@@ -66,25 +62,17 @@ function DealDetailSheet({
   const canBuildQuote = isSeller
     && ([DealStage.SOURCING, DealStage.CALCULATING] as string[]).includes(stageCode)
     && !deal.active_quote;
-  // The seller works the КП inline (builder + approval chain) whenever the deal has one.
-  const showQuoteWorkspace = isSeller && !!deal.active_quote;
-  // Once the КП is internally approved (READY_TO_SEND), the seller pushes it to the
-  // client — the final step of the документооборот, otherwise the chain dead-ends.
-  const canSendQuote = isSeller && quoteStatus === QuoteStatus.READY_TO_SEND;
+  // The seller works the КП on its own full page (builder + approval chain +
+  // lifecycle). The sheet stays a lightweight overview and only links into it.
+  const hasQuote = isSeller && !!deal.active_quote;
   // Buyer decision: once the seller has sent the КП (status SENT), the buyer
   // accepts or rejects it right here. Backend re-checks can_buy on deal.company.
   const canBuyerDecide = isBuyer && quoteStatus === QuoteStatus.SENT;
-  const approvedQuote = isSeller && deal.active_quote
-    && ([QuoteStatus.APPROVED, QuoteStatus.SENT] as string[]).includes(quoteStatus);
 
-  const handleSendToClient = async () => {
-    if (!deal.active_quote) return;
-    try {
-      await sendQuote.mutateAsync(deal.active_quote.id);
-      toast.success(t('pages.deals.detail.quoteSentToast'));
-    } catch (e) {
-      toast.error(translateApiError(e));
-    }
+  // Open the dedicated КП builder page (hash route handled in App.tsx).
+  const openQuotePage = () => {
+    onOpenChange(false);
+    window.location.hash = `deal-quote/${deal.id}`;
   };
 
   const handleApprove = async () => {
@@ -108,7 +96,7 @@ function DealDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className={`overflow-y-auto ${showQuoteWorkspace ? 'sm:max-w-6xl' : 'sm:max-w-lg'}`}>
+      <SheetContent className="overflow-y-auto sm:max-w-lg">
         <SheetHeader>
           <SheetTitle>{deal.title || `${t('pages.deals.deal')} #${deal.id}`}</SheetTitle>
           <SheetDescription>
@@ -167,10 +155,10 @@ function DealDetailSheet({
                   {t('generateQuote.submit')}
                 </Button>
               )}
-              {canSendQuote && (
-                <Button size="sm" disabled={sendQuote.isPending} onClick={handleSendToClient}>
-                  <Send className="mr-2 h-4 w-4" />
-                  {t('requestDetailActions.sendQuote')}
+              {hasQuote && (
+                <Button size="sm" onClick={openQuotePage}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  {t('pages.deals.detail.openQuote')}
                 </Button>
               )}
               {canBuyerDecide && (
@@ -190,41 +178,15 @@ function DealDetailSheet({
                   </Button>
                 </>
               )}
-              {approvedQuote && (
-                <Button size="sm" onClick={() => setContractOpen(true)}>
-                  <FileSignature className="mr-2 h-4 w-4" />
-                  {t('contractGenerateDialog.generate')}
-                </Button>
-              )}
             </div>
           </section>
-
-          {/* Seller КП workspace — the approval chain + the line-item/price builder,
-              shown inline once the deal has a КП. This is where the seller actually
-              fills positions, sets margin, and runs документооборот. */}
-          {showQuoteWorkspace && deal.active_quote && (
-            <>
-              <Separator />
-              {/* QuoteBuilderGrid renders its own approval-chain bar + toolbar
-                  (title, VAT, currency, add/save/PDF), so we don't repeat them here. */}
-              <section className="space-y-3">
-                <div className="h-[520px]">
-                  <QuoteBuilderGrid dealId={deal.id} />
-                </div>
-              </section>
-            </>
-          )}
         </div>
 
         <GenerateQuoteDialog
           dealId={deal.id}
           open={quoteOpen}
           onOpenChange={setQuoteOpen}
-        />
-        <GenerateContractDialog
-          quoteId={deal.active_quote?.id ?? null}
-          open={contractOpen}
-          onOpenChange={setContractOpen}
+          onGenerated={openQuotePage}
         />
         <RejectQuoteDialog
           quoteId={deal.active_quote?.id ?? null}

@@ -58,6 +58,7 @@ const FulfillmentsPage = lazyWithRetry(() => import('./pages/FulfillmentsPage'))
 const LeadsPage = lazyWithRetry(() => import('./pages/LeadsPage'));
 const MySubscriptionPage = lazyWithRetry(() => import('./pages/MySubscriptionPage'));
 const CatalogImportPage = lazyWithRetry(() => import('./pages/CatalogImportPage'));
+const DealQuotePage = lazyWithRetry(() => import('./pages/DealQuotePage'));
 
 import { LoadingSkeleton } from './components/LoadingSkeleton';
 
@@ -71,6 +72,7 @@ type Page =
   | { type: 'sourcing-requests' }
   | { type: 'sourcing-import' }
   | { type: 'crm-deals' }
+  | { type: 'deal-quote'; dealId: number }
   | { type: 'crm-quotes' }
   | { type: 'crm-clients' }
   | { type: 'analytics' }
@@ -162,6 +164,11 @@ function parseHashToPage(rawHash: string): Page {
   if (!path || path === 'dashboard') return { type: 'dashboard' };
   if (path.startsWith('product_detail/')) {
     return { type: 'product_detail', productId: path.slice('product_detail/'.length) } as Page;
+  }
+  if (path.startsWith('deal-quote/')) {
+    const dealId = Number(path.slice('deal-quote/'.length));
+    if (Number.isFinite(dealId) && dealId > 0) return { type: 'deal-quote', dealId };
+    return { type: 'crm-deals' };
   }
   return { type: path } as Page;
 }
@@ -415,6 +422,10 @@ function MainApp() {
         { label: getPageLabel('sourcing-requests', t), pageId: 'sourcing-requests' },
         { label: getPageLabel('sourcing-import', t) },
       ];
+      case 'deal-quote': return [
+        { label: getPageLabel('crm-deals', t), pageId: 'crm-deals' },
+        { label: t('pages.dealQuote.title') },
+      ];
       default: return [{ label: getPageLabel(page.type, t) }];
     }
   };
@@ -464,6 +475,12 @@ function MainApp() {
       break;
     case 'crm-deals':
       content = <DealsPage />;
+      break;
+    case 'deal-quote':
+      // Same access surface as crm-deals (a seller working a КП). The backend
+      // enforces seller-only writes on the quote/quote-item endpoints.
+      content = <DealQuotePage dealId={page.dealId} onBack={() => navigateTo({ type: 'crm-deals' })} />;
+      activePageId = 'crm-deals';
       break;
     case 'crm-quotes':
       content = <QuotesPage />;

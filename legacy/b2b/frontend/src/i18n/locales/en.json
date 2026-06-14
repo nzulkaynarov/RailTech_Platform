@@ -2532,7 +2532,8 @@
         "actions": "Actions",
         "takeIntoWork": "Take into work",
         "quoteSentToast": "Quote sent to client",
-        "quoteApprovedToast": "Quote accepted"
+        "quoteApprovedToast": "Quote accepted",
+        "openQuote": "Open quote"
       },
       "newDeal": "New deal",
       "daysInStage": "days in stage",
@@ -3077,6 +3078,12 @@
       "emailRequired": "Email is required",
       "confirmDelete": "Delete user?",
       "confirmDeleteDesc": "User {{email}} will be permanently deleted."
+    },
+    "dealQuote": {
+      "title": "Quote builder",
+      "noQuote": "No quote yet",
+      "noQuoteHint": "Go back to the deal and click “Create quote” to start.",
+      "notFound": "Deal not found"
     }
   },
   "dealSplit": {
