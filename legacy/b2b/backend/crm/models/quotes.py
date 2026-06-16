@@ -292,6 +292,7 @@ class QuoteItem(models.Model):
     class Meta:
         verbose_name = _("Позиция КП")
         verbose_name_plural = _("Позиции КП")
+        ordering = ["id"]
 
     @property
     def line_total(self):
