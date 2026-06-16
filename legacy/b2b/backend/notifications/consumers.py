@@ -18,6 +18,9 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         from django.contrib.auth.models import AnonymousUser
 
         if not user or isinstance(user, AnonymousUser) or not user.is_authenticated:
+            # Accept then close so the browser receives the custom close code
+            # (4001) in onclose instead of a generic handshake rejection.
+            await self.accept()
             await self.close(code=4001)
             return
 

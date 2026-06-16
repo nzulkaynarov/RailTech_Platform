@@ -21,11 +21,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
         from django.contrib.auth.models import AnonymousUser
 
         if not user or isinstance(user, AnonymousUser) or not user.is_authenticated:
+            # Accept then close so the browser receives the custom close code
+            # (4001) in onclose instead of a generic handshake rejection.
+            await self.accept()
             await self.close(code=4001)
             return
 
         has_access = await self.check_deal_access(user, self.deal_id)
         if not has_access:
+            await self.accept()
             await self.close(code=4003)
             return
 
@@ -108,4 +112,5 @@ class FallbackConsumer(AsyncWebsocketConsumer):
     """
 
     async def connect(self):
+        await self.accept()
         await self.close(code=4404)
