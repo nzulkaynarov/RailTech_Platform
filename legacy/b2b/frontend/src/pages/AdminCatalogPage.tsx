@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHeader, TableRow } from '@/components/ui/table';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/DataTable';
@@ -20,7 +21,7 @@ import {
 import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
 import {
   useProducts, useProduct, useCreateProduct, useUpdateProduct, useDeleteProduct,
-  useDomainTypes, useProductStatuses, useCategories, useManufacturers,
+  useDomainTypes, useProductStatuses, useCategories, useManufacturers, useEquipmentGroups,
   useUploadProductImage, useDeleteProductImage,
   useUploadProductDocument, useDeleteProductDocument,
 } from '@/hooks/useCatalog';
@@ -100,17 +101,28 @@ export function ProductFormSheet({
   const { data: categories } = useCategories();
   const { data: units } = useUnits();
   const { data: manufacturers } = useManufacturers();
+  const { data: equipmentGroups } = useEquipmentGroups();
   const createMut = useCreateProduct();
   const updateMut = useUpdateProduct();
 
   const [draft, setDraft] = useState<Draft>(() => target ?? emptyDraft());
+  const [groupIds, setGroupIds] = useState<number[]>(() => target?.equipment_groups?.map((g) => g.id) ?? []);
 
   useMemo(() => {
     setDraft(target ? { ...target } : emptyDraft());
+    setGroupIds(target?.equipment_groups?.map((g) => g.id) ?? []);
   }, [target]);
 
   const busy = createMut.isPending || updateMut.isPending;
   const isEdit = Boolean(target?.id);
+
+  // Equipment groups are a RAILWAY_MACHINERY taxonomy and are required for that
+  // domain (Product.clean()). Resolve the selected domain's code to gate the field.
+  const domainCode = (domainTypes ?? []).find((d) => d.id === Number(draft.domain_type))?.code
+    ?? (typeof draft.domain_type === 'string' ? draft.domain_type : undefined);
+  const isRailway = domainCode === 'RAILWAY_MACHINERY';
+  const toggleGroup = (id: number) =>
+    setGroupIds((ids) => (ids.includes(id) ? ids.filter((g) => g !== id) : [...ids, id]));
 
   const update = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
 
@@ -119,16 +131,25 @@ export function ProductFormSheet({
       toast.error(t('adminCatalog.nameRequired'));
       return;
     }
-    const payload: Partial<Product> = {
+    if (isRailway && groupIds.length === 0) {
+      toast.error(t('adminCatalog.equipmentGroupsRequired'));
+      return;
+    }
+    // brand (catalog.Manufacturer) replaces the deprecated manufacturer Company FK.
+    // equipment_groups is an M2M write (list of ids) — the read type is
+    // EquipmentGroup[], so the body goes through a write-shaped cast.
+    const payload = {
       name: draft.name,
       description: draft.description || '',
       domain_type: draft.domain_type ? Number(draft.domain_type) : undefined,
       status: draft.status ? Number(draft.status) : undefined,
       category: draft.category ? Number(draft.category) : null,
       uom: draft.uom ? Number(draft.uom) : null,
-      manufacturer: draft.manufacturer ? Number(draft.manufacturer) : null,
+      brand: draft.brand ? Number(draft.brand) : null,
+      manufacturer_part_number: draft.manufacturer_part_number || '',
+      equipment_groups: groupIds,
       gost_drawing: draft.gost_drawing || '',
-    };
+    } as unknown as Partial<Product>;
     try {
       if (isEdit && target) {
         await updateMut.mutateAsync({ id: target.id, data: payload });
@@ -223,8 +244,8 @@ export function ProductFormSheet({
             <div className="space-y-2">
               <Label>{t('adminCatalog.fields.manufacturer')}</Label>
               <Select
-                value={draft.manufacturer ? String(draft.manufacturer) : undefined}
-                onValueChange={(v) => update({ manufacturer: Number(v) })}
+                value={draft.brand ? String(draft.brand) : undefined}
+                onValueChange={(v) => update({ brand: Number(v) })}
               >
                 <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
                 <SelectContent>
@@ -235,10 +256,41 @@ export function ProductFormSheet({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>{t('adminCatalog.fields.gost')}</Label>
-              <Input value={draft.gost_drawing ?? ''} onChange={(e) => update({ gost_drawing: e.target.value })} />
+              <Label>{t('adminCatalog.fields.partNumber')}</Label>
+              <Input
+                value={draft.manufacturer_part_number ?? ''}
+                onChange={(e) => update({ manufacturer_part_number: e.target.value })}
+              />
             </div>
           </div>
+          <div className="space-y-2">
+            <Label>{t('adminCatalog.fields.gost')}</Label>
+            <Input value={draft.gost_drawing ?? ''} onChange={(e) => update({ gost_drawing: e.target.value })} />
+          </div>
+
+          {isRailway && (
+            <div className="space-y-2">
+              <Label>
+                {t('adminCatalog.fields.equipmentGroups')}
+                <span className="ml-1 text-destructive">*</span>
+              </Label>
+              <p className="text-xs text-muted-foreground">{t('adminCatalog.equipmentGroupsHint')}</p>
+              <div className="max-h-44 space-y-2 overflow-y-auto rounded-md border p-3">
+                {(equipmentGroups ?? []).length === 0 && (
+                  <p className="text-xs text-muted-foreground">{t('pages.common.noData')}</p>
+                )}
+                {(equipmentGroups ?? []).map((g) => (
+                  <label key={g.id} className="flex items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={groupIds.includes(g.id)}
+                      onCheckedChange={() => toggleGroup(g.id)}
+                    />
+                    {g.name}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
 
           {isEdit && target?.sku && (
             <>

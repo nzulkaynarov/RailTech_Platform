@@ -3442,7 +3442,9 @@
       "uom": "UOM",
       "manufacturer": "Manufacturer",
       "gost": "GOST / Drawing",
-      "sku": "SKU"
+      "sku": "SKU",
+      "partNumber": "Manufacturer part number",
+      "equipmentGroups": "Equipment groups"
     },
     "stats": {
       "total": "Total",
@@ -3462,7 +3464,9 @@
       "documents": "Documents (datasheets, certificates)",
       "documentsHelp": "PDF, DOCX, XLSX — technical documents"
     },
-    "mediaAfterCreate": "Images and documents can be uploaded after creating the product"
+    "mediaAfterCreate": "Images and documents can be uploaded after creating the product",
+    "equipmentGroupsHint": "Required for the Railway machinery domain: pick at least one group.",
+    "equipmentGroupsRequired": "Select at least one equipment group for a railway product."
   },
   "adminCategories": {
     "title": "Catalog · Categories",

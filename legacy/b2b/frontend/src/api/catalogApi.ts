@@ -80,6 +80,12 @@ export interface Product {
     manufacturer?: number | null;
     manufacturer_data?: { id: number; name: string; inn?: string; logo?: string | null; is_verified?: boolean; has_iso9001?: boolean; trust_score?: number; } | null;
 
+    // Canonical brand (catalog.Manufacturer). `manufacturer` above is the
+    // deprecated Company FK kept only for legacy reads.
+    brand?: number | null;
+    brand_name?: string | null;
+    manufacturer_part_number?: string | null;
+
     uom?: number | null;
     uom_data?: { id: number; code: string; name: string } | null;
 
