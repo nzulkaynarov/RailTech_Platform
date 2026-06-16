@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-  Calculator, FileText, MoreHorizontal, Send, ThumbsUp, ThumbsDown, FileDown, ShieldAlert,
+  Calculator, FileText, MoreHorizontal, Send, FileDown, ShieldAlert,
 } from 'lucide-react';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -25,22 +25,19 @@ import { translateApiError } from '@/lib/apiError';
 import { useUserStore } from '@/store/userStore';
 import { QuoteStatus } from '@/lib/codes';
 import { useCurrencyStore } from '@/store/currencyStore';
-import { useQuotes, useSendQuoteToClient, useApproveQuote, useQuoteStatuses, useForceApproveQuote, useRejectQuote, useGenerateQuotePDF } from '@/hooks/useCRM';
+import { useQuotes, useSendQuoteToClient, useQuoteStatuses, useForceApproveQuote, useGenerateQuotePDF } from '@/hooks/useCRM';
 import { sumMoney } from '@/utils/decimal';
 import { crmApi } from '@/api/crmApi';
 import type { Quote } from '@/api/crmApi';
 import { toast } from 'sonner';
 import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
 import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/DataTable';
-import { RejectQuoteDialog } from '@/components/CRM/RejectQuoteDialog';
 
 export function QuotesPage() {
   const { t } = useTranslation();
   const { activeStatus, role } = useUserStore();
   const { data: quotes, isLoading } = useQuotes();
   const sendToClient = useSendQuoteToClient();
-  const approveQuote = useApproveQuote();
-  const rejectQuote = useRejectQuote();
   const generatePDF = useGenerateQuotePDF();
   const forceApproveMut = useForceApproveQuote();
   const formatCurrency = useCurrencyStore((s) => s.format);
@@ -50,7 +47,6 @@ export function QuotesPage() {
   const quotesList = quotes ?? [];
   const { data: statuses } = useQuoteStatuses();
   const listParams = useListParams(['status'] as const, { defaultOrdering: '-created_at' });
-  const [rejectTarget, setRejectTarget] = useState<Quote | null>(null);
   const [forceApproveTarget, setForceApproveTarget] = useState<Quote | null>(null);
   const [forceApproveReason, setForceApproveReason] = useState('');
 
@@ -77,22 +73,6 @@ export function QuotesPage() {
     } catch {
       toast.error(t('pages.quotes.toast.actionError'));
     }
-  };
-
-  const handleApprove = async (id: number) => {
-    try {
-      await approveQuote.mutateAsync(id);
-      toast.success(t('pages.quotes.toast.approvedSuccess', { id }));
-    } catch {
-      toast.error(t('pages.quotes.toast.actionError'));
-    }
-  };
-
-  const handleReject = async (reason: string) => {
-    if (!rejectTarget) return;
-    await rejectQuote.mutateAsync({ id: rejectTarget.id, reason });
-    toast.success(t('pages.quotes.toast.rejectedSuccess', { id: rejectTarget.id }));
-    setRejectTarget(null);
   };
 
   const handleDownloadPDF = async (id: number) => {
@@ -229,18 +209,9 @@ export function QuotesPage() {
                               </DropdownMenuItem>
                             </>
                           )}
-                          {isBuyer && q.status_code === QuoteStatus.SENT && (
-                            <>
-                              <DropdownMenuItem onClick={() => handleApprove(q.id)}>
-                                <ThumbsUp className="mr-2 h-4 w-4" />
-                                {t('pages.quotes.actions.approve')}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => setRejectTarget(q)}>
-                                <ThumbsDown className="mr-2 h-4 w-4" />
-                                {t('pages.quotes.actions.reject')}
-                              </DropdownMenuItem>
-                            </>
-                          )}
+                          {/* Buyer accept/reject lives only on the canonical
+                              request-detail surface (My Requests → open). This
+                              list stays read-only for the buyer. */}
                           <DropdownMenuItem onClick={() => handleDownloadPDF(q.id)}>
                             <FileDown className="mr-2 h-4 w-4" />
                             {t('pages.quotes.actions.downloadPDF')}
@@ -267,13 +238,6 @@ export function QuotesPage() {
           })()}
         </CardContent>
       </Card>
-      <RejectQuoteDialog
-        quoteId={rejectTarget?.id ?? null}
-        open={!!rejectTarget}
-        onOpenChange={(o) => !o && setRejectTarget(null)}
-        onConfirm={handleReject}
-      />
-
       <AlertDialog
         open={!!forceApproveTarget}
         onOpenChange={(o) => { if (!o) { setForceApproveTarget(null); setForceApproveReason(''); } }}
