@@ -18,6 +18,7 @@ import {
   Handshake,
   Check,
   Receipt,
+  Truck,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -105,13 +106,15 @@ function getBuyerNavigation(activePage: string, t: TFn): NavItem[] {
     { label: t('shell.dashboard'), icon: <LayoutDashboard className="h-4 w-4" />, id: 'dashboard', active: activePage === 'dashboard' },
     { label: t('shell.catalog'), icon: <Package className="h-4 w-4" />, id: 'products', active: activePage === 'products' },
     { label: t('shell.myRequests'), icon: <ClipboardList className="h-4 w-4" />, id: 'my-requests', active: activePage === 'my-requests' },
+    // Order lifecycle, in order: Requests → Contracts → Deliveries → Billing.
+    // Contracts and Deliveries are their own steps, not "billing".
+    { label: t('shell.contracts'), icon: <Handshake className="h-4 w-4" />, id: 'contracts', active: activePage === 'contracts' },
+    { label: t('shell.fulfillments'), icon: <Truck className="h-4 w-4" />, id: 'fulfillments', active: activePage === 'fulfillments' },
     {
       label: t('shell.billing'), icon: <Receipt className="h-4 w-4" />,
       children: [
-        { label: t('shell.contracts'), id: 'contracts', active: activePage === 'contracts' },
         { label: t('shell.invoices'), id: 'invoices', active: activePage === 'invoices' },
         { label: t('shell.payments'), id: 'payments', active: activePage === 'payments' },
-        { label: t('shell.fulfillments'), id: 'fulfillments', active: activePage === 'fulfillments' },
       ],
     },
   ];

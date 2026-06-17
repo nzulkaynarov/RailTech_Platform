@@ -424,17 +424,43 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
         if not (getattr(user, "is_superuser", False) or is_seller(user)):
             raise PermissionDenied("ONLY_SELLER_CAN_BUILD_QUOTE")
 
+    def _is_seller_write(self) -> bool:
+        from accounts.services.permissions import is_seller
+
+        user = self.request.user
+        return bool(getattr(user, "is_superuser", False) or is_seller(user))
+
     def perform_create(self, serializer):
+        # Manual item creation on a КП is a seller action. Buyers add request
+        # rows through POST /crm/deals/{id}/add-request-item/ instead (it
+        # get-or-creates the DRAFT quote and restricts fields to name + qty).
         self._assert_seller()
         serializer.save()
 
     def perform_update(self, serializer):
-        self._assert_seller()
-        serializer.save()
+        if self._is_seller_write():
+            self._assert_seller()
+            serializer.save()
+            return
+        # Buyer editing their own still-open request — name + quantity only,
+        # never pricing. The service re-checks can_buy + the editable window.
+        crm_services.buyer_update_request_item(
+            self.request.user,
+            serializer.instance,
+            name=serializer.validated_data.get("imported_raw_name"),
+            quantity=serializer.validated_data.get("quantity"),
+            unit=serializer.validated_data.get("unit"),
+            unit_code=serializer.validated_data.get("unit_code"),
+            note=serializer.validated_data.get("note"),
+        )
+        serializer.instance.refresh_from_db()
 
     def perform_destroy(self, instance):
-        self._assert_seller()
-        instance.delete()
+        if self._is_seller_write():
+            self._assert_seller()
+            instance.delete()
+            return
+        crm_services.buyer_remove_request_item(self.request.user, instance)
 
     @extend_schema(
         summary="Manually reassign product for a quote item",

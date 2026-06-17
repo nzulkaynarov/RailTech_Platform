@@ -26,7 +26,19 @@ from .deals import (
 )
 from .fulfillment import ensure_fulfillment, update_fulfillment_status
 from .messaging import archive_messages_sync, send_deal_message, user_can_access_deal_chat
-from .quotes import QuoteCalculationService, QuoteLifecycleService, get_crm_analytics_data, reassign_quote_item_product
+from .quotes import (
+    QuoteCalculationService,
+    QuoteLifecycleService,
+    buyer_add_request_item,
+    buyer_add_request_items,
+    buyer_can_edit_request,
+    buyer_remove_request_item,
+    buyer_update_request_item,
+    buyer_update_request_meta,
+    get_crm_analytics_data,
+    reassign_quote_item_product,
+    submit_request,
+)
 
 __all__ = [
     "ALLOWED_STAGE_TRANSITIONS",
@@ -35,6 +47,12 @@ __all__ = [
     "QuoteLifecycleService",
     "STAGE_REQUIRES_SIGNED_CONTRACT",
     "archive_messages_sync",
+    "buyer_add_request_item",
+    "buyer_add_request_items",
+    "buyer_can_edit_request",
+    "buyer_remove_request_item",
+    "buyer_update_request_item",
+    "buyer_update_request_meta",
     "bulk_close_deals_lost",
     "cancel_contract",
     "convert_lead_to_deal",
@@ -54,6 +72,7 @@ __all__ = [
     "sign_act",
     "sign_contract_by_client",
     "sign_contract_by_manager",
+    "submit_request",
     "transition_deal_stage",
     "update_fulfillment_status",
     "user_can_access_deal_chat",

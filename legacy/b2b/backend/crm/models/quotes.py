@@ -222,6 +222,45 @@ class QuoteItem(models.Model):
         verbose_name=_("Количество"),
         help_text=_("Количество единиц товара"),
     )
+    unit = models.CharField(
+        max_length=32,
+        blank=True,
+        default="",
+        verbose_name=_("Единица измерения"),
+        help_text=_("Ед. изм. как в заявке клиента (шт./дона/компл. и т.п.) — для отображения"),
+    )
+    # UBL/Peppol alignment: unit normalised to UN/ECE Recommendation 20 code
+    # (H87=piece, MTR=metre, KGM=kg, TNE=tonne …) so «шт./дона/pcs» collapse to
+    # one canonical value for logic, КП and any future Peppol export.
+    unit_code = models.CharField(
+        max_length=8,
+        blank=True,
+        default="",
+        verbose_name=_("Код ед. изм. (UN/ECE Rec 20)"),
+        help_text=_("Нормализованный код единицы измерения по UN/ECE Recommendation 20"),
+    )
+    # Item identification (UBL ManufacturersItemIdentification / GS1). A line can be
+    # identified by code even WITHOUT a name; «без названия» is valid if mpn/gtin set.
+    mpn = models.CharField(
+        max_length=120,
+        blank=True,
+        default="",
+        verbose_name=_("Артикул / код производителя"),
+        help_text=_("Manufacturer Part Number / артикул из заявки"),
+    )
+    gtin = models.CharField(
+        max_length=14,
+        blank=True,
+        default="",
+        verbose_name=_("GTIN / штрихкод"),
+        help_text=_("GS1 GTIN/EAN, если указан в заявке"),
+    )
+    note = models.TextField(
+        blank=True,
+        default="",
+        verbose_name=_("Примечание клиента"),
+        help_text=_("Комментарий/спецификация/ссылка из заявки (Примечание, Izoh) — UBL line Note"),
+    )
     assigned_at = models.DateTimeField(
         null=True,
         blank=True,

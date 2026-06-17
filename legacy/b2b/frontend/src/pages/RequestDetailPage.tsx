@@ -6,7 +6,8 @@ import { QuoteStatus, DealStage } from '@/lib/codes';
 import { useUserStore } from '@/store/userStore';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useIsViewerMode } from '@/hooks/useViewerMode';
-import { useDeal, useChangeDealStage, useApproveQuote, useRejectQuote, useSendQuoteToClient } from '@/hooks/useCRM';
+import { useDeal, useChangeDealStage, useApproveQuote, useRejectQuote, useSendQuoteToClient, useUpdateRequestMeta } from '@/hooks/useCRM';
+import { Textarea } from '@/components/ui/textarea';
 import { translateApiError } from '@/lib/apiError';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +16,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import { DealChatPanel } from '@/components/Sourcing/DealChatPanel';
 import { RejectQuoteDialog } from '@/components/CRM/RejectQuoteDialog';
+import { RequestItemsEditor } from '@/components/CRM/RequestItemsEditor';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { buyerStatus } from '@/lib/requestStatus';
 
 /**
  * Canonical buyer-facing deal/КП detail surface. Reached via the
@@ -35,6 +39,7 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
   const approveQuote = useApproveQuote();
   const rejectQuote = useRejectQuote();
   const sendQuote = useSendQuoteToClient();
+  const updateMeta = useUpdateRequestMeta();
 
   // Gate seller-side actions (start sourcing / calculation / send quote) to
   // sellers. A buyer would only hit backend guards — and the buttons are
@@ -53,6 +58,16 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
   const isCalculating = deal.stage_code === DealStage.CALCULATING;
   const isQuoteSent = deal.stage_code === DealStage.QUOTE_SENT;
   const isWon = deal.stage_code === DealStage.CLOSED_WON || deal.stage_code === DealStage.CONTRACT_SIGNED;
+  // Buyer may build/edit their own request (name + qty) until the seller engages.
+  // The backend is the source of truth (can_edit_request); the UI only reflects it.
+  const canEditRequest = !!deal.can_edit_request;
+  // A request has NO price — the client never sets one. Prices belong to the
+  // seller's КП and are shown to the buyer ONLY after the КП is actually sent
+  // back (SENT / APPROVED / REJECTED). The seller side always sees pricing.
+  const quoteSentToBuyer = [QuoteStatus.SENT, QuoteStatus.APPROVED, QuoteStatus.REJECTED].includes(
+    (quote?.status_code ?? '') as never,
+  );
+  const showPricedQuote = !!quote && (isSellerSide || quoteSentToBuyer);
 
   const run = async (fn: () => Promise<unknown>) => {
     try {
@@ -72,9 +87,13 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
           <div className="flex-1">
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold">{deal.title || `#${deal.id}`}</h1>
-              <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                {deal.stage_name}
-              </Badge>
+              {isBuyerSide ? (
+                <StatusBadge label={t(buyerStatus(deal.stage_code).labelKey)} variant={buyerStatus(deal.stage_code).variant} />
+              ) : (
+                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                  {deal.stage_name}
+                </Badge>
+              )}
             </div>
             <p className="text-sm text-muted-foreground mt-0.5 flex items-center gap-2">
               <Briefcase className="h-3.5 w-3.5" />
@@ -103,7 +122,9 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
                 <CardContent className="py-4">
                   <span className="text-sm text-muted-foreground">
                     {isBuyerSide
-                      ? t('requestDetailActions.buyerWaitHint')
+                      ? (canEditRequest
+                          ? t('requestItems.buyerEditHint')
+                          : t('requestDetailActions.buyerWaitHint'))
                       : t('requestDetailActions.noActions')}
                   </span>
                 </CardContent>
@@ -183,8 +204,37 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
           );
         })()}
 
-        {/* Quote Content */}
-        {quote ? (
+        {/* Note to the seller — the buyer's free-text request description. Editable
+            while drafting, read-only (and visible to the seller) afterwards. */}
+        {(canEditRequest || (deal.notes ?? '').trim()) && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">{t('requestDetailActions.noteToSeller')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {canEditRequest ? (
+                <Textarea
+                  defaultValue={deal.notes ?? ''}
+                  onBlur={(e) => { if (e.target.value !== (deal.notes ?? '')) updateMeta.mutate({ dealId: deal.id, notes: e.target.value }); }}
+                  placeholder={t('requestDetailActions.noteToSellerPlaceholder')}
+                  rows={2}
+                />
+              ) : (
+                <p className="whitespace-pre-line text-sm text-muted-foreground">{deal.notes}</p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* What the buyer sees about their request:
+            1. canEditRequest      → editable items (name + qty, no price)
+            2. КП sent back / seller → the priced quote table
+            3. seller pricing, not sent yet → request items READ-ONLY, no price
+               (never leak an in-progress price or a confusing "$0" to the buyer)
+            4. nothing yet         → empty state */}
+        {canEditRequest ? (
+          <RequestItemsEditor dealId={deal.id} items={quote?.items ?? []} canEdit />
+        ) : showPricedQuote ? (
           <Card>
             <CardHeader>
               <div className="flex justify-between items-center">
@@ -243,6 +293,10 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
               </Table>
             </CardContent>
           </Card>
+        ) : quote && (quote.items?.length ?? 0) > 0 ? (
+          // Seller is working the КП but hasn't sent it — buyer sees their
+          // requested items read-only, WITHOUT any price.
+          <RequestItemsEditor dealId={deal.id} items={quote.items ?? []} canEdit={false} />
         ) : (
           <Card>
             <CardContent className="py-12 flex flex-col items-center justify-center text-muted-foreground">

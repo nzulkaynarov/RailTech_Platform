@@ -24,6 +24,19 @@ class QuoteItemSerializer(serializers.ModelSerializer):
     product_sku = serializers.CharField(source="product.sku", read_only=True)
     product_gost = serializers.CharField(source="product.gost_drawing", read_only=True)
     offer_supplier_name = serializers.CharField(source="offer.supplier.name", read_only=True)
+    # UBL data-quality gate: a line must be identified by a name OR an item code
+    # (mpn/gtin) OR a matched product. Incomplete lines are highlighted in the
+    # buyer's review grid and block submission until completed.
+    is_incomplete = serializers.SerializerMethodField()
+
+    def get_is_incomplete(self, obj) -> bool:
+        return not (
+            (obj.imported_raw_name or "").strip()
+            or (obj.mpn or "").strip()
+            or (obj.gtin or "").strip()
+            or obj.product_id
+        )
+
     # Currency travels as its code ("USD") in both directions — the frontend grid
     # (formatMoney) and the manual "Add item" path use the code, never the PK.
     frozen_currency = serializers.SlugRelatedField(
@@ -47,6 +60,11 @@ class QuoteItemSerializer(serializers.ModelSerializer):
             "offer_supplier_name",
             "imported_raw_name",
             "quantity",
+            "unit",
+            "unit_code",
+            "mpn",
+            "gtin",
+            "is_incomplete",
             "assigned_at",
             "frozen_base_price",
             "frozen_currency",
@@ -170,6 +188,17 @@ class DealDetailSerializer(serializers.ModelSerializer):
     company_name = serializers.CharField(source="company.name", read_only=True)
     client_name = serializers.CharField(source="client.get_full_name", read_only=True)
     manager_name = serializers.CharField(source="manager.get_full_name", read_only=True)
+    can_edit_request = serializers.SerializerMethodField()
+
+    def get_can_edit_request(self, obj) -> bool:
+        """Whether the current user may add/edit/remove this deal's request rows."""
+        from crm.services import buyer_can_edit_request
+
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if user is None or not getattr(user, "is_authenticated", False):
+            return False
+        return buyer_can_edit_request(obj, user)
 
     class Meta:
         model = Deal
@@ -188,6 +217,7 @@ class DealDetailSerializer(serializers.ModelSerializer):
             "notes",
             "active_quote",
             "quotes",
+            "can_edit_request",
             "created_at",
             "updated_at",
         ]

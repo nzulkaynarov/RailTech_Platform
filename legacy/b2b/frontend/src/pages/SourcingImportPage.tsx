@@ -1,17 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Upload, FileSpreadsheet, Check, Download } from 'lucide-react';
+import { Upload, FileSpreadsheet, Check, Download, Sparkles, AlertTriangle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import { useDeals } from '@/hooks/useCRM';
 import { ExcelUpload } from '@/components/Sourcing/ExcelUpload';
 import { PageShell } from './shared/PageShell';
 import { downloadFile } from '@/lib/download';
+import { buyerStatus } from '@/lib/requestStatus';
 import type { Deal } from '@/api/crmApi';
 
 /**
@@ -34,6 +37,9 @@ export function SourcingImportPage() {
   const { data: deals } = useDeals();
   const [selectedDealId, setSelectedDealId] = useState<string>(() => readDealIdFromHash());
   const [importDone, setImportDone] = useState(false);
+  // Headline mode: let AI read any file. Falls back to the deterministic xlsx
+  // parser server-side if AI is unavailable, so this is always safe to offer.
+  const [useAI, setUseAI] = useState(true);
 
   const importableDeals = useMemo(() =>
     (deals ?? []).filter((d: Deal) =>
@@ -98,7 +104,7 @@ export function SourcingImportPage() {
                 {importableDeals.map((deal) => (
                   <SelectItem key={deal.id} value={String(deal.id)}>
                     {deal.title || `#${deal.id}`} — {deal.company_name || deal.client_name || ''}
-                    {deal.stage_name && ` (${deal.stage_name})`}
+                    {deal.stage_code && ` (${t(buyerStatus(deal.stage_code).labelKey)})`}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -109,7 +115,7 @@ export function SourcingImportPage() {
           </CardContent>
         </Card>
 
-        {/* Step 2: Upload file */}
+        {/* Step 2: Upload file — AI (any file) vs template (xlsx, no AI) */}
         {selectedDealId && (
           <Card>
             <CardContent className="p-5 space-y-3">
@@ -118,19 +124,54 @@ export function SourcingImportPage() {
                   <Badge variant="outline" className="text-xs">2</Badge>
                   {t('pages.sourcingImport.uploadFile')}
                 </h3>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="gap-1.5 text-xs"
-                  onClick={downloadTemplate}
-                >
-                  <Download className="h-3.5 w-3.5" aria-hidden="true" />
-                  {t('pages.sourcingImport.downloadTemplate')}
-                </Button>
+                {!useAI && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 text-xs"
+                    onClick={downloadTemplate}
+                  >
+                    <Download className="h-3.5 w-3.5" aria-hidden="true" />
+                    {t('pages.sourcingImport.downloadTemplate')}
+                  </Button>
+                )}
               </div>
+
+              {/* Mode toggle: AI recognises any file, or strict template (no AI). */}
+              <ToggleGroup
+                type="single"
+                variant="outline"
+                size="sm"
+                value={useAI ? 'ai' : 'tpl'}
+                onValueChange={(value) => { if (value) setUseAI(value === 'ai'); }}
+              >
+                <ToggleGroupItem value="ai" className="gap-1.5 text-xs">
+                  <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                  {t('aiImport.optionAi')}
+                </ToggleGroupItem>
+                <ToggleGroupItem value="tpl" className="text-xs">
+                  {t('aiImport.optionTemplate')}
+                </ToggleGroupItem>
+              </ToggleGroup>
+
+              <p className="text-xs text-muted-foreground">
+                {useAI ? t('aiImport.optionAiHint') : t('aiImport.optionTemplateHint')}
+              </p>
+
+              {/* Disclaimer — external AI processing + liability (only in AI mode). */}
+              {useAI && (
+                <Alert>
+                  <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+                  <AlertTitle>{t('aiImport.disclaimerTitle')}</AlertTitle>
+                  <AlertDescription>{t('aiImport.disclaimer')}</AlertDescription>
+                </Alert>
+              )}
+
               <ExcelUpload
+                key={useAI ? 'ai' : 'tpl'}
                 dealId={Number(selectedDealId)}
+                useAI={useAI}
                 onUploadSuccess={() => setImportDone(true)}
               />
             </CardContent>

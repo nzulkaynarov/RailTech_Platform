@@ -10,8 +10,16 @@ from rest_framework.response import Response
 from core.permissions import IsCompanyMemberOrPlatformAdmin, IsPlatformAdmin
 from crm.constants import DealStageCode
 from crm.models import Deal, DealStage, Quote, QuoteItem
-from crm.serializers import DealDetailSerializer, DealListSerializer
-from crm.services import force_transition_deal_stage, register_new_deal, transition_deal_stage
+from crm.serializers import DealDetailSerializer, DealListSerializer, QuoteItemSerializer
+from crm.services import (
+    buyer_add_request_item,
+    buyer_add_request_items,
+    buyer_update_request_meta,
+    force_transition_deal_stage,
+    register_new_deal,
+    submit_request,
+    transition_deal_stage,
+)
 
 
 @extend_schema_view(
@@ -155,6 +163,100 @@ class DealViewSet(viewsets.ModelViewSet):
 
         serializer = DealDetailSerializer(deal)
         return Response(serializer.data)
+
+    @extend_schema(
+        summary="Add a line item to the buyer's request",
+        description=(
+            "Buyer-only. Appends a row (name + quantity) to the deal's request. "
+            "Creates the underlying DRAFT quote on first add. Allowed only while "
+            "the seller has not taken the deal into work."
+        ),
+        request=inline_serializer(
+            "AddRequestItemRequest",
+            fields={
+                "name": drf_serializers.CharField(),
+                "quantity": drf_serializers.IntegerField(required=False, default=1),
+            },
+        ),
+        responses={201: QuoteItemSerializer},
+        tags=["CRM"],
+    )
+    @action(detail=True, methods=["post"], url_path="add-request-item")
+    def add_request_item(self, request, pk=None):
+        """Buyer appends one item to their request (заявка)."""
+        deal = self.get_object()
+        item = buyer_add_request_item(
+            request.user,
+            deal,
+            name=request.data.get("name", ""),
+            quantity=request.data.get("quantity", 1),
+            unit=request.data.get("unit", ""),
+            unit_code=request.data.get("unit_code", ""),
+            note=request.data.get("note", ""),
+        )
+        return Response(
+            QuoteItemSerializer(item, context={"request": request}).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    @extend_schema(
+        summary="Bulk-add request line items (catalog cart)",
+        description="Buyer-only. Adds many lines at once; catalog items link by product_id.",
+        request=inline_serializer(
+            "AddRequestItemsRequest",
+            fields={"items": drf_serializers.ListField(child=drf_serializers.DictField())},
+        ),
+        responses={201: QuoteItemSerializer(many=True)},
+        tags=["CRM"],
+    )
+    @action(detail=True, methods=["post"], url_path="add-request-items")
+    def add_request_items(self, request, pk=None):
+        """Buyer adds a batch of request lines (the catalog cart checkout)."""
+        deal = self.get_object()
+        items = buyer_add_request_items(request.user, deal, request.data.get("items", []))
+        return Response(
+            QuoteItemSerializer(items, many=True, context={"request": request}).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    @extend_schema(
+        summary="Submit the buyer's request (RFQ) to the seller",
+        description=(
+            "Buyer-only. Issues the request to the seller: Draft → RFQ_OPEN. "
+            "Requires ≥1 line and no incomplete lines. After this the request locks."
+        ),
+        responses={200: DealDetailSerializer},
+        tags=["CRM"],
+    )
+    @action(detail=True, methods=["post"], url_path="submit-request")
+    def submit_request(self, request, pk=None):
+        """Buyer issues the RFQ (the «Отправить заявку» step)."""
+        deal = submit_request(request.user, self.get_object())
+        return Response(DealDetailSerializer(deal, context={"request": request}).data)
+
+    @extend_schema(
+        summary="Edit the request header (title + note to seller)",
+        description="Buyer-only, while the request is still DRAFT.",
+        request=inline_serializer(
+            "UpdateRequestMeta",
+            fields={
+                "title": drf_serializers.CharField(required=False),
+                "notes": drf_serializers.CharField(required=False, allow_blank=True),
+            },
+        ),
+        responses={200: DealDetailSerializer},
+        tags=["CRM"],
+    )
+    @action(detail=True, methods=["patch"], url_path="update-request-meta")
+    def update_request_meta(self, request, pk=None):
+        """Buyer edits the request title / note-to-seller while drafting."""
+        deal = buyer_update_request_meta(
+            request.user,
+            self.get_object(),
+            title=request.data.get("title"),
+            notes=request.data.get("notes"),
+        )
+        return Response(DealDetailSerializer(deal, context={"request": request}).data)
 
     @extend_schema(
         summary="Force change deal stage (admin)",

@@ -4,6 +4,7 @@ from io import BytesIO
 
 import pandas as pd
 from celery import shared_task
+from django.conf import settings
 from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Max
@@ -47,6 +48,102 @@ def route_domain(text: str) -> str:
     return "GENERAL_GOODS"
 
 
+# Column-header synonyms across the formats real clients actually send
+# (RU / UZ-Latin / UZ-Cyrillic / EN). Matching is substring + case-insensitive.
+# Keep UNIT keywords specific so they don't swallow the name column.
+_COL_KEYWORDS = {
+    "name": ["наименование", "номенклатур", "название", "товар", "материал", "номи", "номланиш",
+             "қисм", "эҳтиёт", "qism", "name", "description", "item", "mahsulot"],
+    "qty": ["кол-во", "колл", "кол.", "количество", "миқдор", "miqdor", "сони", "soni",
+            "qty", "quantity", "amount", "адет"],
+    "unit": ["ед.изм", "ед изм", "ед.", "единиц", "ўлчов", "улчов", "бирлик", "бир-ги",
+             "birlik", "o'lchov", "olchov", "unit", "uom", "measure"],
+    "note": ["примечан", "коммент", "izoh", "izoh", "note", "comment", "remark",
+             "характеристик", "спецификац", "описание"],
+    "link": ["ссылка", "ссылк", "havola", "link", "url"],
+}
+
+
+def _cell(value) -> str:
+    """Normalise a worksheet cell to a clean lowercase string ('' for blank/NaN)."""
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return ""
+    text = str(value).strip()
+    return "" if text.lower() == "nan" else text
+
+
+def _match_column(cells, keywords, taken):
+    """First column index whose header cell contains any keyword and isn't taken."""
+    for idx, raw in enumerate(cells):
+        if idx in taken:
+            continue
+        low = _cell(raw).lower()
+        if low and low != "unnamed" and not low.startswith("unnamed") and any(k in low for k in keywords):
+            return idx
+    return None
+
+
+def detect_header_and_columns(raw_df):
+    """Find the real header row (skip title banners) and map logical → column index.
+
+    Real заявки often start with a merged title row and use RU/UZ/EN headers in
+    any order, with extra Photo/Note/Link columns. A row is the header when it
+    has BOTH a name-like cell AND a quantity- or unit-like cell in *different*
+    columns — a single-cell title never qualifies. Returns (header_row_index,
+    {name, qty, unit, note, link}) or (None, None) if nothing matches.
+    """
+    max_scan = min(len(raw_df), 15)
+    for row_idx in range(max_scan):
+        cells = list(raw_df.iloc[row_idx])
+        taken: set = set()
+        name_i = _match_column(cells, _COL_KEYWORDS["name"], taken)
+        if name_i is None:
+            continue
+        taken.add(name_i)
+        qty_i = _match_column(cells, _COL_KEYWORDS["qty"], taken)
+        if qty_i is not None:
+            taken.add(qty_i)
+        unit_i = _match_column(cells, _COL_KEYWORDS["unit"], taken)
+        if unit_i is not None:
+            taken.add(unit_i)
+        # A genuine header needs name + (qty or unit) in distinct columns.
+        if qty_i is None and unit_i is None:
+            continue
+        note_i = _match_column(cells, _COL_KEYWORDS["note"], taken)
+        if note_i is not None:
+            taken.add(note_i)
+        link_i = _match_column(cells, _COL_KEYWORDS["link"], taken)
+        return row_idx, {"name": name_i, "qty": qty_i, "unit": unit_i, "note": note_i, "link": link_i}
+    return None, None
+
+
+def _build_quote_item(quote, name, quantity, unit="", note="", unit_code="", mpn="", gtin=""):
+    """One place to turn a parsed/AI-extracted row into a QuoteItem — runs domain
+    routing + smart-match so both the deterministic and the AI path behave the same.
+    Smart-match runs on the name OR the identifier so name-less coded lines still try."""
+    from crm.models import QuoteItem
+
+    match_key = name or mpn or gtin
+    domain_code = route_domain(match_key)
+    final_product = smart_match_product(match_key, domain_hint=domain_code) if match_key else None
+    try:
+        qty = max(1, int(float(quantity)))
+    except (ValueError, TypeError):
+        qty = 1
+    return QuoteItem(
+        quote=quote,
+        product=final_product,
+        imported_raw_name=name or "",
+        quantity=qty,
+        unit=(unit or "")[:32],
+        unit_code=(unit_code or "")[:8],
+        mpn=(mpn or "")[:120],
+        gtin=(gtin or "")[:14],
+        note=note or "",
+        assigned_at=timezone.now() if final_product else None,
+    )
+
+
 @shared_task(
     bind=True,
     # Higher than the 600s default — enterprise imports can be 50k rows.
@@ -56,11 +153,17 @@ def route_domain(text: str) -> str:
     autoretry_for=(Exception,),
     retry_backoff=True,
 )
-def process_excel_import(self, deal_id: int, file_content_b64: str, user_id: int = None):
+def process_excel_import(self, deal_id: int, file_content_b64: str, user_id: int = None, use_ai: bool = False, filename: str = None):
     """
-    Processes uploaded Excel file and creates QuoteItems for the active Quote.
-    Uses bulk_create to avoid O(n²) recalculation.
-    file_content_b64: base64-encoded XLSX file content (JSON-safe).
+    Turns an uploaded client file into QuoteItems on the deal's active Quote.
+
+    Two paths to the same canonical schema (name/quantity/unit/note):
+      • use_ai=True  → Claude reads ANY file (Excel/CSV/PDF/photo) and maps it
+        (sourcing.services_ai). Falls back to the deterministic parser on failure.
+      • use_ai=False → deterministic header-detect + keyword parser (xlsx only).
+
+    The buyer reviews every recognised item before submitting, so the AI never
+    writes a final заявка unattended. file_content_b64 is the base64 file (JSON-safe).
     """
     from crm.models import Deal, Quote, QuoteItem, QuoteStatus
 
@@ -81,59 +184,85 @@ def process_excel_import(self, deal_id: int, file_content_b64: str, user_id: int
                 defaults={"status": draft_status},
             )
 
-        df = pd.read_excel(BytesIO(file_content), nrows=MAX_EXCEL_ROWS)
-        df.columns = [str(c).lower().strip() for c in df.columns]
-
-        name_col = next((c for c in df.columns if "name" in c or "наименование" in c or "товар" in c), None)
-        qty_col = next((c for c in df.columns if "qty" in c or "кол" in c or "quantity" in c), None)
-
-        if not name_col:
-            return {"status": "error", "message": "Could not find name column in Excel."}
-
         items_to_create = []
-        total_rows = len(df)
 
-        for idx, row in df.iterrows():
-            raw_name = str(row[name_col]).strip()
-            if not raw_name or raw_name == "nan" or raw_name == "":
-                continue
+        # ── AI path: any file → Claude → our schema (fallback to parser on error) ──
+        ai_rows = None
+        if use_ai and getattr(settings, "AI_IMPORT_ENABLED", False):
+            try:
+                from sourcing.services_ai import extract_request_items
 
-            quantity = 1
-            if qty_col and pd.notnull(row[qty_col]):
-                try:
-                    quantity = int(float(row[qty_col]))
-                except (ValueError, TypeError):
-                    pass
+                ai_rows = extract_request_items(file_content, filename or "upload.xlsx")
+                logger.info("AI import: deal=%s recognised %s items", deal_id, len(ai_rows))
+            except Exception:
+                logger.exception("AI import failed deal=%s — falling back to deterministic parser", deal_id)
+                ai_rows = None
 
-            domain_code = route_domain(raw_name)
-            final_product = smart_match_product(raw_name, domain_hint=domain_code)
-
-            items_to_create.append(
-                QuoteItem(
-                    quote=quote,
-                    product=final_product,
-                    imported_raw_name=raw_name,
-                    quantity=quantity,
-                    assigned_at=timezone.now() if final_product else None,
+        if ai_rows is not None:
+            items_to_create = [
+                _build_quote_item(
+                    quote,
+                    row.get("name", ""),
+                    row.get("quantity", 1),
+                    row.get("unit", ""),
+                    row.get("note", ""),
+                    unit_code=row.get("unit_code", ""),
+                    mpn=row.get("mpn", ""),
+                    gtin=row.get("gtin", ""),
                 )
-            )
+                for row in ai_rows
+            ]
+        else:
+            # ── Deterministic path: detect header row + parse columns (xlsx) ──
+            raw_df = pd.read_excel(BytesIO(file_content), header=None, nrows=MAX_EXCEL_ROWS)
+            header_idx, cols = detect_header_and_columns(raw_df)
+            if cols is None:
+                return {"status": "error", "message": "Не удалось распознать колонки (нужны «Наименование» и «Кол-во»)."}
 
-            if len(items_to_create) % 10 == 0 or (idx + 1) == total_rows:
-                self.update_state(state="PROGRESS", meta={"current": len(items_to_create), "total": total_rows})
+            name_i = cols["name"]
+            qty_i, unit_i, note_i, link_i = cols["qty"], cols["unit"], cols["note"], cols["link"]
+            data = raw_df.iloc[header_idx + 1:]
+            total_rows = len(data)
+
+            for offset, (_, row) in enumerate(data.iterrows()):
+                cells = list(row)
+                raw_name = _cell(cells[name_i]) if name_i is not None and name_i < len(cells) else ""
+                if not raw_name:
+                    continue
+
+                quantity = 1
+                if qty_i is not None and qty_i < len(cells):
+                    try:
+                        quantity = max(1, int(float(_cell(cells[qty_i]))))
+                    except (ValueError, TypeError):
+                        pass
+
+                unit = _cell(cells[unit_i]) if unit_i is not None and unit_i < len(cells) else ""
+                note = _cell(cells[note_i]) if note_i is not None and note_i < len(cells) else ""
+                link = _cell(cells[link_i]) if link_i is not None and link_i < len(cells) else ""
+                if link and link not in note:
+                    note = f"{note}\n{link}".strip()
+
+                items_to_create.append(_build_quote_item(quote, raw_name, quantity, unit, note))
+
+                if len(items_to_create) % 10 == 0 or (offset + 1) == total_rows:
+                    self.update_state(state="PROGRESS", meta={"current": len(items_to_create), "total": total_rows})
 
         if not items_to_create:
             return {"status": "error", "message": "Файл обработан, но не найдено ни одной строки."}
 
-        # Bulk create in fixed-size batches. `batch_size` caps the number of
-        # rows per INSERT so we don't explode Postgres parameter limits or
-        # Celery worker memory on 10k+ row imports.
-        with transaction.atomic():
-            QuoteItem.objects.bulk_create(items_to_create, batch_size=BULK_CHUNK)
+        # Dedup/merge against existing lines AND within this batch — a re-imported
+        # file (or two files sharing items) sums quantities instead of doubling rows.
+        from crm.services.quotes import merge_request_lines
 
-        # Single final recalculation of the entire quote
+        with transaction.atomic():
+            created, merged = merge_request_lines(quote, items_to_create)
+
         quote.recalculate_totals()
-        logger.info("Excel import done: deal=%s user=%s rows=%s", deal_id, user_id, len(items_to_create))
-        return {"status": "success", "items_processed": len(items_to_create)}
+        logger.info(
+            "Excel import done: deal=%s user=%s created=%s merged=%s", deal_id, user_id, len(created), merged
+        )
+        return {"status": "success", "items_processed": len(created), "merged": merged}
 
     except Deal.DoesNotExist:
         return {"status": "error", "message": "Deal not found."}

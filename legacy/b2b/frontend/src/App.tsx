@@ -308,9 +308,28 @@ const CRM_MANAGER_WORKSPACE_ROLES = new Set([
 ]);
 const KYC_ALLOWED_PAGES = new Set(['dashboard', 'profile', 'settings', 'help']);
 
+// Role-scoped reachable pages. Closes "hidden" cross-role routes: a buyer
+// hash-navigating to a seller page (crm-deals, deal-quote, analysis, sourcing…)
+// is bounced to the dashboard instead of seeing seller/CRM UI. One standard for
+// what each context can open — nav + deep links + back/forward all go through it.
+const COMMON_PAGES = ['dashboard', 'profile', 'settings', 'help'];
+const BUYER_PAGES = new Set([
+  ...COMMON_PAGES,
+  'products', 'product_detail', 'my-requests', 'request-detail',
+  'contracts', 'invoices', 'payments', 'fulfillments', 'my-subscription',
+]);
+const SELLER_PAGES = new Set([
+  ...COMMON_PAGES,
+  'products', 'product_detail', 'categories', 'equipment-groups', 'catalog-import',
+  'sourcing-requests', 'sourcing-import', 'crm-deals', 'crm-quotes', 'crm-clients',
+  'deal-quote', 'request-detail', 'analytics', 'leads', 'my-subscription',
+  'contracts', 'invoices', 'payments', 'acts', 'fulfillments',
+]);
+
 function MainApp() {
   const { t } = useTranslation();
   const role = useUserStore((s) => s.role);
+  const activeStatus = useUserStore((s) => s.activeStatus);
   const kycStatus = useUserStore((s) => s.company.kycStatus);
   const workspaceRole = useAuthStore((s) => s.user?.workspace_role ?? null);
   const canUseCrmManagerPages =
@@ -353,6 +372,18 @@ function MainApp() {
       window.history.replaceState(null, '', '#dashboard');
     }
   }, [page.type, kycStatus, role, t]);
+
+  // Context guard: a buyer can't reach seller/CRM pages (and vice versa) even by
+  // deep link — keeps each role to one coherent surface, no orphaned pages.
+  useEffect(() => {
+    if (role === 'ADMIN') return;
+    const allowed = activeStatus === 'BUYER' ? BUYER_PAGES : SELLER_PAGES;
+    if (!allowed.has(page.type)) {
+      toast.info(t('guards.notAvailableHere'));
+      setPage({ type: 'dashboard' });
+      window.history.replaceState(null, '', '#dashboard');
+    }
+  }, [page.type, role, activeStatus, t]);
 
   // Handle browser back/forward
   useEffect(() => {

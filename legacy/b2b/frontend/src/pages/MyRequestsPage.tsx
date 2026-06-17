@@ -1,41 +1,46 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { ShoppingCart, FileText, ChevronRight } from 'lucide-react';
+import { ShoppingCart, ChevronRight } from 'lucide-react';
 import { useCurrencyStore } from '@/store/currencyStore';
-import { useDeals, useDealStages } from '@/hooks/useCRM';
+import { useDeals } from '@/hooks/useCRM';
 import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
 import { Toolbar, Pager, useListParams, applyListParams } from '@/components/DataTable';
 import { CreateDealDialog } from '@/components/CRM/CreateDealDialog';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { StatusBadge } from '@/components/ui/StatusBadge';
 import { DealStage } from '@/lib/codes';
+import { buyerStatus, buyerStatusKey, BUYER_STATUS_ORDER } from '@/lib/requestStatus';
 import type { Deal } from '@/api/crmApi';
 
 export function MyRequestsPage() {
   const { t } = useTranslation();
   const { data: deals, isLoading } = useDeals();
-  const { data: stages } = useDealStages();
   const formatCurrency = useCurrencyStore((s) => s.format);
   const [createOpen, setCreateOpen] = useState(false);
+  const [statusTab, setStatusTab] = useState<string>('all');
 
-  const listParams = useListParams(['stage'] as const, { defaultOrdering: '-created_at', pageSize: 15 });
+  const listParams = useListParams([] as const, { defaultOrdering: '-created_at', pageSize: 15 });
   const myDeals = deals ?? [];
 
-  // Counters computed directly from the same dataset the list renders — avoids
-  // the "Completed: 1 but list shows 0 completed items" mismatch that page-stats
-  // caused when the two endpoints disagreed on visibility.
-  const closed: string[] = [DealStage.CLOSED_WON, DealStage.CLOSED_LOST];
+  // KPI stats from the same dataset the list renders (no cross-endpoint drift).
+  const countBy = (key: string) => myDeals.filter((d) => buyerStatusKey(d.stage_code) === key).length;
   const stats = [
-    { label: t('pages.myRequests.stats.active'), value: String(myDeals.filter((d) => !closed.includes(d.stage_code ?? '')).length) },
-    { label: t('pages.myRequests.stats.quoteReceived'), value: String(myDeals.filter((d) => d.stage_code === DealStage.QUOTE_SENT).length) },
-    { label: t('pages.myRequests.stats.contract'), value: String(myDeals.filter((d) => d.stage_code === DealStage.CONTRACT_SIGNED).length) },
-    { label: t('pages.myRequests.stats.completed'), value: String(myDeals.filter((d) => d.stage_code === DealStage.CLOSED_WON).length) },
+    { label: t('requestStatus.awaiting'), value: String(countBy('awaiting')) },
+    { label: t('requestStatus.quote'), value: String(countBy('quote')) },
+    { label: t('requestStatus.confirmed'), value: String(countBy('confirmed')) },
+    { label: t('requestStatus.completed'), value: String(countBy('completed')) },
   ];
 
-  const openDeal = (deal: Deal) => {
-    // Param-based deep link; the detail page reads the id from the hash route.
-    window.location.hash = `request-detail/${deal.id}`;
-  };
+  const openDeal = (deal: Deal) => { window.location.hash = `request-detail/${deal.id}`; };
+
+  // Show a total only once the seller's КП is back — a request has no price.
+  const priced = [DealStage.QUOTE_SENT, DealStage.CONTRACT_SIGNED, DealStage.CLOSED_WON] as string[];
+  const showTotal = (deal: Deal) => priced.includes(deal.stage_code ?? '') && Number(deal.total_value) > 0;
+
+  const byTab = statusTab === 'all'
+    ? myDeals
+    : myDeals.filter((d) => buyerStatusKey(d.stage_code) === statusTab);
 
   return (
     <PageShell
@@ -45,32 +50,28 @@ export function MyRequestsPage() {
       stats={stats}
       actions={[{ label: t('pages.myRequests.newRequest'), onClick: () => setCreateOpen(true) }]}
     >
+      {/* Status filter — buyer-facing statuses only (not the 9 internal stages). */}
+      <Tabs value={statusTab} onValueChange={(v) => { setStatusTab(v); listParams.setPage(1); }}>
+        <TabsList className="flex-wrap">
+          <TabsTrigger value="all">{t('requestStatus.all')}</TabsTrigger>
+          {BUYER_STATUS_ORDER.map((key) => (
+            <TabsTrigger key={key} value={key}>{t(`requestStatus.${key}`)}</TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
+
       <Toolbar
         searchValue={listParams.searchInput}
         onSearchChange={listParams.setSearchInput}
         searchPlaceholder={t('pages.myRequests.searchPlaceholder')}
-        filters={[
-          {
-            key: 'stage',
-            value: listParams.filters.stage,
-            onChange: (v) => listParams.setFilter('stage', v),
-            allLabel: t('pages.myRequests.allStages'),
-            options: (stages ?? []).map((s) => ({ value: s.code, label: s.name })),
-          },
-        ]}
       />
 
       {(() => {
-        const { items: pageItems, total } = applyListParams(myDeals, listParams, {
+        const { items: pageItems, total } = applyListParams(byTab, listParams, {
           searchFields: (d) => [d.title, d.company_name, String(d.id)],
-          filterPredicates: {
-            stage: (d, v) => d.stage_code === v,
-          },
-          sortAccessors: {
-            created_at: (d) => d.created_at ?? '',
-          },
+          sortAccessors: { created_at: (d) => d.created_at ?? '' },
         });
-        if (isLoading) return <LoadingRows rows={3} />;
+        if (isLoading) return <LoadingRows rows={4} />;
         if (!pageItems.length) return (
           <EmptyState
             icon={<ShoppingCart className="h-5 w-5" />}
@@ -80,46 +81,58 @@ export function MyRequestsPage() {
         );
         return (
           <>
-            <div className="space-y-2">
-              {pageItems.map((deal: Deal) => (
-                <Card
-                  key={deal.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => openDeal(deal)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openDeal(deal); }}
-                  className="cursor-pointer hover:border-primary/50 transition-colors py-0 gap-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <CardContent className="px-4 py-4">
-                    <div className="flex items-center gap-4">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                        <FileText className="h-5 w-5 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
+            <div className="rounded-lg border border-border">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead>{t('pages.myRequests.colRequest')}</TableHead>
+                    <TableHead className="w-40">{t('pages.myRequests.colStatus')}</TableHead>
+                    <TableHead className="w-32">{t('pages.myRequests.colDate')}</TableHead>
+                    <TableHead className="w-32 text-right">{t('pages.myRequests.colTotal')}</TableHead>
+                    <TableHead className="w-10" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pageItems.map((deal: Deal) => {
+                    const status = buyerStatus(deal.stage_code);
+                    return (
+                      <TableRow
+                        key={deal.id}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => openDeal(deal)}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openDeal(deal); }}
+                        className="cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        <TableCell>
                           <span className="font-medium">{deal.title ?? `${t('pages.myRequests.deal')} #${deal.id}`}</span>
-                          <Badge variant="outline" className="text-xs">{deal.stage_name}</Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {deal.company_name ? `${deal.company_name} · ` : ''}{new Date(deal.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                      {deal.total_value ? (
-                        <p className="text-sm font-bold text-primary tabular-nums">{formatCurrency(Number(deal.total_value))}</p>
-                      ) : null}
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                          <span className="block text-xs text-muted-foreground">#{deal.id}</span>
+                        </TableCell>
+                        <TableCell>
+                          <StatusBadge label={t(status.labelKey)} variant={status.variant} />
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground tabular-nums">
+                          {new Date(deal.created_at).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {showTotal(deal)
+                            ? <span className="font-semibold text-primary">{formatCurrency(Number(deal.total_value))}</span>
+                            : <span className="text-muted-foreground">—</span>}
+                        </TableCell>
+                        <TableCell>
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
             </div>
             <Pager page={listParams.page} pageSize={listParams.pageSize} total={total} onPageChange={listParams.setPage} />
           </>
         );
       })()}
 
-      {/* Create a заявка directly (catalog cart OR Excel-import path) instead of
-          dumping the buyer onto the (possibly empty) catalog. */}
       <CreateDealDialog
         open={createOpen}
         onOpenChange={setCreateOpen}

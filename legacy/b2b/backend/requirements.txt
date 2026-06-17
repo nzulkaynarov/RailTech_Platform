@@ -80,6 +80,9 @@ wcwidth>=0.6
 six>=1.17
 exceptiongroup>=1.3
 
+# AI — заявка normalisation (client uploads any file → Claude extracts our schema)
+anthropic>=0.40
+
 # Testing
 pytest>=9.0
 pytest-django>=4.12

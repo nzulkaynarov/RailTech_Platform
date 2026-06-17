@@ -106,17 +106,35 @@ class ExcelImportView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        # AI mode: the client may upload ANY supported file (Excel/CSV/PDF/image/text)
+        # and Claude maps it to our schema. Without AI we keep the strict xlsx-only path.
+        from django.conf import settings
+
+        use_ai = str(request.data.get("use_ai", "")).strip().lower() in ("true", "1", "yes", "on")
+        use_ai = use_ai and getattr(settings, "AI_IMPORT_ENABLED", False)
+        ai_extensions = (".xlsx", ".xls", ".csv", ".tsv", ".txt", ".pdf", ".png", ".jpg", ".jpeg", ".webp", ".gif")
+
         try:
             file_content = file_obj.read()
 
-            # MIME/magic byte validation
-            if not _validate_xlsx_signature(file_content):
-                return Response(
-                    {"error": "Invalid file format. Only .xlsx files are accepted."}, status=status.HTTP_400_BAD_REQUEST
-                )
+            if use_ai:
+                if not str(file_obj.name or "").lower().endswith(ai_extensions):
+                    return Response(
+                        {"error": "Unsupported file type. Allowed: Excel, CSV, PDF, image, text."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+            else:
+                # MIME/magic byte validation (non-AI path is xlsx-only)
+                if not _validate_xlsx_signature(file_content):
+                    return Response(
+                        {"error": "Invalid file format. Only .xlsx files are accepted."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
 
             file_content_b64 = base64.b64encode(file_content).decode("ascii")
-            task = process_excel_import.delay(deal_id, file_content_b64, request.user.id)
+            task = process_excel_import.delay(
+                deal_id, file_content_b64, request.user.id, use_ai=use_ai, filename=file_obj.name
+            )
 
             # Store task ownership in DB (not volatile cache)
             ImportTask.objects.create(

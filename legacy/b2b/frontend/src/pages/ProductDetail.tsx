@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import {
   ArrowLeft, ShoppingCart, Minus, Plus, Package, FileText,
   Building2, Clock, Truck,
@@ -263,7 +264,7 @@ export function ProductDetail({ productId, onBack }: ProductDetailProps) {
                 </div>
                 <Button
                   className="w-full gap-2"
-                  onClick={() => { addItem(product, qty); openCart(); }}
+                  onClick={() => { addItem(product, qty); openCart(); toast.success(t('productDetail.addedToRequest')); }}
                 >
                   <ShoppingCart className="h-4 w-4" />
                   {t('productDetail.addToRequest')}
@@ -272,8 +273,9 @@ export function ProductDetail({ productId, onBack }: ProductDetailProps) {
             </Card>
           )}
 
-          {/* Supplier Offers */}
-          {activeOffers.length > 0 && (
+          {/* Supplier Offers — seller cost internals; NEVER shown to the buyer
+              (a buyer gets a price only via the seller's КП). */}
+          {showPrices && activeOffers.length > 0 && (
             <Card>
               <CardContent className="p-5">
                 <h2 className="text-sm font-semibold mb-3">

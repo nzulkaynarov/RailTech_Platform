@@ -259,6 +259,17 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-1">
+                        {canSendRequest && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            aria-label={t('catalog.card.requestQuote')}
+                            onClick={() => { cartStore.addItem(product); toast.success(t('cart.added', { name: product.name })); }}
+                          >
+                            <ShoppingCart className="h-4 w-4" />
+                          </Button>
+                        )}
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleRowClick(product)}>
                           <Eye className="h-4 w-4" />
                         </Button>
