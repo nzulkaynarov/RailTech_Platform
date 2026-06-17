@@ -60,6 +60,14 @@ export function RequestItemsEditor({
       toast.error(translateApiError(e));
     }
   };
+  const saveMpn = async (item: QuoteItem, value: string) => {
+    if (value.trim() === (item.mpn || '').trim()) return;
+    try {
+      await updateItem.mutateAsync({ id: item.id, data: { mpn: value.trim() } });
+    } catch (e) {
+      toast.error(translateApiError(e));
+    }
+  };
 
   const itemName = (item: QuoteItem) => item.product_name || item.imported_raw_name || '';
   const hasIncomplete = items.some((item) => item.is_incomplete);
@@ -178,7 +186,7 @@ export function RequestItemsEditor({
                   ) : (
                     <span className="font-medium">{itemName(item)}</span>
                   )}
-                  {item.mpn && (
+                  {!canEdit && item.mpn && (
                     <span className="mt-0.5 block text-xs text-muted-foreground">
                       {t('requestItems.skuLabel')}: <span className="font-mono">{item.mpn}</span>
                     </span>
@@ -239,13 +247,22 @@ export function RequestItemsEditor({
                   <TableCell className="pt-0" />
                   <TableCell colSpan={canEdit ? 4 : 3} className="pt-0">
                     {canEdit ? (
-                      <Input
-                        defaultValue={item.note || ''}
-                        onBlur={(e) => saveNote(item, e.target.value)}
-                        placeholder={t('requestItems.notePlaceholder')}
-                        className="h-7 text-xs"
-                        aria-label={t('requestItems.noteCol')}
-                      />
+                      <div className="flex flex-wrap gap-2">
+                        <Input
+                          defaultValue={item.mpn || ''}
+                          onBlur={(e) => saveMpn(item, e.target.value)}
+                          placeholder={t('requestItems.skuPlaceholder')}
+                          className="h-7 w-40 text-xs"
+                          aria-label={t('requestItems.skuLabel')}
+                        />
+                        <Input
+                          defaultValue={item.note || ''}
+                          onBlur={(e) => saveNote(item, e.target.value)}
+                          placeholder={t('requestItems.notePlaceholder')}
+                          className="h-7 flex-1 text-xs"
+                          aria-label={t('requestItems.noteCol')}
+                        />
+                      </div>
                     ) : (
                       <span className="block whitespace-pre-line text-xs text-muted-foreground">{item.note}</span>
                     )}

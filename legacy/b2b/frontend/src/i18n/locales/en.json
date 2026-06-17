@@ -3914,6 +3914,7 @@
     "qtyCol": "Qty",
     "skuLabel": "Art.",
     "numCol": "#",
+    "skuPlaceholder": "Art. no.",
     "noteCol": "Note",
     "notePlaceholder": "Note (spec, standard…)",
     "incomplete": "Incomplete — add a name or a code",

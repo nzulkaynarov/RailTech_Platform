@@ -15,15 +15,8 @@ DEFAULT_MATCH_THRESHOLD = float(os.environ.get("SMART_MATCH_THRESHOLD", "0.45"))
 
 
 def _current_threshold() -> float:
-    """Read threshold from SystemSetting if available; fall back to env default."""
-    try:
-        from core.models import SystemSetting
-
-        val = SystemSetting.objects.filter(key="smart_match_threshold").values_list("value", flat=True).first()
-        if val:
-            return float(val)
-    except Exception:
-        logger.exception("Failed to read smart_match_threshold from SystemSetting")
+    """Tier-3 fuzzy-match threshold. Configurable via the SMART_MATCH_THRESHOLD
+    env var (SystemSetting has no per-key store — it's a fixed-field singleton)."""
     return DEFAULT_MATCH_THRESHOLD
 
 
