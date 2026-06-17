@@ -193,6 +193,7 @@ class DealViewSet(viewsets.ModelViewSet):
             unit=request.data.get("unit", ""),
             unit_code=request.data.get("unit_code", ""),
             note=request.data.get("note", ""),
+            mpn=request.data.get("mpn", ""),
         )
         return Response(
             QuoteItemSerializer(item, context={"request": request}).data,
