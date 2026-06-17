@@ -1,44 +1,65 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Upload, FileSpreadsheet, X, CheckCircle, Loader2 } from 'lucide-react';
+import { Upload, FileSpreadsheet, X, Loader2, AlertTriangle } from 'lucide-react';
+import { toast } from 'sonner';
 import { crmApi } from '../../api/crmApi';
 import { useTaskStore } from '../../store/taskStore';
-import { clsx } from 'clsx';
+import { translateApiError } from '@/lib/apiError';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface ExcelUploadProps {
     dealId: number;
+    /** Fires only when the import task COMPLETES (not on enqueue). */
     onUploadSuccess?: (taskId: string) => void;
+    // AI mode: accept ANY supported file (Excel/CSV/PDF/image/text); Claude maps it.
+    useAI?: boolean;
 }
 
-export const ExcelUpload: React.FC<ExcelUploadProps> = ({ dealId, onUploadSuccess }) => {
+const AI_ACCEPT = '.xlsx,.xls,.csv,.tsv,.txt,.pdf,.png,.jpg,.jpeg,.webp,.gif';
+const AI_EXT = /\.(xlsx|xls|csv|tsv|txt|pdf|png|jpe?g|webp|gif)$/i;
+
+export const ExcelUpload: React.FC<ExcelUploadProps> = ({ dealId, onUploadSuccess, useAI = false }) => {
     const { t } = useTranslation();
     const [file, setFile] = useState<File | null>(null);
-    const [isUploading, setIsUploading] = useState(false);
+    const [isDispatching, setIsDispatching] = useState(false);
     const [isDragActive, setIsDragActive] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [taskId, setTaskId] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { addTask, tasks } = useTaskStore();
 
-    const activeTaskId = Object.keys(tasks).find(id => tasks[id].status === 'PROGRESS' || tasks[id].status === 'PENDING');
-    const activeTask = activeTaskId ? tasks[activeTaskId] : null;
+    const task = taskId ? tasks[taskId] : null;
+    const isImporting = !!task && (task.status === 'PENDING' || task.status === 'PROGRESS');
+
+    // Success/failure are driven by the POLLED task status — not by enqueue. The
+    // parent only learns the import is done once the items actually exist.
+    useEffect(() => {
+        if (!task) return;
+        if (task.status === 'SUCCESS') {
+            const finishedId = taskId;
+            setTaskId(null);
+            if (finishedId) onUploadSuccess?.(finishedId);
+        } else if (task.status === 'FAILURE') {
+            const message = task.error || t('sourcing.uploadError');
+            setError(message);
+            toast.error(message);
+            setTaskId(null);
+        }
+    }, [task?.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleDrag = (e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        if (e.type === 'dragenter' || e.type === 'dragover') {
-            setIsDragActive(true);
-        } else {
-            setIsDragActive(false);
-        }
+        setIsDragActive(e.type === 'dragenter' || e.type === 'dragover');
     };
 
-    const validateFile = (file: File) => {
-        const validTypes = [
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'application/vnd.ms-excel'
-        ];
-        if (!validTypes.includes(file.type)) {
+    const validateFile = (candidate: File) => {
+        const ok = useAI
+            ? AI_EXT.test(candidate.name)
+            : ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'].includes(candidate.type);
+        if (!ok) {
             setError(t('sourcing.uploadError'));
             return false;
         }
@@ -46,162 +67,106 @@ export const ExcelUpload: React.FC<ExcelUploadProps> = ({ dealId, onUploadSucces
         return true;
     };
 
-    const handleDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragActive(false);
-        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-            const droppedFile = e.dataTransfer.files[0];
-            if (validateFile(droppedFile)) {
-                setFile(droppedFile);
-            }
-        }
-    };
-
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            const selectedFile = e.target.files[0];
-            if (validateFile(selectedFile)) {
-                setFile(selectedFile);
-            }
-        }
-    };
-
-    const removeFile = () => {
-        setFile(null);
-        setError(null);
+    const pickFile = (candidate?: File | null) => {
+        if (candidate && validateFile(candidate)) setFile(candidate);
     };
 
     const handleUpload = async () => {
         if (!file) return;
-
-        setIsUploading(true);
+        setIsDispatching(true);
         setError(null);
         try {
-            const result = await crmApi.importExcelToDeal(dealId, file);
+            const result = await crmApi.importExcelToDeal(dealId, file, useAI);
             addTask(result.task_id, 'excel_import');
-
+            setTaskId(result.task_id); // success/failure handled by the polled status
             setFile(null);
-            setIsUploading(false);
-
-            if (onUploadSuccess) {
-                onUploadSuccess(result.task_id);
-            }
-        } catch (err: unknown) {
-            const errorMessage = err instanceof Error ? err.message : t('sourcing.uploadError');
-            setError(errorMessage);
-            setIsUploading(false);
+        } catch (e) {
+            const message = translateApiError(e);
+            setError(message);
+            toast.error(message);
+        } finally {
+            setIsDispatching(false);
         }
     };
 
-    return (
-        <div className="w-full max-w-xl mx-auto p-5 bg-card rounded-xl border border-border shadow-sm">
-            <h3 className="text-base font-bold text-foreground mb-4 flex items-center gap-2">
-                <Upload className="w-5 h-5 text-primary" aria-hidden="true" />
-                {t('sourcing.uploadTitle')}
-            </h3>
+    const acceptText = useAI ? t('aiImport.acceptedAi') : '.xlsx, .xls';
 
-            {!file ? (
+    return (
+        <div className="space-y-3">
+            {/* Importing — driven by polled task status */}
+            {isImporting ? (
+                <div className="rounded-xl border border-border p-5">
+                    <div className="mb-2 flex items-center gap-2 text-sm font-medium">
+                        <Loader2 className="h-4 w-4 animate-spin text-primary" aria-hidden="true" />
+                        {t('sourcing.processing')}
+                    </div>
+                    <Progress
+                        value={task?.progress ? Math.round((task.progress.current / task.progress.total) * 100) : undefined}
+                    />
+                    {task?.progress && (
+                        <p className="mt-1 text-right text-xs text-muted-foreground tabular-nums">
+                            {task.progress.current} / {task.progress.total}
+                        </p>
+                    )}
+                </div>
+            ) : !file ? (
                 <div
                     onDragEnter={handleDrag}
                     onDragLeave={handleDrag}
                     onDragOver={handleDrag}
-                    onDrop={handleDrop}
+                    onDrop={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragActive(false); pickFile(e.dataTransfer.files?.[0]); }}
                     role="button"
                     tabIndex={0}
                     aria-label={t('sourcing.uploadHint')}
-                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click(); } }}
-                    className={clsx(
-                        'relative group cursor-pointer transition-all',
-                        'border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center',
-                        isDragActive
-                            ? 'border-primary bg-accent'
-                            : 'border-border dark:border-border hover:border-primary/50 hover:bg-muted dark:hover:bg-white/[0.02]'
-                    )}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click(); } }}
                     onClick={() => fileInputRef.current?.click()}
+                    className={`group flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 text-center transition-colors ${
+                        isDragActive ? 'border-primary bg-accent' : 'border-border hover:border-primary/50 hover:bg-muted'
+                    }`}
                 >
                     <input
                         ref={fileInputRef}
                         type="file"
                         className="hidden"
-                        accept=".xlsx,.xls"
-                        onChange={handleFileChange}
+                        accept={useAI ? AI_ACCEPT : '.xlsx,.xls'}
+                        onChange={(e) => pickFile(e.target.files?.[0])}
                     />
-                    <div className="bg-primary/10 p-3 rounded-xl mb-3 group-hover:scale-105 transition-transform">
-                        <FileSpreadsheet className="w-7 h-7 text-primary" aria-hidden="true" />
+                    <div className="mb-3 rounded-xl bg-primary/10 p-3">
+                        <Upload className="h-6 w-6 text-primary" aria-hidden="true" />
                     </div>
-                    <p className="text-sm font-semibold text-foreground mb-0.5">
-                        {t('sourcing.uploadHint')}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                        .xlsx, .xls
-                    </p>
+                    <p className="mb-0.5 text-sm font-semibold text-foreground">{t('sourcing.uploadHint')}</p>
+                    <p className="text-xs text-muted-foreground">{acceptText}</p>
                 </div>
             ) : (
-                <div className="bg-muted dark:bg-muted/50 border border-border rounded-xl p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="bg-success/10 p-2 rounded-lg">
-                            <FileSpreadsheet className="w-5 h-5 text-success" aria-hidden="true" />
+                <div className="flex items-center justify-between rounded-xl border border-border bg-muted/40 p-4">
+                    <div className="flex min-w-0 items-center gap-3">
+                        <div className="rounded-lg bg-primary/10 p-2">
+                            <FileSpreadsheet className="h-5 w-5 text-primary" aria-hidden="true" />
                         </div>
-                        <div>
-                            <p className="text-sm font-semibold text-foreground truncate max-w-xs">
-                                {file.name}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                                {(file.size / 1024).toFixed(1)} KB
-                            </p>
+                        <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-foreground">{file.name}</p>
+                            <p className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(1)} KB</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        {!isUploading && (
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={removeFile}
-                                aria-label={t('common.delete')}
-                            >
-                                <X className="w-4 h-4" />
+                        {!isDispatching && (
+                            <Button variant="ghost" size="icon" onClick={() => { setFile(null); setError(null); }} aria-label={t('common.delete')}>
+                                <X className="h-4 w-4" />
                             </Button>
                         )}
-                        <Button
-                            onClick={handleUpload}
-                            disabled={isUploading}
-                        >
-                            {isUploading ? (
-                                <>
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                    {t('sourcing.processing')}
-                                </>
-                            ) : (
-                                <>
-                                    <CheckCircle className="w-4 h-4" />
-                                    {t('sourcing.uploadTitle')}
-                                </>
-                            )}
+                        <Button onClick={handleUpload} disabled={isDispatching}>
+                            {isDispatching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                            {useAI ? t('aiImport.agree') : t('sourcing.uploadTitle')}
                         </Button>
                     </div>
                 </div>
             )}
 
-            {activeTask && activeTask.status === 'PROGRESS' && activeTask.progress && (
-                <div className="mt-4">
-                    <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                        <span>{t('sourcing.processing')}</span>
-                        <span>{activeTask.progress.current} / {activeTask.progress.total}</span>
-                    </div>
-                    <div className="w-full bg-muted dark:bg-muted h-1.5 rounded-full overflow-hidden">
-                        <div
-                            className="bg-primary h-full transition-all duration-500 ease-out rounded-full"
-                            style={{ width: `${Math.round((activeTask.progress.current / activeTask.progress.total) * 100)}%` }}
-                        />
-                    </div>
-                </div>
-            )}
-
-            {(error || (activeTask && activeTask.error)) && (
-                <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm" role="alert">
-                    {error || activeTask?.error}
-                </div>
+            {error && (
+                <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+                    <AlertDescription>{error}</AlertDescription>
+                </Alert>
             )}
         </div>
     );

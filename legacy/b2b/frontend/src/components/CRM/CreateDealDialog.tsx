@@ -36,7 +36,6 @@ export function CreateDealDialog({ open, onOpenChange, onCreated }: CreateDealDi
   const { t } = useTranslation();
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
-  const [goToImport, setGoToImport] = useState(true);
   const createMut = useCreateDeal();
 
   async function submit(e: FormEvent) {
@@ -52,14 +51,12 @@ export function CreateDealDialog({ open, onOpenChange, onCreated }: CreateDealDi
         notes: notes.trim() || undefined,
       });
       toast.success(t('createDeal.created'));
+      // The caller routes to the request page, where the buyer adds items
+      // manually OR via the inline "Upload file" (AI/template) — one screen.
       onCreated?.(deal.id);
       onOpenChange(false);
       setTitle('');
       setNotes('');
-      if (goToImport) {
-        // Hash-based SPA navigation so this works inside AppShell context.
-        window.location.hash = `sourcing-import?deal=${deal.id}`;
-      }
     } catch (e) {
       toast.error(translateApiError(e));
     }
@@ -101,23 +98,10 @@ export function CreateDealDialog({ open, onOpenChange, onCreated }: CreateDealDi
                 maxLength={2000}
               />
             </div>
-            <label className="flex items-start gap-2 rounded-md border bg-muted/30 p-2 text-xs">
-              <input
-                type="checkbox"
-                className="mt-0.5"
-                checked={goToImport}
-                onChange={(e) => setGoToImport(e.target.checked)}
-              />
-              <span>
-                <span className="flex items-center gap-1 font-medium">
-                  <Upload className="h-3 w-3" aria-hidden="true" />
-                  {t('createDeal.importOption')}
-                </span>
-                <span className="block text-muted-foreground">
-                  {t('createDeal.importOptionHint')}
-                </span>
-              </span>
-            </label>
+            <p className="flex items-center gap-1.5 rounded-md border border-border bg-muted/30 p-2 text-xs text-muted-foreground">
+              <Upload className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              {t('createDeal.importOptionHint')}
+            </p>
           </div>
           <DialogFooter className="mt-4 gap-2">
             <Button

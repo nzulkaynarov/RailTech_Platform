@@ -28,6 +28,7 @@ import {
   useUploadSignedContract, useCancelContract, useForceCancelContract,
 } from '@/hooks/useBilling';
 import { useUserStore } from '@/store/userStore';
+import { useCurrencyStore } from '@/store/currencyStore';
 import { useIsViewerMode } from '@/hooks/useViewerMode';
 import { contractsApi } from '@/api/contractsApi';
 import type { Contract, ContractStatus } from '@/api/contractsApi';
@@ -62,6 +63,7 @@ export function ContractsPage() {
   const isViewer = useIsViewerMode();
   const viewerTip = t('apiErrors.ADMIN_VIEWER_CANNOT_ACT');
   const { data: contracts, isLoading } = useContracts(undefined);
+  const formatCurrency = useCurrencyStore((s) => s.format);
   const signClient = useSignContractClient();
   const signManager = useSignContractManager();
   const uploadSigned = useUploadSignedContract();
@@ -216,7 +218,7 @@ export function ContractsPage() {
                       <TableRow key={c.id}>
                         <TableCell className="font-medium">{c.number}</TableCell>
                         <TableCell>#{c.deal}</TableCell>
-                        <TableCell className="tabular-nums">{c.total_amount}</TableCell>
+                        <TableCell className="tabular-nums">{formatCurrency(Number(c.total_amount))}</TableCell>
                         <TableCell>
                           <Badge variant={STATUS_VARIANT[c.status]}>
                             {t(`contractsPage.status.${c.status}`)}
@@ -255,7 +257,7 @@ export function ContractsPage() {
             <div className="space-y-4 p-4">
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div><Label>{t('contractsPage.table.deal')}</Label><p>#{selected.deal}</p></div>
-                <div><Label>{t('contractsPage.table.total')}</Label><p className="tabular-nums">{selected.total_amount}</p></div>
+                <div><Label>{t('contractsPage.table.total')}</Label><p className="tabular-nums">{formatCurrency(Number(selected.total_amount))}</p></div>
                 <div>
                   <Label>{t('contractsPage.signClient')}</Label>
                   <p className="text-muted-foreground">

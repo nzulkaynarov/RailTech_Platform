@@ -23,6 +23,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useCountries } from '@/hooks/useMasterData';
 import { accountsApi, type KYCDocument, type Company } from '@/api/accountsApi';
 import { toast } from 'sonner';
+import { translateApiError } from '@/lib/apiError';
 import { ImageUpload } from '@/components/Shared/ImageUpload';
 import { FileUpload } from '@/components/Shared/FileUpload';
 
@@ -43,8 +44,10 @@ function PasswordChangeForm({ onClose }: { onClose: () => void }) {
       await accountsApi.changePassword({ current_password: currentPassword, new_password: newPassword });
       toast.success(t('profile.passwordDialog.success'));
       onClose();
-    } catch {
-      toast.error(t('profile.passwordDialog.error'));
+    } catch (e) {
+      // Surface the backend's specific reason (wrong current password, weak
+      // password, …) instead of a generic message.
+      toast.error(translateApiError(e));
     } finally {
       setChangingPw(false);
     }

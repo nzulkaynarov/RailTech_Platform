@@ -28,6 +28,7 @@ import {
 } from '@/hooks/useBilling';
 import { useIsViewerMode } from '@/hooks/useViewerMode';
 import { useUserStore } from '@/store/userStore';
+import { useCurrencyStore } from '@/store/currencyStore';
 import { invoicesApi } from '@/api/billingApi';
 import type { Invoice, InvoiceStatus } from '@/api/billingApi';
 
@@ -56,6 +57,7 @@ export function InvoicesPage() {
   });
 
   const { data: invoices, isLoading } = useInvoices(undefined);
+  const formatCurrency = useCurrencyStore((s) => s.format);
   const recordPayment = useRecordPayment();
   const generateAct = useGenerateAct();
   const isViewer = useIsViewerMode();
@@ -182,8 +184,8 @@ export function InvoicesPage() {
                       <TableRow key={inv.id}>
                         <TableCell className="font-medium">{inv.number}</TableCell>
                         <TableCell>#{inv.deal}</TableCell>
-                        <TableCell className="tabular-nums">{inv.total_incl_vat}</TableCell>
-                        <TableCell className="tabular-nums">{inv.amount_paid}</TableCell>
+                        <TableCell className="tabular-nums">{formatCurrency(Number(inv.total_incl_vat))}</TableCell>
+                        <TableCell className="tabular-nums">{formatCurrency(Number(inv.amount_paid))}</TableCell>
                         <TableCell>
                           <Badge variant={STATUS_VARIANT[inv.status]}>
                             {t(`invoicesPage.status.${inv.status}`)}
@@ -225,8 +227,8 @@ export function InvoicesPage() {
             <div className="space-y-4 p-4">
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div><Label>{t('invoicesPage.table.deal')}</Label><p>#{selected.deal}</p></div>
-                <div><Label>{t('invoicesPage.table.total')}</Label><p className="tabular-nums">{selected.total_incl_vat}</p></div>
-                <div><Label>{t('invoicesPage.table.paid')}</Label><p className="tabular-nums">{selected.amount_paid}</p></div>
+                <div><Label>{t('invoicesPage.table.total')}</Label><p className="tabular-nums">{formatCurrency(Number(selected.total_incl_vat))}</p></div>
+                <div><Label>{t('invoicesPage.table.paid')}</Label><p className="tabular-nums">{formatCurrency(Number(selected.amount_paid))}</p></div>
                 <div><Label>{t('invoicesPage.table.due')}</Label><p>{selected.due_date ? new Date(selected.due_date).toLocaleDateString() : '—'}</p></div>
               </div>
               <Separator />

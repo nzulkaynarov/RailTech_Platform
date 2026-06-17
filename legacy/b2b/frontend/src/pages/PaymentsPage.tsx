@@ -10,10 +10,12 @@ import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
 import { usePayments } from '@/hooks/useBilling';
 import { RecordPaymentDialog } from '@/components/Billing/RecordPaymentDialog';
 import { useUserStore } from '@/store/userStore';
+import { useCurrencyStore } from '@/store/currencyStore';
 
 export function PaymentsPage() {
   const { t } = useTranslation();
   const { data: payments, isLoading, refetch } = usePayments();
+  const formatCurrency = useCurrencyStore((s) => s.format);
   const [recordOpen, setRecordOpen] = useState(false);
   // Recording a payment is a BUYER action (the client pays the invoice).
   const isBuyer = useUserStore((s) => s.activeStatus) === 'BUYER';
@@ -60,7 +62,7 @@ export function PaymentsPage() {
                 {(payments ?? []).map((p) => (
                   <TableRow key={p.id}>
                     <TableCell>#{p.invoice}</TableCell>
-                    <TableCell className="tabular-nums">{p.amount}</TableCell>
+                    <TableCell className="tabular-nums">{formatCurrency(Number(p.amount))}</TableCell>
                     <TableCell>{t(`invoicesPage.method.${p.method}`, p.method)}</TableCell>
                     <TableCell>{new Date(p.paid_at).toLocaleDateString()}</TableCell>
                     <TableCell className="text-muted-foreground">{p.reference || '—'}</TableCell>

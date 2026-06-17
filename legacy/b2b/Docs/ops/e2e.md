@@ -25,6 +25,30 @@ E2E_BASE_URL=https://staging.b2b.railtech.uz npm run test:e2e
 Or trigger `.github/workflows/e2e.yml` manually from the Actions tab and pass the
 target URL.
 
+## Run against the LOCAL docker stack (no Node on the host)
+
+`frontend/e2e/run-in-docker.sh` runs the specs inside the official Playwright
+image against the running `make up` stack — useful when the dev machine has no
+Node (the committed `node_modules` is a Linux build, unusable on macOS).
+
+```bash
+make up                                   # frontend :5173, backend :8000
+cd frontend && e2e/run-in-docker.sh "golden-path.spec.ts --workers=1"
+```
+
+It forwards `localhost:8000`/`localhost:5173` inside the container to
+`host.docker.internal`, because the SPA is a prod build with
+`VITE_API_URL=http://localhost:8000` baked in — inside the container `localhost`
+would otherwise be the container itself and every API call (incl. login) would
+miss the host backend.
+
+**Gotcha that bit us (2026-06-17):** the local `railtech_frontend` image is a
+prod build, not hot-reloaded. If a new hash route was added (e.g.
+`deal-quote/<id>`, `request-detail/<id>`) and the container predates it, those
+routes silently fall through to the dashboard (`parseHashToPage` is fine; the
+*built bundle* is stale). Rebuild before E2E:
+`docker compose up -d --build frontend`.
+
 ## What's runnable today vs. TODO
 
 - ✅ `smoke` block (`e2e/golden-path.spec.ts`) — app loads, `#root` not empty,

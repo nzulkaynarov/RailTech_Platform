@@ -18,6 +18,10 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
 import { useFulfillments, useUpdateFulfillmentStatus } from '@/hooks/useBilling';
 import { useIsViewerMode } from '@/hooks/useViewerMode';
@@ -40,6 +44,7 @@ const STATUS_CODES: FulfillmentStatus[] = [
 export function FulfillmentsPage() {
   const { t } = useTranslation();
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [confirm, setConfirm] = useState<{ f: Fulfillment; status: FulfillmentStatus } | null>(null);
   const [editing, setEditing] = useState<Fulfillment | null>(null);
   const [form, setForm] = useState({
     status: 'PENDING' as FulfillmentStatus,
@@ -100,7 +105,13 @@ export function FulfillmentsPage() {
   const buyerAct = async (f: Fulfillment, status: FulfillmentStatus) => {
     try {
       await updateMut.mutateAsync({ deal_id: f.deal, status });
-      toast.success(t('fulfillmentPage.statusUpdated'));
+      toast.success(
+        status === FStatusCode.ACCEPTED
+          ? t('fulfillmentPage.acceptedToast')
+          : status === FStatusCode.DISPUTED
+            ? t('fulfillmentPage.disputedToast')
+            : t('fulfillmentPage.statusUpdated'),
+      );
     } catch (e) {
       toast.error(translateApiError(e));
     }
@@ -173,15 +184,15 @@ export function FulfillmentsPage() {
                             variant="ghost" size="sm"
                             disabled={isViewer || updateMut.isPending}
                             title={isViewer ? viewerTip : undefined}
-                            onClick={() => buyerAct(f, FStatusCode.ACCEPTED)}
+                            onClick={() => setConfirm({ f, status: FStatusCode.ACCEPTED })}
                           >
                             {t('fulfillmentPage.accept')}
                           </Button>
                           <Button
-                            variant="ghost" size="sm" className="text-destructive"
+                            variant="ghost" size="sm"
                             disabled={isViewer || updateMut.isPending}
                             title={isViewer ? viewerTip : undefined}
-                            onClick={() => buyerAct(f, FStatusCode.DISPUTED)}
+                            onClick={() => setConfirm({ f, status: FStatusCode.DISPUTED })}
                           >
                             {t('fulfillmentPage.dispute')}
                           </Button>
@@ -246,6 +257,31 @@ export function FulfillmentsPage() {
           </SheetFooter>
         </SheetContent>
       </Sheet>
+
+      {/* Confirm the irreversible buyer decision — accepting closes the deal. */}
+      <AlertDialog open={!!confirm} onOpenChange={(open) => { if (!open) setConfirm(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirm?.status === FStatusCode.DISPUTED ? t('fulfillmentPage.dispute') : t('fulfillmentPage.accept')}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirm?.status === FStatusCode.DISPUTED
+                ? t('fulfillmentPage.confirmDispute')
+                : t('fulfillmentPage.confirmAccept')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              className={confirm?.status === FStatusCode.DISPUTED ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : undefined}
+              onClick={() => { if (confirm) buyerAct(confirm.f, confirm.status); setConfirm(null); }}
+            >
+              {confirm?.status === FStatusCode.DISPUTED ? t('fulfillmentPage.dispute') : t('fulfillmentPage.accept')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PageShell>
   );
 }

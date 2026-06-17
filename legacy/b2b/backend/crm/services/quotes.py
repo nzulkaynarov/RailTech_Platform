@@ -580,3 +580,281 @@ def reassign_quote_item_product(
         level="INFO",
     )
     return item, None
+
+
+# ── Buyer-editable request (заявка) line items ──────────────────────────────
+# The buyer owns the *request*: the list of what they want to procure. Those
+# rows live on the deal's single DRAFT quote (created here on first add, or by
+# the Excel importer). Editing is name + quantity ONLY — never pricing, which is
+# the seller's job — and only BEFORE the seller takes the deal into work. Once
+# the seller starts pricing (stage leaves the pre-work set) the request freezes.
+# Editable only while the buyer is still drafting — before they submit the RFQ.
+# Submitting moves DRAFT → RFQ_OPEN (see submit_request), which locks the request.
+REQUEST_EDITABLE_STAGES = frozenset({DealStageCode.DRAFT})
+
+
+def buyer_can_edit_request(deal: Deal, user: CustomUser) -> bool:
+    """True if `user` may add/edit/remove the request line items on `deal`."""
+    from accounts.services.permissions import is_member_of, is_platform_admin_viewer
+
+    if is_platform_admin_viewer(user):
+        return False
+    if not is_member_of(user, deal.company_id, capability="buy"):
+        return False
+    stage_code = deal.stage.code if deal.stage_id else None
+    return stage_code in REQUEST_EDITABLE_STAGES
+
+
+def _request_draft_quote(deal: Deal) -> Quote:
+    """The single DRAFT quote holding the buyer's requested items (get-or-create)."""
+    quote = deal.quotes.filter(status__code=QuoteStatusCode.DRAFT).order_by("version").first()
+    if quote:
+        return quote
+    draft_status = QuoteStatus.objects.get(code=QuoteStatusCode.DRAFT)
+    next_version = (deal.quotes.aggregate(m=models.Max("version"))["m"] or 0) + 1
+    return Quote.objects.create(deal=deal, version=next_version, status=draft_status)
+
+
+def _assert_request_editable(deal: Deal, user: CustomUser) -> None:
+    from rest_framework.exceptions import PermissionDenied
+
+    if not buyer_can_edit_request(deal, user):
+        raise PermissionDenied("REQUEST_NOT_EDITABLE")
+
+
+def _line_dedup_key(item: QuoteItem):
+    """Identity of a request line for dedup: prefer code (mpn/gtin), else name+unit."""
+    mpn = (item.mpn or "").strip().lower()
+    if mpn:
+        return ("mpn", mpn)
+    gtin = (item.gtin or "").strip()
+    if gtin:
+        return ("gtin", gtin)
+    name = (item.imported_raw_name or (item.product.name if item.product_id and item.product else "")).strip().lower()
+    return ("name", name, (item.unit or "").strip().lower())
+
+
+def merge_request_lines(quote: Quote, new_items: list) -> tuple:
+    """Add unsaved QuoteItem rows to `quote`, deduping by mpn/gtin/(name+unit)
+    against existing lines AND within the batch — same item ⇒ quantities sum.
+    Idempotent for re-imports. Returns (created_list, merged_count)."""
+    existing = {}
+    for line in quote.items.all():
+        existing[_line_dedup_key(line)] = line
+    created, touched, merged = [], [], 0
+    for incoming in new_items:
+        key = _line_dedup_key(incoming)
+        if key in existing:
+            existing[key].quantity += incoming.quantity
+            if existing[key].pk:
+                touched.append(existing[key])
+            merged += 1
+        else:
+            existing[key] = incoming
+            created.append(incoming)
+    if created:
+        QuoteItem.objects.bulk_create(created)
+    for line in touched:
+        line.save(update_fields=["quantity"])
+    return created, merged
+
+
+def buyer_add_request_item(user: CustomUser, deal: Deal, *, name: str, quantity, unit="", unit_code="", note="") -> QuoteItem:
+    from rest_framework.exceptions import ValidationError
+
+    clean_name = (name or "").strip()
+    if not clean_name:
+        raise ValidationError({"name": "ITEM_NAME_REQUIRED"})
+    _assert_request_editable(deal, user)
+    quote = _request_draft_quote(deal)
+    candidate = QuoteItem(
+        quote=quote,
+        imported_raw_name=clean_name,
+        quantity=max(1, int(quantity or 1)),
+        unit=(unit or "")[:32],
+        unit_code=(unit_code or "")[:8],
+        note=note or "",
+    )
+    # Same dedup as cart/import: re-adding an identical line sums the quantity.
+    key = _line_dedup_key(candidate)
+    existing = next((line for line in quote.items.all() if _line_dedup_key(line) == key), None)
+    if existing:
+        existing.quantity += candidate.quantity
+        existing.save(update_fields=["quantity"])
+        item = existing
+    else:
+        candidate.save()
+        item = candidate
+    quote.recalculate_totals()
+    ActivityLog.objects.create(
+        action="Добавлена позиция заявки",
+        detail=f"Deal #{deal.id}: «{clean_name}» × {item.quantity}",
+        user=user,
+        level="INFO",
+        entity_type="deal",
+        entity_id=str(deal.id),
+    )
+    return item
+
+
+def buyer_add_request_items(user: CustomUser, deal: Deal, rows: list) -> list:
+    """Bulk-add request lines — used by the catalog cart checkout. Each row is
+    {product_id?, name?, quantity, unit?}. Catalog items link to the real Product
+    (so the seller gets a pre-matched line), free rows fall back to imported_raw_name.
+    """
+    from django.utils import timezone
+
+    from catalog.models import Product
+
+    _assert_request_editable(deal, user)
+    quote = _request_draft_quote(deal)
+    to_create = []
+    for row in rows or []:
+        product = None
+        product_id = row.get("product_id")
+        if product_id:
+            product = Product.objects.filter(pk=product_id).first()
+        name = (row.get("name") or (product.name if product else "")).strip()
+        if not (name or product):
+            continue
+        to_create.append(
+            QuoteItem(
+                quote=quote,
+                product=product,
+                imported_raw_name="" if product else name,
+                quantity=max(1, int(row.get("quantity") or 1)),
+                unit=(row.get("unit") or "")[:32],
+                unit_code=(row.get("unit_code") or "")[:8],
+                note=row.get("note") or "",
+                assigned_at=timezone.now() if product else None,
+            )
+        )
+    if to_create:
+        merge_request_lines(quote, to_create)
+        quote.recalculate_totals()
+        ActivityLog.objects.create(
+            action="Добавлены позиции заявки (корзина)",
+            detail=f"Deal #{deal.id}: {len(to_create)} позиций",
+            user=user,
+            level="INFO",
+            entity_type="deal",
+            entity_id=str(deal.id),
+        )
+    return to_create
+
+
+def buyer_update_request_item(user: CustomUser, item: QuoteItem, *, name=None, quantity=None, unit=None, unit_code=None, note=None) -> QuoteItem:
+    from rest_framework.exceptions import ValidationError
+
+    deal = item.quote.deal
+    _assert_request_editable(deal, user)
+    fields = []
+    if name is not None:
+        clean_name = name.strip()
+        if not clean_name:
+            raise ValidationError({"name": "ITEM_NAME_REQUIRED"})
+        item.imported_raw_name = clean_name
+        fields.append("imported_raw_name")
+    if quantity is not None:
+        item.quantity = max(1, int(quantity))
+        fields.append("quantity")
+    if unit is not None:
+        item.unit = (unit or "")[:32]
+        fields.append("unit")
+    if unit_code is not None:
+        item.unit_code = (unit_code or "")[:8]
+        fields.append("unit_code")
+    if note is not None:
+        item.note = note or ""
+        fields.append("note")
+    if fields:
+        item.save(update_fields=fields)
+        item.quote.recalculate_totals()
+    return item
+
+
+def buyer_remove_request_item(user: CustomUser, item: QuoteItem) -> None:
+    deal = item.quote.deal
+    _assert_request_editable(deal, user)
+    quote = item.quote
+    item.delete()
+    quote.recalculate_totals()
+    ActivityLog.objects.create(
+        action="Удалена позиция заявки",
+        detail=f"Deal #{deal.id}: QuoteItem #{item.id}",
+        user=user,
+        level="INFO",
+        entity_type="deal",
+        entity_id=str(deal.id),
+    )
+
+
+def _is_request_item_incomplete(item: QuoteItem) -> bool:
+    # UBL: a line must be identified by a name OR a code (mpn/gtin) OR a product.
+    return not (
+        (item.imported_raw_name or "").strip()
+        or (item.mpn or "").strip()
+        or (item.gtin or "").strip()
+        or item.product_id
+    )
+
+
+def buyer_update_request_meta(user: CustomUser, deal: Deal, *, title=None, notes=None) -> Deal:
+    """Buyer edits the request header — title + note-to-seller — while still DRAFT."""
+    from rest_framework.exceptions import PermissionDenied, ValidationError
+
+    if not buyer_can_edit_request(deal, user):
+        raise PermissionDenied("REQUEST_NOT_EDITABLE")
+    fields = []
+    if title is not None:
+        clean = title.strip()
+        if not clean:
+            raise ValidationError({"title": "TITLE_REQUIRED"})
+        deal.title = clean[:255]
+        fields.append("title")
+    if notes is not None:
+        deal.notes = notes
+        fields.append("notes")
+    if fields:
+        deal.save(update_fields=fields)
+    return deal
+
+
+def submit_request(user: CustomUser, deal: Deal) -> Deal:
+    """Buyer issues the RFQ to the seller — the explicit «Отправить заявку» step.
+
+    World-standard RFQ lifecycle: Draft → SUBMIT → seller quotes → accept/reject.
+    Guards: buyer with can_buy, deal still DRAFT, ≥1 line, and NO incomplete lines
+    (the data-quality gate). On success the deal moves DRAFT → RFQ_OPEN via the FSM
+    and the buyer's request locks for editing.
+    """
+    from rest_framework.exceptions import PermissionDenied, ValidationError
+
+    from accounts.services.permissions import is_member_of, is_platform_admin_viewer
+
+    if is_platform_admin_viewer(user):
+        raise PermissionDenied("ADMIN_VIEWER_CANNOT_ACT")
+    if not is_member_of(user, deal.company_id, capability="buy"):
+        raise PermissionDenied("ONLY_BUYER_CAN_SUBMIT_REQUEST")
+    if (deal.stage.code if deal.stage_id else None) != DealStageCode.DRAFT:
+        raise ValidationError({"detail": "REQUEST_ALREADY_SUBMITTED"})
+
+    quote = deal.quotes.filter(status__code=QuoteStatusCode.DRAFT).order_by("version").first()
+    items = list(quote.items.all()) if quote else []
+    if not items:
+        raise ValidationError({"detail": "REQUEST_EMPTY"})
+    if any(_is_request_item_incomplete(item) for item in items):
+        raise ValidationError({"detail": "REQUEST_HAS_INCOMPLETE_ITEMS"})
+
+    deal, error = transition_deal_stage(deal, DealStageCode.RFQ_OPEN, actor=user)
+    if error:
+        raise ValidationError({"detail": error})
+    ActivityLog.objects.create(
+        action="Заявка отправлена поставщику (RFQ)",
+        detail=f"Deal #{deal.id}: {len(items)} позиций",
+        user=user,
+        level="INFO",
+        entity_type="deal",
+        entity_id=str(deal.id),
+    )
+    return deal

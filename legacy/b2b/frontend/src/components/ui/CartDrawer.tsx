@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ShoppingCart, Trash2, Plus, Minus, Package, ArrowRight, Loader2 } from 'lucide-react';
 import { useCartStore } from '@/store/cartStore';
 import { crmApi } from '@/api/crmApi';
+import { translateApiError } from '@/lib/apiError';
 import { toast } from 'sonner';
 import {
     Sheet,
@@ -28,27 +29,26 @@ export const CartDrawer: React.FC = () => {
         if (items.length === 0) return;
         setSubmitting(true);
         try {
-            // 1. Create the Deal in DRAFT with a human-readable summary in notes
-            //    (kept for historical context even though every line is also
-            //    stored as a structured QuoteItem below).
+            // 1. Create the request (Deal in DRAFT).
             const deal = await crmApi.createDeal({
                 title: `${t('cart.requestFrom')} ${new Date().toLocaleDateString()}`,
-                notes: items
-                    .map((item) => `• ${item.product.sku ?? '—'} · ${item.product.name} · ×${item.quantity}`)
-                    .join('\n'),
             });
             if (!deal?.id) throw new Error('DEAL_CREATE_FAILED');
 
-            // The заявка is the Deal; the buyer's requested lines are captured in the
-            // deal notes above. Building the КП (Quote + priced items) is a SELLER
-            // action — the backend now blocks buyers from creating quotes/quote-items
-            // (ONLY_SELLER_CAN_BUILD_QUOTE), so the cart must NOT create them here.
+            // 2. Add the selected catalog products as STRUCTURED request lines
+            //    (linked to the real Product via product_id) — the buyer reviews
+            //    and submits them on the request page. Not a free-text notes dump.
+            await crmApi.addRequestItems(
+                deal.id,
+                items.map((item) => ({ product_id: item.product.id, name: item.product.name, quantity: item.quantity })),
+            );
+
             toast.success(t('cart.requestCreated', { id: deal.id }));
             clearCart();
             closeCart();
             window.location.hash = `request-detail/${deal.id}`;
-        } catch {
-            toast.error(t('cart.requestError'));
+        } catch (e) {
+            toast.error(translateApiError(e));
         } finally {
             setSubmitting(false);
         }

@@ -560,6 +560,32 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 
+# Queue routing. The worker is started with `-Q default,pdf,imports` (see
+# docker-compose / deploy). Celery's built-in default queue is "celery", which
+# that worker does NOT consume — so without this block every `.delay()` lands in
+# an orphaned "celery" queue and silently never runs (Excel import dead-end +
+# stale-quote/auto-invoice beat jobs never firing). Pin the default queue to one
+# the worker consumes, and route the heavy bulk imports to their own queue so a
+# 50k-row import can't starve transactional tasks.
+CELERY_TASK_DEFAULT_QUEUE = "default"
+CELERY_TASK_ROUTES = {
+    "sourcing.tasks.process_excel_import": {"queue": "imports"},
+    "sourcing.tasks.process_catalog_import": {"queue": "imports"},
+}
+
+# ── AI заявка normalisation ─────────────────────────────────────────────────
+# A client may upload ANY file (Excel / CSV / PDF / image / pasted text); Claude
+# extracts the line items into our canonical schema (name / quantity / unit /
+# note). The buyer ALWAYS reviews the result before submitting — the AI never
+# writes a final заявка unattended. Disabled automatically when no API key is set
+# (the deterministic keyword parser remains the fallback).
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+AI_IMPORT_MODEL = os.environ.get("AI_IMPORT_MODEL", "claude-opus-4-8")
+AI_IMPORT_ENABLED = bool(ANTHROPIC_API_KEY) and os.environ.get("AI_IMPORT_ENABLED", "true").lower() == "true"
+# Rows-per-chunk cap so a 10k-line spec is split into bounded LLM calls (token
+# limits) and merged — keeps each request fast, cheap, and within output budget.
+AI_IMPORT_CHUNK_ROWS = int(os.environ.get("AI_IMPORT_CHUNK_ROWS", "400"))
+
 # Removed duplicate declarations (now at the top)
 
 # Logging

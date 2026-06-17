@@ -16,6 +16,12 @@ export interface QuoteItem {
 	offer_supplier_name?: string;
 	imported_raw_name: string;
 	quantity: number;
+	unit?: string;
+	unit_code?: string;
+	mpn?: string;
+	gtin?: string;
+	note?: string;
+	is_incomplete?: boolean;
 	frozen_base_price: string;
 	frozen_currency: string;
 	logistics_cost: string;
@@ -78,6 +84,7 @@ export interface Deal {
 	notes?: string;
 	active_quote?: Quote | null;
 	quotes?: Quote[];
+	can_edit_request?: boolean;
 	created_at: string;
 	updated_at?: string;
 }
@@ -137,6 +144,27 @@ export const crmApi = {
 	deleteQuoteItem: async (id: number) => {
 		await apiClient.delete(`crm/quote-items/${id}/`);
 	},
+	// Buyer adds a row to their own request (name + qty). Creates the underlying
+	// DRAFT quote on first add; allowed only while the seller hasn't engaged.
+	addRequestItem: async (dealId: number, data: { name: string; quantity: number; unit?: string; unit_code?: string; note?: string }) => {
+		const response = await apiClient.post<QuoteItem>(`crm/deals/${dealId}/add-request-item/`, data);
+		return response.data;
+	},
+	// Buyer edits the request header (title + note to seller) while DRAFT.
+	updateRequestMeta: async (dealId: number, data: { title?: string; notes?: string }) => {
+		const response = await apiClient.patch<Deal>(`crm/deals/${dealId}/update-request-meta/`, data);
+		return response.data;
+	},
+	// Buyer adds a batch of request lines at once (catalog cart checkout).
+	addRequestItems: async (dealId: number, items: { product_id?: number; name?: string; quantity: number }[]) => {
+		const response = await apiClient.post<QuoteItem[]>(`crm/deals/${dealId}/add-request-items/`, { items });
+		return response.data;
+	},
+	// Buyer issues the RFQ to the seller (Draft → RFQ_OPEN). The «Отправить заявку» step.
+	submitRequest: async (dealId: number) => {
+		const response = await apiClient.post<Deal>(`crm/deals/${dealId}/submit-request/`);
+		return response.data;
+	},
 	changeDealStage: async (dealId: number, stageCode: string) => {
 		const response = await apiClient.post<Deal>(`crm/deals/${dealId}/change-stage/`, { stage_code: stageCode });
 		return response.data;
@@ -182,9 +210,10 @@ export const crmApi = {
 		const response = await apiClient.get<PaginatedResponse<Product>>(url);
 		return response.data.results;
 	},
-	importExcelToDeal: async (dealId: number, file: File) => {
+	importExcelToDeal: async (dealId: number, file: File, useAI = false) => {
 		const formData = new FormData();
 		formData.append('file', file);
+		if (useAI) formData.append('use_ai', 'true');
 		const response = await apiClient.post<{ message: string, task_id: string }>(
 			`sourcing/import-deal/${dealId}/`,
 			formData,

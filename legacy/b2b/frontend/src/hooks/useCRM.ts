@@ -118,6 +118,43 @@ export const useDeleteQuoteItem = () => {
   });
 };
 
+// Buyer-only: append a row to their own request. Backend creates the DRAFT
+// quote on first add and rejects once the seller has engaged (can_edit_request).
+export const useAddRequestItem = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ dealId, ...data }: { dealId: number; name: string; quantity: number; unit?: string; unit_code?: string; note?: string }) =>
+      crmApi.addRequestItem(dealId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['quote-items'] });
+      queryClient.invalidateQueries({ queryKey: ['deals'] });
+    },
+  });
+};
+
+// Buyer-only: edit the request header (title + note to seller) while DRAFT.
+export const useUpdateRequestMeta = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ dealId, ...data }: { dealId: number; title?: string; notes?: string }) =>
+      crmApi.updateRequestMeta(dealId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['deals'] });
+    },
+  });
+};
+
+// Buyer-only: submit the request (RFQ) to the seller — Draft → RFQ_OPEN.
+export const useSubmitRequest = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (dealId: number) => crmApi.submitRequest(dealId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['deals'] });
+    },
+  });
+};
+
 export const useActivityLogs = () => useQuery({
     queryKey: ['activity-logs'],
     queryFn: () => crmApi.getActivityLogs(),
