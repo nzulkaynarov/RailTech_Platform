@@ -8,6 +8,7 @@ import { useCurrencyStore } from '@/store/currencyStore';
 import { useIsViewerMode } from '@/hooks/useViewerMode';
 import { useDeal, useChangeDealStage, useApproveQuote, useRejectQuote, useSendQuoteToClient, useUpdateRequestMeta } from '@/hooks/useCRM';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { translateApiError } from '@/lib/apiError';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -79,14 +80,26 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
 
   return (
     <div className="flex gap-4">
-      <div className="flex flex-col gap-6 flex-[7] min-w-0">
+      <div className="flex flex-col gap-3 flex-[7] min-w-0">
 
         {/* Header */}
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={onBack}><ArrowLeft className="h-4 w-4" /></Button>
           <div className="flex-1">
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold">{deal.title || `#${deal.id}`}</h1>
+              {canEditRequest ? (
+                <Input
+                  defaultValue={deal.title || ''}
+                  onBlur={(e) => {
+                    const value = e.target.value.trim();
+                    if (value && value !== (deal.title || '')) updateMeta.mutate({ dealId: deal.id, title: value });
+                  }}
+                  className="h-auto max-w-md border-transparent bg-transparent px-1 text-2xl font-bold hover:border-input focus-visible:border-input"
+                  aria-label={t('requestDetailActions.titleLabel')}
+                />
+              ) : (
+                <h1 className="text-2xl font-bold">{deal.title || `#${deal.id}`}</h1>
+              )}
               {isBuyerSide ? (
                 <StatusBadge label={t(buyerStatus(deal.stage_code).labelKey)} variant={buyerStatus(deal.stage_code).variant} />
               ) : (
@@ -117,18 +130,13 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
           const buyerActions = isBuyerSide && isQuoteSent && quote;
           const showActionBar = sellerActions || buyerActions || isWon;
           if (!showActionBar) {
+            // A buyer editing a draft already gets this guidance from the "Your
+            // request" card subtitle — don't waste a whole banner repeating it.
+            if (isBuyerSide && canEditRequest) return null;
             return (
-              <Card className="bg-muted/30">
-                <CardContent className="py-4">
-                  <span className="text-sm text-muted-foreground">
-                    {isBuyerSide
-                      ? (canEditRequest
-                          ? t('requestItems.buyerEditHint')
-                          : t('requestDetailActions.buyerWaitHint'))
-                      : t('requestDetailActions.noActions')}
-                  </span>
-                </CardContent>
-              </Card>
+              <p className="text-sm text-muted-foreground">
+                {isBuyerSide ? t('requestDetailActions.buyerWaitHint') : t('requestDetailActions.noActions')}
+              </p>
             );
           }
           return (

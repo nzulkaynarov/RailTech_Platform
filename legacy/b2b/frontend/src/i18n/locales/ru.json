@@ -3937,6 +3937,7 @@
     "submittedToast": "Заявка отправлена поставщику"
   },
   "requestDetailActions": {
+    "titleLabel": "Название заявки",
     "noteToSeller": "Примечание поставщику",
     "noteToSellerPlaceholder": "Сроки, условия поставки, пожелания…",
     "startSourcing": "К подбору",

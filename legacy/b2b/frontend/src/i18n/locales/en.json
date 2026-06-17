@@ -3933,6 +3933,7 @@
     "submittedToast": "Request submitted to the seller"
   },
   "requestDetailActions": {
+    "titleLabel": "Request title",
     "noteToSeller": "Note to the seller",
     "noteToSellerPlaceholder": "Deadlines, delivery terms, preferences…",
     "startSourcing": "Start sourcing",

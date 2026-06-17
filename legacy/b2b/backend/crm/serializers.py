@@ -64,6 +64,7 @@ class QuoteItemSerializer(serializers.ModelSerializer):
             "unit_code",
             "mpn",
             "gtin",
+            "note",
             "is_incomplete",
             "assigned_at",
             "frozen_base_price",
