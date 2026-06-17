@@ -42,7 +42,7 @@ export function ImportRequestDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{t('aiImport.optionAi')}</DialogTitle>
+          <DialogTitle>{t('aiImport.dialogTitle')}</DialogTitle>
           <DialogDescription>{useAI ? t('aiImport.optionAiHint') : t('aiImport.optionTemplateHint')}</DialogDescription>
         </DialogHeader>
 
@@ -52,12 +52,13 @@ export function ImportRequestDialog({
           size="sm"
           value={useAI ? 'ai' : 'tpl'}
           onValueChange={(value) => { if (value) setUseAI(value === 'ai'); }}
+          className="grid w-full grid-cols-2"
         >
-          <ToggleGroupItem value="ai" className="gap-1.5 text-xs">
-            <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+          <ToggleGroupItem value="ai" className="w-full gap-1.5 text-xs">
+            <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             {t('aiImport.optionAi')}
           </ToggleGroupItem>
-          <ToggleGroupItem value="tpl" className="text-xs">{t('aiImport.optionTemplate')}</ToggleGroupItem>
+          <ToggleGroupItem value="tpl" className="w-full text-xs">{t('aiImport.optionTemplate')}</ToggleGroupItem>
         </ToggleGroup>
 
         {useAI ? (

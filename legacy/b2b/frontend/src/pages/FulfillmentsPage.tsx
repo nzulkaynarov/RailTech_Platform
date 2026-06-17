@@ -22,7 +22,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
+import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import { useFulfillments, useUpdateFulfillmentStatus } from '@/hooks/useBilling';
 import { useIsViewerMode } from '@/hooks/useViewerMode';
 import { useUserStore } from '@/store/userStore';
@@ -55,7 +55,7 @@ export function FulfillmentsPage() {
   });
 
   const queryParams = statusFilter !== 'all' ? { status: statusFilter } : undefined;
-  const { data: list, isLoading } = useFulfillments(queryParams);
+  const { data: list, isLoading, isError, refetch } = useFulfillments(queryParams);
   const updateMut = useUpdateFulfillmentStatus();
   const isViewer = useIsViewerMode();
   // Driving the shipment (PENDING→…→DELIVERED) is a seller action. Buyer-side
@@ -136,7 +136,7 @@ export function FulfillmentsPage() {
             </SelectContent>
           </Select>
 
-          {isLoading ? <LoadingRows rows={6} /> : (list?.length ?? 0) === 0 ? (
+          {isLoading ? <LoadingRows rows={6} /> : isError ? <ErrorState onRetry={refetch} /> : (list?.length ?? 0) === 0 ? (
             <EmptyState icon={<Truck className="h-5 w-5" />} message={t('fulfillmentPage.emptyState')} />
           ) : (
             <Table>

@@ -18,7 +18,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
+import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import { ManualModeBanner } from '@/components/Shared/ManualModeBanner';
 import {
   Toolbar, SortableHead, Pager, useListParams, applyListParams,
@@ -56,7 +56,7 @@ export function InvoicesPage() {
     reference: '',
   });
 
-  const { data: invoices, isLoading } = useInvoices(undefined);
+  const { data: invoices, isLoading, isError, refetch } = useInvoices(undefined);
   const formatCurrency = useCurrencyStore((s) => s.format);
   const recordPayment = useRecordPayment();
   const generateAct = useGenerateAct();
@@ -151,6 +151,7 @@ export function InvoicesPage() {
               },
             });
             if (isLoading) return <LoadingRows rows={6} />;
+            if (isError) return <ErrorState onRetry={refetch} />;
             if (!pageItems.length) {
               return <EmptyState icon={<Receipt className="h-5 w-5" />} message={t('invoicesPage.emptyState')} />;
             }

@@ -7,6 +7,7 @@ import { useAddRequestItem, useUpdateQuoteItem, useDeleteQuoteItem, useSubmitReq
 import { translateApiError } from '@/lib/apiError';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -151,6 +152,7 @@ export function RequestItemsEditor({
         <Table className="min-w-[28rem]">
           <TableHeader>
             <TableRow className="bg-muted/50">
+              <TableHead className="w-10 text-center">{t('requestItems.numCol')}</TableHead>
               <TableHead>{t('requestItems.nameCol')}</TableHead>
               <TableHead className="w-24">{t('requestItems.unitCol')}</TableHead>
               <TableHead className="w-28 text-right">{t('requestItems.qtyCol')}</TableHead>
@@ -158,15 +160,19 @@ export function RequestItemsEditor({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {items.map((item) => (
+            {items.map((item, index) => (
               <Fragment key={item.id}>
               <TableRow className={item.is_incomplete ? 'border-0 bg-destructive/5' : 'border-0'}>
+                <TableCell className="text-center align-top text-sm text-muted-foreground tabular-nums">
+                  {index + 1}
+                </TableCell>
                 <TableCell>
                   {canEdit ? (
-                    <Input
+                    <Textarea
                       defaultValue={itemName(item)}
                       onBlur={(e) => saveName(item, e.target.value)}
-                      className="h-8"
+                      rows={1}
+                      className="min-h-8 resize-none py-1.5 field-sizing-content"
                       aria-label={t('requestItems.nameCol')}
                     />
                   ) : (
@@ -230,6 +236,7 @@ export function RequestItemsEditor({
               {/* Note sub-row — full width, so it never collides with Unit/Qty. */}
               {(canEdit || item.note) && (
                 <TableRow className={item.is_incomplete ? 'bg-destructive/5 hover:bg-destructive/5' : 'hover:bg-transparent'}>
+                  <TableCell className="pt-0" />
                   <TableCell colSpan={canEdit ? 4 : 3} className="pt-0">
                     {canEdit ? (
                       <Input
@@ -249,7 +256,7 @@ export function RequestItemsEditor({
             ))}
             {items.length === 0 && (
               <TableRow>
-                <TableCell colSpan={canEdit ? 4 : 3} className="text-center py-6 text-muted-foreground">
+                <TableCell colSpan={canEdit ? 5 : 4} className="text-center py-6 text-muted-foreground">
                   {t('requestItems.empty')}
                 </TableCell>
               </TableRow>
