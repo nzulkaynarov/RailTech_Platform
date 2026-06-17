@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { AlertTriangle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -89,6 +90,24 @@ export function EmptyState({ icon, message, hint, action }: EmptyStateProps) {
       {action && (
         <Button className="mt-4" size="sm" onClick={action.onClick}>
           {action.label}
+        </Button>
+      )}
+    </div>
+  );
+}
+
+/** Distinct from EmptyState: a failed fetch must not read as "nothing here". */
+export function ErrorState({ onRetry }: { onRetry?: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex flex-col items-center justify-center py-16 text-center">
+      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
+        <AlertTriangle className="h-6 w-6 text-destructive" aria-hidden="true" />
+      </div>
+      <p className="text-sm font-medium text-foreground">{t('common.loadError')}</p>
+      {onRetry && (
+        <Button className="mt-4" size="sm" variant="outline" onClick={onRetry}>
+          {t('common.retry')}
         </Button>
       )}
     </div>

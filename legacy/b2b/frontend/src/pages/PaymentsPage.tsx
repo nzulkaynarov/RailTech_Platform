@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
+import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import { usePayments } from '@/hooks/useBilling';
 import { RecordPaymentDialog } from '@/components/Billing/RecordPaymentDialog';
 import { useUserStore } from '@/store/userStore';
@@ -14,7 +14,7 @@ import { useCurrencyStore } from '@/store/currencyStore';
 
 export function PaymentsPage() {
   const { t } = useTranslation();
-  const { data: payments, isLoading, refetch } = usePayments();
+  const { data: payments, isLoading, isError, refetch } = usePayments();
   const formatCurrency = useCurrencyStore((s) => s.format);
   const [recordOpen, setRecordOpen] = useState(false);
   // Recording a payment is a BUYER action (the client pays the invoice).
@@ -41,7 +41,7 @@ export function PaymentsPage() {
       )}
       <Card>
         <CardContent className="p-0">
-          {isLoading ? <LoadingRows rows={6} /> : (payments?.length ?? 0) === 0 ? (
+          {isLoading ? <LoadingRows rows={6} /> : isError ? <ErrorState onRetry={refetch} /> : (payments?.length ?? 0) === 0 ? (
             <EmptyState
               icon={<Wallet className="h-5 w-5" />}
               message={t('paymentsPage.emptyState')}

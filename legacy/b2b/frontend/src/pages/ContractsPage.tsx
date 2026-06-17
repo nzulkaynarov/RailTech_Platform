@@ -18,7 +18,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
+import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import { ManualModeBanner } from '@/components/Shared/ManualModeBanner';
 import {
   Toolbar, SortableHead, Pager, useListParams, applyListParams,
@@ -62,7 +62,7 @@ export function ContractsPage() {
   const isSeller = !isBuyer; // SELLER / MANUFACTURER context
   const isViewer = useIsViewerMode();
   const viewerTip = t('apiErrors.ADMIN_VIEWER_CANNOT_ACT');
-  const { data: contracts, isLoading } = useContracts(undefined);
+  const { data: contracts, isLoading, isError, refetch } = useContracts(undefined);
   const formatCurrency = useCurrencyStore((s) => s.format);
   const signClient = useSignContractClient();
   const signManager = useSignContractManager();
@@ -181,6 +181,7 @@ export function ContractsPage() {
               },
             });
             if (isLoading) return <LoadingRows rows={6} />;
+            if (isError) return <ErrorState onRetry={refetch} />;
             if (!pageItems.length) {
               return (
                 <EmptyState

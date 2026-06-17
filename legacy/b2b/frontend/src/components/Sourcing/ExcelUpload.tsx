@@ -32,6 +32,14 @@ export const ExcelUpload: React.FC<ExcelUploadProps> = ({ dealId, onUploadSucces
 
     const task = taskId ? tasks[taskId] : null;
     const isImporting = !!task && (task.status === 'PENDING' || task.status === 'PROGRESS');
+    // Optimistic progress so the bar visibly MOVES while parsing (no granular
+    // data for AI/PDF jobs) — makes it obvious the import is working, not hung.
+    const [optimisticPct, setOptimisticPct] = useState(0);
+    useEffect(() => {
+        if (!isImporting) { setOptimisticPct(0); return; }
+        const id = setInterval(() => setOptimisticPct((p) => Math.min(92, p + 6)), 700);
+        return () => clearInterval(id);
+    }, [isImporting]);
 
     // Success/failure are driven by the POLLED task status — not by enqueue. The
     // parent only learns the import is done once the items actually exist.
@@ -101,13 +109,13 @@ export const ExcelUpload: React.FC<ExcelUploadProps> = ({ dealId, onUploadSucces
                         {t('sourcing.processing')}
                     </div>
                     <Progress
-                        value={task?.progress ? Math.round((task.progress.current / task.progress.total) * 100) : undefined}
+                        value={task?.progress ? Math.round((task.progress.current / task.progress.total) * 100) : optimisticPct}
                     />
-                    {task?.progress && (
-                        <p className="mt-1 text-right text-xs text-muted-foreground tabular-nums">
-                            {task.progress.current} / {task.progress.total}
-                        </p>
-                    )}
+                    <p className="mt-1 text-right text-xs text-muted-foreground tabular-nums">
+                        {task?.progress
+                            ? `${task.progress.current} / ${task.progress.total}`
+                            : t('sourcing.processingHint')}
+                    </p>
                 </div>
             ) : !file ? (
                 <div
