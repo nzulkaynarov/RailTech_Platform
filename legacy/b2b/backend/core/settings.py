@@ -585,6 +585,10 @@ AI_IMPORT_ENABLED = bool(ANTHROPIC_API_KEY) and os.environ.get("AI_IMPORT_ENABLE
 # Rows-per-chunk cap so a 10k-line spec is split into bounded LLM calls (token
 # limits) and merged — keeps each request fast, cheap, and within output budget.
 AI_IMPORT_CHUNK_ROWS = int(os.environ.get("AI_IMPORT_CHUNK_ROWS", "400"))
+# Hard byte cap before a file is sent to the model. Vision payloads (PDF/image) go
+# as one base64 request, so an oversized file means a 413 + wasted spend — reject it
+# early. Default 10 MB (the upload endpoint already caps the raw file at 20 MB).
+AI_IMPORT_MAX_BYTES = int(os.environ.get("AI_IMPORT_MAX_BYTES", str(10 * 1024 * 1024)))
 
 # Removed duplicate declarations (now at the top)
 

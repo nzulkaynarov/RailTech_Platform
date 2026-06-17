@@ -140,6 +140,10 @@ def _unit_code_reference():
 
 
 def _extract_one(client, model: str, system: str, *, text: str | None = None, vision_block=None) -> list[dict]:
+    """One model call → raw item dicts. Resilient: a refusal, a truncated response,
+    or unparseable JSON yields an empty list (logged) instead of raising, so one bad
+    chunk never sinks a multi-chunk import. Genuine API/transport errors still raise
+    for the caller to count."""
     user_content = []
     if vision_block is not None:
         user_content.append(vision_block)
@@ -154,44 +158,34 @@ def _extract_one(client, model: str, system: str, *, text: str | None = None, vi
         messages=[{"role": "user", "content": user_content}],
         output_config={"format": {"type": "json_schema", "schema": RESULT_SCHEMA}},
     )
+
+    usage = getattr(response, "usage", None)
+    if usage is not None:
+        # Log token spend so this paid feature is observable in the import logs.
+        logger.info("AI extract usage: input=%s output=%s", usage.input_tokens, usage.output_tokens)
+
+    if response.stop_reason == "refusal":
+        logger.warning("AI extract: model declined the request (%s)", getattr(response, "stop_details", None))
+        return []
+    if response.stop_reason == "max_tokens":
+        # Output was cut off mid-JSON — likely unparseable below. Smaller chunks fix it.
+        logger.warning("AI extract: hit max_tokens — output truncated; lower AI_IMPORT_CHUNK_ROWS")
+
     raw = next((b.text for b in response.content if b.type == "text"), "{}")
-    data = json.loads(raw)
+    try:
+        data = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        logger.warning("AI extract: model JSON unparseable (len=%s) — skipping this chunk", len(raw or ""))
+        return []
     return data.get("items", []) or []
 
 
-def extract_request_items(content: bytes, filename: str) -> list[dict]:
-    """Main entry: uploaded bytes → UBL-aligned request lines.
+def _normalize_items(items: list[dict], valid_codes: set) -> list[dict]:
+    """Pure post-processing of the model's raw items → clean UBL-aligned rows.
 
-    Returns list of {name, quantity, unit, unit_code, mpn, gtin, note}. Unit codes
-    are validated against the DB справочник (UN/ECE Rec 20) — the model maps the
-    client's free text to OUR codes, code only keeps valid ones. Chunks large
-    files. Raises if AI import disabled / API errors — caller may fall back to the
-    deterministic parser. A line with no name but an mpn/gtin is KEPT (identified
-    by code; the buyer completes it in the review grid).
-    """
-    if not settings.AI_IMPORT_ENABLED:
-        raise RuntimeError("AI_IMPORT_DISABLED")
-
-    model = settings.AI_IMPORT_MODEL
-    client = _client()
-    valid_codes, code_guidance = _unit_code_reference()
-    system = (
-        SYSTEM_PROMPT
-        + "\n\nКОДЫ ЕДИНИЦ ИЗМЕРЕНИЯ (UN/ECE Rec 20) — для поля unit_code выбери ОДИН код из "
-        + "этого списка, наиболее подходящий по смыслу (или '' если не подходит ни один):\n"
-        + code_guidance
-    )
-    text, vision_block = file_to_payload(content, filename)
-
-    if vision_block is not None:
-        items = _extract_one(client, model, system, vision_block=vision_block)
-    else:
-        chunks = _chunk_lines(text, settings.AI_IMPORT_CHUNK_ROWS)
-        items = []
-        for index, chunk in enumerate(chunks):
-            items.extend(_extract_one(client, model, system, text=chunk))
-            logger.info("AI extract: chunk %s/%s → %s items", index + 1, len(chunks), len(items))
-
+    Coerces quantity to a positive int, validates unit_code against the DB справочник
+    (off-list codes dropped to ''), truncates each field to its DB column limit, and
+    drops rows identified by neither name nor mpn/gtin. No I/O — unit-tested directly."""
     cleaned = []
     for raw_item in items:
         name = str(raw_item.get("name", "")).strip()
@@ -204,7 +198,6 @@ def extract_request_items(content: bytes, filename: str) -> list[dict]:
             quantity = max(1, int(float(raw_item.get("quantity") or 1)))
         except (ValueError, TypeError):
             quantity = 1
-        # Validate the AI's unit_code against our справочник — discard anything off-list.
         unit_code = str(raw_item.get("unit_code", "")).strip().upper()
         if unit_code not in valid_codes:
             unit_code = ""
@@ -220,3 +213,62 @@ def extract_request_items(content: bytes, filename: str) -> list[dict]:
             }
         )
     return cleaned
+
+
+def extract_request_items(content: bytes, filename: str) -> list[dict]:
+    """Main entry: uploaded bytes → UBL-aligned request lines.
+
+    Returns list of {name, quantity, unit, unit_code, mpn, gtin, note}. Unit codes
+    are validated against the DB справочник (UN/ECE Rec 20) — the model maps the
+    client's free text to OUR codes, code only keeps valid ones. Chunks large
+    files. Raises if AI import disabled / API errors — caller may fall back to the
+    deterministic parser. A line with no name but an mpn/gtin is KEPT (identified
+    by code; the buyer completes it in the review grid).
+    """
+    if not settings.AI_IMPORT_ENABLED:
+        raise RuntimeError("AI_IMPORT_DISABLED")
+
+    # Guard against shipping a giant blob to the model: vision payloads (PDF/image)
+    # are one base64 request, so an oversized file means a 413 + wasted spend. Bounded
+    # by AI_IMPORT_MAX_BYTES; text is already row-bounded via chunking below.
+    max_bytes = getattr(settings, "AI_IMPORT_MAX_BYTES", 10 * 1024 * 1024)
+    if len(content) > max_bytes:
+        raise RuntimeError(f"AI_IMPORT_FILE_TOO_LARGE ({len(content)} > {max_bytes} bytes)")
+
+    model = settings.AI_IMPORT_MODEL
+    import anthropic  # local import: the package is only required when AI import is enabled
+
+    client = _client()
+    valid_codes, code_guidance = _unit_code_reference()
+    system = (
+        SYSTEM_PROMPT
+        + "\n\nКОДЫ ЕДИНИЦ ИЗМЕРЕНИЯ (UN/ECE Rec 20) — для поля unit_code выбери ОДИН код из "
+        + "этого списка, наиболее подходящий по смыслу (или '' если не подходит ни один):\n"
+        + code_guidance
+    )
+    text, vision_block = file_to_payload(content, filename)
+
+    if vision_block is not None:
+        # Single call — a transport error here propagates (nothing partial to keep).
+        items = _extract_one(client, model, system, vision_block=vision_block)
+    else:
+        chunks = _chunk_lines(text, settings.AI_IMPORT_CHUNK_ROWS)
+        items = []
+        failures = 0
+        for index, chunk in enumerate(chunks):
+            try:
+                chunk_items = _extract_one(client, model, system, text=chunk)
+            except anthropic.APIError as exc:
+                # Isolate a single failing chunk — keep what the others returned.
+                failures += 1
+                logger.warning("AI extract: chunk %s/%s failed (%s)", index + 1, len(chunks), exc)
+                continue
+            items.extend(chunk_items)
+            logger.info(
+                "AI extract: chunk %s/%s → %s items (total %s)", index + 1, len(chunks), len(chunk_items), len(items)
+            )
+        # Every chunk failed → surface a hard error so the caller falls back to the parser.
+        if chunks and failures == len(chunks):
+            raise RuntimeError("AI_EXTRACT_ALL_CHUNKS_FAILED")
+
+    return _normalize_items(items, valid_codes)
