@@ -452,6 +452,7 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
             unit=serializer.validated_data.get("unit"),
             unit_code=serializer.validated_data.get("unit_code"),
             note=serializer.validated_data.get("note"),
+            mpn=serializer.validated_data.get("mpn"),
         )
         serializer.instance.refresh_from_db()
 

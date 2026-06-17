@@ -743,7 +743,7 @@ def buyer_add_request_items(user: CustomUser, deal: Deal, rows: list) -> list:
     return to_create
 
 
-def buyer_update_request_item(user: CustomUser, item: QuoteItem, *, name=None, quantity=None, unit=None, unit_code=None, note=None) -> QuoteItem:
+def buyer_update_request_item(user: CustomUser, item: QuoteItem, *, name=None, quantity=None, unit=None, unit_code=None, note=None, mpn=None) -> QuoteItem:
     from rest_framework.exceptions import ValidationError
 
     deal = item.quote.deal
@@ -767,6 +767,9 @@ def buyer_update_request_item(user: CustomUser, item: QuoteItem, *, name=None, q
     if note is not None:
         item.note = note or ""
         fields.append("note")
+    if mpn is not None:
+        item.mpn = (mpn or "")[:120]
+        fields.append("mpn")
     if fields:
         item.save(update_fields=fields)
         item.quote.recalculate_totals()
