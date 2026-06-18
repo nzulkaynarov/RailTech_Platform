@@ -68,6 +68,10 @@ jobs:
           # Default the SPA DSN to the same value as backend (single Sentry project).
           # Override by setting VITE_SENTRY_DSN secret separately if you ever split projects.
           VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN || secrets.SENTRY_DSN }}
+          # AI заявка import (Claude Structured Outputs). When unset, the stack
+          # falls back to the deterministic Excel parser + manual entry
+          # (AI_IMPORT_ENABLED auto-derives from the key being present).
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           test -n "$DATABASE_URL" || { echo "::error::secret DATABASE_URL is not set"; exit 1; }
           test -n "$DJANGO_SECRET_KEY" || { echo "::error::secret DJANGO_SECRET_KEY is not set"; exit 1; }
@@ -104,6 +108,7 @@ jobs:
           SENTRY_ENVIRONMENT=production
           VITE_SENTRY_DSN=${VITE_SENTRY_DSN}
           VITE_SENTRY_ENVIRONMENT=production
+          ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
           EOF
           chmod 600 .env
 
