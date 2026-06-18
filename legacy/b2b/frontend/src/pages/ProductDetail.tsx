@@ -35,7 +35,16 @@ export function ProductDetail({ productId, onBack }: ProductDetailProps) {
   const showPrices = activeStatus === 'SELLER' || activeStatus === 'MANUFACTURER';
 
   const { data: product, isLoading, error } = useProduct(productId);
+  // `qty` is the always-valid (>=1) source of truth used by add-to-request;
+  // `qtyText` is the raw editable buffer so the field can be cleared to type a
+  // multi-digit number instead of being clamped to 1 on every keystroke.
   const [qty, setQty] = useState(1);
+  const [qtyText, setQtyText] = useState('1');
+  const applyQty = (n: number) => {
+    const value = Math.max(1, Math.floor(Number.isFinite(n) ? n : 1));
+    setQty(value);
+    setQtyText(String(value));
+  };
 
   if (isLoading) {
     return (
@@ -249,16 +258,23 @@ export function ProductDetail({ productId, onBack }: ProductDetailProps) {
             <Card>
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-center gap-1 justify-center">
-                  <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setQty(Math.max(1, qty - 1))}>
+                  <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => applyQty(qty - 1)} aria-label={t('productDetail.decrease')}>
                     <Minus className="h-4 w-4" />
                   </Button>
                   <Input
                     type="number"
-                    value={qty}
-                    onChange={(e) => setQty(Math.max(1, Number(e.target.value) || 1))}
+                    min={1}
+                    value={qtyText}
+                    onChange={(e) => {
+                      setQtyText(e.target.value);
+                      const parsed = Number(e.target.value);
+                      if (Number.isFinite(parsed) && parsed >= 1) setQty(Math.floor(parsed));
+                    }}
+                    onBlur={() => applyQty(Number(qtyText))}
+                    aria-label={t('productDetail.quantity')}
                     className="h-9 w-20 text-center tabular-nums"
                   />
-                  <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setQty(qty + 1)}>
+                  <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => applyQty(qty + 1)} aria-label={t('productDetail.increase')}>
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>

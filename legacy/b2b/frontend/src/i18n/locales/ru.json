@@ -1677,7 +1677,10 @@
     "equipmentGroups": "Группы оборудования",
     "document": "Документ",
     "supplierOffers": "Предложения поставщиков",
-    "minOrder": "Мин. заказ: {{qty}} шт"
+    "minOrder": "Мин. заказ: {{qty}} шт",
+    "quantity": "Количество",
+    "decrease": "Уменьшить",
+    "increase": "Увеличить"
   },
   "managerDashboard": {
     "title": "Sourcing",
