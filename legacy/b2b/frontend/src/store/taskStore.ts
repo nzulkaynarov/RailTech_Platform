@@ -6,11 +6,18 @@ interface TaskProgress {
     total: number;
 }
 
+/** Final payload of a finished import task (process_excel_import return). */
+export interface TaskResult {
+    items_processed?: number;
+    merged?: number;
+}
+
 interface ActiveTask {
     id: string;
     type: 'excel_import' | 'catalog_import';
     status: 'PENDING' | 'PROGRESS' | 'SUCCESS' | 'FAILURE';
     progress: TaskProgress | null;
+    result: TaskResult | null;
     error: string | null;
 }
 
@@ -43,6 +50,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
                     type,
                     status: 'PENDING',
                     progress: null,
+                    result: null,
                     error: null,
                 },
             },
@@ -113,7 +121,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
                         progress: result.meta as TaskProgress
                     });
                 } else if (result.status === 'SUCCESS') {
-                    get().updateTask(id, { status: 'SUCCESS', progress: null });
+                    get().updateTask(id, { status: 'SUCCESS', progress: null, result: (result.result as TaskResult) ?? null });
                     get().stopPolling(id);
                     setTimeout(() => get().removeTask(id), 5000);
                 } else if (result.status === 'FAILURE') {

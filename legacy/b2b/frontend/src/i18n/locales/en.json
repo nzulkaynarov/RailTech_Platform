@@ -1016,7 +1016,8 @@
     "requestFrom": "Request from",
     "requestCreated": "Request #{{id}} created",
     "requestError": "Failed to create request",
-    "comingSoon": "Request submission coming soon"
+    "comingSoon": "Request submission coming soon",
+    "titleLabel": "Request name (optional)"
   },
   "nav": {
     "home": "Home",
@@ -3899,7 +3900,8 @@
     "acceptedAi": "Excel, CSV, PDF, image or a photo of a table",
     "recognizing": "Recognising the file…",
     "recognized": "Recognised {{count}} items. Please review and correct if needed.",
-    "failed": "Could not recognise the file. Try another format or fill in manually."
+    "failed": "Could not recognise the file. Try another format or fill in manually.",
+    "importSummaryMerged": "Added {{added}}, merged into existing: {{merged}}"
   },
   "requestStatus": {
     "all": "All",
@@ -3937,7 +3939,8 @@
     "submitHintIncomplete": "Complete the highlighted rows (name or code) to submit.",
     "submittedToast": "Request submitted to the seller",
     "fromCatalog": "from catalog",
-    "gtinPlaceholder": "Barcode"
+    "gtinPlaceholder": "Barcode",
+    "unitNotNormalized": "Unit not standardised — pick one from the list for an accurate quote"
   },
   "requestDetailActions": {
     "titleLabel": "Request title",

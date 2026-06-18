@@ -217,6 +217,7 @@ export function RequestItemsEditor({
                 </TableCell>
                 <TableCell>
                   {canEdit ? (
+                    <div className="flex items-center gap-1">
                     <Select value={item.unit_code || ''} onValueChange={(v) => saveUnit(item, v)}>
                       {/* Legacy/parser imports populate the free-text `unit`
                           ("штук") but no UN/ECE `unit_code`. Bind the Select to
@@ -232,6 +233,14 @@ export function RequestItemsEditor({
                         ))}
                       </SelectContent>
                     </Select>
+                    {/* Free-text unit with no UN/ECE code — fine to display, but
+                        nudge normalisation since it feeds the seller's КП/automation. */}
+                    {item.unit && !item.unit_code && (
+                      <span title={t('requestItems.unitNotNormalized')} className="inline-flex">
+                        <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-warning" aria-label={t('requestItems.unitNotNormalized')} />
+                      </span>
+                    )}
+                    </div>
                   ) : (
                     <span className="text-sm text-muted-foreground">{item.unit || '—'}</span>
                   )}
