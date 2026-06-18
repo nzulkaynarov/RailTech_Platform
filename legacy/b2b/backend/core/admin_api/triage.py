@@ -13,9 +13,11 @@ All data is derived from real DB models via ORM. No hardcoded rows, no fakes.
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timedelta
 from typing import Any
 
+from django.db import DatabaseError
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
@@ -23,6 +25,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.permissions import IsPlatformAdmin
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Triage Queue
@@ -263,7 +267,10 @@ class AdminTriageQueueView(APIView):
         for collect in collectors:
             try:
                 items.extend(collect())
-            except Exception:  # pragma: no cover — don't let one source break the whole queue
+            except DatabaseError:
+                # Don't let one failing source break the whole queue, but log
+                # it — a silently dropped collector was previously invisible.
+                logger.exception("Triage queue collector %s failed", getattr(collect, "__name__", collect))
                 continue
         if qt_filter:
             items = [i for i in items if i.get("queue_type") == qt_filter]

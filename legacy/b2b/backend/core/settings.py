@@ -31,7 +31,10 @@ load_dotenv(BASE_DIR.parent / ".env")
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get("DJANGO_DEBUG", "False") != "False"
+# Explicit opt-in: only the literal "true" (any case) enables DEBUG. Previously
+# `!= "False"` meant an empty string or "false" (lowercase) silently turned
+# DEBUG ON in production.
+DEBUG = os.environ.get("DJANGO_DEBUG", "False").strip().lower() == "true"
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")

@@ -30,6 +30,7 @@ import {
 } from '@/hooks/useAccounts';
 import { useCurrencies } from '@/hooks/useMasterData';
 import { PageShell } from './shared/PageShell';
+import { translateApiError } from '@/lib/apiError';
 import { SubscriptionPayDialog } from '@/components/Admin/SubscriptionPayDialog';
 import type { Subscription } from '@/api/accountsApi';
 
@@ -106,8 +107,8 @@ function FormSheet({
         toast.success(t('admin.subscriptions.created'));
       }
       onOpenChange(false);
-    } catch {
-      toast.error(t('admin.subscriptions.saveFailed'));
+    } catch (e) {
+      toast.error(translateApiError(e));
     }
   };
 
@@ -306,8 +307,8 @@ export function AdminSubscriptionsPage() {
     try {
       await activateMutation.mutateAsync(id);
       toast.success(t('admin.subscriptions.activated'));
-    } catch {
-      toast.error(t('common.error'));
+    } catch (e) {
+      toast.error(translateApiError(e));
     }
   }
 
@@ -315,8 +316,8 @@ export function AdminSubscriptionsPage() {
     try {
       await suspendMutation.mutateAsync(id);
       toast.success(t('admin.subscriptions.suspended'));
-    } catch {
-      toast.error(t('common.error'));
+    } catch (e) {
+      toast.error(translateApiError(e));
     }
   }
 
@@ -326,8 +327,8 @@ export function AdminSubscriptionsPage() {
       await deleteMut.mutateAsync(deleteTarget.id);
       toast.success(t('admin.subscriptions.deleted'));
       setDeleteTarget(null);
-    } catch {
-      toast.error(t('admin.subscriptions.deleteFailed'));
+    } catch (e) {
+      toast.error(translateApiError(e));
     }
   }
 
@@ -517,6 +518,7 @@ export function AdminSubscriptionsPage() {
         onConfirm={(p) =>
           confirmBulkSuspend ? runBulkSuspend(confirmBulkSuspend, p.reason) : Promise.resolve()
         }
+        translateError={(code) => translateApiError(code)}
       />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>

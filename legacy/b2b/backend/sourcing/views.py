@@ -2,8 +2,10 @@ import base64
 import logging
 
 from celery.result import AsyncResult
+from django.db import DatabaseError
 from django.http import HttpResponse
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
+from kombu.exceptions import OperationalError
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
@@ -159,7 +161,9 @@ class ExcelImportView(APIView):
             )
 
             return Response({"task_id": task.id}, status=status.HTTP_202_ACCEPTED)
-        except Exception:
+        except (OSError, ValueError, DatabaseError, OperationalError):
+            # OSError/ValueError: file read/encode; DatabaseError: ImportTask/
+            # Attachment create; OperationalError: Celery broker unreachable.
             logger.exception("Failed to queue Excel import task")
             return Response(
                 {"error": "Failed to process import. Please try again."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -262,7 +266,7 @@ class CatalogImportView(APIView):
             )
 
             return Response({"task_id": task.id}, status=status.HTTP_202_ACCEPTED)
-        except Exception:
+        except (OSError, ValueError, DatabaseError, OperationalError):
             logger.exception("Failed to queue catalog import task")
             return Response(
                 {"error": "Failed to process import. Please try again."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
