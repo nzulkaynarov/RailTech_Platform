@@ -164,6 +164,17 @@ class Payment(models.Model):
         verbose_name = _("Платёж")
         verbose_name_plural = _("Платежи")
         ordering = ["-paid_at"]
+        constraints = [
+            # A bank reference uniquely identifies a real-world payment. Enforce
+            # at the DB level so a double-submit with the same reference cannot
+            # double-count amount_paid, even on a code path that skips the
+            # service-layer check. Blank references are allowed to repeat.
+            models.UniqueConstraint(
+                fields=["invoice", "reference"],
+                condition=~models.Q(reference=""),
+                name="uniq_payment_invoice_reference",
+            ),
+        ]
 
     def __str__(self):
         return f"Payment {self.amount} on {self.paid_at}"

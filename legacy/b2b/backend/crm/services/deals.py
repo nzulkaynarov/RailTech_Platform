@@ -131,14 +131,25 @@ def transition_deal_stage(
         level="WARNING" if not validate_fsm else "INFO",
     )
 
-    # Post-sale hook: on CLOSED_WON, auto-generate Invoice + Act (async)
+    # Post-sale hook: on CLOSED_WON, auto-generate Invoice + Act (async).
+    # Dispatched via transaction.on_commit so the financial task NEVER fires
+    # if the surrounding transaction rolls back (e.g. a later failure in the
+    # caller). When no transaction is active, on_commit runs the callback
+    # immediately, so the behaviour is correct in both contexts.
     if target_stage_code == DealStageCode.CLOSED_WON:
-        try:
+        deal_id = deal.id
+
+        def _dispatch_auto_invoice() -> None:
+            from kombu.exceptions import OperationalError
+
             from ..tasks import auto_invoice_on_closed_won
 
-            auto_invoice_on_closed_won.delay(deal.id)
-        except Exception:
-            logger.exception("Failed to dispatch auto-invoice task for deal %s", deal.id)
+            try:
+                auto_invoice_on_closed_won.delay(deal_id)
+            except (OperationalError, OSError):
+                logger.exception("Failed to dispatch auto-invoice task for deal %s", deal_id)
+
+        transaction.on_commit(_dispatch_auto_invoice)
 
     return deal, None
 

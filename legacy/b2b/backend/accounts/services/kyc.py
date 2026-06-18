@@ -2,6 +2,7 @@ import logging
 from typing import List, Optional, Tuple
 
 from django.conf import settings
+from django.db import transaction
 from django.db.models import QuerySet
 
 from notifications.emails import send_templated_email
@@ -71,16 +72,24 @@ def verify_company_kyc(
         level="WARNING" if is_downgrade else "SUCCESS",
     )
 
-    # Notify owner(s) by email and in-app (only on upgrades)
+    # Notify owner(s) by email and in-app (only on upgrades). Deferred to
+    # transaction.on_commit so a "KYC verified" email is never sent if the
+    # surrounding transaction rolls back. Runs immediately when no transaction
+    # is active.
     if not is_downgrade:
-        try:
-            _send_kyc_status_email(company, level_code)
-        except Exception:
-            logger.exception("Failed to send KYC status email for company %s", company.pk)
-        try:
-            _create_kyc_notification(company, level_code)
-        except Exception:
-            logger.exception("Failed to create KYC notification for company %s", company.pk)
+        company_id = company.pk
+
+        def _notify_kyc_status() -> None:
+            try:
+                _send_kyc_status_email(company, level_code)
+            except (OSError, RuntimeError, ValueError):
+                logger.exception("Failed to send KYC status email for company %s", company_id)
+            try:
+                _create_kyc_notification(company, level_code)
+            except (OSError, RuntimeError, ValueError):
+                logger.exception("Failed to create KYC notification for company %s", company_id)
+
+        transaction.on_commit(_notify_kyc_status)
     return company, None
 
 

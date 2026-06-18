@@ -1,6 +1,6 @@
 from typing import Optional, Tuple
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
 
 from accounts.models import CustomUser
 
@@ -182,15 +182,25 @@ def record_payment(
         if existing is not None:
             return existing, None
 
-    payment = Payment.objects.create(
-        invoice=invoice,
-        amount=amount_d,
-        method=method,
-        paid_at=paid_at,
-        reference=reference,
-        proof_file=proof_file,
-        recorded_by=actor,
-    )
+    try:
+        # Savepoint so a unique-constraint hit (concurrent same-reference
+        # insert that slipped past the check above) rolls back cleanly without
+        # poisoning the outer transaction.
+        with transaction.atomic():
+            payment = Payment.objects.create(
+                invoice=invoice,
+                amount=amount_d,
+                method=method,
+                paid_at=paid_at,
+                reference=reference,
+                proof_file=proof_file,
+                recorded_by=actor,
+            )
+    except IntegrityError:
+        existing = Payment.objects.filter(invoice=invoice, reference=reference).first()
+        if existing is not None:
+            return existing, None
+        raise
 
     invoice.amount_paid = (invoice.amount_paid or D("0")) + amount_d
     if invoice.amount_paid >= invoice.total_incl_vat:
