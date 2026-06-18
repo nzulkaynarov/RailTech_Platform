@@ -267,6 +267,7 @@ CHANNEL_LAYERS = {
 }
 
 MIDDLEWARE = [
+    "core.logging.RequestIDMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -596,23 +597,36 @@ AI_IMPORT_MAX_BYTES = int(os.environ.get("AI_IMPORT_MAX_BYTES", str(10 * 1024 * 
 # Removed duplicate declarations (now at the top)
 
 # Logging
+# Set DJANGO_LOG_FORMAT=json in production to emit one structured JSON object
+# per log line (with request_id correlation) for a log aggregator. Default
+# stays human-readable for local development.
+_LOG_FORMAT = os.environ.get("DJANGO_LOG_FORMAT", "console").strip().lower()
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
+    "filters": {
+        "request_id": {
+            "()": "core.logging.RequestIDFilter",
+        },
+    },
     "formatters": {
         "verbose": {
-            "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
+            "format": "{levelname} {asctime} [{request_id}] {module} {process:d} {thread:d} {message}",
             "style": "{",
         },
         "simple": {
             "format": "{levelname} {message}",
             "style": "{",
         },
+        "json": {
+            "()": "core.logging.JSONFormatter",
+        },
     },
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
-            "formatter": "verbose",
+            "formatter": "json" if _LOG_FORMAT == "json" else "verbose",
+            "filters": ["request_id"],
         },
     },
     "root": {
