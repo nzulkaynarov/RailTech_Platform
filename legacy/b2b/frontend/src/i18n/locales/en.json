@@ -566,7 +566,7 @@
     "uploadError": "Failed to upload file. Check the format (.xlsx, .xls).",
     "searchPlaceholder": "Search by item names...",
     "processing": "Processing file...",
-    "processingHint": "Recognising — this can take a few seconds…",
+    "processingHint": "Recognising line items — this can take up to a minute for large files…",
     "matchFound": "Match found",
     "noMatch": "No match found",
     "assignProduct": "Assign product",

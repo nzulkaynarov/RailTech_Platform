@@ -61,6 +61,11 @@ _COL_KEYWORDS = {
     "note": ["примечан", "коммент", "izoh", "izoh", "note", "comment", "remark",
              "характеристик", "спецификац", "описание"],
     "link": ["ссылка", "ссылк", "havola", "link", "url"],
+    # Manufacturer Part Number / каталожный код. Kept narrow so it doesn't
+    # swallow the name column ("товар"/"материал" live under "name" above and are
+    # matched first, so their column is already taken before we look for article).
+    "article": ["артикул", "артик", "artikul", "каталожн", "katalog", "kataloq",
+                "mpn", "part no", "part num", "part#", "код произв"],
 }
 
 
@@ -90,7 +95,7 @@ def detect_header_and_columns(raw_df):
     any order, with extra Photo/Note/Link columns. A row is the header when it
     has BOTH a name-like cell AND a quantity- or unit-like cell in *different*
     columns — a single-cell title never qualifies. Returns (header_row_index,
-    {name, qty, unit, note, link}) or (None, None) if nothing matches.
+    {name, qty, unit, note, article, link}) or (None, None) if nothing matches.
     """
     max_scan = min(len(raw_df), 15)
     for row_idx in range(max_scan):
@@ -112,8 +117,14 @@ def detect_header_and_columns(raw_df):
         note_i = _match_column(cells, _COL_KEYWORDS["note"], taken)
         if note_i is not None:
             taken.add(note_i)
+        article_i = _match_column(cells, _COL_KEYWORDS["article"], taken)
+        if article_i is not None:
+            taken.add(article_i)
         link_i = _match_column(cells, _COL_KEYWORDS["link"], taken)
-        return row_idx, {"name": name_i, "qty": qty_i, "unit": unit_i, "note": note_i, "link": link_i}
+        return row_idx, {
+            "name": name_i, "qty": qty_i, "unit": unit_i,
+            "note": note_i, "article": article_i, "link": link_i,
+        }
     return None, None
 
 
@@ -221,6 +232,7 @@ def process_excel_import(self, deal_id: int, file_content_b64: str, user_id: int
 
             name_i = cols["name"]
             qty_i, unit_i, note_i, link_i = cols["qty"], cols["unit"], cols["note"], cols["link"]
+            article_i = cols["article"]
             data = raw_df.iloc[header_idx + 1:]
             total_rows = len(data)
 
@@ -239,11 +251,12 @@ def process_excel_import(self, deal_id: int, file_content_b64: str, user_id: int
 
                 unit = _cell(cells[unit_i]) if unit_i is not None and unit_i < len(cells) else ""
                 note = _cell(cells[note_i]) if note_i is not None and note_i < len(cells) else ""
+                article = _cell(cells[article_i]) if article_i is not None and article_i < len(cells) else ""
                 link = _cell(cells[link_i]) if link_i is not None and link_i < len(cells) else ""
                 if link and link not in note:
                     note = f"{note}\n{link}".strip()
 
-                items_to_create.append(_build_quote_item(quote, raw_name, quantity, unit, note))
+                items_to_create.append(_build_quote_item(quote, raw_name, quantity, unit, note, mpn=article))
 
                 if len(items_to_create) % 10 == 0 or (offset + 1) == total_rows:
                     self.update_state(state="PROGRESS", meta={"current": len(items_to_create), "total": total_rows})

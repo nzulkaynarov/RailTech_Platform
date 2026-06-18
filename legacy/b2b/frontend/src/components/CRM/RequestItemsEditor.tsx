@@ -201,7 +201,12 @@ export function RequestItemsEditor({
                 <TableCell>
                   {canEdit ? (
                     <Select value={item.unit_code || ''} onValueChange={(v) => saveUnit(item, v)}>
-                      <SelectTrigger className="h-8 w-24"><SelectValue placeholder="—" /></SelectTrigger>
+                      {/* Legacy/parser imports populate the free-text `unit`
+                          ("штук") but no UN/ECE `unit_code`. Bind the Select to
+                          the code, yet fall back to the stored free-text as the
+                          trigger label so the buyer still SEES their unit
+                          instead of an empty "—". */}
+                      <SelectTrigger className="h-8 w-24"><SelectValue placeholder={item.unit || '—'} /></SelectTrigger>
                       <SelectContent>
                         {(units ?? []).map((u) => (
                           <SelectItem key={u.code} value={u.code}>{u.name}</SelectItem>

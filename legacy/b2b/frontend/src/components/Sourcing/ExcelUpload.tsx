@@ -32,14 +32,18 @@ export const ExcelUpload: React.FC<ExcelUploadProps> = ({ dealId, onUploadSucces
 
     const task = taskId ? tasks[taskId] : null;
     const isImporting = !!task && (task.status === 'PENDING' || task.status === 'PROGRESS');
-    // Optimistic progress so the bar visibly MOVES while parsing (no granular
-    // data for AI/PDF jobs) — makes it obvious the import is working, not hung.
-    const [optimisticPct, setOptimisticPct] = useState(0);
+    // The deterministic parser reports real current/total rows; AI/PDF jobs have
+    // no granular signal. Rather than fake a climbing % that stalls at the end,
+    // show a real bar ONLY when there's real progress, and an honest elapsed
+    // timer otherwise — never a number that pretends to know how far along it is.
+    const hasRealProgress = !!task?.progress && task.progress.total > 0;
+    const [elapsedSec, setElapsedSec] = useState(0);
     useEffect(() => {
-        if (!isImporting) { setOptimisticPct(0); return; }
-        const id = setInterval(() => setOptimisticPct((p) => Math.min(92, p + 6)), 700);
+        if (!isImporting) { setElapsedSec(0); return; }
+        const id = setInterval(() => setElapsedSec((s) => s + 1), 1000);
         return () => clearInterval(id);
     }, [isImporting]);
+    const elapsedLabel = `${Math.floor(elapsedSec / 60)}:${String(elapsedSec % 60).padStart(2, '0')}`;
 
     // Success/failure are driven by the POLLED task status — not by enqueue. The
     // parent only learns the import is done once the items actually exist.
@@ -104,18 +108,23 @@ export const ExcelUpload: React.FC<ExcelUploadProps> = ({ dealId, onUploadSucces
             {/* Importing — driven by polled task status */}
             {isImporting ? (
                 <div className="rounded-xl border border-border p-5">
-                    <div className="mb-2 flex items-center gap-2 text-sm font-medium">
-                        <Loader2 className="h-4 w-4 animate-spin text-primary" aria-hidden="true" />
-                        {t('sourcing.processing')}
+                    <div className="mb-2 flex items-center justify-between gap-2 text-sm font-medium">
+                        <span className="flex min-w-0 items-center gap-2">
+                            <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" aria-hidden="true" />
+                            <span className="truncate">{t('sourcing.processing')}</span>
+                        </span>
+                        <span className="shrink-0 text-xs font-normal text-muted-foreground tabular-nums">{elapsedLabel}</span>
                     </div>
-                    <Progress
-                        value={task?.progress ? Math.round((task.progress.current / task.progress.total) * 100) : optimisticPct}
-                    />
-                    <p className="mt-1 text-right text-xs text-muted-foreground tabular-nums">
-                        {task?.progress
-                            ? `${task.progress.current} / ${task.progress.total}`
-                            : t('sourcing.processingHint')}
-                    </p>
+                    {hasRealProgress ? (
+                        <>
+                            <Progress value={Math.round((task!.progress!.current / task!.progress!.total) * 100)} />
+                            <p className="mt-1 text-right text-xs text-muted-foreground tabular-nums">
+                                {task!.progress!.current} / {task!.progress!.total}
+                            </p>
+                        </>
+                    ) : (
+                        <p className="text-xs text-muted-foreground">{t('sourcing.processingHint')}</p>
+                    )}
                 </div>
             ) : !file ? (
                 <div
