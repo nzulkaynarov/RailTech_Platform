@@ -14,6 +14,8 @@ import { ProductDetailModal } from './subcomponents/ProductDetailModal';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { CatalogGridSkeleton } from '@/components/ui/LoadingSkeleton';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { clsx } from 'clsx';
 import { getDomainVisual } from '../../config/domainConfig';
 
@@ -181,7 +183,7 @@ export const PublicCatalog: React.FC = () => {
                         {/* Search */}
                         <div className="flex items-center gap-3 flex-1 max-w-xl relative" ref={searchRef}>
                             <Search size={16} className="text-muted-foreground absolute left-3" aria-hidden="true" />
-                            <input
+                            <Input
                                 type="search"
                                 value={searchQuery}
                                 onChange={e => { setSearchQuery(e.target.value); setShowSuggestions(true); }}
@@ -192,7 +194,7 @@ export const PublicCatalog: React.FC = () => {
                                 aria-expanded={showSuggestions && suggestions.length > 0}
                                 aria-autocomplete="list"
                                 role="combobox"
-                                className="w-full h-8 bg-muted border border-border text-sm pl-10 pr-3 rounded-lg outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all placeholder:text-muted-foreground"
+                                className="h-8 w-full pl-10"
                             />
                             {showSuggestions && (suggestions.length > 0 || (searchQuery.length < 2 && recentSearches.length > 0)) && (
                                 <ul
@@ -209,8 +211,11 @@ export const PublicCatalog: React.FC = () => {
                                                 <li
                                                     key={q}
                                                     role="option"
+                                                    aria-selected={false}
+                                                    tabIndex={0}
                                                     onClick={() => { setSearchQuery(q); setShowSuggestions(false); }}
-                                                    className="px-3 py-2 cursor-pointer border-b border-border flex items-center gap-2 hover:bg-muted text-sm text-muted-foreground"
+                                                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSearchQuery(q); setShowSuggestions(false); } }}
+                                                    className="px-3 py-2 cursor-pointer border-b border-border flex items-center gap-2 hover:bg-muted focus:bg-muted focus:outline-none text-sm text-muted-foreground"
                                                 >
                                                     <Clock size={12} className="text-muted-foreground/60" /> {q}
                                                 </li>
@@ -260,16 +265,19 @@ export const PublicCatalog: React.FC = () => {
 
                     <div className="flex items-center gap-2 pl-3 border-l border-border ml-3 h-full">
                         {/* Sort */}
-                        <select
-                            value={sortBy}
-                            onChange={e => setSortBy(e.target.value as SortOption)}
-                            aria-label={t('common.filters')}
-                            className="h-7 bg-muted border border-border text-xs font-semibold text-muted-foreground rounded-md px-2 focus-ring hidden sm:block"
-                        >
-                            {Object.entries(sortLabels).map(([value, label]) => (
-                                <option key={value} value={value}>{label}</option>
-                            ))}
-                        </select>
+                        <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+                            <SelectTrigger
+                                aria-label={t('common.filters')}
+                                className="hidden h-7 w-auto gap-1 bg-muted text-xs font-semibold text-muted-foreground sm:flex"
+                            >
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {Object.entries(sortLabels).map(([value, label]) => (
+                                    <SelectItem key={value} value={value} className="text-xs">{label}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
 
                         {/* Единый контрол: вид + плотность в одной группе */}
                         <div className="flex bg-muted border border-border rounded-md p-0.5 gap-0.5">

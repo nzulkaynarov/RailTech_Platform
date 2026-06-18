@@ -90,43 +90,61 @@ export function DealChatPanel({ dealId }: DealChatPanelProps = {}): React.ReactN
       setIsConnected(false);
       return;
     }
-    const wsUrl = `${wsBase()}/ws/chat/${dealId}/?token=${encodeURIComponent(accessToken)}`;
+    let cancelled = false;
+    let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+    let attempt = 0;
 
-    const socket = new WebSocket(wsUrl);
-    socketRef.current = socket;
+    const connect = () => {
+      if (cancelled) return;
+      const wsUrl = `${wsBase()}/ws/chat/${dealId}/?token=${encodeURIComponent(accessToken)}`;
+      const socket = new WebSocket(wsUrl);
+      socketRef.current = socket;
 
-    socket.onopen = () => {
-      setIsConnected(true);
-    };
-    socket.onclose = () => {
-      setIsConnected(false);
-    };
-    socket.onerror = () => {
-      setIsConnected(false);
-    };
-    socket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data?.error) return;
-        if (typeof data?.id === 'number' && typeof data?.text === 'string') {
-          appendMessage({
-            id: data.id,
-            deal: data.deal ?? dealId,
-            sender: data.sender,
-            sender_name: data.sender_name ?? '',
-            text: data.text,
-            message_type: data.message_type ?? 'CHAT',
-            timestamp: data.timestamp,
-            is_me: currentUserId ? data.sender === currentUserId : false,
-          });
+      socket.onopen = () => {
+        if (cancelled) return;
+        attempt = 0; // reset backoff once a connection actually succeeds
+        setIsConnected(true);
+      };
+      // The status text already promises reconnection — actually do it. A flaky
+      // network or a server blip now recovers on its own (exponential backoff,
+      // capped) instead of staying "disconnected" until a full page reload.
+      const scheduleReconnect = () => {
+        if (cancelled) return;
+        setIsConnected(false);
+        const delay = Math.min(15000, 1000 * 2 ** attempt);
+        attempt += 1;
+        reconnectTimer = setTimeout(connect, delay);
+      };
+      socket.onclose = scheduleReconnect;
+      socket.onerror = () => { socket.close(); };
+      socket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data?.error) return;
+          if (typeof data?.id === 'number' && typeof data?.text === 'string') {
+            appendMessage({
+              id: data.id,
+              deal: data.deal ?? dealId,
+              sender: data.sender,
+              sender_name: data.sender_name ?? '',
+              text: data.text,
+              message_type: data.message_type ?? 'CHAT',
+              timestamp: data.timestamp,
+              is_me: currentUserId ? data.sender === currentUserId : false,
+            });
+          }
+        } catch {
+          // ignore malformed frames
         }
-      } catch {
-        // ignore malformed frames
-      }
+      };
     };
+
+    connect();
 
     return () => {
-      socket.close();
+      cancelled = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      socketRef.current?.close();
       socketRef.current = null;
     };
   }, [dealId, accessToken, currentUserId, appendMessage]);

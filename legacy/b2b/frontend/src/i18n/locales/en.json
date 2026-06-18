@@ -1016,7 +1016,8 @@
     "requestFrom": "Request from",
     "requestCreated": "Request #{{id}} created",
     "requestError": "Failed to create request",
-    "comingSoon": "Request submission coming soon"
+    "comingSoon": "Request submission coming soon",
+    "titleLabel": "Request name (optional)"
   },
   "nav": {
     "home": "Home",
@@ -1673,7 +1674,10 @@
     "equipmentGroups": "Equipment Groups",
     "document": "Document",
     "supplierOffers": "Supplier Offers",
-    "minOrder": "Min. order: {{qty}} pcs"
+    "minOrder": "Min. order: {{qty}} pcs",
+    "quantity": "Quantity",
+    "decrease": "Decrease",
+    "increase": "Increase"
   },
   "managerDashboard": {
     "title": "Sourcing",
@@ -3689,7 +3693,8 @@
       "qty": "Qty",
       "price": "Price",
       "line": "Line"
-    }
+    },
+    "balanceDue": "Balance due"
   },
   "paymentsPage": {
     "title": "Payments",
@@ -3774,7 +3779,8 @@
       "carrier": "Carrier",
       "expectedDeliveryDate": "Expected date",
       "notes": "Notes"
-    }
+    },
+    "disputedHint": "Dispute recorded — await the supplier’s response. Discuss it in the request chat."
   },
   "supplierBidsPage": {
     "title": "Supplier bids",
@@ -3894,7 +3900,8 @@
     "acceptedAi": "Excel, CSV, PDF, image or a photo of a table",
     "recognizing": "Recognising the file…",
     "recognized": "Recognised {{count}} items. Please review and correct if needed.",
-    "failed": "Could not recognise the file. Try another format or fill in manually."
+    "failed": "Could not recognise the file. Try another format or fill in manually.",
+    "importSummaryMerged": "Added {{added}}, merged into existing: {{merged}}"
   },
   "requestStatus": {
     "all": "All",
@@ -3930,7 +3937,10 @@
     "submitHint": "Review the items and submit — the seller will prepare a quote.",
     "submitHintEmpty": "Add at least one line item to submit the request.",
     "submitHintIncomplete": "Complete the highlighted rows (name or code) to submit.",
-    "submittedToast": "Request submitted to the seller"
+    "submittedToast": "Request submitted to the seller",
+    "fromCatalog": "from catalog",
+    "gtinPlaceholder": "Barcode",
+    "unitNotNormalized": "Unit not standardised — pick one from the list for an accurate quote"
   },
   "requestDetailActions": {
     "titleLabel": "Request title",
@@ -3962,7 +3972,14 @@
       "reasonPlaceholder": "E.g. price is 20% above our budget",
       "confirm": "Reject",
       "reasonRequired": "Reason is required"
-    }
+    },
+    "validUntil": "Valid until",
+    "validUntilExpired": "Expired",
+    "sellerNote": "Supplier comment",
+    "downloadPdf": "Download quote (PDF)",
+    "subtotal": "Subtotal (excl. VAT)",
+    "vatAmount": "VAT",
+    "backToRequests": "Back to my requests"
   },
   "createQuoteDialog": {
     "title": "Create quote",

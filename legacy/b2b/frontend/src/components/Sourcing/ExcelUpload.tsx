@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Upload, FileSpreadsheet, X, Loader2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { crmApi } from '../../api/crmApi';
-import { useTaskStore } from '../../store/taskStore';
+import { useTaskStore, type TaskResult } from '../../store/taskStore';
 import { translateApiError } from '@/lib/apiError';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -11,8 +11,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface ExcelUploadProps {
     dealId: number;
-    /** Fires only when the import task COMPLETES (not on enqueue). */
-    onUploadSuccess?: (taskId: string) => void;
+    /** Fires only when the import task COMPLETES (not on enqueue). Carries the
+     *  task summary (rows added / merged) so the caller can report real counts. */
+    onUploadSuccess?: (summary?: TaskResult) => void;
     // AI mode: accept ANY supported file (Excel/CSV/PDF/image/text); Claude maps it.
     useAI?: boolean;
 }
@@ -50,9 +51,9 @@ export const ExcelUpload: React.FC<ExcelUploadProps> = ({ dealId, onUploadSucces
     useEffect(() => {
         if (!task) return;
         if (task.status === 'SUCCESS') {
-            const finishedId = taskId;
+            const summary = task.result ?? undefined;
             setTaskId(null);
-            if (finishedId) onUploadSuccess?.(finishedId);
+            onUploadSuccess?.(summary);
         } else if (task.status === 'FAILURE') {
             const message = task.error || t('sourcing.uploadError');
             setError(message);

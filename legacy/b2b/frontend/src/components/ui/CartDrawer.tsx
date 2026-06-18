@@ -16,6 +16,8 @@ import {
 } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 
 export const CartDrawer: React.FC = () => {
@@ -24,6 +26,9 @@ export const CartDrawer: React.FC = () => {
 
     const totalItems = items.reduce((sum, i) => sum + i.quantity, 0);
     const [submitting, setSubmitting] = useState(false);
+    // Optional name so the buyer isn't stuck with a date-stamped default they
+    // have to fix later on the request page. Falls back to the auto-title.
+    const [title, setTitle] = useState('');
 
     const handleSubmit = async () => {
         if (items.length === 0) return;
@@ -31,7 +36,7 @@ export const CartDrawer: React.FC = () => {
         try {
             // 1. Create the request (Deal in DRAFT).
             const deal = await crmApi.createDeal({
-                title: `${t('cart.requestFrom')} ${new Date().toLocaleDateString()}`,
+                title: title.trim() || `${t('cart.requestFrom')} ${new Date().toLocaleDateString()}`,
             });
             if (!deal?.id) throw new Error('DEAL_CREATE_FAILED');
 
@@ -45,6 +50,7 @@ export const CartDrawer: React.FC = () => {
 
             toast.success(t('cart.requestCreated', { id: deal.id }));
             clearCart();
+            setTitle('');
             closeCart();
             window.location.hash = `request-detail/${deal.id}`;
         } catch (e) {
@@ -173,6 +179,16 @@ export const CartDrawer: React.FC = () => {
                     <>
                         <Separator />
                         <SheetFooter className="px-5 py-4">
+                            <div className="w-full space-y-1.5 text-left">
+                                <Label htmlFor="cart-title" className="text-xs text-muted-foreground">{t('cart.titleLabel')}</Label>
+                                <Input
+                                    id="cart-title"
+                                    value={title}
+                                    onChange={(e) => setTitle(e.target.value)}
+                                    placeholder={`${t('cart.requestFrom')} ${new Date().toLocaleDateString()}`}
+                                    className="h-9"
+                                />
+                            </div>
                             <Button
                                 variant="ghost"
                                 size="sm"

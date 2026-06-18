@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ShoppingCart, ChevronRight } from 'lucide-react';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useDeals } from '@/hooks/useCRM';
-import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
+import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import { Toolbar, Pager, useListParams, applyListParams } from '@/components/DataTable';
 import { CreateDealDialog } from '@/components/CRM/CreateDealDialog';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -15,7 +15,7 @@ import type { Deal } from '@/api/crmApi';
 
 export function MyRequestsPage() {
   const { t } = useTranslation();
-  const { data: deals, isLoading } = useDeals();
+  const { data: deals, isLoading, isError, refetch } = useDeals();
   const formatCurrency = useCurrencyStore((s) => s.format);
   const [createOpen, setCreateOpen] = useState(false);
   const [statusTab, setStatusTab] = useState<string>('all');
@@ -23,14 +23,19 @@ export function MyRequestsPage() {
   const listParams = useListParams([] as const, { defaultOrdering: '-created_at', pageSize: 15 });
   const myDeals = deals ?? [];
 
+  const selectTab = (key: string) => { setStatusTab(key); listParams.setPage(1); };
+
   // KPI stats from the same dataset the list renders (no cross-endpoint drift).
+  // Tiles are clickable filters synced with the status tab — clicking an active
+  // tile clears the filter back to "all".
   const countBy = (key: string) => myDeals.filter((d) => buyerStatusKey(d.stage_code) === key).length;
-  const stats = [
-    { label: t('requestStatus.awaiting'), value: String(countBy('awaiting')) },
-    { label: t('requestStatus.quote'), value: String(countBy('quote')) },
-    { label: t('requestStatus.confirmed'), value: String(countBy('confirmed')) },
-    { label: t('requestStatus.completed'), value: String(countBy('completed')) },
-  ];
+  const tile = (key: string) => ({
+    label: t(`requestStatus.${key}`),
+    value: String(countBy(key)),
+    active: statusTab === key,
+    onClick: () => selectTab(statusTab === key ? 'all' : key),
+  });
+  const stats = [tile('awaiting'), tile('quote'), tile('confirmed'), tile('completed')];
 
   const openDeal = (deal: Deal) => { window.location.hash = `request-detail/${deal.id}`; };
 
@@ -51,7 +56,7 @@ export function MyRequestsPage() {
       actions={[{ label: t('pages.myRequests.newRequest'), onClick: () => setCreateOpen(true) }]}
     >
       {/* Status filter — buyer-facing statuses only (not the 9 internal stages). */}
-      <Tabs value={statusTab} onValueChange={(v) => { setStatusTab(v); listParams.setPage(1); }}>
+      <Tabs value={statusTab} onValueChange={selectTab}>
         <TabsList className="flex-wrap">
           <TabsTrigger value="all">{t('requestStatus.all')}</TabsTrigger>
           {BUYER_STATUS_ORDER.map((key) => (
@@ -72,6 +77,9 @@ export function MyRequestsPage() {
           sortAccessors: { created_at: (d) => d.created_at ?? '' },
         });
         if (isLoading) return <LoadingRows rows={4} />;
+        // A failed fetch (Neon sleep / 500 / network) must not read as "no
+        // requests" — that empty state's CTA would push a duplicate заявка.
+        if (isError) return <ErrorState onRetry={() => refetch()} />;
         if (!pageItems.length) return (
           <EmptyState
             icon={<ShoppingCart className="h-5 w-5" />}

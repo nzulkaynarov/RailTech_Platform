@@ -83,9 +83,17 @@ export function ImportRequestDialog({
           key={useAI ? 'ai' : 'tpl'}
           dealId={dealId}
           useAI={useAI}
-          onUploadSuccess={() => {
+          onUploadSuccess={(summary) => {
             queryClient.invalidateQueries({ queryKey: ['deals'] });
-            toast.success(t('pages.sourcingImport.importSuccess'));
+            const added = summary?.items_processed ?? 0;
+            const merged = summary?.merged ?? 0;
+            // Explain why the grid may show fewer rows than the file had: some
+            // lines were merged into existing ones (deduped by article/name).
+            toast.success(
+              merged > 0
+                ? t('aiImport.importSummaryMerged', { added, merged })
+                : t('pages.sourcingImport.importSuccess'),
+            );
             onOpenChange(false);
           }}
         />

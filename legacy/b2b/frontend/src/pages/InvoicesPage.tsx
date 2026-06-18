@@ -6,7 +6,6 @@ import { Receipt, Download, DollarSign, ScrollText } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -14,17 +13,16 @@ import {
 import {
   Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle,
 } from '@/components/ui/sheet';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import { ManualModeBanner } from '@/components/Shared/ManualModeBanner';
+import { RecordPaymentDialog } from '@/components/Billing/RecordPaymentDialog';
+import { DealLink } from '@/components/Shared/DealLink';
 import {
   Toolbar, SortableHead, Pager, useListParams, applyListParams,
 } from '@/components/DataTable';
 import {
-  useInvoices, useRecordPayment, useGenerateAct,
+  useInvoices, useGenerateAct,
 } from '@/hooks/useBilling';
 import { useIsViewerMode } from '@/hooks/useViewerMode';
 import { useUserStore } from '@/store/userStore';
@@ -42,23 +40,15 @@ const STATUS_VARIANT: Record<InvoiceStatus, 'default' | 'secondary' | 'destructi
 };
 
 const STATUS_CODES: InvoiceStatus[] = ['DRAFT', 'ISSUED', 'PARTIAL', 'PAID', 'OVERDUE', 'CANCELLED'];
-const METHODS = ['BANK_TRANSFER', 'CARD', 'CASH', 'OTHER'] as const;
 
 export function InvoicesPage() {
   const { t } = useTranslation();
   const listParams = useListParams(['status'] as const, { defaultOrdering: '-created_at' });
   const [selected, setSelected] = useState<Invoice | null>(null);
   const [payOpen, setPayOpen] = useState(false);
-  const [payForm, setPayForm] = useState({
-    amount: '',
-    paid_at: new Date().toISOString().slice(0, 10),
-    method: 'BANK_TRANSFER',
-    reference: '',
-  });
 
   const { data: invoices, isLoading, isError, refetch } = useInvoices(undefined);
   const formatCurrency = useCurrencyStore((s) => s.format);
-  const recordPayment = useRecordPayment();
   const generateAct = useGenerateAct();
   const isViewer = useIsViewerMode();
   // Recording payment is a BUYER action; issuing the Act is a SELLER action.
@@ -79,27 +69,6 @@ export function InvoicesPage() {
       },
     ];
   }, [invoices, t]);
-
-  const onRecordPayment = async () => {
-    if (!selected || !payForm.amount || !payForm.paid_at) return;
-    try {
-      await recordPayment.mutateAsync({
-        invoiceId: selected.id,
-        amount: payForm.amount,
-        paidAt: payForm.paid_at,
-        method: payForm.method,
-        reference: payForm.reference,
-      });
-      toast.success(t('invoicesPage.paymentRecorded'));
-      setPayOpen(false);
-      setPayForm({
-        amount: '', paid_at: new Date().toISOString().slice(0, 10),
-        method: 'BANK_TRANSFER', reference: '',
-      });
-    } catch (e) {
-      toast.error(translateApiError(e));
-    }
-  };
 
   const onGenerateAct = async () => {
     if (!selected) return;
@@ -184,7 +153,7 @@ export function InvoicesPage() {
                     {pageItems.map((inv) => (
                       <TableRow key={inv.id}>
                         <TableCell className="font-medium">{inv.number}</TableCell>
-                        <TableCell>#{inv.deal}</TableCell>
+                        <TableCell><DealLink dealId={inv.deal} /></TableCell>
                         <TableCell className="tabular-nums">{formatCurrency(Number(inv.total_incl_vat))}</TableCell>
                         <TableCell className="tabular-nums">{formatCurrency(Number(inv.amount_paid))}</TableCell>
                         <TableCell>
@@ -227,9 +196,17 @@ export function InvoicesPage() {
             </SheetHeader>
             <div className="space-y-4 p-4">
               <div className="grid grid-cols-2 gap-3 text-sm">
-                <div><Label>{t('invoicesPage.table.deal')}</Label><p>#{selected.deal}</p></div>
+                <div><Label>{t('invoicesPage.table.deal')}</Label><DealLink dealId={selected.deal} /></div>
                 <div><Label>{t('invoicesPage.table.total')}</Label><p className="tabular-nums">{formatCurrency(Number(selected.total_incl_vat))}</p></div>
                 <div><Label>{t('invoicesPage.table.paid')}</Label><p className="tabular-nums">{formatCurrency(Number(selected.amount_paid))}</p></div>
+                {/* Outstanding balance — surfaced so the buyer doesn't subtract
+                    total − paid by hand before paying. Highlighted when overdue. */}
+                <div>
+                  <Label>{t('invoicesPage.balanceDue')}</Label>
+                  <p className={`tabular-nums font-medium ${selected.status === 'OVERDUE' ? 'text-destructive' : ''}`}>
+                    {formatCurrency(Number(selected.balance_due))}
+                  </p>
+                </div>
                 <div><Label>{t('invoicesPage.table.due')}</Label><p>{selected.due_date ? new Date(selected.due_date).toLocaleDateString() : '—'}</p></div>
               </div>
               <Separator />
@@ -304,52 +281,15 @@ export function InvoicesPage() {
         </Sheet>
       )}
 
-      <Sheet open={payOpen} onOpenChange={setPayOpen}>
-        <SheetContent className="sm:max-w-md">
-          <SheetHeader>
-            <SheetTitle>{t('invoicesPage.recordPayment')}</SheetTitle>
-            <SheetDescription>{selected?.number}</SheetDescription>
-          </SheetHeader>
-          <div className="space-y-3 p-4">
-            <div>
-              <Label htmlFor="amt">{t('invoicesPage.form.amount')}</Label>
-              <Input id="amt" type="number" step="0.01" value={payForm.amount}
-                     onChange={(e) => setPayForm({ ...payForm, amount: e.target.value })} />
-            </div>
-            <div>
-              <Label htmlFor="paidAt">{t('invoicesPage.form.paidAt')}</Label>
-              <Input id="paidAt" type="date" value={payForm.paid_at}
-                     onChange={(e) => setPayForm({ ...payForm, paid_at: e.target.value })} />
-            </div>
-            <div>
-              <Label>{t('invoicesPage.form.method')}</Label>
-              <Select value={payForm.method} onValueChange={(v) => setPayForm({ ...payForm, method: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {METHODS.map((m) => (
-                    <SelectItem key={m} value={m}>{t(`invoicesPage.method.${m}`)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="ref">{t('invoicesPage.form.reference')}</Label>
-              <Input id="ref" value={payForm.reference}
-                     onChange={(e) => setPayForm({ ...payForm, reference: e.target.value })} />
-            </div>
-          </div>
-          <SheetFooter>
-            <Button
-              onClick={onRecordPayment}
-              disabled={recordPayment.isPending || !payForm.amount || isViewer}
-              title={isViewer ? viewerTip : undefined}
-              className="w-full"
-            >
-              {t('invoicesPage.recordPayment')}
-            </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+      {/* Canonical payment recorder — shows the outstanding balance, blocks
+          overpayment, and accepts a proof-of-payment file. Replaces the former
+          bespoke inline form that did none of those. */}
+      <RecordPaymentDialog
+        open={payOpen}
+        onOpenChange={setPayOpen}
+        defaultInvoiceId={selected?.id}
+        onRecorded={() => { setPayOpen(false); refetch(); }}
+      />
     </PageShell>
   );
 }
