@@ -104,7 +104,11 @@ export const ExcelUpload: React.FC<ExcelUploadProps> = ({ dealId, onUploadSucces
     const acceptText = useAI ? t('aiImport.acceptedAi') : '.xlsx, .xls';
 
     return (
-        <div className="space-y-3">
+        // min-w-0: DialogContent is a CSS grid, whose children default to
+        // min-width:auto — a long unbreakable filename would otherwise force the
+        // whole dialog wider than the viewport and push the upload button
+        // off-screen (unclickable). min-w-0 lets the row shrink so truncate works.
+        <div className="w-full min-w-0 space-y-3">
             {/* Importing — driven by polled task status */}
             {isImporting ? (
                 <div className="rounded-xl border border-border p-5">
@@ -155,9 +159,9 @@ export const ExcelUpload: React.FC<ExcelUploadProps> = ({ dealId, onUploadSucces
                     <p className="text-xs text-muted-foreground">{acceptText}</p>
                 </div>
             ) : (
-                <div className="flex items-center justify-between rounded-xl border border-border bg-muted/40 p-4">
+                <div className="flex flex-col gap-3 rounded-xl border border-border bg-muted/40 p-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex min-w-0 items-center gap-3">
-                        <div className="rounded-lg bg-primary/10 p-2">
+                        <div className="shrink-0 rounded-lg bg-primary/10 p-2">
                             <FileSpreadsheet className="h-5 w-5 text-primary" aria-hidden="true" />
                         </div>
                         <div className="min-w-0">
@@ -165,13 +169,15 @@ export const ExcelUpload: React.FC<ExcelUploadProps> = ({ dealId, onUploadSucces
                             <p className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(1)} KB</p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    {/* shrink-0 + justify-end: the actions never get squeezed out of
+                        view by a long filename; they wrap below it on narrow widths. */}
+                    <div className="flex shrink-0 items-center justify-end gap-2">
                         {!isDispatching && (
                             <Button variant="ghost" size="icon" onClick={() => { setFile(null); setError(null); }} aria-label={t('common.delete')}>
                                 <X className="h-4 w-4" />
                             </Button>
                         )}
-                        <Button onClick={handleUpload} disabled={isDispatching}>
+                        <Button onClick={handleUpload} disabled={isDispatching} className="gap-1.5">
                             {isDispatching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                             {useAI ? t('aiImport.agree') : t('sourcing.uploadTitle')}
                         </Button>
