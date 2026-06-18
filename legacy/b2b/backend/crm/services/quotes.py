@@ -659,7 +659,9 @@ def merge_request_lines(quote: Quote, new_items: list) -> tuple:
     return created, merged
 
 
-def buyer_add_request_item(user: CustomUser, deal: Deal, *, name: str, quantity, unit="", unit_code="", note="") -> QuoteItem:
+def buyer_add_request_item(
+    user: CustomUser, deal: Deal, *, name: str, quantity, unit="", unit_code="", note="", mpn=""
+) -> QuoteItem:
     from rest_framework.exceptions import ValidationError
 
     clean_name = (name or "").strip()
@@ -674,6 +676,9 @@ def buyer_add_request_item(user: CustomUser, deal: Deal, *, name: str, quantity,
         unit=(unit or "")[:32],
         unit_code=(unit_code or "")[:8],
         note=note or "",
+        # Article (MPN) parity with the edit path — without it a new line drops the
+        # article. Set before _line_dedup_key, which prefers mpn for dedup.
+        mpn=(mpn or "")[:120],
     )
     # Same dedup as cart/import: re-adding an identical line sums the quantity.
     key = _line_dedup_key(candidate)

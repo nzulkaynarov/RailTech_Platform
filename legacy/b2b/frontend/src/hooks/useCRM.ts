@@ -123,7 +123,7 @@ export const useDeleteQuoteItem = () => {
 export const useAddRequestItem = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ dealId, ...data }: { dealId: number; name: string; quantity: number; unit?: string; unit_code?: string; note?: string }) =>
+    mutationFn: ({ dealId, ...data }: { dealId: number; name: string; quantity: number; unit?: string; unit_code?: string; note?: string; mpn?: string }) =>
       crmApi.addRequestItem(dealId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quote-items'] });

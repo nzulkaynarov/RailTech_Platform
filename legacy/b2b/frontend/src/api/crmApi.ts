@@ -146,7 +146,7 @@ export const crmApi = {
 	},
 	// Buyer adds a row to their own request (name + qty). Creates the underlying
 	// DRAFT quote on first add; allowed only while the seller hasn't engaged.
-	addRequestItem: async (dealId: number, data: { name: string; quantity: number; unit?: string; unit_code?: string; note?: string }) => {
+	addRequestItem: async (dealId: number, data: { name: string; quantity: number; unit?: string; unit_code?: string; note?: string; mpn?: string }) => {
 		const response = await apiClient.post<QuoteItem>(`crm/deals/${dealId}/add-request-item/`, data);
 		return response.data;
 	},
