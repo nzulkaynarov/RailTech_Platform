@@ -28,6 +28,7 @@ import { useIsViewerMode } from '@/hooks/useViewerMode';
 import { useUserStore } from '@/store/userStore';
 import { FulfillmentStatus as FStatusCode } from '@/lib/codes';
 import type { Fulfillment, FulfillmentStatus } from '@/api/fulfillmentApi';
+import { DealLink } from '@/components/Shared/DealLink';
 
 const STATUS_VARIANT: Record<FulfillmentStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   PENDING: 'secondary',
@@ -153,7 +154,7 @@ export function FulfillmentsPage() {
               <TableBody>
                 {(list ?? []).map((f) => (
                   <TableRow key={f.id}>
-                    <TableCell>#{f.deal}</TableCell>
+                    <TableCell><DealLink dealId={f.deal} /></TableCell>
                     <TableCell>
                       <Badge variant={STATUS_VARIANT[f.status]}>
                         {t(`fulfillmentPage.status.${f.status}`)}
@@ -196,6 +197,15 @@ export function FulfillmentsPage() {
                           >
                             {t('fulfillmentPage.dispute')}
                           </Button>
+                        </div>
+                      )}
+                      {/* After a dispute the buyer has no action — the conflict is
+                          handled with the seller. Give a status hint + a way into
+                          the deal chat instead of a silent dead-end. */}
+                      {!isSeller && f.status === FStatusCode.DISPUTED && (
+                        <div className="flex flex-col items-end gap-1">
+                          <span className="text-xs text-muted-foreground">{t('fulfillmentPage.disputedHint')}</span>
+                          <DealLink dealId={f.deal} className="text-xs" />
                         </div>
                       )}
                     </TableCell>

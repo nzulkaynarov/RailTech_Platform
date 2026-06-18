@@ -17,6 +17,7 @@ import { Separator } from '@/components/ui/separator';
 import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import { ManualModeBanner } from '@/components/Shared/ManualModeBanner';
 import { RecordPaymentDialog } from '@/components/Billing/RecordPaymentDialog';
+import { DealLink } from '@/components/Shared/DealLink';
 import {
   Toolbar, SortableHead, Pager, useListParams, applyListParams,
 } from '@/components/DataTable';
@@ -152,7 +153,7 @@ export function InvoicesPage() {
                     {pageItems.map((inv) => (
                       <TableRow key={inv.id}>
                         <TableCell className="font-medium">{inv.number}</TableCell>
-                        <TableCell>#{inv.deal}</TableCell>
+                        <TableCell><DealLink dealId={inv.deal} /></TableCell>
                         <TableCell className="tabular-nums">{formatCurrency(Number(inv.total_incl_vat))}</TableCell>
                         <TableCell className="tabular-nums">{formatCurrency(Number(inv.amount_paid))}</TableCell>
                         <TableCell>
@@ -195,7 +196,7 @@ export function InvoicesPage() {
             </SheetHeader>
             <div className="space-y-4 p-4">
               <div className="grid grid-cols-2 gap-3 text-sm">
-                <div><Label>{t('invoicesPage.table.deal')}</Label><p>#{selected.deal}</p></div>
+                <div><Label>{t('invoicesPage.table.deal')}</Label><DealLink dealId={selected.deal} /></div>
                 <div><Label>{t('invoicesPage.table.total')}</Label><p className="tabular-nums">{formatCurrency(Number(selected.total_incl_vat))}</p></div>
                 <div><Label>{t('invoicesPage.table.paid')}</Label><p className="tabular-nums">{formatCurrency(Number(selected.amount_paid))}</p></div>
                 {/* Outstanding balance — surfaced so the buyer doesn't subtract

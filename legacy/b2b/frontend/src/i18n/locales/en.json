@@ -3775,7 +3775,8 @@
       "carrier": "Carrier",
       "expectedDeliveryDate": "Expected date",
       "notes": "Notes"
-    }
+    },
+    "disputedHint": "Dispute recorded — await the supplier’s response. Discuss it in the request chat."
   },
   "supplierBidsPage": {
     "title": "Supplier bids",
