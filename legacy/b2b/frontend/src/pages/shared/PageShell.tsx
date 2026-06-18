@@ -8,7 +8,10 @@ interface PageShellProps {
   title: string;
   description: string;
   icon: React.ReactNode;
-  stats?: { label: string; value: string }[];
+  // onClick turns a KPI tile into a filter shortcut (reframes the tiles as
+  // filters, not a total — so a subset of statuses no longer reads as "the sum
+  // doesn't add up"). `active` highlights the currently-applied filter.
+  stats?: { label: string; value: string; onClick?: () => void; active?: boolean }[];
   actions?: { label: string; variant?: 'default' | 'outline'; onClick?: () => void }[];
   children?: React.ReactNode;
 }
@@ -36,7 +39,14 @@ export function PageShell({ title, description, icon, stats, actions, children }
       {stats && (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           {stats.map((s) => (
-            <Card key={s.label} className="py-4 gap-1">
+            <Card
+              key={s.label}
+              onClick={s.onClick}
+              role={s.onClick ? 'button' : undefined}
+              tabIndex={s.onClick ? 0 : undefined}
+              onKeyDown={s.onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); s.onClick!(); } } : undefined}
+              className={`py-4 gap-1 ${s.onClick ? 'cursor-pointer transition-colors hover:bg-muted/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring' : ''} ${s.active ? 'border-primary ring-1 ring-primary' : ''}`}
+            >
               <CardContent className="px-4">
                 <p className="text-xs text-muted-foreground">{s.label}</p>
                 <p className="text-2xl font-bold tabular-nums">{s.value}</p>

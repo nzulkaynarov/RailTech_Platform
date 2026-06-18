@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useState, Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Send, Calculator, ThumbsUp, ThumbsDown, User, Briefcase } from 'lucide-react';
+import { ArrowLeft, Send, Calculator, ThumbsUp, ThumbsDown, User, Briefcase, Download, Loader2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { QuoteStatus, DealStage } from '@/lib/codes';
 import { useUserStore } from '@/store/userStore';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useIsViewerMode } from '@/hooks/useViewerMode';
 import { useDeal, useChangeDealStage, useApproveQuote, useRejectQuote, useSendQuoteToClient, useUpdateRequestMeta } from '@/hooks/useCRM';
+import { crmApi } from '@/api/crmApi';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { translateApiError } from '@/lib/apiError';
@@ -30,9 +31,10 @@ import { buyerStatus } from '@/lib/requestStatus';
  */
 export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: () => void }) {
   const { t } = useTranslation();
-  const { data: deal, isLoading } = useDeal(dealId);
+  const { data: deal, isLoading, isError, refetch } = useDeal(dealId);
   const formatCurrency = useCurrencyStore((s) => s.format);
   const [rejectOpen, setRejectOpen] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
   const isViewer = useIsViewerMode();
   const viewerTip = t('apiErrors.ADMIN_VIEWER_CANNOT_ACT');
 
@@ -50,6 +52,20 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
   const isBuyerSide = activeStatus === 'BUYER';
 
   if (isLoading && !deal) return <LoadingSkeleton />;
+  // A failed fetch (404 / no-access / network / Neon sleep) must read as an
+  // error with a way out — not a bare "no data" that looks like an empty deal.
+  if (isError && !deal) return (
+    <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
+      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
+        <AlertTriangle className="h-6 w-6 text-destructive" aria-hidden="true" />
+      </div>
+      <p className="text-sm font-medium">{t('common.loadError')}</p>
+      <div className="flex gap-2">
+        <Button variant="outline" size="sm" onClick={() => refetch()}>{t('common.retry')}</Button>
+        <Button variant="ghost" size="sm" onClick={onBack}><ArrowLeft className="mr-1.5 h-4 w-4" />{t('requestDetailActions.backToRequests')}</Button>
+      </div>
+    </div>
+  );
   if (!deal) return <div className="p-8 text-center text-muted-foreground">{t('pages.common.noData')}</div>;
 
   const quote = deal.active_quote ?? deal.quotes?.[deal.quotes.length - 1] ?? null;
@@ -78,6 +94,19 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
     }
   };
 
+  // Buyer-facing КП PDF export — same endpoint/wrapper the seller uses. Needed
+  // for procurement compliance (tender dossier, archival, forwarding).
+  const handleDownloadPdf = async () => {
+    setDownloadingPdf(true);
+    try {
+      await crmApi.exportDealPDF(deal.id);
+    } catch (e) {
+      toast.error(translateApiError(e));
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
   return (
     <div className="flex gap-4">
       <div className="flex flex-col gap-3 flex-[7] min-w-0">
@@ -88,15 +117,26 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
           <div className="flex-1">
             <div className="flex items-center gap-3">
               {canEditRequest ? (
-                <Input
-                  defaultValue={deal.title || ''}
-                  onBlur={(e) => {
-                    const value = e.target.value.trim();
-                    if (value && value !== (deal.title || '')) updateMeta.mutate({ dealId: deal.id, title: value });
-                  }}
-                  className="h-auto max-w-md border-transparent bg-transparent px-1 text-2xl font-bold hover:border-input focus-visible:border-input"
-                  aria-label={t('requestDetailActions.titleLabel')}
-                />
+                <div className="flex max-w-md flex-1 items-center gap-2">
+                  <Input
+                    defaultValue={deal.title || ''}
+                    onBlur={(e) => {
+                      const value = e.target.value.trim();
+                      // Empty title is not a valid edit — restore the previous
+                      // value in the field instead of silently keeping the old
+                      // DB value while the input looks blank.
+                      if (!value) { e.target.value = deal.title || ''; return; }
+                      if (value !== (deal.title || '')) {
+                        updateMeta.mutate({ dealId: deal.id, title: value }, {
+                          onError: (err) => { e.target.value = deal.title || ''; toast.error(translateApiError(err)); },
+                        });
+                      }
+                    }}
+                    className="h-auto border-transparent bg-transparent px-1 text-2xl font-bold hover:border-input focus-visible:border-input"
+                    aria-label={t('requestDetailActions.titleLabel')}
+                  />
+                  {updateMeta.isPending && <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" aria-hidden="true" />}
+                </div>
               ) : (
                 <h1 className="text-2xl font-bold">{deal.title || `#${deal.id}`}</h1>
               )}
@@ -243,24 +283,61 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
         {canEditRequest ? (
           <RequestItemsEditor dealId={deal.id} items={quote?.items ?? []} canEdit />
         ) : showPricedQuote ? (
-          <Card>
+          (() => {
+            const colCount = isSellerSide ? 7 : 5;
+            const validUntilExpired = quote.valid_until
+              ? new Date(quote.valid_until) < new Date(new Date().toDateString())
+              : false;
+            return (
+            <Card>
             <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="space-y-1">
                   <CardTitle>{t('requestDetailActions.quoteTitle', { version: quote.version })}</CardTitle>
                   <CardDescription>{quote.status_name} — {new Date(quote.created_at).toLocaleString()}</CardDescription>
+                  {/* Offer validity — the acceptance deadline. Warn when past. */}
+                  {quote.valid_until && (
+                    <p className="flex items-center gap-1.5 text-xs">
+                      <span className="text-muted-foreground">{t('requestDetailActions.validUntil')}:</span>
+                      <span className={validUntilExpired ? 'font-medium text-destructive' : 'text-foreground'}>
+                        {new Date(quote.valid_until).toLocaleDateString()}
+                      </span>
+                      {validUntilExpired && (
+                        <Badge variant="destructive" className="gap-1">
+                          <AlertTriangle className="size-3" aria-hidden="true" />
+                          {t('requestDetailActions.validUntilExpired')}
+                        </Badge>
+                      )}
+                    </p>
+                  )}
                 </div>
-                <div className="text-right">
-                  <p className="text-sm text-muted-foreground">{t('requestDetailActions.totalInclVat')}</p>
-                  <p className="text-2xl font-bold text-primary">{formatCurrency(Number(quote.total_incl_vat))}</p>
+                <div className="flex items-start gap-4">
+                  <div className="text-right">
+                    <p className="text-sm text-muted-foreground">{t('requestDetailActions.totalInclVat')}</p>
+                    <p className="text-2xl font-bold text-primary">{formatCurrency(Number(quote.total_incl_vat))}</p>
+                  </div>
+                  {/* PDF export — buyer parity with seller. */}
+                  <Button variant="outline" size="sm" className="shrink-0 gap-1.5" onClick={handleDownloadPdf} disabled={downloadingPdf}>
+                    {downloadingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                    {t('requestDetailActions.downloadPdf')}
+                  </Button>
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
-              <Table>
+            <CardContent className="space-y-4">
+              {/* Seller's cover comment / conditions on the КП. */}
+              {(quote.notes ?? '').trim() && (
+                <div className="rounded-lg border border-border bg-muted/30 p-3">
+                  <p className="mb-1 text-xs font-medium text-muted-foreground">{t('requestDetailActions.sellerNote')}</p>
+                  <p className="whitespace-pre-line text-sm">{quote.notes}</p>
+                </div>
+              )}
+              <div className="overflow-x-auto">
+              <Table className="min-w-[32rem]">
                 <TableHeader>
                   <TableRow className="bg-muted/50">
                     <TableHead>{t('requestDetailActions.itemCol')}</TableHead>
+                    <TableHead className="w-20">{t('requestItems.unitCol')}</TableHead>
                     <TableHead>{t('requestDetailActions.supplierCol')}</TableHead>
                     <TableHead className="text-right">{t('requestDetailActions.qtyCol')}</TableHead>
                     {/* Base price + margin are seller cost internals — the backend
@@ -272,11 +349,19 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
                 </TableHeader>
                 <TableBody>
                   {(quote.items ?? []).map(item => (
-                    <TableRow key={item.id}>
+                    <Fragment key={item.id}>
+                    <TableRow className={item.note ? 'border-0' : ''}>
                       <TableCell>
                         <span className="font-medium">{item.product_name || item.imported_raw_name}</span>
-                        {item.product_sku && <span className="block text-xs font-mono text-primary">{item.product_sku}</span>}
+                        {/* Buyer's own identifiers travel with the line — these
+                            are in the DB and not seller-only, so surface them. */}
+                        <span className="block space-x-2 text-xs font-mono text-muted-foreground">
+                          {item.product_sku && <span className="text-primary">{item.product_sku}</span>}
+                          {item.mpn && <span>{t('requestItems.skuLabel')}: {item.mpn}</span>}
+                          {item.gtin && <span>GTIN: {item.gtin}</span>}
+                        </span>
                       </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{item.unit || '—'}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">{item.offer_supplier_name || '—'}</TableCell>
                       <TableCell className="text-right tabular-nums">{item.quantity}</TableCell>
                       {isSellerSide && <TableCell className="text-right tabular-nums">{formatCurrency(Number(item.frozen_base_price))}</TableCell>}
@@ -289,18 +374,46 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
                         {formatCurrency(Number(item.final_price_excl_vat))}
                       </TableCell>
                     </TableRow>
+                    {item.note && (
+                      <TableRow className="hover:bg-transparent">
+                        <TableCell colSpan={colCount} className="pt-0 text-xs text-muted-foreground">
+                          <span className="font-medium">{t('requestItems.noteCol')}:</span> <span className="whitespace-pre-line">{item.note}</span>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    </Fragment>
                   ))}
                   {(quote.items?.length ?? 0) === 0 && (
                     <TableRow>
-                      <TableCell colSpan={isSellerSide ? 6 : 4} className="text-center py-6 text-muted-foreground">
+                      <TableCell colSpan={colCount} className="text-center py-6 text-muted-foreground">
                         {t('requestDetailActions.noItems')}
                       </TableCell>
                     </TableRow>
                   )}
                 </TableBody>
               </Table>
+              </div>
+              {/* VAT breakdown — the canonical Subtotal → VAT → Total bridge,
+                  so the buyer isn't left to reconcile excl-VAT lines with an
+                  incl-VAT grand total by hand. */}
+              <div className="ml-auto w-full max-w-xs space-y-1 text-sm">
+                <div className="flex justify-between text-muted-foreground">
+                  <span>{t('requestDetailActions.subtotal')}</span>
+                  <span className="tabular-nums">{formatCurrency(Number(quote.subtotal_excl_vat))}</span>
+                </div>
+                <div className="flex justify-between text-muted-foreground">
+                  <span>{t('requestDetailActions.vatAmount')}{quote.vat_rate ? ` (${Number(quote.vat_rate).toFixed(0)}%)` : ''}</span>
+                  <span className="tabular-nums">{formatCurrency(Number(quote.vat_amount))}</span>
+                </div>
+                <div className="flex justify-between border-t border-border pt-1 font-semibold">
+                  <span>{t('requestDetailActions.totalInclVat')}</span>
+                  <span className="tabular-nums text-primary">{formatCurrency(Number(quote.total_incl_vat))}</span>
+                </div>
+              </div>
             </CardContent>
           </Card>
+            );
+          })()
         ) : quote && (quote.items?.length ?? 0) > 0 ? (
           // Seller is working the КП but hasn't sent it — buyer sees their
           // requested items read-only, WITHOUT any price.

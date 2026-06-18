@@ -3689,7 +3689,8 @@
       "qty": "Qty",
       "price": "Price",
       "line": "Line"
-    }
+    },
+    "balanceDue": "Balance due"
   },
   "paymentsPage": {
     "title": "Payments",
@@ -3930,7 +3931,9 @@
     "submitHint": "Review the items and submit — the seller will prepare a quote.",
     "submitHintEmpty": "Add at least one line item to submit the request.",
     "submitHintIncomplete": "Complete the highlighted rows (name or code) to submit.",
-    "submittedToast": "Request submitted to the seller"
+    "submittedToast": "Request submitted to the seller",
+    "fromCatalog": "from catalog",
+    "gtinPlaceholder": "Barcode"
   },
   "requestDetailActions": {
     "titleLabel": "Request title",
@@ -3962,7 +3965,14 @@
       "reasonPlaceholder": "E.g. price is 20% above our budget",
       "confirm": "Reject",
       "reasonRequired": "Reason is required"
-    }
+    },
+    "validUntil": "Valid until",
+    "validUntilExpired": "Expired",
+    "sellerNote": "Supplier comment",
+    "downloadPdf": "Download quote (PDF)",
+    "subtotal": "Subtotal (excl. VAT)",
+    "vatAmount": "VAT",
+    "backToRequests": "Back to my requests"
   },
   "createQuoteDialog": {
     "title": "Create quote",

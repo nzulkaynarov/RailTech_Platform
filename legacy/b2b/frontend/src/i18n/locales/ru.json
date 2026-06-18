@@ -3693,7 +3693,8 @@
       "qty": "Кол-во",
       "price": "Цена",
       "line": "Сумма"
-    }
+    },
+    "balanceDue": "Остаток к оплате"
   },
   "paymentsPage": {
     "title": "Платежи",
@@ -3934,7 +3935,9 @@
     "submitHint": "Проверьте позиции и отправьте заявку — продавец подготовит КП.",
     "submitHintEmpty": "Добавьте хотя бы одну позицию, чтобы отправить заявку.",
     "submitHintIncomplete": "Заполните подсвеченные строки (название или код), чтобы отправить.",
-    "submittedToast": "Заявка отправлена поставщику"
+    "submittedToast": "Заявка отправлена поставщику",
+    "fromCatalog": "из каталога",
+    "gtinPlaceholder": "Штрихкод"
   },
   "requestDetailActions": {
     "titleLabel": "Название заявки",
@@ -3966,7 +3969,14 @@
       "reasonPlaceholder": "Например: цена выше бюджета на 20%",
       "confirm": "Отклонить",
       "reasonRequired": "Укажите причину"
-    }
+    },
+    "validUntil": "Действительно до",
+    "validUntilExpired": "Срок истёк",
+    "sellerNote": "Комментарий поставщика",
+    "downloadPdf": "Скачать КП (PDF)",
+    "subtotal": "Сумма без НДС",
+    "vatAmount": "НДС",
+    "backToRequests": "К моим заявкам"
   },
   "createQuoteDialog": {
     "title": "Создать КП",

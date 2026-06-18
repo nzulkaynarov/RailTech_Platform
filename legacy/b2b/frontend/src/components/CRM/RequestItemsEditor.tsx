@@ -37,7 +37,7 @@ export function RequestItemsEditor({
   const deleteItem = useDeleteQuoteItem();
   const submitRequest = useSubmitRequest();
 
-  const { data: units } = useUnits();
+  const { data: units, isLoading: unitsLoading } = useUnits();
   const [newName, setNewName] = useState('');
   const [newQty, setNewQty] = useState('1');
   const [newUnit, setNewUnit] = useState('');
@@ -64,6 +64,14 @@ export function RequestItemsEditor({
     if (value.trim() === (item.mpn || '').trim()) return;
     try {
       await updateItem.mutateAsync({ id: item.id, data: { mpn: value.trim() } });
+    } catch (e) {
+      toast.error(translateApiError(e));
+    }
+  };
+  const saveGtin = async (item: QuoteItem, value: string) => {
+    if (value.trim() === (item.gtin || '').trim()) return;
+    try {
+      await updateItem.mutateAsync({ id: item.id, data: { gtin: value.trim() } });
     } catch (e) {
       toast.error(translateApiError(e));
     }
@@ -175,7 +183,11 @@ export function RequestItemsEditor({
                   {index + 1}
                 </TableCell>
                 <TableCell>
-                  {canEdit ? (
+                  {/* A catalog-linked row's name is authoritative (product_name);
+                      editing imported_raw_name would be a silent no-op since
+                      itemName() prefers product_name. Show it read-only with a
+                      «from catalog» badge instead of a deceptively-editable field. */}
+                  {canEdit && !item.product_name ? (
                     <Textarea
                       defaultValue={itemName(item)}
                       onBlur={(e) => saveName(item, e.target.value)}
@@ -184,7 +196,12 @@ export function RequestItemsEditor({
                       aria-label={t('requestItems.nameCol')}
                     />
                   ) : (
-                    <span className="font-medium">{itemName(item)}</span>
+                    <span className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium">{itemName(item)}</span>
+                      {canEdit && item.product_name && (
+                        <Badge variant="secondary" className="font-normal">{t('requestItems.fromCatalog')}</Badge>
+                      )}
+                    </span>
                   )}
                   {!canEdit && item.mpn && (
                     <span className="mt-0.5 block text-xs text-muted-foreground">
@@ -206,7 +223,9 @@ export function RequestItemsEditor({
                           the code, yet fall back to the stored free-text as the
                           trigger label so the buyer still SEES their unit
                           instead of an empty "—". */}
-                      <SelectTrigger className="h-8 w-24"><SelectValue placeholder={item.unit || '—'} /></SelectTrigger>
+                      <SelectTrigger className="h-8 w-24" disabled={unitsLoading && !item.unit}>
+                        <SelectValue placeholder={unitsLoading ? t('common.loading') : (item.unit || '—')} />
+                      </SelectTrigger>
                       <SelectContent>
                         {(units ?? []).map((u) => (
                           <SelectItem key={u.code} value={u.code}>{u.name}</SelectItem>
@@ -257,8 +276,15 @@ export function RequestItemsEditor({
                           defaultValue={item.mpn || ''}
                           onBlur={(e) => saveMpn(item, e.target.value)}
                           placeholder={t('requestItems.skuPlaceholder')}
-                          className="h-7 w-40 text-xs"
+                          className="h-7 w-36 text-xs"
                           aria-label={t('requestItems.skuLabel')}
+                        />
+                        <Input
+                          defaultValue={item.gtin || ''}
+                          onBlur={(e) => saveGtin(item, e.target.value)}
+                          placeholder={t('requestItems.gtinPlaceholder')}
+                          className="h-7 w-32 text-xs"
+                          aria-label="GTIN"
                         />
                         <Input
                           defaultValue={item.note || ''}
