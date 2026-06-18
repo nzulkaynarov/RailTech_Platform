@@ -38,9 +38,7 @@ class RequestIDFilter(logging.Filter):
 
 # Standard LogRecord attributes — everything else on a record is treated as a
 # structured extra and merged into the JSON payload.
-_RESERVED = set(
-    vars(logging.makeLogRecord({})).keys()
-) | {"request_id", "asctime", "message"}
+_RESERVED = set(vars(logging.makeLogRecord({})).keys()) | {"request_id", "asctime", "message"}
 
 
 class JSONFormatter(logging.Formatter):
