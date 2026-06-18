@@ -4,7 +4,7 @@ from django.db import transaction
 
 from accounts.models import CustomUser
 
-from ..constants import QuoteStatusCode
+from ..constants import ContractStatusCode, QuoteStatusCode
 from ..models import ActivityLog, Quote
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -47,7 +47,7 @@ def generate_contract_from_quote(
     contract = (
         Contract.objects.filter(deal=quote.deal, quote=quote)
         .exclude(
-            status__in=["CANCELLED"],
+            status__in=[ContractStatusCode.CANCELLED],
         )
         .order_by("-created_at")
         .first()
@@ -58,7 +58,7 @@ def generate_contract_from_quote(
             deal=quote.deal,
             quote=quote,
             number=_next_contract_number(),
-            status="DRAFT",
+            status=ContractStatusCode.DRAFT,
             total_amount=quote.total_incl_vat,
             currency=quote.items.first().frozen_currency if quote.items.exists() else None,
             created_by=actor,
@@ -69,7 +69,8 @@ def generate_contract_from_quote(
     # Render PDF
     _render_contract_pdf(contract)
 
-    contract.status = "PENDING_CLIENT" if contract.status == "DRAFT" else contract.status
+    if contract.status == ContractStatusCode.DRAFT:
+        contract.status = ContractStatusCode.PENDING_CLIENT
     contract.save(update_fields=["status", "pdf_file", "updated_at"])
 
     ActivityLog.objects.create(
@@ -135,11 +136,11 @@ def sign_contract_by_client(
         or is_member_of(client_user, contract.deal.company_id, capability="buy")
     ):
         return None, "MEMBER_REQUIRED_FOR_ACTION"
-    if contract.status not in {"DRAFT", "PENDING_CLIENT"}:
+    if contract.status not in {ContractStatusCode.DRAFT, ContractStatusCode.PENDING_CLIENT}:
         return None, "CONTRACT_CLIENT_SIGN_NOT_ALLOWED"
     contract.client_signer = client_user
     contract.client_signed_at = timezone.now()
-    contract.status = "PENDING_MANAGER" if not contract.manager_signed_at else "SIGNED"
+    contract.status = ContractStatusCode.SIGNED if contract.manager_signed_at else ContractStatusCode.PENDING_MANAGER
     contract.save(update_fields=["client_signer", "client_signed_at", "status", "updated_at"])
     ActivityLog.objects.create(
         action="[MANUAL_MODE] Подписан контракт (сторона клиента)",
@@ -176,11 +177,15 @@ def sign_contract_by_manager(
     # winning supplier's member also carries can_sell.
     if not (getattr(manager_user, "is_superuser", False) or is_seller(manager_user)):
         return None, "MEMBER_REQUIRED_FOR_ACTION"
-    if contract.status not in {"DRAFT", "PENDING_MANAGER", "PENDING_CLIENT"}:
+    if contract.status not in {
+        ContractStatusCode.DRAFT,
+        ContractStatusCode.PENDING_MANAGER,
+        ContractStatusCode.PENDING_CLIENT,
+    }:
         return None, "CONTRACT_MANAGER_SIGN_NOT_ALLOWED"
     contract.manager_signer = manager_user
     contract.manager_signed_at = timezone.now()
-    contract.status = "SIGNED" if contract.client_signed_at else "PENDING_CLIENT"
+    contract.status = ContractStatusCode.SIGNED if contract.client_signed_at else ContractStatusCode.PENDING_CLIENT
     contract.save(update_fields=["manager_signer", "manager_signed_at", "status", "updated_at"])
     ActivityLog.objects.create(
         action="[MANUAL_MODE] Подписан контракт (сторона RailTech)",
@@ -195,7 +200,7 @@ def sign_contract_by_manager(
 def _notify_contract_signed(contract) -> None:
     from notifications.models import Notification, NotificationType
 
-    if contract.status != "SIGNED":
+    if contract.status != ContractStatusCode.SIGNED:
         return
     info = NotificationType.objects.filter(code="SUCCESS").first()
     for recipient in {contract.deal.client, contract.deal.manager}:
@@ -222,9 +227,9 @@ def cancel_contract(
     if is_platform_admin_viewer(actor):
         return None, "ADMIN_VIEWER_CANNOT_ACT"
     contract = Contract.objects.select_for_update().get(pk=contract_id)
-    if contract.status == "SIGNED":
+    if contract.status == ContractStatusCode.SIGNED:
         return None, "CONTRACT_SIGNED_CANNOT_CANCEL"
-    contract.status = "CANCELLED"
+    contract.status = ContractStatusCode.CANCELLED
     contract.notes = f"{contract.notes}\nОтменён {actor}: {reason}".strip()
     contract.save(update_fields=["status", "notes", "updated_at"])
     return contract, None
@@ -251,7 +256,7 @@ def force_cancel_contract(
         return None, "FORCE_REASON_REQUIRED"
     contract = Contract.objects.select_for_update().get(pk=contract_id)
     old_status = contract.status
-    contract.status = "CANCELLED"
+    contract.status = ContractStatusCode.CANCELLED
     contract.notes = (
         f"{contract.notes}\n[FORCE_ADMIN] {admin_user.email}: {reason}"
         if contract.notes

@@ -17,7 +17,7 @@ import { useCurrencyStore } from '@/store/currencyStore';
 import { useUserStore } from '@/store/userStore';
 import { useDeals, useDealStages, useChangeDealStage, useApproveQuote, useRejectQuote } from '@/hooks/useCRM';
 import { translateApiError } from '@/lib/apiError';
-import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
+import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import { RejectQuoteDialog } from '@/components/CRM/RejectQuoteDialog';
 import { CreateDealDialog } from '@/components/CRM/CreateDealDialog';
 import { GenerateQuoteDialog } from '@/components/CRM/GenerateQuoteDialog';
@@ -205,7 +205,7 @@ function DealDetailSheet({
 
 export function DealsPage() {
   const { t } = useTranslation();
-  const { data: deals, isLoading } = useDeals();
+  const { data: deals, isLoading, isError, refetch } = useDeals();
   const { data: stages } = useDealStages();
   const formatCurrency = useCurrencyStore((s) => s.format);
 
@@ -308,6 +308,7 @@ export function DealsPage() {
               },
             });
             if (isLoading) return <LoadingRows rows={5} />;
+            if (isError) return <ErrorState onRetry={refetch} />;
             if (!pageItems.length) return <EmptyState icon={<FileText className="h-5 w-5" />} message={t('pages.common.noData')} />;
             return (
             <>

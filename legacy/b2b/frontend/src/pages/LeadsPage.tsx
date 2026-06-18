@@ -8,13 +8,13 @@ import { Badge } from '@/components/ui/badge';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
+import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import { useLeads, useConvertLead } from '@/hooks/useCRM';
 import type { Lead } from '@/api/crmApi';
 
 export function LeadsPage() {
   const { t } = useTranslation();
-  const { data: leads, isLoading } = useLeads();
+  const { data: leads, isLoading, isError, refetch } = useLeads();
   const convert = useConvertLead();
 
   const onConvert = async (lead: Lead) => {
@@ -37,7 +37,9 @@ export function LeadsPage() {
     >
       <Card>
         <CardContent className="p-0">
-          {isLoading ? <LoadingRows rows={6} /> : (leads?.length ?? 0) === 0 ? (
+          {isLoading ? <LoadingRows rows={6} /> : isError ? (
+            <ErrorState onRetry={refetch} />
+          ) : (leads?.length ?? 0) === 0 ? (
             <EmptyState icon={<ClipboardList className="h-5 w-5" />} message={t('leadsPage.emptyState')} />
           ) : (
             <Table>

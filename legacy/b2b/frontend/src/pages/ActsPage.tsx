@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
+import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import {
   Toolbar, SortableHead, Pager, useListParams, applyListParams,
 } from '@/components/DataTable';
@@ -29,7 +29,7 @@ const STATUS_CODES: ActStatus[] = ['DRAFT', 'ISSUED', 'SIGNED', 'CANCELLED'];
 export function ActsPage() {
   const { t } = useTranslation();
   const listParams = useListParams(['status'] as const, { defaultOrdering: '-created_at' });
-  const { data: acts, isLoading } = useActs(undefined);
+  const { data: acts, isLoading, isError, refetch } = useActs(undefined);
   const signAct = useSignAct();
   const isViewer = useIsViewerMode();
   const viewerTip = t('apiErrors.ADMIN_VIEWER_CANNOT_ACT');
@@ -87,6 +87,7 @@ export function ActsPage() {
               },
             });
             if (isLoading) return <LoadingRows rows={6} />;
+            if (isError) return <ErrorState onRetry={refetch} />;
             if (!pageItems.length) {
               return <EmptyState icon={<ScrollText className="h-5 w-5" />} message={t('actsPage.emptyState')} />;
             }

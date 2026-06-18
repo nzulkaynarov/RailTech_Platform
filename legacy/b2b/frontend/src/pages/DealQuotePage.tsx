@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, FileText, Send, FileSignature } from 'lucide-react';
+import { ArrowLeft, FileText, Send, FileSignature, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { StatusBadge, getDealStageVariant } from '@/components/ui/StatusBadge';
@@ -26,7 +26,7 @@ interface DealQuotePageProps {
 export function DealQuotePage({ dealId, onBack }: DealQuotePageProps) {
   const { t } = useTranslation();
   const formatCurrency = useCurrencyStore((s) => s.format);
-  const { data: deal, isLoading } = useDeal(dealId);
+  const { data: deal, isLoading, isError, refetch } = useDeal(dealId);
   const sendQuote = useSendQuoteToClient();
   const [contractOpen, setContractOpen] = useState(false);
 
@@ -34,6 +34,26 @@ export function DealQuotePage({ dealId, onBack }: DealQuotePageProps) {
     return (
       <div className="flex flex-col gap-6">
         <LoadingRows rows={6} />
+      </div>
+    );
+  }
+
+  // A failed fetch must read as an error with a way out — not the same
+  // "not found" empty state that an actually-missing deal would show.
+  if (isError && !deal) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
+          <AlertTriangle className="h-6 w-6 text-destructive" aria-hidden="true" />
+        </div>
+        <p className="text-sm font-medium">{t('common.loadError')}</p>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => refetch()}>{t('common.retry')}</Button>
+          <Button variant="ghost" size="sm" onClick={onBack}>
+            <ArrowLeft className="mr-1.5 h-4 w-4" />
+            {t('common.back')}
+          </Button>
+        </div>
       </div>
     );
   }

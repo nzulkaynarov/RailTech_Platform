@@ -4,7 +4,7 @@ from django.db import transaction
 
 from accounts.models import CustomUser
 
-from ..constants import DealStageCode
+from ..constants import DealStageCode, FulfillmentStatusCode
 from ..models import Deal
 from .deals import transition_deal_stage
 
@@ -36,13 +36,13 @@ def update_fulfillment_status(
 
     if is_platform_admin_viewer(actor):
         return None, "ADMIN_VIEWER_CANNOT_ACT"
-    valid = {"PENDING", "SHIPPED", "IN_TRANSIT", "DELIVERED", "ACCEPTED", "DISPUTED"}
+    valid = set(FulfillmentStatusCode.values)
     if status_code not in valid:
         return None, "FULFILLMENT_INVALID_STATUS"
     obj = Fulfillment.objects.select_for_update().select_related("deal").get(deal_id=deal_id)
     # Seller drives shipping (PENDING→…→DELIVERED); the buyer ACCEPTS or DISPUTES on
     # receipt. Authorize the actor against the side that owns the target status.
-    buyer_statuses = {"ACCEPTED", "DISPUTED"}
+    buyer_statuses = {FulfillmentStatusCode.ACCEPTED, FulfillmentStatusCode.DISPUTED}
     if getattr(actor, "is_superuser", False):
         authorized = True
     elif status_code in buyer_statuses:
@@ -53,17 +53,17 @@ def update_fulfillment_status(
         return None, "MEMBER_REQUIRED_FOR_ACTION"
     obj.status = status_code
     now = timezone.now()
-    if status_code == "SHIPPED" and not obj.shipped_at:
+    if status_code == FulfillmentStatusCode.SHIPPED and not obj.shipped_at:
         obj.shipped_at = now
-    if status_code == "DELIVERED" and not obj.delivered_at:
+    if status_code == FulfillmentStatusCode.DELIVERED and not obj.delivered_at:
         obj.delivered_at = now
-    if status_code == "ACCEPTED" and not obj.accepted_at:
+    if status_code == FulfillmentStatusCode.ACCEPTED and not obj.accepted_at:
         obj.accepted_at = now
     for key in ("tracking_number", "carrier", "expected_delivery_date", "notes"):
         if key in extra and extra[key] is not None:
             setattr(obj, key, extra[key])
     obj.save()
     # Auto-close deal when accepted by client
-    if status_code == "ACCEPTED":
+    if status_code == FulfillmentStatusCode.ACCEPTED:
         transition_deal_stage(obj.deal, DealStageCode.CLOSED_WON, actor=actor, reason="Приёмка клиентом")
     return obj, None

@@ -16,6 +16,7 @@ import { AdminActivityTimeline } from '@/components/Admin/AdminActivityTimeline'
 import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
 import { DetailKPIGrid } from '@/components/Admin/DetailKPIGrid';
 import { PageShell } from './shared/PageShell';
+import { translateApiError } from '@/lib/apiError';
 import type { RoleApplication } from '@/api/accountsApi';
 
 const STORAGE_KEY = 'adminRoleApps';
@@ -391,6 +392,7 @@ export function AdminRoleApplicationsPage() {
         onConfirm={() =>
           confirm?.kind === 'approve' ? runApprove(confirm.app) : Promise.resolve()
         }
+        translateError={(code) => translateApiError(code)}
       />
       <ConfirmActionDialog
         open={confirm?.kind === 'reject'}
@@ -413,6 +415,7 @@ export function AdminRoleApplicationsPage() {
         onConfirm={(p) =>
           confirm?.kind === 'reject' ? runReject(confirm.app, p.reason) : Promise.resolve()
         }
+        translateError={(code) => translateApiError(code)}
       />
 
       <Separator />

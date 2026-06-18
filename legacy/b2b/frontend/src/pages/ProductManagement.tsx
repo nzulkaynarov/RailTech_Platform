@@ -23,7 +23,7 @@ import { getDomainLabelKey } from '@/config/domainConfig';
 import { useUserStore } from '@/store/userStore';
 import { useCartStore } from '@/store/cartStore';
 import { useCurrencyStore } from '@/store/currencyStore';
-import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
+import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 
 interface ProductManagementProps {
   onProductClick?: (productId: string) => void;
@@ -58,7 +58,7 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
     return p;
   }, [listParams.filters, listParams.search]);
 
-  const { data: products = [], isLoading } = useProducts(apiParams);
+  const { data: products = [], isLoading, isError, refetch } = useProducts(apiParams);
 
   const { items: paginated, total } = useMemo(
     () => applyListParams(products, listParams, {
@@ -187,7 +187,9 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
         }
       />
 
-      {isLoading ? <LoadingRows rows={5} /> : products.length === 0 ? (
+      {isLoading ? <LoadingRows rows={5} /> : isError ? (
+        <ErrorState onRetry={refetch} />
+      ) : products.length === 0 ? (
         <EmptyState icon={<Package className="h-5 w-5" />} message={t('productManagement.noResults')} />
       ) : viewMode === 'list' ? (
         <Card>
