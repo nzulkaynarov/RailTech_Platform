@@ -138,3 +138,36 @@ def assert_seller_can_operate(actor: "CustomUser") -> Optional[str]:
     if company_id is None or not company_has_operational_subscription(company_id):
         return "SUBSCRIPTION_REQUIRED"
     return None
+
+
+# Frontend context-switcher value, sent on every SPA request so the backend can
+# scope data to the role the user is currently ACTING as (not just what their
+# memberships allow). A user who is both a seller and a buyer must, while in the
+# BUYER context, see only their own company's deals — not every buyer's заявка.
+_SELLER_CONTEXTS = {"SELLER", "MANUFACTURER"}
+
+
+def acting_context(request) -> str:
+    """The X-Active-Context header value (BUYER / SELLER / MANUFACTURER), upper-cased.
+    Empty string when absent (non-SPA client)."""
+    return (request.META.get("HTTP_X_ACTIVE_CONTEXT") or "").strip().upper()
+
+
+def seller_sees_all_deals(user: "CustomUser", request) -> bool:
+    """Whether this request should receive the cross-company seller queryset.
+
+    True for a platform admin (always), or a seller acting in a SELLER/MANUFACTURER
+    context. A seller acting in the BUYER context is scoped to its own company —
+    this is what stops a dual seller+buyer user from seeing other buyers' заявки
+    while purchasing. SECURITY NOTE: this only ever NARROWS access — it never
+    grants more than is_seller() already would, so a forged/missing header can't
+    leak data a pure buyer shouldn't see (they fail is_seller and stay scoped).
+    A missing header defaults to seller-see-all to preserve non-SPA API clients;
+    the SPA always sends the header.
+    """
+    if getattr(user, "is_platform_admin", False):
+        return True
+    if not is_seller(user):
+        return False
+    ctx = acting_context(request)
+    return ctx == "" or ctx in _SELLER_CONTEXTS

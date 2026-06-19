@@ -81,10 +81,13 @@ class DealViewSet(viewsets.ModelViewSet):
             .prefetch_related(Prefetch("quotes", queryset=quotes_qs))
         )
 
-        from accounts.services.permissions import is_seller
+        from accounts.services.permissions import seller_sees_all_deals
 
-        # Seller works every buyer заявка to build КП → sees all deals.
-        if user.is_platform_admin or is_seller(user):
+        # Seller works every buyer заявка to build КП → sees all deals, but ONLY
+        # while acting in a seller context. A dual seller+buyer user in the BUYER
+        # context is scoped to its own company (else it would see every buyer's
+        # заявка while purchasing — confidentiality bug reported 2026-06-19).
+        if seller_sees_all_deals(user, self.request):
             return queryset
 
         user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)

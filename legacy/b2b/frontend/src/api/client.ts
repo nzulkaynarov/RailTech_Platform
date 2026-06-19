@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { useUserStore } from '@/store/userStore';
 
 const BASE_ENV_URL = import.meta.env.VITE_API_URL || '';
 const API_URL = BASE_ENV_URL.endsWith('/api/v1') ? BASE_ENV_URL : `${BASE_ENV_URL}/api/v1`;
@@ -22,6 +23,18 @@ apiClient.interceptors.request.use((config) => {
 				config.headers.Authorization = `Bearer ${token}`;
 			}
 		}
+	} catch { /* noop */ }
+	return config;
+});
+
+// Declare the workspace context the user is currently acting in (BUYER / SELLER
+// / MANUFACTURER). The backend scopes data to it: a dual seller+buyer user in
+// BUYER context sees only its own company's deals, not every buyer's заявка.
+// This only ever NARROWS access — never grants more than the user's memberships.
+apiClient.interceptors.request.use((config) => {
+	try {
+		const ctx = useUserStore.getState().activeStatus;
+		if (ctx) config.headers['X-Active-Context'] = ctx;
 	} catch { /* noop */ }
 	return config;
 });

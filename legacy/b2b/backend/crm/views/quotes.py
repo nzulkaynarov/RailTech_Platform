@@ -62,12 +62,11 @@ class QuoteViewSet(viewsets.ModelViewSet):
                 "items__frozen_currency",
             )
         )
-        from accounts.services.permissions import is_seller
+        from accounts.services.permissions import seller_sees_all_deals
 
-        if user.is_platform_admin:
-            return queryset
-        # The seller builds КП across all buyer заявки → sees every quote.
-        if is_seller(user):
+        # Seller building КП across buyer заявки sees every quote — but only in a
+        # seller context. In BUYER context the same user is scoped to its own deals.
+        if seller_sees_all_deals(user, self.request):
             return queryset
         # Buyer sees only quotes on their own company's deals.
         user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
@@ -405,12 +404,12 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
         if getattr(self, "swagger_fake_view", False):
             return QuoteItem.objects.none()
         user = self.request.user
-        from accounts.services.permissions import is_seller
+        from accounts.services.permissions import seller_sees_all_deals
 
         queryset = QuoteItem.objects.all().select_related(
             "product", "product__domain_type", "quote", "offer", "offer__supplier", "frozen_currency"
         )
-        if user.is_platform_admin or is_seller(user):
+        if seller_sees_all_deals(user, self.request):
             return queryset
         # Buyer sees line items only on their own deals (read-only — see _assert_seller).
         user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)

@@ -7,7 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.services.permissions import is_seller
+from accounts.services.permissions import is_seller, seller_sees_all_deals
 from core.file_streaming import stream_file_field
 from core.permissions import IsCompanyMemberOrPlatformAdmin, IsPlatformAdmin
 from crm import services as crm_services
@@ -59,7 +59,7 @@ class ContractViewSet(viewsets.ModelViewSet):
             "deal__company", "quote", "currency", "client_signer", "manager_signer"
         ).order_by("-created_at")
         # Seller operates across all buyer deals → sees every billing record.
-        if user.is_platform_admin or is_seller(user):
+        if seller_sees_all_deals(user, self.request):
             return qs
         user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
         return qs.filter(deal__company_id__in=user_company_ids)
@@ -193,7 +193,7 @@ class InvoiceViewSet(viewsets.ModelViewSet):
             .order_by("-created_at")
         )
         # Seller operates across all buyer deals → sees every billing record.
-        if user.is_platform_admin or is_seller(user):
+        if seller_sees_all_deals(user, self.request):
             return qs
         user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
         return qs.filter(deal__company_id__in=user_company_ids)
@@ -270,7 +270,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
         user = self.request.user
         qs = Payment.objects.select_related("invoice__deal__company").order_by("-paid_at")
         # Seller operates across all buyer deals → sees every billing record.
-        if user.is_platform_admin or is_seller(user):
+        if seller_sees_all_deals(user, self.request):
             return qs
         user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
         return qs.filter(invoice__deal__company_id__in=user_company_ids)
@@ -286,7 +286,7 @@ class ActViewSet(viewsets.ModelViewSet):
         user = self.request.user
         qs = Act.objects.select_related("deal__company", "contract", "invoice").order_by("-created_at")
         # Seller operates across all buyer deals → sees every billing record.
-        if user.is_platform_admin or is_seller(user):
+        if seller_sees_all_deals(user, self.request):
             return qs
         user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
         return qs.filter(deal__company_id__in=user_company_ids)
@@ -329,7 +329,7 @@ class FulfillmentViewSet(viewsets.ModelViewSet):
         user = self.request.user
         qs = Fulfillment.objects.select_related("deal__company").order_by("-updated_at")
         # Seller operates across all buyer deals → sees every billing record.
-        if user.is_platform_admin or is_seller(user):
+        if seller_sees_all_deals(user, self.request):
             return qs
         user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
         return qs.filter(deal__company_id__in=user_company_ids)

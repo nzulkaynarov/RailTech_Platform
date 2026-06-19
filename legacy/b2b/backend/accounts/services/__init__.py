@@ -20,12 +20,14 @@ from .auth import (
 from .kyc import bulk_verify_kyc, delete_kyc_document, upload_kyc_document, verify_company_kyc
 from .members import add_company_member, change_user_role, invite_workspace_member, toggle_user_active
 from .permissions import (
+    acting_context,
     assert_seller_can_operate,
     company_has_operational_subscription,
     is_member_of,
     is_platform_admin_viewer,
     is_seller,
     primary_seller_company_id,
+    seller_sees_all_deals,
 )
 from .profile import submit_company_profile
 from .subscriptions import (
@@ -36,6 +38,7 @@ from .subscriptions import (
 )
 
 __all__ = [
+    "acting_context",
     "add_company_member",
     "approve_role_application",
     "assert_seller_can_operate",
@@ -55,6 +58,7 @@ __all__ = [
     "is_platform_admin_viewer",
     "is_seller",
     "primary_seller_company_id",
+    "seller_sees_all_deals",
     "record_subscription_payment",
     "reject_role_application",
     "reset_password",

@@ -61,9 +61,20 @@ def _member(company, role_code, suffix):
 
 @pytest.fixture
 def seller(lookups):
-    """Seller company with one member per chain role."""
+    """Seller company with one member per chain role + an operational subscription
+    (send-to-client / contract / act are gated behind it — ADR-0002 / F0.2)."""
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from accounts.models import SupplierSubscription
+
     company = Company.objects.create(name="Seller LLC", inn="7700000001")
     company.types.add(CompanyType.objects.get(code="SUPPLIER"))
+    SupplierSubscription.objects.create(
+        company=company, plan="PREMIUM", status="ACTIVE",
+        valid_until=timezone.now().date() + timedelta(days=365),
+    )
     users = {code: _member(company, code, "1") for code in CHAIN_ROLES}
     return {"company": company, "users": users}
 
