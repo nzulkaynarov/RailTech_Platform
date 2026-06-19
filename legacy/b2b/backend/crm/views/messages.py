@@ -43,9 +43,19 @@ class MessageViewSet(viewsets.ModelViewSet):
             return Message.objects.none()
         user = self.request.user
         queryset = Message.objects.all().order_by("timestamp").select_related("sender", "deal")
-        if user.is_platform_admin:
+
+        from accounts.services.permissions import seller_sees_all_deals
+
+        # A seller acting in seller context sees the chat on every deal it works
+        # (parity with DealViewSet/QuoteViewSet). In BUYER context the same user is
+        # scoped to its own deals — no cross-tenant chat. Without the see-all branch
+        # a seller who isn't the specific deal.manager saw the deal + КП but NOT its
+        # chat. seller_sees_all_deals covers platform admin too.
+        if seller_sees_all_deals(user, self.request):
             return queryset
 
+        # Buyer: only messages on deals owned by a company the user is a member of
+        # (plus deals where they are personally the manager/client). No cross-tenant.
         user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
         return queryset.filter(
             Q(deal__company_id__in=user_company_ids) | Q(deal__manager_id=user.id) | Q(deal__client_id=user.id)
