@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { translateApiError } from '@/lib/apiError';
 import { ClipboardList, ArrowRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
 import { Badge } from '@/components/ui/badge';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -16,17 +18,15 @@ export function LeadsPage() {
   const { t } = useTranslation();
   const { data: leads, isLoading, isError, refetch } = useLeads();
   const convert = useConvertLead();
+  // Converting a lead creates a real deal — confirm before the one-way action.
+  const [convertTarget, setConvertTarget] = useState<Lead | null>(null);
 
-  const onConvert = async (lead: Lead) => {
-    if (!lead.id) return;
-    try {
-      const res = await convert.mutateAsync({ leadId: lead.id });
-      toast.success(`${t('leadsPage.converted')} #${res.deal_id}`);
-      // Jump to the deals section so the freshly created deal is visible.
-      window.location.hash = 'crm-deals';
-    } catch (e) {
-      toast.error(translateApiError(e));
-    }
+  const runConvert = async () => {
+    if (!convertTarget?.id) return;
+    const res = await convert.mutateAsync({ leadId: convertTarget.id });
+    toast.success(`${t('leadsPage.converted')} #${res.deal_id}`);
+    // Jump to the deals section so the freshly created deal is visible.
+    window.location.hash = 'crm-deals';
   };
 
   return (
@@ -75,7 +75,7 @@ export function LeadsPage() {
                       {!lead.is_processed && (
                         <Button
                           variant="ghost" size="sm"
-                          onClick={() => onConvert(lead)}
+                          onClick={() => setConvertTarget(lead)}
                           disabled={convert.isPending}
                         >
                           <ArrowRight className="mr-2 h-4 w-4" />
@@ -90,6 +90,17 @@ export function LeadsPage() {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmActionDialog
+        open={convertTarget != null}
+        onOpenChange={(o) => { if (!o) setConvertTarget(null); }}
+        title={t('confirmActions.convertLead.title')}
+        description={t('confirmActions.convertLead.description', { name: convertTarget?.name ?? '' })}
+        variant="primary"
+        confirmLabel={t('leadsPage.convert')}
+        onConfirm={runConvert}
+        translateError={(code) => translateApiError(code)}
+      />
     </PageShell>
   );
 }

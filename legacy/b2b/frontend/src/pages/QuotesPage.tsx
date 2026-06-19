@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
 import { translateApiError } from '@/lib/apiError';
 import { useUserStore } from '@/store/userStore';
 import { QuoteStatus } from '@/lib/codes';
@@ -49,6 +50,9 @@ export function QuotesPage() {
   const listParams = useListParams(['status'] as const, { defaultOrdering: '-created_at' });
   const [forceApproveTarget, setForceApproveTarget] = useState<Quote | null>(null);
   const [forceApproveReason, setForceApproveReason] = useState('');
+  // Send-to-client is irreversible + client-visible — confirm before firing.
+  // One dialog for the whole list; track which row's КП is being sent.
+  const [sendConfirmId, setSendConfirmId] = useState<number | null>(null);
 
   const title = isBuyer ? t('pages.quotes.buyerTitle') : t('pages.quotes.sellerTitle');
   const description = isBuyer ? t('pages.quotes.buyerDescription') : t('pages.quotes.sellerDescription');
@@ -65,15 +69,6 @@ export function QuotesPage() {
         { label: t('pages.quotes.stats.approved'), value: String(quotesList.filter(q => q.status_code === 'APPROVED').length) },
         { label: t('pages.quotes.stats.pipeline'), value: String(quotesList.filter(q => !['APPROVED', 'REJECTED', 'EXPIRED'].includes(q.status_code)).length) },
       ];
-
-  const handleSendToClient = async (id: number) => {
-    try {
-      await sendToClient.mutateAsync(id);
-      toast.success(t('pages.quotes.toast.sentSuccess', { id }));
-    } catch {
-      toast.error(t('pages.quotes.toast.actionError'));
-    }
-  };
 
   const handleDownloadPDF = async (id: number) => {
     try {
@@ -199,7 +194,7 @@ export function QuotesPage() {
                                   backend FSM rejects it. The actual chain steps live on the
                                   КП builder (deal detail). */}
                               {q.status_code === QuoteStatus.READY_TO_SEND && (
-                                <DropdownMenuItem onClick={() => handleSendToClient(q.id)}>
+                                <DropdownMenuItem onClick={() => setSendConfirmId(q.id)}>
                                   <Send className="mr-2 h-4 w-4" />
                                   {t('pages.quotes.actions.sendToClient')}
                                 </DropdownMenuItem>
@@ -269,6 +264,22 @@ export function QuotesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ConfirmActionDialog
+        open={sendConfirmId != null}
+        onOpenChange={(o) => { if (!o) setSendConfirmId(null); }}
+        title={t('confirmActions.sendQuote.title')}
+        description={t('confirmActions.sendQuote.description')}
+        variant="primary"
+        confirmLabel={t('pages.quotes.actions.sendToClient')}
+        onConfirm={async () => {
+          if (sendConfirmId == null) return;
+          const id = sendConfirmId;
+          await sendToClient.mutateAsync(id);
+          toast.success(t('pages.quotes.toast.sentSuccess', { id }));
+        }}
+        translateError={(code) => translateApiError(code)}
+      />
     </PageShell>
   );
 }
