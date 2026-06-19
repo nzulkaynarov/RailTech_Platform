@@ -200,6 +200,10 @@ class MeSerializer(serializers.ModelSerializer):
     # filter the BUYER/SELLER/MANUFACTURER context-switcher.
     can_sell = serializers.SerializerMethodField()
     can_buy = serializers.SerializerMethodField()
+    # Whether the seller company has an operational subscription. Lets the UI show
+    # a "subscription required" banner before the seller hits SUBSCRIPTION_REQUIRED
+    # on a write. None for non-sellers (banner only renders for can_sell users).
+    seller_subscription_operational = serializers.SerializerMethodField()
 
     class Meta:
         model = CustomUser
@@ -221,6 +225,7 @@ class MeSerializer(serializers.ModelSerializer):
             "is_platform_admin",
             "can_sell",
             "can_buy",
+            "seller_subscription_operational",
             "is_active",
             "primary_company",
             "last_login",
@@ -260,6 +265,14 @@ class MeSerializer(serializers.ModelSerializer):
         if obj.primary_company and obj.primary_company.verification_status:
             return obj.primary_company.verification_status.code
         return None
+
+    def get_seller_subscription_operational(self, obj):
+        from accounts.services import company_has_operational_subscription, primary_seller_company_id
+
+        company_id = primary_seller_company_id(obj)
+        if company_id is None:
+            return None
+        return company_has_operational_subscription(company_id)
 
 
 class KYCVerificationSerializer(serializers.Serializer):

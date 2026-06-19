@@ -24,6 +24,7 @@ export function SubscriptionStatusBanner({ onNavigate, onDismiss }: Subscription
   const { t } = useTranslation();
   const activeStatus = useUserStore((s) => s.activeStatus);
   const role = useUserStore((s) => s.role);
+  const sellerSubscriptionOperational = useUserStore((s) => s.sellerSubscriptionOperational);
   const { data: sub } = useMySubscription();
 
   const relevantForRole =
@@ -32,6 +33,19 @@ export function SubscriptionStatusBanner({ onNavigate, onDismiss }: Subscription
   const alert = useMemo(() => {
     if (role === 'ADMIN') return null;
     if (!relevantForRole) return null;
+
+    // Authoritative backend signal (/me seller_subscription_operational): the
+    // seller cannot perform paid writes (send КП, sign contract, issue act) —
+    // they return SUBSCRIPTION_REQUIRED. Covers the "no subscription at all"
+    // case the sub-detail branches below miss (they bail on `!sub`).
+    if (sellerSubscriptionOperational === false && !sub) {
+      return {
+        tone: 'destructive' as const,
+        icon: AlertCircle,
+        title: t('mySubscription.alerts.requiredTitle'),
+        hint: t('mySubscription.alerts.requiredHint'),
+      };
+    }
     if (!sub) return null;
 
     if (sub.status === 'SUSPENDED') {
@@ -71,7 +85,7 @@ export function SubscriptionStatusBanner({ onNavigate, onDismiss }: Subscription
       }
     }
     return null;
-  }, [role, relevantForRole, sub, t]);
+  }, [role, relevantForRole, sub, sellerSubscriptionOperational, t]);
 
   if (!alert) return null;
 

@@ -20,6 +20,7 @@ from .auth import (
 from .kyc import bulk_verify_kyc, delete_kyc_document, upload_kyc_document, verify_company_kyc
 from .members import add_company_member, change_user_role, invite_workspace_member, toggle_user_active
 from .permissions import (
+    assert_seller_can_operate,
     company_has_operational_subscription,
     is_member_of,
     is_platform_admin_viewer,
@@ -37,6 +38,7 @@ from .subscriptions import (
 __all__ = [
     "add_company_member",
     "approve_role_application",
+    "assert_seller_can_operate",
     "bulk_approve_role_applications",
     "bulk_reject_role_applications",
     "bulk_verify_kyc",

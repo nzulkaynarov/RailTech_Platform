@@ -119,3 +119,22 @@ def company_has_operational_subscription(company_id: int) -> bool:
     if sub is None:
         return False
     return sub.is_operational
+
+
+def assert_seller_can_operate(actor: "CustomUser") -> Optional[str]:
+    """Subscription gate for paid seller writes (send КП, sign contract, issue act).
+
+    Returns an error code string to abort with, or None if the actor may proceed:
+      * superuser → None (DBA emergency bypass, parity with the other guards)
+      * no seller company / no operational SupplierSubscription → "SUBSCRIPTION_REQUIRED"
+
+    Callers must already have established that `actor` is a seller (is_seller);
+    this layers the *paid* requirement on top. CLIENT/buyer actions never call it.
+    Documented in ADR-0002 ("subscription-gated seller writes").
+    """
+    if getattr(actor, "is_superuser", False):
+        return None
+    company_id = primary_seller_company_id(actor)
+    if company_id is None or not company_has_operational_subscription(company_id):
+        return "SUBSCRIPTION_REQUIRED"
+    return None
