@@ -27,6 +27,12 @@ export const ExcelUpload: React.FC<ExcelUploadProps> = ({ dealId, onUploadSucces
     const [isDispatching, setIsDispatching] = useState(false);
     const [isDragActive, setIsDragActive] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    // canRetry distinguishes a recoverable import failure (dispatch error or task
+    // FAILURE — same file can be re-sent) from a validation error (must pick a
+    // different file). lastFileRef keeps the dispatched file so retry needs no
+    // re-selection (it's cleared from `file` state once the import is enqueued).
+    const [canRetry, setCanRetry] = useState(false);
+    const lastFileRef = useRef<File | null>(null);
     const [taskId, setTaskId] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { addTask, tasks } = useTaskStore();
@@ -57,6 +63,7 @@ export const ExcelUpload: React.FC<ExcelUploadProps> = ({ dealId, onUploadSucces
         } else if (task.status === 'FAILURE') {
             const message = task.error || t('sourcing.uploadError');
             setError(message);
+            setCanRetry(true); // same file can be re-sent
             toast.error(message);
             setTaskId(null);
         }
@@ -74,6 +81,7 @@ export const ExcelUpload: React.FC<ExcelUploadProps> = ({ dealId, onUploadSucces
             : ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'].includes(candidate.type);
         if (!ok) {
             setError(t('sourcing.uploadError'));
+            setCanRetry(false); // wrong file type — retrying the same file won't help
             return false;
         }
         setError(null);
@@ -84,22 +92,32 @@ export const ExcelUpload: React.FC<ExcelUploadProps> = ({ dealId, onUploadSucces
         if (candidate && validateFile(candidate)) setFile(candidate);
     };
 
-    const handleUpload = async () => {
-        if (!file) return;
+    const dispatchImport = async (toSend: File) => {
+        lastFileRef.current = toSend;
         setIsDispatching(true);
         setError(null);
+        setCanRetry(false);
         try {
-            const result = await crmApi.importExcelToDeal(dealId, file, useAI);
+            const result = await crmApi.importExcelToDeal(dealId, toSend, useAI);
             addTask(result.task_id, 'excel_import');
             setTaskId(result.task_id); // success/failure handled by the polled status
             setFile(null);
         } catch (e) {
             const message = translateApiError(e);
             setError(message);
+            setCanRetry(true); // enqueue failed (e.g. broker down) — same file can be re-sent
             toast.error(message);
         } finally {
             setIsDispatching(false);
         }
+    };
+
+    const handleUpload = () => {
+        if (file) dispatchImport(file);
+    };
+
+    const handleRetry = () => {
+        if (lastFileRef.current) dispatchImport(lastFileRef.current);
     };
 
     const acceptText = useAI ? t('aiImport.acceptedAi') : '.xlsx, .xls';
@@ -189,7 +207,20 @@ export const ExcelUpload: React.FC<ExcelUploadProps> = ({ dealId, onUploadSucces
             {error && (
                 <Alert variant="destructive">
                     <AlertTriangle className="h-4 w-4" aria-hidden="true" />
-                    <AlertDescription>{error}</AlertDescription>
+                    <AlertDescription className="flex items-center justify-between gap-3">
+                        <span className="min-w-0">{error}</span>
+                        {canRetry && !isImporting && !isDispatching && lastFileRef.current && (
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={handleRetry}
+                                className="h-7 shrink-0 gap-1.5 text-xs"
+                            >
+                                <Upload className="h-3.5 w-3.5" aria-hidden="true" />
+                                {t('common.retry')}
+                            </Button>
+                        )}
+                    </AlertDescription>
                 </Alert>
             )}
         </div>

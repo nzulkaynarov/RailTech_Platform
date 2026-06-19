@@ -200,6 +200,13 @@ def check_overdue_deliveries(self) -> dict:
     max_retries=3,
     autoretry_for=(Exception,),
     retry_backoff=True,
+    # Financial task: ack only after completion and re-queue if the worker is
+    # lost mid-run, so a SIGKILL/OOM/redeploy never silently drops invoice+act
+    # creation. Safe because the task is idempotent (reuses existing Invoice/Act).
+    # NB: the per-task attribute is `reject_on_worker_lost` (the *setting* is
+    # `task_reject_on_worker_lost`).
+    acks_late=True,
+    reject_on_worker_lost=True,
 )
 def auto_invoice_on_closed_won(self, deal_id: int) -> dict:
     """Triggered after a deal transitions to CLOSED_WON: create invoice+act skeletons.
