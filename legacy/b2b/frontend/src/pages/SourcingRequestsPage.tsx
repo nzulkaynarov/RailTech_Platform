@@ -5,7 +5,7 @@ import { ClipboardList, FileSpreadsheet, ChevronRight } from 'lucide-react';
 import { useDeals, useDealStages } from '@/hooks/useCRM';
 import { usePageStats } from '@/hooks/usePageStats';
 import { useCurrencyStore } from '@/store/currencyStore';
-import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
+import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import { Toolbar, Pager, useListParams, applyListParams } from '@/components/DataTable';
 import { DealStage } from '@/lib/codes';
 import type { Deal } from '@/api/crmApi';
@@ -15,7 +15,7 @@ const SOURCING_STAGES = new Set<string>([DealStage.SOURCING, DealStage.CALCULATI
 export function SourcingRequestsPage({ onNavigate }: { onNavigate?: (t: string) => void }) {
   const { t } = useTranslation();
   const { data: ps } = usePageStats();
-  const { data: deals, isLoading } = useDeals();
+  const { data: deals, isLoading, isError, refetch } = useDeals();
   const { data: stages } = useDealStages();
   const formatCurrency = useCurrencyStore((s) => s.format);
   const sourcingStats = ps?.sourcing;
@@ -65,6 +65,7 @@ export function SourcingRequestsPage({ onNavigate }: { onNavigate?: (t: string) 
           },
         });
         if (isLoading) return <LoadingRows rows={3} />;
+        if (isError) return <ErrorState onRetry={refetch} />;
         if (!pageItems.length) return <EmptyState icon={<ClipboardList className="h-5 w-5" />} message={t('pages.common.noData')} />;
         return (
           <>

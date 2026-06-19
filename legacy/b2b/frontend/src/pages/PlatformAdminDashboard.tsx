@@ -274,7 +274,9 @@ export default function PlatformAdminDashboard({ onNavigate }: PlatformAdminDash
       subscription_expiring: 'admin-subscriptions',
       invoice_overdue: 'admin-deals',
       support_urgent: 'admin-support',
-      supplier_bid_pending: 'admin-bids',
+      // NOTE: there is no 'supplier_bid_pending' entry — the SupplierBid model
+      // was removed (crm migration 0015) and no triage collector emits that
+      // queue_type any more. Anything unmapped falls through to 'admin-companies'.
     };
     onNavigate(map[item.queue_type] ?? 'admin-companies');
   }

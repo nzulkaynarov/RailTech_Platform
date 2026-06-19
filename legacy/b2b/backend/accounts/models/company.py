@@ -60,6 +60,7 @@ class Company(models.Model):
     )
     is_verified = models.BooleanField(
         default=False,
+        db_index=True,
         verbose_name=_("Верифицирован"),
         help_text=_("Компания прошла базовую проверку RailTech"),
     )

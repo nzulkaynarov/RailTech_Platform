@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { downloadFile } from '@/lib/download';
+import { translateApiError } from '@/lib/apiError';
 import {
   ShieldCheck, FileText, Upload, Download, Trash2,
   BadgeCheck, XCircle, FileQuestion,
@@ -356,6 +357,7 @@ function DetailSheet({
           confirmLabel={t('common.approve')}
           variant="primary"
           onConfirm={(p) => runVerify('L2_VERIFIED', p.reason)}
+          translateError={(code) => translateApiError(code)}
         />
         <ConfirmActionDialog
           open={confirmAction === 'upgrade-l3'}
@@ -368,6 +370,7 @@ function DetailSheet({
           confirmLabel={t('common.confirm')}
           variant="primary"
           onConfirm={(p) => runVerify('L3_CONTRACTED', p.reason)}
+          translateError={(code) => translateApiError(code)}
         />
         <ConfirmActionDialog
           open={confirmAction === 'revoke-l1'}
@@ -384,6 +387,7 @@ function DetailSheet({
           confirmLabel={t('common.revoke')}
           variant="destructive"
           onConfirm={(p) => runVerify('L1_UNVERIFIED', p.reason)}
+          translateError={(code) => translateApiError(code)}
         />
       </SheetContent>
     </Sheet>
@@ -609,6 +613,7 @@ export function AdminKYCPage() {
             ? runRowApprove(confirmRow.company, p.reason)
             : Promise.resolve()
         }
+        translateError={(code) => translateApiError(code)}
       />
       <ConfirmActionDialog
         open={confirmRow?.kind === 'revoke-l1'}
@@ -638,6 +643,7 @@ export function AdminKYCPage() {
         ]}
         confirmLabel={t('common.revoke')}
         variant="destructive"
+        translateError={(code) => translateApiError(code)}
         onConfirm={(p) =>
           confirmRow?.kind === 'revoke-l1'
             ? runRowRevoke(confirmRow.company, p.reason)
@@ -664,6 +670,7 @@ export function AdminKYCPage() {
             ? runBulkApprove(confirmBulk.companies, p.reason)
             : Promise.resolve()
         }
+        translateError={(code) => translateApiError(code)}
       />
 
       <Separator />

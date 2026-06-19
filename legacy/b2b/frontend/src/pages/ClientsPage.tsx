@@ -6,7 +6,7 @@ import {
 } from '@/components/ui/table';
 import { Users, Check, Clock } from 'lucide-react';
 import { useCompanies } from '@/hooks/useAccounts';
-import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
+import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/DataTable';
 import { VerificationStatus } from '@/lib/codes';
 import type { Company } from '@/api/accountsApi';
@@ -23,7 +23,7 @@ const KYC_OPTIONS = [
 export function ClientsPage() {
   const { t } = useTranslation();
   const listParams = useListParams(['kyc'] as const, { defaultOrdering: 'name' });
-  const { data: companies, isLoading } = useCompanies();
+  const { data: companies, isLoading, isError, refetch } = useCompanies();
 
   return (
     <PageShell
@@ -67,6 +67,7 @@ export function ClientsPage() {
               },
             });
             if (isLoading) return <LoadingRows rows={5} />;
+            if (isError) return <ErrorState onRetry={refetch} />;
             if (!pageItems.length) return <EmptyState icon={<Users className="h-5 w-5" />} message={t('pages.common.noData')} />;
             return (
             <>

@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AdminDataTable, useAdminTableQueryState } from '@/components/Admin/AdminDataTable';
 import { AdminActivityTimeline } from '@/components/Admin/AdminActivityTimeline';
 import { DetailKPIGrid } from '@/components/Admin/DetailKPIGrid';
+import { translateApiError } from '@/lib/apiError';
 
 const KYC_BADGE: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; labelKey: string }> = {
   L1_UNVERIFIED: { variant: 'secondary', labelKey: 'kycManager.status.P_PENDING' },
@@ -66,8 +67,8 @@ function MembersPanel({ companyId }: { companyId: number }) {
       await inviteMut.mutateAsync({ companyId, email, role });
       toast.success(t('adminCompanies.invited'));
       setEmail('');
-    } catch {
-      toast.error(t('adminCompanies.inviteFailed'));
+    } catch (e) {
+      toast.error(translateApiError(e));
     }
   };
 
@@ -224,8 +225,8 @@ function CompanyFormSheet({
         toast.success(t('adminCompanies.created'));
       }
       onOpenChange(false);
-    } catch {
-      toast.error(t('adminCompanies.saveFailed'));
+    } catch (e) {
+      toast.error(translateApiError(e));
     }
   };
 
@@ -385,8 +386,8 @@ export function AdminCompaniesPage() {
       await deleteMut.mutateAsync(deleteTarget.id);
       toast.success(t('adminCompanies.deleted'));
       setDeleteTarget(null);
-    } catch {
-      toast.error(t('adminCompanies.deleteFailed'));
+    } catch (e) {
+      toast.error(translateApiError(e));
     }
   };
 

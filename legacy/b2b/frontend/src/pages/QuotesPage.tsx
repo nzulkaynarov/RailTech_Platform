@@ -30,13 +30,13 @@ import { sumMoney } from '@/utils/decimal';
 import { crmApi } from '@/api/crmApi';
 import type { Quote } from '@/api/crmApi';
 import { toast } from 'sonner';
-import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
+import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/DataTable';
 
 export function QuotesPage() {
   const { t } = useTranslation();
   const { activeStatus, role } = useUserStore();
-  const { data: quotes, isLoading } = useQuotes();
+  const { data: quotes, isLoading, isError, refetch } = useQuotes();
   const sendToClient = useSendQuoteToClient();
   const generatePDF = useGenerateQuotePDF();
   const forceApproveMut = useForceApproveQuote();
@@ -156,6 +156,7 @@ export function QuotesPage() {
               },
             });
             if (isLoading) return <LoadingRows rows={5} />;
+            if (isError) return <ErrorState onRetry={refetch} />;
             if (!pageItems.length) return <EmptyState icon={<Calculator className="h-5 w-5" />} message={t('pages.common.noData')} />;
             return (
             <>

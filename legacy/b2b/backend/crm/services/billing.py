@@ -1,9 +1,10 @@
 from typing import Optional, Tuple
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
 
 from accounts.models import CustomUser
 
+from ..constants import ActStatusCode, ContractStatusCode, InvoiceStatusCode
 from ..models import ActivityLog
 from ._params import PaymentData
 
@@ -53,7 +54,7 @@ def generate_invoice_from_contract(
         return None, "MEMBER_REQUIRED_FOR_ACTION"
     contract = Contract.objects.select_related("quote__deal").get(pk=contract_id)
 
-    if contract.status != "SIGNED":
+    if contract.status != ContractStatusCode.SIGNED:
         return None, "INVOICE_REQUIRES_SIGNED_CONTRACT"
 
     # Idempotency: one signed contract yields one invoice. Re-issuing would
@@ -67,7 +68,7 @@ def generate_invoice_from_contract(
         deal=contract.deal,
         contract=contract,
         number=_next_invoice_number(),
-        status="ISSUED",
+        status=InvoiceStatusCode.ISSUED,
         issued_at=timezone.now().date(),
         due_date=(timezone.now() + timedelta(days=due_days)).date(),
         subtotal_excl_vat=quote.subtotal_excl_vat,
@@ -164,7 +165,7 @@ def record_payment(
     # Payment is recorded by the buyer side of the deal -- must be member w/ can_buy.
     if not (getattr(actor, "is_superuser", False) or is_member_of(actor, invoice.deal.company_id, capability="buy")):
         return None, "MEMBER_REQUIRED_FOR_ACTION"
-    if invoice.status in {"CANCELLED"}:
+    if invoice.status in {InvoiceStatusCode.CANCELLED}:
         return None, "INVOICE_CANCELLED"
     amount_d = D(str(amount))
     if amount_d <= 0:
@@ -182,21 +183,31 @@ def record_payment(
         if existing is not None:
             return existing, None
 
-    payment = Payment.objects.create(
-        invoice=invoice,
-        amount=amount_d,
-        method=method,
-        paid_at=paid_at,
-        reference=reference,
-        proof_file=proof_file,
-        recorded_by=actor,
-    )
+    try:
+        # Savepoint so a unique-constraint hit (concurrent same-reference
+        # insert that slipped past the check above) rolls back cleanly without
+        # poisoning the outer transaction.
+        with transaction.atomic():
+            payment = Payment.objects.create(
+                invoice=invoice,
+                amount=amount_d,
+                method=method,
+                paid_at=paid_at,
+                reference=reference,
+                proof_file=proof_file,
+                recorded_by=actor,
+            )
+    except IntegrityError:
+        existing = Payment.objects.filter(invoice=invoice, reference=reference).first()
+        if existing is not None:
+            return existing, None
+        raise
 
     invoice.amount_paid = (invoice.amount_paid or D("0")) + amount_d
     if invoice.amount_paid >= invoice.total_incl_vat:
-        invoice.status = "PAID"
+        invoice.status = InvoiceStatusCode.PAID
     else:
-        invoice.status = "PARTIAL"
+        invoice.status = InvoiceStatusCode.PARTIAL
     invoice.save(update_fields=["amount_paid", "status", "updated_at"])
 
     marker = "[MANUAL_MODE] " if manual else ""
@@ -226,7 +237,7 @@ def generate_act(
     if actor is not None and not (getattr(actor, "is_superuser", False) or is_seller(actor)):
         return None, "MEMBER_REQUIRED_FOR_ACTION"
     invoice = Invoice.objects.select_related("contract", "deal").get(pk=invoice_id)
-    if invoice.status not in {"PAID", "PARTIAL", "ISSUED"}:
+    if invoice.status not in {InvoiceStatusCode.PAID, InvoiceStatusCode.PARTIAL, InvoiceStatusCode.ISSUED}:
         return None, "ACT_INVALID_INVOICE_STATUS"
 
     act = Act.objects.create(
@@ -234,7 +245,7 @@ def generate_act(
         contract=invoice.contract,
         invoice=invoice,
         number=_next_act_number(),
-        status="ISSUED",
+        status=ActStatusCode.ISSUED,
         issued_at=timezone.now().date(),
         total_amount=invoice.total_incl_vat,
         created_by=actor,
@@ -274,9 +285,9 @@ def sign_act(act_id: int, actor: CustomUser, signed_file=None) -> Tuple[Optional
     if is_platform_admin_viewer(actor):
         return None, "ADMIN_VIEWER_CANNOT_ACT"
     act = Act.objects.select_for_update().get(pk=act_id)
-    if act.status != "ISSUED":
+    if act.status != ActStatusCode.ISSUED:
         return None, "ACT_SIGN_NOT_ALLOWED"
-    act.status = "SIGNED"
+    act.status = ActStatusCode.SIGNED
     act.signed_at = timezone.now()
     if signed_file is not None:
         act.signed_file = signed_file

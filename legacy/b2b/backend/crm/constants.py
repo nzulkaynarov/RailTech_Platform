@@ -30,3 +30,44 @@ class QuoteStatusCode(models.TextChoices):
     SENT = "SENT", "Отправлено клиенту"
     APPROVED = "APPROVED", "Одобрено"
     REJECTED = "REJECTED", "Отклонено"
+
+
+# ── Post-sale status codes ──────────────────────────────────────────────────
+# These mirror the CharField(choices=...) values on the Contract / Invoice /
+# Act / Fulfillment models. The models keep their inline choices for the admin
+# UI; services/tasks reference these constants instead of bare string literals
+# so a typo is an AttributeError, not a silent runtime miss. Values MUST stay
+# byte-for-byte identical to the model choices.
+
+
+class ContractStatusCode(models.TextChoices):
+    DRAFT = "DRAFT", "Черновик"
+    PENDING_CLIENT = "PENDING_CLIENT", "Ожидает подписи клиента"
+    PENDING_MANAGER = "PENDING_MANAGER", "Ожидает подписи менеджера"
+    SIGNED = "SIGNED", "Подписан сторонами"
+    CANCELLED = "CANCELLED", "Отменён"
+
+
+class InvoiceStatusCode(models.TextChoices):
+    DRAFT = "DRAFT", "Черновик"
+    ISSUED = "ISSUED", "Выставлен"
+    PARTIAL = "PARTIAL", "Частично оплачен"
+    PAID = "PAID", "Оплачен"
+    OVERDUE = "OVERDUE", "Просрочен"
+    CANCELLED = "CANCELLED", "Отменён"
+
+
+class ActStatusCode(models.TextChoices):
+    DRAFT = "DRAFT", "Черновик"
+    ISSUED = "ISSUED", "Выставлен"
+    SIGNED = "SIGNED", "Подписан"
+    CANCELLED = "CANCELLED", "Отменён"
+
+
+class FulfillmentStatusCode(models.TextChoices):
+    PENDING = "PENDING", "Ожидает отгрузки"
+    SHIPPED = "SHIPPED", "Отгружено"
+    IN_TRANSIT = "IN_TRANSIT", "В пути"
+    DELIVERED = "DELIVERED", "Доставлено"
+    ACCEPTED = "ACCEPTED", "Принято клиентом"
+    DISPUTED = "DISPUTED", "Спорная ситуация"

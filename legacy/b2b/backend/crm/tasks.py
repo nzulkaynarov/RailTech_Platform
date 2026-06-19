@@ -18,6 +18,8 @@ from django.utils import timezone
 
 from core.storage import get_private_storage
 
+from .constants import ActStatusCode, ContractStatusCode, FulfillmentStatusCode, InvoiceStatusCode
+
 logger = logging.getLogger(__name__)
 
 
@@ -167,7 +169,11 @@ def check_overdue_deliveries(self) -> dict:
     today = timezone.now().date()
     overdue_qs = Fulfillment.objects.filter(
         expected_delivery_date__lt=today,
-        status__in=["PENDING", "SHIPPED", "IN_TRANSIT"],
+        status__in=[
+            FulfillmentStatusCode.PENDING,
+            FulfillmentStatusCode.SHIPPED,
+            FulfillmentStatusCode.IN_TRANSIT,
+        ],
     ).select_related("deal__manager")
     warn_type = NotificationType.objects.filter(code="WARNING").first()
     count = 0
@@ -211,7 +217,7 @@ def auto_invoice_on_closed_won(self, deal_id: int) -> dict:
         deal = Deal.objects.get(pk=deal_id)
     except Deal.DoesNotExist:
         return {"error": "deal not found"}
-    contract = deal.contracts.filter(status="SIGNED").order_by("-created_at").first()
+    contract = deal.contracts.filter(status=ContractStatusCode.SIGNED).order_by("-created_at").first()
     result = {"deal_id": deal_id, "invoice": None, "act": None, "fulfillment": True, "idempotent_reuse": False}
     ensure_fulfillment(deal)
     if not contract:
@@ -223,7 +229,7 @@ def auto_invoice_on_closed_won(self, deal_id: int) -> dict:
             deal=deal,
             contract=contract,
         )
-        .exclude(status="CANCELLED")
+        .exclude(status=InvoiceStatusCode.CANCELLED)
         .order_by("-created_at")
         .first()
     )
@@ -240,7 +246,7 @@ def auto_invoice_on_closed_won(self, deal_id: int) -> dict:
         Act.objects.filter(
             invoice=invoice,
         )
-        .exclude(status="CANCELLED")
+        .exclude(status=ActStatusCode.CANCELLED)
         .order_by("-created_at")
         .first()
     )

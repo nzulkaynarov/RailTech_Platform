@@ -50,14 +50,6 @@ export const FulfillmentStatus = {
   DISPUTED: 'DISPUTED',
 } as const;
 
-export const SupplierBidStatus = {
-  DRAFT: 'DRAFT',
-  SUBMITTED: 'SUBMITTED',
-  ACCEPTED: 'ACCEPTED',
-  REJECTED: 'REJECTED',
-  WITHDRAWN: 'WITHDRAWN',
-} as const;
-
 export const CompanyType = {
   CLIENT: 'CLIENT',
   SUPPLIER: 'SUPPLIER',

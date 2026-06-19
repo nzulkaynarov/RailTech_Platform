@@ -104,6 +104,7 @@ class SupplierOffer(models.Model):
     )
     is_active = models.BooleanField(
         default=True,
+        db_index=True,
         verbose_name=_("Активен"),
         help_text=_("Неактивные офферы не отображаются при выборе"),
     )

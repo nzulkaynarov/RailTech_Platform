@@ -8,7 +8,7 @@ B2B marketplace for railway equipment (Uzbekistan). Monorepo: Django backend + R
 
 ## Tech Stack
 
-- **Backend:** Django 6.0, DRF, Daphne (ASGI), Channels (WebSocket), Celery + Redis, PostgreSQL (Neon Cloud)
+- **Backend:** Django 6.0, DRF, Daphne (ASGI), Channels (WebSocket), Celery + Redis, PostgreSQL 17 (self-hosted on a dedicated DB-VPS; Neon retired 2026-06-19)
 - **Frontend:** React 18, TypeScript 5.6, Vite 7, Tailwind CSS 4, shadcn/ui, Zustand 5, React Query 5, i18next (RU/EN)
 - **Infra:** Docker Compose (dev), Nginx (prod), MinIO (S3), GitHub Actions CI
 - **Auth:** JWT (simplejwt) — access 30min, refresh 7d, rotation enabled
@@ -69,8 +69,9 @@ Docs/                       # Mockups, presentations, UI audit (legacy path)
 
 ## Database
 
-- **External:** Neon Cloud PostgreSQL (no local postgres in docker-compose)
-- **Connection:** `DATABASE_URL` env var parsed via `urlparse`, fallback to individual `POSTGRES_*` vars
+- **Prod:** self-hosted **PostgreSQL 17** on a dedicated **DB-VPS** (private `10.0.0.2`, reached from the app-VPS `10.0.0.3` over a WireGuard private network; `sslmode=require`). Native apt/PGDG install, NOT Docker. **Neon Cloud retired (2026-06-19).** Two DBs: `railtech` (prod) and `railtech_test` (testing). Prod `DATABASE_URL` lives ONLY in the GitHub Actions production secret. Daily `pg_dump` backups via cron on the DB-VPS → `/var/backups/railtech-db/` (14-day retention). See `project_db_vps_migration_2026_06_19` memory + [[reference-vps-b2b]].
+- **Local dev:** a local **Postgres container** is added via `docker-compose.override.yml` (gitignored, auto-loaded by `make up`; prod/staging use explicit `-f ...prod.yml` so never load it). Backend reaches it as `db:5432`; `.env` → `DATABASE_URL=postgresql://railtech:railtech@db:5432/railtech?sslmode=disable`. Alternatively tunnel to the remote `railtech_test` through the prod-VPS (commented in `.env`).
+- **Connection:** `DATABASE_URL` env var parsed via `urlparse` (query params → DB `OPTIONS`, `sslmode` defaults to `require`), fallback to individual `POSTGRES_*` vars
 - **Auth user:** `accounts.CustomUser` (email login)
 
 ## API Surface (prefix: `/api/v1/`)
@@ -201,7 +202,7 @@ make clean               # remove all containers, volumes, cache (DESTRUCTIVE)
 
 ## Testing
 
-- **Backend:** pytest + pytest-django, markers: slow, integration, unit; coverage threshold: 30% enforced on CI (`--cov-fail-under=30`), aspirational target 50%+. Current state (2026-04-27): 79 tests collected, ~30% coverage. Local runs against Neon Cloud may hang on `DROP DATABASE` if Daphne/Celery workers hold connections — `pg_terminate_backend` + `DROP DATABASE IF EXISTS test_neondb` then `pytest --create-db` clears it. CI uses a clean Neon project + the `Wake up Neon database` step.
+- **Backend:** pytest + pytest-django, markers: slow, integration, unit; coverage threshold: 30% enforced on CI (`--cov-fail-under=30`), aspirational target 50%+. Current state (2026-04-27): 79 tests collected, ~30% coverage. Local tests run against the local Docker Postgres (`db` service from `docker-compose.override.yml`, `sslmode=disable`) — fast and isolated, no remote DROP-hang. CI uses an ephemeral Postgres service container.
 - **Frontend:** vitest + @testing-library/react + jsdom (5 store/hook unit tests). Run locally — frontend Docker container is the prod nginx build, so `npm test` lives on the developer machine, not in Compose.
 - **CI:** GitHub Actions — 7 jobs (i18n-symmetry, backend-lint, backend-test, frontend-lint, frontend-build, docker-build, security)
 - **Known test debt** (audit 2026-04-27, not blocking but listed for sprint planning):
@@ -402,10 +403,10 @@ Transformation happens in: `userStore.loadFromAuth()` and DRF serializers.
 
 - Frontend is a **production build** served by nginx — `import.meta.env.DEV` is always `false` in Docker
 - Auth URL routes (`/`, `/register`, `/setup-password`) handled by `useAuthRoute()` in App.tsx; main app pages use `#hash` navigation
-- `DATABASE_URL` query params (like `channel_binding=require`) are passed as DB OPTIONS
+- `DATABASE_URL` query params (like `sslmode=require`) are passed as DB OPTIONS
 - Volume mount `./backend:/app` enables hot-reload for backend; frontend needs rebuild (`docker compose up -d --build frontend`)
 - `data/products.ts` exports an EMPTY array — it's legacy, use `catalogApi` for real data
-- **Neon Cloud sleep** — free Neon projects suspend after inactivity. If backend shows "Connection refused", check Neon Console, wake the project, then `docker compose restart backend celery-worker celery-beat`. `dj-db-conn-pool` caches dead connections — only a container restart resets the pool
+- **DB-VPS connectivity** — prod DB is on a separate VPS reached over WireGuard (`10.0.0.2`). If backend shows "Connection refused" / "no pg_hba entry", check: WireGuard up on both boxes, Postgres online (`systemctl status postgresql` on the DB-VPS), and `pg_hba.conf` allows the app-VPS IP `10.0.0.3` for the role. `dj-db-conn-pool` caches dead connections — a container restart (`docker compose restart backend celery-worker celery-beat`) resets the pool
 - **Superadmin is NOT auto-created** — must run `docker compose exec backend python manage.py init_superadmin` after migrations. Credentials come from `.env` (`SUPERADMIN_EMAIL`/`SUPERADMIN_PASSWORD`). Don't hardcode passwords in CLAUDE.md or README — always reference `.env`
 - **No demo/simulation shortcuts** — no demo onboarding, no hardcoded test flows, no bypass of backend. For testing use real registration flow or create users via `init_superadmin`. Admin operations go through Django Unfold at `/admin/`
 - **Don't assume code structure** — always read files before editing. Wrong assumptions (missing imports, wrong types, demo code bypassing backend) cost rebuild cycles. Verify imports exist, types match, and patterns match current code

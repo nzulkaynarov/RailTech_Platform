@@ -6,24 +6,35 @@ This middleware reads the token from the query string (`?token=...`)
 and populates scope['user'] for use inside AsyncWebsocketConsumers.
 """
 
+import logging
 from urllib.parse import parse_qs
 
 from channels.db import database_sync_to_async
 from channels.middleware import BaseMiddleware
 
+logger = logging.getLogger(__name__)
+
 
 @database_sync_to_async
 def get_user_from_token(token_key):
-    try:
-        from django.contrib.auth.models import AnonymousUser
-        from rest_framework_simplejwt.tokens import AccessToken
+    from django.contrib.auth.models import AnonymousUser
+    from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 
-        from accounts.models import CustomUser
+    from accounts.models import CustomUser
+
+    try:
+        from rest_framework_simplejwt.tokens import AccessToken
 
         access_token = AccessToken(token_key)
         user_id = access_token["user_id"]
         return CustomUser.objects.get(id=user_id)
+    except (InvalidToken, TokenError, KeyError, CustomUser.DoesNotExist):
+        # Expired/invalid token or unknown user → anonymous, expected path.
+        return AnonymousUser()
     except Exception:
+        # Unexpected failure (e.g. DB error): log it instead of silently
+        # masking it as "no token", then still fail closed to anonymous.
+        logger.exception("Unexpected error authenticating WebSocket token")
         return AnonymousUser()
 
 

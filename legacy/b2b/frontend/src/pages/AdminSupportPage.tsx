@@ -40,6 +40,7 @@ import {
     Toolbar, SortableHead, Pager, useListParams,
 } from '@/components/DataTable';
 import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
+import { translateApiError } from '@/lib/apiError';
 
 const STATUS_FILTERS: SupportTicketStatus[] = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
 const PRIORITY_FILTERS: SupportTicketPriority[] = ['LOW', 'NORMAL', 'HIGH', 'URGENT'];
@@ -89,8 +90,8 @@ function TicketDetailSheet({
             setText('');
             setIsInternal(false);
             toast.success(t('admin.support.toast.messageSent'));
-        } catch {
-            toast.error(t('common.error'));
+        } catch (e) {
+            toast.error(translateApiError(e));
         }
     };
 
@@ -99,8 +100,8 @@ function TicketDetailSheet({
         try {
             await changeStatus.mutateAsync({ ticketId, status });
             toast.success(t('admin.support.toast.statusChanged'));
-        } catch {
-            toast.error(t('common.error'));
+        } catch (e) {
+            toast.error(translateApiError(e));
         }
     };
 
@@ -109,8 +110,8 @@ function TicketDetailSheet({
         try {
             await assign.mutateAsync({ ticketId });
             toast.success(t('admin.support.toast.assigned'));
-        } catch {
-            toast.error(t('common.error'));
+        } catch (e) {
+            toast.error(translateApiError(e));
         }
     };
 
