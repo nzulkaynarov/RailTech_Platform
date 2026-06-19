@@ -1,3 +1,5 @@
+import pghistory
+import pgtrigger
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -14,6 +16,10 @@ from master_data.models import Currency
 # ────────────────────────────────────────────
 
 
+@pghistory.track(
+    pghistory.RowEvent("contract.snapshot", row=pghistory.New, operation=pgtrigger.Insert | pgtrigger.Update),
+    pghistory.RowEvent("contract.before_update", row=pghistory.Old, operation=pgtrigger.Update),
+)
 class Contract(models.Model):
     """Контракт, формируемый из одобренного Quote. Двусторонняя подпись."""
 
@@ -27,7 +33,7 @@ class Contract(models.Model):
 
     deal = models.ForeignKey(
         "crm.Deal",
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,  # financial record must survive deal deletion
         related_name="contracts",
         verbose_name=_("Сделка"),
     )

@@ -1,5 +1,7 @@
 from decimal import Decimal
 
+import pghistory
+import pgtrigger
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -11,6 +13,12 @@ from master_data.models import Currency
 # ────────────────────────────────────────────
 
 
+# Financial records are the most audit-critical entities — track an immutable
+# row-history (snapshot on insert/update + the pre-update row) like Deal/Quote do.
+@pghistory.track(
+    pghistory.RowEvent("invoice.snapshot", row=pghistory.New, operation=pgtrigger.Insert | pgtrigger.Update),
+    pghistory.RowEvent("invoice.before_update", row=pghistory.Old, operation=pgtrigger.Update),
+)
 class Invoice(models.Model):
     """Инвойс на оплату по контракту."""
 
@@ -25,7 +33,10 @@ class Invoice(models.Model):
 
     deal = models.ForeignKey(
         "crm.Deal",
-        on_delete=models.CASCADE,
+        # PROTECT, not CASCADE: a financial record must never be silently deleted
+        # by removing its deal. Deals are deletable only while DRAFT (no invoices),
+        # so this never blocks a legitimate deletion — it's a safety net.
+        on_delete=models.PROTECT,
         related_name="invoices",
         verbose_name=_("Сделка"),
     )
@@ -120,6 +131,10 @@ class InvoiceItem(models.Model):
         return f"{self.description} x{self.quantity}"
 
 
+@pghistory.track(
+    pghistory.RowEvent("payment.snapshot", row=pghistory.New, operation=pgtrigger.Insert | pgtrigger.Update),
+    pghistory.RowEvent("payment.before_update", row=pghistory.Old, operation=pgtrigger.Update),
+)
 class Payment(models.Model):
     """Платёж по инвойсу."""
 
@@ -132,7 +147,9 @@ class Payment(models.Model):
 
     invoice = models.ForeignKey(
         "crm.Invoice",
-        on_delete=models.CASCADE,
+        # PROTECT: a recorded payment must outlive deletion of its invoice
+        # (invoices are not deleted in normal flow; this prevents silent loss).
+        on_delete=models.PROTECT,
         related_name="payments",
         verbose_name=_("Инвойс"),
     )
@@ -180,6 +197,10 @@ class Payment(models.Model):
         return f"Payment {self.amount} on {self.paid_at}"
 
 
+@pghistory.track(
+    pghistory.RowEvent("act.snapshot", row=pghistory.New, operation=pgtrigger.Insert | pgtrigger.Update),
+    pghistory.RowEvent("act.before_update", row=pghistory.Old, operation=pgtrigger.Update),
+)
 class Act(models.Model):
     """Акт выполненных работ / приёма-передачи."""
 
@@ -192,7 +213,7 @@ class Act(models.Model):
 
     deal = models.ForeignKey(
         "crm.Deal",
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,  # financial record must survive deal deletion
         related_name="acts",
         verbose_name=_("Сделка"),
     )
