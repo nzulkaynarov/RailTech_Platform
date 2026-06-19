@@ -79,6 +79,13 @@ export const useAuthStore = create<AuthState>()(
             },
 
             logout: () => {
+                // Best-effort server-side revocation: blacklist the refresh token
+                // so a stolen copy can't mint new access tokens for its 7d life.
+                // Fire-and-forget — never block local logout on the network.
+                const { refreshToken } = get();
+                if (refreshToken) {
+                    apiClient.post('auth/logout/', { refresh: refreshToken }).catch(() => { /* noop */ });
+                }
                 set({
                     user: null,
                     role: null,

@@ -14,6 +14,7 @@ from accounts.serializers import (
 from accounts.services import (
     create_pending_user,
     reset_password,
+    revoke_user_refresh_tokens,
     send_password_reset_email,
     submit_company_profile,
     verify_and_setup_password,
@@ -175,3 +176,37 @@ class MeView(RetrieveAPIView):
 
     def get_object(self):
         return self.request.user
+
+
+@extend_schema(
+    summary="Log out (revoke refresh token)",
+    description=(
+        "Blacklist the supplied refresh token so it can no longer be used to mint "
+        "access tokens. Pass `all: true` to revoke every refresh token for the "
+        "current user (log out of all devices). Always succeeds (idempotent) — a "
+        "missing/already-invalid token still returns 205."
+    ),
+    tags=["Auth"],
+)
+class LogoutView(views.APIView):
+    """POST /api/v1/auth/logout/ — token revocation (was missing; access tokens
+    are short-lived but a stolen refresh token lived for 7d with no kill switch)."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        from rest_framework_simplejwt.exceptions import TokenError
+        from rest_framework_simplejwt.tokens import RefreshToken
+
+        if request.data.get("all"):
+            revoke_user_refresh_tokens(request.user)
+            return Response(status=status.HTTP_205_RESET_CONTENT)
+
+        token = request.data.get("refresh")
+        if token:
+            try:
+                RefreshToken(token).blacklist()
+            except TokenError:
+                # Already expired/blacklisted/invalid — logout is idempotent.
+                pass
+        return Response(status=status.HTTP_205_RESET_CONTENT)
