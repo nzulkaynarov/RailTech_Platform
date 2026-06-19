@@ -26,7 +26,7 @@ def generate_contract_from_quote(
     notes: str = "",
 ) -> Tuple[Optional["Contract"], Optional[str]]:  # noqa: F821
     """Create a Contract tied to an approved Quote, render its PDF."""
-    from accounts.services import is_platform_admin_viewer, is_seller
+    from accounts.services import assert_seller_can_operate, is_platform_admin_viewer, is_seller
 
     from ..models import Contract
 
@@ -35,6 +35,9 @@ def generate_contract_from_quote(
     # Generating the contract (from the approved КП) is a seller-side action.
     if actor is not None and not (getattr(actor, "is_superuser", False) or is_seller(actor)):
         return None, "MEMBER_REQUIRED_FOR_ACTION"
+    # Paid-seller gate: a seller without an operational subscription cannot transact.
+    if actor is not None and (sub_err := assert_seller_can_operate(actor)):
+        return None, sub_err
     quote = Quote.objects.select_related("deal__company", "status").get(pk=quote_id)
 
     if not quote.status or quote.status.code not in {QuoteStatusCode.APPROVED, QuoteStatusCode.SENT}:
@@ -162,7 +165,7 @@ def sign_contract_by_manager(
     """
     from django.utils import timezone
 
-    from accounts.services import is_platform_admin_viewer, is_seller
+    from accounts.services import assert_seller_can_operate, is_platform_admin_viewer, is_seller
 
     from ..models import Contract
 
@@ -174,6 +177,9 @@ def sign_contract_by_manager(
     # winning supplier's member also carries can_sell.
     if not (getattr(manager_user, "is_superuser", False) or is_seller(manager_user)):
         return None, "MEMBER_REQUIRED_FOR_ACTION"
+    # Paid-seller gate: signing commits the seller — requires an active subscription.
+    if sub_err := assert_seller_can_operate(manager_user):
+        return None, sub_err
     if contract.status not in {
         ContractStatusCode.DRAFT,
         ContractStatusCode.PENDING_MANAGER,

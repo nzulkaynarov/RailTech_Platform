@@ -90,6 +90,10 @@ interface UserState {
    * accounts/0010_platform_admin_model). The historical three-context synthetic
    * switcher has been replaced by `PlatformAdminShell` at the app level. */
   isViewerMode: boolean;
+  /** Whether the seller company has an operational subscription. null for
+   * non-sellers / before /me resolves. false → show the "subscription required"
+   * banner (seller writes return SUBSCRIPTION_REQUIRED). */
+  sellerSubscriptionOperational: boolean | null;
 
   /* ── Auth integration ── */
   loadFromAuth: () => Promise<void>;
@@ -112,6 +116,7 @@ export const useUserStore = create<UserState>((set, _get) => ({
   role: 'USER',
   activeStatus: 'SELLER',
   isViewerMode: false,
+  sellerSubscriptionOperational: null,
   profile: {
     firstName: '',
     lastName: '',
@@ -155,9 +160,11 @@ export const useUserStore = create<UserState>((set, _get) => ({
       const userPayload = authState.user as {
         can_sell?: boolean;
         can_buy?: boolean;
+        seller_subscription_operational?: boolean | null;
       };
       const canSell = userPayload.can_sell !== false;
       const canBuy = userPayload.can_buy !== false;
+      const sellerSubscriptionOperational = userPayload.seller_subscription_operational ?? null;
 
       // Platform admin is decided purely by the backend-computed flag (see
       // CustomUser.is_platform_admin property) with a local fallback on role
@@ -190,6 +197,7 @@ export const useUserStore = create<UserState>((set, _get) => ({
         // Kept for backwards compatibility with call sites still reading
         // `isViewerMode`; see the UserState comment above.
         isViewerMode: isPlatformAdmin,
+        sellerSubscriptionOperational,
         role: isPlatformAdmin ? 'ADMIN' : 'USER',
         profile: {
           firstName: first_name || '',

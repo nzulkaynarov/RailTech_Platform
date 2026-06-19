@@ -71,6 +71,9 @@ export interface User {
 	// SELLER/MANUFACTURER contexts.
 	can_sell?: boolean;
 	can_buy?: boolean;
+	// true/false for sellers, null for non-sellers. false → seller has no
+	// operational subscription and seller writes return SUBSCRIPTION_REQUIRED.
+	seller_subscription_operational?: boolean | null;
 	company?: Company;
 	primary_company?: Company;
 	is_active?: boolean;

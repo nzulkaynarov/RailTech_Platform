@@ -262,7 +262,9 @@
       "pastDueTitle": "Payment overdue",
       "pastDueHint": "Pay the next cycle to keep access to seller features.",
       "expiringTitle": "Subscription expires in {{days}} days",
-      "expiringHint": "Renew early to avoid interruption."
+      "expiringHint": "Renew early to avoid interruption.",
+      "requiredTitle": "Active subscription required",
+      "requiredHint": "Selling actions (sending quotes, signing contracts, issuing documents) need an active subscription. Activate one to start selling."
     },
     "billing": {
       "title": "Billing & payments",
@@ -3997,6 +3999,7 @@
     "companyDocDescription": "The document will be removed permanently."
   },
   "apiErrors": {
+    "SUBSCRIPTION_REQUIRED": "An active subscription is required to perform seller actions. Activate a subscription to continue.",
     "CONTRACT_NEEDS_APPROVAL": "A contract can only be created from an approved quote",
     "CONTRACT_CLIENT_SIGN_NOT_ALLOWED": "Contract cannot be signed by the client in current status",
     "CONTRACT_MANAGER_SIGN_NOT_ALLOWED": "Contract cannot be signed by the manager in current status",

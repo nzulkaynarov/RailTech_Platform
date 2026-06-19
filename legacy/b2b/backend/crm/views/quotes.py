@@ -145,6 +145,7 @@ class QuoteViewSet(viewsets.ModelViewSet):
         ran the approval chain), so this can't reuse the deal-company-scoped
         get_queryset — it fetches the quote directly like the chain actions do.
         """
+        from accounts.services import assert_seller_can_operate
         from crm.services import QuoteLifecycleService
         from crm.services.quotes import can_send_quote_to_client
 
@@ -153,6 +154,9 @@ class QuoteViewSet(viewsets.ModelViewSet):
             return Response({"error": "QUOTE_NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)
         if not can_send_quote_to_client(request.user, quote):
             return _chain_error_response("ROLE_NOT_PERMITTED")
+        # Paid-seller gate: sending the КП to the client is the monetised seller action.
+        if sub_err := assert_seller_can_operate(request.user):
+            return _chain_error_response(sub_err)
         try:
             quote = QuoteLifecycleService.send_to_client(int(pk), request.user)
         except ValueError:

@@ -36,7 +36,7 @@ def generate_invoice_from_contract(
 
     from django.utils import timezone
 
-    from accounts.services import is_platform_admin_viewer, is_seller
+    from accounts.services import assert_seller_can_operate, is_platform_admin_viewer, is_seller
 
     from ..models import Contract, Invoice, InvoiceItem
 
@@ -45,6 +45,9 @@ def generate_invoice_from_contract(
     # Issuing the invoice is a seller-side action.
     if actor is not None and not (getattr(actor, "is_superuser", False) or is_seller(actor)):
         return None, "MEMBER_REQUIRED_FOR_ACTION"
+    # Paid-seller gate (skipped for the actor=None automation path).
+    if actor is not None and (sub_err := assert_seller_can_operate(actor)):
+        return None, sub_err
     contract = Contract.objects.select_related("quote__deal").get(pk=contract_id)
 
     if contract.status != ContractStatusCode.SIGNED:
@@ -220,7 +223,7 @@ def generate_act(
 ) -> Tuple[Optional[object], Optional[str]]:
     from django.utils import timezone
 
-    from accounts.services import is_platform_admin_viewer, is_seller
+    from accounts.services import assert_seller_can_operate, is_platform_admin_viewer, is_seller
 
     from ..models import Act, Invoice
 
@@ -229,6 +232,9 @@ def generate_act(
     # Issuing the act (acceptance certificate) is a seller-side action.
     if actor is not None and not (getattr(actor, "is_superuser", False) or is_seller(actor)):
         return None, "MEMBER_REQUIRED_FOR_ACTION"
+    # Paid-seller gate (skipped for the actor=None automation path).
+    if actor is not None and (sub_err := assert_seller_can_operate(actor)):
+        return None, sub_err
     invoice = Invoice.objects.select_related("contract", "deal").get(pk=invoice_id)
     if invoice.status not in {InvoiceStatusCode.PAID, InvoiceStatusCode.PARTIAL, InvoiceStatusCode.ISSUED}:
         return None, "ACT_INVALID_INVOICE_STATUS"
