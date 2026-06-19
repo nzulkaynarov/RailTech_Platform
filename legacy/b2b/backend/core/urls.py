@@ -13,6 +13,7 @@ from accounts.views import (
     CompanyTypeViewSet,
     CompanyViewSet,
     ForgotPasswordView,
+    LogoutView,
     MeView,
     RegisterView,
     ResetPasswordView,
@@ -123,6 +124,7 @@ urlpatterns = (
         path("api/v1/auth/forgot-password/", ForgotPasswordView.as_view(), name="forgot-password"),
         path("api/v1/auth/reset-password/", ResetPasswordView.as_view(), name="reset-password"),
         path("api/v1/auth/submit-profile/", SubmitProfileView.as_view(), name="submit-profile"),
+        path("api/v1/auth/logout/", LogoutView.as_view(), name="logout"),
         path(
             "api/v1/auth/token/",
             extend_schema(

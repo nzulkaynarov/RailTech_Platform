@@ -8,6 +8,7 @@ Re-exports all ViewSets and Views for backwards compatibility so that
 from accounts.views.applications import CompanyRoleApplicationViewSet, SupplierSubscriptionViewSet  # noqa: F401
 from accounts.views.auth import (  # noqa: F401
     ForgotPasswordView,
+    LogoutView,
     MeView,
     RegisterView,
     ResetPasswordView,
@@ -30,6 +31,7 @@ __all__ = [
     "ForgotPasswordView",
     "ResetPasswordView",
     "MeView",
+    "LogoutView",
     # applications & subscriptions
     "SupplierSubscriptionViewSet",
     "CompanyRoleApplicationViewSet",
