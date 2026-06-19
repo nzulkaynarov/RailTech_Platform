@@ -46,7 +46,13 @@ XlsxWriter>=3.2
 weasyprint>=68.0
 
 # Redis
-redis>=7.4
+# Cap below 8.0: redis-py 8.0.0 broke Django Channels — it mis-maps the
+# asyncio cancellation of an in-flight blocking BZPOPMIN (normal operation in
+# channels_redis await_many_dispatch) into redis.exceptions.TimeoutError, which
+# bubbles up to uvicorn and drops the WebSocket connection (~every few minutes
+# per idle client). redis-py 7.4.x works correctly with channels_redis 4.3.0.
+# See redis-py issue #4091. Remove the cap once channels_redis supports 8.x.
+redis>=7.4,<8
 
 # Admin
 django-unfold>=0.88
