@@ -274,10 +274,9 @@ export default function PlatformAdminDashboard({ onNavigate }: PlatformAdminDash
       subscription_expiring: 'admin-subscriptions',
       invoice_overdue: 'admin-deals',
       support_urgent: 'admin-support',
-      // Supplier bids live on the deal; there is no standalone admin bids page,
-      // so route the queue row to the admin deals surface instead of the dead
-      // 'admin-bids' route (which silently bounced to the dashboard).
-      supplier_bid_pending: 'admin-deals',
+      // NOTE: there is no 'supplier_bid_pending' entry — the SupplierBid model
+      // was removed (crm migration 0015) and no triage collector emits that
+      // queue_type any more. Anything unmapped falls through to 'admin-companies'.
     };
     onNavigate(map[item.queue_type] ?? 'admin-companies');
   }

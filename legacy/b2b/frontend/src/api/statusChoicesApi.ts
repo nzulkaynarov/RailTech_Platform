@@ -10,7 +10,6 @@ export interface Phase2StatusChoices {
   invoice: StatusChoice[];
   act: StatusChoice[];
   fulfillment: StatusChoice[];
-  supplier_bid: StatusChoice[];
   payment_method: StatusChoice[];
 }
 
