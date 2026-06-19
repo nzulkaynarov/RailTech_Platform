@@ -137,6 +137,14 @@ services:
       DJANGO_DEBUG: "False"
     # Concurrency capped so Excel imports don't exhaust the shared box.
     command: celery -A core worker -l info -Q default,pdf,imports --concurrency=2
+    # Liveness: a worker that stops consuming (deadlock, broker drop) fails the
+    # ping and Docker restarts it instead of leaving tasks silently unprocessed.
+    healthcheck:
+      test: ["CMD", "celery", "-A", "core", "inspect", "ping", "-t", "10"]
+      interval: 60s
+      timeout: 20s
+      retries: 3
+      start_period: 45s
     restart: always
     deploy:
       resources:
@@ -161,6 +169,9 @@ services:
       PYTHONUNBUFFERED: 1
       DJANGO_SETTINGS_MODULE: core.settings
       DJANGO_DEBUG: "False"
+    # No healthcheck: beat is PID 1 here, so a crash exits the container and
+    # `restart: always` brings it back. A *hung* (alive but not scheduling) beat
+    # would need a heartbeat probe against last_run_at — deferred (roadmap F1.4).
     restart: always
     deploy:
       resources:
