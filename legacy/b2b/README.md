@@ -12,9 +12,10 @@ Django 5.2 + React 18 + TypeScript, полностью в Docker.
 - **Docker Desktop** (или Docker Engine + Docker Compose v2)
 - **Git**
 - **Make** (предустановлен на macOS/Linux, на Windows — через WSL2)
-- Доступ к удалённой БД (Neon Cloud PostgreSQL) — `DATABASE_URL` получить у администратора
+- Ничего внешнего для БД не нужно — локальная PostgreSQL поднимается в Docker автоматически
 
-> Локальной БД нет. PostgreSQL всегда удалённая — и при разработке, и на продакшне.
+> **Локальная разработка:** `docker-compose.override.yml` (gitignored, подхватывается `make up`) поднимает контейнер `db` (postgres:17), backend ходит в него как `db:5432`. `DATABASE_URL` для локалки уже стоит в `.env.example`/`.env`.
+> **Продакшн:** PostgreSQL 17 на отдельном DB-VPS (приватная сеть WireGuard, `sslmode=require`); прод-`DATABASE_URL` хранится только в GitHub Actions secret. Neon Cloud выведен из эксплуатации (2026-06-19).
 
 ---
 
@@ -37,7 +38,7 @@ cp .env.example .env
 
 | Переменная | Что указать | Где взять |
 |---|---|---|
-| `DATABASE_URL` | Строка подключения к Neon Cloud | У администратора проекта |
+| `DATABASE_URL` | Локально — `postgresql://railtech:railtech@db:5432/railtech?sslmode=disable` (локальный Docker-контейнер `db`). Прод — в GitHub secret | Локальное значение уже в `.env.example` |
 | `DJANGO_SECRET_KEY` | Секретный ключ Django | Сгенерировать командой ниже |
 | `SUPERADMIN_EMAIL` | Email суперадмина | По умолчанию `admin@railtech.uz` |
 | `SUPERADMIN_PASSWORD` | Пароль суперадмина | Задать надёжный пароль |
@@ -131,7 +132,7 @@ docker compose exec celery-worker celery -A core inspect ping
 | `railtech_celery_worker` | python:3.13-slim | — | Асинхронные задачи: импорт Excel, генерация PDF, архивирование чата |
 | `railtech_celery_beat` | python:3.13-slim | — | Планировщик периодических задач (DatabaseScheduler) |
 
-> PostgreSQL — внешняя БД (Neon Cloud), в Docker не поднимается.
+> Локально PostgreSQL поднимается контейнером `railtech_db` (postgres:17) через `docker-compose.override.yml`. На продакшне БД внешняя — PostgreSQL 17 на отдельном DB-VPS (приватная сеть), `docker-compose.override.yml` там не загружается.
 > На продакшне через `docker-compose.prod.yml` добавляется контейнер `railtech_nginx` (nginx:stable-alpine, порты 80/443).
 
 ---
@@ -277,7 +278,8 @@ docker compose logs backend --tail 50
 ```
 
 Частые причины:
-- **Connection refused к Neon** — БД в Neon Cloud заснула. Зайти в [Neon Console](https://console.neon.tech), проверить статус проекта. После пробуждения: `docker compose restart backend celery-worker celery-beat`
+- **Connection refused (локально)** — контейнер `db` ещё не готов. Проверить `docker compose ps db` / `docker compose logs db`; дождаться healthcheck.
+- **Connection refused / no pg_hba entry (прод)** — DB-VPS недоступен. Проверить WireGuard и Postgres на DB-VPS, что `pg_hba.conf` пускает IP app-VPS. После — `docker compose restart backend celery-worker celery-beat`
 - **OperationalError: connection pool** — пул соединений закэшировал мёртвые соединения. Решение: `docker compose restart backend`
 
 ### Суперадмин не может войти
