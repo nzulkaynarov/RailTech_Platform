@@ -14,23 +14,16 @@ from ._params import PaymentData
 
 
 def _next_invoice_number() -> str:
-    from django.utils import timezone
+    # Race-safe per-year counter (was count()+1 → duplicate-number 500 under load).
+    from .numbering import next_document_number
 
-    from ..models import Invoice
-
-    today = timezone.now()
-    count = Invoice.objects.filter(created_at__year=today.year).count() + 1
-    return f"INV-{today.year}-{count:05d}"
+    return next_document_number("INV", "INV")
 
 
 def _next_act_number() -> str:
-    from django.utils import timezone
+    from .numbering import next_document_number
 
-    from ..models import Act
-
-    today = timezone.now()
-    count = Act.objects.filter(created_at__year=today.year).count() + 1
-    return f"ACT-{today.year}-{count:05d}"
+    return next_document_number("ACT", "ACT")
 
 
 @transaction.atomic

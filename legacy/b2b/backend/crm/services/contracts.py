@@ -13,13 +13,10 @@ from ..models import ActivityLog, Quote
 
 
 def _next_contract_number() -> str:
-    from django.utils import timezone
+    # Race-safe per-year counter (was count()+1 → duplicate-number 500 under load).
+    from .numbering import next_document_number
 
-    from ..models import Contract
-
-    today = timezone.now()
-    count = Contract.objects.filter(created_at__year=today.year).count() + 1
-    return f"CT-{today.year}-{count:05d}"
+    return next_document_number("CT", "CT")
 
 
 @transaction.atomic

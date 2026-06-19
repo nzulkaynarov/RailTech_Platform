@@ -9,6 +9,7 @@ from .deals import ActivityLog, Deal, Lead, Message
 from .fulfillment import Fulfillment
 from .lookups import DealStage, QuoteStatus
 from .quotes import Quote, QuoteItem, QuoteItemHistory
+from .sequences import DocumentSequence
 
 __all__ = [
     "Act",
@@ -16,6 +17,7 @@ __all__ = [
     "Contract",
     "Deal",
     "DealStage",
+    "DocumentSequence",
     "Fulfillment",
     "Invoice",
     "InvoiceItem",

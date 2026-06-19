@@ -659,6 +659,7 @@ def merge_request_lines(quote: Quote, new_items: list) -> tuple:
     return created, merged
 
 
+@transaction.atomic
 def buyer_add_request_item(
     user: CustomUser, deal: Deal, *, name: str, quantity, unit="", unit_code="", note="", mpn=""
 ) -> QuoteItem:
@@ -669,6 +670,9 @@ def buyer_add_request_item(
         raise ValidationError({"name": "ITEM_NAME_REQUIRED"})
     _assert_request_editable(deal, user)
     quote = _request_draft_quote(deal)
+    # Lock the draft quote so concurrent adds of the same line serialize — the
+    # dedup read-modify-write on `quantity` below would otherwise lose an update.
+    quote = Quote.objects.select_for_update().get(pk=quote.pk)
     candidate = QuoteItem(
         quote=quote,
         imported_raw_name=clean_name,
@@ -702,6 +706,7 @@ def buyer_add_request_item(
     return item
 
 
+@transaction.atomic
 def buyer_add_request_items(user: CustomUser, deal: Deal, rows: list) -> list:
     """Bulk-add request lines — used by the catalog cart checkout. Each row is
     {product_id?, name?, quantity, unit?}. Catalog items link to the real Product
@@ -713,6 +718,9 @@ def buyer_add_request_items(user: CustomUser, deal: Deal, rows: list) -> list:
 
     _assert_request_editable(deal, user)
     quote = _request_draft_quote(deal)
+    # Lock the draft quote so a concurrent cart checkout / single-add doesn't
+    # race the merge_request_lines read-modify-write (lost quantity update).
+    quote = Quote.objects.select_for_update().get(pk=quote.pk)
     to_create = []
     for row in rows or []:
         product = None
