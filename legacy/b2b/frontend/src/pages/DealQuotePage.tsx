@@ -9,6 +9,7 @@ import { useDeal, useSendQuoteToClient } from '@/hooks/useCRM';
 import { translateApiError } from '@/lib/apiError';
 import { QuoteBuilderGrid } from '@/components/Admin/QuoteBuilderGrid';
 import { GenerateContractDialog } from '@/components/CRM/GenerateContractDialog';
+import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
 import { QuoteStatus } from '@/lib/codes';
 import { LoadingRows, EmptyState } from './shared/PageShell';
 
@@ -29,6 +30,7 @@ export function DealQuotePage({ dealId, onBack }: DealQuotePageProps) {
   const { data: deal, isLoading, isError, refetch } = useDeal(dealId);
   const sendQuote = useSendQuoteToClient();
   const [contractOpen, setContractOpen] = useState(false);
+  const [sendConfirmOpen, setSendConfirmOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -77,14 +79,12 @@ export function DealQuotePage({ dealId, onBack }: DealQuotePageProps) {
   const canContract = !!quote
     && ([QuoteStatus.APPROVED, QuoteStatus.SENT] as string[]).includes(quoteStatus);
 
-  const handleSend = async () => {
+  // Sending the КП is irreversible and client-visible (the buyer immediately
+  // sees the priced offer + frozen prices) → gate behind a confirm dialog.
+  const confirmSend = async () => {
     if (!quote) return;
-    try {
-      await sendQuote.mutateAsync(quote.id);
-      toast.success(t('pages.deals.detail.quoteSentToast'));
-    } catch (e) {
-      toast.error(translateApiError(e));
-    }
+    await sendQuote.mutateAsync(quote.id);
+    toast.success(t('pages.deals.detail.quoteSentToast'));
   };
 
   return (
@@ -116,7 +116,7 @@ export function DealQuotePage({ dealId, onBack }: DealQuotePageProps) {
             </span>
           ) : null}
           {canSend && (
-            <Button size="sm" disabled={sendQuote.isPending} onClick={handleSend}>
+            <Button size="sm" disabled={sendQuote.isPending} onClick={() => setSendConfirmOpen(true)}>
               <Send className="mr-2 h-4 w-4" />
               {t('requestDetailActions.sendQuote')}
             </Button>
@@ -149,6 +149,17 @@ export function DealQuotePage({ dealId, onBack }: DealQuotePageProps) {
         quoteId={quote?.id ?? null}
         open={contractOpen}
         onOpenChange={setContractOpen}
+      />
+
+      <ConfirmActionDialog
+        open={sendConfirmOpen}
+        onOpenChange={setSendConfirmOpen}
+        title={t('confirmActions.sendQuote.title')}
+        description={t('confirmActions.sendQuote.description')}
+        variant="primary"
+        confirmLabel={t('requestDetailActions.sendQuote')}
+        onConfirm={confirmSend}
+        translateError={(code) => translateApiError(code)}
       />
     </div>
   );

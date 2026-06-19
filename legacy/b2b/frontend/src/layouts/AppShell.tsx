@@ -240,9 +240,19 @@ function StatusIcon({ status, className }: { status: CompanyStatus; className?: 
 
 /* ─── Status color helper ───────────────────────────────────────────── */
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function statusColor(_status: CompanyStatus): string {
-  return 'text-primary';
+// Distinct semantic colour per workspace context, so the context-switcher icon
+// and badge read at a glance which role the user is acting as. Was a dead no-op
+// that always returned 'text-primary' (every context looked identical).
+function statusColor(status: CompanyStatus): string {
+  switch (status) {
+    case 'BUYER':
+      return 'text-info';
+    case 'MANUFACTURER':
+      return 'text-warning';
+    case 'SELLER':
+    default:
+      return 'text-primary';
+  }
 }
 
 /* ─── Sidebar nav item component ────────────────────────────────────── */

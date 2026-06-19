@@ -18,6 +18,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import { DealChatPanel } from '@/components/Sourcing/DealChatPanel';
 import { RejectQuoteDialog } from '@/components/CRM/RejectQuoteDialog';
+import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
 import { RequestItemsEditor } from '@/components/CRM/RequestItemsEditor';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { buyerStatus } from '@/lib/requestStatus';
@@ -34,6 +35,7 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
   const { data: deal, isLoading, isError, refetch } = useDeal(dealId);
   const formatCurrency = useCurrencyStore((s) => s.format);
   const [rejectOpen, setRejectOpen] = useState(false);
+  const [approveConfirmOpen, setApproveConfirmOpen] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const isViewer = useIsViewerMode();
   const viewerTip = t('apiErrors.ADMIN_VIEWER_CANNOT_ACT');
@@ -223,7 +225,7 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
                     <Button
                       variant="default"
                       className="bg-success text-success-foreground hover:bg-success/90"
-                      onClick={() => run(() => approveQuote.mutateAsync(quote!.id))}
+                      onClick={() => setApproveConfirmOpen(true)}
                       disabled={isViewer || approveQuote.isPending}
                       title={isViewer ? viewerTip : undefined}
                     >
@@ -438,6 +440,19 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
         open={rejectOpen}
         onOpenChange={setRejectOpen}
         onConfirm={async (reason) => { if (quote) await run(() => rejectQuote.mutateAsync({ id: quote.id, reason })); }}
+      />
+
+      {/* Approving commits the deal to a contract — confirm before the
+          irreversible accept (parity with the reject dialog). */}
+      <ConfirmActionDialog
+        open={approveConfirmOpen}
+        onOpenChange={setApproveConfirmOpen}
+        title={t('confirmActions.approveQuote.title')}
+        description={t('confirmActions.approveQuote.description')}
+        variant="primary"
+        confirmLabel={t('requestDetailActions.approveQuote')}
+        onConfirm={async () => { if (quote) await approveQuote.mutateAsync(quote.id); }}
+        translateError={(code) => translateApiError(code)}
       />
     </div>
   );

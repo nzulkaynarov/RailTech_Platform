@@ -3827,6 +3827,20 @@
       "unit": "Unit"
     }
   },
+  "confirmActions": {
+    "sendQuote": {
+      "title": "Send quote to the client?",
+      "description": "The client will immediately see the priced offer and the prices will be frozen. This cannot be undone."
+    },
+    "approveQuote": {
+      "title": "Approve this quote?",
+      "description": "Approving accepts the seller's offer and moves the deal toward a contract. This cannot be undone."
+    },
+    "convertLead": {
+      "title": "Convert lead to a deal?",
+      "description": "A new deal will be created from “{{name}}” and the lead marked as processed."
+    }
+  },
   "leadsPage": {
     "title": "Leads",
     "description": "Landing-page inquiries",
