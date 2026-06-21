@@ -22,7 +22,17 @@ from accounts.models import (
 )
 from catalog.models import DomainType, ProductStatus, StockStatus
 from crm import services as crm_services
-from crm.models import Contract, ContractStatus, Deal, DealStage, Quote, QuoteItem, QuoteStatus
+from crm.models import (
+    ActStatus,
+    Contract,
+    ContractStatus,
+    Deal,
+    DealStage,
+    InvoiceStatus,
+    Quote,
+    QuoteItem,
+    QuoteStatus,
+)
 from master_data.models import Country, Currency, UnitOfMeasure
 
 # ─── Shared fixtures ──────────────────────────────────────────────────────
@@ -57,6 +67,10 @@ def master_data(db):
     # Post-sale status lookups (F5.4) — --nomigrations skips the seeding migration.
     for code in ["DRAFT", "PENDING_CLIENT", "PENDING_MANAGER", "SIGNED", "CANCELLED"]:
         ContractStatus.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
+    for code in ["DRAFT", "ISSUED", "PARTIAL", "PAID", "OVERDUE", "CANCELLED"]:
+        InvoiceStatus.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
+    for code in ["DRAFT", "ISSUED", "SIGNED", "CANCELLED"]:
+        ActStatus.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
     Country.objects.get_or_create(code="UZ", defaults={"name": "Uzbekistan", "sort_order": 10})
     Currency.objects.get_or_create(code="USD", defaults={"name": "US Dollar", "symbol": "$", "sort_order": 10})
     UnitOfMeasure.objects.get_or_create(code="PCS", defaults={"name": "Piece", "sort_order": 10})
@@ -339,7 +353,7 @@ def test_record_payment_marks_invoice_paid(master_data, deal, manager, buyer):
     )
     assert err is None
     invoice.refresh_from_db()
-    assert invoice.status == "PAID"
+    assert invoice.status_code == "PAID"
 
 
 @pytest.mark.django_db

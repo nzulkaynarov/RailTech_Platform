@@ -26,6 +26,20 @@ def _next_act_number() -> str:
     return next_document_number("ACT", "ACT")
 
 
+def _istatus(code: str):
+    """Resolve an InvoiceStatus lookup by code (F5.4 — status is a FK now)."""
+    from ..models import InvoiceStatus
+
+    return InvoiceStatus.objects.get(code=code)
+
+
+def _astatus(code: str):
+    """Resolve an ActStatus lookup by code (F5.4 — status is a FK now)."""
+    from ..models import ActStatus
+
+    return ActStatus.objects.get(code=code)
+
+
 @transaction.atomic
 def generate_invoice_from_contract(
     contract_id: int,
@@ -64,7 +78,7 @@ def generate_invoice_from_contract(
         deal=contract.deal,
         contract=contract,
         number=_next_invoice_number(),
-        status=InvoiceStatusCode.ISSUED,
+        status=_istatus(InvoiceStatusCode.ISSUED),
         issued_at=timezone.now().date(),
         due_date=(timezone.now() + timedelta(days=due_days)).date(),
         subtotal_excl_vat=quote.subtotal_excl_vat,
@@ -161,7 +175,7 @@ def record_payment(
     # Payment is recorded by the buyer side of the deal -- must be member w/ can_buy.
     if not (getattr(actor, "is_superuser", False) or is_member_of(actor, invoice.deal.company_id, capability="buy")):
         return None, "MEMBER_REQUIRED_FOR_ACTION"
-    if invoice.status in {InvoiceStatusCode.CANCELLED}:
+    if invoice.status_code in {InvoiceStatusCode.CANCELLED}:
         return None, "INVOICE_CANCELLED"
     amount_d = D(str(amount))
     if amount_d <= 0:
@@ -201,9 +215,9 @@ def record_payment(
 
     invoice.amount_paid = (invoice.amount_paid or D("0")) + amount_d
     if invoice.amount_paid >= invoice.total_incl_vat:
-        invoice.status = InvoiceStatusCode.PAID
+        invoice.status = _istatus(InvoiceStatusCode.PAID)
     else:
-        invoice.status = InvoiceStatusCode.PARTIAL
+        invoice.status = _istatus(InvoiceStatusCode.PARTIAL)
     invoice.save(update_fields=["amount_paid", "status", "updated_at"])
 
     marker = "[MANUAL_MODE] " if manual else ""
@@ -235,8 +249,8 @@ def generate_act(
     # Paid-seller gate (skipped for the actor=None automation path).
     if actor is not None and (sub_err := assert_seller_can_operate(actor)):
         return None, sub_err
-    invoice = Invoice.objects.select_related("contract", "deal").get(pk=invoice_id)
-    if invoice.status not in {InvoiceStatusCode.PAID, InvoiceStatusCode.PARTIAL, InvoiceStatusCode.ISSUED}:
+    invoice = Invoice.objects.select_related("contract", "deal", "status").get(pk=invoice_id)
+    if invoice.status_code not in {InvoiceStatusCode.PAID, InvoiceStatusCode.PARTIAL, InvoiceStatusCode.ISSUED}:
         return None, "ACT_INVALID_INVOICE_STATUS"
 
     act = Act.objects.create(
@@ -244,7 +258,7 @@ def generate_act(
         contract=invoice.contract,
         invoice=invoice,
         number=_next_act_number(),
-        status=ActStatusCode.ISSUED,
+        status=_astatus(ActStatusCode.ISSUED),
         issued_at=timezone.now().date(),
         total_amount=invoice.total_incl_vat,
         created_by=actor,
@@ -283,10 +297,10 @@ def sign_act(act_id: int, actor: CustomUser, signed_file=None) -> Tuple[Optional
 
     if is_platform_admin_viewer(actor):
         return None, "ADMIN_VIEWER_CANNOT_ACT"
-    act = Act.objects.select_for_update().get(pk=act_id)
-    if act.status != ActStatusCode.ISSUED:
+    act = Act.objects.select_for_update().select_related("status").get(pk=act_id)
+    if act.status_code != ActStatusCode.ISSUED:
         return None, "ACT_SIGN_NOT_ALLOWED"
-    act.status = ActStatusCode.SIGNED
+    act.status = _astatus(ActStatusCode.SIGNED)
     act.signed_at = timezone.now()
     if signed_file is not None:
         act.signed_file = signed_file

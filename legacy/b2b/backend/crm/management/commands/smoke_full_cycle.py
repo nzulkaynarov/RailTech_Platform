@@ -260,14 +260,14 @@ class Command(BaseCommand):
         if err:
             raise Exception(f"record_payment failed: {err}")
         invoice.refresh_from_db()
-        info(f"invoice status={invoice.status} amount_paid={invoice.amount_paid}")
+        info(f"invoice status={invoice.status_code} amount_paid={invoice.amount_paid}")
         act, err = crm_services.generate_act(invoice.id, actor=manager)
         if err:
             raise Exception(f"generate_act failed: {err}")
         act, err = crm_services.sign_act(act.id, manager)
         if err:
             raise Exception(f"sign_act failed: {err}")
-        info(f"act={act.number} status={act.status}")
+        info(f"act={act.number} status={act.status_code}")
 
         step(9, "Fulfillment ACCEPTED → auto CLOSED_WON")
         crm_services.ensure_fulfillment(deal)

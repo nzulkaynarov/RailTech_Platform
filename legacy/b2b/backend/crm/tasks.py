@@ -237,7 +237,7 @@ def auto_invoice_on_closed_won(self, deal_id: int) -> dict:
             deal=deal,
             contract=contract,
         )
-        .exclude(status=InvoiceStatusCode.CANCELLED)
+        .exclude(status__code=InvoiceStatusCode.CANCELLED)
         .order_by("-created_at")
         .first()
     )
@@ -254,7 +254,7 @@ def auto_invoice_on_closed_won(self, deal_id: int) -> dict:
         Act.objects.filter(
             invoice=invoice,
         )
-        .exclude(status=ActStatusCode.CANCELLED)
+        .exclude(status__code=ActStatusCode.CANCELLED)
         .order_by("-created_at")
         .first()
     )

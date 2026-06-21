@@ -67,7 +67,7 @@ class InvoiceAdmin(ReadOnlyInspectionMixin, ModelAdmin):
     )
     inlines = [InvoiceItemInline, PaymentInline]
     list_per_page = 25
-    list_select_related = ("deal", "deal__company")
+    list_select_related = ("deal", "deal__company", "status")
 
     @display(
         description=_("Статус"),
@@ -81,7 +81,8 @@ class InvoiceAdmin(ReadOnlyInspectionMixin, ModelAdmin):
         },
     )
     def invoice_status(self, obj):
-        return obj.get_status_display()
+        # status is a FK lookup now (F5.4); its name drives the label map above.
+        return obj.status.name if obj.status_id else "—"
 
 
 @admin.register(Payment)
@@ -112,7 +113,7 @@ class ActAdmin(ReadOnlyInspectionMixin, ModelAdmin):
         "updated_at",
     )
     list_per_page = 25
-    list_select_related = ("deal", "deal__company")
+    list_select_related = ("deal", "deal__company", "status")
 
     @display(
         description=_("Статус"),
@@ -124,7 +125,8 @@ class ActAdmin(ReadOnlyInspectionMixin, ModelAdmin):
         },
     )
     def act_status(self, obj):
-        return obj.get_status_display()
+        # status is a FK lookup now (F5.4); its name drives the label map above.
+        return obj.status.name if obj.status_id else "—"
 
 
 @admin.register(Fulfillment)

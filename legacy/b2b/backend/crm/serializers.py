@@ -369,6 +369,9 @@ class InvoiceSerializer(serializers.ModelSerializer):
     items = InvoiceItemSerializer(many=True, read_only=True)
     payments = PaymentSerializer(many=True, read_only=True)
     balance_due = serializers.DecimalField(read_only=True, max_digits=14, decimal_places=2)
+    # status is a FK lookup now (F5.4); keep the code string under `status` (+ name).
+    status = serializers.CharField(source="status.code", read_only=True)
+    status_name = serializers.CharField(source="status.name", read_only=True)
     pdf_url = serializers.SerializerMethodField()
 
     class Meta:
@@ -379,6 +382,7 @@ class InvoiceSerializer(serializers.ModelSerializer):
             "contract",
             "number",
             "status",
+            "status_name",
             "issued_at",
             "due_date",
             "subtotal_excl_vat",
@@ -402,6 +406,9 @@ class InvoiceSerializer(serializers.ModelSerializer):
 
 
 class ActSerializer(serializers.ModelSerializer):
+    # status is a FK lookup now (F5.4); keep the code string under `status` (+ name).
+    status = serializers.CharField(source="status.code", read_only=True)
+    status_name = serializers.CharField(source="status.name", read_only=True)
     pdf_url = serializers.SerializerMethodField()
     signed_file_url = serializers.SerializerMethodField()
 
@@ -414,6 +421,7 @@ class ActSerializer(serializers.ModelSerializer):
             "invoice",
             "number",
             "status",
+            "status_name",
             "issued_at",
             "signed_at",
             "total_amount",

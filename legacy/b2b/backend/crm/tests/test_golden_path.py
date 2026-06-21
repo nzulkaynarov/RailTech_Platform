@@ -31,7 +31,17 @@ from accounts.models import (
 )
 from catalog.models import DomainType, ProductStatus, StockStatus
 from crm import services as crm_services
-from crm.models import ContractStatus, Deal, DealStage, FulfillmentStatus, Quote, QuoteItem, QuoteStatus
+from crm.models import (
+    ActStatus,
+    ContractStatus,
+    Deal,
+    DealStage,
+    FulfillmentStatus,
+    InvoiceStatus,
+    Quote,
+    QuoteItem,
+    QuoteStatus,
+)
 from crm.services.quotes import QuoteCalculationService, QuoteLifecycleService
 from master_data.models import Country, Currency, UnitOfMeasure
 
@@ -83,6 +93,10 @@ def lookups(db):
     # data migration that normally creates these rows.
     for code in ["DRAFT", "PENDING_CLIENT", "PENDING_MANAGER", "SIGNED", "CANCELLED"]:
         ContractStatus.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
+    for code in ["DRAFT", "ISSUED", "PARTIAL", "PAID", "OVERDUE", "CANCELLED"]:
+        InvoiceStatus.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
+    for code in ["DRAFT", "ISSUED", "SIGNED", "CANCELLED"]:
+        ActStatus.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
     for code in ["PENDING", "SHIPPED", "IN_TRANSIT", "DELIVERED", "ACCEPTED", "DISPUTED"]:
         FulfillmentStatus.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
 
@@ -249,7 +263,7 @@ def test_golden_path_rfq_to_closed_won(deal, buyer, manager):
     )
     assert err is None, f"record_payment failed: {err}"
     invoice.refresh_from_db()
-    assert invoice.status == "PAID"
+    assert invoice.status_code == "PAID"
 
     # 9. Fulfillment accepted → deal auto-closes as CLOSED_WON. Story complete.
     crm_services.ensure_fulfillment(deal)
