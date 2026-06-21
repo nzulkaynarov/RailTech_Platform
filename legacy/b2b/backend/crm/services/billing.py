@@ -98,7 +98,12 @@ def generate_invoice_from_contract(
             source_quote_item=qi,
         )
 
-    _render_invoice_pdf(invoice)
+    # Render off the request thread, after commit (F1.6 — avoids orphan PDFs on
+    # rollback). The download endpoint renders lazily if a download races ahead.
+    from ..tasks import render_document_pdf
+
+    invoice_id = invoice.id
+    transaction.on_commit(lambda: render_document_pdf.delay("invoice", invoice_id))
     ActivityLog.objects.create(
         action="Инвойс выставлен",
         detail=f"Инвойс {invoice.number} по сделке #{invoice.deal_id}",
@@ -263,7 +268,12 @@ def generate_act(
         total_amount=invoice.total_incl_vat,
         created_by=actor,
     )
-    _render_act_pdf(act)
+    # Render off the request thread, after commit (F1.6 — avoids orphan PDFs on
+    # rollback). The download endpoint renders lazily if a download races ahead.
+    from ..tasks import render_document_pdf
+
+    act_id = act.id
+    transaction.on_commit(lambda: render_document_pdf.delay("act", act_id))
     return act, None
 
 

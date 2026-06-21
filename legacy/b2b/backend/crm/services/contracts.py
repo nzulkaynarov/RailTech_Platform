@@ -74,12 +74,18 @@ def generate_contract_from_quote(
         )
         contract.save()
 
-    # Render PDF
-    _render_contract_pdf(contract)
-
+    # F5.4: status is a FK lookup now. F1.6: render the PDF AFTER commit, off the
+    # request thread — rendering inside this atomic block wrote the file to storage
+    # even when a later step rolled the transaction back, orphaning it. on_commit
+    # fires only on success; the download endpoint renders lazily if this races behind.
     if contract.status_code == ContractStatusCode.DRAFT:
         contract.status = _cstatus(ContractStatusCode.PENDING_CLIENT)
-    contract.save(update_fields=["status", "pdf_file", "updated_at"])
+    contract.save(update_fields=["status", "updated_at"])
+
+    from ..tasks import render_document_pdf
+
+    contract_id = contract.id
+    transaction.on_commit(lambda: render_document_pdf.delay("contract", contract_id))
 
     ActivityLog.objects.create(
         action="Создан контракт",
