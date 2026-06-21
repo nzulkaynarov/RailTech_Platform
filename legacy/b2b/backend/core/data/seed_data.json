@@ -65,7 +65,8 @@
       "email": "contact@almalykmc.uz",
       "phone": "+998 74 223-45-56",
       "verification_status": "L2_VERIFIED",
-      "company_type": "MANUFACTURER"
+      "company_type": "MANUFACTURER",
+      "subscription": {"status": "PAST_DUE", "plan": "STANDARD"}
     },
     {
       "name": "Tashkent Metro LLC",
