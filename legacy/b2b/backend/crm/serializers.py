@@ -431,6 +431,11 @@ class ActSerializer(serializers.ModelSerializer):
 
 
 class FulfillmentSerializer(serializers.ModelSerializer):
+    # status is a FK lookup now (F5.4); keep emitting the code string under `status`
+    # so the frontend contract is unchanged, plus the display name under status_name.
+    status = serializers.CharField(source="status.code", read_only=True)
+    status_name = serializers.CharField(source="status.name", read_only=True)
+
     class Meta:
         model = Fulfillment
         fields = [
@@ -438,6 +443,7 @@ class FulfillmentSerializer(serializers.ModelSerializer):
             "deal",
             "contract",
             "status",
+            "status_name",
             "shipped_at",
             "delivered_at",
             "accepted_at",

@@ -27,3 +27,40 @@ class QuoteStatus(AbstractLookup):
     class Meta(AbstractLookup.Meta):
         verbose_name = _("Статус КП")
         verbose_name_plural = _("Справочник: Статусы КП")
+
+
+# Post-sale document statuses (F5.4) — moved from inline CharField choices to FK
+# lookups so they share one source of truth with Deal/Quote (code↔row contract in
+# crm.constants; rows seeded in a data migration). Codes: see crm/constants.py.
+
+
+class ContractStatus(AbstractLookup):
+    """Статусы контракта. Seed: DRAFT, PENDING_CLIENT, PENDING_MANAGER, SIGNED, CANCELLED."""
+
+    class Meta(AbstractLookup.Meta):
+        verbose_name = _("Статус контракта")
+        verbose_name_plural = _("Справочник: Статусы контрактов")
+
+
+class InvoiceStatus(AbstractLookup):
+    """Статусы инвойса. Seed: DRAFT, ISSUED, PARTIAL, PAID, OVERDUE, CANCELLED."""
+
+    class Meta(AbstractLookup.Meta):
+        verbose_name = _("Статус инвойса")
+        verbose_name_plural = _("Справочник: Статусы инвойсов")
+
+
+class ActStatus(AbstractLookup):
+    """Статусы акта. Seed: DRAFT, ISSUED, SIGNED, CANCELLED."""
+
+    class Meta(AbstractLookup.Meta):
+        verbose_name = _("Статус акта")
+        verbose_name_plural = _("Справочник: Статусы актов")
+
+
+class FulfillmentStatus(AbstractLookup):
+    """Статусы исполнения/отгрузки. Seed: PENDING, SHIPPED, IN_TRANSIT, DELIVERED, ACCEPTED, DISPUTED."""
+
+    class Meta(AbstractLookup.Meta):
+        verbose_name = _("Статус исполнения")
+        verbose_name_plural = _("Справочник: Статусы исполнения")

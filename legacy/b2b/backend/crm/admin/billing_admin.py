@@ -135,7 +135,7 @@ class FulfillmentAdmin(ReadOnlyInspectionMixin, ModelAdmin):
     autocomplete_fields = ("deal", "contract")
     readonly_fields = ("created_at", "updated_at")
     list_per_page = 25
-    list_select_related = ("deal", "deal__company")
+    list_select_related = ("deal", "deal__company", "status")
 
     @display(
         description=_("Статус"),
@@ -149,4 +149,5 @@ class FulfillmentAdmin(ReadOnlyInspectionMixin, ModelAdmin):
         },
     )
     def fulfillment_status(self, obj):
-        return obj.get_status_display()
+        # status is a FK lookup now (F5.4) — its name drives the label map above.
+        return obj.status.name if obj.status_id else "—"

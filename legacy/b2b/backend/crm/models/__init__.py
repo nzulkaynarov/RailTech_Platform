@@ -7,20 +7,31 @@ from .billing import Act, Invoice, InvoiceItem, Payment
 from .contracts import Contract
 from .deals import ActivityLog, Deal, Lead, Message
 from .fulfillment import Fulfillment
-from .lookups import DealStage, QuoteStatus
+from .lookups import (
+    ActStatus,
+    ContractStatus,
+    DealStage,
+    FulfillmentStatus,
+    InvoiceStatus,
+    QuoteStatus,
+)
 from .quotes import Quote, QuoteItem, QuoteItemHistory
 from .sequences import DocumentSequence
 
 __all__ = [
     "Act",
+    "ActStatus",
     "ActivityLog",
     "Contract",
+    "ContractStatus",
     "Deal",
     "DealStage",
     "DocumentSequence",
     "Fulfillment",
+    "FulfillmentStatus",
     "Invoice",
     "InvoiceItem",
+    "InvoiceStatus",
     "Lead",
     "Message",
     "Payment",

@@ -11,7 +11,7 @@ from accounts.services.permissions import is_seller, seller_sees_all_deals
 from core.file_streaming import stream_file_field
 from core.permissions import IsCompanyMemberOrPlatformAdmin, IsPlatformAdmin
 from crm import services as crm_services
-from crm.models import Act, Contract, Fulfillment, Invoice, Payment
+from crm.models import Act, Contract, Fulfillment, FulfillmentStatus, Invoice, Payment
 from crm.serializers import (
     ActSerializer,
     ContractSerializer,
@@ -39,7 +39,10 @@ class Phase2StatusChoicesView(APIView):
                 "contract": to_list(Contract.STATUS_CHOICES),
                 "invoice": to_list(Invoice.STATUS_CHOICES),
                 "act": to_list(Act.STATUS_CHOICES),
-                "fulfillment": to_list(Fulfillment.STATUS_CHOICES),
+                # fulfillment status moved to a FK lookup (F5.4) — read from the table.
+                "fulfillment": [
+                    {"code": s.code, "label": s.name} for s in FulfillmentStatus.objects.filter(is_active=True)
+                ],
                 "payment_method": to_list(Payment.METHOD_CHOICES),
             }
         )
