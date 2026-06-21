@@ -1,11 +1,22 @@
 import json
 import os
+from datetime import timedelta
 from pathlib import Path
 
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
+from django.utils import timezone
 
-from accounts.models import Company, CompanyMember, KYCDocType, SystemRole, VerificationStatus, WorkspaceRole
+from accounts.models import (
+    Company,
+    CompanyMember,
+    CompanyType,
+    KYCDocType,
+    SupplierSubscription,
+    SystemRole,
+    VerificationStatus,
+    WorkspaceRole,
+)
 from catalog.models import DomainType, ProductStatus, StockStatus
 from crm.models import DealStage, QuoteStatus
 from master_data.models import Country, Currency, DeliveryBasis, UnitOfMeasure
@@ -13,6 +24,11 @@ from notifications.models import NotificationType
 
 User = get_user_model()
 SEED_DATA_PATH = Path(__file__).resolve().parent.parent.parent / "data" / "seed_data.json"
+
+# Dev/demo default login for seeded test users (NOT production data — this command
+# is dev/demo-only per IRON RULE 1). Override with the SEED_USER_PASSWORD env var.
+# Superusers are exempt: their password comes from SUPERADMIN_PASSWORD / init_superadmin.
+DEFAULT_SEED_PASSWORD = os.environ.get("SEED_USER_PASSWORD", "Demo1234!")
 
 
 def _seed(model, code, **defaults):
@@ -88,8 +104,6 @@ class Command(BaseCommand):
             _seed(SystemRole, code, name=name)
 
         # ─── 6. Роли в компании (типо-специфичные) ───
-        from accounts.models import CompanyType
-
         workspace_roles = [
             # (code, name, applicable_company_type_codes)
             ("OWNER", "Владелец", []),
@@ -243,7 +257,7 @@ class Command(BaseCommand):
             vs = None
             if company_data.get("verification_status"):
                 vs = VerificationStatus.objects.filter(code=company_data["verification_status"]).first()
-            Company.objects.get_or_create(
+            company_obj, _ = Company.objects.get_or_create(
                 inn=company_data["inn"],
                 defaults={
                     "name": company_data["name"],
@@ -253,17 +267,26 @@ class Command(BaseCommand):
                     "verification_status": vs,
                 },
             )
+            # Assign CompanyType(s) — WITHOUT this a seeded company has empty types
+            # and the frontend has no buyer/seller context (loadFromAuth → activeStatus).
+            # Accepts a single `company_type` or a `company_types` list; codes from the DB.
+            type_codes = company_data.get("company_types") or [company_data.get("company_type")]
+            type_codes = [c for c in type_codes if c]
+            if type_codes:
+                company_obj.types.set(CompanyType.objects.filter(code__in=type_codes))
 
         # ─── 18. Тестовые пользователи из seed_data.json ───
         for user_data in seed_data.get("test_users", []):
             email_env = user_data.get("email_env")
             email = os.environ.get(email_env, user_data["email_default"]) if email_env else user_data["email_default"]
             password_env = user_data.get("password_env")
-            password = (
-                os.environ.get(password_env, user_data["password_default"])
-                if password_env
-                else user_data["password_default"]
-            )
+            # Resolve: explicit env → JSON default → dev fallback. Superusers get NO
+            # dev fallback (their secret comes from SUPERADMIN_PASSWORD / init_superadmin).
+            password = os.environ.get(password_env) if password_env else None
+            if password is None:
+                password = user_data.get("password_default")
+            if password is None and not user_data.get("is_superuser"):
+                password = DEFAULT_SEED_PASSWORD
             sys_role = SystemRole.objects.filter(code=user_data["role"]).first()
 
             user_obj, created = User.objects.get_or_create(
@@ -278,9 +301,12 @@ class Command(BaseCommand):
                     "is_active": True,
                 },
             )
-            if created:
+            # Set the password every run (idempotent) so a user created earlier without
+            # one — e.g. auto-created by a deal/quote reference — becomes login-able.
+            if password and not user_obj.check_password(password):
                 user_obj.set_password(password)
-                user_obj.save()
+                user_obj.save(update_fields=["password"])
+            if created:
                 self.stdout.write(f"  Пользователь создан: {email}")
 
             # Company membership
@@ -303,5 +329,38 @@ class Command(BaseCommand):
                             "is_active": True,
                         },
                     )
+
+        # ─── 19. Подписки продавцов ───
+        # Sellers (SUPPLIER / MANUFACTURER) need an operational subscription or the
+        # F0.2 gate (assert_seller_can_operate) blocks send-КП / contract / invoice.
+        # Default ACTIVE PREMIUM; a company may override via a `subscription` block in
+        # seed_data.json (e.g. {"status": "PAST_DUE"}) to exercise the gate realistically.
+        seller_type_codes = {"SUPPLIER", "MANUFACTURER"}
+        usd = Currency.objects.filter(code="USD").first()
+        today = timezone.now().date()
+        plan_rates = {"BASIC": "150", "STANDARD": "400", "PREMIUM": "900"}
+        for company_data in seed_data.get("companies", []):
+            codes = set(company_data.get("company_types") or [company_data.get("company_type")])
+            if not (codes & seller_type_codes):
+                continue
+            company = Company.objects.filter(inn=company_data["inn"]).first()
+            if not company:
+                continue
+            sub_cfg = company_data.get("subscription") or {}
+            plan = sub_cfg.get("plan", "PREMIUM")
+            sub_status = sub_cfg.get("status", "ACTIVE")
+            # PAST_DUE/SUSPENDED/CANCELLED → expired window so is_operational is False.
+            valid_until = today - timedelta(days=1) if sub_status != "ACTIVE" else today + timedelta(days=365)
+            SupplierSubscription.objects.update_or_create(
+                company=company,
+                defaults={
+                    "plan": plan,
+                    "status": sub_status,
+                    "monthly_rate": plan_rates.get(plan, "0"),
+                    "currency": usd,
+                    "valid_from": today,
+                    "valid_until": valid_until,
+                },
+            )
 
         self.stdout.write(self.style.SUCCESS("Справочники загружены!"))
