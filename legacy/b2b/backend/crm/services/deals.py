@@ -108,7 +108,7 @@ def transition_deal_stage(
 
     # Contract gate: CLOSED_WON requires a fully signed Contract.
     if validate_fsm and target_stage_code in STAGE_REQUIRES_SIGNED_CONTRACT:
-        has_signed = deal.contracts.filter(status=ContractStatusCode.SIGNED).exists()
+        has_signed = deal.contracts.filter(status__code=ContractStatusCode.SIGNED).exists()
         if not has_signed:
             return None, "CLOSED_WON_REQUIRES_SIGNED_CONTRACT"
 

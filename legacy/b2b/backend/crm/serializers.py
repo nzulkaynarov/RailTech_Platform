@@ -283,6 +283,10 @@ class ActivityLogSerializer(serializers.ModelSerializer):
 class ContractSerializer(serializers.ModelSerializer):
     client_signer_name = serializers.CharField(source="client_signer.get_full_name", read_only=True, default=None)
     manager_signer_name = serializers.CharField(source="manager_signer.get_full_name", read_only=True, default=None)
+    # status is a FK lookup now (F5.4); keep emitting the code string under `status`
+    # so the frontend contract is unchanged, plus the display name under status_name.
+    status = serializers.CharField(source="status.code", read_only=True)
+    status_name = serializers.CharField(source="status.name", read_only=True)
     pdf_url = serializers.SerializerMethodField()
     signed_file_url = serializers.SerializerMethodField()
 
@@ -294,6 +298,7 @@ class ContractSerializer(serializers.ModelSerializer):
             "quote",
             "number",
             "status",
+            "status_name",
             "total_amount",
             "currency",
             "pdf_file",
@@ -314,7 +319,6 @@ class ContractSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             "number",
-            "status",
             "total_amount",
             "pdf_file",
             "client_signer",

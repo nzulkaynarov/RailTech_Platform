@@ -31,7 +31,7 @@ from accounts.models import (
 )
 from catalog.models import DomainType, ProductStatus, StockStatus
 from crm import services as crm_services
-from crm.models import Deal, DealStage, Quote, QuoteItem, QuoteStatus
+from crm.models import ContractStatus, Deal, DealStage, FulfillmentStatus, Quote, QuoteItem, QuoteStatus
 from crm.services.quotes import QuoteCalculationService, QuoteLifecycleService
 from master_data.models import Country, Currency, UnitOfMeasure
 
@@ -79,6 +79,12 @@ def lookups(db):
     )
     ProductStatus.objects.get_or_create(code="PUBLISHED", defaults={"name": "Published", "sort_order": 20})
     StockStatus.objects.get_or_create(code="IN_STOCK", defaults={"name": "In stock", "sort_order": 10})
+    # Post-sale status lookups (F5.4) — seeded here because --nomigrations skips the
+    # data migration that normally creates these rows.
+    for code in ["DRAFT", "PENDING_CLIENT", "PENDING_MANAGER", "SIGNED", "CANCELLED"]:
+        ContractStatus.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
+    for code in ["PENDING", "SHIPPED", "IN_TRANSIT", "DELIVERED", "ACCEPTED", "DISPUTED"]:
+        FulfillmentStatus.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
 
 
 def _make_company_with_owner(*, name, inn, type_code, email, username):
@@ -226,10 +232,10 @@ def test_golden_path_rfq_to_closed_won(deal, buyer, manager):
     assert err is None, f"generate_contract_from_quote failed: {err}"
     contract, err = crm_services.sign_contract_by_client(contract.id, buyer_user)
     assert err is None, f"sign_contract_by_client failed: {err}"
-    assert contract.status == "PENDING_MANAGER"
+    assert contract.status_code == "PENDING_MANAGER"
     contract, err = crm_services.sign_contract_by_manager(contract.id, manager)
     assert err is None, f"sign_contract_by_manager failed: {err}"
-    assert contract.status == "SIGNED"
+    assert contract.status_code == "SIGNED"
 
     # 8. Invoice issued from the signed contract, then paid in full.
     invoice, err = crm_services.generate_invoice_from_contract(contract.id, actor=manager)

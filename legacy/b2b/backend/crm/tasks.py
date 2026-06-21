@@ -225,7 +225,7 @@ def auto_invoice_on_closed_won(self, deal_id: int) -> dict:
         deal = Deal.objects.get(pk=deal_id)
     except Deal.DoesNotExist:
         return {"error": "deal not found"}
-    contract = deal.contracts.filter(status=ContractStatusCode.SIGNED).order_by("-created_at").first()
+    contract = deal.contracts.filter(status__code=ContractStatusCode.SIGNED).order_by("-created_at").first()
     result = {"deal_id": deal_id, "invoice": None, "act": None, "fulfillment": True, "idempotent_reuse": False}
     ensure_fulfillment(deal)
     if not contract:

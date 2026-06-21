@@ -50,7 +50,7 @@ def generate_invoice_from_contract(
         return None, sub_err
     contract = Contract.objects.select_related("quote__deal").get(pk=contract_id)
 
-    if contract.status != ContractStatusCode.SIGNED:
+    if contract.status_code != ContractStatusCode.SIGNED:
         return None, "INVOICE_REQUIRES_SIGNED_CONTRACT"
 
     # Idempotency: one signed contract yields one invoice. Re-issuing would

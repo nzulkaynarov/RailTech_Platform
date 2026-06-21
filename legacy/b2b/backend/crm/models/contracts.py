@@ -23,14 +23,6 @@ from master_data.models import Currency
 class Contract(models.Model):
     """Контракт, формируемый из одобренного Quote. Двусторонняя подпись."""
 
-    STATUS_CHOICES = [
-        ("DRAFT", _("Черновик")),
-        ("PENDING_CLIENT", _("Ожидает подписи клиента")),
-        ("PENDING_MANAGER", _("Ожидает подписи менеджера")),
-        ("SIGNED", _("Подписан сторонами")),
-        ("CANCELLED", _("Отменён")),
-    ]
-
     deal = models.ForeignKey(
         "crm.Deal",
         on_delete=models.PROTECT,  # financial record must survive deal deletion
@@ -48,10 +40,11 @@ class Contract(models.Model):
         unique=True,
         verbose_name=_("Номер контракта"),
     )
-    status = models.CharField(
-        max_length=20,
-        choices=STATUS_CHOICES,
-        default="DRAFT",
+    status = models.ForeignKey(
+        "crm.ContractStatus",
+        on_delete=models.PROTECT,
+        related_name="contracts",
+        null=True,
         db_index=True,
         verbose_name=_("Статус"),
     )
@@ -125,8 +118,13 @@ class Contract(models.Model):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"Contract {self.number} ({self.status})"
+        return f"Contract {self.number} ({self.status_code})"
+
+    @property
+    def status_code(self):
+        """Null-safe status code — status is a FK lookup now (F5.4)."""
+        return self.status.code if self.status_id else None
 
     @property
     def is_fully_signed(self) -> bool:
-        return self.status == "SIGNED" and bool(self.client_signed_at and self.manager_signed_at)
+        return self.status_code == "SIGNED" and bool(self.client_signed_at and self.manager_signed_at)

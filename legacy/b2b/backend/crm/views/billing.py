@@ -11,7 +11,7 @@ from accounts.services.permissions import is_seller, seller_sees_all_deals
 from core.file_streaming import stream_file_field
 from core.permissions import IsCompanyMemberOrPlatformAdmin, IsPlatformAdmin
 from crm import services as crm_services
-from crm.models import Act, Contract, Fulfillment, FulfillmentStatus, Invoice, Payment
+from crm.models import Act, Contract, ContractStatus, Fulfillment, FulfillmentStatus, Invoice, Payment
 from crm.serializers import (
     ActSerializer,
     ContractSerializer,
@@ -36,7 +36,8 @@ class Phase2StatusChoicesView(APIView):
 
         return Response(
             {
-                "contract": to_list(Contract.STATUS_CHOICES),
+                # contract status moved to a FK lookup (F5.4) — read from the table.
+                "contract": [{"code": s.code, "label": s.name} for s in ContractStatus.objects.filter(is_active=True)],
                 "invoice": to_list(Invoice.STATUS_CHOICES),
                 "act": to_list(Act.STATUS_CHOICES),
                 # fulfillment status moved to a FK lookup (F5.4) — read from the table.
@@ -59,7 +60,7 @@ class ContractViewSet(viewsets.ModelViewSet):
             return Contract.objects.none()
         user = self.request.user
         qs = Contract.objects.select_related(
-            "deal__company", "quote", "currency", "client_signer", "manager_signer"
+            "deal__company", "quote", "currency", "client_signer", "manager_signer", "status"
         ).order_by("-created_at")
         # Seller operates across all buyer deals → sees every billing record.
         if seller_sees_all_deals(user, self.request):

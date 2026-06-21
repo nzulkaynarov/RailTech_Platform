@@ -33,7 +33,7 @@ class ContractAdmin(ReadOnlyInspectionMixin, ModelAdmin):
         "updated_at",
     )
     list_per_page = 25
-    list_select_related = ("deal", "deal__company")
+    list_select_related = ("deal", "deal__company", "status")
 
     @display(
         description=_("Статус"),
@@ -46,7 +46,8 @@ class ContractAdmin(ReadOnlyInspectionMixin, ModelAdmin):
         },
     )
     def contract_status(self, obj):
-        return obj.get_status_display()
+        # status is a FK lookup now (F5.4); its name drives the label map above.
+        return obj.status.name if obj.status_id else "—"
 
 
 @admin.register(Invoice)
