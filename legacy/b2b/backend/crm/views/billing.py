@@ -20,6 +20,22 @@ from crm.serializers import (
     PaymentSerializer,
 )
 
+_PDF_DOC_TYPE = {"Contract": "contract", "Invoice": "invoice", "Act": "act"}
+
+
+def _stream_or_render_pdf(obj):
+    """Stream a document's PDF, rendering it on demand if it isn't ready yet.
+
+    Creation schedules the render asynchronously (F1.6), so a download that races
+    ahead of the Celery task — or arrives while the worker is down — would otherwise
+    404. Here we render lazily as a fallback so the download always succeeds."""
+    if not obj.pdf_file:
+        from crm.tasks import _render_pdf_for
+
+        _render_pdf_for(_PDF_DOC_TYPE[type(obj).__name__], obj.id)
+        obj.refresh_from_db()
+    return stream_file_field(obj.pdf_file)
+
 
 class Phase2StatusChoicesView(APIView):
     """Expose TextChoices-style status sets of the Phase 2 business models
@@ -69,7 +85,7 @@ class ContractViewSet(viewsets.ModelViewSet):
     # (local FileSystemStorage, no MinIO). See core/file_streaming.py.
     @action(detail=True, methods=["get"], url_path="download-pdf")
     def download_pdf(self, request, pk=None):
-        return stream_file_field(self.get_object().pdf_file)
+        return _stream_or_render_pdf(self.get_object())
 
     @action(detail=True, methods=["get"], url_path="download-signed")
     def download_signed(self, request, pk=None):
@@ -200,7 +216,7 @@ class InvoiceViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["get"], url_path="download-pdf")
     def download_pdf(self, request, pk=None):
-        return stream_file_field(self.get_object().pdf_file)
+        return _stream_or_render_pdf(self.get_object())
 
     @extend_schema(summary="Generate invoice from a signed contract", tags=["CRM"])
     @action(
@@ -293,7 +309,7 @@ class ActViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["get"], url_path="download-pdf")
     def download_pdf(self, request, pk=None):
-        return stream_file_field(self.get_object().pdf_file)
+        return _stream_or_render_pdf(self.get_object())
 
     @action(detail=True, methods=["get"], url_path="download-signed")
     def download_signed(self, request, pk=None):

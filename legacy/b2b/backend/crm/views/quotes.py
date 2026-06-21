@@ -359,10 +359,17 @@ class QuoteViewSet(viewsets.ModelViewSet):
         """Download the generated PDF."""
         quote = self.get_object()
         if not quote.pdf_file:
-            return Response(
-                {"error": "PDF not generated yet"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            # Render lazily: the КП PDF is rendered asynchronously after the quote
+            # is sent (F1.6), so a download may race ahead of the Celery task.
+            from crm.services import QuoteLifecycleService
+
+            try:
+                quote = QuoteLifecycleService.generate_pdf(quote.pk)
+            except (OSError, ValueError, RuntimeError):
+                return Response(
+                    {"error": "PDF generation failed"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
 
         from django.http import FileResponse
 

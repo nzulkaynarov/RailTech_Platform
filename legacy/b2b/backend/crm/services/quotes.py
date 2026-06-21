@@ -283,10 +283,14 @@ class QuoteLifecycleService:
                 "Only READY_TO_SEND quotes (internally approved) can be sent to the client."
             )
 
-        # Generate PDF if missing
+        # Render the PDF off the request thread, after commit (F1.6) — rendering it
+        # synchronously here wrote the file inside this atomic block, orphaning it if a
+        # later step rolled back. The client opens the КП via export-pdf, which renders
+        # lazily if this task hasn't finished yet.
         if not quote.pdf_file:
-            quote = QuoteLifecycleService.generate_pdf(quote_id)
-            quote.refresh_from_db()
+            from ..tasks import render_document_pdf
+
+            transaction.on_commit(lambda: render_document_pdf.delay("quote", quote_id))
 
         # Freeze prices
         sent_status = QuoteStatus.objects.filter(code=QuoteStatusCode.SENT).first()
