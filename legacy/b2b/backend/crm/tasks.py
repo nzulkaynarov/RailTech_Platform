@@ -315,3 +315,53 @@ def expire_stale_quotes(self) -> dict:
             )
         count += 1
     return {"expired": count}
+
+
+# Render functions by document type. Each takes the model instance and writes its
+# `pdf_file`. Kept as a dispatch map so the task and the lazy download fallback share
+# one source of truth. The quote uses its lifecycle service (takes an id, not an obj).
+def _render_pdf_for(doc_type: str, doc_id: int) -> None:
+    from .models import Act, Contract, Invoice
+
+    if doc_type == "contract":
+        from .services.contracts import _render_contract_pdf
+
+        _render_contract_pdf(Contract.objects.get(pk=doc_id))
+    elif doc_type == "invoice":
+        from .services.billing import _render_invoice_pdf
+
+        _render_invoice_pdf(Invoice.objects.get(pk=doc_id))
+    elif doc_type == "act":
+        from .services.billing import _render_act_pdf
+
+        _render_act_pdf(Act.objects.get(pk=doc_id))
+    elif doc_type == "quote":
+        from .services.quotes import QuoteLifecycleService
+
+        QuoteLifecycleService.generate_pdf(doc_id)
+    else:
+        raise ValueError(f"Unknown PDF doc_type: {doc_type}")
+
+
+@shared_task(
+    bind=True,
+    name="crm.render_document_pdf",
+    queue="pdf",
+    time_limit=600,
+    soft_time_limit=540,
+    max_retries=3,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+)
+def render_document_pdf(self, doc_type: str, doc_id: int) -> dict:
+    """Render a document's PDF off the request thread.
+
+    Scheduled via transaction.on_commit() at document creation, so the heavy
+    WeasyPrint render never runs inside the creating transaction — eliminating the
+    orphan-file-on-rollback class (a file written then abandoned by a rollback) and
+    keeping the API response fast. The download endpoints render lazily on demand as
+    a fallback, so a download that races ahead of this task still succeeds.
+    """
+    _render_pdf_for(doc_type, doc_id)
+    logger.info("Rendered %s PDF for id=%s", doc_type, doc_id)
+    return {"doc_type": doc_type, "doc_id": doc_id, "status": "rendered"}
