@@ -2,10 +2,51 @@ from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 
 from accounts.models import Company
+from crm.constants import DealStageCode
 from crm.models import Deal, Message
 
 from .models import Notification, NotificationType
 from .services import push_notification_ws
+
+
+def _notify_seller_team(deal, info_type):
+    """Alert the seller team that a new заявка is open for sourcing.
+
+    Single-seller model: a buyer's deal has no `deal.manager`, so every existing
+    seller-facing notification (which targets a specific user) never reached the
+    seller — its bell stayed empty ("уведомления не активны"). Here we fan out to
+    every active can_sell member of a SELLER-type company (= the RailTech team
+    today). TODO multi-seller: target only the addressed seller(s) once заявка
+    routing exists (roadmap F#1) instead of the whole seller pool.
+    """
+    from accounts.constants import SELLER_COMPANY_TYPES
+    from accounts.models import CustomUser
+
+    seller_user_ids = (
+        CustomUser.objects.filter(
+            is_active=True,
+            memberships__is_active=True,
+            memberships__can_sell=True,
+            memberships__company__types__code__in=SELLER_COMPANY_TYPES,
+        )
+        .values_list("id", flat=True)
+        .distinct()
+    )
+    company_name = deal.company.name if deal.company else ""
+    notifications = [
+        Notification(
+            user_id=uid,
+            type=info_type,
+            title="Новая заявка",
+            message=f"Заявка #{deal.pk} от «{company_name}» ожидает КП",
+            link="/crm/deals",
+            deal=deal,
+        )
+        for uid in seller_user_ids
+    ]
+    if notifications:
+        for notif in Notification.objects.bulk_create(notifications):
+            push_notification_ws(notif)
 
 
 @receiver(post_save, sender=Deal)
@@ -75,9 +116,15 @@ def notify_deal_stage_change(sender, instance, **kwargs):
     except Deal.DoesNotExist:
         return
 
-    if old_deal.stage_id != instance.stage_id and instance.client:
-        info_type = NotificationType.objects.filter(code="INFO").first()
-        new_stage_name = instance.stage.name if instance.stage else "N/A"
+    if old_deal.stage_id == instance.stage_id:
+        return
+
+    info_type = NotificationType.objects.filter(code="INFO").first()
+    new_stage = instance.stage
+    new_stage_name = new_stage.name if new_stage else "N/A"
+
+    # Buyer (client) learns their заявка/deal moved stage.
+    if instance.client:
         notif = Notification.objects.create(
             user=instance.client,
             type=info_type,
@@ -87,6 +134,11 @@ def notify_deal_stage_change(sender, instance, **kwargs):
             deal=instance,
         )
         push_notification_ws(notif)
+
+    # Seller team learns a new заявка has opened for sourcing (no deal.manager
+    # is assigned in the single-seller model, so this is their only signal).
+    if new_stage and new_stage.code == DealStageCode.RFQ_OPEN:
+        _notify_seller_team(instance, info_type)
 
 
 @receiver(pre_save, sender=Company)
