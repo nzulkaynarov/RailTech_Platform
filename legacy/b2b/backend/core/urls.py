@@ -16,6 +16,7 @@ from accounts.views import (
     LogoutView,
     MeView,
     RegisterView,
+    WsTicketView,
     ResetPasswordView,
     SetupPasswordView,
     SubmitProfileView,
@@ -125,6 +126,7 @@ urlpatterns = (
         path("api/v1/auth/reset-password/", ResetPasswordView.as_view(), name="reset-password"),
         path("api/v1/auth/submit-profile/", SubmitProfileView.as_view(), name="submit-profile"),
         path("api/v1/auth/logout/", LogoutView.as_view(), name="logout"),
+        path("api/v1/auth/ws-ticket/", WsTicketView.as_view(), name="ws-ticket"),
         path(
             "api/v1/auth/token/",
             extend_schema(
