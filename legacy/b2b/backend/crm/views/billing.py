@@ -9,6 +9,7 @@ from rest_framework.views import APIView
 
 from accounts.services.permissions import is_seller, seller_sees_all_deals
 from core.file_streaming import stream_file_field
+from core.optimistic_locking import OptimisticLockingMixin
 from core.permissions import IsCompanyMemberOrPlatformAdmin, IsPlatformAdmin
 from crm import services as crm_services
 from crm.models import (
@@ -75,7 +76,7 @@ class Phase2StatusChoicesView(APIView):
         )
 
 
-class ContractViewSet(viewsets.ModelViewSet):
+class ContractViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
     """Contracts -- generated from approved quotes, double-signed."""
 
     serializer_class = ContractSerializer
@@ -206,7 +207,7 @@ class ContractViewSet(viewsets.ModelViewSet):
         return Response(ContractSerializer(contract).data)
 
 
-class InvoiceViewSet(viewsets.ModelViewSet):
+class InvoiceViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
     serializer_class = InvoiceSerializer
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
 
