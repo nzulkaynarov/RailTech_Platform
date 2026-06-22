@@ -173,6 +173,77 @@ jobs:
           cd backend
           python manage.py migrate --noinput
 
+  api-contract:
+    # Fails if the committed OpenAPI schema or generated TS types drift from the
+    # code (F2.7). Regenerate both and `git diff` — keeps backend/schema.json +
+    # frontend/src/api/schema.d.ts honest so the frontend types can't silently rot.
+    # Python pinned to 3.12 (the Docker/prod runtime that produced the committed
+    # schema); openapi-typescript is locked in package-lock so its output is stable.
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: railtech
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/railtech
+      DB_SSLMODE: disable
+      DJANGO_SECRET_KEY: 'ci-api-contract-secret-key-not-for-production'
+      DJANGO_DEBUG: 'False'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+
+      - name: Regenerate OpenAPI schema
+        run: |
+          cd backend
+          python manage.py spectacular --format openapi-json --file schema.json
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Regenerate API types
+        run: |
+          cd frontend
+          npm run gen:api-types
+
+      - name: Fail on schema / type drift
+        run: |
+          if ! git diff --exit-code -- backend/schema.json frontend/src/api/schema.d.ts; then
+            echo "::error::OpenAPI schema or generated TS types are out of date."
+            echo "Run 'cd backend && python manage.py spectacular --format openapi-json --file schema.json'"
+            echo "then 'cd frontend && npm run gen:api-types', and commit the result."
+            exit 1
+          fi
+
   frontend-lint:
     runs-on: ubuntu-latest
     strategy:
