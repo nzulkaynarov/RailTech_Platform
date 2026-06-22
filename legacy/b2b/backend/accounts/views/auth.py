@@ -210,3 +210,34 @@ class LogoutView(views.APIView):
                 # Already expired/blacklisted/invalid — logout is idempotent.
                 pass
         return Response(status=status.HTTP_205_RESET_CONTENT)
+
+
+# Short-lived, single-use ticket TTL (seconds). Long enough to open the socket
+# right after fetching, short enough that a leaked ticket (proxy/access logs) is
+# useless almost immediately.
+WS_TICKET_TTL = 30
+
+
+@extend_schema(
+    summary="Mint a one-time WebSocket auth ticket",
+    description=(
+        "Returns a short-lived, single-use ticket to authenticate a WebSocket "
+        "connection (`?ticket=...`), so the long-lived JWT no longer travels in the "
+        "WS URL query string (which proxies/CDNs log). The ticket is consumed on "
+        "first use and expires in 30s."
+    ),
+    tags=["Auth"],
+)
+class WsTicketView(views.APIView):
+    """POST /api/v1/auth/ws-ticket/ — issues a one-time WS auth ticket."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        import secrets
+
+        from django.core.cache import cache
+
+        ticket = secrets.token_urlsafe(32)
+        cache.set(f"ws_ticket:{ticket}", request.user.id, timeout=WS_TICKET_TTL)
+        return Response({"ticket": ticket, "expires_in": WS_TICKET_TTL})

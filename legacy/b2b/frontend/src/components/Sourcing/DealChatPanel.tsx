@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, FormEvent } from 'react';
-import { wsBase } from '@/lib/ws';
+import { authedWsUrl } from '@/lib/ws';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Card } from '@/components/ui/card';
@@ -94,17 +94,6 @@ export function DealChatPanel({ dealId }: DealChatPanelProps = {}): React.ReactN
     let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
     let attempt = 0;
 
-    const connect = () => {
-      if (cancelled) return;
-      const wsUrl = `${wsBase()}/ws/chat/${dealId}/?token=${encodeURIComponent(accessToken)}`;
-      const socket = new WebSocket(wsUrl);
-      socketRef.current = socket;
-
-      socket.onopen = () => {
-        if (cancelled) return;
-        attempt = 0; // reset backoff once a connection actually succeeds
-        setIsConnected(true);
-      };
       // The status text already promises reconnection — actually do it. A flaky
       // network or a server blip now recovers on its own (exponential backoff,
       // capped) instead of staying "disconnected" until a full page reload.
@@ -114,6 +103,26 @@ export function DealChatPanel({ dealId }: DealChatPanelProps = {}): React.ReactN
         const delay = Math.min(15000, 1000 * 2 ** attempt);
         attempt += 1;
         reconnectTimer = setTimeout(connect, delay);
+      };
+
+    const connect = async () => {
+      if (cancelled) return;
+      let wsUrl: string;
+      try {
+        // Fresh single-use ticket per (re)connect — no JWT in the WS URL.
+        wsUrl = await authedWsUrl(`/ws/chat/${dealId}/`);
+      } catch {
+        scheduleReconnect();
+        return;
+      }
+      if (cancelled) return;
+      const socket = new WebSocket(wsUrl);
+      socketRef.current = socket;
+
+      socket.onopen = () => {
+        if (cancelled) return;
+        attempt = 0; // reset backoff once a connection actually succeeds
+        setIsConnected(true);
       };
       socket.onclose = scheduleReconnect;
       socket.onerror = () => { socket.close(); };

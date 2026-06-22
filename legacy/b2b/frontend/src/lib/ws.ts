@@ -16,3 +16,17 @@ export function wsBase(): string {
   base = base.replace(/\/ws$/i, ''); // drop a trailing /ws — callers add it
   return base;
 }
+
+/**
+ * Build an authenticated WebSocket URL for `path` (e.g. `/ws/notifications/`).
+ *
+ * Mints a short-lived, single-use ticket via POST /auth/ws-ticket/ and puts THAT
+ * in the query string instead of the long-lived JWT, so a leaked WS URL (proxy /
+ * access logs) is useless within ~30s. Each (re)connect must call this for a
+ * fresh ticket. Throws if the ticket can't be minted (caller should retry).
+ */
+export async function authedWsUrl(path: string): Promise<string> {
+  const { apiClient } = await import('@/api/client');
+  const { data } = await apiClient.post<{ ticket: string }>('auth/ws-ticket/');
+  return `${wsBase()}${path}?ticket=${encodeURIComponent(data.ticket)}`;
+}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { wsBase } from '@/lib/ws';
+import { authedWsUrl } from '@/lib/ws';
 import { useTranslation } from 'react-i18next';
 import { Bell, Info, AlertTriangle, CheckCircle, Clock, Check, ExternalLink, BellOff } from 'lucide-react';
 import { notificationsApi, Notification } from '@/api/notificationsApi';
@@ -82,11 +82,22 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = () => {
     const socketRef = useRef<WebSocket | null>(null);
     useEffect(() => {
         if (!accessToken) return;
-        const url = `${wsBase()}/ws/notifications/?token=${encodeURIComponent(accessToken)}`;
 
         let stopped = false;
         let retry = 0;
-        const connect = () => {
+        const connect = async () => {
+            if (stopped) return;
+            let url: string;
+            try {
+                // Fresh single-use ticket per (re)connect — no JWT in the WS URL.
+                url = await authedWsUrl('/ws/notifications/');
+            } catch {
+                // Couldn't mint a ticket — retry later; the 60s poll still covers us.
+                if (stopped) return;
+                retry = Math.min(retry + 1, 5);
+                setTimeout(connect, 1000 * 2 ** retry);
+                return;
+            }
             if (stopped) return;
             const ws = new WebSocket(url);
             socketRef.current = ws;
