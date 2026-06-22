@@ -2,6 +2,9 @@ from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import permissions, status, views
 from rest_framework.generics import RetrieveAPIView
 from rest_framework.response import Response
+from rest_framework_simplejwt.views import TokenObtainPairView
+
+from accounts.throttles import PasswordResetEmailThrottle, ScopedRateThrottle
 
 from accounts.serializers import (
     ForgotPasswordSerializer,
@@ -36,6 +39,8 @@ from accounts.services import (
 )
 class RegisterView(views.APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "register"
 
     def post(self, request):
         serializer = RegisterInterestSerializer(data=request.data)
@@ -66,6 +71,8 @@ class RegisterView(views.APIView):
 )
 class SetupPasswordView(views.APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "password_set"
 
     def post(self, request):
         serializer = SetupPasswordSerializer(data=request.data)
@@ -93,6 +100,10 @@ class SetupPasswordView(views.APIView):
 )
 class ForgotPasswordView(views.APIView):
     permission_classes = [permissions.AllowAny]
+    # Two limits: per-IP (password_reset) AND per-target-email (password_reset_email)
+    # so neither one IP nor IP-rotation can bomb a victim's inbox.
+    throttle_classes = [ScopedRateThrottle, PasswordResetEmailThrottle]
+    throttle_scope = "password_reset"
 
     def post(self, request):
         serializer = ForgotPasswordSerializer(data=request.data)
@@ -116,6 +127,8 @@ class ForgotPasswordView(views.APIView):
 )
 class ResetPasswordView(views.APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "password_set"
 
     def post(self, request):
         serializer = ResetPasswordSerializer(data=request.data)
@@ -241,3 +254,11 @@ class WsTicketView(views.APIView):
         ticket = secrets.token_urlsafe(32)
         cache.set(f"ws_ticket:{ticket}", request.user.id, timeout=WS_TICKET_TTL)
         return Response({"ticket": ticket, "expires_in": WS_TICKET_TTL})
+
+
+class ThrottledTokenObtainPairView(TokenObtainPairView):
+    """Login (token obtain) with a per-IP brute-force throttle (`login` scope).
+    Plain TokenObtainPairView only had the loose global anon limit."""
+
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "login"

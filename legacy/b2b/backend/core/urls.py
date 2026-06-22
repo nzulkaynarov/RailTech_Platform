@@ -6,7 +6,7 @@ from django.views.static import serve as _serve_media
 from drf_spectacular.utils import extend_schema
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from rest_framework.routers import DefaultRouter
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.views import TokenRefreshView
 
 from accounts.views import (
     CompanyRoleApplicationViewSet,
@@ -16,6 +16,7 @@ from accounts.views import (
     LogoutView,
     MeView,
     RegisterView,
+    ThrottledTokenObtainPairView,
     WsTicketView,
     ResetPasswordView,
     SetupPasswordView,
@@ -133,7 +134,7 @@ urlpatterns = (
                 summary="Obtain JWT token pair",
                 description="Authenticate with email and password to receive access and refresh tokens.",
                 tags=["Auth"],
-            )(TokenObtainPairView).as_view(),
+            )(ThrottledTokenObtainPairView).as_view(),
             name="token_obtain_pair",
         ),
         path(

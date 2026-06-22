@@ -14,6 +14,7 @@ from accounts.views.auth import (  # noqa: F401
     ResetPasswordView,
     SetupPasswordView,
     SubmitProfileView,
+    ThrottledTokenObtainPairView,
     WsTicketView,
 )
 from accounts.views.company import CompanyViewSet  # noqa: F401
@@ -34,6 +35,7 @@ __all__ = [
     "MeView",
     "LogoutView",
     "WsTicketView",
+    "ThrottledTokenObtainPairView",
     # applications & subscriptions
     "SupplierSubscriptionViewSet",
     "CompanyRoleApplicationViewSet",
