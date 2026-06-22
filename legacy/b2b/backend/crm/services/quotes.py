@@ -32,6 +32,28 @@ def _set_quote_status(quote, code: str) -> None:
     quote.save(update_fields=["status", "updated_at"])
 
 
+def _notify_quote_outcome(quote, *, type_code: str, title: str, message: str) -> None:
+    """Tell the seller side a client decided on a КП (approved/rejected).
+
+    Targets the КП author `prepared_by` (reliably set) plus a distinct
+    `deal.manager` if one is assigned — in the single-seller model deal.manager
+    is usually empty, so the old manager-only notification never reached anyone.
+    Pushed over WS via push_notification_ws for realtime delivery.
+    """
+    from notifications.models import Notification, NotificationType
+    from notifications.services import push_notification_ws
+
+    recipient_ids = {quote.prepared_by_id, quote.deal.manager_id} - {None}
+    if not recipient_ids:
+        return
+    ntype = NotificationType.objects.filter(code=type_code).first()
+    for uid in recipient_ids:
+        notif = Notification.objects.create(
+            user_id=uid, type=ntype, title=title, message=message, link="/crm/deals", deal=quote.deal
+        )
+        push_notification_ws(notif)
+
+
 def _log_quote(quote, actor, action: str, detail: str = "") -> None:
     ActivityLog.objects.create(
         action=action,
@@ -326,8 +348,6 @@ class QuoteLifecycleService:
         """Client approves the quote. Only SENT quotes can be approved."""
         from django.utils import timezone
 
-        from notifications.models import Notification, NotificationType
-
         quote = Quote.objects.select_related("deal__company", "deal__manager", "deal__stage", "status").get(pk=quote_id)
 
         # Status guard
@@ -349,17 +369,16 @@ class QuoteLifecycleService:
             reason=f"КП v{quote.version} одобрено клиентом",
         )
 
-        # Notify manager
-        if quote.deal.manager:
-            success_type = NotificationType.objects.filter(code="SUCCESS").first()
-            Notification.objects.create(
-                user=quote.deal.manager,
-                type=success_type,
-                title="КП одобрено клиентом",
-                message=f"{quote.deal.company.name} одобрил КП v{quote.version}",
-                link="/crm/deals",
-                deal=quote.deal,
-            )
+        # Notify the seller who built the КП (and a distinct manager, if assigned)
+        # that the client approved. deal.manager is usually unset in the single-
+        # seller model, so prepared_by is the reliable recipient — without it the
+        # seller never learned the outcome. Pushed over WS for realtime delivery.
+        _notify_quote_outcome(
+            quote,
+            type_code="SUCCESS",
+            title="КП одобрено клиентом",
+            message=f"{quote.deal.company.name} одобрил КП v{quote.version}",
+        )
 
         return quote
 
@@ -509,7 +528,6 @@ class QuoteLifecycleService:
     @transaction.atomic
     def reject_quote(quote_id: int, rejected_by_user, reason: str = "") -> Quote:
         """Client rejects the quote. Only SENT quotes can be rejected."""
-        from notifications.models import Notification, NotificationType
 
         quote = Quote.objects.select_related("deal__company", "deal__manager", "deal__stage", "status").get(pk=quote_id)
 
@@ -534,17 +552,14 @@ class QuoteLifecycleService:
             reason=f"КП v{quote.version} отклонено. {reason}",
         )
 
-        # Notify manager
-        if quote.deal.manager:
-            warning_type = NotificationType.objects.filter(code="WARNING").first()
-            Notification.objects.create(
-                user=quote.deal.manager,
-                type=warning_type,
-                title="КП отклонено клиентом",
-                message=f"{quote.deal.company.name} отклонил КП v{quote.version}. {reason}",
-                link="/crm/deals",
-                deal=quote.deal,
-            )
+        # Notify the КП author (+ distinct manager) that the client rejected —
+        # same single-seller reasoning as approve_quote. Pushed over WS.
+        _notify_quote_outcome(
+            quote,
+            type_code="WARNING",
+            title="КП отклонено клиентом",
+            message=f"{quote.deal.company.name} отклонил КП v{quote.version}. {reason}".strip(),
+        )
 
         return quote
 
