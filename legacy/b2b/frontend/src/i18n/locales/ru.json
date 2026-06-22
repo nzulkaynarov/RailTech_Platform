@@ -60,7 +60,7 @@
   "auth": {
     "loginTitle": "Вход в кабинет",
     "loginSubtitle": "Введите данные для доступа к платформе",
-    "emailLabel": "Email / ИНН",
+    "emailLabel": "Email",
     "emailPlaceholder": "user@company.com",
     "passwordLabel": "Пароль",
     "passwordPlaceholder": "••••••••",

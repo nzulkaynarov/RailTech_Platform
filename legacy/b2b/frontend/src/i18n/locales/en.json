@@ -60,7 +60,7 @@
   "auth": {
     "loginTitle": "Sign in",
     "loginSubtitle": "Enter your credentials to access the platform",
-    "emailLabel": "Email / TIN",
+    "emailLabel": "Email",
     "emailPlaceholder": "user@company.com",
     "passwordLabel": "Password",
     "passwordPlaceholder": "••••••••",
