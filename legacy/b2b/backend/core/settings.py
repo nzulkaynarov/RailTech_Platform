@@ -277,6 +277,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # Adds RFC 8594 Deprecation/Sunset headers for deprecated API versions (F2.6).
+    "core.versioning.SunsetHeaderMiddleware",
     # Innermost — wraps the view so it captures/replays the rendered response (F2.4).
     "core.idempotency.IdempotencyMiddleware",
 ]
@@ -533,7 +535,20 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    # API versioning (F2.6): formal contract instead of a hardcoded "v1". Routes are
+    # still served under /api/v1/, so request.version resolves to DEFAULT_VERSION;
+    # an unknown version simply has no route (404). When v2 is introduced, add it to
+    # ALLOWED_VERSIONS and mount /api/v2/ — request.version then drives per-version logic.
+    "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.URLPathVersioning",
+    "DEFAULT_VERSION": "v1",
+    "ALLOWED_VERSIONS": ["v1"],
+    "VERSION_PARAM": "version",
 }
+
+# API deprecation / Sunset policy (RFC 8594). Map a version → ISO sunset date to
+# start emitting `Deprecation: true` + `Sunset: <date>` headers on its responses
+# (core.versioning.SunsetHeaderMiddleware). Empty = nothing deprecated yet.
+API_SUNSET = {}
 
 # JWT
 SIMPLE_JWT = {
