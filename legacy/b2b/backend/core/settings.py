@@ -506,6 +506,13 @@ REST_FRAMEWORK = {
         "user": "200/minute",
         "lead_submit": "5/minute",
         "import_upload": "10/hour",
+        # Anti-abuse on unauthenticated/sensitive auth endpoints (the global anon
+        # 20/min is far too loose to stop e.g. password-reset email bombing).
+        "password_reset": "5/hour",  # forgot-password, per IP
+        "password_reset_email": "3/hour",  # forgot-password, per TARGET email (cross-IP victim shield)
+        "register": "5/hour",  # account/verification-email spam, per IP
+        "password_set": "20/hour",  # setup/reset-password token submission, per IP (brute-force)
+        "login": "10/minute",  # token obtain, per IP (brute-force; lenient enough for typos)
     },
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
