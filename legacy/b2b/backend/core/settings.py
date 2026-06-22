@@ -277,7 +277,13 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # Innermost — wraps the view so it captures/replays the rendered response (F2.4).
+    "core.idempotency.IdempotencyMiddleware",
 ]
+
+# Idempotency-Key replay window + max in-flight lock (Sprint D / F2.4).
+IDEMPOTENCY_TTL_SECONDS = int(os.environ.get("IDEMPOTENCY_TTL_SECONDS", str(24 * 3600)))
+IDEMPOTENCY_LOCK_SECONDS = int(os.environ.get("IDEMPOTENCY_LOCK_SECONDS", "90"))
 
 CORS_ALLOW_ALL_ORIGINS = DEBUG
 CORS_ALLOW_CREDENTIALS = True
