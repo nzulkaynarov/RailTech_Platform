@@ -24,8 +24,12 @@ test.describe('smoke', () => {
     expect(bodyText, 'visible text contains an untranslated i18n key').not.toMatch(rawKeyPattern);
   });
 
-  test('health endpoint is up', async ({ request }) => {
-    const res = await request.get('/health/');
+  test('backend health endpoint is up', async ({ request }) => {
+    // The backend (not the SPA nginx) owns /health/. In the docker harness
+    // localhost:8000 is socat-forwarded to the host backend; against staging the
+    // env URL serves it at the same origin. Allow both.
+    const base = process.env.E2E_API_URL || 'http://localhost:8000';
+    const res = await request.get(`${base}/health/`);
     expect(res.ok()).toBeTruthy();
   });
 });

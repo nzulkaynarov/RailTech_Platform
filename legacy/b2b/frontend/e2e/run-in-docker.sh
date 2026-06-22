@@ -12,7 +12,7 @@
 #   e2e/run-in-docker.sh _probe.spec.ts --workers=1
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")/.." && pwd)"   # frontend/
-PW_VERSION="${PW_VERSION:-v1.48.0-jammy}"
+PW_VERSION="${PW_VERSION:-v1.61.0-jammy}"
 
 docker run --rm \
   -v "$HERE":/work -w /work \
