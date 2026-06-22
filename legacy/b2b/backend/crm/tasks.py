@@ -177,11 +177,13 @@ def check_overdue_deliveries(self) -> dict:
         ],
     ).select_related("deal__manager", "status")
     warn_type = NotificationType.objects.filter(code="WARNING").first()
+    from notifications.services import push_notification_ws
+
     count = 0
     for ff in overdue_qs:
         mgr = ff.deal.manager
         if mgr:
-            Notification.objects.create(
+            notif = Notification.objects.create(
                 user=mgr,
                 type=warn_type,
                 title="Просрочка по доставке",
@@ -189,6 +191,7 @@ def check_overdue_deliveries(self) -> dict:
                 link="/crm/deals",
                 deal=ff.deal,
             )
+            push_notification_ws(notif)
         count += 1
     return {"overdue_flagged": count}
 
@@ -295,6 +298,8 @@ def expire_stale_quotes(self) -> dict:
         valid_until__lt=today,
     )
     warn_type = NotificationType.objects.filter(code="WARNING").first()
+    from notifications.services import push_notification_ws
+
     count = 0
     for q in stale_qs:
         q.status = expired_status
@@ -306,7 +311,7 @@ def expire_stale_quotes(self) -> dict:
             level="WARNING",
         )
         if q.deal.manager and warn_type:
-            Notification.objects.create(
+            notif = Notification.objects.create(
                 user=q.deal.manager,
                 type=warn_type,
                 title="КП просрочено",
@@ -314,6 +319,7 @@ def expire_stale_quotes(self) -> dict:
                 link="/crm/quotes",
                 deal=q.deal,
             )
+            push_notification_ws(notif)
         count += 1
     return {"expired": count}
 
