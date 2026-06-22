@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { useUserStore } from '@/store/userStore';
+import { getAccessToken, setAccessToken } from './accessToken';
 
 const BASE_ENV_URL = import.meta.env.VITE_API_URL || '';
 const API_URL = BASE_ENV_URL.endsWith('/api/v1') ? BASE_ENV_URL : `${BASE_ENV_URL}/api/v1`;
@@ -7,23 +8,20 @@ const API_URL = BASE_ENV_URL.endsWith('/api/v1') ? BASE_ENV_URL : `${BASE_ENV_UR
 export const apiClient = axios.create({
 	baseURL: API_URL,
 	timeout: 30_000,
+	// Send the HttpOnly refresh cookie on auth requests (F2.1). Cookie is path-scoped
+	// to /api/v1/auth/, so it only actually rides refresh/logout, not every call.
+	withCredentials: true,
 	headers: {
 		'Content-Type': 'application/json',
 	},
 });
 
-// JWT Auth Interceptor — attaches token from localStorage (persisted by zustand)
+// JWT Auth Interceptor — attaches the in-memory access token (never localStorage; F2.1)
 apiClient.interceptors.request.use((config) => {
-	try {
-		const raw = localStorage.getItem('railtech-auth');
-		if (raw) {
-			const parsed = JSON.parse(raw);
-			const token = parsed?.state?.accessToken;
-			if (token) {
-				config.headers.Authorization = `Bearer ${token}`;
-			}
-		}
-	} catch { /* noop */ }
+	const token = getAccessToken();
+	if (token) {
+		config.headers.Authorization = `Bearer ${token}`;
+	}
 	return config;
 });
 
@@ -84,7 +82,13 @@ apiClient.interceptors.response.use(
 	async (error) => {
 		const originalRequest = error.config;
 
-		if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
+		// Never try to refresh on the auth endpoints themselves — a 401 from
+		// login/refresh/logout means there's no valid session, and refreshing here
+		// would loop (logout → 401 → refresh → fail → logout → …).
+		const reqUrl: string = originalRequest?.url || '';
+		const isAuthEndpoint = reqUrl.includes('auth/token') || reqUrl.includes('auth/logout');
+
+		if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !isAuthEndpoint) {
 			originalRequest._retry = true;
 
 			if (isRefreshing) {
@@ -103,18 +107,17 @@ apiClient.interceptors.response.use(
 			isRefreshing = true;
 
 			try {
-				const raw = localStorage.getItem('railtech-auth');
-				const refreshToken = raw ? JSON.parse(raw)?.state?.refreshToken : null;
-				if (!refreshToken) {
-					await failRefresh(error);
-					return Promise.reject(error);
-				}
-				const response = await axios.post(`${API_URL}/auth/token/refresh/`, {
-					refresh: refreshToken,
-				});
+				// Refresh via the HttpOnly cookie (F2.1) — no token in the body, cookie
+				// is sent by withCredentials. A 401 here means no/expired cookie → logout.
+				const response = await axios.post(
+					`${API_URL}/auth/token/refresh/`,
+					{},
+					{ withCredentials: true },
+				);
 				const newToken = response.data.access;
 
-				// Update store via Zustand (keeps state and localStorage in sync)
+				// Update the in-memory holder + store (keeps the request interceptor in sync).
+				setAccessToken(newToken);
 				const { useAuthStore } = await import('../store/authStore');
 				useAuthStore.getState().setTokens(newToken);
 

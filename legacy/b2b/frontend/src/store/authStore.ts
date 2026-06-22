@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { apiClient } from '../api/client';
+import { setAccessToken } from '../api/accessToken';
 import { User } from '../api/accountsApi';
 
 // Backend SystemRole vocabulary after migration accounts/0010_platform_admin_model.
@@ -15,8 +16,9 @@ interface AuthState {
     user: User | null;
     role: UserRole | null;
     kyc_status: KYCStatus;
+    // Access token is held in memory only (see api/accessToken.ts); the refresh
+    // token lives in an HttpOnly cookie the server sets — never in JS (F2.1).
     accessToken: string | null;
-    refreshToken: string | null;
     isLoading: boolean;
     isAuthenticated: boolean;
     error: string | null;
@@ -25,7 +27,7 @@ interface AuthState {
     logout: () => void;
     initAuth: () => Promise<void>;
     setUser: (user: User) => void;
-    setTokens: (access: string, refresh?: string) => void;
+    setTokens: (access: string) => void;
     clearError: () => void;
 }
 
@@ -43,7 +45,6 @@ export const useAuthStore = create<AuthState>()(
             role: null,
             kyc_status: null,
             accessToken: null,
-            refreshToken: null,
             isLoading: false,
             isAuthenticated: false,
             error: null,
@@ -53,6 +54,8 @@ export const useAuthStore = create<AuthState>()(
                 try {
                     const response = await fetch(`${API_URL}/auth/token/`, {
                         method: 'POST',
+                        // credentials: include → accept the HttpOnly refresh cookie the server sets.
+                        credentials: 'include',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ email, password }),
                     });
@@ -64,8 +67,10 @@ export const useAuthStore = create<AuthState>()(
                         throw new Error(message);
                     }
 
-                    const { access, refresh } = await response.json();
-                    set({ accessToken: access, refreshToken: refresh, error: null });
+                    // Only the access token comes back in the body; refresh is in the cookie.
+                    const { access } = await response.json();
+                    setAccessToken(access);
+                    set({ accessToken: access, error: null });
 
                     // Fetch user profile with the new token
                     await get().initAuth();
@@ -79,41 +84,48 @@ export const useAuthStore = create<AuthState>()(
             },
 
             logout: () => {
-                // Best-effort server-side revocation: blacklist the refresh token
-                // so a stolen copy can't mint new access tokens for its 7d life.
-                // Fire-and-forget — never block local logout on the network.
-                const { refreshToken } = get();
-                if (refreshToken) {
-                    apiClient.post('auth/logout/', { refresh: refreshToken }).catch(() => { /* noop */ });
-                }
+                // Best-effort server-side revocation: the server reads the refresh
+                // cookie, blacklists it, and clears the cookie. Fire-and-forget —
+                // never block local logout on the network. (withCredentials sends the cookie.)
+                apiClient.post('auth/logout/').catch(() => { /* noop */ });
+                setAccessToken(null);
                 set({
                     user: null,
                     role: null,
                     kyc_status: null,
                     accessToken: null,
-                    refreshToken: null,
                     isAuthenticated: false,
                 });
             },
 
             initAuth: async () => {
-                const { accessToken } = get();
-                if (!accessToken) {
-                    set({ isAuthenticated: false, isLoading: false });
-                    return;
-                }
-
                 set({ isLoading: true });
                 try {
-                    // Use apiClient which has the refresh interceptor —
-                    // if the access token is expired, it will automatically
-                    // refresh using the stored refresh token before retrying
+                    // Access is in-memory only, so after a page reload there is none —
+                    // mint a fresh one from the HttpOnly refresh cookie (F2.1). If the
+                    // cookie is missing/expired, there's no session.
+                    if (!get().accessToken) {
+                        const r = await fetch(`${API_URL}/auth/token/refresh/`, {
+                            method: 'POST',
+                            credentials: 'include',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: '{}',
+                        });
+                        if (!r.ok) {
+                            setAccessToken(null);
+                            set({ isAuthenticated: false, isLoading: false, user: null, role: null });
+                            return;
+                        }
+                        const { access } = await r.json();
+                        setAccessToken(access);
+                        set({ accessToken: access });
+                    }
+
+                    // apiClient's interceptor refreshes again (via cookie) if this 401s.
                     const response = await apiClient.get<User>('accounts/users/me/');
-                    const user = response.data;
-                    get().setUser(user);
+                    get().setUser(response.data);
                     set({ isAuthenticated: true });
                 } catch {
-                    // Both access and refresh tokens invalid — logout
                     get().logout();
                 } finally {
                     set({ isLoading: false });
@@ -140,22 +152,22 @@ export const useAuthStore = create<AuthState>()(
                 });
             },
 
-            setTokens: (access: string, refresh?: string) => {
-                const updates: Partial<AuthState> = { accessToken: access };
-                if (refresh) updates.refreshToken = refresh;
-                set(updates);
+            setTokens: (access: string) => {
+                setAccessToken(access);
+                set({ accessToken: access });
             },
 
             clearError: () => set({ error: null }),
         }),
         {
             name: 'railtech-auth',
+            // Tokens are NEVER persisted (F2.1): access is in-memory, refresh is an
+            // HttpOnly cookie. Only cache display data so the shell paints instantly on
+            // reload while initAuth() re-mints the access token from the cookie.
             partialize: (state) => ({
-                accessToken: state.accessToken,
-                refreshToken: state.refreshToken,
                 isAuthenticated: state.isAuthenticated,
                 role: state.role,
-                user: state.user, // Persist user info for immediate display while re-fetching
+                user: state.user,
             }),
         }
     )

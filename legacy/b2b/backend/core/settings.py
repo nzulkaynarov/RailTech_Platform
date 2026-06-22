@@ -303,6 +303,16 @@ CORS_ALLOWED_ORIGINS = (
     ]
 )
 
+# Allow our custom request headers through CORS preflight (cross-origin dev). Without
+# these a credentialed request carrying them is blocked: X-Active-Context (context
+# scoping), Idempotency-Key (F2.4), If-Match (F2.5 optimistic locking). Prod is
+# same-origin (no preflight) but this keeps cross-origin dev honest.
+from corsheaders.defaults import default_headers  # noqa: E402
+
+CORS_ALLOW_HEADERS = (*default_headers, "x-active-context", "idempotency-key", "if-match")
+# Let the SPA read these response headers cross-origin.
+CORS_EXPOSE_HEADERS = ["ETag", "Idempotent-Replay", "Deprecation", "Sunset"]
+
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "http://localhost:8000",
@@ -532,6 +542,19 @@ SIMPLE_JWT = {
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
 }
+
+# Refresh token in an HttpOnly cookie (F2.1): the refresh token never reaches JS, so
+# XSS can't exfiltrate it. The access token still rides the response body (kept in
+# memory by the SPA, never localStorage). Cookie is scoped to the auth path so it's
+# only sent to /token/refresh/ and /logout/, not every API call.
+REFRESH_COOKIE_NAME = os.environ.get("REFRESH_COOKIE_NAME", "refresh_token")
+REFRESH_COOKIE_PATH = "/api/v1/auth/"
+# HTTPS-only in prod. Decoupled from DEBUG so a prod-like local stack (DEBUG=False)
+# served over plain http can still set REFRESH_COOKIE_SECURE=False and have the
+# browser send the cookie. Defaults to secure unless DEBUG.
+REFRESH_COOKIE_SECURE = os.environ.get("REFRESH_COOKIE_SECURE", "false" if DEBUG else "true").strip().lower() == "true"
+REFRESH_COOKIE_SAMESITE = os.environ.get("REFRESH_COOKIE_SAMESITE", "Lax")
+REFRESH_COOKIE_MAX_AGE = int(SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"].total_seconds())
 
 # DRF Spectacular (API Documentation)
 SPECTACULAR_SETTINGS = {

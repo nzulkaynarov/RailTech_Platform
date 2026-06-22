@@ -1,8 +1,31 @@
+from django.conf import settings
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import permissions, status, views
 from rest_framework.generics import RetrieveAPIView
 from rest_framework.response import Response
-from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+
+
+def _set_refresh_cookie(response, token: str) -> None:
+    """Store the refresh token in an HttpOnly cookie (F2.1) — never exposed to JS."""
+    response.set_cookie(
+        settings.REFRESH_COOKIE_NAME,
+        token,
+        max_age=settings.REFRESH_COOKIE_MAX_AGE,
+        httponly=True,
+        secure=settings.REFRESH_COOKIE_SECURE,
+        samesite=settings.REFRESH_COOKIE_SAMESITE,
+        path=settings.REFRESH_COOKIE_PATH,
+    )
+
+
+def _clear_refresh_cookie(response) -> None:
+    response.delete_cookie(
+        settings.REFRESH_COOKIE_NAME,
+        path=settings.REFRESH_COOKIE_PATH,
+        samesite=settings.REFRESH_COOKIE_SAMESITE,
+    )
 
 from accounts.throttles import PasswordResetEmailThrottle, ScopedRateThrottle
 
@@ -208,21 +231,25 @@ class LogoutView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
-        from rest_framework_simplejwt.exceptions import TokenError
         from rest_framework_simplejwt.tokens import RefreshToken
 
         if request.data.get("all"):
             revoke_user_refresh_tokens(request.user)
-            return Response(status=status.HTTP_205_RESET_CONTENT)
+            resp = Response(status=status.HTTP_205_RESET_CONTENT)
+            _clear_refresh_cookie(resp)
+            return resp
 
-        token = request.data.get("refresh")
+        # Prefer the HttpOnly cookie (F2.1); fall back to the body for older clients.
+        token = request.data.get("refresh") or request.COOKIES.get(settings.REFRESH_COOKIE_NAME)
         if token:
             try:
                 RefreshToken(token).blacklist()
             except TokenError:
                 # Already expired/blacklisted/invalid — logout is idempotent.
                 pass
-        return Response(status=status.HTTP_205_RESET_CONTENT)
+        resp = Response(status=status.HTTP_205_RESET_CONTENT)
+        _clear_refresh_cookie(resp)
+        return resp
 
 
 # Short-lived, single-use ticket TTL (seconds). Long enough to open the socket
@@ -262,3 +289,38 @@ class ThrottledTokenObtainPairView(TokenObtainPairView):
 
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "login"
+
+
+class CookieTokenObtainPairView(ThrottledTokenObtainPairView):
+    """Login that returns the access token in the body and the refresh token in an
+    HttpOnly cookie (F2.1) — the refresh token is never exposed to JavaScript."""
+
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        if response.status_code == status.HTTP_200_OK:
+            refresh = response.data.pop("refresh", None)
+            if refresh:
+                _set_refresh_cookie(response, refresh)
+        return response
+
+
+class CookieTokenRefreshView(TokenRefreshView):
+    """Refresh using the HttpOnly cookie (F2.1). Reads the refresh token from the
+    cookie (body still accepted for transition), returns a fresh access token in the
+    body, and — with rotation on — sets the rotated refresh token back as the cookie."""
+
+    def post(self, request, *args, **kwargs):
+        token = request.data.get("refresh") or request.COOKIES.get(settings.REFRESH_COOKIE_NAME)
+        if not token:
+            return Response({"detail": "NO_REFRESH_TOKEN"}, status=status.HTTP_401_UNAUTHORIZED)
+        serializer = self.get_serializer(data={"refresh": token})
+        try:
+            serializer.is_valid(raise_exception=True)
+        except TokenError as exc:
+            raise InvalidToken(exc.args[0])
+        data = dict(serializer.validated_data)
+        rotated = data.pop("refresh", None)  # present when ROTATE_REFRESH_TOKENS
+        response = Response(data, status=status.HTTP_200_OK)
+        if rotated:
+            _set_refresh_cookie(response, rotated)
+        return response
