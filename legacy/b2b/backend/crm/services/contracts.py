@@ -220,6 +220,7 @@ def sign_contract_by_manager(
 
 def _notify_contract_signed(contract) -> None:
     from notifications.models import Notification, NotificationType
+    from notifications.services import push_notification_ws
 
     if contract.status_code != ContractStatusCode.SIGNED:
         return
@@ -227,7 +228,7 @@ def _notify_contract_signed(contract) -> None:
     for recipient in {contract.deal.client, contract.deal.manager}:
         if recipient is None:
             continue
-        Notification.objects.create(
+        notif = Notification.objects.create(
             user=recipient,
             type=info,
             title="Контракт подписан",
@@ -235,6 +236,7 @@ def _notify_contract_signed(contract) -> None:
             link="/crm/deals",
             deal=contract.deal,
         )
+        push_notification_ws(notif)  # realtime, not just the 60s poll
 
 
 @transaction.atomic
