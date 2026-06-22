@@ -74,3 +74,25 @@ def test_no_seller_spam_on_non_rfq_transitions(parties):
     deal.stage = DealStage.objects.get(code="DRAFT")
     deal.save()
     assert Notification.objects.filter(user=seller).count() == baseline
+
+
+@pytest.mark.django_db
+def test_quote_outcome_notifies_the_kp_author_when_no_manager(parties):
+    """approve/reject used to notify deal.manager only — unset in the single-seller
+    model, so the КП author learned nothing. Now prepared_by is notified."""
+    from crm.models import Quote, QuoteStatus
+    from crm.services.quotes import _notify_quote_outcome
+
+    NotificationType.objects.get_or_create(code="SUCCESS", defaults={"name": "Success"})
+    QuoteStatus.objects.get_or_create(code="SENT", defaults={"name": "Sent", "sort_order": 30})
+    seller, deal = parties["seller"], parties["deal"]
+    assert deal.manager_id is None  # the gap's precondition
+    quote = Quote.objects.create(
+        deal=deal, version=1, prepared_by=seller, status=QuoteStatus.objects.get(code="SENT")
+    )
+
+    _notify_quote_outcome(quote, type_code="SUCCESS", title="КП одобрено клиентом", message="ok")
+
+    notifs = Notification.objects.filter(user=seller)
+    assert notifs.count() == 1
+    assert notifs.first().title == "КП одобрено клиентом"
