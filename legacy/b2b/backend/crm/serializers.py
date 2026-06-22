@@ -283,6 +283,10 @@ class ActivityLogSerializer(serializers.ModelSerializer):
 class ContractSerializer(serializers.ModelSerializer):
     client_signer_name = serializers.CharField(source="client_signer.get_full_name", read_only=True, default=None)
     manager_signer_name = serializers.CharField(source="manager_signer.get_full_name", read_only=True, default=None)
+    # status is a FK lookup now (F5.4); keep emitting the code string under `status`
+    # so the frontend contract is unchanged, plus the display name under status_name.
+    status = serializers.CharField(source="status.code", read_only=True)
+    status_name = serializers.CharField(source="status.name", read_only=True)
     pdf_url = serializers.SerializerMethodField()
     signed_file_url = serializers.SerializerMethodField()
 
@@ -294,6 +298,7 @@ class ContractSerializer(serializers.ModelSerializer):
             "quote",
             "number",
             "status",
+            "status_name",
             "total_amount",
             "currency",
             "pdf_file",
@@ -314,7 +319,6 @@ class ContractSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             "number",
-            "status",
             "total_amount",
             "pdf_file",
             "client_signer",
@@ -365,6 +369,9 @@ class InvoiceSerializer(serializers.ModelSerializer):
     items = InvoiceItemSerializer(many=True, read_only=True)
     payments = PaymentSerializer(many=True, read_only=True)
     balance_due = serializers.DecimalField(read_only=True, max_digits=14, decimal_places=2)
+    # status is a FK lookup now (F5.4); keep the code string under `status` (+ name).
+    status = serializers.CharField(source="status.code", read_only=True)
+    status_name = serializers.CharField(source="status.name", read_only=True)
     pdf_url = serializers.SerializerMethodField()
 
     class Meta:
@@ -375,6 +382,7 @@ class InvoiceSerializer(serializers.ModelSerializer):
             "contract",
             "number",
             "status",
+            "status_name",
             "issued_at",
             "due_date",
             "subtotal_excl_vat",
@@ -398,6 +406,9 @@ class InvoiceSerializer(serializers.ModelSerializer):
 
 
 class ActSerializer(serializers.ModelSerializer):
+    # status is a FK lookup now (F5.4); keep the code string under `status` (+ name).
+    status = serializers.CharField(source="status.code", read_only=True)
+    status_name = serializers.CharField(source="status.name", read_only=True)
     pdf_url = serializers.SerializerMethodField()
     signed_file_url = serializers.SerializerMethodField()
 
@@ -410,6 +421,7 @@ class ActSerializer(serializers.ModelSerializer):
             "invoice",
             "number",
             "status",
+            "status_name",
             "issued_at",
             "signed_at",
             "total_amount",
@@ -431,6 +443,11 @@ class ActSerializer(serializers.ModelSerializer):
 
 
 class FulfillmentSerializer(serializers.ModelSerializer):
+    # status is a FK lookup now (F5.4); keep emitting the code string under `status`
+    # so the frontend contract is unchanged, plus the display name under status_name.
+    status = serializers.CharField(source="status.code", read_only=True)
+    status_name = serializers.CharField(source="status.name", read_only=True)
+
     class Meta:
         model = Fulfillment
         fields = [
@@ -438,6 +455,7 @@ class FulfillmentSerializer(serializers.ModelSerializer):
             "deal",
             "contract",
             "status",
+            "status_name",
             "shipped_at",
             "delivered_at",
             "accepted_at",

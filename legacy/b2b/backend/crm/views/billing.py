@@ -11,7 +11,17 @@ from accounts.services.permissions import is_seller, seller_sees_all_deals
 from core.file_streaming import stream_file_field
 from core.permissions import IsCompanyMemberOrPlatformAdmin, IsPlatformAdmin
 from crm import services as crm_services
-from crm.models import Act, Contract, Fulfillment, Invoice, Payment
+from crm.models import (
+    Act,
+    ActStatus,
+    Contract,
+    ContractStatus,
+    Fulfillment,
+    FulfillmentStatus,
+    Invoice,
+    InvoiceStatus,
+    Payment,
+)
 from crm.serializers import (
     ActSerializer,
     ContractSerializer,
@@ -52,10 +62,14 @@ class Phase2StatusChoicesView(APIView):
 
         return Response(
             {
-                "contract": to_list(Contract.STATUS_CHOICES),
-                "invoice": to_list(Invoice.STATUS_CHOICES),
-                "act": to_list(Act.STATUS_CHOICES),
-                "fulfillment": to_list(Fulfillment.STATUS_CHOICES),
+                # post-sale statuses moved to FK lookups (F5.4) — read from the tables.
+                "contract": [{"code": s.code, "label": s.name} for s in ContractStatus.objects.filter(is_active=True)],
+                "invoice": [{"code": s.code, "label": s.name} for s in InvoiceStatus.objects.filter(is_active=True)],
+                "act": [{"code": s.code, "label": s.name} for s in ActStatus.objects.filter(is_active=True)],
+                # fulfillment status moved to a FK lookup (F5.4) — read from the table.
+                "fulfillment": [
+                    {"code": s.code, "label": s.name} for s in FulfillmentStatus.objects.filter(is_active=True)
+                ],
                 "payment_method": to_list(Payment.METHOD_CHOICES),
             }
         )
@@ -72,7 +86,7 @@ class ContractViewSet(viewsets.ModelViewSet):
             return Contract.objects.none()
         user = self.request.user
         qs = Contract.objects.select_related(
-            "deal__company", "quote", "currency", "client_signer", "manager_signer"
+            "deal__company", "quote", "currency", "client_signer", "manager_signer", "status"
         ).order_by("-created_at")
         # Seller operates across all buyer deals → sees every billing record.
         if seller_sees_all_deals(user, self.request):
@@ -201,7 +215,7 @@ class InvoiceViewSet(viewsets.ModelViewSet):
             return Invoice.objects.none()
         user = self.request.user
         qs = (
-            Invoice.objects.select_related("deal__company", "contract", "currency")
+            Invoice.objects.select_related("deal__company", "contract", "currency", "status")
             .prefetch_related(
                 "items",
                 "payments",
@@ -300,7 +314,7 @@ class ActViewSet(viewsets.ModelViewSet):
         if getattr(self, "swagger_fake_view", False):
             return Act.objects.none()
         user = self.request.user
-        qs = Act.objects.select_related("deal__company", "contract", "invoice").order_by("-created_at")
+        qs = Act.objects.select_related("deal__company", "contract", "invoice", "status").order_by("-created_at")
         # Seller operates across all buyer deals → sees every billing record.
         if seller_sees_all_deals(user, self.request):
             return qs

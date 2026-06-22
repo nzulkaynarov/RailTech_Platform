@@ -19,6 +19,14 @@ def _next_contract_number() -> str:
     return next_document_number("CT", "CT")
 
 
+def _cstatus(code: str):
+    """Resolve a ContractStatus lookup row by code (F5.4 — status is a FK now).
+    Raises if the code isn't seeded, surfacing a missing migration loudly (IRON RULE 1)."""
+    from ..models import ContractStatus
+
+    return ContractStatus.objects.get(code=code)
+
+
 @transaction.atomic
 def generate_contract_from_quote(
     quote_id: int,
@@ -47,7 +55,7 @@ def generate_contract_from_quote(
     contract = (
         Contract.objects.filter(deal=quote.deal, quote=quote)
         .exclude(
-            status__in=[ContractStatusCode.CANCELLED],
+            status__code__in=[ContractStatusCode.CANCELLED],
         )
         .order_by("-created_at")
         .first()
@@ -58,7 +66,7 @@ def generate_contract_from_quote(
             deal=quote.deal,
             quote=quote,
             number=_next_contract_number(),
-            status=ContractStatusCode.DRAFT,
+            status=_cstatus(ContractStatusCode.DRAFT),
             total_amount=quote.total_incl_vat,
             currency=quote.items.first().frozen_currency if quote.items.exists() else None,
             created_by=actor,
@@ -66,14 +74,14 @@ def generate_contract_from_quote(
         )
         contract.save()
 
-    if contract.status == ContractStatusCode.DRAFT:
-        contract.status = ContractStatusCode.PENDING_CLIENT
+    # F5.4: status is a FK lookup now. F1.6: render the PDF AFTER commit, off the
+    # request thread — rendering inside this atomic block wrote the file to storage
+    # even when a later step rolled the transaction back, orphaning it. on_commit
+    # fires only on success; the download endpoint renders lazily if this races behind.
+    if contract.status_code == ContractStatusCode.DRAFT:
+        contract.status = _cstatus(ContractStatusCode.PENDING_CLIENT)
     contract.save(update_fields=["status", "updated_at"])
 
-    # Render the PDF AFTER commit, off the request thread (F1.6): rendering inside
-    # this atomic block wrote the file to storage even when a later step rolled the
-    # transaction back, orphaning it. on_commit fires only on success; the download
-    # endpoint renders lazily if this races behind the user.
     from ..tasks import render_document_pdf
 
     contract_id = contract.id
@@ -142,11 +150,13 @@ def sign_contract_by_client(
         or is_member_of(client_user, contract.deal.company_id, capability="buy")
     ):
         return None, "MEMBER_REQUIRED_FOR_ACTION"
-    if contract.status not in {ContractStatusCode.DRAFT, ContractStatusCode.PENDING_CLIENT}:
+    if contract.status_code not in {ContractStatusCode.DRAFT, ContractStatusCode.PENDING_CLIENT}:
         return None, "CONTRACT_CLIENT_SIGN_NOT_ALLOWED"
     contract.client_signer = client_user
     contract.client_signed_at = timezone.now()
-    contract.status = ContractStatusCode.SIGNED if contract.manager_signed_at else ContractStatusCode.PENDING_MANAGER
+    contract.status = _cstatus(
+        ContractStatusCode.SIGNED if contract.manager_signed_at else ContractStatusCode.PENDING_MANAGER
+    )
     contract.save(update_fields=["client_signer", "client_signed_at", "status", "updated_at"])
     ActivityLog.objects.create(
         action="[MANUAL_MODE] Подписан контракт (сторона клиента)",
@@ -186,7 +196,7 @@ def sign_contract_by_manager(
     # Paid-seller gate: signing commits the seller — requires an active subscription.
     if sub_err := assert_seller_can_operate(manager_user):
         return None, sub_err
-    if contract.status not in {
+    if contract.status_code not in {
         ContractStatusCode.DRAFT,
         ContractStatusCode.PENDING_MANAGER,
         ContractStatusCode.PENDING_CLIENT,
@@ -194,7 +204,9 @@ def sign_contract_by_manager(
         return None, "CONTRACT_MANAGER_SIGN_NOT_ALLOWED"
     contract.manager_signer = manager_user
     contract.manager_signed_at = timezone.now()
-    contract.status = ContractStatusCode.SIGNED if contract.client_signed_at else ContractStatusCode.PENDING_CLIENT
+    contract.status = _cstatus(
+        ContractStatusCode.SIGNED if contract.client_signed_at else ContractStatusCode.PENDING_CLIENT
+    )
     contract.save(update_fields=["manager_signer", "manager_signed_at", "status", "updated_at"])
     ActivityLog.objects.create(
         action="[MANUAL_MODE] Подписан контракт (сторона RailTech)",
@@ -209,7 +221,7 @@ def sign_contract_by_manager(
 def _notify_contract_signed(contract) -> None:
     from notifications.models import Notification, NotificationType
 
-    if contract.status != ContractStatusCode.SIGNED:
+    if contract.status_code != ContractStatusCode.SIGNED:
         return
     info = NotificationType.objects.filter(code="SUCCESS").first()
     for recipient in {contract.deal.client, contract.deal.manager}:
@@ -236,9 +248,9 @@ def cancel_contract(
     if is_platform_admin_viewer(actor):
         return None, "ADMIN_VIEWER_CANNOT_ACT"
     contract = Contract.objects.select_for_update().get(pk=contract_id)
-    if contract.status == ContractStatusCode.SIGNED:
+    if contract.status_code == ContractStatusCode.SIGNED:
         return None, "CONTRACT_SIGNED_CANNOT_CANCEL"
-    contract.status = ContractStatusCode.CANCELLED
+    contract.status = _cstatus(ContractStatusCode.CANCELLED)
     contract.notes = f"{contract.notes}\nОтменён {actor}: {reason}".strip()
     contract.save(update_fields=["status", "notes", "updated_at"])
     return contract, None
@@ -264,8 +276,8 @@ def force_cancel_contract(
     if not reason.strip():
         return None, "FORCE_REASON_REQUIRED"
     contract = Contract.objects.select_for_update().get(pk=contract_id)
-    old_status = contract.status
-    contract.status = ContractStatusCode.CANCELLED
+    old_status = contract.status_code
+    contract.status = _cstatus(ContractStatusCode.CANCELLED)
     contract.notes = (
         f"{contract.notes}\n[FORCE_ADMIN] {admin_user.email}: {reason}"
         if contract.notes

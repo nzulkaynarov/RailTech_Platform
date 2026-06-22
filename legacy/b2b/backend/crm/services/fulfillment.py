@@ -15,9 +15,14 @@ from .deals import transition_deal_stage
 
 @transaction.atomic
 def ensure_fulfillment(deal: Deal) -> object:
-    from ..models import Fulfillment
+    from ..models import Fulfillment, FulfillmentStatus
 
-    obj, _ = Fulfillment.objects.get_or_create(deal=deal)
+    # status is now a FK (null=True); stamp the PENDING lookup on creation so a new
+    # fulfillment keeps the old CharField default behaviour.
+    obj, _ = Fulfillment.objects.get_or_create(
+        deal=deal,
+        defaults={"status": FulfillmentStatus.objects.get(code=FulfillmentStatusCode.PENDING)},
+    )
     return obj
 
 
@@ -32,7 +37,7 @@ def update_fulfillment_status(
 
     from accounts.services import is_member_of, is_platform_admin_viewer, is_seller
 
-    from ..models import Fulfillment
+    from ..models import Fulfillment, FulfillmentStatus
 
     if is_platform_admin_viewer(actor):
         return None, "ADMIN_VIEWER_CANNOT_ACT"
@@ -51,7 +56,7 @@ def update_fulfillment_status(
         authorized = is_seller(actor)
     if not authorized:
         return None, "MEMBER_REQUIRED_FOR_ACTION"
-    obj.status = status_code
+    obj.status = FulfillmentStatus.objects.get(code=status_code)
     now = timezone.now()
     if status_code == FulfillmentStatusCode.SHIPPED and not obj.shipped_at:
         obj.shipped_at = now

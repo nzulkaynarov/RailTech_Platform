@@ -9,15 +9,6 @@ from django.utils.translation import gettext_lazy as _
 class Fulfillment(models.Model):
     """Исполнение сделки после подписания: отгрузка, доставка, приёмка."""
 
-    STATUS_CHOICES = [
-        ("PENDING", _("Ожидает отгрузки")),
-        ("SHIPPED", _("Отгружено")),
-        ("IN_TRANSIT", _("В пути")),
-        ("DELIVERED", _("Доставлено")),
-        ("ACCEPTED", _("Принято клиентом")),
-        ("DISPUTED", _("Спорная ситуация")),
-    ]
-
     deal = models.OneToOneField(
         "crm.Deal",
         on_delete=models.CASCADE,
@@ -31,11 +22,13 @@ class Fulfillment(models.Model):
         blank=True,
         related_name="fulfillments",
     )
-    status = models.CharField(
-        max_length=15,
-        choices=STATUS_CHOICES,
-        default="PENDING",
+    status = models.ForeignKey(
+        "crm.FulfillmentStatus",
+        on_delete=models.PROTECT,
+        related_name="fulfillments",
+        null=True,
         db_index=True,
+        verbose_name=_("Статус"),
     )
     shipped_at = models.DateTimeField(null=True, blank=True)
     delivered_at = models.DateTimeField(null=True, blank=True)
@@ -52,4 +45,5 @@ class Fulfillment(models.Model):
         verbose_name_plural = _("Исполнение сделок")
 
     def __str__(self):
-        return f"Fulfillment #{self.deal_id} ({self.status})"
+        code = self.status.code if self.status_id else "—"
+        return f"Fulfillment #{self.deal_id} ({code})"

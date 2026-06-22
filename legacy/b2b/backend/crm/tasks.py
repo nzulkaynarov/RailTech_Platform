@@ -169,12 +169,13 @@ def check_overdue_deliveries(self) -> dict:
     today = timezone.now().date()
     overdue_qs = Fulfillment.objects.filter(
         expected_delivery_date__lt=today,
-        status__in=[
+        # status is a FK now (F5.4) — match by the lookup's code.
+        status__code__in=[
             FulfillmentStatusCode.PENDING,
             FulfillmentStatusCode.SHIPPED,
             FulfillmentStatusCode.IN_TRANSIT,
         ],
-    ).select_related("deal__manager")
+    ).select_related("deal__manager", "status")
     warn_type = NotificationType.objects.filter(code="WARNING").first()
     count = 0
     for ff in overdue_qs:
@@ -224,7 +225,7 @@ def auto_invoice_on_closed_won(self, deal_id: int) -> dict:
         deal = Deal.objects.get(pk=deal_id)
     except Deal.DoesNotExist:
         return {"error": "deal not found"}
-    contract = deal.contracts.filter(status=ContractStatusCode.SIGNED).order_by("-created_at").first()
+    contract = deal.contracts.filter(status__code=ContractStatusCode.SIGNED).order_by("-created_at").first()
     result = {"deal_id": deal_id, "invoice": None, "act": None, "fulfillment": True, "idempotent_reuse": False}
     ensure_fulfillment(deal)
     if not contract:
@@ -236,7 +237,7 @@ def auto_invoice_on_closed_won(self, deal_id: int) -> dict:
             deal=deal,
             contract=contract,
         )
-        .exclude(status=InvoiceStatusCode.CANCELLED)
+        .exclude(status__code=InvoiceStatusCode.CANCELLED)
         .order_by("-created_at")
         .first()
     )
@@ -253,7 +254,7 @@ def auto_invoice_on_closed_won(self, deal_id: int) -> dict:
         Act.objects.filter(
             invoice=invoice,
         )
-        .exclude(status=ActStatusCode.CANCELLED)
+        .exclude(status__code=ActStatusCode.CANCELLED)
         .order_by("-created_at")
         .first()
     )

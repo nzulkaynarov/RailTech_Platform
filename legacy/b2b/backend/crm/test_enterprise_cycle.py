@@ -22,7 +22,17 @@ from accounts.models import (
 )
 from catalog.models import DomainType, ProductStatus, StockStatus
 from crm import services as crm_services
-from crm.models import Contract, Deal, DealStage, Quote, QuoteItem, QuoteStatus
+from crm.models import (
+    ActStatus,
+    Contract,
+    ContractStatus,
+    Deal,
+    DealStage,
+    InvoiceStatus,
+    Quote,
+    QuoteItem,
+    QuoteStatus,
+)
 from master_data.models import Country, Currency, UnitOfMeasure
 
 # ─── Shared fixtures ──────────────────────────────────────────────────────
@@ -54,6 +64,13 @@ def master_data(db):
         "CLOSED_LOST",
     ]:
         DealStage.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
+    # Post-sale status lookups (F5.4) — --nomigrations skips the seeding migration.
+    for code in ["DRAFT", "PENDING_CLIENT", "PENDING_MANAGER", "SIGNED", "CANCELLED"]:
+        ContractStatus.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
+    for code in ["DRAFT", "ISSUED", "PARTIAL", "PAID", "OVERDUE", "CANCELLED"]:
+        InvoiceStatus.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
+    for code in ["DRAFT", "ISSUED", "SIGNED", "CANCELLED"]:
+        ActStatus.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
     Country.objects.get_or_create(code="UZ", defaults={"name": "Uzbekistan", "sort_order": 10})
     Currency.objects.get_or_create(code="USD", defaults={"name": "US Dollar", "symbol": "$", "sort_order": 10})
     UnitOfMeasure.objects.get_or_create(code="PCS", defaults={"name": "Piece", "sort_order": 10})
@@ -242,7 +259,7 @@ def test_closed_won_succeeds_with_signed_contract(master_data, deal, manager, bu
         deal=deal,
         quote=_create_simple_quote(deal, manager),
         number="CT-TEST-1",
-        status="SIGNED",
+        status=ContractStatus.objects.get(code="SIGNED"),
         total_amount=Decimal("100.00"),
         client_signer=buyer_user,
         client_signed_at=timezone.now(),
@@ -284,10 +301,10 @@ def test_contract_double_sign_becomes_signed(master_data, deal, manager, buyer):
     assert err is None
     contract, err = crm_services.sign_contract_by_client(contract.id, buyer_user)
     assert err is None
-    assert contract.status == "PENDING_MANAGER"
+    assert contract.status_code == "PENDING_MANAGER"
     contract, err = crm_services.sign_contract_by_manager(contract.id, manager)
     assert err is None
-    assert contract.status == "SIGNED"
+    assert contract.status_code == "SIGNED"
 
 
 @pytest.mark.django_db
@@ -336,7 +353,7 @@ def test_record_payment_marks_invoice_paid(master_data, deal, manager, buyer):
     )
     assert err is None
     invoice.refresh_from_db()
-    assert invoice.status == "PAID"
+    assert invoice.status_code == "PAID"
 
 
 @pytest.mark.django_db

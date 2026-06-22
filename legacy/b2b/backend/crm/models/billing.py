@@ -22,15 +22,6 @@ from master_data.models import Currency
 class Invoice(models.Model):
     """Инвойс на оплату по контракту."""
 
-    STATUS_CHOICES = [
-        ("DRAFT", _("Черновик")),
-        ("ISSUED", _("Выставлен")),
-        ("PARTIAL", _("Частично оплачен")),
-        ("PAID", _("Оплачен")),
-        ("OVERDUE", _("Просрочен")),
-        ("CANCELLED", _("Отменён")),
-    ]
-
     deal = models.ForeignKey(
         "crm.Deal",
         # PROTECT, not CASCADE: a financial record must never be silently deleted
@@ -49,10 +40,11 @@ class Invoice(models.Model):
         verbose_name=_("Контракт"),
     )
     number = models.CharField(max_length=64, unique=True, verbose_name=_("Номер инвойса"))
-    status = models.CharField(
-        max_length=10,
-        choices=STATUS_CHOICES,
-        default="DRAFT",
+    status = models.ForeignKey(
+        "crm.InvoiceStatus",
+        on_delete=models.PROTECT,
+        related_name="invoices",
+        null=True,
         db_index=True,
         verbose_name=_("Статус"),
     )
@@ -96,6 +88,11 @@ class Invoice(models.Model):
 
     def __str__(self):
         return f"Invoice {self.number}"
+
+    @property
+    def status_code(self):
+        """Null-safe status code — status is a FK lookup now (F5.4)."""
+        return self.status.code if self.status_id else None
 
     @property
     def balance_due(self) -> Decimal:
@@ -204,13 +201,6 @@ class Payment(models.Model):
 class Act(models.Model):
     """Акт выполненных работ / приёма-передачи."""
 
-    STATUS_CHOICES = [
-        ("DRAFT", _("Черновик")),
-        ("ISSUED", _("Выставлен")),
-        ("SIGNED", _("Подписан")),
-        ("CANCELLED", _("Отменён")),
-    ]
-
     deal = models.ForeignKey(
         "crm.Deal",
         on_delete=models.PROTECT,  # financial record must survive deal deletion
@@ -232,11 +222,13 @@ class Act(models.Model):
         related_name="acts",
     )
     number = models.CharField(max_length=64, unique=True, verbose_name=_("Номер акта"))
-    status = models.CharField(
-        max_length=10,
-        choices=STATUS_CHOICES,
-        default="DRAFT",
+    status = models.ForeignKey(
+        "crm.ActStatus",
+        on_delete=models.PROTECT,
+        related_name="acts",
+        null=True,
         db_index=True,
+        verbose_name=_("Статус"),
     )
     issued_at = models.DateField(null=True, blank=True)
     signed_at = models.DateTimeField(null=True, blank=True)
@@ -271,5 +263,10 @@ class Act(models.Model):
         verbose_name_plural = _("Акты")
         ordering = ["-created_at"]
 
+    @property
+    def status_code(self):
+        """Null-safe status code — status is a FK lookup now (F5.4)."""
+        return self.status.code if self.status_id else None
+
     def __str__(self):
-        return f"Act {self.number} ({self.status})"
+        return f"Act {self.number} ({self.status_code})"

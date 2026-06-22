@@ -234,14 +234,14 @@ class Command(BaseCommand):
         contract, err = crm_services.generate_contract_from_quote(quote.id, actor=manager, notes="smoke contract")
         if err:
             raise Exception(f"generate_contract_from_quote failed: {err}")
-        info(f"contract={contract.number} status={contract.status}")
+        info(f"contract={contract.number} status={contract.status_code}")
         contract, err = crm_services.sign_contract_by_client(contract.id, buyer)
         if err:
             raise Exception(f"sign_contract_by_client failed: {err}")
         contract, err = crm_services.sign_contract_by_manager(contract.id, manager)
         if err:
             raise Exception(f"sign_contract_by_manager failed: {err}")
-        info(f"contract status={contract.status} (expected SIGNED)")
+        info(f"contract status={contract.status_code} (expected SIGNED)")
 
         step(8, "Generate invoice, record payment, generate act, sign act")
         invoice, err = crm_services.generate_invoice_from_contract(contract.id, actor=manager)
@@ -260,14 +260,14 @@ class Command(BaseCommand):
         if err:
             raise Exception(f"record_payment failed: {err}")
         invoice.refresh_from_db()
-        info(f"invoice status={invoice.status} amount_paid={invoice.amount_paid}")
+        info(f"invoice status={invoice.status_code} amount_paid={invoice.amount_paid}")
         act, err = crm_services.generate_act(invoice.id, actor=manager)
         if err:
             raise Exception(f"generate_act failed: {err}")
         act, err = crm_services.sign_act(act.id, manager)
         if err:
             raise Exception(f"sign_act failed: {err}")
-        info(f"act={act.number} status={act.status}")
+        info(f"act={act.number} status={act.status_code}")
 
         step(9, "Fulfillment ACCEPTED → auto CLOSED_WON")
         crm_services.ensure_fulfillment(deal)

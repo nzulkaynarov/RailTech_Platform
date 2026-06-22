@@ -5,7 +5,18 @@ from unfold.decorators import display
 
 from core.admin_mixins import ReadOnlyInspectionMixin, superuser_only_action
 
-from ..models import ActivityLog, Deal, DealStage, Lead, Message, QuoteStatus
+from ..models import (
+    ActivityLog,
+    ActStatus,
+    ContractStatus,
+    Deal,
+    DealStage,
+    FulfillmentStatus,
+    InvoiceStatus,
+    Lead,
+    Message,
+    QuoteStatus,
+)
 
 # ────────────────────────────────────────────
 # Inlines
@@ -17,7 +28,7 @@ from .inlines import QuoteInline
 # ────────────────────────────────────────────
 
 
-@admin.register(DealStage, QuoteStatus)
+@admin.register(DealStage, QuoteStatus, ContractStatus, InvoiceStatus, ActStatus, FulfillmentStatus)
 class CRMLookupAdmin(ModelAdmin):
     list_display = ["name", "code", "sort_order", "is_active"]
     list_editable = ["sort_order", "is_active"]
