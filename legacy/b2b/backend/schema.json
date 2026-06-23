@@ -12709,6 +12709,16 @@
                         "title": "Имя файла",
                         "description": "Оригинальное имя загруженного файла"
                     },
+                    "kind": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/KindEnum"
+                            }
+                        ],
+                        "readOnly": true,
+                        "title": "Тип вложения",
+                        "description": "SOURCE = исходный файл заявки (из него распознаны позиции); SUPPORTING = доп. документ\n\n* `SOURCE` - Исходник заявки\n* `SUPPORTING` - Документ"
+                    },
                     "uploaded_by": {
                         "type": "integer",
                         "readOnly": true,
@@ -12760,6 +12770,7 @@
                 "required": [
                     "file",
                     "id",
+                    "kind",
                     "original_filename",
                     "uploaded_at",
                     "uploaded_by",
@@ -14792,6 +14803,14 @@
                     "status_code"
                 ]
             },
+            "KindEnum": {
+                "enum": [
+                    "SOURCE",
+                    "SUPPORTING"
+                ],
+                "type": "string",
+                "description": "* `SOURCE` - Исходник заявки\n* `SUPPORTING` - Документ"
+            },
             "Lead": {
                 "type": "object",
                 "properties": {
@@ -16696,11 +16715,11 @@
                         "description": "Manufacturer Part Number / артикул из заявки",
                         "maxLength": 120
                     },
-                    "gtin": {
+                    "gost_drawing": {
                         "type": "string",
-                        "title": "GTIN / штрихкод",
-                        "description": "GS1 GTIN/EAN, если указан в заявке",
-                        "maxLength": 14
+                        "title": "ГОСТ / чертёж",
+                        "description": "Номер ГОСТ или чертежа из заявки (канонический идентификатор детали)",
+                        "maxLength": 120
                     },
                     "note": {
                         "type": "string",
@@ -18249,11 +18268,11 @@
                         "description": "Manufacturer Part Number / артикул из заявки",
                         "maxLength": 120
                     },
-                    "gtin": {
+                    "gost_drawing": {
                         "type": "string",
-                        "title": "GTIN / штрихкод",
-                        "description": "GS1 GTIN/EAN, если указан в заявке",
-                        "maxLength": 14
+                        "title": "ГОСТ / чертёж",
+                        "description": "Номер ГОСТ или чертежа из заявки (канонический идентификатор детали)",
+                        "maxLength": 120
                     },
                     "note": {
                         "type": "string",
@@ -18386,11 +18405,11 @@
                         "description": "Manufacturer Part Number / артикул из заявки",
                         "maxLength": 120
                     },
-                    "gtin": {
+                    "gost_drawing": {
                         "type": "string",
-                        "title": "GTIN / штрихкод",
-                        "description": "GS1 GTIN/EAN, если указан в заявке",
-                        "maxLength": 14
+                        "title": "ГОСТ / чертёж",
+                        "description": "Номер ГОСТ или чертежа из заявки (канонический идентификатор детали)",
+                        "maxLength": 120
                     },
                     "note": {
                         "type": "string",

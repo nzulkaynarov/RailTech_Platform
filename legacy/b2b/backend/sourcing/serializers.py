@@ -12,6 +12,7 @@ class AttachmentSerializer(serializers.ModelSerializer):
             "id",
             "file",
             "original_filename",
+            "kind",
             "uploaded_by",
             "uploaded_by_email",
             "uploaded_at",
@@ -24,6 +25,7 @@ class AttachmentSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "id",
             "original_filename",
+            "kind",
             "uploaded_by",
             "uploaded_by_email",
             "uploaded_at",
