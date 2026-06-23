@@ -70,17 +70,10 @@ class Command(BaseCommand):
             _seed(Currency, code, name=name, symbol=symbol)
 
         # ─── 3. Единицы измерения ───
-        uoms = [
-            ("PCS", "Штука"),
-            ("KG", "Килограмм"),
-            ("M", "Метр"),
-            ("T", "Тонна"),
-            ("SET", "Комплект"),
-            ("L", "Литр"),
-            ("HR", "Час"),
-        ]
-        for code, name in uoms:
-            _seed(UnitOfMeasure, code, name=name)
+        # Source of truth = master_data migration 0005_seed_uom_unece (UN/ECE Rec 20),
+        # consolidated by 0006. core_seed no longer seeds a competing legacy set
+        # (PCS/KG/M/T/L/HR с полными именами) — это и создавало «кашу» дублей
+        # (кг=KG+KGM, м=M+MTR, …). UOM-справочник тут больше не трогаем.
 
         # ─── 4. Базис поставки (Incoterms) ───
         bases = [

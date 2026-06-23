@@ -7,6 +7,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ru, enUS } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
+import { useUserStore } from '@/store/userStore';
 
 import {
     Sheet,
@@ -43,10 +44,30 @@ const getTypeColor = (type: string, isRead: boolean) => {
 
 interface NotificationCenterProps {
     triggerOnly?: boolean;
+    // AppShell passes its hash-navigation callback so a notification opens the right
+    // in-app page (no full-page reload to /crm or /cabinet shells the buyer/seller
+    // don't use). When absent (e.g. router shells) we fall back to the raw link.
+    onNavigate?: (pageId: string) => void;
 }
 
-export const NotificationCenter: React.FC<NotificationCenterProps> = () => {
+// Map a notification's backend link to an AppShell page id, by the user's active
+// context. Backend links (/crm/deals, /cabinet/deals, …) encode intent, not a route
+// the AppShell buyer/seller can reach — translate to their hash pages.
+function notificationTargetPage(link: string | undefined, activeStatus: string): string {
+    const l = (link || '').toLowerCase();
+    if (l.includes('profile')) return 'profile';
+    const isSeller = activeStatus === 'SELLER' || activeStatus === 'MANUFACTURER';
+    if (isSeller) {
+        if (l.includes('quote')) return 'crm-quotes';
+        return 'crm-deals'; // deals + contracts
+    }
+    if (l.includes('contract')) return 'contracts';
+    return 'my-requests'; // buyer: deals + quotes land on the unified requests page
+}
+
+export const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNavigate }) => {
     const { t, i18n } = useTranslation();
+    const activeStatus = useUserStore((s) => s.activeStatus);
     const [isOpen, setIsOpen] = useState(false);
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
@@ -271,20 +292,34 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = () => {
                                                             {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: dateLocale })}
                                                         </span>
                                                         {n.link && (
-                                                            <Button
-                                                                variant="link"
-                                                                size="xs"
-                                                                asChild
-                                                                className="h-auto p-0 text-primary hover:text-primary/80"
-                                                            >
-                                                                <a
-                                                                    href={n.link}
-                                                                    onClick={e => e.stopPropagation()}
+                                                            onNavigate ? (
+                                                                <Button
+                                                                    variant="link"
+                                                                    size="xs"
+                                                                    className="h-auto p-0 text-primary hover:text-primary/80"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        if (!n.is_read) handleMarkAsRead(n.id);
+                                                                        onNavigate(notificationTargetPage(n.link, activeStatus));
+                                                                        setIsOpen(false);
+                                                                    }}
                                                                 >
                                                                     {t('common.open')}
                                                                     <ExternalLink className="size-3" />
-                                                                </a>
-                                                            </Button>
+                                                                </Button>
+                                                            ) : (
+                                                                <Button
+                                                                    variant="link"
+                                                                    size="xs"
+                                                                    asChild
+                                                                    className="h-auto p-0 text-primary hover:text-primary/80"
+                                                                >
+                                                                    <a href={n.link} onClick={e => e.stopPropagation()}>
+                                                                        {t('common.open')}
+                                                                        <ExternalLink className="size-3" />
+                                                                    </a>
+                                                                </Button>
+                                                            )
                                                         )}
                                                     </div>
                                                 </div>
