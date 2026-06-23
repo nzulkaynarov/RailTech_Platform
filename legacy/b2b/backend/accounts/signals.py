@@ -48,17 +48,18 @@ def ensure_company_has_at_least_one_type(sender, instance: Company, action: str,
 
 @receiver(m2m_changed, sender=Company.types.through)
 def supplier_or_manufacturer_implies_client(sender, instance: Company, action: str, pk_set, **kwargs):
-    """Business rule: SUPPLIER or MANUFACTURER companies are also allowed to buy.
+    """Business rule: a SELLER (SUPPLIER) company is also allowed to buy.
 
-    Source: user directive 2026-04-19 — «любая компания, выбравшая SUPPLIER или
-    MANUFACTURER, автоматически получает право быть CLIENT (покупателем)».
+    Source: user directive 2026-04-19 — a company that becomes a seller automatically
+    gains CLIENT (buyer) capability. (MANUFACTURER retired as a role 2026-06-23 —
+    sellers are SUPPLIER; OEM is now only catalog.Manufacturer.)
     """
     if action != "post_add" or not pk_set:
         return
     added = set(
         CompanyType.objects.filter(pk__in=pk_set).values_list("code", flat=True),
     )
-    if not added & {"SUPPLIER", "MANUFACTURER"}:
+    if not added & {"SUPPLIER"}:
         return
     if instance.types.filter(code="CLIENT").exists():
         return

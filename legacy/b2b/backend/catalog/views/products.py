@@ -8,6 +8,8 @@ from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 
+from accounts.constants import CompanyTypeCode
+
 from ..models import Product, ProductDocument, ProductImage
 from ..serializers import ProductDocumentSerializer, ProductImageSerializer, ProductListSerializer, ProductSerializer
 from .lookups import LIST_CACHE_TTL
@@ -124,19 +126,19 @@ class ProductViewSet(viewsets.ModelViewSet):
         if user.is_platform_admin:
             serializer.save()
             return
-        mfg_membership = (
+        seller_membership = (
             user.memberships.filter(
                 is_active=True,
-                company__types__code__in=["MANUFACTURER", "SUPPLIER"],
+                company__types__code=CompanyTypeCode.SUPPLIER,
             )
             .select_related("company")
             .first()
         )
-        if not mfg_membership:
+        if not seller_membership:
             from rest_framework.exceptions import PermissionDenied
 
-            raise PermissionDenied("NO_MANUFACTURER_MEMBERSHIP")
-        serializer.save(owner_company=mfg_membership.company)
+            raise PermissionDenied("NO_SELLER_MEMBERSHIP")
+        serializer.save(owner_company=seller_membership.company)
 
     @extend_schema(
         summary="Bulk publish products",

@@ -32,12 +32,17 @@ class SystemRoleCode(models.TextChoices):
 class CompanyTypeCode(models.TextChoices):
     CLIENT = "CLIENT", "Клиент (покупатель)"
     SUPPLIER = "SUPPLIER", "Поставщик (продавец)"
-    MANUFACTURER = "MANUFACTURER", "Производитель"
-    PLANT = "PLANT", "Завод"
+    # DEPRECATED participant roles (retired 2026-06-23). Marketplace sides are now
+    # SELLER (SUPPLIER) + BUYER (CLIENT). "Производитель" is ONLY an OEM brand
+    # reference (catalog.Manufacturer), not a company role. Kept for migration/history;
+    # deactivated as selectable types and remapped to SUPPLIER by accounts migration 0018.
+    MANUFACTURER = "MANUFACTURER", "Производитель (DEPRECATED — см. catalog.Manufacturer)"
+    PLANT = "PLANT", "Завод (DEPRECATED)"
 
 
-# Company types whose members operate on the seller side.
-SELLER_COMPANY_TYPES = (CompanyTypeCode.SUPPLIER, CompanyTypeCode.MANUFACTURER)
+# Company types whose members operate on the seller side. A manufacturer that sells
+# is simply a SUPPLIER; the OEM-as-brand lives in catalog.Manufacturer.
+SELLER_COMPANY_TYPES = (CompanyTypeCode.SUPPLIER,)
 
 
 class VerificationStatusCode(models.TextChoices):

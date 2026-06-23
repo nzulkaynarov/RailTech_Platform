@@ -104,8 +104,8 @@ class Command(BaseCommand):
             ("BUYER_MANAGER", "Менеджер (Покупатель)", ["CLIENT"]),
             ("SALES_MANAGER", "Продавец", ["SUPPLIER"]),
             ("LOGIST", "Логист", ["SUPPLIER"]),
-            ("CONTRACT_MANAGER", "Договорник", ["MANUFACTURER"]),
-            ("FOREIGN_TRADE_SPECIALIST", "Специалист ВЭД", ["MANUFACTURER"]),
+            ("CONTRACT_MANAGER", "Договорник", ["SUPPLIER"]),
+            ("FOREIGN_TRADE_SPECIALIST", "Специалист ВЭД", ["SUPPLIER"]),
         ]
         for code, name, applicable_codes in workspace_roles:
             wr = _seed(WorkspaceRole, code, name=name)
@@ -116,10 +116,11 @@ class Command(BaseCommand):
                 wr.applicable_to_types.clear()
 
         # ─── 7. Типы компаний ───
+        # Roles consolidated to SELLER (SUPPLIER) + BUYER (CLIENT) on 2026-06-23;
+        # MANUFACTURER retired as a participant type (now only catalog.Manufacturer brand).
         company_types = [
             ("CLIENT", "Клиент"),
             ("SUPPLIER", "Поставщик"),
-            ("MANUFACTURER", "Производитель"),
             ("LOGISTICS_PROVIDER", "Логистический провайдер"),
         ]
         for code, name in company_types:
@@ -328,7 +329,7 @@ class Command(BaseCommand):
         # F0.2 gate (assert_seller_can_operate) blocks send-КП / contract / invoice.
         # Default ACTIVE PREMIUM; a company may override via a `subscription` block in
         # seed_data.json (e.g. {"status": "PAST_DUE"}) to exercise the gate realistically.
-        seller_type_codes = {"SUPPLIER", "MANUFACTURER"}
+        seller_type_codes = {"SUPPLIER"}
         usd = Currency.objects.filter(code="USD").first()
         today = timezone.now().date()
         plan_rates = {"BASIC": "150", "STANDARD": "400", "PREMIUM": "900"}

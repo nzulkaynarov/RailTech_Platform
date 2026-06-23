@@ -176,7 +176,7 @@ class DashboardAnalyticsView(APIView):
 
         type_counts = dict(
             Company.objects.filter(
-                types__code__in=[CompanyTypeCode.MANUFACTURER, CompanyTypeCode.CLIENT, CompanyTypeCode.SUPPLIER],
+                types__code__in=[CompanyTypeCode.CLIENT, CompanyTypeCode.SUPPLIER],
             )
             .values_list("types__code")
             .annotate(

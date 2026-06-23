@@ -222,7 +222,7 @@ class CatalogImportView(APIView):
                     user=user,
                     is_active=True,
                     can_sell=True,
-                    company__types__code__in=["SUPPLIER", "MANUFACTURER"],
+                    company__types__code="SUPPLIER",
                 )
                 .order_by("-is_primary")
                 .first()
