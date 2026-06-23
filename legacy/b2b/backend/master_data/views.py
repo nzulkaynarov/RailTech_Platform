@@ -12,6 +12,21 @@ from .serializers import CountrySerializer, CurrencySerializer, DeliveryBasisSer
 LOOKUP_CACHE_TTL = 60 * 10  # 10 min — master data changes rarely
 
 
+class _ActiveOnlyListMixin:
+    """Selection dropdowns must show only ACTIVE lookups, so deactivating a row in
+    admin hides it everywhere (consistent with how services query the справочник,
+    e.g. AI unit validation filters is_active=True). Applied to `list` only — so the
+    response is identical for every caller (the list is cache_page-cached and does
+    NOT vary on auth) while retrieve/update/destroy keep the full queryset so an admin
+    can still manage (and reactivate) an inactive row by id."""
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if getattr(self, "action", None) == "list":
+            qs = qs.filter(is_active=True)
+        return qs
+
+
 @extend_schema_view(
     list=extend_schema(summary="List countries", tags=["Master Data"]),
     create=extend_schema(summary="Create country", description="Admin only.", tags=["Master Data"]),
@@ -22,7 +37,7 @@ LOOKUP_CACHE_TTL = 60 * 10  # 10 min — master data changes rarely
 )
 @method_decorator(vary_on_headers("Accept-Language"), name="list")
 @method_decorator(cache_page(LOOKUP_CACHE_TTL), name="list")
-class CountryViewSet(viewsets.ModelViewSet):
+class CountryViewSet(_ActiveOnlyListMixin, viewsets.ModelViewSet):
     """CRUD for countries (read: public; write: admin)."""
 
     queryset = Country.objects.all().order_by("sort_order", "name")
@@ -41,7 +56,7 @@ class CountryViewSet(viewsets.ModelViewSet):
 )
 @method_decorator(vary_on_headers("Accept-Language"), name="list")
 @method_decorator(cache_page(LOOKUP_CACHE_TTL), name="list")
-class CurrencyViewSet(viewsets.ModelViewSet):
+class CurrencyViewSet(_ActiveOnlyListMixin, viewsets.ModelViewSet):
     """CRUD for currencies (read: public; write: admin)."""
 
     queryset = Currency.objects.all().order_by("sort_order", "code")
@@ -60,7 +75,7 @@ class CurrencyViewSet(viewsets.ModelViewSet):
 )
 @method_decorator(vary_on_headers("Accept-Language"), name="list")
 @method_decorator(cache_page(LOOKUP_CACHE_TTL), name="list")
-class UnitOfMeasureViewSet(viewsets.ModelViewSet):
+class UnitOfMeasureViewSet(_ActiveOnlyListMixin, viewsets.ModelViewSet):
     """CRUD for units of measure (read: public; write: admin)."""
 
     queryset = UnitOfMeasure.objects.all().order_by("sort_order", "code")
@@ -79,7 +94,7 @@ class UnitOfMeasureViewSet(viewsets.ModelViewSet):
 )
 @method_decorator(vary_on_headers("Accept-Language"), name="list")
 @method_decorator(cache_page(LOOKUP_CACHE_TTL), name="list")
-class DeliveryBasisViewSet(viewsets.ModelViewSet):
+class DeliveryBasisViewSet(_ActiveOnlyListMixin, viewsets.ModelViewSet):
     """CRUD for delivery basis terms (Incoterms). Read: public; write: admin."""
 
     queryset = DeliveryBasis.objects.all().order_by("sort_order", "code")
