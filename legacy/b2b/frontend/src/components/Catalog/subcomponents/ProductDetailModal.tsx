@@ -34,10 +34,10 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
         : stockStatusKey === 'LOW_STOCK' ? 'secondary'
         : 'outline';
 
-    const mfgInfo = product.manufacturer_data ? {
-        verified: product.manufacturer_data.is_verified,
-        iso: product.manufacturer_data.has_iso9001,
-        trustScore: product.manufacturer_data.trust_score || 0,
+    const mfgInfo = product.brand_name ? {
+        verified: false,
+        iso: false,
+        trustScore: 0,
     } : null;
 
     const currencyCode = product.offers?.[0]?.currency_data?.code || '';
@@ -128,7 +128,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product,
                                     <div className="grid grid-cols-2 gap-x-4 gap-y-5">
                                         <div className="border-l-2 border-border pl-3">
                                             <p className="mb-1 text-xs text-muted-foreground">{t('catalog.table.manufacturer')}</p>
-                                            <p className="text-sm font-semibold">{product.manufacturer_data?.name || '\u2014'}</p>
+                                            <p className="text-sm font-semibold">{product.brand_name || '\u2014'}</p>
                                         </div>
                                         <div className="border-l-2 border-border pl-3">
                                             <p className="mb-1 text-xs text-muted-foreground">{t('catalog.table.origin')}</p>

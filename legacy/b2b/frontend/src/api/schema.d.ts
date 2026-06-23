@@ -1505,8 +1505,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List manufacturers
-         * @description Returns companies that have manufactured products. Derived from Company records linked to products.
+         * List manufacturers (OEM brands)
+         * @description Returns OEM brands from the `catalog.Manufacturer` reference table — the canonical source for `Product.brand`. A brand is catalog metadata, not a platform participant (sellers/buyers are the participant roles).
          */
         get: operations["catalog_manufacturers_list"];
         put?: never;
@@ -1525,8 +1525,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get manufacturer
-         * @description Read-only list of companies that are manufacturers (have linked products).
+         * Get manufacturer (OEM brand)
+         * @description Read-only list of OEM brands (catalog.Manufacturer) for the `brand` selector.
          */
         get: operations["catalog_manufacturers_retrieve"];
         put?: never;
@@ -2521,8 +2521,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`. */
         get: operations["crm_invoices_list"];
         put?: never;
+        /** @description Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`. */
         post: operations["crm_invoices_create"];
         delete?: never;
         options?: never;
@@ -2537,12 +2539,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`. */
         get: operations["crm_invoices_retrieve"];
+        /** @description Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`. */
         put: operations["crm_invoices_update"];
         post?: never;
+        /** @description Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`. */
         delete: operations["crm_invoices_destroy"];
         options?: never;
         head?: never;
+        /** @description Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`. */
         patch: operations["crm_invoices_partial_update"];
         trace?: never;
     };
@@ -2553,6 +2559,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`. */
         get: operations["crm_invoices_download_pdf_retrieve"];
         put?: never;
         post?: never;
@@ -2571,7 +2578,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Generate Act for this invoice */
+        /**
+         * Generate Act for this invoice
+         * @description Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`.
+         */
         post: operations["crm_invoices_generate_act_create"];
         delete?: never;
         options?: never;
@@ -2588,7 +2598,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Record a payment against this invoice */
+        /**
+         * Record a payment against this invoice
+         * @description Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`.
+         */
         post: operations["crm_invoices_record_payment_create"];
         delete?: never;
         options?: never;
@@ -2605,7 +2618,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Generate invoice from a signed contract */
+        /**
+         * Generate invoice from a signed contract
+         * @description Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`.
+         */
         post: operations["crm_invoices_generate_from_contract_create"];
         delete?: never;
         options?: never;
@@ -5288,6 +5304,42 @@ export interface components {
          * @enum {string}
          */
         LevelEnum: "INFO" | "SUCCESS" | "WARNING" | "ERROR";
+        /**
+         * @description OEM brand lookup (catalog.Manufacturer) — the canonical `Product.brand` source.
+         *
+         *     NOT a platform participant (that's the seller/owner). A brand needn't have an
+         *     account; `company` optionally links it to one if the OEM is registered.
+         */
+        Manufacturer: {
+            readonly id: number;
+            /**
+             * Название
+             * @description Название бренда/производителя (OEM)
+             */
+            name: string;
+            /**
+             * Страна
+             * @description Страна происхождения производителя
+             */
+            country?: number | null;
+            readonly country_name: string;
+            /**
+             * Сайт
+             * Format: uri
+             * @description Официальный сайт производителя
+             */
+            website?: string;
+            /**
+             * Связанная компания
+             * @description Платформенная компания, если производитель зарегистрирован (местный)
+             */
+            company?: number | null;
+            /**
+             * Активен
+             * @description Неактивные бренды скрыты в формах выбора
+             */
+            is_active?: boolean;
+        };
         MemberCapabilitiesRequest: {
             member_id: number;
             can_sell?: boolean;
@@ -5565,6 +5617,21 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["Lead"][];
+        };
+        PaginatedManufacturerList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["Manufacturer"][];
         };
         PaginatedMessageList: {
             /** @example 123 */
@@ -6231,10 +6298,10 @@ export interface components {
              */
             category?: number | null;
             /**
-             * Производитель
-             * @description Компания-производитель (OEM)
+             * Компания-владелец
+             * @description Продавец/поставщик, создавший карточку (мультитенантность PIM).
              */
-            manufacturer?: number | null;
+            owner_company?: number | null;
             /**
              * Производитель (бренд)
              * @description Бренд/производитель из справочника (OEM). Канонический для PIM.
@@ -6835,11 +6902,11 @@ export interface components {
             category?: number | null;
             readonly category_data: components["schemas"]["Category"];
             /**
-             * Производитель
-             * @description Компания-производитель (OEM)
+             * Компания-владелец
+             * @description Продавец/поставщик, создавший карточку (мультитенантность PIM).
              */
-            manufacturer?: number | null;
-            readonly manufacturer_data: components["schemas"]["CompanyLight"];
+            owner_company?: number | null;
+            readonly owner_company_data: components["schemas"]["CompanyLight"];
             /**
              * Производитель (бренд)
              * @description Бренд/производитель из справочника (OEM). Канонический для PIM.
@@ -7019,11 +7086,11 @@ export interface components {
             category?: number | null;
             readonly category_data: components["schemas"]["Category"];
             /**
-             * Производитель
-             * @description Компания-производитель (OEM)
+             * Компания-владелец
+             * @description Продавец/поставщик, создавший карточку (мультитенантность PIM).
              */
-            manufacturer?: number | null;
-            readonly manufacturer_data: components["schemas"]["CompanyLight"];
+            owner_company?: number | null;
+            readonly owner_company_data: components["schemas"]["CompanyLight"];
             /**
              * Производитель (бренд)
              * @description Бренд/производитель из справочника (OEM). Канонический для PIM.
@@ -7088,10 +7155,10 @@ export interface components {
              */
             category?: number | null;
             /**
-             * Производитель
-             * @description Компания-производитель (OEM)
+             * Компания-владелец
+             * @description Продавец/поставщик, создавший карточку (мультитенантность PIM).
              */
-            manufacturer?: number | null;
+            owner_company?: number | null;
             /**
              * Производитель (бренд)
              * @description Бренд/производитель из справочника (OEM). Канонический для PIM.
@@ -10473,7 +10540,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PaginatedCompanyList"];
+                    "application/json": components["schemas"]["PaginatedManufacturerList"];
                 };
             };
         };
@@ -10483,7 +10550,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description A unique integer value identifying this Компания. */
+                /** @description A unique integer value identifying this Производитель. */
                 id: number;
             };
             cookie?: never;
@@ -10495,7 +10562,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Company"];
+                    "application/json": components["schemas"]["Manufacturer"];
                 };
             };
         };
@@ -10696,10 +10763,10 @@ export interface operations {
     catalog_products_list: {
         parameters: {
             query?: {
+                brand?: number;
                 category?: number;
                 domain_type__code?: string;
                 equipment_groups?: number[];
-                manufacturer?: number;
                 /** @description A page number within the paginated result set. */
                 page?: number;
                 /** @description A search term. */

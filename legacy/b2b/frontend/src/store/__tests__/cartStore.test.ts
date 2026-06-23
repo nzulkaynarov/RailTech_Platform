@@ -10,7 +10,7 @@ const mockProduct = (id: number, name = 'Test Product'): Product => ({
   domain_type: 1,
   domain_type_name: 'GENERAL_GOODS',
   category: 1,
-  manufacturer: 1,
+  brand: 1,
   status: 1,
   status_name: 'PUBLISHED',
   uom: 1,

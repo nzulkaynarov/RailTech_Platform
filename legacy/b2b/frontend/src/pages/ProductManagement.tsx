@@ -47,14 +47,14 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
   const showPrices = activeStatus === 'SELLER' || activeStatus === 'MANUFACTURER';
   const canManageCatalog = activeStatus === 'SELLER' || activeStatus === 'MANUFACTURER';
 
-  const listParams = useListParams(['domain', 'stock', 'manufacturer'] as const, { defaultOrdering: 'name' });
+  const listParams = useListParams(['domain', 'stock', 'brand'] as const, { defaultOrdering: 'name' });
 
   const apiParams = useMemo(() => {
     const p: Parameters<typeof useProducts>[0] = {};
     if (listParams.filters.domain !== 'all') p.domain_type = listParams.filters.domain;
     if (listParams.search.trim()) p.search = listParams.search.trim();
     if (listParams.filters.stock !== 'all') p.stock_status = listParams.filters.stock;
-    if (listParams.filters.manufacturer !== 'all') p.manufacturer = Number(listParams.filters.manufacturer);
+    if (listParams.filters.brand !== 'all') p.brand = Number(listParams.filters.brand);
     return p;
   }, [listParams.filters, listParams.search]);
 
@@ -168,9 +168,9 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
             options: stockStatuses.map(s => ({ value: s.code, label: s.name })),
           },
           {
-            key: 'manufacturer',
-            value: listParams.filters.manufacturer,
-            onChange: (v) => listParams.setFilter('manufacturer', v),
+            key: 'brand',
+            value: listParams.filters.brand,
+            onChange: (v) => listParams.setFilter('brand', v),
             allLabel: t('productManagement.filters.allManufacturers'),
             options: manufacturers.map(m => ({ value: String(m.id), label: m.name })),
           },
@@ -233,8 +233,8 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
                     <TableCell>
                       <div className="flex flex-col">
                         <span className="font-medium text-sm">{product.name}</span>
-                        {product.manufacturer_data?.name && (
-                          <span className="text-xs text-muted-foreground">{product.manufacturer_data.name}</span>
+                        {product.brand_name && (
+                          <span className="text-xs text-muted-foreground">{product.brand_name}</span>
                         )}
                       </div>
                     </TableCell>

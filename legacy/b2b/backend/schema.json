@@ -3937,8 +3937,8 @@
         "/api/v1/catalog/manufacturers/": {
             "get": {
                 "operationId": "catalog_manufacturers_list",
-                "description": "Returns companies that have manufactured products. Derived from Company records linked to products.",
-                "summary": "List manufacturers",
+                "description": "Returns OEM brands from the `catalog.Manufacturer` reference table — the canonical source for `Product.brand`. A brand is catalog metadata, not a platform participant (sellers/buyers are the participant roles).",
+                "summary": "List manufacturers (OEM brands)",
                 "parameters": [
                     {
                         "name": "page",
@@ -3973,7 +3973,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/PaginatedCompanyList"
+                                    "$ref": "#/components/schemas/PaginatedManufacturerList"
                                 }
                             }
                         },
@@ -3985,8 +3985,8 @@
         "/api/v1/catalog/manufacturers/{id}/": {
             "get": {
                 "operationId": "catalog_manufacturers_retrieve",
-                "description": "Read-only list of companies that are manufacturers (have linked products).",
-                "summary": "Get manufacturer",
+                "description": "Read-only list of OEM brands (catalog.Manufacturer) for the `brand` selector.",
+                "summary": "Get manufacturer (OEM brand)",
                 "parameters": [
                     {
                         "in": "path",
@@ -3994,7 +3994,7 @@
                         "schema": {
                             "type": "integer"
                         },
-                        "description": "A unique integer value identifying this Компания.",
+                        "description": "A unique integer value identifying this Производитель.",
                         "required": true
                     }
                 ],
@@ -4012,7 +4012,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/Company"
+                                    "$ref": "#/components/schemas/Manufacturer"
                                 }
                             }
                         },
@@ -4390,6 +4390,13 @@
                 "parameters": [
                     {
                         "in": "query",
+                        "name": "brand",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
                         "name": "category",
                         "schema": {
                             "type": "integer"
@@ -4413,13 +4420,6 @@
                         },
                         "explode": true,
                         "style": "form"
-                    },
-                    {
-                        "in": "query",
-                        "name": "manufacturer",
-                        "schema": {
-                            "type": "integer"
-                        }
                     },
                     {
                         "name": "page",
@@ -7290,6 +7290,7 @@
         "/api/v1/crm/invoices/": {
             "get": {
                 "operationId": "crm_invoices_list",
+                "description": "Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`.",
                 "parameters": [
                     {
                         "name": "page",
@@ -7333,6 +7334,7 @@
             },
             "post": {
                 "operationId": "crm_invoices_create",
+                "description": "Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`.",
                 "tags": [
                     "crm"
                 ],
@@ -7378,6 +7380,7 @@
         "/api/v1/crm/invoices/{id}/": {
             "get": {
                 "operationId": "crm_invoices_retrieve",
+                "description": "Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`.",
                 "parameters": [
                     {
                         "in": "path",
@@ -7412,6 +7415,7 @@
             },
             "put": {
                 "operationId": "crm_invoices_update",
+                "description": "Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`.",
                 "parameters": [
                     {
                         "in": "path",
@@ -7466,6 +7470,7 @@
             },
             "patch": {
                 "operationId": "crm_invoices_partial_update",
+                "description": "Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`.",
                 "parameters": [
                     {
                         "in": "path",
@@ -7519,6 +7524,7 @@
             },
             "delete": {
                 "operationId": "crm_invoices_destroy",
+                "description": "Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`.",
                 "parameters": [
                     {
                         "in": "path",
@@ -7548,6 +7554,7 @@
         "/api/v1/crm/invoices/{id}/download-pdf/": {
             "get": {
                 "operationId": "crm_invoices_download_pdf_retrieve",
+                "description": "Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`.",
                 "parameters": [
                     {
                         "in": "path",
@@ -7584,6 +7591,7 @@
         "/api/v1/crm/invoices/{id}/generate-act/": {
             "post": {
                 "operationId": "crm_invoices_generate_act_create",
+                "description": "Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`.",
                 "summary": "Generate Act for this invoice",
                 "parameters": [
                     {
@@ -7641,6 +7649,7 @@
         "/api/v1/crm/invoices/{id}/record-payment/": {
             "post": {
                 "operationId": "crm_invoices_record_payment_create",
+                "description": "Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`.",
                 "summary": "Record a payment against this invoice",
                 "parameters": [
                     {
@@ -7698,6 +7707,7 @@
         "/api/v1/crm/invoices/generate-from-contract/": {
             "post": {
                 "operationId": "crm_invoices_generate_from_contract_create",
+                "description": "Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`.",
                 "summary": "Generate invoice from a signed contract",
                 "tags": [
                     "CRM"
@@ -14894,6 +14904,55 @@
                 "type": "string",
                 "description": "* `INFO` - Информация\n* `SUCCESS` - Успех\n* `WARNING` - Предупреждение\n* `ERROR` - Ошибка"
             },
+            "Manufacturer": {
+                "type": "object",
+                "description": "OEM brand lookup (catalog.Manufacturer) — the canonical `Product.brand` source.\n\nNOT a platform participant (that's the seller/owner). A brand needn't have an\naccount; `company` optionally links it to one if the OEM is registered.",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "name": {
+                        "type": "string",
+                        "title": "Название",
+                        "description": "Название бренда/производителя (OEM)",
+                        "maxLength": 255
+                    },
+                    "country": {
+                        "type": "integer",
+                        "nullable": true,
+                        "title": "Страна",
+                        "description": "Страна происхождения производителя"
+                    },
+                    "country_name": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "website": {
+                        "type": "string",
+                        "format": "uri",
+                        "title": "Сайт",
+                        "description": "Официальный сайт производителя",
+                        "maxLength": 200
+                    },
+                    "company": {
+                        "type": "integer",
+                        "nullable": true,
+                        "title": "Связанная компания",
+                        "description": "Платформенная компания, если производитель зарегистрирован (местный)"
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "title": "Активен",
+                        "description": "Неактивные бренды скрыты в формах выбора"
+                    }
+                },
+                "required": [
+                    "country_name",
+                    "id",
+                    "name"
+                ]
+            },
             "MemberCapabilitiesRequest": {
                 "type": "object",
                 "properties": {
@@ -15445,6 +15504,37 @@
                         "type": "array",
                         "items": {
                             "$ref": "#/components/schemas/Lead"
+                        }
+                    }
+                }
+            },
+            "PaginatedManufacturerList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Manufacturer"
                         }
                     }
                 }
@@ -16510,11 +16600,11 @@
                         "title": "Категория",
                         "description": "Категория товара в иерархии каталога"
                     },
-                    "manufacturer": {
+                    "owner_company": {
                         "type": "integer",
                         "nullable": true,
-                        "title": "Производитель",
-                        "description": "Компания-производитель (OEM)"
+                        "title": "Компания-владелец",
+                        "description": "Продавец/поставщик, создавший карточку (мультитенантность PIM)."
                     },
                     "brand": {
                         "type": "integer",
@@ -17373,13 +17463,13 @@
                         ],
                         "readOnly": true
                     },
-                    "manufacturer": {
+                    "owner_company": {
                         "type": "integer",
                         "nullable": true,
-                        "title": "Производитель",
-                        "description": "Компания-производитель (OEM)"
+                        "title": "Компания-владелец",
+                        "description": "Продавец/поставщик, создавший карточку (мультитенантность PIM)."
                     },
-                    "manufacturer_data": {
+                    "owner_company_data": {
                         "allOf": [
                             {
                                 "$ref": "#/components/schemas/CompanyLight"
@@ -17511,9 +17601,9 @@
                     "images",
                     "main_document_url",
                     "main_image_url",
-                    "manufacturer_data",
                     "name",
                     "offers",
+                    "owner_company_data",
                     "sku",
                     "status_code",
                     "status_name",
@@ -17724,13 +17814,13 @@
                         ],
                         "readOnly": true
                     },
-                    "manufacturer": {
+                    "owner_company": {
                         "type": "integer",
                         "nullable": true,
-                        "title": "Производитель",
-                        "description": "Компания-производитель (OEM)"
+                        "title": "Компания-владелец",
+                        "description": "Продавец/поставщик, создавший карточку (мультитенантность PIM)."
                     },
-                    "manufacturer_data": {
+                    "owner_company_data": {
                         "allOf": [
                             {
                                 "$ref": "#/components/schemas/CompanyLight"
@@ -17813,8 +17903,8 @@
                     "domain_type_name",
                     "id",
                     "main_image_url",
-                    "manufacturer_data",
                     "name",
+                    "owner_company_data",
                     "status_code",
                     "status_name",
                     "stock_status",
@@ -17855,11 +17945,11 @@
                         "title": "Категория",
                         "description": "Категория товара в иерархии каталога"
                     },
-                    "manufacturer": {
+                    "owner_company": {
                         "type": "integer",
                         "nullable": true,
-                        "title": "Производитель",
-                        "description": "Компания-производитель (OEM)"
+                        "title": "Компания-владелец",
+                        "description": "Продавец/поставщик, создавший карточку (мультитенантность PIM)."
                     },
                     "brand": {
                         "type": "integer",

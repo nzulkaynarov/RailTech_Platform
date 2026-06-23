@@ -61,7 +61,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         base = Product.objects.all().select_related(
-            "category", "manufacturer", "domain_type", "status", "uom", "brand", "brand__country"
+            "category", "owner_company", "domain_type", "status", "uom", "brand", "brand__country"
         )
         if self.action == "list":
             queryset = base.prefetch_related(
@@ -83,11 +83,11 @@ class ProductViewSet(viewsets.ModelViewSet):
             from django.db.models import Q
 
             if user.is_authenticated:
-                own_mfg_ids = user.memberships.filter(
+                own_company_ids = user.memberships.filter(
                     is_active=True,
                 ).values_list("company_id", flat=True)
                 queryset = queryset.filter(
-                    Q(status__code="PUBLISHED") | Q(manufacturer_id__in=list(own_mfg_ids)),
+                    Q(status__code="PUBLISHED") | Q(owner_company_id__in=list(own_company_ids)),
                 )
             else:
                 queryset = queryset.filter(status__code="PUBLISHED")
@@ -103,7 +103,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     filterset_fields = {
         "domain_type__code": ["exact"],
         "category": ["exact"],
-        "manufacturer": ["exact"],
+        "brand": ["exact"],
         "equipment_groups": ["exact"],
     }
     search_fields = ["name", "gost_drawing", "sku"]
@@ -136,7 +136,7 @@ class ProductViewSet(viewsets.ModelViewSet):
             from rest_framework.exceptions import PermissionDenied
 
             raise PermissionDenied("NO_MANUFACTURER_MEMBERSHIP")
-        serializer.save(manufacturer=mfg_membership.company)
+        serializer.save(owner_company=mfg_membership.company)
 
     @extend_schema(
         summary="Bulk publish products",
@@ -233,7 +233,7 @@ class ProductViewSet(viewsets.ModelViewSet):
                 ("domain_type", "Domain", lambda p: p.domain_type.code if p.domain_type_id else ""),
                 ("category", "Category", lambda p: p.category.name if p.category_id else ""),
                 ("status", "Status", lambda p: p.status.code if p.status_id else ""),
-                ("manufacturer", "Manufacturer", lambda p: p.manufacturer.name if p.manufacturer_id else ""),
+                ("brand", "Brand", lambda p: p.brand.name if p.brand_id else ""),
                 ("created_at", "Created", lambda p: p.created_at.isoformat() if p.created_at else ""),
             ],
         )
@@ -259,7 +259,7 @@ class ProductViewSet(viewsets.ModelViewSet):
             "domain_type",
             "category",
             "uom",
-            "manufacturer",
+            "brand",
             "gost_drawing",
         ]
         for col, header in enumerate(headers, 1):

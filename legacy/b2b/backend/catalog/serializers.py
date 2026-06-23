@@ -7,6 +7,7 @@ from .models import (
     Category,
     DomainType,
     EquipmentGroup,
+    Manufacturer,
     Product,
     ProductDocument,
     ProductImage,
@@ -22,6 +23,19 @@ class CompanyLightSerializer(serializers.ModelSerializer):
     class Meta:
         model = Company
         fields = ["id", "name", "inn", "logo"]
+
+
+class ManufacturerSerializer(serializers.ModelSerializer):
+    """OEM brand lookup (catalog.Manufacturer) — the canonical `Product.brand` source.
+
+    NOT a platform participant (that's the seller/owner). A brand needn't have an
+    account; `company` optionally links it to one if the OEM is registered."""
+
+    country_name = serializers.CharField(source="country.name", read_only=True, default=None)
+
+    class Meta:
+        model = Manufacturer
+        fields = ["id", "name", "country", "country_name", "website", "company", "is_active"]
 
 
 # --- Simple Reference Serializers ---
@@ -123,7 +137,7 @@ class SupplierOfferSerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
     # Readable Nested Objects (for GET)
     category_data = CategorySerializer(source="category", read_only=True)
-    manufacturer_data = CompanyLightSerializer(source="manufacturer", read_only=True)
+    owner_company_data = CompanyLightSerializer(source="owner_company", read_only=True)
     uom_data = UnitOfMeasureSerializer(source="uom", read_only=True)
     equipment_groups_data = EquipmentGroupSerializer(source="equipment_groups", many=True, read_only=True)
 
@@ -159,8 +173,8 @@ class ProductSerializer(serializers.ModelSerializer):
             "domain_type_code",
             "category",
             "category_data",
-            "manufacturer",
-            "manufacturer_data",
+            "owner_company",
+            "owner_company_data",
             "brand",
             "brand_name",
             "brand_country",
@@ -248,7 +262,7 @@ class ProductListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for list endpoints — no nested offers/documents."""
 
     category_data = CategorySerializer(source="category", read_only=True)
-    manufacturer_data = CompanyLightSerializer(source="manufacturer", read_only=True)
+    owner_company_data = CompanyLightSerializer(source="owner_company", read_only=True)
     uom_data = UnitOfMeasureSerializer(source="uom", read_only=True)
 
     main_image_url = serializers.SerializerMethodField()
@@ -275,8 +289,8 @@ class ProductListSerializer(serializers.ModelSerializer):
             "domain_type_code",
             "category",
             "category_data",
-            "manufacturer",
-            "manufacturer_data",
+            "owner_company",
+            "owner_company_data",
             "brand",
             "brand_name",
             "brand_country",

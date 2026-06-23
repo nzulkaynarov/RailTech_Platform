@@ -87,7 +87,7 @@ export function ProductDetail({ productId, onBack }: ProductDetailProps) {
     { label: t('productDetail.article'), value: product.sku },
     { label: t('productDetail.gostDrawing'), value: product.gost_drawing },
     { label: t('productDetail.uom'), value: product.uom_data?.name },
-    { label: t('productDetail.manufacturer'), value: product.manufacturer_data?.name },
+    { label: t('productDetail.manufacturer'), value: product.brand_name },
     { label: t('productDetail.category'), value: product.category_data?.name },
     { label: t('productDetail.domain'), value: product.domain_type_name ? t(getDomainLabelKey(product.domain_type_code ?? ''), product.domain_type_name) : undefined },
   ].filter(a => a.value);

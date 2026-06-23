@@ -64,7 +64,7 @@ export const PublicCatalog: React.FC = () => {
     const { data: products = [], isLoading } = useProducts({
         domain_type: activeDomain || undefined,
         category: filters.category || undefined,
-        manufacturer: filters.manufacturer || undefined,
+        brand: filters.brand || undefined,
         equipment_groups: filters.equipment_groups || undefined,
         stock_status: filters.stock_status || undefined,
         search: debouncedSearch || undefined,
@@ -251,7 +251,7 @@ export const PublicCatalog: React.FC = () => {
                                                 <div className="flex flex-col min-w-0">
                                                     <span className="text-sm font-semibold text-foreground truncate">{p.name}</span>
                                                     <span className="text-xs text-muted-foreground mt-0.5">
-                                                        {p.sku ?? '—'}{p.gost_drawing ? ` · ${p.gost_drawing}` : ''}{p.manufacturer_data?.name ? ` · ${p.manufacturer_data.name}` : ''}
+                                                        {p.sku ?? '—'}{p.gost_drawing ? ` · ${p.gost_drawing}` : ''}{p.brand_name ? ` · ${p.brand_name}` : ''}
                                                     </span>
                                                 </div>
                                             </div>

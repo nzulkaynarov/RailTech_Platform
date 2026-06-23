@@ -5,7 +5,7 @@ from import_export.widgets import ForeignKeyWidget, ManyToManyWidget
 from accounts.models import Company
 from master_data.models import Currency, DeliveryBasis, UnitOfMeasure
 
-from .models import Category, DomainType, EquipmentGroup, Product, ProductStatus, SupplierOffer
+from .models import Category, DomainType, EquipmentGroup, Manufacturer, Product, ProductStatus, SupplierOffer
 
 
 class ProductResource(resources.ModelResource):
@@ -36,10 +36,10 @@ class ProductResource(resources.ModelResource):
         attribute="uom",
         widget=ForeignKeyWidget(UnitOfMeasure, field="code"),
     )
-    manufacturer = fields.Field(
-        column_name=_("Производитель (ИНН)"),
-        attribute="manufacturer",
-        widget=ForeignKeyWidget(Company, field="inn"),
+    brand = fields.Field(
+        column_name=_("Бренд / производитель (название)"),
+        attribute="brand",
+        widget=ForeignKeyWidget(Manufacturer, field="name"),
     )
     equipment_groups = fields.Field(
         column_name=_("Группы оборудования"),
@@ -58,7 +58,7 @@ class ProductResource(resources.ModelResource):
             "status",
             "category",
             "uom",
-            "manufacturer",
+            "brand",
             "gost_drawing",
             "equipment_groups",
         )
