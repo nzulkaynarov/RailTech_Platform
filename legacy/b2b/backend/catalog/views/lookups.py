@@ -10,6 +10,7 @@ from ..serializers import (
     CategorySerializer,
     DomainTypeSerializer,
     EquipmentGroupSerializer,
+    ManufacturerSerializer,
     ProductStatusSerializer,
     StockStatusSerializer,
 )
@@ -124,26 +125,26 @@ class CategoryViewSet(viewsets.ModelViewSet):
 
 @extend_schema_view(
     list=extend_schema(
-        summary="List manufacturers",
+        summary="List manufacturers (OEM brands)",
         description=(
-            "Returns companies that have manufactured products. " "Derived from Company records linked to products."
+            "Returns OEM brands from the `catalog.Manufacturer` reference table — the "
+            "canonical source for `Product.brand`. A brand is catalog metadata, not a "
+            "platform participant (sellers/buyers are the participant roles)."
         ),
         tags=["Catalog"],
     ),
-    retrieve=extend_schema(summary="Get manufacturer", tags=["Catalog"]),
+    retrieve=extend_schema(summary="Get manufacturer (OEM brand)", tags=["Catalog"]),
 )
 class ManufacturerViewSet(viewsets.ReadOnlyModelViewSet):
-    """Read-only list of companies that are manufacturers (have linked products)."""
+    """Read-only list of OEM brands (catalog.Manufacturer) for the `brand` selector."""
 
-    from accounts.serializers import CompanySerializer
-
-    serializer_class = CompanySerializer
+    serializer_class = ManufacturerSerializer
     permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
-        from accounts.models import Company
+        from ..models import Manufacturer
 
-        return Company.objects.filter(manufactured_products__isnull=False).distinct().order_by("name")
+        return Manufacturer.objects.filter(is_active=True).select_related("country").order_by("name")
 
 
 @extend_schema_view(

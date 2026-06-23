@@ -78,12 +78,15 @@ export interface Product {
     category_data?: { id: number, name: string } | null;
     
     manufacturer?: number | null;
-    manufacturer_data?: { id: number; name: string; inn?: string; logo?: string | null; is_verified?: boolean; has_iso9001?: boolean; trust_score?: number; } | null;
 
-    // Canonical brand (catalog.Manufacturer). `manufacturer` above is the
-    // deprecated Company FK kept only for legacy reads.
+    // The SELLER company that owns the listing (tenancy), NOT the OEM.
+    owner_company_data?: { id: number; name: string; inn?: string; logo?: string | null } | null;
+
+    // Canonical brand (catalog.Manufacturer / OEM). This is what catalog
+    // displays show as "manufacturer/производитель".
     brand?: number | null;
     brand_name?: string | null;
+    brand_country?: string | null;
     manufacturer_part_number?: string | null;
 
     uom?: number | null;
@@ -120,7 +123,7 @@ export const catalogApi = {
         domain_type?: string,
         search?: string,
         category?: number,
-        manufacturer?: number,
+        brand?: number,
         equipment_groups?: number,
         stock_status?: string,
     }): Promise<Product[]> => {
@@ -130,7 +133,7 @@ export const catalogApi = {
             if (params.domain_type) query.append('domain_type__code', params.domain_type);
             if (params.search) query.append('search', params.search);
             if (params.category) query.append('category', params.category.toString());
-            if (params.manufacturer) query.append('manufacturer', params.manufacturer.toString());
+            if (params.brand) query.append('brand', params.brand.toString());
             if (params.equipment_groups) query.append('equipment_groups', params.equipment_groups.toString());
             if (params.stock_status) query.append('stock_status', params.stock_status);
             if (query.toString()) url += `?${query.toString()}`;

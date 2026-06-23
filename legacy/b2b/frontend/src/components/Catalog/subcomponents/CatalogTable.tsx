@@ -59,7 +59,7 @@ export const CatalogTable: React.FC<CatalogTableProps> = ({ products, onProductC
         const rows = selectedProducts.map((p) => {
             const sku = (p.sku || '').replace(/"/g, '""');
             const name = p.name.replace(/"/g, '""');
-            const manufacturer = (p.manufacturer_data?.name || '').replace(/"/g, '""');
+            const manufacturer = (p.brand_name || '').replace(/"/g, '""');
             const price = p.base_price ?? '';
             const uom = p.uom_data?.code || 'pcs';
             const stock = p.stock_status || 'IN_STOCK';
@@ -184,7 +184,7 @@ export const CatalogTable: React.FC<CatalogTableProps> = ({ products, onProductC
                             <TableCell className="py-2 px-3">
                                 <div className="flex flex-col">
                                     <span className="text-sm text-foreground dark:text-muted-foreground truncate">
-                                        {product.manufacturer_data?.name || '—'}
+                                        {product.brand_name || '—'}
                                     </span>
 
                                 </div>

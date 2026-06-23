@@ -415,7 +415,7 @@ export function AdminCatalogPage() {
                 name: (p) => p.name ?? '',
                 domain: (p) => p.domain_type_name ?? '',
                 status: (p) => p.status_name ?? '',
-                manufacturer: (p) => p.manufacturer_data?.name ?? '',
+                manufacturer: (p) => p.brand_name ?? '',
               },
             });
             if (isLoading) return <LoadingRows rows={6} />;
@@ -440,7 +440,7 @@ export function AdminCatalogPage() {
                     <TableCell>{p.name}</TableCell>
                     <TableCell className="text-muted-foreground text-xs">{p.domain_type_name || '—'}</TableCell>
                     <TableCell><Badge variant="outline">{p.status_name || '—'}</Badge></TableCell>
-                    <TableCell className="text-muted-foreground text-xs">{p.manufacturer_data?.name ?? '—'}</TableCell>
+                    <TableCell className="text-muted-foreground text-xs">{p.brand_name ?? '—'}</TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1">
                         <Button variant="ghost" size="sm" onClick={() => onEdit(p)}>

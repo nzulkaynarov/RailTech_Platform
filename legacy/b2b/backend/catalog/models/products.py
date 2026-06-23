@@ -85,17 +85,30 @@ class Product(models.Model):
         verbose_name=_("Единица измерения"),
         help_text=_("Базовая единица измерения (шт, кг, м)"),
     )
-    # DEPRECATED: производитель как платформенная компания. Заменяется на `brand`
-    # (catalog.Manufacturer) — бренд не обязан быть аккаунтом. Будет удалён
-    # отдельной миграцией (contract-фаза) после переноса данных/UI на brand.
+    # DEPRECATED (F5.2): conflated two roles — tenancy/ownership AND OEM. Ownership
+    # moved to `owner_company`, OEM moved to `brand` (catalog.Manufacturer). No code
+    # reads/writes this anymore; kept nullable for one release, dropped in a follow-up
+    # migration (roadmap contract-phase). Do NOT use in new code.
     manufacturer = models.ForeignKey(
         "accounts.Company",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="manufactured_products",
-        verbose_name=_("Производитель"),
-        help_text=_("Компания-производитель (OEM)"),
+        verbose_name=_("Производитель (DEPRECATED)"),
+        help_text=_("УСТАРЕЛО — заменено на owner_company (владелец) + brand (OEM)."),
+    )
+    # Tenancy: the platform company that owns/created this catalog card (the seller).
+    # Drives the "see my own unpublished products" scoping; NOT the OEM (that's `brand`).
+    owner_company = models.ForeignKey(
+        "accounts.Company",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="owned_products",
+        db_index=True,
+        verbose_name=_("Компания-владелец"),
+        help_text=_("Продавец/поставщик, создавший карточку (мультитенантность PIM)."),
     )
     brand = models.ForeignKey(
         "catalog.Manufacturer",

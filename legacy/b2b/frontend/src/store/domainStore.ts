@@ -8,7 +8,7 @@ export type DomainCode = string;
 
 interface Filters {
 	category: number | null;
-	manufacturer: number | null;
+	brand: number | null;
 	equipment_groups: number | null;
 	stock_status: string | null;
 }
@@ -23,7 +23,7 @@ interface DomainState {
 
 const initialFilters: Filters = {
 	category: null,
-	manufacturer: null,
+	brand: null,
 	equipment_groups: null,
 	stock_status: null,
 };

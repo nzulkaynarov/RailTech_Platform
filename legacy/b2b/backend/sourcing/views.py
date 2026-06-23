@@ -482,7 +482,7 @@ class AttachmentViewSet(viewsets.ModelViewSet):
             "message__deal__company",
             "quote__deal__company",
             "company",
-            "product__manufacturer",
+            "product__owner_company",
         ).order_by("-uploaded_at")
 
         params = self.request.query_params
@@ -514,7 +514,7 @@ class AttachmentViewSet(viewsets.ModelViewSet):
             | Q(message__deal_id__in=accessible_deals)
             | Q(quote__deal_id__in=accessible_deals)
             | Q(company_id__in=user_company_ids)
-            | Q(product__manufacturer_id__in=user_company_ids),
+            | Q(product__owner_company_id__in=user_company_ids),
         )
 
     def _assert_parent_access(self, validated):

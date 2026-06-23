@@ -157,7 +157,7 @@ class ProductAdmin(ReadOnlyInspectionMixin, ImportExportModelAdmin, ModelAdmin):
     resource_classes = [ProductResource]
     import_form_class = ImportForm
     export_form_class = ExportForm
-    list_display = ("show_product", "domain_badge", "status_badge", "category", "manufacturer")
+    list_display = ("show_product", "domain_badge", "status_badge", "category", "brand")
     list_filter = ("domain_type", "status", "category")
     list_filter_submit = True
     search_fields = ("name", "sku", "gost_drawing")
@@ -167,14 +167,14 @@ class ProductAdmin(ReadOnlyInspectionMixin, ImportExportModelAdmin, ModelAdmin):
         "status",
         "category",
         "uom",
-        "manufacturer",
+        "owner_company",
         "brand",
         "equipment_groups",
     ]
     inlines = [SupplierOfferInline, ProductImageInline, ProductDocumentInline]
     actions = ["publish_products"]
     list_per_page = 25
-    list_select_related = ("domain_type", "status", "category", "manufacturer", "brand")
+    list_select_related = ("domain_type", "status", "category", "owner_company", "brand")
     show_full_result_count = False
     warn_unsaved_form = True
 
@@ -217,7 +217,7 @@ class ProductAdmin(ReadOnlyInspectionMixin, ImportExportModelAdmin, ModelAdmin):
                 "classes": ["tab"],
                 "fields": (
                     "description",
-                    "manufacturer",
+                    ("brand", "owner_company"),
                     "gost_drawing",
                     "specifications",
                 ),

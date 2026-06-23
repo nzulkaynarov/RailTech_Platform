@@ -29,10 +29,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, canS
     const stock = stockConfig[product.stock_status as keyof typeof stockConfig] ?? stockConfig.ON_ORDER;
     const domainVisual = getDomainVisual(product.domain_type_code ?? 'GENERAL_GOODS');
     const inCart = items.some(i => Number(i.product.id) === Number(product.id));
-    const mfgInfo = product.manufacturer_data ? {
-        verified: product.manufacturer_data.is_verified,
-        iso: product.manufacturer_data.has_iso9001,
-        trustScore: product.manufacturer_data.trust_score || 0,
+    const mfgInfo = product.brand_name ? {
+        verified: false,
+        iso: false,
+        trustScore: 0,
     } : null;
     const isBuyer = activeStatus === 'BUYER';
 
@@ -92,14 +92,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, canS
                 </h3>
 
                 {/* Manufacturer + Verified badges */}
-                {product.manufacturer_data?.name && (
+                {product.brand_name && (
                     <div className="mb-3 space-y-1.5">
                         <div className="flex items-center gap-1.5">
                             {mfgInfo?.verified && (
                                 <ShieldCheck className="w-3.5 h-3.5 text-primary shrink-0" />
                             )}
                             <p className="text-xs text-muted-foreground truncate">
-                                {product.manufacturer_data.name}
+                                {product.brand_name}
                             </p>
                         </div>
                         {mfgInfo && (
