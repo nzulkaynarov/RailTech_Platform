@@ -39,12 +39,17 @@ export function DealAttachmentsPanel({
             className={className}
             label={label ?? t('dealAttachments.title')}
             description={description ?? t('dealAttachments.description')}
-            files={files.map(f => ({
-                id: f.id,
-                name: f.original_filename,
-                url: f.file,
-                uploaded_at: f.uploaded_at,
-            }))}
+            files={[...files]
+                // Pin the parse source on top so it reads as "the file this заявка came from".
+                .sort((a, b) => (b.kind === 'SOURCE' ? 1 : 0) - (a.kind === 'SOURCE' ? 1 : 0))
+                .map(f => ({
+                    id: f.id,
+                    name: f.kind === 'SOURCE'
+                        ? `[${t('dealAttachments.sourceTag')}] ${f.original_filename}`
+                        : f.original_filename,
+                    url: f.file,
+                    uploaded_at: f.uploaded_at,
+                }))}
             onUpload={async (file) => { await uploadMut.mutateAsync(file); }}
             onRemove={async (id) => { await removeMut.mutateAsync(Number(id)); }}
             onDownload={(id, name) => downloadFile(`sourcing/attachments/${id}/download/`, name)}

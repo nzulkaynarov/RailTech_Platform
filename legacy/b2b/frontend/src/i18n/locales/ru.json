@@ -3961,6 +3961,8 @@
     "fromCatalog": "из каталога",
     "gostPlaceholder": "ГОСТ / чертёж",
     "gostLabel": "ГОСТ / чертёж",
+    "codePlaceholder": "Артикул / ГОСТ / чертёж",
+    "codeLabel": "Код детали",
     "unitNotNormalized": "Единица не стандартизирована — выберите из списка для точного КП"
   },
   "requestDetailActions": {
@@ -4130,6 +4132,7 @@
   },
   "dealAttachments": {
     "title": "Вложения сделки",
+    "sourceTag": "Исходник заявки",
     "description": "Excel-спецификации, чертежи, доп. документы",
     "noDeal": "Сделка не выбрана"
   }
