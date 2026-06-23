@@ -28,7 +28,7 @@ export function SubscriptionStatusBanner({ onNavigate, onDismiss }: Subscription
   const { data: sub } = useMySubscription();
 
   const relevantForRole =
-    activeStatus === 'SELLER' || activeStatus === 'MANUFACTURER';
+    activeStatus === 'SELLER';
 
   const alert = useMemo(() => {
     if (role === 'ADMIN') return null;

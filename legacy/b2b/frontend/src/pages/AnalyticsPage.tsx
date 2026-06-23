@@ -47,8 +47,8 @@ export function AnalyticsPage() {
 
   return (
     <PageShell
-      title={activeStatus === 'MANUFACTURER' ? t('pages.analytics.manufacturerTitle') : t('pages.analytics.sellerTitle')}
-      description={activeStatus === 'MANUFACTURER' ? t('pages.analytics.manufacturerDescription') : t('pages.analytics.sellerDescription')}
+      title={t('pages.analytics.sellerTitle')}
+      description={t('pages.analytics.sellerDescription')}
       icon={<BarChart3 className="h-5 w-5" />}
       stats={[
         { label: t('pages.analytics.stats.conversion'), value: analytics?.conversion_rate != null ? `${analytics.conversion_rate.toFixed(1)}%` : (ps?.analytics?.conversion ?? '0%') },

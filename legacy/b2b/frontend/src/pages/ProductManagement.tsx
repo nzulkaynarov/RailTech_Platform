@@ -44,8 +44,8 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
   const [editSheetOpen, setEditSheetOpen] = useState(false);
 
   const canSendRequest = activeStatus === 'BUYER';
-  const showPrices = activeStatus === 'SELLER' || activeStatus === 'MANUFACTURER';
-  const canManageCatalog = activeStatus === 'SELLER' || activeStatus === 'MANUFACTURER';
+  const showPrices = activeStatus === 'SELLER';
+  const canManageCatalog = activeStatus === 'SELLER';
 
   const listParams = useListParams(['domain', 'stock', 'brand'] as const, { defaultOrdering: 'name' });
 
@@ -112,7 +112,7 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
   return (
     <PageShell
       title={pageTitle}
-      description={activeStatus === 'BUYER' ? t('productManagement.subtitle.buyer') : activeStatus === 'MANUFACTURER' ? t('productManagement.subtitle.manufacturer') : t('productManagement.subtitle.seller')}
+      description={activeStatus === 'BUYER' ? t('productManagement.subtitle.buyer') : t('productManagement.subtitle.seller')}
       icon={<Package className="h-5 w-5" />}
       stats={stats}
       actions={

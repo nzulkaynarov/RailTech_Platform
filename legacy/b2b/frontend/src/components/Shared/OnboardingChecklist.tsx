@@ -58,7 +58,7 @@ export function OnboardingChecklist({ onNavigate }: OnboardingChecklistProps) {
   const { data: sub } = useMySubscription();
   const { data: deals = [] } = useDeals();
 
-  const isSeller = activeStatus === 'SELLER' || activeStatus === 'MANUFACTURER';
+  const isSeller = activeStatus === 'SELLER';
   const isBuyer = activeStatus === 'BUYER';
 
   const kycStatusCode =

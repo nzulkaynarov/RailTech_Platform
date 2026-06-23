@@ -32,7 +32,7 @@ export function ProductDetail({ productId, onBack }: ProductDetailProps) {
   const formatCurrency = useCurrencyStore((s) => s.format);
   const { activeStatus } = useUserStore();
   const canSendRequest = activeStatus === 'BUYER';
-  const showPrices = activeStatus === 'SELLER' || activeStatus === 'MANUFACTURER';
+  const showPrices = activeStatus === 'SELLER';
 
   const { data: product, isLoading, error } = useProduct(productId);
   // `qty` is the always-valid (>=1) source of truth used by add-to-request;
