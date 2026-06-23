@@ -144,6 +144,16 @@ class Product(models.Model):
         verbose_name=_("ГОСТ / Чертёж"),
         help_text=_("Номер ГОСТ или чертежа"),
     )
+    # ТНВЭД / HS-код — постоянный дом кода товара (PIM). Один раз внесли в карточку →
+    # больше не ищем заново. КП наследует и замораживает его в QuoteItem.hs_code.
+    hs_code = models.CharField(
+        max_length=14,
+        blank=True,
+        default="",
+        db_index=True,
+        verbose_name=_("Код ТНВЭД"),
+        help_text=_("Код товарной номенклатуры ВЭД (ТНВЭД/HS). Хранится в карточке, чтобы не искать заново."),
+    )
     specifications = models.JSONField(
         default=dict,
         blank=True,

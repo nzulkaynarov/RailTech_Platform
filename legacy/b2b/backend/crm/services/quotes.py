@@ -152,8 +152,12 @@ class QuoteCalculationService:
         else:
             item.landed_cost = item.frozen_base_price + item.logistics_cost + item.customs_duty
 
+        # себестоимость → +наценка → −скидка позиции (UBL line-level allowance)
         margin_mult = Decimal("1") + (item.margin_percent / Decimal("100"))
-        item.final_price_excl_vat = (item.landed_cost * margin_mult).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        discount_mult = Decimal("1") - (item.discount_percent / Decimal("100"))
+        item.final_price_excl_vat = (item.landed_cost * margin_mult * discount_mult).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
 
         if commit:
             item.save(update_fields=["landed_cost", "final_price_excl_vat", "logistics_cost", "customs_duty"])
@@ -185,6 +189,7 @@ class QuoteCalculationService:
                 logistics_cost=item.logistics_cost,
                 customs_duty=item.customs_duty,
                 margin_percent=item.margin_percent,
+                discount_percent=item.discount_percent,
                 landed_cost=item.landed_cost,
                 final_price_excl_vat=item.final_price_excl_vat,
                 quantity=item.quantity,
@@ -195,18 +200,29 @@ class QuoteCalculationService:
         if history_records:
             QuoteItemHistory.objects.bulk_create(history_records)
 
-        # 3. Aggregation for Quote totals (use QuerySet, not list)
+        # 3. Aggregation for Quote totals (use QuerySet, not list).
+        # UBL 2.1: LineExtensionAmount (Σ позиций) + document-level AllowanceCharge
+        # (Σ статей расхода со знаком) = TaxExclusiveAmount → +НДС → TaxInclusiveAmount.
         totals = quote.items.aggregate(subtotal=models.Sum(models.F("final_price_excl_vat") * models.F("quantity")))
-
         subtotal = totals["subtotal"] or Decimal("0")
+
+        # Статьи расхода уровня КП: расход (+) минус скидка (−). Процентные статьи
+        # (rate_percent) резолвятся от subtotal, поэтому считаем в Python (статей мало).
+        charges = sum((charge.resolve_signed(subtotal) for charge in quote.charges.all()), Decimal("0"))
+
+        # Ставка НДС берётся из КП (заморожена из БД), не хардкодится в коде.
         vat_rate = quote.vat_rate / Decimal("100")
 
         penny = Decimal("0.01")
         quote.subtotal_excl_vat = subtotal.quantize(penny, rounding=ROUND_HALF_UP)
-        quote.vat_amount = (subtotal * vat_rate).quantize(penny, rounding=ROUND_HALF_UP)
-        quote.total_incl_vat = quote.subtotal_excl_vat + quote.vat_amount
+        quote.charges_total = charges.quantize(penny, rounding=ROUND_HALF_UP)
+        tax_exclusive = quote.subtotal_excl_vat + quote.charges_total
+        quote.vat_amount = (tax_exclusive * vat_rate).quantize(penny, rounding=ROUND_HALF_UP)
+        quote.total_incl_vat = tax_exclusive + quote.vat_amount
 
-        quote.save(update_fields=["subtotal_excl_vat", "vat_amount", "total_incl_vat", "updated_at"])
+        quote.save(
+            update_fields=["subtotal_excl_vat", "charges_total", "vat_amount", "total_incl_vat", "updated_at"]
+        )
         return quote
 
 
@@ -589,9 +605,13 @@ def reassign_quote_item_product(
         if not product:
             return None, "PRODUCT_NOT_FOUND"
         item.product = product
+        # Inherit ТНВЭД from the product card unless ВЭД already set it manually
+        # (the per-line override wins; we only fill an empty code).
+        if not (item.hs_code or "").strip() and (product.hs_code or "").strip():
+            item.hs_code = product.hs_code
     else:
         item.product = None
-    item.save(update_fields=["product", "assigned_at"])
+    item.save(update_fields=["product", "assigned_at", "hs_code"])
     ActivityLog.objects.create(
         action="Переназначен продукт в позиции КП",
         detail=f"QuoteItem #{item.id} → Product #{product_id}",

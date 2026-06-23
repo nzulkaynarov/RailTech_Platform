@@ -5,7 +5,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from core.storage import get_private_storage, quote_pdf_path
-from master_data.models import Country, Currency
+from master_data.models import Country, Currency, DeliveryBasis
 
 # ────────────────────────────────────────────
 # Справочники модуля CRM
@@ -55,6 +55,30 @@ class Quote(models.Model):
         help_text=_("Менеджер, составивший данное КП"),
     )
 
+    # Базис поставки (Incoterm) — «конструктор по базису»: меняет видимость строк
+    # расходов и подпись итоговой цены (включая страховку / включая НДС). Расчётный
+    # движок при этом один — Incoterm не меняет ЧТО считаем, лишь какие слои включены.
+    delivery_basis = models.ForeignKey(
+        DeliveryBasis,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="quotes",
+        verbose_name=_("Базис поставки (Incoterm)"),
+        help_text=_("Условия поставки КП по Incoterms (FCA, CIP, DDP …)"),
+    )
+    # Валюта клиентского КП. Бизнес-правило: КП клиенту всегда в нац. валюте (UZS).
+    # Затраты в иной валюте конвертирует менеджер вручную при вводе (FX-движок не наш).
+    quote_currency = models.ForeignKey(
+        Currency,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("Валюта КП"),
+        help_text=_("Валюта итогового КП для клиента (по умолчанию UZS)"),
+    )
+
     # Налоговые параметры (замороженные на момент создания КП)
     tax_country = models.ForeignKey(
         Country,
@@ -87,6 +111,16 @@ class Quote(models.Model):
         default=0,
         verbose_name=_("Сумма НДС"),
         help_text=_("Общая сумма НДС (авто-расчёт)"),
+    )
+    # Σ статей расхода уровня КП (QuoteCharge) — входят в базу до НДС (UBL document-level
+    # AllowanceCharge): tax_exclusive = subtotal_excl_vat + charges_total.
+    charges_total = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        default=0,
+        editable=False,
+        verbose_name=_("Сумма статей расхода"),
+        help_text=_("Итого по статьям расхода уровня КП (авто-расчёт, до НДС)"),
     )
     total_incl_vat = models.DecimalField(
         max_digits=14,
@@ -257,6 +291,16 @@ class QuoteItem(models.Model):
         verbose_name=_("ГОСТ / чертёж"),
         help_text=_("Номер ГОСТ или чертежа из заявки (канонический идентификатор детали)"),
     )
+    # ТНВЭД, замороженный из Product.hs_code на момент КП (тарифы меняются — КП должно
+    # быть воспроизводимым). ВЭД может переопределить per-line.
+    hs_code = models.CharField(
+        max_length=14,
+        blank=True,
+        default="",
+        db_index=True,
+        verbose_name=_("Код ТНВЭД"),
+        help_text=_("Код ТНВЭД позиции (наследуется из карточки товара, замораживается в КП)"),
+    )
     note = models.TextField(
         blank=True,
         default="",
@@ -310,6 +354,16 @@ class QuoteItem(models.Model):
         validators=[MinValueValidator(0), MaxValueValidator(500)],
         verbose_name=_("Наценка (%)"),
         help_text=_("Процент наценки RailTech (0–500%)"),
+    )
+    # Скидка на позицию (UBL line-level allowance, %). Применяется к цене продажи
+    # строки: final_price_excl_vat = себестоимость × (1 + наценка%) × (1 − скидка%).
+    discount_percent = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        verbose_name=_("Скидка (%)"),
+        help_text=_("Процент скидки на позицию (0–100%)"),
     )
 
     # Вычисляемые поля (пересчитываются в save())
@@ -407,6 +461,12 @@ class QuoteItemHistory(models.Model):
         decimal_places=2,
         verbose_name=_("Наценка (%)"),
     )
+    discount_percent = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0,
+        verbose_name=_("Скидка (%)"),
+    )
     landed_cost = models.DecimalField(
         max_digits=14,
         decimal_places=2,
@@ -440,3 +500,104 @@ class QuoteItemHistory(models.Model):
 
     def __str__(self):
         return f"History #{self.pk} for {self.quote_item} at {self.created_at}"
+
+
+class QuoteCharge(models.Model):
+    """
+    Статья расхода уровня КП — UBL 2.1 document-level cac:AllowanceCharge.
+
+    Добавляется на ВЕСЬ КП (не на позицию): фрахт, страховка, аренда, ЗП проектной
+    команды, комиссионные, сертификация, штрафы и пр. Входит в базу до НДС:
+      tax_exclusive = Σ(позиции) + Σ(charge − allowance)
+    Поштучной аллокации по весу/объёму НЕТ — это задача спец-сервисов, не наша.
+    Сумма вводится в валюте КП (quote_currency); конвертацию делает менеджер вручную.
+    """
+
+    quote = models.ForeignKey(
+        "crm.Quote",
+        on_delete=models.CASCADE,
+        related_name="charges",
+        verbose_name=_("КП"),
+        help_text=_("Коммерческое предложение, к которому относится статья расхода"),
+    )
+    charge_type = models.ForeignKey(
+        "crm.ChargeType",
+        on_delete=models.PROTECT,
+        related_name="quote_charges",
+        verbose_name=_("Статья расхода"),
+        help_text=_("Тип статьи из справочника (фрахт, аренда, комиссия …)"),
+    )
+    description = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        verbose_name=_("Описание"),
+        help_text=_("Уточнение статьи (напр. «аренда склада за июнь»)"),
+    )
+    amount = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        default=0,
+        verbose_name=_("Сумма"),
+        help_text=_("Фиксированная сумма в валюте КП (если rate_percent не задан)"),
+    )
+    # UBL MultiplierFactorNumeric: процент от суммы позиций (база до НДС). Если задан —
+    # имеет приоритет над amount (эффективная сумма = subtotal × rate_percent / 100).
+    # Поддерживает «−5% на весь КП» и симметрично «+N% начисление».
+    rate_percent = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        verbose_name=_("Процент (%)"),
+        help_text=_("Процент от суммы позиций. Если задан — приоритетнее фиксированной суммы"),
+    )
+    # UBL ChargeIndicator: False = начисление (+, расход), True = скидка/уценка (−).
+    is_deduction = models.BooleanField(
+        default=False,
+        verbose_name=_("Скидка (вычет)"),
+        help_text=_("Если включено — сумма вычитается из базы до НДС (UBL allowance)"),
+    )
+    created_by = models.ForeignKey(
+        "accounts.CustomUser",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("Внёс"),
+        help_text=_("Кто добавил статью расхода"),
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Дата создания"))
+    updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Дата обновления"))
+
+    class Meta:
+        verbose_name = _("Статья расхода КП")
+        verbose_name_plural = _("Статьи расхода КП")
+        ordering = ["id"]
+
+    def resolve_signed(self, subtotal):
+        """
+        Эффективная сумма со знаком для агрегации в базу до НДС.
+        rate_percent (если задан) считается от subtotal (суммы позиций), иначе amount.
+        Расход даёт (+), скидка (is_deduction) — (−).
+        """
+        from decimal import Decimal
+
+        if self.rate_percent is not None:
+            base = subtotal * (self.rate_percent / Decimal("100"))
+        else:
+            base = self.amount
+        return -base if self.is_deduction else base
+
+    def __str__(self):
+        sign = "−" if self.is_deduction else "+"
+        value = f"{self.rate_percent}%" if self.rate_percent is not None else self.amount
+        return f"{self.charge_type} {sign}{value} (КП #{self.quote_id})"
+
+    def save(self, *args, **kwargs):
+        """После изменения статьи пересчитываем агрегаты КП (если не отложено)."""
+        skip_recalculate = kwargs.pop("skip_recalculate", False)
+        super().save(*args, **kwargs)
+        if not skip_recalculate:
+            self.quote.recalculate_totals()

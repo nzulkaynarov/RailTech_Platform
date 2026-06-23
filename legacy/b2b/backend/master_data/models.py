@@ -93,6 +93,30 @@ class DeliveryBasis(AbstractLookup):
         help_text=_("Описание условий поставки по Incoterms"),
     )
 
+    # Матрица ответственности по расходам (Incoterms 2020). Конструктор КП читает эти
+    # флаги выбранного базиса и сам показывает/скрывает/делает обязательными строки
+    # расходов — без хардкода «if code == 'DDP'» в коде. Данные правят матрицу.
+    seller_pays_freight = models.BooleanField(
+        default=False,
+        verbose_name=_("Продавец оплачивает фрахт"),
+        help_text=_("Основная перевозка лежит на продавце (C- и D-термы)"),
+    )
+    seller_pays_insurance = models.BooleanField(
+        default=False,
+        verbose_name=_("Продавец оплачивает страхование"),
+        help_text=_("Продавец несёт транзитный риск/страхование груза (CIF, CIP, D-термы)"),
+    )
+    seller_pays_import = models.BooleanField(
+        default=False,
+        verbose_name=_("Продавец оплачивает импортную растаможку"),
+        help_text=_("Импортная пошлина/оформление/НДС на стороне продавца (только DDP)"),
+    )
+    seller_pays_delivery = models.BooleanField(
+        default=False,
+        verbose_name=_("Продавец оплачивает доставку до места"),
+        help_text=_("Доставка до названного места назначения (D-термы)"),
+    )
+
     class Meta(AbstractLookup.Meta):
         verbose_name = _("Базис поставки")
         verbose_name_plural = _("Справочник: Базисы поставок (Incoterms)")

@@ -17,7 +17,12 @@ from crm.views.billing import (  # noqa: F401
 from crm.views.deals import DealStageViewSet, DealViewSet  # noqa: F401
 from crm.views.leads import LeadCreateView, LeadViewSet  # noqa: F401
 from crm.views.messages import ActivityLogViewSet, MessageViewSet  # noqa: F401
-from crm.views.quotes import QuoteItemViewSet, QuoteStatusViewSet, QuoteViewSet  # noqa: F401
+from crm.views.quotes import (  # noqa: F401
+    QuoteChargeViewSet,
+    QuoteItemViewSet,
+    QuoteStatusViewSet,
+    QuoteViewSet,
+)
 
 __all__ = [
     # deals
@@ -26,6 +31,7 @@ __all__ = [
     # quotes
     "QuoteViewSet",
     "QuoteItemViewSet",
+    "QuoteChargeViewSet",
     "QuoteStatusViewSet",
     # messages
     "MessageViewSet",

@@ -18,7 +18,7 @@ from accounts.models import (
     WorkspaceRole,
 )
 from catalog.models import DomainType, ProductStatus, StockStatus
-from crm.models import DealStage, QuoteStatus
+from crm.models import ChargeType, DealStage, QuoteStatus
 from master_data.models import Country, Currency, DeliveryBasis, UnitOfMeasure
 from notifications.models import NotificationType
 
@@ -75,16 +75,50 @@ class Command(BaseCommand):
         # (PCS/KG/M/T/L/HR с полными именами) — это и создавало «кашу» дублей
         # (кг=KG+KGM, м=M+MTR, …). UOM-справочник тут больше не трогаем.
 
-        # ─── 4. Базис поставки (Incoterms) ───
+        # ─── 4. Базис поставки (полный Incoterms 2020 — все 11 терминов) ───
+        # Флаги = матрица ответственности по расходам (кто несёт слой затрат).
+        # (code, name, freight, insurance, import, delivery)
         bases = [
-            ("FCA", "Франко-перевозчик"),
-            ("DAP", "Поставка в место назначения"),
-            ("CPT", "Перевозка оплачена до"),
-            ("EXW", "Франко-завод"),
-            ("CIP", "Перевозка и страхование оплачены до"),
+            ("EXW", "Франко-завод", False, False, False, False),
+            ("FCA", "Франко-перевозчик", False, False, False, False),
+            ("FAS", "Свободно вдоль борта судна", False, False, False, False),
+            ("FOB", "Свободно на борту", False, False, False, False),
+            ("CFR", "Стоимость и фрахт", True, False, False, False),
+            ("CIF", "Стоимость, страхование и фрахт", True, True, False, False),
+            ("CPT", "Перевозка оплачена до", True, False, False, False),
+            ("CIP", "Перевозка и страхование оплачены до", True, True, False, False),
+            ("DAP", "Поставка в место назначения", True, True, False, True),
+            ("DPU", "Поставка в месте выгрузки", True, True, False, True),
+            ("DDP", "Поставка с оплатой пошлин", True, True, True, True),
         ]
-        for code, name in bases:
-            _seed(DeliveryBasis, code, name=name)
+        for code, name, freight, insurance, imp, delivery in bases:
+            _seed(
+                DeliveryBasis,
+                code,
+                name=name,
+                seller_pays_freight=freight,
+                seller_pays_insurance=insurance,
+                seller_pays_import=imp,
+                seller_pays_delivery=delivery,
+            )
+
+        # ─── 4b. Статьи расхода КП (UBL document-level AllowanceCharge) ───
+        # Стартовый набор; овнер пополняет справочник через админку. Сравнение в
+        # коде идёт по агрегату сумм (не по конкретному code), поэтому набор —
+        # удобство, а не контракт hot-path (IRON RULE 1).
+        charge_types = [
+            ("FREIGHT", "Фрахт / логистика"),
+            ("INSURANCE", "Страхование груза"),
+            ("CUSTOMS", "Таможенное оформление"),
+            ("CERTIFICATION", "Сертификация"),
+            ("RENT", "Аренда (склад/площадка)"),
+            ("PAYROLL", "Оплата труда проектной команды"),
+            ("COMMISSION", "Комиссионные выплаты"),
+            ("DISCOUNT", "Скидка клиенту"),
+            ("OTHER", "Прочие расходы"),
+        ]
+        for code, name in charge_types:
+            _seed(ChargeType, code, name=name)
 
         # ─── 5. Системные роли ───
         # Только две: ADMIN (Platform Admin, владелец платформы) и USER.
