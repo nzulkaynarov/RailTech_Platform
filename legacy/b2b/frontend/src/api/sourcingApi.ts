@@ -20,6 +20,7 @@ export interface Attachment {
   id: number;
   file: string | null;
   original_filename: string;
+  kind?: 'SOURCE' | 'SUPPORTING';
   uploaded_by: number | null;
   uploaded_by_email: string | null;
   uploaded_at: string;

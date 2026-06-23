@@ -60,18 +60,19 @@ export function RequestItemsEditor({
       toast.error(translateApiError(e));
     }
   };
-  const saveMpn = async (item: QuoteItem, value: string) => {
-    if (value.trim() === (item.mpn || '').trim()) return;
+  // For the buyer it's all just "the part code" (артикул or ГОСТ/чертёж — see
+  // [[feedback]]). We expose ONE field and auto-classify: a ГОСТ/ОСТ/ТУ/чертёж marker
+  // or a drawing-number pattern → gost_drawing, otherwise a manufacturer part number.
+  const looksLikeGost = (v: string) =>
+    /(гост|gost|ост\s|\bту\b|чертёж|чертеж|drawing)/i.test(v) || /^\d{1,4}[.\-]\d/.test(v.trim());
+  const partCode = (item: QuoteItem) => item.gost_drawing || item.mpn || '';
+  const saveCode = async (item: QuoteItem, value: string) => {
+    const v = value.trim();
+    if (v === partCode(item).trim()) return;
+    // One code per line: set the classified field, clear the other (single source).
+    const data = looksLikeGost(v) ? { gost_drawing: v, mpn: '' } : { mpn: v, gost_drawing: '' };
     try {
-      await updateItem.mutateAsync({ id: item.id, data: { mpn: value.trim() } });
-    } catch (e) {
-      toast.error(translateApiError(e));
-    }
-  };
-  const saveGost = async (item: QuoteItem, value: string) => {
-    if (value.trim() === (item.gost_drawing || '').trim()) return;
-    try {
-      await updateItem.mutateAsync({ id: item.id, data: { gost_drawing: value.trim() } });
+      await updateItem.mutateAsync({ id: item.id, data });
     } catch (e) {
       toast.error(translateApiError(e));
     }
@@ -280,26 +281,21 @@ export function RequestItemsEditor({
                   <TableCell className="pt-0" />
                   <TableCell colSpan={canEdit ? 4 : 3} className="pt-0">
                     {canEdit ? (
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap items-start gap-2">
                         <Input
-                          defaultValue={item.mpn || ''}
-                          onBlur={(e) => saveMpn(item, e.target.value)}
-                          placeholder={t('requestItems.skuPlaceholder')}
-                          className="h-7 w-36 text-xs"
-                          aria-label={t('requestItems.skuLabel')}
+                          key={partCode(item)}
+                          defaultValue={partCode(item)}
+                          onBlur={(e) => saveCode(item, e.target.value)}
+                          placeholder={t('requestItems.codePlaceholder')}
+                          className="h-7 w-44 text-xs"
+                          aria-label={t('requestItems.codeLabel')}
                         />
-                        <Input
-                          defaultValue={item.gost_drawing || ''}
-                          onBlur={(e) => saveGost(item, e.target.value)}
-                          placeholder={t('requestItems.gostPlaceholder')}
-                          className="h-7 w-32 text-xs"
-                          aria-label={t('requestItems.gostLabel')}
-                        />
-                        <Input
+                        <Textarea
                           defaultValue={item.note || ''}
                           onBlur={(e) => saveNote(item, e.target.value)}
                           placeholder={t('requestItems.notePlaceholder')}
-                          className="h-7 flex-1 text-xs"
+                          className="min-h-7 flex-1 resize-y text-xs"
+                          rows={1}
                           aria-label={t('requestItems.noteCol')}
                         />
                       </div>

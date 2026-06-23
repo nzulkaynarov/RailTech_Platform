@@ -3957,6 +3957,8 @@
     "fromCatalog": "from catalog",
     "gostPlaceholder": "GOST / drawing",
     "gostLabel": "GOST / drawing",
+    "codePlaceholder": "Part no. / GOST / drawing",
+    "codeLabel": "Part code",
     "unitNotNormalized": "Unit not standardised — pick one from the list for an accurate quote"
   },
   "requestDetailActions": {
@@ -4126,6 +4128,7 @@
   },
   "dealAttachments": {
     "title": "Deal attachments",
+    "sourceTag": "Request source",
     "description": "Excel specs, drawings, supporting documents",
     "noDeal": "No deal selected"
   }
