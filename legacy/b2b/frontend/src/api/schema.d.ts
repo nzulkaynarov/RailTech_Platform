@@ -4110,6 +4110,14 @@ export interface components {
              */
             readonly original_filename: string;
             /**
+             * Тип вложения
+             * @description SOURCE = исходный файл заявки (из него распознаны позиции); SUPPORTING = доп. документ
+             *
+             *     * `SOURCE` - Исходник заявки
+             *     * `SUPPORTING` - Документ
+             */
+            readonly kind: components["schemas"]["KindEnum"];
+            /**
              * Загрузил
              * @description Пользователь, загрузивший файл
              */
@@ -5229,6 +5237,12 @@ export interface components {
             status_code: string;
             comment?: string;
         };
+        /**
+         * @description * `SOURCE` - Исходник заявки
+         *     * `SUPPORTING` - Документ
+         * @enum {string}
+         */
+        KindEnum: "SOURCE" | "SUPPORTING";
         Lead: {
             readonly id: number;
             /**
@@ -6375,10 +6389,10 @@ export interface components {
              */
             mpn?: string;
             /**
-             * GTIN / штрихкод
-             * @description GS1 GTIN/EAN, если указан в заявке
+             * ГОСТ / чертёж
+             * @description Номер ГОСТ или чертежа из заявки (канонический идентификатор детали)
              */
-            gtin?: string;
+            gost_drawing?: string;
             /**
              * Примечание клиента
              * @description Комментарий/спецификация/ссылка из заявки (Примечание, Izoh) — UBL line Note
@@ -7351,10 +7365,10 @@ export interface components {
              */
             mpn?: string;
             /**
-             * GTIN / штрихкод
-             * @description GS1 GTIN/EAN, если указан в заявке
+             * ГОСТ / чертёж
+             * @description Номер ГОСТ или чертежа из заявки (канонический идентификатор детали)
              */
-            gtin?: string;
+            gost_drawing?: string;
             /**
              * Примечание клиента
              * @description Комментарий/спецификация/ссылка из заявки (Примечание, Izoh) — UBL line Note
@@ -7451,10 +7465,10 @@ export interface components {
              */
             mpn?: string;
             /**
-             * GTIN / штрихкод
-             * @description GS1 GTIN/EAN, если указан в заявке
+             * ГОСТ / чертёж
+             * @description Номер ГОСТ или чертежа из заявки (канонический идентификатор детали)
              */
-            gtin?: string;
+            gost_drawing?: string;
             /**
              * Примечание клиента
              * @description Комментарий/спецификация/ссылка из заявки (Примечание, Izoh) — UBL line Note

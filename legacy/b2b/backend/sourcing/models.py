@@ -30,6 +30,15 @@ class DomainKeyword(models.Model):
         return f"{self.keyword} -> {self.domain_type.name}"
 
 
+class AttachmentKind(models.TextChoices):
+    """Role of an attachment. SOURCE = the original file the заявка was parsed from
+    (the seller cross-checks recognised lines against it); SUPPORTING = any extra
+    document the buyer attaches (cover letter, drawing, spec)."""
+
+    SOURCE = "SOURCE", _("Исходник заявки")
+    SUPPORTING = "SUPPORTING", _("Документ")
+
+
 class Attachment(models.Model):
     """
     Универсальный файл-вложение.
@@ -49,6 +58,14 @@ class Attachment(models.Model):
         max_length=255,
         verbose_name=_("Имя файла"),
         help_text=_("Оригинальное имя загруженного файла"),
+    )
+    kind = models.CharField(
+        max_length=20,
+        choices=AttachmentKind.choices,
+        default=AttachmentKind.SUPPORTING,
+        db_index=True,
+        verbose_name=_("Тип вложения"),
+        help_text=_("SOURCE = исходный файл заявки (из него распознаны позиции); SUPPORTING = доп. документ"),
     )
     uploaded_by = models.ForeignKey(
         "accounts.CustomUser",
