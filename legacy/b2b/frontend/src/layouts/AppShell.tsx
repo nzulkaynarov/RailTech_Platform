@@ -614,7 +614,7 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
               )}
               <ChatDrawer onNavigate={onNavigate} />
               <SupportButton />
-              <NotificationCenter />
+              <NotificationCenter onNavigate={onNavigate} />
             </div>
           </header>
           <main className="flex-1 overflow-y-auto p-6">
