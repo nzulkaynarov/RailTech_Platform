@@ -277,7 +277,15 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # Adds RFC 8594 Deprecation/Sunset headers for deprecated API versions (F2.6).
+    "core.versioning.SunsetHeaderMiddleware",
+    # Innermost — wraps the view so it captures/replays the rendered response (F2.4).
+    "core.idempotency.IdempotencyMiddleware",
 ]
+
+# Idempotency-Key replay window + max in-flight lock (Sprint D / F2.4).
+IDEMPOTENCY_TTL_SECONDS = int(os.environ.get("IDEMPOTENCY_TTL_SECONDS", str(24 * 3600)))
+IDEMPOTENCY_LOCK_SECONDS = int(os.environ.get("IDEMPOTENCY_LOCK_SECONDS", "90"))
 
 CORS_ALLOW_ALL_ORIGINS = DEBUG
 CORS_ALLOW_CREDENTIALS = True
@@ -296,6 +304,16 @@ CORS_ALLOWED_ORIGINS = (
         "http://127.0.0.1:5173",
     ]
 )
+
+# Allow our custom request headers through CORS preflight (cross-origin dev). Without
+# these a credentialed request carrying them is blocked: X-Active-Context (context
+# scoping), Idempotency-Key (F2.4), If-Match (F2.5 optimistic locking). Prod is
+# same-origin (no preflight) but this keeps cross-origin dev honest.
+from corsheaders.defaults import default_headers  # noqa: E402
+
+CORS_ALLOW_HEADERS = (*default_headers, "x-active-context", "idempotency-key", "if-match")
+# Let the SPA read these response headers cross-origin.
+CORS_EXPOSE_HEADERS = ["ETag", "Idempotent-Replay", "Deprecation", "Sunset"]
 
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
@@ -517,7 +535,20 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    # API versioning (F2.6): formal contract instead of a hardcoded "v1". Routes are
+    # still served under /api/v1/, so request.version resolves to DEFAULT_VERSION;
+    # an unknown version simply has no route (404). When v2 is introduced, add it to
+    # ALLOWED_VERSIONS and mount /api/v2/ — request.version then drives per-version logic.
+    "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.URLPathVersioning",
+    "DEFAULT_VERSION": "v1",
+    "ALLOWED_VERSIONS": ["v1"],
+    "VERSION_PARAM": "version",
 }
+
+# API deprecation / Sunset policy (RFC 8594). Map a version → ISO sunset date to
+# start emitting `Deprecation: true` + `Sunset: <date>` headers on its responses
+# (core.versioning.SunsetHeaderMiddleware). Empty = nothing deprecated yet.
+API_SUNSET = {}
 
 # JWT
 SIMPLE_JWT = {
@@ -526,6 +557,19 @@ SIMPLE_JWT = {
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
 }
+
+# Refresh token in an HttpOnly cookie (F2.1): the refresh token never reaches JS, so
+# XSS can't exfiltrate it. The access token still rides the response body (kept in
+# memory by the SPA, never localStorage). Cookie is scoped to the auth path so it's
+# only sent to /token/refresh/ and /logout/, not every API call.
+REFRESH_COOKIE_NAME = os.environ.get("REFRESH_COOKIE_NAME", "refresh_token")
+REFRESH_COOKIE_PATH = "/api/v1/auth/"
+# HTTPS-only in prod. Decoupled from DEBUG so a prod-like local stack (DEBUG=False)
+# served over plain http can still set REFRESH_COOKIE_SECURE=False and have the
+# browser send the cookie. Defaults to secure unless DEBUG.
+REFRESH_COOKIE_SECURE = os.environ.get("REFRESH_COOKIE_SECURE", "false" if DEBUG else "true").strip().lower() == "true"
+REFRESH_COOKIE_SAMESITE = os.environ.get("REFRESH_COOKIE_SAMESITE", "Lax")
+REFRESH_COOKIE_MAX_AGE = int(SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"].total_seconds())
 
 # DRF Spectacular (API Documentation)
 SPECTACULAR_SETTINGS = {

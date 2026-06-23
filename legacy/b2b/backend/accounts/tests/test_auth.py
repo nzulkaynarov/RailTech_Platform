@@ -27,7 +27,9 @@ class TestAuthenticationEndpoints:
 
         assert response.status_code == status.HTTP_200_OK
         assert "access" in response.data
-        assert "refresh" in response.data
+        # F2.1: refresh token is set as an HttpOnly cookie, never in the body.
+        assert "refresh" not in response.data
+        assert "refresh_token" in response.cookies
 
     def test_user_login_invalid_password(self, client, test_user):
         """Test login failure with invalid password."""
@@ -68,12 +70,11 @@ class TestAuthenticationEndpoints:
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_token_refresh_empty_refresh(self, client):
-        """Test token refresh with missing refresh token."""
+        """Empty body AND no refresh cookie → 401 (F2.1; was 400 when refresh came in the body)."""
         url = "/api/v1/auth/token/refresh/"
-        data = {}
-        response = client.post(url, data, format="json")
+        response = client.post(url, {}, format="json")
 
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 @pytest.mark.django_db

@@ -25,7 +25,6 @@ describe('authStore', () => {
     expect(state.user).toBeNull();
     expect(state.role).toBeNull();
     expect(state.accessToken).toBeNull();
-    expect(state.refreshToken).toBeNull();
     expect(state.isAuthenticated).toBe(false);
     expect(state.isLoading).toBe(false);
   });

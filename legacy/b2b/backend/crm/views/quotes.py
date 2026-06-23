@@ -6,6 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from core.optimistic_locking import OptimisticLockingMixin
 from core.permissions import IsCompanyMemberOrPlatformAdmin, IsPlatformAdmin
 from crm import services as crm_services
 from crm.constants import QuoteStatusCode
@@ -35,7 +36,7 @@ def _chain_error_response(error):
     partial_update=extend_schema(summary="Partially update quote", tags=["CRM"]),
     destroy=extend_schema(summary="Delete quote", tags=["CRM"]),
 )
-class QuoteViewSet(viewsets.ModelViewSet):
+class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
     """
     CRUD for quotes (commercial proposals).
 
