@@ -18,13 +18,13 @@ VALID_CODES = {"PCE", "MTR", "KGM"}
 
 class NormalizeItemsTest(SimpleTestCase):
     def test_drops_fully_empty_rows(self):
-        items = [{"name": "", "mpn": "", "gtin": ""}, {"name": "Болт М12"}]
+        items = [{"name": "", "mpn": "", "gost_drawing": ""}, {"name": "Болт М12"}]
         result = _normalize_items(items, VALID_CODES)
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["name"], "Болт М12")
 
     def test_keeps_code_only_rows(self):
-        # A line with no name but an mpn (or gtin) is identifiable — keep it.
+        # A line with no name but an mpn (or ГОСТ/чертёж) is identifiable — keep it.
         result = _normalize_items([{"name": "", "mpn": "ABC-123"}], VALID_CODES)
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["mpn"], "ABC-123")
@@ -54,12 +54,12 @@ class NormalizeItemsTest(SimpleTestCase):
         raw = {
             "name": "n" * 50,
             "mpn": "m" * 200,
-            "gtin": "g" * 30,
+            "gost_drawing": "g" * 200,
             "unit": "u" * 50,
         }
         result = _normalize_items([raw], VALID_CODES)[0]
         self.assertEqual(len(result["mpn"]), 120)
-        self.assertEqual(len(result["gtin"]), 14)
+        self.assertEqual(len(result["gost_drawing"]), 120)
         self.assertEqual(len(result["unit"]), 32)
         # name/note are TextFields — not truncated here.
         self.assertEqual(len(result["name"]), 50)

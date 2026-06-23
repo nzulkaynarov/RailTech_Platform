@@ -128,13 +128,13 @@ def detect_header_and_columns(raw_df):
     return None, None
 
 
-def _build_quote_item(quote, name, quantity, unit="", note="", unit_code="", mpn="", gtin=""):
+def _build_quote_item(quote, name, quantity, unit="", note="", unit_code="", mpn="", gost_drawing=""):
     """One place to turn a parsed/AI-extracted row into a QuoteItem — runs domain
     routing + smart-match so both the deterministic and the AI path behave the same.
     Smart-match runs on the name OR the identifier so name-less coded lines still try."""
     from crm.models import QuoteItem
 
-    match_key = name or mpn or gtin
+    match_key = name or mpn or gost_drawing
     domain_code = route_domain(match_key)
     final_product = smart_match_product(match_key, domain_hint=domain_code) if match_key else None
     try:
@@ -149,7 +149,7 @@ def _build_quote_item(quote, name, quantity, unit="", note="", unit_code="", mpn
         unit=(unit or "")[:32],
         unit_code=(unit_code or "")[:8],
         mpn=(mpn or "")[:120],
-        gtin=(gtin or "")[:14],
+        gost_drawing=(gost_drawing or "")[:120],
         note=note or "",
         assigned_at=timezone.now() if final_product else None,
     )
@@ -219,7 +219,7 @@ def process_excel_import(self, deal_id: int, file_content_b64: str, user_id: int
                     row.get("note", ""),
                     unit_code=row.get("unit_code", ""),
                     mpn=row.get("mpn", ""),
-                    gtin=row.get("gtin", ""),
+                    gost_drawing=row.get("gost_drawing", ""),
                 )
                 for row in ai_rows
             ]

@@ -642,19 +642,19 @@ def _assert_request_editable(deal: Deal, user: CustomUser) -> None:
 
 
 def _line_dedup_key(item: QuoteItem):
-    """Identity of a request line for dedup: prefer code (mpn/gtin), else name+unit."""
+    """Identity of a request line for dedup: prefer code (mpn / ГОСТ-чертёж), else name+unit."""
     mpn = (item.mpn or "").strip().lower()
     if mpn:
         return ("mpn", mpn)
-    gtin = (item.gtin or "").strip()
-    if gtin:
-        return ("gtin", gtin)
+    gost = (item.gost_drawing or "").strip().lower()
+    if gost:
+        return ("gost", gost)
     name = (item.imported_raw_name or (item.product.name if item.product_id and item.product else "")).strip().lower()
     return ("name", name, (item.unit or "").strip().lower())
 
 
 def merge_request_lines(quote: Quote, new_items: list) -> tuple:
-    """Add unsaved QuoteItem rows to `quote`, deduping by mpn/gtin/(name+unit)
+    """Add unsaved QuoteItem rows to `quote`, deduping by mpn / ГОСТ / (name+unit)
     against existing lines AND within the batch — same item ⇒ quantities sum.
     Idempotent for re-imports. Returns (created_list, merged_count)."""
     existing = {}
@@ -825,11 +825,11 @@ def buyer_remove_request_item(user: CustomUser, item: QuoteItem) -> None:
 
 
 def _is_request_item_incomplete(item: QuoteItem) -> bool:
-    # UBL: a line must be identified by a name OR a code (mpn/gtin) OR a product.
+    # UBL: a line must be identified by a name OR a code (mpn / ГОСТ-чертёж) OR a product.
     return not (
         (item.imported_raw_name or "").strip()
         or (item.mpn or "").strip()
-        or (item.gtin or "").strip()
+        or (item.gost_drawing or "").strip()
         or item.product_id
     )
 

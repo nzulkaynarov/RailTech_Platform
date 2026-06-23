@@ -68,10 +68,10 @@ export function RequestItemsEditor({
       toast.error(translateApiError(e));
     }
   };
-  const saveGtin = async (item: QuoteItem, value: string) => {
-    if (value.trim() === (item.gtin || '').trim()) return;
+  const saveGost = async (item: QuoteItem, value: string) => {
+    if (value.trim() === (item.gost_drawing || '').trim()) return;
     try {
-      await updateItem.mutateAsync({ id: item.id, data: { gtin: value.trim() } });
+      await updateItem.mutateAsync({ id: item.id, data: { gost_drawing: value.trim() } });
     } catch (e) {
       toast.error(translateApiError(e));
     }
@@ -289,11 +289,11 @@ export function RequestItemsEditor({
                           aria-label={t('requestItems.skuLabel')}
                         />
                         <Input
-                          defaultValue={item.gtin || ''}
-                          onBlur={(e) => saveGtin(item, e.target.value)}
-                          placeholder={t('requestItems.gtinPlaceholder')}
+                          defaultValue={item.gost_drawing || ''}
+                          onBlur={(e) => saveGost(item, e.target.value)}
+                          placeholder={t('requestItems.gostPlaceholder')}
                           className="h-7 w-32 text-xs"
-                          aria-label="GTIN"
+                          aria-label={t('requestItems.gostLabel')}
                         />
                         <Input
                           defaultValue={item.note || ''}

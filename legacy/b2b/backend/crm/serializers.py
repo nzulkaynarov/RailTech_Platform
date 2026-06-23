@@ -25,15 +25,15 @@ class QuoteItemSerializer(serializers.ModelSerializer):
     product_gost = serializers.CharField(source="product.gost_drawing", read_only=True)
     offer_supplier_name = serializers.CharField(source="offer.supplier.name", read_only=True)
     # UBL data-quality gate: a line must be identified by a name OR an item code
-    # (mpn/gtin) OR a matched product. Incomplete lines are highlighted in the
-    # buyer's review grid and block submission until completed.
+    # (mpn / ГОСТ-чертёж) OR a matched product. Incomplete lines are highlighted in
+    # the buyer's review grid and block submission until completed.
     is_incomplete = serializers.SerializerMethodField()
 
     def get_is_incomplete(self, obj) -> bool:
         return not (
             (obj.imported_raw_name or "").strip()
             or (obj.mpn or "").strip()
-            or (obj.gtin or "").strip()
+            or (obj.gost_drawing or "").strip()
             or obj.product_id
         )
 
@@ -63,7 +63,7 @@ class QuoteItemSerializer(serializers.ModelSerializer):
             "unit",
             "unit_code",
             "mpn",
-            "gtin",
+            "gost_drawing",
             "note",
             "is_incomplete",
             "assigned_at",

@@ -3955,7 +3955,8 @@
     "submitHintIncomplete": "Complete the highlighted rows (name or code) to submit.",
     "submittedToast": "Request submitted to the seller",
     "fromCatalog": "from catalog",
-    "gtinPlaceholder": "Barcode",
+    "gostPlaceholder": "GOST / drawing",
+    "gostLabel": "GOST / drawing",
     "unitNotNormalized": "Unit not standardised — pick one from the list for an accurate quote"
   },
   "requestDetailActions": {

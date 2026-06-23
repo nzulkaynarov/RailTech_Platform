@@ -360,7 +360,7 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
                         <span className="block space-x-2 text-xs font-mono text-muted-foreground">
                           {item.product_sku && <span className="text-primary">{item.product_sku}</span>}
                           {item.mpn && <span>{t('requestItems.skuLabel')}: {item.mpn}</span>}
-                          {item.gtin && <span>GTIN: {item.gtin}</span>}
+                          {item.gost_drawing && <span>{t('requestItems.gostLabel')}: {item.gost_drawing}</span>}
                         </span>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">{item.unit || '—'}</TableCell>

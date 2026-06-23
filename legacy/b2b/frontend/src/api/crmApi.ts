@@ -19,7 +19,7 @@ export interface QuoteItem {
 	unit?: string;
 	unit_code?: string;
 	mpn?: string;
-	gtin?: string;
+	gost_drawing?: string;
 	note?: string;
 	is_incomplete?: boolean;
 	frozen_base_price: string;

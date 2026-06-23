@@ -239,8 +239,10 @@ class QuoteItem(models.Model):
         verbose_name=_("Код ед. изм. (UN/ECE Rec 20)"),
         help_text=_("Нормализованный код единицы измерения по UN/ECE Recommendation 20"),
     )
-    # Item identification (UBL ManufacturersItemIdentification / GS1). A line can be
-    # identified by code even WITHOUT a name; «без названия» is valid if mpn/gtin set.
+    # Item identification (UBL ManufacturersItemIdentification + standard/drawing ref).
+    # A line can be identified by code even WITHOUT a name; «без названия» is valid if
+    # mpn or gost_drawing is set. (GTIN/barcode dropped 2026-06-23 — retail concept,
+    # meaningless for railway/industrial spare parts; the real identifier is MPN + ГОСТ/чертёж.)
     mpn = models.CharField(
         max_length=120,
         blank=True,
@@ -248,12 +250,12 @@ class QuoteItem(models.Model):
         verbose_name=_("Артикул / код производителя"),
         help_text=_("Manufacturer Part Number / артикул из заявки"),
     )
-    gtin = models.CharField(
-        max_length=14,
+    gost_drawing = models.CharField(
+        max_length=120,
         blank=True,
         default="",
-        verbose_name=_("GTIN / штрихкод"),
-        help_text=_("GS1 GTIN/EAN, если указан в заявке"),
+        verbose_name=_("ГОСТ / чертёж"),
+        help_text=_("Номер ГОСТ или чертежа из заявки (канонический идентификатор детали)"),
     )
     note = models.TextField(
         blank=True,

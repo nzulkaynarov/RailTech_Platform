@@ -3959,7 +3959,8 @@
     "submitHintIncomplete": "Заполните подсвеченные строки (название или код), чтобы отправить.",
     "submittedToast": "Заявка отправлена поставщику",
     "fromCatalog": "из каталога",
-    "gtinPlaceholder": "Штрихкод",
+    "gostPlaceholder": "ГОСТ / чертёж",
+    "gostLabel": "ГОСТ / чертёж",
     "unitNotNormalized": "Единица не стандартизирована — выберите из списка для точного КП"
   },
   "requestDetailActions": {

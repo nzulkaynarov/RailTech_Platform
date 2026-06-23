@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 # Canonical request-line schema, aligned to UBL/Peppol line fields. All required
 # (empty string / 0 when absent) — Structured Outputs forbids optional props with
-# additionalProperties=false. `mpn`/`gtin` let a line be identified WITHOUT a name.
+# additionalProperties=false. `mpn`/`gost_drawing` let a line be identified WITHOUT a name.
 ITEM_SCHEMA = {
     "type": "object",
     "properties": {
@@ -33,10 +33,13 @@ ITEM_SCHEMA = {
         "unit": {"type": "string", "description": "Единица измерения как в файле (шт., м., дона, компл. …)"},
         "unit_code": {"type": "string", "description": "Код единицы из справочника UN/ECE Rec 20 (см. список в инструкции); '' если непонятно"},
         "mpn": {"type": "string", "description": "Артикул / код производителя (Manufacturer Part Number); '' если нет"},
-        "gtin": {"type": "string", "description": "GTIN / штрихкод / EAN, если указан; иначе ''"},
+        "gost_drawing": {
+            "type": "string",
+            "description": "Номер ГОСТ или чертежа детали (напр. 'ГОСТ 8752-79', '1-3242.00.00'); '' если нет. НЕ штрихкод.",
+        },
         "note": {"type": "string", "description": "Спецификация/примечание/ссылка клиента (UBL line Note); иначе ''"},
     },
-    "required": ["name", "quantity", "unit", "unit_code", "mpn", "gtin", "note"],
+    "required": ["name", "quantity", "unit", "unit_code", "mpn", "gost_drawing", "note"],
     "additionalProperties": False,
 }
 RESULT_SCHEMA = {
@@ -54,7 +57,7 @@ SYSTEM_PROMPT = (
     "ПРАВИЛА:\n"
     "1. Для каждой позиции верни: name (наименование), quantity (количество, число), "
     "unit (единица измерения как в файле), mpn (артикул / код производителя, если есть), "
-    "gtin (штрихкод/GTIN/EAN, если есть), note (описание/спецификация).\n"
+    "gost_drawing (номер ГОСТ или чертежа детали, если есть — НЕ штрихкод), note (описание/спецификация).\n"
     "2. name делай ЛАКОНИЧНЫМ — это коммерческое название позиции: тип + бренд + модель + "
     "ключевые параметры (обычно 3–8 слов). Длинное техническое описание НЕ оставляй в name — "
     "перенеси его в note. Пример: из «Компактный однофазный стабилизированный импульсный блок "
@@ -68,7 +71,7 @@ SYSTEM_PROMPT = (
     "строки и служебные колонки (например «Фото»/«Photo» — это вложение, а не данные).\n"
     "5. НИЧЕГО НЕ ВЫДУМЫВАЙ. Если значения нет в файле — для строк оставь пустую строку, для "
     "quantity поставь 1. НЕ добавляй позиции, которых нет в данных. Лучше пропустить "
-    "сомнительное, чем выдумать. Позицию можно вернуть и без name, если есть mpn или gtin "
+    "сомнительное, чем выдумать. Позицию можно вернуть и без name, если есть mpn или gost_drawing "
     "(её потом дозаполнит человек).\n"
     "6. Языки могут быть любыми (рус./узб./англ.). Наименование оставляй как в оригинале.\n"
     "Верни результат строго по заданной JSON-схеме."
@@ -185,14 +188,14 @@ def _normalize_items(items: list[dict], valid_codes: set) -> list[dict]:
 
     Coerces quantity to a positive int, validates unit_code against the DB справочник
     (off-list codes dropped to ''), truncates each field to its DB column limit, and
-    drops rows identified by neither name nor mpn/gtin. No I/O — unit-tested directly."""
+    drops rows identified by neither name nor mpn/gost. No I/O — unit-tested directly."""
     cleaned = []
     for raw_item in items:
         name = str(raw_item.get("name", "")).strip()
         mpn = str(raw_item.get("mpn", "")).strip()[:120]
-        gtin = str(raw_item.get("gtin", "")).strip()[:14]
+        gost_drawing = str(raw_item.get("gost_drawing", "")).strip()[:120]
         # UBL: keep a line identified by name OR code; drop only fully-empty rows.
-        if not (name or mpn or gtin):
+        if not (name or mpn or gost_drawing):
             continue
         try:
             quantity = max(1, int(float(raw_item.get("quantity") or 1)))
@@ -208,7 +211,7 @@ def _normalize_items(items: list[dict], valid_codes: set) -> list[dict]:
                 "unit": str(raw_item.get("unit", "")).strip()[:32],
                 "unit_code": unit_code,
                 "mpn": mpn,
-                "gtin": gtin,
+                "gost_drawing": gost_drawing,
                 "note": str(raw_item.get("note", "")).strip(),
             }
         )
@@ -218,11 +221,11 @@ def _normalize_items(items: list[dict], valid_codes: set) -> list[dict]:
 def extract_request_items(content: bytes, filename: str) -> list[dict]:
     """Main entry: uploaded bytes → UBL-aligned request lines.
 
-    Returns list of {name, quantity, unit, unit_code, mpn, gtin, note}. Unit codes
+    Returns list of {name, quantity, unit, unit_code, mpn, gost_drawing, note}. Unit codes
     are validated against the DB справочник (UN/ECE Rec 20) — the model maps the
     client's free text to OUR codes, code only keeps valid ones. Chunks large
     files. Raises if AI import disabled / API errors — caller may fall back to the
-    deterministic parser. A line with no name but an mpn/gtin is KEPT (identified
+    deterministic parser. A line with no name but an mpn/gost_drawing is KEPT (identified
     by code; the buyer completes it in the review grid).
     """
     if not settings.AI_IMPORT_ENABLED:
