@@ -151,13 +151,14 @@ class ExcelImportView(APIView):
             # exact file the КП was parsed from. Shown in the deal's Documents panel.
             from django.core.files.base import ContentFile
 
-            from .models import Attachment
+            from .models import Attachment, AttachmentKind
 
             Attachment.objects.create(
                 deal_id=deal_id,
                 file=ContentFile(file_content, name=file_obj.name),
                 original_filename=file_obj.name,
                 uploaded_by=request.user,
+                kind=AttachmentKind.SOURCE,
             )
 
             return Response({"task_id": task.id}, status=status.HTTP_202_ACCEPTED)
