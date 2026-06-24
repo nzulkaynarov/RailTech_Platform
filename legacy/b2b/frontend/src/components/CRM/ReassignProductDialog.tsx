@@ -57,10 +57,10 @@ export function ReassignProductDialog({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>SKU</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>GOST</TableHead>
-                    <TableHead>Score</TableHead>
+                    <TableHead>{t('rematchDialog.columns.sku')}</TableHead>
+                    <TableHead>{t('rematchDialog.columns.name')}</TableHead>
+                    <TableHead>{t('rematchDialog.columns.gost')}</TableHead>
+                    <TableHead>{t('rematchDialog.columns.score')}</TableHead>
                     <TableHead className="text-right" />
                   </TableRow>
                 </TableHeader>

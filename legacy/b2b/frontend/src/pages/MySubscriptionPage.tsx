@@ -177,7 +177,7 @@ export function MySubscriptionPage() {
                     className="h-8 text-xs"
                   >
                     <Play className="h-3.5 w-3.5" aria-hidden="true" />
-                    {t('common.refresh', { defaultValue: 'Refresh' })}
+                    {t('common.refresh')}
                   </Button>
                   <Button
                     size="sm"

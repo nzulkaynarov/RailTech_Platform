@@ -6,7 +6,6 @@ import {
   Settings,
   HelpCircle,
   ChevronDown,
-  BarChart3,
   Layers,
   ClipboardList,
   User,
@@ -120,6 +119,15 @@ function getBuyerNavigation(activePage: string, t: TFn): NavItem[] {
 }
 
 function getSellerNavigation(activePage: string, t: TFn): NavItem[] {
+  // Clients (full company list), Leads and Sales Analytics are Platform-Admin-only
+  // endpoints (IsPlatformAdmin) — they 403 for EVERY seller (incl. OWNER), so they
+  // are NOT in the seller nav (they were dead-ends). Seller-scoped analytics/clients
+  // would each need their own seller-permitted endpoint before being surfaced here.
+  const crmChildren: NavChild[] = [
+    { label: t('shell.deals'), id: 'crm-deals', active: activePage === 'crm-deals' },
+    { label: t('shell.quotes'), id: 'crm-quotes', active: activePage === 'crm-quotes' },
+  ];
+
   const items: NavItem[] = [
     { label: t('shell.dashboard'), icon: <LayoutDashboard className="h-4 w-4" />, id: 'dashboard', active: activePage === 'dashboard' },
     {
@@ -140,12 +148,7 @@ function getSellerNavigation(activePage: string, t: TFn): NavItem[] {
     },
     {
       label: t('shell.crm'), icon: <Handshake className="h-4 w-4" />,
-      children: [
-        { label: t('shell.deals'), id: 'crm-deals', active: activePage === 'crm-deals' },
-        { label: t('shell.quotes'), id: 'crm-quotes', active: activePage === 'crm-quotes' },
-        { label: t('shell.clients'), id: 'crm-clients', active: activePage === 'crm-clients' },
-        { label: t('shell.leads'), id: 'leads', active: activePage === 'leads' },
-      ],
+      children: crmChildren,
     },
     {
       label: t('shell.billing'), icon: <Receipt className="h-4 w-4" />,
@@ -159,17 +162,22 @@ function getSellerNavigation(activePage: string, t: TFn): NavItem[] {
       ],
     },
   ];
-  // The seller team gets sales analytics (was gated behind a dead role==='ADMIN'
-  // branch, so the seller never actually saw it).
-  items.push({ label: t('shell.salesAnalytics'), icon: <BarChart3 className="h-4 w-4" />, id: 'analytics', active: activePage === 'analytics' });
   return items;
 }
 
 function getNavigation(status: CompanyStatus, activePage: string, t: TFn): NavItem[] {
   switch (status) {
-    case 'BUYER': return getBuyerNavigation(activePage, t);
-    case 'SELLER': return getSellerNavigation(activePage, t);
-    default: return getSellerNavigation(activePage, t);
+    case 'BUYER':
+      return getBuyerNavigation(activePage, t);
+    case 'SELLER':
+      return getSellerNavigation(activePage, t);
+    default: {
+      // Exhaustiveness guard: CompanyStatus is BUYER | SELLER. If a new context
+      // is added, TypeScript flags this line instead of silently falling through.
+      const _exhaustive: never = status;
+      void _exhaustive;
+      return getSellerNavigation(activePage, t);
+    }
   }
 }
 
@@ -344,7 +352,10 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
   // Platform admins aren't business actors; their company's KYC must not disable
   // admin navigation (see ADR-0002). For all other roles we keep the gating.
   const isKycVerified = company.kycStatus === 'verified';
-  const navigation = useMemo(() => getNavigation(activeStatus, activePage, t), [activeStatus, activePage, t]);
+  const navigation = useMemo(
+    () => getNavigation(activeStatus, activePage, t),
+    [activeStatus, activePage, t],
+  );
   const bottomNav = useMemo(() => getBottomNavigation(t), [t]);
 
 

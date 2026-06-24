@@ -152,7 +152,7 @@ export function RecordPaymentDialog({
                   ) : (
                     payableInvoices.map((inv) => (
                       <SelectItem key={inv.id} value={String(inv.id)}>
-                        {inv.number} · {inv.balance_due} · {t(`invoicesPage.statuses.${inv.status}`, inv.status)}
+                        {inv.number} · {inv.balance_due} · {t(`invoicesPage.status.${inv.status}`, inv.status)}
                       </SelectItem>
                     ))
                   )}
@@ -236,7 +236,7 @@ export function RecordPaymentDialog({
                     size="icon"
                     className="h-6 w-6"
                     onClick={() => setProofFile(null)}
-                    aria-label={t('common.remove', { defaultValue: 'Remove' })}
+                    aria-label={t('common.remove')}
                   >
                     <X className="h-3.5 w-3.5" aria-hidden="true" />
                   </Button>

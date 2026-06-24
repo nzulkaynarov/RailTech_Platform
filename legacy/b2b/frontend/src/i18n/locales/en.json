@@ -29,6 +29,8 @@
     "send": "Send",
     "update": "Update",
     "updating": "Updating...",
+    "remove": "Remove",
+    "refresh": "Refresh",
     "pcs": "pcs",
     "active": "Active",
     "inactive": "Inactive",
@@ -2529,16 +2531,6 @@
         "notFound": "Not found"
       }
     },
-    "sourcingMatch": {
-      "title": "Smart Match",
-      "description": "Automatic mapping of unrecognized Excel items",
-      "stats": {
-        "unrecognized": "Unrecognized",
-        "matches": "Matches",
-        "needReview": "Need review",
-        "accuracy": "Accuracy"
-      }
-    },
     "deals": {
       "title": "Deals",
       "description": "Sales funnel and deal lifecycle management",
@@ -3627,7 +3619,7 @@
   },
   "contractsPage": {
     "title": "Contracts",
-    "description": "Agreements between client and RailTech, two-party signed",
+    "description": "Agreements between client and seller, two-party signed",
     "new": "New contract",
     "searchPlaceholder": "Search by number or deal",
     "emptyState": "No contracts found",
@@ -3896,7 +3888,13 @@
     "noCandidates": "No candidates found",
     "apply": "Apply",
     "clear": "Clear assignment",
-    "assigned": "Product reassigned"
+    "assigned": "Product reassigned",
+    "columns": {
+      "sku": "SKU",
+      "name": "Name",
+      "gost": "GOST",
+      "score": "Score"
+    }
   },
   "rfqDialog": {
     "title": "Open RFQ",

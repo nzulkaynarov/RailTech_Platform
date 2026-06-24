@@ -67,12 +67,16 @@ export const PasswordSetupPage: React.FC<PasswordSetupPageProps> = ({ uid, token
     }, [uid, token, t]);
 
     const onSubmit = async (data: PasswordSetupFormData) => {
+        if (!uid || !token) {
+            setServerError(t('passwordSetup.invalidLink'));
+            return;
+        }
         setLoading(true);
         setServerError('');
         try {
             await accountsApi.setupPassword({
-                uid: uid!,
-                token: token!,
+                uid,
+                token,
                 password: data.password,
             });
             setSuccess(true);

@@ -177,11 +177,17 @@ export function HelpPage() {
                 <h3 className="font-semibold text-base mb-1">{t('pages.help.needHelp')}</h3>
                 <p className="text-sm text-muted-foreground">{t('pages.help.supportHours')}</p>
                 <div className="flex items-center gap-4 mt-2 text-sm">
-                  <span className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" /> {t('pages.help.supportEmail')}</span>
-                  <span className="flex items-center gap-1.5"><MessageSquare className="h-3.5 w-3.5" /> {t('pages.help.supportPhone')}</span>
+                  <a href={`mailto:${t('pages.help.supportEmail')}`} className="flex items-center gap-1.5 hover:text-primary transition-colors">
+                    <Mail className="h-3.5 w-3.5" /> {t('pages.help.supportEmail')}
+                  </a>
+                  <a href={`tel:${t('pages.help.supportPhone').replace(/[^+\d]/g, '')}`} className="flex items-center gap-1.5 hover:text-primary transition-colors">
+                    <MessageSquare className="h-3.5 w-3.5" /> {t('pages.help.supportPhone')}
+                  </a>
                 </div>
               </div>
-              <Button>{t('pages.help.contactSupport')}</Button>
+              <Button asChild>
+                <a href={`mailto:${t('pages.help.supportEmail')}`}>{t('pages.help.contactSupport')}</a>
+              </Button>
             </div>
           </CardContent>
         </Card>

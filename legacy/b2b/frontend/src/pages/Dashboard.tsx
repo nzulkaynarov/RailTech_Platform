@@ -36,9 +36,13 @@ import { KPICard } from '@/components/ui/KPICard';
 import { OnboardingChecklist } from '@/components/Shared/OnboardingChecklist';
 import { QuoteApprovalQueue } from '@/components/CRM/QuoteApprovalQueue';
 
+import { StatusBadge } from '@/components/ui/StatusBadge';
+
 import { useTranslation } from 'react-i18next';
 import { useUserStore } from '@/store/userStore';
 import { useCurrencyStore } from '@/store/currencyStore';
+import { useDeals } from '@/hooks/useCRM';
+import { buyerStatus } from '@/lib/requestStatus';
 import { dashboardApi, type DashboardStats } from '@/api/dashboardApi';
 
 // ─── Top Products Table ─────────────────────────────────────────────────
@@ -298,6 +302,75 @@ function BuyerWelcome({ onNavigate }: { onNavigate: (page: string) => void }) {
   );
 }
 
+// ─── BUYER Recent Requests ──────────────────────────────────────────────
+
+function RecentRequestsCard({ onNavigate }: { onNavigate: (page: string) => void }) {
+  const { t } = useTranslation();
+  const formatCurrency = useCurrencyStore((s) => s.format);
+  const { data: deals } = useDeals();
+
+  // No real data → render nothing (no fake/mock rows).
+  const recent = (deals ?? [])
+    .slice()
+    .sort((first, second) => (second.created_at ?? '').localeCompare(first.created_at ?? ''))
+    .slice(0, 5);
+  if (recent.length === 0) return null;
+
+  const openRequest = (dealId: number) => { window.location.hash = `request-detail/${dealId}`; };
+
+  return (
+    <Card className="py-0 gap-0">
+      <CardHeader className="flex flex-row items-center justify-between px-4 py-3">
+        <CardTitle className="text-sm font-semibold">{t('dashboardPage.buyer.recentRequests')}</CardTitle>
+        <Button variant="ghost" size="sm" className="text-xs" onClick={() => onNavigate('my-requests')}>
+          {t('dashboardPage.showAll')}
+        </Button>
+      </CardHeader>
+      <Table>
+        <TableHeader>
+          <TableRow className="bg-muted/40">
+            <TableHead className="text-xs">{t('dashboardPage.buyer.requestNumber')}</TableHead>
+            <TableHead className="text-xs">{t('dashboardPage.buyer.date')}</TableHead>
+            <TableHead className="text-xs">{t('dashboardPage.buyer.status')}</TableHead>
+            <TableHead className="text-right text-xs">{t('dashboardPage.buyer.amount')}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {recent.map((deal) => {
+            const status = buyerStatus(deal.stage_code);
+            const hasTotal = Number(deal.total_value) > 0;
+            return (
+              <TableRow
+                key={deal.id}
+                className="cursor-pointer"
+                tabIndex={0}
+                role="link"
+                onClick={() => openRequest(deal.id)}
+                onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openRequest(deal.id); } }}
+              >
+                <TableCell>
+                  <span className="text-sm font-medium truncate max-w-xs block">
+                    {deal.title ?? `${t('dashboardPage.buyer.deal')} #${deal.id}`}
+                  </span>
+                </TableCell>
+                <TableCell className="text-xs text-muted-foreground">
+                  {new Date(deal.created_at).toLocaleDateString()}
+                </TableCell>
+                <TableCell>
+                  <StatusBadge label={t(status.labelKey)} variant={status.variant} />
+                </TableCell>
+                <TableCell className="text-right tabular-nums text-sm font-medium">
+                  {hasTotal ? formatCurrency(Number(deal.total_value)) : '—'}
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </Card>
+  );
+}
+
 // ─── BUYER Dashboard ────────────────────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -352,6 +425,8 @@ function BuyerDashboard({ onProductClick: _onProductClick, period: _period, stat
         />
       </div>
 
+      {/* Recent requests — buyer's own latest RFQs (real data via useDeals) */}
+      <RecentRequestsCard onNavigate={onNavigate} />
     </div>
   );
 }
