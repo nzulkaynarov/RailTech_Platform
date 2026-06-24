@@ -142,6 +142,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/accounts/companies/{id}/set-member-role/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set a member's workspace role
+         * @description Company Admin (OWNER) delegates / changes a member's workspace role. Refuses to demote the last admin (never-orphan).
+         */
+        post: operations["accounts_companies_set_member_role_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/accounts/companies/{id}/team/": {
         parameters: {
             query?: never;
@@ -2035,6 +2055,116 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/crm/charge-templates/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the company's charge templates
+         * @description Company-Admin manages their own per-Incoterm charge templates (org-admin zone).
+         *
+         *     Scoped to the requester's seller company — they never see or touch another
+         *     tenant's templates, nor the platform's global defaults (those are the fallback
+         *     applied automatically when a company has no template for a basis).
+         */
+        get: operations["crm_charge_templates_list"];
+        put?: never;
+        /**
+         * Add a charge template
+         * @description Company-Admin manages their own per-Incoterm charge templates (org-admin zone).
+         *
+         *     Scoped to the requester's seller company — they never see or touch another
+         *     tenant's templates, nor the platform's global defaults (those are the fallback
+         *     applied automatically when a company has no template for a basis).
+         */
+        post: operations["crm_charge_templates_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/charge-templates/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Company-Admin manages their own per-Incoterm charge templates (org-admin zone).
+         *
+         *     Scoped to the requester's seller company — they never see or touch another
+         *     tenant's templates, nor the platform's global defaults (those are the fallback
+         *     applied automatically when a company has no template for a basis).
+         */
+        get: operations["crm_charge_templates_retrieve"];
+        /**
+         * @description Company-Admin manages their own per-Incoterm charge templates (org-admin zone).
+         *
+         *     Scoped to the requester's seller company — they never see or touch another
+         *     tenant's templates, nor the platform's global defaults (those are the fallback
+         *     applied automatically when a company has no template for a basis).
+         */
+        put: operations["crm_charge_templates_update"];
+        post?: never;
+        /**
+         * Remove a charge template
+         * @description Company-Admin manages their own per-Incoterm charge templates (org-admin zone).
+         *
+         *     Scoped to the requester's seller company — they never see or touch another
+         *     tenant's templates, nor the platform's global defaults (those are the fallback
+         *     applied automatically when a company has no template for a basis).
+         */
+        delete: operations["crm_charge_templates_destroy"];
+        options?: never;
+        head?: never;
+        /**
+         * @description Company-Admin manages their own per-Incoterm charge templates (org-admin zone).
+         *
+         *     Scoped to the requester's seller company — they never see or touch another
+         *     tenant's templates, nor the platform's global defaults (those are the fallback
+         *     applied automatically when a company has no template for a basis).
+         */
+        patch: operations["crm_charge_templates_partial_update"];
+        trace?: never;
+    };
+    "/api/v1/crm/charge-types/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List КП expense-item types (ChargeType lookup) */
+        get: operations["crm_charge_types_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/charge-types/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["crm_charge_types_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/contracts/": {
         parameters: {
             query?: never;
@@ -2805,6 +2935,77 @@ export interface paths {
         patch: operations["crm_payments_partial_update"];
         trace?: never;
     };
+    "/api/v1/crm/quote-charges/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List КП-level expense items / discounts
+         * @description CRUD for КП-level expense items / discounts (UBL document AllowanceCharge).
+         *
+         *     Building the cost breakdown is a SELLER action (mirrors QuoteItemViewSet):
+         *     only the seller team / superuser may write; the buyer never sees these rows.
+         */
+        get: operations["crm_quote_charges_list"];
+        put?: never;
+        /**
+         * Add КП-level expense item / discount
+         * @description CRUD for КП-level expense items / discounts (UBL document AllowanceCharge).
+         *
+         *     Building the cost breakdown is a SELLER action (mirrors QuoteItemViewSet):
+         *     only the seller team / superuser may write; the buyer never sees these rows.
+         */
+        post: operations["crm_quote_charges_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/quote-charges/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description CRUD for КП-level expense items / discounts (UBL document AllowanceCharge).
+         *
+         *     Building the cost breakdown is a SELLER action (mirrors QuoteItemViewSet):
+         *     only the seller team / superuser may write; the buyer never sees these rows.
+         */
+        get: operations["crm_quote_charges_retrieve"];
+        /**
+         * @description CRUD for КП-level expense items / discounts (UBL document AllowanceCharge).
+         *
+         *     Building the cost breakdown is a SELLER action (mirrors QuoteItemViewSet):
+         *     only the seller team / superuser may write; the buyer never sees these rows.
+         */
+        put: operations["crm_quote_charges_update"];
+        post?: never;
+        /**
+         * Remove КП-level expense item / discount
+         * @description CRUD for КП-level expense items / discounts (UBL document AllowanceCharge).
+         *
+         *     Building the cost breakdown is a SELLER action (mirrors QuoteItemViewSet):
+         *     only the seller team / superuser may write; the buyer never sees these rows.
+         */
+        delete: operations["crm_quote_charges_destroy"];
+        options?: never;
+        head?: never;
+        /**
+         * @description CRUD for КП-level expense items / discounts (UBL document AllowanceCharge).
+         *
+         *     Building the cost breakdown is a SELLER action (mirrors QuoteItemViewSet):
+         *     only the seller team / superuser may write; the buyer never sees these rows.
+         */
+        patch: operations["crm_quote_charges_partial_update"];
+        trace?: never;
+    };
     "/api/v1/crm/quote-items/": {
         parameters: {
             query?: never;
@@ -3185,6 +3386,28 @@ export interface paths {
          * @description Send an internally-approved (READY_TO_SEND) КП to the client. Freezes prices at current values. Allowed for the КП-owning company's SALES_MANAGER / OWNER, or a platform admin.
          */
         post: operations["crm_quotes_send_to_client_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/quotes/{id}/set-delivery-basis/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set delivery basis (Incoterm) and auto-apply its charge template
+         * @description Seller picks the Incoterm; the basis template's charges auto-populate.
+         *
+         *     Thin wrapper — all logic lives in crm.services.charges (Rule 8).
+         */
+        post: operations["crm_quotes_set_delivery_basis_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4253,6 +4476,101 @@ export interface components {
         ChangeStageRequestRequest: {
             /** @description Target stage code (e.g. SOURCING, CALCULATING, QUOTE_SENT) */
             stage_code: string;
+        };
+        /**
+         * @description Company-Admin CRUD for per-Incoterm charge templates (org-admin zone).
+         *
+         *     `company` is set by the viewset from the requester's seller company — never
+         *     from the request body — so a Company Admin can only manage their own templates.
+         */
+        ChargeTemplate: {
+            readonly id: number;
+            /**
+             * Код
+             * @description Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')
+             */
+            delivery_basis: string;
+            readonly delivery_basis_name: string;
+            /**
+             * Код
+             * @description Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')
+             */
+            charge_type: string;
+            readonly charge_type_name: string;
+            /**
+             * Сумма по умолчанию
+             * Format: decimal
+             * @description Предзаполняемая сумма (если процент не задан)
+             */
+            default_amount?: string;
+            /**
+             * Процент по умолчанию (%)
+             * Format: decimal
+             * @description Предзаполняемый процент от суммы позиций (приоритетнее суммы)
+             */
+            default_rate_percent?: string | null;
+            /**
+             * Скидка (вычет)
+             * @description Шаблонная строка — скидка, а не расход
+             */
+            is_deduction?: boolean;
+            /** Порядок */
+            sort_order?: number;
+            /** Активен */
+            is_active?: boolean;
+        };
+        /**
+         * @description Company-Admin CRUD for per-Incoterm charge templates (org-admin zone).
+         *
+         *     `company` is set by the viewset from the requester's seller company — never
+         *     from the request body — so a Company Admin can only manage their own templates.
+         */
+        ChargeTemplateRequest: {
+            /**
+             * Код
+             * @description Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')
+             */
+            delivery_basis: string;
+            /**
+             * Код
+             * @description Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')
+             */
+            charge_type: string;
+            /**
+             * Сумма по умолчанию
+             * Format: decimal
+             * @description Предзаполняемая сумма (если процент не задан)
+             */
+            default_amount?: string;
+            /**
+             * Процент по умолчанию (%)
+             * Format: decimal
+             * @description Предзаполняемый процент от суммы позиций (приоритетнее суммы)
+             */
+            default_rate_percent?: string | null;
+            /**
+             * Скидка (вычет)
+             * @description Шаблонная строка — скидка, а не расход
+             */
+            is_deduction?: boolean;
+            /** Порядок */
+            sort_order?: number;
+            /** Активен */
+            is_active?: boolean;
+        };
+        /** @description Read-only lookup feed for the КП charge-type dropdown. */
+        ChargeType: {
+            readonly id: number;
+            /**
+             * Код
+             * @description Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')
+             */
+            code: string;
+            /**
+             * Название
+             * @description Отображаемое название
+             */
+            name: string;
         };
         Company: {
             readonly id: number;
@@ -5707,6 +6025,21 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["ProductList"][];
         };
+        PaginatedQuoteChargeList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["QuoteCharge"][];
+        };
         PaginatedQuoteItemList: {
             /** @example 123 */
             count: number;
@@ -5880,6 +6213,45 @@ export interface components {
              * @description Иконка категории для отображения в каталоге
              */
             icon?: string | null;
+        };
+        /**
+         * @description Company-Admin CRUD for per-Incoterm charge templates (org-admin zone).
+         *
+         *     `company` is set by the viewset from the requester's seller company — never
+         *     from the request body — so a Company Admin can only manage their own templates.
+         */
+        PatchedChargeTemplateRequest: {
+            /**
+             * Код
+             * @description Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')
+             */
+            delivery_basis?: string;
+            /**
+             * Код
+             * @description Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')
+             */
+            charge_type?: string;
+            /**
+             * Сумма по умолчанию
+             * Format: decimal
+             * @description Предзаполняемая сумма (если процент не задан)
+             */
+            default_amount?: string;
+            /**
+             * Процент по умолчанию (%)
+             * Format: decimal
+             * @description Предзаполняемый процент от суммы позиций (приоритетнее суммы)
+             */
+            default_rate_percent?: string | null;
+            /**
+             * Скидка (вычет)
+             * @description Шаблонная строка — скидка, а не расход
+             */
+            is_deduction?: boolean;
+            /** Порядок */
+            sort_order?: number;
+            /** Активен */
+            is_active?: boolean;
         };
         PatchedCompanyRequest: {
             /**
@@ -6144,6 +6516,26 @@ export interface components {
              * @description Описание условий поставки по Incoterms
              */
             description?: string;
+            /**
+             * Продавец оплачивает фрахт
+             * @description Основная перевозка лежит на продавце (C- и D-термы)
+             */
+            seller_pays_freight?: boolean;
+            /**
+             * Продавец оплачивает страхование
+             * @description Продавец несёт транзитный риск/страхование груза (CIF, CIP, D-термы)
+             */
+            seller_pays_insurance?: boolean;
+            /**
+             * Продавец оплачивает импортную растаможку
+             * @description Импортная пошлина/оформление/НДС на стороне продавца (только DDP)
+             */
+            seller_pays_import?: boolean;
+            /**
+             * Продавец оплачивает доставку до места
+             * @description Доставка до названного места назначения (D-термы)
+             */
+            seller_pays_delivery?: boolean;
         };
         PatchedEquipmentGroupRequest: {
             /**
@@ -6285,6 +6677,12 @@ export interface components {
              */
             proof_file?: string | null;
         };
+        /**
+         * @description Strip supplier-cost fields (offers / base_price) from viewers who don't own
+         *     the product. Only the OWNING seller's team + platform admins see cost & supplier
+         *     identity — buyers, other sellers and anon never do (C1 cost-leak fix). React was
+         *     only hiding these client-side; the data still travelled in the API response.
+         */
         PatchedProductRequest: {
             /**
              * Наименование
@@ -6311,11 +6709,6 @@ export interface components {
              * @description Категория товара в иерархии каталога
              */
             category?: number | null;
-            /**
-             * Компания-владелец
-             * @description Продавец/поставщик, создавший карточку (мультитенантность PIM).
-             */
-            owner_company?: number | null;
             /**
              * Производитель (бренд)
              * @description Бренд/производитель из справочника (OEM). Канонический для PIM.
@@ -6346,6 +6739,41 @@ export interface components {
              * @description Применимость к типам оборудования (обязательно для ж/д техники)
              */
             equipment_groups?: number[];
+        };
+        /** @description КП-level expense item / discount (UBL document AllowanceCharge). */
+        PatchedQuoteChargeRequest: {
+            /**
+             * КП
+             * @description Коммерческое предложение, к которому относится статья расхода
+             */
+            quote?: number;
+            /**
+             * Код
+             * @description Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')
+             */
+            charge_type?: string;
+            /**
+             * Описание
+             * @description Уточнение статьи (напр. «аренда склада за июнь»)
+             */
+            description?: string;
+            /**
+             * Сумма
+             * Format: decimal
+             * @description Фиксированная сумма в валюте КП (если rate_percent не задан)
+             */
+            amount?: string;
+            /**
+             * Процент (%)
+             * Format: decimal
+             * @description Процент от суммы позиций. Если задан — приоритетнее фиксированной суммы
+             */
+            rate_percent?: string | null;
+            /**
+             * Скидка (вычет)
+             * @description Если включено — сумма вычитается из базы до НДС (UBL allowance)
+             */
+            is_deduction?: boolean;
         };
         PatchedQuoteItemRequest: {
             /**
@@ -6394,6 +6822,11 @@ export interface components {
              */
             gost_drawing?: string;
             /**
+             * Код ТНВЭД
+             * @description Код ТНВЭД позиции (наследуется из карточки товара, замораживается в КП)
+             */
+            hs_code?: string;
+            /**
              * Примечание клиента
              * @description Комментарий/спецификация/ссылка из заявки (Примечание, Izoh) — UBL line Note
              */
@@ -6433,6 +6866,12 @@ export interface components {
              * @description Процент наценки RailTech (0–500%)
              */
             margin_percent?: string;
+            /**
+             * Скидка (%)
+             * Format: decimal
+             * @description Процент скидки на позицию (0–100%)
+             */
+            discount_percent?: string;
         };
         PatchedQuoteRequest: {
             /**
@@ -6451,6 +6890,16 @@ export interface components {
              * @description Текущий статус КП (черновик, отправлено, одобрено)
              */
             status?: number | null;
+            /**
+             * Базис поставки (Incoterm)
+             * @description Условия поставки КП по Incoterms (FCA, CIP, DDP …)
+             */
+            delivery_basis?: number | null;
+            /**
+             * Код
+             * @description Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')
+             */
+            quote_currency?: string | null;
             /**
              * Страна налогообложения
              * @description Определяет ставку НДС для расчёта
@@ -6517,6 +6966,11 @@ export interface components {
             avatar?: string | null;
         };
         PatchedSupplierOfferRequest: {
+            /**
+             * Товар
+             * @description Эталонный товар из каталога PIM
+             */
+            product?: number;
             /**
              * Поставщик
              * @description Компания-поставщик
@@ -6878,6 +7332,12 @@ export interface components {
          * @enum {string}
          */
         PriorityEnum: "LOW" | "NORMAL" | "HIGH" | "URGENT";
+        /**
+         * @description Strip supplier-cost fields (offers / base_price) from viewers who don't own
+         *     the product. Only the OWNING seller's team + platform admins see cost & supplier
+         *     identity — buyers, other sellers and anon never do (C1 cost-leak fix). React was
+         *     only hiding these client-side; the data still travelled in the API response.
+         */
         Product: {
             readonly id: number;
             /**
@@ -6919,7 +7379,7 @@ export interface components {
              * Компания-владелец
              * @description Продавец/поставщик, создавший карточку (мультитенантность PIM).
              */
-            owner_company?: number | null;
+            readonly owner_company: number | null;
             readonly owner_company_data: components["schemas"]["CompanyLight"];
             /**
              * Производитель (бренд)
@@ -7142,6 +7602,12 @@ export interface components {
              */
             readonly updated_at: string;
         };
+        /**
+         * @description Strip supplier-cost fields (offers / base_price) from viewers who don't own
+         *     the product. Only the OWNING seller's team + platform admins see cost & supplier
+         *     identity — buyers, other sellers and anon never do (C1 cost-leak fix). React was
+         *     only hiding these client-side; the data still travelled in the API response.
+         */
         ProductRequest: {
             /**
              * Наименование
@@ -7168,11 +7634,6 @@ export interface components {
              * @description Категория товара в иерархии каталога
              */
             category?: number | null;
-            /**
-             * Компания-владелец
-             * @description Продавец/поставщик, создавший карточку (мультитенантность PIM).
-             */
-            owner_company?: number | null;
             /**
              * Производитель (бренд)
              * @description Бренд/производитель из справочника (OEM). Канонический для PIM.
@@ -7243,6 +7704,17 @@ export interface components {
              */
             readonly prepared_by: number | null;
             /**
+             * Базис поставки (Incoterm)
+             * @description Условия поставки КП по Incoterms (FCA, CIP, DDP …)
+             */
+            delivery_basis?: number | null;
+            readonly delivery_basis_data: components["schemas"]["DeliveryBasis"];
+            /**
+             * Код
+             * @description Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')
+             */
+            quote_currency?: string | null;
+            /**
              * Страна налогообложения
              * @description Определяет ставку НДС для расчёта
              */
@@ -7259,6 +7731,12 @@ export interface components {
              * @description Итого по всем позициям без НДС (авто-расчёт)
              */
             readonly subtotal_excl_vat: string;
+            /**
+             * Сумма статей расхода
+             * Format: decimal
+             * @description Итого по статьям расхода уровня КП (авто-расчёт, до НДС)
+             */
+            readonly charges_total: string;
             /**
              * Сумма НДС
              * Format: decimal
@@ -7306,6 +7784,7 @@ export interface components {
              */
             readonly approved_at: string | null;
             readonly items: components["schemas"]["QuoteItem"][];
+            readonly charges: components["schemas"]["QuoteCharge"][];
             /**
              * Дата создания
              * Format: date-time
@@ -7316,6 +7795,88 @@ export interface components {
              * Format: date-time
              */
             readonly updated_at: string;
+        };
+        /** @description КП-level expense item / discount (UBL document AllowanceCharge). */
+        QuoteCharge: {
+            readonly id: number;
+            /**
+             * КП
+             * @description Коммерческое предложение, к которому относится статья расхода
+             */
+            quote: number;
+            /**
+             * Код
+             * @description Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')
+             */
+            charge_type: string;
+            readonly charge_type_name: string;
+            /**
+             * Описание
+             * @description Уточнение статьи (напр. «аренда склада за июнь»)
+             */
+            description?: string;
+            /**
+             * Сумма
+             * Format: decimal
+             * @description Фиксированная сумма в валюте КП (если rate_percent не задан)
+             */
+            amount?: string;
+            /**
+             * Процент (%)
+             * Format: decimal
+             * @description Процент от суммы позиций. Если задан — приоритетнее фиксированной суммы
+             */
+            rate_percent?: string | null;
+            /**
+             * Скидка (вычет)
+             * @description Если включено — сумма вычитается из базы до НДС (UBL allowance)
+             */
+            is_deduction?: boolean;
+            /**
+             * Внёс
+             * @description Кто добавил статью расхода
+             */
+            readonly created_by: number | null;
+            /**
+             * Дата создания
+             * Format: date-time
+             */
+            readonly created_at: string;
+        };
+        /** @description КП-level expense item / discount (UBL document AllowanceCharge). */
+        QuoteChargeRequest: {
+            /**
+             * КП
+             * @description Коммерческое предложение, к которому относится статья расхода
+             */
+            quote: number;
+            /**
+             * Код
+             * @description Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')
+             */
+            charge_type: string;
+            /**
+             * Описание
+             * @description Уточнение статьи (напр. «аренда склада за июнь»)
+             */
+            description?: string;
+            /**
+             * Сумма
+             * Format: decimal
+             * @description Фиксированная сумма в валюте КП (если rate_percent не задан)
+             */
+            amount?: string;
+            /**
+             * Процент (%)
+             * Format: decimal
+             * @description Процент от суммы позиций. Если задан — приоритетнее фиксированной суммы
+             */
+            rate_percent?: string | null;
+            /**
+             * Скидка (вычет)
+             * @description Если включено — сумма вычитается из базы до НДС (UBL allowance)
+             */
+            is_deduction?: boolean;
         };
         QuoteItem: {
             readonly id: number;
@@ -7370,6 +7931,11 @@ export interface components {
              */
             gost_drawing?: string;
             /**
+             * Код ТНВЭД
+             * @description Код ТНВЭД позиции (наследуется из карточки товара, замораживается в КП)
+             */
+            hs_code?: string;
+            /**
              * Примечание клиента
              * @description Комментарий/спецификация/ссылка из заявки (Примечание, Izoh) — UBL line Note
              */
@@ -7410,6 +7976,12 @@ export interface components {
              * @description Процент наценки RailTech (0–500%)
              */
             margin_percent?: string;
+            /**
+             * Скидка (%)
+             * Format: decimal
+             * @description Процент скидки на позицию (0–100%)
+             */
+            discount_percent?: string;
             /**
              * Себестоимость
              * Format: decimal
@@ -7470,6 +8042,11 @@ export interface components {
              */
             gost_drawing?: string;
             /**
+             * Код ТНВЭД
+             * @description Код ТНВЭД позиции (наследуется из карточки товара, замораживается в КП)
+             */
+            hs_code?: string;
+            /**
              * Примечание клиента
              * @description Комментарий/спецификация/ссылка из заявки (Примечание, Izoh) — UBL line Note
              */
@@ -7509,6 +8086,12 @@ export interface components {
              * @description Процент наценки RailTech (0–500%)
              */
             margin_percent?: string;
+            /**
+             * Скидка (%)
+             * Format: decimal
+             * @description Процент скидки на позицию (0–100%)
+             */
+            discount_percent?: string;
         };
         QuoteRequest: {
             /**
@@ -7527,6 +8110,16 @@ export interface components {
              * @description Текущий статус КП (черновик, отправлено, одобрено)
              */
             status?: number | null;
+            /**
+             * Базис поставки (Incoterm)
+             * @description Условия поставки КП по Incoterms (FCA, CIP, DDP …)
+             */
+            delivery_basis?: number | null;
+            /**
+             * Код
+             * @description Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')
+             */
+            quote_currency?: string | null;
             /**
              * Страна налогообложения
              * @description Определяет ставку НДС для расчёта
@@ -7630,6 +8223,10 @@ export interface components {
             /** @default  */
             reason: string;
         };
+        SetMemberRoleRequest: {
+            member_id: number;
+            role: string;
+        };
         SetupPasswordRequest: {
             uid: string;
             token: string;
@@ -7655,6 +8252,11 @@ export interface components {
         };
         SupplierOffer: {
             readonly id: number;
+            /**
+             * Товар
+             * @description Эталонный товар из каталога PIM
+             */
+            product: number;
             /**
              * Поставщик
              * @description Компания-поставщик
@@ -7706,6 +8308,11 @@ export interface components {
             is_active?: boolean;
         };
         SupplierOfferRequest: {
+            /**
+             * Товар
+             * @description Эталонный товар из каталога PIM
+             */
+            product: number;
             /**
              * Поставщик
              * @description Компания-поставщик
@@ -8463,6 +9070,54 @@ export interface operations {
             };
             /** @description Not authorized */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    accounts_companies_set_member_role_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Компания. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetMemberRoleRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SetMemberRoleRequest"];
+                "multipart/form-data": components["schemas"]["SetMemberRoleRequest"];
+            };
+        };
+        responses: {
+            /** @description Role updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Only Company Admin can change roles */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Member not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Cannot demote the last admin */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -11463,6 +12118,196 @@ export interface operations {
             };
         };
     };
+    crm_charge_templates_list: {
+        parameters: {
+            query?: {
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChargeTemplate"][];
+                };
+            };
+        };
+    };
+    crm_charge_templates_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChargeTemplateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ChargeTemplateRequest"];
+                "multipart/form-data": components["schemas"]["ChargeTemplateRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChargeTemplate"];
+                };
+            };
+        };
+    };
+    crm_charge_templates_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Шаблон статьи расхода. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChargeTemplate"];
+                };
+            };
+        };
+    };
+    crm_charge_templates_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Шаблон статьи расхода. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChargeTemplateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ChargeTemplateRequest"];
+                "multipart/form-data": components["schemas"]["ChargeTemplateRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChargeTemplate"];
+                };
+            };
+        };
+    };
+    crm_charge_templates_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Шаблон статьи расхода. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    crm_charge_templates_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Шаблон статьи расхода. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedChargeTemplateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedChargeTemplateRequest"];
+                "multipart/form-data": components["schemas"]["PatchedChargeTemplateRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChargeTemplate"];
+                };
+            };
+        };
+    };
+    crm_charge_types_list: {
+        parameters: {
+            query?: {
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChargeType"][];
+                };
+            };
+        };
+    };
+    crm_charge_types_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Статья расхода. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChargeType"];
+                };
+            };
+        };
+    };
     crm_contracts_list: {
         parameters: {
             query?: {
@@ -13153,6 +13998,156 @@ export interface operations {
             };
         };
     };
+    crm_quote_charges_list: {
+        parameters: {
+            query?: {
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                quote?: number;
+                quote__deal_id?: number;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedQuoteChargeList"];
+                };
+            };
+        };
+    };
+    crm_quote_charges_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuoteChargeRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["QuoteChargeRequest"];
+                "multipart/form-data": components["schemas"]["QuoteChargeRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuoteCharge"];
+                };
+            };
+        };
+    };
+    crm_quote_charges_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Статья расхода КП. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuoteCharge"];
+                };
+            };
+        };
+    };
+    crm_quote_charges_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Статья расхода КП. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuoteChargeRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["QuoteChargeRequest"];
+                "multipart/form-data": components["schemas"]["QuoteChargeRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuoteCharge"];
+                };
+            };
+        };
+    };
+    crm_quote_charges_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Статья расхода КП. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    crm_quote_charges_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Статья расхода КП. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedQuoteChargeRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedQuoteChargeRequest"];
+                "multipart/form-data": components["schemas"]["PatchedQuoteChargeRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuoteCharge"];
+                };
+            };
+        };
+    };
     crm_quote_items_list: {
         parameters: {
             query?: {
@@ -13873,6 +14868,34 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    crm_quotes_set_delivery_basis_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Коммерческое предложение. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuoteRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["QuoteRequest"];
+                "multipart/form-data": components["schemas"]["QuoteRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Quote"];
+                };
             };
         };
     };
