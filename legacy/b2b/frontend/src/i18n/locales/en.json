@@ -1111,6 +1111,8 @@
     "inviteHint": "Roles and capabilities can be changed later — Buy/Sell switches control deal access and subscription scope.",
     "ownerOnly": "Only the company Admin can invite new employees.",
     "capabilityUpdated": "Capabilities updated",
+    "roleUpdated": "Role updated",
+    "cannotDemoteLastAdmin": "Cannot demote the last Company Admin — assign another one first.",
     "capabilities": {
       "canBuy": "Buy",
       "canSell": "Sell"

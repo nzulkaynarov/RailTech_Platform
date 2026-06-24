@@ -17,6 +17,7 @@ import {
   useInviteMember,
   useUpdateMemberCapabilities,
   useWorkspaceRoles,
+  useSetMemberRole,
 } from '../../hooks/useAccounts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -59,6 +60,7 @@ export function CompanyTeamSettings() {
   const { data: workspaceRoles = [] } = useWorkspaceRoles(companyTypeForRoles);
   const inviteMut = useInviteMember();
   const capMut = useUpdateMemberCapabilities();
+  const roleMut = useSetMemberRole();
 
   const availableRoles = useMemo(
     () => workspaceRoles.filter((r) => r.code !== 'OWNER'),
@@ -89,6 +91,22 @@ export function CompanyTeamSettings() {
         (err as AxiosLike)?.response?.data?.error ||
         (err instanceof Error ? err.message : t('team.inviteError'));
       toast.error(String(detail));
+    }
+  }
+
+  async function changeMemberRole(memberId: number, roleCode: string) {
+    if (!companyId) return;
+    try {
+      await roleMut.mutateAsync({ companyId, member_id: memberId, role: roleCode });
+      toast.success(t('team.roleUpdated'));
+    } catch (err) {
+      type AxiosLike = { response?: { data?: { detail?: string } } };
+      const detail = (err as AxiosLike)?.response?.data?.detail;
+      toast.error(
+        detail === 'CANNOT_DEMOTE_LAST_COMPANY_ADMIN'
+          ? t('team.cannotDemoteLastAdmin')
+          : String(detail ?? (err instanceof Error ? err.message : t('team.inviteError'))),
+      );
     }
   }
 
@@ -172,6 +190,10 @@ export function CompanyTeamSettings() {
                 const memberId = myMembership?.id ?? extMember.membership_id ?? extMember.id;
                 const canBuy = myMembership?.can_buy ?? extMember.can_buy ?? false;
                 const canSell = myMembership?.can_sell ?? extMember.can_sell ?? false;
+                // Role for THIS company comes off the membership (role_code/role_name);
+                // member.workspace_role is only meaningful for the logged-in user.
+                const roleCode = myMembership?.role_code ?? member.workspace_role ?? '';
+                const roleName = myMembership?.role_name ?? extMember.workspace_role_name;
                 const isSelf = member.id === user?.id;
                 const canEdit = isOwner && !isSelf;
                 return (
@@ -195,10 +217,29 @@ export function CompanyTeamSettings() {
                       </div>
                     </TableCell>
                     <TableCell className="p-4">
-                      <Badge variant={member.workspace_role === 'OWNER' ? 'default' : 'outline'}>
-                        {extMember.workspace_role_name
-                          ?? (member.workspace_role ? t(`team.roles.${member.workspace_role}`, member.workspace_role) : t('team.employee'))}
-                      </Badge>
+                      {canEdit ? (
+                        <Select
+                          value={roleCode}
+                          onValueChange={(v) => changeMemberRole(memberId, v)}
+                          disabled={roleMut.isPending}
+                        >
+                          <SelectTrigger className="w-52" aria-label={t('team.role')}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {workspaceRoles.map((r) => (
+                              <SelectItem key={r.code} value={r.code}>
+                                {r.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Badge variant={roleCode === 'OWNER' ? 'default' : 'outline'}>
+                          {roleName
+                            ?? (roleCode ? t(`team.roles.${roleCode}`, roleCode) : t('team.employee'))}
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell className="p-4 text-center">
                       <Switch

@@ -67,6 +67,18 @@ export const useWorkspaceRoles = (companyType?: string) => useQuery({
   staleTime: 30 * 60_000,
 });
 
+export const useSetMemberRole = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { companyId: number; member_id: number; role: string }) =>
+      accountsApi.setMemberRole(params.companyId, { member_id: params.member_id, role: params.role }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['company-team'] });
+      qc.invalidateQueries({ queryKey: ['me'] });
+    },
+  });
+};
+
 export const useChangeUserRole = () => {
   const qc = useQueryClient();
   return useMutation({
