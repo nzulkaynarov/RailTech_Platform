@@ -489,8 +489,8 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
                   {t('shell.settings')}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-destructive" onClick={() => {
-                  useAuthStore.getState().logout();
+                <DropdownMenuItem className="text-destructive" onClick={async () => {
+                  await useAuthStore.getState().logout();
                   window.location.href = '/';
                 }}>
                   <LogOut className="mr-2 h-4 w-4" />

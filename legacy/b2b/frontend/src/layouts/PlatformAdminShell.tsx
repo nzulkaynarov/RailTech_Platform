@@ -357,8 +357,8 @@ function PlatformAdminShellInner({ children, activePage, onNavigate }: PlatformA
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-destructive"
-                onClick={() => {
-                  useAuthStore.getState().logout();
+                onClick={async () => {
+                  await useAuthStore.getState().logout();
                   window.location.href = '/';
                 }}
               >

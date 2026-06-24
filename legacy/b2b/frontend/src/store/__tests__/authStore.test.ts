@@ -15,9 +15,8 @@ const mockUser = (overrides = {}) => ({
 });
 
 describe('authStore', () => {
-  beforeEach(() => {
-    const { logout } = useAuthStore.getState();
-    logout();
+  beforeEach(async () => {
+    await useAuthStore.getState().logout();
   });
 
   it('should initialize with default values', () => {
@@ -29,13 +28,13 @@ describe('authStore', () => {
     expect(state.isLoading).toBe(false);
   });
 
-  it('should logout and clear all user data', () => {
+  it('should logout and clear all user data', async () => {
     const state = useAuthStore.getState();
 
     state.setUser(mockUser());
     expect(useAuthStore.getState().user).not.toBeNull();
 
-    state.logout();
+    await state.logout();
 
     expect(useAuthStore.getState().user).toBeNull();
     expect(useAuthStore.getState().role).toBeNull();

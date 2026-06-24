@@ -24,7 +24,7 @@ interface AuthState {
     error: string | null;
 
     login: (email: string, password: string) => Promise<void>;
-    logout: () => void;
+    logout: () => Promise<void>;
     initAuth: () => Promise<void>;
     setUser: (user: User) => void;
     setTokens: (access: string) => void;
@@ -83,11 +83,13 @@ export const useAuthStore = create<AuthState>()(
                 }
             },
 
-            logout: () => {
-                // Best-effort server-side revocation: the server reads the refresh
-                // cookie, blacklists it, and clears the cookie. Fire-and-forget —
-                // never block local logout on the network. (withCredentials sends the cookie.)
-                apiClient.post('auth/logout/').catch(() => { /* noop */ });
+            logout: async () => {
+                // MUST await: the server clears the HttpOnly refresh cookie. If we
+                // redirect before that, the reload's initAuth re-mints an access token
+                // from the still-present cookie → "logout doesn't work" (re-logged-in).
+                try {
+                    await apiClient.post('auth/logout/');
+                } catch { /* even if it fails, clear locally below */ }
                 setAccessToken(null);
                 set({
                     user: null,
