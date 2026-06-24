@@ -606,7 +606,11 @@ function MainApp() {
       content = <CatalogImportPage />;
       break;
     default:
-      content = <Dashboard onProductClick={handleProductClick} onNavigate={handleNavigate} />;
+      // Unknown/stale hash → fall back to the role-correct dashboard (never show a
+      // platform admin the buyer dashboard, as a raw default would).
+      content = role === 'ADMIN'
+        ? <PlatformAdminDashboard onNavigate={handleNavigate} />
+        : <Dashboard onProductClick={handleProductClick} onNavigate={handleNavigate} />;
       activePageId = 'dashboard';
   }
 

@@ -31,6 +31,7 @@ import {
   useCompanies, useUploadUserAvatar, useDeleteUserAvatar,
 } from '@/hooks/useAccounts';
 import { PageShell, EmptyState } from './shared/PageShell';
+import { systemRoleLabelKey } from '@/lib/codes';
 import type { User as UserType } from '@/api/accountsApi';
 import { ImageUpload } from '@/components/Shared/ImageUpload';
 
@@ -288,7 +289,7 @@ function DetailSheet({
                   },
                   {
                     label: t('pages.adminUsers.table.role'),
-                    value: user.role_data?.name ?? '—',
+                    value: user.role_data?.code ? t(systemRoleLabelKey(user.role_data.code)) : '—',
                   },
                   {
                     label: t('pages.adminUsers.tabs.memberships'),
@@ -373,7 +374,7 @@ function DetailSheet({
                       const adminBlocked = r.code === 'ADMIN' && hasMemberships;
                       return (
                         <SelectItem key={r.code} value={r.code} disabled={adminBlocked}>
-                          {r.name}
+                          {t(systemRoleLabelKey(r.code))}
                           {adminBlocked && (
                             <span className="text-xs text-muted-foreground ml-2">
                               · {t('pages.adminUsers.roleTab.blockedByMembership')}
@@ -590,7 +591,7 @@ export function AdminUsersPage() {
           { id: 'inactive', label: t('pages.adminUsers.statusLabel.inactive'), count: counts.inactive },
           ...(roles?.map((r) => ({
             id: `role:${r.code}`,
-            label: r.name,
+            label: t(systemRoleLabelKey(r.code)),
           })) ?? []),
         ]}
         columns={[
@@ -614,7 +615,7 @@ export function AdminUsersPage() {
             header: t('pages.adminUsers.table.role'),
             cell: (u) => (
               <Badge variant={u.role_data?.code === 'ADMIN' ? 'default' : 'outline'}>
-                {u.role_data?.name ?? '—'}
+                {u.role_data?.code ? t(systemRoleLabelKey(u.role_data.code)) : '—'}
               </Badge>
             ),
           },

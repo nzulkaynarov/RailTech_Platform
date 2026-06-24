@@ -22,6 +22,27 @@ export const DealStage = {
 } as const;
 export type DealStageCode = (typeof DealStage)[keyof typeof DealStage];
 
+/**
+ * i18n key for a deal-stage CODE. Render `t(DEAL_STAGE_LABEL_KEY[code])` instead of the
+ * DB `stage_name` (Russian-only) so the label follows the UI language. Logic still
+ * compares by code. Mirrors the `dealStages.*` keys in ru.json / en.json.
+ */
+export const DEAL_STAGE_LABEL_KEY: Record<string, string> = {
+  DRAFT: 'dealStages.draft',
+  KYC_PENDING: 'dealStages.kycPending',
+  RFQ_OPEN: 'dealStages.rfqOpen',
+  SOURCING: 'dealStages.sourcing',
+  CALCULATING: 'dealStages.calculating',
+  QUOTE_SENT: 'dealStages.quoteSent',
+  CONTRACT_SIGNED: 'dealStages.contractSigned',
+  CLOSED_WON: 'dealStages.closedWon',
+  CLOSED_LOST: 'dealStages.closedLost',
+};
+
+/** i18n key for a SystemRole CODE (`roles.ADMIN` / `roles.USER`). */
+export const systemRoleLabelKey = (code: string | undefined | null): string =>
+  code ? `roles.${code}` : 'roles.USER';
+
 export const QuoteStatus = {
   DRAFT: 'DRAFT',
   PENDING_TRADE_REVIEW: 'PENDING_TRADE_REVIEW',

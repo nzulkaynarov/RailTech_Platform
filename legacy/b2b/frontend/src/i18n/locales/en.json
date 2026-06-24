@@ -2,6 +2,7 @@
   "dealStages": {
     "draft": "Draft",
     "kycPending": "KYC Verification",
+    "rfqOpen": "RFQ open",
     "sourcing": "Sourcing",
     "calculating": "Calculating",
     "quoteSent": "Quote Sent",
