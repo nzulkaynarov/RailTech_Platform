@@ -17,7 +17,7 @@ import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
 import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
 import { useDeals, useDealStages, useForceChangeDealStage, useDeleteDeal } from '@/hooks/useCRM';
 import { useCompanies } from '@/hooks/useAccounts';
-import { DealStage } from '@/lib/codes';
+import { DealStage, DEAL_STAGE_LABEL_KEY } from '@/lib/codes';
 import type { Deal } from '@/api/crmApi';
 
 const CLOSED_STAGES: string[] = [DealStage.CLOSED_WON, DealStage.CLOSED_LOST];
@@ -65,7 +65,10 @@ export function AdminDealsPage() {
     { label: t('adminDeals.stats.lost'), value: String(deals?.filter((d) => d.stage_code === DealStage.CLOSED_LOST).length ?? '—') },
   ];
 
-  const targetStageName = stages?.find((s) => s.code === targetStage)?.name ?? '';
+  // Localize a stage by CODE; fall back to the DB name only if the code is unknown.
+  const stageLabel = (code?: string | null, fallback?: string | null): string =>
+    code && DEAL_STAGE_LABEL_KEY[code] ? t(DEAL_STAGE_LABEL_KEY[code]) : (fallback ?? '—');
+  const targetStageName = stageLabel(targetStage, stages?.find((s) => s.code === targetStage)?.name);
 
   return (
     <PageShell
@@ -84,7 +87,7 @@ export function AdminDealsPage() {
             value: listParams.filters.stage,
             onChange: (v) => listParams.setFilter('stage', v),
             allLabel: t('adminDeals.allStages'),
-            options: (stages ?? []).map((s) => ({ value: s.code, label: s.name })),
+            options: (stages ?? []).map((s) => ({ value: s.code, label: stageLabel(s.code, s.name) })),
           },
           {
             key: 'company',
@@ -134,7 +137,13 @@ export function AdminDealsPage() {
                         <TableCell className="font-mono text-xs">#{d.id}</TableCell>
                         <TableCell>{d.title ?? '—'}</TableCell>
                         <TableCell className="text-muted-foreground text-xs">{d.company_name ?? '—'}</TableCell>
-                        <TableCell><Badge variant="outline">{d.stage_name ?? '—'}</Badge></TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {d.stage_code && DEAL_STAGE_LABEL_KEY[d.stage_code]
+                              ? t(DEAL_STAGE_LABEL_KEY[d.stage_code])
+                              : (d.stage_name ?? '—')}
+                          </Badge>
+                        </TableCell>
                         <TableCell className="font-mono text-xs">{d.total_value ?? '—'}</TableCell>
                         <TableCell>
                           <div className="flex justify-end gap-1">
@@ -174,7 +183,7 @@ export function AdminDealsPage() {
             ? [
                 {
                   label: t('adminDeals.table.stage'),
-                  before: forceTarget.stage_name ?? '—',
+                  before: stageLabel(forceTarget.stage_code, forceTarget.stage_name),
                   after: targetStageName,
                 },
               ]
@@ -195,7 +204,7 @@ export function AdminDealsPage() {
                     disabled={s.code === forceTarget?.stage_code}
                     className="text-xs"
                   >
-                    {s.name}
+                    {stageLabel(s.code, s.name)}
                   </SelectItem>
                 ))}
               </SelectContent>

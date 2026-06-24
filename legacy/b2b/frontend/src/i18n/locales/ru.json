@@ -2,6 +2,7 @@
   "dealStages": {
     "draft": "Черновик",
     "kycPending": "KYC проверка",
+    "rfqOpen": "Заявка открыта",
     "sourcing": "Закупка",
     "calculating": "Расчёт",
     "quoteSent": "КП отправлено",
