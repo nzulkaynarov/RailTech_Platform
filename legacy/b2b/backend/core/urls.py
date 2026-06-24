@@ -72,6 +72,7 @@ from sourcing.views import (
     CatalogTemplateView,
     ExcelImportView,
     ImportStatusView,
+    MatchCatalogView,
     SourcingRequestViewSet,
 )
 
@@ -157,6 +158,7 @@ urlpatterns = (
         ),
         # Sourcing & Imports
         path("api/v1/sourcing/import-deal/<int:deal_id>/", ExcelImportView.as_view(), name="import-deal"),
+        path("api/v1/sourcing/match-catalog/", MatchCatalogView.as_view(), name="match-catalog"),
         path("api/v1/sourcing/import-catalog/", CatalogImportView.as_view(), name="import-catalog"),
         path("api/v1/sourcing/catalog-template/", CatalogTemplateView.as_view(), name="catalog-template"),
         path("api/v1/sourcing/import-status/<str:task_id>/", ImportStatusView.as_view(), name="import-status"),

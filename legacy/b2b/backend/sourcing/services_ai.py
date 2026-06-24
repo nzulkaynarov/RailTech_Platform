@@ -275,3 +275,164 @@ def extract_request_items(content: bytes, filename: str) -> list[dict]:
             raise RuntimeError("AI_EXTRACT_ALL_CHUNKS_FAILED")
 
     return _normalize_items(items, valid_codes)
+
+
+# ── Semantic matching: заявка line → catalog.Product (roadmap #1) ──────────
+# Cheap SQL trigram preselect narrows the catalog to a shortlist per line; Claude
+# only RANKS that shortlist (product_id MUST come from the DB candidates — Rule 1,
+# the model never invents an id). Multilingual (рус/узб/англ) ranking is the win:
+# a free-text заявка line maps to a differently-named catalog product.
+MATCH_RESULT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "matches": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "line_index": {"type": "integer"},
+                    "candidates": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "product_id": {"type": "integer"},
+                                "confidence": {"type": "number", "description": "0..1"},
+                                "reason": {"type": "string"},
+                            },
+                            "required": ["product_id", "confidence", "reason"],
+                            "additionalProperties": False,
+                        },
+                    },
+                },
+                "required": ["line_index", "candidates"],
+                "additionalProperties": False,
+            },
+        }
+    },
+    "required": ["matches"],
+    "additionalProperties": False,
+}
+
+MATCH_SYSTEM_PROMPT = (
+    "Ты сопоставляешь строки заявки на закупку с товарами каталога B2B-площадки "
+    "(железнодорожное и промышленное оборудование). Для каждой строки заявки даны "
+    "КАНДИДАТЫ из базы (каждый с id). Верни для каждой строки список подходящих "
+    "product_id, РАНЖИРОВАННЫХ по релевантности, с confidence (0..1) и кратким reason.\n\n"
+    "ПРАВИЛА:\n"
+    "1. product_id ВЫБИРАЙ ТОЛЬКО из предложенных кандидатов этой строки. НЕ выдумывай id.\n"
+    "2. Если ни один кандидат не подходит — верни пустой список candidates для строки.\n"
+    "3. Совпадение по артикулу/ГОСТ/чертежу — сильный сигнал (высокий confidence).\n"
+    "4. Языки могут различаться (рус/узб/англ) — сопоставляй по смыслу, не по буквам.\n"
+    "5. Не присваивай высокий confidence наугад: уверенный неверный мэтч хуже пустого.\n"
+    "Верни результат строго по JSON-схеме."
+)
+
+
+def _shortlist_products(line: dict, domain_code: str | None, limit: int = 8):
+    """Trigram + exact-code preselect of catalog Products for one заявка line."""
+    from django.contrib.postgres.search import TrigramSimilarity
+
+    from catalog.models import Product
+
+    qs = Product.objects.all()
+    if domain_code:
+        qs = qs.filter(domain_type__code=domain_code)
+
+    found: dict[int, object] = {}
+    gost = (line.get("gost_drawing") or "").strip()
+    if gost:
+        for product in qs.filter(gost_drawing__iexact=gost)[:limit]:
+            found[product.id] = product
+    name = (line.get("name") or "").strip()
+    if name and len(found) < limit:
+        ranked = (
+            qs.annotate(similarity=TrigramSimilarity("name", name))
+            .filter(similarity__gt=0.1)
+            .order_by("-similarity")[:limit]
+        )
+        for product in ranked:
+            found.setdefault(product.id, product)
+    return list(found.values())[:limit]
+
+
+def match_lines_to_catalog(lines: list[dict], domain_code: str | None = None, top_k: int = 3) -> list[dict]:
+    """Map each заявка line to up to `top_k` catalog Product candidates.
+
+    Returns [{line_index, candidates: [{product_id, name, sku, confidence, reason}]}]
+    only for lines that have at least one valid candidate. Empty list if AI disabled.
+    The buyer/seller confirms a candidate in the grid (human-in-loop, never auto-binds).
+    """
+    if not getattr(settings, "AI_IMPORT_ENABLED", False) or not lines:
+        return []
+
+    shortlists: dict[int, dict] = {}
+    prompt_blocks: list[str] = []
+    for idx, line in enumerate(lines):
+        products = _shortlist_products(line, domain_code)
+        if not products:
+            continue
+        shortlists[idx] = {p.id: p for p in products}
+        cand = "; ".join(
+            f"[id={p.id}] {p.name}"
+            + (f" (ГОСТ {p.gost_drawing})" if getattr(p, "gost_drawing", "") else "")
+            + (f" [SKU {p.sku}]" if getattr(p, "sku", "") else "")
+            for p in products
+        )
+        label = (line.get("name") or "").strip()
+        if line.get("mpn"):
+            label += f" | артикул {line['mpn']}"
+        if line.get("gost_drawing"):
+            label += f" | ГОСТ {line['gost_drawing']}"
+        prompt_blocks.append(f"Строка {idx}: {label or '(без названия)'}\n  Кандидаты: {cand}")
+
+    if not prompt_blocks:
+        return []
+
+    client = _client()
+    user_msg = "Сопоставь строки заявки с кандидатами каталога:\n\n" + "\n\n".join(prompt_blocks)
+    response = client.messages.create(
+        model=settings.AI_IMPORT_MODEL,
+        max_tokens=3000,
+        system=MATCH_SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": [{"type": "text", "text": user_msg}]}],
+        output_config={"format": {"type": "json_schema", "schema": MATCH_RESULT_SCHEMA}},
+    )
+    usage = getattr(response, "usage", None)
+    if usage is not None:
+        logger.info("AI match usage: input=%s output=%s lines=%s", usage.input_tokens, usage.output_tokens, len(prompt_blocks))
+    if response.stop_reason == "refusal":
+        logger.warning("AI match: model declined (%s)", getattr(response, "stop_details", None))
+        return []
+
+    raw = next((b.text for b in response.content if b.type == "text"), "{}")
+    try:
+        data = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        logger.warning("AI match: unparseable JSON (len=%s)", len(raw or ""))
+        return []
+
+    result: list[dict] = []
+    for match in data.get("matches", []):
+        idx = match.get("line_index")
+        pool = shortlists.get(idx)
+        if not pool:
+            continue
+        valid = []
+        for cand in match.get("candidates", []):
+            product = pool.get(cand.get("product_id"))
+            if product is None:  # Rule 1: id must be from the DB shortlist
+                continue
+            valid.append(
+                {
+                    "product_id": product.id,
+                    "name": product.name,
+                    "sku": getattr(product, "sku", "") or "",
+                    "confidence": round(float(cand.get("confidence") or 0), 3),
+                    "reason": (cand.get("reason") or "")[:300],
+                }
+            )
+        valid.sort(key=lambda c: -c["confidence"])
+        if valid:
+            result.append({"line_index": idx, "candidates": valid[:top_k]})
+    return result
