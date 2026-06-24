@@ -99,6 +99,24 @@ class IsProductManagerOrAdmin(BasePermission):
         ).exists()
 
 
+class IsOfferSupplierOrAdmin(BasePermission):
+    """Object-level guard for SupplierOffer writes (C2 tenant isolation):
+      - Platform admin: full access.
+      - Members of the offer's `supplier` company: edit/delete their own offers only.
+    A seller must never be able to read or mutate a competitor's offer.
+    """
+
+    message = "You can only manage offers of your own company."
+
+    def has_object_permission(self, request, view, obj):
+        user = request.user
+        if not (user and user.is_authenticated):
+            return False
+        if user.is_platform_admin:
+            return True
+        return user.memberships.filter(is_active=True, company_id=obj.supplier_id).exists()
+
+
 class IsCompanyMemberOrPlatformAdmin(BasePermission):
     """
     Object-level permission для мульти-тенантных ресурсов (Deal, Quote, Message, QuoteItem).

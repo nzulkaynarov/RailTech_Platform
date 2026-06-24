@@ -173,6 +173,42 @@ def test_no_name_column_raises(lookups, company_factory):
 
 
 @pytest.mark.django_db
+def test_import_stamps_owner_company(lookups, company_factory):
+    """C3: a bulk-imported product is owned by the importing seller so they can
+    see/manage it (without this it's orphaned + invisible)."""
+    supplier = company_factory(name="Importer", inn="111111111")
+    run_catalog_import(
+        _xlsx([{"Наименование": "Реле", "Бренд": "Siemens", "Артикул производителя": "S-1", "Цена": "10", "Валюта": "UZS"}]),
+        supplier_company_id=supplier.id,
+    )
+    from catalog.models import Product
+
+    product = Product.objects.get(manufacturer_part_number="S-1")
+    assert product.owner_company_id == supplier.id
+
+
+@pytest.mark.django_db
+def test_import_backfills_orphan_but_never_hijacks_other_tenant(lookups, company_factory):
+    """C3 safety: de-dup matches globally on brand+MPN. An import must backfill an
+    ORPHAN's owner, but must NOT steal a product another tenant already owns."""
+    from catalog.models import Manufacturer, Product
+
+    owner_a = company_factory(name="OwnerA", inn="111111111")
+    importer_b = company_factory(name="ImporterB", inn="222222222")
+    brand = Manufacturer.objects.create(name="ACME")
+    owned = Product.objects.create(name="X", brand=brand, manufacturer_part_number="A-1", owner_company=owner_a)
+    orphan = Product.objects.create(name="Y", brand=brand, manufacturer_part_number="A-2", owner_company=None)
+
+    row = lambda mpn: {"Наименование": "upd", "Бренд": "ACME", "Артикул производителя": mpn, "Цена": "9", "Валюта": "UZS"}
+    run_catalog_import(_xlsx([row("A-1"), row("A-2")]), supplier_company_id=importer_b.id)
+
+    owned.refresh_from_db()
+    orphan.refresh_from_db()
+    assert owned.owner_company_id == owner_a.id      # NOT hijacked by importer B
+    assert orphan.owner_company_id == importer_b.id  # orphan backfilled
+
+
+@pytest.mark.django_db
 def test_catalog_template_download(lookups, user_factory):
     from rest_framework.test import APIClient
 

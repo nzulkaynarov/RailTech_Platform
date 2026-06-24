@@ -548,7 +548,11 @@ class AttachmentViewSet(viewsets.ModelViewSet):
                 return
             raise PermissionDenied("NO_ACCESS_TO_COMPANY")
         if product:
-            if product.manufacturer_id and product.manufacturer_id in user_company_ids:
+            # Ownership moved from the deprecated `manufacturer` FK (always NULL now)
+            # to `owner_company` — checking the old field denied every legitimate
+            # owner (same class of bug as H1). Legacy fallback kept for pre-split rows.
+            owner_id = product.owner_company_id or product.manufacturer_id
+            if owner_id and owner_id in user_company_ids:
                 return
             raise PermissionDenied("NO_ACCESS_TO_PRODUCT")
         raise PermissionDenied("NO_PARENT_PROVIDED")
