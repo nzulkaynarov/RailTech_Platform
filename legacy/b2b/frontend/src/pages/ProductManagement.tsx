@@ -21,6 +21,7 @@ import { useProducts, useDomainTypes, useStockStatuses, useManufacturers } from 
 import type { Product } from '@/api/catalogApi';
 import { getDomainLabelKey } from '@/config/domainConfig';
 import { useUserStore } from '@/store/userStore';
+import { useAuthStore } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
@@ -32,6 +33,7 @@ interface ProductManagementProps {
 export function ProductManagement({ onProductClick }: ProductManagementProps) {
   const { t } = useTranslation();
   const { activeStatus } = useUserStore();
+  const sellerCompanyId = useAuthStore((s) => s.user?.company?.id);
   const cartStore = useCartStore();
   const formatCurrency = useCurrencyStore((s) => s.format);
   const { data: domainTypes = [] } = useDomainTypes();
@@ -371,6 +373,7 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
           open={editSheetOpen}
           onOpenChange={setEditSheetOpen}
           target={editTarget}
+          sellerCompanyId={sellerCompanyId}
         />
       )}
     </PageShell>

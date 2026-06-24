@@ -3502,7 +3502,11 @@
     },
     "mediaAfterCreate": "Images and documents can be uploaded after creating the product",
     "equipmentGroupsHint": "Required for the Railway machinery domain: pick at least one group.",
-    "equipmentGroupsRequired": "Select at least one equipment group for a railway product."
+    "equipmentGroupsRequired": "Select at least one equipment group for a railway product.",
+    "pricing": {
+      "title": "Price & availability",
+      "hint": "Your offer for this product (price is visible only to you and the platform)."
+    }
   },
   "adminCategories": {
     "title": "Catalog · Categories",

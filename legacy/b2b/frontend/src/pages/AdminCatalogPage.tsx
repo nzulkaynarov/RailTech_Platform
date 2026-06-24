@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Package, Pencil, Trash2 } from 'lucide-react';
@@ -24,8 +24,9 @@ import {
   useDomainTypes, useProductStatuses, useCategories, useManufacturers, useEquipmentGroups,
   useUploadProductImage, useDeleteProductImage,
   useUploadProductDocument, useDeleteProductDocument,
+  useStockStatuses, useOffers, useCreateOffer, useUpdateOffer,
 } from '@/hooks/useCatalog';
-import { useUnits } from '@/hooks/useMasterData';
+import { useUnits, useCurrencies, useDeliveryBases } from '@/hooks/useMasterData';
 import type { Product } from '@/api/catalogApi';
 import { ImageGalleryUpload } from '@/components/Shared/ImageGalleryUpload';
 import { FileUpload } from '@/components/Shared/FileUpload';
@@ -89,11 +90,14 @@ function ProductMediaSection({ productId }: { productId: number }) {
 }
 
 export function ProductFormSheet({
-  open, onOpenChange, target,
+  open, onOpenChange, target, sellerCompanyId,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   target: Product | null;
+  // When set (seller context), show the pricing section and upsert the seller's own
+  // SupplierOffer alongside the product. Admins manage offers on the dedicated page.
+  sellerCompanyId?: number;
 }) {
   const { t } = useTranslation();
   const { data: domainTypes } = useDomainTypes();
@@ -105,15 +109,41 @@ export function ProductFormSheet({
   const createMut = useCreateProduct();
   const updateMut = useUpdateProduct();
 
+  // --- Seller pricing (H3) ---
+  const sellerMode = Boolean(sellerCompanyId);
+  const { data: currencies } = useCurrencies();
+  const { data: stockStatuses } = useStockStatuses();
+  const { data: deliveryBases } = useDeliveryBases();
+  const createOfferMut = useCreateOffer();
+  const updateOfferMut = useUpdateOffer();
+  // On edit, the seller's own offer for this product (C2 scopes /offers/ to them).
+  const { data: ownOffers } = useOffers(sellerMode && target?.id ? { product: target.id } : undefined);
+  const ownOffer = sellerMode ? (ownOffers ?? []).find((o) => o.supplier === sellerCompanyId) ?? null : null;
+
   const [draft, setDraft] = useState<Draft>(() => target ?? emptyDraft());
   const [groupIds, setGroupIds] = useState<number[]>(() => target?.equipment_groups?.map((g) => g.id) ?? []);
+  type OfferDraft = { base_price?: string; currency?: number | null; stock_status?: number | null; delivery_basis?: number | null; supplier_sku?: string };
+  const [offerDraft, setOfferDraft] = useState<OfferDraft>({});
 
-  useMemo(() => {
+  useEffect(() => {
     setDraft(target ? { ...target } : emptyDraft());
     setGroupIds(target?.equipment_groups?.map((g) => g.id) ?? []);
   }, [target]);
 
-  const busy = createMut.isPending || updateMut.isPending;
+  useEffect(() => {
+    setOfferDraft(ownOffer
+      ? {
+          base_price: ownOffer.base_price,
+          currency: ownOffer.currency ?? null,
+          stock_status: ownOffer.stock_status ?? null,
+          delivery_basis: ownOffer.delivery_basis ?? null,
+          supplier_sku: ownOffer.supplier_sku ?? '',
+        }
+      : {});
+  }, [ownOffer]);
+
+  const updateOffer = (patch: Partial<OfferDraft>) => setOfferDraft((d) => ({ ...d, ...patch }));
+  const busy = createMut.isPending || updateMut.isPending || createOfferMut.isPending || updateOfferMut.isPending;
   const isEdit = Boolean(target?.id);
 
   // Equipment groups are a RAILWAY_MACHINERY taxonomy and are required for that
@@ -151,13 +181,32 @@ export function ProductFormSheet({
       gost_drawing: draft.gost_drawing || '',
     } as unknown as Partial<Product>;
     try {
+      let productId = target?.id;
       if (isEdit && target) {
         await updateMut.mutateAsync({ id: target.id, data: payload });
-        toast.success(t('adminCatalog.updated'));
       } else {
-        await createMut.mutateAsync(payload);
-        toast.success(t('adminCatalog.created'));
+        const created = await createMut.mutateAsync(payload);
+        productId = created.id;
       }
+      // Seller pricing (H3): upsert the seller's own offer for this product. Skipped
+      // when no price is entered so a product can still be saved without an offer.
+      if (sellerMode && productId && String(offerDraft.base_price ?? '').trim()) {
+        const offerPayload = {
+          product: productId,
+          supplier: sellerCompanyId,
+          base_price: String(offerDraft.base_price),
+          currency: offerDraft.currency ? Number(offerDraft.currency) : null,
+          stock_status: offerDraft.stock_status ? Number(offerDraft.stock_status) : null,
+          delivery_basis: offerDraft.delivery_basis ? Number(offerDraft.delivery_basis) : null,
+          supplier_sku: offerDraft.supplier_sku ?? '',
+        };
+        if (ownOffer) {
+          await updateOfferMut.mutateAsync({ id: ownOffer.id, data: offerPayload });
+        } else {
+          await createOfferMut.mutateAsync(offerPayload);
+        }
+      }
+      toast.success(isEdit ? t('adminCatalog.updated') : t('adminCatalog.created'));
       onOpenChange(false);
     } catch {
       toast.error(t('adminCatalog.saveFailed'));
@@ -290,6 +339,79 @@ export function ProductFormSheet({
                 ))}
               </div>
             </div>
+          )}
+
+          {sellerMode && (
+            <>
+              <Separator />
+              <div className="space-y-1">
+                <Label className="text-base">{t('adminCatalog.pricing.title')}</Label>
+                <p className="text-xs text-muted-foreground">{t('adminCatalog.pricing.hint')}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>{t('adminOffers.fields.basePrice')}</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={offerDraft.base_price ?? ''}
+                    onChange={(e) => updateOffer({ base_price: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>{t('adminOffers.fields.currency')}</Label>
+                  <Select
+                    value={offerDraft.currency ? String(offerDraft.currency) : undefined}
+                    onValueChange={(v) => updateOffer({ currency: Number(v) })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                    <SelectContent>
+                      {(currencies ?? []).map((c) => (
+                        <SelectItem key={c.id} value={String(c.id)}>{c.code}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>{t('adminOffers.fields.stockStatus')}</Label>
+                  <Select
+                    value={offerDraft.stock_status ? String(offerDraft.stock_status) : undefined}
+                    onValueChange={(v) => updateOffer({ stock_status: Number(v) })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                    <SelectContent>
+                      {(stockStatuses ?? []).map((s) => (
+                        <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>{t('adminOffers.fields.deliveryBasis')}</Label>
+                  <Select
+                    value={offerDraft.delivery_basis ? String(offerDraft.delivery_basis) : undefined}
+                    onValueChange={(v) => updateOffer({ delivery_basis: Number(v) })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                    <SelectContent>
+                      {(deliveryBases ?? []).map((d) => (
+                        <SelectItem key={d.id} value={String(d.id)}>{d.code}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>{t('adminOffers.fields.supplierSku')}</Label>
+                <Input
+                  value={offerDraft.supplier_sku ?? ''}
+                  onChange={(e) => updateOffer({ supplier_sku: e.target.value })}
+                />
+              </div>
+            </>
           )}
 
           {isEdit && target?.sku && (
