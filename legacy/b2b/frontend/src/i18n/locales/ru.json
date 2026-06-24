@@ -4169,5 +4169,14 @@
     "sourceTag": "Исходник заявки",
     "description": "Excel-спецификации, чертежи, доп. документы",
     "noDeal": "Сделка не выбрана"
+  },
+  "workspaceRoles": {
+    "OWNER": "Администратор компании",
+    "PROCUREMENT_MANAGER": "Снабженец",
+    "BUYER_MANAGER": "Менеджер (покупатель)",
+    "SALES_MANAGER": "Менеджер по продажам",
+    "LOGIST": "Логист",
+    "CONTRACT_MANAGER": "Договорник",
+    "FOREIGN_TRADE_SPECIALIST": "Специалист ВЭД"
   }
 }

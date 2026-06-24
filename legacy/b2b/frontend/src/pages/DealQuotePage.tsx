@@ -10,7 +10,7 @@ import { translateApiError } from '@/lib/apiError';
 import { QuoteBuilderGrid } from '@/components/Admin/QuoteBuilderGrid';
 import { GenerateContractDialog } from '@/components/CRM/GenerateContractDialog';
 import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
-import { QuoteStatus } from '@/lib/codes';
+import { QuoteStatus, DEAL_STAGE_LABEL_KEY } from '@/lib/codes';
 import { LoadingRows, EmptyState } from './shared/PageShell';
 
 interface DealQuotePageProps {
@@ -109,7 +109,12 @@ export function DealQuotePage({ dealId, onBack }: DealQuotePageProps) {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <StatusBadge label={deal.stage_name ?? ''} variant={getDealStageVariant(deal.stage_code ?? '')} />
+          <StatusBadge
+            label={deal.stage_code && DEAL_STAGE_LABEL_KEY[deal.stage_code]
+              ? t(DEAL_STAGE_LABEL_KEY[deal.stage_code])
+              : (deal.stage_name ?? '')}
+            variant={getDealStageVariant(deal.stage_code ?? '')}
+          />
           {deal.total_value ? (
             <span className="text-sm font-semibold tabular-nums">
               {formatCurrency(Number(deal.total_value))}

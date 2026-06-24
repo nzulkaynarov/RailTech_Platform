@@ -43,6 +43,22 @@ export const DEAL_STAGE_LABEL_KEY: Record<string, string> = {
 export const systemRoleLabelKey = (code: string | undefined | null): string =>
   code ? `roles.${code}` : 'roles.USER';
 
+/** WorkspaceRole CODEs (CompanyMember.role) — the per-company functional roles. */
+export const WorkspaceRole = {
+  OWNER: 'OWNER',
+  PROCUREMENT_MANAGER: 'PROCUREMENT_MANAGER',
+  BUYER_MANAGER: 'BUYER_MANAGER',
+  SALES_MANAGER: 'SALES_MANAGER',
+  LOGIST: 'LOGIST',
+  CONTRACT_MANAGER: 'CONTRACT_MANAGER',
+  FOREIGN_TRADE_SPECIALIST: 'FOREIGN_TRADE_SPECIALIST',
+} as const;
+
+/** i18n key for a WorkspaceRole CODE — render `t(workspaceRoleLabelKey(code))` instead
+ * of the Russian-only DB role name. Mirrors `workspaceRoles.*` in ru.json / en.json. */
+export const workspaceRoleLabelKey = (code: string | undefined | null): string =>
+  code ? `workspaceRoles.${code}` : '';
+
 export const QuoteStatus = {
   DRAFT: 'DRAFT',
   PENDING_TRADE_REVIEW: 'PENDING_TRADE_REVIEW',

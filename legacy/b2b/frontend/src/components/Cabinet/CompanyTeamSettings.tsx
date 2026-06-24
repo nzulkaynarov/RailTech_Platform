@@ -22,6 +22,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { workspaceRoleLabelKey } from '@/lib/codes';
 import {
   Select,
   SelectTrigger,
@@ -229,15 +230,16 @@ export function CompanyTeamSettings() {
                           <SelectContent>
                             {workspaceRoles.map((r) => (
                               <SelectItem key={r.code} value={r.code}>
-                                {r.name}
+                                {t(workspaceRoleLabelKey(r.code), { defaultValue: r.name })}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       ) : (
                         <Badge variant={roleCode === 'OWNER' ? 'default' : 'outline'}>
-                          {roleName
-                            ?? (roleCode ? t(`team.roles.${roleCode}`, roleCode) : t('team.employee'))}
+                          {roleCode
+                            ? t(workspaceRoleLabelKey(roleCode), { defaultValue: roleName ?? roleCode })
+                            : t('team.employee')}
                         </Badge>
                       )}
                     </TableCell>
@@ -307,12 +309,12 @@ export function CompanyTeamSettings() {
               </Label>
               <Select value={role} onValueChange={setRole}>
                 <SelectTrigger id="team-invite-role" className="w-full">
-                  <SelectValue />
+                  <SelectValue placeholder={t('team.role')} />
                 </SelectTrigger>
                 <SelectContent>
                   {availableRoles.map((r) => (
                     <SelectItem key={r.code} value={r.code}>
-                      {r.name}
+                      {t(workspaceRoleLabelKey(r.code), { defaultValue: r.name })}
                     </SelectItem>
                   ))}
                 </SelectContent>

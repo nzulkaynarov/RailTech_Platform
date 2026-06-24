@@ -4165,5 +4165,14 @@
     "sourceTag": "Request source",
     "description": "Excel specs, drawings, supporting documents",
     "noDeal": "No deal selected"
+  },
+  "workspaceRoles": {
+    "OWNER": "Company administrator",
+    "PROCUREMENT_MANAGER": "Procurement manager",
+    "BUYER_MANAGER": "Buyer manager",
+    "SALES_MANAGER": "Sales manager",
+    "LOGIST": "Logistics",
+    "CONTRACT_MANAGER": "Contract manager",
+    "FOREIGN_TRADE_SPECIALIST": "Foreign-trade specialist"
   }
 }
