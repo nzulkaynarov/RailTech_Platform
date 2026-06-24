@@ -62,11 +62,12 @@ class IsProductManagerOrAdmin(BasePermission):
     """
     Product edit rights:
       - Platform admin: full access.
-      - Members of the product.manufacturer company: full access to their own products.
-      - On create: any authenticated member of a MANUFACTURER or SUPPLIER company.
+      - Members of the product's owner_company (the seller that created the card):
+        full access to their own products.
+      - On create: any authenticated member of a SUPPLIER company.
     """
 
-    message = "You can only manage products of your own manufacturer company."
+    message = "You can only manage products of your own company."
 
     def has_permission(self, request, view):
         user = request.user
@@ -85,12 +86,16 @@ class IsProductManagerOrAdmin(BasePermission):
         user = request.user
         if user.is_platform_admin:
             return True
-        manufacturer_id = getattr(obj, "manufacturer_id", None)
-        if not manufacturer_id:
+        # Ownership moved from the deprecated `manufacturer` FK (always NULL now) to
+        # `owner_company` (the seller that created the card). Falling back to the
+        # legacy field covers any pre-split rows. The old code only checked
+        # manufacturer_id → every seller got 403 editing their own product (H1).
+        owner_id = getattr(obj, "owner_company_id", None) or getattr(obj, "manufacturer_id", None)
+        if not owner_id:
             return False
         return user.memberships.filter(
             is_active=True,
-            company_id=manufacturer_id,
+            company_id=owner_id,
         ).exists()
 
 
