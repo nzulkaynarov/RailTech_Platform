@@ -120,6 +120,34 @@ def add_company_member(
     return membership, None
 
 
+def company_active_admins(company: Company):
+    """Active members holding the full-admin workspace role (code OWNER).
+
+    OWNER is the internal code; its display label is «Администратор компании».
+    This is the company's irreducible admin set — see remove_company_member.
+    """
+    return CompanyMember.objects.filter(company=company, is_active=True, role__code="OWNER")
+
+
+def remove_company_member(
+    membership: "CompanyMember",
+) -> Tuple[Optional[bool], Optional[str]]:
+    """
+    Remove a member, enforcing the never-orphan invariant.
+
+    A company must ALWAYS keep at least one active admin (OWNER) — the party
+    accountable for KYC/billing. Removing the last one would orphan the company,
+    so it's refused; the admin role must be transferred first.
+    """
+    is_admin = membership.is_active and membership.role_id and membership.role.code == "OWNER"
+    if is_admin:
+        other_admins = company_active_admins(membership.company).exclude(pk=membership.pk)
+        if not other_admins.exists():
+            return None, "CANNOT_REMOVE_LAST_COMPANY_ADMIN"
+    membership.delete()
+    return True, None
+
+
 def toggle_user_active(
     user: CustomUser,
     requester: CustomUser,
