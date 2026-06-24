@@ -35,6 +35,7 @@ from .permissions import (
     is_member_of,
     is_platform_admin_viewer,
     is_seller,
+    member_has_permission,
     primary_seller_company_id,
     seller_sees_all_deals,
 )

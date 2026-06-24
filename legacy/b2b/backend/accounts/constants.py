@@ -24,6 +24,64 @@ class WorkspaceRoleCode(models.TextChoices):
     MEMBER = "MEMBER", "Участник"
 
 
+class Permission(models.TextChoices):
+    """Company-level capability codes — the checkboxes a company admin ticks on a role.
+    World-standard Role+Permission-set model (replaces the raw can_sell/can_buy toggles).
+    Sensitive-first: cost/margin visibility, money, signing, exports, team management."""
+
+    # Sales / КП
+    QUOTE_BUILD = "quote.build", "Строить КП"
+    QUOTE_SEND = "quote.send", "Отправлять КП клиенту"
+    QUOTE_VIEW_COST_MARGIN = "quote.view_cost_margin", "Видеть себестоимость и маржу"
+    QUOTE_EDIT_PRICING = "quote.edit_pricing", "Менять цены и скидки"
+    # Procurement / Buyer
+    REQUEST_CREATE = "request.create", "Создавать заявки"
+    QUOTE_APPROVE = "quote.approve", "Принимать/отклонять КП"
+    CONTRACT_SIGN = "contract.sign", "Подписывать контракты"
+    PAYMENT_RECORD = "payment.record", "Проводить платежи"
+    # Catalog
+    CATALOG_MANAGE = "catalog.manage", "Управлять каталогом и офферами"
+    CATALOG_PUBLISH = "catalog.publish", "Публиковать товары"
+    # Company admin
+    TEAM_MANAGE = "team.manage", "Управлять командой и ролями"
+    SETTINGS_EDIT = "settings.edit", "Менять настройки компании"
+    CHARGE_TEMPLATES_MANAGE = "charge_templates.manage", "Управлять шаблонами статей"
+    # Data
+    DATA_EXPORT = "data.export", "Экспортировать данные"
+
+
+# Grouping for the settings UI (the checkbox sections).
+PERMISSION_GROUPS = {
+    "sales": [Permission.QUOTE_BUILD, Permission.QUOTE_SEND, Permission.QUOTE_VIEW_COST_MARGIN, Permission.QUOTE_EDIT_PRICING],
+    "procurement": [Permission.REQUEST_CREATE, Permission.QUOTE_APPROVE, Permission.CONTRACT_SIGN, Permission.PAYMENT_RECORD],
+    "catalog": [Permission.CATALOG_MANAGE, Permission.CATALOG_PUBLISH],
+    "company": [Permission.TEAM_MANAGE, Permission.SETTINGS_EDIT, Permission.CHARGE_TEMPLATES_MANAGE],
+    "data": [Permission.DATA_EXPORT],
+}
+
+ALL_PERMISSIONS = [p.value for p in Permission]
+
+# Seeded default role templates (starting points; a company can clone/rename/edit).
+# The "Company administrator" template is the immutable full-rights role (never-orphan).
+COMPANY_ADMIN_ROLE_NAME = "Администратор компании"
+ROLE_TEMPLATES = {
+    COMPANY_ADMIN_ROLE_NAME: ALL_PERMISSIONS,
+    "Менеджер по продажам": [
+        Permission.QUOTE_BUILD.value, Permission.QUOTE_SEND.value,
+        Permission.QUOTE_VIEW_COST_MARGIN.value, Permission.QUOTE_EDIT_PRICING.value,
+        Permission.CATALOG_MANAGE.value,
+    ],
+    "Менеджер закупок": [
+        Permission.REQUEST_CREATE.value, Permission.QUOTE_APPROVE.value,
+        Permission.CONTRACT_SIGN.value, Permission.PAYMENT_RECORD.value,
+    ],
+    "Финансы": [
+        Permission.PAYMENT_RECORD.value, Permission.QUOTE_VIEW_COST_MARGIN.value, Permission.DATA_EXPORT.value,
+    ],
+    "Наблюдатель": [],
+}
+
+
 class SystemRoleCode(models.TextChoices):
     ADMIN = "ADMIN", "Администратор платформы"
     USER = "USER", "Пользователь"

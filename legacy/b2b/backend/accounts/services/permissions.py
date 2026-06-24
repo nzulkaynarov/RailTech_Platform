@@ -33,6 +33,43 @@ def is_member_of(user: "CustomUser", company_id: int, *, capability: Optional[st
     return True
 
 
+_SELL_PERMS = {"quote.build", "quote.send", "quote.view_cost_margin", "quote.edit_pricing", "catalog.manage", "catalog.publish"}
+_BUY_PERMS = {"request.create", "quote.approve", "contract.sign", "payment.record"}
+_ADMIN_PERMS = {"team.manage", "settings.edit", "charge_templates.manage"}
+
+
+def member_has_permission(user: "CustomUser", company_id: int, perm: str) -> bool:
+    """Company Role+Permission-set check (rbac-roles-design-2026-06-25).
+
+    Superuser → always. Active member with a `company_role` → its permission set.
+    Until a member is migrated to a CompanyRole, fall back to deriving the permission
+    from the legacy OWNER role + can_sell/can_buy flags, so nothing breaks mid-rollout.
+    """
+    if not user or not user.is_authenticated:
+        return False
+    if getattr(user, "is_superuser", False):
+        return True
+    membership = (
+        user.memberships.filter(company_id=company_id, is_active=True)
+        .select_related("company_role", "role")
+        .first()
+    )
+    if membership is None:
+        return False
+    if membership.company_role_id:
+        return membership.company_role.has_perm(perm)
+    # Legacy fallback (no CompanyRole assigned yet).
+    if membership.role_id and getattr(membership.role, "code", None) == WorkspaceRoleCode.OWNER:
+        return True
+    if perm in _ADMIN_PERMS:
+        return False
+    if perm in _SELL_PERMS:
+        return bool(membership.can_sell)
+    if perm in _BUY_PERMS:
+        return bool(membership.can_buy)
+    return bool(membership.can_sell or membership.can_buy)  # e.g. data.export
+
+
 def is_seller(user: "CustomUser") -> bool:
     """True if the user is on the seller team — an active can_sell membership in a
     SELLER-type company (SUPPLIER / MANUFACTURER).
