@@ -319,7 +319,7 @@ class PlatformDashboardView(APIView):
         # By-type breakdown via values().annotate() — 1 query for all types
         type_counts = dict(
             Company.objects.filter(
-                types__code__in=["CLIENT", "SUPPLIER", "MANUFACTURER"],
+                types__code__in=["CLIENT", "SUPPLIER"],
             )
             .values_list("types__code")
             .annotate(count=Count("id", distinct=True))

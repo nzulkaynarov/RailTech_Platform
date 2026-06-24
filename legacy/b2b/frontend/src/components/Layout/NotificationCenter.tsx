@@ -56,7 +56,7 @@ interface NotificationCenterProps {
 function notificationTargetPage(link: string | undefined, activeStatus: string): string {
     const l = (link || '').toLowerCase();
     if (l.includes('profile')) return 'profile';
-    const isSeller = activeStatus === 'SELLER' || activeStatus === 'MANUFACTURER';
+    const isSeller = activeStatus === 'SELLER';
     if (isSeller) {
         if (l.includes('quote')) return 'crm-quotes';
         return 'crm-deals'; // deals + contracts

@@ -50,7 +50,7 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
   // sellers. A buyer would only hit backend guards — and the buttons are
   // meaningless on their screen.
   const activeStatus = useUserStore((s) => s.activeStatus);
-  const isSellerSide = activeStatus === 'SELLER' || activeStatus === 'MANUFACTURER';
+  const isSellerSide = activeStatus === 'SELLER';
   const isBuyerSide = activeStatus === 'BUYER';
 
   if (isLoading && !deal) return <LoadingSkeleton />;

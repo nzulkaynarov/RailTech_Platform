@@ -1,17 +1,17 @@
 import { create } from 'zustand';
 
-/* ─── Company Status (what the company does on the platform) ────────── */
-export type CompanyStatus = 'BUYER' | 'MANUFACTURER' | 'SELLER';
+/* ─── Company Status (what the company does on the platform) ──────────
+   Two marketplace sides only: BUYER + SELLER. "Manufacturer" is an OEM brand
+   reference (catalog.Manufacturer), not a participant role (retired 2026-06-23). */
+export type CompanyStatus = 'BUYER' | 'SELLER';
 
 export const companyStatusLabels: Record<CompanyStatus, string> = {
   BUYER: 'companyStatus.BUYER',
-  MANUFACTURER: 'companyStatus.MANUFACTURER',
   SELLER: 'companyStatus.SELLER',
 };
 
 export const companyStatusDescriptions: Record<CompanyStatus, string> = {
   BUYER: 'companyStatusDesc.BUYER',
-  MANUFACTURER: 'companyStatusDesc.MANUFACTURER',
   SELLER: 'companyStatusDesc.SELLER',
 };
 
@@ -147,11 +147,13 @@ export const useUserStore = create<UserState>((set, _get) => ({
       const initials = `${(first_name || '')[0] || ''}${(last_name || '')[0] || ''}`.toUpperCase();
 
       // Map backend company_types to frontend CompanyStatus
+      // MANUFACTURER/PLANT were retired as participant roles → a selling company is
+      // a SELLER; "manufacturer" now lives only as an OEM brand (catalog.Manufacturer).
       const typeMap: Record<string, CompanyStatus> = {
         CLIENT: 'BUYER',
-        MANUFACTURER: 'MANUFACTURER',
         SUPPLIER: 'SELLER',
-        PLANT: 'MANUFACTURER',
+        MANUFACTURER: 'SELLER',
+        PLANT: 'SELLER',
       };
       const companyTypes: string[] = company?.company_types ?? [];
       // Per-membership capabilities set by the company OWNER.
@@ -181,7 +183,7 @@ export const useUserStore = create<UserState>((set, _get) => ({
       //   can_sell=false → drop SELLER / MANUFACTURER
       //   can_buy=false  → drop BUYER
       const statusEntries: CompanyStatusEntry[] = rawEntries.filter((e) => {
-        if ((e.status === 'SELLER' || e.status === 'MANUFACTURER') && !canSell) return false;
+        if (e.status === 'SELLER' && !canSell) return false;
         if (e.status === 'BUYER' && !canBuy) return false;
         return true;
       });

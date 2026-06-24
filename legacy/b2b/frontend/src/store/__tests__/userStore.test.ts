@@ -79,8 +79,8 @@ describe('userStore', () => {
   it('should keep valid CompanyStatus types', () => {
     const { setActiveStatus } = useUserStore.getState();
 
-    setActiveStatus('MANUFACTURER');
-    expect(useUserStore.getState().activeStatus).toBe('MANUFACTURER');
+    setActiveStatus('SELLER');
+    expect(useUserStore.getState().activeStatus).toBe('SELLER');
 
     setActiveStatus('SELLER');
     expect(useUserStore.getState().activeStatus).toBe('SELLER');

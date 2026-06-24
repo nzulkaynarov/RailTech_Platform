@@ -53,3 +53,15 @@ class TestCalculateItemPrices:
         item = _item("33.33", "0", "0", "0")
         QuoteCalculationService.calculate_item_prices(item, commit=False)
         assert item.final_price_excl_vat.as_tuple().exponent == -2
+
+    def test_line_discount_applied_after_margin(self):
+        # landed 100, +20% = 120 gross, −10% discount = 108.00
+        item = _item("100", "0", "0", "20")
+        item.discount_percent = Decimal("10")
+        QuoteCalculationService.calculate_item_prices(item, commit=False)
+        assert item.final_price_excl_vat == Decimal("108.00")
+
+    def test_zero_discount_keeps_gross(self):
+        item = _item("100", "0", "0", "20")  # discount default 0 → 120.00
+        QuoteCalculationService.calculate_item_prices(item, commit=False)
+        assert item.final_price_excl_vat == Decimal("120.00")

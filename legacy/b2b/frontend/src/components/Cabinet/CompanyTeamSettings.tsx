@@ -50,7 +50,7 @@ export function CompanyTeamSettings() {
       ? 'CLIENT'
       : activeStatus === 'SELLER'
         ? 'SUPPLIER'
-        : 'MANUFACTURER';
+        : 'SUPPLIER';
 
   const companyId = user?.company?.id ?? user?.primary_company?.id ?? null;
   const isOwner = user?.workspace_role === 'OWNER';

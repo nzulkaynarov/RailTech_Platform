@@ -1,10 +1,12 @@
 from rest_framework import serializers
 
 from master_data.models import Currency
+from master_data.serializers import DeliveryBasisSerializer
 
 from .models import (
     Act,
     ActivityLog,
+    ChargeType,
     Contract,
     Deal,
     Fulfillment,
@@ -14,6 +16,7 @@ from .models import (
     Message,
     Payment,
     Quote,
+    QuoteCharge,
     QuoteItem,
 )
 
@@ -64,6 +67,7 @@ class QuoteItemSerializer(serializers.ModelSerializer):
             "unit_code",
             "mpn",
             "gost_drawing",
+            "hs_code",
             "note",
             "is_incomplete",
             "assigned_at",
@@ -72,6 +76,7 @@ class QuoteItemSerializer(serializers.ModelSerializer):
             "logistics_cost",
             "customs_duty",
             "margin_percent",
+            "discount_percent",
             "landed_cost",
             "final_price_excl_vat",
         ]
@@ -110,10 +115,41 @@ class QuoteItemSerializer(serializers.ModelSerializer):
         return data
 
 
+class QuoteChargeSerializer(serializers.ModelSerializer):
+    """КП-level expense item / discount (UBL document AllowanceCharge)."""
+
+    charge_type = serializers.SlugRelatedField(slug_field="code", queryset=ChargeType.objects.all())
+    charge_type_name = serializers.CharField(source="charge_type.name", read_only=True)
+
+    class Meta:
+        model = QuoteCharge
+        fields = [
+            "id",
+            "quote",
+            "charge_type",
+            "charge_type_name",
+            "description",
+            "amount",
+            "rate_percent",
+            "is_deduction",
+            "created_by",
+            "created_at",
+        ]
+        read_only_fields = ["created_by", "created_at"]
+
+
 class QuoteSerializer(serializers.ModelSerializer):
     items = QuoteItemSerializer(many=True, read_only=True)
     status_name = serializers.CharField(source="status.name", read_only=True)
     status_code = serializers.CharField(source="status.code", read_only=True)
+    # Currency as code ("UZS") in both directions, like frozen_currency on items.
+    quote_currency = serializers.SlugRelatedField(
+        slug_field="code", queryset=Currency.objects.all(), required=False, allow_null=True
+    )
+    # Incoterm responsibility flags drive cost-row visibility in the КП builder.
+    delivery_basis_data = DeliveryBasisSerializer(source="delivery_basis", read_only=True)
+    # Internal cost breakdown — gated to seller/admin in to_representation().
+    charges = QuoteChargeSerializer(many=True, read_only=True)
 
     class Meta:
         model = Quote
@@ -125,9 +161,13 @@ class QuoteSerializer(serializers.ModelSerializer):
             "status_code",
             "status_name",
             "prepared_by",
+            "delivery_basis",
+            "delivery_basis_data",
+            "quote_currency",
             "tax_country",
             "vat_rate",
             "subtotal_excl_vat",
+            "charges_total",
             "vat_amount",
             "total_incl_vat",
             "valid_until",
@@ -137,11 +177,13 @@ class QuoteSerializer(serializers.ModelSerializer):
             "approved_by",
             "approved_at",
             "items",
+            "charges",
             "created_at",
             "updated_at",
         ]
         read_only_fields = [
             "subtotal_excl_vat",
+            "charges_total",
             "vat_amount",
             "total_incl_vat",
             "approved_by",
@@ -152,6 +194,31 @@ class QuoteSerializer(serializers.ModelSerializer):
             # never the client request body.
             "prepared_by",
         ]
+
+    # The КП-level cost breakdown (charges list + its total) reveals internal
+    # overhead/margin structure — seller/admin/superuser only. The buyer sees the
+    # final total_incl_vat, never WHY (the two-projection rule).
+    _SELLER_ONLY_FIELDS = ("charges", "charges_total")
+
+    def _viewer_is_privileged(self) -> bool:
+        if hasattr(self, "_priv_cache"):
+            return self._priv_cache
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        privileged = False
+        if user is not None and getattr(user, "is_authenticated", False):
+            from accounts.services.permissions import is_platform_admin_viewer, is_seller
+
+            privileged = bool(getattr(user, "is_superuser", False) or is_platform_admin_viewer(user) or is_seller(user))
+        self._priv_cache = privileged
+        return privileged
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if not self._viewer_is_privileged():
+            for field_name in self._SELLER_ONLY_FIELDS:
+                data.pop(field_name, None)
+        return data
 
 
 class DealListSerializer(serializers.ModelSerializer):

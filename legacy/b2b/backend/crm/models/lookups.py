@@ -64,3 +64,18 @@ class FulfillmentStatus(AbstractLookup):
     class Meta(AbstractLookup.Meta):
         verbose_name = _("Статус исполнения")
         verbose_name_plural = _("Справочник: Статусы исполнения")
+
+
+class ChargeType(AbstractLookup):
+    """
+    Справочник статей расхода уровня КП (UBL 2.1 document-level cac:AllowanceCharge).
+
+    Овнер компании пополняет список: фрахт, страховка, аренда склада, ЗП проектной
+    команды, комиссионные выплаты, сертификация, таможенный штраф и т.п. Эти статьи
+    добавляются на ВЕСЬ КП (не на позицию) и входят в TaxExclusiveAmount до НДС.
+    Seed-минимум: FREIGHT, INSURANCE, CUSTOMS, CERTIFICATION, RENT, PAYROLL, COMMISSION, OTHER.
+    """
+
+    class Meta(AbstractLookup.Meta):
+        verbose_name = _("Статья расхода")
+        verbose_name_plural = _("Справочник: Статьи расхода КП")

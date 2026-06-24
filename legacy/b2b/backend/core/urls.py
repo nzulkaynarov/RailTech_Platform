@@ -54,6 +54,7 @@ from crm.views import (
     MessageViewSet,
     PaymentViewSet,
     Phase2StatusChoicesView,
+    QuoteChargeViewSet,
     QuoteItemViewSet,
     QuoteStatusViewSet,
     QuoteViewSet,
@@ -82,6 +83,7 @@ router.register(r"catalog/stock-statuses", StockStatusViewSet, basename="stockst
 router.register(r"crm/deals", DealViewSet, basename="deal")
 router.register(r"crm/quotes", QuoteViewSet, basename="quote")
 router.register(r"crm/quote-items", QuoteItemViewSet, basename="quoteitem")
+router.register(r"crm/quote-charges", QuoteChargeViewSet, basename="quotecharge")
 router.register(r"crm/messages", MessageViewSet, basename="message")
 router.register(r"crm/activity-logs", ActivityLogViewSet, basename="activitylog")
 router.register(r"crm/deal-stages", DealStageViewSet, basename="dealstage")

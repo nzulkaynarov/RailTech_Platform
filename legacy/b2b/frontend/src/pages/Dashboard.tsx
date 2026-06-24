@@ -7,7 +7,6 @@ import {
   DollarSign,
   Calendar,
   MoreHorizontal,
-  BarChart3,
   ShoppingCart,
   AlertCircle,
   Loader2,
@@ -33,7 +32,6 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Progress } from '@/components/ui/progress';
 import { KPICard } from '@/components/ui/KPICard';
 import { OnboardingChecklist } from '@/components/Shared/OnboardingChecklist';
 import { QuoteApprovalQueue } from '@/components/CRM/QuoteApprovalQueue';
@@ -473,89 +471,6 @@ function SellerDashboard({ onProductClick, period: _period, stats, onNavigate }:
   );
 }
 
-// ─── MANUFACTURER Dashboard ──────────────────────────────────────────────
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function ManufacturerDashboard({ onProductClick: _onProductClick, period: _period, stats, onNavigate }: { onProductClick?: (id: string) => void; period: string; stats: DashboardStats | null; onNavigate: (page: string) => void }) {
-  const { t } = useTranslation();
-  const formatCurrency = useCurrencyStore((s) => s.format);
-  const { company } = useUserStore();
-
-  if (company.kycStatus !== 'verified') return <KYCPendingBanner onNavigate={onNavigate} />;
-
-  return (
-    <div className="flex flex-col gap-6">
-      {/* KPI Row */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KPICard
-          label={t('dashboardPage.kpi.activeRequests')}
-          value={String(stats?.active_requests ?? 0)}
-          icon={<FileText className="h-5 w-5 text-muted-foreground" />}
-          trend={{ value: `${stats?.active_requests_change ?? 0}% ${t('dashboardPage.vsPrevPeriod')}`, direction: (stats?.active_requests_change ?? 0) >= 0 ? "up" : "down" }}
-        />
-        <KPICard
-          label={t('dashboardPage.kpi.catalogItems')}
-          value={String(stats?.catalog_items ?? 0)}
-          icon={<AlertCircle className="h-5 w-5 text-muted-foreground" />}
-          trend={{ value: `${stats?.catalog_items_change ?? 0}% ${t('dashboardPage.vsPrevPeriod')}`, direction: (stats?.catalog_items_change ?? 0) >= 0 ? "up" : "down" }}
-        />
-        <KPICard
-          label={t('dashboardPage.kpi.requestCompletion')}
-          value={`${stats?.request_completion ?? 0}%`}
-          icon={<BarChart3 className="h-5 w-5 text-muted-foreground" />}
-        />
-        <KPICard
-          label={t('dashboardPage.kpi.dealsVolume')}
-          value={formatCurrency(stats?.deals_volume ?? 0)}
-          icon={<DollarSign className="h-5 w-5 text-muted-foreground" />}
-          trend={{ value: `${stats?.deals_volume_change ?? 0}% ${t('dashboardPage.vsPrevPeriod')}`, direction: (stats?.deals_volume_change ?? 0) >= 0 ? "up" : "down" }}
-        />
-      </div>
-
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {/* Bar Chart — Deals by Month */}
-        <Card className="lg:col-span-2 py-0 gap-0">
-          <CardHeader className="flex flex-row items-center justify-between px-4 py-3">
-            <CardTitle className="text-sm font-semibold">{t('dashboardPage.manufacturer.dealsByMonth')}</CardTitle>
-          </CardHeader>
-          <CardContent className="px-2 pb-4">
-            <div role="img" aria-label={t('dashboardPage.manufacturer.dealsByMonthChart')}>
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={stats?.deals_by_month ?? []}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(v: number) => formatCurrency(v)} />
-                <RechartsTooltip
-                  formatter={(value: number) => [formatCurrency(value), t('dashboardPage.seller.volume')]}
-                  contentStyle={{ borderRadius: '8px', fontSize: '12px', border: '1px solid var(--color-border)' }}
-                />
-                <Bar dataKey="value" fill="var(--color-chart-1)" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Completion */}
-        <Card className="py-0 gap-0">
-          <CardHeader className="px-4 py-3">
-            <CardTitle className="text-sm font-semibold">{t('dashboardPage.seller.requestCompletion')}</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col items-center gap-3 px-4 pb-4">
-            <span className="text-4xl font-bold text-primary tabular-nums">{stats?.request_completion ?? 0}%</span>
-            <p className="text-xs text-muted-foreground">{t('dashboardPage.goal')}: {stats?.request_completion_goal ?? 80}%</p>
-            <Progress value={stats?.request_completion ?? 0} className="h-2 w-full" />
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Bottom Row — Top Products */}
-      <TopProductsTable onProductClick={_onProductClick} onShowAll={() => onNavigate?.("products")} topProducts={stats?.top_products ?? []} />
-    </div>
-  );
-}
-
 // ─── Main Dashboard ─────────────────────────────────────────────────────
 
 interface DashboardProps {
@@ -640,8 +555,6 @@ export function Dashboard({ onProductClick, onNavigate }: DashboardProps) {
       {/* Role-based dashboard content — fallback to BuyerDashboard */}
       {activeStatus === 'SELLER' ? (
         <SellerDashboard onProductClick={onProductClick} period={period} stats={stats} onNavigate={onNavigate ?? (() => {})} />
-      ) : activeStatus === 'MANUFACTURER' ? (
-        <ManufacturerDashboard onProductClick={onProductClick} period={period} stats={stats} onNavigate={onNavigate ?? (() => {})} />
       ) : (
         <BuyerDashboard onProductClick={onProductClick} period={period} stats={stats} onNavigate={onNavigate ?? (() => {})} />
       )}

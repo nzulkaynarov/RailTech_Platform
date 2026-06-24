@@ -17,7 +17,7 @@ export function ManualModeBanner({ kind }: ManualModeBannerProps) {
   const role = useUserStore((s) => s.role);
   const activeStatus = useUserStore((s) => s.activeStatus);
   const showForAudience =
-    role === 'ADMIN' || activeStatus === 'SELLER' || activeStatus === 'MANUFACTURER';
+    role === 'ADMIN' || activeStatus === 'SELLER';
   if (!showForAudience) return null;
   return (
     <Alert variant="default" className="border-warning/40 bg-warning/5">

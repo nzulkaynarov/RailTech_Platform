@@ -7,14 +7,12 @@ import {
   HelpCircle,
   ChevronDown,
   BarChart3,
-  Factory,
   Layers,
   ClipboardList,
   User,
   LogOut,
   ChevronUp,
   Store,
-  Calculator,
   Handshake,
   Check,
   Receipt,
@@ -121,45 +119,6 @@ function getBuyerNavigation(activePage: string, t: TFn): NavItem[] {
   return items;
 }
 
-function getManufacturerNavigation(activePage: string, t: TFn): NavItem[] {
-  const items: NavItem[] = [
-    { label: t('shell.dashboard'), icon: <LayoutDashboard className="h-4 w-4" />, id: 'dashboard', active: activePage === 'dashboard' },
-    {
-      label: t('shell.nomenclature'), icon: <Package className="h-4 w-4" />,
-      children: [
-        { label: t('shell.products'), id: 'products', active: activePage === 'products' },
-        { label: t('shell.categories'), id: 'categories', active: activePage === 'categories' },
-        { label: t('shell.equipmentGroups'), id: 'equipment-groups', active: activePage === 'equipment-groups' },
-        { label: t('shell.catalogImport'), id: 'catalog-import', active: activePage === 'catalog-import' },
-      ],
-    },
-    // CRIT-3: MFG needs Excel Import the same way as SELLER.
-    {
-      label: t('shell.sourcing'), icon: <ShoppingCart className="h-4 w-4" />,
-      children: [
-        { label: t('shell.requests'), id: 'sourcing-requests', active: activePage === 'sourcing-requests' },
-        { label: t('shell.excelImport'), id: 'sourcing-import', active: activePage === 'sourcing-import' },
-      ],
-    },
-    { label: t('shell.myRequests'), icon: <ClipboardList className="h-4 w-4" />, id: 'my-requests', active: activePage === 'my-requests' },
-    { label: t('shell.deals'), icon: <Handshake className="h-4 w-4" />, id: 'crm-deals', active: activePage === 'crm-deals' },
-    { label: t('shell.quotes'), icon: <Calculator className="h-4 w-4" />, id: 'crm-quotes', active: activePage === 'crm-quotes' },
-    {
-      label: t('shell.billing'), icon: <Receipt className="h-4 w-4" />,
-      children: [
-        { label: t('shell.mySubscription'), id: 'my-subscription', active: activePage === 'my-subscription' },
-        { label: t('shell.contracts'), id: 'contracts', active: activePage === 'contracts' },
-        { label: t('shell.invoices'), id: 'invoices', active: activePage === 'invoices' },
-        // CRIT-5: MFG must see Payments in billing just like BUYER/SELLER.
-        { label: t('shell.payments'), id: 'payments', active: activePage === 'payments' },
-        { label: t('shell.acts'), id: 'acts', active: activePage === 'acts' },
-        { label: t('shell.fulfillments'), id: 'fulfillments', active: activePage === 'fulfillments' },
-      ],
-    },
-  ];
-  return items;
-}
-
 function getSellerNavigation(activePage: string, t: TFn): NavItem[] {
   const items: NavItem[] = [
     { label: t('shell.dashboard'), icon: <LayoutDashboard className="h-4 w-4" />, id: 'dashboard', active: activePage === 'dashboard' },
@@ -209,7 +168,6 @@ function getSellerNavigation(activePage: string, t: TFn): NavItem[] {
 function getNavigation(status: CompanyStatus, activePage: string, t: TFn): NavItem[] {
   switch (status) {
     case 'BUYER': return getBuyerNavigation(activePage, t);
-    case 'MANUFACTURER': return getManufacturerNavigation(activePage, t);
     case 'SELLER': return getSellerNavigation(activePage, t);
     default: return getSellerNavigation(activePage, t);
   }
@@ -231,8 +189,6 @@ function StatusIcon({ status, className }: { status: CompanyStatus; className?: 
   switch (status) {
     case 'BUYER':
       return <ShoppingCart className={className} />;
-    case 'MANUFACTURER':
-      return <Factory className={className} />;
     case 'SELLER':
       return <Store className={className} />;
   }
@@ -247,8 +203,6 @@ function statusColor(status: CompanyStatus): string {
   switch (status) {
     case 'BUYER':
       return 'text-info';
-    case 'MANUFACTURER':
-      return 'text-warning';
     case 'SELLER':
     default:
       return 'text-primary';

@@ -10,8 +10,8 @@ from core.optimistic_locking import OptimisticLockingMixin
 from core.permissions import IsCompanyMemberOrPlatformAdmin, IsPlatformAdmin
 from crm import services as crm_services
 from crm.constants import QuoteStatusCode
-from crm.models import Quote, QuoteItem, QuoteStatus
-from crm.serializers import QuoteItemSerializer, QuoteSerializer
+from crm.models import Quote, QuoteCharge, QuoteItem, QuoteStatus
+from crm.serializers import QuoteChargeSerializer, QuoteItemSerializer, QuoteSerializer
 
 
 def _chain_error_response(error):
@@ -513,6 +513,61 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
         domain_hint = item.product.domain_type.code if (item.product and item.product.domain_type) else None
         candidates = smart_match_candidates(raw, limit=5, domain_hint=domain_hint)
         return Response({"raw": raw, "candidates": candidates})
+
+
+@extend_schema_view(
+    list=extend_schema(summary="List КП-level expense items / discounts", tags=["CRM"]),
+    create=extend_schema(summary="Add КП-level expense item / discount", tags=["CRM"]),
+    destroy=extend_schema(summary="Remove КП-level expense item / discount", tags=["CRM"]),
+)
+class QuoteChargeViewSet(viewsets.ModelViewSet):
+    """CRUD for КП-level expense items / discounts (UBL document AllowanceCharge).
+
+    Building the cost breakdown is a SELLER action (mirrors QuoteItemViewSet):
+    only the seller team / superuser may write; the buyer never sees these rows.
+    """
+
+    serializer_class = QuoteChargeSerializer
+    permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
+    filterset_fields = {"quote": ["exact"], "quote__deal_id": ["exact"]}
+
+    def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return QuoteCharge.objects.none()
+        user = self.request.user
+        from accounts.services.permissions import seller_sees_all_deals
+
+        queryset = QuoteCharge.objects.select_related("charge_type", "quote").all()
+        if seller_sees_all_deals(user, self.request):
+            return queryset
+        # Buyers must never see the internal cost breakdown.
+        return queryset.none()
+
+    def _assert_seller(self):
+        from rest_framework.exceptions import PermissionDenied
+
+        from accounts.services.permissions import is_platform_admin_viewer, is_seller
+
+        user = self.request.user
+        if is_platform_admin_viewer(user):
+            raise PermissionDenied("ADMIN_VIEWER_CANNOT_ACT")
+        if not (getattr(user, "is_superuser", False) or is_seller(user)):
+            raise PermissionDenied("ONLY_SELLER_CAN_BUILD_QUOTE")
+
+    def perform_create(self, serializer):
+        self._assert_seller()
+        serializer.save(created_by=self.request.user)
+
+    def perform_update(self, serializer):
+        self._assert_seller()
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        self._assert_seller()
+        quote = instance.quote
+        instance.delete()
+        # save()-on-delete doesn't fire; recalc the КП so charges_total drops.
+        quote.recalculate_totals()
 
 
 @extend_schema_view(
