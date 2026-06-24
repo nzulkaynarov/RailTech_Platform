@@ -134,7 +134,45 @@ class SupplierOfferSerializer(serializers.ModelSerializer):
 # --- Main Product Serializer (PIM) ---
 
 
-class ProductSerializer(serializers.ModelSerializer):
+class _CostGateMixin:
+    """Strip supplier-cost fields (offers / base_price) from viewers who don't own
+    the product. Only the OWNING seller's team + platform admins see cost & supplier
+    identity — buyers, other sellers and anon never do (C1 cost-leak fix). React was
+    only hiding these client-side; the data still travelled in the API response.
+    """
+
+    cost_fields: tuple = ()
+
+    def _viewer_company_ids(self):
+        if hasattr(self, "_vci"):
+            return self._vci
+        user = getattr(self.context.get("request"), "user", None)
+        ids = set()
+        if user is not None and getattr(user, "is_authenticated", False):
+            ids = set(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
+        self._vci = ids
+        return ids
+
+    def _viewer_owns_or_admin(self, obj) -> bool:
+        user = getattr(self.context.get("request"), "user", None)
+        if not (user is not None and getattr(user, "is_authenticated", False)):
+            return False
+        if getattr(user, "is_superuser", False) or getattr(user, "is_platform_admin", False):
+            return True
+        owner_id = getattr(obj, "owner_company_id", None)
+        return bool(owner_id and owner_id in self._viewer_company_ids())
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if not self._viewer_owns_or_admin(instance):
+            for field_name in self.cost_fields:
+                data.pop(field_name, None)
+        return data
+
+
+class ProductSerializer(_CostGateMixin, serializers.ModelSerializer):
+    cost_fields = ("offers", "base_price")
+
     # Readable Nested Objects (for GET)
     category_data = CategorySerializer(source="category", read_only=True)
     owner_company_data = CompanyLightSerializer(source="owner_company", read_only=True)
@@ -258,8 +296,10 @@ class ProductSerializer(serializers.ModelSerializer):
         return None
 
 
-class ProductListSerializer(serializers.ModelSerializer):
+class ProductListSerializer(_CostGateMixin, serializers.ModelSerializer):
     """Lightweight serializer for list endpoints — no nested offers/documents."""
+
+    cost_fields = ("base_price",)
 
     category_data = CategorySerializer(source="category", read_only=True)
     owner_company_data = CompanyLightSerializer(source="owner_company", read_only=True)
