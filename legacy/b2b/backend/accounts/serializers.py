@@ -2,7 +2,29 @@ from django.conf import settings
 from django.core.validators import RegexValidator
 from rest_framework import serializers
 
-from .models import Company, CompanyMember, CompanyRoleApplication, CustomUser, KYCDocument, SupplierSubscription
+from .models import (
+    Company,
+    CompanyMember,
+    CompanyRole,
+    CompanyRoleApplication,
+    CustomUser,
+    KYCDocument,
+    SupplierSubscription,
+)
+
+
+class CompanyRoleSerializer(serializers.ModelSerializer):
+    """A company-defined role with its permission set (the access matrix)."""
+
+    member_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CompanyRole
+        fields = ["id", "company", "name", "permissions", "is_system", "member_count", "created_at", "updated_at"]
+        read_only_fields = ["company", "is_system", "created_at", "updated_at"]
+
+    def get_member_count(self, obj):
+        return getattr(obj, "member_count", None) if hasattr(obj, "member_count") else obj.members.count()
 
 
 class KYCDocumentSerializer(serializers.ModelSerializer):
@@ -19,6 +41,7 @@ class CompanyMemberSerializer(serializers.ModelSerializer):
     role_name = serializers.CharField(source="role.name", read_only=True)
     role_code = serializers.CharField(source="role.code", read_only=True)
     company_name = serializers.CharField(source="company.name", read_only=True)
+    company_role_name = serializers.CharField(source="company_role.name", read_only=True)
 
     class Meta:
         model = CompanyMember
@@ -31,6 +54,8 @@ class CompanyMemberSerializer(serializers.ModelSerializer):
             "role",
             "role_code",
             "role_name",
+            "company_role",
+            "company_role_name",
             "is_primary",
             "is_active",
             "can_sell",

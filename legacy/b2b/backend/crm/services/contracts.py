@@ -145,9 +145,16 @@ def sign_contract_by_client(
     contract = Contract.objects.select_for_update().select_related("deal").get(pk=contract_id)
     if is_platform_admin_viewer(client_user):
         return None, "ADMIN_VIEWER_CANNOT_ACT"
+    # Additive guard (defense-in-depth): legacy can_buy capability OR explicit
+    # contract.sign CompanyRole permission. has_explicit_company_role_perm skips
+    # the legacy can_buy fallback so only members with an intentional CompanyRole
+    # assignment pass through this new path (no accidental promotion).
+    from ._params import has_explicit_company_role_perm
+
     if not (
         getattr(client_user, "is_superuser", False)
         or is_member_of(client_user, contract.deal.company_id, capability="buy")
+        or has_explicit_company_role_perm(client_user, contract.deal.company_id, "contract.sign")
     ):
         return None, "MEMBER_REQUIRED_FOR_ACTION"
     if contract.status_code not in {ContractStatusCode.DRAFT, ContractStatusCode.PENDING_CLIENT}:
@@ -191,7 +198,21 @@ def sign_contract_by_manager(
     # Seller side signs as "manager". Single-seller model: any can_sell member
     # (RailTech). The accepted-bid-supplier check is subsumed by is_seller — a
     # winning supplier's member also carries can_sell.
-    if not (getattr(manager_user, "is_superuser", False) or is_seller(manager_user)):
+    # Additive guard (defense-in-depth): legacy is_seller() OR explicit contract.sign
+    # CompanyRole permission in any active SELLER-type company membership.
+    # has_explicit_company_role_perm skips the legacy fallback so only members with
+    # an intentional CompanyRole assignment pass through this new path.
+    from accounts.constants import SELLER_COMPANY_TYPES
+    from ._params import has_explicit_company_role_perm
+
+    seller_memberships = manager_user.memberships.filter(
+        is_active=True, company__types__code__in=SELLER_COMPANY_TYPES
+    ).only("company_id")
+    has_contract_sign_perm = any(
+        has_explicit_company_role_perm(manager_user, m.company_id, "contract.sign")
+        for m in seller_memberships
+    )
+    if not (getattr(manager_user, "is_superuser", False) or is_seller(manager_user) or has_contract_sign_perm):
         return None, "MEMBER_REQUIRED_FOR_ACTION"
     # Paid-seller gate: signing commits the seller — requires an active subscription.
     if sub_err := assert_seller_can_operate(manager_user):

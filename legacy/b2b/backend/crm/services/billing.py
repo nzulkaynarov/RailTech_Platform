@@ -178,7 +178,17 @@ def record_payment(
     if is_platform_admin_viewer(actor):
         return None, "ADMIN_VIEWER_CANNOT_ACT"
     # Payment is recorded by the buyer side of the deal -- must be member w/ can_buy.
-    if not (getattr(actor, "is_superuser", False) or is_member_of(actor, invoice.deal.company_id, capability="buy")):
+    # Additive guard (defense-in-depth): legacy can_buy capability OR explicit
+    # payment.record CompanyRole permission. has_explicit_company_role_perm skips
+    # the legacy can_buy fallback so only members with an intentional CompanyRole
+    # assignment pass through this new path (no accidental promotion).
+    from ._params import has_explicit_company_role_perm
+
+    if not (
+        getattr(actor, "is_superuser", False)
+        or is_member_of(actor, invoice.deal.company_id, capability="buy")
+        or has_explicit_company_role_perm(actor, invoice.deal.company_id, "payment.record")
+    ):
         return None, "MEMBER_REQUIRED_FOR_ACTION"
     if invoice.status_code in {InvoiceStatusCode.CANCELLED}:
         return None, "INVOICE_CANCELLED"

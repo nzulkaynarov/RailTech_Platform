@@ -434,6 +434,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
                         "company__verification_status",
                         "company__country",
                         "role",
+                        "company_role",
                     ).prefetch_related("company__types"),
                 ),
             )

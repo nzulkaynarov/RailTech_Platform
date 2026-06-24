@@ -356,6 +356,39 @@ export const accountsApi = {
 		await apiClient.delete(`accounts/users/${userId}/remove-membership/${membershipId}/`);
 	},
 
+	// ─── Company Roles (custom RBAC) ──────────────────────────────────
+	getCompanyRoles: async (companyId?: number) => {
+		const url = companyId
+			? `accounts/company-roles/?company=${companyId}`
+			: 'accounts/company-roles/';
+		// DRF list is paginated — unwrap to the array the UI maps over.
+		const response = await apiClient.get<PaginatedResponse<CompanyRole>>(url);
+		return response.data.results;
+	},
+	createCompanyRole: async (data: { name: string; permissions: string[] }) => {
+		const response = await apiClient.post<CompanyRole>('accounts/company-roles/', data);
+		return response.data;
+	},
+	updateCompanyRole: async (id: number, data: { name?: string; permissions?: string[] }) => {
+		const response = await apiClient.patch<CompanyRole>(`accounts/company-roles/${id}/`, data);
+		return response.data;
+	},
+	deleteCompanyRole: async (id: number) => {
+		await apiClient.delete(`accounts/company-roles/${id}/`);
+	},
+	assignMemberRole: async (payload: { member_id: number; role_id: number }) => {
+		const response = await apiClient.post<{ id: number; company_role: number | null }>(
+			'accounts/company-roles/assign/',
+			payload,
+		);
+		return response.data;
+	},
+	getPermissionCatalog: async () => {
+		// Backend returns { groups: [...] } — unwrap to the array the UI maps over.
+		const response = await apiClient.get<{ groups: PermissionGroup[] }>('accounts/permissions/');
+		return response.data.groups;
+	},
+
 	// ─── Role Applications (admin + owner self-service) ────────────────
 	getRoleApplications: async (params?: { search?: string; status?: string; requested_type?: string; ordering?: string }) => {
 		const response = await apiClient.get<PaginatedResponse<RoleApplication>>(
@@ -418,6 +451,25 @@ export interface Subscription {
 	notes: string;
 	created_at: string;
 	updated_at: string;
+}
+
+export interface CompanyRole {
+	id: number;
+	name: string;
+	permissions: string[];
+	is_system: boolean;
+	member_count: number;
+}
+
+export interface PermissionDef {
+	code: string;
+	label: string;
+}
+
+export interface PermissionGroup {
+	key: string;
+	label: string;
+	permissions: PermissionDef[];
 }
 
 export interface RoleApplication {

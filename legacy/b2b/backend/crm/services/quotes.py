@@ -10,6 +10,7 @@ from accounts.services.permissions import has_workspace_role
 
 from ..constants import DealStageCode, QuoteStatusCode
 from ..models import ActivityLog, Deal, Quote, QuoteItem, QuoteItemHistory, QuoteStatus
+from ._params import has_explicit_company_role_perm
 from .deals import transition_deal_stage
 
 
@@ -88,6 +89,11 @@ def can_send_quote_to_client(actor, quote) -> bool:
     chain). Mirrors ADR-0002: the seller team builds AND sends its own quotes;
     sending is no longer platform-admin-only. The READY_TO_SEND status guard
     itself stays in QuoteLifecycleService.send_to_client.
+
+    Permission hardening (additive, defense-in-depth): also accepts a member
+    holding the explicit 'quote.send' CompanyRole permission — this satisfies the
+    new Role+Permission-set model while keeping the legacy WorkspaceRole path as
+    a fallback for members not yet migrated to a CompanyRole.
     """
     if getattr(actor, "is_superuser", False) or getattr(actor, "is_platform_admin", False):
         return True
@@ -95,7 +101,12 @@ def can_send_quote_to_client(actor, quote) -> bool:
     if not company_id:
         return False
     # has_workspace_role already lets OWNER through as the escape hatch.
-    return has_workspace_role(actor, company_id, [WorkspaceRoleCode.SALES_MANAGER])
+    # has_explicit_company_role_perm is additive: passes ONLY when an explicit
+    # CompanyRole is assigned with the quote.send permission — it does NOT fall back
+    # to legacy can_sell (which would incorrectly promote all default members).
+    return has_workspace_role(actor, company_id, [WorkspaceRoleCode.SALES_MANAGER]) or has_explicit_company_role_perm(
+        actor, company_id, "quote.send"
+    )
 
 
 def approval_queue_for(user):

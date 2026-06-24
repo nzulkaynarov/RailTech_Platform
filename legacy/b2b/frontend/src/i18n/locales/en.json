@@ -1123,7 +1123,7 @@
     "emailPlaceholder": "Employee email",
     "inviteSuccess": "User {{email}} has been invited.",
     "inviteError": "Failed to send invitation.",
-    "inviteHint": "Roles and capabilities can be changed later — Buy/Sell switches control deal access and subscription scope.",
+    "inviteHint": "Assign a company role to control what each member can do; you can change it any time below.",
     "ownerOnly": "Only the company Admin can invite new employees.",
     "capabilityUpdated": "Capabilities updated",
     "roleUpdated": "Role updated",
@@ -1140,6 +1140,43 @@
     "roleOptions": {
       "MANAGER": "Manager (Create requests)",
       "ACCOUNTANT": "Accountant (Acts, Invoices)"
+    },
+    "companyRole": "Company role",
+    "noRole": "No role",
+    "assignRole": "Assign role",
+    "rolesSection": {
+      "title": "Company Roles",
+      "subtitle": "Create roles with permission sets and assign them to team members",
+      "addRole": "Add role",
+      "editRole": "Edit role",
+      "deleteRole": "Delete role",
+      "deleteConfirm": "Delete role \"{{name}}\"? This action cannot be undone.",
+      "deleteBlockedByMembers": "Cannot delete role — reassign members first.",
+      "memberCount": "{{count}} member",
+      "memberCount_one": "{{count}} member",
+      "memberCount_other": "{{count}} members",
+      "systemBadge": "System",
+      "roleName": "Role name",
+      "roleNamePlaceholder": "E.g. Logistics, Procurement Manager",
+      "permissions": "Permissions",
+      "noPermissions": "No permissions",
+      "saveRole": "Save role",
+      "createSuccess": "Role created",
+      "updateSuccess": "Role updated",
+      "deleteSuccess": "Role deleted",
+      "assignSuccess": "Role assigned",
+      "systemRoleReadonly": "System roles cannot be edited or deleted.",
+      "noRoles": "No roles yet. Create the first role."
+    },
+    "permissionGroups": {
+      "deals": "Deals",
+      "quotes": "Quotes",
+      "team": "Team",
+      "catalog": "Catalog",
+      "analytics": "Analytics",
+      "sourcing": "Sourcing",
+      "contracts": "Contracts",
+      "billing": "Billing"
     }
   },
   "company": {
