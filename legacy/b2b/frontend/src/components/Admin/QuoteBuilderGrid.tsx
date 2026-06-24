@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { QuoteItem, crmApi } from '@/api/crmApi';
-import { Loader2, Save, FileDown, AlertTriangle, Plus, Trash2 } from 'lucide-react';
+import { Loader2, Save, FileDown, AlertTriangle, Plus, Trash2, Sparkles } from 'lucide-react';
 import { useQuoteItems, useUpdateQuoteItem, useCreateQuoteItem, useDeleteQuoteItem, useDeal, useSetQuoteDeliveryBasis } from '@/hooks/useCRM';
 import { formatMoney, calculateLineTotal } from '@/utils/decimal';
 import { DeliveryBasisSelect } from '@/components/CRM/DeliveryBasisSelect';
@@ -21,6 +21,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { QuoteApprovalChain } from '@/components/CRM/QuoteApprovalChain';
+import { AICatalogMatchDialog } from '@/components/Admin/AICatalogMatchDialog';
 
 interface QuoteBuilderGridProps {
 	dealId?: number;
@@ -42,6 +43,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	const [isExporting, setIsExporting] = useState(false);
 	const [newItemName, setNewItemName] = useState('');
 	const [showAddRow, setShowAddRow] = useState(false);
+	const [showAiMatch, setShowAiMatch] = useState(false);
 
 	useEffect(() => {
 		if (quoteItems) {
@@ -188,6 +190,16 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 					<Badge variant="secondary">{currency}</Badge>
 				</div>
 				<div className="flex gap-1.5">
+					{localItems.some(item => !item.product) && (
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={() => setShowAiMatch(true)}
+						>
+							<Sparkles className="size-3" />
+							{t('aiMatch.button')}
+						</Button>
+					)}
 					<Button
 						variant="outline"
 						size="sm"
@@ -490,6 +502,12 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 					</div>
 				</CardContent>
 			</Card>
+
+			<AICatalogMatchDialog
+				open={showAiMatch}
+				onOpenChange={setShowAiMatch}
+				items={localItems}
+			/>
 
 			<AlertDialog open={deleteTarget != null} onOpenChange={(o) => !o && setDeleteTarget(null)}>
 				<AlertDialogContent>

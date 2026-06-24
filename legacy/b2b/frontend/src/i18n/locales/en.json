@@ -10,6 +10,22 @@
     "closedWon": "Closed (Won)",
     "closedLost": "Closed (Lost)"
   },
+  "aiMatch": {
+    "button": "AI catalog match",
+    "title": "AI catalog match",
+    "description": "Match unmatched line items to catalog products using AI. Click a suggestion to bind it.",
+    "loading": "Searching the catalog…",
+    "bind": "Bind this product",
+    "bound": "Product bound",
+    "confidence": "Confidence",
+    "noMatches": "No matches found",
+    "noMatchesDesc": "AI could not find catalog products for these line items.",
+    "allMatched": "All items matched",
+    "allMatchedDesc": "Every line item is already linked to a catalog product.",
+    "aiDisabled": "AI matching is disabled",
+    "aiDisabledDesc": "The AI matching service is currently unavailable. Try assigning products manually.",
+    "retryHint": "Something went wrong. Please close and try again."
+  },
   "common": {
     "all": "All",
     "loading": "Loading...",
