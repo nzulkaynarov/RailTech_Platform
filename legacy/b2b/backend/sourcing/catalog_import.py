@@ -195,6 +195,10 @@ def _apply_product(ctx: _Ctx, fields: dict):
             existing.gost_drawing = fields["gost"]
         if uom:
             existing.uom = uom
+        # Backfill ownership for an orphaned card (C3), but never hijack a product
+        # another tenant already owns — de-dup matches globally on brand+MPN.
+        if ctx.supplier and existing.owner_company_id is None:
+            existing.owner_company = ctx.supplier
         existing.save()
         return existing, False
 
@@ -207,6 +211,9 @@ def _apply_product(ctx: _Ctx, fields: dict):
         domain_type=domain,
         status=ctx.status_draft,
         uom=uom,
+        # Stamp the importing seller as owner so they can see/manage their own cards
+        # (C3) — without this, imported products are orphaned and invisible to them.
+        owner_company=ctx.supplier,
     )
     return product, True
 

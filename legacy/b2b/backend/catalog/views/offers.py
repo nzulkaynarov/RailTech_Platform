@@ -1,6 +1,9 @@
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import permissions, viewsets
+from rest_framework.exceptions import PermissionDenied
+
+from accounts.constants import SELLER_COMPANY_TYPES
 
 from ..models import SupplierOffer
 from ..serializers import SupplierOfferSerializer
@@ -33,19 +36,61 @@ class SupplierOfferViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["product", "supplier", "stock_status"]
 
-    def get_queryset(self):
-        qs = SupplierOffer.objects.select_related("supplier", "product", "currency", "delivery_basis", "stock_status")
-        # Non-admin users only see active offers
+    def _seller_company_ids(self):
+        """Active SUPPLIER/MANUFACTURER companies the user belongs to."""
         user = self.request.user
-        if not (user.is_authenticated and (user.is_platform_admin)):
-            qs = qs.filter(is_active=True)
-        return qs
+        if not user.is_authenticated:
+            return []
+        return list(
+            user.memberships.filter(
+                is_active=True,
+                company__types__code__in=SELLER_COMPANY_TYPES,
+            ).values_list("company_id", flat=True)
+        )
+
+    def get_queryset(self):
+        # An offer carries the seller's cost + supplier identity — confidential (C1/C2).
+        # Only the platform admin and the offer's OWNING seller may read it; buyers and
+        # anonymous callers see nothing here (they get prices via КП quotes, not offers).
+        qs = SupplierOffer.objects.select_related("supplier", "product", "currency", "delivery_basis", "stock_status")
+        user = self.request.user
+        if user.is_authenticated and user.is_platform_admin:
+            return qs
+        company_ids = self._seller_company_ids()
+        if not company_ids:
+            return qs.none()
+        return qs.filter(supplier_id__in=company_ids)
+
+    def perform_create(self, serializer):
+        # A seller can only create offers for their OWN company. The supplier in the
+        # body MUST be one of the seller's companies — a competitor's id is rejected
+        # (C2 spoofing). Platform admin may create an offer for any supplier.
+        user = self.request.user
+        if user.is_platform_admin:
+            serializer.save()
+            return
+        company_ids = self._seller_company_ids()
+        if not company_ids:
+            raise PermissionDenied("NO_SELLER_MEMBERSHIP")
+        supplier = serializer.validated_data.get("supplier")
+        if getattr(supplier, "id", None) not in company_ids:
+            raise PermissionDenied("CANNOT_CREATE_OFFER_FOR_OTHER_SUPPLIER")
+        serializer.save()
+
+    def perform_update(self, serializer):
+        # Non-admins cannot reassign an offer to another supplier (M6-style guard).
+        user = self.request.user
+        if user.is_platform_admin:
+            serializer.save()
+            return
+        serializer.save(supplier=serializer.instance.supplier)
 
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
             return [permissions.AllowAny()]
-        # Write: manager/admin OR supplier with operational subscription
-        from core.permissions import IsPlatformAdmin, IsSupplierWithActiveSubscription
+        # Write: (platform admin OR supplier with operational subscription) AND, for a
+        # specific offer, ownership of that offer's supplier company (object-level).
+        from core.permissions import IsOfferSupplierOrAdmin, IsPlatformAdmin, IsSupplierWithActiveSubscription
 
         class _ManagerOrOperationalSupplier(permissions.BasePermission):
             def has_permission(self, request, view):
@@ -53,4 +98,4 @@ class SupplierOfferViewSet(viewsets.ModelViewSet):
                     request, view
                 ) or IsSupplierWithActiveSubscription().has_permission(request, view)
 
-        return [permissions.IsAuthenticated(), _ManagerOrOperationalSupplier()]
+        return [permissions.IsAuthenticated(), _ManagerOrOperationalSupplier(), IsOfferSupplierOrAdmin()]

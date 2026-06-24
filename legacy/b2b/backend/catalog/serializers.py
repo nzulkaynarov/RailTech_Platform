@@ -116,6 +116,7 @@ class SupplierOfferSerializer(serializers.ModelSerializer):
         model = SupplierOffer
         fields = [
             "id",
+            "product",
             "supplier",
             "supplier_data",
             "supplier_sku",
@@ -233,7 +234,9 @@ class ProductSerializer(_CostGateMixin, serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["sku", "created_at", "updated_at"]
+        # owner_company is stamped by the server (perform_create) and immutable after —
+        # making it writable would let a seller PATCH their product to another tenant (M6).
+        read_only_fields = ["sku", "created_at", "updated_at", "owner_company"]
 
     def get_status_name(self, obj):
         return obj.status.name if obj.status else None
