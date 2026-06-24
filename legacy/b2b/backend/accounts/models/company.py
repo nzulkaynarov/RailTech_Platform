@@ -228,6 +228,59 @@ class Contact(models.Model):
         return f"{self.name} — {self.company.name}"
 
 
+class CompanyRole(models.Model):
+    """A company-defined role with an explicit permission set (the access matrix).
+
+    World-standard Role+Permission-set: the company admin creates named roles and ticks
+    permission checkboxes (accounts.constants.Permission). Replaces the cryptic
+    can_sell/can_buy toggles. Scoped per company — each company has its own role policy.
+    See Docs/ops/rbac-roles-design-2026-06-25.md.
+    """
+
+    company = models.ForeignKey(
+        "accounts.Company",
+        on_delete=models.CASCADE,
+        related_name="roles",
+        verbose_name=_("Компания"),
+    )
+    name = models.CharField(max_length=120, verbose_name=_("Название роли"))
+    permissions = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name=_("Права"),
+        help_text=_("Список кодов прав (accounts.constants.Permission)"),
+    )
+    is_system = models.BooleanField(
+        default=False,
+        verbose_name=_("Системная (Администратор компании)"),
+        help_text=_("Полноправная роль администратора компании — нельзя удалить/урезать"),
+    )
+    created_by = models.ForeignKey(
+        "accounts.CustomUser",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("Кем создана"),
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _("Роль компании")
+        verbose_name_plural = _("Роли компаний")
+        ordering = ["-is_system", "name"]
+        constraints = [
+            models.UniqueConstraint(fields=["company", "name"], name="unique_role_name_per_company"),
+        ]
+
+    def has_perm(self, code: str) -> bool:
+        return self.is_system or code in (self.permissions or [])
+
+    def __str__(self):
+        return f"{self.name} — {self.company.name}"
+
+
 class CompanyMember(models.Model):
     """
     Связь «Пользователь ↔ Компания» с ролью.
@@ -254,6 +307,18 @@ class CompanyMember(models.Model):
         related_name="+",
         verbose_name=_("Роль в компании"),
         help_text=_("Функциональная роль внутри рабочего пространства"),
+    )
+    # New per-company role with an explicit permission set (Role+Permission-set model,
+    # rbac-roles-design-2026-06-25). Additive: when set it drives access; `role`
+    # (legacy WorkspaceRole) is kept during the transition and as a derivation fallback.
+    company_role = models.ForeignKey(
+        "accounts.CompanyRole",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="members",
+        verbose_name=_("Роль (с правами)"),
+        help_text=_("Роль компании с набором прав; назначается администратором компании"),
     )
     is_primary = models.BooleanField(
         default=False,
