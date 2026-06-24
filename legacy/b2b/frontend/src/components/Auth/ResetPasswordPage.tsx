@@ -57,12 +57,16 @@ export const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ uid, token
     }, [uid, token, t]);
 
     const onSubmit = async (data: FormData) => {
+        if (!uid || !token) {
+            setServerError(t('resetPassword.invalidLink'));
+            return;
+        }
         setLoading(true);
         setServerError('');
         try {
             await accountsApi.resetPassword({
-                uid: uid!,
-                token: token!,
+                uid,
+                token,
                 password: data.password,
             });
             setSuccess(true);

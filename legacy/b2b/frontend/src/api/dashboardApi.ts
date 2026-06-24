@@ -22,7 +22,6 @@ export interface DashboardStats {
 
 export interface PageStats {
   sourcing: { total: number; new: number; in_progress: number; completed: number };
-  sourcing_match: { unrecognized: number; matches: number; need_review: number; accuracy: string };
   deals: { total: number; active: number; quote_sent: number; closed_won: number };
   quotes: { drafts: number; sent: number; approved: number; under_review: number; total_amount: string; pipeline: string };
   clients: { total: number; verified: number; awaiting_kyc: number; unverified: number };

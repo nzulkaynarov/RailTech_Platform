@@ -165,7 +165,7 @@ def _queue_invoices() -> list[dict[str, Any]]:
     qs = (
         Invoice.objects.select_related("contract", "contract__deal", "contract__deal__company")
         .filter(
-            status__in=["ISSUED", "PARTIAL", "OVERDUE"],
+            status__code__in=["ISSUED", "PARTIAL", "OVERDUE"],
             due_date__lt=today,
         )
         .order_by("due_date")

@@ -36,7 +36,7 @@ class PageStatsView(APIView):
     def get(self, request):
         from django.core.cache import cache
 
-        from crm.models import Deal, Quote, QuoteItem
+        from crm.models import Deal, Quote
         from notifications.models import Notification
 
         cache_key = f"page_stats_{request.user.id}"
@@ -49,17 +49,14 @@ class PageStatsView(APIView):
         if is_staff:
             deals_qs = Deal.objects.all()
             quotes_qs = Quote.objects.all()
-            quote_items_qs = QuoteItem.objects.all()
         else:
             user_company_ids = request.user.memberships.filter(is_active=True).values_list("company_id", flat=True)
             deals_qs = Deal.objects.filter(company_id__in=user_company_ids)
             quotes_qs = Quote.objects.filter(deal__company_id__in=user_company_ids)
-            quote_items_qs = QuoteItem.objects.filter(quote__deal__company_id__in=user_company_ids)
 
         deal_stats = self._get_deal_stats(deals_qs)
         quote_stats = self._get_quote_stats(quotes_qs)
         sourcing_stats = self._get_sourcing_stats(deals_qs)
-        match_stats = self._get_match_stats(quote_items_qs)
         client_stats = self._get_client_stats()
         catalog_stats = self._get_catalog_stats()
         user_stats = self._get_user_stats(is_staff)
@@ -74,12 +71,6 @@ class PageStatsView(APIView):
                 "new": sourcing_stats["new"],
                 "in_progress": sourcing_stats["in_progress"],
                 "completed": sourcing_stats["completed"],
-            },
-            "sourcing_match": {
-                "unrecognized": match_stats["unmatched"],
-                "matches": match_stats["matched"],
-                "need_review": match_stats["unmatched"],
-                "accuracy": f'{match_stats["accuracy"]}%',
             },
             "deals": deal_stats,
             "quotes": {
@@ -150,18 +141,6 @@ class PageStatsView(APIView):
             in_progress=Count("id", filter=Q(stage__code__in=["SOURCING", "CALCULATING"])),
             completed=Count("id", filter=Q(stage__code__in=["QUOTE_SENT", "CONTRACT_SIGNED", "CLOSED_WON"])),
         )
-
-    @staticmethod
-    def _get_match_stats(quote_items_qs) -> dict:
-        """Aggregate Smart Match statistics — single query via aggregate()."""
-        stats = quote_items_qs.aggregate(
-            total=Count("id"),
-            matched=Count("id", filter=Q(product__isnull=False)),
-            unmatched=Count("id", filter=Q(product__isnull=True)),
-        )
-        total = stats["total"]
-        stats["accuracy"] = round((stats["matched"] / total * 100) if total > 0 else 0)
-        return stats
 
     @staticmethod
     def _get_client_stats() -> dict:
@@ -395,7 +374,7 @@ class PlatformDashboardView(APIView):
             status__in=["PENDING", "DOCUMENTS_REQUIRED", "PAYMENT_REQUIRED"],
         ).count()
         overdue_invoices = Invoice.objects.filter(
-            status__in=["ISSUED", "PARTIAL", "OVERDUE"],
+            status__code__in=["ISSUED", "PARTIAL", "OVERDUE"],
             due_date__lt=now.date(),
         ).count()
         return {

@@ -44,6 +44,10 @@ export const ExcelUpload: React.FC<ExcelUploadProps> = ({ dealId, onUploadSucces
     // show a real bar ONLY when there's real progress, and an honest elapsed
     // timer otherwise — never a number that pretends to know how far along it is.
     const hasRealProgress = !!task?.progress && task.progress.total > 0;
+    // Safe percent: guard against a missing/zero total (division would yield
+    // NaN/Infinity and break the Progress bar) — fall back to 0.
+    const progressTotal = task?.progress?.total;
+    const progressPercent = progressTotal ? Math.round(((task?.progress?.current ?? 0) / progressTotal) * 100) : 0;
     const [elapsedSec, setElapsedSec] = useState(0);
     useEffect(() => {
         if (!isImporting) { setElapsedSec(0); return; }
@@ -140,9 +144,9 @@ export const ExcelUpload: React.FC<ExcelUploadProps> = ({ dealId, onUploadSucces
                     </div>
                     {hasRealProgress ? (
                         <>
-                            <Progress value={Math.round((task!.progress!.current / task!.progress!.total) * 100)} />
+                            <Progress value={progressPercent} />
                             <p className="mt-1 text-right text-xs text-muted-foreground tabular-nums">
-                                {task!.progress!.current} / {task!.progress!.total}
+                                {task?.progress?.current ?? 0} / {task?.progress?.total ?? 0}
                             </p>
                         </>
                     ) : (
