@@ -321,20 +321,27 @@ class QuoteLifecycleService:
                 "Only READY_TO_SEND quotes (internally approved) can be sent to the client."
             )
 
-        # Render the PDF off the request thread, after commit (F1.6) — rendering it
-        # synchronously here wrote the file inside this atomic block, orphaning it if a
-        # later step rolled back. The client opens the КП via export-pdf, which renders
-        # lazily if this task hasn't finished yet.
-        if not quote.pdf_file:
-            from ..tasks import render_document_pdf
+        # Mint the public no-login access token once (idempotent across re-sends of the
+        # same КП version). Lets an offline/registered client open the client projection
+        # without an account; rotate only by issuing a new version.
+        import secrets
 
-            transaction.on_commit(lambda: render_document_pdf.delay("quote", quote_id))
+        if not quote.public_access_token:
+            quote.public_access_token = secrets.token_urlsafe(32)
 
         # Freeze prices
         sent_status = QuoteStatus.objects.filter(code=QuoteStatusCode.SENT).first()
         quote.status = sent_status
         quote.frozen_at = timezone.now()
-        quote.save(update_fields=["status", "frozen_at", "updated_at"])
+        quote.save(update_fields=["status", "frozen_at", "public_access_token", "updated_at"])
+
+        # Email the КП off the request thread, after commit (F1.6 — no render inside the
+        # atomic block, no orphan on rollback). The task renders the PDF if needed, then
+        # emails it (with the public link) to the recipient — registered client OR offline
+        # contact. Unified send: one action, channel adapts to who the recipient is.
+        from ..tasks import send_quote_email
+
+        transaction.on_commit(lambda: send_quote_email.delay(quote_id))
 
         # Change deal stage via FSM
         transition_deal_stage(

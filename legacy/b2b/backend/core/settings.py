@@ -531,6 +531,7 @@ REST_FRAMEWORK = {
         "register": "5/hour",  # account/verification-email spam, per IP
         "password_set": "20/hour",  # setup/reset-password token submission, per IP (brute-force)
         "login": "10/minute",  # token obtain, per IP (brute-force; lenient enough for typos)
+        "public_quote": "30/minute",  # unauthenticated КП-by-token view; blunts token brute-forcing
     },
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,

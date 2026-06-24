@@ -3783,6 +3783,31 @@ export interface paths {
         patch: operations["notifications_mark_all_read_partial_update"];
         trace?: never;
     };
+    "/api/v1/public/quotes/{token}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Public КП view/download by token
+         * @description Unauthenticated КП view/download by secret token (client base, CB-public-link).
+         *
+         *     Lets an offline or registered client open the КП the seller emailed them WITHOUT a
+         *     login. Streams the CLIENT projection PDF only (quote_pdf.html exposes no margin/cost/
+         *     charges). Only a SENT (frozen) КП with a token is reachable; an unknown token 404s.
+         *     Rate-limited to blunt token brute-forcing despite the 256-bit space.
+         */
+        get: operations["public_quotes_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sourcing/attachments/": {
         parameters: {
             query?: never;
@@ -15656,6 +15681,26 @@ export interface operations {
         };
         responses: {
             /** @description All notifications marked as read */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    public_quotes_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;

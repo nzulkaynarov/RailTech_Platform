@@ -56,6 +56,7 @@ from crm.views import (
     ChargeTemplateViewSet,
     ChargeTypeViewSet,
     Phase2StatusChoicesView,
+    PublicQuoteView,
     QuoteChargeViewSet,
     QuoteItemViewSet,
     QuoteStatusViewSet,
@@ -167,6 +168,8 @@ urlpatterns = (
         path("api/v1/admin/activity/", AdminActivityView.as_view(), name="admin-activity"),
         path("api/v1/crm/leads/", LeadCreateView.as_view(), name="lead-create"),
         path("api/v1/crm/status-choices/", Phase2StatusChoicesView.as_view(), name="phase2-status-choices"),
+        # Public, unauthenticated КП view/download by secret token (client base CB-public-link).
+        path("api/v1/public/quotes/<str:token>/", PublicQuoteView.as_view(), name="public-quote"),
         path("api/v1/system-settings/", SystemSettingsView.as_view(), name="system-settings"),
         path("api/v1/accounts/me/", MeView.as_view(), name="current-user"),
         path("api/v1/health/", health_check, name="health_check"),

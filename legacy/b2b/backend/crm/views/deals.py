@@ -109,16 +109,33 @@ class DealViewSet(viewsets.ModelViewSet):
         return super().destroy(request, *args, **kwargs)
 
     def perform_create(self, serializer):
-        primary_company = self.request.user.primary_company
-        if not primary_company:
-            from rest_framework.exceptions import ValidationError
+        from rest_framework.exceptions import PermissionDenied, ValidationError
 
-            raise ValidationError(
-                {
-                    "company": _("User has no associated company. Please complete your company profile."),
-                }
-            )
-        save_kwargs = dict(client=self.request.user, company=primary_company)
+        user = self.request.user
+        contact_id = self.request.data.get("contact_id")
+
+        if contact_id:
+            # Seller opens a deal for an OFFLINE client from their own book (client base).
+            # company = the client's company, client = None, contact = the offline contact.
+            from accounts.models import Contact
+            from accounts.services.clients import seller_clients
+
+            contact = Contact.objects.select_related("company").filter(pk=contact_id).first()
+            if contact is None:
+                raise ValidationError({"contact_id": _("Contact not found.")})
+            # Ownership: the contact's company must be in THIS seller's book (no cross-tenant).
+            if not seller_clients(user).filter(pk=contact.company_id).exists():
+                raise PermissionDenied("CONTACT_NOT_IN_YOUR_BOOK")
+            save_kwargs = dict(company=contact.company, contact=contact, client=None)
+        else:
+            # Buyer-initiated deal: scoped to the user's own company.
+            primary_company = user.primary_company
+            if not primary_company:
+                raise ValidationError(
+                    {"company": _("User has no associated company. Please complete your company profile.")}
+                )
+            save_kwargs = dict(client=user, company=primary_company)
+
         if not serializer.validated_data.get("stage"):
             draft_stage = DealStage.objects.filter(code=DealStageCode.DRAFT).first()
             if draft_stage:

@@ -1,0 +1,1 @@
+Коммерческое предложение RailTech №{{ deal_id }} (в.{{ quote_version }})

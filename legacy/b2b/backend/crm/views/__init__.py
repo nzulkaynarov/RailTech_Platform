@@ -20,6 +20,7 @@ from crm.views.messages import ActivityLogViewSet, MessageViewSet  # noqa: F401
 from crm.views.quotes import (  # noqa: F401
     ChargeTemplateViewSet,
     ChargeTypeViewSet,
+    PublicQuoteView,
     QuoteChargeViewSet,
     QuoteItemViewSet,
     QuoteStatusViewSet,
@@ -37,6 +38,7 @@ __all__ = [
     "ChargeTypeViewSet",
     "ChargeTemplateViewSet",
     "QuoteStatusViewSet",
+    "PublicQuoteView",
     # messages
     "MessageViewSet",
     "ActivityLogViewSet",
