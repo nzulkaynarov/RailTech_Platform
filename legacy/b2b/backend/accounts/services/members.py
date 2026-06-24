@@ -8,6 +8,7 @@ from django.utils.http import urlsafe_base64_encode
 
 from notifications.emails import send_templated_email
 
+from ..constants import WorkspaceRoleCode
 from ..models import Company, CompanyMember, CustomUser, SystemRole, WorkspaceRole
 
 logger = logging.getLogger(__name__)
@@ -126,7 +127,7 @@ def company_active_admins(company: Company):
     OWNER is the internal code; its display label is «Администратор компании».
     This is the company's irreducible admin set — see remove_company_member.
     """
-    return CompanyMember.objects.filter(company=company, is_active=True, role__code="OWNER")
+    return CompanyMember.objects.filter(company=company, is_active=True, role__code=WorkspaceRoleCode.OWNER)
 
 
 def remove_company_member(
@@ -139,13 +140,47 @@ def remove_company_member(
     accountable for KYC/billing. Removing the last one would orphan the company,
     so it's refused; the admin role must be transferred first.
     """
-    is_admin = membership.is_active and membership.role_id and membership.role.code == "OWNER"
+    is_admin = membership.is_active and membership.role_id and membership.role.code == WorkspaceRoleCode.OWNER
     if is_admin:
         other_admins = company_active_admins(membership.company).exclude(pk=membership.pk)
         if not other_admins.exists():
             return None, "CANNOT_REMOVE_LAST_COMPANY_ADMIN"
     membership.delete()
     return True, None
+
+
+def set_member_workspace_role(
+    membership: "CompanyMember",
+    role_code: str,
+) -> Tuple[Optional["CompanyMember"], Optional[str]]:
+    """
+    Change a member's workspace role — the Company Admin's delegation tool.
+
+    Invariants:
+      - role must exist and be applicable to the company's type(s);
+      - never-orphan: the LAST active admin (OWNER) cannot be demoted away from
+        OWNER (transfer/promote someone else first) → CANNOT_DEMOTE_LAST_COMPANY_ADMIN.
+    """
+    role = WorkspaceRole.objects.filter(code=role_code).first()
+    if not role:
+        return None, "WORKSPACE_ROLE_NOT_FOUND"
+
+    applicable = role.applicable_to_types.all()
+    if applicable.exists():
+        company_type_codes = set(membership.company.types.values_list("code", flat=True))
+        allowed_codes = set(applicable.values_list("code", flat=True))
+        if not (company_type_codes & allowed_codes):
+            return None, "WORKSPACE_ROLE_NOT_APPLICABLE_TO_COMPANY_TYPE"
+
+    currently_admin = membership.is_active and membership.role_id and membership.role.code == WorkspaceRoleCode.OWNER
+    if currently_admin and role.code != WorkspaceRoleCode.OWNER:
+        other_admins = company_active_admins(membership.company).exclude(pk=membership.pk)
+        if not other_admins.exists():
+            return None, "CANNOT_DEMOTE_LAST_COMPANY_ADMIN"
+
+    membership.role = role
+    membership.save(update_fields=["role"])
+    return membership, None
 
 
 def toggle_user_active(

@@ -503,6 +503,56 @@ class CompanyViewSet(viewsets.ModelViewSet):
         )
 
     @extend_schema(
+        summary="Set a member's workspace role",
+        description=(
+            "Company Admin (OWNER) delegates / changes a member's workspace role. "
+            "Refuses to demote the last admin (never-orphan)."
+        ),
+        request=inline_serializer(
+            "SetMemberRole",
+            fields={
+                "member_id": drf_serializers.IntegerField(),
+                "role": drf_serializers.CharField(),
+            },
+        ),
+        responses={
+            200: OpenApiResponse(description="Role updated"),
+            403: OpenApiResponse(description="Only Company Admin can change roles"),
+            404: OpenApiResponse(description="Member not found"),
+            409: OpenApiResponse(description="Cannot demote the last admin"),
+        },
+        tags=["Accounts"],
+    )
+    @action(detail=True, methods=["post"], url_path="set-member-role")
+    def set_member_role(self, request, pk=None):
+        company = self.get_object()
+        # Authorization: Company Admin (OWNER) of this company, or platform staff.
+        if not request.user.is_platform_admin:
+            is_admin = CompanyMember.objects.filter(
+                user=request.user, company=company, is_active=True, role__code=WorkspaceRoleCode.OWNER
+            ).exists()
+            if not is_admin:
+                return Response({"detail": "ONLY_COMPANY_ADMIN_CAN_CHANGE_ROLES"}, status=status.HTTP_403_FORBIDDEN)
+
+        member_id = request.data.get("member_id")
+        role_code = request.data.get("role")
+        if not member_id or not role_code:
+            return Response({"detail": "MEMBER_ID_AND_ROLE_REQUIRED"}, status=400)
+        member = CompanyMember.objects.filter(pk=member_id, company=company).select_related("role").first()
+        if not member:
+            return Response({"detail": "MEMBER_NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)
+
+        result, error = services.set_member_workspace_role(member, role_code)
+        if error:
+            http_status = (
+                status.HTTP_409_CONFLICT
+                if error == "CANNOT_DEMOTE_LAST_COMPANY_ADMIN"
+                else status.HTTP_400_BAD_REQUEST
+            )
+            return Response({"detail": error}, status=http_status)
+        return Response({"id": result.id, "user_id": result.user_id, "role": result.role.code})
+
+    @extend_schema(
         summary="Invite team member",
         description=(
             "Invite a new user to the company by email. "

@@ -328,6 +328,14 @@ export const accountsApi = {
 		}>(`accounts/companies/${companyId}/update-member-capabilities/`, payload);
 		return response.data;
 	},
+	// Company Admin changes a member's workspace role (promote/demote/transfer).
+	setMemberRole: async (companyId: number, payload: { member_id: number; role: string }) => {
+		const response = await apiClient.post<{ id: number; user_id: number; role: string }>(
+			`accounts/companies/${companyId}/set-member-role/`,
+			payload,
+		);
+		return response.data;
+	},
 	getWorkspaceRoles: async (companyType?: string) => {
 		const url = companyType
 			? `accounts/workspace-roles/?company_type=${encodeURIComponent(companyType)}`

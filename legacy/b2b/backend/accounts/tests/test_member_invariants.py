@@ -7,7 +7,7 @@ accountable for KYC/billing; removing the last one would orphan the company.
 import pytest
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
-from accounts.services import remove_company_member
+from accounts.services import remove_company_member, set_member_workspace_role
 
 
 @pytest.fixture
@@ -54,3 +54,51 @@ def test_can_remove_non_admin_member(company_with_admin):
     result, error = remove_company_member(member)
     assert error is None
     assert result is True
+
+
+# ─── set_member_workspace_role (delegation) ─────────────────────────────────
+
+
+@pytest.mark.django_db
+def test_cannot_demote_last_admin(company_with_admin):
+    _company, admin, _owner_role, manager_role = company_with_admin
+    result, error = set_member_workspace_role(admin, manager_role.code)
+    assert result is None
+    assert error == "CANNOT_DEMOTE_LAST_COMPANY_ADMIN"
+    admin.refresh_from_db()
+    assert admin.role.code == "OWNER"  # unchanged
+
+
+@pytest.mark.django_db
+def test_can_demote_admin_after_promoting_another(company_with_admin):
+    company, admin, owner_role, manager_role = company_with_admin
+    second_user = CustomUser.objects.create_user(email="a2@acme.test", username="a2@acme.test", password="pw")
+    second = CompanyMember.objects.create(user=second_user, company=company, role=manager_role, is_active=True)
+
+    # Promote the second member to admin, then the first can be demoted.
+    _r, e1 = set_member_workspace_role(second, owner_role.code)
+    assert e1 is None
+    result, error = set_member_workspace_role(admin, manager_role.code)
+    assert error is None
+    assert result.role.code == "SALES_MANAGER"
+
+
+@pytest.mark.django_db
+def test_promote_member_to_admin(company_with_admin):
+    company, _admin, owner_role, manager_role = company_with_admin
+    user = CustomUser.objects.create_user(email="m@acme.test", username="m@acme.test", password="pw")
+    member = CompanyMember.objects.create(user=user, company=company, role=manager_role, is_active=True)
+
+    result, error = set_member_workspace_role(member, owner_role.code)
+    assert error is None
+    assert result.role.code == "OWNER"
+
+
+@pytest.mark.django_db
+def test_unknown_role_rejected(company_with_admin):
+    company, _admin, _owner_role, manager_role = company_with_admin
+    user = CustomUser.objects.create_user(email="x@acme.test", username="x@acme.test", password="pw")
+    member = CompanyMember.objects.create(user=user, company=company, role=manager_role, is_active=True)
+    result, error = set_member_workspace_role(member, "NONEXISTENT_ROLE")
+    assert result is None
+    assert error == "WORKSPACE_ROLE_NOT_FOUND"

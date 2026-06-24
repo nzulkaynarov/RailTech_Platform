@@ -24,6 +24,7 @@ from .members import (
     company_active_admins,
     invite_workspace_member,
     remove_company_member,
+    set_member_workspace_role,
     toggle_user_active,
 )
 from .permissions import (
@@ -73,6 +74,7 @@ __all__ = [
     "reset_password",
     "revoke_user_refresh_tokens",
     "send_password_reset_email",
+    "set_member_workspace_role",
     "submit_company_profile",
     "toggle_user_active",
     "upload_kyc_document",
