@@ -4,6 +4,7 @@ Public API re-exported so existing import paths keep working.
 """
 
 from .billing import Act, Invoice, InvoiceItem, Payment
+from .charges import ChargeTemplate, QuoteCharge
 from .contracts import Contract
 from .deals import ActivityLog, Deal, Lead, Message
 from .fulfillment import Fulfillment
@@ -16,13 +17,14 @@ from .lookups import (
     InvoiceStatus,
     QuoteStatus,
 )
-from .quotes import Quote, QuoteCharge, QuoteItem, QuoteItemHistory
+from .quotes import Quote, QuoteItem, QuoteItemHistory
 from .sequences import DocumentSequence
 
 __all__ = [
     "Act",
     "ActStatus",
     "ActivityLog",
+    "ChargeTemplate",
     "ChargeType",
     "Contract",
     "ContractStatus",

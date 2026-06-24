@@ -20,6 +20,7 @@ export interface QuoteItem {
 	unit_code?: string;
 	mpn?: string;
 	gost_drawing?: string;
+	hs_code?: string;
 	note?: string;
 	is_incomplete?: boolean;
 	frozen_base_price: string;
@@ -27,12 +28,41 @@ export interface QuoteItem {
 	logistics_cost: string;
 	customs_duty: string;
 	margin_percent: string;
+	discount_percent: string;
 	landed_cost: string;
 	final_price_excl_vat: string;
 	assigned_at?: string | null;
 }
 
 export type DealItem = QuoteItem;
+
+// Incoterms 2020 cost-responsibility flags — drive which cost rows the КП builder
+// shows / requires for the selected delivery basis (code reads flags, no hardcode).
+export interface DeliveryBasis {
+	id: number;
+	code: string;
+	name: string;
+	description?: string;
+	seller_pays_freight: boolean;
+	seller_pays_insurance: boolean;
+	seller_pays_import: boolean;
+	seller_pays_delivery: boolean;
+}
+
+// КП-level expense item / discount (UBL document AllowanceCharge). Seller-only —
+// the buyer never receives these rows (server gates them).
+export interface QuoteCharge {
+	id: number;
+	quote: number;
+	charge_type: string;          // ChargeType code, e.g. 'FREIGHT'
+	charge_type_name?: string;
+	description?: string;
+	amount: string;
+	rate_percent?: string | null; // % of subtotal; takes priority over amount
+	is_deduction: boolean;        // true = discount (−), false = charge (+)
+	created_by?: number | null;
+	created_at?: string;
+}
 
 export interface Quote {
 	id: number;
@@ -41,10 +71,15 @@ export interface Quote {
 	status: number;
 	status_code: string;
 	status_name: string;
+	delivery_basis?: number | null;
+	delivery_basis_data?: DeliveryBasis | null;
+	quote_currency?: string | null;
 	tax_country?: number | null;
 	vat_rate?: string;
 	items: QuoteItem[];
+	charges?: QuoteCharge[];       // seller-only; absent for buyers
 	subtotal_excl_vat: string;
+	charges_total?: string;        // seller-only
 	vat_amount: string;
 	total_incl_vat: string;
 	valid_until?: string | null;
@@ -187,6 +222,10 @@ export const crmApi = {
 		const response = await apiClient.get<{ code: string; name: string }[]>('crm/quote-statuses/');
 		return response.data;
 	},
+	getChargeTypes: async () => {
+		const response = await apiClient.get<{ id: number; code: string; name: string }[]>('crm/charge-types/');
+		return response.data;
+	},
 	getQuoteItems: async (params?: { deal_id?: number, product_is_null?: boolean }) => {
 		let url = 'crm/quote-items/';
 		if (params) {
@@ -284,6 +323,34 @@ export const crmApi = {
 	createQuote: async (data: { deal: number; notes?: string; valid_until?: string }) => {
 		const response = await apiClient.post<Quote>('crm/quotes/', data);
 		return response.data;
+	},
+	// Seller sets КП-level fields (currency, notes, validity).
+	updateQuote: async (id: number, data: Partial<Pick<Quote, 'quote_currency' | 'notes' | 'valid_until'>>) => {
+		const response = await apiClient.patch<Quote>(`crm/quotes/${id}/`, data);
+		return response.data;
+	},
+	// Seller picks the Incoterm → server sets the basis AND auto-applies its charge
+	// template (the default expense items for that basis). Dedicated endpoint, not a
+	// plain PATCH, so the template side-effect is explicit.
+	setQuoteDeliveryBasis: async (id: number, deliveryBasis: number) => {
+		const response = await apiClient.post<Quote>(`crm/quotes/${id}/set-delivery-basis/`, { delivery_basis: deliveryBasis });
+		return response.data;
+	},
+	// ─── КП-level expense items / discounts (UBL document AllowanceCharge) ───
+	getQuoteCharges: async (quoteId: number) => {
+		const response = await apiClient.get<PaginatedResponse<QuoteCharge>>(`crm/quote-charges/?quote=${quoteId}`);
+		return response.data.results;
+	},
+	createQuoteCharge: async (data: { quote: number; charge_type: string; description?: string; amount?: string; rate_percent?: string | null; is_deduction?: boolean }) => {
+		const response = await apiClient.post<QuoteCharge>('crm/quote-charges/', data);
+		return response.data;
+	},
+	updateQuoteCharge: async (id: number, data: Partial<QuoteCharge>) => {
+		const response = await apiClient.patch<QuoteCharge>(`crm/quote-charges/${id}/`, data);
+		return response.data;
+	},
+	deleteQuoteCharge: async (id: number) => {
+		await apiClient.delete(`crm/quote-charges/${id}/`);
 	},
 	generateQuotePDF: async (id: number) => {
 		const response = await apiClient.post<{ url: string }>(`crm/quotes/${id}/generate-pdf/`);

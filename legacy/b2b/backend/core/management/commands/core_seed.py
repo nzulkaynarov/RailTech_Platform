@@ -18,7 +18,7 @@ from accounts.models import (
     WorkspaceRole,
 )
 from catalog.models import DomainType, ProductStatus, StockStatus
-from crm.models import ChargeType, DealStage, QuoteStatus
+from crm.models import ChargeTemplate, ChargeType, DealStage, QuoteStatus
 from master_data.models import Country, Currency, DeliveryBasis, UnitOfMeasure
 from notifications.models import NotificationType
 
@@ -119,6 +119,32 @@ class Command(BaseCommand):
         ]
         for code, name in charge_types:
             _seed(ChargeType, code, name=name)
+
+        # ─── 4c. Шаблоны статей расхода по базисам (Incoterm cost profiles) ───
+        # При выборе базиса на КП эти статьи авто-добавляются (продавец потом правит).
+        # Зеркалит матрицу ответственности: продавец видит только свои слои затрат.
+        # Овнер кастомизирует шаблоны в админке (Справочник: Шаблоны статей расхода).
+        charge_templates = {
+            "CFR": ["FREIGHT"],
+            "CPT": ["FREIGHT"],
+            "CIF": ["FREIGHT", "INSURANCE"],
+            "CIP": ["FREIGHT", "INSURANCE"],
+            "DAP": ["FREIGHT", "INSURANCE"],
+            "DPU": ["FREIGHT", "INSURANCE"],
+            "DDP": ["FREIGHT", "INSURANCE", "CUSTOMS", "CERTIFICATION"],
+        }
+        for basis_code, type_codes in charge_templates.items():
+            basis = DeliveryBasis.objects.filter(code=basis_code).first()
+            if not basis:
+                continue
+            for order, type_code in enumerate(type_codes):
+                charge_type = ChargeType.objects.filter(code=type_code).first()
+                if charge_type:
+                    ChargeTemplate.objects.update_or_create(
+                        delivery_basis=basis,
+                        charge_type=charge_type,
+                        defaults={"sort_order": order},
+                    )
 
         # ─── 5. Системные роли ───
         # Только две: ADMIN (Platform Admin, владелец платформы) и USER.
