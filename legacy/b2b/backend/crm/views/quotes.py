@@ -606,6 +606,12 @@ class QuoteStatusViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
     pagination_class = None
 
+    def list(self, request, *args, **kwargs):
+        # Lightweight {code,name} feed (no serializer_class needed) — the frontend
+        # status dropdowns consume codes, not full objects.
+        data = [{"code": status.code, "name": status.name} for status in self.get_queryset()]
+        return Response(data)
+
 
 @extend_schema_view(
     list=extend_schema(summary="List КП expense-item types (ChargeType lookup)", tags=["CRM"]),
