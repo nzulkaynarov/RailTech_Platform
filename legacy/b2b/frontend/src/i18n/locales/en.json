@@ -1095,6 +1095,18 @@
     "operationFailed": "Operation failed",
     "uploadFailure": "Upload failed"
   },
+  "chargeTemplates": {
+    "title": "Charge templates",
+    "subtitle": "Charges auto-applied to a КП when its delivery basis is selected. If empty, the platform's global defaults apply.",
+    "basis": "Basis",
+    "chargeType": "Charge",
+    "default": "Default",
+    "empty": "No custom templates yet — global defaults apply.",
+    "add": "Add a template charge",
+    "hint": "A template is tied to an Incoterm basis. Selecting that basis on a КП auto-adds these charges — the seller edits them afterwards.",
+    "added": "Template added",
+    "duplicate": "This charge already exists for this basis."
+  },
   "team": {
     "title": "Company Team",
     "subtitle": "Manage employee access to the dashboard",
@@ -2020,6 +2032,7 @@
       "business": "Business",
       "company": "Company",
       "team": "Team",
+      "templates": "Charge templates",
       "system": "System",
       "platform": "Platform"
     },

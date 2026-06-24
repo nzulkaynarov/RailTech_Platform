@@ -18,6 +18,7 @@ import { useUserStore, companyStatusLabels } from '@/store/userStore';
 import { useThemeStore } from '@/store/themeStore';
 import { useSystemSettings, useUpdateSystemSettings } from '@/hooks/useSystemSettings';
 import { CompanyTeamSettings } from '@/components/Cabinet/CompanyTeamSettings';
+import { ChargeTemplatesSettings } from '@/components/Cabinet/ChargeTemplatesSettings';
 
 function SettingRow({ icon: Icon, title, description, children }: {
   icon: React.ComponentType<{ className?: string }>;
@@ -41,9 +42,10 @@ function SettingRow({ icon: Icon, title, description, children }: {
 
 export function SettingsPage() {
   const { t, i18n } = useTranslation();
-  const { role, company } = useUserStore();
+  const { role, company, activeStatus } = useUserStore();
   const { theme, setTheme } = useThemeStore();
   const isAdmin = role === 'ADMIN';
+  const isSeller = activeStatus === 'SELLER';
   // Fake rows trimmed — currency/timezone/dateFormat/density/sidebar didn't
   // feed back into any consumer and made the panel feel like a mock. Only
   // Language (i18next) and Theme (themeStore) actually change the UI.
@@ -61,6 +63,8 @@ export function SettingsPage() {
           {/* Workspace members manage their team here; the OWNER also gets the
               invite form (gated inside CompanyTeamSettings). Hidden for Platform Admin. */}
           {!isAdmin && <TabsTrigger value="team">{t('settings.tabs.team')}</TabsTrigger>}
+          {/* Charge templates — seller Company Admin business config (org-admin zone). */}
+          {!isAdmin && isSeller && <TabsTrigger value="templates">{t('settings.tabs.templates')}</TabsTrigger>}
           {isAdmin && <TabsTrigger value="company">{t('settings.tabs.company')}</TabsTrigger>}
           {isAdmin && <TabsTrigger value="platform">{t('settings.tabs.platform')}</TabsTrigger>}
         </TabsList>
@@ -100,6 +104,13 @@ export function SettingsPage() {
         {!isAdmin && (
           <TabsContent value="team" className="space-y-4">
             <CompanyTeamSettings />
+          </TabsContent>
+        )}
+
+        {/* Charge templates — seller Company Admin manages per-Incoterm defaults */}
+        {!isAdmin && isSeller && (
+          <TabsContent value="templates" className="space-y-4">
+            <ChargeTemplatesSettings />
           </TabsContent>
         )}
 

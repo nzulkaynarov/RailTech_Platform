@@ -206,6 +206,28 @@ export const useChargeTypes = () => useQuery({
     staleTime: 5 * 60_000,
 });
 
+// Org-admin: the company's per-Incoterm charge templates.
+export const useChargeTemplates = () => useQuery({
+    queryKey: ['charge-templates'],
+    queryFn: crmApi.getChargeTemplates,
+});
+
+export const useCreateChargeTemplate = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (data: Parameters<typeof crmApi.createChargeTemplate>[0]) => crmApi.createChargeTemplate(data),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['charge-templates'] }),
+    });
+};
+
+export const useDeleteChargeTemplate = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (id: number) => crmApi.deleteChargeTemplate(id),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['charge-templates'] }),
+    });
+};
+
 export const useQuoteCharges = (quoteId?: number) => useQuery({
     queryKey: ['quote-charges', quoteId],
     queryFn: () => crmApi.getQuoteCharges(quoteId as number),

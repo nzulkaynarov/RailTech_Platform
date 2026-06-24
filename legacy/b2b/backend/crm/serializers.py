@@ -1,11 +1,12 @@
 from rest_framework import serializers
 
-from master_data.models import Currency
+from master_data.models import Currency, DeliveryBasis
 from master_data.serializers import DeliveryBasisSerializer
 
 from .models import (
     Act,
     ActivityLog,
+    ChargeTemplate,
     ChargeType,
     Contract,
     Deal,
@@ -121,6 +122,34 @@ class ChargeTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = ChargeType
         fields = ["id", "code", "name"]
+
+
+class ChargeTemplateSerializer(serializers.ModelSerializer):
+    """Company-Admin CRUD for per-Incoterm charge templates (org-admin zone).
+
+    `company` is set by the viewset from the requester's seller company — never
+    from the request body — so a Company Admin can only manage their own templates.
+    """
+
+    delivery_basis = serializers.SlugRelatedField(slug_field="code", queryset=DeliveryBasis.objects.all())
+    delivery_basis_name = serializers.CharField(source="delivery_basis.name", read_only=True)
+    charge_type = serializers.SlugRelatedField(slug_field="code", queryset=ChargeType.objects.all())
+    charge_type_name = serializers.CharField(source="charge_type.name", read_only=True)
+
+    class Meta:
+        model = ChargeTemplate
+        fields = [
+            "id",
+            "delivery_basis",
+            "delivery_basis_name",
+            "charge_type",
+            "charge_type_name",
+            "default_amount",
+            "default_rate_percent",
+            "is_deduction",
+            "sort_order",
+            "is_active",
+        ]
 
 
 class QuoteChargeSerializer(serializers.ModelSerializer):

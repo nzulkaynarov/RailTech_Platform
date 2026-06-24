@@ -10,8 +10,9 @@ from core.optimistic_locking import OptimisticLockingMixin
 from core.permissions import IsCompanyMemberOrPlatformAdmin, IsPlatformAdmin
 from crm import services as crm_services
 from crm.constants import QuoteStatusCode
-from crm.models import ChargeType, Quote, QuoteCharge, QuoteItem, QuoteStatus
+from crm.models import ChargeTemplate, ChargeType, Quote, QuoteCharge, QuoteItem, QuoteStatus
 from crm.serializers import (
+    ChargeTemplateSerializer,
     ChargeTypeSerializer,
     QuoteChargeSerializer,
     QuoteItemSerializer,
@@ -615,6 +616,68 @@ class ChargeTypeViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
     pagination_class = None
 
-    def list(self, request, *args, **kwargs):
-        data = [{"code": s.code, "name": s.name} for s in self.get_queryset()]
-        return Response(data)
+
+@extend_schema_view(
+    list=extend_schema(summary="List the company's charge templates", tags=["CRM"]),
+    create=extend_schema(summary="Add a charge template", tags=["CRM"]),
+    destroy=extend_schema(summary="Remove a charge template", tags=["CRM"]),
+)
+class ChargeTemplateViewSet(viewsets.ModelViewSet):
+    """Company-Admin manages their own per-Incoterm charge templates (org-admin zone).
+
+    Scoped to the requester's seller company — they never see or touch another
+    tenant's templates, nor the platform's global defaults (those are the fallback
+    applied automatically when a company has no template for a basis).
+    """
+
+    serializer_class = ChargeTemplateSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = None
+
+    def _seller_company_id(self):
+        from accounts.services.permissions import primary_seller_company_id
+
+        return primary_seller_company_id(self.request.user)
+
+    def _assert_company_admin(self, company_id):
+        from rest_framework.exceptions import PermissionDenied
+
+        from accounts.constants import WorkspaceRoleCode
+
+        user = self.request.user
+        if getattr(user, "is_superuser", False):
+            return
+        if not company_id:
+            raise PermissionDenied("NO_SELLER_COMPANY")
+        is_admin = user.memberships.filter(
+            company_id=company_id, is_active=True, role__code=WorkspaceRoleCode.OWNER
+        ).exists()
+        if not is_admin:
+            raise PermissionDenied("ONLY_COMPANY_ADMIN_CAN_MANAGE_TEMPLATES")
+
+    def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return ChargeTemplate.objects.none()
+        company_id = self._seller_company_id()
+        if not company_id:
+            return ChargeTemplate.objects.none()
+        return ChargeTemplate.objects.filter(company_id=company_id).select_related("delivery_basis", "charge_type")
+
+    def perform_create(self, serializer):
+        from rest_framework.exceptions import ValidationError
+
+        company_id = self._seller_company_id()
+        self._assert_company_admin(company_id)
+        basis = serializer.validated_data["delivery_basis"]
+        charge_type = serializer.validated_data["charge_type"]
+        if ChargeTemplate.objects.filter(company_id=company_id, delivery_basis=basis, charge_type=charge_type).exists():
+            raise ValidationError({"charge_type": "TEMPLATE_ALREADY_EXISTS"})
+        serializer.save(company_id=company_id)
+
+    def perform_update(self, serializer):
+        self._assert_company_admin(self._seller_company_id())
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        self._assert_company_admin(self._seller_company_id())
+        instance.delete()
