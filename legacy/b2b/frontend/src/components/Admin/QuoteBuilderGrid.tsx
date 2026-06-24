@@ -3,8 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { QuoteItem, crmApi } from '@/api/crmApi';
 import { Loader2, Save, FileDown, AlertTriangle, Plus, Trash2 } from 'lucide-react';
-import { useQuoteItems, useUpdateQuoteItem, useCreateQuoteItem, useDeleteQuoteItem, useDeal } from '@/hooks/useCRM';
+import { useQuoteItems, useUpdateQuoteItem, useCreateQuoteItem, useDeleteQuoteItem, useDeal, useSetQuoteDeliveryBasis } from '@/hooks/useCRM';
 import { formatMoney, calculateLineTotal } from '@/utils/decimal';
+import { DeliveryBasisSelect } from '@/components/CRM/DeliveryBasisSelect';
+import { QuoteChargesSection } from '@/components/CRM/QuoteChargesSection';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -34,6 +36,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	const updateMutation = useUpdateQuoteItem();
 	const createItemMutation = useCreateQuoteItem();
 	const deleteItemMutation = useDeleteQuoteItem();
+	const setBasisMutation = useSetQuoteDeliveryBasis();
 
 	const [localItems, setLocalItems] = useState<QuoteItem[]>([]);
 	const [isExporting, setIsExporting] = useState(false);
@@ -73,6 +76,8 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 							logistics_cost: item.logistics_cost,
 							customs_duty: item.customs_duty,
 							margin_percent: item.margin_percent,
+							discount_percent: item.discount_percent,
+							hs_code: item.hs_code,
 						}
 					});
 				}
@@ -146,6 +151,17 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	const currency = quoteItems[0]?.frozen_currency || 'USD';
 	const vatRate = activeQuote?.vat_rate || '12';
 
+	// Incoterm cost-responsibility flags drive cost-column visibility. With no basis
+	// chosen yet, show all columns (don't hide already-entered data).
+	const basisFlags = activeQuote?.delivery_basis_data;
+	const showLogistics = !basisFlags || basisFlags.seller_pays_freight;
+	const showCustoms = !basisFlags || basisFlags.seller_pays_import;
+
+	const handleBasisChange = (basisId: number) => {
+		if (!activeQuote) return;
+		setBasisMutation.mutate({ id: activeQuote.id, deliveryBasis: basisId });
+	};
+
 	return (
 		<div className="flex flex-col h-full gap-3">
 			{/* КП internal approval chain (документооборот) */}
@@ -167,6 +183,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 				<div className="flex items-center gap-3">
 					<h2 className="text-sm font-bold">{t('quote.title')}</h2>
 					<Separator orientation="vertical" className="h-4" />
+					<DeliveryBasisSelect value={activeQuote?.delivery_basis} onChange={handleBasisChange} />
 					<Badge variant="outline">{t('quote.vat')} {vatRate}%</Badge>
 					<Badge variant="secondary">{currency}</Badge>
 				</div>
@@ -211,6 +228,14 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 								<TableHead className="px-2 py-2 text-xs font-semibold text-muted-foreground min-w-[200px]">
 									{t('catalog.table.name')}
 								</TableHead>
+								<TableHead className="px-2 py-2 text-xs font-semibold text-muted-foreground w-28">
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<span className="cursor-help">{t('quote.hsCode')}</span>
+										</TooltipTrigger>
+										<TooltipContent>{t('quote.hsCodeHelp')}</TooltipContent>
+									</Tooltip>
+								</TableHead>
 								<TableHead className="px-2 py-2 text-center text-xs font-semibold text-muted-foreground w-16">
 									<Tooltip>
 										<TooltipTrigger asChild>
@@ -227,22 +252,26 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 										<TooltipContent>{t('quote.basePriceHelp', 'FCA Base Price per unit')}</TooltipContent>
 									</Tooltip>
 								</TableHead>
-								<TableHead className="px-2 py-2 text-xs font-semibold text-muted-foreground w-24 bg-muted/30">
-									<Tooltip>
-										<TooltipTrigger asChild>
-											<span className="cursor-help">{t('quote.logistics', 'Logistics')}</span>
-										</TooltipTrigger>
-										<TooltipContent>{t('quote.logisticsHelp', 'Logistics DAP cost per unit')}</TooltipContent>
-									</Tooltip>
-								</TableHead>
-								<TableHead className="px-2 py-2 text-xs font-semibold text-muted-foreground w-24 bg-muted/30">
-									<Tooltip>
-										<TooltipTrigger asChild>
-											<span className="cursor-help">{t('sourcing.title')}</span>
-										</TooltipTrigger>
-										<TooltipContent>{t('quote.customsDutyHelp', 'Customs duty per unit')}</TooltipContent>
-									</Tooltip>
-								</TableHead>
+								{showLogistics && (
+									<TableHead className="px-2 py-2 text-xs font-semibold text-muted-foreground w-24 bg-muted/30">
+										<Tooltip>
+											<TooltipTrigger asChild>
+												<span className="cursor-help">{t('quote.logistics', 'Logistics')}</span>
+											</TooltipTrigger>
+											<TooltipContent>{t('quote.logisticsHelp', 'Logistics DAP cost per unit')}</TooltipContent>
+										</Tooltip>
+									</TableHead>
+								)}
+								{showCustoms && (
+									<TableHead className="px-2 py-2 text-xs font-semibold text-muted-foreground w-24 bg-muted/30">
+										<Tooltip>
+											<TooltipTrigger asChild>
+												<span className="cursor-help">{t('sourcing.title')}</span>
+											</TooltipTrigger>
+											<TooltipContent>{t('quote.customsDutyHelp', 'Customs duty per unit')}</TooltipContent>
+										</Tooltip>
+									</TableHead>
+								)}
 								<TableHead className="px-2 py-2 text-xs font-bold text-muted-foreground w-28">
 									<Tooltip>
 										<TooltipTrigger asChild>
@@ -257,6 +286,14 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 											<span className="cursor-help">{t('quote.margin')}</span>
 										</TooltipTrigger>
 										<TooltipContent>{t('quote.marginHelp', 'Margin percentage applied to landed cost')}</TooltipContent>
+									</Tooltip>
+								</TableHead>
+								<TableHead className="px-2 py-2 text-center text-xs font-semibold text-muted-foreground w-16">
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<span className="cursor-help">{t('quote.discount')}</span>
+										</TooltipTrigger>
+										<TooltipContent>{t('quote.discountHelp')}</TooltipContent>
 									</Tooltip>
 								</TableHead>
 								<TableHead className="px-2 py-2 text-right text-xs font-semibold text-muted-foreground w-32 pr-4">
@@ -293,6 +330,16 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 									</TableCell>
 									<TableCell className="p-0">
 										<Input
+											type="text"
+											aria-label={t('quote.hsCode')}
+											placeholder={t('quote.hsCode')}
+											className="h-8 border-none shadow-none rounded-none text-xs font-mono text-center focus-visible:ring-1"
+											value={item.hs_code || ''}
+											onChange={(e) => updateItemLocally(item.id, 'hs_code', e.target.value)}
+										/>
+									</TableCell>
+									<TableCell className="p-0">
+										<Input
 											type="number"
 											aria-label={t('catalog.table.unit')}
 											className="h-8 border-none shadow-none rounded-none text-xs font-semibold text-center focus-visible:ring-1"
@@ -309,24 +356,28 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 											onChange={(e) => updateItemLocally(item.id, 'frozen_base_price', e.target.value)}
 										/>
 									</TableCell>
-									<TableCell className="p-0 bg-muted/20">
-										<Input
-											type="number"
-											aria-label={t('quote.logistics', 'Logistics')}
-											className="h-8 border-none shadow-none rounded-none text-xs font-mono text-right pr-2 focus-visible:ring-1"
-											value={item.logistics_cost}
-											onChange={(e) => updateItemLocally(item.id, 'logistics_cost', e.target.value)}
-										/>
-									</TableCell>
-									<TableCell className="p-0 bg-muted/20">
-										<Input
-											type="number"
-											aria-label={t('sourcing.title')}
-											className="h-8 border-none shadow-none rounded-none text-xs font-mono text-right pr-2 focus-visible:ring-1"
-											value={item.customs_duty}
-											onChange={(e) => updateItemLocally(item.id, 'customs_duty', e.target.value)}
-										/>
-									</TableCell>
+									{showLogistics && (
+										<TableCell className="p-0 bg-muted/20">
+											<Input
+												type="number"
+												aria-label={t('quote.logistics', 'Logistics')}
+												className="h-8 border-none shadow-none rounded-none text-xs font-mono text-right pr-2 focus-visible:ring-1"
+												value={item.logistics_cost}
+												onChange={(e) => updateItemLocally(item.id, 'logistics_cost', e.target.value)}
+											/>
+										</TableCell>
+									)}
+									{showCustoms && (
+										<TableCell className="p-0 bg-muted/20">
+											<Input
+												type="number"
+												aria-label={t('sourcing.title')}
+												className="h-8 border-none shadow-none rounded-none text-xs font-mono text-right pr-2 focus-visible:ring-1"
+												value={item.customs_duty}
+												onChange={(e) => updateItemLocally(item.id, 'customs_duty', e.target.value)}
+											/>
+										</TableCell>
+									)}
 									<TableCell className="px-2 py-1.5 text-right pr-2 bg-muted/30">
 										<span className="text-sm font-bold tabular-nums">
 											{formatMoney(item.landed_cost, item.frozen_currency)}
@@ -339,6 +390,15 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 											className="h-8 border-none shadow-none rounded-none text-xs font-bold text-center text-primary focus-visible:ring-1"
 											value={item.margin_percent}
 											onChange={(e) => updateItemLocally(item.id, 'margin_percent', e.target.value)}
+										/>
+									</TableCell>
+									<TableCell className="p-0">
+										<Input
+											type="number"
+											aria-label={t('quote.discount')}
+											className="h-8 border-none shadow-none rounded-none text-xs font-semibold text-center focus-visible:ring-1"
+											value={item.discount_percent}
+											onChange={(e) => updateItemLocally(item.id, 'discount_percent', e.target.value)}
 										/>
 									</TableCell>
 									<TableCell className="px-2 py-1.5 text-right pr-4">
@@ -362,7 +422,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 							{showAddRow && (
 								<TableRow className="bg-primary/5">
 									<TableCell className="px-2 py-1.5 text-center text-xs text-muted-foreground">+</TableCell>
-									<TableCell className="p-1" colSpan={7}>
+									<TableCell className="p-1" colSpan={20}>
 										<div className="flex items-center gap-2">
 											<Input
 												type="text"
@@ -382,8 +442,6 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 											</Button>
 										</div>
 									</TableCell>
-									<TableCell />
-									<TableCell />
 								</TableRow>
 							)}
 						</TableBody>
@@ -392,6 +450,9 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 			</div>
 
 			<Separator />
+
+			{/* КП-level expense items / discounts (seller-only) */}
+			{activeQuote && <QuoteChargesSection quoteId={activeQuote.id} currency={currency} />}
 
 			{/* Summary Footer */}
 			<Card className="py-3">
@@ -402,6 +463,17 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 							{formatMoney(activeQuote?.subtotal_excl_vat)}
 						</span>
 					</div>
+					{activeQuote?.charges_total != null && Number(activeQuote.charges_total) !== 0 && (
+						<>
+							<Separator orientation="vertical" className="h-6" />
+							<div className="flex flex-col items-end leading-none">
+								<span className="text-xs text-muted-foreground mb-1">{t('quote.charges.title')}</span>
+								<span className="text-sm font-semibold tabular-nums">
+									{formatMoney(activeQuote.charges_total)}
+								</span>
+							</div>
+						</>
+					)}
 					<Separator orientation="vertical" className="h-6" />
 					<div className="flex flex-col items-end leading-none">
 						<span className="text-xs text-muted-foreground mb-1">{t('quote.vat')}</span>

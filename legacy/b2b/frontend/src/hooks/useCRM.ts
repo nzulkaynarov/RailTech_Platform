@@ -171,6 +171,71 @@ export const useQuote = (id: number) => useQuery({
     enabled: !!id,
 });
 
+// КП-level: seller sets currency / notes / validity.
+export const useUpdateQuote = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, data }: { id: number; data: Parameters<typeof crmApi.updateQuote>[1] }) =>
+            crmApi.updateQuote(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['quotes'] });
+            queryClient.invalidateQueries({ queryKey: ['deals'] });
+        },
+    });
+};
+
+// Seller picks Incoterm → basis set + charge template auto-applied. Refresh quotes,
+// deals (active_quote), and the charges list (template rows appear).
+export const useSetQuoteDeliveryBasis = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, deliveryBasis }: { id: number; deliveryBasis: number }) =>
+            crmApi.setQuoteDeliveryBasis(id, deliveryBasis),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['quotes'] });
+            queryClient.invalidateQueries({ queryKey: ['deals'] });
+            queryClient.invalidateQueries({ queryKey: ['quote-charges'] });
+        },
+    });
+};
+
+// ── КП-level expense items / discounts (charges) ─────────────────────────
+export const useChargeTypes = () => useQuery({
+    queryKey: ['charge-types'],
+    queryFn: crmApi.getChargeTypes,
+    staleTime: 5 * 60_000,
+});
+
+export const useQuoteCharges = (quoteId?: number) => useQuery({
+    queryKey: ['quote-charges', quoteId],
+    queryFn: () => crmApi.getQuoteCharges(quoteId as number),
+    enabled: !!quoteId,
+});
+
+// Charges change the КП total (charges_total → vat → total), so refresh quotes,
+// deals (active_quote totals), and the charges list.
+const invalidateCharges = (queryClient: ReturnType<typeof useQueryClient>) => {
+    queryClient.invalidateQueries({ queryKey: ['quote-charges'] });
+    queryClient.invalidateQueries({ queryKey: ['quotes'] });
+    queryClient.invalidateQueries({ queryKey: ['deals'] });
+};
+
+export const useCreateQuoteCharge = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (data: Parameters<typeof crmApi.createQuoteCharge>[0]) => crmApi.createQuoteCharge(data),
+        onSuccess: () => invalidateCharges(queryClient),
+    });
+};
+
+export const useDeleteQuoteCharge = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (id: number) => crmApi.deleteQuoteCharge(id),
+        onSuccess: () => invalidateCharges(queryClient),
+    });
+};
+
 export const useSendQuoteToClient = () => {
     const queryClient = useQueryClient();
     return useMutation({

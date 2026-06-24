@@ -115,6 +115,14 @@ class QuoteItemSerializer(serializers.ModelSerializer):
         return data
 
 
+class ChargeTypeSerializer(serializers.ModelSerializer):
+    """Read-only lookup feed for the КП charge-type dropdown."""
+
+    class Meta:
+        model = ChargeType
+        fields = ["id", "code", "name"]
+
+
 class QuoteChargeSerializer(serializers.ModelSerializer):
     """КП-level expense item / discount (UBL document AllowanceCharge)."""
 

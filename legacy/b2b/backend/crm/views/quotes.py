@@ -10,8 +10,13 @@ from core.optimistic_locking import OptimisticLockingMixin
 from core.permissions import IsCompanyMemberOrPlatformAdmin, IsPlatformAdmin
 from crm import services as crm_services
 from crm.constants import QuoteStatusCode
-from crm.models import Quote, QuoteCharge, QuoteItem, QuoteStatus
-from crm.serializers import QuoteChargeSerializer, QuoteItemSerializer, QuoteSerializer
+from crm.models import ChargeType, Quote, QuoteCharge, QuoteItem, QuoteStatus
+from crm.serializers import (
+    ChargeTypeSerializer,
+    QuoteChargeSerializer,
+    QuoteItemSerializer,
+    QuoteSerializer,
+)
 
 
 def _chain_error_response(error):
@@ -161,6 +166,28 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
             quote = QuoteLifecycleService.send_to_client(int(pk), request.user)
         except ValueError:
             return _chain_error_response("INVALID_STATUS")
+        return Response(self.get_serializer(quote).data)
+
+    @extend_schema(
+        summary="Set delivery basis (Incoterm) and auto-apply its charge template",
+        tags=["CRM"],
+    )
+    @action(detail=True, methods=["post"], url_path="set-delivery-basis", permission_classes=[IsAuthenticated])
+    def set_delivery_basis(self, request, pk=None):
+        """Seller picks the Incoterm; the basis template's charges auto-populate.
+
+        Thin wrapper — all logic lives in crm.services.charges (Rule 8).
+        """
+        quote, err = crm_services.set_quote_delivery_basis(
+            int(pk), request.data.get("delivery_basis"), request.user
+        )
+        if err:
+            http_status = (
+                status.HTTP_403_FORBIDDEN
+                if err in ("ADMIN_VIEWER_CANNOT_ACT", "ONLY_SELLER_CAN_BUILD_QUOTE")
+                else status.HTTP_400_BAD_REQUEST
+            )
+            return Response({"error": err}, status=http_status)
         return Response(self.get_serializer(quote).data)
 
     @extend_schema(
@@ -575,6 +602,16 @@ class QuoteChargeViewSet(viewsets.ModelViewSet):
 )
 class QuoteStatusViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = QuoteStatus.objects.all().order_by("sort_order", "name")
+    permission_classes = [IsAuthenticated]
+    pagination_class = None
+
+
+@extend_schema_view(
+    list=extend_schema(summary="List КП expense-item types (ChargeType lookup)", tags=["CRM"]),
+)
+class ChargeTypeViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = ChargeType.objects.filter(is_active=True).order_by("sort_order", "name")
+    serializer_class = ChargeTypeSerializer
     permission_classes = [IsAuthenticated]
     pagination_class = None
 

@@ -153,3 +153,48 @@ def test_manual_hs_code_not_overwritten_on_assign(quote):
     reassign_quote_item_product(item.id, quote.deal.client, product_id=product.id)
     item.refresh_from_db()
     assert item.hs_code == "9999999999"
+
+
+# ─── Incoterm charge templates (auto-apply) ─────────────────────────────────
+
+
+@pytest.mark.django_db
+def test_charge_template_auto_applies_and_is_idempotent(quote):
+    from crm.models import ChargeTemplate
+    from crm.services.charges import apply_charge_template_to_quote
+    from master_data.models import DeliveryBasis
+
+    ddp = DeliveryBasis.objects.create(code="DDP", name="DDP", seller_pays_import=True)
+    freight = ChargeType.objects.create(code="FREIGHT", name="Фрахт")
+    customs = ChargeType.objects.create(code="CUSTOMS", name="Таможня")
+    ChargeTemplate.objects.create(delivery_basis=ddp, charge_type=freight, default_amount=Decimal("500"))
+    ChargeTemplate.objects.create(delivery_basis=ddp, charge_type=customs, default_rate_percent=Decimal("5"))
+
+    quote.delivery_basis = ddp
+    quote.save(update_fields=["delivery_basis"])
+
+    created = apply_charge_template_to_quote(quote)
+    assert created == 2
+    assert quote.charges.filter(from_template=True).count() == 2
+    # Re-applying the same basis must not duplicate rows.
+    assert apply_charge_template_to_quote(quote) == 0
+    assert quote.charges.count() == 2
+
+
+@pytest.mark.django_db
+def test_template_does_not_clobber_manual_charge(quote):
+    """A manually-added charge of the same type blocks the template duplicate."""
+    from crm.models import ChargeTemplate, QuoteCharge
+    from crm.services.charges import apply_charge_template_to_quote
+    from master_data.models import DeliveryBasis
+
+    cif = DeliveryBasis.objects.create(code="CIF", name="CIF")
+    freight = ChargeType.objects.create(code="FREIGHT", name="Фрахт")
+    ChargeTemplate.objects.create(delivery_basis=cif, charge_type=freight, default_amount=Decimal("100"))
+    # Seller already entered a freight charge by hand.
+    QuoteCharge.objects.create(quote=quote, charge_type=freight, amount=Decimal("777"))
+
+    quote.delivery_basis = cif
+    quote.save(update_fields=["delivery_basis"])
+    assert apply_charge_template_to_quote(quote) == 0
+    assert quote.charges.get(charge_type=freight).amount == Decimal("777")

@@ -6,6 +6,7 @@ Public API is re-exported here so `crm.services.X` and
 
 from ._params import PaymentData
 from .billing import generate_act, generate_invoice_from_contract, record_payment, sign_act
+from .charges import apply_charge_template_to_quote, set_quote_delivery_basis
 from .contracts import (
     cancel_contract,
     force_cancel_contract,
@@ -46,6 +47,7 @@ __all__ = [
     "QuoteCalculationService",
     "QuoteLifecycleService",
     "STAGE_REQUIRES_SIGNED_CONTRACT",
+    "apply_charge_template_to_quote",
     "archive_messages_sync",
     "buyer_add_request_item",
     "buyer_add_request_items",
@@ -69,6 +71,7 @@ __all__ = [
     "record_payment",
     "register_new_deal",
     "send_deal_message",
+    "set_quote_delivery_basis",
     "sign_act",
     "sign_contract_by_client",
     "sign_contract_by_manager",
