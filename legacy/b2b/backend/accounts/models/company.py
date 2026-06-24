@@ -42,6 +42,17 @@ class Company(models.Model):
         verbose_name=_("ИНН"),
         help_text=_("Идентификационный номер налогоплательщика"),
     )
+    # INN as STATED by a seller for an offline (unverified) client — NOT unique, because
+    # two sellers may independently enter the same real company before KYC (owner: "I'm
+    # not afraid of duplicates — the admin merges/rejects at KYC"). The canonical, unique
+    # `inn` above is assigned only when the company is verified (that's where dups surface).
+    stated_inn = models.CharField(
+        max_length=20,
+        blank=True,
+        db_index=True,
+        verbose_name=_("ИНН (со слов, до проверки)"),
+        help_text=_("ИНН клиента, указанный продавцом; канонический ИНН присваивается на KYC"),
+    )
     types = models.ManyToManyField(
         "accounts.CompanyType",
         related_name="companies",
@@ -138,6 +149,15 @@ class Company(models.Model):
         verbose_name=_("Заметки по KYC"),
         help_text=_("Внутренние заметки менеджера (не видны клиенту)"),
     )
+    # False = an "offline" client a seller created in their CRM (no platform login yet).
+    # Flips to True when a real user joins the company (signal / invite-accept). Lets the
+    # UI and queries distinguish a rep-created account from a self-registered one.
+    is_registered = models.BooleanField(
+        default=True,
+        db_index=True,
+        verbose_name=_("Зарегистрирована на платформе"),
+        help_text=_("False — клиент заведён продавцом вручную (без входа в систему)"),
+    )
 
     created_at = models.DateTimeField(
         auto_now_add=True,
@@ -155,6 +175,57 @@ class Company(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.inn})"
+
+
+class Contact(models.Model):
+    """A person at a client company who has NO platform login (the CRM "Contact").
+
+    World-standard Account(Company)+Contact model: a seller can record the people they
+    deal with at an offline client and reuse them across deals. Distinct from
+    CompanyMember (a registered user). One company has many contacts.
+    """
+
+    company = models.ForeignKey(
+        "accounts.Company",
+        on_delete=models.CASCADE,
+        related_name="contacts",
+        verbose_name=_("Компания"),
+        help_text=_("Организация, к которой относится контакт"),
+    )
+    name = models.CharField(max_length=255, verbose_name=_("ФИО"))
+    email = models.EmailField(blank=True, verbose_name=_("Email"))
+    phone = models.CharField(max_length=50, blank=True, verbose_name=_("Телефон"))
+    position = models.CharField(max_length=255, blank=True, verbose_name=_("Должность"))
+    is_primary = models.BooleanField(
+        default=False,
+        verbose_name=_("Основной контакт"),
+        help_text=_("Контакт по умолчанию для отправки КП"),
+    )
+    created_by = models.ForeignKey(
+        "accounts.CustomUser",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_contacts",
+        verbose_name=_("Кем создан"),
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _("Контакт")
+        verbose_name_plural = _("Контакты")
+        ordering = ["-is_primary", "name"]
+
+    def clean(self):
+        # World-practice rule: a contact must be reachable by at least one channel.
+        from django.core.exceptions import ValidationError
+
+        if not (self.email or self.phone):
+            raise ValidationError(_("Укажите email или телефон контакта."))
+
+    def __str__(self):
+        return f"{self.name} — {self.company.name}"
 
 
 class CompanyMember(models.Model):

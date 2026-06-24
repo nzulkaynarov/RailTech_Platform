@@ -17,6 +17,7 @@ from .auth import (
     send_password_reset_email,
     verify_and_setup_password,
 )
+from .clients import create_offline_client, find_client_company
 from .kyc import bulk_verify_kyc, delete_kyc_document, upload_kyc_document, verify_company_kyc
 from .members import (
     add_company_member,

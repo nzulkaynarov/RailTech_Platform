@@ -43,6 +43,15 @@ class Deal(models.Model):
         verbose_name=_("Контактное лицо"),
         help_text=_("Представитель клиента в данной сделке"),
     )
+    contact = models.ForeignKey(
+        "accounts.Contact",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="deals",
+        verbose_name=_("Контакт (офлайн-клиент)"),
+        help_text=_("Контактное лицо клиента без входа в систему (для отправки КП)"),
+    )
     manager = models.ForeignKey(
         "accounts.CustomUser",
         on_delete=models.SET_NULL,
