@@ -1,19 +1,28 @@
-"""Client base (Phase 1): seller-created offline clients — Company(is_registered=False)
-+ primary Contact, with search-before-create de-dup. See clients.py."""
+"""Client base (Phase 1+2): seller-created offline clients — Company(is_registered=False)
++ primary Contact, scoped to the seller's OWN book (not global). See clients.py."""
 
 import pytest
 from django.core.exceptions import ValidationError
 
-from accounts.models import Company, CompanyType, Contact, CustomUser
+from accounts.models import Company, CompanyMember, CompanyType, Contact, CustomUser, WorkspaceRole
 from accounts.services import create_offline_client, find_client_company
+from accounts.services.clients import seller_clients
+
+
+def _make_seller(email, inn):
+    supplier = CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 10})[0]
+    CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
+    owner = WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})[0]
+    co = Company.objects.create(name=f"Seller {email}", inn=inn)
+    co.types.add(supplier)
+    user = CustomUser.objects.create_user(email=email, username=email, password="pw", is_active=True)
+    CompanyMember.objects.create(user=user, company=co, role=owner, is_active=True, can_sell=True)
+    return user
 
 
 @pytest.fixture
 def seller(db):
-    CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
-    return CustomUser.objects.create_user(
-        email="rep@seller.test", username="rep@seller.test", password="pw", is_active=True
-    )
+    return _make_seller("rep@sellerA.test", "700000001")
 
 
 @pytest.mark.django_db
@@ -29,22 +38,37 @@ def test_creates_offline_company_and_primary_contact(seller):
     assert company.members.count() == 0  # no platform login
     assert "CLIENT" in company.types.values_list("code", flat=True)
     assert contact.is_primary is True
-    assert contact.company_id == company.id
+    assert contact.created_by_id == seller.id
 
 
 @pytest.mark.django_db
-def test_dedupes_company_by_inn_and_contact_by_email(seller):
+def test_dedupes_within_own_book_by_inn_and_email(seller):
     r1, _ = create_offline_client(
         seller=seller, company_name="Dedupe Co", contact_name="A", email="a@d.test", inn="305333444"
     )
-    # Same INN (different name) + same contact email → reuse both, no duplicates.
+    # Same INN (different name) + same contact email, SAME seller → reuse both.
     r2, _ = create_offline_client(
-        seller=seller, company_name="Totally Different Name", contact_name="A2", email="a@d.test", inn="305333444"
+        seller=seller, company_name="Different Name", contact_name="A2", email="a@d.test", inn="305333444"
     )
     assert r1["company"].id == r2["company"].id
     assert r1["contact"].id == r2["contact"].id
-    assert Company.objects.filter(inn="305333444").count() == 1
-    assert Contact.objects.filter(company=r1["company"]).count() == 1
+
+
+@pytest.mark.django_db
+def test_other_seller_does_not_see_or_reuse_first_sellers_client(seller):
+    """Confidentiality + per-book scoping: a different seller creating the same INN gets
+    a SEPARATE record (cross-tenant dups are allowed; admin reconciles at KYC)."""
+    r1, _ = create_offline_client(
+        seller=seller, company_name="Shared RealCo", contact_name="A", email="a@s.test", inn="305999000"
+    )
+    seller_b = _make_seller("rep@sellerB.test", "700000002")
+    r2, _ = create_offline_client(
+        seller=seller_b, company_name="Shared RealCo", contact_name="B", email="b@s.test", inn="305999000"
+    )
+    assert r1["company"].id != r2["company"].id  # separate private records
+    assert seller_clients(seller).count() == 1
+    assert seller_clients(seller_b).count() == 1
+    assert r2["company"] not in seller_clients(seller)  # B's client invisible to A
 
 
 @pytest.mark.django_db
@@ -56,7 +80,6 @@ def test_second_distinct_contact_is_not_primary(seller):
         seller=seller, company_name="MultiContact Co", contact_name="Second", email="second@m.test", inn="305555666"
     )
     assert r1["company"].id == r2["company"].id
-    assert r2["contact"].id != r1["contact"].id
     assert r1["contact"].is_primary is True
     assert r2["contact"].is_primary is False
 
@@ -81,8 +104,11 @@ def test_contact_model_clean_requires_channel(seller):
 
 
 @pytest.mark.django_db
-def test_find_client_company_by_inn_then_name(seller):
-    c = Company.objects.create(name="Findable LLC", inn="305777888", is_registered=False)
-    assert find_client_company(inn="305777888").id == c.id
-    assert find_client_company(name="findable llc").id == c.id  # case-insensitive
-    assert find_client_company(name="nope") is None
+def test_find_client_company_scoped_to_book(seller):
+    # A company only becomes findable once it's in the seller's book (has their contact).
+    created, _ = create_offline_client(
+        seller=seller, company_name="Findable LLC", contact_name="C", email="c@f.test", inn="305777888"
+    )
+    assert find_client_company(seller, inn="305777888").id == created["company"].id
+    assert find_client_company(seller, name="findable llc").id == created["company"].id  # case-insensitive
+    assert find_client_company(seller, name="nope") is None

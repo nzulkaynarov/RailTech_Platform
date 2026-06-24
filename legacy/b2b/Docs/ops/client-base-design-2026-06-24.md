@@ -36,13 +36,41 @@ world-practice study (Salesforce / HubSpot / Pipedrive / Zoho) + current-schema 
   **pre-bound to the Contact's Company**, so signup links the new user to the existing card (solves the
   dedupe risk) and converts the offline client into an active one — the acquisition loop.
 
-## Flow (matches the owner's hypothesis)
-1. Seller picks "Create КП" → **searches a company** (by name/INN).
-2. If absent → **"Create client"**: short requisites form (company name, INN optional, contact name,
-   email/phone) → creates `Company(is_registered=False)` + `Contact(is_primary=True)`.
-3. Seller builds the КП for that client's company.
-4. On finish: **Download PDF**, **Copy share link**, or **Send email** (PDF + public link + optional
-   register-invite). Registered buyer → in-app + email; offline client → email only.
+## Flow (owner-refined 2026-06-24)
+
+Two entry points that converge on ONE unified send:
+
+**Outbound (seller-initiated, e.g. an offline client):**
+1. Seller picks "Create КП" → **must select a client to proceed** (hard gate; a КП always has a
+   recipient). The picker shows the **seller's OWN client base only** — NOT a platform-wide company
+   search (confidentiality: a seller never browses other tenants' clients).
+2. If the client isn't in their base → **"Create client"** (short requisites: company name, INN
+   optional, contact name, email/phone) → adds `Company(is_registered=False)` + `Contact(is_primary)`
+   **into the seller's book**.
+3. Build the КП for that client → send.
+
+**Inbound (client submitted an RFQ):** the Deal already carries the client (company + user) → the
+client-selection step is **skipped and the recipient is auto-selected** → build КП → send.
+
+**Unified send (offline AND online, one action):** the seller clicks "Send КП"; the *channel* adapts to
+the recipient automatically — registered buyer → in-app + email; offline contact → email + public link.
+Plus **Download PDF** and **Copy share link** always available.
+
+### Client-base scoping + de-dup policy (owner directive 2026-06-24)
+The seller's book is **scoped to the seller COMPANY** (visible to its team — standard team CRM), not
+global. It is populated two ways:
+- **(a) Auto, inbound:** any client that has sent this seller an RFQ is added to the book. ⚠ "this
+  seller" is precise only once **multi-seller routing** (the open tenancy keystone) lands — in today's
+  single-seller model RFQs aren't routed, so the auto part activates with routing. Manual creation
+  works now.
+- **(b) Manual:** the seller creates the card (Company `is_registered=False` + primary Contact).
+
+**De-dup is intentionally light (owner: "I'm not afraid of duplicates").** No global search/merge at
+create time (it would also leak other tenants' clients). Within the seller's *own* book we offer a
+soft "don't re-enter the same client twice" convenience, not a hard gate. Cross-seller / platform
+duplicates are allowed and **reconciled by the platform admin during KYC (merge or reject)** → implies
+a future admin **company-merge tool** (separate, later). Invite-on-send links an offline client to its
+registered account when they join (Phase 4).
 
 ## Model design
 - `accounts/Contact`: `company (FK, related_name="contacts")`, `name`, `email (blank)`, `phone (blank)`,

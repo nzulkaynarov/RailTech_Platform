@@ -42,6 +42,17 @@ class Company(models.Model):
         verbose_name=_("ИНН"),
         help_text=_("Идентификационный номер налогоплательщика"),
     )
+    # INN as STATED by a seller for an offline (unverified) client — NOT unique, because
+    # two sellers may independently enter the same real company before KYC (owner: "I'm
+    # not afraid of duplicates — the admin merges/rejects at KYC"). The canonical, unique
+    # `inn` above is assigned only when the company is verified (that's where dups surface).
+    stated_inn = models.CharField(
+        max_length=20,
+        blank=True,
+        db_index=True,
+        verbose_name=_("ИНН (со слов, до проверки)"),
+        help_text=_("ИНН клиента, указанный продавцом; канонический ИНН присваивается на KYC"),
+    )
     types = models.ManyToManyField(
         "accounts.CompanyType",
         related_name="companies",

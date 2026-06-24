@@ -11,19 +11,46 @@ from typing import Optional, Tuple
 
 from django.db import transaction
 
+from ..constants import SELLER_COMPANY_TYPES
 from ..models import Company, CompanyType, Contact, CustomUser
 
 logger = logging.getLogger(__name__)
 
 
-def find_client_company(*, inn: str = "", name: str = "") -> Optional[Company]:
-    """Search-before-create: match an existing account by INN (exact) then name (iexact)."""
+def _seller_company_ids(user: CustomUser) -> list:
+    """The SUPPLIER/MANUFACTURER companies the user is an active member of."""
+    return list(
+        user.memberships.filter(
+            is_active=True,
+            company__types__code__in=SELLER_COMPANY_TYPES,
+        ).values_list("company_id", flat=True)
+    )
+
+
+def seller_clients(user: CustomUser):
+    """The seller's OWN client base (team-level): companies its members created as
+    offline clients (via a Contact) — NOT a platform-wide listing (confidentiality).
+    """
+    seller_ids = _seller_company_ids(user)
+    if not seller_ids:
+        return Company.objects.none()
+    return (
+        Company.objects.filter(contacts__created_by__memberships__company_id__in=seller_ids)
+        .distinct()
+        .order_by("name")
+    )
+
+
+def find_client_company(user: CustomUser, *, inn: str = "", name: str = "") -> Optional[Company]:
+    """Search-before-create WITHIN the seller's own book (by INN then name) — a seller
+    never dedups against (or sees) another tenant's clients."""
+    book = seller_clients(user)
     if inn:
-        match = Company.objects.filter(inn=inn).first()
+        match = book.filter(stated_inn=inn).first()
         if match:
             return match
     if name:
-        return Company.objects.filter(name__iexact=name.strip()).first()
+        return book.filter(name__iexact=name.strip()).first()
     return None
 
 
@@ -53,12 +80,14 @@ def create_offline_client(
     if not (email or phone):
         return None, "CONTACT_NEEDS_EMAIL_OR_PHONE"
 
-    company = find_client_company(inn=inn, name=company_name)
+    # Soft de-dup WITHIN the seller's own book only (convenience; not a hard gate).
+    # Cross-tenant duplicates are allowed and reconciled by the admin at KYC.
+    company = find_client_company(seller, inn=inn, name=company_name)
     company_created = False
     if company is None:
         company = Company.objects.create(
             name=company_name,
-            inn=inn or None,
+            stated_inn=inn,  # NOT the unique `inn` — cross-tenant dups allowed pre-KYC
             is_registered=False,  # rep-created, no platform login yet
         )
         client_type = CompanyType.objects.filter(code="CLIENT").first()
