@@ -372,3 +372,78 @@ def render_document_pdf(self, doc_type: str, doc_id: int) -> dict:
     _render_pdf_for(doc_type, doc_id)
     logger.info("Rendered %s PDF for id=%s", doc_type, doc_id)
     return {"doc_type": doc_type, "doc_id": doc_id, "status": "rendered"}
+
+
+@shared_task(
+    bind=True,
+    name="crm.send_quote_email",
+    queue="pdf",
+    time_limit=600,
+    soft_time_limit=540,
+    max_retries=3,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+)
+def send_quote_email(self, quote_id: int) -> dict:
+    """Email the КП to its recipient on send (off-thread, after commit).
+
+    Unified for both client kinds: a registered buyer (deal.client) and an offline
+    contact (deal.contact). Ensures the PDF is rendered first (so it can be attached),
+    includes the public no-login link, and is best-effort — a КП is SENT regardless of
+    whether the email lands. The seller-only cost projection never leaves the building:
+    the attached PDF is the client projection (no margin/charges).
+    """
+    from django.conf import settings
+
+    from notifications.emails import send_templated_email
+
+    from .models import Quote
+
+    quote = Quote.objects.select_related("deal__client", "deal__contact", "deal__company").get(pk=quote_id)
+
+    if not quote.pdf_file:
+        _render_pdf_for("quote", quote_id)
+        quote.refresh_from_db()
+
+    # Recipient: registered user first, else the offline contact.
+    if quote.deal.client and quote.deal.client.email:
+        to_email = quote.deal.client.email
+        to_name = quote.deal.client.get_full_name() or quote.deal.client.email
+    elif quote.deal.contact and quote.deal.contact.email:
+        to_email = quote.deal.contact.email
+        to_name = quote.deal.contact.name
+    else:
+        logger.warning("Quote %s: no recipient email (client/contact) — email skipped", quote_id)
+        return {"quote_id": quote_id, "status": "no_recipient"}
+
+    attachments = []
+    if quote.pdf_file:
+        try:
+            quote.pdf_file.open("rb")
+            attachments = [(f"KP-{quote.deal_id}-v{quote.version}.pdf", quote.pdf_file.read(), "application/pdf")]
+        finally:
+            quote.pdf_file.close()
+
+    public_link = ""
+    if quote.public_access_token:
+        public_link = f"{settings.FRONTEND_URL}/api/v1/public/quotes/{quote.public_access_token}/"
+
+    send_templated_email(
+        "quote_sent",
+        {
+            "recipient_name": to_name,
+            "deal_id": quote.deal_id,
+            "quote_version": quote.version,
+            "company_name": quote.deal.company.name if quote.deal.company else "",
+            "valid_until": quote.valid_until.strftime("%d.%m.%Y") if quote.valid_until else "—",
+            "total_incl_vat": str(quote.total_incl_vat),
+            "public_link": public_link,
+        },
+        to=[to_email],
+        channel="transactional",
+        user=quote.deal.client if quote.deal.client else None,
+        attachments=attachments,
+        fail_silently=True,
+    )
+    logger.info("Quote %s email sent to %s", quote_id, to_email)
+    return {"quote_id": quote_id, "status": "sent", "to": to_email}

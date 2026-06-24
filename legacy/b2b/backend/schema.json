@@ -11960,6 +11960,37 @@
                 }
             }
         },
+        "/api/v1/public/quotes/{token}/": {
+            "get": {
+                "operationId": "public_quotes_retrieve",
+                "description": "Unauthenticated КП view/download by secret token (client base, CB-public-link).\n\nLets an offline or registered client open the КП the seller emailed them WITHOUT a\nlogin. Streams the CLIENT projection PDF only (quote_pdf.html exposes no margin/cost/\ncharges). Only a SENT (frozen) КП with a token is reachable; an unknown token 404s.\nRate-limited to blunt token brute-forcing despite the 256-bit space.",
+                "summary": "Public КП view/download by token",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "token",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/v1/sourcing/attachments/": {
             "get": {
                 "operationId": "sourcing_attachments_list",

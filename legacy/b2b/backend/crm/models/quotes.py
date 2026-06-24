@@ -156,6 +156,18 @@ class Quote(models.Model):
         verbose_name=_("Дата заморозки цен"),
         help_text=_("Момент фиксации цен при отправке клиенту"),
     )
+    # Random token for an UNAUTHENTICATED public view/download of the client КП
+    # projection (no margin/cost), emailed to offline/registered clients on send.
+    # Minted once on send-to-client; rotate only by issuing a new КП version.
+    public_access_token = models.CharField(
+        max_length=64,
+        unique=True,
+        null=True,
+        blank=True,
+        db_index=True,
+        verbose_name=_("Публичный токен доступа"),
+        help_text=_("Секретный токен для просмотра/скачивания КП клиентом без входа"),
+    )
     approved_at = models.DateTimeField(
         null=True,
         blank=True,

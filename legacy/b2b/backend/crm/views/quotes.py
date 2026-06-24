@@ -3,9 +3,12 @@ from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_
 from rest_framework import serializers as drf_serializers
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
+from rest_framework.views import APIView
 
+from core.file_streaming import stream_file_field
 from core.optimistic_locking import OptimisticLockingMixin
 from core.permissions import IsCompanyMemberOrPlatformAdmin, IsPlatformAdmin
 from crm import services as crm_services
@@ -24,6 +27,33 @@ def _chain_error_response(error):
     """Map a КП approval-chain service error code to an HTTP response."""
     http_status = status.HTTP_403_FORBIDDEN if error == "ROLE_NOT_PERMITTED" else status.HTTP_400_BAD_REQUEST
     return Response({"error": error}, status=http_status)
+
+
+class PublicQuoteView(APIView):
+    """Unauthenticated КП view/download by secret token (client base, CB-public-link).
+
+    Lets an offline or registered client open the КП the seller emailed them WITHOUT a
+    login. Streams the CLIENT projection PDF only (quote_pdf.html exposes no margin/cost/
+    charges). Only a SENT (frozen) КП with a token is reachable; an unknown token 404s.
+    Rate-limited to blunt token brute-forcing despite the 256-bit space.
+    """
+
+    permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "public_quote"
+
+    @extend_schema(summary="Public КП view/download by token", tags=["CRM"])
+    def get(self, request, token):
+        quote = Quote.objects.select_related("deal").filter(public_access_token=token).first()
+        # Must be a real, already-sent КП (frozen_at set on send). DRAFTs never have a token.
+        if quote is None or quote.frozen_at is None:
+            return Response({"detail": "NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)
+        if not quote.pdf_file:
+            from crm.tasks import _render_pdf_for
+
+            _render_pdf_for("quote", quote.pk)
+            quote.refresh_from_db()
+        return stream_file_field(quote.pdf_file)
 
 
 @extend_schema_view(

@@ -86,6 +86,7 @@ def send_templated_email(
     user=None,
     cc: Optional[Iterable[str]] = None,
     bcc: Optional[Iterable[str]] = None,
+    attachments: Optional[Iterable[tuple]] = None,
     fail_silently: bool = False,
 ) -> EmailLog:
     """Render a template bundle and send it through the named channel.
@@ -122,6 +123,9 @@ def send_templated_email(
     )
     if html_body:
         message.attach_alternative(html_body, "text/html")
+    # Optional binary attachments, e.g. a rendered КП PDF: (filename, content_bytes, mimetype).
+    for filename, content, mimetype in attachments or []:
+        message.attach(filename, content, mimetype)
 
     status = EmailLog.STATUS_SENT
     error_text = ""
