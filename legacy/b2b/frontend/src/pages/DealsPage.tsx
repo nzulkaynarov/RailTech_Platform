@@ -1,207 +1,28 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FileText, Clock, Eye, ThumbsUp, ThumbsDown } from 'lucide-react';
-import { toast } from 'sonner';
+import { FileText, Clock, Eye } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import {
-  Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
-} from '@/components/ui/sheet';
-import { Separator } from '@/components/ui/separator';
 import { StatusBadge, getDealStageVariant } from '@/components/ui/StatusBadge';
 import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/DataTable';
 import { useCurrencyStore } from '@/store/currencyStore';
-import { useUserStore } from '@/store/userStore';
-import { useDeals, useDealStages, useChangeDealStage, useApproveQuote, useRejectQuote } from '@/hooks/useCRM';
-import { translateApiError } from '@/lib/apiError';
+import { useDeals, useDealStages } from '@/hooks/useCRM';
 import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
-import { RejectQuoteDialog } from '@/components/CRM/RejectQuoteDialog';
 import { CreateDealDialog } from '@/components/CRM/CreateDealDialog';
-import { GenerateQuoteDialog } from '@/components/CRM/GenerateQuoteDialog';
 import { DealsKanban } from '@/components/CRM/DealsKanban';
-import { DealStage, QuoteStatus } from '@/lib/codes';
 import type { Deal } from '@/api/crmApi';
 
-/* ─── Detail Sheet ─────────────────────────────────────────────────── */
-
-function DealDetailSheet({
-  deal,
-  open,
-  onOpenChange,
-}: {
-  deal: Deal | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}) {
-  const { t } = useTranslation();
-  const formatCurrency = useCurrencyStore((s) => s.format);
-  const activeStatus = useUserStore((s) => s.activeStatus);
-  const [quoteOpen, setQuoteOpen] = useState(false);
-  const [rejectOpen, setRejectOpen] = useState(false);
-  const changeStage = useChangeDealStage();
-  const approveQuote = useApproveQuote();
-  const rejectQuote = useRejectQuote();
-  if (!deal) return null;
-
-  // Role split: opening the RFQ/заявка is a BUYER action; building the КП and
-  // generating the contract are SELLER actions. The backend enforces this too;
-  // gating here stops the wrong-role buttons from rendering (e.g. a buyer must
-  // never see "Создать КП").
-  const isBuyer = activeStatus === 'BUYER';
-  const isSeller = !isBuyer; // SELLER / MANUFACTURER context (store filters by can_sell)
-  const stageCode = deal.stage_code ?? '';
-  const quoteStatus = deal.active_quote?.status_code ?? '';
-  // Seller "take into work": a fresh заявка lands in DRAFT; the seller advances it
-  // to SOURCING so the КП builder ("Создать КП") becomes available.
-  const canTakeIntoWork = isSeller
-    && !deal.active_quote
-    && ([DealStage.DRAFT, DealStage.KYC_PENDING, DealStage.RFQ_OPEN] as string[]).includes(stageCode);
-  const canBuildQuote = isSeller
-    && ([DealStage.SOURCING, DealStage.CALCULATING] as string[]).includes(stageCode)
-    && !deal.active_quote;
-  // The seller works the КП on its own full page (builder + approval chain +
-  // lifecycle). The sheet stays a lightweight overview and only links into it.
-  const hasQuote = isSeller && !!deal.active_quote;
-  // Buyer decision: once the seller has sent the КП (status SENT), the buyer
-  // accepts or rejects it right here. Backend re-checks can_buy on deal.company.
-  const canBuyerDecide = isBuyer && quoteStatus === QuoteStatus.SENT;
-
-  // Open the dedicated КП builder page (hash route handled in App.tsx).
-  const openQuotePage = () => {
-    onOpenChange(false);
-    window.location.hash = `deal-quote/${deal.id}`;
-  };
-
-  const handleApprove = async () => {
-    if (!deal.active_quote) return;
-    try {
-      await approveQuote.mutateAsync(deal.active_quote.id);
-      toast.success(t('pages.deals.detail.quoteApprovedToast'));
-    } catch (e) {
-      toast.error(translateApiError(e));
-    }
-  };
-
-  const rows = [
-    { label: t('pages.deals.detail.client'), value: deal.client_name || deal.company_name },
-    { label: t('pages.deals.detail.manager'), value: deal.manager_name },
-    { label: t('pages.deals.detail.stage'), value: deal.stage_name },
-    { label: t('pages.deals.detail.totalValue'), value: deal.total_value ? formatCurrency(Number(deal.total_value)) : undefined },
-    { label: t('pages.deals.detail.created'), value: new Date(deal.created_at).toLocaleDateString() },
-    ...(deal.updated_at ? [{ label: t('pages.deals.detail.updated'), value: new Date(deal.updated_at).toLocaleDateString() }] : []),
-  ].filter(r => r.value);
-
-  return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="overflow-y-auto sm:max-w-lg">
-        <SheetHeader>
-          <SheetTitle>{deal.title || `${t('pages.deals.deal')} #${deal.id}`}</SheetTitle>
-          <SheetDescription>
-            {deal.client_name || deal.company_name || `D-${deal.id}`}
-          </SheetDescription>
-        </SheetHeader>
-
-        <div className="mt-2 space-y-6 px-4">
-          <section className="space-y-3">
-            <h3 className="text-sm font-semibold">{t('pages.deals.detail.info')}</h3>
-            {rows.map((r) => (
-              <div key={r.label} className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">{r.label}</span>
-                <span className="text-sm font-medium">{r.value}</span>
-              </div>
-            ))}
-          </section>
-
-          <Separator />
-
-          <section className="space-y-2">
-            <h3 className="text-sm font-semibold">{t('pages.deals.detail.stage')}</h3>
-            <StatusBadge label={deal.stage_name ?? ''} variant={getDealStageVariant(deal.stage_code ?? '')} />
-          </section>
-
-          {deal.notes && (
-            <>
-              <Separator />
-              <section className="space-y-2">
-                <h3 className="text-sm font-semibold">{t('pages.deals.detail.notes')}</h3>
-                <div className="rounded-lg border bg-muted/50 p-3">
-                  <p className="text-sm whitespace-pre-wrap">{deal.notes}</p>
-                </div>
-              </section>
-            </>
-          )}
-
-          <Separator />
-          <section className="space-y-2">
-            <h3 className="text-sm font-semibold">{t('pages.deals.detail.actions')}</h3>
-            <div className="flex flex-wrap gap-2">
-              {canTakeIntoWork && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={changeStage.isPending}
-                  onClick={() => changeStage.mutate({ id: deal.id, stage: DealStage.SOURCING })}
-                >
-                  <FileText className="mr-2 h-4 w-4" />
-                  {t('pages.deals.detail.takeIntoWork')}
-                </Button>
-              )}
-              {canBuildQuote && (
-                <Button size="sm" onClick={() => setQuoteOpen(true)}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  {t('generateQuote.submit')}
-                </Button>
-              )}
-              {hasQuote && (
-                <Button size="sm" onClick={openQuotePage}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  {t('pages.deals.detail.openQuote')}
-                </Button>
-              )}
-              {canBuyerDecide && (
-                <>
-                  <Button
-                    size="sm"
-                    className="bg-success text-success-foreground hover:bg-success/90"
-                    disabled={approveQuote.isPending}
-                    onClick={handleApprove}
-                  >
-                    <ThumbsUp className="mr-2 h-4 w-4" />
-                    {t('requestDetailActions.approveQuote')}
-                  </Button>
-                  <Button size="sm" variant="destructive" onClick={() => setRejectOpen(true)}>
-                    <ThumbsDown className="mr-2 h-4 w-4" />
-                    {t('requestDetailActions.rejectQuote')}
-                  </Button>
-                </>
-              )}
-            </div>
-          </section>
-        </div>
-
-        <GenerateQuoteDialog
-          dealId={deal.id}
-          open={quoteOpen}
-          onOpenChange={setQuoteOpen}
-          onGenerated={openQuotePage}
-        />
-        <RejectQuoteDialog
-          quoteId={deal.active_quote?.id ?? null}
-          open={rejectOpen}
-          onOpenChange={setRejectOpen}
-          onConfirm={async (reason) => {
-            if (deal.active_quote) await rejectQuote.mutateAsync({ id: deal.active_quote.id, reason });
-          }}
-        />
-      </SheetContent>
-    </Sheet>
-  );
+/* ─── Single canonical seller deal pipeline (ADR-0003 consolidation) ─────────
+ * One index (list + Kanban) → ONE deal record (request-detail/<id>) → focused
+ * КП builder (deal-quote/<id>). The old Sourcing→Requests list and the inline
+ * DealDetailSheet were removed (duplicate surfaces on the same useDeals data).
+ */
+function openDeal(deal: Deal) {
+  window.location.hash = `request-detail/${deal.id}`;
 }
-
-/* ─── Main Page ────────────────────────────────────────────────────── */
 
 export function DealsPage() {
   const { t } = useTranslation();
@@ -210,7 +31,6 @@ export function DealsPage() {
   const formatCurrency = useCurrencyStore((s) => s.format);
 
   const listParams = useListParams(['stage'] as const, { defaultOrdering: '-created_at' });
-  const [detailTarget, setDetailTarget] = useState<Deal | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [view, setView] = useState<'list' | 'kanban'>(() => {
     try {
@@ -221,11 +41,6 @@ export function DealsPage() {
     setView(v);
     try { localStorage.setItem('deals.view', v); } catch { /* ignore */ }
   };
-
-  const selectedDeal = useMemo(() => {
-    if (!detailTarget || !deals) return null;
-    return deals.find((d) => d.id === detailTarget.id) ?? detailTarget;
-  }, [deals, detailTarget]);
 
   const stats = [
     { label: t('pages.deals.stats.total'), value: String(deals?.length ?? 0) },
@@ -287,7 +102,7 @@ export function DealsPage() {
         <DealsKanban
           deals={deals ?? []}
           stages={stages}
-          onOpen={(d) => setDetailTarget(d)}
+          onOpen={openDeal}
         />
       ) : (
       <Card>
@@ -329,7 +144,7 @@ export function DealsPage() {
                   <TableRow
                     key={deal.id}
                     className="cursor-pointer"
-                    onClick={() => setDetailTarget(deal)}
+                    onClick={() => openDeal(deal)}
                   >
                     <TableCell>
                       <span className="font-medium">{deal.title || `#${deal.id}`}</span>
@@ -359,7 +174,7 @@ export function DealsPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex justify-center" onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="sm" onClick={() => setDetailTarget(deal)}>
+                        <Button variant="ghost" size="sm" onClick={() => openDeal(deal)} aria-label={t('pages.deals.detail.openQuote')}>
                           <Eye className="h-3.5 w-3.5" />
                         </Button>
                       </div>
@@ -375,12 +190,6 @@ export function DealsPage() {
         </CardContent>
       </Card>
       )}
-
-      <DealDetailSheet
-        deal={selectedDeal}
-        open={!!detailTarget}
-        onOpenChange={(open) => { if (!open) setDetailTarget(null); }}
-      />
     </PageShell>
   );
 }

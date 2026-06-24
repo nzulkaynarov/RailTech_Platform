@@ -140,13 +140,9 @@ function getSellerNavigation(activePage: string, t: TFn): NavItem[] {
       ],
     },
     {
-      label: t('shell.sourcing'), icon: <ShoppingCart className="h-4 w-4" />,
-      children: [
-        { label: t('shell.requests'), id: 'sourcing-requests', active: activePage === 'sourcing-requests' },
-        { label: t('shell.excelImport'), id: 'sourcing-import', active: activePage === 'sourcing-import' },
-      ],
-    },
-    {
+      // One canonical seller deal surface (consolidation): the CRM → Deals
+      // pipeline is the single entry. The old Sourcing→Requests duplicate list was
+      // removed; Excel import is reached from the Deals "New" dialog.
       label: t('shell.crm'), icon: <Handshake className="h-4 w-4" />,
       children: crmChildren,
     },

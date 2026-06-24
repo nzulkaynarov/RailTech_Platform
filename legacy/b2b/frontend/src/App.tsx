@@ -28,7 +28,6 @@ const RequestDetailPage = lazyWithRetry(() => import('./pages/RequestDetailPage'
 
 // Lazy load individual page modules
 const PlatformAdminDashboard = lazyWithRetry(() => import('./pages/PlatformAdminDashboard'));
-const SourcingRequestsPage = lazyWithRetry(() => import('./pages/SourcingRequestsPage'));
 const SourcingImportPage = lazyWithRetry(() => import('./pages/SourcingImportPage'));
 const DealsPage = lazyWithRetry(() => import('./pages/DealsPage'));
 const QuotesPage = lazyWithRetry(() => import('./pages/QuotesPage'));
@@ -451,11 +450,15 @@ function MainApp() {
         { label: t('breadcrumb.productDetail') },
       ];
       case 'request-detail': return [
-        { label: getPageLabel('my-requests', t), pageId: 'my-requests' },
+        // The deal record is the seller's "Deals" detail and the buyer's "My Requests"
+        // detail — one page, context-aware parent crumb.
+        activeStatus === 'SELLER'
+          ? { label: getPageLabel('crm-deals', t), pageId: 'crm-deals' }
+          : { label: getPageLabel('my-requests', t), pageId: 'my-requests' },
         { label: t('breadcrumb.requestDetail') },
       ];
       case 'sourcing-import': return [
-        { label: getPageLabel('sourcing-requests', t), pageId: 'sourcing-requests' },
+        { label: getPageLabel('crm-deals', t), pageId: 'crm-deals' },
         { label: getPageLabel('sourcing-import', t) },
       ];
       case 'deal-quote': return [
@@ -498,13 +501,16 @@ function MainApp() {
       content = (
         <RequestDetailPage
           dealId={page.dealId}
-          onBack={() => navigateTo({ type: 'my-requests' })}
+          onBack={() => navigateTo({ type: activeStatus === 'SELLER' ? 'crm-deals' : 'my-requests' })}
         />
       );
-      activePageId = 'my-requests';
+      activePageId = activeStatus === 'SELLER' ? 'crm-deals' : 'my-requests';
       break;
     case 'sourcing-requests':
-      content = <SourcingRequestsPage onNavigate={handleNavigate} />;
+      // Consolidated into the single CRM → Deals pipeline. Keep the old hash route
+      // working by rendering the canonical Deals surface (no separate page).
+      content = <DealsPage />;
+      activePageId = 'crm-deals';
       break;
     case 'sourcing-import':
       content = <SourcingImportPage />;
@@ -515,7 +521,7 @@ function MainApp() {
     case 'deal-quote':
       // Same access surface as crm-deals (a seller working a КП). The backend
       // enforces seller-only writes on the quote/quote-item endpoints.
-      content = <DealQuotePage dealId={page.dealId} onBack={() => navigateTo({ type: 'crm-deals' })} />;
+      content = <DealQuotePage dealId={page.dealId} onBack={() => navigateTo({ type: 'request-detail', dealId: page.dealId })} />;
       activePageId = 'crm-deals';
       break;
     case 'crm-quotes':

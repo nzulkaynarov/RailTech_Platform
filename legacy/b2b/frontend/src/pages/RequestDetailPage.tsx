@@ -1,6 +1,6 @@
 import { useState, Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Send, Calculator, ThumbsUp, ThumbsDown, User, Briefcase, Download, Loader2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Send, Calculator, ThumbsUp, ThumbsDown, User, Briefcase, Download, Loader2, AlertTriangle, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { QuoteStatus, DealStage } from '@/lib/codes';
 import { useUserStore } from '@/store/userStore';
@@ -20,6 +20,7 @@ import { DealChatPanel } from '@/components/Sourcing/DealChatPanel';
 import { RejectQuoteDialog } from '@/components/CRM/RejectQuoteDialog';
 import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
 import { RequestItemsEditor } from '@/components/CRM/RequestItemsEditor';
+import { GenerateQuoteDialog } from '@/components/CRM/GenerateQuoteDialog';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { buyerStatus } from '@/lib/requestStatus';
 
@@ -37,6 +38,7 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
   const [rejectOpen, setRejectOpen] = useState(false);
   const [approveConfirmOpen, setApproveConfirmOpen] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [generateQuoteOpen, setGenerateQuoteOpen] = useState(false);
   const isViewer = useIsViewerMode();
   const viewerTip = t('apiErrors.ADMIN_VIEWER_CANNOT_ACT');
 
@@ -77,6 +79,11 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
   const isCalculating = deal.stage_code === DealStage.CALCULATING;
   const isQuoteSent = deal.stage_code === DealStage.QUOTE_SENT;
   const isWon = deal.stage_code === DealStage.CLOSED_WON || deal.stage_code === DealStage.CONTRACT_SIGNED;
+  // Seller КП-builder entry (consolidated here from the old Deals side-sheet):
+  // create the КП once the deal is in work, or open the focused builder if it exists.
+  const canBuildQuote = isSellerSide && (isSourcing || isCalculating) && !deal.active_quote;
+  const hasQuote = isSellerSide && !!deal.active_quote;
+  const openQuoteBuilder = () => { window.location.hash = `deal-quote/${deal.id}`; };
   // Buyer may build/edit their own request (name + qty) until the seller engages.
   // The backend is the source of truth (can_edit_request); the UI only reflects it.
   const canEditRequest = !!deal.can_edit_request;
@@ -168,7 +175,7 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
             / send quote) only show for SELLER / MANUFACTURER. Buyer only sees
             approve / reject once the quote is sent. */}
         {(() => {
-          const sellerActions = isSellerSide && (isDraft || isSourcing || (isCalculating && quote));
+          const sellerActions = isSellerSide && (isDraft || isSourcing || isCalculating || hasQuote);
           const buyerActions = isBuyerSide && isQuoteSent && quote;
           const showActionBar = sellerActions || buyerActions || isWon;
           if (!showActionBar) {
@@ -204,6 +211,25 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
                   >
                     <Calculator className="h-4 w-4 mr-2" />
                     {t('requestDetailActions.startCalculation')}
+                  </Button>
+                )}
+                {/* КП builder entry — create it, then open the focused full-page
+                    builder (QuoteBuilderGrid: pricing, basis, charges, approval chain). */}
+                {canBuildQuote && (
+                  <Button
+                    variant="default"
+                    onClick={() => setGenerateQuoteOpen(true)}
+                    disabled={isViewer}
+                    title={isViewer ? viewerTip : undefined}
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    {t('generateQuote.submit')}
+                  </Button>
+                )}
+                {hasQuote && (
+                  <Button variant="outline" onClick={openQuoteBuilder}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    {t('pages.deals.detail.openQuote')}
                   </Button>
                 )}
                 {/* Only an internally-approved КП can be sent (backend requires
@@ -453,6 +479,14 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
         confirmLabel={t('requestDetailActions.approveQuote')}
         onConfirm={async () => { if (quote) await approveQuote.mutateAsync(quote.id); }}
         translateError={(code) => translateApiError(code)}
+      />
+
+      {/* Seller: create the КП, then jump straight into the focused builder. */}
+      <GenerateQuoteDialog
+        dealId={deal.id}
+        open={generateQuoteOpen}
+        onOpenChange={setGenerateQuoteOpen}
+        onGenerated={openQuoteBuilder}
       />
     </div>
   );
