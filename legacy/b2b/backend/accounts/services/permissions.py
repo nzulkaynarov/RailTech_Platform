@@ -145,6 +145,24 @@ def is_platform_admin_viewer(user: "CustomUser") -> bool:
     return role_code == "ADMIN"
 
 
+def can_view_quote_costs(user: "CustomUser") -> bool:
+    """True if the viewer may see КП cost/margin fields (base price, logistics, customs,
+    margin, landed cost, charges). Superuser / platform-admin always; otherwise a member of
+    a SELLER company who holds the `quote.view_cost_margin` permission. This is the sensitive
+    gate that replaces the blanket "any seller sees cost" — a restricted seller-team role
+    (e.g. Наблюдатель) no longer sees margin."""
+    if not user or not user.is_authenticated:
+        return False
+    if getattr(user, "is_superuser", False) or is_platform_admin_viewer(user):
+        return True
+    seller_company_ids = (
+        user.memberships.filter(is_active=True, company__types__code__in=SELLER_COMPANY_TYPES)
+        .values_list("company_id", flat=True)
+        .distinct()
+    )
+    return any(member_has_permission(user, cid, "quote.view_cost_margin") for cid in seller_company_ids)
+
+
 def company_has_operational_subscription(company_id: int) -> bool:
     """True if the company has a SupplierSubscription that is_operational right now.
 

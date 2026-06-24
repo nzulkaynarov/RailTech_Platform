@@ -4231,5 +4231,21 @@
     "LOGIST": "Логист",
     "CONTRACT_MANAGER": "Договорник",
     "FOREIGN_TRADE_SPECIALIST": "Специалист ВЭД"
+  },
+  "permissions": {
+    "quote.build": "Строить КП",
+    "quote.send": "Отправлять КП клиенту",
+    "quote.view_cost_margin": "Видеть себестоимость и маржу",
+    "quote.edit_pricing": "Менять цены и скидки",
+    "request.create": "Создавать заявки",
+    "quote.approve": "Принимать/отклонять КП",
+    "contract.sign": "Подписывать контракты",
+    "payment.record": "Проводить платежи",
+    "catalog.manage": "Управлять каталогом и офферами",
+    "catalog.publish": "Публиковать товары",
+    "team.manage": "Управлять командой и ролями",
+    "settings.edit": "Менять настройки компании",
+    "charge_templates.manage": "Управлять шаблонами статей",
+    "data.export": "Экспортировать данные"
   }
 }

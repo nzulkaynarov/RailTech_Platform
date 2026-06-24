@@ -102,9 +102,9 @@ class QuoteItemSerializer(serializers.ModelSerializer):
         user = getattr(request, "user", None)
         privileged = False
         if user is not None and getattr(user, "is_authenticated", False):
-            from accounts.services.permissions import is_platform_admin_viewer, is_seller
+            from accounts.services.permissions import can_view_quote_costs
 
-            privileged = bool(getattr(user, "is_superuser", False) or is_platform_admin_viewer(user) or is_seller(user))
+            privileged = can_view_quote_costs(user)
         self._priv_cache = privileged
         return privileged
 
@@ -244,9 +244,9 @@ class QuoteSerializer(serializers.ModelSerializer):
         user = getattr(request, "user", None)
         privileged = False
         if user is not None and getattr(user, "is_authenticated", False):
-            from accounts.services.permissions import is_platform_admin_viewer, is_seller
+            from accounts.services.permissions import can_view_quote_costs
 
-            privileged = bool(getattr(user, "is_superuser", False) or is_platform_admin_viewer(user) or is_seller(user))
+            privileged = can_view_quote_costs(user)
         self._priv_cache = privileged
         return privileged
 

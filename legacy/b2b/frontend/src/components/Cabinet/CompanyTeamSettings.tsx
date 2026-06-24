@@ -182,7 +182,7 @@ function RoleEditorSheet({ open, onOpenChange, editingRole }: RoleSheetProps) {
                                 checked={selectedPerms.has(perm.code)}
                                 onCheckedChange={() => togglePerm(perm.code)}
                               />
-                              <span className="text-sm text-foreground">{perm.label}</span>
+                              <span className="text-sm text-foreground">{t(`permissions.${perm.code}`, { defaultValue: perm.label })}</span>
                             </label>
                           ))}
                         </div>
@@ -306,7 +306,7 @@ function RolesSection() {
                       <div className="flex flex-wrap gap-1">
                         {role.permissions.slice(0, 3).map((perm) => (
                           <Badge key={perm} variant="outline" className="text-xs font-normal">
-                            {perm}
+                            {t(`permissions.${perm}`, { defaultValue: perm })}
                           </Badge>
                         ))}
                         {role.permissions.length > 3 && (
