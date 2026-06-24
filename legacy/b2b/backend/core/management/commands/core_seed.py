@@ -141,6 +141,7 @@ class Command(BaseCommand):
                 charge_type = ChargeType.objects.filter(code=type_code).first()
                 if charge_type:
                     ChargeTemplate.objects.update_or_create(
+                        company=None,  # global platform default
                         delivery_basis=basis,
                         charge_type=charge_type,
                         defaults={"sort_order": order},

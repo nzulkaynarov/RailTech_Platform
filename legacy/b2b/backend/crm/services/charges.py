@@ -11,6 +11,24 @@ from crm.models import ChargeTemplate, Quote, QuoteCharge
 from master_data.models import DeliveryBasis
 
 
+def _seller_company_id_for(quote: Quote, actor):
+    """The seller company whose templates apply — the company building the КП.
+
+    Prefer the actor (the seller setting the basis), else the quote's preparer.
+    Returns None → use the platform's global default templates.
+    """
+    from accounts.services.permissions import primary_seller_company_id
+
+    if actor is not None:
+        company_id = primary_seller_company_id(actor)
+        if company_id:
+            return company_id
+    preparer = getattr(quote, "prepared_by", None)
+    if preparer is not None:
+        return primary_seller_company_id(preparer)
+    return None
+
+
 def apply_charge_template_to_quote(quote: Quote, actor=None) -> int:
     """
     Create QuoteCharge rows from the quote's delivery-basis template.
@@ -22,12 +40,15 @@ def apply_charge_template_to_quote(quote: Quote, actor=None) -> int:
     if not quote.delivery_basis_id:
         return 0
 
+    # Scope to the seller company's own templates; fall back to the platform's
+    # global defaults (company IS NULL) when the company has none for this basis.
+    company_id = _seller_company_id_for(quote, actor)
+    by_basis = ChargeTemplate.objects.filter(delivery_basis_id=quote.delivery_basis_id, is_active=True)
+    own = by_basis.filter(company_id=company_id) if company_id else by_basis.none()
+    templates = own if own.exists() else by_basis.filter(company__isnull=True)
+
     existing_type_ids = set(quote.charges.values_list("charge_type_id", flat=True))
-    templates = (
-        ChargeTemplate.objects.filter(delivery_basis_id=quote.delivery_basis_id, is_active=True)
-        .exclude(charge_type_id__in=existing_type_ids)
-        .select_related("charge_type")
-    )
+    templates = templates.exclude(charge_type_id__in=existing_type_ids).select_related("charge_type")
 
     created = 0
     for template in templates:

@@ -198,3 +198,58 @@ def test_template_does_not_clobber_manual_charge(quote):
     quote.save(update_fields=["delivery_basis"])
     assert apply_charge_template_to_quote(quote) == 0
     assert quote.charges.get(charge_type=freight).amount == Decimal("777")
+
+
+# ─── Per-company charge templates (scope + global fallback) ─────────────────
+
+
+def _seller_user_with_supplier_company(inn):
+    from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
+
+    CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 10})
+    owner_role = WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})[0]
+    co = Company.objects.create(name=f"Seller {inn}", inn=inn)
+    co.types.add(CompanyType.objects.get(code="SUPPLIER"))
+    user = CustomUser.objects.create_user(email=f"s{inn}@s.test", username=f"s{inn}@s.test", password="pw", is_active=True)
+    CompanyMember.objects.create(user=user, company=co, role=owner_role, is_active=True, can_sell=True)
+    return user, co
+
+
+@pytest.mark.django_db
+def test_company_templates_override_global(quote):
+    from crm.models import ChargeTemplate
+    from crm.services.charges import apply_charge_template_to_quote
+    from master_data.models import DeliveryBasis
+
+    ddp = DeliveryBasis.objects.create(code="DDP", name="DDP")
+    rent = ChargeType.objects.create(code="RENT", name="Аренда")
+    freight = ChargeType.objects.create(code="FREIGHT", name="Фрахт")
+    ChargeTemplate.objects.create(company=None, delivery_basis=ddp, charge_type=freight)  # global default
+
+    seller, co = _seller_user_with_supplier_company("7777777777")
+    ChargeTemplate.objects.create(company=co, delivery_basis=ddp, charge_type=rent)  # company's own
+
+    quote.delivery_basis = ddp
+    quote.save(update_fields=["delivery_basis"])
+    created = apply_charge_template_to_quote(quote, seller)
+    assert created == 1
+    assert quote.charges.get(from_template=True).charge_type.code == "RENT"
+
+
+@pytest.mark.django_db
+def test_falls_back_to_global_when_company_has_none(quote):
+    from crm.models import ChargeTemplate
+    from crm.services.charges import apply_charge_template_to_quote
+    from master_data.models import DeliveryBasis
+
+    ddp = DeliveryBasis.objects.create(code="DDP", name="DDP")
+    freight = ChargeType.objects.create(code="FREIGHT", name="Фрахт")
+    ChargeTemplate.objects.create(company=None, delivery_basis=ddp, charge_type=freight)  # global only
+
+    seller, _co = _seller_user_with_supplier_company("6666666666")
+
+    quote.delivery_basis = ddp
+    quote.save(update_fields=["delivery_basis"])
+    created = apply_charge_template_to_quote(quote, seller)
+    assert created == 1
+    assert quote.charges.get(from_template=True).charge_type.code == "FREIGHT"

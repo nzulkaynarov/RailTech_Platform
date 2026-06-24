@@ -64,6 +64,20 @@ export interface QuoteCharge {
 	created_at?: string;
 }
 
+// Per-company charge template (org-admin): default charges auto-applied per basis.
+export interface ChargeTemplate {
+	id: number;
+	delivery_basis: string;        // Incoterm code
+	delivery_basis_name?: string;
+	charge_type: string;           // ChargeType code
+	charge_type_name?: string;
+	default_amount: string;
+	default_rate_percent?: string | null;
+	is_deduction: boolean;
+	sort_order: number;
+	is_active: boolean;
+}
+
 export interface Quote {
 	id: number;
 	deal: number;
@@ -225,6 +239,21 @@ export const crmApi = {
 	getChargeTypes: async () => {
 		const response = await apiClient.get<{ id: number; code: string; name: string }[]>('crm/charge-types/');
 		return response.data;
+	},
+	// ─── Org-admin: the company's per-Incoterm charge templates ───
+	getChargeTemplates: async () => {
+		const response = await apiClient.get<ChargeTemplate[]>('crm/charge-templates/');
+		return response.data;
+	},
+	createChargeTemplate: async (data: {
+		delivery_basis: string; charge_type: string;
+		default_amount?: string; default_rate_percent?: string | null; is_deduction?: boolean; sort_order?: number;
+	}) => {
+		const response = await apiClient.post<ChargeTemplate>('crm/charge-templates/', data);
+		return response.data;
+	},
+	deleteChargeTemplate: async (id: number) => {
+		await apiClient.delete(`crm/charge-templates/${id}/`);
 	},
 	getQuoteItems: async (params?: { deal_id?: number, product_is_null?: boolean }) => {
 		let url = 'crm/quote-items/';

@@ -123,12 +123,25 @@ class ChargeTemplate(models.Model):
     """
     Шаблон статей расхода для базиса поставки (Incoterm cost profile).
 
-    Овнер настраивает в админке: к каждому базису — набор статей по умолчанию. При
-    выборе базиса на КП эти статьи авто-создаются как QuoteCharge (from_template=True),
-    после чего продавец правит их вручную. Глобальные (одни на платформу) — для
-    единственного продавца RailTech; при необходимости позже заскоупим на компанию.
+    Администратор компании-продавца настраивает свои шаблоны: к каждому базису —
+    набор статей по умолчанию. При выборе базиса на КП эти статьи авто-создаются как
+    QuoteCharge (from_template=True), после чего продавец правит вручную.
+
+    Скоуп: `company` = компания-владелец шаблона. `company IS NULL` — глобальный
+    дефолт платформы (стартовый сид), который используется, если у компании-продавца
+    нет своих шаблонов под этот базис (см. apply_charge_template_to_quote).
     """
 
+    company = models.ForeignKey(
+        "accounts.Company",
+        on_delete=models.CASCADE,
+        related_name="charge_templates",
+        null=True,
+        blank=True,
+        db_index=True,
+        verbose_name=_("Компания"),
+        help_text=_("Компания-владелец шаблона. Пусто = глобальный дефолт платформы."),
+    )
     delivery_basis = models.ForeignKey(
         DeliveryBasis,
         on_delete=models.CASCADE,
@@ -170,9 +183,10 @@ class ChargeTemplate(models.Model):
     class Meta:
         verbose_name = _("Шаблон статьи расхода")
         verbose_name_plural = _("Справочник: Шаблоны статей расхода (по базисам)")
-        ordering = ["delivery_basis", "sort_order", "id"]
-        # One row per (basis, charge type) — the template is the set of types for a basis.
-        unique_together = [("delivery_basis", "charge_type")]
+        ordering = ["company", "delivery_basis", "sort_order", "id"]
+        # One row per (company, basis, charge type). NULL company = the global default set.
+        unique_together = [("company", "delivery_basis", "charge_type")]
 
     def __str__(self):
-        return f"{self.delivery_basis.code}: {self.charge_type}"
+        scope = self.company.name if self.company_id else "global"
+        return f"[{scope}] {self.delivery_basis.code}: {self.charge_type}"
