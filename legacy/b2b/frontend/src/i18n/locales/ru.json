@@ -1095,14 +1095,14 @@
     "inviteSuccess": "Пользователь {{email}} успешно приглашен.",
     "inviteError": "Ошибка при приглашении.",
     "inviteHint": "Роли и права можно поменять позже — переключатели «Покупка» и «Продажа» управляют доступом к сделкам и подписке.",
-    "ownerOnly": "Только Владелец компании может приглашать новых сотрудников.",
+    "ownerOnly": "Только Администратор компании может приглашать новых сотрудников.",
     "capabilityUpdated": "Права обновлены",
     "capabilities": {
       "canBuy": "Покупка",
       "canSell": "Продажа"
     },
     "roles": {
-      "OWNER": "Владелец",
+      "OWNER": "Администратор компании",
       "ACCOUNTANT": "Бухгалтер",
       "MANAGER": "Снабженец"
     },
@@ -1169,7 +1169,7 @@
     "typeSupplierDesc": "Посредник: покупает и перепродаёт оборудование",
     "roleLabel": "Ваша роль в компании",
     "rolePlaceholder": "Выберите роль",
-    "roleOwner": "Владелец / Основатель",
+    "roleOwner": "Администратор компании / Основатель",
     "roleManager": "Снабженец / Закупщик",
     "roleAccountant": "Бухгалтер",
     "submit": "Отправить на верификацию",
@@ -1284,7 +1284,7 @@
     "workspaceRole": "Роль в кабинете",
     "workspaceRolePlaceholder": "Выберите роль в кабинете",
     "workspaceNone": "Нет",
-    "workspaceOwner": "Владелец",
+    "workspaceOwner": "Администратор компании",
     "workspaceAccountant": "Бухгалтер",
     "workspaceManager": "Менеджер",
     "validation": {
@@ -3409,7 +3409,7 @@
     "members": {
       "inviteEmail": "Email приглашаемого",
       "role": "Роль",
-      "roleOwner": "Владелец",
+      "roleOwner": "Администратор компании",
       "roleProcurement": "Закупки",
       "roleMember": "Участник",
       "invite": "Пригласить",

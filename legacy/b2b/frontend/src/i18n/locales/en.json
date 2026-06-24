@@ -1093,14 +1093,14 @@
     "inviteSuccess": "User {{email}} has been invited.",
     "inviteError": "Failed to send invitation.",
     "inviteHint": "Roles and capabilities can be changed later — Buy/Sell switches control deal access and subscription scope.",
-    "ownerOnly": "Only the company Owner can invite new employees.",
+    "ownerOnly": "Only the company Admin can invite new employees.",
     "capabilityUpdated": "Capabilities updated",
     "capabilities": {
       "canBuy": "Buy",
       "canSell": "Sell"
     },
     "roles": {
-      "OWNER": "Owner",
+      "OWNER": "Company Admin",
       "ACCOUNTANT": "Accountant",
       "MANAGER": "Manager"
     },
@@ -1167,7 +1167,7 @@
     "typeSupplierDesc": "Supplying equipment and spare parts",
     "roleLabel": "Your role in the company",
     "rolePlaceholder": "Select role",
-    "roleOwner": "Owner / Founder",
+    "roleOwner": "Company Admin / Founder",
     "roleManager": "Procurement Manager",
     "roleAccountant": "Accountant",
     "submit": "Submit for verification",
@@ -1282,7 +1282,7 @@
     "workspaceRole": "Workspace Role",
     "workspaceRolePlaceholder": "Select workspace role",
     "workspaceNone": "None",
-    "workspaceOwner": "Owner",
+    "workspaceOwner": "Company Admin",
     "workspaceAccountant": "Accountant",
     "workspaceManager": "Manager",
     "validation": {
@@ -3405,7 +3405,7 @@
     "members": {
       "inviteEmail": "Invitee email",
       "role": "Role",
-      "roleOwner": "Owner",
+      "roleOwner": "Company Admin",
       "roleProcurement": "Procurement",
       "roleMember": "Member",
       "invite": "Invite",

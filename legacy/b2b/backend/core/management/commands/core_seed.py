@@ -133,7 +133,7 @@ class Command(BaseCommand):
         # ─── 6. Роли в компании (типо-специфичные) ───
         workspace_roles = [
             # (code, name, applicable_company_type_codes)
-            ("OWNER", "Владелец", []),
+            ("OWNER", "Администратор компании", []),
             ("PROCUREMENT_MANAGER", "Снабженец", ["CLIENT"]),
             ("BUYER_MANAGER", "Менеджер (Покупатель)", ["CLIENT"]),
             ("SALES_MANAGER", "Продавец", ["SUPPLIER"]),
