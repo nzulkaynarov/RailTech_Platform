@@ -265,6 +265,11 @@ class DealListSerializer(serializers.ModelSerializer):
     stage_code = serializers.CharField(source="stage.code", read_only=True)
     company_name = serializers.CharField(source="company.name", read_only=True)
     active_quote = QuoteSerializer(read_only=True)
+    target_sellers_data = serializers.SerializerMethodField()
+
+    def get_target_sellers_data(self, obj) -> list:
+        """Seller companies this RFQ is routed to (multi-seller routing)."""
+        return [{"id": seller.id, "name": seller.name} for seller in obj.target_sellers.all()]
 
     class Meta:
         model = Deal
@@ -279,6 +284,7 @@ class DealListSerializer(serializers.ModelSerializer):
             "total_value",
             "manager",
             "active_quote",
+            "target_sellers_data",
             "created_at",
         ]
 
@@ -294,6 +300,11 @@ class DealDetailSerializer(serializers.ModelSerializer):
     client_name = serializers.CharField(source="client.get_full_name", read_only=True)
     manager_name = serializers.CharField(source="manager.get_full_name", read_only=True)
     can_edit_request = serializers.SerializerMethodField()
+    target_sellers_data = serializers.SerializerMethodField()
+
+    def get_target_sellers_data(self, obj) -> list:
+        """Seller companies this RFQ is routed to (multi-seller routing)."""
+        return [{"id": seller.id, "name": seller.name} for seller in obj.target_sellers.all()]
 
     def get_can_edit_request(self, obj) -> bool:
         """Whether the current user may add/edit/remove this deal's request rows."""
@@ -323,6 +334,7 @@ class DealDetailSerializer(serializers.ModelSerializer):
             "active_quote",
             "quotes",
             "can_edit_request",
+            "target_sellers_data",
             "created_at",
             "updated_at",
         ]

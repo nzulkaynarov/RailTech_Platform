@@ -146,6 +146,13 @@ export interface Message {
 	is_me: boolean;
 }
 
+// A seller company an RFQ is routed to (multi-seller routing). Minimal shape —
+// id + display name — used both for the routing picker and the "Routed to" line.
+export interface SellerCompanyRef {
+	id: number;
+	name: string;
+}
+
 export interface Deal {
 	id: number;
 	company?: number | null;
@@ -163,6 +170,8 @@ export interface Deal {
 	active_quote?: Quote | null;
 	quotes?: Quote[];
 	can_edit_request?: boolean;
+	// Seller companies this RFQ is routed to (read-only; populated by routeDeal).
+	target_sellers_data?: SellerCompanyRef[];
 	created_at: string;
 	updated_at?: string;
 }
@@ -241,6 +250,20 @@ export const crmApi = {
 	// Buyer issues the RFQ to the seller (Draft → RFQ_OPEN). The «Отправить заявку» step.
 	submitRequest: async (dealId: number) => {
 		const response = await apiClient.post<Deal>(`crm/deals/${dealId}/submit-request/`);
+		return response.data;
+	},
+	// ─── Multi-seller routing ────────────────────────────────────────────────
+	// Active SUPPLIER companies — the buyer's routing picker source. The endpoint
+	// may be paginated or return a bare array; unwrap both shapes.
+	getDealSuppliers: async (): Promise<SellerCompanyRef[]> => {
+		const response = await apiClient.get<SellerCompanyRef[] | PaginatedResponse<SellerCompanyRef>>('crm/deals/suppliers/');
+		const { data } = response;
+		return Array.isArray(data) ? data : data.results;
+	},
+	// Buyer routes a DRAFT RFQ to one or more seller companies (by company id).
+	// Returns the refreshed deal (incl. target_sellers_data).
+	routeDeal: async (dealId: number, sellerCompanyIds: number[]) => {
+		const response = await apiClient.post<Deal>(`crm/deals/${dealId}/route/`, { seller_company_ids: sellerCompanyIds });
 		return response.data;
 	},
 	changeDealStage: async (dealId: number, stageCode: string) => {

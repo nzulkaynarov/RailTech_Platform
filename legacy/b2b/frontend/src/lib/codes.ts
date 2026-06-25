@@ -55,9 +55,11 @@ export const WorkspaceRole = {
 } as const;
 
 /** i18n key for a WorkspaceRole CODE — render `t(workspaceRoleLabelKey(code))` instead
- * of the Russian-only DB role name. Mirrors `workspaceRoles.*` in ru.json / en.json. */
+ * of the Russian-only DB role name. Returns `''` for an unknown / empty code so callers
+ * can gracefully fall back to the raw DB name (`|| role_name`). Mirrors `workspaceRoles.*`
+ * in ru.json / en.json. */
 export const workspaceRoleLabelKey = (code: string | undefined | null): string =>
-  code ? `workspaceRoles.${code}` : '';
+  code && code in WorkspaceRole ? `workspaceRoles.${code}` : '';
 
 export const QuoteStatus = {
   DRAFT: 'DRAFT',

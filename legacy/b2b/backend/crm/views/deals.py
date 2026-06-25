@@ -17,6 +17,7 @@ from crm.services import (
     buyer_update_request_meta,
     force_transition_deal_stage,
     register_new_deal,
+    route_request_to_sellers,
     submit_request,
     transition_deal_stage,
 )
@@ -78,7 +79,7 @@ class DealViewSet(viewsets.ModelViewSet):
         queryset = (
             Deal.objects.all()
             .select_related("client", "manager", "company", "stage")
-            .prefetch_related(Prefetch("quotes", queryset=quotes_qs))
+            .prefetch_related(Prefetch("quotes", queryset=quotes_qs), "target_sellers")
         )
 
         from accounts.services.permissions import seller_visible_deal_ids
@@ -283,6 +284,64 @@ class DealViewSet(viewsets.ModelViewSet):
             notes=request.data.get("notes"),
         )
         return Response(DealDetailSerializer(deal, context={"request": request}).data)
+
+    @extend_schema(
+        summary="Route the request (RFQ) to seller companies",
+        description=(
+            "Buyer-only, while the deal is still DRAFT. Addresses a (typically "
+            "free-text) заявка to chosen seller companies — multi-seller routing. "
+            "Idempotent; each id must be an active SUPPLIER-type company."
+        ),
+        request=inline_serializer(
+            "RouteRequestRequest",
+            fields={
+                "seller_company_ids": drf_serializers.ListField(child=drf_serializers.IntegerField()),
+            },
+        ),
+        responses={200: DealDetailSerializer},
+        tags=["CRM"],
+    )
+    @action(detail=True, methods=["post"], url_path="route")
+    def route(self, request, pk=None):
+        """Buyer routes the request to the chosen seller company/companies."""
+        route_request_to_sellers(
+            request.user,
+            self.get_object(),
+            request.data.get("seller_company_ids", []),
+        )
+        # Re-fetch so target_sellers_data reflects the freshly-created routing rows
+        # (the get_object() instance carries a stale prefetched M2M cache).
+        deal = self.get_queryset().get(pk=pk)
+        return Response(DealDetailSerializer(deal, context={"request": request}).data)
+
+    @extend_schema(
+        summary="List seller companies for the routing picker",
+        description="Buyer-facing lightweight directory of active SUPPLIER companies.",
+        responses={
+            200: inline_serializer(
+                "SupplierPickerItem",
+                fields={
+                    "id": drf_serializers.IntegerField(),
+                    "name": drf_serializers.CharField(),
+                },
+                many=True,
+            )
+        },
+        tags=["CRM"],
+    )
+    @action(detail=False, methods=["get"], url_path="suppliers", pagination_class=None)
+    def suppliers(self, request):
+        """Active SUPPLIER companies for the buyer's routing picker."""
+        from accounts.constants import SELLER_COMPANY_TYPES
+        from accounts.models import Company
+
+        sellers = (
+            Company.objects.filter(types__code__in=SELLER_COMPANY_TYPES)
+            .distinct()
+            .order_by("name")
+            .values("id", "name")
+        )
+        return Response(list(sellers))
 
     @extend_schema(
         summary="Force change deal stage (admin)",

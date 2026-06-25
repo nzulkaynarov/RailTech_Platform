@@ -49,6 +49,28 @@ export const useCreateDeal = () => {
   });
 };
 
+// ── Multi-seller routing ─────────────────────────────────────────────────
+// Active SUPPLIER companies — the buyer's "route to seller(s)" picker source.
+export const useDealSuppliers = () => useQuery({
+  queryKey: ['deal-suppliers'],
+  queryFn: crmApi.getDealSuppliers,
+  staleTime: 5 * 60_000,
+});
+
+// Buyer routes a DRAFT RFQ to seller companies. Invalidate the deals list and
+// the specific deal detail (key ['deals', id]) so target_sellers_data refreshes.
+export const useRouteDeal = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ dealId, sellerCompanyIds }: { dealId: number; sellerCompanyIds: number[] }) =>
+      crmApi.routeDeal(dealId, sellerCompanyIds),
+    onSuccess: (_data, { dealId }) => {
+      queryClient.invalidateQueries({ queryKey: ['deals'] });
+      queryClient.invalidateQueries({ queryKey: ['deals', dealId] });
+    },
+  });
+};
+
 export const useDealStages = () => useQuery({
   queryKey: ['deal-stages'],
   queryFn: crmApi.getDealStages,

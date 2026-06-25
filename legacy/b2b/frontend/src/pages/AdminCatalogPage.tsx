@@ -254,7 +254,9 @@ export function ProductFormSheet({
                 <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
                 <SelectContent>
                   {(statuses ?? []).map((s) => (
-                    <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
+                    <SelectItem key={s.id} value={String(s.id)}>
+                      {productStatusLabelKey(s.code) ? t(productStatusLabelKey(s.code)) : s.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -521,7 +523,10 @@ export function AdminCatalogPage() {
             value: listParams.filters.status,
             onChange: (v) => listParams.setFilter('status', v),
             allLabel: t('adminCatalog.allStatuses'),
-            options: (statuses ?? []).map((s) => ({ value: s.code, label: s.name })),
+            options: (statuses ?? []).map((s) => ({
+              value: s.code,
+              label: productStatusLabelKey(s.code) ? t(productStatusLabelKey(s.code)) : s.name,
+            })),
           },
         ]}
         newLabel={t('adminCatalog.newProduct')}

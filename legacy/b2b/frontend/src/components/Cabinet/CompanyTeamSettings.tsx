@@ -26,6 +26,7 @@ import {
   usePermissionCatalog,
 } from '../../hooks/useAccounts';
 import { CompanyRole } from '../../api/accountsApi';
+import { workspaceRoleLabelKey } from '@/lib/codes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -599,7 +600,7 @@ export function CompanyTeamSettings() {
                 <SelectContent>
                   {availableWorkspaceRoles.map((r) => (
                     <SelectItem key={r.code} value={r.code}>
-                      {r.name}
+                      {workspaceRoleLabelKey(r.code) ? t(workspaceRoleLabelKey(r.code)) : r.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

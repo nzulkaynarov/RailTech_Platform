@@ -38,6 +38,7 @@ from .quotes import (
     buyer_update_request_meta,
     get_crm_analytics_data,
     reassign_quote_item_product,
+    route_request_to_sellers,
     submit_request,
 )
 
@@ -70,6 +71,7 @@ __all__ = [
     "reassign_quote_item_product",
     "record_payment",
     "register_new_deal",
+    "route_request_to_sellers",
     "send_deal_message",
     "set_quote_delivery_basis",
     "sign_act",
