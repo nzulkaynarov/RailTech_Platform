@@ -55,6 +55,16 @@ def quote(db):
     return quote
 
 
+@pytest.fixture(autouse=True)
+def _isolate_seeded_charge_templates(db):
+    # The Incoterm charge-template profiles are now SEED DATA (crm migration 0036). These
+    # tests assert exact template-application counts, so they must control their own template
+    # environment — clear the global seed before each (rolled back with the test transaction).
+    from crm.models import ChargeTemplate
+
+    ChargeTemplate.objects.filter(company__isnull=True).delete()
+
+
 @pytest.mark.django_db
 def test_baseline_without_charges(quote):
     """No charges → subtotal=100, charges_total=0, vat=12, total=112."""
@@ -67,8 +77,8 @@ def test_baseline_without_charges(quote):
 @pytest.mark.django_db
 def test_header_charges_add_before_vat(quote):
     """Freight +50, rent +30 → charges 80; tax_excl 180; vat 21.60; total 201.60."""
-    freight = ChargeType.objects.create(code="FREIGHT", name="Фрахт")
-    rent = ChargeType.objects.create(code="RENT", name="Аренда склада")
+    freight = ChargeType.objects.get_or_create(code="FREIGHT", defaults={"name": "Фрахт"})[0]
+    rent = ChargeType.objects.get_or_create(code="RENT", defaults={"name": "Аренда склада"})[0]
     QuoteCharge.objects.create(quote=quote, charge_type=freight, amount=Decimal("50.00"))
     QuoteCharge.objects.create(quote=quote, charge_type=rent, amount=Decimal("30.00"))
     quote.refresh_from_db()
@@ -82,8 +92,8 @@ def test_header_charges_add_before_vat(quote):
 @pytest.mark.django_db
 def test_allowance_is_subtracted(quote):
     """Charge +50 and allowance −10 → net charges 40; tax_excl 140; total 156.80."""
-    freight = ChargeType.objects.create(code="FREIGHT", name="Фрахт")
-    discount = ChargeType.objects.create(code="DISCOUNT", name="Скидка")
+    freight = ChargeType.objects.get_or_create(code="FREIGHT", defaults={"name": "Фрахт"})[0]
+    discount = ChargeType.objects.get_or_create(code="DISCOUNT", defaults={"name": "Скидка"})[0]
     QuoteCharge.objects.create(quote=quote, charge_type=freight, amount=Decimal("50.00"))
     QuoteCharge.objects.create(
         quote=quote, charge_type=discount, amount=Decimal("10.00"), is_deduction=True
@@ -98,7 +108,7 @@ def test_allowance_is_subtracted(quote):
 @pytest.mark.django_db
 def test_percent_discount_on_whole_quote(quote):
     """−5% on subtotal 100 → charges −5; tax_excl 95; vat 11.40; total 106.40."""
-    discount = ChargeType.objects.create(code="DISCOUNT", name="Скидка")
+    discount = ChargeType.objects.get_or_create(code="DISCOUNT", defaults={"name": "Скидка"})[0]
     QuoteCharge.objects.create(
         quote=quote, charge_type=discount, rate_percent=Decimal("5"), is_deduction=True
     )
@@ -112,7 +122,7 @@ def test_percent_discount_on_whole_quote(quote):
 @pytest.mark.django_db
 def test_percent_takes_priority_over_amount(quote):
     """rate_percent set → amount is ignored (10% of 100 = 10, not the 999 amount)."""
-    freight = ChargeType.objects.create(code="FREIGHT", name="Фрахт")
+    freight = ChargeType.objects.get_or_create(code="FREIGHT", defaults={"name": "Фрахт"})[0]
     QuoteCharge.objects.create(
         quote=quote, charge_type=freight, amount=Decimal("999.00"), rate_percent=Decimal("10")
     )
@@ -164,9 +174,9 @@ def test_charge_template_auto_applies_and_is_idempotent(quote):
     from crm.services.charges import apply_charge_template_to_quote
     from master_data.models import DeliveryBasis
 
-    ddp = DeliveryBasis.objects.create(code="DDP", name="DDP", seller_pays_import=True)
-    freight = ChargeType.objects.create(code="FREIGHT", name="Фрахт")
-    customs = ChargeType.objects.create(code="CUSTOMS", name="Таможня")
+    ddp = DeliveryBasis.objects.get_or_create(code="DDP", defaults={"name": "DDP", "seller_pays_import": True})[0]
+    freight = ChargeType.objects.get_or_create(code="FREIGHT", defaults={"name": "Фрахт"})[0]
+    customs = ChargeType.objects.get_or_create(code="CUSTOMS", defaults={"name": "Таможня"})[0]
     ChargeTemplate.objects.create(delivery_basis=ddp, charge_type=freight, default_amount=Decimal("500"))
     ChargeTemplate.objects.create(delivery_basis=ddp, charge_type=customs, default_rate_percent=Decimal("5"))
 
@@ -188,8 +198,8 @@ def test_template_does_not_clobber_manual_charge(quote):
     from crm.services.charges import apply_charge_template_to_quote
     from master_data.models import DeliveryBasis
 
-    cif = DeliveryBasis.objects.create(code="CIF", name="CIF")
-    freight = ChargeType.objects.create(code="FREIGHT", name="Фрахт")
+    cif = DeliveryBasis.objects.get_or_create(code="CIF", defaults={"name": "CIF"})[0]
+    freight = ChargeType.objects.get_or_create(code="FREIGHT", defaults={"name": "Фрахт"})[0]
     ChargeTemplate.objects.create(delivery_basis=cif, charge_type=freight, default_amount=Decimal("100"))
     # Seller already entered a freight charge by hand.
     QuoteCharge.objects.create(quote=quote, charge_type=freight, amount=Decimal("777"))
@@ -221,9 +231,9 @@ def test_company_templates_override_global(quote):
     from crm.services.charges import apply_charge_template_to_quote
     from master_data.models import DeliveryBasis
 
-    ddp = DeliveryBasis.objects.create(code="DDP", name="DDP")
-    rent = ChargeType.objects.create(code="RENT", name="Аренда")
-    freight = ChargeType.objects.create(code="FREIGHT", name="Фрахт")
+    ddp = DeliveryBasis.objects.get_or_create(code="DDP", defaults={"name": "DDP"})[0]
+    rent = ChargeType.objects.get_or_create(code="RENT", defaults={"name": "Аренда"})[0]
+    freight = ChargeType.objects.get_or_create(code="FREIGHT", defaults={"name": "Фрахт"})[0]
     ChargeTemplate.objects.create(company=None, delivery_basis=ddp, charge_type=freight)  # global default
 
     seller, co = _seller_user_with_supplier_company("7777777777")
@@ -242,8 +252,8 @@ def test_falls_back_to_global_when_company_has_none(quote):
     from crm.services.charges import apply_charge_template_to_quote
     from master_data.models import DeliveryBasis
 
-    ddp = DeliveryBasis.objects.create(code="DDP", name="DDP")
-    freight = ChargeType.objects.create(code="FREIGHT", name="Фрахт")
+    ddp = DeliveryBasis.objects.get_or_create(code="DDP", defaults={"name": "DDP"})[0]
+    freight = ChargeType.objects.get_or_create(code="FREIGHT", defaults={"name": "Фрахт"})[0]
     ChargeTemplate.objects.create(company=None, delivery_basis=ddp, charge_type=freight)  # global only
 
     seller, _co = _seller_user_with_supplier_company("6666666666")
@@ -253,3 +263,33 @@ def test_falls_back_to_global_when_company_has_none(quote):
     created = apply_charge_template_to_quote(quote, seller)
     assert created == 1
     assert quote.charges.get(from_template=True).charge_type.code == "FREIGHT"
+
+
+@pytest.mark.django_db
+def test_incoterm_flags_gate_per_line_costs(quote):
+    """Audit M1/M2: per-line freight/customs enter landed cost ONLY when the Incoterm basis
+    says the seller pays — switching to a buyer-pays basis zeroes the bucket (no ghost cost)."""
+    from crm.services.quotes import QuoteCalculationService
+
+    from master_data.models import DeliveryBasis
+
+    item = quote.items.first()
+    item.logistics_cost = Decimal("50")
+    item.customs_duty = Decimal("20")
+    item.save()
+    exw = DeliveryBasis.objects.get_or_create(code="EXW", defaults={"name": "EXW"})[0]  # all flags False
+    ddp = DeliveryBasis.objects.get_or_create(
+        code="DDP", defaults={"name": "DDP", "seller_pays_freight": True, "seller_pays_import": True}
+    )[0]
+    # EXW: buyer bears freight + customs → per-line buckets zeroed, landed = base only.
+    QuoteCalculationService.calculate_item_prices(item, commit=True, basis=exw)
+    item.refresh_from_db()
+    assert item.logistics_cost == Decimal("0") and item.customs_duty == Decimal("0")
+    assert item.landed_cost == item.frozen_base_price
+    # DDP: seller bears both → counted in landed cost.
+    item.logistics_cost = Decimal("50")
+    item.customs_duty = Decimal("20")
+    item.save()
+    QuoteCalculationService.calculate_item_prices(item, commit=True, basis=ddp)
+    item.refresh_from_db()
+    assert item.landed_cost == item.frozen_base_price + Decimal("70")

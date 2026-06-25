@@ -25,6 +25,7 @@ import { DealAttachmentsPanel } from './DealAttachmentsPanel';
 import { crmApi, Message } from '@/api/crmApi';
 import { useSuggestChatReply } from '@/hooks/useCRM';
 import { useAuthStore } from '@/store/authStore';
+import { useUserStore } from '@/store/userStore';
 
 interface DealChatPanelProps {
   dealId?: number | null;
@@ -45,6 +46,7 @@ export function DealChatPanel({ dealId }: DealChatPanelProps = {}): React.ReactN
   const { t } = useTranslation();
   const accessToken = useAuthStore((s) => s.accessToken);
   const currentUserId = useAuthStore((s) => s.user?.id);
+  const activeStatus = useUserStore((s) => s.activeStatus);
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -317,6 +319,10 @@ export function DealChatPanel({ dealId }: DealChatPanelProps = {}): React.ReactN
           <Separator />
 
           <form onSubmit={handleSend} className="flex items-center gap-1.5 p-2">
+            {/* Reply-assist is a SELLER-agent tool (Intercom/Zendesk pattern) — drafting a
+                reply only makes sense for the side responding to an inquiry. Showing it to the
+                buyer who is initiating produced a nonsensical "reply to yourself" (owner-reported). */}
+            {activeStatus === 'SELLER' && (
             <Button
               type="button"
               variant="outline"
@@ -333,6 +339,7 @@ export function DealChatPanel({ dealId }: DealChatPanelProps = {}): React.ReactN
                 <Sparkles className="h-3.5 w-3.5" />
               )}
             </Button>
+            )}
             <Input
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}

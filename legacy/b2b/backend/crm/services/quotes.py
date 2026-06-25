@@ -1,3 +1,4 @@
+import logging
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Optional, Tuple
 
@@ -12,6 +13,8 @@ from ..constants import DealStageCode, QuoteStatusCode
 from ..models import ActivityLog, Deal, Quote, QuoteItem, QuoteItemHistory, QuoteStatus
 from ._params import has_explicit_company_role_perm
 from .deals import transition_deal_stage
+
+logger = logging.getLogger(__name__)
 
 
 def _quote_owner_company_id(quote) -> Optional[int]:
@@ -147,20 +150,32 @@ class QuoteCalculationService:
     """
 
     @staticmethod
-    def calculate_item_prices(item: QuoteItem, commit=True):
+    def calculate_item_prices(item: QuoteItem, commit=True, basis=...):
         """
         Calculates Landed Cost and Final Price for a single item.
         Formula:
-          1. landed_cost = base + logistics + customs
-          2. final_price = landed_cost * (1 + margin%)
+          1. landed_cost = base + logistics + customs  (each gated by the Incoterm basis)
+          2. final_price = landed_cost * (1 + margin%) * (1 − discount%)
+
+        `basis` (DeliveryBasis|None) — the Incoterm flags are LOAD-BEARING (audit M1/M2): a
+        cost bucket enters the seller's landed cost ONLY when the basis says the seller pays
+        it. Switching to a basis where the BUYER pays freight/customs zeroes that per-line
+        bucket, so a hidden column never ghosts into the total. Pass `basis=...` (sentinel)
+        to lazy-load from item.quote (single-item path); the bulk recalc passes it explicitly.
         """
         is_service = item.product and item.product.domain_type and item.product.domain_type.code == "SERVICES"
+        if basis is ...:
+            basis = item.quote.delivery_basis if item.quote_id else None
 
         if is_service:
             item.landed_cost = item.frozen_base_price
             item.logistics_cost = Decimal("0")
             item.customs_duty = Decimal("0")
         else:
+            if basis is not None and not basis.seller_pays_freight:
+                item.logistics_cost = Decimal("0")
+            if basis is not None and not basis.seller_pays_import:
+                item.customs_duty = Decimal("0")
             item.landed_cost = item.frozen_base_price + item.logistics_cost + item.customs_duty
 
         # себестоимость → +наценка → −скидка позиции (UBL line-level allowance)
@@ -182,12 +197,15 @@ class QuoteCalculationService:
         Full recalculation of a Quote and all its items.
         Prevents N+1 updates by using aggregation.
         """
-        quote = Quote.objects.select_for_update().get(pk=quote_id)
+        # of=("self",): lock only the quote row — select_related pulls the NULLABLE
+        # delivery_basis via an outer join, and Postgres can't FOR UPDATE that side.
+        quote = Quote.objects.select_for_update(of=("self",)).select_related("delivery_basis").get(pk=quote_id)
         items = list(quote.items.select_related("product__domain_type").all())
 
-        # 1. Recalculate each item price (without saving each time to DB yet)
+        # 1. Recalculate each item price (without saving each time to DB yet). Pass the basis
+        #    once so the Incoterm flag-gating runs without an N+1 on item.quote (M1/M2).
         for item in items:
-            cls.calculate_item_prices(item, commit=False)
+            cls.calculate_item_prices(item, commit=False, basis=quote.delivery_basis)
 
         # 2. Bulk update items to minimize DB hits
         QuoteItem.objects.bulk_update(items, ["landed_cost", "final_price_excl_vat", "logistics_cost", "customs_duty"])
@@ -402,6 +420,19 @@ class QuoteLifecycleService:
             actor=approved_by_user,
             reason=f"КП v{quote.version} одобрено клиентом",
         )
+
+        # Materialize the Contract the instant the buyer accepts — otherwise the deal sits in
+        # CONTRACT_SIGNED with NO actual Contract (audit B1: approve → green badge → dead-end,
+        # generate_contract_from_quote was only ever called from tests). actor=None = system
+        # path: the buyer's approval triggers it, and the buyer is not a seller so it must NOT
+        # go through the seller-actor guard. Best-effort — a render hiccup must not unwind the
+        # approval (the seller can re-issue from the contract surface).
+        from .contracts import generate_contract_from_quote
+
+        try:
+            generate_contract_from_quote(quote.id, actor=None)
+        except (ValueError, OSError) as exc:  # noqa: BLE001 — narrow: lookup/PDF render
+            logger.warning("Contract auto-generation after approval failed for quote %s: %s", quote.id, exc)
 
         # Notify the seller who built the КП (and a distinct manager, if assigned)
         # that the client approved. deal.manager is usually unset in the single-
@@ -783,18 +814,26 @@ def buyer_add_request_items(user: CustomUser, deal: Deal, rows: list) -> list:
         product = None
         product_id = row.get("product_id")
         if product_id:
-            product = Product.objects.filter(pk=product_id).first()
+            product = Product.objects.select_related("uom").filter(pk=product_id).first()
         name = (row.get("name") or (product.name if product else "")).strip()
         if not (name or product):
             continue
+        # A catalog line INHERITS the product's attributes (uom / MPN / ГОСТ / ТНВЭД) — the
+        # Product is the single source of truth. Previously only name+qty survived the
+        # cart→заявка hop, so the seller received a line with no unit/spec (owner-reported).
+        # An explicit row value (free-text path) still wins where provided.
+        prod_uom = product.uom if (product and product.uom_id) else None
         to_create.append(
             QuoteItem(
                 quote=quote,
                 product=product,
                 imported_raw_name="" if product else name,
                 quantity=max(1, int(row.get("quantity") or 1)),
-                unit=(row.get("unit") or "")[:32],
-                unit_code=(row.get("unit_code") or "")[:8],
+                unit=(row.get("unit") or (prod_uom.name if prod_uom else ""))[:32],
+                unit_code=(row.get("unit_code") or (prod_uom.code if prod_uom else ""))[:8],
+                mpn=(product.manufacturer_part_number if product else "") or "",
+                gost_drawing=(product.gost_drawing if product else "") or "",
+                hs_code=(product.hs_code if product else "") or "",
                 note=row.get("note") or "",
                 assigned_at=timezone.now() if product else None,
             )

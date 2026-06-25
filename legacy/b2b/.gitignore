@@ -77,3 +77,4 @@ docker-compose.override.yml
 # Django collectstatic output — regenerated on every deploy (entrypoint.sh runs
 # collectstatic; WhiteNoise serves it). Never track generated build artifacts.
 backend/staticfiles/
+.claude/worktrees/

@@ -21,9 +21,20 @@ class QuoteAdmin(ModelAdmin):
     list_filter = ("status", "created_at", "tax_country")
     list_filter_submit = True
     search_fields = ("deal__title", "deal__company__name")
-    autocomplete_fields = ["deal", "status", "prepared_by", "tax_country", "approved_by"]
     inlines = [QuoteItemInline]
+    # ADR-0002 / Rule 8: Unfold is oversight-only. The platform engineer must NEVER author or
+    # re-price a company's КП — all quote/line writes go through React Admin + crm.services.
+    # Every business field is read-only here; the screen stays VIEWABLE for debug/inspection.
     readonly_fields = [
+        "deal",
+        "version",
+        "status",
+        "prepared_by",
+        "tax_country",
+        "vat_rate",
+        "valid_until",
+        "notes",
+        "approved_by",
         "subtotal_excl_vat",
         "vat_amount",
         "total_incl_vat",
@@ -90,15 +101,14 @@ class QuoteAdmin(ModelAdmin):
         ),
     )
 
-    def get_readonly_fields(self, request, obj=None):
-        readonly = list(super().get_readonly_fields(request, obj))
-        if "frozen_at" not in readonly:
-            readonly.append("frozen_at")
-        return readonly
+    def has_add_permission(self, request):
+        return False
 
-    def save_formset(self, request, form, formset, change):
-        formset.save()
-        form.instance.recalculate_totals()
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(QuoteItemHistory)

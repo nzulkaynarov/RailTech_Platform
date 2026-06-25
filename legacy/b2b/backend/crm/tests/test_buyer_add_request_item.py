@@ -82,3 +82,29 @@ def test_add_request_item_dedups_by_mpn(deal):
     assert first.id == second.id
     second.refresh_from_db()
     assert second.quantity == 7
+
+
+@pytest.mark.django_db
+def test_cart_line_inherits_product_attributes(deal):
+    """Owner-reported: a catalog line added from the cart must INHERIT the product's
+    uom / MPN / ГОСТ / ТНВЭД — not arrive as name+qty only (single source of truth)."""
+    from catalog.models import Product, ProductStatus
+    from crm.models import QuoteItem
+    from crm.services.quotes import buyer_add_request_items
+    from master_data.models import UnitOfMeasure
+
+    deal_obj, buyer = deal
+    uom = UnitOfMeasure.objects.create(code="PCE", name="шт")
+    pub = ProductStatus.objects.get_or_create(code="PUBLISHED", defaults={"name": "P", "sort_order": 1})[0]
+    product = Product.objects.create(
+        name="Автосцепка СА-3", status=pub, uom=uom,
+        manufacturer_part_number="SA3-001", gost_drawing="ГОСТ 3475-81", hs_code="8607300000",
+    )
+    buyer_add_request_items(buyer, deal_obj, [{"product_id": product.id, "quantity": 3}])
+    line = QuoteItem.objects.filter(quote__deal=deal_obj, product=product).first()
+    assert line is not None
+    assert line.unit == "шт" and line.unit_code == "PCE", f"uom not inherited: {line.unit!r}/{line.unit_code!r}"
+    assert line.mpn == "SA3-001"
+    assert line.gost_drawing == "ГОСТ 3475-81"
+    assert line.hs_code == "8607300000"
+    assert line.quantity == 3

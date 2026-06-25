@@ -4118,7 +4118,9 @@
     "subtotal": "Subtotal (excl. VAT)",
     "vatAmount": "VAT",
     "backToRequests": "Back to my requests",
-    "routedTo": "Routed to"
+    "routedTo": "Routed to",
+    "charges": "Charges / allowances",
+    "openContract": "Open contract"
   },
   "createQuoteDialog": {
     "title": "Create quote",

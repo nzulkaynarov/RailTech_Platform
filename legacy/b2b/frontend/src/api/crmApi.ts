@@ -12,6 +12,8 @@ export interface QuoteItem {
 	product_domain?: string;
 	product_sku?: string;
 	product_gost?: string;
+	product_mpn?: string;
+	product_uom?: string;
 	offer?: number | null;
 	offer_supplier_name?: string;
 	imported_raw_name: string;

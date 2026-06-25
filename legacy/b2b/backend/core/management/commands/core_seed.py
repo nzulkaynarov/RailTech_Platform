@@ -18,8 +18,8 @@ from accounts.models import (
     WorkspaceRole,
 )
 from catalog.models import DomainType, ProductStatus, StockStatus
-from crm.models import ChargeTemplate, ChargeType, DealStage, QuoteStatus
-from master_data.models import Country, Currency, DeliveryBasis, UnitOfMeasure
+from crm.models import DealStage, QuoteStatus
+from master_data.models import Country, Currency
 from notifications.models import NotificationType
 
 User = get_user_model()
@@ -75,77 +75,14 @@ class Command(BaseCommand):
         # (PCS/KG/M/T/L/HR с полными именами) — это и создавало «кашу» дублей
         # (кг=KG+KGM, м=M+MTR, …). UOM-справочник тут больше не трогаем.
 
-        # ─── 4. Базис поставки (полный Incoterms 2020 — все 11 терминов) ───
-        # Флаги = матрица ответственности по расходам (кто несёт слой затрат).
-        # (code, name, freight, insurance, import, delivery)
-        bases = [
-            ("EXW", "Франко-завод", False, False, False, False),
-            ("FCA", "Франко-перевозчик", False, False, False, False),
-            ("FAS", "Свободно вдоль борта судна", False, False, False, False),
-            ("FOB", "Свободно на борту", False, False, False, False),
-            ("CFR", "Стоимость и фрахт", True, False, False, False),
-            ("CIF", "Стоимость, страхование и фрахт", True, True, False, False),
-            ("CPT", "Перевозка оплачена до", True, False, False, False),
-            ("CIP", "Перевозка и страхование оплачены до", True, True, False, False),
-            ("DAP", "Поставка в место назначения", True, True, False, True),
-            ("DPU", "Поставка в месте выгрузки", True, True, False, True),
-            ("DDP", "Поставка с оплатой пошлин", True, True, True, True),
-        ]
-        for code, name, freight, insurance, imp, delivery in bases:
-            _seed(
-                DeliveryBasis,
-                code,
-                name=name,
-                seller_pays_freight=freight,
-                seller_pays_insurance=insurance,
-                seller_pays_import=imp,
-                seller_pays_delivery=delivery,
-            )
-
-        # ─── 4b. Статьи расхода КП (UBL document-level AllowanceCharge) ───
-        # Стартовый набор; овнер пополняет справочник через админку. Сравнение в
-        # коде идёт по агрегату сумм (не по конкретному code), поэтому набор —
-        # удобство, а не контракт hot-path (IRON RULE 1).
-        charge_types = [
-            ("FREIGHT", "Фрахт / логистика"),
-            ("INSURANCE", "Страхование груза"),
-            ("CUSTOMS", "Таможенное оформление"),
-            ("CERTIFICATION", "Сертификация"),
-            ("RENT", "Аренда (склад/площадка)"),
-            ("PAYROLL", "Оплата труда проектной команды"),
-            ("COMMISSION", "Комиссионные выплаты"),
-            ("DISCOUNT", "Скидка клиенту"),
-            ("OTHER", "Прочие расходы"),
-        ]
-        for code, name in charge_types:
-            _seed(ChargeType, code, name=name)
-
-        # ─── 4c. Шаблоны статей расхода по базисам (Incoterm cost profiles) ───
-        # При выборе базиса на КП эти статьи авто-добавляются (продавец потом правит).
-        # Зеркалит матрицу ответственности: продавец видит только свои слои затрат.
-        # Овнер кастомизирует шаблоны в админке (Справочник: Шаблоны статей расхода).
-        charge_templates = {
-            "CFR": ["FREIGHT"],
-            "CPT": ["FREIGHT"],
-            "CIF": ["FREIGHT", "INSURANCE"],
-            "CIP": ["FREIGHT", "INSURANCE"],
-            "DAP": ["FREIGHT", "INSURANCE"],
-            "DPU": ["FREIGHT", "INSURANCE"],
-            "DDP": ["FREIGHT", "INSURANCE", "CUSTOMS", "CERTIFICATION"],
-        }
-        for basis_code, type_codes in charge_templates.items():
-            basis = DeliveryBasis.objects.filter(code=basis_code).first()
-            if not basis:
-                continue
-            for order, type_code in enumerate(type_codes):
-                charge_type = ChargeType.objects.filter(code=type_code).first()
-                if charge_type:
-                    ChargeTemplate.objects.update_or_create(
-                        company=None,  # global platform default
-                        delivery_basis=basis,
-                        charge_type=charge_type,
-                        defaults={"sort_order": order},
-                    )
+        # ─── 4. Базис поставки + 4b/4c. Статьи и шаблоны расхода КП ───
+        # MOVED OUT (B3 fix): the Incoterms 2020 DeliveryBasis rows + flags, the
+        # ChargeType catalog, and the GLOBAL (company IS NULL) ChargeTemplate cost
+        # profiles are now seeded by idempotent data migrations so a clean production
+        # DB has a working basis/charge engine on day one (IRON RULE 1):
+        #   - master_data/migrations/0008_seed_delivery_basis_incoterms.py
+        #   - crm/migrations/0036_seed_charge_engine.py
+        # core_seed (dev/demo-only) no longer owns these business lookups.
 
         # ─── 5. Системные роли ───
         # Только две: ADMIN (Platform Admin, владелец платформы) и USER.

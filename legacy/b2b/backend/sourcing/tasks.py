@@ -128,13 +128,30 @@ def detect_header_and_columns(raw_df):
     return None, None
 
 
-def _build_quote_item(quote, name, quantity, unit="", note="", unit_code="", mpn="", gost_drawing=""):
+def _build_quote_item(quote, name, quantity, unit="", note="", unit_code="", mpn="", gost_drawing="", name_canonical=""):
     """One place to turn a parsed/AI-extracted row into a QuoteItem — runs domain
     routing + smart-match so both the deterministic and the AI path behave the same.
-    Smart-match runs on the name OR the identifier so name-less coded lines still try."""
+    Smart-match runs on the name OR the identifier so name-less coded lines still try.
+
+    name_canonical: the clean canonical RU name the AI paid to produce (билингва/
+    транслитерация). When present we (a) store it on QuoteItem.name_canonical as the
+    кириллический catalog-search key, and (b) show it to the buyer as the primary
+    display name (imported_raw_name) instead of the dirty raw string. The verbatim
+    original is kept as provenance in `note`. The deterministic parser passes ''."""
     from crm.models import QuoteItem
 
-    match_key = name or mpn or gost_drawing
+    canonical = (name_canonical or "").strip()
+    raw_name = name or ""
+    # Buyer's grid renders imported_raw_name → show the CLEAN value when the AI gave
+    # us one; keep the verbatim original as provenance so nothing is silently lost.
+    display_name = canonical or raw_name
+    final_note = note or ""
+    if canonical and raw_name and raw_name.strip() != canonical:
+        provenance = f"Исходное наименование: {raw_name.strip()}"
+        final_note = f"{final_note}\n{provenance}".strip() if final_note else provenance
+
+    # Smart-match on the canonical (кириллица hits the catalog) → raw → identifier.
+    match_key = canonical or raw_name or mpn or gost_drawing
     domain_code = route_domain(match_key)
     final_product = smart_match_product(match_key, domain_hint=domain_code) if match_key else None
     try:
@@ -144,13 +161,14 @@ def _build_quote_item(quote, name, quantity, unit="", note="", unit_code="", mpn
     return QuoteItem(
         quote=quote,
         product=final_product,
-        imported_raw_name=name or "",
+        imported_raw_name=display_name[:500],
+        name_canonical=canonical[:500],
         quantity=qty,
         unit=(unit or "")[:32],
         unit_code=(unit_code or "")[:8],
         mpn=(mpn or "")[:120],
         gost_drawing=(gost_drawing or "")[:120],
-        note=note or "",
+        note=final_note,
         assigned_at=timezone.now() if final_product else None,
     )
 
@@ -220,6 +238,7 @@ def process_excel_import(self, deal_id: int, file_content_b64: str, user_id: int
                     unit_code=row.get("unit_code", ""),
                     mpn=row.get("mpn", ""),
                     gost_drawing=row.get("gost_drawing", ""),
+                    name_canonical=row.get("name_canonical", ""),
                 )
                 for row in ai_rows
             ]
