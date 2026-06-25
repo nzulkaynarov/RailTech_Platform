@@ -103,32 +103,24 @@ export const useAuthStore = create<AuthState>()(
             initAuth: async () => {
                 set({ isLoading: true });
                 try {
-                    // Access is in-memory only, so after a page reload there is none —
-                    // mint a fresh one from the HttpOnly refresh cookie (F2.1). If the
-                    // cookie is missing/expired, there's no session.
-                    if (!get().accessToken) {
-                        const r = await fetch(`${API_URL}/auth/token/refresh/`, {
-                            method: 'POST',
-                            credentials: 'include',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: '{}',
-                        });
-                        if (!r.ok) {
-                            setAccessToken(null);
-                            set({ isAuthenticated: false, isLoading: false, user: null, role: null });
-                            return;
-                        }
-                        const { access } = await r.json();
-                        setAccessToken(access);
-                        set({ accessToken: access });
-                    }
-
-                    // apiClient's interceptor refreshes again (via cookie) if this 401s.
+                    // Access token is in-memory only, so after a reload there is none. Do NOT
+                    // refresh here with a raw fetch — that bypasses the apiClient refresh mutex,
+                    // so it races against the interceptor refresh that any other component's
+                    // API call (firing on mount before this resolves) triggers. With rotation +
+                    // blacklist on, two concurrent refreshes mean one blacklists the other's
+                    // token → 401 → the user is logged out on reload (latency makes this bite on
+                    // prod even when it passes locally). Instead, just call /me: the FIRST 401
+                    // mints a fresh access via the single mutex'd interceptor refresh, and every
+                    // concurrent call queues on it — exactly one refresh, no race (F2.1).
                     const response = await apiClient.get<User>('accounts/users/me/');
                     get().setUser(response.data);
                     set({ isAuthenticated: true });
                 } catch {
-                    get().logout();
+                    // No valid session (the interceptor's cookie refresh failed). Clear locally;
+                    // don't call logout() — that POSTs auth/logout/ needlessly and the interceptor
+                    // already handled the redirect for a genuinely expired session.
+                    setAccessToken(null);
+                    set({ isAuthenticated: false, user: null, role: null });
                 } finally {
                     set({ isLoading: false });
                 }
