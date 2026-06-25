@@ -14,7 +14,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
+import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import {
   useCountries, useCurrencies, useUnits, useDeliveryBases,
   useCreateLookup, useUpdateLookup, useDeleteLookup,
@@ -24,11 +24,13 @@ import type { MasterKind, Country, Currency, LookupItem } from '@/api/masterData
 type AnyItem = Country | Currency | LookupItem;
 
 function LookupEditor({
-  kind, items, isLoading, extraFields = [],
+  kind, items, isLoading, isError, onRetry, extraFields = [],
 }: {
   kind: MasterKind;
   items: AnyItem[] | undefined;
   isLoading: boolean;
+  isError?: boolean;
+  onRetry?: () => void;
   extraFields?: { key: string; label: string }[];
 }) {
   const { t } = useTranslation();
@@ -95,7 +97,7 @@ function LookupEditor({
 
       <Card>
         <CardContent className="p-0">
-          {isLoading ? <LoadingRows rows={5} /> : !items?.length ? (
+          {isError ? <ErrorState onRetry={onRetry} /> : isLoading ? <LoadingRows rows={5} /> : !items?.length ? (
             <EmptyState icon={<Database className="h-5 w-5" />} message={t('adminMasterData.empty')} />
           ) : (
             <Table>
@@ -257,6 +259,8 @@ export function AdminMasterDataPage() {
             kind="countries"
             items={countries.data}
             isLoading={countries.isLoading}
+            isError={countries.isError}
+            onRetry={() => countries.refetch()}
             extraFields={[
               { key: 'alpha2', label: t('adminMasterData.countryFields.alpha2') },
               { key: 'vat_rate', label: t('adminMasterData.countryFields.vatRate') },
@@ -269,16 +273,18 @@ export function AdminMasterDataPage() {
             kind="currencies"
             items={currencies.data}
             isLoading={currencies.isLoading}
+            isError={currencies.isError}
+            onRetry={() => currencies.refetch()}
             extraFields={[{ key: 'symbol', label: t('adminMasterData.currencyFields.symbol') }]}
           />
         </TabsContent>
 
         <TabsContent value="units" className="mt-4">
-          <LookupEditor kind="units" items={units.data} isLoading={units.isLoading} />
+          <LookupEditor kind="units" items={units.data} isLoading={units.isLoading} isError={units.isError} onRetry={() => units.refetch()} />
         </TabsContent>
 
         <TabsContent value="delivery-basis" className="mt-4">
-          <LookupEditor kind="delivery-basis" items={deliveryBases.data} isLoading={deliveryBases.isLoading} />
+          <LookupEditor kind="delivery-basis" items={deliveryBases.data} isLoading={deliveryBases.isLoading} isError={deliveryBases.isError} onRetry={() => deliveryBases.refetch()} />
         </TabsContent>
       </Tabs>
     </PageShell>

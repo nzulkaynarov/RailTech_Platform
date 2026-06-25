@@ -5,12 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { Tags, ChevronDown } from 'lucide-react';
 import { useCategories } from '@/hooks/useCatalog';
-import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
+import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import type { Category } from '@/api/catalogApi';
 
 export function CategoriesPage() {
   const { t } = useTranslation();
-  const { data: categories, isLoading } = useCategories();
+  const { data: categories, isLoading, isError, refetch } = useCategories();
 
   const topLevel = (categories ?? []).filter((c: Category) => !c.parent);
   const getChildren = (parentId: number) => (categories ?? []).filter((c: Category) => c.parent === parentId);
@@ -21,7 +21,9 @@ export function CategoriesPage() {
       description={t('pages.categories.description')}
       icon={<Tags className="h-5 w-5" />}
     >
-      {isLoading ? <LoadingRows rows={4} /> : topLevel.length === 0 ? (
+      {isLoading ? <LoadingRows rows={4} /> : isError ? (
+        <ErrorState onRetry={() => refetch()} />
+      ) : topLevel.length === 0 ? (
         <EmptyState icon={<Tags className="h-5 w-5" />} message={t('pages.common.noData')} />
       ) : (
         <div className="space-y-2">

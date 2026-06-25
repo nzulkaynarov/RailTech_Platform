@@ -24,7 +24,7 @@ import { AdminDetailLayout } from '@/components/Admin/AdminDetailLayout';
 import { AdminActivityTimeline } from '@/components/Admin/AdminActivityTimeline';
 import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
 import { DetailKPIGrid } from '@/components/Admin/DetailKPIGrid';
-import { PageShell } from './shared/PageShell';
+import { PageShell, ErrorState } from './shared/PageShell';
 import type { Company } from '@/api/accountsApi';
 
 type KYCCode = 'L1_UNVERIFIED' | 'PROFILE_SUBMITTED' | 'L2_VERIFIED' | 'L3_CONTRACTED';
@@ -421,7 +421,7 @@ export function AdminKYCPage() {
 
   // All-companies query for accurate tab counts
   const { data: allCompanies = [] } = useCompanies();
-  const { data: companies = [], isLoading } = useCompanies(queryParams);
+  const { data: companies = [], isLoading, isError, refetch } = useCompanies(queryParams);
   const kept = companies;
 
   const selectedCompany = useMemo(() => {
@@ -497,6 +497,9 @@ export function AdminKYCPage() {
         { label: t('kycManager.stats.partner'), value: String(counts.L3_CONTRACTED) },
       ]}
     >
+      {isError ? (
+        <ErrorState onRetry={() => refetch()} />
+      ) : (
       <AdminDataTable<Company>
         storageKey={STORAGE_KEY}
         rows={kept}
@@ -582,6 +585,7 @@ export function AdminKYCPage() {
         emptyIcon={<ShieldCheck className="h-5 w-5 text-muted-foreground" />}
         emptyTitle={t('kycManager.emptyState')}
       />
+      )}
 
       {/* Row-level confirms */}
       <ConfirmActionDialog

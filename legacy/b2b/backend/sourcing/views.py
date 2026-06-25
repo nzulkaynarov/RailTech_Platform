@@ -302,7 +302,16 @@ class ImportStatusView(APIView):
         result_data = None
         if res.ready():
             raw_result = res.result
-            if isinstance(raw_result, dict):
+            if res.failed():
+                # A hard crash (uncaught exception, time-limit, worker kill) leaves
+                # res.result as an Exception instance — NOT a dict. Reporting that as
+                # "completed" hides the failure from the UI, so surface a real "failed"
+                # status with the error message instead.
+                result_data = {
+                    "status": "failed",
+                    "message": str(raw_result) if raw_result else None,
+                }
+            elif isinstance(raw_result, dict):
                 result_data = {
                     "status": raw_result.get("status"),
                     "items_processed": raw_result.get("items_processed"),

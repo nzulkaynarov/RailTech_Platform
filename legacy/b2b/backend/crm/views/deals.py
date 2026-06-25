@@ -140,6 +140,15 @@ class DealViewSet(viewsets.ModelViewSet):
                 raise ValidationError(
                     {"company": _("User has no associated company. Please complete your company profile.")}
                 )
+            # Capability guard (server-side, not UI-only): opening a buyer RFQ is a
+            # buy-side action — a member without can_buy (e.g. a seller-only member of
+            # this company) must be refused here, not merely hidden in the cart UI.
+            from accounts.services.permissions import is_member_of, is_platform_admin_viewer
+
+            if is_platform_admin_viewer(user):
+                raise PermissionDenied("ADMIN_VIEWER_CANNOT_ACT")
+            if not is_member_of(user, primary_company.id, capability="buy"):
+                raise PermissionDenied("ONLY_BUYER_CAN_CREATE_REQUEST")
             save_kwargs = dict(client=user, company=primary_company)
 
         if not serializer.validated_data.get("stage"):

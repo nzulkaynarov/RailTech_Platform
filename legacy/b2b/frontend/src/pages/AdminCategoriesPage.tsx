@@ -7,14 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/DataTable';
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
+import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
+import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import {
   useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory, useDomainTypes,
 } from '@/hooks/useCatalog';
@@ -134,7 +131,7 @@ function CategoryFormSheet({
 export function AdminCategoriesPage() {
   const { t } = useTranslation();
   // Fetch every category (DRF pages at 20) so search/sort/Pager + stat tiles see all rows (H4).
-  const { data: categories, isLoading } = useCategories({ fetchAll: true });
+  const { data: categories, isLoading, isError, refetch } = useCategories({ fetchAll: true });
   const deleteMut = useDeleteCategory();
 
   const listParams = useListParams([], { defaultOrdering: 'sort_order' });
@@ -158,13 +155,8 @@ export function AdminCategoriesPage() {
   };
   const onDelete = async () => {
     if (!deleteTarget) return;
-    try {
-      await deleteMut.mutateAsync(deleteTarget.id);
-      toast.success(t('adminCategories.deleted'));
-      setDeleteTarget(null);
-    } catch {
-      toast.error(t('adminCategories.deleteFailed'));
-    }
+    await deleteMut.mutateAsync(deleteTarget.id);
+    toast.success(t('adminCategories.deleted'));
   };
 
   const stats = [
@@ -197,6 +189,7 @@ export function AdminCategoriesPage() {
               },
             });
             if (isLoading) return <LoadingRows rows={5} />;
+            if (isError) return <ErrorState onRetry={() => refetch()} />;
             if (!pageItems.length) return <EmptyState icon={<Layers className="h-5 w-5" />} message={t('adminCategories.emptyState')} />;
             return (
             <>
@@ -204,9 +197,9 @@ export function AdminCategoriesPage() {
               <TableHeader>
                 <TableRow>
                   <SortableHead sortKey="name" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('adminCategories.table.name')}</SortableHead>
-                  <SortableHead sortKey="" current="" onChange={() => {}}>{t('adminCategories.table.parent')}</SortableHead>
+                  <TableHead>{t('adminCategories.table.parent')}</TableHead>
                   <SortableHead sortKey="sort_order" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('adminCategories.table.order')}</SortableHead>
-                  <SortableHead sortKey="" current="" onChange={() => {}} className="text-right">{t('adminCategories.table.actions')}</SortableHead>
+                  <TableHead className="text-right">{t('adminCategories.table.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -245,22 +238,16 @@ export function AdminCategoriesPage() {
         all={categories ?? []}
       />
 
-      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('adminCategories.confirmDelete')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t('adminCategories.confirmDeleteDesc', { name: deleteTarget?.name })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t('adminCategories.cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={onDelete} disabled={deleteMut.isPending}>
-              {t('adminCategories.delete')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmActionDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => !o && setDeleteTarget(null)}
+        title={t('adminCategories.confirmDelete')}
+        description={t('adminCategories.confirmDeleteDesc', { name: deleteTarget?.name })}
+        variant="destructive"
+        confirmLabel={t('adminCategories.delete')}
+        cancelLabel={t('adminCategories.cancel')}
+        onConfirm={onDelete}
+      />
     </PageShell>
   );
 }

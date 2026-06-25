@@ -29,7 +29,7 @@ import {
   useCompanies,
 } from '@/hooks/useAccounts';
 import { useCurrencies } from '@/hooks/useMasterData';
-import { PageShell } from './shared/PageShell';
+import { PageShell, ErrorState } from './shared/PageShell';
 import { translateApiError } from '@/lib/apiError';
 import { SubscriptionPayDialog } from '@/components/Admin/SubscriptionPayDialog';
 import type { Subscription } from '@/api/accountsApi';
@@ -285,13 +285,14 @@ export function AdminSubscriptionsPage() {
   }, [tableState.search, tableState.tab]);
 
   const { data: allSubs = [] } = useSubscriptions();
-  const { data: subscriptions = [], isLoading } = useSubscriptions(queryParams);
+  const { data: subscriptions = [], isLoading, isError, refetch } = useSubscriptions(queryParams);
 
   const [editTarget, setEditTarget] = useState<Subscription | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Subscription | null>(null);
   const [payTargetId, setPayTargetId] = useState<number | null>(null);
   const [confirmBulkSuspend, setConfirmBulkSuspend] = useState<Subscription[] | null>(null);
+  const [suspendTarget, setSuspendTarget] = useState<Subscription | null>(null);
 
   const filtered = subscriptions;
 
@@ -312,10 +313,12 @@ export function AdminSubscriptionsPage() {
     }
   }
 
-  async function handleSuspend(id: number) {
+  async function runSuspend() {
+    if (!suspendTarget) return;
     try {
-      await suspendMutation.mutateAsync(id);
+      await suspendMutation.mutateAsync(suspendTarget.id);
       toast.success(t('admin.subscriptions.suspended'));
+      setSuspendTarget(null);
     } catch (e) {
       toast.error(translateApiError(e));
     }
@@ -367,6 +370,9 @@ export function AdminSubscriptionsPage() {
       icon={<CreditCard className="h-5 w-5" />}
       stats={stats}
     >
+      {isError ? (
+        <ErrorState onRetry={() => refetch()} />
+      ) : (
       <AdminDataTable<Subscription>
         storageKey={STORAGE_KEY}
         rows={filtered}
@@ -443,7 +449,7 @@ export function AdminSubscriptionsPage() {
             icon: <Pause className="h-3.5 w-3.5 text-warning" />,
             onRun: (s) => {
               if (s.status !== 'ACTIVE') return;
-              handleSuspend(s.id);
+              setSuspendTarget(s);
             },
           },
           {
@@ -485,6 +491,7 @@ export function AdminSubscriptionsPage() {
         emptyIcon={<CreditCard className="h-5 w-5 text-muted-foreground" />}
         emptyTitle={t('pages.common.noData')}
       />
+      )}
 
       <FormSheet
         sub={editTarget}
@@ -518,6 +525,27 @@ export function AdminSubscriptionsPage() {
         onConfirm={(p) =>
           confirmBulkSuspend ? runBulkSuspend(confirmBulkSuspend, p.reason) : Promise.resolve()
         }
+        translateError={(code) => translateApiError(code)}
+      />
+
+      <ConfirmActionDialog
+        open={Boolean(suspendTarget)}
+        onOpenChange={(v) => !v && setSuspendTarget(null)}
+        title={t('admin.subscriptions.suspendDialog.title')}
+        description={
+          suspendTarget
+            ? t('admin.subscriptions.suspendDialog.description', { name: suspendTarget.company_name })
+            : ''
+        }
+        requireReason
+        reasonTemplates={[
+          t('admin.subscriptions.suspendTemplates.nonPayment'),
+          t('admin.subscriptions.suspendTemplates.fraud'),
+          t('admin.subscriptions.suspendTemplates.other'),
+        ]}
+        confirmLabel={t('admin.subscriptions.suspended')}
+        variant="destructive"
+        onConfirm={() => runSuspend()}
         translateError={(code) => translateApiError(code)}
       />
 

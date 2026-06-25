@@ -6,7 +6,7 @@ import { useUserStore } from '@/store/userStore';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { usePageStats } from '@/hooks/usePageStats';
 import { useAnalytics } from '@/hooks/useCRM';
-import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
+import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 
 function BuyerAnalytics() {
   const { t } = useTranslation();
@@ -30,7 +30,7 @@ export function AnalyticsPage() {
   const { data: ps } = usePageStats();
   const { t } = useTranslation();
   const { activeStatus } = useUserStore();
-  const { data: analytics, isLoading } = useAnalytics();
+  const { data: analytics, isLoading, isError, refetch } = useAnalytics();
   const formatCurrency = useCurrencyStore((s) => s.format);
 
   if (activeStatus === 'BUYER') {
@@ -57,7 +57,7 @@ export function AnalyticsPage() {
         { label: t('pages.analytics.stats.winRate'), value: ps?.analytics?.win_rate ?? '0%' },
       ]}
     >
-      {isLoading ? <LoadingRows rows={4} /> : (
+      {isError ? <ErrorState onRetry={() => refetch()} /> : isLoading ? <LoadingRows rows={4} /> : (
         <div className="grid gap-6 lg:grid-cols-2">
           <Card>
             <CardHeader>

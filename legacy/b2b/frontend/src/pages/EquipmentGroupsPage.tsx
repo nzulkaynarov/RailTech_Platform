@@ -2,12 +2,12 @@ import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '@/components/ui/card';
 import { Layers, ChevronRight } from 'lucide-react';
 import { useEquipmentGroups } from '@/hooks/useCatalog';
-import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
+import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import type { EquipmentGroup } from '@/api/catalogApi';
 
 export function EquipmentGroupsPage() {
   const { t } = useTranslation();
-  const { data: groups, isLoading } = useEquipmentGroups();
+  const { data: groups, isLoading, isError, refetch } = useEquipmentGroups();
 
   return (
     <PageShell
@@ -15,7 +15,9 @@ export function EquipmentGroupsPage() {
       description={t('pages.equipmentGroups.description')}
       icon={<Layers className="h-5 w-5" />}
     >
-      {isLoading ? <LoadingRows rows={4} /> : !groups?.length ? (
+      {isLoading ? <LoadingRows rows={4} /> : isError ? (
+        <ErrorState onRetry={() => refetch()} />
+      ) : !groups?.length ? (
         <EmptyState icon={<Layers className="h-5 w-5" />} message={t('pages.common.noData')} />
       ) : (
         <div className="grid gap-4 md:grid-cols-2">

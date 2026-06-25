@@ -13,7 +13,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
+import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
 import { useDeals, useDealStages, useForceChangeDealStage, useDeleteDeal } from '@/hooks/useCRM';
 import { useCompanies } from '@/hooks/useAccounts';
@@ -24,7 +24,7 @@ const CLOSED_STAGES: string[] = [DealStage.CLOSED_WON, DealStage.CLOSED_LOST];
 
 export function AdminDealsPage() {
   const { t } = useTranslation();
-  const { data: deals, isLoading } = useDeals();
+  const { data: deals, isLoading, isError, refetch } = useDeals();
   const { data: stages } = useDealStages();
   const { data: companies } = useCompanies();
   const deleteMut = useDeleteDeal();
@@ -116,6 +116,7 @@ export function AdminDealsPage() {
                 created_at: (d) => d.created_at ?? '',
               },
             });
+            if (isError) return <ErrorState onRetry={() => refetch()} />;
             if (isLoading) return <LoadingRows rows={5} />;
             if (!pageItems.length) return <EmptyState icon={<Handshake className="h-5 w-5" />} message={t('adminDeals.empty')} />;
             return (

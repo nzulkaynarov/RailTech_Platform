@@ -8,14 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/DataTable';
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
+import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
+import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import {
   useOffers, useCreateOffer, useUpdateOffer, useDeleteOffer,
   useProducts, useStockStatuses,
@@ -213,7 +210,7 @@ export function AdminOffersPage() {
   const { t } = useTranslation();
   // Fetch the complete sets (DRF pages at 20) so search/sort/Pager + stat tiles are
   // accurate and every offer's product/stock label resolves (H4 / M1).
-  const { data: offers, isLoading } = useOffers({ fetchAll: true });
+  const { data: offers, isLoading, isError, refetch } = useOffers({ fetchAll: true });
   const { data: products } = useProducts({ fetchAll: true });
   const { data: stockStatuses } = useStockStatuses();
   const deleteMut = useDeleteOffer();
@@ -247,13 +244,8 @@ export function AdminOffersPage() {
   };
   const onDelete = async () => {
     if (!deleteTarget) return;
-    try {
-      await deleteMut.mutateAsync(deleteTarget.id);
-      toast.success(t('adminOffers.deleted'));
-      setDeleteTarget(null);
-    } catch {
-      toast.error(t('adminOffers.deleteFailed'));
-    }
+    await deleteMut.mutateAsync(deleteTarget.id);
+    toast.success(t('adminOffers.deleted'));
   };
 
   const stats = [
@@ -307,6 +299,7 @@ export function AdminOffersPage() {
               },
             });
             if (isLoading) return <LoadingRows rows={5} />;
+            if (isError) return <ErrorState onRetry={() => refetch()} />;
             if (!pageItems.length) return <EmptyState icon={<Tags className="h-5 w-5" />} message={t('adminOffers.emptyState')} />;
             return (
             <>
@@ -316,9 +309,9 @@ export function AdminOffersPage() {
                   <SortableHead sortKey="product" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('adminOffers.table.product')}</SortableHead>
                   <SortableHead sortKey="supplier" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('adminOffers.table.supplier')}</SortableHead>
                   <SortableHead sortKey="price" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('adminOffers.table.price')}</SortableHead>
-                  <SortableHead sortKey="" current="" onChange={() => {}}>{t('adminOffers.table.status')}</SortableHead>
-                  <SortableHead sortKey="" current="" onChange={() => {}}>{t('adminOffers.table.active')}</SortableHead>
-                  <SortableHead sortKey="" current="" onChange={() => {}} className="text-right">{t('adminOffers.table.actions')}</SortableHead>
+                  <TableHead>{t('adminOffers.table.status')}</TableHead>
+                  <TableHead>{t('adminOffers.table.active')}</TableHead>
+                  <TableHead className="text-right">{t('adminOffers.table.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -362,20 +355,16 @@ export function AdminOffersPage() {
 
       <OfferFormSheet open={sheetOpen} onOpenChange={setSheetOpen} target={editTarget} />
 
-      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('adminOffers.confirmDelete')}</AlertDialogTitle>
-            <AlertDialogDescription>{t('adminOffers.confirmDeleteDesc')}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t('adminOffers.cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={onDelete} disabled={deleteMut.isPending}>
-              {t('adminOffers.delete')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmActionDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => !o && setDeleteTarget(null)}
+        title={t('adminOffers.confirmDelete')}
+        description={t('adminOffers.confirmDeleteDesc')}
+        variant="destructive"
+        confirmLabel={t('adminOffers.delete')}
+        cancelLabel={t('adminOffers.cancel')}
+        onConfirm={onDelete}
+      />
     </PageShell>
   );
 }

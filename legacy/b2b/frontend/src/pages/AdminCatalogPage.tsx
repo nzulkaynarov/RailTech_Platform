@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Package, Pencil, Trash2 } from 'lucide-react';
+import { Package, Pencil, Trash2, Send } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,20 +11,17 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Table, TableBody, TableCell, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/DataTable';
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
+import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
+import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import {
   useProducts, useProduct, useCreateProduct, useUpdateProduct, useDeleteProduct,
   useDomainTypes, useProductStatuses, useCategories, useManufacturers, useEquipmentGroups,
   useUploadProductImage, useDeleteProductImage,
   useUploadProductDocument, useDeleteProductDocument,
-  useStockStatuses, useOffers, useCreateOffer, useUpdateOffer,
+  useStockStatuses, useOffers, useCreateOffer, useUpdateOffer, useBulkPublishProducts,
 } from '@/hooks/useCatalog';
 import { useUnits, useCurrencies, useDeliveryBases } from '@/hooks/useMasterData';
 import { productStatusLabelKey } from '@/lib/codes';
@@ -452,7 +449,7 @@ export function ProductFormSheet({
 export function AdminCatalogPage() {
   const { t } = useTranslation();
   const listParams = useListParams(['domain', 'status'] as const, { defaultOrdering: 'name' });
-  const { data: products, isLoading } = useProducts({
+  const { data: products, isLoading, isError, refetch } = useProducts({
     search: listParams.search || undefined,
     domain_type: listParams.filters.domain === 'all' ? undefined : listParams.filters.domain,
     // Fetch the complete set so client-side search/sort/Pager + stat tiles are accurate
@@ -462,10 +459,12 @@ export function AdminCatalogPage() {
   const { data: domainTypes } = useDomainTypes();
   const { data: statuses } = useProductStatuses();
   const deleteMut = useDeleteProduct();
+  const publishMut = useBulkPublishProducts();
 
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Product | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
+  const [publishTarget, setPublishTarget] = useState<Product | null>(null);
 
   const onEdit = (p: Product) => {
     setEditTarget(p);
@@ -478,14 +477,19 @@ export function AdminCatalogPage() {
 
   const onDelete = async () => {
     if (!deleteTarget) return;
-    try {
-      await deleteMut.mutateAsync(deleteTarget.id);
-      toast.success(t('adminCatalog.deleted'));
-      setDeleteTarget(null);
-    } catch {
-      toast.error(t('adminCatalog.deleteFailed'));
-    }
+    await deleteMut.mutateAsync(deleteTarget.id);
+    toast.success(t('adminCatalog.deleted'));
   };
+
+  const onPublish = async () => {
+    if (!publishTarget) return;
+    await publishMut.mutateAsync([publishTarget.id]);
+    toast.success(t('adminCatalog.published'));
+  };
+
+  // A product with a blank/DRAFT status is never PUBLISHED and has no other way to
+  // go live — surface a quick publish affordance on those rows only.
+  const canPublish = (p: Product) => p.status_code !== 'PUBLISHED';
 
   const stats = [
     { label: t('adminCatalog.stats.total'), value: String(products?.length ?? '—') },
@@ -550,6 +554,7 @@ export function AdminCatalogPage() {
               },
             });
             if (isLoading) return <LoadingRows rows={6} />;
+            if (isError) return <ErrorState onRetry={() => refetch()} />;
             if (!pageItems.length) return <EmptyState icon={<Package className="h-5 w-5" />} message={t('adminCatalog.emptyState')} />;
             return (
             <>
@@ -561,7 +566,7 @@ export function AdminCatalogPage() {
                   <SortableHead sortKey="domain" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('adminCatalog.table.domain')}</SortableHead>
                   <SortableHead sortKey="status" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('adminCatalog.table.status')}</SortableHead>
                   <SortableHead sortKey="manufacturer" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('adminCatalog.table.manufacturer')}</SortableHead>
-                  <SortableHead sortKey="" current="" onChange={() => {}} className="text-right">{t('adminCatalog.table.actions')}</SortableHead>
+                  <TableHead className="text-right">{t('adminCatalog.table.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -574,6 +579,11 @@ export function AdminCatalogPage() {
                     <TableCell className="text-muted-foreground text-xs">{p.brand_name ?? '—'}</TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1">
+                        {canPublish(p) && (
+                          <Button variant="ghost" size="sm" onClick={() => setPublishTarget(p)} title={t('adminCatalog.publish')}>
+                            <Send className="h-3.5 w-3.5 text-primary" />
+                          </Button>
+                        )}
                         <Button variant="ghost" size="sm" onClick={() => onEdit(p)}>
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
@@ -595,22 +605,27 @@ export function AdminCatalogPage() {
 
       <ProductFormSheet open={sheetOpen} onOpenChange={setSheetOpen} target={editTarget} />
 
-      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('adminCatalog.confirmDelete')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t('adminCatalog.confirmDeleteDesc', { name: deleteTarget?.name })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t('adminCatalog.cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={onDelete} disabled={deleteMut.isPending}>
-              {t('adminCatalog.delete')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmActionDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => !o && setDeleteTarget(null)}
+        title={t('adminCatalog.confirmDelete')}
+        description={t('adminCatalog.confirmDeleteDesc', { name: deleteTarget?.name })}
+        variant="destructive"
+        confirmLabel={t('adminCatalog.delete')}
+        cancelLabel={t('adminCatalog.cancel')}
+        onConfirm={onDelete}
+      />
+
+      <ConfirmActionDialog
+        open={!!publishTarget}
+        onOpenChange={(o) => !o && setPublishTarget(null)}
+        title={t('adminCatalog.confirmPublish')}
+        description={t('adminCatalog.confirmPublishDesc', { name: publishTarget?.name })}
+        variant="primary"
+        confirmLabel={t('adminCatalog.publish')}
+        cancelLabel={t('adminCatalog.cancel')}
+        onConfirm={onPublish}
+      />
     </PageShell>
   );
 }

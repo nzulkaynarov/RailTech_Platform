@@ -454,7 +454,15 @@ export default function PlatformAdminDashboard({ onNavigate }: PlatformAdminDash
           </Select>
         </CardHeader>
         <CardContent className="p-0">
-          {queueLoading ? (
+          {queue.isError ? (
+            <div className="flex flex-col items-center gap-2 py-8 text-center">
+              <AlertTriangle className="h-5 w-5 text-destructive" aria-hidden="true" />
+              <div className="text-xs font-medium text-foreground">{t('common.loadError')}</div>
+              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => queue.refetch()}>
+                {t('common.retry')}
+              </Button>
+            </div>
+          ) : queueLoading ? (
             <div className="flex justify-center p-6">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
@@ -486,7 +494,15 @@ export default function PlatformAdminDashboard({ onNavigate }: PlatformAdminDash
             <CardTitle className="text-sm">{t('platformAdmin.activity.title')}</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            {dashboard.isLoading && activity.length === 0 ? (
+            {dashboard.isError ? (
+              <div className="flex flex-col items-center gap-2 py-8 text-center">
+                <AlertTriangle className="h-4 w-4 text-destructive" aria-hidden="true" />
+                <div className="text-xs font-medium text-foreground">{t('common.loadError')}</div>
+                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => dashboard.refetch()}>
+                  {t('common.retry')}
+                </Button>
+              </div>
+            ) : dashboard.isLoading && activity.length === 0 ? (
               <div className="flex justify-center p-6">
                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
               </div>

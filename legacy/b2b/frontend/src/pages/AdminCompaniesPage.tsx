@@ -32,7 +32,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
+import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import {
   useCompanies, useCreateCompany, useUpdateCompany, useDeleteCompany,
   useCompanyTeam, useInviteMember,
@@ -365,7 +365,7 @@ export function AdminCompaniesPage() {
     }
     return Object.keys(p).length ? p : undefined;
   }, [tableState.search, tableState.tab]);
-  const { data: companies = [], isLoading } = useCompanies(queryParams);
+  const { data: companies = [], isLoading, isError, refetch } = useCompanies(queryParams);
   const deleteMut = useDeleteCompany();
 
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -402,6 +402,9 @@ export function AdminCompaniesPage() {
       icon={<Building2 className="h-5 w-5" />}
       stats={stats}
     >
+      {isError ? (
+        <ErrorState onRetry={() => refetch()} />
+      ) : (
       <AdminDataTable<Company>
         storageKey={STORAGE_KEY}
         rows={companies}
@@ -495,6 +498,7 @@ export function AdminCompaniesPage() {
         emptyIcon={<Building2 className="h-5 w-5 text-muted-foreground" />}
         emptyTitle={t('adminCompanies.emptyState')}
       />
+      )}
 
       <CompanyFormSheet open={sheetOpen} onOpenChange={setSheetOpen} target={editTarget} />
 
