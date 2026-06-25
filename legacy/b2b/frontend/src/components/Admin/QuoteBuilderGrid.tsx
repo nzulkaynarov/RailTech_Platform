@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { QuoteItem, crmApi } from '@/api/crmApi';
-import { Loader2, Save, FileDown, AlertTriangle, Plus, Trash2, Sparkles } from 'lucide-react';
+import { Loader2, Save, FileDown, AlertTriangle, Plus, Trash2, Sparkles, FileText } from 'lucide-react';
 import { useQuoteItems, useUpdateQuoteItem, useCreateQuoteItem, useDeleteQuoteItem, useDeal, useSetQuoteDeliveryBasis } from '@/hooks/useCRM';
 import { formatMoney, calculateLineTotal } from '@/utils/decimal';
 import { DeliveryBasisSelect } from '@/components/CRM/DeliveryBasisSelect';
@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { QuoteApprovalChain } from '@/components/CRM/QuoteApprovalChain';
 import { AICatalogMatchDialog } from '@/components/Admin/AICatalogMatchDialog';
+import { GenerateQuoteDialog } from '@/components/CRM/GenerateQuoteDialog';
 
 interface QuoteBuilderGridProps {
 	dealId?: number;
@@ -44,6 +45,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	const [newItemName, setNewItemName] = useState('');
 	const [showAddRow, setShowAddRow] = useState(false);
 	const [showAiMatch, setShowAiMatch] = useState(false);
+	const [showGenerateQuote, setShowGenerateQuote] = useState(false);
 
 	useEffect(() => {
 		if (quoteItems) {
@@ -150,6 +152,34 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	}
 
 	const activeQuote = deal?.active_quote;
+
+	// No active quote → the grid has nothing to operate on. Show a guided
+	// empty-state with a primary action that opens the existing КП-creation flow.
+	if (!activeQuote) {
+		return (
+			<>
+				<Card className="min-h-[200px]">
+					<CardContent className="flex flex-col items-center justify-center gap-3 py-12 text-center">
+						<div className="flex size-12 items-center justify-center rounded-full bg-muted">
+							<FileText className="size-6 text-muted-foreground" aria-hidden="true" />
+						</div>
+						<h3 className="text-base font-semibold">{t('quote.empty.title')}</h3>
+						<p className="max-w-sm text-sm text-muted-foreground">{t('quote.empty.description')}</p>
+						<Button className="mt-2" onClick={() => setShowGenerateQuote(true)} disabled={!dealId}>
+							<FileText className="size-4" aria-hidden="true" />
+							{t('quote.empty.action')}
+						</Button>
+					</CardContent>
+				</Card>
+				<GenerateQuoteDialog
+					dealId={dealId || null}
+					open={showGenerateQuote}
+					onOpenChange={setShowGenerateQuote}
+				/>
+			</>
+		);
+	}
+
 	const currency = quoteItems[0]?.frozen_currency || 'USD';
 	const vatRate = activeQuote?.vat_rate || '12';
 
@@ -223,7 +253,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 						disabled={isExporting}
 					>
 						{isExporting ? <Loader2 className="size-3 animate-spin" /> : <FileDown className="size-3" />}
-						PDF
+						{t('quote.pdf')}
 					</Button>
 				</div>
 			</div>
@@ -278,7 +308,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 									<TableHead className="px-2 py-2 text-xs font-semibold text-muted-foreground w-24 bg-muted/30">
 										<Tooltip>
 											<TooltipTrigger asChild>
-												<span className="cursor-help">{t('sourcing.title')}</span>
+												<span className="cursor-help">{t('quote.customsDuty')}</span>
 											</TooltipTrigger>
 											<TooltipContent>{t('quote.customsDutyHelp', 'Customs duty per unit')}</TooltipContent>
 										</Tooltip>
@@ -383,7 +413,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 										<TableCell className="p-0 bg-muted/20">
 											<Input
 												type="number"
-												aria-label={t('sourcing.title')}
+												aria-label={t('quote.customsDuty')}
 												className="h-8 border-none shadow-none rounded-none text-xs font-mono text-right pr-2 focus-visible:ring-1"
 												value={item.customs_duty}
 												onChange={(e) => updateItemLocally(item.id, 'customs_duty', e.target.value)}

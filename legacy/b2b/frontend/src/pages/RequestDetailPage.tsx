@@ -6,9 +6,9 @@ import { QuoteStatus, DealStage, DEAL_STAGE_LABEL_KEY, quoteStatusLabelKey } fro
 import { useUserStore } from '@/store/userStore';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useIsViewerMode } from '@/hooks/useViewerMode';
-import { useDeal, useChangeDealStage, useApproveQuote, useRejectQuote, useSendQuoteToClient, useUpdateRequestMeta, usePreflightCheck } from '@/hooks/useCRM';
+import { useDeal, useChangeDealStage, useApproveQuote, useRejectQuote, useSendQuoteToClient, useUpdateRequestMeta, usePreflightCheck, useQuoteRequestDiff } from '@/hooks/useCRM';
 import { crmApi } from '@/api/crmApi';
-import type { PreflightFinding, PreflightLine } from '@/api/crmApi';
+import type { PreflightFinding, PreflightLine, QuoteDiffFinding } from '@/api/crmApi';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { translateApiError } from '@/lib/apiError';
@@ -23,6 +23,7 @@ import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
 import { RequestItemsEditor } from '@/components/CRM/RequestItemsEditor';
 import { PreflightWarnings } from '@/components/CRM/PreflightWarnings';
 import { GenerateQuoteDialog } from '@/components/CRM/GenerateQuoteDialog';
+import { CoverageCheck } from '@/components/CRM/CoverageCheck';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { buyerStatus } from '@/lib/requestStatus';
 
@@ -46,6 +47,12 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
   const [preflightFindings, setPreflightFindings] = useState<PreflightFinding[]>([]);
   const [preflightRan, setPreflightRan] = useState(false);
   const preflightCheck = usePreflightCheck();
+  // AI #3 «КП vs заявка» coverage/diff state (buyer, received-КП only). Advisory —
+  // never gates approve/reject.
+  const [diffFindings, setDiffFindings] = useState<QuoteDiffFinding[]>([]);
+  const [diffAiEnabled, setDiffAiEnabled] = useState(true);
+  const [diffRan, setDiffRan] = useState(false);
+  const quoteDiff = useQuoteRequestDiff();
   const isViewer = useIsViewerMode();
   const viewerTip = t('apiErrors.ADMIN_VIEWER_CANNOT_ACT');
 
@@ -148,6 +155,22 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
         },
       },
     );
+  };
+
+  // AI #3 — compare the received КП against the original request lines. Advisory:
+  // the deterministic coverage facts come back even when AI is off (degraded mode).
+  const handleQuoteDiffCheck = () => {
+    if (!quote) return;
+    quoteDiff.mutate(quote.id, {
+      onSuccess: (data) => {
+        setDiffFindings(data.findings);
+        setDiffAiEnabled(data.ai_enabled);
+        setDiffRan(true);
+      },
+      onError: (err) => {
+        toast.error(translateApiError(err));
+      },
+    });
   };
 
   return (
@@ -383,6 +406,7 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
               ? new Date(quote.valid_until) < new Date(new Date().toDateString())
               : false;
             return (
+            <>
             <Card>
             <CardHeader>
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -515,6 +539,19 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
               </div>
             </CardContent>
           </Card>
+          {/* AI #3 — «КП vs заявка» coverage / discrepancy check. Buyer-only and
+              only once the КП has actually been sent back; purely advisory. */}
+          {isBuyerSide && (quote.items?.length ?? 0) > 0 && (
+            <CoverageCheck
+              items={quote.items ?? []}
+              findings={diffFindings}
+              aiEnabled={diffAiEnabled}
+              isPending={quoteDiff.isPending}
+              hasRun={diffRan}
+              onCheck={handleQuoteDiffCheck}
+            />
+          )}
+          </>
             );
           })()
         ) : quote && (quote.items?.length ?? 0) > 0 ? (

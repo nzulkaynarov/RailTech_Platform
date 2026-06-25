@@ -90,6 +90,85 @@ export interface PreflightPayload {
 	domain_code?: string;
 }
 
+// AI #3 — «КП vs заявка» coverage / discrepancy check (advisory, never blocks).
+// issue_type is a CODE (compare by code, not translated text). `line` is the
+// 0-based index into the КП's items, resolvable back to requested/quoted names.
+export type QuoteDiffIssueType =
+	| 'uncovered' // seller did not price this requested line
+	| 'substituted' // a non-equivalent catalog product was offered
+	| 'note_ignored' // the line's note/requirement may have been ignored
+	| 'qty_unit'; // quantity / unit mismatch (reserved)
+
+export interface QuoteDiffFinding {
+	issue_type: QuoteDiffIssueType;
+	line: number;
+	explanation: string;
+}
+
+export interface QuoteDiffResult {
+	ai_enabled: boolean;
+	findings: QuoteDiffFinding[];
+}
+
+// AI #6 — signed contract / counter-invoice extraction + code-side reconciliation.
+// The model TRANSCRIBES these fields (untrusted OCR); the money verdict in `comparison`
+// is recomputed on the backend in Decimal. line_index/totals are strings as read.
+export interface DocExtractLineTotal {
+	description: string;
+	line_total: string;
+}
+
+export interface DocExtractedFields {
+	total: string;
+	currency_code: string;
+	valid_until: string;
+	bank_details: string;
+	line_totals: DocExtractLineTotal[];
+}
+
+// Stable machine codes for each reconciliation flag (compared by code, never name).
+export type DocMismatchCode =
+	| 'TOTAL_MISMATCH'
+	| 'CURRENCY_UNKNOWN'
+	| 'FOREIGN_CURRENCY'
+	| 'DOCUMENT_EXPIRED'
+	| 'TOTAL_NOT_FOUND'
+	| 'CURRENCY_NOT_FOUND';
+
+export interface DocMismatch {
+	code: DocMismatchCode;
+	document_total?: string;
+	expected_total?: string;
+	difference?: string;
+	document_currency?: string;
+	expected_currency?: string;
+	valid_until?: string;
+}
+
+export interface DocComparison {
+	ok: boolean;
+	mismatches: DocMismatch[];
+	parsed: {
+		document_total: string | null;
+		document_currency: string | null;
+		valid_until: string | null;
+		bank_details: string | null;
+		line_count: number;
+	};
+}
+
+export interface DocCheckResult {
+	reference: { kind: 'quote' | 'contract'; id: number };
+	extracted: DocExtractedFields;
+	comparison: DocComparison;
+}
+
+export interface DocCheckPayload {
+	file: File;
+	quoteId?: number;
+	contractId?: number;
+}
+
 // Incoterms 2020 cost-responsibility flags — drive which cost rows the КП builder
 // shows / requires for the selected delivery basis (code reads flags, no hardcode).
 export interface DeliveryBasis {
@@ -567,6 +646,23 @@ export const crmApi = {
 		return response.data;
 	},
 
+	// ─── AI #6 contract/invoice extraction + reconciliation ──
+	// POST a signed contract/counter-invoice PDF + a quote OR contract id → extracted
+	// fields and a CODE-computed (Decimal) comparison vs the КП/Contract record. The
+	// money verdict comes from the backend; LLM numbers are never trusted. May 503.
+	checkDocument: async ({ file, quoteId, contractId }: DocCheckPayload) => {
+		const formData = new FormData();
+		formData.append('file', file);
+		if (quoteId != null) formData.append('quote_id', String(quoteId));
+		if (contractId != null) formData.append('contract_id', String(contractId));
+		const response = await apiClient.post<DocCheckResult>(
+			'sourcing/extract-document/',
+			formData,
+			{ headers: { 'Content-Type': 'multipart/form-data' } },
+		);
+		return response.data;
+	},
+
 	// ─── AI #4 deal-chat reply assist ────────────────────────
 	// POST a deal id → a professional reply DRAFT built from the recent chat history.
 	// The draft fills the input for the user to review/edit before sending (never
@@ -575,6 +671,18 @@ export const crmApi = {
 		const response = await apiClient.post<{ draft: string }>(
 			`crm/deals/${dealId}/suggest-reply/`,
 			{},
+		);
+		return response.data;
+	},
+
+	// ─── AI #3 «КП vs заявка» coverage / diff ────────────────
+	// GET a received КП id → deterministic coverage facts (uncovered lines) plus,
+	// when AI is on, semantic discrepancies (non-equivalent substitution, ignored
+	// note). Read-only & assistive — never blocks. Scoped to the deal's buyer or
+	// the routed seller (403 otherwise).
+	quoteRequestDiff: async (quoteId: number) => {
+		const response = await apiClient.get<QuoteDiffResult>(
+			`crm/quotes/${quoteId}/request-diff/`,
 		);
 		return response.data;
 	},

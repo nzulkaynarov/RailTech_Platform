@@ -674,3 +674,120 @@ class PreflightCheckView(APIView):
 
         findings = pre_flight_check(lines[:50], domain_code=domain_code)
         return Response({"findings": findings})
+
+
+# Max size for an uploaded contract/invoice document (one base64 vision call).
+MAX_DOC_FILE_SIZE = 15 * 1024 * 1024
+
+
+def _resolve_expected(user, request, quote_id, contract_id):
+    """Resolve the (expected_total, expected_currency_code, kind) record of truth for a
+    Quote or Contract the user may see. Returns (None, None, None) when not found/visible.
+    Scoping mirrors the billing viewset: platform admin sees all; everyone else only
+    records on a deal owned by one of their active company memberships."""
+    from crm.models import Contract, Quote
+
+    is_admin = getattr(user, "is_platform_admin", False)
+    company_ids = list(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
+
+    if contract_id:
+        qs = Contract.objects.select_related("currency", "deal")
+        contract = qs.filter(pk=contract_id).first()
+        if contract is None:
+            return None, None, None
+        if not is_admin and contract.deal.company_id not in company_ids and contract.deal.client_id != user.id:
+            return None, None, None
+        currency_code = contract.currency.code if contract.currency_id else None
+        return contract.total_amount, currency_code, "contract"
+
+    qs = Quote.objects.select_related("quote_currency", "deal")
+    quote = qs.filter(pk=quote_id).first()
+    if quote is None:
+        return None, None, None
+    if not is_admin and quote.deal.company_id not in company_ids and quote.deal.client_id != user.id:
+        return None, None, None
+    currency_code = quote.quote_currency.code if quote.quote_currency_id else None
+    return quote.total_incl_vat, currency_code, "quote"
+
+
+@extend_schema(
+    summary="AI extract + reconcile a signed contract / counter-invoice PDF (AI #6)",
+    description=(
+        "Buyer uploads a signed contract or counter-invoice (PDF/scan/image). Claude "
+        "transcribes {total, currency_code, valid_until, bank_details, line_totals} with "
+        "the same vision pattern as the заявка path; the financial comparison vs the "
+        "referenced Quote/Contract is recomputed in CODE with Decimal precision (LLM "
+        "numbers are never trusted for money). Flags total mismatch, foreign/unknown "
+        "currency and expired date. Pass quote_id OR contract_id."
+    ),
+    request={
+        "multipart/form-data": {
+            "type": "object",
+            "properties": {
+                "file": {"type": "string", "format": "binary", "description": "Contract/invoice PDF or image"},
+                "quote_id": {"type": "integer"},
+                "contract_id": {"type": "integer"},
+            },
+        }
+    },
+    responses={
+        200: OpenApiResponse(description="Extracted fields + code-computed reconciliation"),
+        400: OpenApiResponse(description="No file or missing quote_id/contract_id"),
+        404: OpenApiResponse(description="Quote/Contract not found or not visible"),
+        503: OpenApiResponse(description="AI extraction disabled"),
+    },
+    tags=["Sourcing"],
+)
+class DocumentExtractView(APIView):
+    """AI #6 — extract a contract/invoice PDF and reconcile it vs the КП/Contract in code."""
+
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "ai_extract"
+
+    def post(self, request):
+        from django.conf import settings
+
+        if not getattr(settings, "AI_IMPORT_ENABLED", False):
+            return Response({"error": "AI_DISABLED"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+        uploaded = request.FILES.get("file")
+        if uploaded is None:
+            return Response({"error": "FILE_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
+        if uploaded.size > MAX_DOC_FILE_SIZE:
+            return Response({"error": "FILE_TOO_LARGE"}, status=status.HTTP_400_BAD_REQUEST)
+
+        def _to_int(value):
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return None
+
+        quote_id = _to_int(request.data.get("quote_id"))
+        contract_id = _to_int(request.data.get("contract_id"))
+        if not quote_id and not contract_id:
+            return Response({"error": "QUOTE_OR_CONTRACT_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
+
+        expected_total, expected_currency, kind = _resolve_expected(
+            request.user, request, quote_id, contract_id
+        )
+        if kind is None:
+            return Response({"error": "REFERENCE_NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)
+
+        from sourcing.services_ai_extract import extract_document_fields, reconcile
+
+        try:
+            extracted = extract_document_fields(uploaded.read(), uploaded.name)
+        except RuntimeError as exc:
+            logger.warning("AI doc-extract failed: %s", exc)
+            return Response({"error": "AI_EXTRACT_FAILED"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+        comparison = reconcile(extracted, expected_total, expected_currency)
+        return Response(
+            {
+                "reference": {"kind": kind, "id": contract_id or quote_id},
+                "extracted": extracted,
+                "comparison": comparison,
+            }
+        )
