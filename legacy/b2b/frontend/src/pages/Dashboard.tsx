@@ -307,7 +307,23 @@ function BuyerWelcome({ onNavigate }: { onNavigate: (page: string) => void }) {
 function RecentRequestsCard({ onNavigate }: { onNavigate: (page: string) => void }) {
   const { t } = useTranslation();
   const formatCurrency = useCurrencyStore((s) => s.format);
-  const { data: deals } = useDeals();
+  const { data: deals, isError, refetch } = useDeals();
+
+  // A failed fetch must read as an error with a retry — not a silent absence
+  // that looks like "no requests yet".
+  if (isError) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center gap-3 py-8 text-center">
+          <AlertCircle className="h-6 w-6 text-destructive" aria-hidden="true" />
+          <p className="text-sm font-medium">{t('common.loadError')}</p>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            {t('common.retry')}
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   // No real data → render nothing (no fake/mock rows).
   const recent = (deals ?? [])

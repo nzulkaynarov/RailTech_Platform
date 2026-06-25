@@ -8,14 +8,11 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/DataTable';
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
+import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
+import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import {
   useEquipmentGroups, useCreateEquipmentGroup, useUpdateEquipmentGroup, useDeleteEquipmentGroup,
 } from '@/hooks/useCatalog';
@@ -123,7 +120,7 @@ function GroupFormSheet({
 export function AdminEquipmentGroupsPage() {
   const { t } = useTranslation();
   // Fetch every group (DRF pages at 20) so search/sort/Pager + stat tiles see all rows (H4).
-  const { data: groups, isLoading } = useEquipmentGroups(undefined, { fetchAll: true });
+  const { data: groups, isLoading, isError, refetch } = useEquipmentGroups(undefined, { fetchAll: true });
   const deleteMut = useDeleteEquipmentGroup();
 
   const listParams = useListParams([], { defaultOrdering: 'path' });
@@ -141,13 +138,8 @@ export function AdminEquipmentGroupsPage() {
   };
   const onDelete = async () => {
     if (!deleteTarget) return;
-    try {
-      await deleteMut.mutateAsync(deleteTarget.id);
-      toast.success(t('adminEquipmentGroups.deleted'));
-      setDeleteTarget(null);
-    } catch {
-      toast.error(t('adminEquipmentGroups.deleteFailed'));
-    }
+    await deleteMut.mutateAsync(deleteTarget.id);
+    toast.success(t('adminEquipmentGroups.deleted'));
   };
 
   const stats = [
@@ -179,6 +171,7 @@ export function AdminEquipmentGroupsPage() {
               },
             });
             if (isLoading) return <LoadingRows rows={5} />;
+            if (isError) return <ErrorState onRetry={() => refetch()} />;
             if (!pageItems.length) return <EmptyState icon={<Factory className="h-5 w-5" />} message={t('adminEquipmentGroups.emptyState')} />;
             return (
             <>
@@ -186,7 +179,7 @@ export function AdminEquipmentGroupsPage() {
               <TableHeader>
                 <TableRow>
                   <SortableHead sortKey="path" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('adminEquipmentGroups.table.path')}</SortableHead>
-                  <SortableHead sortKey="" current="" onChange={() => {}} className="text-right">{t('adminEquipmentGroups.table.actions')}</SortableHead>
+                  <TableHead className="text-right">{t('adminEquipmentGroups.table.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -221,22 +214,16 @@ export function AdminEquipmentGroupsPage() {
         all={groups ?? []}
       />
 
-      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('adminEquipmentGroups.confirmDelete')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t('adminEquipmentGroups.confirmDeleteDesc', { name: deleteTarget?.full_path || deleteTarget?.name })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t('adminEquipmentGroups.cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={onDelete} disabled={deleteMut.isPending}>
-              {t('adminEquipmentGroups.delete')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmActionDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => !o && setDeleteTarget(null)}
+        title={t('adminEquipmentGroups.confirmDelete')}
+        description={t('adminEquipmentGroups.confirmDeleteDesc', { name: deleteTarget?.full_path || deleteTarget?.name })}
+        variant="destructive"
+        confirmLabel={t('adminEquipmentGroups.delete')}
+        cancelLabel={t('adminEquipmentGroups.cancel')}
+        onConfirm={onDelete}
+      />
     </PageShell>
   );
 }

@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AdminDataTable, useAdminTableQueryState } from '@/components/Admin/AdminDataTable';
 import { AdminActivityTimeline } from '@/components/Admin/AdminActivityTimeline';
+import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
 import { DetailKPIGrid } from '@/components/Admin/DetailKPIGrid';
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter,
@@ -30,7 +31,7 @@ import {
   useWorkspaceRoles, useAddUserMembership, useRemoveUserMembership,
   useCompanies, useUploadUserAvatar, useDeleteUserAvatar,
 } from '@/hooks/useAccounts';
-import { PageShell, EmptyState } from './shared/PageShell';
+import { PageShell, EmptyState, ErrorState } from './shared/PageShell';
 import { systemRoleLabelKey, workspaceRoleLabelKey } from '@/lib/codes';
 import type { User as UserType } from '@/api/accountsApi';
 import { ImageUpload } from '@/components/Shared/ImageUpload';
@@ -197,6 +198,7 @@ function DetailSheet({
 
   const [draft, setDraft] = useState<Draft>(() => user ?? {});
   const [roleCode, setRoleCode] = useState<string>('');
+  const [confirmDeactivate, setConfirmDeactivate] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -219,7 +221,7 @@ function DetailSheet({
     { icon: Calendar, value: user.date_joined ? new Date(user.date_joined).toLocaleDateString() : '—' },
   ];
 
-  const handleToggleActive = async () => {
+  const runToggleActive = async () => {
     try {
       await toggleMut.mutateAsync(user.id);
       toast.success(
@@ -230,6 +232,16 @@ function DetailSheet({
     } catch {
       toast.error(t('common.error'));
     }
+  };
+
+  // Deactivation is destructive (revokes the user's access) — gate it behind a
+  // confirm. Re-activation is benign and fires immediately.
+  const handleToggleActive = (next: boolean) => {
+    if (!next && user.is_active) {
+      setConfirmDeactivate(true);
+      return;
+    }
+    void runToggleActive();
   };
 
   const handleSave = async () => {
@@ -424,6 +436,16 @@ function DetailSheet({
             {t('pages.adminUsers.delete')}
           </Button>
         </SheetFooter>
+
+        <ConfirmActionDialog
+          open={confirmDeactivate}
+          onOpenChange={setConfirmDeactivate}
+          title={t('pages.adminUsers.confirmDeactivateTitle')}
+          description={t('pages.adminUsers.confirmDeactivateDesc', { name: user.email })}
+          confirmLabel={t('pages.adminUsers.deactivateConfirm')}
+          variant="destructive"
+          onConfirm={async () => { await runToggleActive(); }}
+        />
       </SheetContent>
     </Sheet>
   );
@@ -536,7 +558,7 @@ export function AdminUsersPage() {
   }, [tableState.search, tableState.tab]);
 
   const { data: allUsers = [] } = useUsers();
-  const { data: users = [], isLoading } = useUsers(queryParams);
+  const { data: users = [], isLoading, isError, refetch } = useUsers(queryParams);
 
   const selectedUser = useMemo(() => {
     if (!detailTarget) return null;
@@ -578,6 +600,9 @@ export function AdminUsersPage() {
       icon={<Shield className="h-5 w-5" />}
       stats={stats}
     >
+      {isError ? (
+        <ErrorState onRetry={() => refetch()} />
+      ) : (
       <AdminDataTable<UserType>
         storageKey={STORAGE_KEY}
         rows={filtered}
@@ -670,6 +695,7 @@ export function AdminUsersPage() {
         emptyIcon={<Shield className="h-5 w-5 text-muted-foreground" />}
         emptyTitle={t('pages.common.noData')}
       />
+      )}
 
       <DetailSheet
         user={selectedUser}

@@ -840,6 +840,10 @@
         "noNotes": "No notes",
         "created": "Created",
         "updated": "Updated"
+      },
+      "suspendDialog": {
+        "title": "Suspend subscription?",
+        "description": "The subscription for \"{{name}}\" will be suspended."
       }
     },
     "roleApps": {
@@ -3175,7 +3179,10 @@
       "deleteFailed": "Failed to delete",
       "emailRequired": "Email is required",
       "confirmDelete": "Delete user?",
-      "confirmDeleteDesc": "User {{email}} will be permanently deleted."
+      "confirmDeleteDesc": "User {{email}} will be permanently deleted.",
+      "confirmDeactivateTitle": "Deactivate user?",
+      "confirmDeactivateDesc": "User {{name}} will lose access to the platform.",
+      "deactivateConfirm": "Deactivate"
     },
     "dealQuote": {
       "title": "Quote builder",
@@ -3568,7 +3575,11 @@
     "pricing": {
       "title": "Price & availability",
       "hint": "Your offer for this product (price is visible only to you and the platform)."
-    }
+    },
+    "published": "Product published",
+    "publish": "Publish",
+    "confirmPublish": "Publish product?",
+    "confirmPublishDesc": "Product \"{{name}}\" will become visible to buyers in the catalog."
   },
   "adminCategories": {
     "title": "Catalog · Categories",

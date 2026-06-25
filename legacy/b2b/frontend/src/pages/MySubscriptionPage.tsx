@@ -4,6 +4,7 @@ import {
   CreditCard,
   Calendar,
   AlertCircle,
+  AlertTriangle,
   CheckCircle2,
   Wallet,
   Pause,
@@ -44,7 +45,7 @@ function daysUntil(dateStr?: string | null): number | null {
 
 export function MySubscriptionPage() {
   const { t } = useTranslation();
-  const { data: sub, isLoading, refetch } = useMySubscription();
+  const { data: sub, isLoading, isError, refetch } = useMySubscription();
   const [payOpen, setPayOpen] = useState(false);
 
   const remainingDays = useMemo(() => daysUntil(sub?.valid_until), [sub]);
@@ -62,6 +63,18 @@ export function MySubscriptionPage() {
         <Card>
           <CardContent className="p-6">
             <Skeleton className="h-20 w-full" />
+          </CardContent>
+        </Card>
+      ) : isError ? (
+        // A failed fetch must read as an error with a retry — never as the
+        // "no subscription" empty state (which looks like a successful load).
+        <Card>
+          <CardContent className="flex flex-col items-center gap-3 p-8 text-center">
+            <AlertTriangle className="h-8 w-8 text-destructive" aria-hidden="true" />
+            <p className="text-sm font-medium">{t('common.loadError')}</p>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
+              {t('common.retry')}
+            </Button>
           </CardContent>
         </Card>
       ) : !sub ? (

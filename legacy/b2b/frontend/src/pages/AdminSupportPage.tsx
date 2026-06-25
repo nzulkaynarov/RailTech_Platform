@@ -39,7 +39,7 @@ import type {
 import {
     Toolbar, SortableHead, Pager, useListParams,
 } from '@/components/DataTable';
-import { PageShell, LoadingRows, EmptyState } from './shared/PageShell';
+import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import { translateApiError } from '@/lib/apiError';
 
 const STATUS_FILTERS: SupportTicketStatus[] = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
@@ -294,7 +294,7 @@ export function AdminSupportPage() {
         page_size: pageSize,
     };
 
-    const { data, isLoading } = useSupportTickets(queryParams);
+    const { data, isLoading, isError, refetch } = useSupportTickets(queryParams);
     const tickets: SupportTicket[] = data?.results ?? [];
     const total = data?.count ?? 0;
 
@@ -360,7 +360,9 @@ export function AdminSupportPage() {
                         ]}
                     />
 
-                    {isLoading ? (
+                    {isError ? (
+                        <ErrorState onRetry={() => refetch()} />
+                    ) : isLoading ? (
                         <LoadingRows rows={6} />
                     ) : tickets.length === 0 ? (
                         <EmptyState

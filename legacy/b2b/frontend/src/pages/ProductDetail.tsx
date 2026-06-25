@@ -34,7 +34,7 @@ export function ProductDetail({ productId, onBack }: ProductDetailProps) {
   const canSendRequest = activeStatus === 'BUYER';
   const showPrices = activeStatus === 'SELLER';
 
-  const { data: product, isLoading, error } = useProduct(productId);
+  const { data: product, isLoading, error, refetch } = useProduct(productId);
   // `qty` is the always-valid (>=1) source of truth used by add-to-request;
   // `qtyText` is the raw editable buffer so the field can be cleared to type a
   // multi-digit number instead of being clamped to 1 on every keystroke.
@@ -63,11 +63,18 @@ export function ProductDetail({ productId, onBack }: ProductDetailProps) {
   }
 
   if (error || !product) {
+    // A failed fetch (network/server) is distinct from a genuinely missing product:
+    // offer a retry on error, fall back to "not found" + back when there's no error.
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-3">
         <Package className="h-12 w-12 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">{error instanceof Error ? error.message : t('catalog.productNotFound')}</p>
-        <Button variant="outline" onClick={onBack}>{t('common.back')}</Button>
+        <p className="text-sm text-muted-foreground">{error ? t('common.loadError') : t('catalog.productNotFound')}</p>
+        <div className="flex gap-2">
+          {error && (
+            <Button variant="outline" onClick={() => refetch()}>{t('common.retry')}</Button>
+          )}
+          <Button variant="ghost" onClick={onBack}>{t('common.back')}</Button>
+        </div>
       </div>
     );
   }

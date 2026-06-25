@@ -15,7 +15,7 @@ import { AdminDetailLayout } from '@/components/Admin/AdminDetailLayout';
 import { AdminActivityTimeline } from '@/components/Admin/AdminActivityTimeline';
 import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
 import { DetailKPIGrid } from '@/components/Admin/DetailKPIGrid';
-import { PageShell } from './shared/PageShell';
+import { PageShell, ErrorState } from './shared/PageShell';
 import { translateApiError } from '@/lib/apiError';
 import type { RoleApplication } from '@/api/accountsApi';
 
@@ -235,7 +235,7 @@ export function AdminRoleApplicationsPage() {
   }, [tableState.search, tableState.tab]);
 
   const { data: allApps = [] } = useRoleApplications();
-  const { data: apps = [], isLoading } = useRoleApplications(queryParams);
+  const { data: apps = [], isLoading, isError, refetch } = useRoleApplications(queryParams);
 
   const filtered = useMemo(() => {
     // For the "pending" tab there are three backend statuses, so filter client-side over the allApps snapshot.
@@ -284,6 +284,9 @@ export function AdminRoleApplicationsPage() {
         { label: t('admin.roleApps.stats.rejected'), value: String(counts.rejected) },
       ]}
     >
+      {isError ? (
+        <ErrorState onRetry={() => refetch()} />
+      ) : (
       <AdminDataTable<RoleApplication>
         storageKey={STORAGE_KEY}
         rows={filtered}
@@ -366,6 +369,7 @@ export function AdminRoleApplicationsPage() {
         emptyIcon={<ClipboardCheck className="h-5 w-5 text-muted-foreground" />}
         emptyTitle={t('pages.common.noData')}
       />
+      )}
 
       <ConfirmActionDialog
         open={confirm?.kind === 'approve'}
