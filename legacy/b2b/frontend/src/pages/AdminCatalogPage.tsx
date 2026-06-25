@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Package, Pencil, Trash2, Send } from 'lucide-react';
+import { Package, Pencil, Trash2, Send, Sparkles, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,7 @@ import {
   useUploadProductImage, useDeleteProductImage,
   useUploadProductDocument, useDeleteProductDocument,
   useStockStatuses, useOffers, useCreateOffer, useUpdateOffer, useBulkPublishProducts,
+  useEnrichProduct,
 } from '@/hooks/useCatalog';
 import { useUnits, useCurrencies, useDeliveryBases } from '@/hooks/useMasterData';
 import { productStatusLabelKey } from '@/lib/codes';
@@ -154,6 +155,48 @@ export function ProductFormSheet({
 
   const update = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
 
+  // --- AI #2: enrich (suggestion only, seller reviews & edits) ---
+  const enrichMut = useEnrichProduct();
+  // Category hint is advisory text — the seller still picks the real category from
+  // the DB dropdown (Rule 1: we never resolve/invent a Category id from the hint).
+  const [categoryHint, setCategoryHint] = useState<string>('');
+
+  const runEnrich = async () => {
+    const name = draft.name?.trim();
+    if (!name) {
+      toast.error(t('adminCatalog.nameRequired'));
+      return;
+    }
+    try {
+      const suggestion = await enrichMut.mutateAsync({
+        name,
+        domain_code: domainCode,
+        mpn: draft.manufacturer_part_number ?? undefined,
+        gost: draft.gost_drawing ?? undefined,
+      });
+      // Empty object → AI disabled or nothing to suggest.
+      if (!suggestion || Object.keys(suggestion).length === 0) {
+        toast.info(t('adminCatalog.aiEnrich.empty'));
+        return;
+      }
+      const patch: Partial<Draft> = {};
+      if (suggestion.description) patch.description = suggestion.description;
+      if (suggestion.specifications?.length) {
+        // Map [{key,value}] → the Product.specifications JSON object the form persists.
+        const specs: Record<string, string> = {};
+        for (const spec of suggestion.specifications) {
+          if (spec.key) specs[spec.key] = spec.value;
+        }
+        patch.specifications = specs;
+      }
+      update(patch);
+      setCategoryHint(suggestion.suggested_category_hint ?? '');
+      toast.success(t('adminCatalog.aiEnrich.applied'));
+    } catch {
+      toast.error(t('adminCatalog.aiEnrich.failed'));
+    }
+  };
+
   const submit = async () => {
     if (!draft.name?.trim()) {
       toast.error(t('adminCatalog.nameRequired'));
@@ -177,6 +220,7 @@ export function ProductFormSheet({
       manufacturer_part_number: draft.manufacturer_part_number || '',
       equipment_groups: groupIds,
       gost_drawing: draft.gost_drawing || '',
+      specifications: draft.specifications ?? undefined,
     } as unknown as Partial<Product>;
     try {
       let productId = target?.id;
@@ -223,10 +267,37 @@ export function ProductFormSheet({
             <Label>{t('adminCatalog.fields.name')}</Label>
             <Input value={draft.name ?? ''} onChange={(e) => update({ name: e.target.value })} />
           </div>
+
+          <div className="flex items-start justify-between gap-3 rounded-md border border-dashed bg-muted/40 p-3">
+            <div className="space-y-0.5">
+              <p className="text-sm font-medium">{t('adminCatalog.aiEnrich.title')}</p>
+              <p className="text-xs text-muted-foreground">{t('adminCatalog.aiEnrich.hint')}</p>
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={runEnrich}
+              disabled={enrichMut.isPending || !draft.name?.trim()}
+              className="shrink-0"
+            >
+              {enrichMut.isPending
+                ? <Loader2 className="size-4 animate-spin" />
+                : <Sparkles className="size-4" />}
+              {t('adminCatalog.aiEnrich.button')}
+            </Button>
+          </div>
+
           <div className="space-y-2">
             <Label>{t('adminCatalog.fields.description')}</Label>
             <Textarea rows={3} value={draft.description ?? ''} onChange={(e) => update({ description: e.target.value })} />
           </div>
+
+          {categoryHint && (
+            <p className="text-xs text-muted-foreground">
+              {t('adminCatalog.aiEnrich.categoryHint', { hint: categoryHint })}
+            </p>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label>{t('adminCatalog.fields.domainType')}</Label>

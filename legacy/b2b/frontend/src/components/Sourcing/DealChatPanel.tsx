@@ -19,9 +19,11 @@ import {
   Wifi,
   WifiOff,
   Loader2,
+  Sparkles,
 } from 'lucide-react';
 import { DealAttachmentsPanel } from './DealAttachmentsPanel';
 import { crmApi, Message } from '@/api/crmApi';
+import { useSuggestChatReply } from '@/hooks/useCRM';
 import { useAuthStore } from '@/store/authStore';
 
 interface DealChatPanelProps {
@@ -52,6 +54,8 @@ export function DealChatPanel({ dealId }: DealChatPanelProps = {}): React.ReactN
 
   const socketRef = useRef<WebSocket | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const suggestReply = useSuggestChatReply();
 
   const appendMessage = useCallback((incoming: Message) => {
     setMessages((prev) => {
@@ -183,6 +187,25 @@ export function DealChatPanel({ dealId }: DealChatPanelProps = {}): React.ReactN
     }
   }
 
+  // AI #4: fetch a reply DRAFT from the recent history and drop it into the input.
+  // The user reviews/edits it before sending — we NEVER auto-send the draft.
+  function handleSuggestReply() {
+    if (!dealId || suggestReply.isPending) return;
+    suggestReply.mutate(dealId, {
+      onSuccess: ({ draft }) => {
+        if (draft) {
+          setInputValue(draft);
+        } else {
+          toast.info(t('dealChat.suggestEmpty'));
+        }
+      },
+      onError: (error) => {
+        const status = (error as { response?: { status?: number } }).response?.status;
+        toast.error(status === 503 ? t('dealChat.suggestDisabled') : t('dealChat.suggestError'));
+      },
+    });
+  }
+
   return (
     <Card className="flex h-full flex-col overflow-hidden">
       <Tabs defaultValue="chat" className="flex h-full flex-col">
@@ -294,6 +317,22 @@ export function DealChatPanel({ dealId }: DealChatPanelProps = {}): React.ReactN
           <Separator />
 
           <form onSubmit={handleSend} className="flex items-center gap-1.5 p-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-7 w-7 shrink-0"
+              onClick={handleSuggestReply}
+              disabled={!dealId || suggestReply.isPending}
+              aria-label={t('dealChat.suggestReply')}
+              title={t('dealChat.suggestReply')}
+            >
+              {suggestReply.isPending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Sparkles className="h-3.5 w-3.5" />
+              )}
+            </Button>
             <Input
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
