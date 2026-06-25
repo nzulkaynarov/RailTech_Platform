@@ -99,7 +99,9 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
                 "items__frozen_currency",
             )
         )
-        from accounts.services.permissions import seller_visible_deal_ids
+        from django.db.models import Q
+
+        from accounts.services.permissions import seller_acting_company_ids, seller_visible_deal_ids
 
         # Seller building КП across buyer заявки sees every quote — but only in a
         # seller context. In BUYER context the same user is scoped to its own deals.
@@ -107,7 +109,17 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
             return queryset
         visible_deal_ids = seller_visible_deal_ids(user, self.request)
         if visible_deal_ids is not None:
-            return queryset.filter(deal_id__in=visible_deal_ids)
+            # Own КП only — on a deal routed to competing sellers, a seller must not read a
+            # competitor's quote (charges/metadata; cost is also redacted) — audit H1.
+            seller_ids = seller_acting_company_ids(user, self.request) or set()
+            return (
+                queryset.filter(deal_id__in=visible_deal_ids)
+                .filter(
+                    Q(prepared_by__memberships__company_id__in=seller_ids, prepared_by__memberships__is_active=True)
+                    | Q(prepared_by__isnull=True)
+                )
+                .distinct()
+            )
         # Buyer sees only quotes on their own company's deals.
         user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
         return queryset.filter(deal__company_id__in=user_company_ids)
@@ -118,12 +130,12 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
         (anchoring the КП-owning company + approval chain). Auto-increments version."""
         from rest_framework.exceptions import PermissionDenied
 
-        from accounts.services.permissions import is_platform_admin_viewer, is_seller
+        from accounts.services.permissions import can_edit_quote_pricing, is_platform_admin_viewer
 
         user = self.request.user
         if is_platform_admin_viewer(user):
             raise PermissionDenied("ADMIN_VIEWER_CANNOT_ACT")
-        if not (getattr(user, "is_superuser", False) or is_seller(user)):
+        if not (getattr(user, "is_superuser", False) or can_edit_quote_pricing(user)):
             raise PermissionDenied("ONLY_SELLER_CAN_BUILD_QUOTE")
         deal = serializer.validated_data.get("deal")
         version = (deal.quotes.aggregate(max_v=Max("version"))["max_v"] or 0) + 1 if deal else 1
@@ -512,7 +524,23 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
             return queryset
         visible_deal_ids = seller_visible_deal_ids(user, self.request)
         if visible_deal_ids is not None:
-            return queryset.filter(quote__deal_id__in=visible_deal_ids)
+            from django.db.models import Q
+
+            from accounts.services.permissions import seller_acting_company_ids
+
+            # Own КП only (audit H1) — not a competitor's quote items/charges on a co-routed deal.
+            seller_ids = seller_acting_company_ids(user, self.request) or set()
+            return (
+                queryset.filter(quote__deal_id__in=visible_deal_ids)
+                .filter(
+                    Q(
+                        quote__prepared_by__memberships__company_id__in=seller_ids,
+                        quote__prepared_by__memberships__is_active=True,
+                    )
+                    | Q(quote__prepared_by__isnull=True)
+                )
+                .distinct()
+            )
         # Buyer sees line items only on their own deals (read-only — see _assert_seller).
         user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
         return queryset.filter(quote__deal__company_id__in=user_company_ids)
@@ -521,12 +549,12 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
         """Building/editing КП line items is a seller action. Raise 403 otherwise."""
         from rest_framework.exceptions import PermissionDenied
 
-        from accounts.services.permissions import is_platform_admin_viewer, is_seller
+        from accounts.services.permissions import can_edit_quote_pricing, is_platform_admin_viewer
 
         user = self.request.user
         if is_platform_admin_viewer(user):
             raise PermissionDenied("ADMIN_VIEWER_CANNOT_ACT")
-        if not (getattr(user, "is_superuser", False) or is_seller(user)):
+        if not (getattr(user, "is_superuser", False) or can_edit_quote_pricing(user)):
             raise PermissionDenied("ONLY_SELLER_CAN_BUILD_QUOTE")
 
     def _is_seller_write(self) -> bool:
@@ -637,19 +665,35 @@ class QuoteChargeViewSet(viewsets.ModelViewSet):
             return queryset
         visible_deal_ids = seller_visible_deal_ids(user, self.request)
         if visible_deal_ids is not None:
-            return queryset.filter(quote__deal_id__in=visible_deal_ids)
+            from django.db.models import Q
+
+            from accounts.services.permissions import seller_acting_company_ids
+
+            # Own КП only (audit H1) — not a competitor's quote items/charges on a co-routed deal.
+            seller_ids = seller_acting_company_ids(user, self.request) or set()
+            return (
+                queryset.filter(quote__deal_id__in=visible_deal_ids)
+                .filter(
+                    Q(
+                        quote__prepared_by__memberships__company_id__in=seller_ids,
+                        quote__prepared_by__memberships__is_active=True,
+                    )
+                    | Q(quote__prepared_by__isnull=True)
+                )
+                .distinct()
+            )
         # Buyers must never see the internal cost breakdown.
         return queryset.none()
 
     def _assert_seller(self):
         from rest_framework.exceptions import PermissionDenied
 
-        from accounts.services.permissions import is_platform_admin_viewer, is_seller
+        from accounts.services.permissions import can_edit_quote_pricing, is_platform_admin_viewer
 
         user = self.request.user
         if is_platform_admin_viewer(user):
             raise PermissionDenied("ADMIN_VIEWER_CANNOT_ACT")
-        if not (getattr(user, "is_superuser", False) or is_seller(user)):
+        if not (getattr(user, "is_superuser", False) or can_edit_quote_pricing(user)):
             raise PermissionDenied("ONLY_SELLER_CAN_BUILD_QUOTE")
 
     def perform_create(self, serializer):

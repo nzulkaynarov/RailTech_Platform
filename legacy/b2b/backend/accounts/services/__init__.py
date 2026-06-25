@@ -44,6 +44,8 @@ from .permissions import (
     is_seller,
     member_has_permission,
     primary_seller_company_id,
+    can_edit_quote_pricing,
+    seller_acting_company_ids,
     seller_can_access_deal,
     seller_company_routed_to_deal,
     seller_sees_all_deals,
