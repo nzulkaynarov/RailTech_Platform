@@ -6,7 +6,7 @@ Public API re-exported so existing import paths keep working.
 from .billing import Act, Invoice, InvoiceItem, Payment
 from .charges import ChargeTemplate, QuoteCharge
 from .contracts import Contract
-from .deals import ActivityLog, Deal, Lead, Message
+from .deals import ActivityLog, Deal, DealSellerRouting, Lead, Message
 from .fulfillment import Fulfillment
 from .lookups import (
     ActStatus,
@@ -29,6 +29,7 @@ __all__ = [
     "Contract",
     "ContractStatus",
     "Deal",
+    "DealSellerRouting",
     "DealStage",
     "DocumentSequence",
     "Fulfillment",

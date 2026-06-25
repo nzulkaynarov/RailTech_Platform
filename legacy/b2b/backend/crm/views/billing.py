@@ -7,7 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.services.permissions import is_seller, seller_sees_all_deals
+from accounts.services.permissions import is_seller, seller_visible_deal_ids
 from core.file_streaming import stream_file_field
 from core.optimistic_locking import OptimisticLockingMixin
 from core.permissions import IsCompanyMemberOrPlatformAdmin, IsPlatformAdmin
@@ -89,9 +89,13 @@ class ContractViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
         qs = Contract.objects.select_related(
             "deal__company", "quote", "currency", "client_signer", "manager_signer", "status"
         ).order_by("-created_at")
-        # Seller operates across all buyer deals → sees every billing record.
-        if seller_sees_all_deals(user, self.request):
+        # Platform admin sees every billing record; a context-seller sees only records
+        # on deals routed to them (multi-seller); buyer sees its own company's records.
+        if getattr(user, "is_platform_admin", False):
             return qs
+        visible_deal_ids = seller_visible_deal_ids(user, self.request)
+        if visible_deal_ids is not None:
+            return qs.filter(deal_id__in=visible_deal_ids)
         user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
         return qs.filter(deal__company_id__in=user_company_ids)
 
@@ -223,9 +227,13 @@ class InvoiceViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
             )
             .order_by("-created_at")
         )
-        # Seller operates across all buyer deals → sees every billing record.
-        if seller_sees_all_deals(user, self.request):
+        # Platform admin sees every billing record; a context-seller sees only records
+        # on deals routed to them (multi-seller); buyer sees its own company's records.
+        if getattr(user, "is_platform_admin", False):
             return qs
+        visible_deal_ids = seller_visible_deal_ids(user, self.request)
+        if visible_deal_ids is not None:
+            return qs.filter(deal_id__in=visible_deal_ids)
         user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
         return qs.filter(deal__company_id__in=user_company_ids)
 
@@ -300,9 +308,13 @@ class PaymentViewSet(viewsets.ModelViewSet):
             return Payment.objects.none()
         user = self.request.user
         qs = Payment.objects.select_related("invoice__deal__company").order_by("-paid_at")
-        # Seller operates across all buyer deals → sees every billing record.
-        if seller_sees_all_deals(user, self.request):
+        # Platform admin sees every billing record; a context-seller sees only records
+        # on deals routed to them (multi-seller); buyer sees its own company's records.
+        if getattr(user, "is_platform_admin", False):
             return qs
+        visible_deal_ids = seller_visible_deal_ids(user, self.request)
+        if visible_deal_ids is not None:
+            return qs.filter(invoice__deal_id__in=visible_deal_ids)
         user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
         return qs.filter(invoice__deal__company_id__in=user_company_ids)
 
@@ -316,9 +328,13 @@ class ActViewSet(viewsets.ModelViewSet):
             return Act.objects.none()
         user = self.request.user
         qs = Act.objects.select_related("deal__company", "contract", "invoice", "status").order_by("-created_at")
-        # Seller operates across all buyer deals → sees every billing record.
-        if seller_sees_all_deals(user, self.request):
+        # Platform admin sees every billing record; a context-seller sees only records
+        # on deals routed to them (multi-seller); buyer sees its own company's records.
+        if getattr(user, "is_platform_admin", False):
             return qs
+        visible_deal_ids = seller_visible_deal_ids(user, self.request)
+        if visible_deal_ids is not None:
+            return qs.filter(deal_id__in=visible_deal_ids)
         user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
         return qs.filter(deal__company_id__in=user_company_ids)
 
@@ -359,9 +375,13 @@ class FulfillmentViewSet(viewsets.ModelViewSet):
             return Fulfillment.objects.none()
         user = self.request.user
         qs = Fulfillment.objects.select_related("deal__company").order_by("-updated_at")
-        # Seller operates across all buyer deals → sees every billing record.
-        if seller_sees_all_deals(user, self.request):
+        # Platform admin sees every billing record; a context-seller sees only records
+        # on deals routed to them (multi-seller); buyer sees its own company's records.
+        if getattr(user, "is_platform_admin", False):
             return qs
+        visible_deal_ids = seller_visible_deal_ids(user, self.request)
+        if visible_deal_ids is not None:
+            return qs.filter(deal_id__in=visible_deal_ids)
         user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
         return qs.filter(deal__company_id__in=user_company_ids)
 

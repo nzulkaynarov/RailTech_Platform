@@ -135,14 +135,24 @@ class IsCompanyMemberOrPlatformAdmin(BasePermission):
         if user.is_platform_admin:
             return True
 
-        # Seller team (can_sell) operates across all buyer заявки/deals in the
-        # single-seller model — they are not members of the buyer's deal.company,
-        # so grant access to CRM objects here (per-seller scoping comes with
-        # multi-seller). Buyer-side access falls through to the membership check.
-        from accounts.services.permissions import is_seller
+        # Seller team (can_sell): a seller may act on a CRM object IFF its deal is
+        # ROUTED to one of their seller companies (multi-seller confidentiality —
+        # replaces the old see-all where any seller could read any buyer's
+        # deal/quote/chat). If not routed, fall through to the buyer-membership
+        # check, so a dual seller+buyer can still reach their own buyer company's
+        # objects while purchasing.
+        from accounts.services.permissions import is_seller, seller_can_access_deal
 
         if is_seller(user):
-            return True
+            deal_id = None
+            if hasattr(obj, "seller_routings"):  # obj is a Deal
+                deal_id = obj.pk
+            elif hasattr(obj, "deal_id"):  # Quote / Message / Invoice / Contract / Act
+                deal_id = obj.deal_id
+            elif hasattr(obj, "quote"):  # QuoteItem
+                deal_id = obj.quote.deal_id
+            if deal_id is not None and seller_can_access_deal(user, request, deal_id):
+                return True
 
         target_company = None
         if hasattr(obj, "company"):
