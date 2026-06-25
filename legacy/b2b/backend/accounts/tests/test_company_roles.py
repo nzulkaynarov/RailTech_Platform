@@ -70,3 +70,23 @@ def test_role_name_unique_per_company(company):
 
     with pytest.raises(IntegrityError):
         CompanyRole.objects.create(company=company, name="Dup", permissions=[])
+
+
+@pytest.mark.django_db
+def test_can_view_quote_costs_gated_by_permission(db):
+    """The КП cost/margin gate: a seller-team member sees margin only with quote.view_cost_margin."""
+    from accounts.models import CompanyType
+    from accounts.services.permissions import can_view_quote_costs
+
+    seller_co = Company.objects.create(name="SellerCo")
+    supplier_type = CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 1})[0]
+    seller_co.types.add(supplier_type)
+
+    with_perm = CompanyRole.objects.create(company=seller_co, name="Sales", permissions=["quote.view_cost_margin"])
+    without_perm = CompanyRole.objects.create(company=seller_co, name="Viewer", permissions=[])
+
+    privileged = _member(seller_co, "see@s.test", role=with_perm, can_sell=False, can_buy=False)
+    restricted = _member(seller_co, "nosee@s.test", role=without_perm, can_sell=False, can_buy=False)
+
+    assert can_view_quote_costs(privileged.user) is True
+    assert can_view_quote_costs(restricted.user) is False  # seller-team but no margin permission

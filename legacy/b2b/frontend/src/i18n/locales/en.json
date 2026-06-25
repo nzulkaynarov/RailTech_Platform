@@ -4227,5 +4227,21 @@
     "LOGIST": "Logistics",
     "CONTRACT_MANAGER": "Contract manager",
     "FOREIGN_TRADE_SPECIALIST": "Foreign-trade specialist"
+  },
+  "permissions": {
+    "quote.build": "Build quotes",
+    "quote.send": "Send quotes to clients",
+    "quote.view_cost_margin": "View cost & margin",
+    "quote.edit_pricing": "Edit pricing & discounts",
+    "request.create": "Create requests",
+    "quote.approve": "Approve / reject quotes",
+    "contract.sign": "Sign contracts",
+    "payment.record": "Record payments",
+    "catalog.manage": "Manage catalog & offers",
+    "catalog.publish": "Publish products",
+    "team.manage": "Manage team & roles",
+    "settings.edit": "Edit company settings",
+    "charge_templates.manage": "Manage charge templates",
+    "data.export": "Export data"
   }
 }
