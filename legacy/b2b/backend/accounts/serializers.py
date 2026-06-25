@@ -417,6 +417,16 @@ class CompanyRoleApplicationSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             "id",
+            # Moderation + ownership fields — set by the server on create / by the admin's
+            # approve-reject action, NEVER writable by the applicant (audit M2: an OWNER could
+            # otherwise forge {status:APPROVED, reviewed_by:<admin>} or move `company` to another
+            # tenant via PATCH while the app was PENDING).
+            "company",
+            "status",
+            "submitted_by",
+            "reviewed_by",
+            "review_notes",
+            "reviewed_at",
             "company_name",
             "company_inn",
             "requested_type_name",

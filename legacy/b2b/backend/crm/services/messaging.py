@@ -96,6 +96,13 @@ def send_deal_message(user: CustomUser, deal: Deal, text: str) -> Tuple[Optional
     Create a chat message for a deal after authorization + validation.
     Broadcast happens via Message post_save signal — do not group_send here.
     """
+    # Sending is an ACTION, not read-only inspection — the platform-admin viewer must not
+    # inject messages into a company's deal chat (audit L1; user_can_access_deal_chat
+    # allows admin READ, but the write path is gated here).
+    from accounts.services.permissions import is_platform_admin_viewer
+
+    if is_platform_admin_viewer(user):
+        return None, "ADMIN_VIEWER_CANNOT_ACT"
     if not user_can_access_deal_chat(user, deal):
         return None, "NOT_DEAL_MEMBER"
     clean = (text or "").strip()

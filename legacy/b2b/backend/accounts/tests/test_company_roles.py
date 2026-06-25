@@ -90,3 +90,23 @@ def test_can_view_quote_costs_gated_by_permission(db):
 
     assert can_view_quote_costs(privileged.user) is True
     assert can_view_quote_costs(restricted.user) is False  # seller-team but no margin permission
+
+
+def test_can_edit_quote_pricing_gated_by_permission(db):
+    """Audit H2: КП pricing writes require quote.edit_pricing — a can_sell view-only role
+    (e.g. Наблюдатель) must NOT edit price/margin/charges, even though can_sell defaults True."""
+    from accounts.models import CompanyType
+    from accounts.services.permissions import can_edit_quote_pricing
+
+    seller_co = Company.objects.create(name="SellerCoH2")
+    supplier_type = CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 1})[0]
+    seller_co.types.add(supplier_type)
+
+    with_perm = CompanyRole.objects.create(company=seller_co, name="Sales", permissions=["quote.edit_pricing"])
+    without_perm = CompanyRole.objects.create(company=seller_co, name="Viewer", permissions=[])
+
+    editor = _member(seller_co, "edit@s.test", role=with_perm, can_sell=True, can_buy=False)
+    viewer = _member(seller_co, "view@s.test", role=without_perm, can_sell=True, can_buy=False)
+
+    assert can_edit_quote_pricing(editor.user) is True
+    assert can_edit_quote_pricing(viewer.user) is False

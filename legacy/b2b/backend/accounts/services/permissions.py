@@ -329,3 +329,38 @@ def seller_company_routed_to_deal(user: "CustomUser", deal_id) -> bool:
     if not seller_company_ids:
         return False
     return Deal.objects.filter(pk=deal_id, seller_routings__seller_company_id__in=seller_company_ids).exists()
+
+
+def seller_acting_company_ids(user: "CustomUser", request):
+    """The viewer's can_sell SELLER company ids when ACTING as a seller (seller context),
+    else None. Used to scope quote querysets to the seller's OWN КП — on a deal routed to
+    competing sellers, each must see only the quotes their own company prepared (audit H1).
+    """
+    if getattr(user, "is_platform_admin", False):
+        return None
+    if not is_seller(user):
+        return None
+    if acting_context(request) not in ({""} | _SELLER_CONTEXTS):
+        return None
+    return set(
+        user.memberships.filter(
+            is_active=True, can_sell=True, company__types__code__in=SELLER_COMPANY_TYPES
+        ).values_list("company_id", flat=True)
+    )
+
+
+def can_edit_quote_pricing(user: "CustomUser") -> bool:
+    """True if the user may WRITE КП pricing (price/margin/logistics/customs/charges).
+    Superuser / platform-admin always; otherwise a member of a SELLER company holding the
+    `quote.edit_pricing` permission. `can_sell` defaults True, so without this a view-only
+    CompanyRole (Наблюдатель) could still tamper with pricing (audit H2)."""
+    if not user or not user.is_authenticated:
+        return False
+    if getattr(user, "is_superuser", False) or is_platform_admin_viewer(user):
+        return True
+    seller_company_ids = (
+        user.memberships.filter(is_active=True, company__types__code__in=SELLER_COMPANY_TYPES)
+        .values_list("company_id", flat=True)
+        .distinct()
+    )
+    return any(member_has_permission(user, cid, "quote.edit_pricing") for cid in seller_company_ids)
