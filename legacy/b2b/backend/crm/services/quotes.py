@@ -852,7 +852,18 @@ def buyer_add_request_items(user: CustomUser, deal: Deal, rows: list) -> list:
     return to_create
 
 
-def buyer_update_request_item(user: CustomUser, item: QuoteItem, *, name=None, quantity=None, unit=None, unit_code=None, note=None, mpn=None) -> QuoteItem:
+def buyer_update_request_item(
+    user: CustomUser,
+    item: QuoteItem,
+    *,
+    name=None,
+    quantity=None,
+    unit=None,
+    unit_code=None,
+    note=None,
+    mpn=None,
+    name_canonical=None,
+) -> QuoteItem:
     from rest_framework.exceptions import ValidationError
 
     deal = item.quote.deal
@@ -864,6 +875,11 @@ def buyer_update_request_item(user: CustomUser, item: QuoteItem, *, name=None, q
             raise ValidationError({"name": "ITEM_NAME_REQUIRED"})
         item.imported_raw_name = clean_name
         fields.append("imported_raw_name")
+    # Buyer may correct the AI-import's canonical RU search key (used to re-match
+    # against the cyrillic catalog) — never touches the original imported name.
+    if name_canonical is not None:
+        item.name_canonical = (name_canonical or "")[:500]
+        fields.append("name_canonical")
     if quantity is not None:
         item.quantity = max(1, int(quantity))
         fields.append("quantity")

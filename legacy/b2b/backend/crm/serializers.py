@@ -76,6 +76,7 @@ class QuoteItemSerializer(serializers.ModelSerializer):
             "offer",
             "offer_supplier_name",
             "imported_raw_name",
+            "name_canonical",
             "quantity",
             "unit",
             "unit_code",

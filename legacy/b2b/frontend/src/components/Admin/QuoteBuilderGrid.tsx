@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { QuoteItem, crmApi } from '@/api/crmApi';
-import { Loader2, Save, FileDown, AlertTriangle, Plus, Trash2, Sparkles, FileText } from 'lucide-react';
+import { Loader2, Save, FileDown, AlertTriangle, Plus, Trash2, Sparkles, FileText, Settings } from 'lucide-react';
 import { useQuoteItems, useUpdateQuoteItem, useCreateQuoteItem, useDeleteQuoteItem, useDeal, useSetQuoteDeliveryBasis } from '@/hooks/useCRM';
 import { formatMoney, calculateLineTotal } from '@/utils/decimal';
 import { DeliveryBasisSelect } from '@/components/CRM/DeliveryBasisSelect';
@@ -23,6 +23,7 @@ import {
 import { QuoteApprovalChain } from '@/components/CRM/QuoteApprovalChain';
 import { AICatalogMatchDialog } from '@/components/Admin/AICatalogMatchDialog';
 import { GenerateQuoteDialog } from '@/components/CRM/GenerateQuoteDialog';
+import { QuoteSettingsDialog } from '@/components/CRM/QuoteSettingsDialog';
 
 interface QuoteBuilderGridProps {
 	dealId?: number;
@@ -46,6 +47,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	const [showAddRow, setShowAddRow] = useState(false);
 	const [showAiMatch, setShowAiMatch] = useState(false);
 	const [showGenerateQuote, setShowGenerateQuote] = useState(false);
+	const [showSettings, setShowSettings] = useState(false);
 
 	useEffect(() => {
 		if (quoteItems) {
@@ -238,6 +240,16 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 						<Plus className="size-3" />
 						{t('common.add')}
 					</Button>
+					{!activeQuote.frozen_at && (
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={() => setShowSettings(true)}
+						>
+							<Settings className="size-3" />
+							{t('quote.settings.title')}
+						</Button>
+					)}
 					<Button
 						variant="outline"
 						size="sm"
@@ -505,7 +517,10 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 							{formatMoney(activeQuote?.subtotal_excl_vat)}
 						</span>
 					</div>
-					{activeQuote?.charges_total != null && Number(activeQuote.charges_total) !== 0 && (
+					{/* Show the charges line whenever КП-level charges EXIST — even when they net
+					    to 0 (e.g. a +100 charge offset by a −100 discount). Keying off the net
+					    total alone would hide that any charges were applied (charges-net-0). */}
+					{activeQuote?.charges_total != null && (activeQuote.charges?.length ?? 0) > 0 && (
 						<>
 							<Separator orientation="vertical" className="h-6" />
 							<div className="flex flex-col items-end leading-none">
@@ -537,6 +552,12 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 				open={showAiMatch}
 				onOpenChange={setShowAiMatch}
 				items={localItems}
+			/>
+
+			<QuoteSettingsDialog
+				quote={activeQuote}
+				open={showSettings}
+				onOpenChange={setShowSettings}
 			/>
 
 			<AlertDialog open={deleteTarget != null} onOpenChange={(o) => !o && setDeleteTarget(null)}>

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { crmApi, QuoteItem, MatchCatalogPayload, PreflightPayload, DocCheckPayload } from '../api/crmApi';
+import { aiApi, type ComposeRequestPayload } from '../api/aiApi';
 
 export const useDeals = () => useQuery({
   queryKey: ['deals'],
@@ -206,6 +207,20 @@ export const useUpdateQuote = () => {
     });
 };
 
+// КП-level settings (gear panel): seller sets VAT rate / tax country / validity / currency.
+// vat_rate feeds VAT, so the backend re-aggregates totals — refresh quotes + deals (active_quote).
+export const useUpdateQuoteSettings = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, data }: { id: number; data: Parameters<typeof crmApi.updateQuoteSettings>[1] }) =>
+            crmApi.updateQuoteSettings(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['quotes'] });
+            queryClient.invalidateQueries({ queryKey: ['deals'] });
+        },
+    });
+};
+
 // Seller picks Incoterm → basis set + charge template auto-applied. Refresh quotes,
 // deals (active_quote), and the charges list (template rows appear).
 export const useSetQuoteDeliveryBasis = () => {
@@ -405,6 +420,13 @@ export const useReassignProduct = () => {
 // (no cache to invalidate); binding happens via useUpdateQuoteItem afterwards.
 export const useMatchCatalog = () => useMutation({
   mutationFn: (payload: MatchCatalogPayload) => crmApi.matchCatalog(payload),
+});
+
+// AI #8 conversational заявка builder: POST free-text need → proposed structured
+// request lines + catalog candidates. Pure advisory op (no cache to invalidate);
+// the buyer reviews/edits/confirms before anything is added. May 503 when AI off.
+export const useComposeRequest = () => useMutation({
+  mutationFn: (payload: ComposeRequestPayload) => aiApi.composeRequest(payload),
 });
 
 // AI #7 pre-flight quality check: POST draft заявка lines → advisory findings.
