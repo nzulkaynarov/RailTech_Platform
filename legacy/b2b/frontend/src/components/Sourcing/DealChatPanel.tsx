@@ -266,7 +266,7 @@ export function DealChatPanel({ dealId }: DealChatPanelProps = {}): React.ReactN
                           variant="secondary"
                           className="text-muted-foreground text-xs font-normal gap-1"
                         >
-                          <Info className="h-3 w-3" />
+                          <Info className="h-3 w-3" aria-hidden="true" />
                           {msg.text}
                         </Badge>
                       </div>
@@ -282,7 +282,7 @@ export function DealChatPanel({ dealId }: DealChatPanelProps = {}): React.ReactN
                       )}
                     >
                       <div className="flex items-center gap-1 px-1">
-                        <UserIcon className="text-muted-foreground h-3 w-3" />
+                        <UserIcon className="text-muted-foreground h-3 w-3" aria-hidden="true" />
                         <span className="text-muted-foreground text-xs font-medium">
                           {msg.sender_name || t('nav.profile')}
                         </span>
