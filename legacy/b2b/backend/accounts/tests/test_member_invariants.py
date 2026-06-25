@@ -102,3 +102,29 @@ def test_unknown_role_rejected(company_with_admin):
     result, error = set_member_workspace_role(member, "NONEXISTENT_ROLE")
     assert result is None
     assert error == "WORKSPACE_ROLE_NOT_FOUND"
+
+
+@pytest.mark.django_db
+def test_cannot_deactivate_sole_company_admin(company_with_admin):
+    """Audit L3: deactivating the user who is the SOLE active OWNER would orphan the company."""
+    from accounts.services.members import toggle_user_active
+
+    _company, admin, _owner_role, _manager_role = company_with_admin
+    requester = CustomUser.objects.create_user(email="req@x.test", username="req@x.test", password="pw")
+    result, error = toggle_user_active(admin.user, requester)
+    assert result is None
+    assert error == "CANNOT_DEACTIVATE_SOLE_COMPANY_ADMIN"
+    admin.user.refresh_from_db()
+    assert admin.user.is_active is True
+
+
+@pytest.mark.django_db
+def test_can_deactivate_admin_when_another_exists(company_with_admin):
+    from accounts.services.members import toggle_user_active
+
+    company, admin, owner_role, _manager_role = company_with_admin
+    second = CustomUser.objects.create_user(email="admin3@acme.test", username="admin3@acme.test", password="pw")
+    CompanyMember.objects.create(user=second, company=company, role=owner_role, is_active=True)
+    requester = CustomUser.objects.create_user(email="req2@x.test", username="req2@x.test", password="pw")
+    result, error = toggle_user_active(admin.user, requester)
+    assert error is None and result is not None

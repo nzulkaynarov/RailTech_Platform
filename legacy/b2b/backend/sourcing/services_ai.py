@@ -106,7 +106,9 @@ def file_to_payload(content: bytes, filename: str):
     ext = (filename or "").rsplit(".", 1)[-1].lower() if "." in (filename or "") else ""
 
     if ext in ("xlsx", "xls"):
-        sheets = pd.read_excel(BytesIO(content), header=None, sheet_name=None)
+        # nrows cap per sheet (audit L4) — a small zip-bomb-style xlsx can otherwise expand to
+        # a huge in-memory DataFrame and OOM the worker (deterministic paths cap at 50_000 too).
+        sheets = pd.read_excel(BytesIO(content), header=None, sheet_name=None, nrows=50_000)
         text = "\n\n".join(df.to_csv(index=False, header=False) for df in sheets.values())
         return text, None
     if ext == "csv":
