@@ -252,7 +252,12 @@ def generate_act(
 ) -> Tuple[Optional[object], Optional[str]]:
     from django.utils import timezone
 
-    from accounts.services import assert_seller_can_operate, is_platform_admin_viewer, is_seller
+    from accounts.services import (
+        assert_seller_can_operate,
+        is_platform_admin_viewer,
+        is_seller,
+        seller_company_routed_to_deal,
+    )
 
     from ..models import Act, Invoice
 
@@ -265,6 +270,14 @@ def generate_act(
     if actor is not None and (sub_err := assert_seller_can_operate(actor)):
         return None, sub_err
     invoice = Invoice.objects.select_related("contract", "deal", "status").get(pk=invoice_id)
+    # Bind to THIS invoice's deal routing — a seller must not issue an act on a
+    # competitor's invoice (audit H4).
+    if (
+        actor is not None
+        and not getattr(actor, "is_superuser", False)
+        and not seller_company_routed_to_deal(actor, invoice.deal_id)
+    ):
+        return None, "MEMBER_REQUIRED_FOR_ACTION"
     if invoice.status_code not in {InvoiceStatusCode.PAID, InvoiceStatusCode.PARTIAL, InvoiceStatusCode.ISSUED}:
         return None, "ACT_INVALID_INVOICE_STATUS"
 

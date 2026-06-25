@@ -45,6 +45,7 @@ from .permissions import (
     member_has_permission,
     primary_seller_company_id,
     seller_can_access_deal,
+    seller_company_routed_to_deal,
     seller_sees_all_deals,
     seller_visible_deal_ids,
 )

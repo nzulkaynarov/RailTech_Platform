@@ -163,6 +163,29 @@ def can_view_quote_costs(user: "CustomUser") -> bool:
     return any(member_has_permission(user, cid, "quote.view_cost_margin") for cid in seller_company_ids)
 
 
+def can_view_quote_costs_for(user: "CustomUser", quote) -> bool:
+    """Per-quote cost/margin gate (audit C1). `can_view_quote_costs` answers "may this user
+    EVER see cost?"; this also requires the quote to belong to the viewer's OWN company —
+    on a deal routed to competing sellers A and B, A must not read B's КП cost/margin.
+    Superuser / platform-admin see all; an unclaimed (prepared_by=None) request quote carries
+    no real cost yet and is owned by whichever seller builds it.
+    """
+    if not can_view_quote_costs(user):
+        return False
+    if getattr(user, "is_superuser", False) or is_platform_admin_viewer(user):
+        return True
+    prepared_by_id = getattr(quote, "prepared_by_id", None)
+    if prepared_by_id is None:
+        return True
+    from accounts.models import CompanyMember
+
+    viewer_company_ids = set(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
+    preparer_company_ids = set(
+        CompanyMember.objects.filter(user_id=prepared_by_id, is_active=True).values_list("company_id", flat=True)
+    )
+    return bool(viewer_company_ids & preparer_company_ids)
+
+
 def company_has_operational_subscription(company_id: int) -> bool:
     """True if the company has a SupplierSubscription that is_operational right now.
 
@@ -285,3 +308,24 @@ def seller_can_access_deal(user: "CustomUser", request, deal_id) -> bool:
     return Deal.objects.filter(
         pk=deal_id, seller_routings__seller_company_id__in=seller_company_ids
     ).exists()
+
+
+def seller_company_routed_to_deal(user: "CustomUser", deal_id) -> bool:
+    """Service-layer (NO request/acting-context) binding: True if the actor has a can_sell
+    SELLER company that is a routing target of `deal_id`. Seller write actions (contract
+    sign, act issuance, fulfillment state) must bind to the specific deal they're routed
+    to — `is_seller(actor)` alone let any seller act on a competitor's deal (review
+    2026-06-25 platform audit H3/H4/M1).
+    """
+    if not user or not user.is_authenticated:
+        return False
+    from crm.models import Deal
+
+    seller_company_ids = list(
+        user.memberships.filter(
+            is_active=True, can_sell=True, company__types__code__in=SELLER_COMPANY_TYPES
+        ).values_list("company_id", flat=True)
+    )
+    if not seller_company_ids:
+        return False
+    return Deal.objects.filter(pk=deal_id, seller_routings__seller_company_id__in=seller_company_ids).exists()

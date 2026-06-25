@@ -35,7 +35,7 @@ def update_fulfillment_status(
 ) -> Tuple[Optional[object], Optional[str]]:
     from django.utils import timezone
 
-    from accounts.services import is_member_of, is_platform_admin_viewer, is_seller
+    from accounts.services import is_member_of, is_platform_admin_viewer, seller_company_routed_to_deal
 
     from ..models import Fulfillment, FulfillmentStatus
 
@@ -53,7 +53,8 @@ def update_fulfillment_status(
     elif status_code in buyer_statuses:
         authorized = is_member_of(actor, obj.deal.company_id, capability="buy")
     else:
-        authorized = is_seller(actor)
+        # Seller status: bind to THIS deal's routing — not any seller (audit M1).
+        authorized = seller_company_routed_to_deal(actor, obj.deal_id)
     if not authorized:
         return None, "MEMBER_REQUIRED_FOR_ACTION"
     obj.status = FulfillmentStatus.objects.get(code=status_code)
