@@ -23,15 +23,18 @@ def _item(base, logistics, customs, margin):
 
 
 class TestCalculateItemPrices:
-    def test_landed_cost_sums_components(self):
+    def test_landed_cost_is_base_plus_customs_only(self):
+        # F3.8: per-line cost = себестоимость (base) + customs (ТНВЭД) only. The logistics
+        # arg (10) is NOT a per-line cost any more — freight is a document-level charge.
         item = _item("100", "10", "5", "0")
         QuoteCalculationService.calculate_item_prices(item, commit=False)
-        assert item.landed_cost == Decimal("115")
+        assert item.landed_cost == Decimal("105")  # 100 base + 5 customs; logistics excluded
+        assert item.logistics_cost == Decimal("0")
 
     def test_margin_applied_to_landed_cost(self):
-        item = _item("100", "10", "5", "20")  # landed 115, +20% = 138.00
+        item = _item("100", "10", "5", "20")  # landed = 100 + 5 = 105, +20% = 126.00
         QuoteCalculationService.calculate_item_prices(item, commit=False)
-        assert item.final_price_excl_vat == Decimal("138.00")
+        assert item.final_price_excl_vat == Decimal("126.00")
 
     def test_zero_margin_keeps_landed_cost(self):
         item = _item("250.50", "0", "0", "0")

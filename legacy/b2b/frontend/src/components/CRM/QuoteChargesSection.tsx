@@ -20,6 +20,11 @@ interface QuoteChargesSectionProps {
 	currency?: string;
 }
 
+// CUSTOMS duty is the one cost computed PER LINE (rate by ТНВЭД) — offering it as a
+// document-level charge would double-bill it. Everything else (freight/logistics,
+// insurance, packing, …) is a batch/header charge entered here once (F3.8). Code (Rule 2).
+const PER_LINE_CHARGE_CODES = ['CUSTOMS'];
+
 /**
  * КП-level expense items / discounts (UBL document AllowanceCharge). Seller-only —
  * the buyer never receives these rows. Each charge is a fixed sum OR a % of the
@@ -103,9 +108,14 @@ export const QuoteChargesSection: React.FC<QuoteChargesSectionProps> = ({ quoteI
 							<SelectValue placeholder={t('quote.charges.typePlaceholder')} />
 						</SelectTrigger>
 						<SelectContent>
-							{chargeTypes.map((ct) => (
-								<SelectItem key={ct.id} value={ct.code}>{ct.name}</SelectItem>
-							))}
+							{/* Freight & customs are PER-LINE columns (Логистика/Таможня) in the builder —
+							    offering them as КП-level charges double-bills them (audit M3: only
+							    non-line costs like insurance/certification belong at document level). */}
+							{chargeTypes
+								.filter((ct) => !PER_LINE_CHARGE_CODES.includes(ct.code))
+								.map((ct) => (
+									<SelectItem key={ct.id} value={ct.code}>{ct.name}</SelectItem>
+								))}
 						</SelectContent>
 					</Select>
 

@@ -654,7 +654,7 @@
     "unitShort": "Unit",
     "quantity": "Qty",
     "marginPercent": "Margin %",
-    "lineTotal": "Total",
+    "lineTotal": "Line total",
     "approvalChain": {
       "title": "Quote approval",
       "stepDraft": "Draft",

@@ -154,29 +154,25 @@ class QuoteCalculationService:
         """
         Calculates Landed Cost and Final Price for a single item.
         Formula:
-          1. landed_cost = base + logistics + customs  (each gated by the Incoterm basis)
+          1. landed_cost = base + customs duty (per ТНВЭД)   — F3.8, unified across Incoterms
           2. final_price = landed_cost * (1 + margin%) * (1 − discount%)
 
-        `basis` (DeliveryBasis|None) — the Incoterm flags are LOAD-BEARING (audit M1/M2): a
-        cost bucket enters the seller's landed cost ONLY when the basis says the seller pays
-        it. Switching to a basis where the BUYER pays freight/customs zeroes that per-line
-        bucket, so a hidden column never ghosts into the total. Pass `basis=...` (sentinel)
-        to lazy-load from item.quote (single-item path); the bulk recalc passes it explicitly.
+        `basis` is accepted for call-site compatibility but no longer gates per-line columns:
+        freight/insurance/etc. are document-level charges (на всю партию), not per-line. The
+        Incoterm basis instead drives which document charges appear (DEFAULT_CHARGES_BY_BASIS).
         """
         is_service = item.product and item.product.domain_type and item.product.domain_type.code == "SERVICES"
-        if basis is ...:
-            basis = item.quote.delivery_basis if item.quote_id else None
 
+        # F3.8 (owner directive): the per-line cost is ONLY себестоимость (base) + customs
+        # duty (inherently per-line — the rate is set by the line's ТНВЭД/HS code). Freight,
+        # insurance, packing and every other shipment cost are document-level charges entered
+        # ONCE for the whole batch (см. QuoteCharge / DEFAULT_CHARGES_BY_BASIS), NOT per line.
+        # The table is therefore unified across Incoterms; the chosen basis drives which
+        # document charges appear, not which per-line columns show. logistics_cost stays 0.
+        item.logistics_cost = Decimal("0")
         if is_service:
-            item.landed_cost = item.frozen_base_price
-            item.logistics_cost = Decimal("0")
             item.customs_duty = Decimal("0")
-        else:
-            if basis is not None and not basis.seller_pays_freight:
-                item.logistics_cost = Decimal("0")
-            if basis is not None and not basis.seller_pays_import:
-                item.customs_duty = Decimal("0")
-            item.landed_cost = item.frozen_base_price + item.logistics_cost + item.customs_duty
+        item.landed_cost = item.frozen_base_price + item.customs_duty
 
         # себестоимость → +наценка → −скидка позиции (UBL line-level allowance)
         margin_mult = Decimal("1") + (item.margin_percent / Decimal("100"))

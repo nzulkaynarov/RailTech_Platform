@@ -415,7 +415,10 @@ export const crmApi = {
 		let url = 'crm/quote-items/';
 		if (params) {
 			const query = new URLSearchParams();
-			if (params.deal_id) query.append('deal_id', params.deal_id.toString());
+			// Backend filterset key is `quote__deal_id` (QuoteItemViewSet.filterset_fields).
+			// Sending `deal_id` was silently IGNORED by DRF → the КП builder loaded the
+			// seller's items from ALL deals (opening one deal's КП showed another's lines).
+			if (params.deal_id) query.append('quote__deal_id', params.deal_id.toString());
 			if (params.product_is_null) query.append('product__isnull', 'true');
 			if (query.toString()) url += `?${query.toString()}`;
 		}
