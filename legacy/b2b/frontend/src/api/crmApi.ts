@@ -65,6 +65,29 @@ export interface MatchCatalogPayload {
 	top_k?: number;
 }
 
+// AI #7 pre-flight quality check — one advisory finding per flagged line.
+// line_index references a line in the sent array (NOT a QuoteItem id).
+export interface PreflightFinding {
+	line_index: number;
+	severity: 'info' | 'warning';
+	issue: string;
+	suggestion: string;
+}
+
+export interface PreflightLine {
+	name: string;
+	quantity?: number;
+	unit?: string;
+	mpn?: string;
+	gost_drawing?: string;
+	note?: string;
+}
+
+export interface PreflightPayload {
+	lines: PreflightLine[];
+	domain_code?: string;
+}
+
 // Incoterms 2020 cost-responsibility flags — drive which cost rows the КП builder
 // shows / requires for the selected delivery basis (code reads flags, no hardcode).
 export interface DeliveryBasis {
@@ -526,6 +549,17 @@ export const crmApi = {
 	matchCatalog: async (payload: MatchCatalogPayload) => {
 		const response = await apiClient.post<{ matches: CatalogMatch[] }>(
 			'sourcing/match-catalog/',
+			payload,
+		);
+		return response.data;
+	},
+
+	// ─── AI #7 pre-flight quality check ──────────────────────
+	// POST draft request lines → advisory quality findings per line.
+	// Advisory only (never blocks submit); may 503 {error:'AI_DISABLED'}.
+	preflightCheck: async (payload: PreflightPayload) => {
+		const response = await apiClient.post<{ findings: PreflightFinding[] }>(
+			'sourcing/preflight-check/',
 			payload,
 		);
 		return response.data;

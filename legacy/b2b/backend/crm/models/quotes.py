@@ -262,6 +262,17 @@ class QuoteItem(models.Model):
         verbose_name=_("Оригинальное наименование"),
         help_text=_("Строка из Excel-импорта (для нераспознанных позиций)"),
     )
+    # Канонизированное русское наименование, полученное при AI-нормализации (билингва/
+    # транслитерация): «tormoznaya koloda» → «Тормозная колодка». Исходное imported_raw_name
+    # НЕ трогаем — это поле служит ключом поиска по кириллическому каталогу (триграммный
+    # preselect ищет и по нему). Пусто, если AI-импорт выключен или строка введена вручную.
+    name_canonical = models.CharField(
+        max_length=500,
+        blank=True,
+        default="",
+        verbose_name=_("Каноническое наименование (RU)"),
+        help_text=_("Нормализованное русское наименование из AI-импорта (для поиска по каталогу)"),
+    )
     quantity = models.PositiveIntegerField(
         default=1,
         validators=[MinValueValidator(1)],

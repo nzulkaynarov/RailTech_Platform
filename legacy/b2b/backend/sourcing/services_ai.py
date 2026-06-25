@@ -29,6 +29,16 @@ ITEM_SCHEMA = {
     "type": "object",
     "properties": {
         "name": {"type": "string", "description": "Наименование товара/материала (UBL Item/Name)"},
+        "name_canonical": {
+            "type": "string",
+            "description": (
+                "Каноническое РУССКОЕ наименование этой же позиции для поиска по каталогу: "
+                "транслитерируй латиницу в кириллицу и приведи к словарной форме на русском "
+                "(напр. 'tormoznaya koloda' → 'Тормозная колодка', 'avtoscepka SA-3' → "
+                "'Автосцепка СА-3'). Бренды/модели/коды оставляй как есть. Если name уже на "
+                "русском — продублируй его сюда. '' только если name пустой."
+            ),
+        },
         "quantity": {"type": "number", "description": "Количество (число; 1 если не указано)"},
         "unit": {"type": "string", "description": "Единица измерения как в файле (шт., м., дона, компл. …)"},
         "unit_code": {"type": "string", "description": "Код единицы из справочника UN/ECE Rec 20 (см. список в инструкции); '' если непонятно"},
@@ -39,7 +49,7 @@ ITEM_SCHEMA = {
         },
         "note": {"type": "string", "description": "Спецификация/примечание/ссылка клиента (UBL line Note); иначе ''"},
     },
-    "required": ["name", "quantity", "unit", "unit_code", "mpn", "gost_drawing", "note"],
+    "required": ["name", "name_canonical", "quantity", "unit", "unit_code", "mpn", "gost_drawing", "note"],
     "additionalProperties": False,
 }
 RESULT_SCHEMA = {
@@ -73,7 +83,10 @@ SYSTEM_PROMPT = (
     "quantity поставь 1. НЕ добавляй позиции, которых нет в данных. Лучше пропустить "
     "сомнительное, чем выдумать. Позицию можно вернуть и без name, если есть mpn или gost_drawing "
     "(её потом дозаполнит человек).\n"
-    "6. Языки могут быть любыми (рус./узб./англ.). Наименование оставляй как в оригинале.\n"
+    "6. Языки могут быть любыми (рус./узб./англ.). Поле name оставляй как в оригинале, "
+    "а в name_canonical верни каноническое РУССКОЕ наименование той же позиции "
+    "(транслитерация латиницы в кириллицу + словарная форма) для поиска по каталогу — "
+    "бренды, модели и коды при этом не переводи.\n"
     "Верни результат строго по заданной JSON-схеме."
 )
 
@@ -192,6 +205,9 @@ def _normalize_items(items: list[dict], valid_codes: set) -> list[dict]:
     cleaned = []
     for raw_item in items:
         name = str(raw_item.get("name", "")).strip()
+        # Каноническое русское имя для поиска по каталогу; падаем обратно на name,
+        # если модель его не вернула (старый стаб/пустой ответ).
+        name_canonical = str(raw_item.get("name_canonical", "")).strip()[:500] or name[:500]
         mpn = str(raw_item.get("mpn", "")).strip()[:120]
         gost_drawing = str(raw_item.get("gost_drawing", "")).strip()[:120]
         # UBL: keep a line identified by name OR code; drop only fully-empty rows.
@@ -207,6 +223,7 @@ def _normalize_items(items: list[dict], valid_codes: set) -> list[dict]:
         cleaned.append(
             {
                 "name": name,
+                "name_canonical": name_canonical,
                 "quantity": quantity,
                 "unit": str(raw_item.get("unit", "")).strip()[:32],
                 "unit_code": unit_code,
@@ -221,7 +238,9 @@ def _normalize_items(items: list[dict], valid_codes: set) -> list[dict]:
 def extract_request_items(content: bytes, filename: str) -> list[dict]:
     """Main entry: uploaded bytes → UBL-aligned request lines.
 
-    Returns list of {name, quantity, unit, unit_code, mpn, gost_drawing, note}. Unit codes
+    Returns list of {name, name_canonical, quantity, unit, unit_code, mpn, gost_drawing, note}.
+    `name_canonical` is the canonical Russian search name (Latin↔Cyrillic normalised) — the
+    original `name` is preserved verbatim for display. Unit codes
     are validated against the DB справочник (UN/ECE Rec 20) — the model maps the
     client's free text to OUR codes, code only keeps valid ones. Chunks large
     files. Raises if AI import disabled / API errors — caller may fall back to the
@@ -330,8 +349,16 @@ MATCH_SYSTEM_PROMPT = (
 
 
 def _shortlist_products(line: dict, domain_code: str | None, limit: int = 8):
-    """Trigram + exact-code preselect of catalog Products for one заявка line."""
+    """Trigram + exact-code preselect of catalog Products for one заявка line.
+
+    Bilingual: the line's raw `name` AND its canonical Russian `name_canonical`
+    (Latin↔Cyrillic normalised by the AI parser) are BOTH fed to trigram similarity,
+    and we keep the GREATEST score. This is what lets a Latin query like
+    «tormoznaya koloda» preselect a Cyrillic catalog row («Тормозная колодка»):
+    the raw name trigram-misses the кириллица, but name_canonical hits it.
+    """
     from django.contrib.postgres.search import TrigramSimilarity
+    from django.db.models.functions import Greatest
 
     from catalog.models import Product
 
@@ -344,12 +371,18 @@ def _shortlist_products(line: dict, domain_code: str | None, limit: int = 8):
     if gost:
         for product in qs.filter(gost_drawing__iexact=gost)[:limit]:
             found[product.id] = product
+
+    # Search terms: the raw name AND the canonical Russian form. Deduped so a single
+    # term (or when canonical == name) doesn't waste a redundant similarity column.
     name = (line.get("name") or "").strip()
-    if name and len(found) < limit:
+    name_canonical = (line.get("name_canonical") or "").strip()
+    terms = [term for term in dict.fromkeys([name, name_canonical]) if term]
+    if terms and len(found) < limit:
+        similarities = [TrigramSimilarity("name", term) for term in terms]
+        # GREATEST across terms — a hit on either the raw or canonical name counts.
+        similarity = similarities[0] if len(similarities) == 1 else Greatest(*similarities)
         ranked = (
-            qs.annotate(similarity=TrigramSimilarity("name", name))
-            .filter(similarity__gt=0.1)
-            .order_by("-similarity")[:limit]
+            qs.annotate(similarity=similarity).filter(similarity__gt=0.1).order_by("-similarity")[:limit]
         )
         for product in ranked:
             found.setdefault(product.id, product)
@@ -359,9 +392,11 @@ def _shortlist_products(line: dict, domain_code: str | None, limit: int = 8):
 def match_lines_to_catalog(lines: list[dict], domain_code: str | None = None, top_k: int = 3) -> list[dict]:
     """Map each заявка line to up to `top_k` catalog Product candidates.
 
-    Returns [{line_index, candidates: [{product_id, name, sku, confidence, reason}]}]
-    only for lines that have at least one valid candidate. Empty list if AI disabled.
-    The buyer/seller confirms a candidate in the grid (human-in-loop, never auto-binds).
+    Returns [{line_index, name_canonical, candidates: [{product_id, name, sku, confidence,
+    reason}]}] only for lines that have at least one valid candidate. `name_canonical` is
+    echoed back so the caller can persist it on the QuoteItem alongside the chosen product.
+    Empty list if AI disabled. The buyer/seller confirms a candidate in the grid
+    (human-in-loop, never auto-binds).
     """
     if not getattr(settings, "AI_IMPORT_ENABLED", False) or not lines:
         return []
@@ -380,6 +415,9 @@ def match_lines_to_catalog(lines: list[dict], domain_code: str | None = None, to
             for p in products
         )
         label = (line.get("name") or "").strip()
+        canonical = (line.get("name_canonical") or "").strip()
+        if canonical and canonical.casefold() != label.casefold():
+            label += f" | рус. {canonical}"
         if line.get("mpn"):
             label += f" | артикул {line['mpn']}"
         if line.get("gost_drawing"):
@@ -434,5 +472,8 @@ def match_lines_to_catalog(lines: list[dict], domain_code: str | None = None, to
             )
         valid.sort(key=lambda c: -c["confidence"])
         if valid:
-            result.append({"line_index": idx, "candidates": valid[:top_k]})
+            # Echo the canonical Russian name so callers can persist it on QuoteItem.
+            source_line = lines[idx] if 0 <= idx < len(lines) else {}
+            name_canonical = (source_line.get("name_canonical") or "").strip()
+            result.append({"line_index": idx, "name_canonical": name_canonical, "candidates": valid[:top_k]})
     return result
