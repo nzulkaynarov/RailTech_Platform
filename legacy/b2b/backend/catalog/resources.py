@@ -46,6 +46,17 @@ class ProductResource(resources.ModelResource):
         attribute="equipment_groups",
         widget=ManyToManyWidget(EquipmentGroup, field="name", separator=";"),
     )
+    # MPN (the brand+MPN PIM dedup key) and HS code are plain CharFields — without
+    # them the import/export round-trips drop the dedup key and the customs code
+    # (M9). Column names match the XLSX import template (M10) for a clean round-trip.
+    manufacturer_part_number = fields.Field(
+        column_name="manufacturer_part_number",
+        attribute="manufacturer_part_number",
+    )
+    hs_code = fields.Field(
+        column_name="hs_code",
+        attribute="hs_code",
+    )
 
     class Meta:
         model = Product
@@ -59,7 +70,9 @@ class ProductResource(resources.ModelResource):
             "category",
             "uom",
             "brand",
+            "manufacturer_part_number",
             "gost_drawing",
+            "hs_code",
             "equipment_groups",
         )
         export_order = fields

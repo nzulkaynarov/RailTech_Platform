@@ -93,9 +93,14 @@ function normalizeUser(u: User): User {
 export interface CompanyFilterParams {
 	search?: string;
 	verification_status?: string;
+	// Backend filterset key for company type (e.g. 'SUPPLIER'); compared by CODE.
+	'types__code'?: string;
 	ordering?: string;
 	page?: number;
 	limit?: number;
+	// Follow DRF `next` links and return every matching company, not just page 1
+	// (the supplier picker must list ALL sellers, not the first 20).
+	fetchAll?: boolean;
 	[key: string]: string | number | boolean | undefined;
 }
 
@@ -116,6 +121,26 @@ export const accountsApi = {
 		return response.data;
 	},
 	getCompanies: async (params?: CompanyFilterParams) => {
+		if (params?.fetchAll) {
+			const query = { ...params };
+			delete query.fetchAll;
+			const all: Company[] = [];
+			let url: string | null = 'accounts/companies/';
+			let isFirst = true;
+			let guard = 0;
+			while (url && guard < 500) {
+				const response: { data: PaginatedResponse<Company> } = await apiClient.get<PaginatedResponse<Company>>(
+					url,
+					isFirst ? { params: query } : undefined,
+				);
+				all.push(...response.data.results);
+				const next = response.data.next;
+				url = next ? next.replace(/^.*\/api\/v1\//, '') : null;
+				isFirst = false;
+				guard += 1;
+			}
+			return all;
+		}
 		const response = await apiClient.get<PaginatedResponse<Company>>('accounts/companies/', { params });
 		return response.data.results;
 	},

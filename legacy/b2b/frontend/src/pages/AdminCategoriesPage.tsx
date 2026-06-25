@@ -133,7 +133,8 @@ function CategoryFormSheet({
 
 export function AdminCategoriesPage() {
   const { t } = useTranslation();
-  const { data: categories, isLoading } = useCategories();
+  // Fetch every category (DRF pages at 20) so search/sort/Pager + stat tiles see all rows (H4).
+  const { data: categories, isLoading } = useCategories({ fetchAll: true });
   const deleteMut = useDeleteCategory();
 
   const listParams = useListParams([], { defaultOrdering: 'sort_order' });

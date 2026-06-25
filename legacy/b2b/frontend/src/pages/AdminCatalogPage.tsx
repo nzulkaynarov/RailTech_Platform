@@ -27,6 +27,7 @@ import {
   useStockStatuses, useOffers, useCreateOffer, useUpdateOffer,
 } from '@/hooks/useCatalog';
 import { useUnits, useCurrencies, useDeliveryBases } from '@/hooks/useMasterData';
+import { productStatusLabelKey } from '@/lib/codes';
 import type { Product } from '@/api/catalogApi';
 import { ImageGalleryUpload } from '@/components/Shared/ImageGalleryUpload';
 import { FileUpload } from '@/components/Shared/FileUpload';
@@ -104,7 +105,7 @@ export function ProductFormSheet({
   const { data: statuses } = useProductStatuses();
   const { data: categories } = useCategories();
   const { data: units } = useUnits();
-  const { data: manufacturers } = useManufacturers();
+  const { data: manufacturers } = useManufacturers({ fetchAll: true });
   const { data: equipmentGroups } = useEquipmentGroups();
   const createMut = useCreateProduct();
   const updateMut = useUpdateProduct();
@@ -452,6 +453,9 @@ export function AdminCatalogPage() {
   const { data: products, isLoading } = useProducts({
     search: listParams.search || undefined,
     domain_type: listParams.filters.domain === 'all' ? undefined : listParams.filters.domain,
+    // Fetch the complete set so client-side search/sort/Pager + stat tiles are accurate
+    // (DRF caps each page at 20; H4). Server already filters by search/domain.
+    fetchAll: true,
   });
   const { data: domainTypes } = useDomainTypes();
   const { data: statuses } = useProductStatuses();
@@ -561,7 +565,7 @@ export function AdminCatalogPage() {
                     <TableCell className="font-mono text-xs">{p.sku ?? '—'}</TableCell>
                     <TableCell>{p.name}</TableCell>
                     <TableCell className="text-muted-foreground text-xs">{p.domain_type_name || '—'}</TableCell>
-                    <TableCell><Badge variant="outline">{p.status_name || '—'}</Badge></TableCell>
+                    <TableCell><Badge variant="outline">{productStatusLabelKey(p.status_code) ? t(productStatusLabelKey(p.status_code)) : (p.status_name || '—')}</Badge></TableCell>
                     <TableCell className="text-muted-foreground text-xs">{p.brand_name ?? '—'}</TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1">

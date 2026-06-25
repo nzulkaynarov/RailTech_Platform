@@ -36,8 +36,10 @@ function OfferFormSheet({
   const { t } = useTranslation();
   const createMut = useCreateOffer();
   const updateMut = useUpdateOffer();
-  const { data: products } = useProducts();
-  const { data: companies } = useCompanies();
+  const { data: products } = useProducts({ fetchAll: true });
+  // Supplier picker: only SUPPLIER-type companies (compared by CODE), and the full
+  // list — not the first 20 (M2). A SupplierOffer's supplier must be a seller company.
+  const { data: companies } = useCompanies({ 'types__code': 'SUPPLIER', fetchAll: true });
   const { data: currencies } = useCurrencies();
   const { data: deliveryBases } = useDeliveryBases();
   const { data: stockStatuses } = useStockStatuses();
@@ -209,8 +211,11 @@ function OfferFormSheet({
 
 export function AdminOffersPage() {
   const { t } = useTranslation();
-  const { data: offers, isLoading } = useOffers();
-  const { data: products } = useProducts();
+  // Fetch the complete sets (DRF pages at 20) so search/sort/Pager + stat tiles are
+  // accurate and every offer's product/stock label resolves (H4 / M1).
+  const { data: offers, isLoading } = useOffers({ fetchAll: true });
+  const { data: products } = useProducts({ fetchAll: true });
+  const { data: stockStatuses } = useStockStatuses();
   const deleteMut = useDeleteOffer();
 
   const listParams = useListParams(['active'] as const, { defaultOrdering: '-created_at' });
@@ -223,6 +228,14 @@ export function AdminOffersPage() {
     (products ?? []).forEach((p) => productMap.set(p.id, `${p.name}${p.sku ? ' · ' + p.sku : ''}`));
     return productMap;
   }, [products]);
+
+  // The offer serializer returns stock_status as a raw FK id; resolve it to a label
+  // via the lookup table (M1 — table previously showed the int).
+  const stockNameById = useMemo(() => {
+    const stockMap = new Map<number, string>();
+    (stockStatuses ?? []).forEach((s) => stockMap.set(s.id, s.name));
+    return stockMap;
+  }, [stockStatuses]);
 
   const onEdit = (o: SupplierOffer) => {
     setEditTarget(o);
@@ -318,7 +331,9 @@ export function AdminOffersPage() {
                     <TableCell className="font-mono text-xs">
                       {o.base_price} {o.currency_data?.code ?? ''}
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-xs">{o.stock_status ?? '—'}</TableCell>
+                    <TableCell className="text-muted-foreground text-xs">
+                      {o.stock_status ? stockNameById.get(o.stock_status) ?? '—' : '—'}
+                    </TableCell>
                     <TableCell>
                       <Badge variant={o.is_active ? 'default' : 'secondary'}>
                         {o.is_active ? t('adminOffers.yes') : t('adminOffers.no')}
