@@ -564,5 +564,17 @@ export const crmApi = {
 		);
 		return response.data;
 	},
+
+	// ─── AI #4 deal-chat reply assist ────────────────────────
+	// POST a deal id → a professional reply DRAFT built from the recent chat history.
+	// The draft fills the input for the user to review/edit before sending (never
+	// auto-sent). Empty draft when no conversation / no access; may 503 AI_DISABLED.
+	suggestChatReply: async (dealId: number) => {
+		const response = await apiClient.post<{ draft: string }>(
+			`crm/deals/${dealId}/suggest-reply/`,
+			{},
+		);
+		return response.data;
+	},
 };
 

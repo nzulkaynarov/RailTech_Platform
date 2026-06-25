@@ -13,6 +13,7 @@ from .lookups import (
     ProductStatusViewSet,
     StockStatusViewSet,
 )
+from .ai import ProductEnrichView
 from .offers import SupplierOfferViewSet
 from .products import ProductViewSet
 
@@ -23,6 +24,7 @@ __all__ = [
     "LIST_CACHE_TTL",
     "LOOKUP_CACHE_TTL",
     "ManufacturerViewSet",
+    "ProductEnrichView",
     "ProductStatusViewSet",
     "ProductViewSet",
     "StockStatusViewSet",

@@ -234,3 +234,11 @@ export const useDeleteProductDocument = () => {
     },
   });
 };
+
+// AI #2: draft product fields (description / specs / category hint) from the name.
+// SUGGESTION ONLY — caller applies the result into the form draft for the seller to edit.
+export const useEnrichProduct = () =>
+  useMutation({
+    mutationFn: (params: Parameters<typeof catalogApi.enrichProduct>[0]) =>
+      catalogApi.enrichProduct(params),
+  });

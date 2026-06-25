@@ -5,6 +5,7 @@ Public API is re-exported here so `crm.services.X` and
 """
 
 from ._params import PaymentData
+from .ai_chat import suggest_chat_reply
 from .billing import generate_act, generate_invoice_from_contract, record_payment, sign_act
 from .charges import apply_charge_template_to_quote, set_quote_delivery_basis
 from .contracts import (
@@ -78,6 +79,7 @@ __all__ = [
     "sign_contract_by_client",
     "sign_contract_by_manager",
     "submit_request",
+    "suggest_chat_reply",
     "transition_deal_stage",
     "update_fulfillment_status",
     "user_can_access_deal_chat",

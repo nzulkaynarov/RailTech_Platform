@@ -413,6 +413,13 @@ export const usePreflightCheck = () => useMutation({
   mutationFn: (payload: PreflightPayload) => crmApi.preflightCheck(payload),
 });
 
+// AI #4 deal-chat reply assist: POST a deal id → a reply DRAFT from recent chat.
+// Pure op (no cache to invalidate); the draft fills the input for review/edit,
+// never auto-sent. May 503 when AI is disabled — the UI degrades gracefully.
+export const useSuggestChatReply = () => useMutation({
+  mutationFn: (dealId: number) => crmApi.suggestChatReply(dealId),
+});
+
 export const useCreateQuote = () => {
   const qc = useQueryClient();
   return useMutation({

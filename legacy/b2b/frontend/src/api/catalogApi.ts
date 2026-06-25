@@ -312,7 +312,28 @@ export const catalogApi = {
     deleteProductDocument: async (productId: number, docId: number): Promise<void> => {
         await apiClient.delete(`catalog/products/${productId}/delete-document/${docId}/`);
     },
+    // AI #2: draft description / specs / category-hint from a product name (+ optional
+    // MPN / ГОСТ / domain). SUGGESTION ONLY — the seller reviews & edits before saving.
+    // Returns an empty suggestion ({}) when AI is disabled server-side.
+    enrichProduct: async (params: {
+        name: string;
+        domain_code?: string;
+        mpn?: string;
+        gost?: string;
+    }): Promise<ProductEnrichSuggestion> => {
+        const response = await apiClient.post<{ suggestion: ProductEnrichSuggestion }>(
+            'catalog/product-enrich/',
+            params,
+        );
+        return response.data.suggestion ?? {};
+    },
 };
+
+export interface ProductEnrichSuggestion {
+    description?: string;
+    specifications?: { key: string; value: string }[];
+    suggested_category_hint?: string;
+}
 
 export interface ProductImage {
     id: number;

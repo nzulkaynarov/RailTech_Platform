@@ -5,6 +5,7 @@ Re-exports all ViewSets and Views for backwards compatibility so that
 ``from crm.views import DealViewSet`` continues to work unchanged.
 """
 
+from crm.views.ai import SuggestChatReplyView  # noqa: F401
 from crm.views.analytics import CRMAnalyticsView, DashboardAnalyticsView  # noqa: F401
 from crm.views.billing import (  # noqa: F401
     ActViewSet,
@@ -55,4 +56,6 @@ __all__ = [
     # leads
     "LeadCreateView",
     "LeadViewSet",
+    # ai
+    "SuggestChatReplyView",
 ]

@@ -2279,7 +2279,9 @@
       "smartMatch": "Smart Match results.pdf",
       "rfq": "RFQ SAUT.pdf",
       "quoteDraft": "Quote Draft.pdf"
-    }
+    },
+    "suggestEmpty": "The AI has no reply draft to suggest.",
+    "suggestReply": "Suggest reply (AI)"
   },
   "fab": {
     "telegram": "Telegram",
@@ -3579,7 +3581,16 @@
     "published": "Product published",
     "publish": "Publish",
     "confirmPublish": "Publish product?",
-    "confirmPublishDesc": "Product \"{{name}}\" will become visible to buyers in the catalog."
+    "confirmPublishDesc": "Product \"{{name}}\" will become visible to buyers in the catalog.",
+    "aiEnrich": {
+      "title": "AI enrichment",
+      "hint": "AI suggests a description and specs from the product name — review and edit before saving.",
+      "button": "Fill with AI",
+      "empty": "The AI returned no suggestions.",
+      "applied": "AI suggestions applied — review and save.",
+      "failed": "Could not get AI suggestions.",
+      "categoryHint": "Suggested category: {{hint}}"
+    }
   },
   "adminCategories": {
     "title": "Catalog · Categories",
