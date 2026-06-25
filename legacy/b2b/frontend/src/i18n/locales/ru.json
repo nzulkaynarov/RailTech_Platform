@@ -2450,7 +2450,9 @@
       "quoteDraft": "КП Черновик.pdf"
     },
     "suggestEmpty": "ИИ не предложил черновик ответа.",
-    "suggestReply": "Черновик ответа (ИИ)"
+    "suggestReply": "Черновик ответа (ИИ)",
+    "suggestDisabled": "ИИ-помощник сейчас недоступен.",
+    "suggestError": "Не удалось получить черновик ответа."
   },
   "fab": {
     "telegram": "Telegram",

@@ -2281,7 +2281,9 @@
       "quoteDraft": "Quote Draft.pdf"
     },
     "suggestEmpty": "The AI has no reply draft to suggest.",
-    "suggestReply": "Suggest reply (AI)"
+    "suggestReply": "Suggest reply (AI)",
+    "suggestDisabled": "The AI assistant is currently unavailable.",
+    "suggestError": "Could not get a reply draft."
   },
   "fab": {
     "telegram": "Telegram",

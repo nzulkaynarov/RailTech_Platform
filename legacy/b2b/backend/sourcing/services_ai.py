@@ -362,7 +362,9 @@ def _shortlist_products(line: dict, domain_code: str | None, limit: int = 8):
 
     from catalog.models import Product
 
-    qs = Product.objects.all()
+    # PUBLISHED only — the AI match must not surface competitors' DRAFT/ARCHIVED cards that
+    # the catalog list endpoint deliberately hides (review 2026-06-25, HIGH #3).
+    qs = Product.objects.filter(status__code="PUBLISHED")
     if domain_code:
         qs = qs.filter(domain_type__code=domain_code)
 

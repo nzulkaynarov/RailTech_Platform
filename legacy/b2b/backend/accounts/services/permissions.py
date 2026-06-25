@@ -245,8 +245,6 @@ def seller_visible_deal_ids(user: "CustomUser", request) -> Optional[set]:
         return None
     if acting_context(request) not in ({""} | _SELLER_CONTEXTS):
         return None
-    from django.db.models import Q
-
     from crm.models import Deal
 
     seller_company_ids = list(
@@ -254,11 +252,16 @@ def seller_visible_deal_ids(user: "CustomUser", request) -> Optional[set]:
             is_active=True, can_sell=True, company__types__code__in=SELLER_COMPANY_TYPES
         ).values_list("company_id", flat=True)
     )
+    # ROUTING ROWS ONLY. A prior version also OR'd in "deals that merely offer one of my
+    # products" — but that leaked: a buyer adding seller A's product to a deal routed to
+    # seller B made the whole of B's deal visible to A (review 2026-06-25, CRITICAL).
+    # submit_request already writes a DealSellerRouting row per product owner, so the
+    # "offers my product" case is covered for submitted deals; unrouted drafts must stay
+    # invisible to every seller.
     return set(
-        Deal.objects.filter(
-            Q(seller_routings__seller_company_id__in=seller_company_ids)
-            | Q(quotes__items__product__owner_company_id__in=seller_company_ids)
-        ).values_list("id", flat=True)
+        Deal.objects.filter(seller_routings__seller_company_id__in=seller_company_ids).values_list(
+            "id", flat=True
+        )
     )
 
 
@@ -271,8 +274,6 @@ def seller_can_access_deal(user: "CustomUser", request, deal_id) -> bool:
         return False
     if acting_context(request) not in ({""} | _SELLER_CONTEXTS):
         return False
-    from django.db.models import Q
-
     from crm.models import Deal
 
     seller_company_ids = list(
@@ -280,10 +281,7 @@ def seller_can_access_deal(user: "CustomUser", request, deal_id) -> bool:
             is_active=True, can_sell=True, company__types__code__in=SELLER_COMPANY_TYPES
         ).values_list("company_id", flat=True)
     )
+    # Routing rows only — see seller_visible_deal_ids (the product-owner OR-clause leaked).
     return Deal.objects.filter(
-        Q(pk=deal_id)
-        & (
-            Q(seller_routings__seller_company_id__in=seller_company_ids)
-            | Q(quotes__items__product__owner_company_id__in=seller_company_ids)
-        )
+        pk=deal_id, seller_routings__seller_company_id__in=seller_company_ids
     ).exists()
