@@ -533,6 +533,7 @@ REST_FRAMEWORK = {
         "login": "10/minute",  # token obtain, per IP (brute-force; lenient enough for typos)
         "public_quote": "30/minute",  # unauthenticated КП-by-token view; blunts token brute-forcing
         "ai_match": "20/minute",  # AI catalog-match endpoint — each call is a paid Claude request
+        "ai_preflight": "20/minute",  # AI заявка pre-flight quality check — each call is a paid Claude request
     },
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,

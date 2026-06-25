@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { crmApi, QuoteItem, MatchCatalogPayload } from '../api/crmApi';
+import { crmApi, QuoteItem, MatchCatalogPayload, PreflightPayload } from '../api/crmApi';
 
 export const useDeals = () => useQuery({
   queryKey: ['deals'],
@@ -405,6 +405,12 @@ export const useReassignProduct = () => {
 // (no cache to invalidate); binding happens via useUpdateQuoteItem afterwards.
 export const useMatchCatalog = () => useMutation({
   mutationFn: (payload: MatchCatalogPayload) => crmApi.matchCatalog(payload),
+});
+
+// AI #7 pre-flight quality check: POST draft заявка lines → advisory findings.
+// Pure advisory op (no cache to invalidate); never blocks the buyer submit.
+export const usePreflightCheck = () => useMutation({
+  mutationFn: (payload: PreflightPayload) => crmApi.preflightCheck(payload),
 });
 
 export const useCreateQuote = () => {

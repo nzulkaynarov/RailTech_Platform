@@ -4194,7 +4194,8 @@
     "ROLE_NOT_PERMITTED": "This approval step is not available for your workspace role",
     "INVALID_STATUS": "Action not available in the quote's current status",
     "NO_QUOTE_COMPANY": "The quote has no owning company — assign a preparer first",
-    "UNKNOWN": "Unknown error"
+    "UNKNOWN": "Unknown error",
+    "AI_DISABLED": "The AI check is currently unavailable."
   },
   "fileUpload": {
     "upload": "Upload",
@@ -4277,5 +4278,15 @@
     "draft": "Draft",
     "published": "Published",
     "archived": "Archived"
+  },
+  "preflight": {
+    "title": "Request quality check (AI)",
+    "subtitle": "Optional pre-submit pass: the AI flags what to improve. Advisory only — it never blocks submitting.",
+    "checkButton": "Check request",
+    "idleHint": "Press \"Check request\" to get quality suggestions for your line items.",
+    "allClear": "No issues found — the request looks ready to submit.",
+    "lineLabel": "Line {{index}}: {{name}}",
+    "unnamedLine": "Line {{index}} (unnamed)",
+    "suggestionLabel": "Suggestion"
   }
 }

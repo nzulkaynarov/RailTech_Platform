@@ -624,3 +624,37 @@ class MatchCatalogView(APIView):
 
         matches = match_lines_to_catalog(lines[:50], domain_code=domain_code, top_k=top_k)
         return Response({"matches": matches})
+
+
+@extend_schema(
+    summary="AI pre-flight quality check for a заявка (advisory)",
+    description=(
+        "Runs an ADVISORY quality pass over draft request lines before the buyer "
+        "submits the RFQ. Claude flags vague descriptions, missing/implausible qty or "
+        "units, likely-duplicate lines and missing key specs. Returns warnings only — "
+        "never a hard block (line_index always references a GIVEN line; out-of-range "
+        "indices are dropped). Capped at 50 lines per call."
+    ),
+    tags=["Sourcing"],
+)
+class PreflightCheckView(APIView):
+    """AI advisory pre-submit quality check of buyer заявка lines (AI #7)."""
+
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "ai_preflight"
+
+    def post(self, request):
+        from django.conf import settings
+
+        if not getattr(settings, "AI_IMPORT_ENABLED", False):
+            return Response({"error": "AI_DISABLED"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        lines = request.data.get("lines")
+        if not isinstance(lines, list) or not lines:
+            return Response({"error": "LINES_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
+        domain_code = request.data.get("domain_code") or None
+
+        from sourcing.services_ai_preflight import pre_flight_check
+
+        findings = pre_flight_check(lines[:50], domain_code=domain_code)
+        return Response({"findings": findings})

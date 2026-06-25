@@ -6,8 +6,9 @@ import { QuoteStatus, DealStage, DEAL_STAGE_LABEL_KEY, quoteStatusLabelKey } fro
 import { useUserStore } from '@/store/userStore';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useIsViewerMode } from '@/hooks/useViewerMode';
-import { useDeal, useChangeDealStage, useApproveQuote, useRejectQuote, useSendQuoteToClient, useUpdateRequestMeta } from '@/hooks/useCRM';
+import { useDeal, useChangeDealStage, useApproveQuote, useRejectQuote, useSendQuoteToClient, useUpdateRequestMeta, usePreflightCheck } from '@/hooks/useCRM';
 import { crmApi } from '@/api/crmApi';
+import type { PreflightFinding, PreflightLine } from '@/api/crmApi';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { translateApiError } from '@/lib/apiError';
@@ -20,6 +21,7 @@ import { DealChatPanel } from '@/components/Sourcing/DealChatPanel';
 import { RejectQuoteDialog } from '@/components/CRM/RejectQuoteDialog';
 import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
 import { RequestItemsEditor } from '@/components/CRM/RequestItemsEditor';
+import { PreflightWarnings } from '@/components/CRM/PreflightWarnings';
 import { GenerateQuoteDialog } from '@/components/CRM/GenerateQuoteDialog';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { buyerStatus } from '@/lib/requestStatus';
@@ -39,6 +41,11 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
   const [approveConfirmOpen, setApproveConfirmOpen] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [generateQuoteOpen, setGenerateQuoteOpen] = useState(false);
+  // AI #7 pre-flight advisory state (DRAFT buyer request only). Findings are
+  // purely advisory — they never gate submitting the RFQ.
+  const [preflightFindings, setPreflightFindings] = useState<PreflightFinding[]>([]);
+  const [preflightRan, setPreflightRan] = useState(false);
+  const preflightCheck = usePreflightCheck();
   const isViewer = useIsViewerMode();
   const viewerTip = t('apiErrors.ADMIN_VIEWER_CANNOT_ACT');
 
@@ -114,6 +121,33 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
     } finally {
       setDownloadingPdf(false);
     }
+  };
+
+  // Map the buyer's draft request lines → the advisory pre-flight check payload.
+  // Only the buyer-owned fields travel (no price); the backend validates indices.
+  const preflightLines: PreflightLine[] = (quote?.items ?? []).map((item) => ({
+    name: item.product_name || item.imported_raw_name || '',
+    quantity: item.quantity,
+    unit: item.unit,
+    mpn: item.mpn,
+    gost_drawing: item.gost_drawing,
+    note: item.note,
+  }));
+
+  const handlePreflightCheck = () => {
+    preflightCheck.mutate(
+      { lines: preflightLines },
+      {
+        onSuccess: (data) => {
+          setPreflightFindings(data.findings);
+          setPreflightRan(true);
+        },
+        onError: (err) => {
+          // AI off → 503 AI_DISABLED; surface a friendly toast, never a crash.
+          toast.error(translateApiError(err));
+        },
+      },
+    );
   };
 
   return (
@@ -320,7 +354,20 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
                (never leak an in-progress price or a confusing "$0" to the buyer)
             4. nothing yet         → empty state */}
         {canEditRequest ? (
-          <RequestItemsEditor dealId={deal.id} items={quote?.items ?? []} canEdit />
+          <>
+            <RequestItemsEditor dealId={deal.id} items={quote?.items ?? []} canEdit />
+            {/* AI #7 advisory pre-flight quality check — buyer reviews warnings
+                before submitting; never blocks. Only shown when there are lines. */}
+            {preflightLines.length > 0 && (
+              <PreflightWarnings
+                lines={preflightLines}
+                findings={preflightFindings}
+                isPending={preflightCheck.isPending}
+                hasRun={preflightRan}
+                onCheck={handlePreflightCheck}
+              />
+            )}
+          </>
         ) : showPricedQuote ? (
           (() => {
             const colCount = isSellerSide ? 7 : 5;
