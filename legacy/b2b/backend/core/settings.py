@@ -538,6 +538,7 @@ REST_FRAMEWORK = {
         "ai_chat": "20/minute",  # AI deal-chat reply assist — each call is a paid Claude request
         "ai_diff": "20/minute",  # AI КП-vs-заявка diff — each call is a paid Claude request
         "ai_extract": "20/minute",  # AI PDF contract/invoice extraction — each call is a paid Claude request
+        "ai_compose": "20/minute",  # AI conversational заявка builder — each call is a paid Claude request
     },
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,

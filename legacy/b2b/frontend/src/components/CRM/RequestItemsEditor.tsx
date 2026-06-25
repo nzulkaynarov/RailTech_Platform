@@ -13,7 +13,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ImportRequestDialog } from '@/components/CRM/ImportRequestDialog';
+import { ConversationalRequest } from '@/components/Sourcing/ConversationalRequest';
 import { useUnits } from '@/hooks/useMasterData';
+
+// `name_canonical` is the AI-import's normalised RU search key on QuoteItem. The
+// shared QuoteItem type/serializer expose it (see crmApi.ts delta); this local
+// view keeps the editor compiling independently of that single-writer file while
+// avoiding `any`.
+type RequestItem = QuoteItem & { name_canonical?: string };
 
 /**
  * Editable buyer request (заявка) line items. The buyer owns WHAT they want to
@@ -28,7 +35,7 @@ export function RequestItemsEditor({
   canEdit,
 }: {
   dealId: number;
-  items: QuoteItem[];
+  items: RequestItem[];
   canEdit: boolean;
 }) {
   const { t } = useTranslation();
@@ -124,6 +131,22 @@ export function RequestItemsEditor({
     }
   };
 
+  // Canonical search name set by the AI import (normalised RU spelling used as the
+  // catalog-search key). The buyer may view/correct it so a mistranslated line can
+  // still be matched — it never overwrites the original imported_raw_name.
+  const saveCanonical = async (item: RequestItem, value: string) => {
+    const canonical = value.trim();
+    if (canonical === (item.name_canonical || '').trim()) return;
+    try {
+      await updateItem.mutateAsync({
+        id: item.id,
+        data: { name_canonical: canonical } as Partial<QuoteItem>,
+      });
+    } catch (e) {
+      toast.error(translateApiError(e));
+    }
+  };
+
   const saveQty = async (item: QuoteItem, value: string) => {
     const qty = Math.max(1, Number(value) || 1);
     if (qty === item.quantity) return;
@@ -203,6 +226,16 @@ export function RequestItemsEditor({
                         <Badge variant="secondary" className="font-normal">{t('requestItems.fromCatalog')}</Badge>
                       )}
                     </span>
+                  )}
+                  {canEdit && (
+                    <Input
+                      key={item.name_canonical}
+                      defaultValue={item.name_canonical || ''}
+                      onBlur={(e) => saveCanonical(item, e.target.value)}
+                      placeholder={t('requestItems.searchNamePlaceholder')}
+                      className="mt-1 h-7 text-xs"
+                      aria-label={t('requestItems.searchNameLabel')}
+                    />
                   )}
                   {!canEdit && item.mpn && (
                     <span className="mt-0.5 block text-xs text-muted-foreground">
@@ -317,6 +350,14 @@ export function RequestItemsEditor({
           </TableBody>
         </Table>
         </div>
+
+        {/* AI #8 — describe the need in words; the buyer accepts proposed lines
+            into the grid (human-in-loop, nothing auto-submitted). */}
+        {canEdit && (
+          <div className="mt-4">
+            <ConversationalRequest dealId={dealId} />
+          </div>
+        )}
 
         {canEdit && (
           <div className="mt-4 flex flex-wrap items-end gap-2">

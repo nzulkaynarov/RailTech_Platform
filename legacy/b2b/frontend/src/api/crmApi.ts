@@ -514,6 +514,17 @@ export const crmApi = {
 		const response = await apiClient.patch<Quote>(`crm/quotes/${id}/`, data);
 		return response.data;
 	},
+	// Seller sets КП-level settings from the builder gear panel: VAT rate, tax country,
+	// validity, currency. Seller-guarded PATCH on the same Quote endpoint (backend gates
+	// it via can_edit_quote_pricing). vat_rate / valid_until are strings (Decimal/date);
+	// tax_country is the Country pk; quote_currency is the Currency code (e.g. "UZS").
+	updateQuoteSettings: async (
+		id: number,
+		data: Partial<Pick<Quote, 'vat_rate' | 'tax_country' | 'valid_until' | 'quote_currency'>>,
+	) => {
+		const response = await apiClient.patch<Quote>(`crm/quotes/${id}/`, data);
+		return response.data;
+	},
 	// Seller picks the Incoterm → server sets the basis AND auto-applies its charge
 	// template (the default expense items for that basis). Dedicated endpoint, not a
 	// plain PATCH, so the template side-effect is explicit.

@@ -307,6 +307,20 @@ const CRM_MANAGER_WORKSPACE_ROLES = new Set([
 ]);
 const KYC_ALLOWED_PAGES = new Set(['dashboard', 'profile', 'settings', 'help']);
 
+// Platform Admin is a viewer/moderator (ADR-0002): they reach moderation +
+// platform-CRUD surfaces only, NEVER a buyer/seller business page (deals,
+// quotes-as-a-seller, sourcing, my-requests, my-subscription…). This allowlist
+// mirrors the admin sidebar (getAdminNavigation + bottom nav + footer profile);
+// a non-allowlisted hash for an admin is bounced to the admin dashboard rather
+// than rendering a business surface they must not act on.
+const ADMIN_REACHABLE_PAGES = new Set([
+  'dashboard', 'profile', 'settings', 'help',
+  ...ADMIN_PAGES,
+  // Moderation read surfaces the admin sidebar links to but which aren't
+  // `admin-*` ids (force-approve quote / read-only contract inspection).
+  'crm-quotes', 'contracts',
+]);
+
 // Role-scoped reachable pages. Closes "hidden" cross-role routes: a buyer
 // hash-navigating to a seller page (crm-deals, deal-quote, analysis, sourcing…)
 // is bounced to the dashboard instead of seeing seller/CRM UI. One standard for
@@ -374,8 +388,17 @@ function MainApp() {
 
   // Context guard: a buyer can't reach seller/CRM pages (and vice versa) even by
   // deep link — keeps each role to one coherent surface, no orphaned pages.
+  // The platform admin (viewer) is gated to its own moderation allowlist so a
+  // business page (deals, my-requests, sourcing…) never renders for them.
   useEffect(() => {
-    if (role === 'ADMIN') return;
+    if (role === 'ADMIN') {
+      if (!ADMIN_REACHABLE_PAGES.has(page.type)) {
+        toast.info(t('guards.notAvailableHere'));
+        setPage({ type: 'dashboard' });
+        window.history.replaceState(null, '', '#dashboard');
+      }
+      return;
+    }
     const allowed = activeStatus === 'BUYER' ? BUYER_PAGES : SELLER_PAGES;
     if (!allowed.has(page.type)) {
       toast.info(t('guards.notAvailableHere'));
@@ -424,6 +447,13 @@ function MainApp() {
       'leads', 'my-subscription', 'catalog-import',
     ];
     if (validTypes.includes(target)) {
+      // Platform admin (viewer): only moderation/CRUD surfaces are reachable —
+      // a business page target is bounced to the admin dashboard.
+      if (role === 'ADMIN' && !ADMIN_REACHABLE_PAGES.has(target)) {
+        toast.info(t('guards.notAvailableHere'));
+        navigateTo({ type: 'dashboard' });
+        return;
+      }
       // Role guard: admin pages require ADMIN role
       if (ADMIN_PAGES.has(target) && role !== 'ADMIN') {
         toast.error(t('guards.adminRequired'));

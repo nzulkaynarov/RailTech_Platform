@@ -145,6 +145,32 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
         draft_status = QuoteStatus.objects.get(code=QuoteStatusCode.DRAFT)
         serializer.save(version=version, prepared_by=user, status=draft_status)
 
+    def perform_update(self, serializer):
+        """Editing КП-level settings (VAT rate, tax country, validity, currency) is a
+        SELLER action — same gate as building line items / charges (can_edit_quote_pricing).
+        Without this guard a buyer who can READ the КП via get_queryset could PATCH its
+        pricing-relevant settings. The serializer coerces quote_currency (by code) and
+        tax_country (by pk); changing vat_rate moves the VAT total, so recalc afterwards."""
+        from rest_framework.exceptions import PermissionDenied
+
+        from accounts.services.permissions import can_edit_quote_pricing, is_platform_admin_viewer
+
+        user = self.request.user
+        if is_platform_admin_viewer(user):
+            raise PermissionDenied("ADMIN_VIEWER_CANNOT_ACT")
+        if not (getattr(user, "is_superuser", False) or can_edit_quote_pricing(user)):
+            raise PermissionDenied("ONLY_SELLER_CAN_BUILD_QUOTE")
+        quote = serializer.instance
+        if quote.frozen_at:
+            raise PermissionDenied("QUOTE_FROZEN")
+        serializer.save()
+        # vat_rate feeds the VAT computation, so a settings change must re-aggregate
+        # the КП totals (vat_amount / total_incl_vat) — Rule 8: logic in the service.
+        from crm.services import QuoteCalculationService
+
+        QuoteCalculationService.recalculate_quote(serializer.instance.pk)
+        serializer.instance.refresh_from_db()
+
     @extend_schema(
         summary="Generate quote PDF",
         description="Generate a PDF file for the quote using WeasyPrint.",
@@ -587,6 +613,7 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
             unit_code=serializer.validated_data.get("unit_code"),
             note=serializer.validated_data.get("note"),
             mpn=serializer.validated_data.get("mpn"),
+            name_canonical=serializer.validated_data.get("name_canonical"),
         )
         serializer.instance.refresh_from_db()
 

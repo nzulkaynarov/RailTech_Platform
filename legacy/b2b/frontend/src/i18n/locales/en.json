@@ -685,6 +685,17 @@
       "title": "No commercial offer yet",
       "description": "This deal has no active quote yet. Create one to add line items, calculate margin and export a PDF.",
       "action": "Generate quote"
+    },
+    "settings": {
+      "title": "Quote settings",
+      "description": "Quote-level parameters: VAT rate, tax country, validity and currency.",
+      "saved": "Quote settings saved",
+      "vatRate": "VAT rate (%)",
+      "taxCountry": "Tax country",
+      "taxCountryPlaceholder": "Select country",
+      "validUntil": "Valid until",
+      "currency": "Quote currency",
+      "currencyPlaceholder": "Select currency"
     }
   },
   "admin": {
@@ -4084,7 +4095,9 @@
     "gostLabel": "GOST / drawing",
     "codePlaceholder": "Part no. / GOST / drawing",
     "codeLabel": "Part code",
-    "unitNotNormalized": "Unit not standardised — pick one from the list for an accurate quote"
+    "unitNotNormalized": "Unit not standardised — pick one from the list for an accurate quote",
+    "searchNamePlaceholder": "Search name (for catalog)",
+    "searchNameLabel": "Search name"
   },
   "requestDetailActions": {
     "titleLabel": "Request title",
@@ -4352,5 +4365,22 @@
       "TOTAL_NOT_FOUND": "No total found in the document",
       "CURRENCY_NOT_FOUND": "No currency stated in the document"
     }
+  },
+  "conversationalRequest": {
+    "title": "Describe in words (AI)",
+    "hint": "Describe your need in plain text — the AI will propose request line items for you to review and add.",
+    "placeholder": "E.g.: need brake pads for a railcar, 4 sets, and axle-box bearings",
+    "compose": "Build request",
+    "composing": "Building…",
+    "textRequired": "Enter a description of the need",
+    "noItems": "No items recognized — please refine the description",
+    "proposedTitle": "Proposed items",
+    "acceptAll": "Add all",
+    "accept": "Add",
+    "added": "Added",
+    "accepted": "Item added to the request",
+    "unnamed": "Unnamed",
+    "codeLabel": "Code",
+    "candidatesCount": "{{count}} in catalog"
   }
 }
