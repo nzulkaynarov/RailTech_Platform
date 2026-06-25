@@ -18,6 +18,13 @@ from .auth import (
     verify_and_setup_password,
 )
 from .clients import create_offline_client, find_client_company
+from .roles import (
+    assign_role_to_member,
+    create_company_role,
+    delete_company_role,
+    list_roles_for_user,
+    update_company_role,
+)
 from .kyc import bulk_verify_kyc, delete_kyc_document, upload_kyc_document, verify_company_kyc
 from .members import (
     add_company_member,

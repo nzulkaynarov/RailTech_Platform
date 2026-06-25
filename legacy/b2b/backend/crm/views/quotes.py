@@ -248,12 +248,25 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
 
     @staticmethod
     def _assert_buyer_can_buy(user, quote):
-        """Return a 403 Response if `user` may not act as the deal's buyer, else None."""
+        """Return a 403 Response if `user` may not act as the deal's buyer, else None.
+
+        Additive guard (defense-in-depth): legacy can_buy capability OR explicit
+        quote.approve CompanyRole permission. has_explicit_company_role_perm skips
+        the legacy can_buy fallback so only members with an intentional CompanyRole
+        assignment pass through this new path (no accidental promotion).
+        """
         from accounts.services.permissions import is_member_of, is_platform_admin_viewer
+
+        from crm.services._params import has_explicit_company_role_perm
 
         if is_platform_admin_viewer(user):
             return Response({"error": "ADMIN_VIEWER_CANNOT_ACT"}, status=status.HTTP_403_FORBIDDEN)
-        if not (getattr(user, "is_superuser", False) or is_member_of(user, quote.deal.company_id, capability="buy")):
+        company_id = quote.deal.company_id
+        if not (
+            getattr(user, "is_superuser", False)
+            or is_member_of(user, company_id, capability="buy")
+            or has_explicit_company_role_perm(user, company_id, "quote.approve")
+        ):
             return Response({"error": "MEMBER_REQUIRED_FOR_ACTION"}, status=status.HTTP_403_FORBIDDEN)
         return None
 

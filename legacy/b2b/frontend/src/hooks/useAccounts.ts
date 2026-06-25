@@ -2,6 +2,58 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { accountsApi, User, UserFilterParams, CompanyFilterParams } from '../api/accountsApi';
 import { useUserStore } from '../store/userStore';
 
+// ─── Company Roles & Permissions ─────────────────────────────────────────────
+
+export const useCompanyRoles = (companyId?: number) => useQuery({
+  queryKey: ['company-roles', companyId],
+  queryFn: () => accountsApi.getCompanyRoles(companyId),
+  staleTime: 60_000,
+});
+
+export const useCreateCompanyRole = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { name: string; permissions: string[] }) =>
+      accountsApi.createCompanyRole(data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['company-roles'] }),
+  });
+};
+
+export const useUpdateCompanyRole = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: { name?: string; permissions?: string[] } }) =>
+      accountsApi.updateCompanyRole(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['company-roles'] }),
+  });
+};
+
+export const useDeleteCompanyRole = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => accountsApi.deleteCompanyRole(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['company-roles'] }),
+  });
+};
+
+export const useAssignMemberRole = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: { member_id: number; role_id: number }) =>
+      accountsApi.assignMemberRole(payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['company-team'] });
+      qc.invalidateQueries({ queryKey: ['company-roles'] });
+    },
+  });
+};
+
+export const usePermissionCatalog = () => useQuery({
+  queryKey: ['permission-catalog'],
+  queryFn: () => accountsApi.getPermissionCatalog(),
+  staleTime: 5 * 60_000,
+});
+
 export const useUsers = (params?: UserFilterParams) => useQuery({
   queryKey: ['users', params],
   queryFn: () => accountsApi.getUsers(params),

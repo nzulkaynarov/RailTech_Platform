@@ -36,6 +36,35 @@ export interface QuoteItem {
 
 export type DealItem = QuoteItem;
 
+// ─── AI catalog match (sourcing/match-catalog) ───────────────────────────
+// A single catalog product proposed for an unmatched КП line.
+export interface CatalogCandidate {
+	product_id: number;
+	name: string;
+	sku: string;
+	confidence: number; // 0..1
+	reason: string;
+}
+
+// Candidates for one POSTed line. `line_index` is the index into the `lines`
+// array sent in the request (NOT the QuoteItem id) — caller maps it back.
+export interface CatalogMatch {
+	line_index: number;
+	candidates: CatalogCandidate[];
+}
+
+export interface MatchCatalogLine {
+	name: string;
+	mpn?: string;
+	gost_drawing?: string;
+}
+
+export interface MatchCatalogPayload {
+	lines: MatchCatalogLine[];
+	domain_code?: string;
+	top_k?: number;
+}
+
 // Incoterms 2020 cost-responsibility flags — drive which cost rows the КП builder
 // shows / requires for the selected delivery basis (code reads flags, no hardcode).
 export interface DeliveryBasis {
@@ -464,6 +493,17 @@ export const crmApi = {
 		const response = await apiClient.post<QuoteItem>(
 			`crm/quote-items/${quoteItemId}/reassign-product/`,
 			{ product_id: productId },
+		);
+		return response.data;
+	},
+
+	// ─── AI catalog match ────────────────────────────────────
+	// POST a batch of unmatched lines → candidate catalog products per line.
+	// Only lines with ≥1 candidate are returned; may 503 {error:'AI_DISABLED'}.
+	matchCatalog: async (payload: MatchCatalogPayload) => {
+		const response = await apiClient.post<{ matches: CatalogMatch[] }>(
+			'sourcing/match-catalog/',
+			payload,
 		);
 		return response.data;
 	},

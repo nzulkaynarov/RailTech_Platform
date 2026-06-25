@@ -8,6 +8,7 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, Spec
 from rest_framework.routers import DefaultRouter
 from accounts.views import (
     CompanyRoleApplicationViewSet,
+    CompanyRoleViewSet,
     CompanyTypeViewSet,
     CompanyViewSet,
     CookieTokenObtainPairView,
@@ -15,6 +16,7 @@ from accounts.views import (
     ForgotPasswordView,
     LogoutView,
     MeView,
+    PermissionCatalogView,
     RegisterView,
     WsTicketView,
     ResetPasswordView,
@@ -70,6 +72,7 @@ from sourcing.views import (
     CatalogTemplateView,
     ExcelImportView,
     ImportStatusView,
+    MatchCatalogView,
     SourcingRequestViewSet,
 )
 
@@ -107,6 +110,7 @@ router.register(r"accounts/role-applications", CompanyRoleApplicationViewSet, ba
 router.register(r"accounts/system-roles", SystemRoleViewSet, basename="systemrole")
 router.register(r"accounts/workspace-roles", WorkspaceRoleViewSet, basename="workspacerole")
 router.register(r"accounts/company-types", CompanyTypeViewSet, basename="companytype")
+router.register(r"accounts/company-roles", CompanyRoleViewSet, basename="company-role")
 router.register(r"notifications", NotificationViewSet, basename="notification")
 
 # Support tickets
@@ -154,6 +158,7 @@ urlpatterns = (
         ),
         # Sourcing & Imports
         path("api/v1/sourcing/import-deal/<int:deal_id>/", ExcelImportView.as_view(), name="import-deal"),
+        path("api/v1/sourcing/match-catalog/", MatchCatalogView.as_view(), name="match-catalog"),
         path("api/v1/sourcing/import-catalog/", CatalogImportView.as_view(), name="import-catalog"),
         path("api/v1/sourcing/catalog-template/", CatalogTemplateView.as_view(), name="catalog-template"),
         path("api/v1/sourcing/import-status/<str:task_id>/", ImportStatusView.as_view(), name="import-status"),
@@ -172,6 +177,7 @@ urlpatterns = (
         path("api/v1/public/quotes/<str:token>/", PublicQuoteView.as_view(), name="public-quote"),
         path("api/v1/system-settings/", SystemSettingsView.as_view(), name="system-settings"),
         path("api/v1/accounts/me/", MeView.as_view(), name="current-user"),
+        path("api/v1/accounts/permissions/", PermissionCatalogView.as_view(), name="permission-catalog"),
         path("api/v1/health/", health_check, name="health_check"),
         # Root-level health endpoint for Docker/K8s healthchecks
         path("health/", health_check, name="health_check_root"),

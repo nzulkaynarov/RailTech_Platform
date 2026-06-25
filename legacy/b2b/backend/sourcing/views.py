@@ -578,3 +578,40 @@ class AttachmentViewSet(viewsets.ModelViewSet):
         if instance.file:
             instance.file.delete(save=False)
         instance.delete()
+
+
+@extend_schema(
+    summary="AI semantic match: заявка lines → catalog products",
+    description=(
+        "For each request line (name / mpn / gost_drawing) returns up to top_k catalog "
+        "Product candidates ranked by Claude (product_id always from a DB trigram shortlist — "
+        "the model never invents ids). The buyer/seller confirms a candidate in the grid "
+        "(human-in-loop). Capped at 50 lines per call."
+    ),
+    tags=["Sourcing"],
+)
+class MatchCatalogView(APIView):
+    """AI-assisted matching of free-text заявка lines to catalog.Product (roadmap #1)."""
+
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "ai_match"
+
+    def post(self, request):
+        from django.conf import settings
+
+        if not getattr(settings, "AI_IMPORT_ENABLED", False):
+            return Response({"error": "AI_DISABLED"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        lines = request.data.get("lines")
+        if not isinstance(lines, list) or not lines:
+            return Response({"error": "LINES_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
+        domain_code = request.data.get("domain_code") or None
+        try:
+            top_k = max(1, min(5, int(request.data.get("top_k") or 3)))
+        except (TypeError, ValueError):
+            top_k = 3
+
+        from sourcing.services_ai import match_lines_to_catalog
+
+        matches = match_lines_to_catalog(lines[:50], domain_code=domain_code, top_k=top_k)
+        return Response({"matches": matches})

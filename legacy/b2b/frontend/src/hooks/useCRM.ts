@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { crmApi, QuoteItem } from '../api/crmApi';
+import { crmApi, QuoteItem, MatchCatalogPayload } from '../api/crmApi';
 
 export const useDeals = () => useQuery({
   queryKey: ['deals'],
@@ -378,6 +378,12 @@ export const useReassignProduct = () => {
   });
 };
 
+
+// AI catalog match: POST unmatched lines → candidate products. Pure query op
+// (no cache to invalidate); binding happens via useUpdateQuoteItem afterwards.
+export const useMatchCatalog = () => useMutation({
+  mutationFn: (payload: MatchCatalogPayload) => crmApi.matchCatalog(payload),
+});
 
 export const useCreateQuote = () => {
   const qc = useQueryClient();
