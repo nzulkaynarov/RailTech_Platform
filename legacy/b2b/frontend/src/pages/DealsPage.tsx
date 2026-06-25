@@ -148,6 +148,12 @@ export function DealsPage() {
                   >
                     <TableCell>
                       <span className="font-medium">{deal.title || `#${deal.id}`}</span>
+                      {/* Multi-seller routing — show which sellers this RFQ targets. */}
+                      {(deal.target_sellers_data?.length ?? 0) > 0 && (
+                        <span className="mt-0.5 block text-xs text-muted-foreground">
+                          {t('pages.deals.routedTo')}: {deal.target_sellers_data!.map((seller) => seller.name).join(', ')}
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {deal.client_name || deal.company_name || ''}

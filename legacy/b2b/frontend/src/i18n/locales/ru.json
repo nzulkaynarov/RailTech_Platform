@@ -308,7 +308,14 @@
       "title": "Название",
       "titlePlaceholder": "Например: Закупка подшипников Q2 2026",
       "notes": "Комментарий",
-      "notesPlaceholder": "Контекст, сроки, особенности…"
+      "notesPlaceholder": "Контекст, сроки, особенности…",
+      "routeToSellers": "Направить продавцам",
+      "routeToSellersPlaceholder": "Выберите продавцов",
+      "routeToSellersHint": "Опционально — выберите, какие продавцы получат эту заявку. Можно оставить пустым.",
+      "sellerSearchPlaceholder": "Поиск продавцов…",
+      "sellersSelected": "Выбрано: {{count}}",
+      "removeSeller": "Убрать {{name}}",
+      "noSellers": "Продавцы не найдены"
     }
   },
   "forgotPassword": {
@@ -2636,7 +2643,8 @@
         "closedWon": "Закрыто (Выиграно)",
         "closedLost": "Закрыто (Проиграно)",
         "kycPending": "KYC проверка"
-      }
+      },
+      "routedTo": "Направлено"
     },
     "quotes": {
       "buyerTitle": "Коммерческие предложения",
@@ -4089,7 +4097,8 @@
     "downloadPdf": "Скачать КП (PDF)",
     "subtotal": "Сумма без НДС",
     "vatAmount": "НДС",
-    "backToRequests": "К моим заявкам"
+    "backToRequests": "К моим заявкам",
+    "routedTo": "Направлено"
   },
   "createQuoteDialog": {
     "title": "Создать КП",

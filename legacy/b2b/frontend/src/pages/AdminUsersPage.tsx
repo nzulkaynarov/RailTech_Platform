@@ -31,7 +31,7 @@ import {
   useCompanies, useUploadUserAvatar, useDeleteUserAvatar,
 } from '@/hooks/useAccounts';
 import { PageShell, EmptyState } from './shared/PageShell';
-import { systemRoleLabelKey } from '@/lib/codes';
+import { systemRoleLabelKey, workspaceRoleLabelKey } from '@/lib/codes';
 import type { User as UserType } from '@/api/accountsApi';
 import { ImageUpload } from '@/components/Shared/ImageUpload';
 
@@ -114,7 +114,11 @@ function MembershipsPanel({ user }: { user: UserType }) {
                     <span className="font-medium truncate">{m.company_name ?? `#${m.company}`}</span>
                     {m.is_primary && <Badge variant="outline" className="text-xs">{t('pages.adminUsers.memberships.primary')}</Badge>}
                   </div>
-                  <p className="text-xs text-muted-foreground">{m.role_name ?? m.role_code ?? '—'}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {workspaceRoleLabelKey(m.role_code)
+                      ? t(workspaceRoleLabelKey(m.role_code))
+                      : (m.role_name ?? m.role_code ?? '—')}
+                  </p>
                 </div>
                 <Button
                   variant="ghost"
@@ -155,7 +159,9 @@ function MembershipsPanel({ user }: { user: UserType }) {
             <SelectTrigger><SelectValue placeholder={draftCompanyId ? '—' : t('pages.adminUsers.memberships.selectCompanyFirst')} /></SelectTrigger>
             <SelectContent>
               {(workspaceRoles ?? []).map((r) => (
-                <SelectItem key={r.code} value={r.code}>{r.name}</SelectItem>
+                <SelectItem key={r.code} value={r.code}>
+                  {workspaceRoleLabelKey(r.code) ? t(workspaceRoleLabelKey(r.code)) : r.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>

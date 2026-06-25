@@ -911,6 +911,63 @@ def route_deal_from_catalog(deal: Deal) -> set:
     return seller_ids
 
 
+def route_request_to_sellers(user: CustomUser, deal: Deal, seller_company_ids: list) -> Deal:
+    """Buyer routes a (typically free-text) заявка to chosen seller companies.
+
+    Multi-seller routing: a free-text RFQ has no Product.owner_company to imply the
+    supplier, so the buyer picks the target seller(s) explicitly. Idempotent upsert of
+    DealSellerRouting rows (the through model behind Deal.target_sellers). Allowed only
+    while the deal is still DRAFT — once submitted the routing is frozen.
+
+    Guards: not a platform-admin viewer, buyer (can_buy) of the deal's own company,
+    deal stage is DRAFT, and every id is an active SUPPLIER-type Company.
+    """
+    from rest_framework.exceptions import PermissionDenied, ValidationError
+
+    from accounts.constants import SELLER_COMPANY_TYPES
+    from accounts.models import Company
+    from accounts.services.permissions import is_member_of, is_platform_admin_viewer
+    from crm.models import DealSellerRouting
+
+    if is_platform_admin_viewer(user):
+        raise PermissionDenied("ADMIN_VIEWER_CANNOT_ACT")
+    if not is_member_of(user, deal.company_id, capability="buy"):
+        raise PermissionDenied("ONLY_BUYER_CAN_ROUTE")
+    if (deal.stage.code if deal.stage_id else None) != DealStageCode.DRAFT:
+        raise ValidationError({"detail": "REQUEST_ALREADY_SUBMITTED"})
+
+    requested_ids = {int(seller_id) for seller_id in seller_company_ids}
+    if not requested_ids:
+        raise ValidationError({"detail": "NO_SELLERS_SELECTED"})
+
+    # NB: Company has no is_active flag (only CompanyMember does). A company is
+    # "active as a seller" iff it carries a SUPPLIER CompanyType — same gate the
+    # rest of the codebase uses (core.permissions, catalog offers, contracts).
+    valid_ids = set(
+        Company.objects.filter(
+            id__in=requested_ids,
+            types__code__in=SELLER_COMPANY_TYPES,
+        )
+        .distinct()
+        .values_list("id", flat=True)
+    )
+    if valid_ids != requested_ids:
+        raise ValidationError({"detail": "NOT_A_SELLER_COMPANY"})
+
+    for seller_id in valid_ids:
+        DealSellerRouting.objects.get_or_create(deal=deal, seller_company_id=seller_id)
+
+    ActivityLog.objects.create(
+        action="Заявка адресована продавцам (RFQ routing)",
+        detail=f"Deal #{deal.id}: {len(valid_ids)} продавцов",
+        user=user,
+        level="INFO",
+        entity_type="deal",
+        entity_id=str(deal.id),
+    )
+    return deal
+
+
 def submit_request(user: CustomUser, deal: Deal) -> Deal:
     """Buyer issues the RFQ to the seller — the explicit «Отправить заявку» step.
 

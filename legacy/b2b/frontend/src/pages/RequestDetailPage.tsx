@@ -170,6 +170,15 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
                 </>
               )}
             </p>
+            {/* Multi-seller routing — the seller companies this RFQ is routed to. */}
+            {(deal.target_sellers_data?.length ?? 0) > 0 && (
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                <span className="text-xs text-muted-foreground">{t('requestDetailActions.routedTo')}:</span>
+                {deal.target_sellers_data!.map((seller) => (
+                  <Badge key={seller.id} variant="secondary">{seller.name}</Badge>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 

@@ -41,6 +41,15 @@ def _seller(name, inn, email):
     return user, company
 
 
+def _buyer(name, inn, email, buyer_co):
+    user = CustomUser.objects.create_user(email=email, username=email, password="x")
+    CompanyMember.objects.create(
+        user=user, company=buyer_co, role=WorkspaceRole.objects.get(code="OWNER"),
+        is_active=True, is_primary=True, can_buy=True,
+    )
+    return user
+
+
 def _api(user, ctx="SELLER"):
     client = APIClient()
     client.credentials(
@@ -122,3 +131,71 @@ def test_routing_inferred_from_catalog(world):
     # And it makes the deal visible to seller A only.
     assert deal.id in _ids(_api(world["sa_user"]).get("/api/v1/crm/deals/"))
     assert deal.id not in _ids(_api(world["sb_user"]).get("/api/v1/crm/deals/"))
+
+
+@pytest.mark.django_db
+def test_buyer_routes_free_text_deal_to_seller(world):
+    """A buyer routes a free-text заявка → DealSellerRouting rows created, the deal
+    becomes visible to the routed seller, and target_sellers_data is exposed."""
+    draft = DealStage.objects.get(code="DRAFT")
+    deal = Deal.objects.create(title="Free-text RFQ", company=world["buyer_co"], stage=draft)
+    buyer = _buyer("Buyer User", "C100", "buyer@t.test", world["buyer_co"])
+
+    resp = _api(buyer, ctx="BUYER").post(
+        f"/api/v1/crm/deals/{deal.id}/route/",
+        {"seller_company_ids": [world["sb_co"].id]},
+        format="json",
+    )
+    assert resp.status_code == 200, resp.content
+    body = resp.json()
+    assert {row["id"] for row in body["target_sellers_data"]} == {world["sb_co"].id}
+
+    assert DealSellerRouting.objects.filter(deal=deal, seller_company=world["sb_co"]).exists()
+    # Routed seller now sees it; the non-routed seller still does not.
+    assert deal.id in _ids(_api(world["sb_user"]).get("/api/v1/crm/deals/"))
+    assert deal.id not in _ids(_api(world["sa_user"]).get("/api/v1/crm/deals/"))
+
+
+@pytest.mark.django_db
+def test_non_buyer_cannot_route(world):
+    """A seller (non-buyer of the deal's company) is refused routing."""
+    draft = DealStage.objects.get(code="DRAFT")
+    deal = Deal.objects.create(title="Free-text RFQ", company=world["buyer_co"], stage=draft)
+
+    resp = _api(world["sa_user"], ctx="SELLER").post(
+        f"/api/v1/crm/deals/{deal.id}/route/",
+        {"seller_company_ids": [world["sb_co"].id]},
+        format="json",
+    )
+    # Seller A is not a member of the buyer company → cannot even reach the object.
+    assert resp.status_code in (403, 404)
+    assert not DealSellerRouting.objects.filter(deal=deal).exists()
+
+
+@pytest.mark.django_db
+def test_route_rejects_non_seller_company(world):
+    """Routing to a non-SUPPLIER company id is rejected with NOT_A_SELLER_COMPANY."""
+    draft = DealStage.objects.get(code="DRAFT")
+    deal = Deal.objects.create(title="Free-text RFQ", company=world["buyer_co"], stage=draft)
+    buyer = _buyer("Buyer User", "C100", "buyer@t.test", world["buyer_co"])
+
+    resp = _api(buyer, ctx="BUYER").post(
+        f"/api/v1/crm/deals/{deal.id}/route/",
+        {"seller_company_ids": [world["buyer_co"].id]},  # CLIENT, not SUPPLIER
+        format="json",
+    )
+    assert resp.status_code == 400
+    assert resp.json()["detail"] == "NOT_A_SELLER_COMPANY"
+
+
+@pytest.mark.django_db
+def test_suppliers_picker_lists_active_sellers(world):
+    """The buyer's picker returns active SUPPLIER companies as {id, name}."""
+    buyer = _buyer("Buyer User", "C100", "buyer@t.test", world["buyer_co"])
+    resp = _api(buyer, ctx="BUYER").get("/api/v1/crm/deals/suppliers/")
+    assert resp.status_code == 200
+    rows = resp.json()
+    ids = {row["id"] for row in rows}
+    assert world["sa_co"].id in ids and world["sb_co"].id in ids
+    assert world["buyer_co"].id not in ids
+    assert all(set(row.keys()) == {"id", "name"} for row in rows)

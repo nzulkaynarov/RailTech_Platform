@@ -306,7 +306,14 @@
       "title": "Title",
       "titlePlaceholder": "e.g. Q2 2026 bearings procurement",
       "notes": "Notes",
-      "notesPlaceholder": "Context, deadlines, constraints…"
+      "notesPlaceholder": "Context, deadlines, constraints…",
+      "routeToSellers": "Route to seller(s)",
+      "routeToSellersPlaceholder": "Select sellers",
+      "routeToSellersHint": "Optional — choose which sellers receive this request. Can be left empty.",
+      "sellerSearchPlaceholder": "Search sellers…",
+      "sellersSelected": "{{count}} selected",
+      "removeSeller": "Remove {{name}}",
+      "noSellers": "No sellers found"
     }
   },
   "forgotPassword": {
@@ -2632,7 +2639,8 @@
         "closedWon": "Closed (Won)",
         "closedLost": "Closed (Lost)",
         "kycPending": "KYC Pending"
-      }
+      },
+      "routedTo": "Routed to"
     },
     "quotes": {
       "buyerTitle": "Commercial Offers",
@@ -4085,7 +4093,8 @@
     "downloadPdf": "Download quote (PDF)",
     "subtotal": "Subtotal (excl. VAT)",
     "vatAmount": "VAT",
-    "backToRequests": "Back to my requests"
+    "backToRequests": "Back to my requests",
+    "routedTo": "Routed to"
   },
   "createQuoteDialog": {
     "title": "Create quote",
