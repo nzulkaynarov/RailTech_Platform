@@ -199,3 +199,42 @@ def test_suppliers_picker_lists_active_sellers(world):
     assert world["sa_co"].id in ids and world["sb_co"].id in ids
     assert world["buyer_co"].id not in ids
     assert all(set(row.keys()) == {"id", "name"} for row in rows)
+
+
+@pytest.mark.django_db
+def test_seller_cannot_see_deal_offering_their_product_routed_elsewhere(world):
+    """Regression (review 2026-06-25 #2): a deal routed to seller B that merely references
+    seller A's catalog product must NOT be visible to seller A — routing rows are the only grant."""
+    draft = DealStage.objects.get(code="DRAFT")
+    deal_b = Deal.objects.create(title="B deal", company=world["buyer_co"], stage=draft)
+    DealSellerRouting.objects.create(deal=deal_b, seller_company=world["sb_co"])
+    quote = Quote.objects.create(
+        deal=deal_b, version=1, status=QuoteStatus.objects.get(code="DRAFT"),
+        vat_rate=Decimal("12"), subtotal_excl_vat=Decimal("0"), vat_amount=Decimal("0"), total_incl_vat=Decimal("0"),
+    )
+    a_product = Product.objects.create(
+        name="A part", owner_company=world["sa_co"], status=ProductStatus.objects.get(code="PUBLISHED")
+    )
+    QuoteItem.objects.create(quote=quote, product=a_product, quantity=1, final_price_excl_vat=Decimal("0"))
+    assert deal_b.id not in _ids(_api(world["sa_user"]).get("/api/v1/crm/deals/"))
+    assert _api(world["sa_user"]).get(f"/api/v1/crm/deals/{deal_b.id}/").status_code in (403, 404)
+
+
+@pytest.mark.django_db
+def test_seller_cannot_write_item_to_unrouted_quote(world):
+    """Regression (review 2026-06-25 #1): seller A cannot POST a quote item onto a quote whose
+    deal is routed to seller B (no write-tamper on a competitor's КП)."""
+    draft = DealStage.objects.get(code="DRAFT")
+    deal_b = Deal.objects.create(title="B deal", company=world["buyer_co"], stage=draft)
+    DealSellerRouting.objects.create(deal=deal_b, seller_company=world["sb_co"])
+    quote = Quote.objects.create(
+        deal=deal_b, version=1, status=QuoteStatus.objects.get(code="DRAFT"),
+        vat_rate=Decimal("12"), subtotal_excl_vat=Decimal("0"), vat_amount=Decimal("0"), total_incl_vat=Decimal("0"),
+    )
+    a_product = Product.objects.create(
+        name="A part", owner_company=world["sa_co"], status=ProductStatus.objects.get(code="PUBLISHED")
+    )
+    resp = _api(world["sa_user"]).post(
+        "/api/v1/crm/quote-items/", {"quote": quote.id, "product": a_product.id, "quantity": 1}, format="json"
+    )
+    assert resp.status_code == 403

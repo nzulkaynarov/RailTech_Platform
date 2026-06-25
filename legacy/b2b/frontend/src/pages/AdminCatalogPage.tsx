@@ -187,13 +187,17 @@ export function ProductFormSheet({
         for (const spec of suggestion.specifications) {
           if (spec.key) specs[spec.key] = spec.value;
         }
-        patch.specifications = specs;
+        // Merge into the existing specs — don't silently drop the product's prior rows (#9).
+        patch.specifications = { ...((draft.specifications as Record<string, string>) ?? {}), ...specs };
       }
       update(patch);
       setCategoryHint(suggestion.suggested_category_hint ?? '');
       toast.success(t('adminCatalog.aiEnrich.applied'));
-    } catch {
-      toast.error(t('adminCatalog.aiEnrich.failed'));
+    } catch (err) {
+      // AI off → backend 503 {AI_DISABLED}; show the neutral "empty" toast, not a hard error (#8).
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 503) toast.info(t('adminCatalog.aiEnrich.empty'));
+      else toast.error(t('adminCatalog.aiEnrich.failed'));
     }
   };
 

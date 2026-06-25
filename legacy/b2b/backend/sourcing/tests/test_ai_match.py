@@ -24,8 +24,12 @@ def _stub_response(matches):
 
 @pytest.fixture
 def products(db):
-    p1 = Product.objects.create(name="Автосцепка СА-3", sku="RLM-004")
-    p2 = Product.objects.create(name="Баббит Б-83", sku="MAT-001")
+    from catalog.models import ProductStatus
+
+    # PUBLISHED — the shortlist only surfaces published cards (review 2026-06-25 #3).
+    pub = ProductStatus.objects.get_or_create(code="PUBLISHED", defaults={"name": "Published", "sort_order": 1})[0]
+    p1 = Product.objects.create(name="Автосцепка СА-3", sku="RLM-004", status=pub)
+    p2 = Product.objects.create(name="Баббит Б-83", sku="MAT-001", status=pub)
     return p1, p2
 
 
@@ -151,3 +155,20 @@ def test_endpoint_guards(products, settings):
     settings.AI_IMPORT_ENABLED = False
     r = client.post("/api/v1/sourcing/match-catalog/", {"lines": [{"name": "x"}]}, format="json")
     assert r.status_code == 503
+
+
+@pytest.mark.django_db
+def test_shortlist_excludes_unpublished_products(db):
+    """Regression (review 2026-06-25 #3): the AI catalog shortlist must not surface DRAFT/
+    ARCHIVED cards — only PUBLISHED ones, mirroring the catalog list endpoint."""
+    from catalog.models import Product, ProductStatus
+    from sourcing.services_ai import _shortlist_products
+
+    pub = ProductStatus.objects.get_or_create(code="PUBLISHED", defaults={"name": "P", "sort_order": 1})[0]
+    drf = ProductStatus.objects.get_or_create(code="DRAFT", defaults={"name": "D", "sort_order": 1})[0]
+    Product.objects.create(name="SecretWidgetXYZ", status=drf)
+    Product.objects.create(name="SecretWidgetXYZ", status=pub)
+    names = [p.name for p in _shortlist_products({"name": "SecretWidgetXYZ"}, None)]
+    statuses = {p.status.code for p in _shortlist_products({"name": "SecretWidgetXYZ"}, None)}
+    assert names, "published match should be found"
+    assert statuses == {"PUBLISHED"}, f"shortlist leaked non-published: {statuses}"

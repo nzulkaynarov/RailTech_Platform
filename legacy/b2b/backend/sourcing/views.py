@@ -437,10 +437,18 @@ class SourcingRequestViewSet(viewsets.ReadOnlyModelViewSet):
             .prefetch_related("quotes", "quotes__items")
         )
 
-        # B2B Filter: User sees deals from their active companies
-        if not (user.is_platform_admin):
-            user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
-            queryset = queryset.filter(company_id__in=user_company_ids)
+        # B2B Filter: platform admin sees all; a routed seller sees their routed deals
+        # (review 2026-06-25 #5 — sourcing was left on the buyer-company model); buyer sees
+        # its own company's deals.
+        if not user.is_platform_admin:
+            from accounts.services.permissions import seller_visible_deal_ids
+
+            visible = seller_visible_deal_ids(user, self.request)
+            if visible is not None:
+                queryset = queryset.filter(id__in=visible)
+            else:
+                user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
+                queryset = queryset.filter(company_id__in=user_company_ids)
 
         return queryset
 
@@ -515,8 +523,16 @@ class AttachmentViewSet(viewsets.ModelViewSet):
         # Subquery: avoid loading all deal IDs into memory
         from django.db.models import Q
 
+        # A routed seller can reach their routed deals' attachments (the buyer's заявка
+        # source-of-truth file) — review 2026-06-25 #5.
+        from accounts.services.permissions import seller_visible_deal_ids
+
+        seller_deal_ids = seller_visible_deal_ids(user, self.request) or set()
         accessible_deals = Deal.objects.filter(
-            Q(company_id__in=user_company_ids) | Q(manager_id=user.id) | Q(client_id=user.id),
+            Q(company_id__in=user_company_ids)
+            | Q(manager_id=user.id)
+            | Q(client_id=user.id)
+            | Q(id__in=seller_deal_ids),
         ).values("id")
 
         return qs.filter(

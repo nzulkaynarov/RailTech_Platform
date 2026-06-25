@@ -456,6 +456,23 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
         )
 
 
+def _assert_seller_owns_quote_deal(request, quote):
+    """A seller may only WRITE to a quote whose deal is routed to them. `perform_create`
+    takes the target `quote` from the request body and bypasses the scoped get_queryset +
+    object permission, so without this a seller could POST items/charges onto a COMPETITOR's
+    КП (review 2026-06-25, CRITICAL #1). Superuser bypasses; platform-admin is already
+    refused upstream by _assert_seller (ADMIN_VIEWER_CANNOT_ACT)."""
+    from rest_framework.exceptions import PermissionDenied
+
+    from accounts.services.permissions import seller_can_access_deal
+
+    user = request.user
+    if getattr(user, "is_superuser", False):
+        return
+    if quote is None or not seller_can_access_deal(user, request, quote.deal_id):
+        raise PermissionDenied("NO_ACCESS_TO_DEAL")
+
+
 @extend_schema_view(
     list=extend_schema(
         summary="List quote items",
@@ -523,6 +540,7 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
         # rows through POST /crm/deals/{id}/add-request-item/ instead (it
         # get-or-creates the DRAFT quote and restricts fields to name + qty).
         self._assert_seller()
+        _assert_seller_owns_quote_deal(self.request, serializer.validated_data.get("quote"))
         serializer.save()
 
     def perform_update(self, serializer):
@@ -636,6 +654,7 @@ class QuoteChargeViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         self._assert_seller()
+        _assert_seller_owns_quote_deal(self.request, serializer.validated_data.get("quote"))
         serializer.save(created_by=self.request.user)
 
     def perform_update(self, serializer):

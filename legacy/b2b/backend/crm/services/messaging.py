@@ -74,6 +74,18 @@ def user_can_access_deal_chat(user: CustomUser, deal: Deal) -> bool:
         return True
     if deal.manager_id == user.id or deal.client_id == user.id:
         return True
+    # Routed seller: a seller team whose company is a routing target of this deal may chat —
+    # parity with the read-side seller_visible_deal_ids scoping (review 2026-06-25 #4: without
+    # this, a routed seller could READ the thread but POST/WS/AI-reply all 403'd).
+    from accounts.constants import SELLER_COMPANY_TYPES
+
+    seller_company_ids = list(
+        user.memberships.filter(
+            is_active=True, can_sell=True, company__types__code__in=SELLER_COMPANY_TYPES
+        ).values_list("company_id", flat=True)
+    )
+    if seller_company_ids and deal.seller_routings.filter(seller_company_id__in=seller_company_ids).exists():
+        return True
     if deal.company_id:
         return user.memberships.filter(company_id=deal.company_id, is_active=True).exists()
     return False
