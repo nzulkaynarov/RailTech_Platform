@@ -193,6 +193,16 @@ def toggle_user_active(
     """
     if user.pk == requester.pk:
         return None, "CANNOT_DEACTIVATE_SELF"
+    # Never-orphan (audit L3): deactivating the user disables their account platform-wide; if
+    # they are the SOLE active OWNER of any company, that company would be left with no admin
+    # (no one to manage team/KYC/billing). Block — transfer ownership first.
+    if user.is_active:  # about to deactivate
+        owner_memberships = CompanyMember.objects.filter(
+            user=user, is_active=True, role__code=WorkspaceRoleCode.OWNER
+        ).select_related("company")
+        for membership in owner_memberships:
+            if not company_active_admins(membership.company).exclude(user=user).exists():
+                return None, "CANNOT_DEACTIVATE_SOLE_COMPANY_ADMIN"
     user.is_active = not user.is_active
     user.save(update_fields=["is_active"])
     return user, None

@@ -75,15 +75,22 @@ class SupplierOfferViewSet(viewsets.ModelViewSet):
         supplier = serializer.validated_data.get("supplier")
         if getattr(supplier, "id", None) not in company_ids:
             raise PermissionDenied("CANNOT_CREATE_OFFER_FOR_OTHER_SUPPLIER")
+        # The product must be PUBLISHED (any seller may quote a live catalog card) or owned by
+        # the seller — not a competitor's DRAFT/ARCHIVED card (audit L2: pricing-data pollution).
+        product = serializer.validated_data.get("product")
+        prod_published = getattr(getattr(product, "status", None), "code", None) == "PUBLISHED"
+        prod_owned = getattr(product, "owner_company_id", None) in company_ids
+        if product is not None and not (prod_published or prod_owned):
+            raise PermissionDenied("CANNOT_ATTACH_OFFER_TO_FOREIGN_PRODUCT")
         serializer.save()
 
     def perform_update(self, serializer):
-        # Non-admins cannot reassign an offer to another supplier (M6-style guard).
+        # Non-admins cannot reassign an offer to another supplier OR another product (audit L2).
         user = self.request.user
         if user.is_platform_admin:
             serializer.save()
             return
-        serializer.save(supplier=serializer.instance.supplier)
+        serializer.save(supplier=serializer.instance.supplier, product=serializer.instance.product)
 
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
