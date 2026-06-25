@@ -26,9 +26,11 @@ class TestValidateImageUpload:
         f = SimpleUploadedFile("test.png", b"\x89PNG\r\n\x1a\n" + b"\x00" * 100, content_type="image/png")
         validate_image_upload(f)
 
-    def test_valid_svg(self):
+    def test_svg_rejected(self):
+        # SVG removed for stored-XSS safety (audit H6) — must now be refused.
         f = SimpleUploadedFile("icon.svg", b"<svg></svg>", content_type="image/svg+xml")
-        validate_image_upload(f)
+        with pytest.raises(ValidationError):
+            validate_image_upload(f)
 
     def test_invalid_extension(self):
         f = SimpleUploadedFile("test.exe", b"\x00" * 100, content_type="application/octet-stream")
@@ -122,3 +124,15 @@ class TestValidateDocumentUpload:
         f = SimpleUploadedFile("huge.pdf", b"\x00" * (DOCUMENT_MAX_SIZE + 1), content_type="application/pdf")
         with pytest.raises(ValidationError, match="file size"):
             validate_document_upload(f)
+
+
+def test_export_neutralizes_formula_injection():
+    """Audit H5: CSV/XLSX cells starting with =,+,-,@ are prefixed with ' so Excel/Sheets
+    won't execute them."""
+    from core.exporters import _normalize_value
+
+    assert _normalize_value("=HYPERLINK(\"http://evil\")") == "'=HYPERLINK(\"http://evil\")"
+    assert _normalize_value("+1+1") == "'+1+1"
+    assert _normalize_value("@SUM(A1)") == "'@SUM(A1)"
+    assert _normalize_value("-2") == "'-2"
+    assert _normalize_value("Normal Co") == "Normal Co"  # untouched

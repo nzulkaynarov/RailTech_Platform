@@ -238,3 +238,27 @@ def test_seller_cannot_write_item_to_unrouted_quote(world):
         "/api/v1/crm/quote-items/", {"quote": quote.id, "product": a_product.id, "quantity": 1}, format="json"
     )
     assert resp.status_code == 403
+
+
+@pytest.mark.django_db
+def test_seller_a_cannot_see_seller_b_quote_costs_on_corouted_deal(world):
+    """Audit C1: on a deal routed to BOTH A and B, seller A must not read seller B's quote
+    cost/margin fields. B prepares the quote (prepared_by a B member, margin set)."""
+    draft = DealStage.objects.get(code="DRAFT")
+    deal = Deal.objects.create(title="co-routed", company=world["buyer_co"], stage=draft)
+    DealSellerRouting.objects.create(deal=deal, seller_company=world["sa_co"])
+    DealSellerRouting.objects.create(deal=deal, seller_company=world["sb_co"])
+    b_quote = Quote.objects.create(
+        deal=deal, version=1, status=QuoteStatus.objects.get(code="DRAFT"), prepared_by=world["sb_user"],
+        vat_rate=Decimal("12"), subtotal_excl_vat=Decimal("0"), vat_amount=Decimal("0"), total_incl_vat=Decimal("0"),
+    )
+    QuoteItem.objects.create(
+        quote=b_quote, imported_raw_name="part", quantity=1,
+        frozen_base_price=Decimal("100"), margin_percent=Decimal("30"), final_price_excl_vat=Decimal("130"),
+    )
+    resp = _api(world["sa_user"]).get(f"/api/v1/crm/quote-items/?quote__deal_id={deal.id}")
+    assert resp.status_code == 200
+    rows = resp.json().get("results", resp.json())
+    for row in rows:
+        assert "margin_percent" not in row, "C1 leak: B's margin visible to A"
+        assert "frozen_base_price" not in row, "C1 leak: B's cost visible to A"

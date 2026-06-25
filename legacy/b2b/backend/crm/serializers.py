@@ -95,22 +95,25 @@ class QuoteItemSerializer(serializers.ModelSerializer):
         "landed_cost",
     )
 
-    def _viewer_is_privileged(self) -> bool:
-        if hasattr(self, "_priv_cache"):
-            return self._priv_cache
-        request = self.context.get("request")
-        user = getattr(request, "user", None)
-        privileged = False
-        if user is not None and getattr(user, "is_authenticated", False):
-            from accounts.services.permissions import can_view_quote_costs
+    def _can_see_costs(self, quote) -> bool:
+        # Per-quote (C1): cost/margin only on a quote the viewer's own company prepared —
+        # not a competitor's quote on the same multi-seller-routed deal. Cached by quote id
+        # so a list of items on one quote doesn't re-query the preparer's memberships.
+        cache = getattr(self, "_cost_cache", None)
+        if cache is None:
+            cache = self._cost_cache = {}
+        qid = getattr(quote, "id", None)
+        if qid not in cache:
+            user = getattr(self.context.get("request"), "user", None)
+            from accounts.services.permissions import can_view_quote_costs_for
 
-            privileged = can_view_quote_costs(user)
-        self._priv_cache = privileged
-        return privileged
+            cache[qid] = bool(user and quote is not None and can_view_quote_costs_for(user, quote))
+        return cache[qid]
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        if not self._viewer_is_privileged():
+        # QuoteItem → its .quote; Quote → itself.
+        if not self._can_see_costs(getattr(instance, "quote", instance)):
             for field_name in self._SELLER_ONLY_FIELDS:
                 data.pop(field_name, None)
         return data
@@ -237,22 +240,25 @@ class QuoteSerializer(serializers.ModelSerializer):
     # final total_incl_vat, never WHY (the two-projection rule).
     _SELLER_ONLY_FIELDS = ("charges", "charges_total")
 
-    def _viewer_is_privileged(self) -> bool:
-        if hasattr(self, "_priv_cache"):
-            return self._priv_cache
-        request = self.context.get("request")
-        user = getattr(request, "user", None)
-        privileged = False
-        if user is not None and getattr(user, "is_authenticated", False):
-            from accounts.services.permissions import can_view_quote_costs
+    def _can_see_costs(self, quote) -> bool:
+        # Per-quote (C1): cost/margin only on a quote the viewer's own company prepared —
+        # not a competitor's quote on the same multi-seller-routed deal. Cached by quote id
+        # so a list of items on one quote doesn't re-query the preparer's memberships.
+        cache = getattr(self, "_cost_cache", None)
+        if cache is None:
+            cache = self._cost_cache = {}
+        qid = getattr(quote, "id", None)
+        if qid not in cache:
+            user = getattr(self.context.get("request"), "user", None)
+            from accounts.services.permissions import can_view_quote_costs_for
 
-            privileged = can_view_quote_costs(user)
-        self._priv_cache = privileged
-        return privileged
+            cache[qid] = bool(user and quote is not None and can_view_quote_costs_for(user, quote))
+        return cache[qid]
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        if not self._viewer_is_privileged():
+        # QuoteItem → its .quote; Quote → itself.
+        if not self._can_see_costs(getattr(instance, "quote", instance)):
             for field_name in self._SELLER_ONLY_FIELDS:
                 data.pop(field_name, None)
         return data

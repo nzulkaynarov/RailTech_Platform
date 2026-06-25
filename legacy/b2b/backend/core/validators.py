@@ -9,13 +9,14 @@ import os
 
 from django.core.exceptions import ValidationError
 
-ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"}
+# SVG removed (audit H6): SVGs carry inline <script>/onload, have no magic-byte signature,
+# and are served same-origin as image/svg+xml → stored XSS. Raster formats only.
+ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
 ALLOWED_IMAGE_CONTENT_TYPES = {
     "image/jpeg",
     "image/png",
     "image/gif",
     "image/webp",
-    "image/svg+xml",
 }
 
 ALLOWED_DOCUMENT_EXTENSIONS = ALLOWED_IMAGE_EXTENSIONS | {".pdf", ".doc", ".docx", ".xls", ".xlsx", ".csv", ".txt"}

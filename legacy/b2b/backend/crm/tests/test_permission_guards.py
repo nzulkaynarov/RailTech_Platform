@@ -148,12 +148,18 @@ def seller_company(lookups):
 
 
 @pytest.fixture
-def deal(lookups, buyer_company):
-    return Deal.objects.create(
+def deal(lookups, buyer_company, seller_company):
+    deal = Deal.objects.create(
         title="PG Deal",
         company=buyer_company,
         stage=DealStage.objects.get(code="CALCULATING"),
     )
+    # Route to the seller — seller write actions (sign/act/fulfillment) now bind to the
+    # deal's routing (audit H3/H4/M1), so the test seller must be a routing target.
+    from crm.models import DealSellerRouting
+
+    DealSellerRouting.objects.create(deal=deal, seller_company=seller_company)
+    return deal
 
 
 def _ready_to_send_quote(deal, prepared_by):

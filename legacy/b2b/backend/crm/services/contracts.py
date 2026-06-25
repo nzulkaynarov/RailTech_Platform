@@ -188,7 +188,12 @@ def sign_contract_by_manager(
     """
     from django.utils import timezone
 
-    from accounts.services import assert_seller_can_operate, is_platform_admin_viewer, is_seller
+    from accounts.services import (
+        assert_seller_can_operate,
+        is_platform_admin_viewer,
+        is_seller,
+        seller_company_routed_to_deal,
+    )
 
     from ..models import Contract
 
@@ -212,7 +217,12 @@ def sign_contract_by_manager(
         has_explicit_company_role_perm(manager_user, m.company_id, "contract.sign")
         for m in seller_memberships
     )
-    if not (getattr(manager_user, "is_superuser", False) or is_seller(manager_user) or has_contract_sign_perm):
+    # Bind to THIS contract's deal routing — any seller could otherwise sign a competitor's
+    # contract by enumerating ids (audit H3).
+    if not (
+        getattr(manager_user, "is_superuser", False)
+        or ((is_seller(manager_user) or has_contract_sign_perm) and seller_company_routed_to_deal(manager_user, contract.deal_id))
+    ):
         return None, "MEMBER_REQUIRED_FOR_ACTION"
     # Paid-seller gate: signing commits the seller — requires an active subscription.
     if sub_err := assert_seller_can_operate(manager_user):

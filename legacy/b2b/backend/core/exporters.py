@@ -35,7 +35,13 @@ def _normalize_value(value) -> str:
         return ""
     if isinstance(value, bool):
         return "1" if value else "0"
-    return str(value)
+    text = str(value)
+    # CSV/formula injection (audit H5): a cell starting with = + - @ (or tab/CR) runs as a
+    # formula when the admin opens the export in Excel/Sheets (HYPERLINK exfil, DDE exec).
+    # Prefix a single quote to neutralize — user-controlled fields flow through here.
+    if text[:1] in ("=", "+", "-", "@", "\t", "\r"):
+        text = "'" + text
+    return text
 
 
 def export_queryset_csv(
