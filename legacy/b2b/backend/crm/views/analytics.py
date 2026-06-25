@@ -46,9 +46,18 @@ class DashboardAnalyticsView(APIView):
     def get(self, request):
         from django.core.cache import cache
 
-        # B2B data isolation
+        from accounts.services.permissions import seller_visible_deal_ids
+
+        # B2B data isolation. Three mutually-exclusive scopes:
+        #   * platform admin            → see-all (company_ids=None, deal_scope=None)
+        #   * context-acting seller     → scope by ROUTED DEAL IDS, not buyer-company.
+        #     A seller isn't a member of the buyer's deal.company, so the old
+        #     company_id__in filter returned ZERO KPIs for a pure seller. Routed
+        #     deals are the seller's confidentiality boundary (DealSellerRouting).
+        #   * buyer (and dual user in BUYER context) → scope by own company ids (unchanged)
         is_staff = request.user.is_platform_admin
-        if is_staff:
+        deal_scope = None if is_staff else seller_visible_deal_ids(request.user, request)
+        if is_staff or deal_scope is not None:
             user_company_ids = None
         else:
             user_company_ids = list(
@@ -63,26 +72,23 @@ class DashboardAnalyticsView(APIView):
 
         period_start = self._resolve_period_start(period)
 
-        # Get deals -- scoped to user's companies for non-staff
-        all_deals = Deal.objects.all()
-        if user_company_ids is not None:
-            all_deals = all_deals.filter(company_id__in=user_company_ids)
+        # Get deals -- scoped to routed deal ids (seller) or own companies (buyer).
+        all_deals = self._scope_deals(Deal.objects.all(), user_company_ids, deal_scope)
         period_deals = all_deals.filter(created_at__gte=period_start)
 
         # Previous period for comparison
         prev_period_start = period_start - (timezone.now() - period_start)
-        prev_period_deals = Deal.objects.filter(
-            created_at__gte=prev_period_start,
-            created_at__lt=period_start,
+        prev_period_deals = self._scope_deals(
+            Deal.objects.filter(created_at__gte=prev_period_start, created_at__lt=period_start),
+            user_company_ids,
+            deal_scope,
         )
-        if user_company_ids is not None:
-            prev_period_deals = prev_period_deals.filter(company_id__in=user_company_ids)
 
         volume_kpis = self._get_volume_kpis(period_deals, prev_period_deals, all_deals)
         catalog_kpis = self._get_catalog_kpis(period_start)
         client_kpis = self._get_client_kpis(period_start)
         counterparties = self._get_counterparties()
-        completion = self._get_completion_stats(user_company_ids)
+        completion = self._get_completion_stats(user_company_ids, deal_scope)
         buyer_stats = self._get_buyer_stats(all_deals)
 
         data = {
@@ -90,8 +96,8 @@ class DashboardAnalyticsView(APIView):
             **catalog_kpis,
             **client_kpis,
             "deals_by_month": self._get_deals_by_month(all_deals),
-            "activity_by_day": self._get_activity_by_day(user_company_ids),
-            "top_products": self._get_top_products(user_company_ids=user_company_ids),
+            "activity_by_day": self._get_activity_by_day(user_company_ids, deal_scope),
+            "top_products": self._get_top_products(user_company_ids=user_company_ids, deal_scope=deal_scope),
             "counterparties": counterparties,
             "request_completion": completion["request_completion"],
             "request_completion_goal": 80,
@@ -99,6 +105,20 @@ class DashboardAnalyticsView(APIView):
         }
         cache.set(cache_key, data, 60)
         return Response(data)
+
+    @staticmethod
+    def _scope_deals(deals, user_company_ids, deal_scope):
+        """Apply the resolved isolation scope to a Deal queryset.
+
+        deal_scope (a set of routed deal ids) wins for a context-acting seller;
+        user_company_ids scopes a buyer to its own companies; both None = see-all
+        (platform admin).
+        """
+        if deal_scope is not None:
+            return deals.filter(id__in=deal_scope)
+        if user_company_ids is not None:
+            return deals.filter(company_id__in=user_company_ids)
+        return deals
 
     @staticmethod
     def _resolve_period_start(period: str):
@@ -191,10 +211,13 @@ class DashboardAnalyticsView(APIView):
         }
 
     @staticmethod
-    def _get_completion_stats(user_company_ids) -> dict:
-        """Compute request completion percentage."""
+    def _get_completion_stats(user_company_ids, deal_scope=None) -> dict:
+        """Compute request completion percentage, scoped to routed deals (seller)
+        or own companies (buyer)."""
         quotes_qs = Quote.objects.all()
-        if user_company_ids is not None:
+        if deal_scope is not None:
+            quotes_qs = quotes_qs.filter(deal_id__in=deal_scope)
+        elif user_company_ids is not None:
             quotes_qs = quotes_qs.filter(deal__company_id__in=user_company_ids)
         completed = quotes_qs.filter(status__code__in=[QuoteStatusCode.APPROVED, QuoteStatusCode.SENT]).count()
         total = quotes_qs.count()
@@ -245,15 +268,18 @@ class DashboardAnalyticsView(APIView):
             )
         return result
 
-    def _get_activity_by_day(self, user_company_ids=None):
-        """Get activity aggregated by day for the last 30 days."""
+    def _get_activity_by_day(self, user_company_ids=None, deal_scope=None):
+        """Get activity aggregated by day for the last 30 days, scoped to routed
+        deals (seller) or own companies (buyer)."""
         from django.db.models.functions import TruncDate
 
         from crm.models import ActivityLog
 
         thirty_days_ago = timezone.now() - timedelta(days=30)
         qs = ActivityLog.objects.filter(timestamp__gte=thirty_days_ago)
-        if user_company_ids is not None:
+        if deal_scope is not None:
+            qs = qs.filter(entity_type="deal", entity_id__in=deal_scope)
+        elif user_company_ids is not None:
             qs = qs.filter(user__memberships__company_id__in=user_company_ids)
         daily_activity = (
             qs.annotate(day=TruncDate("timestamp")).values("day").annotate(count=Count("id")).order_by("day")
@@ -270,12 +296,15 @@ class DashboardAnalyticsView(APIView):
             )
         return result
 
-    def _get_top_products(self, limit=5, user_company_ids=None):
-        """Get top products by deal frequency, scoped to user's companies."""
+    def _get_top_products(self, limit=5, user_company_ids=None, deal_scope=None):
+        """Get top products by deal frequency, scoped to routed deals (seller) or
+        own companies (buyer)."""
         from catalog.models import Product
 
         qs = Product.objects.select_related("category")
-        if user_company_ids is not None:
+        if deal_scope is not None:
+            qs = qs.filter(quote_items__quote__deal_id__in=deal_scope)
+        elif user_company_ids is not None:
             qs = qs.filter(quote_items__quote__deal__company_id__in=user_company_ids)
         top = qs.annotate(deal_count=Count("quote_items", distinct=True)).order_by("-deal_count")[:limit]
 

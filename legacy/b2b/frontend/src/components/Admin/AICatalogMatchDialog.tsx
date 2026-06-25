@@ -102,7 +102,7 @@ export const AICatalogMatchDialog: React.FC<AICatalogMatchDialogProps> = ({ open
     if (unmatchedItems.length === 0) {
       return (
         <Alert>
-          <Check className="size-4" />
+          <Check className="size-4" aria-hidden="true" />
           <AlertTitle>{t('aiMatch.allMatched')}</AlertTitle>
           <AlertDescription>{t('aiMatch.allMatchedDesc')}</AlertDescription>
         </Alert>
@@ -113,7 +113,7 @@ export const AICatalogMatchDialog: React.FC<AICatalogMatchDialogProps> = ({ open
       return (
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="size-4 animate-spin" />
+            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
             {t('aiMatch.loading')}
           </div>
           <Skeleton className="h-16 w-full" />
@@ -126,7 +126,7 @@ export const AICatalogMatchDialog: React.FC<AICatalogMatchDialogProps> = ({ open
     if (aiDisabled) {
       return (
         <Alert variant="destructive">
-          <AlertTriangle className="size-4" />
+          <AlertTriangle className="size-4" aria-hidden="true" />
           <AlertTitle>{t('aiMatch.aiDisabled')}</AlertTitle>
           <AlertDescription>{t('aiMatch.aiDisabledDesc')}</AlertDescription>
         </Alert>
@@ -136,7 +136,7 @@ export const AICatalogMatchDialog: React.FC<AICatalogMatchDialogProps> = ({ open
     if (failed) {
       return (
         <Alert variant="destructive">
-          <AlertTriangle className="size-4" />
+          <AlertTriangle className="size-4" aria-hidden="true" />
           <AlertTitle>{t('errors.operationFailed')}</AlertTitle>
           <AlertDescription>{t('aiMatch.retryHint')}</AlertDescription>
         </Alert>
@@ -146,7 +146,7 @@ export const AICatalogMatchDialog: React.FC<AICatalogMatchDialogProps> = ({ open
     if (!hasAnyCandidates) {
       return (
         <Alert>
-          <AlertTriangle className="size-4" />
+          <AlertTriangle className="size-4" aria-hidden="true" />
           <AlertTitle>{t('aiMatch.noMatches')}</AlertTitle>
           <AlertDescription>{t('aiMatch.noMatchesDesc')}</AlertDescription>
         </Alert>
@@ -165,9 +165,9 @@ export const AICatalogMatchDialog: React.FC<AICatalogMatchDialogProps> = ({ open
               <div key={item.id} className="rounded-md border p-3">
                 <div className="mb-2 flex items-center gap-2">
                   {isBound ? (
-                    <Check className="size-4 shrink-0 text-success" />
+                    <Check className="size-4 shrink-0 text-success" aria-hidden="true" />
                   ) : (
-                    <AlertTriangle className="size-4 shrink-0 text-warning" />
+                    <AlertTriangle className="size-4 shrink-0 text-warning" aria-hidden="true" />
                   )}
                   <span className="text-sm font-semibold">{lineName(item)}</span>
                   {item.mpn && (
@@ -181,7 +181,7 @@ export const AICatalogMatchDialog: React.FC<AICatalogMatchDialogProps> = ({ open
                   <p className="text-xs text-muted-foreground">{t('aiMatch.noMatches')}</p>
                 ) : (
                   <div className="flex flex-wrap items-center gap-2">
-                    {isBinding && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
+                    {isBinding && <Loader2 className="size-4 animate-spin text-muted-foreground" aria-hidden="true" />}
                     {match.candidates.map((candidate) => (
                       <Tooltip key={candidate.product_id}>
                         <TooltipTrigger asChild>
@@ -219,7 +219,7 @@ export const AICatalogMatchDialog: React.FC<AICatalogMatchDialogProps> = ({ open
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="size-4 text-primary" />
+            <Sparkles className="size-4 text-primary" aria-hidden="true" />
             {t('aiMatch.title')}
           </DialogTitle>
           <DialogDescription>{t('aiMatch.description')}</DialogDescription>
