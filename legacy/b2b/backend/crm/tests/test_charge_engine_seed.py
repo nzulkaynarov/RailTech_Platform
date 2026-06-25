@@ -29,7 +29,8 @@ def test_charge_engine_seed_creates_types_and_global_templates():
     ddp_charges = set(
         global_templates.filter(delivery_basis__code="DDP").values_list("charge_type__code", flat=True)
     )
-    assert {"FREIGHT", "INSURANCE", "CUSTOMS", "CERTIFICATION"} <= ddp_charges
+    assert {"INSURANCE", "CERTIFICATION"} <= ddp_charges
+    assert "FREIGHT" not in ddp_charges and "CUSTOMS" not in ddp_charges  # per-line, not document (M3)
 
 
 def test_charge_engine_seed_is_idempotent():
@@ -40,7 +41,7 @@ def test_charge_engine_seed_is_idempotent():
     assert ChargeType.objects.filter(code="FREIGHT").count() == 1
     assert (
         ChargeTemplate.objects.filter(
-            company__isnull=True, delivery_basis__code="DDP", charge_type__code="FREIGHT"
+            company__isnull=True, delivery_basis__code="DDP", charge_type__code="INSURANCE"
         ).count()
         == 1
     )

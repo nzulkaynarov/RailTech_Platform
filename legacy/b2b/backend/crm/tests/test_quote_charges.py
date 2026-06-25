@@ -263,3 +263,33 @@ def test_falls_back_to_global_when_company_has_none(quote):
     created = apply_charge_template_to_quote(quote, seller)
     assert created == 1
     assert quote.charges.get(from_template=True).charge_type.code == "FREIGHT"
+
+
+@pytest.mark.django_db
+def test_incoterm_flags_gate_per_line_costs(quote):
+    """Audit M1/M2: per-line freight/customs enter landed cost ONLY when the Incoterm basis
+    says the seller pays — switching to a buyer-pays basis zeroes the bucket (no ghost cost)."""
+    from crm.services.quotes import QuoteCalculationService
+
+    from master_data.models import DeliveryBasis
+
+    item = quote.items.first()
+    item.logistics_cost = Decimal("50")
+    item.customs_duty = Decimal("20")
+    item.save()
+    exw = DeliveryBasis.objects.get_or_create(code="EXW", defaults={"name": "EXW"})[0]  # all flags False
+    ddp = DeliveryBasis.objects.get_or_create(
+        code="DDP", defaults={"name": "DDP", "seller_pays_freight": True, "seller_pays_import": True}
+    )[0]
+    # EXW: buyer bears freight + customs → per-line buckets zeroed, landed = base only.
+    QuoteCalculationService.calculate_item_prices(item, commit=True, basis=exw)
+    item.refresh_from_db()
+    assert item.logistics_cost == Decimal("0") and item.customs_duty == Decimal("0")
+    assert item.landed_cost == item.frozen_base_price
+    # DDP: seller bears both → counted in landed cost.
+    item.logistics_cost = Decimal("50")
+    item.customs_duty = Decimal("20")
+    item.save()
+    QuoteCalculationService.calculate_item_prices(item, commit=True, basis=ddp)
+    item.refresh_from_db()
+    assert item.landed_cost == item.frozen_base_price + Decimal("70")

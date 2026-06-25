@@ -150,20 +150,32 @@ class QuoteCalculationService:
     """
 
     @staticmethod
-    def calculate_item_prices(item: QuoteItem, commit=True):
+    def calculate_item_prices(item: QuoteItem, commit=True, basis=...):
         """
         Calculates Landed Cost and Final Price for a single item.
         Formula:
-          1. landed_cost = base + logistics + customs
-          2. final_price = landed_cost * (1 + margin%)
+          1. landed_cost = base + logistics + customs  (each gated by the Incoterm basis)
+          2. final_price = landed_cost * (1 + margin%) * (1 − discount%)
+
+        `basis` (DeliveryBasis|None) — the Incoterm flags are LOAD-BEARING (audit M1/M2): a
+        cost bucket enters the seller's landed cost ONLY when the basis says the seller pays
+        it. Switching to a basis where the BUYER pays freight/customs zeroes that per-line
+        bucket, so a hidden column never ghosts into the total. Pass `basis=...` (sentinel)
+        to lazy-load from item.quote (single-item path); the bulk recalc passes it explicitly.
         """
         is_service = item.product and item.product.domain_type and item.product.domain_type.code == "SERVICES"
+        if basis is ...:
+            basis = item.quote.delivery_basis if item.quote_id else None
 
         if is_service:
             item.landed_cost = item.frozen_base_price
             item.logistics_cost = Decimal("0")
             item.customs_duty = Decimal("0")
         else:
+            if basis is not None and not basis.seller_pays_freight:
+                item.logistics_cost = Decimal("0")
+            if basis is not None and not basis.seller_pays_import:
+                item.customs_duty = Decimal("0")
             item.landed_cost = item.frozen_base_price + item.logistics_cost + item.customs_duty
 
         # себестоимость → +наценка → −скидка позиции (UBL line-level allowance)
@@ -185,12 +197,15 @@ class QuoteCalculationService:
         Full recalculation of a Quote and all its items.
         Prevents N+1 updates by using aggregation.
         """
-        quote = Quote.objects.select_for_update().get(pk=quote_id)
+        # of=("self",): lock only the quote row — select_related pulls the NULLABLE
+        # delivery_basis via an outer join, and Postgres can't FOR UPDATE that side.
+        quote = Quote.objects.select_for_update(of=("self",)).select_related("delivery_basis").get(pk=quote_id)
         items = list(quote.items.select_related("product__domain_type").all())
 
-        # 1. Recalculate each item price (without saving each time to DB yet)
+        # 1. Recalculate each item price (without saving each time to DB yet). Pass the basis
+        #    once so the Incoterm flag-gating runs without an N+1 on item.quote (M1/M2).
         for item in items:
-            cls.calculate_item_prices(item, commit=False)
+            cls.calculate_item_prices(item, commit=False, basis=quote.delivery_basis)
 
         # 2. Bulk update items to minimize DB hits
         QuoteItem.objects.bulk_update(items, ["landed_cost", "final_price_excl_vat", "logistics_cost", "customs_duty"])

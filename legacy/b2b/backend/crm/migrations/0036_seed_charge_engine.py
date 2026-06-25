@@ -19,18 +19,17 @@ CHARGE_TYPES = [
     ("OTHER", "Прочие расходы"),
 ]
 
-# Global (company IS NULL) default cost profiles per Incoterm basis. When a seller
-# picks a basis on the КП and their company has no own templates for it, these
-# platform defaults seed the QuoteCharge rows (seller then edits). Mirrors the
-# responsibility matrix: the seller only sees the expense layers they actually bear.
+# Global (company IS NULL) default DOCUMENT-LEVEL cost profiles per Incoterm basis. These
+# carry ONLY non-line costs — freight & customs are captured PER-LINE (logistics_cost /
+# customs_duty, gated by the basis flags), so the templates must NOT duplicate them or the
+# seller double-bills (audit M3). One canonical place per cost component: freight/customs
+# per line, insurance/certification at the document level.
 CHARGE_TEMPLATES = {
-    "CFR": ["FREIGHT"],
-    "CPT": ["FREIGHT"],
-    "CIF": ["FREIGHT", "INSURANCE"],
-    "CIP": ["FREIGHT", "INSURANCE"],
-    "DAP": ["FREIGHT", "INSURANCE"],
-    "DPU": ["FREIGHT", "INSURANCE"],
-    "DDP": ["FREIGHT", "INSURANCE", "CUSTOMS", "CERTIFICATION"],
+    "CIF": ["INSURANCE"],
+    "CIP": ["INSURANCE"],
+    "DAP": ["INSURANCE"],
+    "DPU": ["INSURANCE"],
+    "DDP": ["INSURANCE", "CERTIFICATION"],
 }
 
 
