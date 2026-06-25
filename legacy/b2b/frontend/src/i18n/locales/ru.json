@@ -4123,7 +4123,8 @@
     "vatAmount": "НДС",
     "backToRequests": "К моим заявкам",
     "routedTo": "Направлено",
-    "charges": "Надбавки / скидки"
+    "charges": "Надбавки / скидки",
+    "openContract": "Перейти к контракту"
   },
   "createQuoteDialog": {
     "title": "Создать КП",

@@ -315,10 +315,18 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
                   </>
                 )}
                 {isWon && (
-                  <Badge variant="outline" className="bg-success/10 text-success border-success/20 py-1.5 px-3">
-                    <ThumbsUp className="h-4 w-4 mr-2" />
-                    {t('requestDetailActions.dealAccepted')}
-                  </Badge>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Badge variant="outline" className="bg-success/10 text-success border-success/20 py-1.5 px-3">
+                      <ThumbsUp className="h-4 w-4 mr-2" />
+                      {t('requestDetailActions.dealAccepted')}
+                    </Badge>
+                    {/* The approval auto-materializes the Contract (B1) — carry the buyer straight
+                        to it instead of a terminal badge with no next step (audit B2). */}
+                    <Button size="sm" onClick={() => { window.location.hash = 'contracts'; }}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      {t('requestDetailActions.openContract')}
+                    </Button>
+                  </div>
                 )}
               </CardContent>
             </Card>

@@ -4119,7 +4119,8 @@
     "vatAmount": "VAT",
     "backToRequests": "Back to my requests",
     "routedTo": "Routed to",
-    "charges": "Charges / allowances"
+    "charges": "Charges / allowances",
+    "openContract": "Open contract"
   },
   "createQuoteDialog": {
     "title": "Create quote",
