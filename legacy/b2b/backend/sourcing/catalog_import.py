@@ -110,12 +110,21 @@ def _cell(row, column) -> str:
 
 
 def _parse_decimal(text: str):
+    """Parse a price cell. Returns None for a blank cell (name-only row → no offer).
+
+    A non-blank value must be a number > 0 — a negative or zero price is a data
+    error, not a valid offer (M3). We reject it with a stable code so the row is
+    rolled back and reported instead of silently writing a bogus offer.
+    """
     if not text:
         return None
     try:
-        return Decimal(text.replace(" ", "").replace(",", "."))
+        value = Decimal(text.replace(" ", "").replace(",", "."))
     except (InvalidOperation, ValueError):
         raise ValueError("PRICE_NOT_A_NUMBER")
+    if value <= 0:
+        raise ValueError("PRICE_NOT_POSITIVE")
+    return value
 
 
 def _parse_int(text: str, default: int) -> int:

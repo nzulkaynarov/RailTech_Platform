@@ -2,7 +2,7 @@ import { useState, Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Send, Calculator, ThumbsUp, ThumbsDown, User, Briefcase, Download, Loader2, AlertTriangle, FileText } from 'lucide-react';
 import { toast } from 'sonner';
-import { QuoteStatus, DealStage } from '@/lib/codes';
+import { QuoteStatus, DealStage, DEAL_STAGE_LABEL_KEY, quoteStatusLabelKey } from '@/lib/codes';
 import { useUserStore } from '@/store/userStore';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useIsViewerMode } from '@/hooks/useViewerMode';
@@ -153,7 +153,9 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
                 <StatusBadge label={t(buyerStatus(deal.stage_code).labelKey)} variant={buyerStatus(deal.stage_code).variant} />
               ) : (
                 <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                  {deal.stage_name}
+                  {deal.stage_code && DEAL_STAGE_LABEL_KEY[deal.stage_code]
+                    ? t(DEAL_STAGE_LABEL_KEY[deal.stage_code])
+                    : deal.stage_name}
                 </Badge>
               )}
             </div>
@@ -322,7 +324,7 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="space-y-1">
                   <CardTitle>{t('requestDetailActions.quoteTitle', { version: quote.version })}</CardTitle>
-                  <CardDescription>{quote.status_name} — {new Date(quote.created_at).toLocaleString()}</CardDescription>
+                  <CardDescription>{quoteStatusLabelKey(quote.status_code) ? t(quoteStatusLabelKey(quote.status_code)) : quote.status_name} — {new Date(quote.created_at).toLocaleString()}</CardDescription>
                   {/* Offer validity — the acceptance deadline. Warn when past. */}
                   {quote.valid_until && (
                     <p className="flex items-center gap-1.5 text-xs">

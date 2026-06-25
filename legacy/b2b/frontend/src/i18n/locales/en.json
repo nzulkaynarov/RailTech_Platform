@@ -4243,5 +4243,19 @@
     "settings.edit": "Edit company settings",
     "charge_templates.manage": "Manage charge templates",
     "data.export": "Export data"
+  },
+  "quoteStatuses": {
+    "draft": "Draft",
+    "pendingTradeReview": "Trade Review",
+    "pendingApproval": "Pending Approval",
+    "readyToSend": "Ready to Send",
+    "sent": "Sent to Client",
+    "approved": "Approved",
+    "rejected": "Rejected"
+  },
+  "productPublicationStatuses": {
+    "draft": "Draft",
+    "published": "Published",
+    "archived": "Archived"
   }
 }

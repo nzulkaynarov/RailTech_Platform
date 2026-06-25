@@ -120,6 +120,45 @@ def test_bad_price_is_row_error(lookups, company_factory):
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize("bad_price", ["0", "-5", "-0.01"])
+def test_non_positive_price_is_row_error(lookups, company_factory, bad_price):
+    """M3: a zero/negative price is a data error — reject the row, write no offer."""
+    supplier = company_factory(inn="111111111")
+    result = run_catalog_import(
+        _xlsx([{"Наименование": "Z", "Бренд": "B", "Артикул производителя": "Z-1", "Цена": bad_price, "Валюта": "UZS"}]),
+        supplier_company_id=supplier.id,
+    )
+
+    assert result["created"] == 0
+    assert result["offers_upserted"] == 0
+    assert result["skipped"] == 1
+    assert "PRICE_NOT_POSITIVE" in result["errors"][0]["message"]
+
+    from catalog.models import Product, SupplierOffer
+
+    assert SupplierOffer.objects.count() == 0
+    assert not Product.objects.filter(manufacturer_part_number="Z-1").exists()
+
+
+@pytest.mark.django_db
+def test_name_without_price_creates_no_offer(lookups, company_factory):
+    """M3: a name-only row creates the PIM card but NO empty offer."""
+    supplier = company_factory(inn="111111111")
+    result = run_catalog_import(
+        _xlsx([{"Наименование": "OnlyName", "Бренд": "B", "Артикул производителя": "N-1"}]),
+        supplier_company_id=supplier.id,
+    )
+
+    assert result["created"] == 1
+    assert result["offers_upserted"] == 0
+    assert result["skipped"] == 0
+
+    from catalog.models import SupplierOffer
+
+    assert SupplierOffer.objects.count() == 0
+
+
+@pytest.mark.django_db
 def test_products_only_when_no_supplier(lookups):
     result = run_catalog_import(
         _xlsx([{"Наименование": "NoOffer", "Цена": "10", "Валюта": "UZS"}]), supplier_company_id=None

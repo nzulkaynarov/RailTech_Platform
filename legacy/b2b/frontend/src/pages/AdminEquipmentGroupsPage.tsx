@@ -122,7 +122,8 @@ function GroupFormSheet({
 
 export function AdminEquipmentGroupsPage() {
   const { t } = useTranslation();
-  const { data: groups, isLoading } = useEquipmentGroups();
+  // Fetch every group (DRF pages at 20) so search/sort/Pager + stat tiles see all rows (H4).
+  const { data: groups, isLoading } = useEquipmentGroups(undefined, { fetchAll: true });
   const deleteMut = useDeleteEquipmentGroup();
 
   const listParams = useListParams([], { defaultOrdering: 'path' });

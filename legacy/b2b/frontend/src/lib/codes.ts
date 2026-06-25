@@ -70,6 +70,26 @@ export const QuoteStatus = {
 } as const;
 export type QuoteStatusCode = (typeof QuoteStatus)[keyof typeof QuoteStatus];
 
+/**
+ * i18n key for a quote-status CODE. Render `t(QUOTE_STATUS_LABEL_KEY[code])` instead
+ * of the DB `status_name` (Russian-only) so the label follows the UI language. Logic
+ * still compares by code. Mirrors the `quoteStatuses.*` keys in ru.json / en.json.
+ */
+export const QUOTE_STATUS_LABEL_KEY: Record<string, string> = {
+  DRAFT: 'quoteStatuses.draft',
+  PENDING_TRADE_REVIEW: 'quoteStatuses.pendingTradeReview',
+  PENDING_APPROVAL: 'quoteStatuses.pendingApproval',
+  READY_TO_SEND: 'quoteStatuses.readyToSend',
+  SENT: 'quoteStatuses.sent',
+  APPROVED: 'quoteStatuses.approved',
+  REJECTED: 'quoteStatuses.rejected',
+};
+
+/** Resolve a quote-status label key from a code, with a graceful fallback to the raw
+ *  DB name when the code is unknown (returns `''` so callers can `|| status_name`). */
+export const quoteStatusLabelKey = (code: string | undefined | null): string =>
+  code && QUOTE_STATUS_LABEL_KEY[code] ? QUOTE_STATUS_LABEL_KEY[code] : '';
+
 export const ContractStatus = {
   DRAFT: 'DRAFT',
   PENDING_CLIENT: 'PENDING_CLIENT',
@@ -99,3 +119,27 @@ export const VerificationStatus = {
   L2_VERIFIED: 'L2_VERIFIED',
   L3_CONTRACTED: 'L3_CONTRACTED',
 } as const;
+
+/** Product PUBLICATION-status CODEs (catalog `ProductStatus` lookup: DRAFT/PUBLISHED/
+ *  ARCHIVED). Distinct from the stock-availability `productStatuses.*` keys. */
+export const ProductPublicationStatus = {
+  DRAFT: 'DRAFT',
+  PUBLISHED: 'PUBLISHED',
+  ARCHIVED: 'ARCHIVED',
+} as const;
+
+/**
+ * i18n key for a product publication-status CODE. Render
+ * `t(PRODUCT_STATUS_LABEL_KEY[code])` instead of the DB `status_name` (Russian-only).
+ * Mirrors the `productPublicationStatuses.*` keys in ru.json / en.json.
+ */
+export const PRODUCT_STATUS_LABEL_KEY: Record<string, string> = {
+  DRAFT: 'productPublicationStatuses.draft',
+  PUBLISHED: 'productPublicationStatuses.published',
+  ARCHIVED: 'productPublicationStatuses.archived',
+};
+
+/** Resolve a product publication-status label key from a code, returning `''` when
+ *  unknown so callers can fall back to the raw DB name (`|| status_name`). */
+export const productStatusLabelKey = (code: string | undefined | null): string =>
+  code && PRODUCT_STATUS_LABEL_KEY[code] ? PRODUCT_STATUS_LABEL_KEY[code] : '';

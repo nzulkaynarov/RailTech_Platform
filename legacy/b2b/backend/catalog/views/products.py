@@ -254,6 +254,9 @@ class ProductViewSet(viewsets.ModelViewSet):
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = "Products"
+        # Column names align with ProductResource (M9/M10) and the import-engine
+        # aliases (sourcing/catalog_import.py) so an export round-trips back through
+        # import without losing the MPN dedup key or the HS/customs code.
         headers = [
             "name",
             "sku",
@@ -262,7 +265,9 @@ class ProductViewSet(viewsets.ModelViewSet):
             "category",
             "uom",
             "brand",
+            "manufacturer_part_number",
             "gost_drawing",
+            "hs_code",
         ]
         for col, header in enumerate(headers, 1):
             ws.cell(row=1, column=col, value=header)

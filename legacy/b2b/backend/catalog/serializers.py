@@ -238,6 +238,42 @@ class ProductSerializer(_CostGateMixin, serializers.ModelSerializer):
         # making it writable would let a seller PATCH their product to another tenant (M6).
         read_only_fields = ["sku", "created_at", "updated_at", "owner_company"]
 
+    def validate(self, attrs):
+        """Enforce the RAILWAY_MACHINERY "≥1 equipment group" rule at the API layer (H5).
+
+        ``Product.clean()`` skips the check when ``pk is None`` (the m2m can't be
+        read before the row exists) and an empty m2m fires no ``m2m_changed`` signal,
+        so an API *create* without groups would otherwise persist a silently-invalid
+        card. We validate here so the request gets a clean 400 instead.
+        """
+        attrs = super().validate(attrs)
+        domain_type = attrs.get("domain_type")
+        # On partial update domain_type may be absent — fall back to the instance.
+        if domain_type is None and self.instance is not None:
+            domain_type = self.instance.domain_type
+        is_railway = bool(domain_type) and getattr(domain_type, "code", None) == "RAILWAY_MACHINERY"
+        if not is_railway:
+            return attrs
+
+        # equipment_groups present in the payload? use it; else fall back to the
+        # instance's current groups (partial update that doesn't touch groups).
+        if "equipment_groups" in attrs:
+            groups = attrs.get("equipment_groups") or []
+        elif self.instance is not None:
+            groups = list(self.instance.equipment_groups.all())
+        else:
+            groups = []
+        if not groups:
+            raise serializers.ValidationError(
+                {
+                    "equipment_groups": (
+                        "Товары домена RAILWAY_MACHINERY должны быть привязаны "
+                        "минимум к одной группе оборудования."
+                    )
+                }
+            )
+        return attrs
+
     def get_status_name(self, obj):
         return obj.status.name if obj.status else None
 

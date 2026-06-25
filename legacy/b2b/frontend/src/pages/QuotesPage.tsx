@@ -24,7 +24,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
 import { translateApiError } from '@/lib/apiError';
 import { useUserStore } from '@/store/userStore';
-import { QuoteStatus } from '@/lib/codes';
+import { QuoteStatus, quoteStatusLabelKey } from '@/lib/codes';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useQuotes, useSendQuoteToClient, useQuoteStatuses, useForceApproveQuote, useGenerateQuotePDF } from '@/hooks/useCRM';
 import { sumMoney } from '@/utils/decimal';
@@ -176,7 +176,7 @@ export function QuotesPage() {
                     <TableCell className="text-right tabular-nums font-medium">{formatCurrency(Number(q.total_incl_vat))}</TableCell>
                     <TableCell>
                       <Badge variant={getStatusBadgeVariant(q.status_code)}>
-                        {q.status_name}
+                        {quoteStatusLabelKey(q.status_code) ? t(quoteStatusLabelKey(q.status_code)) : q.status_name}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground">{new Date(q.created_at).toLocaleDateString()}</TableCell>

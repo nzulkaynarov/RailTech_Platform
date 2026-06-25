@@ -1,7 +1,7 @@
 from django.core.cache import cache
-from django.core.exceptions import ValidationError
 from django.db.models.signals import m2m_changed, post_delete, post_save
 from django.dispatch import receiver
+from rest_framework.exceptions import ValidationError
 
 from .models import Category, EquipmentGroup, Product
 
@@ -11,6 +11,10 @@ def validate_railway_equipment_groups(sender, instance, action, **kwargs):
     """
     Post-save M2M validation: RAILWAY_MACHINERY products must have
     at least one equipment group after M2M relations are set.
+
+    Raises a DRF ``ValidationError`` (not a Django one) so the API path
+    returns a clean HTTP 400 instead of an unhandled 500 (H6). DRF's
+    exception handler maps this exception to a 400 response.
     """
     if action in ("post_add", "post_remove", "post_clear"):
         if (
@@ -19,7 +23,12 @@ def validate_railway_equipment_groups(sender, instance, action, **kwargs):
             and not instance.equipment_groups.exists()
         ):
             raise ValidationError(
-                "Товары домена RAILWAY_MACHINERY должны быть привязаны " "минимум к одной группе оборудования."
+                {
+                    "equipment_groups": (
+                        "Товары домена RAILWAY_MACHINERY должны быть привязаны "
+                        "минимум к одной группе оборудования."
+                    )
+                }
             )
 
 

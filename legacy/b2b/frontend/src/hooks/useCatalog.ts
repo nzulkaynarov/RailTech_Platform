@@ -35,15 +35,15 @@ export const useCategories = (params?: Parameters<typeof catalogApi.getCategorie
   staleTime: 10 * 60_000,
 });
 
-export const useManufacturers = () => useQuery({
-  queryKey: ['manufacturers'],
-  queryFn: catalogApi.getManufacturers,
+export const useManufacturers = (opts?: { fetchAll?: boolean }) => useQuery({
+  queryKey: ['manufacturers', { fetchAll: opts?.fetchAll ?? false }],
+  queryFn: () => catalogApi.getManufacturers(opts),
   staleTime: 10 * 60_000,
 });
 
-export const useEquipmentGroups = (search?: string) => useQuery({
-  queryKey: ['equipment-groups', { search }],
-  queryFn: () => catalogApi.getEquipmentGroups(search),
+export const useEquipmentGroups = (search?: string, opts?: { fetchAll?: boolean }) => useQuery({
+  queryKey: ['equipment-groups', { search, fetchAll: opts?.fetchAll ?? false }],
+  queryFn: () => catalogApi.getEquipmentGroups(search, opts),
   staleTime: 5 * 60_000,
 });
 
