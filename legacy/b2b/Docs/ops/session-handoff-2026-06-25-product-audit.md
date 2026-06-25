@@ -70,3 +70,18 @@ node:22 bash -lc 'cd frontend && npx tsc -b'`. i18n: `python3 scripts/check_i18n
 Browser: rebuild frontend (`docker compose up -d --build frontend`) + restart backend, then
 `frontend/e2e/run-in-docker.sh <spec> --workers=1` (PW_VERSION=v1.61.0-jammy). Accounts:
 buyer.local@ / seller.local@ / admin@railtech.uz, pw `Test1234!` (machine-local — re-provision).
+
+## Follow-up findings (post-merge, 2026-06-25 EOD)
+- **Owner-reported "seller opens заявка in CRM → thrown to a DIFFERENT КП (all КП)"**: investigated
+  thoroughly in the merged code, **could NOT reproduce**. Full flow `crm-deals` → row → 
+  `request-detail/{deal.id}` → `deal-quote/{deal.id}` resolves to the CORRECT КП (verified by browser
+  repro: clicking "покупка" → request-detail/4 → deal-quote/4). Backend clean (1 quote/deal, 0
+  cross-deal leaks, `Deal.active_quote` is `self.quotes`-scoped). `deal-quote/4` vs `/7` render
+  different correct КП. QuotesPage PDF actions correctly pass quote-id→quote-endpoint. **NEED exact
+  repro steps from the owner** (which screen + which "open" button), or it was already fixed by a
+  prior merge. React Query keys (`['deals', id]`, `['quote-items', {deal_id}]`) are correctly id-scoped
+  (no stale-cache path found).
+- **КП builder (`QuoteBuilderGrid`) has untranslated English strings** (seen in browser): "Quote
+  builder", "Commercial Offer", "Select Incoterm", "Landed Cost", "Margin", "Discount", "No match
+  found", "before VAT", "AI catalog match", "Add", "Save". Mixed-language for a RU seller — wrap in
+  `t()` + add RU/EN keys. Concrete next-session task.
