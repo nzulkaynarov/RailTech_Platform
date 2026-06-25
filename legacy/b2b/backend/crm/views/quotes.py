@@ -550,21 +550,27 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
             return queryset
         visible_deal_ids = seller_visible_deal_ids(user, self.request)
         if visible_deal_ids is not None:
-            from django.db.models import Q
+            from accounts.models import CompanyMember
+            from accounts.services.permissions import SELLER_COMPANY_TYPES, seller_acting_company_ids
 
-            from accounts.services.permissions import seller_acting_company_ids
-
-            # Own КП only (audit H1) — not a competitor's quote items/charges on a co-routed deal.
+            # The seller sees items/charges on deals routed to them. Audit H1 (no cross-seller
+            # leak): hide a quote ONLY when it was prepared by a COMPETING seller company. The
+            # buyer's request lines and the seller's КП are the SAME quote in this model, and
+            # that quote is created by the BUYER (or left unassigned) — so scoping by
+            # prepared_by's *seller* company alone wrongly hid the seller's own КП and made
+            # pricing un-saveable (404 on item PATCH → subtotal stuck at 0). Exclude only
+            # quotes whose prepared_by belongs to another seller company.
             seller_ids = seller_acting_company_ids(user, self.request) or set()
+            competing_preparer_ids = (
+                CompanyMember.objects.filter(
+                    is_active=True, company__types__code__in=SELLER_COMPANY_TYPES
+                )
+                .exclude(company_id__in=seller_ids)
+                .values_list("user_id", flat=True)
+            )
             return (
                 queryset.filter(quote__deal_id__in=visible_deal_ids)
-                .filter(
-                    Q(
-                        quote__prepared_by__memberships__company_id__in=seller_ids,
-                        quote__prepared_by__memberships__is_active=True,
-                    )
-                    | Q(quote__prepared_by__isnull=True)
-                )
+                .exclude(quote__prepared_by_id__in=competing_preparer_ids)
                 .distinct()
             )
         # Buyer sees line items only on their own deals (read-only — see _assert_seller).
@@ -692,21 +698,27 @@ class QuoteChargeViewSet(viewsets.ModelViewSet):
             return queryset
         visible_deal_ids = seller_visible_deal_ids(user, self.request)
         if visible_deal_ids is not None:
-            from django.db.models import Q
+            from accounts.models import CompanyMember
+            from accounts.services.permissions import SELLER_COMPANY_TYPES, seller_acting_company_ids
 
-            from accounts.services.permissions import seller_acting_company_ids
-
-            # Own КП only (audit H1) — not a competitor's quote items/charges on a co-routed deal.
+            # The seller sees items/charges on deals routed to them. Audit H1 (no cross-seller
+            # leak): hide a quote ONLY when it was prepared by a COMPETING seller company. The
+            # buyer's request lines and the seller's КП are the SAME quote in this model, and
+            # that quote is created by the BUYER (or left unassigned) — so scoping by
+            # prepared_by's *seller* company alone wrongly hid the seller's own КП and made
+            # pricing un-saveable (404 on item PATCH → subtotal stuck at 0). Exclude only
+            # quotes whose prepared_by belongs to another seller company.
             seller_ids = seller_acting_company_ids(user, self.request) or set()
+            competing_preparer_ids = (
+                CompanyMember.objects.filter(
+                    is_active=True, company__types__code__in=SELLER_COMPANY_TYPES
+                )
+                .exclude(company_id__in=seller_ids)
+                .values_list("user_id", flat=True)
+            )
             return (
                 queryset.filter(quote__deal_id__in=visible_deal_ids)
-                .filter(
-                    Q(
-                        quote__prepared_by__memberships__company_id__in=seller_ids,
-                        quote__prepared_by__memberships__is_active=True,
-                    )
-                    | Q(quote__prepared_by__isnull=True)
-                )
+                .exclude(quote__prepared_by_id__in=competing_preparer_ids)
                 .distinct()
             )
         # Buyers must never see the internal cost breakdown.

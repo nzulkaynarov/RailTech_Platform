@@ -262,3 +262,37 @@ def test_seller_a_cannot_see_seller_b_quote_costs_on_corouted_deal(world):
     for row in rows:
         assert "margin_percent" not in row, "C1 leak: B's margin visible to A"
         assert "frozen_base_price" not in row, "C1 leak: B's cost visible to A"
+
+
+@pytest.mark.django_db
+def test_routed_seller_can_price_buyer_prepared_quote(world):
+    """Regression (prod $224-instead-of-$68k bug): the buyer's request lines and the seller's
+    КП are the SAME quote, created by the BUYER (prepared_by=buyer). Scoping КП items by
+    prepared_by's *seller* company wrongly hid the seller's own quote → item PATCH 404 →
+    prices never saved → subtotal stuck at 0. The routed seller must be able to price it;
+    a competing seller still must not (audit H1)."""
+    draft_stage = DealStage.objects.get(code="DRAFT")
+    deal = Deal.objects.create(title="Buyer RFQ", company=world["buyer_co"], stage=draft_stage)
+    DealSellerRouting.objects.create(deal=deal, seller_company=world["sb_co"])  # routed to Seller B
+    buyer_user = _buyer("Buyer U", "C100", "buyeru@t.test", world["buyer_co"])
+    quote = Quote.objects.create(
+        deal=deal, version=1, status=QuoteStatus.objects.get(code="DRAFT"),
+        prepared_by=buyer_user, vat_rate=Decimal("12"),
+        subtotal_excl_vat=Decimal("0"), vat_amount=Decimal("0"), total_incl_vat=Decimal("0"),
+    )
+    item = QuoteItem.objects.create(quote=quote, imported_raw_name="Рельс Р65", quantity=10)
+
+    # Routed seller B prices the buyer-prepared line → 200, subtotal recalculated (was 404 → 0).
+    resp = _api(world["sb_user"]).patch(
+        f"/api/v1/crm/quote-items/{item.id}/",
+        {"frozen_base_price": "500", "margin_percent": "20", "quantity": "10"}, format="json",
+    )
+    assert resp.status_code == 200, resp.content
+    quote.refresh_from_db()
+    assert quote.subtotal_excl_vat > 0
+
+    # Competing seller A (not routed) still cannot touch it — H1 preserved.
+    blocked = _api(world["sa_user"]).patch(
+        f"/api/v1/crm/quote-items/{item.id}/", {"frozen_base_price": "1"}, format="json",
+    )
+    assert blocked.status_code in (403, 404)
