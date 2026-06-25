@@ -27,7 +27,18 @@ class QuoteItemSerializer(serializers.ModelSerializer):
     product_domain = serializers.CharField(source="product.domain_type.code", read_only=True)
     product_sku = serializers.CharField(source="product.sku", read_only=True)
     product_gost = serializers.CharField(source="product.gost_drawing", read_only=True)
+    # Fallbacks so the buyer's review grid can show a catalog line's identity from the linked
+    # Product when the denormalised copy is blank (audit M12) — single source of truth.
+    product_mpn = serializers.SerializerMethodField()
+    product_uom = serializers.SerializerMethodField()
     offer_supplier_name = serializers.CharField(source="offer.supplier.name", read_only=True)
+
+    def get_product_mpn(self, obj) -> str:
+        return obj.product.manufacturer_part_number if obj.product_id else ""
+
+    def get_product_uom(self, obj) -> str:
+        return obj.product.uom.name if (obj.product_id and obj.product.uom_id) else ""
+
     # UBL data-quality gate: a line must be identified by a name OR an item code
     # (mpn / ГОСТ-чертёж) OR a matched product. Incomplete lines are highlighted in
     # the buyer's review grid and block submission until completed.
@@ -60,6 +71,8 @@ class QuoteItemSerializer(serializers.ModelSerializer):
             "product_domain",
             "product_sku",
             "product_gost",
+            "product_mpn",
+            "product_uom",
             "offer",
             "offer_supplier_name",
             "imported_raw_name",

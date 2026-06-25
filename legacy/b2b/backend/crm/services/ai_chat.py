@@ -21,6 +21,7 @@ import logging
 from django.conf import settings
 
 from accounts.models import CustomUser
+from accounts.services.permissions import is_platform_admin_viewer, seller_company_routed_to_deal
 
 from ..models import Deal
 from .messaging import user_can_access_deal_chat
@@ -105,9 +106,10 @@ def suggest_chat_reply(deal_id: int, requesting_user: CustomUser) -> dict:
 
     Returns {"draft": str}. Empty draft ("") when AI is disabled, when the deal does
     not exist, when the user may NOT access this deal's chat (same visibility scoping
-    the chat itself uses — `user_can_access_deal_chat`), or when there is no human
-    conversation yet to reply to. NEVER raises into the request flow for these cases;
-    a hard API/transport error from Claude propagates for the view to map to 5xx.
+    the chat itself uses — `user_can_access_deal_chat`), when the user is not on the
+    deal's SELLER side with sell capability, or when there is no human conversation yet
+    to reply to. NEVER raises into the request flow for these cases; a hard API/transport
+    error from Claude propagates for the view to map to 5xx.
     """
     if not getattr(settings, "AI_IMPORT_ENABLED", False):
         return {"draft": ""}
@@ -120,6 +122,16 @@ def suggest_chat_reply(deal_id: int, requesting_user: CustomUser) -> dict:
     # Same deal-visibility scoping the chat uses — a user may only get a draft for a
     # deal whose chat they can access. No cross-tenant drafting.
     if not user_can_access_deal_chat(requesting_user, deal):
+        return {"draft": ""}
+
+    # Role gate (audit M6): the draft is written in the SELLER's voice. Only an actor on
+    # the deal's routed SELLER side with sell capability may author it — otherwise the
+    # buyer (a chat participant) would draft a reply to themselves and burn a paid call.
+    # A platform-admin viewer oversees but never authors a company's commercial docs
+    # (ADR-0002 / ADMIN_VIEWER_CANNOT_ACT).
+    if is_platform_admin_viewer(requesting_user):
+        return {"draft": ""}
+    if not seller_company_routed_to_deal(requesting_user, deal.pk):
         return {"draft": ""}
 
     recent = list(

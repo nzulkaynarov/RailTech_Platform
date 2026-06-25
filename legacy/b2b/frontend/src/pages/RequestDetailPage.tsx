@@ -443,11 +443,11 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
                             are in the DB and not seller-only, so surface them. */}
                         <span className="block space-x-2 text-xs font-mono text-muted-foreground">
                           {item.product_sku && <span className="text-primary">{item.product_sku}</span>}
-                          {item.mpn && <span>{t('requestItems.skuLabel')}: {item.mpn}</span>}
-                          {item.gost_drawing && <span>{t('requestItems.gostLabel')}: {item.gost_drawing}</span>}
+                          {(item.mpn || item.product_mpn) && <span>{t('requestItems.skuLabel')}: {item.mpn || item.product_mpn}</span>}
+                          {(item.gost_drawing || item.product_gost) && <span>{t('requestItems.gostLabel')}: {item.gost_drawing || item.product_gost}</span>}
                         </span>
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{item.unit || '—'}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{item.unit || item.product_uom || '—'}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">{item.offer_supplier_name || '—'}</TableCell>
                       <TableCell className="text-right tabular-nums">{item.quantity}</TableCell>
                       {isSellerSide && <TableCell className="text-right tabular-nums">{formatCurrency(Number(item.frozen_base_price))}</TableCell>}
@@ -487,6 +487,15 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
                   <span>{t('requestDetailActions.subtotal')}</span>
                   <span className="tabular-nums">{formatCurrency(Number(quote.subtotal_excl_vat))}</span>
                 </div>
+                {/* Charges/allowances line — without it Subtotal + VAT ≠ Total and the buyer
+                    sees an unexplained number (audit M11). Shown whenever the КП carries any
+                    charge so the money bridge always reconciles. */}
+                {quote.charges_total != null && Number(quote.charges_total) !== 0 && (
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>{t('requestDetailActions.charges')}</span>
+                    <span className="tabular-nums">{formatCurrency(Number(quote.charges_total))}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-muted-foreground">
                   <span>{t('requestDetailActions.vatAmount')}{quote.vat_rate ? ` (${Number(quote.vat_rate).toFixed(0)}%)` : ''}</span>
                   <span className="tabular-nums">{formatCurrency(Number(quote.vat_amount))}</span>

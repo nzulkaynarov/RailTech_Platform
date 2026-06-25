@@ -3,11 +3,12 @@ import importlib
 import pytest
 from django.apps import apps as django_apps
 
-from master_data.models import UnitOfMeasure
+from master_data.models import DeliveryBasis, UnitOfMeasure
 
 pytestmark = pytest.mark.django_db
 
 _MIG = importlib.import_module("master_data.migrations.0004_dedupe_uom_stubs")
+_INCOTERMS_MIG = importlib.import_module("master_data.migrations.0008_seed_delivery_basis_incoterms")
 
 
 def test_dedupe_removes_cyrillic_uom_stub_keeps_latin():
@@ -28,3 +29,28 @@ def test_dedupe_uom_is_idempotent_and_safe_without_stub():
     _MIG.dedupe_uom_stubs(django_apps, None)
     _MIG.dedupe_uom_stubs(django_apps, None)
     assert UnitOfMeasure.objects.filter(code="KG").exists()
+
+
+def test_incoterm_basis_seed_creates_full_matrix():
+    """B3: a fresh DB must have a working Incoterm responsibility matrix. The data
+    migration seeds all 11 terms — DDP makes the seller bear the import customs layer,
+    while EXW makes them bear nothing."""
+    _INCOTERMS_MIG.seed_incoterms(django_apps, None)
+
+    ddp = DeliveryBasis.objects.get(code="DDP")
+    assert ddp.seller_pays_import is True
+    assert ddp.seller_pays_freight is True
+    assert ddp.seller_pays_delivery is True
+
+    exw = DeliveryBasis.objects.get(code="EXW")
+    assert exw.seller_pays_freight is False
+    assert exw.seller_pays_import is False
+
+    assert DeliveryBasis.objects.count() >= 11
+
+
+def test_incoterm_basis_seed_is_idempotent():
+    """get_or_create — running the migration twice never errors or duplicates."""
+    _INCOTERMS_MIG.seed_incoterms(django_apps, None)
+    _INCOTERMS_MIG.seed_incoterms(django_apps, None)
+    assert DeliveryBasis.objects.filter(code="DDP").count() == 1

@@ -1,3 +1,4 @@
+import logging
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Optional, Tuple
 
@@ -12,6 +13,8 @@ from ..constants import DealStageCode, QuoteStatusCode
 from ..models import ActivityLog, Deal, Quote, QuoteItem, QuoteItemHistory, QuoteStatus
 from ._params import has_explicit_company_role_perm
 from .deals import transition_deal_stage
+
+logger = logging.getLogger(__name__)
 
 
 def _quote_owner_company_id(quote) -> Optional[int]:
@@ -403,6 +406,19 @@ class QuoteLifecycleService:
             reason=f"КП v{quote.version} одобрено клиентом",
         )
 
+        # Materialize the Contract the instant the buyer accepts — otherwise the deal sits in
+        # CONTRACT_SIGNED with NO actual Contract (audit B1: approve → green badge → dead-end,
+        # generate_contract_from_quote was only ever called from tests). actor=None = system
+        # path: the buyer's approval triggers it, and the buyer is not a seller so it must NOT
+        # go through the seller-actor guard. Best-effort — a render hiccup must not unwind the
+        # approval (the seller can re-issue from the contract surface).
+        from .contracts import generate_contract_from_quote
+
+        try:
+            generate_contract_from_quote(quote.id, actor=None)
+        except (ValueError, OSError) as exc:  # noqa: BLE001 — narrow: lookup/PDF render
+            logger.warning("Contract auto-generation after approval failed for quote %s: %s", quote.id, exc)
+
         # Notify the seller who built the КП (and a distinct manager, if assigned)
         # that the client approved. deal.manager is usually unset in the single-
         # seller model, so prepared_by is the reliable recipient — without it the
@@ -783,18 +799,26 @@ def buyer_add_request_items(user: CustomUser, deal: Deal, rows: list) -> list:
         product = None
         product_id = row.get("product_id")
         if product_id:
-            product = Product.objects.filter(pk=product_id).first()
+            product = Product.objects.select_related("uom").filter(pk=product_id).first()
         name = (row.get("name") or (product.name if product else "")).strip()
         if not (name or product):
             continue
+        # A catalog line INHERITS the product's attributes (uom / MPN / ГОСТ / ТНВЭД) — the
+        # Product is the single source of truth. Previously only name+qty survived the
+        # cart→заявка hop, so the seller received a line with no unit/spec (owner-reported).
+        # An explicit row value (free-text path) still wins where provided.
+        prod_uom = product.uom if (product and product.uom_id) else None
         to_create.append(
             QuoteItem(
                 quote=quote,
                 product=product,
                 imported_raw_name="" if product else name,
                 quantity=max(1, int(row.get("quantity") or 1)),
-                unit=(row.get("unit") or "")[:32],
-                unit_code=(row.get("unit_code") or "")[:8],
+                unit=(row.get("unit") or (prod_uom.name if prod_uom else ""))[:32],
+                unit_code=(row.get("unit_code") or (prod_uom.code if prod_uom else ""))[:8],
+                mpn=(product.manufacturer_part_number if product else "") or "",
+                gost_drawing=(product.gost_drawing if product else "") or "",
+                hs_code=(product.hs_code if product else "") or "",
                 note=row.get("note") or "",
                 assigned_at=timezone.now() if product else None,
             )

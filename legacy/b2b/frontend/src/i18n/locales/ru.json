@@ -4122,7 +4122,8 @@
     "subtotal": "Сумма без НДС",
     "vatAmount": "НДС",
     "backToRequests": "К моим заявкам",
-    "routedTo": "Направлено"
+    "routedTo": "Направлено",
+    "charges": "Надбавки / скидки"
   },
   "createQuoteDialog": {
     "title": "Создать КП",

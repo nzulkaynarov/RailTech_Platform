@@ -8,10 +8,14 @@ from ..models import InvoiceItem, Payment, Quote, QuoteItem
 
 
 class QuoteItemInline(TabularInline):
+    # ADR-0002 / Rule 8: oversight-only. A platform engineer must NOT author or re-price a
+    # company's КП lines from Unfold — all line writes go through React Admin + crm.services.
+    # Read-only inspection only; no add / change / delete.
     model = QuoteItem
     extra = 0
     tab = True
-    autocomplete_fields = ["product", "offer", "frozen_currency"]
+    can_delete = False
+    show_change_link = False
     fields = [
         "product",
         "imported_raw_name",
@@ -23,7 +27,16 @@ class QuoteItemInline(TabularInline):
         "landed_cost",
         "final_price_excl_vat",
     ]
-    readonly_fields = ["landed_cost", "final_price_excl_vat"]
+    readonly_fields = fields
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 class QuoteInline(TabularInline):
