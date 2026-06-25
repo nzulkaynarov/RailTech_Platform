@@ -81,14 +81,19 @@ class DealViewSet(viewsets.ModelViewSet):
             .prefetch_related(Prefetch("quotes", queryset=quotes_qs))
         )
 
-        from accounts.services.permissions import seller_sees_all_deals
+        from accounts.services.permissions import seller_visible_deal_ids
 
-        # Seller works every buyer заявка to build КП → sees all deals, but ONLY
-        # while acting in a seller context. A dual seller+buyer user in the BUYER
-        # context is scoped to its own company (else it would see every buyer's
-        # заявка while purchasing — confidentiality bug reported 2026-06-19).
-        if seller_sees_all_deals(user, self.request):
+        # Platform admin sees every deal (oversight). A seller acting in a seller
+        # context is scoped to the RFQs ROUTED to them (multi-seller confidentiality
+        # keystone — replaces the old see-all leak where seller A saw seller B's
+        # buyers' заявки). A dual seller+buyer user in the BUYER context (or a pure
+        # buyer) falls through to its own-company scope.
+        if getattr(user, "is_platform_admin", False):
             return queryset
+
+        visible_deal_ids = seller_visible_deal_ids(user, self.request)
+        if visible_deal_ids is not None:
+            return queryset.filter(id__in=visible_deal_ids)
 
         user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
         return queryset.filter(company_id__in=user_company_ids)

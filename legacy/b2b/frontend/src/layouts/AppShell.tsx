@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   LayoutDashboard,
   Package,
@@ -341,6 +342,7 @@ export function AppShell(props: AppShellProps) {
 function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShellProps) {
   const { t } = useTranslation();
   const { role, activeStatus, profile, company, setActiveStatus } = useUserStore();
+  const queryClient = useQueryClient();
   const cartCount = useCartCount();
   const { currency, setCurrency } = useCurrencyStore();
   const { state } = useSidebar();
@@ -400,6 +402,11 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
                       className={cn('gap-3', activeStatus === entry.status && 'bg-accent')}
                       onClick={() => {
                         setActiveStatus(entry.status);
+                        // Switching Buyer↔Seller changes the X-Active-Context header and
+                        // therefore the scoped data (deals/quotes/billing differ per
+                        // context after multi-seller routing). Invalidate so every query
+                        // refetches under the new context instead of serving stale cache.
+                        queryClient.invalidateQueries();
                         onNavigate('dashboard');
                       }}
                     >

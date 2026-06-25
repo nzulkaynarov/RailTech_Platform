@@ -73,18 +73,40 @@ def test_seller_in_buyer_context_sees_only_own_company(world):
     assert world["other_deal"].id not in ids  # ← the leak, now closed
 
 
-def test_seller_in_seller_context_sees_all(world):
+def test_seller_in_seller_context_sees_only_routed(world):
+    """Multi-seller keystone: a seller in SELLER context sees the RFQs routed to it,
+    NOT every buyer's заявка. A competitor's deal routed elsewhere stays invisible."""
+    from accounts.models import Company, CompanyType
+    from crm.models import Deal, DealSellerRouting, DealStage
+
+    seller_co = world["dual"].memberships.first().company
+    DealSellerRouting.objects.create(deal=world["other_deal"], seller_company=seller_co)
+    # A competitor's RFQ, NOT routed to our seller → must stay hidden.
+    comp_buyer = Company.objects.create(name="Comp Buyer", inn="C9")
+    comp_buyer.types.add(CompanyType.objects.get(code="CLIENT"))
+    competitor_deal = Deal.objects.create(
+        title="competitor", company=comp_buyer, stage=DealStage.objects.get(code="DRAFT")
+    )
+
     resp = _client(world["dual"], ctx="SELLER").get("/api/v1/crm/deals/")
     assert resp.status_code == 200
     ids = _ids(resp)
-    assert {world["own_deal"].id, world["other_deal"].id} <= ids
+    assert world["other_deal"].id in ids  # routed to us → visible
+    assert competitor_deal.id not in ids  # not routed to us → the leak, now closed
 
 
-def test_seller_without_header_defaults_to_see_all(world):
-    # Backward-compat for non-SPA clients; the SPA always sends the header.
+def test_seller_without_header_sees_only_routed(world):
+    """Non-SPA clients (no X-Active-Context) still get the routing-scoped queryset —
+    a missing header can no longer leak unrouted deals."""
+    from crm.models import DealSellerRouting
+
+    seller_co = world["dual"].memberships.first().company
     resp = _client(world["dual"]).get("/api/v1/crm/deals/")
     assert resp.status_code == 200
-    assert world["other_deal"].id in _ids(resp)
+    assert world["other_deal"].id not in _ids(resp)  # unrouted → invisible
+    DealSellerRouting.objects.create(deal=world["other_deal"], seller_company=seller_co)
+    resp2 = _client(world["dual"]).get("/api/v1/crm/deals/")
+    assert world["other_deal"].id in _ids(resp2)  # routed → now visible
 
 
 def test_pure_buyer_never_sees_other_companies(world):

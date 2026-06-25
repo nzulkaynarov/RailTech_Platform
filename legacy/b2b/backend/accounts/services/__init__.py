@@ -44,7 +44,9 @@ from .permissions import (
     is_seller,
     member_has_permission,
     primary_seller_company_id,
+    seller_can_access_deal,
     seller_sees_all_deals,
+    seller_visible_deal_ids,
 )
 from .profile import submit_company_profile
 from .subscriptions import (
@@ -76,7 +78,9 @@ __all__ = [
     "is_platform_admin_viewer",
     "is_seller",
     "primary_seller_company_id",
+    "seller_can_access_deal",
     "seller_sees_all_deals",
+    "seller_visible_deal_ids",
     "record_subscription_payment",
     "reject_role_application",
     "remove_company_member",

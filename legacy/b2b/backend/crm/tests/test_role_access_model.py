@@ -69,11 +69,18 @@ def buyer(lookups):
 
 
 @pytest.fixture
-def deal(buyer):
+def deal(buyer, seller):
     buyer_user, buyer_co = buyer
-    return Deal.objects.create(
+    _seller_user, seller_co = seller
+    d = Deal.objects.create(
         title="Buyer заявка", company=buyer_co, client=buyer_user, stage=DealStage.objects.get(code="CALCULATING")
     )
+    # Multi-seller routing: this RFQ is routed to RailTech (the seller) — that is
+    # what grants the seller team visibility now (replaces the old see-all).
+    from crm.models import DealSellerRouting
+
+    DealSellerRouting.objects.create(deal=d, seller_company=seller_co)
+    return d
 
 
 def _quote(deal, status_code="DRAFT", prepared_by=None):
@@ -209,7 +216,8 @@ def test_client_cannot_see_other_companies_deals(buyer, deal):
 
 
 def test_real_seller_still_sees_all_deals(seller, deal):
-    """The fix must not break the legitimate seller's cross-deal visibility."""
+    """The legitimate seller still sees an RFQ routed to it (the `deal` fixture routes
+    to RailTech). Multi-seller scoping must not hide deals genuinely directed here."""
     resp = _api(seller[0]).get("/api/v1/crm/deals/")
     ids = [d["id"] for d in (resp.data["results"] if isinstance(resp.data, dict) else resp.data)]
     assert deal.id in ids

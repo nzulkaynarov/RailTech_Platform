@@ -893,6 +893,24 @@ def buyer_update_request_meta(user: CustomUser, deal: Deal, *, title=None, notes
     return deal
 
 
+def route_deal_from_catalog(deal: Deal) -> set:
+    """Upsert DealSellerRouting rows from the deal's quote-item products — the
+    target seller(s) are the distinct `Product.owner_company` of the chosen catalog
+    items. Idempotent. Returns the set of seller company ids routed to. Product-less
+    (free-text) lines contribute nothing — those deals are routed by the buyer.
+    """
+    from crm.models import DealSellerRouting, QuoteItem
+
+    seller_ids = set(
+        QuoteItem.objects.filter(quote__deal=deal, product__owner_company__isnull=False)
+        .values_list("product__owner_company_id", flat=True)
+        .distinct()
+    )
+    for seller_id in seller_ids:
+        DealSellerRouting.objects.get_or_create(deal=deal, seller_company_id=seller_id)
+    return seller_ids
+
+
 def submit_request(user: CustomUser, deal: Deal) -> Deal:
     """Buyer issues the RFQ to the seller — the explicit «Отправить заявку» step.
 
@@ -918,6 +936,11 @@ def submit_request(user: CustomUser, deal: Deal) -> Deal:
         raise ValidationError({"detail": "REQUEST_EMPTY"})
     if any(_is_request_item_incomplete(item) for item in items):
         raise ValidationError({"detail": "REQUEST_HAS_INCOMPLETE_ITEMS"})
+
+    # Route the RFQ to the seller(s) whose catalog products the buyer chose — the
+    # supplier is implied by Product.owner_company (world-standard marketplace RFQ).
+    # Free-text-only заявки stay unrouted here; the buyer routes them explicitly.
+    route_deal_from_catalog(deal)
 
     deal, error = transition_deal_stage(deal, DealStageCode.RFQ_OPEN, actor=user)
     if error:

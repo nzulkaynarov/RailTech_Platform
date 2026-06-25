@@ -226,3 +226,64 @@ def seller_sees_all_deals(user: "CustomUser", request) -> bool:
         return False
     ctx = acting_context(request)
     return ctx == "" or ctx in _SELLER_CONTEXTS
+
+
+def seller_visible_deal_ids(user: "CustomUser", request) -> Optional[set]:
+    """The deal ids a context-acting seller may see: those routed to one of their
+    seller companies (DealSellerRouting) OR offering one of their catalog products
+    (defense-in-depth for drafts whose routing rows aren't written yet). This is
+    the multi-seller confidentiality boundary that replaces the old see-all leak.
+
+    Returns None when the user is NOT a routing-scoped seller — the caller then
+    applies platform-admin see-all (check `is_platform_admin` first) or the
+    buyer-company scope. A seller acting in the BUYER context also gets None, so a
+    dual seller+buyer user is scoped to its own company while purchasing.
+    """
+    if getattr(user, "is_platform_admin", False):
+        return None
+    if not is_seller(user):
+        return None
+    if acting_context(request) not in ({""} | _SELLER_CONTEXTS):
+        return None
+    from django.db.models import Q
+
+    from crm.models import Deal
+
+    seller_company_ids = list(
+        user.memberships.filter(
+            is_active=True, can_sell=True, company__types__code__in=SELLER_COMPANY_TYPES
+        ).values_list("company_id", flat=True)
+    )
+    return set(
+        Deal.objects.filter(
+            Q(seller_routings__seller_company_id__in=seller_company_ids)
+            | Q(quotes__items__product__owner_company_id__in=seller_company_ids)
+        ).values_list("id", flat=True)
+    )
+
+
+def seller_can_access_deal(user: "CustomUser", request, deal_id) -> bool:
+    """Object-level counterpart of `seller_visible_deal_ids` — a single EXISTS query
+    for one deal. A context-acting seller may act on `deal_id` IFF it is routed to
+    one of their seller companies or offers one of their catalog products.
+    """
+    if not is_seller(user):
+        return False
+    if acting_context(request) not in ({""} | _SELLER_CONTEXTS):
+        return False
+    from django.db.models import Q
+
+    from crm.models import Deal
+
+    seller_company_ids = list(
+        user.memberships.filter(
+            is_active=True, can_sell=True, company__types__code__in=SELLER_COMPANY_TYPES
+        ).values_list("company_id", flat=True)
+    )
+    return Deal.objects.filter(
+        Q(pk=deal_id)
+        & (
+            Q(seller_routings__seller_company_id__in=seller_company_ids)
+            | Q(quotes__items__product__owner_company_id__in=seller_company_ids)
+        )
+    ).exists()

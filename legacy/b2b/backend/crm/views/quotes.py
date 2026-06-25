@@ -99,12 +99,15 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
                 "items__frozen_currency",
             )
         )
-        from accounts.services.permissions import seller_sees_all_deals
+        from accounts.services.permissions import seller_visible_deal_ids
 
         # Seller building КП across buyer заявки sees every quote — but only in a
         # seller context. In BUYER context the same user is scoped to its own deals.
-        if seller_sees_all_deals(user, self.request):
+        if getattr(user, "is_platform_admin", False):
             return queryset
+        visible_deal_ids = seller_visible_deal_ids(user, self.request)
+        if visible_deal_ids is not None:
+            return queryset.filter(deal_id__in=visible_deal_ids)
         # Buyer sees only quotes on their own company's deals.
         user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
         return queryset.filter(deal__company_id__in=user_company_ids)
@@ -483,13 +486,16 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
         if getattr(self, "swagger_fake_view", False):
             return QuoteItem.objects.none()
         user = self.request.user
-        from accounts.services.permissions import seller_sees_all_deals
+        from accounts.services.permissions import seller_visible_deal_ids
 
         queryset = QuoteItem.objects.all().select_related(
             "product", "product__domain_type", "quote", "offer", "offer__supplier", "frozen_currency"
         )
-        if seller_sees_all_deals(user, self.request):
+        if getattr(user, "is_platform_admin", False):
             return queryset
+        visible_deal_ids = seller_visible_deal_ids(user, self.request)
+        if visible_deal_ids is not None:
+            return queryset.filter(quote__deal_id__in=visible_deal_ids)
         # Buyer sees line items only on their own deals (read-only — see _assert_seller).
         user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
         return queryset.filter(quote__deal__company_id__in=user_company_ids)
@@ -606,11 +612,14 @@ class QuoteChargeViewSet(viewsets.ModelViewSet):
         if getattr(self, "swagger_fake_view", False):
             return QuoteCharge.objects.none()
         user = self.request.user
-        from accounts.services.permissions import seller_sees_all_deals
+        from accounts.services.permissions import seller_visible_deal_ids
 
         queryset = QuoteCharge.objects.select_related("charge_type", "quote").all()
-        if seller_sees_all_deals(user, self.request):
+        if getattr(user, "is_platform_admin", False):
             return queryset
+        visible_deal_ids = seller_visible_deal_ids(user, self.request)
+        if visible_deal_ids is not None:
+            return queryset.filter(quote__deal_id__in=visible_deal_ids)
         # Buyers must never see the internal cost breakdown.
         return queryset.none()
 

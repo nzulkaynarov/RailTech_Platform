@@ -93,6 +93,15 @@ class Deal(models.Model):
         verbose_name=_("Дата обновления"),
     )
 
+    target_sellers = models.ManyToManyField(
+        "accounts.Company",
+        through="crm.DealSellerRouting",
+        related_name="targeted_deals",
+        blank=True,
+        verbose_name=_("Целевые продавцы"),
+        help_text=_("Продавцы, которым адресована заявка (RFQ-маршрутизация)"),
+    )
+
     class Meta:
         verbose_name = _("Сделка")
         verbose_name_plural = _("Сделки")
@@ -121,6 +130,42 @@ class Deal(models.Model):
     def total_value(self):
         quote = self.active_quote
         return quote.total_incl_vat if quote else Decimal("0")
+
+
+class DealSellerRouting(models.Model):
+    """Routes an RFQ (Deal) to a specific seller company — the per-seller private
+    thread handle. World-standard RFQ confidentiality: a seller sees a buyer's
+    заявка IFF a routing row links them, so competing sellers are siloed (no
+    cross-seller leak). Routing is normally inferred from the catalog products'
+    `owner_company` at submit; product-less (free-text) deals can be routed
+    explicitly by the buyer.
+    """
+
+    deal = models.ForeignKey(
+        "crm.Deal",
+        on_delete=models.CASCADE,
+        related_name="seller_routings",
+        verbose_name=_("Сделка"),
+    )
+    seller_company = models.ForeignKey(
+        "accounts.Company",
+        on_delete=models.CASCADE,
+        related_name="routed_deals",
+        db_index=True,
+        verbose_name=_("Компания-продавец"),
+    )
+    routed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("Маршрутизация заявки продавцу")
+        verbose_name_plural = _("Маршрутизация заявок продавцам")
+        constraints = [
+            models.UniqueConstraint(fields=["deal", "seller_company"], name="uniq_deal_seller_routing"),
+        ]
+        indexes = [models.Index(fields=["seller_company", "deal"], name="deal_routing_seller_idx")]
+
+    def __str__(self):
+        return f"Deal #{self.deal_id} → seller {self.seller_company_id}"
 
 
 # ────────────────────────────────────────────
