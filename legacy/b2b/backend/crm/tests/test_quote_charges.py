@@ -266,30 +266,26 @@ def test_falls_back_to_global_when_company_has_none(quote):
 
 
 @pytest.mark.django_db
-def test_incoterm_flags_gate_per_line_costs(quote):
-    """Audit M1/M2: per-line freight/customs enter landed cost ONLY when the Incoterm basis
-    says the seller pays — switching to a buyer-pays basis zeroes the bucket (no ghost cost)."""
+def test_per_line_cost_is_base_plus_customs_regardless_of_basis(quote):
+    """F3.8: the per-line table is UNIFIED across Incoterms. Only customs duty (per ТНВЭД) is a
+    per-line cost; freight/logistics is NEVER per-line (it's a document-level charge на всю
+    партию). So landed = base + customs and logistics is always zeroed, independent of basis."""
     from crm.services.quotes import QuoteCalculationService
 
     from master_data.models import DeliveryBasis
 
     item = quote.items.first()
-    item.logistics_cost = Decimal("50")
+    item.logistics_cost = Decimal("50")  # operator-typed; must be ignored per-line
     item.customs_duty = Decimal("20")
     item.save()
-    exw = DeliveryBasis.objects.get_or_create(code="EXW", defaults={"name": "EXW"})[0]  # all flags False
-    ddp = DeliveryBasis.objects.get_or_create(
-        code="DDP", defaults={"name": "DDP", "seller_pays_freight": True, "seller_pays_import": True}
-    )[0]
-    # EXW: buyer bears freight + customs → per-line buckets zeroed, landed = base only.
-    QuoteCalculationService.calculate_item_prices(item, commit=True, basis=exw)
-    item.refresh_from_db()
-    assert item.logistics_cost == Decimal("0") and item.customs_duty == Decimal("0")
-    assert item.landed_cost == item.frozen_base_price
-    # DDP: seller bears both → counted in landed cost.
-    item.logistics_cost = Decimal("50")
-    item.customs_duty = Decimal("20")
-    item.save()
-    QuoteCalculationService.calculate_item_prices(item, commit=True, basis=ddp)
-    item.refresh_from_db()
-    assert item.landed_cost == item.frozen_base_price + Decimal("70")
+    for code, defaults in (
+        ("EXW", {"name": "EXW"}),
+        ("DDP", {"name": "DDP", "seller_pays_freight": True, "seller_pays_import": True}),
+    ):
+        basis = DeliveryBasis.objects.get_or_create(code=code, defaults=defaults)[0]
+        item.logistics_cost = Decimal("50")  # re-set; the calc must zero it every time
+        item.customs_duty = Decimal("20")
+        QuoteCalculationService.calculate_item_prices(item, commit=True, basis=basis)
+        item.refresh_from_db()
+        assert item.logistics_cost == Decimal("0"), f"logistics must never be per-line ({code})"
+        assert item.landed_cost == item.frozen_base_price + Decimal("20"), f"landed=base+customs ({code})"

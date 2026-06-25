@@ -97,10 +97,11 @@ def set_quote_delivery_basis(quote_id: int, basis_id, actor):
 
     quote.delivery_basis = basis
     quote.save(update_fields=["delivery_basis", "updated_at"])
+    # F3.8: choosing a basis auto-adds its document-level charges (e.g. DDP → insurance +
+    # certification) — the per-line table stays unified (себестоимость + ТНВЭД only). Freight
+    # & the rest live here at document level, not per line.
     apply_charge_template_to_quote(quote, actor)
-    # Re-cost the lines under the NEW Incoterm: per-line freight/customs are gated by the
-    # basis flags (M1), so switching basis must recompute or a now-hidden cost ghosts into
-    # the total (audit M2). recalculate_quote also refreshes charges_total + VAT.
+    # recalculate_quote refreshes the line costs (landed = base + customs) + charges_total + VAT.
     from .quotes import QuoteCalculationService
 
     QuoteCalculationService.recalculate_quote(quote_id)

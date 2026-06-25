@@ -609,7 +609,7 @@
     "vat": "НДС 12% (Узбекистан)",
     "total": "Итого с НДС",
     "margin": "Маржа",
-    "landedCost": "Стоимость доставки",
+    "landedCost": "Себестоимость",
     "basePrice": "Базовая цена FCA",
     "unsavedChanges": "Есть несохранённые изменения",
     "unsavedChangesDesc": "У вас есть несохранённые изменения. Нажмите Сохранить для их применения.",
@@ -656,7 +656,7 @@
     "unitShort": "Ед.",
     "quantity": "Кол-во",
     "marginPercent": "Маржа %",
-    "lineTotal": "Итого",
+    "lineTotal": "Сумма",
     "approvalChain": {
       "title": "Согласование КП",
       "stepDraft": "Черновик",

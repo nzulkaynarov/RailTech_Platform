@@ -187,9 +187,12 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 
 	// Incoterm cost-responsibility flags drive cost-column visibility. With no basis
 	// chosen yet, show all columns (don't hide already-entered data).
-	const basisFlags = activeQuote?.delivery_basis_data;
-	const showLogistics = !basisFlags || basisFlags.seller_pays_freight;
-	const showCustoms = !basisFlags || basisFlags.seller_pays_import;
+	// F3.8: the per-line table is UNIFIED across Incoterms. Only the customs duty (per ТНВЭД)
+	// is a per-line cost; logistics/freight & everything else are document-level charges
+	// (на всю партию) added below — driven by the chosen basis (DEFAULT_CHARGES_BY_BASIS),
+	// not by per-line columns. So logistics never shows per-line; customs always does.
+	const showLogistics = false;
+	const showCustoms = true;
 
 	const handleBasisChange = (basisId: number) => {
 		if (!activeQuote) return;
@@ -293,7 +296,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 								<TableHead className="px-2 py-2 text-center text-xs font-semibold text-muted-foreground w-16">
 									<Tooltip>
 										<TooltipTrigger asChild>
-											<span className="cursor-help">{t('catalog.table.unit')}</span>
+											<span className="cursor-help">{t('quote.quantity')}</span>
 										</TooltipTrigger>
 										<TooltipContent>{t('quote.quantityHelp', 'Quantity / Units')}</TooltipContent>
 									</Tooltip>
@@ -351,7 +354,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 									</Tooltip>
 								</TableHead>
 								<TableHead className="px-2 py-2 text-right text-xs font-semibold text-muted-foreground w-32 pr-4">
-									{t('quote.total')}
+									{t('quote.lineTotal')}
 								</TableHead>
 								<TableHead className="px-2 py-2 w-8" />
 							</TableRow>
