@@ -33,6 +33,7 @@ import { useIsViewerMode } from '@/hooks/useViewerMode';
 import { contractsApi } from '@/api/contractsApi';
 import type { Contract, ContractStatus } from '@/api/contractsApi';
 import { DealLink } from '@/components/Shared/DealLink';
+import { DocumentCheck } from '@/components/CRM/DocumentCheck';
 
 const STATUS_VARIANT: Record<ContractStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   DRAFT: 'secondary',
@@ -336,6 +337,7 @@ export function ContractsPage() {
                     }}
                   />
                 </label>
+                <DocumentCheck contractId={selected.id} />
                 {selected.status !== 'CANCELLED' && selected.status !== 'SIGNED' && (
                   <Button
                     variant="destructive"

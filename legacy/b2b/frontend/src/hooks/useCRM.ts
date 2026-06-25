@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { crmApi, QuoteItem, MatchCatalogPayload, PreflightPayload } from '../api/crmApi';
+import { crmApi, QuoteItem, MatchCatalogPayload, PreflightPayload, DocCheckPayload } from '../api/crmApi';
 
 export const useDeals = () => useQuery({
   queryKey: ['deals'],
@@ -413,11 +413,25 @@ export const usePreflightCheck = () => useMutation({
   mutationFn: (payload: PreflightPayload) => crmApi.preflightCheck(payload),
 });
 
+// AI #6 contract/invoice extraction: POST a signed PDF + quote/contract id → extracted
+// fields and a code-computed reconciliation. Pure advisory op (no cache to invalidate);
+// the money verdict is recomputed on the backend in Decimal. May 503 when AI disabled.
+export const useCheckDocument = () => useMutation({
+  mutationFn: (payload: DocCheckPayload) => crmApi.checkDocument(payload),
+});
+
 // AI #4 deal-chat reply assist: POST a deal id → a reply DRAFT from recent chat.
 // Pure op (no cache to invalidate); the draft fills the input for review/edit,
 // never auto-sent. May 503 when AI is disabled — the UI degrades gracefully.
 export const useSuggestChatReply = () => useMutation({
   mutationFn: (dealId: number) => crmApi.suggestChatReply(dealId),
+});
+
+// AI #3 «КП vs заявка» coverage/diff: GET a received КП id → deterministic coverage
+// facts + (when AI on) semantic discrepancies. On-demand paid call → mutation so the
+// buyer triggers it explicitly. Read-only & assistive; never blocks. May 503 when off.
+export const useQuoteRequestDiff = () => useMutation({
+  mutationFn: (quoteId: number) => crmApi.quoteRequestDiff(quoteId),
 });
 
 export const useCreateQuote = () => {

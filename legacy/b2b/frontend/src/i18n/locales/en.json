@@ -679,6 +679,12 @@
       "queueEmpty": "No quotes are waiting on your approval",
       "queueDeal": "Deal #{{id}}",
       "queueVersion": "Version {{version}}"
+    },
+    "pdf": "PDF",
+    "empty": {
+      "title": "No commercial offer yet",
+      "description": "This deal has no active quote yet. Create one to add line items, calculate margin and export a PDF.",
+      "action": "Generate quote"
     }
   },
   "admin": {
@@ -4210,7 +4216,9 @@
     "INVALID_STATUS": "Action not available in the quote's current status",
     "NO_QUOTE_COMPANY": "The quote has no owning company — assign a preparer first",
     "UNKNOWN": "Unknown error",
-    "AI_DISABLED": "The AI check is currently unavailable."
+    "AI_DISABLED": "The AI check is currently unavailable.",
+    "NOT_AUTHORIZED": "You are not allowed to perform this action",
+    "QUOTE_NOT_FOUND": "Quote not found"
   },
   "fileUpload": {
     "upload": "Upload",
@@ -4303,5 +4311,46 @@
     "lineLabel": "Line {{index}}: {{name}}",
     "unnamedLine": "Line {{index}} (unnamed)",
     "suggestionLabel": "Suggestion"
+  },
+  "coverageCheck": {
+    "title": "Quote vs request check",
+    "subtitle": "Compares the received quote against your original request. Advisory only — it never blocks anything.",
+    "checkButton": "Check quote",
+    "idleHint": "Press \"Check quote\" to find uncovered lines and discrepancies with your request.",
+    "allClear": "No discrepancies with your request found.",
+    "lineLabel": "Line {{index}}: {{name}}",
+    "unnamedLine": "Item {{index}}",
+    "aiOffHint": "Semantic check is off — only uncovered lines are shown.",
+    "issue": {
+      "uncovered": "Line not priced in the quote",
+      "substituted": "A non-equivalent substitute was offered",
+      "note_ignored": "A requirement from the note may have been ignored",
+      "qty_unit": "Quantity or unit mismatch"
+    }
+  },
+  "documentCheck": {
+    "title": "Document check (AI)",
+    "subtitle": "Upload a signed contract or counter-invoice — AI extracts the amounts and reconciles them against the quote/contract",
+    "uploadButton": "Upload & check",
+    "idleHint": "PDF and scans (JPG, PNG) supported. Amount reconciliation runs in code with Decimal precision — AI numbers are never trusted for money.",
+    "allClear": "No discrepancies: total, currency and validity match",
+    "advisoryNote": "This is an advisory check and does not block signing. Review the document yourself.",
+    "fields": {
+      "total": "Document total",
+      "currency": "Currency",
+      "validUntil": "Valid until / pay by",
+      "lineCount": "Line items",
+      "bankDetails": "Bank details"
+    },
+    "totalDetail": "Document {{document}}, quote/contract {{expected}} (difference {{difference}})",
+    "currencyDetail": "Document {{document}}, expected {{expected}}",
+    "mismatch": {
+      "TOTAL_MISMATCH": "Total does not match the quote/contract",
+      "CURRENCY_UNKNOWN": "Document currency is not in the reference list",
+      "FOREIGN_CURRENCY": "Document is in a different currency",
+      "DOCUMENT_EXPIRED": "Document validity has expired",
+      "TOTAL_NOT_FOUND": "No total found in the document",
+      "CURRENCY_NOT_FOUND": "No currency stated in the document"
+    }
   }
 }
