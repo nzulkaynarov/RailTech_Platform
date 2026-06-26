@@ -120,6 +120,39 @@ def test_percent_discount_on_whole_quote(quote):
 
 
 @pytest.mark.django_db
+def test_percent_charge_resolves_off_quantized_subtotal(quote):
+    """Sub-penny robustness: a percent charge must be computed off the QUANTIZED
+    subtotal_excl_vat (the displayed value), not a separately-rounded raw aggregate.
+
+    We craft a subtotal that carries a fractional cent in the raw aggregate
+    (3 lines × 33.34 = 100.02 here is clean, so instead force a base that would
+    differ): the contract is that resolve_signed sees exactly the persisted,
+    quantized subtotal_excl_vat — so the percent base equals what the seller sees.
+    """
+    from decimal import ROUND_HALF_UP
+
+    discount = ChargeType.objects.get_or_create(code="DISCOUNT", defaults={"name": "Скидка"})[0]
+    # Three lines of 33.33 → raw aggregate 99.99, quantized subtotal_excl_vat 99.99.
+    quote.items.all().delete()
+    for _ in range(3):
+        QuoteItem.objects.create(quote=quote, frozen_base_price=Decimal("33.33"), quantity=1)
+    QuoteCharge.objects.create(
+        quote=quote, charge_type=discount, rate_percent=Decimal("10"), is_deduction=True
+    )
+    quote.refresh_from_db()
+
+    # The percent base is the persisted (quantized) subtotal, so the charge equals
+    # −(subtotal_excl_vat × 10%) quantized — never a value derived from a differently
+    # rounded raw aggregate.
+    expected = -(quote.subtotal_excl_vat * Decimal("0.10")).quantize(
+        Decimal("0.01"), rounding=ROUND_HALF_UP
+    )
+    assert quote.subtotal_excl_vat == Decimal("99.99")
+    assert quote.charges_total == expected
+    assert quote.charges_total == Decimal("-10.00")  # 10% of 99.99 = 9.999 → 10.00
+
+
+@pytest.mark.django_db
 def test_percent_takes_priority_over_amount(quote):
     """rate_percent set → amount is ignored (10% of 100 = 10, not the 999 amount)."""
     freight = ChargeType.objects.get_or_create(code="FREIGHT", defaults={"name": "Фрахт"})[0]

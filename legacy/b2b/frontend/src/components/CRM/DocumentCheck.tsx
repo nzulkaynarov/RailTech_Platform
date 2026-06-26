@@ -24,6 +24,9 @@ import type { DocCheckResult, DocMismatchCode } from '@/api/crmApi';
  *
  * Pass exactly one of quoteId / contractId (the record of truth to reconcile against).
  */
+// Mirror the backend AI_IMPORT_MAX_BYTES (10 MB) so an oversized file fails fast on the
+// client instead of round-tripping to the server only to be rejected.
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 export function DocumentCheck({
   quoteId,
   contractId,
@@ -37,6 +40,10 @@ export function DocumentCheck({
   const check = useCheckDocument();
 
   const onPick = async (file: File) => {
+    if (file.size > MAX_UPLOAD_BYTES) {
+      toast.error(t('documentCheck.fileTooLarge', { max: MAX_UPLOAD_BYTES / (1024 * 1024) }));
+      return;
+    }
     setResult(null);
     try {
       const data = await check.mutateAsync({ file, quoteId, contractId });
@@ -76,7 +83,7 @@ export function DocumentCheck({
             ref={inputRef}
             type="file"
             className="hidden"
-            accept=".pdf,.jpg,.jpeg,.png,.webp"
+            accept=".pdf,.jpg,.jpeg,.png,.webp,.csv,.txt,.xlsx"
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (file) onPick(file);

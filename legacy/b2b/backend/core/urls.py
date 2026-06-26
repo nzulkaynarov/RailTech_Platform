@@ -5,6 +5,7 @@ from django.urls import include, path, re_path
 from django.views.static import serve as _serve_media
 from drf_spectacular.utils import extend_schema
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
+from rest_framework.permissions import IsAdminUser
 from rest_framework.routers import DefaultRouter
 from accounts.views import (
     CompanyRoleApplicationViewSet,
@@ -196,8 +197,18 @@ urlpatterns = (
         path("api/v1/health/", health_check, name="health_check"),
         # Root-level health endpoint for Docker/K8s healthchecks
         path("health/", health_check, name="health_check_root"),
-        # API Documentation (drf-spectacular) — protected in production
-        path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+        # API Documentation (drf-spectacular) — the OpenAPI schema describes the
+        # entire private API surface, so it must NOT be anonymously readable in
+        # production (external HTTP study 2026-06-26 found api/schema/ public 200).
+        # Gate it behind IsAdminUser: the SPA consumes the schema only at build
+        # time (verified — no runtime fetch of /api/schema/ anywhere in
+        # frontend/src), so requiring an authenticated staff user is safe.
+        # docs/redoc below are already DEBUG-only.
+        path(
+            "api/schema/",
+            SpectacularAPIView.as_view(permission_classes=[IsAdminUser]),
+            name="schema",
+        ),
     ]
     + (
         [

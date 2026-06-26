@@ -296,3 +296,80 @@ def test_routed_seller_can_price_buyer_prepared_quote(world):
         f"/api/v1/crm/quote-items/{item.id}/", {"frozen_base_price": "1"}, format="json",
     )
     assert blocked.status_code in (403, 404)
+
+
+@pytest.mark.django_db
+def test_dual_membership_preparer_own_kp_stays_visible(world):
+    """Dual-membership read-scope edge: a КП prepared by a user who is a member of BOTH
+    seller A AND a competing seller B must STILL be visible to a PURE seller-A viewer when
+    acting for A. Without subtracting the viewer's own-company members from the competing-
+    preparer exclusion set, the dual preparer (via their B membership) lands in
+    competing_preparer_ids → A's own legitimately-prepared КП gets hidden from A's viewers.
+    A purely-B preparer's КП still stays hidden (no cross-seller leak)."""
+    draft = DealStage.objects.get(code="DRAFT")
+    deal = Deal.objects.create(title="co-routed", company=world["buyer_co"], stage=draft)
+    DealSellerRouting.objects.create(deal=deal, seller_company=world["sa_co"])
+    DealSellerRouting.objects.create(deal=deal, seller_company=world["sb_co"])
+
+    # `dual_preparer` belongs to BOTH seller A (their own company) and competing seller B.
+    dual_preparer = CustomUser.objects.create_user(
+        email="dualprep@t.test", username="dualprep@t.test", password="x"
+    )
+    CompanyMember.objects.create(
+        user=dual_preparer, company=world["sa_co"], role=WorkspaceRole.objects.get(code="OWNER"),
+        is_active=True, is_primary=True, can_sell=True,
+    )
+    CompanyMember.objects.create(
+        user=dual_preparer, company=world["sb_co"], role=WorkspaceRole.objects.get(code="OWNER"),
+        is_active=True, is_primary=False, can_sell=True,
+    )
+
+    # A's own КП, prepared by the dual member acting for A.
+    a_quote = Quote.objects.create(
+        deal=deal, version=1, status=QuoteStatus.objects.get(code="DRAFT"), prepared_by=dual_preparer,
+        vat_rate=Decimal("12"), subtotal_excl_vat=Decimal("0"), vat_amount=Decimal("0"), total_incl_vat=Decimal("0"),
+    )
+    a_item = QuoteItem.objects.create(quote=a_quote, imported_raw_name="A part", quantity=1)
+
+    # A purely-competing B preparer's КП — must stay hidden from the pure-A viewer.
+    b_quote = Quote.objects.create(
+        deal=deal, version=2, status=QuoteStatus.objects.get(code="DRAFT"), prepared_by=world["sb_user"],
+        vat_rate=Decimal("12"), subtotal_excl_vat=Decimal("0"), vat_amount=Decimal("0"), total_incl_vat=Decimal("0"),
+    )
+    b_item = QuoteItem.objects.create(quote=b_quote, imported_raw_name="B part", quantity=1)
+
+    # sa_user is a PURE seller-A member (the viewer).
+    visible = _ids(_api(world["sa_user"]).get(f"/api/v1/crm/quote-items/?quote__deal_id={deal.id}"))
+    assert a_item.id in visible, "A's own КП (prepared by a dual A+B member) wrongly hidden from A"
+    assert b_item.id not in visible, "B's КП leaked to seller A (cross-seller leak)"
+
+
+@pytest.mark.django_db
+def test_quote_items_filter_scopes_to_requested_deal(world):
+    """DRF silent-filter contract: GET /crm/quote-items/?quote__deal_id=<dealA> returns ONLY
+    deal-A items, never deal-B's. Pins the frontend↔backend filter-key contract so a renamed
+    or unknown ?filter= param can't silently fall back to "all rows" (the «Открыть КП → wrong
+    deal» bug). Run as a routed seller who can legitimately see both deals."""
+    draft = DealStage.objects.get(code="DRAFT")
+    deal_a = Deal.objects.create(title="Deal A", company=world["buyer_co"], stage=draft)
+    deal_b = Deal.objects.create(title="Deal B", company=world["buyer_co"], stage=draft)
+    # Seller B is routed to BOTH deals, so without the filter it would see items from both.
+    DealSellerRouting.objects.create(deal=deal_a, seller_company=world["sb_co"])
+    DealSellerRouting.objects.create(deal=deal_b, seller_company=world["sb_co"])
+
+    quote_a = Quote.objects.create(
+        deal=deal_a, version=1, status=QuoteStatus.objects.get(code="DRAFT"), prepared_by=world["sb_user"],
+        vat_rate=Decimal("12"), subtotal_excl_vat=Decimal("0"), vat_amount=Decimal("0"), total_incl_vat=Decimal("0"),
+    )
+    quote_b = Quote.objects.create(
+        deal=deal_b, version=1, status=QuoteStatus.objects.get(code="DRAFT"), prepared_by=world["sb_user"],
+        vat_rate=Decimal("12"), subtotal_excl_vat=Decimal("0"), vat_amount=Decimal("0"), total_incl_vat=Decimal("0"),
+    )
+    item_a = QuoteItem.objects.create(quote=quote_a, imported_raw_name="A line", quantity=1)
+    item_b = QuoteItem.objects.create(quote=quote_b, imported_raw_name="B line", quantity=1)
+
+    resp = _api(world["sb_user"]).get(f"/api/v1/crm/quote-items/?quote__deal_id={deal_a.id}")
+    assert resp.status_code == 200, resp.content
+    ids = _ids(resp)
+    assert item_a.id in ids, "deal-A item missing from its own filter result"
+    assert item_b.id not in ids, "filter silently leaked deal-B's item (filter-key drift)"

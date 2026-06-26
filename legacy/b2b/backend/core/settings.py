@@ -269,6 +269,10 @@ CHANNEL_LAYERS = {
 MIDDLEWARE = [
     "core.logging.RequestIDMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    # Stamps Content-Security-Policy on responses (protects Unfold /admin/ HTML;
+    # no-op on JSON). Report-Only by default — see core/csp.py. The public SPA's
+    # CSP is mirrored on the host Caddy (deploy/caddy/b2b.railtech.uz.caddy).
+    "core.csp.ContentSecurityPolicyMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",

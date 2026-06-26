@@ -44,6 +44,25 @@ b2b.railtech.uz {
         X-Frame-Options "SAMEORIGIN"
         Referrer-Policy "strict-origin-when-cross-origin"
         -Server
+
+        # Content-Security-Policy for the React SPA (Caddy serves the SPA HTML;
+        # Django serves /api + /admin and stamps its OWN CSP via
+        # backend/core/csp.py — this block does NOT cover those backend paths).
+        #
+        # The SPA is a Vite build. Vite/Tailwind inject runtime inline <style>,
+        # so style-src needs 'unsafe-inline'. WebSocket (/ws/*) needs wss: in
+        # connect-src. img-src allows data:/blob: for inline icons and
+        # object-url previews. script-src is 'self' only (no inline scripts in
+        # the built SPA) — tighten further (nonces) only if a build needs it.
+        #
+        # MIRROR-NOTE for the prod host operator: this file is the canonical
+        # SPA CSP. If you ever move TLS termination or split the SPA onto a
+        # different host-Caddy block, copy this Content-Security-Policy verbatim
+        # there too — and keep it in sync with backend/core/csp.py's CSP_POLICY.
+        # Conservative first rollout: deliver as *-Report-Only* so a missed asset
+        # only warns. Switch the header NAME to "Content-Security-Policy" (drop
+        # "-Report-Only") once the browser console is clean.
+        Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://b2b.railtech.uz; font-src 'self' data:; connect-src 'self' wss: https://b2b.railtech.uz; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'"
     }
 
     log {
