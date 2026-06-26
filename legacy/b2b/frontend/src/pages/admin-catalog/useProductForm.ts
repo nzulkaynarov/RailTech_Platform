@@ -57,6 +57,9 @@ export function useProductForm({
           stock_status: ownOffer.stock_status ?? null,
           delivery_basis: ownOffer.delivery_basis ?? null,
           supplier_sku: ownOffer.supplier_sku ?? '',
+          stock_quantity: ownOffer.stock_quantity ?? 0,
+          in_stock_lead_time_days: ownOffer.in_stock_lead_time_days ?? 0,
+          order_lead_time_days: ownOffer.order_lead_time_days ?? 0,
         }
       : {});
   }, [ownOffer]);
@@ -165,6 +168,9 @@ export function useProductForm({
           stock_status: offerDraft.stock_status ? Number(offerDraft.stock_status) : null,
           delivery_basis: offerDraft.delivery_basis ? Number(offerDraft.delivery_basis) : null,
           supplier_sku: offerDraft.supplier_sku ?? '',
+          stock_quantity: Number(offerDraft.stock_quantity ?? 0),
+          in_stock_lead_time_days: Number(offerDraft.in_stock_lead_time_days ?? 0),
+          order_lead_time_days: Number(offerDraft.order_lead_time_days ?? 0),
         };
         if (ownOffer) {
           await updateOfferMut.mutateAsync({ id: ownOffer.id, data: offerPayload });

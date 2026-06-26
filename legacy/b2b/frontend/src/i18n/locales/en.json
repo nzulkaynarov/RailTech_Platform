@@ -696,8 +696,30 @@
       "taxCountryPlaceholder": "Select country",
       "validUntil": "Valid until",
       "currency": "Quote currency",
-      "currencyPlaceholder": "Select currency"
-    }
+      "currencyPlaceholder": "Select currency",
+      "margin": "КП margin (%)",
+      "marginHelp": "Markup on the landed cost of all lines (whole КП)",
+      "costCurrencyDefault": "Default cost currency",
+      "costCurrencyDefaultPlaceholder": "Select currency",
+      "costCurrencyDefaultHelp": "New lines inherit this base-price currency",
+      "deliveryLeadTime": "Delivery lead time (days)",
+      "deliveryLeadTimeHelp": "Overrides the lead time for the whole КП. Empty — use the max across lines",
+      "deliveryNote": "Delivery note",
+      "deliveryNotePlaceholder": "e.g. \"in stock\" / \"made to order\"",
+      "fxOverride": "Exchange rates (manual override)",
+      "fxOverrideHelp": "The CBU rate is frozen by the engine. Set your own if needed — soum per 1 unit of currency",
+      "fxCbuRate": "CBU rate: {{rate}}",
+      "fxOverrideFor": "Rate for {{code}}"
+    },
+    "marginApplied": "Margin",
+    "leadTime": "Lead time",
+    "leadTimeHelp": "Line delivery lead time in days",
+    "leadTimeBadge": "up to {{days}} d.",
+    "leadTimeUpTo": "up to {{days}} d.",
+    "deliveryLeadTime": "Delivery lead time",
+    "lineCurrency": "Line cost currency",
+    "costInPresentation": "Landed cost: {{value}}",
+    "fxRateAt": "Rate {{from}}→{{to}}: {{rate}}"
   },
   "admin": {
     "dashboard": {
@@ -3710,7 +3732,10 @@
       "deliveryBasis": "Delivery basis",
       "stockStatus": "Stock status",
       "leadTime": "Lead time",
-      "minQty": "Min. order"
+      "minQty": "Min. order",
+      "stockQuantity": "Quantity in stock",
+      "inStockLeadTimeDays": "In-stock lead time (days)",
+      "orderLeadTimeDays": "Order lead time (days)"
     },
     "stats": {
       "total": "Total",
@@ -3723,6 +3748,10 @@
       "status": "Stock",
       "active": "Active",
       "actions": "Actions"
+    },
+    "availability": {
+      "title": "Availability & lead times",
+      "hint": "Stock on hand and lead times drive automatic ATP splitting of quote lines by availability."
     }
   },
   "contractsPage": {
@@ -4384,5 +4413,11 @@
     "unnamed": "Unnamed",
     "codeLabel": "Code",
     "candidatesCount": "{{count}} in catalog"
+  },
+  "export": {
+    "menu": "Export",
+    "pdf": "PDF",
+    "excel": "Excel",
+    "csv": "CSV"
   }
 }

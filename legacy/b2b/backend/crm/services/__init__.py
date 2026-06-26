@@ -5,10 +5,17 @@ Public API is re-exported here so `crm.services.X` and
 """
 
 from ._params import PaymentData
+from .availability import (
+    Tranche,
+    auto_split_quote_by_availability,
+    resolve_seller_offer,
+    split_line_by_availability,
+)
 from .ai_chat import suggest_chat_reply
 from .ai_diff import quote_vs_request_diff, user_can_view_quote_diff
 from .billing import generate_act, generate_invoice_from_contract, record_payment, sign_act
 from .charges import apply_charge_template_to_quote, set_quote_delivery_basis
+from .exporters import export_quote
 from .contracts import (
     cancel_contract,
     force_cancel_contract,
@@ -38,6 +45,7 @@ from .quotes import (
     buyer_remove_request_item,
     buyer_update_request_item,
     buyer_update_request_meta,
+    effective_quote_lead_time,
     get_crm_analytics_data,
     reassign_quote_item_product,
     route_request_to_sellers,
@@ -50,8 +58,10 @@ __all__ = [
     "QuoteCalculationService",
     "QuoteLifecycleService",
     "STAGE_REQUIRES_SIGNED_CONTRACT",
+    "Tranche",
     "apply_charge_template_to_quote",
     "archive_messages_sync",
+    "auto_split_quote_by_availability",
     "buyer_add_request_item",
     "buyer_add_request_items",
     "buyer_can_edit_request",
@@ -61,7 +71,9 @@ __all__ = [
     "bulk_close_deals_lost",
     "cancel_contract",
     "convert_lead_to_deal",
+    "effective_quote_lead_time",
     "ensure_fulfillment",
+    "export_quote",
     "force_cancel_contract",
     "force_transition_deal_stage",
     "generate_act",
@@ -73,7 +85,9 @@ __all__ = [
     "reassign_quote_item_product",
     "record_payment",
     "register_new_deal",
+    "resolve_seller_offer",
     "route_request_to_sellers",
+    "split_line_by_availability",
     "send_deal_message",
     "set_quote_delivery_basis",
     "sign_act",

@@ -67,8 +67,9 @@ class Quote(models.Model):
         verbose_name=_("Базис поставки (Incoterm)"),
         help_text=_("Условия поставки КП по Incoterms (FCA, CIP, DDP …)"),
     )
-    # Валюта клиентского КП. Бизнес-правило: КП клиенту всегда в нац. валюте (UZS).
-    # Затраты в иной валюте конвертирует менеджер вручную при вводе (FX-движок не наш).
+    # Валюта клиентского КП (ПРЕЗЕНТАЦИОННАЯ) — одна на весь КП, её видит клиент.
+    # Бизнес-правило: КП клиенту по умолчанию в нац. валюте (UZS). Все агрегаты
+    # (subtotal/charges/vat/total) считаются и хранятся именно в этой валюте.
     quote_currency = models.ForeignKey(
         Currency,
         on_delete=models.PROTECT,
@@ -77,6 +78,37 @@ class Quote(models.Model):
         related_name="+",
         verbose_name=_("Валюта КП"),
         help_text=_("Валюта итогового КП для клиента (по умолчанию UZS)"),
+    )
+    # Валюта СЕБЕСТОИМОСТИ по умолчанию для НОВЫХ позиций (UI-удобство). Реальная
+    # валюта базовой цены живёт на позиции (QuoteItem.frozen_currency); это поле лишь
+    # подставляется при добавлении строки, чтобы менеджер не выбирал валюту каждый раз.
+    cost_currency_default = models.ForeignKey(
+        Currency,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("Валюта себестоимости по умолчанию"),
+        help_text=_("Валюта базовой цены, наследуемая новыми позициями КП (UZS по умолчанию)"),
+    )
+    # Замороженный снимок FX-курсов к UZS, чтобы итог КП не «плавал» при движении
+    # рыночного курса: {код_валюты: "курс_к_UZS"}. Заполняется движком при пересчёте
+    # для каждой валюты себестоимости позиций, встреченной в КП; однажды записанный
+    # курс не перезатирается рыночным (заморозка). UZS не хранится (=1).
+    fx_snapshot = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name=_("Снимок курсов (FX)"),
+        help_text=_("Замороженные курсы валют себестоимости к UZS на момент расчёта {код: курс}"),
+    )
+    # Ручное переопределение курса на уровне КП: {код_валюты: "курс"}. Имеет высший
+    # приоритет — менеджер/ВЭД может зафиксировать договорной курс, который победит
+    # и снимок, и рыночный курс из master_data.fx.
+    fx_manual = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name=_("Ручные курсы КП (FX override)"),
+        help_text=_("Договорные курсы валют к UZS, заданные вручную {код: курс} — побеждают снимок"),
     )
 
     # Налоговые параметры (замороженные на момент создания КП)
@@ -95,6 +127,16 @@ class Quote(models.Model):
         default=12.00,
         verbose_name=_("Ставка НДС (%)"),
         help_text=_("Зафиксированная ставка НДС на момент создания КП"),
+    )
+    # Маржа на ВЕСЬ КП (наценка на себестоимость, едина для всех позиций). Бизнес-реальность:
+    # маржа ставится на КП, а не на позицию. QuoteItem.margin_percent оставлен как задел под
+    # будущее позиционное переопределение, но движок применяет именно этот КП-уровневый процент.
+    margin_percent = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        default=0,
+        verbose_name=_("Маржа КП (%)"),
+        help_text=_("Наценка на себестоимость всех позиций (на весь КП)"),
     )
 
     # Агрегированные суммы (пересчитываются при сохранении позиций)
@@ -141,6 +183,24 @@ class Quote(models.Model):
         verbose_name=_("Примечания"),
         help_text=_("Дополнительные условия и комментарии к КП"),
     )
+
+    # Срок поставки уровня КП (ключевой коммерческий параметр). Если NULL — выводится
+    # как max(сроков позиций): КП полностью поставлено, когда готова самая медленная
+    # позиция. Если задан — это ручное переопределение (см. effective_delivery_lead_time).
+    delivery_lead_time_days = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name=_("Срок поставки КП (дней)"),
+        help_text=_("Срок поставки всего КП в днях. Если пусто — берётся максимум по позициям"),
+    )
+    delivery_note = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        verbose_name=_("Условие поставки"),
+        help_text=_("Уточнение по срокам/наличию («в наличии», «под заказ» и т. п.)"),
+    )
+
     pdf_file = models.FileField(
         upload_to=quote_pdf_path,
         storage=get_private_storage,
@@ -201,6 +261,18 @@ class Quote(models.Model):
 
     def __str__(self):
         return f"КП v{self.version} — {self.deal}"
+
+    @property
+    def effective_delivery_lead_time_days(self) -> int:
+        """Срок поставки КП: ручное переопределение, иначе max(сроков позиций).
+
+        Логика дублируется в сервисе (effective_quote_lead_time) для записи в БД на
+        пересчёте; здесь — лёгкое чтение для сериализатора без сайд-эффектов.
+        """
+        if self.delivery_lead_time_days is not None:
+            return self.delivery_lead_time_days
+        # max() по позициям; 0, если позиций нет или у всех срок 0.
+        return max((item.lead_time_days for item in self.items.all()), default=0)
 
     def recalculate_totals(self):
         """
@@ -387,6 +459,13 @@ class QuoteItem(models.Model):
         validators=[MinValueValidator(0), MaxValueValidator(100)],
         verbose_name=_("Скидка (%)"),
         help_text=_("Процент скидки на позицию (0–100%)"),
+    )
+    # Срок поставки позиции в днях (от заказа/предоплаты). Из них КП-уровневый срок
+    # выводится как максимум (Quote.effective_delivery_lead_time_days).
+    lead_time_days = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_("Срок поставки (дней)"),
+        help_text=_("Срок поставки позиции в днях от заказа/предоплаты"),
     )
 
     # Вычисляемые поля (пересчитываются в save())

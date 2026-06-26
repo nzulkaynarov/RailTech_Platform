@@ -259,6 +259,42 @@ export function ProductFormSheet({
                   onChange={(e) => updateOffer({ supplier_sku: e.target.value })}
                 />
               </div>
+              <div className="space-y-1">
+                <Label className="text-base">{t('adminOffers.availability.title')}</Label>
+                <p className="text-xs text-muted-foreground">{t('adminOffers.availability.hint')}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>{t('adminOffers.fields.stockQuantity')}</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={offerDraft.stock_quantity ?? 0}
+                    onChange={(e) => updateOffer({ stock_quantity: Number(e.target.value) })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>{t('adminOffers.fields.inStockLeadTimeDays')}</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={offerDraft.in_stock_lead_time_days ?? 0}
+                    onChange={(e) => updateOffer({ in_stock_lead_time_days: Number(e.target.value) })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>{t('adminOffers.fields.orderLeadTimeDays')}</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={offerDraft.order_lead_time_days ?? 0}
+                  onChange={(e) => updateOffer({ order_lead_time_days: Number(e.target.value) })}
+                />
+              </div>
             </>
           )}
 

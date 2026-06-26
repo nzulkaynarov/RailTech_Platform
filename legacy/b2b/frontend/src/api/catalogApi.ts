@@ -58,6 +58,9 @@ export interface SupplierOffer {
     delivery_basis_data?: { id: number; code: string; name: string } | null;
     stock_status?: number | null;
     delivery_lead_time?: string;
+    stock_quantity?: number;
+    in_stock_lead_time_days?: number;
+    order_lead_time_days?: number;
     min_order_qty?: number;
     is_active?: boolean;
 }

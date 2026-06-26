@@ -127,6 +127,9 @@ class SupplierOfferSerializer(serializers.ModelSerializer):
             "delivery_basis_data",
             "stock_status",
             "delivery_lead_time",
+            "stock_quantity",
+            "in_stock_lead_time_days",
+            "order_lead_time_days",
             "min_order_qty",
             "is_active",
         ]

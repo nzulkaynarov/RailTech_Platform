@@ -92,6 +92,7 @@ class QuoteItemSerializer(serializers.ModelSerializer):
             "customs_duty",
             "margin_percent",
             "discount_percent",
+            "lead_time_days",
             "landed_cost",
             "final_price_excl_vat",
         ]
@@ -196,14 +197,25 @@ class QuoteSerializer(serializers.ModelSerializer):
     items = QuoteItemSerializer(many=True, read_only=True)
     status_name = serializers.CharField(source="status.name", read_only=True)
     status_code = serializers.CharField(source="status.code", read_only=True)
-    # Currency as code ("UZS") in both directions, like frozen_currency on items.
+    # Presentation currency as code ("UZS") in both directions, like frozen_currency on items.
     quote_currency = serializers.SlugRelatedField(
+        slug_field="code", queryset=Currency.objects.all(), required=False, allow_null=True
+    )
+    # Default COST currency new lines inherit (UI convenience) — code in both directions.
+    cost_currency_default = serializers.SlugRelatedField(
         slug_field="code", queryset=Currency.objects.all(), required=False, allow_null=True
     )
     # Incoterm responsibility flags drive cost-row visibility in the КП builder.
     delivery_basis_data = DeliveryBasisSerializer(source="delivery_basis", read_only=True)
     # Internal cost breakdown — gated to seller/admin in to_representation().
     charges = QuoteChargeSerializer(many=True, read_only=True)
+    # Effective КП delivery term = override (delivery_lead_time_days) or max(line lead times).
+    effective_delivery_lead_time_days = serializers.SerializerMethodField()
+
+    def get_effective_delivery_lead_time_days(self, obj) -> int:
+        from crm.services import effective_quote_lead_time
+
+        return effective_quote_lead_time(obj)
 
     class Meta:
         model = Quote
@@ -218,12 +230,19 @@ class QuoteSerializer(serializers.ModelSerializer):
             "delivery_basis",
             "delivery_basis_data",
             "quote_currency",
+            "cost_currency_default",
+            "fx_snapshot",
+            "fx_manual",
             "tax_country",
             "vat_rate",
+            "margin_percent",
             "subtotal_excl_vat",
             "charges_total",
             "vat_amount",
             "total_incl_vat",
+            "delivery_lead_time_days",
+            "effective_delivery_lead_time_days",
+            "delivery_note",
             "valid_until",
             "notes",
             "pdf_file",
@@ -240,6 +259,10 @@ class QuoteSerializer(serializers.ModelSerializer):
             "charges_total",
             "vat_amount",
             "total_incl_vat",
+            # fx_snapshot is frozen by the engine, never set by the client; fx_manual is
+            # the client-writable override.
+            "fx_snapshot",
+            "effective_delivery_lead_time_days",
             "approved_by",
             "approved_at",
             "created_at",

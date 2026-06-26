@@ -698,8 +698,30 @@
       "taxCountryPlaceholder": "Выберите страну",
       "validUntil": "Действует до",
       "currency": "Валюта КП",
-      "currencyPlaceholder": "Выберите валюту"
-    }
+      "currencyPlaceholder": "Выберите валюту",
+      "margin": "Маржа КП (%)",
+      "marginHelp": "Наценка на себестоимость всех позиций (на весь КП)",
+      "costCurrencyDefault": "Валюта себестоимости по умолчанию",
+      "costCurrencyDefaultPlaceholder": "Выберите валюту",
+      "costCurrencyDefaultHelp": "Новые позиции наследуют эту валюту базовой цены",
+      "deliveryLeadTime": "Срок поставки (дн.)",
+      "deliveryLeadTimeHelp": "Переопределяет срок на весь КП. Пусто — берётся максимум по позициям",
+      "deliveryNote": "Примечание к поставке",
+      "deliveryNotePlaceholder": "напр. «в наличии» / «под заказ»",
+      "fxOverride": "Курсы валют (ручная корректировка)",
+      "fxOverrideHelp": "Курс ЦБ зафиксирован движком. При необходимости задайте свой — сум за 1 единицу валюты",
+      "fxCbuRate": "Курс ЦБ: {{rate}}",
+      "fxOverrideFor": "Курс для {{code}}"
+    },
+    "marginApplied": "Маржа",
+    "leadTime": "Срок",
+    "leadTimeHelp": "Срок поставки позиции в днях",
+    "leadTimeBadge": "до {{days}} дн.",
+    "leadTimeUpTo": "до {{days}} дн.",
+    "deliveryLeadTime": "Срок поставки",
+    "lineCurrency": "Валюта себестоимости позиции",
+    "costInPresentation": "Себестоимость: {{value}}",
+    "fxRateAt": "Курс {{from}}→{{to}}: {{rate}}"
   },
   "admin": {
     "dashboard": {
@@ -3714,7 +3736,10 @@
       "deliveryBasis": "Базис поставки",
       "stockStatus": "Статус наличия",
       "leadTime": "Срок поставки",
-      "minQty": "Мин. заказ"
+      "minQty": "Мин. заказ",
+      "stockQuantity": "Количество на складе",
+      "inStockLeadTimeDays": "Срок поставки со склада (дней)",
+      "orderLeadTimeDays": "Срок поставки под заказ (дней)"
     },
     "stats": {
       "total": "Всего",
@@ -3727,6 +3752,10 @@
       "status": "Наличие",
       "active": "Активен",
       "actions": "Действия"
+    },
+    "availability": {
+      "title": "Наличие и сроки",
+      "hint": "Остаток на складе и сроки поставки используются для автоматического разбиения позиций КП по доступности (ATP)."
     }
   },
   "contractsPage": {
@@ -4388,5 +4417,11 @@
     "unnamed": "Без названия",
     "codeLabel": "Код",
     "candidatesCount": "{{count}} в каталоге"
+  },
+  "export": {
+    "menu": "Экспорт",
+    "pdf": "PDF",
+    "excel": "Excel",
+    "csv": "CSV"
   }
 }

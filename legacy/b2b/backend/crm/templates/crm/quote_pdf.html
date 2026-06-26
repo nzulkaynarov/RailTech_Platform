@@ -1,101 +1,329 @@
 <!DOCTYPE html>
-<html>
+{% comment %}
+  Client-facing КП (commercial offer) — CLIENT PROJECTION.
+
+  Hard rule (UNCHANGED): never expose seller cost internals from which the buyer
+  could derive the markup — no landed_cost, margin_percent, logistics_cost,
+  customs_duty or any QuoteCharge row here. Only the per-unit sale price, line
+  totals and the document totals bridge (subtotal → charges-as-one-line → VAT →
+  total) are shown, all in the КП presentation currency (quote_currency, UZS).
+
+  Context variables (set by QuoteLifecycleService.generate_pdf): quote, items,
+  company (the buyer), seller (the issuing Company, may be None).
+  CSS is inline + WeasyPrint-supported (no flexbox/grid reliance; tables for layout).
+{% endcomment %}
+<html lang="ru">
 <head>
 <meta charset="utf-8">
 <style>
-  body { font-family: 'Arial', sans-serif; font-size: 12px; color: #333; margin: 40px; }
-  h1 { font-size: 24px; color: #1a1a2e; margin-bottom: 5px; }
-  .subtitle { color: #666; font-size: 14px; margin-bottom: 30px; }
-  .header-info { display: flex; justify-content: space-between; margin-bottom: 30px; }
-  .company-block { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-  .company-block h3 { margin: 0 0 8px 0; color: #1a1a2e; }
-  .company-block p { margin: 2px 0; }
-  table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-  th { background: #1a1a2e; color: white; padding: 10px 8px; text-align: left; font-size: 11px; }
-  td { padding: 8px; border-bottom: 1px solid #e0e0e0; font-size: 11px; }
-  tr:nth-child(even) { background: #f8f9fa; }
-  .text-right { text-align: right; }
-  .totals { margin-top: 20px; float: right; width: 300px; }
-  .totals table { margin-top: 0; }
-  .totals td { padding: 6px 10px; font-size: 12px; }
-  .totals .total-row { font-weight: bold; font-size: 14px; background: #1a1a2e; color: white; }
-  .footer { margin-top: 80px; font-size: 10px; color: #999; text-align: center; border-top: 1px solid #e0e0e0; padding-top: 10px; }
-  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; }
-  .valid-until { margin-top: 20px; padding: 10px; background: #fff3cd; border-radius: 4px; font-size: 11px; }
+  @page {
+    size: A4;
+    margin: 18mm 16mm 20mm 16mm;
+    @bottom-center {
+      content: "Стр. " counter(page) " из " counter(pages);
+      font-family: 'Helvetica', 'Arial', sans-serif;
+      font-size: 8pt;
+      color: #9aa0a6;
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    font-family: 'Helvetica', 'Arial', sans-serif;
+    font-size: 9.5pt;
+    line-height: 1.45;
+    color: #20242b;
+    margin: 0;
+  }
+
+  /* ── Brand header ─────────────────────────────────────────── */
+  .brandbar {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 14pt;
+  }
+  .brandbar td { vertical-align: top; padding: 0; }
+  .brand-name {
+    font-size: 16pt;
+    font-weight: 700;
+    color: #15294d;
+    letter-spacing: 0.2pt;
+  }
+  .brand-meta { font-size: 8.5pt; color: #5a6270; margin-top: 2pt; }
+  .doc-id {
+    text-align: right;
+    font-size: 8.5pt;
+    color: #5a6270;
+  }
+  .doc-id .doc-no {
+    font-size: 13pt;
+    font-weight: 700;
+    color: #15294d;
+    letter-spacing: 0.2pt;
+  }
+  .rule {
+    height: 2.5pt;
+    background: #15294d;
+    margin: 0 0 16pt 0;
+  }
+
+  h1.offer-title {
+    font-size: 14pt;
+    font-weight: 700;
+    color: #15294d;
+    margin: 0 0 14pt 0;
+  }
+
+  /* ── Parties ──────────────────────────────────────────────── */
+  .parties { width: 100%; border-collapse: separate; border-spacing: 10pt 0; margin-bottom: 16pt; }
+  .parties td { vertical-align: top; width: 50%; }
+  .party {
+    border: 0.75pt solid #dfe3ea;
+    border-radius: 4pt;
+    padding: 9pt 11pt;
+    background: #f7f9fc;
+  }
+  .party h3 {
+    margin: 0 0 5pt 0;
+    font-size: 8pt;
+    text-transform: uppercase;
+    letter-spacing: 0.6pt;
+    color: #7a828f;
+    font-weight: 700;
+  }
+  .party .pname { font-weight: 700; font-size: 10.5pt; color: #20242b; }
+  .party p { margin: 1.5pt 0; font-size: 8.7pt; color: #3c424c; }
+
+  /* ── Line items ───────────────────────────────────────────── */
+  table.lines { width: 100%; border-collapse: collapse; margin-bottom: 4pt; }
+  table.lines thead th {
+    background: #15294d;
+    color: #ffffff;
+    padding: 7pt 7pt;
+    text-align: left;
+    font-size: 8pt;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3pt;
+  }
+  table.lines tbody td {
+    padding: 6pt 7pt;
+    border-bottom: 0.5pt solid #e6e9ef;
+    font-size: 9pt;
+    vertical-align: top;
+  }
+  table.lines tbody tr:nth-child(even) { background: #f6f8fb; }
+  .num { text-align: right; white-space: nowrap; }
+  .center { text-align: center; white-space: nowrap; }
+  .item-name { font-weight: 600; color: #20242b; }
+  .item-sub { font-size: 7.6pt; color: #7a828f; margin-top: 1pt; }
+
+  /* ── Totals bridge ────────────────────────────────────────── */
+  .totals-wrap { width: 100%; border-collapse: collapse; margin-top: 12pt; }
+  .totals-wrap td { vertical-align: top; }
+  table.totals { width: 62%; border-collapse: collapse; margin-left: 38%; }
+  table.totals td { padding: 5pt 9pt; font-size: 9.2pt; }
+  table.totals td.lbl { color: #4a515c; }
+  table.totals td.val { text-align: right; white-space: nowrap; }
+  table.totals tr.sep td { border-top: 0.5pt solid #d7dbe3; }
+  table.totals tr.grand td {
+    background: #15294d;
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 10.5pt;
+    border-radius: 3pt;
+  }
+
+  /* ── Notes / terms ────────────────────────────────────────── */
+  .terms { margin-top: 18pt; }
+  .term-box {
+    border-left: 2.5pt solid #15294d;
+    background: #f7f9fc;
+    padding: 7pt 11pt;
+    margin-bottom: 8pt;
+    font-size: 8.8pt;
+    color: #3c424c;
+  }
+  .term-box .k { font-weight: 700; color: #20242b; }
+  .valid-box {
+    border-left-color: #b8860b;
+    background: #fdf8ec;
+  }
+  .fx-note { font-size: 7.8pt; color: #8a909b; margin-top: 6pt; }
+  .notes-block { margin-top: 12pt; font-size: 8.8pt; color: #3c424c; }
+  .notes-block .k { font-weight: 700; color: #20242b; }
+
+  .footer {
+    margin-top: 26pt;
+    padding-top: 8pt;
+    border-top: 0.5pt solid #e6e9ef;
+    font-size: 7.6pt;
+    color: #9aa0a6;
+    text-align: center;
+  }
 </style>
 </head>
 <body>
-  <h1>Коммерческое предложение</h1>
-  <p class="subtitle">КП №{{ quote.deal_id }}-v{{ quote.version }} от {{ quote.created_at|date:"d.m.Y" }}</p>
+  {% with pres_ccy=quote.quote_currency.code|default:"UZS" %}
 
-  <div class="company-block">
-    <h3>Клиент</h3>
-    <p><strong>{{ company.name }}</strong></p>
-    <p>ИНН: {{ company.inn }}</p>
-    {% if company.legal_address %}<p>Адрес: {{ company.legal_address }}</p>{% endif %}
-    {% if company.contact_person %}<p>Контактное лицо: {{ company.contact_person }}</p>{% endif %}
-  </div>
+  <!-- ── Brand header ── -->
+  <table class="brandbar">
+    <tr>
+      <td>
+        <div class="brand-name">{% if seller %}{{ seller.name }}{% else %}RailTech B2B{% endif %}</div>
+        <div class="brand-meta">
+          {% if seller %}
+            {% if seller.inn %}ИНН {{ seller.inn }}{% endif %}
+            {% if seller.phone %} · тел. {{ seller.phone }}{% endif %}
+            {% if seller.email %} · {{ seller.email }}{% endif %}
+          {% else %}
+            RailTech B2B Ecosystem
+          {% endif %}
+        </div>
+      </td>
+      <td class="doc-id">
+        <div class="doc-no">КП № {{ quote.deal_id }}-{{ quote.version }}</div>
+        <div>от {{ quote.created_at|date:"d.m.Y" }}</div>
+        {% if quote.valid_until %}<div>действ. до {{ quote.valid_until|date:"d.m.Y" }}</div>{% endif %}
+      </td>
+    </tr>
+  </table>
+  <div class="rule"></div>
 
-  <table>
+  <h1 class="offer-title">Коммерческое предложение</h1>
+
+  <!-- ── Parties ── -->
+  <table class="parties">
+    <tr>
+      <td>
+        <div class="party">
+          <h3>Поставщик</h3>
+          {% if seller %}
+            <div class="pname">{{ seller.name }}</div>
+            {% if seller.inn %}<p>ИНН: {{ seller.inn }}</p>{% endif %}
+            {% if seller.legal_address %}<p>{{ seller.legal_address }}</p>{% endif %}
+            {% if seller.phone %}<p>Тел.: {{ seller.phone }}</p>{% endif %}
+            {% if seller.email %}<p>{{ seller.email }}</p>{% endif %}
+          {% else %}
+            <div class="pname">RailTech B2B</div>
+            <p>Платформа b2b.railtech.uz</p>
+          {% endif %}
+        </div>
+      </td>
+      <td>
+        <div class="party">
+          <h3>Покупатель</h3>
+          <div class="pname">{{ company.name }}</div>
+          {% if company.inn %}<p>ИНН: {{ company.inn }}</p>{% endif %}
+          {% if company.legal_address %}<p>{{ company.legal_address }}</p>{% endif %}
+          {% if company.contact_person %}<p>Контакт: {{ company.contact_person }}</p>{% endif %}
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- ── Line items (client projection — NO cost/margin) ── -->
+  <table class="lines">
     <thead>
       <tr>
-        <th style="width:6%">#</th>
-        <th style="width:46%">Наименование</th>
-        <th style="width:12%">Кол-во</th>
-        <th style="width:18%" class="text-right">Цена за ед., без НДС</th>
-        <th style="width:18%" class="text-right">Сумма, без НДС</th>
+        <th style="width:5%">№</th>
+        <th style="width:43%">Наименование</th>
+        <th style="width:10%" class="center">Кол-во</th>
+        <th style="width:12%" class="center">Срок</th>
+        <th style="width:15%" class="num">Цена за ед.</th>
+        <th style="width:15%" class="num">Сумма</th>
       </tr>
     </thead>
     <tbody>
-      {% comment %}
-        Client-facing КП: show ONLY the final per-unit price and line total. Never
-        expose the seller cost fields here — the buyer could derive the markup.
-      {% endcomment %}
       {% for item in items %}
       <tr>
-        <td>{{ forloop.counter }}</td>
-        <td>{{ item.product.name|default:item.imported_raw_name }}</td>
-        <td>{{ item.quantity }}</td>
-        <td class="text-right">{{ item.final_price_excl_vat|floatformat:2 }}</td>
-        <td class="text-right">{{ item.line_total|floatformat:2 }}</td>
+        <td class="num">{{ forloop.counter }}</td>
+        <td>
+          <div class="item-name">{{ item.product.name|default:item.imported_raw_name|default:"—" }}</div>
+          {% if item.mpn or item.gost_drawing %}
+          <div class="item-sub">
+            {% if item.mpn %}Арт.: {{ item.mpn }}{% endif %}
+            {% if item.mpn and item.gost_drawing %} · {% endif %}
+            {% if item.gost_drawing %}{{ item.gost_drawing }}{% endif %}
+          </div>
+          {% endif %}
+        </td>
+        <td class="center">{{ item.quantity }}{% if item.unit %} {{ item.unit }}{% endif %}</td>
+        <td class="center">{% if item.lead_time_days %}до {{ item.lead_time_days }} дн.{% else %}&mdash;{% endif %}</td>
+        <td class="num">{{ item.final_price_excl_vat|floatformat:2 }}</td>
+        <td class="num">{{ item.line_total|floatformat:2 }}</td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
 
-  <div class="totals">
-    <table>
-      <tr>
-        <td>Итого без НДС:</td>
-        <td class="text-right">{{ quote.subtotal_excl_vat|floatformat:2 }}</td>
-      </tr>
-      <tr>
-        <td>НДС {{ quote.vat_rate }}%:</td>
-        <td class="text-right">{{ quote.vat_amount|floatformat:2 }}</td>
-      </tr>
-      <tr class="total-row">
-        <td>ИТОГО с НДС:</td>
-        <td class="text-right">{{ quote.total_incl_vat|floatformat:2 }}</td>
-      </tr>
-    </table>
-  </div>
+  <!-- ── Totals bridge: Subtotal → Charges → VAT → Total ── -->
+  <table class="totals-wrap">
+    <tr>
+      <td>
+        <table class="totals">
+          <tr>
+            <td class="lbl">Сумма позиций (без НДС):</td>
+            <td class="val">{{ quote.subtotal_excl_vat|floatformat:2 }} {{ pres_ccy }}</td>
+          </tr>
+          {% if quote.charges_total %}
+          <tr>
+            <td class="lbl">Доп. расходы / скидки:</td>
+            <td class="val">{{ quote.charges_total|floatformat:2 }} {{ pres_ccy }}</td>
+          </tr>
+          <tr class="sep">
+            <td class="lbl">Итого без НДС:</td>
+            <td class="val">{{ quote.subtotal_excl_vat|add:quote.charges_total|floatformat:2 }} {{ pres_ccy }}</td>
+          </tr>
+          {% endif %}
+          <tr {% if not quote.charges_total %}class="sep"{% endif %}>
+            <td class="lbl">НДС {{ quote.vat_rate|floatformat:0 }}%:</td>
+            <td class="val">{{ quote.vat_amount|floatformat:2 }} {{ pres_ccy }}</td>
+          </tr>
+          <tr class="grand">
+            <td class="lbl">ИТОГО к оплате:</td>
+            <td class="val">{{ quote.total_incl_vat|floatformat:2 }} {{ pres_ccy }}</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 
-  <div style="clear:both"></div>
+  <!-- ── Terms ── -->
+  <div class="terms">
+    <div class="term-box">
+      <span class="k">Срок поставки:</span>
+      {% if quote.effective_delivery_lead_time_days %}до {{ quote.effective_delivery_lead_time_days }} дн.{% else %}по согласованию{% endif %}
+      {% if quote.delivery_basis %} &middot; <span class="k">Базис поставки:</span> {{ quote.delivery_basis.code }}{% if quote.delivery_basis.name %} ({{ quote.delivery_basis.name }}){% endif %}{% endif %}
+      {% if quote.delivery_note %} &middot; {{ quote.delivery_note }}{% endif %}
+    </div>
 
-  {% if quote.valid_until %}
-  <div class="valid-until">
-    Предложение действительно до: <strong>{{ quote.valid_until|date:"d.m.Y" }}</strong>
+    {% if quote.valid_until %}
+    <div class="term-box valid-box">
+      <span class="k">Предложение действительно до:</span> {{ quote.valid_until|date:"d.m.Y" }}
+    </div>
+    {% endif %}
+
+    {% if quote.fx_snapshot %}
+    <div class="fx-note">
+      Курс ЦБ на {{ quote.frozen_at|default:quote.updated_at|date:"d.m.Y" }}:
+      {% for ccy_code, rate in quote.fx_snapshot.items %}{{ ccy_code }} = {{ rate|floatformat:2 }} сум{% if not forloop.last %}; {% endif %}{% endfor %}.
+      Суммы в КП пересчитаны в {{ pres_ccy }} по указанному курсу.
+    </div>
+    {% endif %}
   </div>
-  {% endif %}
 
   {% if quote.notes %}
-  <div style="margin-top:20px">
-    <strong>Примечания:</strong><br>{{ quote.notes|linebreaks }}
+  <div class="notes-block">
+    <span class="k">Примечания:</span><br>{{ quote.notes|linebreaks }}
   </div>
   {% endif %}
 
   <div class="footer">
-    RailTech B2B Ecosystem | {{ quote.created_at|date:"Y" }} | Сгенерировано автоматически
+    Документ сформирован в RailTech B2B Ecosystem &middot; {{ quote.created_at|date:"d.m.Y" }}
   </div>
+
+  {% endwith %}
 </body>
 </html>

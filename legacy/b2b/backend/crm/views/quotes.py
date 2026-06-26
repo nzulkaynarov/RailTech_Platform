@@ -1,5 +1,11 @@
 from django.db.models import Max
-from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view, inline_serializer
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiResponse,
+    extend_schema,
+    extend_schema_view,
+    inline_serializer,
+)
 from rest_framework import serializers as drf_serializers
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -492,6 +498,35 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
             as_attachment=True,
             filename=quote.pdf_file.name.split("/")[-1],
         )
+
+    @extend_schema(
+        summary="Export quote in a chosen format (pdf | xlsx | csv)",
+        description=(
+            "On-demand, user-chosen export of the КП. ?format=pdf returns the CLIENT "
+            "projection (no seller cost/margin); ?format=xlsx|csv returns the seller line "
+            "table, including cost/margin columns only when the requester may view КП costs."
+        ),
+        parameters=[
+            OpenApiParameter(
+                name="format",
+                description="Export format: pdf (default), xlsx, or csv.",
+                required=False,
+                type=str,
+                enum=["pdf", "xlsx", "csv"],
+            )
+        ],
+        responses={
+            200: OpenApiResponse(description="Rendered file (PDF / XLSX / CSV)"),
+            400: OpenApiResponse(description="Unsupported format"),
+        },
+        tags=["CRM"],
+    )
+    @action(detail=True, methods=["get"], url_path="export")
+    def export(self, request, pk=None):
+        """Thin wrapper — format dispatch + cost gating live in crm.views.exports."""
+        from crm.views.exports import handle_quote_export
+
+        return handle_quote_export(request, self.get_object())
 
 
 def _assert_seller_owns_quote_deal(request, quote):

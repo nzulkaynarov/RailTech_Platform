@@ -12,6 +12,7 @@ from accounts.services.permissions import has_workspace_role
 from ..constants import DealStageCode, QuoteStatusCode
 from ..models import ActivityLog, Deal, Quote, QuoteItem, QuoteItemHistory, QuoteStatus
 from ._params import has_explicit_company_role_perm
+from .availability import resolve_seller_offer, split_line_by_availability
 from .deals import transition_deal_stage
 
 logger = logging.getLogger(__name__)
@@ -28,6 +29,16 @@ def _quote_owner_company_id(quote) -> Optional[int]:
         .first()
     )
     return membership.company_id if membership else None
+
+
+def _quote_seller_company(quote):
+    """The issuing (seller) Company for the КП document header — the preparer's
+    owning company. None when the КП is still an unclaimed buyer request (no preparer),
+    in which case the PDF header falls back to the platform name."""
+    company_id = _quote_owner_company_id(quote)
+    if not company_id:
+        return None
+    return Company.objects.filter(pk=company_id).first()
 
 
 def _set_quote_status(quote, code: str) -> None:
@@ -143,6 +154,18 @@ def approval_queue_for(user):
     )
 
 
+def effective_quote_lead_time(quote, items=None) -> int:
+    """Effective КП delivery lead time (days): the manual override on the КП if set,
+    otherwise max(line lead_time_days) — the КП is fully delivered when the slowest
+    line is ready. `items` may be a pre-fetched list to avoid a re-query; otherwise the
+    КП's items are read. Returns 0 when there is no override and no line has a lead time.
+    """
+    if quote.delivery_lead_time_days is not None:
+        return quote.delivery_lead_time_days
+    rows = items if items is not None else quote.items.all()
+    return max((row.lead_time_days for row in rows), default=0)
+
+
 class QuoteCalculationService:
     """
     Centralized engine for financial calculations.
@@ -150,12 +173,21 @@ class QuoteCalculationService:
     """
 
     @staticmethod
-    def calculate_item_prices(item: QuoteItem, commit=True, basis=...):
+    def calculate_item_prices(item: QuoteItem, commit=True, basis=..., margin_percent=None, rate=None):
         """
         Calculates Landed Cost and Final Price for a single item.
         Formula:
-          1. landed_cost = base + customs duty (per ТНВЭД)   — F3.8, unified across Incoterms
+          1. landed_cost (UZS) = (base + customs duty) × FX-rate   — F3.8 + multi-currency
           2. final_price = landed_cost * (1 + margin%) * (1 − discount%)
+
+        Multi-currency: the per-line base price (frozen_base_price) is denominated in the
+        line's cost currency (item.frozen_currency, e.g. USD/EUR/RUB). `rate` is that
+        currency's UZS rate (resolved ONCE in recalculate_quote — no N+1 lookup here). The
+        customs_duty is treated as entered in the SAME line currency and converted together
+        (design choice — keeps the per-line cost in one currency; UZS lines use rate=1). All
+        downstream amounts (margin, subtotal, charges, VAT, totals) are therefore in UZS =
+        quote_currency. When `rate` is None, no conversion is applied (rate 1) — preserves
+        the legacy in-memory call path (e.g. unit tests, QuoteItem.save without a quote map).
 
         `basis` is accepted for call-site compatibility but no longer gates per-line columns:
         freight/insurance/etc. are document-level charges (на всю партию), not per-line. The
@@ -173,10 +205,16 @@ class QuoteCalculationService:
         item.logistics_cost = Decimal("0")
         if is_service:
             item.customs_duty = Decimal("0")
-        item.landed_cost = item.frozen_base_price + item.customs_duty
+        # Convert (base + customs), both in the line currency, into UZS via the resolved rate.
+        fx_rate = Decimal("1") if rate is None else Decimal(str(rate))
+        item.landed_cost = (
+            (item.frozen_base_price + item.customs_duty) * fx_rate
+        ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
-        # себестоимость → +наценка → −скидка позиции (UBL line-level allowance)
-        margin_mult = Decimal("1") + (item.margin_percent / Decimal("100"))
+        # себестоимость → +наценка (маржа на ВЕСЬ КП) → −скидка позиции. Маржа приходит из
+        # quote.margin_percent; прямые вызовы без неё падают на позиционное значение (задел).
+        effective_margin = item.margin_percent if margin_percent is None else margin_percent
+        margin_mult = Decimal("1") + (effective_margin / Decimal("100"))
         discount_mult = Decimal("1") - (item.discount_percent / Decimal("100"))
         item.final_price_excl_vat = (item.landed_cost * margin_mult * discount_mult).quantize(
             Decimal("0.01"), rounding=ROUND_HALF_UP
@@ -186,6 +224,43 @@ class QuoteCalculationService:
             item.save(update_fields=["landed_cost", "final_price_excl_vat", "logistics_cost", "customs_duty"])
 
         return item
+
+    @staticmethod
+    def _resolve_fx_rate_map(quote, items) -> dict:
+        """Resolve {currency_code: Decimal rate_to_uzs} for every DISTINCT line cost
+        currency on the КП, ONCE (no per-line lookup). Priority per currency:
+          1. quote.fx_manual[code]   — КП-level manual override (договорной курс), wins.
+          2. quote.fx_snapshot[code] — already frozen on a prior recalc (no market drift).
+          3. master_data.fx.get_rate_to_uzs(code) — current market rate; WRITTEN BACK into
+             fx_snapshot so it freezes from now on.
+        UZS (and a missing currency) → rate 1. Mutates quote.fx_snapshot in place; the
+        caller persists it. Returns {code: Decimal}.
+        """
+        from master_data.fx import get_rate_to_uzs
+
+        snapshot = quote.fx_snapshot if isinstance(quote.fx_snapshot, dict) else {}
+        manual = quote.fx_manual if isinstance(quote.fx_manual, dict) else {}
+        rate_map: dict = {}
+        codes = {
+            (item.frozen_currency.code if item.frozen_currency_id else "UZS").upper() for item in items
+        }
+        for code in codes:
+            if code in ("UZS", ""):
+                rate_map[code] = Decimal("1")
+                continue
+            if code in manual and manual[code] not in (None, ""):
+                rate_map[code] = Decimal(str(manual[code]))
+                continue
+            if code in snapshot and snapshot[code] not in (None, ""):
+                rate_map[code] = Decimal(str(snapshot[code]))
+                continue
+            market = get_rate_to_uzs(code)
+            resolved = Decimal("1") if market is None else Decimal(str(market))
+            rate_map[code] = resolved
+            # Freeze it onto the КП so the total can't drift on the next recalc.
+            snapshot[code] = str(resolved)
+        quote.fx_snapshot = snapshot
+        return rate_map
 
     @classmethod
     @transaction.atomic
@@ -197,12 +272,30 @@ class QuoteCalculationService:
         # of=("self",): lock only the quote row — select_related pulls the NULLABLE
         # delivery_basis via an outer join, and Postgres can't FOR UPDATE that side.
         quote = Quote.objects.select_for_update(of=("self",)).select_related("delivery_basis").get(pk=quote_id)
-        items = list(quote.items.select_related("product__domain_type").all())
+        items = list(quote.items.select_related("product__domain_type", "frozen_currency").all())
+
+        # 0. Resolve the FX rate map ONCE for all distinct line cost currencies and freeze
+        #    newly-resolved rates into quote.fx_snapshot (persisted in step 4 below).
+        rate_map = cls._resolve_fx_rate_map(quote, items)
 
         # 1. Recalculate each item price (without saving each time to DB yet). Pass the basis
-        #    once so the Incoterm flag-gating runs without an N+1 on item.quote (M1/M2).
+        #    and per-currency rate once so the Incoterm flag-gating + FX conversion run
+        #    without an N+1 on item.quote / rate lookup (M1/M2).
         for item in items:
-            cls.calculate_item_prices(item, commit=False, basis=quote.delivery_basis)
+            line_code = (item.frozen_currency.code if item.frozen_currency_id else "UZS").upper()
+            cls.calculate_item_prices(
+                item,
+                commit=False,
+                basis=quote.delivery_basis,
+                margin_percent=quote.margin_percent,
+                rate=rate_map.get(line_code, Decimal("1")),
+            )
+
+        # 1b. Effective КП lead time = override or max(line lead times). Computed here off
+        #     the already-fetched items (no extra query); the override on the КП is NEVER
+        #     overwritten — the derived value is presentation, exposed via the serializer /
+        #     Quote.effective_delivery_lead_time_days. (Helper centralises the rule — Rule 8.)
+        quote.effective_lead_time_cached = effective_quote_lead_time(quote, items)
 
         # 2. Bulk update items to minimize DB hits
         QuoteItem.objects.bulk_update(items, ["landed_cost", "final_price_excl_vat", "logistics_cost", "customs_duty"])
@@ -252,7 +345,15 @@ class QuoteCalculationService:
         quote.total_incl_vat = tax_exclusive + quote.vat_amount
 
         quote.save(
-            update_fields=["subtotal_excl_vat", "charges_total", "vat_amount", "total_incl_vat", "updated_at"]
+            update_fields=[
+                "subtotal_excl_vat",
+                "charges_total",
+                "vat_amount",
+                "total_incl_vat",
+                # FX snapshot freezes any newly-resolved market rate so the total can't drift.
+                "fx_snapshot",
+                "updated_at",
+            ]
         )
         return quote
 
@@ -303,7 +404,9 @@ class QuoteLifecycleService:
         from weasyprint import HTML
 
         quote = (
-            Quote.objects.select_related("deal__company", "status", "tax_country", "prepared_by")
+            Quote.objects.select_related(
+                "deal__company", "status", "tax_country", "prepared_by", "quote_currency", "delivery_basis"
+            )
             .prefetch_related("items__product__domain_type")
             .get(pk=quote_id)
         )
@@ -314,6 +417,10 @@ class QuoteLifecycleService:
                 "quote": quote,
                 "items": quote.items.select_related("product", "frozen_currency").all(),
                 "company": quote.deal.company,
+                # Issuer (seller) block for a branded offer header — the company that
+                # owns the КП (the preparer's seller company). None for an unclaimed
+                # request quote; the template falls back to the platform name.
+                "seller": _quote_seller_company(quote),
             },
         )
 
@@ -472,6 +579,13 @@ class QuoteLifecycleService:
             return None, "ROLE_NOT_PERMITTED"
         if not quote.status or quote.status.code != QuoteStatusCode.DRAFT:
             return None, "INVALID_STATUS"
+        # ATP auto-split (Track B): the КП is built and leaving DRAFT — split every
+        # product line whose seller stock can't cover the requested qty into наличие +
+        # под заказ tranches, in one pass (no per-line clicks). Idempotent: an already-
+        # split set is left alone, so re-submitting after a send-back never re-splits.
+        from .availability import auto_split_quote_by_availability
+
+        auto_split_quote_by_availability(quote, company_id)
         has_trade = CompanyMember.objects.filter(
             company_id=company_id, is_active=True, role__code=WorkspaceRoleCode.FOREIGN_TRADE_SPECIALIST
         ).exists()
@@ -660,9 +774,16 @@ def reassign_quote_item_product(
         # (the per-line override wins; we only fill an empty code).
         if not (item.hs_code or "").strip() and (product.hs_code or "").strip():
             item.hs_code = product.hs_code
+        # Lead-time INHERITANCE (Track B): pull the срок from the seller's OWN offer for
+        # this product, but ONLY when the seller hasn't manually set one (0/unset). The
+        # per-line override always wins — mirrors the hs_code inheritance above.
+        offer = resolve_seller_offer(product, _quote_owner_company_id(item.quote))
+        if not item.lead_time_days and offer is not None:
+            tranches = split_line_by_availability(product, item.quantity, offer)
+            item.lead_time_days = max((tranche.lead_time_days for tranche in tranches), default=0)
     else:
         item.product = None
-    item.save(update_fields=["product", "assigned_at", "hs_code"])
+    item.save(update_fields=["product", "assigned_at", "hs_code", "lead_time_days"])
     ActivityLog.objects.create(
         action="Переназначен продукт в позиции КП",
         detail=f"QuoteItem #{item.id} → Product #{product_id}",
@@ -825,17 +946,28 @@ def buyer_add_request_items(user: CustomUser, deal: Deal, rows: list) -> list:
         # cart→заявка hop, so the seller received a line with no unit/spec (owner-reported).
         # An explicit row value (free-text path) still wins where provided.
         prod_uom = product.uom if (product and product.uom_id) else None
+        quantity = max(1, int(row.get("quantity") or 1))
+        # Lead-time inheritance (Track B): a catalog line carries the срок from the owning
+        # seller's offer so the buyer already sees a realistic delivery time; the seller may
+        # later override it. Resolved via product.owner_company (the offer supplier).
+        lead_time_days = 0
+        if product:
+            offer = resolve_seller_offer(product, product.owner_company_id)
+            if offer is not None:
+                tranches = split_line_by_availability(product, quantity, offer)
+                lead_time_days = max((tranche.lead_time_days for tranche in tranches), default=0)
         to_create.append(
             QuoteItem(
                 quote=quote,
                 product=product,
                 imported_raw_name="" if product else name,
-                quantity=max(1, int(row.get("quantity") or 1)),
+                quantity=quantity,
                 unit=(row.get("unit") or (prod_uom.name if prod_uom else ""))[:32],
                 unit_code=(row.get("unit_code") or (prod_uom.code if prod_uom else ""))[:8],
                 mpn=(product.manufacturer_part_number if product else "") or "",
                 gost_drawing=(product.gost_drawing if product else "") or "",
                 hs_code=(product.hs_code if product else "") or "",
+                lead_time_days=lead_time_days,
                 note=row.get("note") or "",
                 assigned_at=timezone.now() if product else None,
             )

@@ -81,7 +81,25 @@ class SupplierOffer(models.Model):
         max_length=100,
         blank=True,
         verbose_name=_("Срок поставки"),
-        help_text=_("Ориентировочный срок поставки (напр. '14-21 дн.')"),
+        help_text=_("Ориентировочный срок поставки (напр. '14-21 дн.') — свободный текст"),
+    )
+    # Наличие на складе (ATP — available-to-promise). stock_quantity единиц поставщик может
+    # отгрузить со склада за in_stock_lead_time_days; остаток заказа едет под заказ за
+    # order_lead_time_days. Из этих полей авто-сплитятся транши строки КП (Track B).
+    stock_quantity = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_("Остаток на складе"),
+        help_text=_("Доступное количество на складе (ATP) для отгрузки в короткий срок"),
+    )
+    in_stock_lead_time_days = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_("Срок поставки со склада (дней)"),
+        help_text=_("Срок отгрузки единиц, имеющихся на складе (наличие)"),
+    )
+    order_lead_time_days = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_("Срок поставки под заказ (дней)"),
+        help_text=_("Срок поставки единиц сверх складского остатка (под заказ)"),
     )
     min_order_qty = models.PositiveIntegerField(
         default=1,
