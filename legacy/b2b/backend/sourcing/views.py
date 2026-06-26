@@ -676,8 +676,13 @@ class PreflightCheckView(APIView):
         return Response({"findings": findings})
 
 
-# Max size for an uploaded contract/invoice document (one base64 vision call).
+# Max size for an uploaded contract/invoice document (one base64 vision call). Aligned at
+# request time to settings.AI_IMPORT_MAX_BYTES so the view's cap matches the service's (was
+# 15MB vs 10MB → a 12MB file passed here then failed downstream as a confusing AI_EXTRACT_FAILED).
 MAX_DOC_FILE_SIZE = 15 * 1024 * 1024
+# Extensions file_to_payload can actually parse — anything else is rejected so an arbitrary
+# binary can't be silently decoded as garbage text and still burn a paid extraction call.
+_DOC_EXT_ALLOWLIST = {"pdf", "png", "jpg", "jpeg", "webp", "gif", "csv", "txt", "tsv", "xlsx", "xls"}
 
 
 def _resolve_expected(user, request, quote_id, contract_id):
@@ -755,8 +760,11 @@ class DocumentExtractView(APIView):
         uploaded = request.FILES.get("file")
         if uploaded is None:
             return Response({"error": "FILE_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
-        if uploaded.size > MAX_DOC_FILE_SIZE:
+        if uploaded.size > getattr(settings, "AI_IMPORT_MAX_BYTES", MAX_DOC_FILE_SIZE):
             return Response({"error": "FILE_TOO_LARGE"}, status=status.HTTP_400_BAD_REQUEST)
+        extension = (uploaded.name or "").rsplit(".", 1)[-1].lower() if "." in (uploaded.name or "") else ""
+        if extension not in _DOC_EXT_ALLOWLIST:
+            return Response({"error": "FILE_TYPE_UNSUPPORTED"}, status=status.HTTP_400_BAD_REQUEST)
 
         def _to_int(value):
             try:

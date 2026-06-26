@@ -106,7 +106,12 @@ def test_compose_drops_noise_rows(settings, monkeypatch):
 
 
 @pytest.mark.django_db
-def test_compose_endpoint_guards(settings):
+def test_compose_endpoint_guards(settings, monkeypatch):
+    # Spy: every guarded path (missing/blank text, AI disabled) MUST return BEFORE the paid
+    # Claude call — this proves the no-paid-call contract, not just the status code.
+    import sourcing.services_ai_conversational as conv
+
+    monkeypatch.setattr(conv, "_client", lambda: pytest.fail("paid LLM call reached on a guarded compose path"))
     settings.AI_IMPORT_ENABLED = True
     user = CustomUser.objects.create_user(email="cw@x.test", username="cw@x.test", password="pw", is_active=True)
     client = APIClient()

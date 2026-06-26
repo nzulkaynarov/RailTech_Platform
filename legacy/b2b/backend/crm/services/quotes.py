@@ -159,14 +159,15 @@ class QuoteCalculationService:
 
         `basis` is accepted for call-site compatibility but no longer gates per-line columns:
         freight/insurance/etc. are document-level charges (на всю партию), not per-line. The
-        Incoterm basis instead drives which document charges appear (DEFAULT_CHARGES_BY_BASIS).
+        Incoterm basis instead drives which document charges auto-apply (the per-basis global
+        ChargeTemplate seed → apply_charge_template_to_quote).
         """
         is_service = item.product and item.product.domain_type and item.product.domain_type.code == "SERVICES"
 
         # F3.8 (owner directive): the per-line cost is ONLY себестоимость (base) + customs
         # duty (inherently per-line — the rate is set by the line's ТНВЭД/HS code). Freight,
         # insurance, packing and every other shipment cost are document-level charges entered
-        # ONCE for the whole batch (см. QuoteCharge / DEFAULT_CHARGES_BY_BASIS), NOT per line.
+        # ONCE for the whole batch (см. QuoteCharge / per-basis ChargeTemplate), NOT per line.
         # The table is therefore unified across Incoterms; the chosen basis drives which
         # document charges appear, not which per-line columns show. logistics_cost stays 0.
         item.logistics_cost = Decimal("0")
