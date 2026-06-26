@@ -3736,7 +3736,10 @@
       "deliveryBasis": "Базис поставки",
       "stockStatus": "Статус наличия",
       "leadTime": "Срок поставки",
-      "minQty": "Мин. заказ"
+      "minQty": "Мин. заказ",
+      "stockQuantity": "Количество на складе",
+      "inStockLeadTimeDays": "Срок поставки со склада (дней)",
+      "orderLeadTimeDays": "Срок поставки под заказ (дней)"
     },
     "stats": {
       "total": "Всего",
@@ -3749,6 +3752,10 @@
       "status": "Наличие",
       "active": "Активен",
       "actions": "Действия"
+    },
+    "availability": {
+      "title": "Наличие и сроки",
+      "hint": "Остаток на складе и сроки поставки используются для автоматического разбиения позиций КП по доступности (ATP)."
     }
   },
   "contractsPage": {
@@ -4410,5 +4417,11 @@
     "unnamed": "Без названия",
     "codeLabel": "Код",
     "candidatesCount": "{{count}} в каталоге"
+  },
+  "export": {
+    "menu": "Экспорт",
+    "pdf": "PDF",
+    "excel": "Excel",
+    "csv": "CSV"
   }
 }

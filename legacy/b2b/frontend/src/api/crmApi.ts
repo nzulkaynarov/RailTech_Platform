@@ -496,6 +496,24 @@ export const crmApi = {
 		}>(`sourcing/import-status/${taskId}/`);
 		return response.data;
 	},
+	// On-demand multi-format КП export (PDF / Excel / CSV). Returns an attachment
+	// (blob), not JSON; the backend gates seller cost/margin columns server-side.
+	exportQuote: async (quoteId: number, format: 'pdf' | 'xlsx' | 'csv') => {
+		const response = await apiClient.get(`crm/quotes/${quoteId}/export/`, {
+			params: { format },
+			responseType: 'blob',
+		});
+		const blob = new Blob([response.data]);
+		const objectUrl = window.URL.createObjectURL(blob);
+		const link = document.createElement('a');
+		link.href = objectUrl;
+		const extension = format === 'xlsx' ? 'xlsx' : format;
+		link.setAttribute('download', `RailTech_Quote_${quoteId}.${extension}`);
+		document.body.appendChild(link);
+		link.click();
+		link.remove();
+		window.URL.revokeObjectURL(objectUrl);
+	},
 	exportDealPDF: async (dealId: number) => {
 		const response = await apiClient.get(`crm/deals/${dealId}/export-pdf/`, {
 			responseType: 'blob'

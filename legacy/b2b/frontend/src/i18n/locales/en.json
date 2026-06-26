@@ -3732,7 +3732,10 @@
       "deliveryBasis": "Delivery basis",
       "stockStatus": "Stock status",
       "leadTime": "Lead time",
-      "minQty": "Min. order"
+      "minQty": "Min. order",
+      "stockQuantity": "Quantity in stock",
+      "inStockLeadTimeDays": "In-stock lead time (days)",
+      "orderLeadTimeDays": "Order lead time (days)"
     },
     "stats": {
       "total": "Total",
@@ -3745,6 +3748,10 @@
       "status": "Stock",
       "active": "Active",
       "actions": "Actions"
+    },
+    "availability": {
+      "title": "Availability & lead times",
+      "hint": "Stock on hand and lead times drive automatic ATP splitting of quote lines by availability."
     }
   },
   "contractsPage": {
@@ -4406,5 +4413,11 @@
     "unnamed": "Unnamed",
     "codeLabel": "Code",
     "candidatesCount": "{{count}} in catalog"
+  },
+  "export": {
+    "menu": "Export",
+    "pdf": "PDF",
+    "excel": "Excel",
+    "csv": "CSV"
   }
 }

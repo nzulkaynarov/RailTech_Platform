@@ -62,6 +62,9 @@ function OfferFormSheet({
       delivery_basis: draft.delivery_basis ? Number(draft.delivery_basis) : null,
       stock_status: draft.stock_status ? Number(draft.stock_status) : null,
       delivery_lead_time: draft.delivery_lead_time ?? '',
+      stock_quantity: Number(draft.stock_quantity ?? 0),
+      in_stock_lead_time_days: Number(draft.in_stock_lead_time_days ?? 0),
+      order_lead_time_days: Number(draft.order_lead_time_days ?? 0),
       min_order_qty: draft.min_order_qty ?? 1,
       is_active: draft.is_active ?? true,
     };
@@ -193,6 +196,42 @@ function OfferFormSheet({
                 onChange={(e) => update({ min_order_qty: Number(e.target.value) })}
               />
             </div>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-base">{t('adminOffers.availability.title')}</Label>
+            <p className="text-xs text-muted-foreground">{t('adminOffers.availability.hint')}</p>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>{t('adminOffers.fields.stockQuantity')}</Label>
+              <Input
+                type="number"
+                min="0"
+                step="1"
+                value={draft.stock_quantity ?? 0}
+                onChange={(e) => update({ stock_quantity: Number(e.target.value) })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{t('adminOffers.fields.inStockLeadTimeDays')}</Label>
+              <Input
+                type="number"
+                min="0"
+                step="1"
+                value={draft.in_stock_lead_time_days ?? 0}
+                onChange={(e) => update({ in_stock_lead_time_days: Number(e.target.value) })}
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>{t('adminOffers.fields.orderLeadTimeDays')}</Label>
+            <Input
+              type="number"
+              min="0"
+              step="1"
+              value={draft.order_lead_time_days ?? 0}
+              onChange={(e) => update({ order_lead_time_days: Number(e.target.value) })}
+            />
           </div>
         </div>
 

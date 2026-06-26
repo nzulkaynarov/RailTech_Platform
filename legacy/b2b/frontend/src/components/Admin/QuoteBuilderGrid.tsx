@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { QuoteItem, crmApi } from '@/api/crmApi';
-import { Loader2, Save, FileDown, AlertTriangle, Plus, Trash2, Sparkles, FileText, Settings } from 'lucide-react';
+import { QuoteItem } from '@/api/crmApi';
+import { Loader2, Save, AlertTriangle, Plus, Trash2, Sparkles, FileText, Settings } from 'lucide-react';
 import { useQuoteItems, useUpdateQuoteItem, useCreateQuoteItem, useDeleteQuoteItem, useDeal, useSetQuoteDeliveryBasis } from '@/hooks/useCRM';
 import { useCurrencies } from '@/hooks/useMasterData';
 import { formatMoney, calculateLineTotal, toDecimal } from '@/utils/decimal';
@@ -28,6 +28,7 @@ import { QuoteApprovalChain } from '@/components/CRM/QuoteApprovalChain';
 import { AICatalogMatchDialog } from '@/components/Admin/AICatalogMatchDialog';
 import { GenerateQuoteDialog } from '@/components/CRM/GenerateQuoteDialog';
 import { QuoteSettingsDialog } from '@/components/CRM/QuoteSettingsDialog';
+import { ExportMenu } from '@/components/Shared/ExportMenu';
 
 interface QuoteBuilderGridProps {
 	dealId?: number;
@@ -47,7 +48,6 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	const setBasisMutation = useSetQuoteDeliveryBasis();
 
 	const [localItems, setLocalItems] = useState<QuoteItem[]>([]);
-	const [isExporting, setIsExporting] = useState(false);
 	const [newItemName, setNewItemName] = useState('');
 	const [showAddRow, setShowAddRow] = useState(false);
 	const [showAiMatch, setShowAiMatch] = useState(false);
@@ -105,17 +105,6 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 			if (onSave) onSave();
 		} catch {
 			toast.error(t('errors.operationFailed'));
-		}
-	};
-
-	const handleExport = async () => {
-		setIsExporting(true);
-		try {
-			await crmApi.exportDealPDF(dealId);
-		} catch {
-			toast.error(t('errors.operationFailed'));
-		} finally {
-			setIsExporting(false);
 		}
 	};
 
@@ -299,14 +288,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 						{updateMutation.isPending ? <Loader2 className="size-3 animate-spin" /> : <Save className="size-3" />}
 						{t('common.save')}
 					</Button>
-					<Button
-						size="sm"
-						onClick={handleExport}
-						disabled={isExporting}
-					>
-						{isExporting ? <Loader2 className="size-3 animate-spin" /> : <FileDown className="size-3" />}
-						{t('quote.pdf')}
-					</Button>
+					<ExportMenu quoteId={activeQuote.id} />
 				</div>
 			</div>
 

@@ -8,6 +8,9 @@ export type OfferDraft = {
   stock_status?: number | null;
   delivery_basis?: number | null;
   supplier_sku?: string;
+  stock_quantity?: number;
+  in_stock_lead_time_days?: number;
+  order_lead_time_days?: number;
 };
 
 export function emptyDraft(): Draft {

@@ -12,6 +12,7 @@ from accounts.services.permissions import has_workspace_role
 from ..constants import DealStageCode, QuoteStatusCode
 from ..models import ActivityLog, Deal, Quote, QuoteItem, QuoteItemHistory, QuoteStatus
 from ._params import has_explicit_company_role_perm
+from .availability import resolve_seller_offer, split_line_by_availability
 from .deals import transition_deal_stage
 
 logger = logging.getLogger(__name__)
@@ -28,6 +29,16 @@ def _quote_owner_company_id(quote) -> Optional[int]:
         .first()
     )
     return membership.company_id if membership else None
+
+
+def _quote_seller_company(quote):
+    """The issuing (seller) Company for the КП document header — the preparer's
+    owning company. None when the КП is still an unclaimed buyer request (no preparer),
+    in which case the PDF header falls back to the platform name."""
+    company_id = _quote_owner_company_id(quote)
+    if not company_id:
+        return None
+    return Company.objects.filter(pk=company_id).first()
 
 
 def _set_quote_status(quote, code: str) -> None:
@@ -393,7 +404,9 @@ class QuoteLifecycleService:
         from weasyprint import HTML
 
         quote = (
-            Quote.objects.select_related("deal__company", "status", "tax_country", "prepared_by")
+            Quote.objects.select_related(
+                "deal__company", "status", "tax_country", "prepared_by", "quote_currency", "delivery_basis"
+            )
             .prefetch_related("items__product__domain_type")
             .get(pk=quote_id)
         )
@@ -404,6 +417,10 @@ class QuoteLifecycleService:
                 "quote": quote,
                 "items": quote.items.select_related("product", "frozen_currency").all(),
                 "company": quote.deal.company,
+                # Issuer (seller) block for a branded offer header — the company that
+                # owns the КП (the preparer's seller company). None for an unclaimed
+                # request quote; the template falls back to the platform name.
+                "seller": _quote_seller_company(quote),
             },
         )
 
@@ -562,6 +579,13 @@ class QuoteLifecycleService:
             return None, "ROLE_NOT_PERMITTED"
         if not quote.status or quote.status.code != QuoteStatusCode.DRAFT:
             return None, "INVALID_STATUS"
+        # ATP auto-split (Track B): the КП is built and leaving DRAFT — split every
+        # product line whose seller stock can't cover the requested qty into наличие +
+        # под заказ tranches, in one pass (no per-line clicks). Idempotent: an already-
+        # split set is left alone, so re-submitting after a send-back never re-splits.
+        from .availability import auto_split_quote_by_availability
+
+        auto_split_quote_by_availability(quote, company_id)
         has_trade = CompanyMember.objects.filter(
             company_id=company_id, is_active=True, role__code=WorkspaceRoleCode.FOREIGN_TRADE_SPECIALIST
         ).exists()
@@ -750,9 +774,16 @@ def reassign_quote_item_product(
         # (the per-line override wins; we only fill an empty code).
         if not (item.hs_code or "").strip() and (product.hs_code or "").strip():
             item.hs_code = product.hs_code
+        # Lead-time INHERITANCE (Track B): pull the срок from the seller's OWN offer for
+        # this product, but ONLY when the seller hasn't manually set one (0/unset). The
+        # per-line override always wins — mirrors the hs_code inheritance above.
+        offer = resolve_seller_offer(product, _quote_owner_company_id(item.quote))
+        if not item.lead_time_days and offer is not None:
+            tranches = split_line_by_availability(product, item.quantity, offer)
+            item.lead_time_days = max((tranche.lead_time_days for tranche in tranches), default=0)
     else:
         item.product = None
-    item.save(update_fields=["product", "assigned_at", "hs_code"])
+    item.save(update_fields=["product", "assigned_at", "hs_code", "lead_time_days"])
     ActivityLog.objects.create(
         action="Переназначен продукт в позиции КП",
         detail=f"QuoteItem #{item.id} → Product #{product_id}",
@@ -915,17 +946,28 @@ def buyer_add_request_items(user: CustomUser, deal: Deal, rows: list) -> list:
         # cart→заявка hop, so the seller received a line with no unit/spec (owner-reported).
         # An explicit row value (free-text path) still wins where provided.
         prod_uom = product.uom if (product and product.uom_id) else None
+        quantity = max(1, int(row.get("quantity") or 1))
+        # Lead-time inheritance (Track B): a catalog line carries the срок from the owning
+        # seller's offer so the buyer already sees a realistic delivery time; the seller may
+        # later override it. Resolved via product.owner_company (the offer supplier).
+        lead_time_days = 0
+        if product:
+            offer = resolve_seller_offer(product, product.owner_company_id)
+            if offer is not None:
+                tranches = split_line_by_availability(product, quantity, offer)
+                lead_time_days = max((tranche.lead_time_days for tranche in tranches), default=0)
         to_create.append(
             QuoteItem(
                 quote=quote,
                 product=product,
                 imported_raw_name="" if product else name,
-                quantity=max(1, int(row.get("quantity") or 1)),
+                quantity=quantity,
                 unit=(row.get("unit") or (prod_uom.name if prod_uom else ""))[:32],
                 unit_code=(row.get("unit_code") or (prod_uom.code if prod_uom else ""))[:8],
                 mpn=(product.manufacturer_part_number if product else "") or "",
                 gost_drawing=(product.gost_drawing if product else "") or "",
                 hs_code=(product.hs_code if product else "") or "",
+                lead_time_days=lead_time_days,
                 note=row.get("note") or "",
                 assigned_at=timezone.now() if product else None,
             )

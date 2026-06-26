@@ -302,6 +302,8 @@ class SupplierOfferAdmin(ReadOnlyInspectionMixin, ImportExportModelAdmin, ModelA
                     ("base_price", "currency"),
                     ("delivery_basis", "stock_status"),
                     ("delivery_lead_time", "min_order_qty"),
+                    "stock_quantity",
+                    ("in_stock_lead_time_days", "order_lead_time_days"),
                 ),
             },
         ),
