@@ -27,6 +27,7 @@ import {
 } from '../../hooks/useAccounts';
 import { CompanyRole } from '../../api/accountsApi';
 import { workspaceRoleLabelKey } from '@/lib/codes';
+import type { TFunction } from 'i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -66,6 +67,46 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+
+// ─── Error helpers ──────────────────────────────────────────────────────────
+
+interface BackendErrorShape {
+  response?: { data?: { error?: string; detail?: string } };
+}
+
+/** Backend service error codes → i18n message keys (see accounts/views/roles.py). */
+const ROLE_ERROR_KEYS: Record<string, string> = {
+  ONLY_TEAM_MANAGER_CAN_MANAGE_ROLES: 'team.rolesSection.errors.onlyTeamManager',
+  SYSTEM_ROLE_IMMUTABLE: 'team.rolesSection.errors.systemImmutable',
+  ROLE_HAS_MEMBERS_REASSIGN_FIRST: 'team.rolesSection.errors.roleHasMembers',
+  CANNOT_DEMOTE_LAST_COMPANY_ADMIN: 'team.rolesSection.errors.lastAdmin',
+  MEMBER_NOT_FOUND: 'team.rolesSection.errors.memberNotFound',
+  ROLE_NOT_FOUND: 'team.rolesSection.errors.roleNotFound',
+  ROLE_NAME_REQUIRED: 'team.rolesSection.errors.nameRequired',
+  ROLE_NAME_TAKEN: 'team.rolesSection.errors.nameTaken',
+  UNKNOWN_PERMISSION_CODE: 'team.rolesSection.errors.unknownPermission',
+  ROLE_COMPANY_MISMATCH: 'team.rolesSection.errors.companyMismatch',
+};
+
+/**
+ * i18next uses '.' as its key separator, but permission codes contain dots
+ * (e.g. "quote.build"). Map the dotted code to a single-segment key under
+ * `permissions` so it resolves against the (nested) locale object.
+ */
+function permLabelKey(code: string): string {
+  return `permissions.${code.replace(/\./g, '_')}`;
+}
+
+/** Resolve a thrown axios error to a localized, human-readable message. */
+function resolveRoleError(err: unknown, translate: TFunction, fallbackKey: string): string {
+  const data = (err as BackendErrorShape)?.response?.data;
+  const code = data?.error;
+  if (code && ROLE_ERROR_KEYS[code]) {
+    return translate(ROLE_ERROR_KEYS[code]);
+  }
+  if (data?.detail) return data.detail;
+  return translate(fallbackKey);
+}
 
 // ─── Role Editor Sheet ──────────────────────────────────────────────────────
 
@@ -120,9 +161,7 @@ function RoleEditorSheet({ open, onOpenChange, editingRole }: RoleSheetProps) {
       }
       onOpenChange(false);
     } catch (err) {
-      type AxiosLike = { response?: { data?: { detail?: string } } };
-      const detail = (err as AxiosLike)?.response?.data?.detail;
-      toast.error(detail ?? (err instanceof Error ? err.message : t('common.error')));
+      toast.error(resolveRoleError(err, t, 'common.error'));
     }
   }
 
@@ -156,16 +195,21 @@ function RoleEditorSheet({ open, onOpenChange, editingRole }: RoleSheetProps) {
             </div>
 
             <div className="space-y-3">
-              <p className="text-sm font-medium text-foreground">
-                {t('team.rolesSection.permissions')}
-              </p>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-foreground">
+                  {t('team.rolesSection.permissions')}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {t('team.rolesSection.permissionsHint')}
+                </p>
+              </div>
               {permissionGroups.length === 0 ? (
                 <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
               ) : (
                 <div className="space-y-5">
                   {permissionGroups.map((group) => {
                     const groupLabel =
-                      t(`team.permissionGroups.${group.key}`, { defaultValue: group.label });
+                      t(`team.rolesSection.groups.${group.key}`, { defaultValue: group.label });
                     return (
                       <div key={group.key} className="space-y-2">
                         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -183,7 +227,7 @@ function RoleEditorSheet({ open, onOpenChange, editingRole }: RoleSheetProps) {
                                 checked={selectedPerms.has(perm.code)}
                                 onCheckedChange={() => togglePerm(perm.code)}
                               />
-                              <span className="text-sm text-foreground">{t(`permissions.${perm.code}`, { defaultValue: perm.label })}</span>
+                              <span className="text-sm text-foreground">{t(permLabelKey(perm.code), { defaultValue: perm.label })}</span>
                             </label>
                           ))}
                         </div>
@@ -242,9 +286,7 @@ function RolesSection() {
       await deleteMut.mutateAsync(role.id);
       toast.success(t('team.rolesSection.deleteSuccess'));
     } catch (err) {
-      type AxiosLike = { response?: { data?: { detail?: string } } };
-      const detail = (err as AxiosLike)?.response?.data?.detail;
-      toast.error(detail ?? t('team.rolesSection.deleteBlockedByMembers'));
+      toast.error(resolveRoleError(err, t, 'team.rolesSection.deleteBlockedByMembers'));
     }
   }
 
@@ -307,7 +349,7 @@ function RolesSection() {
                       <div className="flex flex-wrap gap-1">
                         {role.permissions.slice(0, 3).map((perm) => (
                           <Badge key={perm} variant="outline" className="text-xs font-normal">
-                            {t(`permissions.${perm}`, { defaultValue: perm })}
+                            {t(permLabelKey(perm), { defaultValue: perm })}
                           </Badge>
                         ))}
                         {role.permissions.length > 3 && (
@@ -444,9 +486,7 @@ export function CompanyTeamSettings() {
       await assignMut.mutateAsync({ member_id: memberId, role_id: roleId });
       toast.success(t('team.rolesSection.assignSuccess'));
     } catch (err) {
-      type AxiosLike = { response?: { data?: { detail?: string } } };
-      const detail = (err as AxiosLike)?.response?.data?.detail;
-      toast.error(detail ?? (err instanceof Error ? err.message : t('common.error')));
+      toast.error(resolveRoleError(err, t, 'common.error'));
     }
   }
 

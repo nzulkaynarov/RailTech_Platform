@@ -74,7 +74,8 @@
     "period7d": "7 days",
     "period30d": "30 days",
     "period90d": "90 days",
-    "id": "ID"
+    "id": "ID",
+    "members": "Members"
   },
   "auth": {
     "loginTitle": "Sign in",
@@ -1285,7 +1286,27 @@
       "deleteSuccess": "Role deleted",
       "assignSuccess": "Role assigned",
       "systemRoleReadonly": "System roles cannot be edited or deleted.",
-      "noRoles": "No roles yet. Create the first role."
+      "noRoles": "No roles yet. Create the first role.",
+      "permissionsHint": "Tick what a member with this role may do. Grant sensitive actions (cost & margin, pricing, payments, contract signing, export, team management) deliberately.",
+      "groups": {
+        "sales": "Sales / Quotes",
+        "procurement": "Procurement",
+        "catalog": "Catalog",
+        "company": "Company admin",
+        "data": "Data"
+      },
+      "errors": {
+        "onlyTeamManager": "Only a company administrator can manage roles.",
+        "systemImmutable": "The system «Company administrator» role cannot be changed or deleted.",
+        "roleHasMembers": "Reassign the members of this role to another role first.",
+        "lastAdmin": "This is the last company administrator. Transfer admin to another member first, then change this member's role.",
+        "memberNotFound": "Member not found.",
+        "roleNotFound": "Role not found.",
+        "nameRequired": "Role name is required.",
+        "nameTaken": "A role with this name already exists.",
+        "unknownPermission": "An unknown permission was selected.",
+        "companyMismatch": "This role belongs to a different company."
+      }
     },
     "permissionGroups": {
       "deals": "Deals",
@@ -4390,7 +4411,21 @@
     "team.manage": "Manage team & roles",
     "settings.edit": "Edit company settings",
     "charge_templates.manage": "Manage charge templates",
-    "data.export": "Export data"
+    "data.export": "Export data",
+    "quote_build": "Build quotes",
+    "quote_send": "Send quotes to client",
+    "quote_view_cost_margin": "See cost & margin",
+    "quote_edit_pricing": "Edit prices & discounts",
+    "request_create": "Create requests",
+    "quote_approve": "Approve / reject quotes",
+    "contract_sign": "Sign contracts",
+    "payment_record": "Record payments",
+    "catalog_manage": "Manage catalog & offers",
+    "catalog_publish": "Publish products",
+    "team_manage": "Manage team & roles",
+    "settings_edit": "Edit company settings",
+    "charge_templates_manage": "Manage charge templates",
+    "data_export": "Export data"
   },
   "quoteStatuses": {
     "draft": "Draft",

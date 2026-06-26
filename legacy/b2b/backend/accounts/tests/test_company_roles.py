@@ -21,6 +21,48 @@ def _member(company, email, *, role=None, can_sell=True, can_buy=True, wsrole_co
 
 
 @pytest.mark.django_db
+def test_default_templates_have_five_roles_with_one_system(company):
+    """The seeded default set = 5 role templates, exactly one immutable «Администратор компании»."""
+    from accounts.constants import COMPANY_ADMIN_ROLE_NAME, ROLE_TEMPLATES
+
+    assert len(ROLE_TEMPLATES) == 5
+    for name, perms in ROLE_TEMPLATES.items():
+        CompanyRole.objects.create(
+            company=company, name=name, permissions=list(perms), is_system=name == COMPANY_ADMIN_ROLE_NAME
+        )
+    roles = CompanyRole.objects.filter(company=company)
+    assert roles.count() == 5
+    system_roles = roles.filter(is_system=True)
+    assert system_roles.count() == 1
+    assert system_roles.first().name == COMPANY_ADMIN_ROLE_NAME
+    # The Наблюдатель template carries no sensitive permission.
+    assert roles.get(name="Наблюдатель").permissions == []
+
+
+@pytest.mark.django_db
+def test_sales_member_can_send_quote_but_not_sign_contract(company):
+    """A member mapped onto the «Менеджер по продажам» template can quote.send but not contract.sign."""
+    from accounts.constants import ROLE_TEMPLATES
+
+    sales_role = CompanyRole.objects.create(
+        company=company, name="Менеджер по продажам", permissions=list(ROLE_TEMPLATES["Менеджер по продажам"])
+    )
+    sales = _member(company, "sales@a.test", role=sales_role, can_sell=False, can_buy=False)
+    assert member_has_permission(sales.user, company.id, "quote.send") is True
+    assert member_has_permission(sales.user, company.id, "contract.sign") is False
+    assert member_has_permission(sales.user, company.id, "payment.record") is False
+
+
+@pytest.mark.django_db
+def test_viewer_member_can_do_nothing_sensitive(company):
+    """A «Наблюдатель» (read-only) member holds none of the sensitive permissions."""
+    viewer_role = CompanyRole.objects.create(company=company, name="Наблюдатель", permissions=[])
+    viewer = _member(company, "view@a.test", role=viewer_role, can_sell=False, can_buy=False)
+    for perm in ("quote.send", "quote.approve", "contract.sign", "payment.record", "team.manage", "data.export"):
+        assert member_has_permission(viewer.user, company.id, perm) is False
+
+
+@pytest.mark.django_db
 def test_company_role_has_perm(company):
     role = CompanyRole.objects.create(company=company, name="Sales", permissions=["quote.send", "quote.build"])
     assert role.has_perm("quote.send") is True
