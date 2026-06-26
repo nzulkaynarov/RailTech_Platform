@@ -16,6 +16,7 @@ _ERROR_STATUS = {
     "ONLY_TEAM_MANAGER_CAN_MANAGE_ROLES": status.HTTP_403_FORBIDDEN,
     "SYSTEM_ROLE_IMMUTABLE": status.HTTP_403_FORBIDDEN,
     "ROLE_HAS_MEMBERS_REASSIGN_FIRST": status.HTTP_409_CONFLICT,
+    "CANNOT_DEMOTE_LAST_COMPANY_ADMIN": status.HTTP_409_CONFLICT,
     "MEMBER_NOT_FOUND": status.HTTP_404_NOT_FOUND,
     "ROLE_NOT_FOUND": status.HTTP_404_NOT_FOUND,
 }
@@ -32,7 +33,24 @@ _GROUP_LABELS = {
     "company": {"ru": "Компания", "en": "Company admin"},
     "data": {"ru": "Данные", "en": "Data"},
 }
-_PERM_LABELS = {p.value: {"ru": p.label} for p in Permission}
+# English labels for the permission checkboxes (the .label on Permission is RU). The SPA
+# localizes via i18n keys, but the catalog ships both so non-i18n clients render correctly.
+_PERM_LABELS_EN = {
+    "quote.build": "Build quotes",
+    "quote.send": "Send quotes to client",
+    "quote.view_cost_margin": "See cost & margin",
+    "quote.edit_pricing": "Edit prices & discounts",
+    "request.create": "Create requests",
+    "quote.approve": "Approve / reject quotes",
+    "contract.sign": "Sign contracts",
+    "payment.record": "Record payments",
+    "catalog.manage": "Manage catalog & offers",
+    "catalog.publish": "Publish products",
+    "team.manage": "Manage team & roles",
+    "settings.edit": "Edit company settings",
+    "charge_templates.manage": "Manage charge templates",
+    "data.export": "Export data",
+}
 
 
 class CompanyRoleViewSet(viewsets.ModelViewSet):
@@ -102,7 +120,10 @@ class PermissionCatalogView(APIView):
                     "key": key,
                     "label": _GROUP_LABELS.get(key, {}).get("ru", key),
                     "label_en": _GROUP_LABELS.get(key, {}).get("en", key),
-                    "permissions": [{"code": p.value, "label": p.label} for p in perms],
+                    "permissions": [
+                        {"code": p.value, "label": p.label, "label_en": _PERM_LABELS_EN.get(p.value, p.label)}
+                        for p in perms
+                    ],
                 }
             )
         return Response({"groups": groups})

@@ -89,7 +89,7 @@ def delete_company_role(user, role: CompanyRole) -> Optional[str]:
 
 @transaction.atomic
 def assign_role_to_member(user, member_id, role_id) -> Tuple[Optional[CompanyMember], Optional[str]]:
-    member = CompanyMember.objects.filter(pk=member_id).select_related("company").first()
+    member = CompanyMember.objects.filter(pk=member_id).select_related("company", "company_role").first()
     if member is None:
         return None, "MEMBER_NOT_FOUND"
     if not _can_manage(user, member.company_id):
@@ -99,6 +99,29 @@ def assign_role_to_member(user, member_id, role_id) -> Tuple[Optional[CompanyMem
         return None, "ROLE_NOT_FOUND"
     if role.company_id != member.company_id:
         return None, "ROLE_COMPANY_MISMATCH"
+    # Never-orphan invariant (ADR-0004): a company must always keep ≥1 active member
+    # holding the immutable «Администратор компании» (is_system) role. If this member is
+    # that role's sole active holder, reassigning them to a non-system role would strip the
+    # company of every admin — transfer admin to someone else first.
+    if (
+        member.company_role_id
+        and member.company_role.is_system
+        and not role.is_system
+        and _is_sole_active_system_admin(member)
+    ):
+        return None, "CANNOT_DEMOTE_LAST_COMPANY_ADMIN"
     member.company_role = role
     member.save(update_fields=["company_role"])
     return member, None
+
+
+def _is_sole_active_system_admin(member: CompanyMember) -> bool:
+    """True if `member` is the only active member of their company holding an is_system role."""
+    other_admins = (
+        CompanyMember.objects.filter(
+            company_id=member.company_id, is_active=True, company_role__is_system=True
+        )
+        .exclude(pk=member.pk)
+        .exists()
+    )
+    return not other_admins
