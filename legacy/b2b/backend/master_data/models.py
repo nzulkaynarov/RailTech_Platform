@@ -120,3 +120,32 @@ class DeliveryBasis(AbstractLookup):
     class Meta(AbstractLookup.Meta):
         verbose_name = _("Базис поставки")
         verbose_name_plural = _("Справочник: Базисы поставок (Incoterms)")
+
+
+class ExchangeRate(models.Model):
+    """Курс валюты к UZS на дату. Источник: ЦБ РУз (авто, Celery beat) или ручной (MANUAL).
+
+    Соглашение: 1 единица `currency` = `rate_to_uzs` сум. UZS к самому себе не хранится (=1).
+    КП замораживает нужные курсы снимком на момент создания (см. Quote FX-snapshot).
+    """
+
+    currency = models.ForeignKey(
+        "master_data.Currency", on_delete=models.PROTECT, related_name="rates", verbose_name=_("Валюта")
+    )
+    rate_to_uzs = models.DecimalField(
+        max_digits=18, decimal_places=6, verbose_name=_("Курс к UZS"), help_text=_("Сколько сум за 1 единицу валюты")
+    )
+    rate_date = models.DateField(verbose_name=_("Дата курса"))
+    source = models.CharField(max_length=16, default="CBU", verbose_name=_("Источник"), help_text=_("CBU или MANUAL"))
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("Курс валюты")
+        verbose_name_plural = _("Справочник: Курсы валют")
+        ordering = ["-rate_date", "currency__code"]
+        constraints = [
+            models.UniqueConstraint(fields=["currency", "rate_date"], name="uniq_exchange_rate_ccy_date"),
+        ]
+
+    def __str__(self):
+        return f"{self.currency.code} = {self.rate_to_uzs} UZS @ {self.rate_date}"
