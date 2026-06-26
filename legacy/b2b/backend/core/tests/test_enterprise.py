@@ -65,10 +65,13 @@ class LandedCostPipelineTest(TestCase):
             margin_percent=Decimal("15.00"),
             quantity=1,
         )
-        # landed_cost = 1000 + 200 + 50 = 1250
-        self.assertEqual(item.landed_cost, Decimal("1250.00"))
-        # final_price_excl_vat = 1250 * 1.15 = 1437.50
-        self.assertEqual(item.final_price_excl_vat, Decimal("1437.50"))
+        # F3.8: freight is now a DOCUMENT-level charge, not a per-line cost — logistics_cost is
+        # hard-zeroed by the engine. Customs stays per-line (driven by the line's ТНВЭД).
+        # landed_cost = base + customs = 1000 + 50 = 1050 (the 200 logistics is ignored).
+        self.assertEqual(item.logistics_cost, Decimal("0.00"))
+        self.assertEqual(item.landed_cost, Decimal("1050.00"))
+        # final_price_excl_vat = 1050 * 1.15 = 1207.50
+        self.assertEqual(item.final_price_excl_vat, Decimal("1207.50"))
 
     def test_zero_margin_is_valid(self):
         """Edge case: margin of 0% must not break the pipeline."""
@@ -80,8 +83,9 @@ class LandedCostPipelineTest(TestCase):
             margin_percent=Decimal("0.00"),
             quantity=1,
         )
-        self.assertEqual(item.landed_cost, Decimal("600.00"))
-        self.assertEqual(item.final_price_excl_vat, Decimal("600.00"))
+        # F3.8: logistics zeroed → landed = base only = 500 (customs is 0 here).
+        self.assertEqual(item.landed_cost, Decimal("500.00"))
+        self.assertEqual(item.final_price_excl_vat, Decimal("500.00"))
 
 
 class RBACSecurityTest(TestCase):

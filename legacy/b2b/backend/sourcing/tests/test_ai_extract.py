@@ -139,3 +139,35 @@ def test_extract_document_fields_parses_stubbed_model(settings, monkeypatch):
     assert fields["valid_until"] == "2030-01-01"
     assert len(fields["line_totals"]) == 1
     assert fields["line_totals"][0]["description"] == "Болт М12"
+
+
+@pytest.mark.django_db
+def test_extract_endpoint_guards(settings, monkeypatch):
+    """Endpoint guard contract: AI-disabled, missing file, and unsupported file-type all return
+    BEFORE the paid Claude call (spy fails if reached). The new type allowlist rejects arbitrary
+    binaries that file_to_payload would otherwise decode as garbage and still bill a call."""
+    from django.core.files.uploadedfile import SimpleUploadedFile
+    from rest_framework.test import APIClient
+
+    import sourcing.services_ai_extract as ext
+    from accounts.models import CustomUser
+
+    monkeypatch.setattr(ext, "_client", lambda: pytest.fail("paid call reached on a guarded extract path"))
+    user = CustomUser.objects.create_user(email="dx@x.test", username="dx@x.test", password="pw", is_active=True)
+    client = APIClient()
+    client.force_authenticate(user)
+    url = "/api/v1/sourcing/extract-document/"
+
+    # AI disabled → 503, before the file is even read
+    settings.AI_IMPORT_ENABLED = False
+    pdf = SimpleUploadedFile("doc.pdf", b"%PDF-1.4 stub", content_type="application/pdf")
+    assert client.post(url, {"file": pdf, "quote_id": 1}, format="multipart").status_code == 503
+
+    settings.AI_IMPORT_ENABLED = True
+    # missing file → 400
+    assert client.post(url, {"quote_id": 1}, format="multipart").status_code == 400
+    # unsupported type → 400 FILE_TYPE_UNSUPPORTED (allowlist), call never reached
+    binary = SimpleUploadedFile("malware.exe", b"MZ\x00\x00binary", content_type="application/octet-stream")
+    resp = client.post(url, {"file": binary, "quote_id": 1}, format="multipart")
+    assert resp.status_code == 400
+    assert resp.json().get("error") == "FILE_TYPE_UNSUPPORTED"
