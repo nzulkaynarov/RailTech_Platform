@@ -4,6 +4,7 @@ from rest_framework import serializers
 
 from .models import (
     Company,
+    CompanyDocumentProfile,
     CompanyMember,
     CompanyRole,
     CompanyRoleApplication,
@@ -11,6 +12,44 @@ from .models import (
     KYCDocument,
     SupplierSubscription,
 )
+
+
+class CompanyDocumentProfileSerializer(serializers.ModelSerializer):
+    """The branded requisites a company prints on its own КП / contract documents.
+
+    Read/update by the company OWNER for THEIR OWN company. `logo` is read-only here
+    (multipart upload goes through the dedicated upload-document-logo action, mirroring
+    the company-logo pattern); all textual requisites are flat-writable.
+    """
+
+    logo_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CompanyDocumentProfile
+        fields = [
+            "id",
+            "company",
+            "logo",
+            "logo_url",
+            "legal_name",
+            "inn",
+            "legal_address",
+            "bank_details",
+            "signatory_name",
+            "signatory_position",
+            "footer_text",
+            "accent_color",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "company", "logo", "created_at", "updated_at"]
+
+    def get_logo_url(self, obj):
+        if not obj.logo:
+            return None
+        request = self.context.get("request")
+        url = obj.logo.url
+        return request.build_absolute_uri(url) if request else url
 
 
 class CompanyRoleSerializer(serializers.ModelSerializer):

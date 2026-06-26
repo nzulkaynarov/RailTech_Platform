@@ -41,6 +41,24 @@ def _quote_seller_company(quote):
     return Company.objects.filter(pk=company_id).first()
 
 
+def _seller_document_profile(seller_company):
+    """The selling company's branded document requisites for the КП header — or None.
+
+    Only returns a profile when the seller has actually filled it in (at least a legal
+    name or a logo); an empty auto-created profile yields None so the template cleanly
+    falls back to the seller Company fields / platform name. Read-only — never creates.
+    """
+    from accounts.models import CompanyDocumentProfile
+
+    if seller_company is None:
+        return None
+    profile = CompanyDocumentProfile.objects.filter(company=seller_company).first()
+    if profile is None:
+        return None
+    has_content = bool((profile.legal_name or "").strip() or profile.logo or (profile.bank_details or "").strip())
+    return profile if has_content else None
+
+
 def _set_quote_status(quote, code: str) -> None:
     # .get (not get_or_create): the status MUST exist from the seed migration.
     quote.status = QuoteStatus.objects.get(code=code)
@@ -411,16 +429,30 @@ class QuoteLifecycleService:
             .get(pk=quote_id)
         )
 
+        # Issuer (seller) block for a branded offer header — the company that owns the КП
+        # (the preparer's seller company). None for an unclaimed request quote; the
+        # template falls back to the platform name.
+        seller_company = _quote_seller_company(quote)
+        # The seller's filled-in document profile (legal name, requisites, logo, footer).
+        # When present, the «Поставщик» block + header logo + footer render from it; when
+        # absent the template falls back to the seller Company fields → platform name.
+        seller_profile = _seller_document_profile(seller_company)
+        seller_logo_url = None
+        if seller_profile and seller_profile.logo:
+            try:
+                seller_logo_url = seller_profile.logo.url
+            except (ValueError, OSError):  # storage backend unavailable / missing key
+                seller_logo_url = None
+
         html_string = render_to_string(
             "crm/quote_pdf.html",
             {
                 "quote": quote,
                 "items": quote.items.select_related("product", "frozen_currency").all(),
                 "company": quote.deal.company,
-                # Issuer (seller) block for a branded offer header — the company that
-                # owns the КП (the preparer's seller company). None for an unclaimed
-                # request quote; the template falls back to the platform name.
-                "seller": _quote_seller_company(quote),
+                "seller": seller_company,
+                "seller_profile": seller_profile,
+                "seller_logo_url": seller_logo_url,
             },
         )
 

@@ -6,7 +6,7 @@ from unfold.decorators import display
 
 from core.admin_mixins import ReadOnlyInspectionMixin
 
-from .models import EmailLog, Notification, NotificationType
+from .models import EmailLog, EmailTemplate, Notification, NotificationType
 
 
 @admin.register(NotificationType)
@@ -154,3 +154,19 @@ class EmailLogAdmin(ReadOnlyInspectionMixin, ModelAdmin):
             'border-radius:8px; background:#ffffff;"></iframe>',
             obj.body_html,
         )
+
+
+@admin.register(EmailTemplate)
+class EmailTemplateAdmin(ModelAdmin):
+    """DB-editable email templates. Primary editor is the React Platform-Operator
+    admin; this Unfold registration is an engineer-side fallback."""
+
+    list_display = ("key", "subject", "is_active", "updated_by", "updated_at")
+    list_filter = ("is_active",)
+    search_fields = ("key", "subject")
+    readonly_fields = ("updated_by", "updated_at")
+    list_per_page = 30
+
+    def save_model(self, request, obj, form, change):
+        obj.updated_by = request.user
+        super().save_model(request, obj, form, change)

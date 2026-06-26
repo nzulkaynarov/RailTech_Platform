@@ -14,11 +14,13 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 
+import { useAuthStore } from '@/store/authStore';
 import { useUserStore, companyStatusLabels } from '@/store/userStore';
 import { useThemeStore } from '@/store/themeStore';
 import { useSystemSettings, useUpdateSystemSettings } from '@/hooks/useSystemSettings';
 import { CompanyTeamSettings } from '@/components/Cabinet/CompanyTeamSettings';
 import { ChargeTemplatesSettings } from '@/components/Cabinet/ChargeTemplatesSettings';
+import { CompanyDocumentProfileSettings } from '@/components/Cabinet/CompanyDocumentProfileSettings';
 
 function SettingRow({ icon: Icon, title, description, children }: {
   icon: React.ComponentType<{ className?: string }>;
@@ -44,6 +46,7 @@ export function SettingsPage() {
   const { t, i18n } = useTranslation();
   const { role, company, activeStatus } = useUserStore();
   const { theme, setTheme } = useThemeStore();
+  const isOwner = useAuthStore((s) => s.user?.workspace_role === 'OWNER');
   const isAdmin = role === 'ADMIN';
   const isSeller = activeStatus === 'SELLER';
   // Fake rows trimmed — currency/timezone/dateFormat/density/sidebar didn't
@@ -65,6 +68,10 @@ export function SettingsPage() {
           {!isAdmin && <TabsTrigger value="team">{t('settings.tabs.team')}</TabsTrigger>}
           {/* Charge templates — seller Company Admin business config (org-admin zone). */}
           {!isAdmin && isSeller && <TabsTrigger value="templates">{t('settings.tabs.templates')}</TabsTrigger>}
+          {/* Document profile — seller OWNER edits the КП / contract branding block. */}
+          {!isAdmin && isSeller && isOwner && (
+            <TabsTrigger value="documentProfile">{t('settings.tabs.documentProfile')}</TabsTrigger>
+          )}
           {isAdmin && <TabsTrigger value="company">{t('settings.tabs.company')}</TabsTrigger>}
           {isAdmin && <TabsTrigger value="platform">{t('settings.tabs.platform')}</TabsTrigger>}
         </TabsList>
@@ -111,6 +118,13 @@ export function SettingsPage() {
         {!isAdmin && isSeller && (
           <TabsContent value="templates" className="space-y-4">
             <ChargeTemplatesSettings />
+          </TabsContent>
+        )}
+
+        {/* Document profile — seller OWNER edits КП / contract branding block */}
+        {!isAdmin && isSeller && isOwner && (
+          <TabsContent value="documentProfile" className="space-y-4">
+            <CompanyDocumentProfileSettings />
           </TabsContent>
         )}
 

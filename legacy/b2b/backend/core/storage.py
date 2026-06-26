@@ -52,6 +52,13 @@ def company_logo_path(instance, filename):
     return f"companies/{instance.pk}/logo/{name}"
 
 
+def company_document_profile_logo_path(instance, filename):
+    """companies/{company_id}/doc-profile/logo/{uuid}.{ext} — the branded logo the seller
+    company puts on its own КП / contract documents (public bucket, like the avatar/logo)."""
+    name = _uuid_filename(instance, filename)
+    return f"companies/{instance.company_id}/doc-profile/logo/{name}"
+
+
 def user_avatar_path(instance, filename):
     """users/{user_id}/avatar/{uuid}.{ext}"""
     name = _uuid_filename(instance, filename)
