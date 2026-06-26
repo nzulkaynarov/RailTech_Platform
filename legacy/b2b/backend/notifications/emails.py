@@ -33,7 +33,8 @@ from typing import Iterable, Optional
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives, get_connection
-from django.template import Context, TemplateDoesNotExist
+from django.db import DatabaseError
+from django.template import Context, Template, TemplateDoesNotExist
 from django.template.loader import get_template, render_to_string
 
 from .models import EmailLog
@@ -66,8 +67,49 @@ def _render_plaintext(template_path: str, context: dict) -> str:
     return template.template.render(Context(context, autoescape=False))
 
 
+def _render_string_plaintext(source: str, context: dict) -> str:
+    """Render a stored (DB) template string with HTML auto-escaping DISABLED.
+
+    Same rationale as `_render_plaintext`: a text/plain body must not be
+    HTML-escaped, or '&' in a URL query becomes '&amp;' and the link breaks.
+    """
+    return Template(source).render(Context(context, autoescape=False))
+
+
+def _render_string_html(source: str, context: dict) -> str:
+    """Render a stored (DB) HTML template string with normal auto-escaping ON."""
+    return Template(source).render(Context(context))
+
+
+def _db_template(template_name: str):
+    """Return the active DB EmailTemplate row for this key, or None.
+
+    A missing table (migrations not yet applied) or any DB error degrades
+    gracefully to the file fallback — the email must still go out.
+    """
+    try:
+        from .models import EmailTemplate
+
+        return EmailTemplate.objects.filter(key=template_name, is_active=True).first()
+    except DatabaseError:
+        logger.exception("EmailTemplate lookup failed for key=%s — using file fallback", template_name)
+        return None
+
+
 def _render_bodies(template_name: str, context: dict) -> tuple[str, str, str]:
-    """Render subject, text body, HTML body. Raises TemplateDoesNotExist early."""
+    """Render subject, text body, HTML body.
+
+    Prefers an active DB EmailTemplate row (Platform-Operator editable); falls
+    back to the file templates in backend/templates/emails/ when no active row
+    exists. Raises TemplateDoesNotExist early if neither source has the template.
+    """
+    db_template = _db_template(template_name)
+    if db_template is not None:
+        subject = _render_string_plaintext(db_template.subject, context).strip()
+        text_body = _render_string_plaintext(db_template.text_body, context)
+        html_body = _render_string_html(db_template.html_body, context) if db_template.html_body else ""
+        return subject, text_body, html_body
+
     subject = _render_plaintext(f"emails/{template_name}_subject.txt", context).strip()
     text_body = _render_plaintext(f"emails/{template_name}.txt", context)
     try:

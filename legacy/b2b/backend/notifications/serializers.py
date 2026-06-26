@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Notification
+from .models import EmailTemplate, Notification
 
 
 class NotificationSerializer(serializers.ModelSerializer):
@@ -23,3 +23,37 @@ class NotificationSerializer(serializers.ModelSerializer):
             "created_at",
         ]
         read_only_fields = ["id", "created_at"]
+
+
+class EmailTemplateSerializer(serializers.ModelSerializer):
+    """DB-editable email template — Platform-Operator admin CRUD."""
+
+    updated_by_email = serializers.CharField(source="updated_by.email", read_only=True)
+
+    class Meta:
+        model = EmailTemplate
+        fields = [
+            "id",
+            "key",
+            "subject",
+            "html_body",
+            "text_body",
+            "available_variables",
+            "is_active",
+            "updated_by",
+            "updated_by_email",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "updated_by", "updated_by_email", "updated_at"]
+
+
+class EmailTemplatePreviewSerializer(serializers.Serializer):
+    """Optional override context for preview/test-send. Empty = use SAMPLE context."""
+
+    context = serializers.DictField(required=False)
+
+
+class EmailTemplateTestSendSerializer(EmailTemplatePreviewSerializer):
+    """Input for the test-send action: a single recipient email."""
+
+    to_email = serializers.EmailField()

@@ -3,7 +3,11 @@ from django.core.validators import RegexValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from core.storage import company_logo_path, get_public_storage
+from core.storage import (
+    company_document_profile_logo_path,
+    company_logo_path,
+    get_public_storage,
+)
 from master_data.models import Country
 
 # ────────────────────────────────────────────
@@ -175,6 +179,98 @@ class Company(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.inn})"
+
+    @property
+    def document_profile(self):
+        """Get-or-create the company's branded document profile (КП / договор requisites).
+
+        Lazily materialised so every company has a profile object to render from; the
+        seller fills it in once via the OWNER endpoint. Cheap OneToOne reverse lookup.
+        """
+        profile = CompanyDocumentProfile.objects.filter(company=self).first()
+        if profile is None:
+            profile = CompanyDocumentProfile.objects.create(company=self)
+        return profile
+
+
+class CompanyDocumentProfile(models.Model):
+    """Branded requisites a company prints on its OWN commercial documents (КП, договор).
+
+    Tenant org-admin (OWNER) fills it once: legal name, ИНН, юр.адрес, банковские
+    реквизиты, подписант, логотип, колонтитул. The КП / contract documents render the
+    «Поставщик» block from this profile instead of the hardcoded platform name, so each
+    selling company issues offers under its OWN brand. One profile per company.
+    """
+
+    company = models.OneToOneField(
+        "accounts.Company",
+        on_delete=models.CASCADE,
+        related_name="document_profile_rel",
+        verbose_name=_("Компания"),
+        help_text=_("Организация, чьи документы оформляются по этому профилю"),
+    )
+    logo = models.ImageField(
+        upload_to=company_document_profile_logo_path,
+        storage=get_public_storage,
+        null=True,
+        blank=True,
+        verbose_name=_("Логотип для документов"),
+        help_text=_("Логотип, печатаемый в шапке КП / договора"),
+    )
+    legal_name = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name=_("Полное юридическое наименование"),
+        help_text=_("Наименование организации для документов (напр. ООО «РемПуть»)"),
+    )
+    inn = models.CharField(
+        max_length=20,
+        blank=True,
+        verbose_name=_("ИНН"),
+        help_text=_("ИНН организации для реквизитов в документах"),
+    )
+    legal_address = models.TextField(
+        blank=True,
+        verbose_name=_("Юридический адрес"),
+        help_text=_("Юридический адрес для реквизитов в документах"),
+    )
+    bank_details = models.TextField(
+        blank=True,
+        verbose_name=_("Банковские реквизиты"),
+        help_text=_("Р/с, банк, МФО, корр. счёт и пр."),
+    )
+    signatory_name = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name=_("ФИО подписанта"),
+        help_text=_("Лицо, подписывающее документы от имени компании"),
+    )
+    signatory_position = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name=_("Должность подписанта"),
+        help_text=_("Должность подписанта (напр. Генеральный директор)"),
+    )
+    footer_text = models.TextField(
+        blank=True,
+        verbose_name=_("Колонтитул / оговорка"),
+        help_text=_("Текст внизу документа: дисклеймер, условия, контакты"),
+    )
+    accent_color = models.CharField(
+        max_length=20,
+        blank=True,
+        verbose_name=_("Акцентный цвет"),
+        help_text=_("HEX-цвет фирменного стиля для шапки документа (напр. #15294d)"),
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Создан"))
+    updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Обновлён"))
+
+    class Meta:
+        verbose_name = _("Профиль документов компании")
+        verbose_name_plural = _("Профили документов компаний")
+
+    def __str__(self):
+        return f"Документы: {self.company.name}"
 
 
 class Contact(models.Model):

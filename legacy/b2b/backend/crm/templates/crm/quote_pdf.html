@@ -9,7 +9,12 @@
   total) are shown, all in the КП presentation currency (quote_currency, UZS).
 
   Context variables (set by QuoteLifecycleService.generate_pdf): quote, items,
-  company (the buyer), seller (the issuing Company, may be None).
+  company (the buyer), seller (the issuing Company, may be None), seller_profile (the
+  selling company's branded CompanyDocumentProfile — legal name, requisites, signatory,
+  footer, accent color; may be None) and seller_logo_url (its logo, may be None).
+
+  The «Поставщик» block + header logo + footer render from seller_profile when present,
+  falling back to the seller Company fields and finally the platform name when absent.
   CSS is inline + WeasyPrint-supported (no flexbox/grid reliance; tables for layout).
 {% endcomment %}
 <html lang="ru">
@@ -166,14 +171,26 @@
 </head>
 <body>
   {% with pres_ccy=quote.quote_currency.code|default:"UZS" %}
+  {% comment %} Seller display name: branded legal_name → Company name → platform. {% endcomment %}
+  {% firstof seller_profile.legal_name seller.name "RailTech B2B" as seller_name %}
+  {% with accent=seller_profile.accent_color|default:"#15294d" %}
 
   <!-- ── Brand header ── -->
   <table class="brandbar">
     <tr>
+      {% if seller_logo_url %}
+      <td style="width:54pt; vertical-align:middle;">
+        <img src="{{ seller_logo_url }}" style="max-height:46pt; max-width:120pt;" alt="logo">
+      </td>
+      {% endif %}
       <td>
-        <div class="brand-name">{% if seller %}{{ seller.name }}{% else %}RailTech B2B{% endif %}</div>
+        <div class="brand-name" {% if accent %}style="color:{{ accent }};"{% endif %}>{% if seller_name %}{{ seller_name }}{% else %}RailTech B2B{% endif %}</div>
         <div class="brand-meta">
-          {% if seller %}
+          {% if seller_profile %}
+            {% if seller_profile.inn %}ИНН {{ seller_profile.inn }}{% elif seller.inn %}ИНН {{ seller.inn }}{% endif %}
+            {% if seller.phone %} · тел. {{ seller.phone }}{% endif %}
+            {% if seller.email %} · {{ seller.email }}{% endif %}
+          {% elif seller %}
             {% if seller.inn %}ИНН {{ seller.inn }}{% endif %}
             {% if seller.phone %} · тел. {{ seller.phone }}{% endif %}
             {% if seller.email %} · {{ seller.email }}{% endif %}
@@ -189,7 +206,7 @@
       </td>
     </tr>
   </table>
-  <div class="rule"></div>
+  <div class="rule" {% if accent %}style="background:{{ accent }};"{% endif %}></div>
 
   <h1 class="offer-title">Коммерческое предложение</h1>
 
@@ -199,7 +216,15 @@
       <td>
         <div class="party">
           <h3>Поставщик</h3>
-          {% if seller %}
+          {% if seller_profile %}
+            <div class="pname">{{ seller_profile.legal_name|default:seller.name }}</div>
+            {% if seller_profile.inn %}<p>ИНН: {{ seller_profile.inn }}</p>{% elif seller.inn %}<p>ИНН: {{ seller.inn }}</p>{% endif %}
+            {% if seller_profile.legal_address %}<p>{{ seller_profile.legal_address }}</p>{% elif seller.legal_address %}<p>{{ seller.legal_address }}</p>{% endif %}
+            {% if seller_profile.bank_details %}<p>{{ seller_profile.bank_details|linebreaksbr }}</p>{% endif %}
+            {% if seller.phone %}<p>Тел.: {{ seller.phone }}</p>{% endif %}
+            {% if seller.email %}<p>{{ seller.email }}</p>{% endif %}
+            {% if seller_profile.signatory_name %}<p>{{ seller_profile.signatory_position|default:"Подписант" }}: {{ seller_profile.signatory_name }}</p>{% endif %}
+          {% elif seller %}
             <div class="pname">{{ seller.name }}</div>
             {% if seller.inn %}<p>ИНН: {{ seller.inn }}</p>{% endif %}
             {% if seller.legal_address %}<p>{{ seller.legal_address }}</p>{% endif %}
@@ -321,9 +346,14 @@
   {% endif %}
 
   <div class="footer">
-    Документ сформирован в RailTech B2B Ecosystem &middot; {{ quote.created_at|date:"d.m.Y" }}
+    {% if seller_profile.footer_text %}
+      {{ seller_profile.footer_text|linebreaksbr }}
+    {% else %}
+      Документ сформирован в RailTech B2B Ecosystem &middot; {{ quote.created_at|date:"d.m.Y" }}
+    {% endif %}
   </div>
 
+  {% endwith %}
   {% endwith %}
 </body>
 </html>

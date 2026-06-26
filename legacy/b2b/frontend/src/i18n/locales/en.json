@@ -1075,6 +1075,58 @@
         "twoFactorDesc": "Required for all managers",
         "resetSessions": "Reset all user sessions"
       }
+    },
+    "emailTemplates": {
+      "title": "Email templates",
+      "description": "Manage email templates. An active DB template overrides the file template at send time.",
+      "new": "New template",
+      "create": "Create",
+      "save": "Save",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "created": "Template created",
+      "saved": "Template saved",
+      "deleted": "Template deleted",
+      "keyRequired": "Select a template key",
+      "emptyEditor": "Select a template on the left or create a new one",
+      "previewAction": "Preview",
+      "testSendAction": "Test send",
+      "statusActive": "Active",
+      "statusInactive": "Inactive",
+      "confirmDelete": "Delete template?",
+      "confirmDeleteDesc": "Template \"{{key}}\" will be deleted. Sending will fall back to the file template.",
+      "stats": {
+        "total": "Total",
+        "active": "Active"
+      },
+      "fields": {
+        "key": "Key",
+        "keyPlaceholder": "Select a key",
+        "subject": "Subject",
+        "textBody": "Text body",
+        "htmlBody": "HTML body",
+        "htmlHint": "If empty, the email is sent without an HTML alternative.",
+        "availableVariables": "Available variables",
+        "variablesPlaceholder": "e.g. {{first_name}}, {{company_name}}, {{link}}",
+        "isActive": "Active"
+      },
+      "preview": {
+        "title": "Email preview",
+        "description": "Template rendered with sample context. No email is sent.",
+        "html": "HTML",
+        "text": "Text",
+        "noHtml": "No HTML version.",
+        "saveFirst": "Save the template first"
+      },
+      "testSend": {
+        "title": "Test send",
+        "description": "Send a test email using this template to the given address.",
+        "toEmail": "Recipient email",
+        "send": "Send",
+        "emailRequired": "Enter a recipient email",
+        "sent": "Email sent to {{email}}",
+        "failed": "Failed to send the email"
+      }
     }
   },
   "notifications": {
@@ -1773,7 +1825,8 @@
     "globalSearch": "Global Search (Alt+S)...",
     "mainNavigation": "Main navigation",
     "secondaryNavigation": "Secondary navigation",
-    "currencySelector": "Currency selector"
+    "currencySelector": "Currency selector",
+    "emailTemplates": "Email templates"
   },
   "productDetail": {
     "specifications": "Specifications",
@@ -2141,7 +2194,8 @@
       "team": "Team",
       "templates": "Charge templates",
       "system": "System",
-      "platform": "Platform"
+      "platform": "Platform",
+      "documentProfile": "Documents & branding"
     },
     "platform": {
       "title": "Platform settings",
@@ -4419,5 +4473,24 @@
     "pdf": "PDF",
     "excel": "Excel",
     "csv": "CSV"
+  },
+  "documentProfile": {
+    "title": "Company document profile",
+    "subtitle": "This data is printed in the «Supplier» block on quotes and contracts: logo, legal details, signatory and footer.",
+    "ownerOnly": "Only the company administrator (owner) can edit the document profile.",
+    "saved": "Document profile saved",
+    "logo": "Logo",
+    "logoDescription": "Printed in the header of quotes and contracts. PNG, JPG, SVG or WebP.",
+    "legalName": "Full legal name",
+    "legalNamePlaceholder": "LLC «Company Name»",
+    "inn": "Tax ID (INN)",
+    "accentColor": "Accent color",
+    "legalAddress": "Legal address",
+    "bankDetails": "Bank details",
+    "bankDetailsPlaceholder": "Account no., bank, MFO, corr. account…",
+    "signatoryName": "Signatory name",
+    "signatoryPosition": "Signatory position",
+    "footerText": "Footer text",
+    "footerTextPlaceholder": "Disclaimer or contacts at the bottom of the document"
   }
 }

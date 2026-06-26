@@ -37,6 +37,25 @@ export interface Company {
 	user_count?: number;
 }
 
+// Per-company document/branding profile printed on КП / contract PDFs.
+// OneToOne → Company (accounts.CompanyDocumentProfile). Editable by the
+// company OWNER (or platform admin) in the company settings zone.
+export interface CompanyDocumentProfile {
+	id: number;
+	company: number;
+	logo_url?: string | null;
+	legal_name?: string;
+	inn?: string;
+	legal_address?: string;
+	bank_details?: string;
+	signatory_name?: string;
+	signatory_position?: string;
+	footer_text?: string;
+	accent_color?: string;
+	created_at?: string;
+	updated_at?: string;
+}
+
 export interface UserMembership {
 	id: number;
 	company: number;
@@ -198,6 +217,33 @@ export const accountsApi = {
 	},
 	deleteCompanyLogo: async (companyId: number) => {
 		await apiClient.delete(`accounts/companies/${companyId}/delete-logo/`);
+	},
+	// ── Company document profile (КП / contract branding) ──
+	getCompanyDocumentProfile: async (companyId: number) => {
+		const response = await apiClient.get<CompanyDocumentProfile>(
+			`accounts/companies/${companyId}/document-profile/`,
+		);
+		return response.data;
+	},
+	updateCompanyDocumentProfile: async (
+		companyId: number,
+		data: Partial<CompanyDocumentProfile>,
+	) => {
+		const response = await apiClient.patch<CompanyDocumentProfile>(
+			`accounts/companies/${companyId}/document-profile/`,
+			data,
+		);
+		return response.data;
+	},
+	uploadCompanyDocumentLogo: async (companyId: number, file: File) => {
+		const formData = new FormData();
+		formData.append('logo', file);
+		const response = await apiClient.post<CompanyDocumentProfile>(
+			`accounts/companies/${companyId}/document-profile/upload-logo/`,
+			formData,
+			{ headers: { 'Content-Type': 'multipart/form-data' } },
+		);
+		return response.data;
 	},
 	uploadAvatar: async (file: File) => {
 		const formData = new FormData();

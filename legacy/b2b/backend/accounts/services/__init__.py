@@ -18,6 +18,12 @@ from .auth import (
     verify_and_setup_password,
 )
 from .clients import create_offline_client, find_client_company
+from .document_profile import (
+    get_document_profile,
+    is_company_owner,
+    update_document_profile,
+    upload_document_profile_logo,
+)
 from .roles import (
     assign_role_to_member,
     create_company_role,
@@ -76,7 +82,11 @@ __all__ = [
     "create_pending_user",
     "delete_kyc_document",
     "ensure_trial_subscription",
+    "get_document_profile",
     "invite_workspace_member",
+    "is_company_owner",
+    "update_document_profile",
+    "upload_document_profile_logo",
     "is_member_of",
     "is_platform_admin_viewer",
     "is_seller",

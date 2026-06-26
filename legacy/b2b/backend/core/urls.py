@@ -69,7 +69,7 @@ from crm.views import (
     SuggestChatReplyView,
 )
 from master_data.views import CountryViewSet, CurrencyViewSet, DeliveryBasisViewSet, UnitOfMeasureViewSet
-from notifications.views import NotificationViewSet
+from notifications.views import EmailTemplateViewSet, NotificationViewSet
 from sourcing.views import (
     AttachmentViewSet,
     CatalogImportView,
@@ -122,6 +122,7 @@ router.register(r"accounts/workspace-roles", WorkspaceRoleViewSet, basename="wor
 router.register(r"accounts/company-types", CompanyTypeViewSet, basename="companytype")
 router.register(r"accounts/company-roles", CompanyRoleViewSet, basename="company-role")
 router.register(r"notifications", NotificationViewSet, basename="notification")
+router.register(r"admin/email-templates", EmailTemplateViewSet, basename="admin-email-template")
 
 # Support tickets
 router.register(r"support/tickets", SupportTicketViewSet, basename="support-ticket")

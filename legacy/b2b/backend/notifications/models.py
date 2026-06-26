@@ -187,3 +187,72 @@ class EmailLog(models.Model):
     def __str__(self):
         recipients = ", ".join(self.to_emails) if self.to_emails else "—"
         return f"[{self.status}] {self.template} → {recipients}"
+
+
+class EmailTemplate(models.Model):
+    """DB-editable override for the file-based email templates.
+
+    Platform Operators edit transactional email copy from the React admin
+    without a code deploy. `notifications.emails.send_templated_email` renders
+    from an active row when one exists for the given key, ELSE falls back to the
+    file templates in backend/templates/emails/ — so this is purely additive and
+    backward compatible: an empty table changes nothing.
+
+    `key` matches the file template name (e.g. 'setup_password', 'invite_member',
+    'kyc_verified', 'quote_sent', 'reset_password', 'role_application_approved',
+    'role_application_rejected'). The stored subject/html/text are Django
+    templates rendered against the same context the calling service provides;
+    `available_variables` documents those merge vars for the editor.
+    """
+
+    key = models.SlugField(
+        max_length=100,
+        unique=True,
+        verbose_name=_("Ключ"),
+        help_text=_("Совпадает с именем файлового шаблона: 'setup_password', 'kyc_verified', 'quote_sent', …"),
+    )
+    subject = models.CharField(
+        max_length=255,
+        verbose_name=_("Тема"),
+        help_text=_("Шаблон темы письма. Поддерживает переменные контекста, напр. {{ company_name }}."),
+    )
+    html_body = models.TextField(
+        blank=True,
+        verbose_name=_("Тело (HTML)"),
+        help_text=_("HTML-версия письма. Пусто — HTML-альтернатива не прикладывается."),
+    )
+    text_body = models.TextField(
+        verbose_name=_("Текст (plain)"),
+        help_text=_("Текстовая версия письма. Рендерится без HTML-экранирования (ссылки не ломаются)."),
+    )
+    available_variables = models.TextField(
+        blank=True,
+        verbose_name=_("Доступные переменные"),
+        help_text=_("Человекочитаемая справка по merge-переменным, которые передаёт контекст для этого ключа."),
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name=_("Активен"),
+        help_text=_("Неактивный шаблон игнорируется — отправка возвращается к файловому шаблону."),
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="edited_email_templates",
+        verbose_name=_("Кто изменил"),
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name=_("Изменён"),
+    )
+
+    class Meta:
+        verbose_name = _("Шаблон email")
+        verbose_name_plural = _("Шаблоны email")
+        ordering = ["key"]
+
+    def __str__(self):
+        state = "" if self.is_active else " (выкл.)"
+        return f"{self.key}{state}"

@@ -75,6 +75,85 @@ export interface AdminActivityEntry {
   timestamp: string;
 }
 
+/* ─── Email templates ───────────────────────────────────────────────── */
+
+export type EmailTemplateKey =
+  | 'setup_password'
+  | 'invite_member'
+  | 'kyc_verified'
+  | 'quote_sent'
+  | 'reset_password'
+  | 'role_application_approved'
+  | 'role_application_rejected';
+
+export interface EmailTemplate {
+  id: number;
+  key: string;
+  subject: string;
+  html_body: string;
+  text_body: string;
+  available_variables: string;
+  is_active: boolean;
+  updated_by: number | null;
+  updated_by_email: string | null;
+  updated_at: string | null;
+}
+
+export interface EmailTemplateDraft {
+  key: string;
+  subject: string;
+  html_body: string;
+  text_body: string;
+  available_variables: string;
+  is_active: boolean;
+}
+
+export interface EmailTemplatePreview {
+  key: string;
+  subject: string;
+  text_body: string;
+  html_body: string;
+  context_used: Record<string, unknown>;
+}
+
+export interface EmailTemplateTestSendResult {
+  status: 'SENT' | 'FAILED';
+  email_log_id: number | null;
+  to_email: string;
+}
+
+export const emailTemplatesApi = {
+  list: async () => {
+    const res = await apiClient.get<EmailTemplate[]>('admin/email-templates/');
+    return res.data;
+  },
+  create: async (data: EmailTemplateDraft) => {
+    const res = await apiClient.post<EmailTemplate>('admin/email-templates/', data);
+    return res.data;
+  },
+  update: async (id: number, data: Partial<EmailTemplateDraft>) => {
+    const res = await apiClient.patch<EmailTemplate>(`admin/email-templates/${id}/`, data);
+    return res.data;
+  },
+  remove: async (id: number) => {
+    await apiClient.delete(`admin/email-templates/${id}/`);
+  },
+  preview: async (id: number, context?: Record<string, unknown>) => {
+    const res = await apiClient.post<EmailTemplatePreview>(
+      `admin/email-templates/${id}/preview/`,
+      { context },
+    );
+    return res.data;
+  },
+  testSend: async (id: number, toEmail: string, context?: Record<string, unknown>) => {
+    const res = await apiClient.post<EmailTemplateTestSendResult>(
+      `admin/email-templates/${id}/test-send/`,
+      { to_email: toEmail, context },
+    );
+    return res.data;
+  },
+};
+
 export const adminApi = {
   getQueue: async (params?: { queue_type?: string; limit?: number }) => {
     const res = await apiClient.get<AdminQueueResponse>('admin/queue/', { params });

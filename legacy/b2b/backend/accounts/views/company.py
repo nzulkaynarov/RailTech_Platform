@@ -11,7 +11,13 @@ from rest_framework.response import Response
 from accounts import services
 from accounts.constants import SELLER_COMPANY_TYPES, VerificationStatusCode, WorkspaceRoleCode
 from accounts.models import Company, CompanyMember, CustomUser
-from accounts.serializers import CompanySerializer, KYCDocumentSerializer, KYCVerificationSerializer, UserSerializer
+from accounts.serializers import (
+    CompanyDocumentProfileSerializer,
+    CompanySerializer,
+    KYCDocumentSerializer,
+    KYCVerificationSerializer,
+    UserSerializer,
+)
 from core.permissions import IsPlatformAdmin
 
 
@@ -87,6 +93,8 @@ class CompanyViewSet(viewsets.ModelViewSet):
         "download_document",
         "upload_logo",
         "delete_logo",
+        "document_profile",
+        "upload_document_profile_logo",
         "team",
         "invite",
         "update_member_capabilities",
@@ -406,6 +414,61 @@ class CompanyViewSet(viewsets.ModelViewSet):
             company.logo = None
             company.save(update_fields=["logo"])
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @extend_schema(
+        summary="Read / update company document profile",
+        description=(
+            "The branded requisites a company prints on its own КП / contract documents "
+            "(legal name, ИНН, юр.адрес, банк, подписант, колонтитул, акцентный цвет). "
+            "GET returns the profile (auto-created); PATCH updates it. OWNER of THIS company "
+            "(or platform admin) only — never another tenant. Logo is uploaded separately."
+        ),
+        request=CompanyDocumentProfileSerializer,
+        responses={
+            200: CompanyDocumentProfileSerializer,
+            403: OpenApiResponse(description="Only the company OWNER may read/update the profile"),
+        },
+        tags=["Accounts"],
+    )
+    @action(detail=True, methods=["get", "patch"], url_path="document-profile")
+    def document_profile(self, request, pk=None):
+        company = self.get_object()
+        if not services.is_company_owner(request.user, company):
+            return Response({"detail": "NOT_COMPANY_OWNER"}, status=status.HTTP_403_FORBIDDEN)
+        if request.method == "PATCH":
+            profile, error = services.update_document_profile(request.user, company, request.data)
+            if error:
+                http_status = status.HTTP_403_FORBIDDEN if error == "NOT_COMPANY_OWNER" else status.HTTP_400_BAD_REQUEST
+                return Response({"detail": error}, status=http_status)
+        else:
+            profile = services.get_document_profile(company)
+        return Response(CompanyDocumentProfileSerializer(profile, context={"request": request}).data)
+
+    @extend_schema(
+        summary="Upload company document-profile logo",
+        description="Upload or replace the logo printed in the КП / contract header (multipart/form-data). OWNER only.",
+        request={
+            "multipart/form-data": {
+                "type": "object",
+                "properties": {"logo": {"type": "string", "format": "binary"}},
+            }
+        },
+        responses={200: CompanyDocumentProfileSerializer},
+        tags=["Accounts"],
+    )
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="document-profile/upload-logo",
+        parser_classes=[MultiPartParser, FormParser],
+    )
+    def upload_document_profile_logo(self, request, pk=None):
+        company = self.get_object()
+        profile, error = services.upload_document_profile_logo(request.user, company, request.FILES.get("logo"))
+        if error:
+            http_status = status.HTTP_403_FORBIDDEN if error == "NOT_COMPANY_OWNER" else status.HTTP_400_BAD_REQUEST
+            return Response({"detail": error}, status=http_status)
+        return Response(CompanyDocumentProfileSerializer(profile, context={"request": request}).data)
 
     @extend_schema(
         summary="Get company team members",

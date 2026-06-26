@@ -1077,6 +1077,58 @@
         "twoFactorDesc": "Обязательно для всех менеджеров",
         "resetSessions": "Сбросить все сессии пользователей"
       }
+    },
+    "emailTemplates": {
+      "title": "Email-шаблоны",
+      "description": "Управление шаблонами писем. Активный шаблон в базе переопределяет файловый шаблон при отправке.",
+      "new": "Новый шаблон",
+      "create": "Создать",
+      "save": "Сохранить",
+      "delete": "Удалить",
+      "cancel": "Отмена",
+      "created": "Шаблон создан",
+      "saved": "Шаблон сохранён",
+      "deleted": "Шаблон удалён",
+      "keyRequired": "Выберите ключ шаблона",
+      "emptyEditor": "Выберите шаблон слева или создайте новый",
+      "previewAction": "Предпросмотр",
+      "testSendAction": "Тестовая отправка",
+      "statusActive": "Активен",
+      "statusInactive": "Неактивен",
+      "confirmDelete": "Удалить шаблон?",
+      "confirmDeleteDesc": "Шаблон «{{key}}» будет удалён. Отправка вернётся к файловому шаблону.",
+      "stats": {
+        "total": "Всего",
+        "active": "Активных"
+      },
+      "fields": {
+        "key": "Ключ",
+        "keyPlaceholder": "Выберите ключ",
+        "subject": "Тема",
+        "textBody": "Текстовая версия",
+        "htmlBody": "HTML-версия",
+        "htmlHint": "Если пусто — письмо отправляется без HTML-альтернативы.",
+        "availableVariables": "Доступные переменные",
+        "variablesPlaceholder": "Например: {{first_name}}, {{company_name}}, {{link}}",
+        "isActive": "Активен"
+      },
+      "preview": {
+        "title": "Предпросмотр письма",
+        "description": "Шаблон отрендерен с тестовым контекстом. Письмо не отправляется.",
+        "html": "HTML",
+        "text": "Текст",
+        "noHtml": "HTML-версия отсутствует.",
+        "saveFirst": "Сначала сохраните шаблон"
+      },
+      "testSend": {
+        "title": "Тестовая отправка",
+        "description": "Отправить тестовое письмо по этому шаблону на указанный адрес.",
+        "toEmail": "Email получателя",
+        "send": "Отправить",
+        "emailRequired": "Укажите email получателя",
+        "sent": "Письмо отправлено на {{email}}",
+        "failed": "Не удалось отправить письмо"
+      }
     }
   },
   "notifications": {
@@ -1777,7 +1829,8 @@
     "globalSearch": "Глобальный поиск (Alt+S)...",
     "mainNavigation": "Основная навигация",
     "secondaryNavigation": "Дополнительная навигация",
-    "currencySelector": "Выбор валюты"
+    "currencySelector": "Выбор валюты",
+    "emailTemplates": "Email-шаблоны"
   },
   "productDetail": {
     "specifications": "Характеристики",
@@ -2310,7 +2363,8 @@
       "team": "Команда",
       "templates": "Шаблоны расходов",
       "system": "Система",
-      "platform": "Платформа"
+      "platform": "Платформа",
+      "documentProfile": "Документы и бренд"
     },
     "platform": {
       "title": "Системные настройки",
@@ -4423,5 +4477,24 @@
     "pdf": "PDF",
     "excel": "Excel",
     "csv": "CSV"
+  },
+  "documentProfile": {
+    "title": "Профиль документов компании",
+    "subtitle": "Эти данные печатаются в блоке «Поставщик» на КП и в договорах: логотип, реквизиты, подписант и колонтитул.",
+    "ownerOnly": "Редактировать профиль документов может только администратор компании (владелец).",
+    "saved": "Профиль документов сохранён",
+    "logo": "Логотип",
+    "logoDescription": "Печатается в шапке КП и договоров. PNG, JPG, SVG или WebP.",
+    "legalName": "Полное юридическое наименование",
+    "legalNamePlaceholder": "ООО «Название компании»",
+    "inn": "ИНН",
+    "accentColor": "Акцентный цвет",
+    "legalAddress": "Юридический адрес",
+    "bankDetails": "Банковские реквизиты",
+    "bankDetailsPlaceholder": "Р/с, банк, МФО, корр. счёт…",
+    "signatoryName": "ФИО подписанта",
+    "signatoryPosition": "Должность подписанта",
+    "footerText": "Текст колонтитула",
+    "footerTextPlaceholder": "Дисклеймер или контакты внизу документа"
   }
 }
