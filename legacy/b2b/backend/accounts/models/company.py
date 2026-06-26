@@ -192,6 +192,18 @@ class Company(models.Model):
             profile = CompanyDocumentProfile.objects.create(company=self)
         return profile
 
+    @property
+    def settings(self):
+        """Get-or-create the company's КП-defaults + numbering settings row.
+
+        Lazily materialised so every company has a settings object to read from; the
+        seller fills it in via the OWNER endpoint. Cheap OneToOne reverse lookup.
+        """
+        row = CompanySettings.objects.filter(company=self).first()
+        if row is None:
+            row = CompanySettings.objects.create(company=self)
+        return row
+
 
 class CompanyDocumentProfile(models.Model):
     """Branded requisites a company prints on its OWN commercial documents (КП, договор).
@@ -271,6 +283,86 @@ class CompanyDocumentProfile(models.Model):
 
     def __str__(self):
         return f"Документы: {self.company.name}"
+
+
+class CompanySettings(models.Model):
+    """Per-company КП defaults + the document-numbering scheme.
+
+    The selling company sets these once (OWNER-gated). New КП built by the company
+    pre-fill from `default_*` so the seller team isn't re-entering the same Incoterm,
+    valuta, ставку НДС, маржу and validity on every offer. `doc_number_prefix` brands
+    the company's own document numbering (contracts/invoices/acts): with prefix "ACME"
+    a contract reads `ACME-CT-2026-00001`; without it the platform default `CT-2026-00001`.
+    One settings row per company (get-or-create via the `Company.settings` accessor).
+    """
+
+    company = models.OneToOneField(
+        "accounts.Company",
+        on_delete=models.CASCADE,
+        related_name="settings_rel",
+        verbose_name=_("Компания"),
+        help_text=_("Организация, к которой относятся настройки"),
+    )
+
+    # ── КП defaults (inherited by a new Quote on CREATE only) ──────────────────
+    default_delivery_basis = models.ForeignKey(
+        "master_data.DeliveryBasis",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("Базис поставки по умолчанию"),
+        help_text=_("Incoterm, подставляемый в новый КП (FCA, CIP, DDP …)"),
+    )
+    default_cost_currency = models.ForeignKey(
+        "master_data.Currency",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("Валюта себестоимости по умолчанию"),
+        help_text=_("Валюта базовой цены, наследуемая новыми позициями КП"),
+    )
+    default_vat_rate = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name=_("Ставка НДС по умолчанию (%)"),
+        help_text=_("Ставка НДС, подставляемая в новый КП"),
+    )
+    default_margin_percent = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name=_("Маржа по умолчанию (%)"),
+        help_text=_("Наценка на себестоимость, подставляемая в новый КП"),
+    )
+    default_offer_validity_days = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name=_("Срок действия КП по умолчанию (дней)"),
+        help_text=_("Через сколько дней истекает новый КП (valid_until = сегодня + N)"),
+    )
+
+    # ── Document numbering scheme ──────────────────────────────────────────────
+    doc_number_prefix = models.CharField(
+        max_length=16,
+        blank=True,
+        verbose_name=_("Префикс нумерации документов"),
+        help_text=_("Префикс номеров документов компании (напр. «ACME» → ACME-CT-2026-00001)"),
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Создан"))
+    updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Обновлён"))
+
+    class Meta:
+        verbose_name = _("Настройки компании")
+        verbose_name_plural = _("Настройки компаний")
+
+    def __str__(self):
+        return f"Настройки: {self.company.name}"
 
 
 class Contact(models.Model):

@@ -8,10 +8,45 @@ from .models import (
     CompanyMember,
     CompanyRole,
     CompanyRoleApplication,
+    CompanySettings,
     CustomUser,
     KYCDocument,
     SupplierSubscription,
 )
+
+
+class CompanySettingsSerializer(serializers.ModelSerializer):
+    """A selling company's КП defaults + document-numbering prefix.
+
+    Read/update by the company OWNER for THEIR OWN company. FK defaults
+    (delivery_basis / cost_currency) are exposed AND written as master-data CODES
+    (e.g. "USD", "FCA") — the service resolves them — so the field names below are
+    read-only projections; PATCH bodies carry `default_cost_currency` /
+    `default_delivery_basis` codes which the view hands to update_company_settings.
+    """
+
+    default_cost_currency_code = serializers.CharField(
+        source="default_cost_currency.code", read_only=True, allow_null=True
+    )
+    default_delivery_basis_code = serializers.CharField(
+        source="default_delivery_basis.code", read_only=True, allow_null=True
+    )
+
+    class Meta:
+        model = CompanySettings
+        fields = [
+            "id",
+            "company",
+            "default_cost_currency_code",
+            "default_delivery_basis_code",
+            "default_vat_rate",
+            "default_margin_percent",
+            "default_offer_validity_days",
+            "doc_number_prefix",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "company", "created_at", "updated_at"]
 
 
 class CompanyDocumentProfileSerializer(serializers.ModelSerializer):

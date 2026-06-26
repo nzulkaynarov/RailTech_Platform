@@ -56,6 +56,34 @@ export interface CompanyDocumentProfile {
 	updated_at?: string;
 }
 
+// OneToOne → Company (accounts.CompanySettings). The selling company's КП
+// defaults + document-numbering prefix. Read/written by the company OWNER.
+// FK defaults are exposed as master-data CODES (default_*_code, read-only) and
+// PATCHed as CODES under default_cost_currency / default_delivery_basis.
+export interface CompanySettings {
+	id: number;
+	company: number;
+	default_cost_currency_code?: string | null;
+	default_delivery_basis_code?: string | null;
+	default_vat_rate?: string | null;
+	default_margin_percent?: string | null;
+	default_offer_validity_days?: number | null;
+	doc_number_prefix?: string;
+	created_at?: string;
+	updated_at?: string;
+}
+
+// PATCH body for company settings. FK defaults are sent as CODES ("" clears);
+// numeric defaults accept null to clear.
+export interface CompanySettingsUpdate {
+	default_cost_currency?: string;
+	default_delivery_basis?: string;
+	default_vat_rate?: string | null;
+	default_margin_percent?: string | null;
+	default_offer_validity_days?: number | null;
+	doc_number_prefix?: string;
+}
+
 export interface UserMembership {
 	id: number;
 	company: number;
@@ -242,6 +270,23 @@ export const accountsApi = {
 			`accounts/companies/${companyId}/document-profile/upload-logo/`,
 			formData,
 			{ headers: { 'Content-Type': 'multipart/form-data' } },
+		);
+		return response.data;
+	},
+	// ── Company settings (КП defaults + document numbering) ──
+	getCompanySettings: async (companyId: number) => {
+		const response = await apiClient.get<CompanySettings>(
+			`accounts/companies/${companyId}/settings/`,
+		);
+		return response.data;
+	},
+	updateCompanySettings: async (
+		companyId: number,
+		data: CompanySettingsUpdate,
+	) => {
+		const response = await apiClient.patch<CompanySettings>(
+			`accounts/companies/${companyId}/settings/`,
+			data,
 		);
 		return response.data;
 	},

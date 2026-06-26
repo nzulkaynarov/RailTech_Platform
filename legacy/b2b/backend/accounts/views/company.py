@@ -14,6 +14,7 @@ from accounts.models import Company, CompanyMember, CustomUser
 from accounts.serializers import (
     CompanyDocumentProfileSerializer,
     CompanySerializer,
+    CompanySettingsSerializer,
     KYCDocumentSerializer,
     KYCVerificationSerializer,
     UserSerializer,
@@ -95,6 +96,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
         "delete_logo",
         "document_profile",
         "upload_document_profile_logo",
+        "company_settings",
         "team",
         "invite",
         "update_member_capabilities",
@@ -469,6 +471,35 @@ class CompanyViewSet(viewsets.ModelViewSet):
             http_status = status.HTTP_403_FORBIDDEN if error == "NOT_COMPANY_OWNER" else status.HTTP_400_BAD_REQUEST
             return Response({"detail": error}, status=http_status)
         return Response(CompanyDocumentProfileSerializer(profile, context={"request": request}).data)
+
+    @extend_schema(
+        summary="Read / update company КП defaults + numbering",
+        description=(
+            "The selling company's КП defaults (Incoterm, валюта себестоимости, ставка НДС, "
+            "маржа, срок действия) and its document-numbering prefix. GET returns the settings "
+            "(auto-created); PATCH updates them. delivery_basis / cost_currency are sent as "
+            "master-data CODES (e.g. 'USD', 'FCA'). OWNER of THIS company (or platform admin) only."
+        ),
+        request=CompanySettingsSerializer,
+        responses={
+            200: CompanySettingsSerializer,
+            403: OpenApiResponse(description="Only the company OWNER may read/update the settings"),
+        },
+        tags=["Accounts"],
+    )
+    @action(detail=True, methods=["get", "patch"], url_path="settings")
+    def company_settings(self, request, pk=None):
+        company = self.get_object()
+        if not services.is_company_owner(request.user, company):
+            return Response({"detail": "NOT_COMPANY_OWNER"}, status=status.HTTP_403_FORBIDDEN)
+        if request.method == "PATCH":
+            settings_row, error = services.update_company_settings(request.user, company, request.data)
+            if error:
+                http_status = status.HTTP_403_FORBIDDEN if error == "NOT_COMPANY_OWNER" else status.HTTP_400_BAD_REQUEST
+                return Response({"detail": error}, status=http_status)
+        else:
+            settings_row = services.get_company_settings(company)
+        return Response(CompanySettingsSerializer(settings_row, context={"request": request}).data)
 
     @extend_schema(
         summary="Get company team members",

@@ -149,7 +149,17 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
         # status FK stays NULL → QuoteApprovalChain renders no actions and the seller
         # is stuck with no way to submit the КП for review (the "тупик" bug).
         draft_status = QuoteStatus.objects.get(code=QuoteStatusCode.DRAFT)
-        serializer.save(version=version, prepared_by=user, status=draft_status)
+        quote = serializer.save(version=version, prepared_by=user, status=draft_status)
+        # Pre-fill КП-level defaults (Incoterm, валюта, НДС, маржа, срок действия) from the
+        # building seller's CompanySettings — ONLY on create, never overwriting set values.
+        from accounts.services.permissions import primary_seller_company_id
+
+        seller_company_id = primary_seller_company_id(user)
+        if seller_company_id:
+            from accounts.models import Company
+
+            seller_company = Company.objects.filter(pk=seller_company_id).first()
+            crm_services.apply_company_quote_defaults(quote, seller_company)
 
     def perform_update(self, serializer):
         """Editing КП-level settings (VAT rate, tax country, validity, currency) is a

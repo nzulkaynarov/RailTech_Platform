@@ -2195,7 +2195,10 @@
       "templates": "Charge templates",
       "system": "System",
       "platform": "Platform",
-      "documentProfile": "Documents & branding"
+      "documentProfile": "Documents & branding",
+      "companyAdmin": "Company settings",
+      "defaults": "Quote defaults",
+      "numbering": "Document numbering"
     },
     "platform": {
       "title": "Platform settings",
@@ -2313,6 +2316,10 @@
       "auditLogs": "Audit logs",
       "auditLogsDesc": "User action log",
       "view": "View"
+    },
+    "companyAdmin": {
+      "title": "Company administration",
+      "description": "Your company's document profile, quote defaults, numbering and charge templates"
     }
   },
   "sourcingHub": {
@@ -4492,5 +4499,28 @@
     "signatoryPosition": "Signatory position",
     "footerText": "Footer text",
     "footerTextPlaceholder": "Disclaimer or contacts at the bottom of the document"
+  },
+  "companyDefaults": {
+    "title": "Quote defaults",
+    "subtitle": "Values pre-filled into every new commercial quote",
+    "deliveryBasis": "Default delivery basis",
+    "costCurrency": "Default cost currency",
+    "vatRate": "Default VAT rate (%)",
+    "marginPercent": "Default margin (%)",
+    "offerValidityDays": "Default quote validity (days)",
+    "notSet": "Not set",
+    "help": "New quotes inherit these values. You can override them in each individual quote.",
+    "saved": "Quote defaults saved",
+    "ownerOnly": "Only the company owner can configure quote defaults"
+  },
+  "companyNumbering": {
+    "title": "Document numbering",
+    "subtitle": "Prefix for your company's quote, contract, invoice and act numbers",
+    "prefix": "Numbering prefix",
+    "prefixPlaceholder": "e.g. ACME",
+    "prefixHelp": "Up to 16 characters. Empty means platform numbering is used.",
+    "previewLabel": "Number preview",
+    "saved": "Numbering settings saved",
+    "ownerOnly": "Only the company owner can configure numbering"
   }
 }

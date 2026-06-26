@@ -13,17 +13,18 @@ from ._params import PaymentData
 # ──────────────────────────────────────────────────────────────────────────
 
 
-def _next_invoice_number() -> str:
-    # Race-safe per-year counter (was count()+1 → duplicate-number 500 under load).
+def _next_invoice_number(seller_company=None) -> str:
+    # Race-safe per-(company, year) counter (was count()+1 → duplicate-number 500 under
+    # load). Carries the seller company so the invoice gets THEIR prefix + counter.
     from .numbering import next_document_number
 
-    return next_document_number("INV", "INV")
+    return next_document_number("INV", "INV", company=seller_company)
 
 
-def _next_act_number() -> str:
+def _next_act_number(seller_company=None) -> str:
     from .numbering import next_document_number
 
-    return next_document_number("ACT", "ACT")
+    return next_document_number("ACT", "ACT", company=seller_company)
 
 
 def _istatus(code: str):
@@ -74,10 +75,14 @@ def generate_invoice_from_contract(
         return existing_invoice, None
 
     quote = contract.quote
+    # Seller company = the КП author's owning company → its prefix + per-company counter.
+    from .quotes import _quote_seller_company
+
+    seller_company = _quote_seller_company(quote)
     invoice = Invoice.objects.create(
         deal=contract.deal,
         contract=contract,
-        number=_next_invoice_number(),
+        number=_next_invoice_number(seller_company),
         status=_istatus(InvoiceStatusCode.ISSUED),
         issued_at=timezone.now().date(),
         due_date=(timezone.now() + timedelta(days=due_days)).date(),
@@ -269,7 +274,7 @@ def generate_act(
     # Paid-seller gate (skipped for the actor=None automation path).
     if actor is not None and (sub_err := assert_seller_can_operate(actor)):
         return None, sub_err
-    invoice = Invoice.objects.select_related("contract", "deal", "status").get(pk=invoice_id)
+    invoice = Invoice.objects.select_related("contract__quote", "deal", "status").get(pk=invoice_id)
     # Bind to THIS invoice's deal routing — a seller must not issue an act on a
     # competitor's invoice (audit H4).
     if (
@@ -281,11 +286,15 @@ def generate_act(
     if invoice.status_code not in {InvoiceStatusCode.PAID, InvoiceStatusCode.PARTIAL, InvoiceStatusCode.ISSUED}:
         return None, "ACT_INVALID_INVOICE_STATUS"
 
+    # Seller company = the КП author's owning company → its prefix + per-company counter.
+    from .quotes import _quote_seller_company
+
+    seller_company = _quote_seller_company(invoice.contract.quote) if invoice.contract_id else None
     act = Act.objects.create(
         deal=invoice.deal,
         contract=invoice.contract,
         invoice=invoice,
-        number=_next_act_number(),
+        number=_next_act_number(seller_company),
         status=_astatus(ActStatusCode.ISSUED),
         issued_at=timezone.now().date(),
         total_amount=invoice.total_incl_vat,
