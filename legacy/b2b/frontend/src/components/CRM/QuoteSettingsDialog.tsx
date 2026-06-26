@@ -45,6 +45,7 @@ export function QuoteSettingsDialog({ quote, open, onOpenChange }: QuoteSettings
 	const { data: currencies = [] } = useCurrencies();
 	const updateSettings = useUpdateQuoteSettings();
 
+	const [marginPercent, setMarginPercent] = useState('');
 	const [vatRate, setVatRate] = useState('');
 	const [taxCountry, setTaxCountry] = useState('');
 	const [validUntil, setValidUntil] = useState('');
@@ -58,6 +59,7 @@ export function QuoteSettingsDialog({ quote, open, onOpenChange }: QuoteSettings
 	// Re-seed the form from the КП whenever it opens (the seller may switch quotes).
 	useEffect(() => {
 		if (!open) return;
+		setMarginPercent(quote.margin_percent ?? '');
 		setVatRate(quote.vat_rate ?? '');
 		setTaxCountry(quote.tax_country != null ? String(quote.tax_country) : '');
 		setValidUntil(quote.valid_until ?? '');
@@ -74,6 +76,7 @@ export function QuoteSettingsDialog({ quote, open, onOpenChange }: QuoteSettings
 			await updateSettings.mutateAsync({
 				id: quote.id,
 				data: {
+					margin_percent: marginPercent === '' ? undefined : marginPercent,
 					vat_rate: vatRate === '' ? undefined : vatRate,
 					tax_country: taxCountry === '' ? null : Number(taxCountry),
 					valid_until: validUntil === '' ? null : validUntil,
@@ -97,6 +100,11 @@ export function QuoteSettingsDialog({ quote, open, onOpenChange }: QuoteSettings
 					</DialogHeader>
 
 					<div className="mt-4 flex flex-col gap-4">
+						<div className="flex flex-col gap-1.5">
+							<Label htmlFor="quote-margin">{t('quote.settings.margin')}</Label>
+							<Input id="quote-margin" type="number" step="0.01" min={0} value={marginPercent} onChange={(e) => setMarginPercent(e.target.value)} />
+							<p className="text-xs text-muted-foreground">{t('quote.settings.marginHelp')}</p>
+						</div>
 						<div className="flex flex-col gap-1.5">
 							<Label htmlFor="quote-vat-rate">{t('quote.settings.vatRate')}</Label>
 							<Input

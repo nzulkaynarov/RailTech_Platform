@@ -322,3 +322,18 @@ def test_per_line_cost_is_base_plus_customs_regardless_of_basis(quote):
         item.refresh_from_db()
         assert item.logistics_cost == Decimal("0"), f"logistics must never be per-line ({code})"
         assert item.landed_cost == item.frozen_base_price + Decimal("20"), f"landed=base+customs ({code})"
+
+
+@pytest.mark.django_db
+def test_quote_level_margin_applies_to_all_lines(quote):
+    """F3.8 follow-up: margin is set ONCE on the whole КП (quote.margin_percent), not per line —
+    recalculate_quote applies it to every line's final price."""
+    from crm.services.quotes import QuoteCalculationService
+
+    quote.margin_percent = Decimal("20")
+    quote.save(update_fields=["margin_percent"])
+    QuoteCalculationService.recalculate_quote(quote.id)
+    line = quote.items.first()
+    line.refresh_from_db()
+    # landed = 100 (base, no customs) → final = 100 × 1.20 = 120
+    assert line.final_price_excl_vat == Decimal("120.00")

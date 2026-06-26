@@ -698,8 +698,11 @@
       "taxCountryPlaceholder": "Выберите страну",
       "validUntil": "Действует до",
       "currency": "Валюта КП",
-      "currencyPlaceholder": "Выберите валюту"
-    }
+      "currencyPlaceholder": "Выберите валюту",
+      "margin": "Маржа КП (%)",
+      "marginHelp": "Наценка на себестоимость всех позиций (на весь КП)"
+    },
+    "marginApplied": "Маржа"
   },
   "admin": {
     "dashboard": {

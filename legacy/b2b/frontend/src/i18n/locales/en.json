@@ -696,8 +696,11 @@
       "taxCountryPlaceholder": "Select country",
       "validUntil": "Valid until",
       "currency": "Quote currency",
-      "currencyPlaceholder": "Select currency"
-    }
+      "currencyPlaceholder": "Select currency",
+      "margin": "КП margin (%)",
+      "marginHelp": "Markup on the landed cost of all lines (whole КП)"
+    },
+    "marginApplied": "Margin"
   },
   "admin": {
     "dashboard": {

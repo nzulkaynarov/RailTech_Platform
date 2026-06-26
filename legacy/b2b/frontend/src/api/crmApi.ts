@@ -223,6 +223,7 @@ export interface Quote {
 	quote_currency?: string | null;
 	tax_country?: number | null;
 	vat_rate?: string;
+	margin_percent?: string;          // КП-level markup applied to every line (F3.8)
 	items: QuoteItem[];
 	charges?: QuoteCharge[];       // seller-only; absent for buyers
 	subtotal_excl_vat: string;
@@ -523,7 +524,7 @@ export const crmApi = {
 	// tax_country is the Country pk; quote_currency is the Currency code (e.g. "UZS").
 	updateQuoteSettings: async (
 		id: number,
-		data: Partial<Pick<Quote, 'vat_rate' | 'tax_country' | 'valid_until' | 'quote_currency'>>,
+		data: Partial<Pick<Quote, 'vat_rate' | 'margin_percent' | 'tax_country' | 'valid_until' | 'quote_currency'>>,
 	) => {
 		const response = await apiClient.patch<Quote>(`crm/quotes/${id}/`, data);
 		return response.data;

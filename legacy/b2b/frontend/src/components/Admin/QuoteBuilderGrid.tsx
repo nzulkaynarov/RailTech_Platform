@@ -337,14 +337,6 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 										<TooltipContent>{t('quote.landedCostHelp')}</TooltipContent>
 									</Tooltip>
 								</TableHead>
-								<TableHead className="px-2 py-2 text-center text-xs font-semibold text-primary w-16">
-									<Tooltip>
-										<TooltipTrigger asChild>
-											<span className="cursor-help">{t('quote.margin')}</span>
-										</TooltipTrigger>
-										<TooltipContent>{t('quote.marginHelp')}</TooltipContent>
-									</Tooltip>
-								</TableHead>
 								<TableHead className="px-2 py-2 text-right text-xs font-semibold text-muted-foreground w-32 pr-4">
 									{t('quote.lineTotal')}
 								</TableHead>
@@ -432,15 +424,6 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 											{formatMoney(item.landed_cost, item.frozen_currency)}
 										</span>
 									</TableCell>
-									<TableCell className="p-0">
-										<Input
-											type="number"
-											aria-label={t('quote.margin')}
-											className="h-8 border-none shadow-none rounded-none text-xs font-bold text-center text-primary focus-visible:ring-1"
-											value={item.margin_percent}
-											onChange={(e) => updateItemLocally(item.id, 'margin_percent', e.target.value)}
-										/>
-									</TableCell>
 									<TableCell className="px-2 py-1.5 text-right pr-4">
 										<span className="text-sm font-bold tabular-nums">
 											{formatMoney(calculateLineTotal(item.final_price_excl_vat, item.quantity), item.frozen_currency)}
@@ -497,6 +480,15 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 			{/* Summary Footer */}
 			<Card className="py-3">
 				<CardContent className="flex items-center justify-end gap-6 py-0">
+					{Number(activeQuote?.margin_percent ?? 0) > 0 && (
+						<>
+							<div className="flex flex-col items-end leading-none">
+								<span className="text-xs text-muted-foreground mb-1">{t('quote.marginApplied')}</span>
+								<span className="text-sm font-semibold tabular-nums text-primary">{Number(activeQuote?.margin_percent).toFixed(1)}%</span>
+							</div>
+							<Separator orientation="vertical" className="h-6" />
+						</>
+					)}
 					<div className="flex flex-col items-end leading-none">
 						<span className="text-xs text-muted-foreground mb-1">{t('quote.subtotal')}</span>
 						<span className="text-sm font-semibold tabular-nums">

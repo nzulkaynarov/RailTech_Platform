@@ -150,7 +150,7 @@ class QuoteCalculationService:
     """
 
     @staticmethod
-    def calculate_item_prices(item: QuoteItem, commit=True, basis=...):
+    def calculate_item_prices(item: QuoteItem, commit=True, basis=..., margin_percent=None):
         """
         Calculates Landed Cost and Final Price for a single item.
         Formula:
@@ -175,8 +175,10 @@ class QuoteCalculationService:
             item.customs_duty = Decimal("0")
         item.landed_cost = item.frozen_base_price + item.customs_duty
 
-        # себестоимость → +наценка → −скидка позиции (UBL line-level allowance)
-        margin_mult = Decimal("1") + (item.margin_percent / Decimal("100"))
+        # себестоимость → +наценка (маржа на ВЕСЬ КП) → −скидка позиции. Маржа приходит из
+        # quote.margin_percent; прямые вызовы без неё падают на позиционное значение (задел).
+        effective_margin = item.margin_percent if margin_percent is None else margin_percent
+        margin_mult = Decimal("1") + (effective_margin / Decimal("100"))
         discount_mult = Decimal("1") - (item.discount_percent / Decimal("100"))
         item.final_price_excl_vat = (item.landed_cost * margin_mult * discount_mult).quantize(
             Decimal("0.01"), rounding=ROUND_HALF_UP
@@ -202,7 +204,7 @@ class QuoteCalculationService:
         # 1. Recalculate each item price (without saving each time to DB yet). Pass the basis
         #    once so the Incoterm flag-gating runs without an N+1 on item.quote (M1/M2).
         for item in items:
-            cls.calculate_item_prices(item, commit=False, basis=quote.delivery_basis)
+            cls.calculate_item_prices(item, commit=False, basis=quote.delivery_basis, margin_percent=quote.margin_percent)
 
         # 2. Bulk update items to minimize DB hits
         QuoteItem.objects.bulk_update(items, ["landed_cost", "final_price_excl_vat", "logistics_cost", "customs_duty"])

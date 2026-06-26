@@ -199,6 +199,9 @@ def _build_quote_with_items(deal, manager):
         margin_percent=Decimal("10.00"),
         final_price_excl_vat=Decimal("0"),
     )
+    # F3.8: margin is set ONCE on the whole КП (per-line margins above are now ignored by the engine).
+    quote.margin_percent = Decimal("20.00")
+    quote.save(update_fields=["margin_percent"])
     return quote
 
 
@@ -221,10 +224,10 @@ def test_golden_path_rfq_to_closed_won(deal, buyer, manager):
     # 4. Manager builds the КП and the calculation engine prices it.
     quote = _build_quote_with_items(deal, manager)
     quote = QuoteCalculationService.recalculate_quote(quote.id)
-    # 10×(100×1.20) + 4×(50×1.10) = 1200 + 220 = 1420 excl. VAT
-    assert quote.subtotal_excl_vat == Decimal("1420.00"), quote.subtotal_excl_vat
-    assert quote.vat_amount == Decimal("170.40")  # 12%
-    assert quote.total_incl_vat == Decimal("1590.40")
+    # F3.8 КП-level margin 20%: 10×(100×1.20) + 4×(50×1.20) = 1200 + 240 = 1440 excl. VAT
+    assert quote.subtotal_excl_vat == Decimal("1440.00"), quote.subtotal_excl_vat
+    assert quote.vat_amount == Decimal("172.80")  # 12%
+    assert quote.total_incl_vat == Decimal("1612.80")
 
     # 5. КП internally approved (chain is exercised in test_quote_approval_chain)
     #    → READY_TO_SEND, then sent to client → deal QUOTE_SENT, quote SENT, PDF.

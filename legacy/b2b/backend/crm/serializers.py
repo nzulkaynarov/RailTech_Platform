@@ -220,6 +220,7 @@ class QuoteSerializer(serializers.ModelSerializer):
             "quote_currency",
             "tax_country",
             "vat_rate",
+            "margin_percent",
             "subtotal_excl_vat",
             "charges_total",
             "vat_amount",
