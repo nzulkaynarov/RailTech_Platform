@@ -22,6 +22,8 @@
   .footer { margin-top: 80px; font-size: 10px; color: #999; text-align: center; border-top: 1px solid #e0e0e0; padding-top: 10px; }
   .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; }
   .valid-until { margin-top: 20px; padding: 10px; background: #fff3cd; border-radius: 4px; font-size: 11px; }
+  .delivery-term { margin-top: 20px; padding: 10px; background: #f8f9fa; border-radius: 4px; font-size: 11px; }
+  .fx-note { margin-top: 10px; font-size: 10px; color: #888; }
 </style>
 </head>
 <body>
@@ -36,51 +38,83 @@
     {% if company.contact_person %}<p>Контактное лицо: {{ company.contact_person }}</p>{% endif %}
   </div>
 
+  {% with pres_ccy=quote.quote_currency.code|default:"UZS" %}
   <table>
     <thead>
       <tr>
-        <th style="width:6%">#</th>
-        <th style="width:46%">Наименование</th>
-        <th style="width:12%">Кол-во</th>
-        <th style="width:18%" class="text-right">Цена за ед., без НДС</th>
-        <th style="width:18%" class="text-right">Сумма, без НДС</th>
+        <th style="width:5%">#</th>
+        <th style="width:34%">Наименование</th>
+        <th style="width:9%">Кол-во</th>
+        <th style="width:15%" class="text-right">Базовая цена</th>
+        <th style="width:13%">Срок поставки</th>
+        <th style="width:12%" class="text-right">Цена за ед., без НДС</th>
+        <th style="width:12%" class="text-right">Сумма, без НДС</th>
       </tr>
     </thead>
     <tbody>
       {% comment %}
-        Client-facing КП: show ONLY the final per-unit price and line total. Never
-        expose the seller cost fields here — the buyer could derive the markup.
+        Client-facing КП projection rule (UNCHANGED): never expose seller cost
+        internals from which the buyer could derive the markup — no landed_cost,
+        margin_percent, logistics_cost or customs_duty here.
+
+        New presentation: the per-line BASE price is shown in the currency it was
+        entered in (item.frozen_currency, UZS when null) so the client sees what
+        was quoted, while the final per-unit price, the line total and ALL document
+        totals are expressed in the КП presentation currency (quote_currency, UZS).
       {% endcomment %}
       {% for item in items %}
       <tr>
         <td>{{ forloop.counter }}</td>
         <td>{{ item.product.name|default:item.imported_raw_name }}</td>
         <td>{{ item.quantity }}</td>
-        <td class="text-right">{{ item.final_price_excl_vat|floatformat:2 }}</td>
-        <td class="text-right">{{ item.line_total|floatformat:2 }}</td>
+        <td class="text-right">{{ item.frozen_base_price|floatformat:2 }} {{ item.frozen_currency.code|default:"UZS" }}</td>
+        <td>{% if item.lead_time_days %}до {{ item.lead_time_days }} дн.{% else %}&mdash;{% endif %}</td>
+        <td class="text-right">{{ item.final_price_excl_vat|floatformat:2 }} {{ pres_ccy }}</td>
+        <td class="text-right">{{ item.line_total|floatformat:2 }} {{ pres_ccy }}</td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
+  {% endwith %}
 
   <div class="totals">
+    {% with pres_ccy=quote.quote_currency.code|default:"UZS" %}
     <table>
       <tr>
         <td>Итого без НДС:</td>
-        <td class="text-right">{{ quote.subtotal_excl_vat|floatformat:2 }}</td>
+        <td class="text-right">{{ quote.subtotal_excl_vat|floatformat:2 }} {{ pres_ccy }}</td>
       </tr>
       <tr>
         <td>НДС {{ quote.vat_rate }}%:</td>
-        <td class="text-right">{{ quote.vat_amount|floatformat:2 }}</td>
+        <td class="text-right">{{ quote.vat_amount|floatformat:2 }} {{ pres_ccy }}</td>
       </tr>
       <tr class="total-row">
         <td>ИТОГО с НДС:</td>
-        <td class="text-right">{{ quote.total_incl_vat|floatformat:2 }}</td>
+        <td class="text-right">{{ quote.total_incl_vat|floatformat:2 }} {{ pres_ccy }}</td>
       </tr>
     </table>
+    {% endwith %}
   </div>
 
   <div style="clear:both"></div>
+
+  <div class="delivery-term">
+    Срок поставки:
+    <strong>{% if quote.effective_delivery_lead_time_days %}до {{ quote.effective_delivery_lead_time_days }} дн.{% else %}по согласованию{% endif %}</strong>
+    {% if quote.delivery_note %} &mdash; {{ quote.delivery_note }}{% endif %}
+  </div>
+
+  {% comment %}
+    Currency / ЦБ-rate disclosure: when ANY line was priced in a non-UZS cost
+    currency, the snapshot is non-empty ({code: rate}). Show the frozen ЦБ rates
+    on the freeze date so the client understands the UZS conversion basis.
+  {% endcomment %}
+  {% if quote.fx_snapshot %}
+  <div class="fx-note">
+    Курс ЦБ на {{ quote.frozen_at|default:quote.updated_at|date:"d.m.Y" }}:
+    {% for ccy_code, rate in quote.fx_snapshot.items %}{{ ccy_code }} = {{ rate|floatformat:2 }} сум{% if not forloop.last %}; {% endif %}{% endfor %}
+  </div>
+  {% endif %}
 
   {% if quote.valid_until %}
   <div class="valid-until">

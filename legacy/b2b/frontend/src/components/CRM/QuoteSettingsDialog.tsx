@@ -50,6 +50,15 @@ export function QuoteSettingsDialog({ quote, open, onOpenChange }: QuoteSettings
 	const [taxCountry, setTaxCountry] = useState('');
 	const [validUntil, setValidUntil] = useState('');
 	const [currency, setCurrency] = useState('');
+	const [costCurrencyDefault, setCostCurrencyDefault] = useState('');
+	const [deliveryLeadTime, setDeliveryLeadTime] = useState('');
+	const [deliveryNote, setDeliveryNote] = useState('');
+	// КП-level manual FX overrides keyed by currency code (empty ⇒ use CBU snapshot).
+	const [fxManual, setFxManual] = useState<Record<string, string>>({});
+
+	// Currencies the engine has frozen an FX snapshot for — the rows of the FX editor.
+	const fxSnapshot = quote.fx_snapshot ?? {};
+	const fxCurrencies = Object.keys(fxSnapshot);
 
 	const vatRateNumber = vatRate === '' ? null : Number(vatRate);
 	const vatRateInvalid =
@@ -64,7 +73,16 @@ export function QuoteSettingsDialog({ quote, open, onOpenChange }: QuoteSettings
 		setTaxCountry(quote.tax_country != null ? String(quote.tax_country) : '');
 		setValidUntil(quote.valid_until ?? '');
 		setCurrency(quote.quote_currency ?? '');
+		setCostCurrencyDefault(quote.cost_currency_default ?? '');
+		setDeliveryLeadTime(quote.delivery_lead_time_days != null ? String(quote.delivery_lead_time_days) : '');
+		setDeliveryNote(quote.delivery_note ?? '');
+		setFxManual({ ...(quote.fx_manual ?? {}) });
 	}, [open, quote]);
+
+	// Edit a single currency's manual override; empty string clears it (back to CBU).
+	const setOverride = (code: string, value: string) => {
+		setFxManual((prev) => ({ ...prev, [code]: value }));
+	};
 
 	async function submit(event: FormEvent) {
 		event.preventDefault();
@@ -72,6 +90,10 @@ export function QuoteSettingsDialog({ quote, open, onOpenChange }: QuoteSettings
 			toast.error(t('quote.settings.vatRateOutOfRange', { min: VAT_RATE_MIN, max: VAT_RATE_MAX }));
 			return;
 		}
+		// Keep only non-empty overrides — a blank input means "use the CBU snapshot".
+		const cleanedFxManual = Object.fromEntries(
+			Object.entries(fxManual).filter(([, rate]) => rate !== '' && rate != null),
+		);
 		try {
 			await updateSettings.mutateAsync({
 				id: quote.id,
@@ -81,6 +103,10 @@ export function QuoteSettingsDialog({ quote, open, onOpenChange }: QuoteSettings
 					tax_country: taxCountry === '' ? null : Number(taxCountry),
 					valid_until: validUntil === '' ? null : validUntil,
 					quote_currency: currency === '' ? null : currency,
+					cost_currency_default: costCurrencyDefault === '' ? null : costCurrencyDefault,
+					delivery_lead_time_days: deliveryLeadTime === '' ? null : Number(deliveryLeadTime),
+					delivery_note: deliveryNote,
+					fx_manual: cleanedFxManual,
 				},
 			});
 			toast.success(t('quote.settings.saved'));
@@ -165,6 +191,78 @@ export function QuoteSettingsDialog({ quote, open, onOpenChange }: QuoteSettings
 								</SelectContent>
 							</Select>
 						</div>
+
+						<div className="flex flex-col gap-1.5">
+							<Label htmlFor="quote-cost-currency">{t('quote.settings.costCurrencyDefault')}</Label>
+							<Select value={costCurrencyDefault} onValueChange={setCostCurrencyDefault}>
+								<SelectTrigger id="quote-cost-currency">
+									<SelectValue placeholder={t('quote.settings.costCurrencyDefaultPlaceholder')} />
+								</SelectTrigger>
+								<SelectContent>
+									{currencies.map((item) => (
+										<SelectItem key={item.id} value={item.code}>
+											{item.code} — {item.name}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+							<p className="text-xs text-muted-foreground">{t('quote.settings.costCurrencyDefaultHelp')}</p>
+						</div>
+
+						<div className="flex flex-col gap-1.5">
+							<Label htmlFor="quote-lead-time">{t('quote.settings.deliveryLeadTime')}</Label>
+							<Input
+								id="quote-lead-time"
+								type="number"
+								min={0}
+								value={deliveryLeadTime}
+								onChange={(event) => setDeliveryLeadTime(event.target.value)}
+								placeholder={String(quote.effective_delivery_lead_time_days ?? 0)}
+							/>
+							<p className="text-xs text-muted-foreground">{t('quote.settings.deliveryLeadTimeHelp')}</p>
+						</div>
+
+						<div className="flex flex-col gap-1.5">
+							<Label htmlFor="quote-delivery-note">{t('quote.settings.deliveryNote')}</Label>
+							<Input
+								id="quote-delivery-note"
+								type="text"
+								maxLength={255}
+								value={deliveryNote}
+								onChange={(event) => setDeliveryNote(event.target.value)}
+								placeholder={t('quote.settings.deliveryNotePlaceholder')}
+							/>
+						</div>
+
+						{/* Manual FX override editor — one row per currency the engine froze a rate
+						    for. The CBU snapshot is shown read-only; the input writes fx_manual
+						    (empty ⇒ keep CBU). Rates are сум per 1 unit of currency. */}
+						{fxCurrencies.length > 0 && (
+							<div className="flex flex-col gap-2">
+								<Label>{t('quote.settings.fxOverride')}</Label>
+								<p className="text-xs text-muted-foreground">{t('quote.settings.fxOverrideHelp')}</p>
+								<div className="flex flex-col gap-2">
+									{fxCurrencies.map((code) => (
+										<div key={code} className="flex items-center gap-2">
+											<span className="w-12 text-sm font-mono">{code}</span>
+											<span className="flex-1 text-xs text-muted-foreground">
+												{t('quote.settings.fxCbuRate', { rate: fxSnapshot[code] })}
+											</span>
+											<Input
+												type="number"
+												step="0.0001"
+												min={0}
+												className="w-32"
+												aria-label={t('quote.settings.fxOverrideFor', { code })}
+												value={fxManual[code] ?? ''}
+												onChange={(event) => setOverride(code, event.target.value)}
+												placeholder={fxSnapshot[code]}
+											/>
+										</div>
+									))}
+								</div>
+							</div>
+						)}
 					</div>
 
 					<DialogFooter className="mt-6 gap-2">

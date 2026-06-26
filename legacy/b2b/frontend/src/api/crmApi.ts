@@ -26,11 +26,17 @@ export interface QuoteItem {
 	note?: string;
 	is_incomplete?: boolean;
 	frozen_base_price: string;
+	// The LINE's COST currency (base-price currency), code e.g. "USD". null ⇒ UZS.
 	frozen_currency: string;
 	logistics_cost: string;
+	// customs_duty is entered in the SAME line currency as frozen_base_price.
 	customs_duty: string;
 	margin_percent: string;
 	discount_percent: string;
+	// Per-line срок поставки (days). КП-level effective срок = max over lines.
+	lead_time_days: number;
+	// landed_cost / final_price_excl_vat are READ-ONLY and now in UZS
+	// = (frozen_base_price + customs_duty) × fx rate of frozen_currency.
 	landed_cost: string;
 	final_price_excl_vat: string;
 	assigned_at?: string | null;
@@ -220,7 +226,20 @@ export interface Quote {
 	status_name: string;
 	delivery_basis?: number | null;
 	delivery_basis_data?: DeliveryBasis | null;
+	// Presentation currency (all stored totals are in UZS regardless); Currency code.
 	quote_currency?: string | null;
+	// Default cost currency new lines inherit (Currency code or null ⇒ UZS).
+	cost_currency_default?: string | null;
+	// Frozen FX (READ-ONLY): { currencyCode: "rateToUzsString" } e.g. {"USD":"12000"}.
+	fx_snapshot?: Record<string, string>;
+	// КП-level manual FX override (read+WRITE) — wins over snapshot & market.
+	fx_manual?: Record<string, string>;
+	// КП-level срок поставки OVERRIDE in days (null ⇒ use derived max over lines).
+	delivery_lead_time_days?: number | null;
+	// READ-ONLY computed срок = override if set else max(items[].lead_time_days) (0 if none).
+	effective_delivery_lead_time_days?: number;
+	// "в наличии" / "под заказ" nuance (max 255).
+	delivery_note?: string;
 	tax_country?: number | null;
 	vat_rate?: string;
 	margin_percent?: string;          // КП-level markup applied to every line (F3.8)
@@ -329,7 +348,7 @@ export const crmApi = {
 		const response = await apiClient.patch<Deal>(`crm/deals/${id}/`, data);
 		return response.data;
 	},
-	createQuoteItem: async (data: { quote: number; imported_raw_name: string; quantity: number; frozen_base_price?: string; frozen_currency?: string }) => {
+	createQuoteItem: async (data: { quote: number; imported_raw_name: string; quantity: number; frozen_base_price?: string; frozen_currency?: string; lead_time_days?: number }) => {
 		const response = await apiClient.post<QuoteItem>('crm/quote-items/', data);
 		return response.data;
 	},
@@ -524,7 +543,18 @@ export const crmApi = {
 	// tax_country is the Country pk; quote_currency is the Currency code (e.g. "UZS").
 	updateQuoteSettings: async (
 		id: number,
-		data: Partial<Pick<Quote, 'vat_rate' | 'margin_percent' | 'tax_country' | 'valid_until' | 'quote_currency'>>,
+		data: Partial<Pick<
+			Quote,
+			| 'vat_rate'
+			| 'margin_percent'
+			| 'tax_country'
+			| 'valid_until'
+			| 'quote_currency'
+			| 'cost_currency_default'
+			| 'fx_manual'
+			| 'delivery_lead_time_days'
+			| 'delivery_note'
+		>>,
 	) => {
 		const response = await apiClient.patch<Quote>(`crm/quotes/${id}/`, data);
 		return response.data;

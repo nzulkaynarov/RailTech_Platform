@@ -700,9 +700,28 @@
       "currency": "Валюта КП",
       "currencyPlaceholder": "Выберите валюту",
       "margin": "Маржа КП (%)",
-      "marginHelp": "Наценка на себестоимость всех позиций (на весь КП)"
+      "marginHelp": "Наценка на себестоимость всех позиций (на весь КП)",
+      "costCurrencyDefault": "Валюта себестоимости по умолчанию",
+      "costCurrencyDefaultPlaceholder": "Выберите валюту",
+      "costCurrencyDefaultHelp": "Новые позиции наследуют эту валюту базовой цены",
+      "deliveryLeadTime": "Срок поставки (дн.)",
+      "deliveryLeadTimeHelp": "Переопределяет срок на весь КП. Пусто — берётся максимум по позициям",
+      "deliveryNote": "Примечание к поставке",
+      "deliveryNotePlaceholder": "напр. «в наличии» / «под заказ»",
+      "fxOverride": "Курсы валют (ручная корректировка)",
+      "fxOverrideHelp": "Курс ЦБ зафиксирован движком. При необходимости задайте свой — сум за 1 единицу валюты",
+      "fxCbuRate": "Курс ЦБ: {{rate}}",
+      "fxOverrideFor": "Курс для {{code}}"
     },
-    "marginApplied": "Маржа"
+    "marginApplied": "Маржа",
+    "leadTime": "Срок",
+    "leadTimeHelp": "Срок поставки позиции в днях",
+    "leadTimeBadge": "до {{days}} дн.",
+    "leadTimeUpTo": "до {{days}} дн.",
+    "deliveryLeadTime": "Срок поставки",
+    "lineCurrency": "Валюта себестоимости позиции",
+    "costInPresentation": "Себестоимость: {{value}}",
+    "fxRateAt": "Курс {{from}}→{{to}}: {{rate}}"
   },
   "admin": {
     "dashboard": {

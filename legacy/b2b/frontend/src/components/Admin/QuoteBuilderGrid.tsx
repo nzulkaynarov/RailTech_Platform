@@ -4,7 +4,8 @@ import { toast } from 'sonner';
 import { QuoteItem, crmApi } from '@/api/crmApi';
 import { Loader2, Save, FileDown, AlertTriangle, Plus, Trash2, Sparkles, FileText, Settings } from 'lucide-react';
 import { useQuoteItems, useUpdateQuoteItem, useCreateQuoteItem, useDeleteQuoteItem, useDeal, useSetQuoteDeliveryBasis } from '@/hooks/useCRM';
-import { formatMoney, calculateLineTotal } from '@/utils/decimal';
+import { useCurrencies } from '@/hooks/useMasterData';
+import { formatMoney, calculateLineTotal, toDecimal } from '@/utils/decimal';
 import { DeliveryBasisSelect } from '@/components/CRM/DeliveryBasisSelect';
 import { QuoteChargesSection } from '@/components/CRM/QuoteChargesSection';
 import { Button } from '@/components/ui/button';
@@ -16,6 +17,9 @@ import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/comp
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import {
+	Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -36,6 +40,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 
 	const { data: quoteItems = [], isLoading: itemsLoading } = useQuoteItems({ deal_id: dealId });
 	const { data: deal, isLoading: dealLoading } = useDeal(dealId);
+	const { data: currencies = [] } = useCurrencies();
 	const updateMutation = useUpdateQuoteItem();
 	const createItemMutation = useCreateQuoteItem();
 	const deleteItemMutation = useDeleteQuoteItem();
@@ -69,6 +74,13 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 		}));
 	};
 
+	// The line's COST currency is a code (not a numeric field) — set it verbatim.
+	const updateItemCurrency = (id: number, code: string) => {
+		setLocalItems(prev => prev.map(item =>
+			item.id === id ? { ...item, frozen_currency: code } : item
+		));
+	};
+
 	const handleSave = async () => {
 		try {
 			for (const item of localItems) {
@@ -79,10 +91,12 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 						data: {
 							quantity: item.quantity,
 							frozen_base_price: item.frozen_base_price,
+							frozen_currency: item.frozen_currency,
 							logistics_cost: item.logistics_cost,
 							customs_duty: item.customs_duty,
 							margin_percent: item.margin_percent,
 							discount_percent: item.discount_percent,
+							lead_time_days: item.lead_time_days,
 							hs_code: item.hs_code,
 						}
 					});
@@ -113,7 +127,8 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 				imported_raw_name: newItemName.trim(),
 				quantity: 1,
 				frozen_base_price: '0',
-				frozen_currency: 'USD',
+				// New lines inherit the КП's default cost currency (fallback UZS).
+				frozen_currency: deal.active_quote.cost_currency_default || 'UZS',
 			});
 			setNewItemName('');
 			setShowAddRow(false);
@@ -182,8 +197,27 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 		);
 	}
 
-	const currency = quoteItems[0]?.frozen_currency || 'USD';
+	// Presentation currency (all STORED totals are in UZS); computed columns
+	// (Себестоимость / Сумма / итоги) render in it. Defaults to UZS.
+	const presentationCurrency = activeQuote?.quote_currency || 'UZS';
 	const vatRate = activeQuote?.vat_rate || '12';
+
+	// FX rate (сум per 1 unit) for a line cost currency: manual override wins over
+	// the frozen snapshot; UZS is always 1. Strings → Decimal for display math.
+	const fxSnapshot = activeQuote?.fx_snapshot ?? {};
+	const fxManual = activeQuote?.fx_manual ?? {};
+	const fxRateFor = (code?: string): string => {
+		const ccy = (code || 'UZS').toUpperCase();
+		if (ccy === 'UZS') return '1';
+		return fxManual[ccy] || fxSnapshot[ccy] || '1';
+	};
+	// The line's COST shown in the presentation (UZS) currency, for the tooltip.
+	const lineCostInPresentation = (item: QuoteItem): string => {
+		const native = toDecimal(item.frozen_base_price).plus(toDecimal(item.customs_duty));
+		return native.mul(toDecimal(fxRateFor(item.frozen_currency))).toString();
+	};
+	// КП срок поставки (до N дн.) — backend-computed effective value.
+	const effectiveLeadTime = activeQuote?.effective_delivery_lead_time_days ?? 0;
 
 	// Incoterm cost-responsibility flags drive cost-column visibility. With no basis
 	// chosen yet, show all columns (don't hide already-entered data).
@@ -222,7 +256,10 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 					<Separator orientation="vertical" className="h-4" />
 					<DeliveryBasisSelect value={activeQuote?.delivery_basis} onChange={handleBasisChange} />
 					<Badge variant="outline">{t('quote.vat')} {vatRate}%</Badge>
-					<Badge variant="secondary">{currency}</Badge>
+					<Badge variant="secondary">{presentationCurrency}</Badge>
+					{effectiveLeadTime > 0 && (
+						<Badge variant="outline">{t('quote.leadTimeBadge', { days: effectiveLeadTime })}</Badge>
+					)}
 				</div>
 				<div className="flex gap-1.5">
 					{localItems.some(item => !item.product) && (
@@ -301,7 +338,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 										<TooltipContent>{t('quote.quantityHelp')}</TooltipContent>
 									</Tooltip>
 								</TableHead>
-								<TableHead className="px-2 py-2 text-xs font-semibold text-muted-foreground w-28 bg-muted/30">
+								<TableHead className="px-2 py-2 text-xs font-semibold text-muted-foreground w-40 bg-muted/30">
 									<Tooltip>
 										<TooltipTrigger asChild>
 											<span className="cursor-help">{t('quote.basePrice')}</span>
@@ -329,6 +366,14 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 										</Tooltip>
 									</TableHead>
 								)}
+								<TableHead className="px-2 py-2 text-center text-xs font-semibold text-muted-foreground w-20">
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<span className="cursor-help">{t('quote.leadTime')}</span>
+										</TooltipTrigger>
+										<TooltipContent>{t('quote.leadTimeHelp')}</TooltipContent>
+									</Tooltip>
+								</TableHead>
 								<TableHead className="px-2 py-2 text-xs font-bold text-muted-foreground w-28">
 									<Tooltip>
 										<TooltipTrigger asChild>
@@ -389,13 +434,55 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 										/>
 									</TableCell>
 									<TableCell className="p-0 bg-muted/20">
-										<Input
-											type="number"
-											aria-label={t('quote.basePrice')}
-											className="h-8 border-none shadow-none rounded-none text-xs font-mono text-right pr-2 focus-visible:ring-1"
-											value={item.frozen_base_price}
-											onChange={(e) => updateItemLocally(item.id, 'frozen_base_price', e.target.value)}
-										/>
+										<div className="flex items-center">
+											<Tooltip>
+												<TooltipTrigger asChild>
+													<Input
+														type="number"
+														aria-label={t('quote.basePrice')}
+														className="h-8 border-none shadow-none rounded-none text-xs font-mono text-right pr-2 focus-visible:ring-1"
+														value={item.frozen_base_price}
+														onChange={(e) => updateItemLocally(item.id, 'frozen_base_price', e.target.value)}
+													/>
+												</TooltipTrigger>
+												<TooltipContent>
+													{/* UZS-equivalent of the line cost + the FX rate / date used. */}
+													<div className="flex flex-col gap-0.5">
+														<span>{t('quote.costInPresentation', {
+															value: formatMoney(lineCostInPresentation(item), presentationCurrency),
+														})}</span>
+														{(item.frozen_currency || 'UZS').toUpperCase() !== 'UZS' && (
+															<span className="text-muted-foreground">
+																{t('quote.fxRateAt', {
+																	rate: fxRateFor(item.frozen_currency),
+																	from: (item.frozen_currency || 'UZS').toUpperCase(),
+																	to: presentationCurrency,
+																})}
+															</span>
+														)}
+													</div>
+												</TooltipContent>
+											</Tooltip>
+											{/* Per-line COST currency selector (base-price currency). */}
+											<Select
+												value={item.frozen_currency || 'UZS'}
+												onValueChange={(code) => updateItemCurrency(item.id, code)}
+											>
+												<SelectTrigger
+													aria-label={t('quote.lineCurrency')}
+													className="h-8 w-16 shrink-0 border-none shadow-none rounded-none text-xs focus:ring-1"
+												>
+													<SelectValue />
+												</SelectTrigger>
+												<SelectContent>
+													{currencies.map((ccy) => (
+														<SelectItem key={ccy.id} value={ccy.code}>
+															{ccy.code}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+										</div>
 									</TableCell>
 									{showLogistics && (
 										<TableCell className="p-0 bg-muted/20">
@@ -419,14 +506,24 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 											/>
 										</TableCell>
 									)}
+									<TableCell className="p-0">
+										<Input
+											type="number"
+											min={0}
+											aria-label={t('quote.leadTime')}
+											className="h-8 border-none shadow-none rounded-none text-xs text-center focus-visible:ring-1"
+											value={item.lead_time_days ?? 0}
+											onChange={(e) => updateItemLocally(item.id, 'lead_time_days', e.target.value)}
+										/>
+									</TableCell>
 									<TableCell className="px-2 py-1.5 text-right pr-2 bg-muted/30">
 										<span className="text-sm font-bold tabular-nums">
-											{formatMoney(item.landed_cost, item.frozen_currency)}
+											{formatMoney(item.landed_cost, presentationCurrency)}
 										</span>
 									</TableCell>
 									<TableCell className="px-2 py-1.5 text-right pr-4">
 										<span className="text-sm font-bold tabular-nums">
-											{formatMoney(calculateLineTotal(item.final_price_excl_vat, item.quantity), item.frozen_currency)}
+											{formatMoney(calculateLineTotal(item.final_price_excl_vat, item.quantity), presentationCurrency)}
 										</span>
 									</TableCell>
 									<TableCell className="px-1 py-0.5">
@@ -475,11 +572,22 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 			<Separator />
 
 			{/* КП-level expense items / discounts (seller-only) */}
-			{activeQuote && <QuoteChargesSection quoteId={activeQuote.id} currency={currency} />}
+			{activeQuote && <QuoteChargesSection quoteId={activeQuote.id} currency={presentationCurrency} />}
 
 			{/* Summary Footer */}
 			<Card className="py-3">
 				<CardContent className="flex items-center justify-end gap-6 py-0">
+					{effectiveLeadTime > 0 && (
+						<>
+							<div className="flex flex-col items-end leading-none mr-auto">
+								<span className="text-xs text-muted-foreground mb-1">{t('quote.deliveryLeadTime')}</span>
+								<span className="text-sm font-semibold tabular-nums">
+									{t('quote.leadTimeUpTo', { days: effectiveLeadTime })}
+								</span>
+							</div>
+							<Separator orientation="vertical" className="h-6" />
+						</>
+					)}
 					{Number(activeQuote?.margin_percent ?? 0) > 0 && (
 						<>
 							<div className="flex flex-col items-end leading-none">
@@ -492,7 +600,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 					<div className="flex flex-col items-end leading-none">
 						<span className="text-xs text-muted-foreground mb-1">{t('quote.subtotal')}</span>
 						<span className="text-sm font-semibold tabular-nums">
-							{formatMoney(activeQuote?.subtotal_excl_vat)}
+							{formatMoney(activeQuote?.subtotal_excl_vat, presentationCurrency)}
 						</span>
 					</div>
 					{/* Show the charges line whenever КП-level charges EXIST — even when they net
@@ -504,7 +612,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 							<div className="flex flex-col items-end leading-none">
 								<span className="text-xs text-muted-foreground mb-1">{t('quote.charges.title')}</span>
 								<span className="text-sm font-semibold tabular-nums">
-									{formatMoney(activeQuote.charges_total)}
+									{formatMoney(activeQuote.charges_total, presentationCurrency)}
 								</span>
 							</div>
 						</>
@@ -513,14 +621,14 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 					<div className="flex flex-col items-end leading-none">
 						<span className="text-xs text-muted-foreground mb-1">{t('quote.vat')}</span>
 						<span className="text-sm font-semibold tabular-nums">
-							{formatMoney(activeQuote?.vat_amount)}
+							{formatMoney(activeQuote?.vat_amount, presentationCurrency)}
 						</span>
 					</div>
 					<Separator orientation="vertical" className="h-8" />
 					<div className="flex flex-col items-end leading-none">
 						<span className="text-xs text-primary font-semibold mb-1">{t('quote.total')}</span>
 						<span className="text-xl font-bold tabular-nums">
-							{formatMoney(activeQuote?.total_incl_vat)}
+							{formatMoney(activeQuote?.total_incl_vat, presentationCurrency)}
 						</span>
 					</div>
 				</CardContent>
