@@ -561,11 +561,20 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
             # pricing un-saveable (404 on item PATCH → subtotal stuck at 0). Exclude only
             # quotes whose prepared_by belongs to another seller company.
             seller_ids = seller_acting_company_ids(user, self.request) or set()
+            # Dual-membership edge: a user who belongs to BOTH the viewer's own seller
+            # company AND a competing one would otherwise land in competing_preparer_ids
+            # and hide their OWN company's legitimately-prepared КП from their own viewers.
+            # Subtract members of the viewer's OWN seller companies so only PURELY-competing
+            # preparers are excluded.
+            own_member_ids = CompanyMember.objects.filter(
+                is_active=True, company_id__in=seller_ids
+            ).values_list("user_id", flat=True)
             competing_preparer_ids = (
                 CompanyMember.objects.filter(
                     is_active=True, company__types__code__in=SELLER_COMPANY_TYPES
                 )
                 .exclude(company_id__in=seller_ids)
+                .exclude(user_id__in=own_member_ids)
                 .values_list("user_id", flat=True)
             )
             return (
@@ -709,11 +718,20 @@ class QuoteChargeViewSet(viewsets.ModelViewSet):
             # pricing un-saveable (404 on item PATCH → subtotal stuck at 0). Exclude only
             # quotes whose prepared_by belongs to another seller company.
             seller_ids = seller_acting_company_ids(user, self.request) or set()
+            # Dual-membership edge: a user who belongs to BOTH the viewer's own seller
+            # company AND a competing one would otherwise land in competing_preparer_ids
+            # and hide their OWN company's legitimately-prepared КП from their own viewers.
+            # Subtract members of the viewer's OWN seller companies so only PURELY-competing
+            # preparers are excluded.
+            own_member_ids = CompanyMember.objects.filter(
+                is_active=True, company_id__in=seller_ids
+            ).values_list("user_id", flat=True)
             competing_preparer_ids = (
                 CompanyMember.objects.filter(
                     is_active=True, company__types__code__in=SELLER_COMPANY_TYPES
                 )
                 .exclude(company_id__in=seller_ids)
+                .exclude(user_id__in=own_member_ids)
                 .values_list("user_id", flat=True)
             )
             return (

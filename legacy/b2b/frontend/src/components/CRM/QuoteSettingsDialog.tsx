@@ -30,6 +30,11 @@ interface QuoteSettingsDialogProps {
 	onOpenChange: (open: boolean) => void;
 }
 
+// Client-side bounds for the VAT rate (%). The backend is the source of truth, but
+// these stop a seller from typing nonsense like 999 and get fast inline feedback.
+const VAT_RATE_MIN = 0;
+const VAT_RATE_MAX = 100;
+
 // Seller-only КП settings: VAT rate (%), tax country, valid until (date), currency.
 // Currency is sent as the Currency CODE (e.g. "UZS") to match the backend SlugRelatedField;
 // tax country is sent as the Country pk. Frozen КП is read-only (backend rejects with
@@ -45,6 +50,11 @@ export function QuoteSettingsDialog({ quote, open, onOpenChange }: QuoteSettings
 	const [validUntil, setValidUntil] = useState('');
 	const [currency, setCurrency] = useState('');
 
+	const vatRateNumber = vatRate === '' ? null : Number(vatRate);
+	const vatRateInvalid =
+		vatRateNumber !== null &&
+		(Number.isNaN(vatRateNumber) || vatRateNumber < VAT_RATE_MIN || vatRateNumber > VAT_RATE_MAX);
+
 	// Re-seed the form from the КП whenever it opens (the seller may switch quotes).
 	useEffect(() => {
 		if (!open) return;
@@ -56,6 +66,10 @@ export function QuoteSettingsDialog({ quote, open, onOpenChange }: QuoteSettings
 
 	async function submit(event: FormEvent) {
 		event.preventDefault();
+		if (vatRateInvalid) {
+			toast.error(t('quote.settings.vatRateOutOfRange', { min: VAT_RATE_MIN, max: VAT_RATE_MAX }));
+			return;
+		}
 		try {
 			await updateSettings.mutateAsync({
 				id: quote.id,
@@ -89,10 +103,17 @@ export function QuoteSettingsDialog({ quote, open, onOpenChange }: QuoteSettings
 								id="quote-vat-rate"
 								type="number"
 								step="0.01"
-								min="0"
+								min={VAT_RATE_MIN}
+								max={VAT_RATE_MAX}
 								value={vatRate}
 								onChange={(event) => setVatRate(event.target.value)}
+								aria-invalid={vatRateInvalid}
 							/>
+							{vatRateInvalid && (
+								<p className="text-xs text-destructive">
+									{t('quote.settings.vatRateOutOfRange', { min: VAT_RATE_MIN, max: VAT_RATE_MAX })}
+								</p>
+							)}
 						</div>
 
 						<div className="flex flex-col gap-1.5">
@@ -142,7 +163,7 @@ export function QuoteSettingsDialog({ quote, open, onOpenChange }: QuoteSettings
 						<Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
 							{t('common.cancel')}
 						</Button>
-						<Button type="submit" disabled={updateSettings.isPending}>
+						<Button type="submit" disabled={updateSettings.isPending || vatRateInvalid}>
 							{updateSettings.isPending && <Loader2 className="size-4 animate-spin" />}
 							{t('common.save')}
 						</Button>

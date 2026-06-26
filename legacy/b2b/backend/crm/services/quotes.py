@@ -232,15 +232,20 @@ class QuoteCalculationService:
         totals = quote.items.aggregate(subtotal=models.Sum(models.F("final_price_excl_vat") * models.F("quantity")))
         subtotal = totals["subtotal"] or Decimal("0")
 
-        # Статьи расхода уровня КП: расход (+) минус скидка (−). Процентные статьи
-        # (rate_percent) резолвятся от subtotal, поэтому считаем в Python (статей мало).
-        charges = sum((charge.resolve_signed(subtotal) for charge in quote.charges.all()), Decimal("0"))
-
         # Ставка НДС берётся из КП (заморожена из БД), не хардкодится в коде.
         vat_rate = quote.vat_rate / Decimal("100")
 
         penny = Decimal("0.01")
         quote.subtotal_excl_vat = subtotal.quantize(penny, rounding=ROUND_HALF_UP)
+
+        # Статьи расхода уровня КП: расход (+) минус скидка (−). Процентные статьи
+        # (rate_percent) резолвятся от ОТОБРАЖАЕМОЙ (квантованной) суммы позиций
+        # subtotal_excl_vat, а не от сырого агрегата — иначе процент брался бы от
+        # незаокруглённой базы и давал бы суб-копеечный дрейф против того, что видит
+        # пользователь. Считаем в Python (статей мало).
+        charges = sum(
+            (charge.resolve_signed(quote.subtotal_excl_vat) for charge in quote.charges.all()), Decimal("0")
+        )
         quote.charges_total = charges.quantize(penny, rounding=ROUND_HALF_UP)
         tax_exclusive = quote.subtotal_excl_vat + quote.charges_total
         quote.vat_amount = (tax_exclusive * vat_rate).quantize(penny, rounding=ROUND_HALF_UP)
