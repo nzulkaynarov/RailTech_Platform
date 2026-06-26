@@ -21,6 +21,8 @@ import { useSystemSettings, useUpdateSystemSettings } from '@/hooks/useSystemSet
 import { CompanyTeamSettings } from '@/components/Cabinet/CompanyTeamSettings';
 import { ChargeTemplatesSettings } from '@/components/Cabinet/ChargeTemplatesSettings';
 import { CompanyDocumentProfileSettings } from '@/components/Cabinet/CompanyDocumentProfileSettings';
+import { CompanyDefaultsSettings } from '@/components/Cabinet/CompanyDefaultsSettings';
+import { CompanyNumberingSettings } from '@/components/Cabinet/CompanyNumberingSettings';
 
 function SettingRow({ icon: Icon, title, description, children }: {
   icon: React.ComponentType<{ className?: string }>;
@@ -63,15 +65,14 @@ export function SettingsPage() {
       <Tabs defaultValue="general">
         <TabsList>
           <TabsTrigger value="general">{t('settings.tabs.general')}</TabsTrigger>
+          {/* Company-Admin hub — seller business config (defaults, numbering, templates,
+              document profile). Gated to a seller OWNER (org-admin zone). */}
+          {!isAdmin && isSeller && isOwner && (
+            <TabsTrigger value="companyAdmin">{t('settings.tabs.companyAdmin')}</TabsTrigger>
+          )}
           {/* Workspace members manage their team here; the OWNER also gets the
               invite form (gated inside CompanyTeamSettings). Hidden for Platform Admin. */}
           {!isAdmin && <TabsTrigger value="team">{t('settings.tabs.team')}</TabsTrigger>}
-          {/* Charge templates — seller Company Admin business config (org-admin zone). */}
-          {!isAdmin && isSeller && <TabsTrigger value="templates">{t('settings.tabs.templates')}</TabsTrigger>}
-          {/* Document profile — seller OWNER edits the КП / contract branding block. */}
-          {!isAdmin && isSeller && isOwner && (
-            <TabsTrigger value="documentProfile">{t('settings.tabs.documentProfile')}</TabsTrigger>
-          )}
           {isAdmin && <TabsTrigger value="company">{t('settings.tabs.company')}</TabsTrigger>}
           {isAdmin && <TabsTrigger value="platform">{t('settings.tabs.platform')}</TabsTrigger>}
         </TabsList>
@@ -107,24 +108,19 @@ export function SettingsPage() {
           </Card>
         </TabsContent>
 
+        {/* Company-Admin hub (seller OWNER) — one coherent place for the company's
+            КП defaults, document numbering, charge templates and document profile.
+            A nested sub-navigation keeps the page tidy instead of N top-level tabs. */}
+        {!isAdmin && isSeller && isOwner && (
+          <TabsContent value="companyAdmin" className="space-y-4">
+            <CompanyAdminHub />
+          </TabsContent>
+        )}
+
         {/* Team — invite/manage company members (OWNER) or view team (members) */}
         {!isAdmin && (
           <TabsContent value="team" className="space-y-4">
             <CompanyTeamSettings />
-          </TabsContent>
-        )}
-
-        {/* Charge templates — seller Company Admin manages per-Incoterm defaults */}
-        {!isAdmin && isSeller && (
-          <TabsContent value="templates" className="space-y-4">
-            <ChargeTemplatesSettings />
-          </TabsContent>
-        )}
-
-        {/* Document profile — seller OWNER edits КП / contract branding block */}
-        {!isAdmin && isSeller && isOwner && (
-          <TabsContent value="documentProfile" className="space-y-4">
-            <CompanyDocumentProfileSettings />
           </TabsContent>
         )}
 
@@ -167,6 +163,46 @@ export function SettingsPage() {
         )}
       </Tabs>
     </div>
+  );
+}
+
+/**
+ * Seller Company-Admin hub — consolidates the company's business config (КП defaults,
+ * document numbering, charge templates, document profile) under one tab with a nested
+ * sub-navigation. Each sub-section is wired to its own OWNER-gated endpoint.
+ */
+function CompanyAdminHub() {
+  const { t } = useTranslation();
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">{t('settings.companyAdmin.title')}</CardTitle>
+        <CardDescription>{t('settings.companyAdmin.description')}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Tabs defaultValue="documentProfile" className="w-full">
+          <TabsList className="flex-wrap">
+            <TabsTrigger value="documentProfile">{t('settings.tabs.documentProfile')}</TabsTrigger>
+            <TabsTrigger value="defaults">{t('settings.tabs.defaults')}</TabsTrigger>
+            <TabsTrigger value="numbering">{t('settings.tabs.numbering')}</TabsTrigger>
+            <TabsTrigger value="templates">{t('settings.tabs.templates')}</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="documentProfile" className="mt-4">
+            <CompanyDocumentProfileSettings />
+          </TabsContent>
+          <TabsContent value="defaults" className="mt-4">
+            <CompanyDefaultsSettings />
+          </TabsContent>
+          <TabsContent value="numbering" className="mt-4">
+            <CompanyNumberingSettings />
+          </TabsContent>
+          <TabsContent value="templates" className="mt-4">
+            <ChargeTemplatesSettings />
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
   );
 }
 

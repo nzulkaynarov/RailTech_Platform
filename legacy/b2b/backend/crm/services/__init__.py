@@ -39,6 +39,7 @@ from .messaging import archive_messages_sync, send_deal_message, user_can_access
 from .quotes import (
     QuoteCalculationService,
     QuoteLifecycleService,
+    apply_company_quote_defaults,
     buyer_add_request_item,
     buyer_add_request_items,
     buyer_can_edit_request,
@@ -60,6 +61,7 @@ __all__ = [
     "STAGE_REQUIRES_SIGNED_CONTRACT",
     "Tranche",
     "apply_charge_template_to_quote",
+    "apply_company_quote_defaults",
     "archive_messages_sync",
     "auto_split_quote_by_availability",
     "buyer_add_request_item",

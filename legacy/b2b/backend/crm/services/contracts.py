@@ -12,11 +12,12 @@ from ..models import ActivityLog, Quote
 # ──────────────────────────────────────────────────────────────────────────
 
 
-def _next_contract_number() -> str:
-    # Race-safe per-year counter (was count()+1 → duplicate-number 500 under load).
+def _next_contract_number(seller_company=None) -> str:
+    # Race-safe per-(company, year) counter (was count()+1 → duplicate-number 500 under
+    # load). Carries the seller company so the contract gets THEIR prefix + counter.
     from .numbering import next_document_number
 
-    return next_document_number("CT", "CT")
+    return next_document_number("CT", "CT", company=seller_company)
 
 
 def _cstatus(code: str):
@@ -62,10 +63,14 @@ def generate_contract_from_quote(
     )
 
     if not contract:
+        # Seller company = the КП author's owning company → its prefix + per-company counter.
+        from .quotes import _quote_seller_company
+
+        seller_company = _quote_seller_company(quote)
         contract = Contract(
             deal=quote.deal,
             quote=quote,
-            number=_next_contract_number(),
+            number=_next_contract_number(seller_company),
             status=_cstatus(ContractStatusCode.DRAFT),
             total_amount=quote.total_incl_vat,
             currency=quote.items.first().frozen_currency if quote.items.exists() else None,

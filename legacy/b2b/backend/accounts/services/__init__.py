@@ -18,6 +18,7 @@ from .auth import (
     verify_and_setup_password,
 )
 from .clients import create_offline_client, find_client_company
+from .company_settings import get_company_settings, update_company_settings
 from .document_profile import (
     get_document_profile,
     is_company_owner,
@@ -82,6 +83,8 @@ __all__ = [
     "create_pending_user",
     "delete_kyc_document",
     "ensure_trial_subscription",
+    "get_company_settings",
+    "update_company_settings",
     "get_document_profile",
     "invite_workspace_member",
     "is_company_owner",

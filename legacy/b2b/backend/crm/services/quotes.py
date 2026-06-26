@@ -59,6 +59,51 @@ def _seller_document_profile(seller_company):
     return profile if has_content else None
 
 
+def apply_company_quote_defaults(quote: Quote, company: Optional[Company]) -> Quote:
+    """Pre-fill a freshly-CREATED КП from the seller company's CompanySettings.
+
+    Only fills fields the company has actually configured (non-None), and ONLY on a
+    brand-new quote — never overwrites a value already set on the quote. Applied to:
+    delivery_basis, quote cost_currency_default, vat_rate, margin_percent and
+    valid_until (= today + default_offer_validity_days). No-op when the company has no
+    settings configured. Reads settings via a plain filter (no write on read).
+    """
+    if company is None:
+        return quote
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from accounts.models import CompanySettings
+
+    settings_row = CompanySettings.objects.filter(company=company).first()
+    if settings_row is None:
+        return quote
+
+    changed = []
+    if settings_row.default_delivery_basis_id and quote.delivery_basis_id is None:
+        quote.delivery_basis_id = settings_row.default_delivery_basis_id
+        changed.append("delivery_basis")
+    if settings_row.default_cost_currency_id and quote.cost_currency_default_id is None:
+        quote.cost_currency_default_id = settings_row.default_cost_currency_id
+        changed.append("cost_currency_default")
+    # vat_rate / margin_percent have non-null model defaults; only override when the
+    # quote still carries the bare model default AND the company configured a value.
+    if settings_row.default_vat_rate is not None and quote.vat_rate == Decimal("12.00"):
+        quote.vat_rate = settings_row.default_vat_rate
+        changed.append("vat_rate")
+    if settings_row.default_margin_percent is not None and quote.margin_percent == Decimal("0"):
+        quote.margin_percent = settings_row.default_margin_percent
+        changed.append("margin_percent")
+    if settings_row.default_offer_validity_days is not None and quote.valid_until is None:
+        quote.valid_until = timezone.now().date() + timedelta(days=settings_row.default_offer_validity_days)
+        changed.append("valid_until")
+
+    if changed:
+        quote.save(update_fields=[*changed, "updated_at"])
+    return quote
+
+
 def _set_quote_status(quote, code: str) -> None:
     # .get (not get_or_create): the status MUST exist from the seed migration.
     quote.status = QuoteStatus.objects.get(code=code)
