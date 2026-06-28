@@ -116,6 +116,7 @@ function getAdminNavigation(activePage: string, t: TFn, attention: AttentionCoun
     { label: t('shell.adminQuotes'), icon: <FileText className="h-4 w-4" />, id: 'crm-quotes', active: activePage === 'crm-quotes' },
     { label: t('shell.adminContracts'), icon: <FileSignature className="h-4 w-4" />, id: 'contracts', active: activePage === 'contracts' },
     { label: t('shell.masterData'), icon: <Layers className="h-4 w-4" />, id: 'admin-master-data', active: activePage === 'admin-master-data' },
+    { label: t('shell.operatorRoles'), icon: <ShieldCheck className="h-4 w-4" />, id: 'admin-operator-roles', active: activePage === 'admin-operator-roles' },
     { label: t('shell.emailTemplates'), icon: <Mail className="h-4 w-4" />, id: 'admin-email-templates', active: activePage === 'admin-email-templates' },
     { label: t('shell.support'), icon: <LifeBuoy className="h-4 w-4" />, id: 'admin-support', active: activePage === 'admin-support' },
     {

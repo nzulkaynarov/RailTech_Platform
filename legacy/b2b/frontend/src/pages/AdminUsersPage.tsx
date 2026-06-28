@@ -31,12 +31,16 @@ import {
   useWorkspaceRoles, useAddUserMembership, useRemoveUserMembership,
   useCompanies, useUploadUserAvatar, useDeleteUserAvatar,
 } from '@/hooks/useAccounts';
+import { useOperatorRoles, useAssignOperatorRole } from '@/hooks/useAdmin';
 import { PageShell, EmptyState, ErrorState } from './shared/PageShell';
 import { systemRoleLabelKey, workspaceRoleLabelKey } from '@/lib/codes';
 import type { User as UserType } from '@/api/accountsApi';
 import { ImageUpload } from '@/components/Shared/ImageUpload';
 
 type Draft = Partial<UserType>;
+
+/** Sentinel for "clear operator role" — shadcn Select can't hold an empty value. */
+const NO_OPERATOR_ROLE = 'none';
 
 function MembershipsPanel({ user }: { user: UserType }) {
   const { t } = useTranslation();
@@ -195,6 +199,8 @@ function DetailSheet({
   const updateMut = useUpdateUser();
   const uploadAvatarMut = useUploadUserAvatar();
   const deleteAvatarMut = useDeleteUserAvatar();
+  const { data: operatorRoles } = useOperatorRoles();
+  const assignOperatorMut = useAssignOperatorRole();
 
   const [draft, setDraft] = useState<Draft>(() => user ?? {});
   const [roleCode, setRoleCode] = useState<string>('');
@@ -229,8 +235,10 @@ function DetailSheet({
           ? t('pages.adminUsers.deactivated', { name: user.email })
           : t('pages.adminUsers.activated', { name: user.email })
       );
-    } catch {
-      toast.error(t('common.error'));
+    } catch (e) {
+      const detail = (e as { response?: { data?: { error?: string; detail?: string } } })?.response?.data;
+      const code = detail?.error || detail?.detail;
+      toast.error(code ? t(`pages.adminUsers.errors.${code}`, code) : t('common.error'));
     }
   };
 
@@ -263,6 +271,24 @@ function DetailSheet({
     } catch (e) {
       const detail = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
       toast.error(detail ? t(`pages.adminUsers.errors.${detail}`, detail) : t('pages.adminUsers.saveFailed'));
+    }
+  };
+
+  // Operator sub-role (ADR-0004 G1) — only meaningful for platform operators.
+  // The "none" sentinel maps to a null role_id (clears the assignment).
+  const handleAssignOperatorRole = async (value: string) => {
+    const roleId = value === NO_OPERATOR_ROLE ? null : Number(value);
+    try {
+      await assignOperatorMut.mutateAsync({ userId: user.id, roleId });
+      toast.success(t('operatorRoles.assignSuccess'));
+    } catch (e) {
+      const data = (e as { response?: { data?: { error?: string; detail?: string } } })?.response?.data;
+      const code = data?.error;
+      toast.error(
+        code
+          ? t(`operatorRoles.errors.${code}`, { defaultValue: data?.detail ?? t('common.error') })
+          : data?.detail ?? t('common.error'),
+      );
     }
   };
 
@@ -410,6 +436,31 @@ function DetailSheet({
                   </p>
                 )}
               </div>
+
+              {/* Operator sub-role — only for platform operators (ADR-0004 G1). */}
+              {user.is_platform_admin && (
+                <div className="space-y-2 rounded-lg border p-3">
+                  <Label>{t('operatorRoles.assignRole')}</Label>
+                  <Select
+                    value={user.operator_role_data?.id ? String(user.operator_role_data.id) : NO_OPERATOR_ROLE}
+                    onValueChange={handleAssignOperatorRole}
+                    disabled={assignOperatorMut.isPending}
+                  >
+                    <SelectTrigger aria-label={t('operatorRoles.assignRole')}>
+                      <SelectValue placeholder={t('operatorRoles.noOperatorRole')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NO_OPERATOR_ROLE}>{t('operatorRoles.noOperatorRole')}</SelectItem>
+                      {(operatorRoles ?? []).map((operatorRole) => (
+                        <SelectItem key={operatorRole.id} value={String(operatorRole.id)}>
+                          {operatorRole.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">{t('operatorRoles.assignHint')}</p>
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="memberships" className="mt-4">

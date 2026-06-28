@@ -7,6 +7,7 @@ from .applications import CompanyRoleApplication
 from .company import Company, CompanyDocumentProfile, CompanyMember, CompanyRole, CompanySettings, Contact
 from .kyc import KYCDocument
 from .lookups import CompanyType, KYCDocType, SystemRole, VerificationStatus, WorkspaceRole
+from .operators import OperatorRole
 from .subscriptions import SupplierSubscription
 from .users import CustomUser
 
@@ -22,6 +23,7 @@ __all__ = [
     "CustomUser",
     "KYCDocType",
     "KYCDocument",
+    "OperatorRole",
     "SupplierSubscription",
     "SystemRole",
     "VerificationStatus",

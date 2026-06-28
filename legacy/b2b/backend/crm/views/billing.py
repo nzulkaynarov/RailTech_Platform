@@ -10,7 +10,7 @@ from rest_framework.views import APIView
 from accounts.services.permissions import is_seller, seller_visible_deal_ids
 from core.file_streaming import stream_file_field
 from core.optimistic_locking import OptimisticLockingMixin
-from core.permissions import IsCompanyMemberOrPlatformAdmin, IsPlatformAdmin
+from core.permissions import IsCompanyMemberOrPlatformAdmin, OperatorScoped
 from crm import services as crm_services
 from crm.models import (
     Act,
@@ -81,6 +81,11 @@ class ContractViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
 
     serializer_class = ContractSerializer
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
+    # Operator sub-capability for the admin contract overrides (ADR-0004 G1).
+    operator_permissions = {
+        "cancel": "moderation.force_override",
+        "force_cancel": "moderation.force_override",
+    }
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
@@ -178,7 +183,7 @@ class ContractViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
         return Response(ContractSerializer(contract).data)
 
     @extend_schema(summary="Cancel contract", tags=["CRM"])
-    @action(detail=True, methods=["post"], url_path="cancel", permission_classes=[IsAuthenticated, IsPlatformAdmin])
+    @action(detail=True, methods=["post"], url_path="cancel", permission_classes=[IsAuthenticated, OperatorScoped])
     def cancel(self, request, pk=None):
         contract, err = crm_services.cancel_contract(int(pk), request.user, reason=request.data.get("reason", ""))
         if err:
@@ -198,7 +203,7 @@ class ContractViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
         tags=["CRM"],
     )
     @action(
-        detail=True, methods=["post"], url_path="force-cancel", permission_classes=[IsAuthenticated, IsPlatformAdmin]
+        detail=True, methods=["post"], url_path="force-cancel", permission_classes=[IsAuthenticated, OperatorScoped]
     )
     def force_cancel(self, request, pk=None):
         contract, err = crm_services.force_cancel_contract(

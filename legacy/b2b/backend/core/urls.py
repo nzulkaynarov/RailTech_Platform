@@ -17,6 +17,8 @@ from accounts.views import (
     ForgotPasswordView,
     LogoutView,
     MeView,
+    OperatorPermissionCatalogView,
+    OperatorRoleViewSet,
     PermissionCatalogView,
     RegisterView,
     WsTicketView,
@@ -121,6 +123,7 @@ router.register(r"accounts/system-roles", SystemRoleViewSet, basename="systemrol
 router.register(r"accounts/workspace-roles", WorkspaceRoleViewSet, basename="workspacerole")
 router.register(r"accounts/company-types", CompanyTypeViewSet, basename="companytype")
 router.register(r"accounts/company-roles", CompanyRoleViewSet, basename="company-role")
+router.register(r"admin/operator-roles", OperatorRoleViewSet, basename="operator-role")
 router.register(r"notifications", NotificationViewSet, basename="notification")
 router.register(r"admin/email-templates", EmailTemplateViewSet, basename="admin-email-template")
 
@@ -195,6 +198,11 @@ urlpatterns = (
         path("api/v1/system-settings/", SystemSettingsView.as_view(), name="system-settings"),
         path("api/v1/accounts/me/", MeView.as_view(), name="current-user"),
         path("api/v1/accounts/permissions/", PermissionCatalogView.as_view(), name="permission-catalog"),
+        path(
+            "api/v1/admin/operator-permissions/",
+            OperatorPermissionCatalogView.as_view(),
+            name="operator-permission-catalog",
+        ),
         path("api/v1/health/", health_check, name="health_check"),
         # Root-level health endpoint for Docker/K8s healthchecks
         path("health/", health_check, name="health_check_root"),

@@ -87,6 +87,115 @@ class SystemRoleCode(models.TextChoices):
     USER = "USER", "Пользователь"
 
 
+# ──────────────────────────────────────────────────────────────────────────
+# Platform Operator plane (ADR-0004 G1) — granular operator sub-roles.
+#
+# The Platform Operator (SystemRole.ADMIN, no CompanyMember) was a monolith: one
+# all-powerful ADMIN doing KYC + billing + moderation + force-overrides. G1 splits
+# that into least-privilege sub-roles. This is PLATFORM-scoped (NOT a CompanyRole):
+# it gates which platform-staff actions an operator may take, never tenant operations
+# (ADMIN_VIEWER_CANNOT_ACT still forbids acting on behalf of a company).
+# ──────────────────────────────────────────────────────────────────────────
+
+
+class OperatorRoleCode(models.TextChoices):
+    """Stable codes for the seeded operator sub-roles. SUPER_OPERATOR == the legacy
+    all-powerful ADMIN (backward compatible)."""
+
+    SUPPORT = "SUPPORT", "Поддержка"
+    KYC_OFFICER = "KYC_OFFICER", "Офицер KYC"
+    BILLING_OPERATOR = "BILLING_OPERATOR", "Оператор биллинга"
+    MODERATOR = "MODERATOR", "Модератор"
+    SUPER_OPERATOR = "SUPER_OPERATOR", "Супероператор"
+
+
+class OperatorPermission(models.TextChoices):
+    """Platform-staff capability codes — what an operator sub-role may do.
+    Sensitive-first: KYC verification, billing changes, moderation, force-overrides,
+    operator-role administration. Compared by code; never by translated name."""
+
+    # Users
+    USERS_VIEW = "users.view", "Просматривать пользователей"
+    USERS_MANAGE = "users.manage", "Управлять пользователями (блок/роль)"
+    # Companies
+    COMPANIES_VIEW = "companies.view", "Просматривать компании"
+    COMPANIES_MANAGE = "companies.manage", "Управлять компаниями"
+    # KYC
+    KYC_VIEW = "kyc.view", "Просматривать KYC и документы"
+    KYC_VERIFY = "kyc.verify", "Верифицировать KYC (L1→L3)"
+    # Billing
+    BILLING_VIEW = "billing.view", "Просматривать подписки и счета"
+    BILLING_MANAGE = "billing.manage", "Управлять подписками и платежами"
+    # Moderation
+    MODERATION_ROLE_APPLICATIONS = "moderation.role_applications", "Модерация заявок на роли"
+    MODERATION_FORCE_OVERRIDE = "moderation.force_override", "Force-override (сделки/КП/контракты)"
+    # Platform
+    PLATFORM_SETTINGS = "platform.settings", "Системные настройки и справочники"
+    OPERATORS_MANAGE = "operators.manage", "Управлять ролями операторов"
+
+
+# Grouping for the operator-role editor UI (the checkbox sections).
+OPERATOR_PERMISSION_GROUPS = {
+    "users": [OperatorPermission.USERS_VIEW, OperatorPermission.USERS_MANAGE],
+    "companies": [OperatorPermission.COMPANIES_VIEW, OperatorPermission.COMPANIES_MANAGE],
+    "kyc": [OperatorPermission.KYC_VIEW, OperatorPermission.KYC_VERIFY],
+    "billing": [OperatorPermission.BILLING_VIEW, OperatorPermission.BILLING_MANAGE],
+    "moderation": [OperatorPermission.MODERATION_ROLE_APPLICATIONS, OperatorPermission.MODERATION_FORCE_OVERRIDE],
+    "platform": [OperatorPermission.PLATFORM_SETTINGS, OperatorPermission.OPERATORS_MANAGE],
+}
+
+ALL_OPERATOR_PERMISSIONS = [p.value for p in OperatorPermission]
+
+# Seeded operator sub-role presets (ADR-0004 Decision 5.1). SUPER_OPERATOR is the
+# immutable full-rights role (= today's single ADMIN; never-orphan floor).
+OPERATOR_ROLE_TEMPLATES = {
+    OperatorRoleCode.SUPER_OPERATOR.value: {
+        "name": "Супероператор",
+        "permissions": ALL_OPERATOR_PERMISSIONS,
+        "is_system": True,
+        "description": "Полный доступ ко всем функциям платформенного оператора (= прежний единый администратор).",
+    },
+    OperatorRoleCode.SUPPORT.value: {
+        "name": "Поддержка",
+        "permissions": [
+            OperatorPermission.USERS_VIEW.value, OperatorPermission.COMPANIES_VIEW.value,
+            OperatorPermission.KYC_VIEW.value, OperatorPermission.BILLING_VIEW.value,
+        ],
+        "is_system": False,
+        "description": "Только просмотр пользователей, компаний, KYC и биллинга для триажа обращений.",
+    },
+    OperatorRoleCode.KYC_OFFICER.value: {
+        "name": "Офицер KYC",
+        "permissions": [
+            OperatorPermission.USERS_VIEW.value, OperatorPermission.COMPANIES_VIEW.value,
+            OperatorPermission.KYC_VIEW.value, OperatorPermission.KYC_VERIFY.value,
+        ],
+        "is_system": False,
+        "description": "Проверка и верификация KYC (L1→L3), загрузка документов.",
+    },
+    OperatorRoleCode.BILLING_OPERATOR.value: {
+        "name": "Оператор биллинга",
+        "permissions": [
+            OperatorPermission.USERS_VIEW.value, OperatorPermission.COMPANIES_VIEW.value,
+            OperatorPermission.BILLING_VIEW.value, OperatorPermission.BILLING_MANAGE.value,
+        ],
+        "is_system": False,
+        "description": "Управление подписками поставщиков и проведение платежей.",
+    },
+    OperatorRoleCode.MODERATOR.value: {
+        "name": "Модератор",
+        "permissions": [
+            OperatorPermission.USERS_VIEW.value, OperatorPermission.COMPANIES_VIEW.value,
+            OperatorPermission.KYC_VIEW.value,
+            OperatorPermission.MODERATION_ROLE_APPLICATIONS.value,
+            OperatorPermission.MODERATION_FORCE_OVERRIDE.value,
+        ],
+        "is_system": False,
+        "description": "Модерация заявок на роли и аварийные force-override действия (с указанием причины).",
+    },
+}
+
+
 class CompanyTypeCode(models.TextChoices):
     CLIENT = "CLIENT", "Клиент (покупатель)"
     SUPPLIER = "SUPPLIER", "Поставщик (продавец)"

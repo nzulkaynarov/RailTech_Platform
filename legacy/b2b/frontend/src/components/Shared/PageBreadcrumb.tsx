@@ -45,6 +45,7 @@ const pageI18nKeys: Record<string, string> = {
   'admin-subscriptions': 'breadcrumbs.adminSubscriptions',
   'admin-role-apps': 'breadcrumbs.adminRoleApps',
   'admin-master-data': 'breadcrumbs.adminMasterData',
+  'admin-operator-roles': 'breadcrumbs.adminOperatorRoles',
   'admin-support': 'breadcrumbs.adminSupport',
   'admin-catalog': 'breadcrumbs.adminCatalog',
   'admin-categories': 'breadcrumbs.adminCategories',

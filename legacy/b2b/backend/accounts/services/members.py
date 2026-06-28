@@ -84,6 +84,14 @@ def change_user_role(
         has_active_memberships = user.memberships.filter(is_active=True).exists()
         if has_active_memberships:
             return None, "ADMIN_ROLE_REQUIRES_NO_MEMBERSHIPS"
+    else:
+        # Demoting ADMIN→USER flips is_platform_admin off and strips operator capability.
+        # Operator-plane never-orphan (ADR-0004 G1): refuse if this is the last operator who
+        # can administer operator roles — reassign operator management first.
+        from .operators import is_last_operator_manager
+
+        if is_last_operator_manager(user):
+            return None, "CANNOT_DEMOTE_LAST_OPERATOR_MANAGER"
     user.role = role
     user.save(update_fields=["role"])
     return user, None
@@ -203,6 +211,12 @@ def toggle_user_active(
         for membership in owner_memberships:
             if not company_active_admins(membership.company).exclude(user=user).exists():
                 return None, "CANNOT_DEACTIVATE_SOLE_COMPANY_ADMIN"
+        # Operator-plane never-orphan (ADR-0004 G1): deactivating the sole operator who can
+        # administer operator roles would orphan the operator plane — reassign first.
+        from .operators import is_last_operator_manager
+
+        if is_last_operator_manager(user):
+            return None, "CANNOT_DEACTIVATE_SOLE_OPERATOR"
     user.is_active = not user.is_active
     user.save(update_fields=["is_active"])
     return user, None

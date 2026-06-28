@@ -49,6 +49,7 @@ const AdminCompaniesPage = lazyWithRetry(() => import('./pages/AdminCompaniesPag
 const AdminDealsPage = lazyWithRetry(() => import('./pages/AdminDealsPage'));
 const AdminMasterDataPage = lazyWithRetry(() => import('./pages/AdminMasterDataPage'));
 const AdminEmailTemplatesPage = lazyWithRetry(() => import('./pages/AdminEmailTemplatesPage'));
+const AdminOperatorRolesPage = lazyWithRetry(() => import('./pages/AdminOperatorRolesPage'));
 const AdminSupportPage = lazyWithRetry(() => import('./pages/AdminSupportPage'));
 const ContractsPage = lazyWithRetry(() => import('./pages/ContractsPage'));
 const InvoicesPage = lazyWithRetry(() => import('./pages/InvoicesPage'));
@@ -92,6 +93,7 @@ type Page =
   | { type: 'admin-deals' }
   | { type: 'admin-master-data' }
   | { type: 'admin-email-templates' }
+  | { type: 'admin-operator-roles' }
   | { type: 'admin-support' }
   | { type: 'contracts' }
   | { type: 'invoices' }
@@ -298,7 +300,8 @@ function App() {
 const ADMIN_PAGES = new Set([
   'admin-users', 'admin-kyc', 'admin-subscriptions', 'admin-role-apps',
   'admin-catalog', 'admin-categories', 'admin-equipment-groups', 'admin-offers',
-  'admin-companies', 'admin-deals', 'admin-master-data', 'admin-email-templates', 'admin-support',
+  'admin-companies', 'admin-deals', 'admin-master-data', 'admin-email-templates',
+  'admin-operator-roles', 'admin-support',
 ]);
 // CRM-pages that need a management WorkspaceRole inside the user's company
 // (not a platform-level SystemRole). Buyers don't see these by design.
@@ -444,7 +447,8 @@ function MainApp() {
       'help', 'my-requests',
       'admin-users', 'admin-kyc', 'admin-subscriptions', 'admin-role-apps',
       'admin-catalog', 'admin-categories', 'admin-equipment-groups', 'admin-offers',
-      'admin-companies', 'admin-deals', 'admin-master-data', 'admin-email-templates', 'admin-support',
+      'admin-companies', 'admin-deals', 'admin-master-data', 'admin-email-templates',
+      'admin-operator-roles', 'admin-support',
       'contracts', 'invoices', 'payments', 'acts', 'fulfillments',
       'leads', 'my-subscription', 'catalog-import',
     ];
@@ -612,6 +616,9 @@ function MainApp() {
       break;
     case 'admin-email-templates':
       content = <AdminEmailTemplatesPage />;
+      break;
+    case 'admin-operator-roles':
+      content = <AdminOperatorRolesPage />;
       break;
     case 'admin-support':
       content = <AdminSupportPage />;

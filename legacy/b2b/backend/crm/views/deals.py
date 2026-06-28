@@ -7,7 +7,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from core.permissions import IsCompanyMemberOrPlatformAdmin, IsPlatformAdmin
+from core.permissions import IsCompanyMemberOrPlatformAdmin, OperatorScoped
 from crm.constants import DealStageCode
 from crm.models import Deal, DealStage, Quote, QuoteItem
 from crm.serializers import DealDetailSerializer, DealListSerializer, QuoteItemSerializer
@@ -63,6 +63,8 @@ class DealViewSet(viewsets.ModelViewSet):
         return DealDetailSerializer
 
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
+    # Operator sub-capability for the force-override action (ADR-0004 G1).
+    operator_permissions = {"force_change_stage": "moderation.force_override"}
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
@@ -376,7 +378,7 @@ class DealViewSet(viewsets.ModelViewSet):
         detail=True,
         methods=["post"],
         url_path="force-change-stage",
-        permission_classes=[IsAuthenticated, IsPlatformAdmin],
+        permission_classes=[IsAuthenticated, OperatorScoped],
     )
     def force_change_stage(self, request, pk=None):
         deal = self.get_object()

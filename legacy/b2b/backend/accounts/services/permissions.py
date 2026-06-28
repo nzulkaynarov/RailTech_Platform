@@ -145,6 +145,31 @@ def is_platform_admin_viewer(user: "CustomUser") -> bool:
     return role_code == "ADMIN"
 
 
+def operator_has_permission(user: "CustomUser", perm: str) -> bool:
+    """Platform-operator sub-capability check (ADR-0004 G1) — THE operator enforcement point.
+
+    Mirrors `member_has_permission` but PLATFORM-scoped (no company_id): it gates which
+    platform-staff actions an operator may take, not tenant operations.
+
+      * superuser → always (DBA emergency bypass, parity with the other guards)
+      * not a platform operator at all (`is_platform_admin` False) → never
+      * operator with no `operator_role` assigned → full access (backward-compatible:
+        the legacy single ADMIN == SUPER_OPERATOR; granular restriction is opt-in once a
+        narrower role is assigned, so an un-migrated/new admin is never accidentally locked out)
+      * otherwise → the assigned OperatorRole's permission set
+    """
+    if not user or not user.is_authenticated:
+        return False
+    if getattr(user, "is_superuser", False):
+        return True
+    if not getattr(user, "is_platform_admin", False):
+        return False
+    op_role = getattr(user, "operator_role", None)
+    if op_role is None:
+        return True
+    return op_role.has_perm(perm)
+
+
 def can_view_quote_costs(user: "CustomUser") -> bool:
     """True if the viewer may see КП cost/margin fields (base price, logistics, customs,
     margin, landed cost, charges). Superuser / platform-admin always; otherwise a member of
