@@ -94,7 +94,9 @@
     "hidePassword": "Hide password",
     "login": "Sign in",
     "validation": {
-      "emailInvalid": "Enter a valid email"
+      "emailInvalid": "Enter a valid email",
+      "emailRequired": "Enter your email",
+      "passwordRequired": "Enter your password"
     }
   },
   "onboarding": {
