@@ -11,6 +11,7 @@ from .models import (
     CompanySettings,
     CustomUser,
     KYCDocument,
+    OperatorRole,
     SupplierSubscription,
 )
 
@@ -99,6 +100,23 @@ class CompanyRoleSerializer(serializers.ModelSerializer):
 
     def get_member_count(self, obj):
         return getattr(obj, "member_count", None) if hasattr(obj, "member_count") else obj.members.count()
+
+
+class OperatorRoleSerializer(serializers.ModelSerializer):
+    """A platform-operator sub-role with its capability set (ADR-0004 G1)."""
+
+    operator_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = OperatorRole
+        fields = [
+            "id", "code", "name", "permissions", "is_system",
+            "description", "operator_count", "created_at", "updated_at",
+        ]
+        read_only_fields = ["id", "code", "is_system", "created_at", "updated_at"]
+
+    def get_operator_count(self, obj):
+        return getattr(obj, "operator_count", None) if hasattr(obj, "operator_count") else obj.operators.count()
 
 
 class KYCDocumentSerializer(serializers.ModelSerializer):
@@ -223,6 +241,8 @@ class UserSerializer(serializers.ModelSerializer):
     role_data = serializers.SerializerMethodField()
     workspace_role = serializers.SerializerMethodField()
     kyc_status = serializers.SerializerMethodField()
+    operator_role_data = serializers.SerializerMethodField()
+    is_platform_admin = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = CustomUser
@@ -241,13 +261,22 @@ class UserSerializer(serializers.ModelSerializer):
             "role_data",
             "workspace_role",
             "kyc_status",
+            "operator_role",
+            "operator_role_data",
+            "is_platform_admin",
             "is_active",
             "memberships",
             "primary_company",
             "last_login",
             "date_joined",
         ]
-        read_only_fields = ["id", "role", "last_login", "date_joined"]
+        read_only_fields = ["id", "role", "operator_role", "last_login", "date_joined"]
+
+    def get_operator_role_data(self, obj):
+        op = obj.operator_role
+        if op:
+            return {"id": op.id, "code": op.code, "name": op.name}
+        return None
 
     def get_role_data(self, obj):
         if obj.role:

@@ -1629,7 +1629,8 @@
     "mySubscription": "Моя подписка",
     "catalogImport": "Импорт каталога",
     "forgotPassword": "Сброс пароля",
-    "resetPassword": "Новый пароль"
+    "resetPassword": "Новый пароль",
+    "adminOperatorRoles": "Роли операторов"
   },
   "dealsKanban": {
     "list": "Список",
@@ -1851,7 +1852,8 @@
     "mainNavigation": "Основная навигация",
     "secondaryNavigation": "Дополнительная навигация",
     "currencySelector": "Выбор валюты",
-    "emailTemplates": "Email-шаблоны"
+    "emailTemplates": "Email-шаблоны",
+    "operatorRoles": "Роли операторов"
   },
   "productDetail": {
     "specifications": "Характеристики",
@@ -3288,7 +3290,9 @@
         "COMPANY_AND_WORKSPACE_ROLE_REQUIRED": "Укажите компанию и роль.",
         "COMPANY_NOT_FOUND": "Компания не найдена.",
         "MEMBERSHIP_NOT_FOUND": "Членство не найдено.",
-        "ROLE_CODE_REQUIRED": "Укажите код роли."
+        "ROLE_CODE_REQUIRED": "Укажите код роли.",
+        "CANNOT_DEMOTE_LAST_OPERATOR_MANAGER": "Нельзя снять роль администратора у последнего оператора, управляющего ролями операторов — сначала назначьте другого.",
+        "CANNOT_DEACTIVATE_SOLE_OPERATOR": "Нельзя деактивировать последнего оператора, управляющего ролями операторов — сначала назначьте другого."
       },
       "fields": {
         "email": "Email",
@@ -4561,5 +4565,64 @@
     "previewLabel": "Пример номера",
     "saved": "Настройки нумерации сохранены",
     "ownerOnly": "Нумерацию может настраивать только владелец компании"
+  },
+  "operatorRoles": {
+    "title": "Роли операторов",
+    "description": "Управление платформенными суб-ролями операторов и их правами",
+    "addRole": "Добавить роль",
+    "editRole": "Редактировать роль",
+    "deleteRole": "Удалить роль",
+    "name": "Название",
+    "namePlaceholder": "Например: Офицер KYC",
+    "descriptionField": "Описание",
+    "descriptionPlaceholder": "Кратко опишите назначение роли",
+    "code": "Код",
+    "permissions": "Права",
+    "permissionsHint": "Отметьте действия, доступные операторам с этой ролью",
+    "systemRole": "Системная",
+    "systemRoleReadonly": "Это системная роль — её нельзя изменять или удалять",
+    "operatorCount": "Операторов",
+    "saveRole": "Сохранить роль",
+    "noRoles": "Роли операторов ещё не созданы",
+    "deleteConfirm": "Удалить роль «{{name}}»? Это действие нельзя отменить.",
+    "assignRole": "Роль оператора",
+    "assignHint": "Определяет, какие действия платформы доступны этому оператору",
+    "noOperatorRole": "Без роли оператора",
+    "createSuccess": "Роль создана",
+    "updateSuccess": "Роль обновлена",
+    "deleteSuccess": "Роль удалена",
+    "assignSuccess": "Роль оператора назначена",
+    "stats": {
+      "total": "Всего ролей",
+      "system": "Системные"
+    },
+    "errors": {
+      "ONLY_SUPER_OPERATOR_CAN_MANAGE_OPERATORS": "Только супероператор может управлять ролями операторов",
+      "SYSTEM_OPERATOR_ROLE_IMMUTABLE": "Системную роль нельзя изменять или удалять",
+      "ROLE_HAS_OPERATORS_REASSIGN_FIRST": "У роли есть операторы — сначала переназначьте их",
+      "CANNOT_DEMOTE_LAST_OPERATOR": "Нельзя снять роль у последнего оператора платформы",
+      "NOT_A_PLATFORM_OPERATOR": "Пользователь не является платформенным оператором",
+      "ROLE_NAME_TAKEN": "Роль с таким названием уже существует"
+    }
+  },
+  "operatorPermissions": {
+    "users": "Пользователи",
+    "companies": "Компании",
+    "kyc": "KYC",
+    "billing": "Биллинг",
+    "moderation": "Модерация",
+    "platform": "Платформа",
+    "users_view": "Просматривать пользователей",
+    "users_manage": "Управлять пользователями (блокировка, роль)",
+    "companies_view": "Просматривать компании",
+    "companies_manage": "Управлять компаниями",
+    "kyc_view": "Просматривать KYC и документы",
+    "kyc_verify": "Верифицировать KYC (L1→L3)",
+    "billing_view": "Просматривать подписки и счета",
+    "billing_manage": "Управлять подписками и платежами",
+    "moderation_role_applications": "Модерация заявок на роли",
+    "moderation_force_override": "Force-override (сделки, КП, контракты)",
+    "platform_settings": "Системные настройки и справочники",
+    "operators_manage": "Управлять ролями операторов"
   }
 }

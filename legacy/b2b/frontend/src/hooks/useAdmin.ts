@@ -1,6 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { adminApi, emailTemplatesApi } from '@/api/adminApi';
-import type { EmailTemplateDraft } from '@/api/adminApi';
+import { adminApi, emailTemplatesApi, operatorRolesApi } from '@/api/adminApi';
+import type { EmailTemplateDraft, OperatorRoleDraft } from '@/api/adminApi';
 
 export const useAdminQueue = (queueType?: string) =>
   useQuery({
@@ -109,6 +109,68 @@ export const useTestSendEmailTemplate = () =>
       context?: Record<string, unknown>;
     }) => emailTemplatesApi.testSend(id, toEmail, context),
   });
+
+/* ─── Operator roles (ADR-0004 G1) ──────────────────────────────────── */
+
+const OPERATOR_ROLES_KEY = ['admin-operator-roles'];
+
+export const useOperatorRoles = () =>
+  useQuery({
+    queryKey: OPERATOR_ROLES_KEY,
+    queryFn: () => operatorRolesApi.list(),
+    staleTime: 30_000,
+  });
+
+export const useOperatorPermissionCatalog = () =>
+  useQuery({
+    queryKey: ['admin-operator-permissions'],
+    queryFn: () => operatorRolesApi.permissionCatalog(),
+    staleTime: 5 * 60_000,
+  });
+
+export const useCreateOperatorRole = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: OperatorRoleDraft) => operatorRolesApi.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: OPERATOR_ROLES_KEY });
+    },
+  });
+};
+
+export const useUpdateOperatorRole = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: OperatorRoleDraft }) =>
+      operatorRolesApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: OPERATOR_ROLES_KEY });
+    },
+  });
+};
+
+export const useDeleteOperatorRole = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => operatorRolesApi.remove(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: OPERATOR_ROLES_KEY });
+    },
+  });
+};
+
+export const useAssignOperatorRole = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, roleId }: { userId: number; roleId: number | null }) =>
+      operatorRolesApi.assign(userId, roleId),
+    onSuccess: () => {
+      // The assigned role's operator_count + the user's operator_role both change.
+      queryClient.invalidateQueries({ queryKey: OPERATOR_ROLES_KEY });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+  });
+};
 
 export const useBulkSubscriptionStatus = () => {
   const queryClient = useQueryClient();

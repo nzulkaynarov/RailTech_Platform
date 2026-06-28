@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from accounts import services
 from accounts.models import CompanyRoleApplication, SupplierSubscription
 from accounts.serializers import CompanyRoleApplicationSerializer, SupplierSubscriptionSerializer
-from core.permissions import IsPlatformAdmin
+from core.permissions import OperatorScoped
 
 
 @extend_schema_view(
@@ -33,7 +33,21 @@ class SupplierSubscriptionViewSet(viewsets.ModelViewSet):
     """
 
     serializer_class = SupplierSubscriptionSerializer
-    permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
+    permission_classes = [permissions.IsAuthenticated, OperatorScoped]
+    # Operator sub-capability per action (ADR-0004 G1). `mine`/`pay` are member-facing
+    # (own IsAuthenticated permission_classes) so they bypass this map.
+    operator_permissions = {
+        "list": "billing.view",
+        "retrieve": "billing.view",
+        "export": "billing.view",
+        "create": "billing.manage",
+        "update": "billing.manage",
+        "partial_update": "billing.manage",
+        "destroy": "billing.manage",
+        "activate": "billing.manage",
+        "suspend": "billing.manage",
+        "bulk_set_status": "billing.manage",
+    }
     filterset_fields = ["plan", "status", "company"]
     search_fields = ["company__name", "company__inn"]
     ordering = ["-created_at"]
@@ -227,10 +241,16 @@ class CompanyRoleApplicationViewSet(viewsets.ModelViewSet):
 
     _OWNER_ALLOWED_ACTIONS = {"list", "retrieve", "create", "partial_update", "update"}
     _ADMIN_ONLY_ACTIONS = {"approve", "reject", "destroy"}
+    # Operator sub-capability for the moderation actions (ADR-0004 G1).
+    operator_permissions = {
+        "approve": "moderation.role_applications",
+        "reject": "moderation.role_applications",
+        "destroy": "moderation.role_applications",
+    }
 
     def get_permissions(self):
         if self.action in self._ADMIN_ONLY_ACTIONS:
-            return [permissions.IsAuthenticated(), IsPlatformAdmin()]
+            return [permissions.IsAuthenticated(), OperatorScoped()]
         return [permissions.IsAuthenticated()]
 
     def get_queryset(self):

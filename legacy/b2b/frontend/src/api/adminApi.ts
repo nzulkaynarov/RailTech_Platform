@@ -154,6 +154,74 @@ export const emailTemplatesApi = {
   },
 };
 
+/* ─── Operator roles (ADR-0004 G1) ──────────────────────────────────── */
+
+/** A platform-operator sub-role with its capability set. */
+export interface OperatorRole {
+  id: number;
+  code: string;
+  name: string;
+  permissions: string[];
+  is_system: boolean;
+  description: string;
+  operator_count: number;
+}
+
+/** Mutable fields when creating/updating an operator role. */
+export interface OperatorRoleDraft {
+  name: string;
+  permissions: string[];
+  description: string;
+}
+
+export interface OperatorPermissionDef {
+  code: string;
+  label: string;
+  label_en: string;
+}
+
+export interface OperatorPermissionGroup {
+  key: string;
+  label: string;
+  label_en: string;
+  permissions: OperatorPermissionDef[];
+}
+
+export const operatorRolesApi = {
+  list: async () => {
+    // ModelViewSet — unwrap DRF pagination defensively (plain array or {results}).
+    const res = await apiClient.get<OperatorRole[] | { results: OperatorRole[] }>(
+      'admin/operator-roles/',
+    );
+    return Array.isArray(res.data) ? res.data : res.data.results;
+  },
+  create: async (data: OperatorRoleDraft) => {
+    const res = await apiClient.post<OperatorRole>('admin/operator-roles/', data);
+    return res.data;
+  },
+  update: async (id: number, data: OperatorRoleDraft) => {
+    const res = await apiClient.put<OperatorRole>(`admin/operator-roles/${id}/`, data);
+    return res.data;
+  },
+  remove: async (id: number) => {
+    await apiClient.delete(`admin/operator-roles/${id}/`);
+  },
+  assign: async (userId: number, roleId: number | null) => {
+    const res = await apiClient.post<{ user_id: number; operator_role_id: number | null }>(
+      'admin/operator-roles/assign/',
+      { user_id: userId, role_id: roleId },
+    );
+    return res.data;
+  },
+  permissionCatalog: async () => {
+    // Backend returns { groups: [...] } — unwrap to the array the UI maps over.
+    const res = await apiClient.get<{ groups: OperatorPermissionGroup[] }>(
+      'admin/operator-permissions/',
+    );
+    return res.data.groups;
+  },
+};
+
 export const adminApi = {
   getQueue: async (params?: { queue_type?: string; limit?: number }) => {
     const res = await apiClient.get<AdminQueueResponse>('admin/queue/', { params });

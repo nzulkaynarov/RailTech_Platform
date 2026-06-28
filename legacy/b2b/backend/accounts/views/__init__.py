@@ -6,6 +6,7 @@ Re-exports all ViewSets and Views for backwards compatibility so that
 """
 
 from accounts.views.applications import CompanyRoleApplicationViewSet, SupplierSubscriptionViewSet  # noqa: F401
+from accounts.views.operators import OperatorPermissionCatalogView, OperatorRoleViewSet  # noqa: F401
 from accounts.views.roles import CompanyRoleViewSet, PermissionCatalogView  # noqa: F401
 from accounts.views.auth import (  # noqa: F401
     CookieTokenObtainPairView,
@@ -27,6 +28,8 @@ from accounts.views.users import UserViewSet  # noqa: F401
 __all__ = [
     "CompanyRoleViewSet",
     "PermissionCatalogView",
+    "OperatorRoleViewSet",
+    "OperatorPermissionCatalogView",
     # company
     "CompanyViewSet",
     # users

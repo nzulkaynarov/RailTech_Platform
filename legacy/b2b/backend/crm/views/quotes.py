@@ -16,7 +16,7 @@ from rest_framework.views import APIView
 
 from core.file_streaming import stream_file_field
 from core.optimistic_locking import OptimisticLockingMixin
-from core.permissions import IsCompanyMemberOrPlatformAdmin, IsPlatformAdmin
+from core.permissions import IsCompanyMemberOrPlatformAdmin, IsPlatformAdmin, OperatorScoped
 from crm import services as crm_services
 from crm.constants import QuoteStatusCode
 from crm.models import ChargeTemplate, ChargeType, Quote, QuoteCharge, QuoteItem, QuoteStatus
@@ -88,6 +88,8 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
 
     serializer_class = QuoteSerializer
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
+    # Operator sub-capability for the force-override action (ADR-0004 G1).
+    operator_permissions = {"force_approve": "moderation.force_override"}
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
@@ -367,7 +369,12 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
         responses={200: QuoteSerializer, 400: OpenApiResponse(description="Validation error")},
         tags=["CRM"],
     )
-    @action(detail=True, methods=["post"], url_path="force-approve")
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="force-approve",
+        permission_classes=[IsAuthenticated, OperatorScoped],
+    )
     def force_approve(self, request, pk=None):
         """Platform admin force-overrides quote status to APPROVED."""
         from crm.services import QuoteLifecycleService

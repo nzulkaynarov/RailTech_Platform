@@ -3,7 +3,7 @@ from rest_framework import permissions, viewsets
 from rest_framework.response import Response
 
 from accounts.models import SystemRole, WorkspaceRole
-from core.permissions import IsPlatformAdmin
+from core.permissions import OperatorScoped
 
 
 @extend_schema_view(
@@ -29,7 +29,8 @@ class CompanyTypeViewSet(viewsets.ReadOnlyModelViewSet):
 )
 class SystemRoleViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = SystemRole.objects.all().order_by("sort_order", "name")
-    permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
+    permission_classes = [permissions.IsAuthenticated, OperatorScoped]
+    operator_permission = "users.view"  # read-only lookup for the admin Users page
     pagination_class = None
 
     def list(self, request, *args, **kwargs):

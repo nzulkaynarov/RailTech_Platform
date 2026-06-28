@@ -12,7 +12,7 @@ from rest_framework.response import Response
 from accounts import services
 from accounts.models import Company, CompanyMember, CustomUser
 from accounts.serializers import SelfUpdateSerializer, UserSerializer
-from core.permissions import IsPlatformAdmin
+from core.permissions import OperatorScoped
 
 
 @extend_schema_view(
@@ -54,7 +54,23 @@ class UserViewSet(viewsets.ModelViewSet):
         .order_by("-date_joined")
     )
     serializer_class = UserSerializer
-    permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
+    permission_classes = [permissions.IsAuthenticated, OperatorScoped]
+    # Operator sub-capability per action (ADR-0004 G1). Self-service actions
+    # (change-password, update-me, upload/delete-avatar, me) carry their own
+    # IsAuthenticated permission_classes and bypass this map.
+    operator_permissions = {
+        "list": "users.view",
+        "retrieve": "users.view",
+        "export": "users.view",
+        "create": "users.manage",
+        "update": "users.manage",
+        "partial_update": "users.manage",
+        "destroy": "users.manage",
+        "toggle_active": "users.manage",
+        "change_role": "users.manage",
+        "add_membership": "users.manage",
+        "remove_membership": "users.manage",
+    }
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ["is_active", "role__code"]
     search_fields = ["email", "first_name", "last_name", "phone"]

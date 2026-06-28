@@ -19,7 +19,7 @@ from accounts.serializers import (
     KYCVerificationSerializer,
     UserSerializer,
 )
-from core.permissions import IsPlatformAdmin
+from core.permissions import OperatorScoped
 
 
 @extend_schema_view(
@@ -71,7 +71,21 @@ class CompanyViewSet(viewsets.ModelViewSet):
         .order_by("-created_at")
     )
     serializer_class = CompanySerializer
-    permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
+    permission_classes = [permissions.IsAuthenticated, OperatorScoped]
+    # Operator sub-capability per admin-only action (ADR-0004 G1). Member-facing actions
+    # (see _MEMBER_ALLOWED_ACTIONS) bypass this via get_permissions; unmapped admin actions
+    # fall back to the coarse platform-operator gate.
+    operator_permissions = {
+        "list": "companies.view",
+        "retrieve": "companies.view",
+        "export": "companies.view",
+        "create": "companies.manage",
+        "update": "companies.manage",
+        "partial_update": "companies.manage",
+        "destroy": "companies.manage",
+        "verify_kyc": "kyc.verify",
+        "bulk_verify_kyc": "kyc.verify",
+    }
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = {
         "verification_status__code": ["exact"],
@@ -100,10 +114,15 @@ class CompanyViewSet(viewsets.ModelViewSet):
         "team",
         "invite",
         "update_member_capabilities",
+        "set_member_role",
     }
 
     def get_permissions(self):
-        if self.action in self._MEMBER_ALLOWED_ACTIONS:
+        # Member-facing actions (own-company self-service / OWNER team management) carry their
+        # own in-action authz and must NOT hit the operator gate — BUT only for non-operators.
+        # A platform OPERATOR calling these still goes through OperatorScoped so a narrow role
+        # (e.g. SUPPORT) cannot edit company data via update/partial_update (escalation fix).
+        if self.action in self._MEMBER_ALLOWED_ACTIONS and not self.request.user.is_platform_admin:
             return [permissions.IsAuthenticated()]
         return super().get_permissions()
 
@@ -281,7 +300,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
         detail=False,
         methods=["post"],
         url_path="bulk-verify-kyc",
-        permission_classes=[permissions.IsAuthenticated, IsPlatformAdmin],
+        permission_classes=[permissions.IsAuthenticated, OperatorScoped],
     )
     def bulk_verify_kyc(self, request):
         ids = request.data.get("ids") or []

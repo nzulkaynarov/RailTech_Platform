@@ -1625,7 +1625,8 @@
     "mySubscription": "My subscription",
     "catalogImport": "Catalog import",
     "forgotPassword": "Reset password",
-    "resetPassword": "New password"
+    "resetPassword": "New password",
+    "adminOperatorRoles": "Operator roles"
   },
   "dealsKanban": {
     "list": "List",
@@ -1847,7 +1848,8 @@
     "mainNavigation": "Main navigation",
     "secondaryNavigation": "Secondary navigation",
     "currencySelector": "Currency selector",
-    "emailTemplates": "Email templates"
+    "emailTemplates": "Email templates",
+    "operatorRoles": "Operator roles"
   },
   "productDetail": {
     "specifications": "Specifications",
@@ -3284,7 +3286,9 @@
         "COMPANY_AND_WORKSPACE_ROLE_REQUIRED": "Company and workspace role are required.",
         "COMPANY_NOT_FOUND": "Company not found.",
         "MEMBERSHIP_NOT_FOUND": "Membership not found.",
-        "ROLE_CODE_REQUIRED": "Role code is required."
+        "ROLE_CODE_REQUIRED": "Role code is required.",
+        "CANNOT_DEMOTE_LAST_OPERATOR_MANAGER": "Cannot demote the last operator who can manage operator roles — assign another one first.",
+        "CANNOT_DEACTIVATE_SOLE_OPERATOR": "Cannot deactivate the last operator who can manage operator roles — assign another one first."
       },
       "fields": {
         "email": "Email",
@@ -4557,5 +4561,64 @@
     "previewLabel": "Number preview",
     "saved": "Numbering settings saved",
     "ownerOnly": "Only the company owner can configure numbering"
+  },
+  "operatorRoles": {
+    "title": "Operator roles",
+    "description": "Manage platform operator sub-roles and their permissions",
+    "addRole": "Add role",
+    "editRole": "Edit role",
+    "deleteRole": "Delete role",
+    "name": "Name",
+    "namePlaceholder": "e.g. KYC Officer",
+    "descriptionField": "Description",
+    "descriptionPlaceholder": "Briefly describe what this role is for",
+    "code": "Code",
+    "permissions": "Permissions",
+    "permissionsHint": "Tick the actions operators with this role can perform",
+    "systemRole": "System",
+    "systemRoleReadonly": "This is a system role — it cannot be edited or deleted",
+    "operatorCount": "Operators",
+    "saveRole": "Save role",
+    "noRoles": "No operator roles yet",
+    "deleteConfirm": "Delete the role \"{{name}}\"? This action cannot be undone.",
+    "assignRole": "Operator role",
+    "assignHint": "Controls which platform actions this operator can take",
+    "noOperatorRole": "No operator role",
+    "createSuccess": "Role created",
+    "updateSuccess": "Role updated",
+    "deleteSuccess": "Role deleted",
+    "assignSuccess": "Operator role assigned",
+    "stats": {
+      "total": "Total roles",
+      "system": "System"
+    },
+    "errors": {
+      "ONLY_SUPER_OPERATOR_CAN_MANAGE_OPERATORS": "Only a super operator can manage operator roles",
+      "SYSTEM_OPERATOR_ROLE_IMMUTABLE": "A system role cannot be edited or deleted",
+      "ROLE_HAS_OPERATORS_REASSIGN_FIRST": "This role still has operators — reassign them first",
+      "CANNOT_DEMOTE_LAST_OPERATOR": "Cannot remove the role from the last platform operator",
+      "NOT_A_PLATFORM_OPERATOR": "This user is not a platform operator",
+      "ROLE_NAME_TAKEN": "A role with this name already exists"
+    }
+  },
+  "operatorPermissions": {
+    "users": "Users",
+    "companies": "Companies",
+    "kyc": "KYC",
+    "billing": "Billing",
+    "moderation": "Moderation",
+    "platform": "Platform",
+    "users_view": "View users",
+    "users_manage": "Manage users (block / role)",
+    "companies_view": "View companies",
+    "companies_manage": "Manage companies",
+    "kyc_view": "View KYC & documents",
+    "kyc_verify": "Verify KYC (L1→L3)",
+    "billing_view": "View subscriptions & invoices",
+    "billing_manage": "Manage subscriptions & payments",
+    "moderation_role_applications": "Moderate role applications",
+    "moderation_force_override": "Force-override (deals / quotes / contracts)",
+    "platform_settings": "System settings & master data",
+    "operators_manage": "Manage operator roles"
   }
 }

@@ -32,6 +32,41 @@ class IsPlatformAdminOrReadOnly(BasePermission):
         return user.is_platform_admin
 
 
+class OperatorScoped(BasePermission):
+    """Platform-operator gate with a per-action sub-capability (ADR-0004 G1).
+
+    Coarse gate: the requester must be a Platform Operator (`is_platform_admin`).
+    Fine gate: if the view declares the required operator permission for the current
+    action, the operator's sub-role must hold it. The permission is resolved from, in
+    order: `view.operator_permissions[action]` (dict), else `view.operator_permission`
+    (single default). An UNMAPPED action falls back to the coarse platform-admin gate
+    only — so a missed mapping degrades to today's "any operator" behaviour, never a
+    silent lock-out. SUPER_OPERATOR / an operator with no sub-role assigned passes
+    everything (backward compatible).
+    """
+
+    message = "Access restricted to platform operators with the required capability."
+
+    def has_permission(self, request, view):
+        user = request.user
+        if not (user and user.is_authenticated and user.is_platform_admin):
+            return False
+        perm = self._required_permission(view)
+        if perm is None:
+            return True
+        from accounts.services.permissions import operator_has_permission
+
+        return operator_has_permission(user, perm)
+
+    @staticmethod
+    def _required_permission(view):
+        per_action = getattr(view, "operator_permissions", None)
+        action = getattr(view, "action", None)
+        if per_action and action in per_action:
+            return per_action[action]
+        return getattr(view, "operator_permission", None)
+
+
 class IsSupplierWithActiveSubscription(BasePermission):
     """
     Запись разрешена компаниям-поставщикам с активной/триальной подпиской.
