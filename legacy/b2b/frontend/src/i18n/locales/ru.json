@@ -94,7 +94,9 @@
     "hidePassword": "Скрыть пароль",
     "login": "Войти",
     "validation": {
-      "emailInvalid": "Укажите корректный email"
+      "emailInvalid": "Укажите корректный email",
+      "emailRequired": "Введите email",
+      "passwordRequired": "Введите пароль"
     }
   },
   "onboarding": {

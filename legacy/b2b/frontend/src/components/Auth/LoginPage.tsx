@@ -13,12 +13,13 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
-const loginSchema = z.object({
-    email: z.string().min(1, 'auth.emailLabel').max(254),
-    password: z.string().min(1, 'auth.passwordLabel').max(128),
-});
+const createLoginSchema = (t: (key: string) => string) =>
+    z.object({
+        email: z.string().min(1, t('auth.validation.emailRequired')).max(254),
+        password: z.string().min(1, t('auth.validation.passwordRequired')).max(128),
+    });
 
-type LoginFormData = z.infer<typeof loginSchema>;
+type LoginFormData = z.infer<ReturnType<typeof createLoginSchema>>;
 
 interface LoginPageProps {
     onNavigate?: (target: string) => void;
@@ -33,7 +34,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, onRegister, on
     const [serverError, setServerError] = useState('');
 
     const form = useForm<LoginFormData>({
-        resolver: zodResolver(loginSchema),
+        resolver: zodResolver(createLoginSchema(t)),
         defaultValues: { email: '', password: '' },
     });
 
