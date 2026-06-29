@@ -32,6 +32,7 @@ import {
   useCompanies, useUploadUserAvatar, useDeleteUserAvatar,
 } from '@/hooks/useAccounts';
 import { useOperatorRoles, useAssignOperatorRole } from '@/hooks/useAdmin';
+import { useOperatorCan } from '@/hooks/useViewerMode';
 import { PageShell, EmptyState, ErrorState } from './shared/PageShell';
 import { systemRoleLabelKey, workspaceRoleLabelKey } from '@/lib/codes';
 import type { User as UserType } from '@/api/accountsApi';
@@ -201,6 +202,9 @@ function DetailSheet({
   const deleteAvatarMut = useDeleteUserAvatar();
   const { data: operatorRoles } = useOperatorRoles();
   const assignOperatorMut = useAssignOperatorRole();
+  // Hide the operator-role assignment control from an operator without `operators.manage`
+  // (audit F3-UX) — it otherwise only 403s on save.
+  const canManageOperators = useOperatorCan('operators.manage');
 
   const [draft, setDraft] = useState<Draft>(() => user ?? {});
   const [roleCode, setRoleCode] = useState<string>('');
@@ -437,8 +441,9 @@ function DetailSheet({
                 )}
               </div>
 
-              {/* Operator sub-role — only for platform operators (ADR-0004 G1). */}
-              {user.is_platform_admin && (
+              {/* Operator sub-role — only for platform operators (ADR-0004 G1), and only
+                  editable by an operator holding operators.manage (audit F3-UX). */}
+              {user.is_platform_admin && canManageOperators && (
                 <div className="space-y-2 rounded-lg border p-3">
                   <Label>{t('operatorRoles.assignRole')}</Label>
                   <Select

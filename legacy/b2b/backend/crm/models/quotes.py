@@ -36,6 +36,18 @@ class Quote(models.Model):
         verbose_name=_("Версия"),
         help_text=_("Порядковый номер версии КП внутри сделки"),
     )
+    number = models.CharField(
+        max_length=40,
+        null=True,
+        blank=True,
+        unique=True,
+        db_index=True,
+        verbose_name=_("Номер КП"),
+        help_text=_(
+            "Человекочитаемый сквозной номер КП, выдаётся при отправке клиенту "
+            "(напр. ACME-КП-2026-00001). Пусто, пока КП не отправлено."
+        ),
+    )
     status = models.ForeignKey(
         "crm.QuoteStatus",
         on_delete=models.PROTECT,
@@ -53,6 +65,20 @@ class Quote(models.Model):
         related_name="prepared_quotes",
         verbose_name=_("Подготовил"),
         help_text=_("Менеджер, составивший данное КП"),
+    )
+    seller_company = models.ForeignKey(
+        "accounts.Company",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="prepared_quotes",
+        verbose_name=_("Компания-продавец"),
+        help_text=_(
+            "Компания-продавец, владеющая КП (выставляет оферту). Закрепляется при создании "
+            "или при отправке на согласование за продавцом, на которого маршрутизирована "
+            "сделка. Источник истины для шапки документа и цепочки согласования — НЕ выводится "
+            "из основной компании автора (он мог состоять в нескольких компаниях)."
+        ),
     )
 
     # Базис поставки (Incoterm) — «конструктор по базису»: меняет видимость строк

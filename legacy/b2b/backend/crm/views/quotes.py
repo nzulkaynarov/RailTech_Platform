@@ -151,12 +151,16 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
         # status FK stays NULL → QuoteApprovalChain renders no actions and the seller
         # is stuck with no way to submit the КП for review (the "тупик" bug).
         draft_status = QuoteStatus.objects.get(code=QuoteStatusCode.DRAFT)
-        quote = serializer.save(version=version, prepared_by=user, status=draft_status)
-        # Pre-fill КП-level defaults (Incoterm, валюта, НДС, маржа, срок действия) from the
-        # building seller's CompanySettings — ONLY on create, never overwriting set values.
+        # Anchor the КП-owning seller company EXPLICITLY at create (audit H2) so ownership is
+        # never re-derived from the preparer's primary membership downstream.
         from accounts.services.permissions import primary_seller_company_id
 
         seller_company_id = primary_seller_company_id(user)
+        quote = serializer.save(
+            version=version, prepared_by=user, status=draft_status, seller_company_id=seller_company_id
+        )
+        # Pre-fill КП-level defaults (Incoterm, валюта, НДС, маржа, срок действия) from the
+        # building seller's CompanySettings — ONLY on create, never overwriting set values.
         if seller_company_id:
             from accounts.models import Company
 
@@ -212,7 +216,11 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
                     "url": (request.build_absolute_uri(quote.pdf_file.url) if quote.pdf_file else None),
                 }
             )
-        except (OSError, ValueError, RuntimeError) as e:
+        except ValueError as e:
+            if str(e) == "QUOTE_NOT_CLAIMED":
+                return Response({"error": "QUOTE_NOT_CLAIMED"}, status=status.HTTP_409_CONFLICT)
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except (OSError, RuntimeError) as e:
             return Response(
                 {"error": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -501,7 +509,11 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
 
             try:
                 quote = QuoteLifecycleService.generate_pdf(quote.pk)
-            except (OSError, ValueError, RuntimeError):
+            except ValueError as exc:
+                if str(exc) == "QUOTE_NOT_CLAIMED":
+                    return Response({"error": "QUOTE_NOT_CLAIMED"}, status=status.HTTP_409_CONFLICT)
+                return Response({"error": "PDF generation failed"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            except (OSError, RuntimeError):
                 return Response(
                     {"error": "PDF generation failed"},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,

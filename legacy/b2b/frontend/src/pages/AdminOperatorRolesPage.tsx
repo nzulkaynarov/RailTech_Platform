@@ -46,6 +46,7 @@ import {
   useDeleteOperatorRole,
 } from '@/hooks/useAdmin';
 import type { OperatorRole } from '@/api/adminApi';
+import { useOperatorCan } from '@/hooks/useViewerMode';
 import { PageShell, ErrorState } from './shared/PageShell';
 
 // ─── Error helpers ──────────────────────────────────────────────────────────
@@ -262,6 +263,9 @@ function OperatorRoleEditorSheet({ open, onOpenChange, editingRole }: RoleSheetP
 
 export function AdminOperatorRolesPage() {
   const { t } = useTranslation();
+  // Client-side capability gate (audit F3-UX): hide mutation controls from an operator
+  // who lacks `operators.manage` instead of showing controls that only 403 on save.
+  const canManage = useOperatorCan('operators.manage');
   const { data: operatorRoles = [], isLoading, isError, refetch } = useOperatorRoles();
   const deleteMut = useDeleteOperatorRole();
 
@@ -306,12 +310,14 @@ export function AdminOperatorRolesPage() {
         <ErrorState onRetry={() => refetch()} />
       ) : (
         <div className="space-y-4">
-          <div className="flex items-center justify-end">
-            <Button size="sm" onClick={openCreate}>
-              <Plus className="h-4 w-4" aria-hidden="true" />
-              {t('operatorRoles.addRole')}
-            </Button>
-          </div>
+          {canManage && (
+            <div className="flex items-center justify-end">
+              <Button size="sm" onClick={openCreate}>
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                {t('operatorRoles.addRole')}
+              </Button>
+            </div>
+          )}
 
           {isLoading ? (
             <div className="flex justify-center py-8">
@@ -365,6 +371,7 @@ export function AdminOperatorRolesPage() {
                       </TableCell>
                       <TableCell className="p-4">
                         <div className="flex items-center gap-1">
+                          {canManage && (
                           <Button
                             variant="ghost"
                             size="icon"
@@ -374,7 +381,8 @@ export function AdminOperatorRolesPage() {
                           >
                             <Pencil className="h-4 w-4" aria-hidden="true" />
                           </Button>
-                          {!role.is_system && (
+                          )}
+                          {canManage && !role.is_system && (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button

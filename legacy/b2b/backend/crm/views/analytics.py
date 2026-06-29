@@ -46,7 +46,11 @@ class DashboardAnalyticsView(APIView):
     def get(self, request):
         from django.core.cache import cache
 
-        from accounts.services.permissions import seller_visible_deal_ids
+        from accounts.services.permissions import (
+            acting_context,
+            seller_acting_company_ids,
+            seller_visible_deal_ids,
+        )
 
         # B2B data isolation. Three mutually-exclusive scopes:
         #   * platform admin            → see-all (company_ids=None, deal_scope=None)
@@ -57,6 +61,9 @@ class DashboardAnalyticsView(APIView):
         #   * buyer (and dual user in BUYER context) → scope by own company ids (unchanged)
         is_staff = request.user.is_platform_admin
         deal_scope = None if is_staff else seller_visible_deal_ids(request.user, request)
+        # The acting seller's OWN company ids — used to scope the catalog-positions KPI to
+        # the seller's own products (audit F4: it previously showed the platform-wide count).
+        seller_company_ids = None if is_staff else seller_acting_company_ids(request.user, request)
         if is_staff or deal_scope is not None:
             user_company_ids = None
         else:
@@ -65,7 +72,11 @@ class DashboardAnalyticsView(APIView):
             )
 
         period = request.query_params.get("period", "30d")
-        cache_key = f"dashboard_analytics_{period}_{request.user.pk}"
+        # The acting context MUST be in the cache key (audit M3): catalog_items / clients_count
+        # are now context-dependent (seller → own products / routed buyers; buyer → 0), so a dual
+        # buyer+seller user switching context within the 60s TTL would otherwise read the other
+        # context's numbers.
+        cache_key = f"dashboard_analytics_{period}_{acting_context(request) or 'NONE'}_{request.user.pk}"
         cached = cache.get(cache_key)
         if cached:
             return Response(cached)
@@ -85,8 +96,8 @@ class DashboardAnalyticsView(APIView):
         )
 
         volume_kpis = self._get_volume_kpis(period_deals, prev_period_deals, all_deals)
-        catalog_kpis = self._get_catalog_kpis(period_start)
-        client_kpis = self._get_client_kpis(period_start)
+        catalog_kpis = self._get_catalog_kpis(period_start, is_staff, seller_company_ids)
+        client_kpis = self._get_client_kpis(period_start, is_staff, deal_scope)
         counterparties = self._get_counterparties()
         completion = self._get_completion_stats(user_company_ids, deal_scope)
         buyer_stats = self._get_buyer_stats(all_deals)
@@ -152,35 +163,51 @@ class DashboardAnalyticsView(APIView):
             ),
         }
 
-    def _get_catalog_kpis(self, period_start) -> dict:
-        """Compute catalog item counts with period-over-period change."""
+    def _get_catalog_kpis(self, period_start, is_staff, seller_company_ids) -> dict:
+        """Compute catalog item counts with period-over-period change.
+
+        Scoped to the acting context (audit F4): a platform admin sees the whole PIM; a
+        seller sees only ITS OWN published products (Product.owner_company); a buyer has no
+        owned catalog (the KPI isn't shown to buyers) so the count is 0.
+        """
         from catalog.models import Product
 
-        published_products = Product.objects.filter(status__code="PUBLISHED").count()
-        prev_published = Product.objects.filter(
-            status__code="PUBLISHED",
-            created_at__lt=period_start,
-        ).count()
+        products = Product.objects.filter(status__code="PUBLISHED")
+        if not is_staff:
+            products = products.filter(owner_company_id__in=(seller_company_ids or []))
+        published_products = products.count()
+        prev_published = products.filter(created_at__lt=period_start).count()
         return {
             "catalog_items": published_products,
             "catalog_items_change": self._calculate_percentage_change(prev_published, published_products),
         }
 
-    def _get_client_kpis(self, period_start) -> dict:
-        """Compute client counts with period-over-period change."""
-        from accounts.models import Company, CompanyType
+    def _get_client_kpis(self, period_start, is_staff, deal_scope) -> dict:
+        """Compute client counts with period-over-period change.
 
-        client_type = CompanyType.objects.filter(code=CompanyTypeCode.CLIENT).first()
-        if client_type:
+        Scoped to the acting context (audit F4): a platform admin sees every CLIENT company;
+        a seller sees only the distinct buyer companies across the deals routed to it; a
+        buyer has no "clients" so the count is 0.
+        """
+        if is_staff:
+            from accounts.models import Company, CompanyType
+
+            client_type = CompanyType.objects.filter(code=CompanyTypeCode.CLIENT).first()
+            if not client_type:
+                return {"clients_count": 0, "clients_count_change": 0}
             current_clients = Company.objects.filter(types=client_type).distinct().count()
             prev_clients = (
                 current_clients
-                - Company.objects.filter(
-                    types=client_type,
-                    created_at__gte=period_start,
-                )
-                .distinct()
-                .count()
+                - Company.objects.filter(types=client_type, created_at__gte=period_start).distinct().count()
+            )
+        elif deal_scope is not None:
+            routed = Deal.objects.filter(id__in=deal_scope)
+            current_clients = routed.values("company_id").distinct().count()
+            # Baseline = distinct buyer companies that ALREADY had a routed deal before the period
+            # (audit M4). The earlier "minus in-period-created" math wrongly dropped repeat clients
+            # (deals in both periods) from prev, garbling the trend arrow.
+            prev_clients = (
+                routed.filter(created_at__lt=period_start).values("company_id").distinct().count()
             )
         else:
             current_clients = prev_clients = 0

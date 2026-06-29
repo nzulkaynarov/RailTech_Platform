@@ -332,6 +332,12 @@ class MeSerializer(serializers.ModelSerializer):
     # a "subscription required" banner before the seller hits SUBSCRIPTION_REQUIRED
     # on a write. None for non-sellers (banner only renders for can_sell users).
     seller_subscription_operational = serializers.SerializerMethodField()
+    # The platform operator's own sub-role + effective permission codes, so the React admin
+    # can GATE controls client-side (audit F3-UX). Without this the UI showed Add/Edit/Delete
+    # to a view-only operator, which only 403'd on save.
+    operator_role_code = serializers.CharField(source="operator_role.code", read_only=True)
+    operator_permissions = serializers.SerializerMethodField()
+    is_superuser = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = CustomUser
@@ -351,6 +357,9 @@ class MeSerializer(serializers.ModelSerializer):
             "workspace_role",
             "kyc_status",
             "is_platform_admin",
+            "is_superuser",
+            "operator_role_code",
+            "operator_permissions",
             "can_sell",
             "can_buy",
             "seller_subscription_operational",
@@ -401,6 +410,24 @@ class MeSerializer(serializers.ModelSerializer):
         if company_id is None:
             return None
         return company_has_operational_subscription(company_id)
+
+    def get_operator_permissions(self, obj):
+        """Effective operator permission codes for client-side capability gating.
+
+        None = UNRESTRICTED — superuser, an operator with no sub-role (backward-compat full
+        access), or an `is_system` sub-role (e.g. SUPER_OPERATOR). The is_system case MUST
+        mirror OperatorRole.has_perm's short-circuit (`return self.is_system or code in ...`),
+        otherwise a NEW permission code added later as a nav `requires` would be wrongly hidden
+        from existing super-operators whose stored permission JSON predates it (FE/BE authz
+        desync — audit M7). A list = exactly the codes the assigned sub-role grants, so the
+        React admin hides controls the operator can't use.
+        """
+        if not getattr(obj, "is_platform_admin", False):
+            return None
+        op_role = obj.operator_role
+        if getattr(obj, "is_superuser", False) or op_role is None or op_role.is_system:
+            return None
+        return list(op_role.permissions or [])
 
 
 class KYCVerificationSerializer(serializers.Serializer):

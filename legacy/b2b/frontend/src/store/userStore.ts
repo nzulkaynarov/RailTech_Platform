@@ -94,6 +94,12 @@ interface UserState {
    * non-sellers / before /me resolves. false → show the "subscription required"
    * banner (seller writes return SUBSCRIPTION_REQUIRED). */
   sellerSubscriptionOperational: boolean | null;
+  /** Platform Engineer (Django superuser): full privileges everywhere. */
+  isSuperuser: boolean;
+  /** The platform operator's effective permission codes for client-side capability
+   * gating (audit F3-UX). `null` = unrestricted (superuser, or an operator with no
+   * sub-role assigned); an array = exactly the codes the assigned sub-role grants. */
+  operatorPermissions: string[] | null;
 
   /* ── Auth integration ── */
   loadFromAuth: () => Promise<void>;
@@ -117,6 +123,8 @@ export const useUserStore = create<UserState>((set, _get) => ({
   activeStatus: 'SELLER',
   isViewerMode: false,
   sellerSubscriptionOperational: null,
+  isSuperuser: false,
+  operatorPermissions: null,
   profile: {
     firstName: '',
     lastName: '',
@@ -163,10 +171,14 @@ export const useUserStore = create<UserState>((set, _get) => ({
         can_sell?: boolean;
         can_buy?: boolean;
         seller_subscription_operational?: boolean | null;
+        is_superuser?: boolean;
+        operator_permissions?: string[] | null;
       };
       const canSell = userPayload.can_sell !== false;
       const canBuy = userPayload.can_buy !== false;
       const sellerSubscriptionOperational = userPayload.seller_subscription_operational ?? null;
+      const isSuperuser = userPayload.is_superuser === true;
+      const operatorPermissions = userPayload.operator_permissions ?? null;
 
       // Platform admin is decided purely by the backend-computed flag (see
       // CustomUser.is_platform_admin property) with a local fallback on role
@@ -200,6 +212,8 @@ export const useUserStore = create<UserState>((set, _get) => ({
         // `isViewerMode`; see the UserState comment above.
         isViewerMode: isPlatformAdmin,
         sellerSubscriptionOperational,
+        isSuperuser,
+        operatorPermissions,
         role: isPlatformAdmin ? 'ADMIN' : 'USER',
         profile: {
           firstName: first_name || '',

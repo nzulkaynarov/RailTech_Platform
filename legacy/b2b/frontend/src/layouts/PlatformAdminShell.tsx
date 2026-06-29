@@ -100,8 +100,15 @@ interface AttentionCounts {
 
 /* ─── Platform-admin-only navigation ────────────────────────────────── */
 
-function getAdminNavigation(activePage: string, t: TFn, attention: AttentionCounts): NavItem[] {
-  return [
+function getAdminNavigation(
+  activePage: string,
+  t: TFn,
+  attention: AttentionCounts,
+  can: (perm: string) => boolean = () => true,
+): NavItem[] {
+  // Items keyed to a single operator permission are hidden from a narrow sub-role that
+  // lacks it (audit F3-UX) — they would otherwise lead to a page that only 403s on save.
+  return ([
     { label: t('shell.dashboard'), icon: <LayoutDashboard className="h-4 w-4" />, id: 'dashboard', active: activePage === 'dashboard' },
     { label: t('shell.users'), icon: <Users className="h-4 w-4" />, id: 'admin-users', active: activePage === 'admin-users' },
     { label: t('shell.companies'), icon: <Store className="h-4 w-4" />, id: 'admin-companies', active: activePage === 'admin-companies' },
@@ -111,13 +118,13 @@ function getAdminNavigation(activePage: string, t: TFn, attention: AttentionCoun
       active: activePage === 'admin-subscriptions',
       badge: (attention.subsPastDue ?? 0) + (attention.subsExpiring ?? 0) || undefined,
     },
-    { label: t('shell.roleApplications'), icon: <ClipboardList className="h-4 w-4" />, id: 'admin-role-apps', active: activePage === 'admin-role-apps', badge: attention.roleApps },
+    { label: t('shell.roleApplications'), icon: <ClipboardList className="h-4 w-4" />, id: 'admin-role-apps', active: activePage === 'admin-role-apps', badge: attention.roleApps, requires: 'moderation.role_applications' },
     { label: t('shell.adminDeals'), icon: <Handshake className="h-4 w-4" />, id: 'admin-deals', active: activePage === 'admin-deals' },
     { label: t('shell.adminQuotes'), icon: <FileText className="h-4 w-4" />, id: 'crm-quotes', active: activePage === 'crm-quotes' },
     { label: t('shell.adminContracts'), icon: <FileSignature className="h-4 w-4" />, id: 'contracts', active: activePage === 'contracts' },
-    { label: t('shell.masterData'), icon: <Layers className="h-4 w-4" />, id: 'admin-master-data', active: activePage === 'admin-master-data' },
-    { label: t('shell.operatorRoles'), icon: <ShieldCheck className="h-4 w-4" />, id: 'admin-operator-roles', active: activePage === 'admin-operator-roles' },
-    { label: t('shell.emailTemplates'), icon: <Mail className="h-4 w-4" />, id: 'admin-email-templates', active: activePage === 'admin-email-templates' },
+    { label: t('shell.masterData'), icon: <Layers className="h-4 w-4" />, id: 'admin-master-data', active: activePage === 'admin-master-data', requires: 'platform.settings' },
+    { label: t('shell.operatorRoles'), icon: <ShieldCheck className="h-4 w-4" />, id: 'admin-operator-roles', active: activePage === 'admin-operator-roles', requires: 'operators.manage' },
+    { label: t('shell.emailTemplates'), icon: <Mail className="h-4 w-4" />, id: 'admin-email-templates', active: activePage === 'admin-email-templates', requires: 'platform.settings' },
     { label: t('shell.support'), icon: <LifeBuoy className="h-4 w-4" />, id: 'admin-support', active: activePage === 'admin-support' },
     {
       label: t('shell.adminCatalog'), icon: <Package className="h-4 w-4" />,
@@ -128,7 +135,7 @@ function getAdminNavigation(activePage: string, t: TFn, attention: AttentionCoun
         { label: t('shell.adminCatalogOffers'), id: 'admin-offers', active: activePage === 'admin-offers' },
       ],
     },
-  ];
+  ] as (NavItem & { requires?: string })[]).filter((item) => !item.requires || can(item.requires));
 }
 
 function getBottomNavigation(t: TFn): NavItem[] {
@@ -271,7 +278,18 @@ function PlatformAdminShellInner({ children, activePage, onNavigate }: PlatformA
     };
   }, [platformDashboard]);
 
-  const navigation = useMemo(() => getAdminNavigation(activePage, t, attention), [activePage, t, attention]);
+  // Operator capability predicate for nav gating (audit F3-UX): superuser / no-sub-role →
+  // everything; a narrow sub-role → only the nav items whose `requires` perm it holds.
+  const isSuperuser = useUserStore((s) => s.isSuperuser);
+  const operatorPermissions = useUserStore((s) => s.operatorPermissions);
+  const can = useMemo(() => {
+    return (perm: string) => isSuperuser || operatorPermissions === null || operatorPermissions.includes(perm);
+  }, [isSuperuser, operatorPermissions]);
+
+  const navigation = useMemo(
+    () => getAdminNavigation(activePage, t, attention, can),
+    [activePage, t, attention, can],
+  );
   const bottomNav = useMemo(() => getBottomNavigation(t), [t]);
 
   return (

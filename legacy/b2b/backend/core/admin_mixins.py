@@ -55,29 +55,46 @@ def superuser_only_action(description):
 
 class ReadOnlyInspectionMixin:
     """
-    Forces a Django ModelAdmin into "inspection mode":
+    Inspection-mode guard for Django Unfold ModelAdmin.
 
-    - Add via UI: forbidden
-    - Delete via UI: forbidden
+    RULE CHANGE (2026-06-29, owner directive): the **superuser** (Platform Engineer) now
+    has FULL privileges in Unfold — add / change / delete — for direct data administration.
+    Unfold is no longer a read-only inspection tool for the superuser.
+
+    AUDIT SCOPE (be precise — do NOT overclaim): django-pghistory triggers capture changes
+    ONLY for the tracked business models — Deal, Quote, QuoteItem, Contract, Invoice, Payment,
+    Act (and SystemSetting). Mutations to OTHER models (Company, SupplierSubscription,
+    CompanyRoleApplication, Fulfillment, Product, SupplierOffer, …) are NOT history-tracked.
+    Direct edits here also BYPASS service-layer side effects (FSM transitions, KYC/subscription
+    emails, document-number minting, invoice.amount_paid recompute) — for those, prefer the
+    React Operator pages / DRF services / @superuser_only_action handlers, which are audited.
+    A handful of admins therefore keep `has_add_permission=False` (Contract/Invoice/Act/Payment)
+    because raw creation produces structurally-broken rows (empty unique number / stale balance).
+
+    NON-superuser staff (should any be granted Django admin access) remain in read-only
+    inspection mode:
+    - Add / Delete via UI: forbidden
     - Field editing in change form: forbidden (all fields become readonly)
-    - View change form: ALLOWED (so engineer can inspect record)
-    - Custom @admin.action handlers: ALLOWED only for superusers
-      (use @superuser_only_action decorator)
-
-    Override `inspection_editable_fields` (tuple) on the subclass to allow
-    editing specific fields if absolutely necessary for emergency repair.
+    - View change form: ALLOWED (so they can inspect a record)
+    Override `inspection_editable_fields` (tuple) to allow specific fields for such staff.
+    Custom @admin.action handlers remain superuser-only (@superuser_only_action).
     """
 
     inspection_editable_fields: tuple = ()
 
     def has_add_permission(self, request):
-        return False
+        return bool(getattr(request.user, "is_superuser", False))
 
     def has_delete_permission(self, request, obj=None):
-        return False
+        return bool(getattr(request.user, "is_superuser", False))
 
     def get_readonly_fields(self, request, obj=None):
         existing = list(super().get_readonly_fields(request, obj))
+
+        # Superuser edits freely (full privileges); only non-superuser staff are locked
+        # down to read-only inspection.
+        if getattr(request.user, "is_superuser", False):
+            return existing
 
         if obj is None:
             return existing
