@@ -1,3 +1,4 @@
+import pghistory
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -6,6 +7,7 @@ from django.utils.translation import gettext_lazy as _
 # ────────────────────────────────────────────
 
 
+@pghistory.track()  # G6: audit engineer (Unfold superuser) edits to the seller billing gate
 class SupplierSubscription(models.Model):
     """
     Подписка поставщика на платформу.

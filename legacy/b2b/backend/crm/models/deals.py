@@ -366,6 +366,16 @@ class ActivityLog(models.Model):
         blank=True,
         verbose_name=_("Состояние после"),
     )
+    expires_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Действует до"),
+        help_text=_(
+            "Срок действия временно́го доступа (break-glass): до этого момента оператор "
+            "вправе видеть приватные данные тенанта по указанной причине. Пусто для обычных "
+            "записей журнала."
+        ),
+    )
 
     class Meta:
         verbose_name = _("Запись активности")

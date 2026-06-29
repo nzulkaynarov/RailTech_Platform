@@ -1,3 +1,4 @@
+import pghistory
 from django.conf import settings
 from django.core.validators import RegexValidator
 from django.db import models
@@ -20,6 +21,7 @@ from master_data.models import Country
 # ────────────────────────────────────────────
 
 
+@pghistory.track()  # G6: audit engineer (Unfold superuser) edits — KYC level, types, requisites
 class Company(models.Model):
     """
     Юридическое лицо / Организация.

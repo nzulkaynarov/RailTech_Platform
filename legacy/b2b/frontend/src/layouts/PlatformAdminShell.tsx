@@ -19,6 +19,7 @@ import {
   Building2,
   LifeBuoy,
   Mail,
+  ScrollText,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -124,6 +125,7 @@ function getAdminNavigation(
     { label: t('shell.adminContracts'), icon: <FileSignature className="h-4 w-4" />, id: 'contracts', active: activePage === 'contracts' },
     { label: t('shell.masterData'), icon: <Layers className="h-4 w-4" />, id: 'admin-master-data', active: activePage === 'admin-master-data', requires: 'platform.settings' },
     { label: t('shell.operatorRoles'), icon: <ShieldCheck className="h-4 w-4" />, id: 'admin-operator-roles', active: activePage === 'admin-operator-roles', requires: 'operators.manage' },
+    { label: t('shell.accessLog'), icon: <ScrollText className="h-4 w-4" />, id: 'admin-access-log', active: activePage === 'admin-access-log', requires: 'moderation.force_override' },
     { label: t('shell.emailTemplates'), icon: <Mail className="h-4 w-4" />, id: 'admin-email-templates', active: activePage === 'admin-email-templates', requires: 'platform.settings' },
     { label: t('shell.support'), icon: <LifeBuoy className="h-4 w-4" />, id: 'admin-support', active: activePage === 'admin-support' },
     {

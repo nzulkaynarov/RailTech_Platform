@@ -36,6 +36,15 @@ export const useAdminActivity = (entityType: string, entityId: number | string |
     staleTime: 15_000,
   });
 
+export const useAccessLog = (limit = 100) =>
+  useQuery({
+    queryKey: ['admin-access-log', limit],
+    queryFn: () => adminApi.getAccessLog(limit),
+    staleTime: 15_000,
+    refetchInterval: 60_000,
+    placeholderData: keepPreviousData,
+  });
+
 export const useBulkVerifyKYC = () => {
   const queryClient = useQueryClient();
   return useMutation({

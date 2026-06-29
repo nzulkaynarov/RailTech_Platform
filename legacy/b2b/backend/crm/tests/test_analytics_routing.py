@@ -23,6 +23,19 @@ def lookups(db):
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
     DealStage.objects.get_or_create(code="DRAFT", defaults={"name": "Draft", "sort_order": 10})
     QuoteStatus.objects.get_or_create(code="DRAFT", defaults={"name": "Draft", "sort_order": 10})
+    from catalog.models import ProductStatus
+
+    ProductStatus.objects.get_or_create(code="PUBLISHED", defaults={"name": "Published", "sort_order": 20})
+
+
+def _published_product(owner_co, name):
+    """A PUBLISHED catalog product owned by `owner_co` (drives the catalog_items KPI)."""
+    from catalog.models import Product, ProductStatus
+
+    return Product.objects.create(
+        name=name, sku=name, description="", manufacturer_part_number="", gost_drawing="",
+        owner_company=owner_co, status=ProductStatus.objects.get(code="PUBLISHED"),
+    )
 
 
 def _seller(name, inn, email):
@@ -96,3 +109,27 @@ def test_pure_seller_with_no_routing_sees_zero_not_error(lookups):
     body = resp.json()
     assert body["deals_volume"] == 0.0, body
     assert body["active_requests"] == 0, body
+
+
+@pytest.mark.django_db
+def test_catalog_and_clients_kpis_are_tenant_scoped(lookups):
+    """F4: catalog_items counts only the seller's OWN products (not the whole PIM), and
+    clients_count counts only the distinct buyers on deals routed to the seller — not every
+    CLIENT company on the platform."""
+    seller_a, co_a = _seller("Seller A", "A100", "sa@t.test")
+    _seller_b, co_b = _seller("Seller B", "B100", "sb@t.test")
+    buyer_co = Company.objects.create(name="Buyer Co", inn="C100")
+    buyer_co.types.add(CompanyType.objects.get(code="CLIENT"))
+    # A second, unrelated buyer that A never deals with — must NOT inflate A's clients_count.
+    other_buyer = Company.objects.create(name="Other Buyer", inn="C200")
+    other_buyer.types.add(CompanyType.objects.get(code="CLIENT"))
+
+    _published_product(co_a, "A-rail-clamp")          # A's own product → counts for A
+    _published_product(co_b, "B-competitor-part")     # competitor's → must NOT count for A
+
+    routed = _deal_with_quote(buyer_co, "A's RFQ", Decimal("1000"))
+    DealSellerRouting.objects.create(deal=routed, seller_company=co_a)
+
+    body = _api(seller_a).get("/api/v1/crm/analytics/dashboard/?period=90d").json()
+    assert body["catalog_items"] == 1, body      # only A's own published product
+    assert body["clients_count"] == 1, body       # only the one routed buyer, not all CLIENTs
