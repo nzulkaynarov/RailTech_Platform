@@ -75,6 +75,23 @@ export interface AdminActivityEntry {
   timestamp: string;
 }
 
+/** Access-log entry: a break-glass grant or a force-override action (ADR-0004 G2). */
+export interface AdminAccessLogEntry {
+  id: number;
+  action: string;
+  detail: string;
+  level: 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR';
+  reason: string;
+  entity_type: string;
+  entity_id: number | null;
+  user_email: string | null;
+  user_name: string;
+  timestamp: string;
+  expires_at: string | null;
+  is_break_glass: boolean;
+  is_active: boolean;
+}
+
 /* ─── Email templates ───────────────────────────────────────────────── */
 
 export type EmailTemplateKey =
@@ -248,6 +265,24 @@ export const adminApi = {
       items: AdminActivityEntry[];
     }>('admin/activity/', {
       params: { entity_type: entityType, entity_id: entityId, limit },
+    });
+    return res.data;
+  },
+  /** Access log feed: break-glass grants + force-override actions (G2). */
+  getAccessLog: async (limit = 100) => {
+    const res = await apiClient.get<{
+      count: number;
+      items: AdminAccessLogEntry[];
+    }>('admin/access-log/', { params: { limit } });
+    return res.data;
+  },
+  /** Open a reason-required, time-boxed break-glass grant (G2). */
+  openBreakGlass: async (entityType: string, entityId: number, reason: string, minutes?: number) => {
+    const res = await apiClient.post('admin/break-glass/', {
+      entity_type: entityType,
+      entity_id: entityId,
+      reason,
+      ...(minutes ? { minutes } : {}),
     });
     return res.data;
   },

@@ -34,12 +34,13 @@ def log_admin_action(
     before: Optional[dict[str, Any]] = None,
     after: Optional[dict[str, Any]] = None,
     level: str = "INFO",
+    expires_at=None,
 ):
     """
     Create an ActivityLog entry scoped to a single entity.
 
     All admin override actions must route through this helper so the timeline
-    remains consistent.
+    remains consistent. `expires_at` time-boxes a break-glass access grant (G2).
     """
     from crm.models import ActivityLog
 
@@ -53,4 +54,5 @@ def log_admin_action(
         reason=(reason or "")[:5000],
         before_data=before,
         after_data=after,
+        expires_at=expires_at,
     )

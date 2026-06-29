@@ -1855,7 +1855,8 @@
     "secondaryNavigation": "Дополнительная навигация",
     "currencySelector": "Выбор валюты",
     "emailTemplates": "Email-шаблоны",
-    "operatorRoles": "Роли операторов"
+    "operatorRoles": "Роли операторов",
+    "accessLog": "Журнал доступа"
   },
   "productDetail": {
     "specifications": "Характеристики",
@@ -4571,6 +4572,28 @@
     "previewLabel": "Пример номера",
     "saved": "Настройки нумерации сохранены",
     "ownerOnly": "Нумерацию может настраивать только владелец компании"
+  },
+  "accessLogPage": {
+    "title": "Журнал доступа",
+    "description": "Временный доступ (break-glass) и принудительные override-действия операторов — кто, к чему и почему",
+    "empty": "Записей доступа пока нет",
+    "stats": {
+      "activeBreakGlass": "Активный break-glass",
+      "forceOverrides": "Override-действия"
+    },
+    "col": {
+      "event": "Событие",
+      "operator": "Оператор",
+      "entity": "Объект",
+      "reason": "Причина",
+      "when": "Когда",
+      "status": "Статус"
+    },
+    "badge": {
+      "activeUntil": "Активен до {{time}}",
+      "expired": "Истёк",
+      "override": "Override"
+    }
   },
   "operatorRoles": {
     "title": "Роли операторов",

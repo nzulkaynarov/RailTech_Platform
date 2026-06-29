@@ -1851,7 +1851,8 @@
     "secondaryNavigation": "Secondary navigation",
     "currencySelector": "Currency selector",
     "emailTemplates": "Email templates",
-    "operatorRoles": "Operator roles"
+    "operatorRoles": "Operator roles",
+    "accessLog": "Access log"
   },
   "productDetail": {
     "specifications": "Specifications",
@@ -4567,6 +4568,28 @@
     "previewLabel": "Number preview",
     "saved": "Numbering settings saved",
     "ownerOnly": "Only the company owner can configure numbering"
+  },
+  "accessLogPage": {
+    "title": "Access log",
+    "description": "Break-glass grants and operator force-override actions — who accessed what, and why",
+    "empty": "No access events yet",
+    "stats": {
+      "activeBreakGlass": "Active break-glass",
+      "forceOverrides": "Force-overrides"
+    },
+    "col": {
+      "event": "Event",
+      "operator": "Operator",
+      "entity": "Entity",
+      "reason": "Reason",
+      "when": "When",
+      "status": "Status"
+    },
+    "badge": {
+      "activeUntil": "Active until {{time}}",
+      "expired": "Expired",
+      "override": "Override"
+    }
   },
   "operatorRoles": {
     "title": "Operator roles",

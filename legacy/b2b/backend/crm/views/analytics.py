@@ -317,7 +317,9 @@ class DashboardAnalyticsView(APIView):
             day_val = item.get("day")
             result.append(
                 {
-                    "day": day_val.strftime("%a") if day_val else "",
+                    # Date (dd.mm), not just the weekday: a sparse 30-day window can contain two
+                    # different Fridays, which "%a" rendered as an ambiguous duplicate "Fri/Fri".
+                    "day": day_val.strftime("%d.%m") if day_val else "",
                     "count": item["count"],
                 }
             )

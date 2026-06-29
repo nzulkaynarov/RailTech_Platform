@@ -1,3 +1,4 @@
+import pghistory
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -18,6 +19,7 @@ from core.storage import (
 # ────────────────────────────────────────────
 
 
+@pghistory.track()  # G6: audit engineer (Unfold superuser) edits to role-application status
 class CompanyRoleApplication(models.Model):
     """
     Заявка компании на получение роли (SUPPLIER или MANUFACTURER).

@@ -3,6 +3,7 @@ from typing import Optional, Tuple
 from django.db import transaction
 
 from accounts.models import CustomUser
+from core.audit import log_admin_action
 
 from ..constants import ContractStatusCode, QuoteStatusCode
 from ..models import ActivityLog, Quote
@@ -322,10 +323,18 @@ def force_cancel_contract(
         else f"[FORCE_ADMIN] {admin_user.email}: {reason}"
     )
     contract.save(update_fields=["status", "notes", "updated_at"])
-    ActivityLog.objects.create(
+    # Structured, entity-scoped audit (G2 Gap A) — route through log_admin_action so the
+    # override carries reason + entity_type/id + before/after and surfaces on the contract
+    # timeline and the «Журнал доступа» page (not a bare, unscoped ActivityLog).
+    log_admin_action(
+        entity_type="contract",
+        entity_id=contract_id,
         action="[FORCE_ADMIN] Контракт отменён платформенным админом",
-        detail=f"Контракт #{contract_id} ({old_status} → CANCELLED). Причина: {reason}",
-        user=admin_user,
+        detail=f"Контракт #{contract_id} ({old_status} → CANCELLED).",
+        actor=admin_user,
+        reason=reason,
+        before={"status": old_status},
+        after={"status": ContractStatusCode.CANCELLED},
         level="WARNING",
     )
     return contract, None

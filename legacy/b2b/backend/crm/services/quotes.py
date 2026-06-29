@@ -8,6 +8,7 @@ from django.db.models import Count, Q, Sum
 from accounts.constants import SystemRoleCode, VerificationStatusCode, WorkspaceRoleCode
 from accounts.models import Company, CompanyMember, CustomUser
 from accounts.services.permissions import has_workspace_role, routed_seller_company_id
+from core.audit import log_admin_action
 
 from ..constants import DealStageCode, QuoteStatusCode
 from ..models import ActivityLog, Deal, Quote, QuoteItem, QuoteItemHistory, QuoteStatus
@@ -834,10 +835,18 @@ class QuoteLifecycleService:
             else f"[FORCE_ADMIN] {admin_user.email}: {reason}"
         )
         quote.save(update_fields=["status", "approved_at", "approved_by", "notes", "updated_at"])
-        ActivityLog.objects.create(
+        # Structured, entity-scoped audit (G2 Gap A) — route through log_admin_action like
+        # transition_deal_stage, so the override carries reason + entity_type/id + before/after
+        # and shows on the quote timeline and the «Журнал доступа» page (not a bare ActivityLog).
+        log_admin_action(
+            entity_type="quote",
+            entity_id=quote_id,
             action="[FORCE_ADMIN] КП одобрено платформенным админом",
-            detail=f"КП #{quote_id} ({old_code} → APPROVED). Причина: {reason}",
-            user=admin_user,
+            detail=f"КП #{quote_id} ({old_code} → APPROVED).",
+            actor=admin_user,
+            reason=reason,
+            before={"status": old_code},
+            after={"status": QuoteStatusCode.APPROVED},
             level="WARNING",
         )
         return quote, None

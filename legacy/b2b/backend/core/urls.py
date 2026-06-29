@@ -42,7 +42,14 @@ from catalog.views import (
     StockStatusViewSet,
     SupplierOfferViewSet,
 )
-from core.admin_api import AdminActivityView, AdminPulseView, AdminSearchView, AdminTriageQueueView
+from core.admin_api import (
+    AdminAccessLogView,
+    AdminActivityView,
+    AdminPulseView,
+    AdminSearchView,
+    AdminTriageQueueView,
+    BreakGlassView,
+)
 from core.health import health_check
 from core.views import PageStatsView, PlatformDashboardView, SupportTicketViewSet, SystemSettingsView
 from crm.views import (
@@ -191,6 +198,8 @@ urlpatterns = (
         path("api/v1/admin/pulse/", AdminPulseView.as_view(), name="admin-pulse"),
         path("api/v1/admin/search/", AdminSearchView.as_view(), name="admin-search"),
         path("api/v1/admin/activity/", AdminActivityView.as_view(), name="admin-activity"),
+        path("api/v1/admin/break-glass/", BreakGlassView.as_view(), name="admin-break-glass"),
+        path("api/v1/admin/access-log/", AdminAccessLogView.as_view(), name="admin-access-log"),
         path("api/v1/crm/leads/", LeadCreateView.as_view(), name="lead-create"),
         path("api/v1/crm/status-choices/", Phase2StatusChoicesView.as_view(), name="phase2-status-choices"),
         # Public, unauthenticated КП view/download by secret token (client base CB-public-link).
