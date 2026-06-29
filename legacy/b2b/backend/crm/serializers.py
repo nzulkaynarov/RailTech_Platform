@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from rest_framework import serializers
 
 from master_data.models import Currency, DeliveryBasis
@@ -186,6 +188,7 @@ class QuoteChargeSerializer(serializers.ModelSerializer):
             "description",
             "amount",
             "rate_percent",
+            "cost_amount",
             "is_deduction",
             "created_by",
             "created_at",
@@ -211,11 +214,24 @@ class QuoteSerializer(serializers.ModelSerializer):
     charges = QuoteChargeSerializer(many=True, read_only=True)
     # Effective КП delivery term = override (delivery_lead_time_days) or max(line lead times).
     effective_delivery_lead_time_days = serializers.SerializerMethodField()
+    # Seller unit economics (landed cost / gross profit / margin / operating profit / loss flags).
+    # Cost-gated AND only computed when the view asks (include_economics) — keeps it off list
+    # endpoints (no N+1) and hidden from a viewer without quote.view_cost_margin.
+    economics = serializers.SerializerMethodField()
 
     def get_effective_delivery_lead_time_days(self, obj) -> int:
         from crm.services import effective_quote_lead_time
 
         return effective_quote_lead_time(obj)
+
+    def get_economics(self, obj):
+        if not self.context.get("include_economics"):
+            return None
+        if not self._can_see_costs(obj):
+            return None
+        from crm.services.quotes import compute_quote_economics
+
+        return {k: (str(v) if isinstance(v, Decimal) else v) for k, v in compute_quote_economics(obj).items()}
 
     class Meta:
         model = Quote
@@ -252,6 +268,7 @@ class QuoteSerializer(serializers.ModelSerializer):
             "approved_at",
             "items",
             "charges",
+            "economics",
             "created_at",
             "updated_at",
         ]

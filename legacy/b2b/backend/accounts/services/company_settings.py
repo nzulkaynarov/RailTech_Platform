@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 # Scalar fields the OWNER may flat-write. FK fields (delivery_basis / cost_currency)
 # are resolved by CODE separately; `company` / timestamps are immutable.
-_DECIMAL_FIELDS = ("default_vat_rate", "default_margin_percent")
+_DECIMAL_FIELDS = ("default_vat_rate", "default_margin_percent", "min_margin_percent", "target_margin_percent")
 _TEXT_FIELDS = ("doc_number_prefix",)
 
 

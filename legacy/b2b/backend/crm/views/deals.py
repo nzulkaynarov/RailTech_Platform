@@ -62,6 +62,14 @@ class DealViewSet(viewsets.ModelViewSet):
             return DealListSerializer
         return DealDetailSerializer
 
+    def get_serializer_context(self):
+        # Compute the active quote's (cost-gated) unit economics ONLY on the single-deal detail —
+        # the КП builder reads deal.active_quote.economics there. Off for the deals LIST so the
+        # nested active_quote doesn't trigger an items+charges N+1 per row.
+        ctx = super().get_serializer_context()
+        ctx["include_economics"] = self.action == "retrieve"
+        return ctx
+
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
     # Operator sub-capability for the force-override action (ADR-0004 G1).
     operator_permissions = {"force_change_stage": "moderation.force_override"}

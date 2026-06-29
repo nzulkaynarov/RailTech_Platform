@@ -91,6 +91,13 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
     # Operator sub-capability for the force-override action (ADR-0004 G1).
     operator_permissions = {"force_approve": "moderation.force_override"}
 
+    def get_serializer_context(self):
+        # Compute the (cost-gated) unit-economics block ONLY on the single-quote detail —
+        # the КП builder reads it there. Off for list endpoints to avoid an items+charges N+1.
+        ctx = super().get_serializer_context()
+        ctx["include_economics"] = self.action == "retrieve"
+        return ctx
+
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
             return Quote.objects.none()
@@ -262,8 +269,10 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
             return _chain_error_response(sub_err)
         try:
             quote = QuoteLifecycleService.send_to_client(int(pk), request.user)
-        except ValueError:
-            return _chain_error_response("INVALID_STATUS")
+        except ValueError as exc:
+            code = str(exc)
+            # Surface the specific loss-prevention / claim errors instead of a generic status.
+            return _chain_error_response(code if code in ("QUOTE_BELOW_COST", "QUOTE_NOT_CLAIMED") else "INVALID_STATUS")
         return Response(self.get_serializer(quote).data)
 
     @extend_schema(

@@ -64,6 +64,19 @@ class QuoteCharge(models.Model):
         verbose_name=_("Процент (%)"),
         help_text=_("Процент от суммы позиций. Если задан — приоритетнее фиксированной суммы"),
     )
+    # РЕАЛЬНАЯ стоимость статьи ДЛЯ ПРОДАВЦА (что он сам платит за фрахт/страховку/…),
+    # отдельно от того, что выставлено покупателю (amount/rate_percent). NULL = «перевыставляем
+    # по себестоимости» (стоимость = выставленной сумме, нетто-ноль). Если продавец берёт за
+    # фрахт больше, чем платит, — разница это доп.прибыль; если меньше/поглощает — съедает маржу.
+    # Нужно для ЧЕСТНОЙ операционной прибыли в панели «Экономика сделки» (не применяется к скидкам).
+    cost_amount = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name=_("Ваша стоимость статьи"),
+        help_text=_("Сколько статья реально стоит продавцу. Пусто = по себестоимости (= выставленной сумме)."),
+    )
     # UBL ChargeIndicator: False = начисление (+, расход), True = скидка/уценка (−).
     is_deduction = models.BooleanField(
         default=False,
@@ -105,6 +118,20 @@ class QuoteCharge(models.Model):
         else:
             base = self.amount
         return -base if self.is_deduction else base
+
+    def resolve_seller_cost(self, subtotal):
+        """Реальная стоимость статьи ДЛЯ ПРОДАВЦА (для операционной прибыли).
+        Скидки (is_deduction) — это уменьшение выручки, не затрата → 0. Для начисления:
+        явная `cost_amount`, иначе — выставленная покупателю сумма (перевыставление по
+        себестоимости, нетто-ноль)."""
+        if self.is_deduction:
+            return Decimal("0")
+        if self.cost_amount is not None:
+            return self.cost_amount
+        # NULL → billed = cost (pass-through): берём то, что выставлено покупателю.
+        if self.rate_percent is not None:
+            return subtotal * (self.rate_percent / Decimal("100"))
+        return self.amount
 
     def __str__(self):
         sign = "−" if self.is_deduction else "+"
