@@ -223,6 +223,7 @@ class QuoteSerializer(serializers.ModelSerializer):
             "id",
             "deal",
             "version",
+            "number",
             "status",
             "status_code",
             "status_name",
@@ -255,6 +256,7 @@ class QuoteSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = [
+            "number",
             "subtotal_excl_vat",
             "charges_total",
             "vat_amount",

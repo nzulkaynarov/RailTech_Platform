@@ -422,7 +422,11 @@ class DealViewSet(viewsets.ModelViewSet):
 
             try:
                 quote = QuoteLifecycleService.generate_pdf(quote.pk)
-            except (OSError, ValueError, RuntimeError):
+            except ValueError as exc:
+                if str(exc) == "QUOTE_NOT_CLAIMED":
+                    return Response({"error": "QUOTE_NOT_CLAIMED"}, status=status.HTTP_409_CONFLICT)
+                return Response({"error": "Failed to generate PDF"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            except (OSError, RuntimeError):
                 return Response({"error": "Failed to generate PDF"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         if not quote.pdf_file:
             return Response({"error": "PDF generation failed"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

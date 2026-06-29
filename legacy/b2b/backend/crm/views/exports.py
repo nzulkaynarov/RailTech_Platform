@@ -32,7 +32,15 @@ def handle_quote_export(request, quote):
     include_costs = export_format in ("xlsx", "csv") and can_view_quote_costs_for(request.user, quote)
     try:
         return export_quote(quote, export_format, include_costs=include_costs)
-    except ValueError:
+    except ValueError as exc:
+        if str(exc) == "QUOTE_NOT_CLAIMED":
+            return Response(
+                {
+                    "error": "QUOTE_NOT_CLAIMED",
+                    "detail": "КП ещё не сформировано продавцом — экспорт станет доступен после отправки на согласование.",
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
         return Response(
             {"error": "UNSUPPORTED_FORMAT", "supported": ["pdf", "xlsx", "csv"]},
             status=status.HTTP_400_BAD_REQUEST,

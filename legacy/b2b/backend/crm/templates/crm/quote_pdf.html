@@ -200,7 +200,7 @@
         </div>
       </td>
       <td class="doc-id">
-        <div class="doc-no">КП № {{ quote.deal_id }}-{{ quote.version }}</div>
+        <div class="doc-no">{% if quote.number %}КП № {{ quote.number }}{% else %}КП № {{ quote.deal_id }}-{{ quote.version }}{% endif %}</div>
         <div>от {{ quote.created_at|date:"d.m.Y" }}</div>
         {% if quote.valid_until %}<div>действ. до {{ quote.valid_until|date:"d.m.Y" }}</div>{% endif %}
       </td>

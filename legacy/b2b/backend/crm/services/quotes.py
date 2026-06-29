@@ -7,7 +7,7 @@ from django.db.models import Count, Q, Sum
 
 from accounts.constants import SystemRoleCode, VerificationStatusCode, WorkspaceRoleCode
 from accounts.models import Company, CompanyMember, CustomUser
-from accounts.services.permissions import has_workspace_role
+from accounts.services.permissions import has_workspace_role, routed_seller_company_id
 
 from ..constants import DealStageCode, QuoteStatusCode
 from ..models import ActivityLog, Deal, Quote, QuoteItem, QuoteItemHistory, QuoteStatus
@@ -19,8 +19,17 @@ logger = logging.getLogger(__name__)
 
 
 def _quote_owner_company_id(quote) -> Optional[int]:
-    """Company that owns the КП — the preparer's primary company (the seller team
-    that runs the approval chain). None if the quote has no preparer yet."""
+    """Company that owns the КП — the seller team that runs the approval chain and whose
+    requisites brand the document.
+
+    Source of truth is the explicit `Quote.seller_company` FK, set at build/claim time to the
+    VERIFIED routed seller (audit F0/H2). Read FIRST so the role checks, ВЭД/director gate,
+    auto-split, PDF header and КП-number minting all resolve to ONE coherent company — never
+    "validate against routed company B but anchor to the preparer's primary company A".
+    Falls back to the preparer's primary membership ONLY for legacy quotes saved before the FK
+    existed. None if neither is resolvable (unclaimed buyer request)."""
+    if quote.seller_company_id:
+        return quote.seller_company_id
     if not quote.prepared_by_id:
         return None
     membership = (
@@ -475,9 +484,13 @@ class QuoteLifecycleService:
         )
 
         # Issuer (seller) block for a branded offer header — the company that owns the КП
-        # (the preparer's seller company). None for an unclaimed request quote; the
-        # template falls back to the platform name.
+        # (the preparer's seller company). An unclaimed buyer-request КП (prepared_by NULL)
+        # has NO issuing seller, so rendering it would brand a "коммерческое предложение"
+        # with the platform identity ("RailTech B2B") — misrepresenting the supplier on a
+        # commercial document. Refuse to render until a seller has claimed it (audit F1).
         seller_company = _quote_seller_company(quote)
+        if seller_company is None:
+            raise ValueError("QUOTE_NOT_CLAIMED")
         # The seller's filled-in document profile (legal name, requisites, logo, footer).
         # When present, the «Поставщик» block + header logo + footer render from it; when
         # absent the template falls back to the seller Company fields → platform name.
@@ -536,6 +549,16 @@ class QuoteLifecycleService:
                 "Only READY_TO_SEND quotes (internally approved) can be sent to the client."
             )
 
+        # An unclaimed КП has no issuing seller (e.g. the preparer's membership was deactivated
+        # after the КП was claimed) — refuse to send rather than freeze it under the PLATFORM
+        # identity, mint a platform-branded number, and then have the async PDF render fail
+        # (audit M2). Mirrors the generate_pdf QUOTE_NOT_CLAIMED guard so the failure surfaces
+        # synchronously to the sender. A superuser send is the platform-escalation/orchestrator
+        # path (no company membership by design) and is allowed through with platform branding.
+        seller_company = _quote_seller_company(quote)
+        if seller_company is None and not getattr(sent_by_user, "is_superuser", False):
+            raise ValueError("QUOTE_NOT_CLAIMED")
+
         # Mint the public no-login access token once (idempotent across re-sends of the
         # same КП version). Lets an offline/registered client open the client projection
         # without an account; rotate only by issuing a new version.
@@ -544,11 +567,21 @@ class QuoteLifecycleService:
         if not quote.public_access_token:
             quote.public_access_token = secrets.token_urlsafe(32)
 
+        # Mint a human, sequential, quotable КП number on first send (idempotent across
+        # re-sends of the same version) — world-standard B2B: every offer the buyer receives
+        # carries a citable document number, per-company-prefixed (ACME-КП-2026-00001) or the
+        # shared platform counter (КП-2026-00001). Re-using next_document_number keeps the КП
+        # consistent with Contract/Invoice/Act numbering.
+        if not quote.number:
+            from .numbering import next_document_number
+
+            quote.number = next_document_number("KP", "КП", seller_company)
+
         # Freeze prices
         sent_status = QuoteStatus.objects.filter(code=QuoteStatusCode.SENT).first()
         quote.status = sent_status
         quote.frozen_at = timezone.now()
-        quote.save(update_fields=["status", "frozen_at", "public_access_token", "updated_at"])
+        quote.save(update_fields=["status", "number", "frozen_at", "public_access_token", "updated_at"])
 
         # Email the КП off the request thread, after commit (F1.6 — no render inside the
         # atomic block, no orphan on rollback). The task renders the PDF if needed, then
@@ -644,18 +677,45 @@ class QuoteLifecycleService:
     def submit_for_review(quote_id: int, actor: CustomUser) -> Tuple[Optional[Quote], Optional[str]]:
         """Sales submits a built КП into the chain. DRAFT → PENDING_TRADE_REVIEW,
         or straight to PENDING_APPROVAL if the company has no ВЭД member."""
-        quote = Quote.objects.select_related("status", "prepared_by").get(pk=quote_id)
-        # The submitter anchors the owning company if no preparer is recorded yet.
-        if not quote.prepared_by_id:
-            quote.prepared_by = actor
-            quote.save(update_fields=["prepared_by", "updated_at"])
-        company_id = _quote_owner_company_id(quote)
-        if not company_id:
-            return None, "NO_QUOTE_COMPANY"
+        quote = Quote.objects.select_related("status", "prepared_by", "deal").get(pk=quote_id)
+        # Resolve the КП-owning company WITHOUT mutating anything first (audit F0):
+        #   • already-claimed КП → the preparer's company;
+        #   • unclaimed buyer-request КП → the submitter MAY claim it, but ONLY if they are
+        #     a can_sell seller routed to THIS deal. Anchoring prepared_by before this check
+        #     let any authenticated user (even a buyer) hijack the КП + drive its approval
+        #     chain cross-tenant, and the write committed even on a rejected call.
+        if quote.prepared_by_id:
+            company_id = _quote_owner_company_id(quote)
+            if not company_id:
+                return None, "NO_QUOTE_COMPANY"
+        else:
+            company_id = routed_seller_company_id(actor, quote.deal_id)
+            if not company_id:
+                return None, "ROLE_NOT_PERMITTED"
         if not has_workspace_role(actor, company_id, [WorkspaceRoleCode.SALES_MANAGER]):
             return None, "ROLE_NOT_PERMITTED"
         if not quote.status or quote.status.code != QuoteStatusCode.DRAFT:
             return None, "INVALID_STATUS"
+        # A commercial offer cannot enter the approval chain with NO value: reject a КП whose
+        # total is zero/negative (the "half-priced / unpriced КП" gap — it could otherwise be
+        # approved and sent to the client at 0,00). Keyed on the КП TOTAL (not per-line) so a
+        # deliberately-free line (included item, sample, 100% promo discount) among priced lines
+        # is still allowed — only a genuinely value-less offer is blocked (audit M6).
+        if (quote.subtotal_excl_vat or 0) <= 0:
+            return None, "QUOTE_HAS_UNPRICED_LINES"
+        # All gates passed — NOW it is safe to claim the КП: anchor BOTH the preparer and the
+        # owning seller company to the VERIFIED company resolved above (audit F0/H2), so the
+        # rest of the chain, the document header and the КП number all resolve to ONE coherent
+        # company — never "validated against routed B but anchored to primary A".
+        claim_fields = []
+        if not quote.prepared_by_id:
+            quote.prepared_by = actor
+            claim_fields.append("prepared_by")
+        if not quote.seller_company_id:
+            quote.seller_company_id = company_id
+            claim_fields.append("seller_company")
+        if claim_fields:
+            quote.save(update_fields=[*claim_fields, "updated_at"])
         # ATP auto-split (Track B): the КП is built and leaving DRAFT — split every
         # product line whose seller stock can't cover the requested qty into наличие +
         # под заказ tranches, in one pass (no per-line clicks). Idempotent: an already-
@@ -1264,6 +1324,14 @@ def submit_request(user: CustomUser, deal: Deal) -> Deal:
     # supplier is implied by Product.owner_company (world-standard marketplace RFQ).
     # Free-text-only заявки stay unrouted here; the buyer routes them explicitly.
     route_deal_from_catalog(deal)
+
+    # An RFQ MUST reach at least one seller. A free-text/manually-typed заявка produces
+    # no Product.owner_company routing, so without an explicit buyer routing this would
+    # advance to RFQ_OPEN visible to NO seller, while the buyer is told «Менеджер готовит
+    # КП» — a silent dead-end (audit F2). Mirror the NO_SELLERS_SELECTED guard the /route
+    # endpoint already enforces so both paths uphold the same ≥1-recipient invariant.
+    if not deal.seller_routings.exists():
+        raise ValidationError({"detail": "NO_RECIPIENTS"})
 
     deal, error = transition_deal_stage(deal, DealStageCode.RFQ_OPEN, actor=user)
     if error:

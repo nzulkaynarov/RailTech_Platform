@@ -13,8 +13,23 @@ from ..models import Act, Contract, Fulfillment, Invoice, Payment
 from .inlines import InvoiceItemInline, PaymentInline
 
 
+class _ServiceMintedDocAdminMixin:
+    """Block raw Unfold ADD even for a superuser (audit H3).
+
+    Contract/Invoice/Act/Payment MUST be created through their services, which mint the
+    sequential `number` (Contract/Invoice/Act), render the PDF, write ActivityLog and recompute
+    invoice.amount_paid (Payment). A hand-created row in Unfold would save an EMPTY unique
+    `number` (→ IntegrityError 500 on the second add) or leave invoice.amount_paid stale. The
+    superuser keeps full change/delete via ReadOnlyInspectionMixin — only ADD is blocked here.
+    Must precede ReadOnlyInspectionMixin in the MRO so this has_add_permission wins.
+    """
+
+    def has_add_permission(self, request):
+        return False
+
+
 @admin.register(Contract)
-class ContractAdmin(ReadOnlyInspectionMixin, ModelAdmin):
+class ContractAdmin(_ServiceMintedDocAdminMixin, ReadOnlyInspectionMixin, ModelAdmin):
     list_display = ("number", "deal", "contract_status", "total_amount", "created_at")
     list_filter = ("status", "created_at")
     list_filter_submit = True
@@ -51,7 +66,7 @@ class ContractAdmin(ReadOnlyInspectionMixin, ModelAdmin):
 
 
 @admin.register(Invoice)
-class InvoiceAdmin(ReadOnlyInspectionMixin, ModelAdmin):
+class InvoiceAdmin(_ServiceMintedDocAdminMixin, ReadOnlyInspectionMixin, ModelAdmin):
     list_display = ("number", "deal", "invoice_status", "total_incl_vat", "amount_paid", "issued_at", "due_date")
     list_filter = ("status", "issued_at", "due_date")
     list_filter_submit = True
@@ -86,7 +101,7 @@ class InvoiceAdmin(ReadOnlyInspectionMixin, ModelAdmin):
 
 
 @admin.register(Payment)
-class PaymentAdmin(ReadOnlyInspectionMixin, ModelAdmin):
+class PaymentAdmin(_ServiceMintedDocAdminMixin, ReadOnlyInspectionMixin, ModelAdmin):
     list_display = ("invoice", "amount", "method", "paid_at", "reference", "recorded_by")
     list_filter = ("method", "paid_at")
     search_fields = ("invoice__number", "reference", "recorded_by__email")
@@ -97,7 +112,7 @@ class PaymentAdmin(ReadOnlyInspectionMixin, ModelAdmin):
 
 
 @admin.register(Act)
-class ActAdmin(ReadOnlyInspectionMixin, ModelAdmin):
+class ActAdmin(_ServiceMintedDocAdminMixin, ReadOnlyInspectionMixin, ModelAdmin):
     list_display = ("number", "deal", "act_status", "total_amount", "issued_at", "signed_at")
     list_filter = ("status", "issued_at")
     list_filter_submit = True

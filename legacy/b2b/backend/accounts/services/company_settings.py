@@ -103,7 +103,21 @@ def update_company_settings(
 
     for field in _TEXT_FIELDS:
         if field in data:
-            setattr(settings_row, field, (data.get(field) or "").strip()[:16])
+            value = (data.get(field) or "").strip()[:16]
+            if field == "doc_number_prefix" and value:
+                # The prefix is the GLOBAL discriminator that keeps per-company document numbers
+                # (ACME-КП-2026-00001, ACME-CT-2026-00001 …) from colliding on the globally-unique
+                # `number`. Two companies sharing a prefix would each mint the same string → an
+                # IntegrityError 500 on the second send (audit M1). Enforce case-insensitive
+                # uniqueness across companies before accepting it.
+                clash = (
+                    CompanySettings.objects.filter(doc_number_prefix__iexact=value)
+                    .exclude(company_id=company.id)
+                    .exists()
+                )
+                if clash:
+                    return None, "DOC_PREFIX_TAKEN"
+            setattr(settings_row, field, value)
             changed.append(field)
 
     if changed:

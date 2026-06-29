@@ -356,6 +356,45 @@ def seller_company_routed_to_deal(user: "CustomUser", deal_id) -> bool:
     return Deal.objects.filter(pk=deal_id, seller_routings__seller_company_id__in=seller_company_ids).exists()
 
 
+def routed_seller_company_id(user: "CustomUser", deal_id) -> Optional[int]:
+    """WHICH of the actor's can_sell SELLER companies is a routing target of `deal_id`, or None.
+
+    Stronger form of `seller_company_routed_to_deal` that returns the company id, so the КП
+    approval chain can anchor the КП-owning company to a *verified routed seller* before it
+    writes `quote.prepared_by`. Without this, any authenticated user could claim an unclaimed
+    buyer-request КП and drive its approval chain cross-tenant (audit F0).
+    """
+    if not user or not user.is_authenticated:
+        return None
+    from crm.models import DealSellerRouting
+
+    routed_ids = set(DealSellerRouting.objects.filter(deal_id=deal_id).values_list("seller_company_id", flat=True))
+    if not routed_ids:
+        return None
+    # The actor's active can_sell SELLER memberships that are routed to this deal, ordered
+    # DETERMINISTICALLY (audit M5 — no arbitrary .first()): prefer the primary membership, then
+    # prefer a company where the actor holds a chain-advancing role (OWNER/SALES_MANAGER), so the
+    # downstream role check in submit_for_review resolves against the RIGHT company.
+    memberships = (
+        user.memberships.filter(
+            is_active=True,
+            can_sell=True,
+            company__types__code__in=SELLER_COMPANY_TYPES,
+            company_id__in=routed_ids,
+        )
+        .select_related("role")
+        .order_by("-is_primary", "company_id")
+    )
+    chain_roles = {WorkspaceRoleCode.OWNER, WorkspaceRoleCode.SALES_MANAGER}
+    fallback_id = None
+    for membership in memberships:
+        if fallback_id is None:
+            fallback_id = membership.company_id
+        if membership.role and membership.role.code in chain_roles:
+            return membership.company_id
+    return fallback_id
+
+
 def seller_acting_company_ids(user: "CustomUser", request):
     """The viewer's can_sell SELLER company ids when ACTING as a seller (seller context),
     else None. Used to scope quote querysets to the seller's OWN КП — on a deal routed to

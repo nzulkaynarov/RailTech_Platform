@@ -2210,7 +2210,7 @@
   },
   "settings": {
     "title": "Settings",
-    "subtitle": "Platform configuration and preferences",
+    "subtitle": "Account settings and preferences",
     "tabs": {
       "general": "General",
       "appearance": "Appearance",
@@ -4299,6 +4299,10 @@
     "REQUEST_EMPTY": "Add at least one line item before submitting",
     "REQUEST_HAS_INCOMPLETE_ITEMS": "Complete the highlighted rows before submitting",
     "REQUEST_ALREADY_SUBMITTED": "The request has already been submitted",
+    "NO_RECIPIENTS": "Select at least one seller before submitting the request",
+    "DOC_PREFIX_TAKEN": "This numbering prefix is already used by another company — choose a different one",
+    "QUOTE_NOT_CLAIMED": "The quote isn't prepared by a seller yet — export becomes available after it's submitted for review",
+    "QUOTE_HAS_UNPRICED_LINES": "Set a price on every line — a quote with zero-priced rows can't be submitted",
     "PLATFORM_ADMIN_REQUIRED": "This action is restricted to platform administrators",
     "FORCE_REASON_REQUIRED": "Force-action requires a mandatory reason (written to the audit log)",
     "QUOTE_STATUS_NOT_FOUND": "Quote status not found in the lookup table",
