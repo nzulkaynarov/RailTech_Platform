@@ -347,6 +347,24 @@ class CompanySettings(models.Model):
         verbose_name=_("Срок действия КП по умолчанию (дней)"),
         help_text=_("Через сколько дней истекает новый КП (valid_until = сегодня + N)"),
     )
+    # ── Margin governance (юнит-экономика / защита от убытка) ──────────────────
+    # Both are GROSS MARGIN ON PRICE (прибыль / цена), NOT markup. The КП builder shows a
+    # traffic light per line and on the deal: 🟢 ≥ target, 🟡 between floor and target,
+    # 🔴 < floor. Below the floor a КП needs approval; below COST it is hard-blocked.
+    min_margin_percent = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=15,
+        verbose_name=_("Порог маржи (%)"),
+        help_text=_("Минимальная валовая маржа (на цене). Ниже — КП требует согласования."),
+    )
+    target_margin_percent = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=25,
+        verbose_name=_("Целевая маржа (%)"),
+        help_text=_("Желаемая валовая маржа (на цене) — зелёная зона в конструкторе КП."),
+    )
 
     # ── Document numbering scheme ──────────────────────────────────────────────
     doc_number_prefix = models.CharField(

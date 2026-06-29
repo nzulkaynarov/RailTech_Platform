@@ -217,6 +217,21 @@ export interface ChargeTemplate {
 	is_active: boolean;
 }
 
+/** Seller unit economics for the КП (cost-gated; null when the viewer can't see costs or
+ *  on list endpoints). Decimals arrive as strings. */
+export interface QuoteEconomics {
+	total_landed_cost: string;
+	gross_profit: string;
+	gross_margin_percent: string;   // gross margin ON PRICE (governance metric)
+	markup_percent: string;         // markup on cost (reference)
+	charge_cost_total: string;
+	operating_profit: string;
+	below_cost: boolean;            // hard-stop flag: client total < landed cost
+	below_floor: boolean;           // warn+approval flag: margin < company floor
+	min_margin_percent: string;
+	target_margin_percent: string;
+}
+
 export interface Quote {
 	id: number;
 	deal: number;
@@ -255,6 +270,8 @@ export interface Quote {
 	frozen_at?: string | null;
 	approved_by?: number | null;
 	approved_at?: string | null;
+	// Seller unit economics — present only on the single-quote/deal detail for a cost-viewer.
+	economics?: QuoteEconomics | null;
 	created_at: string;
 	updated_at?: string;
 }

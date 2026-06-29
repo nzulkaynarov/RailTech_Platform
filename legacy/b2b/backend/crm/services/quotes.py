@@ -431,6 +431,56 @@ class QuoteCalculationService:
         return quote
 
 
+def compute_quote_economics(quote) -> dict:
+    """Seller-side unit economics for the КП (панель «Экономика сделки»).
+
+    Uses the SAME stored values the engine produced (no re-derivation of price): per-line
+    landed_cost × qty for COGS; the КП's subtotal/charges/totals as-is. Margin is reported as
+    GROSS MARGIN ON PRICE (profit/price) — the governance metric — plus markup-on-cost for
+    reference. operating_profit subtracts the seller's REAL cost of charges (QuoteCharge.
+    cost_amount, default = billed), so a КП billed below its true cost shows the loss.
+    `below_cost` is the hard-stop flag; `below_floor` drives the warn+approval path.
+    Returns Decimals (the serializer/JSON layer stringifies)."""
+    items = list(quote.items.all())
+    total_landed_cost = sum((it.landed_cost * it.quantity for it in items), Decimal("0")).quantize(
+        Decimal("0.01"), rounding=ROUND_HALF_UP
+    )
+    subtotal = quote.subtotal_excl_vat or Decimal("0")
+    charges_total = quote.charges_total or Decimal("0")
+    tax_exclusive = subtotal + charges_total
+
+    gross_profit = subtotal - total_landed_cost
+    gross_margin_pct = (gross_profit / subtotal * Decimal("100")) if subtotal > 0 else Decimal("0")
+    markup_pct = (gross_profit / total_landed_cost * Decimal("100")) if total_landed_cost > 0 else Decimal("0")
+
+    charge_cost_total = sum(
+        (charge.resolve_seller_cost(subtotal) for charge in quote.charges.all()), Decimal("0")
+    ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    operating_profit = tax_exclusive - total_landed_cost - charge_cost_total
+
+    # Seller company's margin governance thresholds (gross-margin-on-price). Fall back to the
+    # model defaults when the КП has no resolvable owner / settings yet.
+    from accounts.models import CompanySettings
+
+    company_id = _quote_owner_company_id(quote)
+    settings_row = CompanySettings.objects.filter(company_id=company_id).first() if company_id else None
+    min_margin = settings_row.min_margin_percent if settings_row else Decimal("15")
+    target_margin = settings_row.target_margin_percent if settings_row else Decimal("25")
+
+    return {
+        "total_landed_cost": total_landed_cost,
+        "gross_profit": gross_profit.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
+        "gross_margin_percent": gross_margin_pct.quantize(Decimal("0.1"), rounding=ROUND_HALF_UP),
+        "markup_percent": markup_pct.quantize(Decimal("0.1"), rounding=ROUND_HALF_UP),
+        "charge_cost_total": charge_cost_total,
+        "operating_profit": operating_profit.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
+        "below_cost": tax_exclusive < total_landed_cost,
+        "below_floor": subtotal > 0 and gross_margin_pct < min_margin,
+        "min_margin_percent": min_margin,
+        "target_margin_percent": target_margin,
+    }
+
+
 def get_crm_analytics_data():
     """LOW-4: Extracted analytics logic from views to service."""
     deals = Deal.objects.all()
@@ -559,6 +609,12 @@ class QuoteLifecycleService:
         seller_company = _quote_seller_company(quote)
         if seller_company is None and not getattr(sent_by_user, "is_superuser", False):
             raise ValueError("QUOTE_NOT_CLAIMED")
+
+        # LOSS PREVENTION (authoritative server gate): never send a КП priced below its landed
+        # cost — even if items/charges were edited after the internal approval. Mirrors the
+        # live G1 guardrail in the builder; can't be bypassed via the API.
+        if compute_quote_economics(quote)["below_cost"]:
+            raise ValueError("QUOTE_BELOW_COST")
 
         # Mint the public no-login access token once (idempotent across re-sends of the
         # same КП version). Lets an offline/registered client open the client projection
@@ -704,6 +760,11 @@ class QuoteLifecycleService:
         # is still allowed — only a genuinely value-less offer is blocked (audit M6).
         if (quote.subtotal_excl_vat or 0) <= 0:
             return None, "QUOTE_HAS_UNPRICED_LINES"
+        # LOSS PREVENTION (hard stop): a КП whose client total is below its landed cost would be
+        # sold at a loss — never allow it into the approval chain. Below the margin FLOOR is a
+        # softer signal (warn + approval on the client side), NOT a hard block here.
+        if compute_quote_economics(quote)["below_cost"]:
+            return None, "QUOTE_BELOW_COST"
         # All gates passed — NOW it is safe to claim the КП: anchor BOTH the preparer and the
         # owning seller company to the VERIFIED company resolved above (audit F0/H2), so the
         # rest of the chain, the document header and the КП number all resolve to ONE coherent

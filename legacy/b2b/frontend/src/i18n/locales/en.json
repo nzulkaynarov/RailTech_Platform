@@ -715,6 +715,17 @@
       "fxOverrideFor": "Rate for {{code}}"
     },
     "marginApplied": "Margin",
+    "economics": {
+      "title": "Deal economics",
+      "landedCost": "Landed cost",
+      "grossProfit": "Gross profit",
+      "grossMargin": "Gross margin",
+      "markupRef": "markup {{markup}}%",
+      "operatingProfit": "Operating profit",
+      "belowCost": "Quote is below landed cost — selling at a loss. Sending is blocked.",
+      "belowFloor": "Margin is below the company floor ({{floor}}%) — approval required.",
+      "thresholds": "Floor {{floor}}% · Target {{target}}%"
+    },
     "leadTime": "Lead time",
     "leadTimeHelp": "Line delivery lead time in days",
     "leadTimeBadge": "up to {{days}} d.",
@@ -4304,6 +4315,7 @@
     "DOC_PREFIX_TAKEN": "This numbering prefix is already used by another company — choose a different one",
     "QUOTE_NOT_CLAIMED": "The quote isn't prepared by a seller yet — export becomes available after it's submitted for review",
     "QUOTE_HAS_UNPRICED_LINES": "Set a price on every line — a quote with zero-priced rows can't be submitted",
+    "QUOTE_BELOW_COST": "Quote is below landed cost — selling at a loss. Raise the price or margin.",
     "PLATFORM_ADMIN_REQUIRED": "This action is restricted to platform administrators",
     "FORCE_REASON_REQUIRED": "Force-action requires a mandatory reason (written to the audit log)",
     "QUOTE_STATUS_NOT_FOUND": "Quote status not found in the lookup table",

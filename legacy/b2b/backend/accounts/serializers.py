@@ -43,6 +43,8 @@ class CompanySettingsSerializer(serializers.ModelSerializer):
             "default_vat_rate",
             "default_margin_percent",
             "default_offer_validity_days",
+            "min_margin_percent",
+            "target_margin_percent",
             "doc_number_prefix",
             "created_at",
             "updated_at",

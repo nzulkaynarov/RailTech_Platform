@@ -556,6 +556,74 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 			{/* КП-level expense items / discounts (seller-only) */}
 			{activeQuote && <QuoteChargesSection quoteId={activeQuote.id} currency={presentationCurrency} />}
 
+			{/* Экономика сделки — себестоимость / прибыль / маржа / защита от убытка.
+			    economics === null for a viewer without quote.view_cost_margin → панель скрыта. */}
+			{activeQuote && activeQuote.economics && (
+				<Card className={activeQuote.economics.below_cost ? 'py-3 border-destructive' : 'py-3'}>
+					<CardContent className="space-y-3 py-0">
+						{activeQuote.economics.below_cost ? (
+							<div className="flex items-center gap-2 rounded-md bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive">
+								<AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
+								{t('quote.economics.belowCost')}
+							</div>
+						) : activeQuote.economics.below_floor ? (
+							<div className="flex items-center gap-2 rounded-md bg-warning/10 px-3 py-2 text-sm font-medium text-warning">
+								<AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
+								{t('quote.economics.belowFloor', { floor: Number(activeQuote.economics.min_margin_percent).toFixed(0) })}
+							</div>
+						) : null}
+						<div className="flex flex-wrap items-center justify-end gap-6">
+							<span className="mr-auto text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+								{t('quote.economics.title')}
+							</span>
+							<div className="flex flex-col items-end leading-none">
+								<span className="text-xs text-muted-foreground mb-1">{t('quote.economics.landedCost')}</span>
+								<span className="text-sm font-semibold tabular-nums">
+									{formatMoney(activeQuote.economics.total_landed_cost, presentationCurrency)}
+								</span>
+							</div>
+							<Separator orientation="vertical" className="h-6" />
+							<div className="flex flex-col items-end leading-none">
+								<span className="text-xs text-muted-foreground mb-1">{t('quote.economics.grossProfit')}</span>
+								<span className="text-sm font-semibold tabular-nums">
+									{formatMoney(activeQuote.economics.gross_profit, presentationCurrency)}
+								</span>
+							</div>
+							<Separator orientation="vertical" className="h-6" />
+							<div className="flex flex-col items-end leading-none">
+								<span className="text-xs text-muted-foreground mb-1">{t('quote.economics.grossMargin')}</span>
+								<span className={
+									'text-sm font-bold tabular-nums '
+									+ (activeQuote.economics.below_cost || activeQuote.economics.below_floor
+										? 'text-destructive'
+										: Number(activeQuote.economics.gross_margin_percent) >= Number(activeQuote.economics.target_margin_percent)
+											? 'text-success'
+											: 'text-warning')
+								}>
+									{Number(activeQuote.economics.gross_margin_percent).toFixed(1)}%
+								</span>
+								<span className="text-xs text-muted-foreground">
+									{t('quote.economics.markupRef', { markup: Number(activeQuote.economics.markup_percent).toFixed(0) })}
+								</span>
+							</div>
+							<Separator orientation="vertical" className="h-8" />
+							<div className="flex flex-col items-end leading-none">
+								<span className="text-xs text-primary font-semibold mb-1">{t('quote.economics.operatingProfit')}</span>
+								<span className="text-lg font-bold tabular-nums">
+									{formatMoney(activeQuote.economics.operating_profit, presentationCurrency)}
+								</span>
+							</div>
+						</div>
+						<p className="text-right text-xs text-muted-foreground">
+							{t('quote.economics.thresholds', {
+								floor: Number(activeQuote.economics.min_margin_percent).toFixed(0),
+								target: Number(activeQuote.economics.target_margin_percent).toFixed(0),
+							})}
+						</p>
+					</CardContent>
+				</Card>
+			)}
+
 			{/* Summary Footer */}
 			<Card className="py-3">
 				<CardContent className="flex items-center justify-end gap-6 py-0">
