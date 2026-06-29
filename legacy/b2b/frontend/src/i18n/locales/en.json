@@ -726,6 +726,16 @@
       "belowFloor": "Margin is below the company floor ({{floor}}%) — approval required.",
       "thresholds": "Floor {{floor}}% · Target {{target}}%"
     },
+    "rail": {
+      "title": "Economics & totals",
+      "params": "Quote parameters",
+      "totals": "Amount due",
+      "collapse": "Collapse panel",
+      "expand": "Expand panel"
+    },
+    "lineDetails": "Line details",
+    "discountPercent": "Line discount (%)",
+    "lineProfit": "Line profit",
     "leadTime": "Lead time",
     "leadTimeHelp": "Line delivery lead time in days",
     "leadTimeBadge": "up to {{days}} d.",
