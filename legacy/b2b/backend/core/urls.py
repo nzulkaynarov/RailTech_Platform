@@ -58,6 +58,7 @@ from crm.views import (
     ContractViewSet,
     CRMAnalyticsView,
     DashboardAnalyticsView,
+    TimeToFirstQuoteView,
     DealStageViewSet,
     DealViewSet,
     FulfillmentViewSet,
@@ -191,6 +192,7 @@ urlpatterns = (
         path("api/v1/sourcing/import-status/<str:task_id>/", ImportStatusView.as_view(), name="import-status"),
         path("api/v1/crm/analytics/", CRMAnalyticsView.as_view(), name="crm-analytics"),
         path("api/v1/crm/analytics/dashboard/", DashboardAnalyticsView.as_view(), name="dashboard-analytics"),
+        path("api/v1/crm/analytics/time-to-first-quote/", TimeToFirstQuoteView.as_view(), name="time-to-first-quote"),
         path("api/v1/analytics/page-stats/", PageStatsView.as_view(), name="page-stats"),
         path("api/v1/analytics/platform-dashboard/", PlatformDashboardView.as_view(), name="platform-dashboard"),
         # Admin Platform API

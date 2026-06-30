@@ -7,7 +7,7 @@ Re-exports all ViewSets and Views for backwards compatibility so that
 
 from crm.views.ai import SuggestChatReplyView  # noqa: F401
 from crm.views.ai_diff import QuoteRequestDiffView  # noqa: F401
-from crm.views.analytics import CRMAnalyticsView, DashboardAnalyticsView  # noqa: F401
+from crm.views.analytics import CRMAnalyticsView, DashboardAnalyticsView, TimeToFirstQuoteView  # noqa: F401
 from crm.views.billing import (  # noqa: F401
     ActViewSet,
     ContractViewSet,
@@ -47,6 +47,7 @@ __all__ = [
     # analytics
     "DashboardAnalyticsView",
     "CRMAnalyticsView",
+    "TimeToFirstQuoteView",
     # billing (contracts, invoices, payments, acts, fulfillment)
     "ContractViewSet",
     "InvoiceViewSet",
