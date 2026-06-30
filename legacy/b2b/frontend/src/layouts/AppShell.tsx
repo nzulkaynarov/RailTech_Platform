@@ -1,22 +1,15 @@
 import { useState, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  LayoutDashboard,
-  Package,
   ShoppingCart,
   Settings,
-  HelpCircle,
   ChevronDown,
   Layers,
-  ClipboardList,
   User,
   LogOut,
   ChevronUp,
   Store,
-  Handshake,
   Check,
-  Receipt,
-  Truck,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -63,6 +56,7 @@ import {
   useUserStore,
   type CompanyStatus,
 } from '@/store/userStore';
+import { buildNavigation, TENANT_NAV, TENANT_BOTTOM_NAV } from '@/config/navigation';
 import { useCartStore, useCartCount } from '@/store/cartStore';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useAuthStore } from '@/store/authStore';
@@ -87,105 +81,6 @@ interface NavItem {
   active?: boolean;
   badge?: number;
   children?: NavChild[];
-}
-
-/* ─── Status-based navigation (what the user sees depends on context) ─ */
-
-type TFn = (key: string) => string;
-
-function getBuyerNavigation(activePage: string, t: TFn): NavItem[] {
-  // Focused buyer flow: browse Catalog → create/track заявка in My Requests
-  // (opens the request detail where the КП is reviewed + accepted/rejected) →
-  // Billing. Removed the duplicate "Deals" (same data as My Requests), the
-  // separate "Commercial Offers" list (the КП lives inside the request), the
-  // tender "Supplier Bids" (not part of the buyer↔seller КП model), and "Acts"
-  // (no buyer action there).
-  const items: NavItem[] = [
-    { label: t('shell.dashboard'), icon: <LayoutDashboard className="h-4 w-4" />, id: 'dashboard', active: activePage === 'dashboard' },
-    { label: t('shell.catalog'), icon: <Package className="h-4 w-4" />, id: 'products', active: activePage === 'products' },
-    { label: t('shell.myRequests'), icon: <ClipboardList className="h-4 w-4" />, id: 'my-requests', active: activePage === 'my-requests' },
-    // Order lifecycle, in order: Requests → Contracts → Deliveries → Billing.
-    // Contracts and Deliveries are their own steps, not "billing".
-    { label: t('shell.contracts'), icon: <Handshake className="h-4 w-4" />, id: 'contracts', active: activePage === 'contracts' },
-    { label: t('shell.fulfillments'), icon: <Truck className="h-4 w-4" />, id: 'fulfillments', active: activePage === 'fulfillments' },
-    {
-      label: t('shell.billing'), icon: <Receipt className="h-4 w-4" />,
-      children: [
-        { label: t('shell.invoices'), id: 'invoices', active: activePage === 'invoices' },
-        { label: t('shell.payments'), id: 'payments', active: activePage === 'payments' },
-      ],
-    },
-  ];
-  return items;
-}
-
-function getSellerNavigation(activePage: string, t: TFn): NavItem[] {
-  // Clients (full company list), Leads and Sales Analytics are Platform-Admin-only
-  // endpoints (IsPlatformAdmin) — they 403 for EVERY seller (incl. OWNER), so they
-  // are NOT in the seller nav (they were dead-ends). Seller-scoped analytics/clients
-  // would each need their own seller-permitted endpoint before being surfaced here.
-  const crmChildren: NavChild[] = [
-    { label: t('shell.deals'), id: 'crm-deals', active: activePage === 'crm-deals' },
-    { label: t('shell.quotes'), id: 'crm-quotes', active: activePage === 'crm-quotes' },
-  ];
-
-  const items: NavItem[] = [
-    { label: t('shell.dashboard'), icon: <LayoutDashboard className="h-4 w-4" />, id: 'dashboard', active: activePage === 'dashboard' },
-    {
-      label: t('shell.catalog'), icon: <Package className="h-4 w-4" />,
-      children: [
-        { label: t('shell.nomenclature'), id: 'products', active: activePage === 'products' },
-        { label: t('shell.categories'), id: 'categories', active: activePage === 'categories' },
-        { label: t('shell.equipmentGroups'), id: 'equipment-groups', active: activePage === 'equipment-groups' },
-        { label: t('shell.catalogImport'), id: 'catalog-import', active: activePage === 'catalog-import' },
-      ],
-    },
-    {
-      // One canonical seller deal surface (consolidation): the CRM → Deals
-      // pipeline is the single entry. The old Sourcing→Requests duplicate list was
-      // removed; Excel import is reached from the Deals "New" dialog.
-      label: t('shell.crm'), icon: <Handshake className="h-4 w-4" />,
-      children: crmChildren,
-    },
-    {
-      label: t('shell.billing'), icon: <Receipt className="h-4 w-4" />,
-      children: [
-        { label: t('shell.mySubscription'), id: 'my-subscription', active: activePage === 'my-subscription' },
-        { label: t('shell.contracts'), id: 'contracts', active: activePage === 'contracts' },
-        { label: t('shell.invoices'), id: 'invoices', active: activePage === 'invoices' },
-        { label: t('shell.payments'), id: 'payments', active: activePage === 'payments' },
-        { label: t('shell.acts'), id: 'acts', active: activePage === 'acts' },
-        { label: t('shell.fulfillments'), id: 'fulfillments', active: activePage === 'fulfillments' },
-      ],
-    },
-  ];
-  return items;
-}
-
-function getNavigation(status: CompanyStatus, activePage: string, t: TFn): NavItem[] {
-  switch (status) {
-    case 'BUYER':
-      return getBuyerNavigation(activePage, t);
-    case 'SELLER':
-      return getSellerNavigation(activePage, t);
-    default: {
-      // Exhaustiveness guard: CompanyStatus is BUYER | SELLER. If a new context
-      // is added, TypeScript flags this line instead of silently falling through.
-      const _exhaustive: never = status;
-      void _exhaustive;
-      return getSellerNavigation(activePage, t);
-    }
-  }
-}
-
-// AppShell never renders for a platform admin (App.tsx routes ADMIN to
-// PlatformAdminShell), so the bottom nav is just settings + help — the old
-// role==='ADMIN' admin-* block here was dead code.
-function getBottomNavigation(t: TFn): NavItem[] {
-  return [
-    { label: t('shell.settings'), icon: <Settings className="h-4 w-4" />, id: 'settings' },
-    { label: t('shell.help'), icon: <HelpCircle className="h-4 w-4" />, id: 'help' },
-  ];
 }
 
 /* ─── Status icon helper ────────────────────────────────────────────── */
@@ -341,20 +236,23 @@ export function AppShell(props: AppShellProps) {
 
 function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShellProps) {
   const { t } = useTranslation();
-  const { role, activeStatus, profile, company, setActiveStatus } = useUserStore();
+  const { role, activeStatus, profile, company, capabilities, setActiveStatus } = useUserStore();
   const queryClient = useQueryClient();
   const cartCount = useCartCount();
   const { currency, setCurrency } = useCurrencyStore();
   const { state } = useSidebar();
   const sidebarCollapsed = state === 'collapsed';
-  // Platform admins aren't business actors; their company's KYC must not disable
-  // admin navigation (see ADR-0002). For all other roles we keep the gating.
-  const isKycVerified = company.kycStatus === 'verified';
+  // ADR-0005: ONE config-driven nav, filtered by effective capabilities. Items the user can't
+  // access are HIDDEN (not greyed) — e.g. before KYC the buyer "Сделки" simply isn't shown,
+  // leaving Главная/Каталог/Настройки + the onboarding checklist. No disabled-state gating.
   const navigation = useMemo(
-    () => getNavigation(activeStatus, activePage, t),
-    [activeStatus, activePage, t],
+    () => buildNavigation(TENANT_NAV, capabilities, activeStatus, activePage, t),
+    [capabilities, activeStatus, activePage, t],
   );
-  const bottomNav = useMemo(() => getBottomNavigation(t), [t]);
+  const bottomNav = useMemo(
+    () => buildNavigation(TENANT_BOTTOM_NAV, capabilities, activeStatus, activePage, t),
+    [capabilities, activeStatus, activePage, t],
+  );
 
 
   return (
@@ -426,7 +324,7 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
           {/* Main navigation */}
           <nav aria-label={t('shell.mainNavigation')} className="flex-1 space-y-0.5 overflow-y-auto py-3 px-3 group-data-[collapsible=icon]:px-1.5">
             {navigation.map((item) => (
-              <SidebarNavItem key={item.label} item={item} onNavigate={onNavigate} collapsed={sidebarCollapsed} disabled={!isKycVerified} />
+              <SidebarNavItem key={item.label} item={item} onNavigate={onNavigate} collapsed={sidebarCollapsed} />
             ))}
           </nav>
 

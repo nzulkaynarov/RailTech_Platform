@@ -286,6 +286,7 @@ class UserViewSet(viewsets.ModelViewSet):
                         "company__verification_status",
                         "company__country",
                         "role",
+                        "company_role",  # capabilities.permissions reads the member's CompanyRole
                     ).prefetch_related("company__types"),
                 ),
             )

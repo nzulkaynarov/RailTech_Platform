@@ -37,7 +37,14 @@ def invite_workspace_member(company: Company, email: str, role_code: str) -> Tup
     user.set_unusable_password()
     user.save()
 
-    CompanyMember.objects.create(user=user, company=company, role=w_role, is_primary=True)
+    member = CompanyMember.objects.create(user=user, company=company, role=w_role, is_primary=True)
+    # Give the invited member a starting CompanyRole mapped from their WorkspaceRole, so the G4
+    # access matrix governs them from day one (not the can_sell/can_buy fallback). The company
+    # admin can re-assign later in «Команда и доступы».
+    from .roles import default_company_role_for
+
+    member.company_role = default_company_role_for(company, role_code)
+    member.save(update_fields=["company_role"])
 
     token = default_token_generator.make_token(user)
     uid = urlsafe_base64_encode(force_bytes(user.pk))
