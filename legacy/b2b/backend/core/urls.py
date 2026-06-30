@@ -8,6 +8,7 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, Spec
 from rest_framework.permissions import IsAdminUser
 from rest_framework.routers import DefaultRouter
 from accounts.views import (
+    CompanyEntitlementViewSet,
     CompanyRoleApplicationViewSet,
     CompanyRoleViewSet,
     CompanyTypeViewSet,
@@ -126,6 +127,7 @@ router.register(r"crm/leads", LeadViewSet, basename="lead")
 router.register(r"accounts/companies", CompanyViewSet)
 router.register(r"accounts/users", UserViewSet)
 router.register(r"accounts/subscriptions", SupplierSubscriptionViewSet, basename="subscription")
+router.register(r"admin/entitlements", CompanyEntitlementViewSet, basename="entitlement")
 router.register(r"accounts/role-applications", CompanyRoleApplicationViewSet, basename="roleapplication")
 router.register(r"accounts/system-roles", SystemRoleViewSet, basename="systemrole")
 router.register(r"accounts/workspace-roles", WorkspaceRoleViewSet, basename="workspacerole")

@@ -5,6 +5,7 @@ from rest_framework import serializers
 from .models import (
     Company,
     CompanyDocumentProfile,
+    CompanyEntitlement,
     CompanyMember,
     CompanyRole,
     CompanyRoleApplication,
@@ -540,6 +541,38 @@ class SupplierSubscriptionSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = ["id", "company_name", "company_inn", "created_at", "updated_at"]
+
+
+class CompanyEntitlementSerializer(serializers.ModelSerializer):
+    """Platform-admin view/CRUD of a company's feature entitlements (ADR-0006 Move 4 monetization)."""
+
+    company_name = serializers.CharField(source="company.name", read_only=True)
+    company_inn = serializers.CharField(source="company.inn", read_only=True)
+    access_display = serializers.CharField(source="get_access_display", read_only=True)
+    is_granted = serializers.SerializerMethodField()
+
+    def get_is_granted(self, obj) -> bool:
+        return obj.is_currently_granted()
+
+    class Meta:
+        model = CompanyEntitlement
+        fields = [
+            "id",
+            "company",
+            "company_name",
+            "company_inn",
+            "feature_key",
+            "access",
+            "access_display",
+            "limit",
+            "credits",
+            "expires_at",
+            "note",
+            "is_granted",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "company_name", "company_inn", "access_display", "is_granted", "created_at", "updated_at"]
 
 
 class CompanyRoleApplicationSerializer(serializers.ModelSerializer):
