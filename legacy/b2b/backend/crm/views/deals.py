@@ -397,7 +397,8 @@ class DealViewSet(viewsets.ModelViewSet):
         if err:
             http_status = (
                 status.HTTP_403_FORBIDDEN
-                if err in ("ADMIN_VIEWER_CANNOT_ACT", "ONLY_SELLER_CAN_BUILD_QUOTE", "MEMBER_REQUIRED_FOR_ACTION")
+                if err
+                in ("ADMIN_VIEWER_CANNOT_ACT", "ONLY_SELLER_CAN_BUILD_QUOTE", "MEMBER_REQUIRED_FOR_ACTION", "AI_DRAFT_NOT_ENTITLED")
                 else status.HTTP_404_NOT_FOUND
                 if err == "DEAL_NOT_FOUND"
                 else status.HTTP_400_BAD_REQUEST
