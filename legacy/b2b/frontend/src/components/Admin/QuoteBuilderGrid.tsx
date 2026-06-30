@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { QuoteItem, QuoteEconomics, crmApi } from '@/api/crmApi';
+import { translateApiError } from '@/lib/apiError';
 import {
 	Loader2, Save, AlertTriangle, Plus, Trash2, Sparkles, FileText, Settings, Tag,
 	ChevronRight, ChevronDown, PanelRightClose, PanelRightOpen,
@@ -82,8 +83,9 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 			await queryClient.invalidateQueries({ queryKey: ['quote-items'] });
 			toast.success(t('aiDraft.generated', { count: prefilled }));
 		} catch (e) {
-			const code = (e as { response?: { data?: { error?: string } } })?.response?.data?.error;
-			toast.error(code === 'NO_REQUEST_LINES' ? t('aiDraft.noLines') : t('aiDraft.error'));
+			// Friendly message per error code (AI_DRAFT_NOT_ENTITLED → «оформите подписку»,
+			// NO_REQUEST_LINES, …) via the central apiErrors.* map.
+			toast.error(translateApiError(e));
 		} finally {
 			setDraftBusy(false);
 		}

@@ -83,6 +83,8 @@ export function DealQuotePage({ dealId, onBack }: DealQuotePageProps) {
   // sees the priced offer + frozen prices) → gate behind a confirm dialog.
   const confirmSend = async () => {
     if (!quote) return;
+    // Errors (e.g. QUOTE_SEND_NOT_ENTITLED) propagate to the ConfirmActionDialog's translateError,
+    // which renders the friendly apiErrors.* message — don't swallow them here.
     await sendQuote.mutateAsync(quote.id);
     toast.success(t('pages.deals.detail.quoteSentToast'));
   };
