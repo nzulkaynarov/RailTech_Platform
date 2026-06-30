@@ -750,13 +750,26 @@ class QuoteLifecycleService:
 
         transaction.on_commit(lambda: send_quote_email.delay(quote_id))
 
-        # Change deal stage via FSM
-        transition_deal_stage(
-            quote.deal,
+        # Change deal stage via FSM. P0-1: the real buyer path lands the deal in RFQ_OPEN, and
+        # QUOTE_SENT is only legal from CALCULATING — so advance through CALCULATING first, and
+        # CAPTURE the error instead of swallowing it. Previously the error was discarded: the КП
+        # was marked SENT + emailed while the deal silently stayed in RFQ_OPEN forever (dead-end).
+        deal = quote.deal
+        current_stage = deal.stage.code if deal.stage else None
+        if current_stage in (DealStageCode.RFQ_OPEN, DealStageCode.SOURCING):
+            _, stage_err = transition_deal_stage(
+                deal, DealStageCode.CALCULATING, actor=sent_by_user, reason="Сборка КП к отправке"
+            )
+            if stage_err:
+                raise ValueError(stage_err)
+        _, stage_err = transition_deal_stage(
+            deal,
             DealStageCode.QUOTE_SENT,
             actor=sent_by_user,
             reason=f"КП v{quote.version} отправлено клиенту",
         )
+        if stage_err:
+            raise ValueError(stage_err)
 
         # Create notification for client contact
         if quote.deal.client:
@@ -791,13 +804,15 @@ class QuoteLifecycleService:
         quote.approved_by = approved_by_user
         quote.save(update_fields=["status", "approved_at", "approved_by", "updated_at"])
 
-        # Change deal stage via FSM
-        transition_deal_stage(
+        # Change deal stage via FSM (P0-1: capture the error — don't swallow it).
+        _, stage_err = transition_deal_stage(
             quote.deal,
             DealStageCode.CONTRACT_SIGNED,
             actor=approved_by_user,
             reason=f"КП v{quote.version} одобрено клиентом",
         )
+        if stage_err:
+            raise ValueError(stage_err)
 
         # Materialize the Contract the instant the buyer accepts — otherwise the deal sits in
         # CONTRACT_SIGNED with NO actual Contract (audit B1: approve → green badge → dead-end,
@@ -1036,13 +1051,15 @@ class QuoteLifecycleService:
         # PDF). It's preserved on the deal-stage transition audit below + the seller notification.
         quote.save(update_fields=["status", "updated_at"])
 
-        # Move deal back to CALCULATING via FSM
-        transition_deal_stage(
+        # Move deal back to CALCULATING via FSM (P0-1: capture the error — don't swallow it).
+        _, stage_err = transition_deal_stage(
             quote.deal,
             DealStageCode.CALCULATING,
             actor=rejected_by_user,
             reason=f"КП v{quote.version} отклонено. {reason}",
         )
+        if stage_err:
+            raise ValueError(stage_err)
 
         # Notify the КП author (+ distinct manager) that the client rejected —
         # same single-seller reasoning as approve_quote. Pushed over WS.

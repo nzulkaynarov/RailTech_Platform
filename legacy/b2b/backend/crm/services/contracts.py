@@ -99,7 +99,30 @@ def generate_contract_from_quote(
         user=actor,
         level="INFO",
     )
+    # P1: a created contract must not be silent — tell BOTH parties it awaits signature
+    # (previously generate set PENDING_CLIENT and nobody was notified → dead-end after accept).
+    _notify_contract_pending(contract)
     return contract, None
+
+
+def _notify_contract_pending(contract) -> None:
+    """Notify both parties that a contract is awaiting signature (PENDING_CLIENT)."""
+    from notifications.models import Notification, NotificationType
+    from notifications.services import push_notification_ws
+
+    info = NotificationType.objects.filter(code="INFO").first()
+    for recipient in {contract.deal.client, _contract_seller_recipient(contract)}:
+        if recipient is None:
+            continue
+        notif = Notification.objects.create(
+            user=recipient,
+            type=info,
+            title="Контракт ожидает подписания",
+            message=f"Контракт {contract.number} по сделке #{contract.deal_id} готов — требуется подпись сторон",
+            link="/crm/deals",
+            deal=contract.deal,
+        )
+        push_notification_ws(notif)
 
 
 def _render_contract_pdf(contract) -> None:
@@ -177,7 +200,7 @@ def sign_contract_by_client(
         user=client_user,
         level="INFO",
     )
-    _notify_contract_signed(contract)
+    _finalize_if_signed(contract)
     return contract, None
 
 
@@ -251,8 +274,40 @@ def sign_contract_by_manager(
         user=manager_user,
         level="INFO",
     )
-    _notify_contract_signed(contract)
+    _finalize_if_signed(contract)
     return contract, None
+
+
+def _contract_seller_recipient(contract):
+    """The seller-side человек to notify about a contract — the КП author (prepared_by), NOT the
+    legacy NULL deal.manager that the old notifications targeted (so the author silently never
+    learned the contract was signed / the КП expired). P0/P1 loop fix."""
+    quote = getattr(contract, "quote", None)
+    return getattr(quote, "prepared_by", None) if quote else None
+
+
+def _finalize_if_signed(contract) -> None:
+    """When BOTH parties have signed, close the loop: auto-advance the deal CONTRACT_SIGNED →
+    CLOSED_WON (the contract gate is now satisfied; this also triggers the auto-invoice hook —
+    the loop's finish line) and notify both sides. Previously the contract sat SIGNED while the
+    deal stayed in CONTRACT_SIGNED forever and the author was never told (dead-end)."""
+    if contract.status_code != ContractStatusCode.SIGNED:
+        return
+    from ..constants import DealStageCode
+    from .deals import transition_deal_stage
+
+    # actor=None → internal/system transition (bypasses the admin-viewer actor-guard, logs as auto).
+    _, err = transition_deal_stage(
+        contract.deal, DealStageCode.CLOSED_WON, actor=None, reason="Контракт подписан обеими сторонами"
+    )
+    if err:
+        # The signature itself succeeded; a stage hiccup must not break it — record, don't raise.
+        ActivityLog.objects.create(
+            action="Авто-переход в CLOSED_WON не выполнен",
+            detail=f"Контракт {contract.number} / сделка #{contract.deal_id}: {err}",
+            level="WARNING",
+        )
+    _notify_contract_signed(contract)
 
 
 def _notify_contract_signed(contract) -> None:
@@ -262,7 +317,7 @@ def _notify_contract_signed(contract) -> None:
     if contract.status_code != ContractStatusCode.SIGNED:
         return
     info = NotificationType.objects.filter(code="SUCCESS").first()
-    for recipient in {contract.deal.client, contract.deal.manager}:
+    for recipient in {contract.deal.client, _contract_seller_recipient(contract)}:
         if recipient is None:
             continue
         notif = Notification.objects.create(
