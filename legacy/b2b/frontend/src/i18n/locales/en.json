@@ -16,6 +16,12 @@
     "none": "No offers for the matched lines",
     "error": "Could not prefill prices"
   },
+  "aiDraft": {
+    "action": "AI draft КП",
+    "generated": "Draft КП created, {{count}} prices prefilled",
+    "noLines": "The request has no lines to draft from",
+    "error": "Could not create the draft КП"
+  },
   "aiMatch": {
     "button": "AI catalog match",
     "title": "AI catalog match",

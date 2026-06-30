@@ -379,6 +379,36 @@ class DealViewSet(viewsets.ModelViewSet):
         return self._assignment_response(deal, err, request)
 
     @extend_schema(
+        summary="Generate a pre-filled draft КП from the buyer request (AI moat / speed)",
+        description=(
+            "Creates a fresh DRAFT Quote for the seller, copying the buyer's request lines and "
+            "prefilling matched products' cost / currency / lead-time from the seller's SupplierOffers "
+            "(ADR-0006 Move 3). The seller reviews-and-sends instead of building from scratch."
+        ),
+        responses={200: DealDetailSerializer},
+        tags=["CRM"],
+    )
+    @action(detail=True, methods=["post"], url_path="generate-draft-quote", permission_classes=[IsAuthenticated])
+    def generate_draft_quote(self, request, pk=None):
+        """Thin wrapper (Rule 8) — build a pre-filled draft КП from the buyer request."""
+        from crm.services.draft_quote import generate_draft_quote as build_draft
+
+        quote, err, prefilled = build_draft(int(pk), request.user)
+        if err:
+            http_status = (
+                status.HTTP_403_FORBIDDEN
+                if err in ("ADMIN_VIEWER_CANNOT_ACT", "ONLY_SELLER_CAN_BUILD_QUOTE", "MEMBER_REQUIRED_FOR_ACTION")
+                else status.HTTP_404_NOT_FOUND
+                if err == "DEAL_NOT_FOUND"
+                else status.HTTP_400_BAD_REQUEST
+            )
+            return Response({"error": err}, status=http_status)
+        deal = Deal.objects.get(pk=quote.deal_id)
+        return Response(
+            {"prefilled": prefilled, "quote_id": quote.id, "deal": DealDetailSerializer(deal, context={"request": request}).data}
+        )
+
+    @extend_schema(
         summary="List seller companies for the routing picker",
         description="Buyer-facing lightweight directory of active SUPPLIER companies.",
         responses={

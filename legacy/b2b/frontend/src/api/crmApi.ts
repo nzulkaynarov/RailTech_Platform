@@ -786,6 +786,16 @@ export const crmApi = {
 		return response.data;
 	},
 
+	// ─── AI draft-КП generation (Move 3) ─────────────────────
+	// Build a pre-filled draft КП from the buyer request (copied lines + pricing-assist on matches).
+	generateDraftQuote: async (dealId: number) => {
+		const response = await apiClient.post<{ prefilled: number; quote_id: number }>(
+			`crm/deals/${dealId}/generate-draft-quote/`,
+			{},
+		);
+		return response.data;
+	},
+
 	// ─── AI #7 pre-flight quality check ──────────────────────
 	// POST draft request lines → advisory quality findings per line.
 	// Advisory only (never blocks submit); may 503 {error:'AI_DISABLED'}.
