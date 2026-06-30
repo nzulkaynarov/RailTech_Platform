@@ -147,6 +147,13 @@ def export_quote(quote: Quote, fmt: str, *, include_costs: bool = False) -> Http
     fmt = (fmt or "pdf").lower()
     if fmt not in EXPORT_FORMATS:
         raise ValueError("UNSUPPORTED_FORMAT")
+    # HOLE 2: an unrated line currency means every total is a placeholder (rate 1). Refuse to
+    # export ANY format with knowingly-wrong numbers — the xlsx/csv path renders independently of
+    # generate_pdf (which re-checks fx_missing + below_cost for the client PDF), so guard here too.
+    from crm.services.quotes import compute_quote_economics
+
+    if compute_quote_economics(quote)["fx_missing"]:
+        raise ValueError("FX_RATE_MISSING")
     if fmt == "pdf":
         return _export_pdf(quote)
     return _export_spreadsheet(quote, fmt, include_costs=include_costs)

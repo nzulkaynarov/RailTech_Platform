@@ -95,8 +95,17 @@ def set_quote_delivery_basis(quote_id: int, basis_id, actor):
         if not basis:
             return None, "DELIVERY_BASIS_NOT_FOUND"
 
+    old_basis_id = quote.delivery_basis_id
     quote.delivery_basis = basis
     quote.save(update_fields=["delivery_basis", "updated_at"])
+    # KP-05: when the basis actually CHANGES, drop the previous template's untouched auto-rows
+    # (from_template=True) before re-seeding — otherwise EXW's freight lingers after switching to
+    # DDP and stale charges silently inflate the total. Manually-added rows (from_template=False),
+    # including template rows the seller edited (the update path flips the flag), are preserved.
+    # Same-basis re-apply skips this (idempotent — apply_charge_template_to_quote is type-deduped).
+    new_basis_id = basis.id if basis else None
+    if old_basis_id != new_basis_id:
+        quote.charges.filter(from_template=True).delete()
     # F3.8: choosing a basis auto-adds its document-level charges (e.g. DDP → insurance +
     # certification) — the per-line table stays unified (себестоимость + ТНВЭД only). Freight
     # & the rest live here at document level, not per line.

@@ -224,8 +224,9 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
                 }
             )
         except ValueError as e:
-            if str(e) == "QUOTE_NOT_CLAIMED":
-                return Response({"error": "QUOTE_NOT_CLAIMED"}, status=status.HTTP_409_CONFLICT)
+            # Claim + loss-prevention guards (HOLE 2) → 409, not 500.
+            if str(e) in ("QUOTE_NOT_CLAIMED", "FX_RATE_MISSING", "QUOTE_BELOW_COST"):
+                return Response({"error": str(e)}, status=status.HTTP_409_CONFLICT)
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         except (OSError, RuntimeError) as e:
             return Response(
@@ -272,7 +273,11 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
         except ValueError as exc:
             code = str(exc)
             # Surface the specific loss-prevention / claim errors instead of a generic status.
-            return _chain_error_response(code if code in ("QUOTE_BELOW_COST", "QUOTE_NOT_CLAIMED") else "INVALID_STATUS")
+            return _chain_error_response(
+                code
+                if code in ("QUOTE_BELOW_COST", "QUOTE_NOT_CLAIMED", "FX_RATE_MISSING", "QUOTE_HAS_UNPRICED_LINES")
+                else "INVALID_STATUS"
+            )
         return Response(self.get_serializer(quote).data)
 
     @extend_schema(
@@ -519,8 +524,8 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
             try:
                 quote = QuoteLifecycleService.generate_pdf(quote.pk)
             except ValueError as exc:
-                if str(exc) == "QUOTE_NOT_CLAIMED":
-                    return Response({"error": "QUOTE_NOT_CLAIMED"}, status=status.HTTP_409_CONFLICT)
+                if str(exc) in ("QUOTE_NOT_CLAIMED", "FX_RATE_MISSING", "QUOTE_BELOW_COST"):
+                    return Response({"error": str(exc)}, status=status.HTTP_409_CONFLICT)
                 return Response({"error": "PDF generation failed"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             except (OSError, RuntimeError):
                 return Response(
@@ -833,7 +838,9 @@ class QuoteChargeViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         self._assert_seller()
-        serializer.save()
+        # Editing a charge makes it the seller's deliberate value → mark it manual so a later
+        # Incoterm switch (KP-05) won't wipe it with the rest of the old basis's template rows.
+        serializer.save(from_template=False)
 
     def perform_destroy(self, instance):
         self._assert_seller()

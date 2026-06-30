@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from rest_framework import serializers
 
@@ -223,6 +223,28 @@ class QuoteSerializer(serializers.ModelSerializer):
         from crm.services import effective_quote_lead_time
 
         return effective_quote_lead_time(obj)
+
+    def validate_fx_manual(self, value):
+        """Client-writable manual FX override (договорной курс). Harden it (adversarial HOLE 1):
+        a rate of "0"/negative/non-numeric would otherwise sail past the fx_missing guard yet
+        zero or flip a line's landed cost → a free/loss КП shown as profit. Accept only POSITIVE
+        numerics; normalise keys to upper-case; drop blank entries."""
+        if value in (None, ""):
+            return {}
+        if not isinstance(value, dict):
+            raise serializers.ValidationError("FX_MANUAL_INVALID")
+        cleaned = {}
+        for code, rate in value.items():
+            if rate in (None, ""):
+                continue  # blank = not set; falls through to snapshot/market
+            try:
+                parsed = Decimal(str(rate))
+            except (InvalidOperation, ValueError, TypeError):
+                raise serializers.ValidationError({code: "FX_RATE_INVALID"})
+            if parsed <= 0:
+                raise serializers.ValidationError({code: "FX_RATE_MUST_BE_POSITIVE"})
+            cleaned[str(code).upper()] = str(parsed)
+        return cleaned
 
     def get_economics(self, obj):
         if not self.context.get("include_economics"):

@@ -176,6 +176,11 @@ def _build_quote_with_items(deal, manager):
         prepared_by=manager,
         tax_country=Country.objects.get(code="UZ"),
         vat_rate=Decimal("12.00"),
+        # Declare an explicit 1:1 USD→UZS rate (договорной курс) so the КП prices at parity —
+        # this test exercises the golden FLOW, not FX conversion. The engine no longer invents a
+        # silent rate=1 for a missing rate (KP-01); a КП with an unrated currency is now blocked,
+        # so the rate must be stated. (Real FX conversion is covered in the multi-currency tests.)
+        fx_manual={"USD": "1"},
         subtotal_excl_vat=Decimal("0"),
         vat_amount=Decimal("0"),
         total_incl_vat=Decimal("0"),
