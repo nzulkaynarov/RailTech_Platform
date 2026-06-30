@@ -303,6 +303,26 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
         return Response(self.get_serializer(quote).data)
 
     @extend_schema(
+        summary="Reorder КП charges (cascade order)",
+        request=inline_serializer("ChargesReorderRequest", fields={"order": drf_serializers.ListField(child=drf_serializers.IntegerField())}),
+        tags=["CRM"],
+    )
+    @action(detail=True, methods=["post"], url_path="charges-reorder", permission_classes=[IsAuthenticated])
+    def charges_reorder(self, request, pk=None):
+        """Reorder the КП's charges top-to-bottom (drives the cascade base). Thin wrapper (Rule 8)."""
+        from crm.services.charges import reorder_quote_charges
+
+        quote, err = reorder_quote_charges(int(pk), request.data.get("order") or [], request.user)
+        if err:
+            http_status = (
+                status.HTTP_403_FORBIDDEN
+                if err in ("ADMIN_VIEWER_CANNOT_ACT", "ONLY_SELLER_CAN_BUILD_QUOTE")
+                else status.HTTP_400_BAD_REQUEST
+            )
+            return Response({"error": err}, status=http_status)
+        return Response(self.get_serializer(quote).data)
+
+    @extend_schema(
         summary="Approve quote",
         description="Client approves the quote. Only the client's company members or staff can approve.",
         responses={
@@ -820,8 +840,14 @@ class QuoteChargeViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         self._assert_seller()
-        _assert_seller_owns_quote_deal(self.request, serializer.validated_data.get("quote"))
-        serializer.save(created_by=self.request.user)
+        quote = serializer.validated_data.get("quote")
+        _assert_seller_owns_quote_deal(self.request, quote)
+        # Append a manually-added charge at the BOTTOM of the cascade (after existing rows), so
+        # e.g. a partner commission added last is based on the full running total above it.
+        from django.db.models import Max
+
+        next_order = (quote.charges.aggregate(m=Max("sort_order"))["m"] or 0) + 1 if quote else 0
+        serializer.save(created_by=self.request.user, sort_order=next_order)
 
     def perform_update(self, serializer):
         self._assert_seller()

@@ -244,10 +244,16 @@ class QuoteChargeSerializer(serializers.ModelSerializer):
             "rate_percent",
             "cost_amount",
             "is_deduction",
+            "sort_order",
+            "resolved_base",
+            "resolved_amount",
+            "from_template",
             "created_by",
             "created_at",
         ]
-        read_only_fields = ["created_by", "created_at"]
+        # sort_order is set server-side (append on create / dedicated reorder endpoint); the
+        # resolved_* snapshots are computed by recalc — all read-only on the charge serializer.
+        read_only_fields = ["created_by", "created_at", "sort_order", "resolved_base", "resolved_amount", "from_template"]
 
 
 class QuoteSerializer(serializers.ModelSerializer):

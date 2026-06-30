@@ -642,7 +642,10 @@
       "costShort": "cost",
       "description": "Description",
       "descriptionPlaceholder": "Description (optional)",
-      "inCurrency": "Charge amounts are in the КП currency: {{currency}} (line costs may be USD/EUR)"
+      "inCurrency": "Charge amounts are in the КП currency: {{currency}} (line costs may be USD/EUR)",
+      "ofBase": "{{rate}}% of {{base}}",
+      "moveUp": "Move up",
+      "moveDown": "Move down"
     },
     "deleteItem": "Delete item?",
     "addItemPlaceholder": "Item name...",

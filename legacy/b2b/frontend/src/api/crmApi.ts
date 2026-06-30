@@ -201,6 +201,9 @@ export interface QuoteCharge {
 	cost_amount?: string | null;  // seller's REAL cost (null ⇒ billed-at-cost pass-through)
 	is_deduction: boolean;        // true = discount (−), false = charge (+)
 	from_template?: boolean;      // auto-created from an Incoterm template (vs added by hand)
+	sort_order?: number;          // cascade position (top→bottom); reorder changes the % base
+	resolved_base?: string | null;   // running tax-excl subtotal this row was applied to
+	resolved_amount?: string | null; // signed computed amount (UBL BaseAmount/Amount)
 	created_by?: number | null;
 	created_at?: string;
 }
@@ -641,6 +644,11 @@ export const crmApi = {
 	},
 	deleteQuoteCharge: async (id: number) => {
 		await apiClient.delete(`crm/quote-charges/${id}/`);
+	},
+	// Reorder the cascade: `order` is the full list of charge ids top→bottom.
+	reorderQuoteCharges: async (quoteId: number, order: number[]) => {
+		const response = await apiClient.post<Quote>(`crm/quotes/${quoteId}/charges-reorder/`, { order });
+		return response.data;
 	},
 	generateQuotePDF: async (id: number) => {
 		const response = await apiClient.post<{ url: string }>(`crm/quotes/${id}/generate-pdf/`);

@@ -304,6 +304,15 @@ export const useDeleteQuoteCharge = () => {
     });
 };
 
+export const useReorderQuoteCharges = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ quoteId, order }: { quoteId: number; order: number[] }) =>
+            crmApi.reorderQuoteCharges(quoteId, order),
+        onSuccess: () => invalidateCharges(queryClient),
+    });
+};
+
 export const useSendQuoteToClient = () => {
     const queryClient = useQueryClient();
     return useMutation({

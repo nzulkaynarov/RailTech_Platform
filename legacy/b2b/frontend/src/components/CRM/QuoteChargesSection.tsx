@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Plus, Trash2, Loader2, Pencil, Check, X } from 'lucide-react';
+import { Plus, Trash2, Loader2, Pencil, Check, X, ArrowUp, ArrowDown } from 'lucide-react';
 import {
 	useQuoteCharges, useChargeTypes, useCreateQuoteCharge, useUpdateQuoteCharge, useDeleteQuoteCharge,
+	useReorderQuoteCharges,
 } from '@/hooks/useCRM';
 import type { QuoteCharge } from '@/api/crmApi';
 import { formatMoney } from '@/utils/decimal';
@@ -42,6 +43,16 @@ export const QuoteChargesSection: React.FC<QuoteChargesSectionProps> = ({ quoteI
 	const createMutation = useCreateQuoteCharge();
 	const updateMutation = useUpdateQuoteCharge();
 	const deleteMutation = useDeleteQuoteCharge();
+	const reorderMutation = useReorderQuoteCharges();
+
+	// Move a charge up/down in the cascade (swap with its neighbour) → resend the full order.
+	const move = (index: number, dir: -1 | 1) => {
+		const next = index + dir;
+		if (next < 0 || next >= charges.length) return;
+		const ids = charges.map((c) => c.id);
+		[ids[index], ids[next]] = [ids[next], ids[index]];
+		reorderMutation.mutate({ quoteId, order: ids });
+	};
 
 	// Add-row state
 	const [chargeType, setChargeType] = useState('');
@@ -135,7 +146,7 @@ export const QuoteChargesSection: React.FC<QuoteChargesSectionProps> = ({ quoteI
 				{/* Existing charges — inline-editable */}
 				{charges.length > 0 && (
 					<div className="flex flex-col divide-y rounded-md border">
-						{charges.map((charge) => (
+						{charges.map((charge, index) => (
 							editingId === charge.id ? (
 								<div key={charge.id} className="flex flex-col gap-2 bg-muted/30 px-3 py-2">
 									<div className="flex flex-wrap items-center gap-2">
@@ -198,16 +209,34 @@ export const QuoteChargesSection: React.FC<QuoteChargesSectionProps> = ({ quoteI
 										)}
 									</div>
 									<div className="flex items-center gap-3 shrink-0">
+										{/* Cascade base hint for a % row: «10% от <running base>» (transparency). */}
+										{charge.rate_percent != null && charge.resolved_base != null && (
+											<span className="text-xs text-muted-foreground tabular-nums">
+												{t('quote.charges.ofBase', { rate: charge.rate_percent, base: formatMoney(charge.resolved_base, currency) })}
+											</span>
+										)}
 										{!charge.is_deduction && charge.cost_amount != null && (
 											<span className="text-xs text-muted-foreground tabular-nums" title={t('quote.charges.costAmount')}>
 												{t('quote.charges.costShort')} {formatMoney(charge.cost_amount, currency)}
 											</span>
 										)}
-										<span className="text-sm font-mono tabular-nums">
-											{charge.rate_percent != null
-												? `${charge.is_deduction ? '−' : '+'}${charge.rate_percent}%`
-												: `${charge.is_deduction ? '−' : '+'}${formatMoney(charge.amount, currency)}`}
+										<span className="text-sm font-mono tabular-nums" title={t('quote.charges.amount')}>
+											{charge.resolved_amount != null
+												? `${Number(charge.resolved_amount) < 0 ? '−' : '+'}${formatMoney(String(Math.abs(Number(charge.resolved_amount))), currency)}`
+												: charge.rate_percent != null
+													? `${charge.is_deduction ? '−' : '+'}${charge.rate_percent}%`
+													: `${charge.is_deduction ? '−' : '+'}${formatMoney(charge.amount, currency)}`}
 										</span>
+										<div className="flex flex-col">
+											<Button variant="ghost" size="icon-xs" className="h-3.5 text-muted-foreground hover:text-foreground"
+												onClick={() => move(index, -1)} disabled={index === 0 || reorderMutation.isPending} title={t('quote.charges.moveUp')}>
+												<ArrowUp className="size-3" />
+											</Button>
+											<Button variant="ghost" size="icon-xs" className="h-3.5 text-muted-foreground hover:text-foreground"
+												onClick={() => move(index, 1)} disabled={index === charges.length - 1 || reorderMutation.isPending} title={t('quote.charges.moveDown')}>
+												<ArrowDown className="size-3" />
+											</Button>
+										</div>
 										<Button
 											variant="ghost"
 											size="icon-xs"
