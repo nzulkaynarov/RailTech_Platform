@@ -13,6 +13,7 @@ import {
   Lock,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
+import { useHasCompanyPermission } from '@/hooks/useCapabilities';
 import { useUserStore } from '../../store/userStore';
 import {
   useCompanyTeam,
@@ -440,7 +441,8 @@ export function CompanyTeamSettings() {
     activeStatus === 'BUYER' ? 'CLIENT' : 'SUPPLIER';
 
   const companyId = user?.company?.id ?? user?.primary_company?.id ?? null;
-  const isOwner = user?.workspace_role === 'OWNER';
+  // U2: team management gated on the team.manage PERMISSION (delegated company admin), not OWNER.
+  const canManageTeam = useHasCompanyPermission('team.manage');
 
   const { data: team = [], isLoading, refetch } = useCompanyTeam(companyId);
   const { data: companyRoles = [] } = useCompanyRoles(companyId ?? undefined);
@@ -538,7 +540,7 @@ export function CompanyTeamSettings() {
                   (myMembership as (typeof myMembership & { company_role?: number | null }) | undefined)
                     ?.company_role ?? extMember.company_role ?? null;
                 const isSelf = member.id === user?.id;
-                const canEdit = isOwner && !isSelf;
+                const canEdit = canManageTeam && !isSelf;
 
                 return (
                   <TableRow key={memberId} className="transition-colors hover:bg-muted/40">
@@ -609,7 +611,7 @@ export function CompanyTeamSettings() {
       </div>
 
       {/* ── Invite form (owner only) ── */}
-      {isOwner ? (
+      {canManageTeam ? (
         <div className="rounded-2xl border border-border bg-muted/40 p-6">
           <h4 className="mb-4 flex items-center gap-2 text-base font-bold text-foreground">
             <UserPlus className="h-4 w-4 text-primary" aria-hidden="true" />

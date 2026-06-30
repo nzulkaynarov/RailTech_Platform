@@ -6,6 +6,7 @@ import { FileText, Loader2, Shield } from 'lucide-react';
 
 import { accountsApi, CompanyDocumentProfile } from '@/api/accountsApi';
 import { useAuthStore } from '@/store/authStore';
+import { useHasCompanyPermission } from '@/hooks/useCapabilities';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -59,14 +60,14 @@ export function CompanyDocumentProfileSettings() {
   const user = useAuthStore((s) => s.user);
 
   const companyId = user?.company?.id ?? user?.primary_company?.id ?? null;
-  const isOwner = user?.workspace_role === 'OWNER';
+  const canEditSettings = useHasCompanyPermission('settings.edit');
 
   const [form, setForm] = useState<ProfileForm>(EMPTY_FORM);
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ['company-document-profile', companyId],
     queryFn: () => accountsApi.getCompanyDocumentProfile(companyId as number),
-    enabled: companyId != null && isOwner,
+    enabled: companyId != null && canEditSettings,
   });
 
   useEffect(() => {
@@ -83,7 +84,7 @@ export function CompanyDocumentProfileSettings() {
     onError: () => toast.error(t('common.error')),
   });
 
-  if (!isOwner) {
+  if (!canEditSettings) {
     return (
       <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/40 p-4">
         <Shield className="h-5 w-5 text-muted-foreground" aria-hidden="true" />

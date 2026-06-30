@@ -10,6 +10,7 @@ from rest_framework.response import Response
 
 from accounts import services
 from accounts.constants import SELLER_COMPANY_TYPES, VerificationStatusCode, WorkspaceRoleCode
+from accounts.services.permissions import member_has_permission
 from accounts.models import Company, CompanyMember, CustomUser
 from accounts.serializers import (
     CompanyDocumentProfileSerializer,
@@ -579,17 +580,12 @@ class CompanyViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"], url_path="update-member-capabilities")
     def update_member_capabilities(self, request, pk=None):
         company = self.get_object()
-        # Authorization: OWNER of this company, or platform staff/superuser.
+        # Authorization (ADR-0005 U2): the team.manage CompanyRole permission (OWNER holds it via
+        # the is_system role), or platform staff/superuser. Lets a delegated company admin manage
+        # the team, not only the founding OWNER.
         is_staff = request.user.is_platform_admin
-        if not is_staff:
-            owner_membership = CompanyMember.objects.filter(
-                user=request.user,
-                company=company,
-                is_active=True,
-                role__code=WorkspaceRoleCode.OWNER,
-            ).exists()
-            if not owner_membership:
-                return Response({"detail": "ONLY_OWNER_CAN_DISTRIBUTE_CAPABILITIES"}, status=status.HTTP_403_FORBIDDEN)
+        if not is_staff and not member_has_permission(request.user, company.id, "team.manage"):
+            return Response({"detail": "ONLY_OWNER_CAN_DISTRIBUTE_CAPABILITIES"}, status=status.HTTP_403_FORBIDDEN)
 
         member_id = request.data.get("member_id")
         if not member_id:
@@ -691,17 +687,10 @@ class CompanyViewSet(viewsets.ModelViewSet):
         """Invite a new team member to the company."""
         company = self.get_object()
 
-        # Only company owner can invite
-        membership = (
-            CompanyMember.objects.filter(user=request.user, company=company, is_active=True)
-            .select_related("role")
-            .first()
-        )
-
-        if not membership or membership.role.code != WorkspaceRoleCode.OWNER:
-            is_staff = request.user.is_platform_admin
-            if not is_staff:
-                return Response({"detail": "ONLY_COMPANY_OWNER_CAN_INVITE"}, status=status.HTTP_403_FORBIDDEN)
+        # Inviting a member is team management → the team.manage permission (OWNER holds it via
+        # the is_system role; a delegated company admin too), or platform staff (ADR-0005 U2).
+        if not request.user.is_platform_admin and not member_has_permission(request.user, company.id, "team.manage"):
+            return Response({"detail": "ONLY_COMPANY_OWNER_CAN_INVITE"}, status=status.HTTP_403_FORBIDDEN)
 
         email = request.data.get("email")
         role_code = request.data.get("role", "PROCUREMENT_MANAGER")
