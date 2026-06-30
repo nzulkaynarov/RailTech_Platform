@@ -8,12 +8,13 @@ from .company import Company, CompanyDocumentProfile, CompanyMember, CompanyRole
 from .kyc import KYCDocument
 from .lookups import CompanyType, KYCDocType, SystemRole, VerificationStatus, WorkspaceRole
 from .operators import OperatorRole
-from .subscriptions import SupplierSubscription
+from .subscriptions import CompanyEntitlement, SupplierSubscription
 from .users import CustomUser
 
 __all__ = [
     "Company",
     "CompanyDocumentProfile",
+    "CompanyEntitlement",
     "CompanyMember",
     "CompanyRole",
     "CompanyRoleApplication",

@@ -130,3 +130,69 @@ class SupplierSubscription(models.Model):
         if self.valid_until and self.valid_until < today:
             return False
         return True
+
+
+@pghistory.track()  # audit billing/admin grants & revocations of paid features
+class CompanyEntitlement(models.Model):
+    """Feature-keyed access grant — the monetization keystone (ADR-0006 §3).
+
+    The app gates on a stable FEATURE_KEY (e.g. ``kp.send``, ``ai.draft``), NEVER a plan name —
+    a company's plan / promo / demo state is projected into entitlement rows, so pricing and
+    packaging changes never touch business code. Layered OVER SupplierSubscription: a feature is
+    granted by an explicit row here (or by the always-free floor); the subscription remains the
+    coarse "may this seller operate at all" gate. Feature-flags (global on/off) are separate.
+    """
+
+    ACCESS_CHOICES = [
+        ("ENABLED", _("Включено")),
+        ("DISABLED", _("Выключено")),
+        ("DEMO", _("Демо")),  # feature usable but output is watermarked / send+export gated
+    ]
+
+    company = models.ForeignKey(
+        "accounts.Company",
+        on_delete=models.CASCADE,
+        related_name="entitlements",
+        verbose_name=_("Компания"),
+    )
+    feature_key = models.CharField(
+        max_length=64,
+        db_index=True,
+        verbose_name=_("Ключ функции"),
+        help_text=_("Стабильный код функции (accounts.constants.FeatureKey), напр. kp.send"),
+    )
+    access = models.CharField(max_length=16, choices=ACCESS_CHOICES, default="ENABLED", verbose_name=_("Доступ"))
+    limit = models.PositiveIntegerField(
+        null=True, blank=True, verbose_name=_("Лимит"), help_text=_("Потолок использования (пусто — без лимита)")
+    )
+    credits = models.PositiveIntegerField(
+        null=True, blank=True, verbose_name=_("Кредиты"), help_text=_("Расходуемый баланс (пусто — неприменимо)")
+    )
+    expires_at = models.DateTimeField(null=True, blank=True, verbose_name=_("Действует до"))
+    note = models.CharField(max_length=255, blank=True, verbose_name=_("Заметка"))
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _("Право доступа компании")
+        verbose_name_plural = _("Права доступа компаний")
+        constraints = [
+            models.UniqueConstraint(fields=["company", "feature_key"], name="uniq_company_feature_entitlement"),
+        ]
+
+    def __str__(self):
+        return f"{self.company_id} · {self.feature_key} · {self.access}"
+
+    def is_currently_granted(self) -> bool:
+        """The feature is usable right now: not DISABLED, not expired, and (if credit-metered) has
+        a positive balance. DEMO counts as usable — the watermark/send-gate is enforced at the
+        feature's own call site via `entitlement_state`, not here."""
+        from django.utils import timezone
+
+        if self.access == "DISABLED":
+            return False
+        if self.expires_at is not None and self.expires_at < timezone.now():
+            return False
+        if self.credits is not None and self.credits <= 0:
+            return False
+        return True

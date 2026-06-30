@@ -225,3 +225,30 @@ class VerificationStatusCode(models.TextChoices):
     PROFILE_SUBMITTED = "PROFILE_SUBMITTED", "Профиль подан"
     L2_VERIFIED = "L2_VERIFIED", "Верифицирован (L2)"
     L3_CONTRACTED = "L3_CONTRACTED", "Контракт (L3)"
+
+
+class FeatureKey(models.TextChoices):
+    """Stable feature keys for the entitlement layer (ADR-0006 §3 monetization).
+
+    The app gates on these codes — NEVER a plan name. A company's plan / promo / demo is projected
+    into CompanyEntitlement rows keyed by these. Add a key here, then gate the call site with
+    accounts.services.entitlements.has_entitlement(company_id, FeatureKey.X).
+    """
+
+    KP_SEND = "kp.send", "Отправка КП клиенту"
+    KP_EXPORT = "kp.export", "Экспорт КП (PDF/Excel)"
+    AI_MATCH = "ai.match", "AI-подбор каталога"
+    AI_DRAFT = "ai.draft", "AI-черновик КП"
+    AI_PREFLIGHT = "ai.preflight", "AI-проверка заявки"
+    ROLES_CUSTOM = "roles.custom", "Кастомные роли компании"
+
+
+# The FREE FLOOR — features always granted, no entitlement row required. Keeps the platform's core
+# loop usable for free and avoids a circular gate (the permission engine the КП builder reads must
+# never be paywalled). Everything NOT here is locked unless an entitlement row grants it.
+FREE_FLOOR_FEATURES = frozenset(
+    {
+        FeatureKey.AI_MATCH.value,  # match заявка↔catalog — feeds the wedge, drives adoption; free
+        FeatureKey.AI_PREFLIGHT.value,  # advisory request quality — free, improves data for everyone
+    }
+)
