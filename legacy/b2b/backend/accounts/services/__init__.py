@@ -66,6 +66,13 @@ from .permissions import (
     seller_sees_all_deals,
     seller_visible_deal_ids,
 )
+from .entitlements import (
+    consume_credit,
+    entitlement_state,
+    grant_entitlement,
+    has_entitlement,
+    is_demo,
+)
 from .profile import submit_company_profile
 from .subscriptions import (
     change_subscription_status,
@@ -89,6 +96,11 @@ __all__ = [
     "check_and_expire_subscriptions",
     "company_active_admins",
     "company_has_operational_subscription",
+    "consume_credit",
+    "entitlement_state",
+    "grant_entitlement",
+    "has_entitlement",
+    "is_demo",
     "create_operator_role",
     "create_pending_user",
     "delete_operator_role",
