@@ -19,9 +19,63 @@ from .models import (
     Message,
     Payment,
     Quote,
+    QuoteApprovalStep,
     QuoteCharge,
     QuoteItem,
 )
+
+
+class QuoteApprovalStepSerializer(serializers.ModelSerializer):
+    """One node of the КП approval chain — assigned vs actual approver, status, and whether
+    the requesting user may act on it right now (current stage + has the permission)."""
+
+    approver_name = serializers.SerializerMethodField()
+    acted_by_name = serializers.SerializerMethodField()
+    can_act = serializers.SerializerMethodField()
+
+    class Meta:
+        model = QuoteApprovalStep
+        fields = [
+            "id", "order", "participation", "status", "approver", "approver_name", "approver_role",
+            "acted_by", "acted_by_name", "is_mandatory", "is_auto", "trigger_reason", "comment",
+            "decided_at", "created_at", "can_act",
+        ]
+
+    @staticmethod
+    def _member_name(member):
+        user = getattr(member, "user", None)
+        if not user:
+            return ""
+        return f"{user.first_name} {user.last_name}".strip() or user.email
+
+    def get_approver_name(self, obj) -> str:
+        return self._member_name(obj.approver)
+
+    def get_acted_by_name(self, obj) -> str:
+        user = obj.acted_by
+        return (f"{user.first_name} {user.last_name}".strip() or user.email) if user else ""
+
+    def get_can_act(self, obj) -> bool:
+        from accounts.services.permissions import member_has_permission
+        from crm.services.approvals import _active_order, _step_permission
+        from crm.services.quotes import _quote_owner_company_id
+
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if not user or not user.is_authenticated:
+            return False
+        if obj.status != "PENDING" or obj.participation == "INFORMED":
+            return False
+        quote = obj.quote
+        if not getattr(quote, "status", None) or quote.status.code != "PENDING_APPROVAL":
+            return False
+        if obj.order != _active_order(quote):
+            return False
+        company_id = _quote_owner_company_id(quote)
+        return bool(
+            company_id
+            and (getattr(user, "is_superuser", False) or member_has_permission(user, company_id, _step_permission(obj)))
+        )
 
 
 class QuoteItemSerializer(serializers.ModelSerializer):
@@ -218,11 +272,19 @@ class QuoteSerializer(serializers.ModelSerializer):
     # Cost-gated AND only computed when the view asks (include_economics) — keeps it off list
     # endpoints (no N+1) and hidden from a viewer without quote.view_cost_margin.
     economics = serializers.SerializerMethodField()
+    # Internal approval chain (only on the single-quote/deal detail, same gate as economics).
+    approval_steps = serializers.SerializerMethodField()
 
     def get_effective_delivery_lead_time_days(self, obj) -> int:
         from crm.services import effective_quote_lead_time
 
         return effective_quote_lead_time(obj)
+
+    def get_approval_steps(self, obj):
+        if not self.context.get("include_economics"):
+            return []
+        steps = obj.approval_steps.select_related("approver__user", "approver_role", "acted_by").all()
+        return QuoteApprovalStepSerializer(steps, many=True, context=self.context).data
 
     def validate_fx_manual(self, value):
         """Client-writable manual FX override (договорной курс). Harden it (adversarial HOLE 1):
@@ -291,6 +353,7 @@ class QuoteSerializer(serializers.ModelSerializer):
             "items",
             "charges",
             "economics",
+            "approval_steps",
             "created_at",
             "updated_at",
         ]

@@ -235,6 +235,26 @@ export interface QuoteEconomics {
 	fx_missing: string[];           // line currencies with NO resolvable rate → blocks submit/send
 }
 
+/** One node of the КП internal approval chain (unified workflow). */
+export interface QuoteApprovalStep {
+	id: number;
+	order: number;
+	participation: 'HEAD' | 'APPROVER' | 'INFORMED';
+	status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'SKIPPED' | 'RECALLED';
+	approver: number | null;
+	approver_name: string;
+	approver_role: number | null;
+	acted_by: number | null;
+	acted_by_name: string;
+	is_mandatory: boolean;
+	is_auto: boolean;
+	trigger_reason: string;
+	comment: string;
+	decided_at: string | null;
+	created_at: string;
+	can_act: boolean;        // may the requesting user act on this step right now
+}
+
 export interface Quote {
 	id: number;
 	deal: number;
@@ -275,6 +295,8 @@ export interface Quote {
 	approved_at?: string | null;
 	// Seller unit economics — present only on the single-quote/deal detail for a cost-viewer.
 	economics?: QuoteEconomics | null;
+	// Internal approval chain — present only on the single-quote/deal detail.
+	approval_steps?: QuoteApprovalStep[];
 	created_at: string;
 	updated_at?: string;
 }
@@ -649,16 +671,17 @@ export const crmApi = {
 		const response = await apiClient.post<Quote>(`crm/quotes/${id}/submit-for-review/`);
 		return response.data;
 	},
-	confirmQuoteTradeReview: async (id: number) => {
-		const response = await apiClient.post<Quote>(`crm/quotes/${id}/confirm-trade-review/`);
+	// Unified approval chain: act on a step (approve/reject) or recall the КП back to draft.
+	approvalAct: async (id: number, stepId: number, decision: 'APPROVE' | 'REJECT', comment = '') => {
+		const response = await apiClient.post<Quote>(`crm/quotes/${id}/approval-act/`, {
+			step_id: stepId,
+			decision,
+			comment,
+		});
 		return response.data;
 	},
-	directorApproveQuote: async (id: number) => {
-		const response = await apiClient.post<Quote>(`crm/quotes/${id}/director-approve/`);
-		return response.data;
-	},
-	sendQuoteBack: async (id: number, reason: string) => {
-		const response = await apiClient.post<Quote>(`crm/quotes/${id}/send-back/`, { reason });
+	recallQuote: async (id: number) => {
+		const response = await apiClient.post<Quote>(`crm/quotes/${id}/recall/`);
 		return response.data;
 	},
 	getMyApprovalQueue: async () => {

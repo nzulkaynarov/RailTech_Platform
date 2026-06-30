@@ -690,7 +690,33 @@
       "queueTitle": "Очередь согласования",
       "queueEmpty": "Нет КП, ожидающих вашего согласования",
       "queueDeal": "Сделка #{{id}}",
-      "queueVersion": "Версия {{version}}"
+      "queueVersion": "Версия {{version}}",
+      "groupApprovers": "Согласующие",
+      "groupHead": "Руководитель",
+      "groupInformed": "Для информации",
+      "approve": "Согласовать",
+      "reject": "Отклонить",
+      "rejected": "КП отклонён",
+      "recall": "Отозвать",
+      "recalled": "КП отозван на доработку",
+      "mandatory": "Обязательный",
+      "anyHolder": "Любой с правом согласования",
+      "comment": "Комментарий",
+      "rejectTitle": "Отклонить / вернуть на доработку",
+      "rejectDesc": "Укажите причину — она будет видна составителю КП.",
+      "rejectReasonPlaceholder": "Например: пересчитайте логистику по позиции 3",
+      "status": {
+        "DRAFT": "Черновик",
+        "PENDING_APPROVAL": "На согласовании",
+        "READY_TO_SEND": "Готово к отправке"
+      },
+      "stepStatus": {
+        "PENDING": "Ожидает",
+        "APPROVED": "Согласовано",
+        "REJECTED": "Отклонено",
+        "RECALLED": "Отозвано",
+        "SKIPPED": "Пропущено"
+      }
     },
     "pdf": "PDF",
     "empty": {

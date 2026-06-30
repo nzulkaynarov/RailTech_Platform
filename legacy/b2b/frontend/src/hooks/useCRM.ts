@@ -356,27 +356,19 @@ export const useSubmitQuoteForReview = () => {
     });
 };
 
-export const useConfirmQuoteTradeReview = () => {
+export const useActOnApprovalStep = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: (id: number) => crmApi.confirmQuoteTradeReview(id),
+        mutationFn: ({ id, stepId, decision, comment }: { id: number; stepId: number; decision: 'APPROVE' | 'REJECT'; comment?: string }) =>
+            crmApi.approvalAct(id, stepId, decision, comment || ''),
         onSuccess: () => invalidateQuoteChain(queryClient),
     });
 };
 
-export const useDirectorApproveQuote = () => {
+export const useRecallQuote = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: (id: number) => crmApi.directorApproveQuote(id),
-        onSuccess: () => invalidateQuoteChain(queryClient),
-    });
-};
-
-export const useSendQuoteBack = () => {
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: ({ id, reason }: { id: number; reason: string }) =>
-            crmApi.sendQuoteBack(id, reason),
+        mutationFn: (id: number) => crmApi.recallQuote(id),
         onSuccess: () => invalidateQuoteChain(queryClient),
     });
 };
