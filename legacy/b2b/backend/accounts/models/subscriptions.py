@@ -136,7 +136,7 @@ class SupplierSubscription(models.Model):
 class CompanyEntitlement(models.Model):
     """Feature-keyed access grant — the monetization keystone (ADR-0006 §3).
 
-    The app gates on a stable FEATURE_KEY (e.g. ``kp.send``, ``ai.draft``), NEVER a plan name —
+    The app gates on a stable FEATURE_KEY (e.g. ``quote.send``, ``ai.draft``), NEVER a plan name —
     a company's plan / promo / demo state is projected into entitlement rows, so pricing and
     packaging changes never touch business code. Layered OVER SupplierSubscription: a feature is
     granted by an explicit row here (or by the always-free floor); the subscription remains the
@@ -159,7 +159,7 @@ class CompanyEntitlement(models.Model):
         max_length=64,
         db_index=True,
         verbose_name=_("Ключ функции"),
-        help_text=_("Стабильный код функции (accounts.constants.FeatureKey), напр. kp.send"),
+        help_text=_("Стабильный код функции (accounts.constants.FeatureKey), напр. quote.send"),
     )
     access = models.CharField(max_length=16, choices=ACCESS_CHOICES, default="ENABLED", verbose_name=_("Доступ"))
     limit = models.PositiveIntegerField(

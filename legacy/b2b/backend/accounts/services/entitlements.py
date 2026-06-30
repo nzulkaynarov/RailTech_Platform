@@ -109,12 +109,13 @@ def grant_entitlement(
     return row
 
 
-def can_send_kp(company_id: int) -> bool:
-    """May this seller company SEND a КП to the client? A paid output action: requires the kp.send
-    entitlement and NOT a DEMO state (demo can build + watermark, but not actually send)."""
-    return has_entitlement(company_id, FeatureKey.KP_SEND) and not is_demo(company_id, FeatureKey.KP_SEND)
+def quote_send_entitled(company_id: int) -> bool:
+    """May this seller company SEND a КП (Quote) to the client? A paid output action: requires the
+    quote.send entitlement and NOT a DEMO state (demo can build + watermark, but not actually send).
+    Distinct from can_send_quote_to_client (the role-PERMISSION check) — this is the billing gate."""
+    return has_entitlement(company_id, FeatureKey.QUOTE_SEND) and not is_demo(company_id, FeatureKey.QUOTE_SEND)
 
 
-def can_export_kp(company_id: int) -> bool:
-    """May this seller company EXPORT a КП (PDF/Excel)? Same paid-output gate as send."""
-    return has_entitlement(company_id, FeatureKey.KP_EXPORT) and not is_demo(company_id, FeatureKey.KP_EXPORT)
+def quote_export_entitled(company_id: int) -> bool:
+    """May this seller company EXPORT a КП (Quote, PDF/Excel cost data)? Same paid-output gate as send."""
+    return has_entitlement(company_id, FeatureKey.QUOTE_EXPORT) and not is_demo(company_id, FeatureKey.QUOTE_EXPORT)

@@ -67,13 +67,13 @@ from .permissions import (
     seller_visible_deal_ids,
 )
 from .entitlements import (
-    can_export_kp,
-    can_send_kp,
     consume_credit,
     entitlement_state,
     grant_entitlement,
     has_entitlement,
     is_demo,
+    quote_export_entitled,
+    quote_send_entitled,
 )
 from .profile import submit_company_profile
 from .subscriptions import (
@@ -98,13 +98,13 @@ __all__ = [
     "check_and_expire_subscriptions",
     "company_active_admins",
     "company_has_operational_subscription",
-    "can_export_kp",
-    "can_send_kp",
     "consume_credit",
     "entitlement_state",
     "grant_entitlement",
     "has_entitlement",
     "is_demo",
+    "quote_export_entitled",
+    "quote_send_entitled",
     "create_operator_role",
     "create_pending_user",
     "delete_operator_role",
