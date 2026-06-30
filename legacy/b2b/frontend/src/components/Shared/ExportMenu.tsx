@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Download, FileText, FileSpreadsheet, FileType, Loader2 } from 'lucide-react';
 import { crmApi } from '@/api/crmApi';
+import { translateApiError } from '@/lib/apiError';
 import { Button } from '@/components/ui/button';
 import {
 	DropdownMenu,
@@ -31,8 +32,20 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({ quoteId, disabled }) => 
 		setExportingFormat(format);
 		try {
 			await crmApi.exportQuote(quoteId, format);
-		} catch {
-			toast.error(t('errors.operationFailed'));
+		} catch (err) {
+			// The request is responseType:'blob', so a 409 refusal (QUOTE_BELOW_COST /
+			// FX_RATE_MISSING / QUOTE_NOT_CLAIMED) arrives as a Blob — parse it for the code so
+			// the seller sees WHY, not a generic "operation failed".
+			let code = '';
+			const data = (err as { response?: { data?: unknown } })?.response?.data;
+			if (data instanceof Blob) {
+				try {
+					code = (JSON.parse(await data.text()) as { error?: string }).error || '';
+				} catch {
+					/* not JSON */
+				}
+			}
+			toast.error(code ? translateApiError(code) : t('errors.operationFailed'));
 		} finally {
 			setExportingFormat(null);
 		}

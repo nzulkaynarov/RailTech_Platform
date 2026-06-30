@@ -446,21 +446,24 @@ class QuoteCalculationService:
         penny = Decimal("0.01")
         quote.subtotal_excl_vat = subtotal.quantize(penny, rounding=ROUND_HALF_UP)
 
-        # Статьи расхода уровня КП: расход (+) минус скидка (−). Процентные статьи
-        # (rate_percent) резолвятся от ОТОБРАЖАЕМОЙ (квантованной) суммы позиций
-        # subtotal_excl_vat, а не от сырого агрегата — иначе процент брался бы от
-        # незаокруглённой базы и давал бы суб-копеечный дрейф против того, что видит
-        # пользователь. Считаем в Python (статей мало).
-        charges = sum(
-            (charge.resolve_signed(quote.subtotal_excl_vat) for charge in quote.charges.all()), Decimal("0")
-        )
-        # KP-03: a net deduction (discount) may bring the КП down to zero but NEVER below —
-        # clamp the signed charges total at −subtotal so tax_exclusive ≥ 0. Otherwise an
-        # over-discount stored a negative VAT and a negative total_incl_vat on the КП, rendered
-        # to the buyer. (Percent charges are already capped 0–100; fixed deductions were not.)
-        charges = max(charges, -quote.subtotal_excl_vat)
-        quote.charges_total = charges.quantize(penny, rounding=ROUND_HALF_UP)
-        tax_exclusive = quote.subtotal_excl_vat + quote.charges_total
+        # CASCADE (sequential pricing, SAP-style): statьи расхода применяются СВЕРХУ ВНИЗ по
+        # sort_order. Каждая % статья считается от РАСТУЩЕГО итога (позиции + подписанные статьи
+        # выше неё) — так «комиссия 10%» берётся от всего итога над ней, «скидка выше комиссии»
+        # уменьшает базу комиссии и т.д. Порядок несущий; менеджер двигает строки. % уже считаем
+        # от квантованной базы (no sub-копеечный дрейф). KP-03: пошаговый max(running, 0) держит
+        # tax_exclusive ≥ 0 И не даёт нижестоящему % считаться от отрицательной базы.
+        running = quote.subtotal_excl_vat
+        for charge in quote.charges.all():  # Meta.ordering = [sort_order, id]
+            base_before = running
+            signed = charge.resolve_signed(base_before).quantize(penny, rounding=ROUND_HALF_UP)
+            running = max(running + signed, Decimal("0"))
+            # Transparency snapshot for the UI / UBL (BaseAmount / Amount).
+            charge.resolved_base = base_before
+            charge.resolved_amount = signed
+            # skip_recalculate: we ARE inside recalc — saving a charge must not re-trigger it.
+            charge.save(update_fields=["resolved_base", "resolved_amount"], skip_recalculate=True)
+        quote.charges_total = (running - quote.subtotal_excl_vat).quantize(penny, rounding=ROUND_HALF_UP)
+        tax_exclusive = running.quantize(penny, rounding=ROUND_HALF_UP)
         quote.vat_amount = (tax_exclusive * vat_rate).quantize(penny, rounding=ROUND_HALF_UP)
         quote.total_incl_vat = tax_exclusive + quote.vat_amount
 
@@ -522,9 +525,18 @@ def compute_quote_economics(quote) -> dict:
     gross_margin_pct = (gross_profit / subtotal * Decimal("100")) if subtotal > 0 else Decimal("0")
     markup_pct = (gross_profit / total_landed_cost * Decimal("100")) if total_landed_cost > 0 else Decimal("0")
 
-    charge_cost_total = sum(
-        (charge.resolve_seller_cost(subtotal) for charge in quote.charges.all()), Decimal("0")
-    ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    # Seller's REAL cost of the charges: explicit cost_amount when set, else the cascade-billed
+    # amount (resolved_amount) as pass-through (billed = cost → nets to zero in operating profit).
+    # Deductions (discounts) are a revenue reduction, not a cost → skipped.
+    charge_cost_total = Decimal("0")
+    for charge in quote.charges.all():
+        if charge.is_deduction:
+            continue
+        if charge.cost_amount is not None:
+            charge_cost_total += charge.cost_amount
+        elif charge.resolved_amount is not None:
+            charge_cost_total += charge.resolved_amount
+    charge_cost_total = charge_cost_total.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
     operating_profit = tax_exclusive - total_landed_cost - charge_cost_total
 
     # Seller company's margin governance thresholds (gross-margin-on-price). Fall back to the
@@ -945,10 +957,8 @@ class QuoteLifecycleService:
         }
         if not quote.status or quote.status.code not in review_states:
             return None, "INVALID_STATUS"
-        if reason:
-            note = f"Возврат на доработку: {reason}"
-            quote.notes = f"{quote.notes}\n{note}".strip() if quote.notes else note
-            quote.save(update_fields=["notes", "updated_at"])
+        # LEAK FIX: the rework reason is INTERNAL — it goes to the audit log only, NEVER into
+        # quote.notes (which is rendered verbatim in the CLIENT-facing КП PDF «Примечания»).
         _set_quote_status(quote, QuoteStatusCode.DRAFT)
         _log_quote(quote, actor, "quote.send_back", f"КП v{quote.version} возвращено на доработку. {reason}".strip())
         return quote, None
@@ -988,12 +998,10 @@ class QuoteLifecycleService:
         quote.status = approved
         quote.approved_at = timezone.now()
         quote.approved_by = admin_user
-        quote.notes = (
-            f"{quote.notes}\n[FORCE_ADMIN] {admin_user.email}: {reason}"
-            if quote.notes
-            else f"[FORCE_ADMIN] {admin_user.email}: {reason}"
-        )
-        quote.save(update_fields=["status", "approved_at", "approved_by", "notes", "updated_at"])
+        # LEAK FIX: the force-override reason + the platform-admin EMAIL must NOT land in
+        # quote.notes — that field is rendered verbatim in the CLIENT КП PDF «Примечания». The
+        # override is fully captured below in the entity-scoped audit log (log_admin_action).
+        quote.save(update_fields=["status", "approved_at", "approved_by", "updated_at"])
         # Structured, entity-scoped audit (G2 Gap A) — route through log_admin_action like
         # transition_deal_stage, so the override carries reason + entity_type/id + before/after
         # and shows on the quote timeline and the «Журнал доступа» page (not a bare ActivityLog).
@@ -1024,11 +1032,9 @@ class QuoteLifecycleService:
 
         rejected_status = QuoteStatus.objects.filter(code=QuoteStatusCode.REJECTED).first()
         quote.status = rejected_status
-        # Append rejection reason instead of replacing notes
-        if reason:
-            rejection_note = f"Причина отказа: {reason}"
-            quote.notes = f"{quote.notes}\n{rejection_note}".strip() if quote.notes else rejection_note
-        quote.save(update_fields=["status", "notes", "updated_at"])
+        # LEAK FIX: the rejection reason is NOT written to quote.notes (rendered in the client КП
+        # PDF). It's preserved on the deal-stage transition audit below + the seller notification.
+        quote.save(update_fields=["status", "updated_at"])
 
         # Move deal back to CALCULATING via FSM
         transition_deal_stage(

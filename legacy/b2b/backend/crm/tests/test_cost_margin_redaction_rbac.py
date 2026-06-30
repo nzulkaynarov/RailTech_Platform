@@ -18,10 +18,12 @@ from accounts.models import (
     CustomUser,
     WorkspaceRole,
 )
-from crm.models import Deal, DealStage, Quote, QuoteItem
-from crm.serializers import QuoteItemSerializer
+from crm.models import ChargeType, Deal, DealStage, Quote, QuoteCharge, QuoteItem
+from crm.serializers import QuoteChargeSerializer, QuoteItemSerializer
 
 _COST_FIELDS = ("frozen_base_price", "logistics_cost", "customs_duty", "margin_percent", "landed_cost")
+# Per-charge cost / breakdown the standalone charge endpoint must also redact (cascade audit).
+_CHARGE_COST_FIELDS = ("cost_amount", "resolved_base", "resolved_amount", "amount", "rate_percent")
 
 
 def _seller_member(company, email, *, perms):
@@ -78,3 +80,45 @@ def test_cost_shown_to_member_with_permission(quote_item):
     data = _serialize_as(privileged, item)
     for field in _COST_FIELDS:
         assert field in data, f"{field} hidden from a member WITH quote.view_cost_margin"
+
+
+# ─── QuoteCharge redaction (charge-cascade audit: cost_amount/resolved_* must not leak) ──────
+@pytest.fixture
+def quote_charge(db):
+    CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 10})
+    seller_co = Company.objects.create(name="ChargeCo")
+    seller_co.types.add(CompanyType.objects.get(code="SUPPLIER"))
+    preparer = _seller_member(seller_co, "cprep@s.test", perms=["quote.view_cost_margin"])
+    stage = DealStage.objects.get_or_create(code="DRAFT", defaults={"name": "Draft", "sort_order": 10})[0]
+    deal = Deal.objects.create(title="cd", company=seller_co, client=preparer, stage=stage)
+    quote = Quote.objects.create(deal=deal, version=1, prepared_by=preparer)
+    ctype = ChargeType.objects.get_or_create(code="FREIGHT", defaults={"name": "Freight", "sort_order": 10})[0]
+    charge = QuoteCharge(
+        quote=quote, charge_type=ctype, rate_percent="10.00", amount="0.00",
+        cost_amount="400000.00", resolved_base="950000.00", resolved_amount="95000.00",
+    )
+    return seller_co, charge
+
+
+def _serialize_charge_as(user, charge):
+    request = APIRequestFactory().get("/")
+    request.user = user
+    return QuoteChargeSerializer(charge, context={"request": request}).data
+
+
+@pytest.mark.django_db
+def test_charge_cost_hidden_from_member_without_permission(quote_charge):
+    seller_co, charge = quote_charge
+    restricted = _seller_member(seller_co, "cnosee@s.test", perms=[])
+    data = _serialize_charge_as(restricted, charge)
+    for field in _CHARGE_COST_FIELDS:
+        assert field not in data, f"{field} leaked on the charge endpoint to a non-cost-viewer"
+
+
+@pytest.mark.django_db
+def test_charge_cost_shown_to_member_with_permission(quote_charge):
+    seller_co, charge = quote_charge
+    privileged = _seller_member(seller_co, "csee@s.test", perms=["quote.view_cost_margin"])
+    data = _serialize_charge_as(privileged, charge)
+    for field in _CHARGE_COST_FIELDS:
+        assert field in data, f"{field} hidden from a charge cost-viewer"

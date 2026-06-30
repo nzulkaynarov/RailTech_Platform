@@ -59,6 +59,7 @@ def apply_charge_template_to_quote(quote: Quote, actor=None) -> int:
             rate_percent=template.default_rate_percent,
             is_deduction=template.is_deduction,
             from_template=True,
+            sort_order=template.sort_order,  # carry the template's cascade position
             created_by=actor,
         )
         # Batch insert; recalc once at the end instead of per-row.
@@ -68,6 +69,35 @@ def apply_charge_template_to_quote(quote: Quote, actor=None) -> int:
     if created:
         quote.recalculate_totals()
     return created
+
+
+@transaction.atomic
+def reorder_quote_charges(quote_id: int, ordered_ids, actor):
+    """Set the cascade order of a КП's charges (seller action) and recalc. `ordered_ids` is the
+    full list of charge ids in the new top-to-bottom order; sort_order = index. Thin service
+    (Rule 8). Editable КП only (a sent/frozen КП is locked)."""
+    from accounts.services.permissions import is_platform_admin_viewer, is_seller
+
+    if is_platform_admin_viewer(actor):
+        return None, "ADMIN_VIEWER_CANNOT_ACT"
+    if not (getattr(actor, "is_superuser", False) or is_seller(actor)):
+        return None, "ONLY_SELLER_CAN_BUILD_QUOTE"
+    quote = Quote.objects.filter(pk=quote_id).first()
+    if quote is None:
+        return None, "QUOTE_NOT_FOUND"
+    if quote.frozen_at:
+        return None, "QUOTE_FROZEN"
+    charges = {charge.id: charge for charge in quote.charges.all()}
+    for index, charge_id in enumerate(ordered_ids):
+        charge = charges.get(int(charge_id))
+        if charge is not None:
+            charge.sort_order = index
+            charge.save(update_fields=["sort_order"])
+    from .quotes import QuoteCalculationService
+
+    QuoteCalculationService.recalculate_quote(quote_id)
+    quote.refresh_from_db()
+    return quote, None
 
 
 @transaction.atomic

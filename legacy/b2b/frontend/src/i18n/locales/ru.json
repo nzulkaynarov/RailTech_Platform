@@ -644,7 +644,10 @@
       "costShort": "себест.",
       "description": "Описание",
       "descriptionPlaceholder": "Описание (необязательно)",
-      "inCurrency": "Суммы статей — в валюте КП: {{currency}} (себестоимость позиций может быть в USD/EUR)"
+      "inCurrency": "Суммы статей — в валюте КП: {{currency}} (себестоимость позиций может быть в USD/EUR)",
+      "ofBase": "{{rate}}% от {{base}}",
+      "moveUp": "Выше",
+      "moveDown": "Ниже"
     },
     "deleteItem": "Удалить позицию?",
     "addItemPlaceholder": "Наименование позиции...",

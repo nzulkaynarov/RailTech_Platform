@@ -90,6 +90,23 @@ class QuoteCharge(models.Model):
         verbose_name=_("Из шаблона"),
         help_text=_("Строка создана автоматически из шаблона базиса поставки"),
     )
+    # CASCADE: charges apply top-to-bottom; a % row is computed on the RUNNING tax-exclusive
+    # subtotal of everything above it (lines + signed charges already applied). sort_order drives
+    # that sequence; the manager reorders rows ↑↓. (Same order = order by id within.)
+    sort_order = models.PositiveIntegerField(
+        default=0,
+        db_index=True,
+        verbose_name=_("Порядок"),
+        help_text=_("Позиция в каскаде: статья считается от нарастающего итога всех строк выше неё."),
+    )
+    # Transparency snapshots written by recalculate_quote: the running base this row was applied
+    # to, and the resulting signed amount (UBL BaseAmount / Amount). Lets the UI show «10% от X = Y».
+    resolved_base = models.DecimalField(
+        max_digits=16, decimal_places=2, null=True, blank=True, verbose_name=_("База (нарастающий итог до строки)")
+    )
+    resolved_amount = models.DecimalField(
+        max_digits=16, decimal_places=2, null=True, blank=True, verbose_name=_("Рассчитанная сумма (со знаком)")
+    )
     created_by = models.ForeignKey(
         "accounts.CustomUser",
         on_delete=models.SET_NULL,
@@ -105,7 +122,7 @@ class QuoteCharge(models.Model):
     class Meta:
         verbose_name = _("Статья расхода КП")
         verbose_name_plural = _("Статьи расхода КП")
-        ordering = ["id"]
+        ordering = ["sort_order", "id"]
 
     def resolve_signed(self, subtotal):
         """
