@@ -176,6 +176,20 @@ class DealSellerRouting(models.Model):
         verbose_name=_("Компания-продавец"),
     )
     routed_at = models.DateTimeField(auto_now_add=True)
+    # ADR-0006 Move 2 (per-seller ownership). Competition is HIDDEN: each routed seller works the
+    # заявка INDEPENDENTLY and the buyer picks a winner at the end, so ownership is PER seller
+    # company (this routing row), NOT a single deal-level owner — seller A claiming must not block
+    # seller B. NULL = unclaimed in this company's shared queue. assigned_at = time-to-first-touch.
+    assigned_to = models.ForeignKey(
+        "accounts.CustomUser",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        db_index=True,
+        related_name="claimed_routings",
+        verbose_name=_("Ответственный (взял в работу)"),
+    )
+    assigned_at = models.DateTimeField(null=True, blank=True, verbose_name=_("Взята в работу"))
 
     class Meta:
         verbose_name = _("Маршрутизация заявки продавцу")

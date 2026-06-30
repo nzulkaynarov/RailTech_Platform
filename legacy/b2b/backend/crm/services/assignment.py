@@ -1,13 +1,12 @@
-"""Deal ownership / work-queue (ADR-0006 Move 2).
+"""Deal ownership / work-queue (ADR-0006 Move 2) — PER SELLER COMPANY.
 
-World-standard, team-size-agnostic ownership: a routed seller team sees its заявки as a shared
-work-queue; a member CLAIMS one to own it (claim-lock prevents a race), an admin can ASSIGN it,
-and either can RELEASE it back to the queue. This replaces the "everyone stares at one shared
-pile, processed serially" anti-pattern — it scales from a 1-person to an N-person team without a
-hard-coded routing rule (the owner's "5 people" was an illustration, not a spec).
+Competition between routed sellers is HIDDEN: each routed seller works the заявка independently and
+the buyer picks a winner at the end. So ownership lives on DealSellerRouting (one row per
+deal+seller_company), NOT a single Deal-level FK — seller A claiming must NOT block seller B from
+owning their own copy of the same RFQ. A member may act ONLY on the routing of their OWN seller
+company (no cross-tenant grab). Each function returns the Deal (the viewset serializes it).
 
-Thin services (Rule 8); the viewset is a wrapper. Ownership is seller-side and bound to the deal's
-routing (a member can only claim a deal routed to their company — no cross-tenant grab).
+Thin services (Rule 8); the viewset is a wrapper.
 """
 
 from typing import Optional, Tuple
@@ -17,112 +16,118 @@ from django.utils import timezone
 
 from accounts.models import CustomUser
 
-from ..models import Deal
+from ..models import Deal, DealSellerRouting
 
 
-def _seller_may_act_on_deal(actor: CustomUser, deal_id: int) -> bool:
-    """True if `actor` is a seller routed to this deal (or superuser) — the claim/own gate."""
-    from accounts.services import is_seller, seller_company_routed_to_deal
-
-    if getattr(actor, "is_superuser", False):
-        return True
-    return is_seller(actor) and seller_company_routed_to_deal(actor, deal_id)
+def _actor_seller_company_ids(actor: CustomUser) -> set:
+    """Active seller (can_sell) company ids the actor belongs to."""
+    return set(
+        actor.memberships.filter(is_active=True, can_sell=True).values_list("company_id", flat=True)
+    )
 
 
 @transaction.atomic
 def claim_deal(deal_id: int, actor: CustomUser) -> Tuple[Optional[Deal], Optional[str]]:
-    """A routed seller-team member takes ownership of an unclaimed deal (pull from the queue).
-    Claim-lock: select_for_update serialises concurrent claims so two members can't both win."""
-    from accounts.services import is_platform_admin_viewer
+    """A routed seller-team member claims THEIR company's copy of the заявка (pull from the queue).
+    Per-company claim-lock: select_for_update on the routing row serialises concurrent claims so two
+    members of the same company can't both win; a different company's claim is independent."""
+    from accounts.services import is_platform_admin_viewer, is_seller, seller_company_routed_to_deal
 
     if is_platform_admin_viewer(actor):
         return None, "ADMIN_VIEWER_CANNOT_ACT"
-    deal = Deal.objects.select_for_update().filter(pk=deal_id).first()
-    if deal is None:
-        return None, "DEAL_NOT_FOUND"
-    if not _seller_may_act_on_deal(actor, deal_id):
+    if not (is_seller(actor) and seller_company_routed_to_deal(actor, deal_id)):
         return None, "MEMBER_REQUIRED_FOR_ACTION"
-    if deal.assigned_to_id and deal.assigned_to_id != actor.id:
-        return None, "DEAL_ALREADY_CLAIMED"  # someone else owns it — release/reassign first
-    if deal.assigned_to_id == actor.id:
-        return deal, None  # already owned by this member — true no-op (preserve the assigned_at SLA anchor)
-    deal.assigned_to = actor
-    deal.assigned_at = timezone.now()
-    deal.save(update_fields=["assigned_to", "assigned_at", "updated_at"])
-    _log(deal, actor, "Заявка взята в работу", f"{actor.email} взял заявку #{deal_id}")
-    return deal, None
+    routing = (
+        DealSellerRouting.objects.select_for_update()
+        .select_related("deal")
+        .filter(deal_id=deal_id, seller_company_id__in=_actor_seller_company_ids(actor))
+        .first()
+    )
+    if routing is None:
+        return None, "DEAL_NOT_FOUND"  # not routed to the actor's company
+    if routing.assigned_to_id and routing.assigned_to_id != actor.id:
+        return None, "DEAL_ALREADY_CLAIMED"  # a teammate owns this company's copy — release first
+    if routing.assigned_to_id == actor.id:
+        return routing.deal, None  # already owned by this member — no-op (keep the assigned_at SLA anchor)
+    routing.assigned_to = actor
+    routing.assigned_at = timezone.now()
+    routing.save(update_fields=["assigned_to", "assigned_at"])
+    _log(deal_id, actor, "Заявка взята в работу", f"{actor.email} взял заявку #{deal_id}")
+    return routing.deal, None
 
 
 @transaction.atomic
 def release_deal(deal_id: int, actor: CustomUser) -> Tuple[Optional[Deal], Optional[str]]:
-    """Return a deal to the shared queue (the current owner, or an admin with team.manage)."""
+    """Return the actor's OWN company's copy to that company's shared queue — the current owner, or
+    an admin with team.manage on that seller company. Never touches a competitor seller's routing."""
     from accounts.services import is_platform_admin_viewer, member_has_permission
 
     if is_platform_admin_viewer(actor):
         return None, "ADMIN_VIEWER_CANNOT_ACT"
-    deal = Deal.objects.select_for_update().filter(pk=deal_id).first()
-    if deal is None:
+    routings = list(
+        DealSellerRouting.objects.select_for_update()
+        .select_related("deal")
+        .filter(deal_id=deal_id, seller_company_id__in=_actor_seller_company_ids(actor))
+    )
+    if not routings:
         return None, "DEAL_NOT_FOUND"
-    if deal.assigned_to_id is None:
-        return deal, None  # already in the shared queue — no-op
-    is_owner = deal.assigned_to_id == actor.id
-    # An admin may release ONLY a claim held by a member of their OWN routed seller company —
-    # never yank a competitor seller's in-progress claim on a multi-routed RFQ (tenant isolation).
-    routed_ids = set(deal.seller_routings.values_list("seller_company_id", flat=True))
-    owner_company_ids = set(
-        deal.assigned_to.memberships.filter(is_active=True).values_list("company_id", flat=True)
+    target = next(
+        (
+            r
+            for r in routings
+            if r.assigned_to_id == actor.id
+            or getattr(actor, "is_superuser", False)
+            or member_has_permission(actor, r.seller_company_id, "team.manage")
+        ),
+        None,
     )
-    can_manage = any(
-        member_has_permission(actor, cid, "team.manage") for cid in (routed_ids & owner_company_ids)
-    )
-    if not (getattr(actor, "is_superuser", False) or is_owner or can_manage):
+    if target is None:
         return None, "MEMBER_REQUIRED_FOR_ACTION"
-    deal.assigned_to = None
-    deal.assigned_at = None
-    deal.save(update_fields=["assigned_to", "assigned_at", "updated_at"])
-    _log(deal, actor, "Заявка возвращена в очередь", f"{actor.email} освободил заявку #{deal_id}")
-    return deal, None
+    if target.assigned_to_id is None:
+        return target.deal, None  # already in this company's queue — no-op
+    target.assigned_to = None
+    target.assigned_at = None
+    target.save(update_fields=["assigned_to", "assigned_at"])
+    _log(deal_id, actor, "Заявка возвращена в очередь", f"{actor.email} освободил заявку #{deal_id}")
+    return target.deal, None
 
 
 @transaction.atomic
 def assign_deal(deal_id: int, actor: CustomUser, assignee_id: int) -> Tuple[Optional[Deal], Optional[str]]:
-    """A company admin (team.manage on a routed seller company) assigns the deal to a member.
-    The assignee must belong to one of the deal's routed seller companies (no cross-tenant)."""
+    """A company admin (team.manage on a routed seller company) assigns the deal to a member of THAT
+    SAME company. Scoped per routing — an admin can neither assign on a competitor's routing nor
+    assign to a member outside their own company."""
     from accounts.services import is_platform_admin_viewer, member_has_permission
 
     if is_platform_admin_viewer(actor):
         return None, "ADMIN_VIEWER_CANNOT_ACT"
-    deal = Deal.objects.select_for_update().filter(pk=deal_id).first()
-    if deal is None:
-        return None, "DEAL_NOT_FOUND"
-    routed_company_ids = list(deal.seller_routings.values_list("seller_company_id", flat=True))
-    # The actor manages ONLY the routed companies where they hold team.manage (superuser → all).
-    if getattr(actor, "is_superuser", False):
-        managed_company_ids = list(routed_company_ids)
-    else:
-        managed_company_ids = [
-            cid for cid in routed_company_ids if member_has_permission(actor, cid, "team.manage")
-        ]
-    if not managed_company_ids:
-        return None, "MEMBER_REQUIRED_FOR_ACTION"
-    # Never overwrite a claim owned by a member OUTSIDE the actor's managed companies — that would
-    # let a competitor seller's admin seize another routed seller's claim (tenant isolation).
-    if deal.assigned_to_id and not deal.assigned_to.memberships.filter(
-        is_active=True, company_id__in=managed_company_ids
-    ).exists():
-        return None, "DEAL_ALREADY_CLAIMED"
     assignee = CustomUser.objects.filter(pk=assignee_id).first()
     if assignee is None:
         return None, "ASSIGNEE_NOT_FOUND"
-    # Assignee must belong to one of the actor's OWN managed seller companies (not just any routed one).
-    if not assignee.memberships.filter(is_active=True, company_id__in=managed_company_ids).exists():
+    managed = [
+        r
+        for r in DealSellerRouting.objects.select_for_update().select_related("deal").filter(deal_id=deal_id)
+        if getattr(actor, "is_superuser", False)
+        or member_has_permission(actor, r.seller_company_id, "team.manage")
+    ]
+    if not managed:
+        return None, "MEMBER_REQUIRED_FOR_ACTION"
+    target = next(
+        (
+            r
+            for r in managed
+            if assignee.memberships.filter(is_active=True, company_id=r.seller_company_id).exists()
+        ),
+        None,
+    )
+    if target is None:
         return None, "ASSIGNEE_NOT_IN_ROUTED_COMPANY"
-    deal.assigned_to = assignee
-    deal.assigned_at = timezone.now()
-    deal.save(update_fields=["assigned_to", "assigned_at", "updated_at"])
-    _notify_assignee(deal, assignee)
-    _log(deal, actor, "Заявка назначена", f"{actor.email} назначил заявку #{deal_id} → {assignee.email}")
-    return deal, None
+    target.assigned_to = assignee
+    target.assigned_at = timezone.now()
+    target.save(update_fields=["assigned_to", "assigned_at"])
+    _notify_assignee(target.deal, assignee)
+    _log(deal_id, actor, "Заявка назначена", f"{actor.email} назначил заявку #{deal_id} → {assignee.email}")
+    return target.deal, None
 
 
 def _notify_assignee(deal: Deal, assignee: CustomUser) -> None:
@@ -143,7 +148,9 @@ def _notify_assignee(deal: Deal, assignee: CustomUser) -> None:
     transaction.on_commit(lambda: push_notification_ws(notif))
 
 
-def _log(deal: Deal, actor: CustomUser, action: str, detail: str) -> None:
+def _log(deal_id: int, actor: CustomUser, action: str, detail: str) -> None:
     from ..models import ActivityLog
 
-    ActivityLog.objects.create(action=action, detail=detail, user=actor, level="INFO", entity_type="deal", entity_id=deal.pk)
+    ActivityLog.objects.create(
+        action=action, detail=detail, user=actor, level="INFO", entity_type="deal", entity_id=deal_id
+    )

@@ -9,23 +9,28 @@ from .models import Notification, NotificationType
 from .services import push_notification_ws
 
 
-def _routed_seller_user_ids(deal) -> set:
-    """Active can_sell members of the seller companies this deal was ROUTED to (DealSellerRouting)."""
+def _seller_user_ids_for_companies(company_ids) -> set:
+    """Active can_sell member user ids of the given seller companies."""
     from accounts.models import CustomUser
 
-    routed_company_ids = list(deal.seller_routings.values_list("seller_company_id", flat=True))
-    if not routed_company_ids:
+    company_ids = list(company_ids)
+    if not company_ids:
         return set()
     return set(
         CustomUser.objects.filter(
             is_active=True,
             memberships__is_active=True,
             memberships__can_sell=True,
-            memberships__company_id__in=routed_company_ids,
+            memberships__company_id__in=company_ids,
         )
         .values_list("id", flat=True)
         .distinct()
     )
+
+
+def _routed_seller_user_ids(deal) -> set:
+    """Active can_sell members of the seller companies this deal was ROUTED to (DealSellerRouting)."""
+    return _seller_user_ids_for_companies(deal.seller_routings.values_list("seller_company_id", flat=True))
 
 
 def _notify_seller_team(deal, info_type):
@@ -95,10 +100,17 @@ def notify_new_message(sender, instance, created, **kwargs):
         recipients.add(deal.client_id)
     if deal.manager_id and deal.manager_id != sender_user.id:
         recipients.add(deal.manager_id)
-    if deal.assigned_to_id and deal.assigned_to_id != sender_user.id:
-        recipients.add(deal.assigned_to_id)
-    elif not deal.assigned_to_id:
-        recipients.update(_routed_seller_user_ids(deal) - {sender_user.id})
+    # Per-seller ownership (ADR-0006 Move 2): notify each routed seller's claimed owner; for a routing
+    # still in the queue, alert that company's seller team. Competition is hidden — each seller hears
+    # only about their own thread.
+    unclaimed_company_ids = []
+    for routing in deal.seller_routings.all():
+        if routing.assigned_to_id:
+            recipients.add(routing.assigned_to_id)
+        else:
+            unclaimed_company_ids.append(routing.seller_company_id)
+    recipients.update(_seller_user_ids_for_companies(unclaimed_company_ids))
+    recipients.discard(sender_user.id)
 
     notifications = [
         Notification(

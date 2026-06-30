@@ -1,11 +1,12 @@
-"""Regression tests for the 2026-06-30 post-merge adversarial-audit fixes (Move 2 / U2).
+"""Regression tests for Move 2 ownership (ADR-0006) — PER SELLER COMPANY (per-routing).
 
-Covers:
-  #2  claim_deal is a true no-op when the actor already owns the deal (assigned_at SLA anchor kept)
-  #7  release_deal / assign_deal are scoped to the actor's OWN routed seller company — a co-routed
-      competitor seller's admin can neither release nor seize another seller's claim (tenant isolation)
-  #4  assigned_to_name is redacted across tenants (competitor seller / non-member viewer gets None)
-  #5  notify_new_message alerts the claimed deal owner (assigned_to), not only client+manager
+Competition between routed sellers is hidden: each seller works the заявка independently and the
+buyer picks a winner. Ownership lives on DealSellerRouting (per deal+seller_company). Covers:
+  * sellers claim INDEPENDENTLY — A's claim never blocks B (the #8 fix)
+  * claim is a no-op for the current owner (assigned_at SLA anchor kept)
+  * release/assign are scoped to the actor's OWN routed company (no cross-seller interference)
+  * assigned_to_name is only the viewer's OWN company's owner (cross-tenant structurally hidden)
+  * notify_new_message reaches each routed seller's claimed owner
 """
 
 from types import SimpleNamespace
@@ -27,12 +28,8 @@ from crm.serializers import DealListSerializer
 from crm.services.assignment import assign_deal, claim_deal, release_deal
 
 
-# ─── helpers ────────────────────────────────────────────────────────────────
-
-
 def _ws(code):
-    role, _ = WorkspaceRole.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
-    return role
+    return WorkspaceRole.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})[0]
 
 
 def _user(email):
@@ -81,16 +78,11 @@ def scenario(lookups):
     DealSellerRouting.objects.create(deal=deal, seller_company=seller_a)
     DealSellerRouting.objects.create(deal=deal, seller_company=seller_b)
 
-    a_member = _user("a.member@a.uz")
-    _member(a_member, seller_a)
-    a_admin = _user("a.admin@a.uz")
-    _member(a_admin, seller_a, company_role=_team_manager_role(seller_a))
-    b_member = _user("b.member@b.uz")
-    _member(b_member, seller_b)
-    b_admin = _user("b.admin@b.uz")
-    _member(b_admin, seller_b, company_role=_team_manager_role(seller_b))
-    buyer_user = _user("buyer@buyer.uz")
-    _member(buyer_user, buyer, can_sell=False, can_buy=True)
+    a_member = _user("a.member@a.uz"); _member(a_member, seller_a)
+    a_admin = _user("a.admin@a.uz"); _member(a_admin, seller_a, company_role=_team_manager_role(seller_a))
+    b_member = _user("b.member@b.uz"); _member(b_member, seller_b)
+    b_admin = _user("b.admin@b.uz"); _member(b_admin, seller_b, company_role=_team_manager_role(seller_b))
+    buyer_user = _user("buyer@buyer.uz"); _member(buyer_user, buyer, can_sell=False, can_buy=True)
 
     return SimpleNamespace(
         deal=deal, buyer=buyer, seller_a=seller_a, seller_b=seller_b,
@@ -98,52 +90,65 @@ def scenario(lookups):
     )
 
 
-# ─── #2 idempotent re-claim ─────────────────────────────────────────────────
+def _routing(deal, company):
+    return DealSellerRouting.objects.get(deal=deal, seller_company=company)
+
+
+# ─── per-seller independence (the #8 fix) ───────────────────────────────────
+
+
+def test_sellers_claim_independently(scenario):
+    """Seller A claiming MUST NOT block seller B from claiming their own copy."""
+    _, err_a = claim_deal(scenario.deal.id, scenario.a_member)
+    _, err_b = claim_deal(scenario.deal.id, scenario.b_member)
+    assert err_a is None and err_b is None
+    assert _routing(scenario.deal, scenario.seller_a).assigned_to_id == scenario.a_member.id
+    assert _routing(scenario.deal, scenario.seller_b).assigned_to_id == scenario.b_member.id
+
+
+def test_teammate_cannot_double_claim_same_company_copy(scenario):
+    a_member2 = _user("a.member2@a.uz"); _member(a_member2, scenario.seller_a)
+    claim_deal(scenario.deal.id, scenario.a_member)
+    _, err = claim_deal(scenario.deal.id, a_member2)
+    assert err == "DEAL_ALREADY_CLAIMED"  # a teammate already owns company A's copy
 
 
 def test_reclaim_by_owner_is_noop_and_preserves_assigned_at(scenario):
-    deal, err = claim_deal(scenario.deal.id, scenario.a_member)
-    assert err is None
-    first_ts = deal.assigned_at
+    claim_deal(scenario.deal.id, scenario.a_member)
+    first_ts = _routing(scenario.deal, scenario.seller_a).assigned_at
     assert first_ts is not None
-
-    deal2, err2 = claim_deal(scenario.deal.id, scenario.a_member)
-    assert err2 is None
-    assert deal2.assigned_at == first_ts  # SLA anchor must NOT be reset by a repeat claim
+    claim_deal(scenario.deal.id, scenario.a_member)
+    assert _routing(scenario.deal, scenario.seller_a).assigned_at == first_ts  # SLA anchor kept
 
 
-# ─── #7 cross-seller release isolation ──────────────────────────────────────
+# ─── cross-seller release/assign isolation ──────────────────────────────────
 
 
 def test_competitor_admin_cannot_release_another_sellers_claim(scenario):
-    claim_deal(scenario.deal.id, scenario.a_member)  # seller A owns it
-    _, err = release_deal(scenario.deal.id, scenario.b_admin)  # seller B's admin tries to yank it
-    assert err == "MEMBER_REQUIRED_FOR_ACTION"
-    scenario.deal.refresh_from_db()
-    assert scenario.deal.assigned_to_id == scenario.a_member.id  # still owned by A
+    claim_deal(scenario.deal.id, scenario.a_member)   # A owns its copy
+    claim_deal(scenario.deal.id, scenario.b_member)   # B owns its own copy
+    # B's admin releases — may only touch B's OWN routing, never A's claim (cross-seller isolation).
+    release_deal(scenario.deal.id, scenario.b_admin)
+    assert _routing(scenario.deal, scenario.seller_a).assigned_to_id == scenario.a_member.id  # A intact
+    assert _routing(scenario.deal, scenario.seller_b).assigned_to_id is None  # B's own released
 
 
 def test_owner_can_release_own_claim(scenario):
     claim_deal(scenario.deal.id, scenario.a_member)
-    deal, err = release_deal(scenario.deal.id, scenario.a_member)
-    assert err is None and deal.assigned_to_id is None
+    _, err = release_deal(scenario.deal.id, scenario.a_member)
+    assert err is None and _routing(scenario.deal, scenario.seller_a).assigned_to_id is None
 
 
 def test_own_company_admin_can_release_member_claim(scenario):
     claim_deal(scenario.deal.id, scenario.a_member)
-    deal, err = release_deal(scenario.deal.id, scenario.a_admin)  # A's own admin
-    assert err is None and deal.assigned_to_id is None
+    _, err = release_deal(scenario.deal.id, scenario.a_admin)
+    assert err is None and _routing(scenario.deal, scenario.seller_a).assigned_to_id is None
 
 
-# ─── #7 cross-seller assign isolation ───────────────────────────────────────
-
-
-def test_competitor_admin_cannot_assign_to_their_own_member_on_anothers_claim(scenario):
-    claim_deal(scenario.deal.id, scenario.a_member)  # A owns it
-    _, err = assign_deal(scenario.deal.id, scenario.b_admin, scenario.b_member.id)
-    assert err == "DEAL_ALREADY_CLAIMED"  # must not overwrite a competitor's claim
-    scenario.deal.refresh_from_db()
-    assert scenario.deal.assigned_to_id == scenario.a_member.id
+def test_admin_can_assign_within_own_company(scenario):
+    _, err = assign_deal(scenario.deal.id, scenario.a_admin, scenario.a_member.id)
+    assert err is None
+    assert _routing(scenario.deal, scenario.seller_a).assigned_to_id == scenario.a_member.id
 
 
 def test_competitor_admin_cannot_assign_a_rivals_member(scenario):
@@ -151,35 +156,28 @@ def test_competitor_admin_cannot_assign_a_rivals_member(scenario):
     assert err == "ASSIGNEE_NOT_IN_ROUTED_COMPANY"  # assignee must be in the actor's own company
 
 
-def test_admin_can_assign_within_own_company(scenario):
-    deal, err = assign_deal(scenario.deal.id, scenario.a_admin, scenario.a_member.id)
-    assert err is None and deal.assigned_to_id == scenario.a_member.id
-
-
-# ─── #4 assigned_to_name cross-tenant redaction ─────────────────────────────
+# ─── assigned_to_name shows only the viewer's OWN company owner ──────────────
 
 
 def _name_as_seen_by(deal, viewer):
-    ser = DealListSerializer(deal, context={"request": SimpleNamespace(user=viewer)})
-    return ser.data["assigned_to_name"]
+    return DealListSerializer(deal, context={"request": SimpleNamespace(user=viewer)}).data["assigned_to_name"]
 
 
-def test_assigned_to_name_redacted_from_competitor_and_buyer(scenario):
-    claim_deal(scenario.deal.id, scenario.a_member)
+def test_assigned_to_name_scoped_to_viewers_own_company(scenario):
+    claim_deal(scenario.deal.id, scenario.a_member)  # only A's copy claimed
     deal = Deal.objects.get(pk=scenario.deal.id)
-    # invited member has blank name → display falls back to email for authorized viewers
-    assert _name_as_seen_by(deal, scenario.a_member) == scenario.a_member.email  # self
-    assert _name_as_seen_by(deal, scenario.a_admin) == scenario.a_member.email   # same company
-    assert _name_as_seen_by(deal, scenario.b_admin) is None   # competitor seller — redacted
-    assert _name_as_seen_by(deal, scenario.buyer_user) is None  # buyer — redacted
+    assert _name_as_seen_by(deal, scenario.a_member) == scenario.a_member.email   # own claim
+    assert _name_as_seen_by(deal, scenario.a_admin) == scenario.a_member.email    # same company
+    assert _name_as_seen_by(deal, scenario.b_admin) is None   # B's own copy is unclaimed → nothing
+    assert _name_as_seen_by(deal, scenario.buyer_user) is None  # buyer doesn't own
 
 
-# ─── #5 chat notification reaches the claimed owner ─────────────────────────
+# ─── chat notification reaches the claimed owner ────────────────────────────
 
 
 def test_new_message_notifies_claimed_owner(scenario):
     from notifications.models import Notification
 
-    claim_deal(scenario.deal.id, scenario.a_member)  # a_member owns the deal (manager stays NULL)
+    claim_deal(scenario.deal.id, scenario.a_member)
     Message.objects.create(deal=scenario.deal, sender=scenario.buyer_user, text="Когда КП?", message_type="CHAT")
     assert Notification.objects.filter(user=scenario.a_member, deal=scenario.deal).exists()
