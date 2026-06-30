@@ -957,10 +957,8 @@ class QuoteLifecycleService:
         }
         if not quote.status or quote.status.code not in review_states:
             return None, "INVALID_STATUS"
-        if reason:
-            note = f"Возврат на доработку: {reason}"
-            quote.notes = f"{quote.notes}\n{note}".strip() if quote.notes else note
-            quote.save(update_fields=["notes", "updated_at"])
+        # LEAK FIX: the rework reason is INTERNAL — it goes to the audit log only, NEVER into
+        # quote.notes (which is rendered verbatim in the CLIENT-facing КП PDF «Примечания»).
         _set_quote_status(quote, QuoteStatusCode.DRAFT)
         _log_quote(quote, actor, "quote.send_back", f"КП v{quote.version} возвращено на доработку. {reason}".strip())
         return quote, None
@@ -1000,12 +998,10 @@ class QuoteLifecycleService:
         quote.status = approved
         quote.approved_at = timezone.now()
         quote.approved_by = admin_user
-        quote.notes = (
-            f"{quote.notes}\n[FORCE_ADMIN] {admin_user.email}: {reason}"
-            if quote.notes
-            else f"[FORCE_ADMIN] {admin_user.email}: {reason}"
-        )
-        quote.save(update_fields=["status", "approved_at", "approved_by", "notes", "updated_at"])
+        # LEAK FIX: the force-override reason + the platform-admin EMAIL must NOT land in
+        # quote.notes — that field is rendered verbatim in the CLIENT КП PDF «Примечания». The
+        # override is fully captured below in the entity-scoped audit log (log_admin_action).
+        quote.save(update_fields=["status", "approved_at", "approved_by", "updated_at"])
         # Structured, entity-scoped audit (G2 Gap A) — route through log_admin_action like
         # transition_deal_stage, so the override carries reason + entity_type/id + before/after
         # and shows on the quote timeline and the «Журнал доступа» page (not a bare ActivityLog).
@@ -1036,11 +1032,9 @@ class QuoteLifecycleService:
 
         rejected_status = QuoteStatus.objects.filter(code=QuoteStatusCode.REJECTED).first()
         quote.status = rejected_status
-        # Append rejection reason instead of replacing notes
-        if reason:
-            rejection_note = f"Причина отказа: {reason}"
-            quote.notes = f"{quote.notes}\n{rejection_note}".strip() if quote.notes else rejection_note
-        quote.save(update_fields=["status", "notes", "updated_at"])
+        # LEAK FIX: the rejection reason is NOT written to quote.notes (rendered in the client КП
+        # PDF). It's preserved on the deal-stage transition audit below + the seller notification.
+        quote.save(update_fields=["status", "updated_at"])
 
         # Move deal back to CALCULATING via FSM
         transition_deal_stage(

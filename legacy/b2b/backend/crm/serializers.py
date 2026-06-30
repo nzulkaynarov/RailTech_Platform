@@ -255,6 +255,24 @@ class QuoteChargeSerializer(serializers.ModelSerializer):
         # resolved_* snapshots are computed by recalc — all read-only on the charge serializer.
         read_only_fields = ["created_by", "created_at", "sort_order", "resolved_base", "resolved_amount", "from_template"]
 
+    # Seller-cost / per-charge breakdown — same redaction invariant as QuoteItem/QuoteSerializer.
+    # The standalone quote-charges endpoint must NOT serve these to a teammate who lacks
+    # quote.view_cost_margin on the КП (a restricted Наблюдатель/logist could otherwise back out
+    # the margin). cost_amount is the seller's REAL cost; resolved_* + the per-charge amount/% are
+    # the breakdown the client PDF deliberately collapses into one aggregated line.
+    _COST_FIELDS = ("cost_amount", "resolved_base", "resolved_amount", "amount", "rate_percent")
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        from accounts.services.permissions import can_view_quote_costs_for
+
+        if not (user and can_view_quote_costs_for(user, instance.quote)):
+            for field_name in self._COST_FIELDS:
+                data.pop(field_name, None)
+        return data
+
 
 class QuoteSerializer(serializers.ModelSerializer):
     items = QuoteItemSerializer(many=True, read_only=True)
