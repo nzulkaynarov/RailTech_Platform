@@ -29,7 +29,7 @@ const stepTargets: (string | null)[] = [
   'sourcing-import', // step 1 — Excel import
   'crm-quotes',      // step 2 — Quotes builder
   'crm-deals',       // step 3 — Deals pipeline
-  'analytics',       // step 4 — Analytics
+  null,              // step 4 — (analytics page cut in Move 1; step shows its blurb, no nav)
 ]
 
 export function OnboardingTour({ open, onClose, onNavigate }: OnboardingTourProps) {

@@ -31,8 +31,6 @@ const PlatformAdminDashboard = lazyWithRetry(() => import('./pages/PlatformAdmin
 const SourcingImportPage = lazyWithRetry(() => import('./pages/SourcingImportPage'));
 const DealsPage = lazyWithRetry(() => import('./pages/DealsPage'));
 const QuotesPage = lazyWithRetry(() => import('./pages/QuotesPage'));
-const ClientsPage = lazyWithRetry(() => import('./pages/ClientsPage'));
-const AnalyticsPage = lazyWithRetry(() => import('./pages/AnalyticsPage'));
 const CategoriesPage = lazyWithRetry(() => import('./pages/CategoriesPage'));
 const EquipmentGroupsPage = lazyWithRetry(() => import('./pages/EquipmentGroupsPage'));
 const HelpPage = lazyWithRetry(() => import('./pages/HelpPage'));
@@ -57,7 +55,6 @@ const InvoicesPage = lazyWithRetry(() => import('./pages/InvoicesPage'));
 const PaymentsPage = lazyWithRetry(() => import('./pages/PaymentsPage'));
 const ActsPage = lazyWithRetry(() => import('./pages/ActsPage'));
 const FulfillmentsPage = lazyWithRetry(() => import('./pages/FulfillmentsPage'));
-const LeadsPage = lazyWithRetry(() => import('./pages/LeadsPage'));
 const MySubscriptionPage = lazyWithRetry(() => import('./pages/MySubscriptionPage'));
 const CatalogImportPage = lazyWithRetry(() => import('./pages/CatalogImportPage'));
 const DealQuotePage = lazyWithRetry(() => import('./pages/DealQuotePage'));
@@ -76,8 +73,6 @@ type Page =
   | { type: 'crm-deals' }
   | { type: 'deal-quote'; dealId: number }
   | { type: 'crm-quotes' }
-  | { type: 'crm-clients' }
-  | { type: 'analytics' }
   | { type: 'categories' }
   | { type: 'equipment-groups' }
   | { type: 'help' }
@@ -102,7 +97,6 @@ type Page =
   | { type: 'payments' }
   | { type: 'acts' }
   | { type: 'fulfillments' }
-  | { type: 'leads' }
   | { type: 'my-subscription' }
   | { type: 'catalog-import' }
 ;
@@ -305,13 +299,6 @@ const ADMIN_PAGES = new Set([
   'admin-companies', 'admin-deals', 'admin-master-data', 'admin-email-templates',
   'admin-operator-roles', 'admin-access-log', 'admin-support',
 ]);
-// CRM-pages that need a management WorkspaceRole inside the user's company
-// (not a platform-level SystemRole). Buyers don't see these by design.
-// See ADR-0002 — Sales Manager / Account Manager are WorkspaceRoles.
-const CRM_MANAGER_PAGES = new Set(['leads']);
-const CRM_MANAGER_WORKSPACE_ROLES = new Set([
-  'OWNER', 'SALES_MANAGER', 'CONTRACT_MANAGER', 'PROCUREMENT_MANAGER', 'BUYER_MANAGER',
-]);
 const KYC_ALLOWED_PAGES = new Set(['dashboard', 'profile', 'settings', 'help']);
 
 // Platform Admin is a viewer/moderator (ADR-0002): they reach moderation +
@@ -341,8 +328,8 @@ const BUYER_PAGES = new Set([
 const SELLER_PAGES = new Set([
   ...COMMON_PAGES,
   'products', 'product_detail', 'categories', 'equipment-groups', 'catalog-import',
-  'sourcing-requests', 'sourcing-import', 'crm-deals', 'crm-quotes', 'crm-clients',
-  'deal-quote', 'request-detail', 'analytics', 'leads', 'my-subscription',
+  'sourcing-requests', 'sourcing-import', 'crm-deals', 'crm-quotes',
+  'deal-quote', 'request-detail', 'my-subscription',
   'contracts', 'invoices', 'payments', 'acts', 'fulfillments',
 ]);
 
@@ -351,10 +338,6 @@ function MainApp() {
   const role = useUserStore((s) => s.role);
   const activeStatus = useUserStore((s) => s.activeStatus);
   const kycStatus = useUserStore((s) => s.company.kycStatus);
-  const workspaceRole = useAuthStore((s) => s.user?.workspace_role ?? null);
-  const canUseCrmManagerPages =
-    role === 'ADMIN' ||
-    (workspaceRole !== null && CRM_MANAGER_WORKSPACE_ROLES.has(workspaceRole));
   const [page, setPage] = useState<Page>(() => parseHashToPage(window.location.hash));
   const [showTour, setShowTour] = useState(false);
 
@@ -373,12 +356,7 @@ function MainApp() {
       window.history.replaceState(null, '', '#dashboard');
       return;
     }
-    if (CRM_MANAGER_PAGES.has(page.type) && !canUseCrmManagerPages) {
-      toast.error(t('guards.managerRequired'));
-      setPage({ type: 'dashboard' });
-      window.history.replaceState(null, '', '#dashboard');
-    }
-  }, [page.type, role, canUseCrmManagerPages, t]);
+  }, [page.type, role, t]);
 
   // KYC guard: if not verified, only allow dashboard/profile/settings/help.
   // Platform admins are moderators, not business actors — their personal
@@ -444,15 +422,15 @@ function MainApp() {
     const validTypes = [
       'dashboard', 'products', 'profile', 'settings',
       'sourcing-requests', 'sourcing-import',
-      'crm-deals', 'crm-quotes', 'crm-clients',
-      'analytics', 'categories', 'equipment-groups',
+      'crm-deals', 'crm-quotes',
+      'categories', 'equipment-groups',
       'help', 'my-requests',
       'admin-users', 'admin-kyc', 'admin-subscriptions', 'admin-role-apps',
       'admin-catalog', 'admin-categories', 'admin-equipment-groups', 'admin-offers',
       'admin-companies', 'admin-deals', 'admin-master-data', 'admin-email-templates',
       'admin-operator-roles', 'admin-access-log', 'admin-support',
       'contracts', 'invoices', 'payments', 'acts', 'fulfillments',
-      'leads', 'my-subscription', 'catalog-import',
+      'my-subscription', 'catalog-import',
     ];
     if (validTypes.includes(target)) {
       // Platform admin (viewer): only moderation/CRUD surfaces are reachable —
@@ -465,11 +443,6 @@ function MainApp() {
       // Role guard: admin pages require ADMIN role
       if (ADMIN_PAGES.has(target) && role !== 'ADMIN') {
         toast.error(t('guards.adminRequired'));
-        navigateTo({ type: 'dashboard' });
-        return;
-      }
-      if (CRM_MANAGER_PAGES.has(target) && !canUseCrmManagerPages) {
-        toast.error(t('guards.managerRequired'));
         navigateTo({ type: 'dashboard' });
         return;
       }
@@ -565,12 +538,6 @@ function MainApp() {
     case 'crm-quotes':
       content = <QuotesPage />;
       break;
-    case 'crm-clients':
-      content = <ClientsPage />;
-      break;
-    case 'analytics':
-      content = <AnalyticsPage />;
-      break;
     case 'categories':
       content = <CategoriesPage />;
       break;
@@ -642,9 +609,6 @@ function MainApp() {
       break;
     case 'fulfillments':
       content = <FulfillmentsPage />;
-      break;
-    case 'leads':
-      content = <LeadsPage />;
       break;
     case 'my-subscription':
       content = <MySubscriptionPage />;
