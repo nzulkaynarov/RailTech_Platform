@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { QuoteItem, QuoteEconomics, crmApi } from '@/api/crmApi';
 import {
@@ -67,6 +68,26 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	const [showGenerateQuote, setShowGenerateQuote] = useState(false);
 	const [showSettings, setShowSettings] = useState(false);
 	const [pricingBusy, setPricingBusy] = useState(false);
+	const [draftBusy, setDraftBusy] = useState(false);
+	const queryClient = useQueryClient();
+
+	// AI draft-КП (Move 3): turn the buyer request into a pre-filled draft (copied lines + prices from
+	// the seller's offers) in one click — review-and-send instead of building from scratch.
+	const handleGenerateDraft = async () => {
+		if (!dealId) return;
+		setDraftBusy(true);
+		try {
+			const { prefilled } = await crmApi.generateDraftQuote(dealId);
+			await queryClient.invalidateQueries({ queryKey: ['deals'] });
+			await queryClient.invalidateQueries({ queryKey: ['quote-items'] });
+			toast.success(t('aiDraft.generated', { count: prefilled }));
+		} catch (e) {
+			const code = (e as { response?: { data?: { error?: string } } })?.response?.data?.error;
+			toast.error(code === 'NO_REQUEST_LINES' ? t('aiDraft.noLines') : t('aiDraft.error'));
+		} finally {
+			setDraftBusy(false);
+		}
+	};
 	// UI-only state — deliberately kept OUT of localItems so it never trips hasUnsavedChanges.
 	const [expandedRowId, setExpandedRowId] = useState<number | null>(null);
 	const [railOpen, setRailOpen] = useState<boolean>(() => {
@@ -199,10 +220,16 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 						</div>
 						<h3 className="text-base font-semibold">{t('quote.empty.title')}</h3>
 						<p className="max-w-sm text-sm text-muted-foreground">{t('quote.empty.description')}</p>
-						<Button className="mt-2" onClick={() => setShowGenerateQuote(true)} disabled={!dealId}>
-							<FileText className="size-4" aria-hidden="true" />
-							{t('quote.empty.action')}
-						</Button>
+						<div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+							<Button onClick={handleGenerateDraft} disabled={!dealId || draftBusy}>
+								{draftBusy ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" aria-hidden="true" />}
+								{t('aiDraft.action')}
+							</Button>
+							<Button variant="outline" onClick={() => setShowGenerateQuote(true)} disabled={!dealId}>
+								<FileText className="size-4" aria-hidden="true" />
+								{t('quote.empty.action')}
+							</Button>
+						</div>
 					</CardContent>
 				</Card>
 				<GenerateQuoteDialog
