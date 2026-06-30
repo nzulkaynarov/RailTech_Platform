@@ -65,6 +65,16 @@ def generate_draft_quote(deal_id: int, actor: CustomUser) -> Tuple[Optional[Quot
         return None, "NO_REQUEST_LINES", 0
 
     seller_company_id = primary_seller_company_id(actor)
+    # MONETIZATION GATE (ADR-0006 Move 4): AI draft is a paid accelerator. An operational subscription
+    # grants it (unmetered) by the baseline; a credit-limited entitlement meters it. consume_credit
+    # decrements only when metered, and the whole function is atomic so a credit rolls back on error.
+    # Superuser = platform escalation (no seller company), bypasses.
+    if not getattr(actor, "is_superuser", False):
+        from accounts.constants import FeatureKey
+        from accounts.services import consume_credit
+
+        if not consume_credit(seller_company_id, FeatureKey.AI_DRAFT):
+            return None, "AI_DRAFT_NOT_ENTITLED", 0
     version = (deal.quotes.aggregate(max_v=Max("version"))["max_v"] or 0) + 1
     quote = Quote.objects.create(
         deal=deal,

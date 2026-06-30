@@ -74,7 +74,11 @@ def consume_credit(company_id: int, feature_key, amount: int = 1) -> bool:
         .filter(company_id=company_id, feature_key=key)
         .first()
     )
-    if row is None or not row.is_currently_granted():
+    if row is None:
+        # No explicit row → an operational subscription grants the baseline UNMETERED (mirrors
+        # has_entitlement so a subscribed seller isn't blocked just for lacking a credit row).
+        return key in SUBSCRIPTION_BASELINE_FEATURES and _has_operational_subscription(company_id)
+    if not row.is_currently_granted():
         return False
     if row.credits is None:  # unmetered grant
         return True

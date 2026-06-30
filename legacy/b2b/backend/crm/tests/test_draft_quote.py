@@ -36,6 +36,17 @@ def scene(db):
     buyer.types.add(CompanyType.objects.get(code="CLIENT"))
     seller = Company.objects.create(name="Seller", inn="2220000001")
     seller.types.add(CompanyType.objects.get(code="SUPPLIER"))
+    # Operational subscription → entitles the seller to ai.draft (baseline) so the gate passes.
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from accounts.models import SupplierSubscription
+
+    SupplierSubscription.objects.create(
+        company=seller, plan="BASIC", status="ACTIVE",
+        valid_from=timezone.now().date(), valid_until=(timezone.now() + timedelta(days=365)).date(),
+    )
 
     product = Product.objects.create(name="Автосцепка СА-3")
     SupplierOffer.objects.create(
@@ -96,3 +107,18 @@ def test_no_request_lines(scene):
     DealSellerRouting.objects.create(deal=empty_deal, seller_company=scene["seller"])
     _, err, _ = generate_draft_quote(empty_deal.id, scene["seller_user"])
     assert err == "NO_REQUEST_LINES"
+
+
+def test_ai_draft_gated_without_entitlement(scene):
+    """A routed seller WITHOUT a subscription/entitlement can't generate an AI draft (paid feature)."""
+    seller2 = Company.objects.create(name="Seller2", inn="2220000077")
+    seller2.types.add(CompanyType.objects.get(code="SUPPLIER"))  # no subscription, no entitlement
+    DealSellerRouting.objects.create(deal=scene["deal"], seller_company=seller2)
+    role = CompanyRole.objects.create(company=seller2, name="М", permissions=["quote.edit_pricing"])
+    ws = WorkspaceRole.objects.get(code="SALES_MANAGER")
+    member = CustomUser.objects.create_user(email="s2@s.uz", username="s2@s.uz", password="pw", is_active=True)
+    CompanyMember.objects.create(
+        user=member, company=seller2, role=ws, company_role=role, is_active=True, is_primary=True, can_sell=True
+    )
+    _, err, _ = generate_draft_quote(scene["deal"].id, member)
+    assert err == "AI_DRAFT_NOT_ENTITLED"
