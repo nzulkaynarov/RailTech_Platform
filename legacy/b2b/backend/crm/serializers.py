@@ -429,30 +429,38 @@ class QuoteSerializer(serializers.ModelSerializer):
         return data
 
 
-def _assigned_to_display(obj, request):
-    """Display name of the deal's claimed owner — REDACTED across tenants (confidentiality).
-
-    Returns the assignee's full name (falling back to email, since invited members often have
-    blank first/last name) ONLY to viewers who may see that individual: platform admin/superuser,
-    the assignee themselves, or someone sharing an active company membership with the assignee
-    (their own seller team). A co-routed COMPETITOR seller — or the buyer — must NOT learn a rival
-    seller's individual employee identity, so they get None. The deal still reports `assigned_to`
-    (the id) so the UI can show claimed/unclaimed without leaking the name.
-    """
-    if not obj.assigned_to_id:
-        return None
+def _viewer_routing(obj, request):
+    """The DealSellerRouting for the VIEWER's OWN seller company on this deal (per-seller ownership,
+    ADR-0006 Move 2). Each seller sees only THEIR company's claim — a competitor's routing is never
+    surfaced, so cross-seller identity leakage is structurally impossible. Buyer / platform admin
+    have no own-routing here → None (they don't claim)."""
     user = getattr(request, "user", None)
     if user is None or not getattr(user, "is_authenticated", False):
         return None
-    assignee = obj.assigned_to
-    display = assignee.get_full_name() or assignee.email
-    if getattr(user, "is_superuser", False) or getattr(user, "is_platform_admin", False):
-        return display
-    if user.id == assignee.id:
-        return display
-    viewer_company_ids = set(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
-    assignee_company_ids = set(assignee.memberships.filter(is_active=True).values_list("company_id", flat=True))
-    return display if (viewer_company_ids & assignee_company_ids) else None
+    company_ids = set(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
+    if not company_ids:
+        return None
+    return next((r for r in obj.seller_routings.all() if r.seller_company_id in company_ids), None)
+
+
+def _assigned_to_id(obj, request):
+    routing = _viewer_routing(obj, request)
+    return routing.assigned_to_id if routing else None
+
+
+def _assigned_to_display(obj, request):
+    """Owner display name for the viewer's OWN company routing (their colleague), falling back to
+    email since invited members often have a blank full name. None if unclaimed / not the viewer's."""
+    routing = _viewer_routing(obj, request)
+    if routing is None or not routing.assigned_to_id:
+        return None
+    assignee = routing.assigned_to
+    return assignee.get_full_name() or assignee.email
+
+
+def _assigned_at(obj, request):
+    routing = _viewer_routing(obj, request)
+    return routing.assigned_at if routing else None
 
 
 class DealListSerializer(serializers.ModelSerializer):
@@ -463,10 +471,19 @@ class DealListSerializer(serializers.ModelSerializer):
     company_name = serializers.CharField(source="company.name", read_only=True)
     active_quote = QuoteSerializer(read_only=True)
     target_sellers_data = serializers.SerializerMethodField()
+    # Per-seller ownership (ADR-0006 Move 2): these reflect the VIEWER's own company routing.
+    assigned_to = serializers.SerializerMethodField()
     assigned_to_name = serializers.SerializerMethodField()
+    assigned_at = serializers.SerializerMethodField()
+
+    def get_assigned_to(self, obj):
+        return _assigned_to_id(obj, self.context.get("request"))
 
     def get_assigned_to_name(self, obj):
         return _assigned_to_display(obj, self.context.get("request"))
+
+    def get_assigned_at(self, obj):
+        return _assigned_at(obj, self.context.get("request"))
 
     def get_target_sellers_data(self, obj) -> list:
         """Seller companies this RFQ is routed to (multi-seller routing)."""
@@ -503,12 +520,21 @@ class DealDetailSerializer(serializers.ModelSerializer):
     company_name = serializers.CharField(source="company.name", read_only=True)
     client_name = serializers.CharField(source="client.get_full_name", read_only=True)
     manager_name = serializers.CharField(source="manager.get_full_name", read_only=True)
+    # Per-seller ownership (ADR-0006 Move 2): these reflect the VIEWER's own company routing.
+    assigned_to = serializers.SerializerMethodField()
     assigned_to_name = serializers.SerializerMethodField()
+    assigned_at = serializers.SerializerMethodField()
     can_edit_request = serializers.SerializerMethodField()
     target_sellers_data = serializers.SerializerMethodField()
 
+    def get_assigned_to(self, obj):
+        return _assigned_to_id(obj, self.context.get("request"))
+
     def get_assigned_to_name(self, obj):
         return _assigned_to_display(obj, self.context.get("request"))
+
+    def get_assigned_at(self, obj):
+        return _assigned_at(obj, self.context.get("request"))
 
     def get_target_sellers_data(self, obj) -> list:
         """Seller companies this RFQ is routed to (multi-seller routing)."""

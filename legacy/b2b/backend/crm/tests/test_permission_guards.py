@@ -626,20 +626,25 @@ def test_approve_raises_on_illegal_stage_no_silent_desync(lookups, buyer_company
 def test_claim_deal_by_routed_seller_then_lock_then_release(lookups, buyer_company, seller_company, deal):
     """A routed seller claims an unclaimed deal; a second member can't steal it (claim-lock);
     release returns it to the queue. The world-standard claimable-queue ownership."""
+    from crm.models import DealSellerRouting
     from crm.services.assignment import claim_deal, release_deal
+
+    def _routing():
+        return DealSellerRouting.objects.get(deal=deal, seller_company=seller_company)
 
     seller = _make_user("claim_seller@s.test")
     _make_member(seller, seller_company, can_sell=True, is_primary=True)
-    claimed, err = claim_deal(deal.id, seller)
-    assert err is None and claimed.assigned_to_id == seller.id and claimed.assigned_at is not None
+    _, err = claim_deal(deal.id, seller)
+    # Ownership lives on the seller-company routing now (ADR-0006 Move 2 per-routing).
+    assert err is None and _routing().assigned_to_id == seller.id and _routing().assigned_at is not None
 
     other = _make_user("claim_other@s.test")
     _make_member(other, seller_company, can_sell=True, is_primary=True)
     _, err2 = claim_deal(deal.id, other)
-    assert err2 == "DEAL_ALREADY_CLAIMED"  # owned — no silent steal
+    assert err2 == "DEAL_ALREADY_CLAIMED"  # a teammate owns this company's copy — no silent steal
 
-    released, err3 = release_deal(deal.id, seller)
-    assert err3 is None and released.assigned_to_id is None
+    _, err3 = release_deal(deal.id, seller)
+    assert err3 is None and _routing().assigned_to_id is None
 
 
 @pytest.mark.django_db
