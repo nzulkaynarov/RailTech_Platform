@@ -278,7 +278,7 @@ def auto_invoice_on_closed_won(self, deal_id: int) -> dict:
     retry_backoff=True,
 )
 def expire_stale_quotes(self) -> dict:
-    """Move SENT quotes past `valid_until` to EXPIRED and notify the deal manager.
+    """Move SENT quotes past `valid_until` to EXPIRED and notify the КП author (prepared_by).
 
     Runs on a daily Beat schedule. Ignores DRAFT (not yet sent) and APPROVED /
     REJECTED (terminal) quotes. Each transition is audit-logged in ActivityLog.
@@ -292,7 +292,7 @@ def expire_stale_quotes(self) -> dict:
     if expired_status is None:
         logger.error("QuoteStatus 'EXPIRED' missing — seed migration not applied")
         return {"expired": 0, "error": "expired_status_missing"}
-    stale_qs = Quote.objects.select_related("status", "deal__manager").filter(
+    stale_qs = Quote.objects.select_related("status", "prepared_by").filter(
         status__code="SENT",
         valid_until__isnull=False,
         valid_until__lt=today,
@@ -310,9 +310,9 @@ def expire_stale_quotes(self) -> dict:
             user=None,
             level="WARNING",
         )
-        if q.deal.manager and warn_type:
+        if q.prepared_by and warn_type:
             notif = Notification.objects.create(
-                user=q.deal.manager,
+                user=q.prepared_by,
                 type=warn_type,
                 title="КП просрочено",
                 message=f"Срок действия КП v{q.version} по сделке #{q.deal_id} истёк",

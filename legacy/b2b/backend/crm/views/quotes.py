@@ -16,7 +16,7 @@ from rest_framework.views import APIView
 
 from core.file_streaming import stream_file_field
 from core.optimistic_locking import OptimisticLockingMixin
-from core.permissions import IsCompanyMemberOrPlatformAdmin, IsPlatformAdmin, OperatorScoped
+from core.permissions import IsCompanyMemberOrPlatformAdmin, OperatorScoped
 from crm import services as crm_services
 from crm.constants import QuoteStatusCode
 from crm.models import ChargeTemplate, ChargeType, Quote, QuoteCharge, QuoteItem, QuoteStatus
@@ -344,7 +344,12 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
             return denied
         from crm.services import QuoteLifecycleService
 
-        quote = QuoteLifecycleService.approve_quote(quote.pk, request.user)
+        try:
+            quote = QuoteLifecycleService.approve_quote(quote.pk, request.user)
+        except ValueError as exc:
+            # Surface a clean 400 (incl. the P0-1 FSM error) instead of a 500.
+            code = str(exc)
+            return _chain_error_response(code if code == "FSM_TRANSITION_NOT_ALLOWED" else "INVALID_STATUS")
         return Response(self.get_serializer(quote).data)
 
     @staticmethod
@@ -396,7 +401,11 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
         reason = request.data.get("reason", "")
         from crm.services import QuoteLifecycleService
 
-        quote = QuoteLifecycleService.reject_quote(quote.pk, request.user, reason)
+        try:
+            quote = QuoteLifecycleService.reject_quote(quote.pk, request.user, reason)
+        except ValueError as exc:
+            code = str(exc)
+            return _chain_error_response(code if code == "FSM_TRANSITION_NOT_ALLOWED" else "INVALID_STATUS")
         return Response(self.get_serializer(quote).data)
 
     @extend_schema(
@@ -738,26 +747,33 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
         detail=True,
         methods=["post"],
         url_path="reassign-product",
-        permission_classes=[IsAuthenticated, IsPlatformAdmin],
+        permission_classes=[IsAuthenticated],
     )
     def reassign_product(self, request, pk=None):
+        # P0-2: re-matching an item to a catalog product is a SELLER action (КП assembly), NOT
+        # platform-admin-only — the dialog renders on the seller's own КП page. _assert_seller
+        # gates "is a seller"; get_object scopes to the seller's own visible items (a buyer can't
+        # reach another tenant's item, and a buyer hitting their own item is refused by _assert_seller).
+        self._assert_seller()
+        item = self.get_object()
         product_id = request.data.get("product_id")
-        item, err = crm_services.reassign_quote_item_product(
-            int(pk),
+        updated, err = crm_services.reassign_quote_item_product(
+            item.id,
             request.user,
             product_id=int(product_id) if product_id else None,
         )
         if err:
             return Response({"detail": err}, status=400)
-        return Response(QuoteItemSerializer(item).data)
+        return Response(QuoteItemSerializer(updated).data)
 
     @extend_schema(summary="Get top-N smart-match candidates for this item", tags=["CRM"])
     @action(
-        detail=True, methods=["get"], url_path="match-candidates", permission_classes=[IsAuthenticated, IsPlatformAdmin]
+        detail=True, methods=["get"], url_path="match-candidates", permission_classes=[IsAuthenticated]
     )
     def match_candidates(self, request, pk=None):
         from sourcing.services import smart_match_candidates
 
+        self._assert_seller()
         item = self.get_object()
         raw = item.imported_raw_name or (item.product.name if item.product else "")
         domain_hint = item.product.domain_type.code if (item.product and item.product.domain_type) else None
