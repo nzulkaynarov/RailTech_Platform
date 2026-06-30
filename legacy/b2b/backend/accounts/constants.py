@@ -235,8 +235,8 @@ class FeatureKey(models.TextChoices):
     accounts.services.entitlements.has_entitlement(company_id, FeatureKey.X).
     """
 
-    KP_SEND = "kp.send", "Отправка КП клиенту"
-    KP_EXPORT = "kp.export", "Экспорт КП (PDF/Excel)"
+    QUOTE_SEND = "quote.send", "Отправка КП клиенту"
+    QUOTE_EXPORT = "quote.export", "Экспорт КП (PDF/Excel)"
     AI_MATCH = "ai.match", "AI-подбор каталога"
     AI_DRAFT = "ai.draft", "AI-черновик КП"
     AI_PREFLIGHT = "ai.preflight", "AI-проверка заявки"
@@ -259,8 +259,8 @@ FREE_FLOOR_FEATURES = frozenset(
 # that maps "has a plan" → features; business code still only ever checks a FeatureKey.
 SUBSCRIPTION_BASELINE_FEATURES = frozenset(
     {
-        FeatureKey.KP_SEND.value,
-        FeatureKey.KP_EXPORT.value,
+        FeatureKey.QUOTE_SEND.value,
+        FeatureKey.QUOTE_EXPORT.value,
         FeatureKey.AI_DRAFT.value,
         FeatureKey.ROLES_CUSTOM.value,
     }

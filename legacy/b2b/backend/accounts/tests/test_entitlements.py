@@ -8,7 +8,8 @@ from django.utils import timezone
 from accounts.constants import FeatureKey
 from accounts.models import Company, CompanyEntitlement, SupplierSubscription
 from accounts.services.entitlements import (
-    can_send_kp,
+    quote_export_entitled,
+    quote_send_entitled,
     consume_credit,
     grant_entitlement,
     has_entitlement,
@@ -34,58 +35,66 @@ def test_free_floor_always_granted_without_a_row(company):
 
 
 def test_non_floor_feature_locked_without_a_row(company):
-    assert has_entitlement(company.id, FeatureKey.KP_SEND) is False
+    assert has_entitlement(company.id, FeatureKey.QUOTE_SEND) is False
 
 
-# ─── monetization gate: subscription baseline + can_send_kp ──────────────────
+# ─── monetization gate: subscription baseline + quote_send_entitled ──────────────────
 
 
 def test_operational_subscription_grants_send_baseline(company):
     _operational_sub(company)
-    assert has_entitlement(company.id, FeatureKey.KP_SEND) is True
-    assert can_send_kp(company.id) is True
+    assert has_entitlement(company.id, FeatureKey.QUOTE_SEND) is True
+    assert quote_send_entitled(company.id) is True
 
 
 def test_no_subscription_no_send(company):
-    assert can_send_kp(company.id) is False  # build is free; send is not
+    assert quote_send_entitled(company.id) is False  # build is free; send is not
 
 
 def test_explicit_disable_overrides_subscription(company):
     _operational_sub(company)
-    grant_entitlement(company.id, FeatureKey.KP_SEND, access="DISABLED")  # admin revoke wins
-    assert can_send_kp(company.id) is False
+    grant_entitlement(company.id, FeatureKey.QUOTE_SEND, access="DISABLED")  # admin revoke wins
+    assert quote_send_entitled(company.id) is False
 
 
 def test_demo_blocks_send_even_with_subscription(company):
     _operational_sub(company)
-    grant_entitlement(company.id, FeatureKey.KP_SEND, access="DEMO")
-    assert has_entitlement(company.id, FeatureKey.KP_SEND) is True  # usable (build)...
-    assert can_send_kp(company.id) is False  # ...but demo can't actually send
+    grant_entitlement(company.id, FeatureKey.QUOTE_SEND, access="DEMO")
+    assert has_entitlement(company.id, FeatureKey.QUOTE_SEND) is True  # usable (build)...
+    assert quote_send_entitled(company.id) is False  # ...but demo can't actually send
 
 
 def test_promo_grant_allows_send_without_subscription(company):
-    grant_entitlement(company.id, FeatureKey.KP_SEND, access="ENABLED")  # promo, no subscription
-    assert can_send_kp(company.id) is True
+    grant_entitlement(company.id, FeatureKey.QUOTE_SEND, access="ENABLED")  # promo, no subscription
+    assert quote_send_entitled(company.id) is True
+
+
+def test_export_gate_baseline_and_demo(company):
+    assert quote_export_entitled(company.id) is False  # no subscription, no row
+    _operational_sub(company)
+    assert quote_export_entitled(company.id) is True  # subscription baseline grants quote.export
+    grant_entitlement(company.id, FeatureKey.QUOTE_EXPORT, access="DEMO")
+    assert quote_export_entitled(company.id) is False  # demo can't export cost data
 
 
 def test_enabled_row_grants_disabled_revokes(company):
-    grant_entitlement(company.id, FeatureKey.KP_SEND, access="ENABLED")
-    assert has_entitlement(company.id, FeatureKey.KP_SEND) is True
-    grant_entitlement(company.id, FeatureKey.KP_SEND, access="DISABLED")
-    assert has_entitlement(company.id, FeatureKey.KP_SEND) is False
+    grant_entitlement(company.id, FeatureKey.QUOTE_SEND, access="ENABLED")
+    assert has_entitlement(company.id, FeatureKey.QUOTE_SEND) is True
+    grant_entitlement(company.id, FeatureKey.QUOTE_SEND, access="DISABLED")
+    assert has_entitlement(company.id, FeatureKey.QUOTE_SEND) is False
 
 
 def test_expired_entitlement_not_granted(company):
     grant_entitlement(
-        company.id, FeatureKey.KP_EXPORT, access="ENABLED", expires_at=timezone.now() - timedelta(days=1)
+        company.id, FeatureKey.QUOTE_EXPORT, access="ENABLED", expires_at=timezone.now() - timedelta(days=1)
     )
-    assert has_entitlement(company.id, FeatureKey.KP_EXPORT) is False
+    assert has_entitlement(company.id, FeatureKey.QUOTE_EXPORT) is False
 
 
 def test_demo_access_is_granted_and_flagged(company):
-    grant_entitlement(company.id, FeatureKey.KP_SEND, access="DEMO")
-    assert has_entitlement(company.id, FeatureKey.KP_SEND) is True  # usable...
-    assert is_demo(company.id, FeatureKey.KP_SEND) is True  # ...but the caller knows to watermark/gate
+    grant_entitlement(company.id, FeatureKey.QUOTE_SEND, access="DEMO")
+    assert has_entitlement(company.id, FeatureKey.QUOTE_SEND) is True  # usable...
+    assert is_demo(company.id, FeatureKey.QUOTE_SEND) is True  # ...but the caller knows to watermark/gate
 
 
 def test_credit_metering_consumes_and_blocks_when_exhausted(company):
@@ -109,7 +118,7 @@ def test_free_floor_consume_is_noop_true(company):
 
 
 def test_grant_is_upsert_one_row_per_feature(company):
-    grant_entitlement(company.id, FeatureKey.KP_SEND, access="ENABLED")
-    grant_entitlement(company.id, FeatureKey.KP_SEND, access="DEMO", note="downgraded")
-    rows = CompanyEntitlement.objects.filter(company=company, feature_key="kp.send")
+    grant_entitlement(company.id, FeatureKey.QUOTE_SEND, access="ENABLED")
+    grant_entitlement(company.id, FeatureKey.QUOTE_SEND, access="DEMO", note="downgraded")
+    rows = CompanyEntitlement.objects.filter(company=company, feature_key="quote.send")
     assert rows.count() == 1 and rows.first().access == "DEMO"

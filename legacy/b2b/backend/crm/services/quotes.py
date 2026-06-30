@@ -706,14 +706,14 @@ class QuoteLifecycleService:
             raise ValueError("QUOTE_NOT_CLAIMED")
 
         # MONETIZATION GATE (ADR-0006 Move 4): sending a КП to the client is a PAID action. The
-        # seller's company must hold the kp.send entitlement — an operational subscription grants it
+        # seller's company must hold the quote.send entitlement — an operational subscription grants it
         # by default, so paying sellers are unaffected; a demo/unsubscribed seller can build the КП
         # but not send it. Superuser = platform escalation, allowed through.
         if seller_company is not None and not getattr(sent_by_user, "is_superuser", False):
-            from accounts.services import can_send_kp
+            from accounts.services import quote_send_entitled
 
-            if not can_send_kp(seller_company.id):
-                raise ValueError("KP_SEND_NOT_ENTITLED")
+            if not quote_send_entitled(seller_company.id):
+                raise ValueError("QUOTE_SEND_NOT_ENTITLED")
 
         # LOSS PREVENTION (authoritative server gate): never send a КП priced below its landed
         # cost — even if items/charges were edited after the internal approval. Mirrors the
