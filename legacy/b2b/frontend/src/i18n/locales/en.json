@@ -1694,7 +1694,8 @@
     "empty": "No deals",
     "untitled": "Deal #{{id}}",
     "claim": "Claim",
-    "claimed": "Deal claimed"
+    "claimed": "Deal claimed",
+    "assigned": "Assigned"
   },
   "verification": {
     "applicationUnderReview": "Application Under Review",

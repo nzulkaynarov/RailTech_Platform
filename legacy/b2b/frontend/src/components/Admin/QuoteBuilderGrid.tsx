@@ -401,6 +401,17 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 			<Button variant="ghost" size="icon-xs" onClick={toggleRail} aria-expanded={false} aria-controls="kp-econ-rail" title={t('quote.rail.expand')}>
 				<PanelRightOpen className="size-4" />
 			</Button>
+			{/* Keep «Настройки КП» reachable even when the rail is collapsed (no dead-end). */}
+			{!activeQuote.frozen_at && (
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<Button variant="ghost" size="icon-xs" onClick={() => setShowSettings(true)} aria-label={t('quote.settings.title')}>
+							<Settings className="size-4" />
+						</Button>
+					</TooltipTrigger>
+					<TooltipContent side="left">{t('quote.settings.title')}</TooltipContent>
+				</Tooltip>
+			)}
 			{econ && (
 				<Tooltip>
 					<TooltipTrigger asChild>

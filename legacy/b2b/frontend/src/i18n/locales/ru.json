@@ -1698,7 +1698,8 @@
     "empty": "Нет сделок",
     "untitled": "Сделка #{{id}}",
     "claim": "Взять в работу",
-    "claimed": "Заявка взята в работу"
+    "claimed": "Заявка взята в работу",
+    "assigned": "Назначено"
   },
   "verification": {
     "applicationUnderReview": "Заявка на рассмотрении",
