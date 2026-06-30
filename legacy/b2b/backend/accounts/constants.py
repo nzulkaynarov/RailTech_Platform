@@ -252,3 +252,16 @@ FREE_FLOOR_FEATURES = frozenset(
         FeatureKey.AI_PREFLIGHT.value,  # advisory request quality — free, improves data for everyone
     }
 )
+
+# Baseline features an OPERATIONAL SupplierSubscription grants (no explicit entitlement row needed)
+# — so a paying/trial seller keeps sending & exporting КП and building AI drafts. An explicit
+# CompanyEntitlement row OVERRIDES this (a promo grant, or a DEMO downgrade). This is the ONE place
+# that maps "has a plan" → features; business code still only ever checks a FeatureKey.
+SUBSCRIPTION_BASELINE_FEATURES = frozenset(
+    {
+        FeatureKey.KP_SEND.value,
+        FeatureKey.KP_EXPORT.value,
+        FeatureKey.AI_DRAFT.value,
+        FeatureKey.ROLES_CUSTOM.value,
+    }
+)

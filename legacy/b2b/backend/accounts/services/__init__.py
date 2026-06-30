@@ -67,6 +67,8 @@ from .permissions import (
     seller_visible_deal_ids,
 )
 from .entitlements import (
+    can_export_kp,
+    can_send_kp,
     consume_credit,
     entitlement_state,
     grant_entitlement,
@@ -96,6 +98,8 @@ __all__ = [
     "check_and_expire_subscriptions",
     "company_active_admins",
     "company_has_operational_subscription",
+    "can_export_kp",
+    "can_send_kp",
     "consume_credit",
     "entitlement_state",
     "grant_entitlement",
