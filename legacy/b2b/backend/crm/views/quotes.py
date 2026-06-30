@@ -430,59 +430,46 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
         return Response(self.get_serializer(quote).data)
 
     @extend_schema(
-        summary="Confirm trade review (FOREIGN_TRADE_SPECIALIST / ВЭД)",
-        responses={
-            200: QuoteSerializer,
-            400: OpenApiResponse(description="Wrong status"),
-            403: OpenApiResponse(description="Role not permitted"),
-        },
-        tags=["CRM"],
-    )
-    @action(detail=True, methods=["post"], url_path="confirm-trade-review", permission_classes=[IsAuthenticated])
-    def confirm_trade_review(self, request, pk=None):
-        from crm.services import QuoteLifecycleService
-
-        quote, error = QuoteLifecycleService.confirm_trade_review(int(pk), request.user)
-        if error:
-            return _chain_error_response(error)
-        return Response(self.get_serializer(quote).data)
-
-    @extend_schema(
-        summary="Approve КП internally (DIRECTOR)",
-        responses={
-            200: QuoteSerializer,
-            400: OpenApiResponse(description="Wrong status"),
-            403: OpenApiResponse(description="Role not permitted"),
-        },
-        tags=["CRM"],
-    )
-    @action(detail=True, methods=["post"], url_path="director-approve", permission_classes=[IsAuthenticated])
-    def director_approve(self, request, pk=None):
-        from crm.services import QuoteLifecycleService
-
-        quote, error = QuoteLifecycleService.director_approve(int(pk), request.user)
-        if error:
-            return _chain_error_response(error)
-        return Response(self.get_serializer(quote).data)
-
-    @extend_schema(
-        summary="Send КП back to sales for rework (ВЭД / DIRECTOR)",
+        summary="Act on a КП approval step (approve / reject)",
         request=inline_serializer(
-            "SendBackQuoteRequest", fields={"reason": drf_serializers.CharField(required=False, default="")}
+            "ApprovalActRequest",
+            fields={
+                "step_id": drf_serializers.IntegerField(),
+                "decision": drf_serializers.ChoiceField(choices=["APPROVE", "REJECT"]),
+                "comment": drf_serializers.CharField(required=False, default=""),
+            },
         ),
-        responses={
-            200: QuoteSerializer,
-            400: OpenApiResponse(description="Wrong status"),
-            403: OpenApiResponse(description="Role not permitted"),
-        },
+        responses={200: QuoteSerializer, 400: OpenApiResponse(description="Wrong status/step"), 403: OpenApiResponse(description="Role not permitted")},
         tags=["CRM"],
     )
-    @action(detail=True, methods=["post"], url_path="send-back", permission_classes=[IsAuthenticated])
-    def send_back(self, request, pk=None):
-        from crm.services import QuoteLifecycleService
+    @action(detail=True, methods=["post"], url_path="approval-act", permission_classes=[IsAuthenticated])
+    def approval_act(self, request, pk=None):
+        """An approver approves or rejects their step in the КП approval chain."""
+        from crm.services.approvals import act_on_step
 
-        reason = request.data.get("reason", "")
-        quote, error = QuoteLifecycleService.send_back(int(pk), request.user, reason)
+        step_id = request.data.get("step_id")
+        decision = (request.data.get("decision") or "").upper()
+        comment = request.data.get("comment", "")
+        if decision not in ("APPROVE", "REJECT"):
+            return _chain_error_response("INVALID_DECISION")
+        if not step_id:
+            return _chain_error_response("STEP_NOT_FOUND")
+        quote, error = act_on_step(int(step_id), request.user, decision, comment)
+        if error:
+            return _chain_error_response(error)
+        return Response(self.get_serializer(quote).data)
+
+    @extend_schema(
+        summary="Recall a КП from approval back to DRAFT (submitter / head)",
+        responses={200: QuoteSerializer, 400: OpenApiResponse(description="Wrong status"), 403: OpenApiResponse(description="Not permitted")},
+        tags=["CRM"],
+    )
+    @action(detail=True, methods=["post"], url_path="recall", permission_classes=[IsAuthenticated])
+    def recall(self, request, pk=None):
+        """Pull a КП back out of the approval chain to edit it (PENDING_APPROVAL → DRAFT)."""
+        from crm.services.approvals import recall_quote
+
+        quote, error = recall_quote(int(pk), request.user)
         if error:
             return _chain_error_response(error)
         return Response(self.get_serializer(quote).data)

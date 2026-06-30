@@ -3,6 +3,7 @@
 Public API re-exported so existing import paths keep working.
 """
 
+from .approvals import QuoteApprovalStep, StepParticipation, StepStatus, StepTrigger
 from .billing import Act, Invoice, InvoiceItem, Payment
 from .charges import ChargeTemplate, QuoteCharge
 from .contracts import Contract
@@ -41,8 +42,12 @@ __all__ = [
     "Message",
     "Payment",
     "Quote",
+    "QuoteApprovalStep",
     "QuoteCharge",
     "QuoteItem",
     "QuoteItemHistory",
     "QuoteStatus",
+    "StepParticipation",
+    "StepStatus",
+    "StepTrigger",
 ]

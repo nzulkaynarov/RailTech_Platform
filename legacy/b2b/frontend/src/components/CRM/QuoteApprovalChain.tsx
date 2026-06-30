@@ -1,21 +1,14 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Check, ChevronRight, Loader2, SendHorizontal, Undo2 } from 'lucide-react';
-import type { Quote } from '@/api/crmApi';
-import { useAuthStore } from '@/store/authStore';
+import { Check, Clock, Loader2, Lock, SendHorizontal, Undo2, X, Mail } from 'lucide-react';
+import type { Quote, QuoteApprovalStep } from '@/api/crmApi';
 import { translateApiError } from '@/lib/apiError';
-import {
-  useSubmitQuoteForReview,
-  useConfirmQuoteTradeReview,
-  useDirectorApproveQuote,
-  useSendQuoteBack,
-} from '@/hooks/useCRM';
+import { useSubmitQuoteForReview, useActOnApprovalStep, useRecallQuote } from '@/hooks/useCRM';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { cn } from '@/lib/utils';
 import {
   AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -25,175 +18,152 @@ interface QuoteApprovalChainProps {
   quote: Quote;
 }
 
-/** Ordered chain stages, used to render the stepper. SENT/APPROVED/REJECTED are
- * terminal client-side states — the chain bar hides itself for them. */
-const CHAIN_STEPS = [
-  { code: 'DRAFT', labelKey: 'quote.approvalChain.stepDraft' },
-  { code: 'PENDING_TRADE_REVIEW', labelKey: 'quote.approvalChain.stepTradeReview' },
-  { code: 'PENDING_APPROVAL', labelKey: 'quote.approvalChain.stepApproval' },
-  { code: 'READY_TO_SEND', labelKey: 'quote.approvalChain.stepReady' },
-] as const;
+const CHAIN_STATUSES = new Set(['DRAFT', 'PENDING_APPROVAL', 'READY_TO_SEND']);
 
-const CHAIN_STATUSES = new Set<string>(CHAIN_STEPS.map((s) => s.code));
-
-/** OWNER is the escape hatch — it can advance any step (mirrors the backend
- * `has_workspace_role`). Each forward action also lists its dedicated role. */
-const canAct = (role: string | null | undefined, allowed: string[]): boolean =>
-  !!role && (role === 'OWNER' || allowed.includes(role));
+const STATUS_ICON: Record<string, React.ReactNode> = {
+  APPROVED: <Check className="size-3.5 text-success" aria-hidden="true" />,
+  REJECTED: <X className="size-3.5 text-destructive" aria-hidden="true" />,
+  PENDING: <Clock className="size-3.5 text-warning" aria-hidden="true" />,
+  RECALLED: <Undo2 className="size-3.5 text-muted-foreground" aria-hidden="true" />,
+  SKIPPED: <Check className="size-3.5 text-muted-foreground" aria-hidden="true" />,
+};
 
 /**
- * КП internal approval chain (документооборот) bar for the seller team.
- * Renders the stepper + the single forward action matching the current status,
- * gated by the member's primary-company workspace role. The backend re-checks
- * the role against the КП's owning company, so this only drives what's shown.
+ * КП internal approval chain (unified workflow) — the step list a КП routes through:
+ * intermediate approvers + a mandatory head, optionally an «informed» CC group. Renders
+ * submit (DRAFT), per-step approve/reject for whoever may act now, and recall. Backend
+ * re-checks every permission, so this only drives what's shown.
  */
 export const QuoteApprovalChain: React.FC<QuoteApprovalChainProps> = ({ quote }) => {
   const { t } = useTranslation();
-  const workspaceRole = useAuthStore((s) => s.user?.workspace_role);
-
   const submit = useSubmitQuoteForReview();
-  const confirmTrade = useConfirmQuoteTradeReview();
-  const directorApprove = useDirectorApproveQuote();
-  const sendBack = useSendQuoteBack();
+  const act = useActOnApprovalStep();
+  const recall = useRecallQuote();
 
-  const [sendBackOpen, setSendBackOpen] = useState(false);
+  const [rejectStep, setRejectStep] = useState<QuoteApprovalStep | null>(null);
   const [reason, setReason] = useState('');
 
   const status = quote.status_code;
   if (!CHAIN_STATUSES.has(status)) return null;
 
-  const activeIndex = CHAIN_STEPS.findIndex((s) => s.code === status);
-  const busy = submit.isPending || confirmTrade.isPending || directorApprove.isPending || sendBack.isPending;
+  const steps = quote.approval_steps ?? [];
+  const busy = submit.isPending || act.isPending || recall.isPending;
 
-  const run = async (mutate: () => Promise<unknown>, successKey: string) => {
+  const run = async (fn: () => Promise<unknown>, successKey: string) => {
     try {
-      await mutate();
+      await fn();
       toast.success(t(successKey));
     } catch (e) {
       toast.error(translateApiError(e));
     }
   };
 
-  const confirmSendBack = async () => {
+  const approve = (step: QuoteApprovalStep) =>
+    run(() => act.mutateAsync({ id: quote.id, stepId: step.id, decision: 'APPROVE' }), 'quote.approvalChain.approved');
+
+  const confirmReject = async () => {
+    if (!rejectStep) return;
     try {
-      await sendBack.mutateAsync({ id: quote.id, reason: reason.trim() });
-      toast.success(t('quote.approvalChain.sentBack'));
+      await act.mutateAsync({ id: quote.id, stepId: rejectStep.id, decision: 'REJECT', comment: reason.trim() });
+      toast.success(t('quote.approvalChain.rejected'));
+      setRejectStep(null);
       setReason('');
-      setSendBackOpen(false);
     } catch (e) {
       toast.error(translateApiError(e));
     }
   };
 
-  // Forward action for the current step — only the responsible role sees it.
-  const forwardAction = (() => {
-    if (status === 'DRAFT' && canAct(workspaceRole, ['SALES_MANAGER'])) {
-      return (
-        <Button size="sm" disabled={busy}
-          onClick={() => run(() => submit.mutateAsync(quote.id), 'quote.approvalChain.submitted')}>
-          {submit.isPending ? <Loader2 className="size-3 animate-spin" /> : <SendHorizontal className="size-3" />}
-          {t('quote.approvalChain.submit')}
-        </Button>
-      );
-    }
-    if (status === 'PENDING_TRADE_REVIEW' && canAct(workspaceRole, ['FOREIGN_TRADE_SPECIALIST'])) {
-      return (
-        <Button size="sm" disabled={busy}
-          onClick={() => run(() => confirmTrade.mutateAsync(quote.id), 'quote.approvalChain.tradeConfirmed')}>
-          {confirmTrade.isPending ? <Loader2 className="size-3 animate-spin" /> : <Check className="size-3" />}
-          {t('quote.approvalChain.confirmTradeReview')}
-        </Button>
-      );
-    }
-    if (status === 'PENDING_APPROVAL' && canAct(workspaceRole, ['DIRECTOR'])) {
-      return (
-        <Button size="sm" disabled={busy}
-          onClick={() => run(() => directorApprove.mutateAsync(quote.id), 'quote.approvalChain.approved')}>
-          {directorApprove.isPending ? <Loader2 className="size-3 animate-spin" /> : <Check className="size-3" />}
-          {t('quote.approvalChain.directorApprove')}
-        </Button>
-      );
-    }
-    return null;
-  })();
+  const groups: { key: string; labelKey: string; icon: React.ReactNode; items: QuoteApprovalStep[] }[] = [
+    { key: 'APPROVER', labelKey: 'quote.approvalChain.groupApprovers', icon: null, items: steps.filter((s) => s.participation === 'APPROVER') },
+    { key: 'HEAD', labelKey: 'quote.approvalChain.groupHead', icon: <Lock className="size-3" />, items: steps.filter((s) => s.participation === 'HEAD') },
+    { key: 'INFORMED', labelKey: 'quote.approvalChain.groupInformed', icon: <Mail className="size-3" />, items: steps.filter((s) => s.participation === 'INFORMED') },
+  ];
 
-  // Send-back is available to ВЭД / DIRECTOR (and OWNER) on any review state.
-  const showSendBack =
-    status !== 'DRAFT' && canAct(workspaceRole, ['FOREIGN_TRADE_SPECIALIST', 'DIRECTOR']);
-
-  // A hint shown when the current user is not the one who must act now.
-  const waitingHint = (() => {
-    if (forwardAction) return null;
-    if (status === 'PENDING_TRADE_REVIEW') return t('quote.approvalChain.waitingTradeReview');
-    if (status === 'PENDING_APPROVAL') return t('quote.approvalChain.waitingApproval');
-    if (status === 'READY_TO_SEND') return t('quote.approvalChain.readyHint');
-    return null;
-  })();
+  const renderStep = (step: QuoteApprovalStep) => (
+    <div key={step.id} className="flex flex-wrap items-center gap-2 py-1 text-sm">
+      {STATUS_ICON[step.status]}
+      <span className="font-medium">{step.approver_name || t('quote.approvalChain.anyHolder')}</span>
+      {step.is_mandatory && <Lock className="size-3 text-muted-foreground" aria-label={t('quote.approvalChain.mandatory')} />}
+      <Badge variant="outline" className="text-xs">{t(`quote.approvalChain.stepStatus.${step.status}`)}</Badge>
+      {step.acted_by_name && step.decided_at && (
+        <span className="text-xs text-muted-foreground">
+          {step.acted_by_name} · {new Date(step.decided_at).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
+        </span>
+      )}
+      {step.comment && <span className="text-xs text-muted-foreground">«{step.comment}»</span>}
+      {step.can_act && (
+        <span className="ml-auto flex gap-1.5">
+          <Button size="sm" disabled={busy} onClick={() => approve(step)}>
+            {act.isPending ? <Loader2 className="size-3 animate-spin" /> : <Check className="size-3" />}
+            {t('quote.approvalChain.approve')}
+          </Button>
+          <Button variant="outline" size="sm" disabled={busy} onClick={() => setRejectStep(step)}>
+            <Undo2 className="size-3" />
+            {t('quote.approvalChain.reject')}
+          </Button>
+        </span>
+      )}
+    </div>
+  );
 
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-md border bg-muted/40 px-3 py-2">
-      <span className="text-xs font-semibold text-muted-foreground shrink-0">
-        {t('quote.approvalChain.title')}
-      </span>
-
-      {/* Stepper */}
-      <div className="flex items-center gap-1.5 flex-wrap">
-        {CHAIN_STEPS.map((step, idx) => {
-          const isDone = idx < activeIndex;
-          const isActive = idx === activeIndex;
-          return (
-            <React.Fragment key={step.code}>
-              <Badge
-                variant={isActive ? 'default' : isDone ? 'secondary' : 'outline'}
-                className={cn('gap-1', !isActive && !isDone && 'text-muted-foreground')}
-              >
-                {isDone && <Check className="size-3" />}
-                {t(step.labelKey)}
-              </Badge>
-              {idx < CHAIN_STEPS.length - 1 && (
-                <ChevronRight className="size-3 text-muted-foreground shrink-0" />
-              )}
-            </React.Fragment>
-          );
-        })}
+    <div className="flex flex-col gap-2 rounded-md border bg-muted/40 px-3 py-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-semibold text-muted-foreground">{t('quote.approvalChain.title')}</span>
+        <Badge variant={status === 'READY_TO_SEND' ? 'secondary' : 'default'} className="text-xs">
+          {t(`quote.approvalChain.status.${status}`)}
+        </Badge>
+        <div className="ml-auto flex items-center gap-1.5">
+          {status === 'DRAFT' && (
+            <Button size="sm" disabled={busy}
+              onClick={() => run(() => submit.mutateAsync(quote.id), 'quote.approvalChain.submitted')}>
+              {submit.isPending ? <Loader2 className="size-3 animate-spin" /> : <SendHorizontal className="size-3" />}
+              {t('quote.approvalChain.submit')}
+            </Button>
+          )}
+          {status === 'PENDING_APPROVAL' && (
+            <Button variant="outline" size="sm" disabled={busy}
+              onClick={() => run(() => recall.mutateAsync(quote.id), 'quote.approvalChain.recalled')}>
+              <Undo2 className="size-3" />
+              {t('quote.approvalChain.recall')}
+            </Button>
+          )}
+        </div>
       </div>
 
-      {waitingHint && (
-        <span className="text-xs text-muted-foreground">{waitingHint}</span>
+      {status === 'PENDING_APPROVAL' && steps.length > 0 && (
+        <div className="flex flex-col gap-2">
+          {groups.filter((g) => g.items.length > 0).map((group) => (
+            <div key={group.key} className="rounded-md border bg-background px-3 py-1.5">
+              <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {group.icon}{t(group.labelKey)}
+              </div>
+              {group.items.sort((a, b) => a.order - b.order).map(renderStep)}
+            </div>
+          ))}
+        </div>
       )}
 
-      {/* Actions */}
-      <div className="flex items-center gap-1.5 ml-auto">
-        {showSendBack && (
-          <Button variant="outline" size="sm" disabled={busy} onClick={() => setSendBackOpen(true)}>
-            <Undo2 className="size-3" />
-            {t('quote.approvalChain.sendBack')}
-          </Button>
-        )}
-        {forwardAction}
-      </div>
+      {status === 'READY_TO_SEND' && (
+        <span className="text-xs text-muted-foreground">{t('quote.approvalChain.readyHint')}</span>
+      )}
 
-      <AlertDialog open={sendBackOpen} onOpenChange={(o) => { if (!o) setReason(''); setSendBackOpen(o); }}>
+      <AlertDialog open={!!rejectStep} onOpenChange={(o) => { if (!o) { setRejectStep(null); setReason(''); } }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t('quote.approvalChain.sendBackTitle')}</AlertDialogTitle>
-            <AlertDialogDescription>{t('quote.approvalChain.sendBackDesc')}</AlertDialogDescription>
+            <AlertDialogTitle>{t('quote.approvalChain.rejectTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('quote.approvalChain.rejectDesc')}</AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-2">
-            <Label htmlFor="send-back-reason">{t('quote.approvalChain.sendBack')}</Label>
-            <Textarea
-              id="send-back-reason"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder={t('quote.approvalChain.sendBackReasonPlaceholder')}
-              rows={3}
-            />
+            <Label htmlFor="reject-reason">{t('quote.approvalChain.comment')}</Label>
+            <Textarea id="reject-reason" value={reason} onChange={(e) => setReason(e.target.value)}
+              placeholder={t('quote.approvalChain.rejectReasonPlaceholder')} rows={3} />
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={sendBack.isPending}>{t('common.cancel')}</AlertDialogCancel>
-            <Button onClick={confirmSendBack} disabled={sendBack.isPending}>
-              {sendBack.isPending && <Loader2 className="size-3 animate-spin" />}
-              {t('quote.approvalChain.sendBack')}
+            <AlertDialogCancel disabled={act.isPending}>{t('common.cancel')}</AlertDialogCancel>
+            <Button variant="destructive" onClick={confirmReject} disabled={act.isPending}>
+              {act.isPending && <Loader2 className="size-3 animate-spin" />}
+              {t('quote.approvalChain.reject')}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

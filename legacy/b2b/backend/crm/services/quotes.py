@@ -197,32 +197,51 @@ def can_send_quote_to_client(actor, quote) -> bool:
 
 
 def approval_queue_for(user):
-    """КП waiting on this user's workspace-role step, scoped to the user's own
-    companies. Each (company, role) the user holds contributes only the statuses
-    that role advances — so a SALES_MANAGER in company A never sees company A's
-    director-stage quotes unless they are also OWNER/DIRECTOR there."""
-    memberships = user.memberships.filter(is_active=True).select_related("role")
-    condition = Q()
-    matched = False
-    for membership in memberships:
-        if not membership.role:
-            continue
-        statuses = _ROLE_QUEUE_STATUSES.get(membership.role.code)
-        if not statuses:
-            continue
-        matched = True
-        condition |= Q(
-            prepared_by__memberships__company_id=membership.company_id,
-            prepared_by__memberships__is_primary=True,
-            prepared_by__memberships__is_active=True,
-            status__code__in=statuses,
-        )
-    if not matched:
+    """КП waiting on THIS user's pending approval STEP (unified step-based chain).
+
+    A КП is in my queue when it is PENDING_APPROVAL, has a PENDING acting step at the
+    CURRENT stage (lowest pending order), that step is in a company I belong to, and I hold
+    the step's permission (quote.review for an intermediate, quote.approve_final for the head).
+    """
+    from accounts.constants import Permission
+    from accounts.services.permissions import member_has_permission
+
+    from crm.models import QuoteApprovalStep
+    from crm.models.approvals import StepParticipation, StepStatus
+
+    company_ids = set(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
+    if not company_ids:
         return Quote.objects.none()
+
+    steps = (
+        QuoteApprovalStep.objects.filter(
+            status=StepStatus.PENDING, quote__status__code=QuoteStatusCode.PENDING_APPROVAL
+        )
+        .exclude(participation=StepParticipation.INFORMED)
+        .select_related("quote", "quote__status", "quote__seller_company", "quote__prepared_by")
+        .order_by("quote_id", "order")
+    )
+    active_order_by_quote: dict = {}
+    actionable_quote_ids: set = set()
+    for step in steps:
+        quote = step.quote
+        company_id = _quote_owner_company_id(quote)
+        if company_id not in company_ids:
+            continue
+        # steps are ordered by order asc → the first seen for a quote is its active (min) order
+        active = active_order_by_quote.setdefault(quote.id, step.order)
+        if step.order != active:
+            continue
+        perm = (
+            Permission.QUOTE_APPROVE_FINAL.value
+            if step.participation == StepParticipation.HEAD
+            else Permission.QUOTE_REVIEW.value
+        )
+        if member_has_permission(user, company_id, perm):
+            actionable_quote_ids.add(quote.id)
     return (
-        Quote.objects.filter(condition)
+        Quote.objects.filter(id__in=actionable_quote_ids)
         .select_related("deal", "deal__company", "status", "prepared_by")
-        .distinct()
         .order_by("-updated_at")
     )
 
@@ -859,12 +878,17 @@ class QuoteLifecycleService:
         from .availability import auto_split_quote_by_availability
 
         auto_split_quote_by_availability(quote, company_id)
-        has_trade = CompanyMember.objects.filter(
-            company_id=company_id, is_active=True, role__code=WorkspaceRoleCode.FOREIGN_TRADE_SPECIALIST
-        ).exists()
-        next_code = QuoteStatusCode.PENDING_TRADE_REVIEW if has_trade else QuoteStatusCode.PENDING_APPROVAL
-        _set_quote_status(quote, next_code)
-        _log_quote(quote, actor, "quote.submit_for_review", f"КП v{quote.version} на согласование → {next_code}")
+        # Unified approval workflow: build the permission-driven step list (mandatory head +
+        # optional reviewer(s) + risk-aware reason), then route. Source of truth = the steps,
+        # not a granular status — the КП goes to a single «На согласовании» (PENDING_APPROVAL).
+        from .approvals import HEAD_ORDER, build_approval_chain, _active_order, _notify_order
+
+        build_approval_chain(quote, company_id, economics=_econ)
+        _set_quote_status(quote, QuoteStatusCode.PENDING_APPROVAL)
+        first_order = _active_order(quote)
+        if first_order is not None:
+            _notify_order(quote, first_order)
+        _log_quote(quote, actor, "quote.submit_for_review", f"КП v{quote.version} на согласование (цепочка построена)")
         return quote, None
 
     @staticmethod

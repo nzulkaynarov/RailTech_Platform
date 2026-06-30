@@ -688,7 +688,33 @@
       "queueTitle": "Approval queue",
       "queueEmpty": "No quotes are waiting on your approval",
       "queueDeal": "Deal #{{id}}",
-      "queueVersion": "Version {{version}}"
+      "queueVersion": "Version {{version}}",
+      "groupApprovers": "Approvers",
+      "groupHead": "Head",
+      "groupInformed": "For information",
+      "approve": "Approve",
+      "reject": "Reject",
+      "rejected": "Quote rejected",
+      "recall": "Recall",
+      "recalled": "Quote recalled for rework",
+      "mandatory": "Mandatory",
+      "anyHolder": "Any approver",
+      "comment": "Comment",
+      "rejectTitle": "Reject / send back for rework",
+      "rejectDesc": "Provide a reason — it will be visible to the quote preparer.",
+      "rejectReasonPlaceholder": "E.g. recalculate logistics for line 3",
+      "status": {
+        "DRAFT": "Draft",
+        "PENDING_APPROVAL": "In approval",
+        "READY_TO_SEND": "Ready to send"
+      },
+      "stepStatus": {
+        "PENDING": "Pending",
+        "APPROVED": "Approved",
+        "REJECTED": "Rejected",
+        "RECALLED": "Recalled",
+        "SKIPPED": "Skipped"
+      }
     },
     "pdf": "PDF",
     "empty": {

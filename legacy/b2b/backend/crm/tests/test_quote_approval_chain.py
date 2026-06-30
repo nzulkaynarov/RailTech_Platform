@@ -1,38 +1,45 @@
-"""Service tests for the КП internal approval chain (документооборот).
+"""Service + endpoint tests for the UNIFIED КП approval chain (step-based).
 
-DRAFT → PENDING_TRADE_REVIEW → PENDING_APPROVAL → READY_TO_SEND → (send_to_client).
-Each step is gated by the actor's WorkspaceRole inside the company that owns the
-quote (the preparer's company); OWNER may act on any step.
+Submit builds a permission-driven step list: an optional intermediate reviewer
+(quote.review) + a mandatory final approver / руководитель (quote.approve_final).
+Same order = parallel; the head is always last. act_on_step advances the chain;
+recall pulls it back. DRAFT → PENDING_APPROVAL → (steps approved) → READY_TO_SEND.
 """
 
+from datetime import timedelta
 from decimal import Decimal
 
 import pytest
+from django.utils import timezone
 
-from accounts.models import Company, CompanyMember, CompanyType, CustomUser, VerificationStatus, WorkspaceRole
-from crm.models import Deal, DealStage, Quote, QuoteStatus
+from accounts.constants import Permission
+from accounts.models import (
+    Company,
+    CompanyMember,
+    CompanyRole,
+    CompanyType,
+    CustomUser,
+    SupplierSubscription,
+    VerificationStatus,
+    WorkspaceRole,
+)
+from crm.models import Deal, DealStage, Quote, QuoteApprovalStep, QuoteStatus
+from crm.models.approvals import StepParticipation, StepStatus
+from crm.services.approvals import act_on_step, recall_quote
 from crm.services.quotes import QuoteLifecycleService as QLS
 from master_data.models import Country
 
 pytestmark = pytest.mark.django_db
 
-QUOTE_STATUSES = [
-    "DRAFT",
-    "PENDING_TRADE_REVIEW",
-    "PENDING_APPROVAL",
-    "READY_TO_SEND",
-    "SENT",
-    "APPROVED",
-    "REJECTED",
-]
-CHAIN_ROLES = ["OWNER", "SALES_MANAGER", "FOREIGN_TRADE_SPECIALIST", "DIRECTOR", "MEMBER"]
+QUOTE_STATUSES = ["DRAFT", "PENDING_TRADE_REVIEW", "PENDING_APPROVAL", "READY_TO_SEND", "SENT", "APPROVED", "REJECTED"]
+WORKSPACE_ROLES = ["OWNER", "SALES_MANAGER", "MEMBER"]
 
 
 @pytest.fixture
 def lookups(db):
     for code in QUOTE_STATUSES:
         QuoteStatus.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
-    for code in CHAIN_ROLES:
+    for code in WORKSPACE_ROLES:
         WorkspaceRole.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
     for code in ["DRAFT", "QUOTE_SENT", "CONTRACT_SIGNED"]:
         DealStage.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
@@ -42,41 +49,41 @@ def lookups(db):
     Country.objects.get_or_create(code="UZ", defaults={"name": "Uzbekistan", "sort_order": 10})
 
 
-def _member(company, role_code, suffix):
-    user = CustomUser.objects.create_user(
-        email=f"{role_code.lower()}{suffix}@seller.test",
-        username=f"{role_code.lower()}{suffix}",
-        password="pw",
-        is_active=True,
-    )
-    CompanyMember.objects.create(
+def _user(email):
+    return CustomUser.objects.create_user(email=email, username=email, password="pw", is_active=True)
+
+
+def _member(company, user, *, workspace_role=None, company_role=None):
+    return CompanyMember.objects.create(
         user=user,
         company=company,
-        role=WorkspaceRole.objects.get(code=role_code),
+        role=WorkspaceRole.objects.get(code=workspace_role) if workspace_role else None,
+        company_role=company_role,
         is_primary=True,
         is_active=True,
+        can_sell=False,  # explicit: permissions come from company_role, not the legacy flag
     )
-    return user
 
 
 @pytest.fixture
 def seller(lookups):
-    """Seller company with one member per chain role + an operational subscription
-    (send-to-client / contract / act are gated behind it — ADR-0002 / F0.2)."""
-    from datetime import timedelta
-
-    from django.utils import timezone
-
-    from accounts.models import SupplierSubscription
-
+    """Seller with a SALES_MANAGER (builds/submits, no approval rights) and a HEAD
+    (company-admin role → quote.approve_final). Operational subscription so send is allowed."""
     company = Company.objects.create(name="Seller LLC", inn="7700000001")
     company.types.add(CompanyType.objects.get(code="SUPPLIER"))
     SupplierSubscription.objects.create(
-        company=company, plan="PREMIUM", status="ACTIVE",
-        valid_until=timezone.now().date() + timedelta(days=365),
+        company=company, plan="PREMIUM", status="ACTIVE", valid_until=timezone.now().date() + timedelta(days=365)
     )
-    users = {code: _member(company, code, "1") for code in CHAIN_ROLES}
-    return {"company": company, "users": users}
+    admin_role = CompanyRole.objects.create(company=company, name="Администратор компании", is_system=True)
+    sales_role = CompanyRole.objects.create(company=company, name="Продажи", permissions=[Permission.QUOTE_BUILD.value])
+
+    sales_user = _user("sales@seller.test")
+    _member(company, sales_user, workspace_role="SALES_MANAGER", company_role=sales_role)
+    head_user = _user("head@seller.test")
+    # Neutral workspace role (not OWNER/SALES_MANAGER) → cannot submit; approval rights come
+    # purely from the is-system company role (quote.approve_final).
+    _member(company, head_user, workspace_role="MEMBER", company_role=admin_role)
+    return {"company": company, "sales": sales_user, "head": head_user, "admin_role": admin_role}
 
 
 @pytest.fixture
@@ -91,10 +98,7 @@ def client_co(lookups):
 @pytest.fixture
 def deal(seller, client_co):
     return Deal.objects.create(
-        title="Chain Deal",
-        company=client_co,
-        manager=seller["users"]["SALES_MANAGER"],
-        stage=DealStage.objects.get(code="DRAFT"),
+        title="Chain Deal", company=client_co, manager=seller["sales"], stage=DealStage.objects.get(code="DRAFT")
     )
 
 
@@ -117,83 +121,89 @@ def _status(quote):
     return quote.status.code
 
 
-def test_happy_path_chain(seller, deal):
-    users = seller["users"]
-    quote = _quote(deal, prepared_by=users["SALES_MANAGER"])
-
-    _, err = QLS.submit_for_review(quote.id, users["SALES_MANAGER"])
-    assert err is None and _status(quote) == "PENDING_TRADE_REVIEW"
-
-    _, err = QLS.confirm_trade_review(quote.id, users["FOREIGN_TRADE_SPECIALIST"])
+def test_submit_builds_chain_with_mandatory_head(seller, deal):
+    quote = _quote(deal, prepared_by=seller["sales"])
+    _, err = QLS.submit_for_review(quote.id, seller["sales"])
     assert err is None and _status(quote) == "PENDING_APPROVAL"
+    steps = list(quote.approval_steps.all())
+    head = [s for s in steps if s.participation == StepParticipation.HEAD]
+    assert len(head) == 1 and head[0].is_mandatory and head[0].status == StepStatus.PENDING
 
-    _, err = QLS.director_approve(quote.id, users["DIRECTOR"])
+
+def test_head_approval_makes_ready(seller, deal):
+    quote = _quote(deal, prepared_by=seller["sales"])
+    QLS.submit_for_review(quote.id, seller["sales"])
+    head_step = quote.approval_steps.get(participation=StepParticipation.HEAD)
+    _, err = act_on_step(head_step.id, seller["head"], "APPROVE")
     assert err is None and _status(quote) == "READY_TO_SEND"
+    head_step.refresh_from_db()
+    assert head_step.status == StepStatus.APPROVED and head_step.acted_by_id == seller["head"].id
 
 
-def test_wrong_role_is_refused(seller, deal):
-    users = seller["users"]
-    quote = _quote(deal, prepared_by=users["SALES_MANAGER"])
+def test_reject_returns_to_draft(seller, deal):
+    quote = _quote(deal, prepared_by=seller["sales"])
+    QLS.submit_for_review(quote.id, seller["sales"])
+    head_step = quote.approval_steps.get(participation=StepParticipation.HEAD)
+    _, err = act_on_step(head_step.id, seller["head"], "REJECT", comment="дорого")
+    assert err is None and _status(quote) == "DRAFT"
+    head_step.refresh_from_db()
+    assert head_step.status == StepStatus.REJECTED and head_step.comment == "дорого"
 
-    # ВЭД cannot submit (sales-only step)
-    _, err = QLS.submit_for_review(quote.id, users["FOREIGN_TRADE_SPECIALIST"])
-    assert err == "ROLE_NOT_PERMITTED" and _status(quote) == "DRAFT"
 
-    QLS.submit_for_review(quote.id, users["SALES_MANAGER"])
-    QLS.confirm_trade_review(quote.id, users["FOREIGN_TRADE_SPECIALIST"])
-    # Sales cannot do the director's approval
-    _, err = QLS.director_approve(quote.id, users["SALES_MANAGER"])
+def test_recall_returns_to_draft(seller, deal):
+    quote = _quote(deal, prepared_by=seller["sales"])
+    QLS.submit_for_review(quote.id, seller["sales"])
+    _, err = recall_quote(quote.id, seller["sales"])
+    assert err is None and _status(quote) == "DRAFT"
+    assert quote.approval_steps.filter(status=StepStatus.RECALLED).exists()
+
+
+def test_non_permitted_cannot_act(seller, deal):
+    quote = _quote(deal, prepared_by=seller["sales"])
+    QLS.submit_for_review(quote.id, seller["sales"])
+    head_step = quote.approval_steps.get(participation=StepParticipation.HEAD)
+    # The sales manager has no quote.approve_final → cannot act on the head step.
+    _, err = act_on_step(head_step.id, seller["sales"], "APPROVE")
     assert err == "ROLE_NOT_PERMITTED" and _status(quote) == "PENDING_APPROVAL"
 
 
-def test_owner_can_act_on_any_step(seller, deal):
-    owner = seller["users"]["OWNER"]
-    quote = _quote(deal, prepared_by=seller["users"]["SALES_MANAGER"])
-    assert QLS.submit_for_review(quote.id, owner)[1] is None
-    assert QLS.confirm_trade_review(quote.id, owner)[1] is None
-    assert QLS.director_approve(quote.id, owner)[1] is None
+def test_reviewer_then_head(seller, deal):
+    """A dedicated reviewer (quote.review, not head) adds an intermediate step acted first."""
+    reviewer_role = CompanyRole.objects.create(
+        company=seller["company"], name="ВЭД", permissions=[Permission.QUOTE_REVIEW.value]
+    )
+    reviewer = _user("ved@seller.test")
+    _member(seller["company"], reviewer, workspace_role="MEMBER", company_role=reviewer_role)
+
+    quote = _quote(deal, prepared_by=seller["sales"])
+    QLS.submit_for_review(quote.id, seller["sales"])
+    review_step = quote.approval_steps.get(participation=StepParticipation.APPROVER)
+    head_step = quote.approval_steps.get(participation=StepParticipation.HEAD)
+    assert review_step.order < head_step.order
+
+    # Head can't jump the queue before the reviewer acts.
+    _, err = act_on_step(head_step.id, seller["head"], "APPROVE")
+    assert err == "STEP_NOT_ACTIVE" and _status(quote) == "PENDING_APPROVAL"
+
+    assert act_on_step(review_step.id, reviewer, "APPROVE")[1] is None
+    assert act_on_step(head_step.id, seller["head"], "APPROVE")[1] is None
     assert _status(quote) == "READY_TO_SEND"
 
 
-def test_member_without_role_is_refused(seller, deal):
-    member = seller["users"]["MEMBER"]
-    quote = _quote(deal, prepared_by=seller["users"]["SALES_MANAGER"])
-    _, err = QLS.submit_for_review(quote.id, member)
-    assert err == "ROLE_NOT_PERMITTED"
-
-
-def test_trade_review_skipped_when_no_ved_member(client_co, lookups):
-    company = Company.objects.create(name="No-VED LLC", inn="7700000002")
-    company.types.add(CompanyType.objects.get(code="SUPPLIER"))
-    sales = _member(company, "SALES_MANAGER", "2")
-    deal = Deal.objects.create(title="D2", company=client_co, manager=sales, stage=DealStage.objects.get(code="DRAFT"))
-    quote = _quote(deal, prepared_by=sales)
-
-    _, err = QLS.submit_for_review(quote.id, sales)
-    # No ВЭД in the company → jump straight to director approval.
-    assert err is None and _status(quote) == "PENDING_APPROVAL"
-
-
-def test_send_back_returns_to_draft(seller, deal):
-    users = seller["users"]
-    quote = _quote(deal, prepared_by=users["SALES_MANAGER"])
-    QLS.submit_for_review(quote.id, users["SALES_MANAGER"])
-
-    _, err = QLS.send_back(quote.id, users["FOREIGN_TRADE_SPECIALIST"], reason="скорректировать цены")
-    assert err is None and _status(quote) == "DRAFT"
+def test_submit_gate_requires_sales_role(seller, deal):
+    quote = _quote(deal, prepared_by=seller["sales"])
+    # The head (no SALES_MANAGER workspace role) cannot submit.
+    _, err = QLS.submit_for_review(quote.id, seller["head"])
+    assert err == "ROLE_NOT_PERMITTED" and _status(quote) == "DRAFT"
 
 
 def test_send_to_client_blocked_until_ready(seller, deal):
-    users = seller["users"]
-    quote = _quote(deal, prepared_by=users["SALES_MANAGER"])
-    # A DRAFT КП may not be sent — it must pass the approval chain first.
+    quote = _quote(deal, prepared_by=seller["sales"])
     with pytest.raises(ValueError):
-        QLS.send_to_client(quote.id, users["SALES_MANAGER"])
+        QLS.send_to_client(quote.id, seller["sales"])
 
 
 # ─── DRF endpoint tests ─────────────────────────────────────────────────────
-
-
 def _api(user):
     from rest_framework.test import APIClient
     from rest_framework_simplejwt.tokens import RefreshToken
@@ -203,67 +213,33 @@ def _api(user):
     return client
 
 
-def test_submit_for_review_endpoint(seller, deal):
-    users = seller["users"]
-    quote = _quote(deal, prepared_by=users["SALES_MANAGER"])
-    resp = _api(users["SALES_MANAGER"]).post(f"/api/v1/crm/quotes/{quote.id}/submit-for-review/")
-    assert resp.status_code == 200
-    assert _status(quote) == "PENDING_TRADE_REVIEW"
+def test_approval_act_endpoint(seller, deal):
+    quote = _quote(deal, prepared_by=seller["sales"])
+    QLS.submit_for_review(quote.id, seller["sales"])
+    head_step = quote.approval_steps.get(participation=StepParticipation.HEAD)
+    resp = _api(seller["head"]).post(
+        f"/api/v1/crm/quotes/{quote.id}/approval-act/", {"step_id": head_step.id, "decision": "APPROVE"}, format="json"
+    )
+    assert resp.status_code == 200, resp.data
+    assert _status(quote) == "READY_TO_SEND"
 
 
-def test_wrong_role_endpoint_returns_403(seller, deal):
-    users = seller["users"]
-    quote = _quote(deal, prepared_by=users["SALES_MANAGER"])
-    # ВЭД cannot submit — the service refuses, the view maps it to 403.
-    resp = _api(users["FOREIGN_TRADE_SPECIALIST"]).post(f"/api/v1/crm/quotes/{quote.id}/submit-for-review/")
-    assert resp.status_code == 403
+def test_recall_endpoint(seller, deal):
+    quote = _quote(deal, prepared_by=seller["sales"])
+    QLS.submit_for_review(quote.id, seller["sales"])
+    resp = _api(seller["sales"]).post(f"/api/v1/crm/quotes/{quote.id}/recall/")
+    assert resp.status_code == 200, resp.data
     assert _status(quote) == "DRAFT"
 
 
 def test_my_approval_queue_endpoint(seller, deal):
-    users = seller["users"]
-    quote = _quote(deal, prepared_by=users["SALES_MANAGER"])
-    QLS.submit_for_review(quote.id, users["SALES_MANAGER"])  # → PENDING_TRADE_REVIEW
-
-    # ВЭД's queue contains the quote awaiting their confirmation.
-    resp = _api(users["FOREIGN_TRADE_SPECIALIST"]).get("/api/v1/crm/quotes/my-approval-queue/")
-    assert resp.status_code == 200
+    quote = _quote(deal, prepared_by=seller["sales"])
+    QLS.submit_for_review(quote.id, seller["sales"])
+    # The head's queue contains the quote awaiting their approval.
+    resp = _api(seller["head"]).get("/api/v1/crm/quotes/my-approval-queue/")
     ids = [q["id"] for q in (resp.data["results"] if isinstance(resp.data, dict) else resp.data)]
     assert quote.id in ids
-
-    # The director's queue does NOT (it is not at PENDING_APPROVAL yet).
-    resp = _api(users["DIRECTOR"]).get("/api/v1/crm/quotes/my-approval-queue/")
+    # The sales manager (no approval right) does not see it in the approval queue.
+    resp = _api(seller["sales"]).get("/api/v1/crm/quotes/my-approval-queue/")
     ids = [q["id"] for q in (resp.data["results"] if isinstance(resp.data, dict) else resp.data)]
     assert quote.id not in ids
-
-
-def test_send_to_client_allowed_for_sales_manager(seller, deal):
-    """ADR-0002: the seller team sends its own internally-approved КП — not
-    platform-admin-only. SALES_MANAGER on a READY_TO_SEND quote → 200 + SENT."""
-    users = seller["users"]
-    quote = _quote(deal, prepared_by=users["SALES_MANAGER"], status_code="READY_TO_SEND")
-    # Pre-set pdf_file so send_to_client skips WeasyPrint generation in the test.
-    quote.pdf_file = "kp/already.pdf"
-    quote.save(update_fields=["pdf_file"])
-
-    resp = _api(users["SALES_MANAGER"]).post(f"/api/v1/crm/quotes/{quote.id}/send-to-client/")
-    assert resp.status_code == 200, resp.data
-    assert _status(quote) == "SENT"
-
-
-def test_send_to_client_forbidden_for_non_sales_member(seller, deal):
-    """A plain MEMBER (no SALES_MANAGER/OWNER role) cannot send → 403, КП unchanged."""
-    users = seller["users"]
-    quote = _quote(deal, prepared_by=users["SALES_MANAGER"], status_code="READY_TO_SEND")
-    resp = _api(users["MEMBER"]).post(f"/api/v1/crm/quotes/{quote.id}/send-to-client/")
-    assert resp.status_code == 403
-    assert _status(quote) == "READY_TO_SEND"
-
-
-def test_send_to_client_rejects_unapproved_quote(seller, deal):
-    """A DRAFT КП cannot be sent even by SALES_MANAGER — status guard → 400."""
-    users = seller["users"]
-    quote = _quote(deal, prepared_by=users["SALES_MANAGER"])  # DRAFT
-    resp = _api(users["SALES_MANAGER"]).post(f"/api/v1/crm/quotes/{quote.id}/send-to-client/")
-    assert resp.status_code == 400
-    assert _status(quote) == "DRAFT"

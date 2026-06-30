@@ -34,6 +34,11 @@ class Permission(models.TextChoices):
     QUOTE_SEND = "quote.send", "Отправлять КП клиенту"
     QUOTE_VIEW_COST_MARGIN = "quote.view_cost_margin", "Видеть себестоимость и маржу"
     QUOTE_EDIT_PRICING = "quote.edit_pricing", "Менять цены и скидки"
+    # Internal КП approval chain (NEW — distinct from quote.approve, which is the BUYER's
+    # accept/reject). quote.review = intermediate approver; quote.approve_final = the mandatory
+    # final approver («руководитель»). The company admin role carries both by default.
+    QUOTE_REVIEW = "quote.review", "Согласовывать КП (промежуточно)"
+    QUOTE_APPROVE_FINAL = "quote.approve_final", "Финально утверждать КП (руководитель)"
     # Procurement / Buyer
     REQUEST_CREATE = "request.create", "Создавать заявки"
     QUOTE_APPROVE = "quote.approve", "Принимать/отклонять КП"
@@ -52,7 +57,10 @@ class Permission(models.TextChoices):
 
 # Grouping for the settings UI (the checkbox sections).
 PERMISSION_GROUPS = {
-    "sales": [Permission.QUOTE_BUILD, Permission.QUOTE_SEND, Permission.QUOTE_VIEW_COST_MARGIN, Permission.QUOTE_EDIT_PRICING],
+    "sales": [
+        Permission.QUOTE_BUILD, Permission.QUOTE_SEND, Permission.QUOTE_VIEW_COST_MARGIN,
+        Permission.QUOTE_EDIT_PRICING, Permission.QUOTE_REVIEW, Permission.QUOTE_APPROVE_FINAL,
+    ],
     "procurement": [Permission.REQUEST_CREATE, Permission.QUOTE_APPROVE, Permission.CONTRACT_SIGN, Permission.PAYMENT_RECORD],
     "catalog": [Permission.CATALOG_MANAGE, Permission.CATALOG_PUBLISH],
     "company": [Permission.TEAM_MANAGE, Permission.SETTINGS_EDIT, Permission.CHARGE_TEMPLATES_MANAGE],
