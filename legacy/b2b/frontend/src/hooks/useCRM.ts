@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { crmApi, QuoteItem, MatchCatalogPayload, PreflightPayload, DocCheckPayload } from '../api/crmApi';
+import { crmApi, QuoteItem, QuoteCharge, MatchCatalogPayload, PreflightPayload, DocCheckPayload } from '../api/crmApi';
 import { aiApi, type ComposeRequestPayload } from '../api/aiApi';
 
 export const useDeals = () => useQuery({
@@ -283,6 +283,15 @@ export const useCreateQuoteCharge = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: (data: Parameters<typeof crmApi.createQuoteCharge>[0]) => crmApi.createQuoteCharge(data),
+        onSuccess: () => invalidateCharges(queryClient),
+    });
+};
+
+export const useUpdateQuoteCharge = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, data }: { id: number; data: Partial<QuoteCharge> }) =>
+            crmApi.updateQuoteCharge(id, data),
         onSuccess: () => invalidateCharges(queryClient),
     });
 };

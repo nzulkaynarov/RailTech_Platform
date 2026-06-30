@@ -440,6 +440,9 @@ class QuoteItem(models.Model):
         max_digits=14,
         decimal_places=2,
         default=0,
+        # KP-04: a price can be 0 (free/included line) but never negative — a negative base
+        # silently flipped landed_cost/final_price negative and distorted below_cost & margin.
+        validators=[MinValueValidator(0)],
         verbose_name=_("Базовая цена (заморожена)"),
         help_text=_("Цена поставщика, зафиксированная в момент создания КП"),
     )
@@ -458,6 +461,7 @@ class QuoteItem(models.Model):
         max_digits=14,
         decimal_places=2,
         default=0,
+        validators=[MinValueValidator(0)],
         verbose_name=_("Логистика"),
         help_text=_("Стоимость доставки за единицу"),
     )
@@ -465,6 +469,7 @@ class QuoteItem(models.Model):
         max_digits=14,
         decimal_places=2,
         default=0,
+        validators=[MinValueValidator(0)],
         verbose_name=_("Таможенная пошлина"),
         help_text=_("Таможенная пошлина за единицу"),
     )

@@ -123,7 +123,11 @@ def seller_quote(db):
         order_lead_time_days=30,
     )
     deal = Deal.objects.create(company=buyer_co, stage=draft_stage)
-    quote = Quote.objects.create(deal=deal, version=1, status=draft_qs, prepared_by=seller)
+    # Explicit 1:1 USD rate (KP-01): the engine no longer fabricates a silent rate=1 for an
+    # unrated line currency, so submit/send would block on FX_RATE_MISSING without a stated rate.
+    quote = Quote.objects.create(
+        deal=deal, version=1, status=draft_qs, prepared_by=seller, fx_manual={"USD": "1"}
+    )
     item = QuoteItem.objects.create(
         quote=quote,
         product=product,

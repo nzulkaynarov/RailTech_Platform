@@ -31,6 +31,7 @@
     "loading": "Loading...",
     "error": "An error occurred",
     "save": "Save",
+    "edit": "Edit",
     "cancel": "Cancel",
     "delete": "Delete",
     "search": "Search",
@@ -635,7 +636,13 @@
       "type": "Item",
       "typePlaceholder": "Select item",
       "amount": "Amount",
-      "sum": "Sum"
+      "sum": "Sum",
+      "costAmount": "Your cost",
+      "costAmountHint": "The charge's real cost to you, in КП currency ({{currency}}). Empty = billed at cost.",
+      "costShort": "cost",
+      "description": "Description",
+      "descriptionPlaceholder": "Description (optional)",
+      "inCurrency": "Charge amounts are in the КП currency: {{currency}} (line costs may be USD/EUR)"
     },
     "deleteItem": "Delete item?",
     "addItemPlaceholder": "Item name...",
@@ -724,6 +731,7 @@
       "operatingProfit": "Operating profit",
       "belowCost": "Quote is below landed cost — selling at a loss. Sending is blocked.",
       "belowFloor": "Margin is below the company floor ({{floor}}%) — approval required.",
+      "fxMissing": "No FX rate for: {{currencies}}. Cost not computed — sending is blocked.",
       "thresholds": "Floor {{floor}}% · Target {{target}}%"
     },
     "rail": {
@@ -4326,6 +4334,7 @@
     "QUOTE_NOT_CLAIMED": "The quote isn't prepared by a seller yet — export becomes available after it's submitted for review",
     "QUOTE_HAS_UNPRICED_LINES": "Set a price on every line — a quote with zero-priced rows can't be submitted",
     "QUOTE_BELOW_COST": "Quote is below landed cost — selling at a loss. Raise the price or margin.",
+    "FX_RATE_MISSING": "No FX rate for a line currency — cost not computed. Set the rate in КП settings.",
     "PLATFORM_ADMIN_REQUIRED": "This action is restricted to platform administrators",
     "FORCE_REASON_REQUIRED": "Force-action requires a mandatory reason (written to the audit log)",
     "QUOTE_STATUS_NOT_FOUND": "Quote status not found in the lookup table",

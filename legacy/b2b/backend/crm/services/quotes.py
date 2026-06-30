@@ -328,9 +328,16 @@ class QuoteCalculationService:
                 rate_map[code] = Decimal(str(snapshot[code]))
                 continue
             market = get_rate_to_uzs(code)
-            resolved = Decimal("1") if market is None else Decimal(str(market))
+            if market is None:
+                # KP-01: NO rate available. Use 1 as an in-memory placeholder so recalc doesn't
+                # crash — but DO NOT freeze it into the snapshot. Freezing a fabricated 1 would
+                # understate cost ~12000× AND permanently shadow the real rate once it lands in
+                # the DB. compute_quote_economics().fx_missing flags it; submit/send is blocked.
+                rate_map[code] = Decimal("1")
+                continue
+            resolved = Decimal(str(market))
             rate_map[code] = resolved
-            # Freeze it onto the КП so the total can't drift on the next recalc.
+            # Freeze the REAL market rate onto the КП so the total can't drift on the next recalc.
             snapshot[code] = str(resolved)
         quote.fx_snapshot = snapshot
         return rate_map
@@ -412,6 +419,11 @@ class QuoteCalculationService:
         charges = sum(
             (charge.resolve_signed(quote.subtotal_excl_vat) for charge in quote.charges.all()), Decimal("0")
         )
+        # KP-03: a net deduction (discount) may bring the КП down to zero but NEVER below —
+        # clamp the signed charges total at −subtotal so tax_exclusive ≥ 0. Otherwise an
+        # over-discount stored a negative VAT and a negative total_incl_vat on the КП, rendered
+        # to the buyer. (Percent charges are already capped 0–100; fixed deductions were not.)
+        charges = max(charges, -quote.subtotal_excl_vat)
         quote.charges_total = charges.quantize(penny, rounding=ROUND_HALF_UP)
         tax_exclusive = quote.subtotal_excl_vat + quote.charges_total
         quote.vat_amount = (tax_exclusive * vat_rate).quantize(penny, rounding=ROUND_HALF_UP)
@@ -441,13 +453,33 @@ def compute_quote_economics(quote) -> dict:
     cost_amount, default = billed), so a КП billed below its true cost shows the loss.
     `below_cost` is the hard-stop flag; `below_floor` drives the warn+approval path.
     Returns Decimals (the serializer/JSON layer stringifies)."""
-    items = list(quote.items.all())
+    items = list(quote.items.select_related("frozen_currency").all())
     total_landed_cost = sum((it.landed_cost * it.quantity for it in items), Decimal("0")).quantize(
         Decimal("0.01"), rounding=ROUND_HALF_UP
     )
     subtotal = quote.subtotal_excl_vat or Decimal("0")
     charges_total = quote.charges_total or Decimal("0")
     tax_exclusive = subtotal + charges_total
+
+    # FX guard (KP-01): distinct non-UZS line currencies with NO resolvable rate (neither a
+    # manual override, a frozen snapshot, nor a current market rate). Such a line was priced at
+    # the in-memory placeholder rate 1 → landed cost silently understated. This list blocks
+    # submit/send and warns the manager — we never let a fabricated rate 1 freeze into the КП.
+    from master_data.fx import get_rate_to_uzs
+
+    manual = quote.fx_manual if isinstance(quote.fx_manual, dict) else {}
+    snapshot = quote.fx_snapshot if isinstance(quote.fx_snapshot, dict) else {}
+    fx_missing: list = []
+    _seen_ccy: set = set()
+    for line in items:
+        ccy = (line.frozen_currency.code if line.frozen_currency_id else "UZS").upper()
+        if ccy in ("UZS", "") or ccy in _seen_ccy:
+            continue
+        _seen_ccy.add(ccy)
+        if manual.get(ccy) not in (None, "") or snapshot.get(ccy) not in (None, ""):
+            continue
+        if get_rate_to_uzs(ccy) is None:
+            fx_missing.append(ccy)
 
     gross_profit = subtotal - total_landed_cost
     gross_margin_pct = (gross_profit / subtotal * Decimal("100")) if subtotal > 0 else Decimal("0")
@@ -474,10 +506,15 @@ def compute_quote_economics(quote) -> dict:
         "markup_percent": markup_pct.quantize(Decimal("0.1"), rounding=ROUND_HALF_UP),
         "charge_cost_total": charge_cost_total,
         "operating_profit": operating_profit.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
-        "below_cost": tax_exclusive < total_landed_cost,
+        # KP-02: a real loss is operating_profit < 0 — i.e. the buyer's tax-exclusive price does
+        # not cover landed cost PLUS the seller's real cost of the charges. The old lines-only
+        # test (tax_exclusive < total_landed_cost) was masked by any buyer-billed +charge (the
+        # charge revenue inflated tax_exclusive) → a loss-making КП slipped past the G1 gate.
+        "below_cost": tax_exclusive < (total_landed_cost + charge_cost_total),
         "below_floor": subtotal > 0 and gross_margin_pct < min_margin,
         "min_margin_percent": min_margin,
         "target_margin_percent": target_margin,
+        "fx_missing": fx_missing,
     }
 
 
@@ -613,7 +650,10 @@ class QuoteLifecycleService:
         # LOSS PREVENTION (authoritative server gate): never send a КП priced below its landed
         # cost — even if items/charges were edited after the internal approval. Mirrors the
         # live G1 guardrail in the builder; can't be bypassed via the API.
-        if compute_quote_economics(quote)["below_cost"]:
+        _econ = compute_quote_economics(quote)
+        if _econ["fx_missing"]:
+            raise ValueError("FX_RATE_MISSING")
+        if _econ["below_cost"]:
             raise ValueError("QUOTE_BELOW_COST")
 
         # Mint the public no-login access token once (idempotent across re-sends of the
@@ -763,7 +803,10 @@ class QuoteLifecycleService:
         # LOSS PREVENTION (hard stop): a КП whose client total is below its landed cost would be
         # sold at a loss — never allow it into the approval chain. Below the margin FLOOR is a
         # softer signal (warn + approval on the client side), NOT a hard block here.
-        if compute_quote_economics(quote)["below_cost"]:
+        _econ = compute_quote_economics(quote)
+        if _econ["fx_missing"]:
+            return None, "FX_RATE_MISSING"
+        if _econ["below_cost"]:
             return None, "QUOTE_BELOW_COST"
         # All gates passed — NOW it is safe to claim the КП: anchor BOTH the preparer and the
         # owning seller company to the VERIFIED company resolved above (audit F0/H2), so the

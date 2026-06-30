@@ -198,7 +198,9 @@ export interface QuoteCharge {
 	description?: string;
 	amount: string;
 	rate_percent?: string | null; // % of subtotal; takes priority over amount
+	cost_amount?: string | null;  // seller's REAL cost (null ⇒ billed-at-cost pass-through)
 	is_deduction: boolean;        // true = discount (−), false = charge (+)
+	from_template?: boolean;      // auto-created from an Incoterm template (vs added by hand)
 	created_by?: number | null;
 	created_at?: string;
 }
@@ -226,10 +228,11 @@ export interface QuoteEconomics {
 	markup_percent: string;         // markup on cost (reference)
 	charge_cost_total: string;
 	operating_profit: string;
-	below_cost: boolean;            // hard-stop flag: client total < landed cost
+	below_cost: boolean;            // hard-stop flag: operating profit < 0 (landed + charge costs)
 	below_floor: boolean;           // warn+approval flag: margin < company floor
 	min_margin_percent: string;
 	target_margin_percent: string;
+	fx_missing: string[];           // line currencies with NO resolvable rate → blocks submit/send
 }
 
 export interface Quote {
@@ -606,7 +609,7 @@ export const crmApi = {
 		const response = await apiClient.get<PaginatedResponse<QuoteCharge>>(`crm/quote-charges/?quote=${quoteId}`);
 		return response.data.results;
 	},
-	createQuoteCharge: async (data: { quote: number; charge_type: string; description?: string; amount?: string; rate_percent?: string | null; is_deduction?: boolean }) => {
+	createQuoteCharge: async (data: { quote: number; charge_type: string; description?: string; amount?: string; rate_percent?: string | null; cost_amount?: string | null; is_deduction?: boolean }) => {
 		const response = await apiClient.post<QuoteCharge>('crm/quote-charges/', data);
 		return response.data;
 	},

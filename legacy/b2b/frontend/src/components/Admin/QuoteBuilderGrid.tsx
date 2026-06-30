@@ -43,13 +43,13 @@ interface QuoteBuilderGridProps {
 const marginToneClass = (belowCostOrFloor: boolean, marginPct: number, target: number): string =>
 	belowCostOrFloor ? 'text-destructive' : marginPct >= target ? 'text-success' : 'text-warning';
 
-// Compact, locale-aware money for the collapsed rail strip (e.g. «7,8 млн»). Full value
-// is always available in the tooltip via formatMoney.
-const compactNumber = (value?: string | number | null): string =>
-	new Intl.NumberFormat('ru-RU', { notation: 'compact', maximumFractionDigits: 1 }).format(Number(value || 0));
+// Compact, locale-aware money for the collapsed rail strip (e.g. «7,8 млн»). Locale follows
+// the active i18n language (not hardcoded). Full value is always in the tooltip via formatMoney.
+const compactNumber = (value: string | number | null | undefined, locale: string): string =>
+	new Intl.NumberFormat(locale, { notation: 'compact', maximumFractionDigits: 1 }).format(Number(value || 0));
 
 export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: propDealId, onSave }) => {
-	const { t } = useTranslation();
+	const { t, i18n } = useTranslation();
 	const dealId = propDealId || 0;
 
 	const { data: quoteItems = [], isLoading: itemsLoading } = useQuoteItems({ deal_id: dealId });
@@ -337,6 +337,12 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 				{econ && (
 					<div className="flex flex-col gap-2 rounded-md border p-3">
 						<span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('quote.economics.title')}</span>
+						{econ.fx_missing && econ.fx_missing.length > 0 && (
+							<div className="flex items-center gap-2 rounded-md bg-destructive/10 px-2 py-1.5 text-xs font-medium text-destructive">
+								<AlertTriangle className="size-3.5 shrink-0" aria-hidden="true" />
+								{t('quote.economics.fxMissing', { currencies: econ.fx_missing.join(', ') })}
+							</div>
+						)}
 						{econ.below_cost ? (
 							<div className="flex items-center gap-2 rounded-md bg-destructive/10 px-2 py-1.5 text-xs font-medium text-destructive">
 								<AlertTriangle className="size-3.5 shrink-0" aria-hidden="true" />
@@ -419,7 +425,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 			)}
 			<Tooltip>
 				<TooltipTrigger asChild>
-					<span className="cursor-help text-xs font-bold tabular-nums">{compactNumber(activeQuote?.total_incl_vat)}</span>
+					<span className="cursor-help text-xs font-bold tabular-nums">{compactNumber(activeQuote?.total_incl_vat, i18n.language)}</span>
 				</TooltipTrigger>
 				<TooltipContent side="left">{t('quote.total')}: {formatMoney(activeQuote?.total_incl_vat, presentationCurrency)}</TooltipContent>
 			</Tooltip>

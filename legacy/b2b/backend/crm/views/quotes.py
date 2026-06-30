@@ -272,7 +272,9 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
         except ValueError as exc:
             code = str(exc)
             # Surface the specific loss-prevention / claim errors instead of a generic status.
-            return _chain_error_response(code if code in ("QUOTE_BELOW_COST", "QUOTE_NOT_CLAIMED") else "INVALID_STATUS")
+            return _chain_error_response(
+                code if code in ("QUOTE_BELOW_COST", "QUOTE_NOT_CLAIMED", "FX_RATE_MISSING") else "INVALID_STATUS"
+            )
         return Response(self.get_serializer(quote).data)
 
     @extend_schema(
@@ -833,7 +835,9 @@ class QuoteChargeViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         self._assert_seller()
-        serializer.save()
+        # Editing a charge makes it the seller's deliberate value → mark it manual so a later
+        # Incoterm switch (KP-05) won't wipe it with the rest of the old basis's template rows.
+        serializer.save(from_template=False)
 
     def perform_destroy(self, instance):
         self._assert_seller()
