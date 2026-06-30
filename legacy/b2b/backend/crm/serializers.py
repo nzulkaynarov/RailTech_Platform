@@ -437,6 +437,7 @@ class DealListSerializer(serializers.ModelSerializer):
     company_name = serializers.CharField(source="company.name", read_only=True)
     active_quote = QuoteSerializer(read_only=True)
     target_sellers_data = serializers.SerializerMethodField()
+    assigned_to_name = serializers.CharField(source="assigned_to.get_full_name", read_only=True)
 
     def get_target_sellers_data(self, obj) -> list:
         """Seller companies this RFQ is routed to (multi-seller routing)."""
@@ -454,6 +455,9 @@ class DealListSerializer(serializers.ModelSerializer):
             "stage_name",
             "total_value",
             "manager",
+            "assigned_to",
+            "assigned_to_name",
+            "assigned_at",
             "active_quote",
             "target_sellers_data",
             "created_at",
@@ -470,6 +474,7 @@ class DealDetailSerializer(serializers.ModelSerializer):
     company_name = serializers.CharField(source="company.name", read_only=True)
     client_name = serializers.CharField(source="client.get_full_name", read_only=True)
     manager_name = serializers.CharField(source="manager.get_full_name", read_only=True)
+    assigned_to_name = serializers.CharField(source="assigned_to.get_full_name", read_only=True)
     can_edit_request = serializers.SerializerMethodField()
     target_sellers_data = serializers.SerializerMethodField()
 
@@ -497,6 +502,9 @@ class DealDetailSerializer(serializers.ModelSerializer):
             "client_name",
             "manager",
             "manager_name",
+            "assigned_to",
+            "assigned_to_name",
+            "assigned_at",
             "stage",
             "stage_code",
             "stage_name",

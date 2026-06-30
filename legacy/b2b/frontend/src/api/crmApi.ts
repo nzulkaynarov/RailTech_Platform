@@ -330,6 +330,9 @@ export interface Deal {
 	client_name?: string;
 	manager?: number | null;
 	manager_name?: string;
+	assigned_to?: number | null;       // deal owner (claimed); null = unclaimed, in the queue
+	assigned_to_name?: string;
+	assigned_at?: string | null;       // time-to-first-touch anchor
 	stage?: number | null;
 	stage_code?: string;
 	stage_name?: string;
@@ -419,6 +422,19 @@ export const crmApi = {
 	// Buyer issues the RFQ to the seller (Draft → RFQ_OPEN). The «Отправить заявку» step.
 	submitRequest: async (dealId: number) => {
 		const response = await apiClient.post<Deal>(`crm/deals/${dealId}/submit-request/`);
+		return response.data;
+	},
+	// ─── Deal ownership / work-queue (ADR-0006 Move 2) ───────────────────────
+	claimDeal: async (dealId: number) => {
+		const response = await apiClient.post<Deal>(`crm/deals/${dealId}/claim/`);
+		return response.data;
+	},
+	releaseDeal: async (dealId: number) => {
+		const response = await apiClient.post<Deal>(`crm/deals/${dealId}/release/`);
+		return response.data;
+	},
+	assignDeal: async (dealId: number, assigneeId: number) => {
+		const response = await apiClient.post<Deal>(`crm/deals/${dealId}/assign/`, { assignee_id: assigneeId });
 		return response.data;
 	},
 	// ─── Multi-seller routing ────────────────────────────────────────────────

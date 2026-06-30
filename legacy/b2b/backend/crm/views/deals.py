@@ -333,6 +333,46 @@ class DealViewSet(viewsets.ModelViewSet):
         deal = self.get_queryset().get(pk=pk)
         return Response(DealDetailSerializer(deal, context={"request": request}).data)
 
+    def _assignment_response(self, deal, err, request):
+        if err:
+            http_status = (
+                status.HTTP_403_FORBIDDEN
+                if err in ("ADMIN_VIEWER_CANNOT_ACT", "MEMBER_REQUIRED_FOR_ACTION")
+                else status.HTTP_400_BAD_REQUEST
+            )
+            return Response({"error": err}, status=http_status)
+        deal = self.get_queryset().get(pk=deal.pk)
+        return Response(DealDetailSerializer(deal, context={"request": request}).data)
+
+    @extend_schema(summary="Claim a deal (take it from the shared queue)", tags=["CRM"])
+    @action(detail=True, methods=["post"], url_path="claim", permission_classes=[IsAuthenticated])
+    def claim(self, request, pk=None):
+        """ADR-0006 Move 2: a routed seller-team member takes ownership of an unclaimed заявка."""
+        from crm.services.assignment import claim_deal
+
+        deal, err = claim_deal(int(pk), request.user)
+        return self._assignment_response(deal, err, request)
+
+    @extend_schema(summary="Release a deal back to the queue", tags=["CRM"])
+    @action(detail=True, methods=["post"], url_path="release", permission_classes=[IsAuthenticated])
+    def release(self, request, pk=None):
+        from crm.services.assignment import release_deal
+
+        deal, err = release_deal(int(pk), request.user)
+        return self._assignment_response(deal, err, request)
+
+    @extend_schema(
+        summary="Assign a deal to a team member (company admin)",
+        request=inline_serializer("AssignDealRequest", fields={"assignee_id": drf_serializers.IntegerField()}),
+        tags=["CRM"],
+    )
+    @action(detail=True, methods=["post"], url_path="assign", permission_classes=[IsAuthenticated])
+    def assign(self, request, pk=None):
+        from crm.services.assignment import assign_deal
+
+        deal, err = assign_deal(int(pk), request.user, request.data.get("assignee_id"))
+        return self._assignment_response(deal, err, request)
+
     @extend_schema(
         summary="List seller companies for the routing picker",
         description="Buyer-facing lightweight directory of active SUPPLIER companies.",

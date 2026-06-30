@@ -62,6 +62,27 @@ class Deal(models.Model):
         verbose_name=_("Менеджер"),
         help_text=_("Ответственный менеджер RailTech"),
     )
+    # ADR-0006 Move 2 — explicit DEAL OWNER on the seller side. NULL = unclaimed, sitting in the
+    # routed sellers' shared work-queue; a routed member claims it (claimable queue, the world-
+    # standard ownership pattern — works for a 1-person or 100-person team, not a hard-coded
+    # round-robin). assigned_at anchors the time-to-first-touch SLA. (Distinct from the legacy
+    # `manager`, which stays for back-compat.)
+    assigned_to = models.ForeignKey(
+        "accounts.CustomUser",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        db_index=True,
+        related_name="assigned_deals",
+        verbose_name=_("Ответственный (взял в работу)"),
+        help_text=_("Кто из команды продавца ведёт эту заявку. Пусто — в общей очереди, не взята."),
+    )
+    assigned_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Взята в работу"),
+        help_text=_("Когда заявку взяли в работу — основа SLA «время до первого касания»."),
+    )
     stage = models.ForeignKey(
         "crm.DealStage",
         on_delete=models.PROTECT,

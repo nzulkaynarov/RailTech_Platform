@@ -10,24 +10,22 @@ from .services import push_notification_ws
 
 
 def _notify_seller_team(deal, info_type):
-    """Alert the seller team that a new заявка is open for sourcing.
-
-    Single-seller model: a buyer's deal has no `deal.manager`, so every existing
-    seller-facing notification (which targets a specific user) never reached the
-    seller — its bell stayed empty ("уведомления не активны"). Here we fan out to
-    every active can_sell member of a SELLER-type company (= the RailTech team
-    today). TODO multi-seller: target only the addressed seller(s) once заявка
-    routing exists (roadmap F#1) instead of the whole seller pool.
-    """
-    from accounts.constants import SELLER_COMPANY_TYPES
+    """Alert ONLY the seller teams this заявка was ROUTED to (DealSellerRouting), deep-linking to
+    the specific deal — not a fan-out to the whole seller pool (ADR-0006 Move 2). Fires on the
+    RFQ_OPEN transition, by which point routing is set. A заявка lands in the routed company's
+    shared work-queue; a member then CLAIMS it (crm.services.assignment) — that's the targeted,
+    quiet, scalable signal, replacing the noisy whole-pool blast that linked to a generic list."""
     from accounts.models import CustomUser
 
+    routed_company_ids = list(deal.seller_routings.values_list("seller_company_id", flat=True))
+    if not routed_company_ids:
+        return
     seller_user_ids = (
         CustomUser.objects.filter(
             is_active=True,
             memberships__is_active=True,
             memberships__can_sell=True,
-            memberships__company__types__code__in=SELLER_COMPANY_TYPES,
+            memberships__company_id__in=routed_company_ids,
         )
         .values_list("id", flat=True)
         .distinct()
@@ -39,7 +37,7 @@ def _notify_seller_team(deal, info_type):
             type=info_type,
             title="Новая заявка",
             message=f"Заявка #{deal.pk} от «{company_name}» ожидает КП",
-            link="/crm/deals",
+            link=f"/crm/deals/{deal.pk}",
             deal=deal,
         )
         for uid in seller_user_ids

@@ -617,3 +617,44 @@ def test_approve_raises_on_illegal_stage_no_silent_desync(lookups, buyer_company
 
     with pytest.raises(ValueError):
         QuoteLifecycleService.approve_quote(quote.id, buyer)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 7.  Deal ownership / claimable queue (ADR-0006 Move 2)
+# ─────────────────────────────────────────────────────────────────────────────
+@pytest.mark.django_db
+def test_claim_deal_by_routed_seller_then_lock_then_release(lookups, buyer_company, seller_company, deal):
+    """A routed seller claims an unclaimed deal; a second member can't steal it (claim-lock);
+    release returns it to the queue. The world-standard claimable-queue ownership."""
+    from crm.services.assignment import claim_deal, release_deal
+
+    seller = _make_user("claim_seller@s.test")
+    _make_member(seller, seller_company, can_sell=True, is_primary=True)
+    claimed, err = claim_deal(deal.id, seller)
+    assert err is None and claimed.assigned_to_id == seller.id and claimed.assigned_at is not None
+
+    other = _make_user("claim_other@s.test")
+    _make_member(other, seller_company, can_sell=True, is_primary=True)
+    _, err2 = claim_deal(deal.id, other)
+    assert err2 == "DEAL_ALREADY_CLAIMED"  # owned — no silent steal
+
+    released, err3 = release_deal(deal.id, seller)
+    assert err3 is None and released.assigned_to_id is None
+
+
+@pytest.mark.django_db
+def test_claim_deal_non_routed_seller_denied(lookups, buyer_company, seller_company, deal):
+    """A seller NOT routed to the deal cannot claim it (no cross-tenant grab)."""
+    from crm.services.assignment import claim_deal
+
+    other_co = Company.objects.create(
+        name="Unrouted Seller",
+        inn="9990000009",
+        verification_status=VerificationStatus.objects.get(code="L2_VERIFIED"),
+    )
+    other_co.types.add(CompanyType.objects.get(code="SUPPLIER"))
+    outsider = _make_user("unrouted_seller@s.test")
+    _make_member(outsider, other_co, can_sell=True, is_primary=True)
+
+    _, err = claim_deal(deal.id, outsider)
+    assert err == "MEMBER_REQUIRED_FOR_ACTION"

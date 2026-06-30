@@ -1696,7 +1696,9 @@
     "list": "Список",
     "kanban": "Канбан",
     "empty": "Нет сделок",
-    "untitled": "Сделка #{{id}}"
+    "untitled": "Сделка #{{id}}",
+    "claim": "Взять в работу",
+    "claimed": "Заявка взята в работу"
   },
   "verification": {
     "applicationUnderReview": "Заявка на рассмотрении",

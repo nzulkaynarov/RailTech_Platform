@@ -1692,7 +1692,9 @@
     "list": "List",
     "kanban": "Kanban",
     "empty": "No deals",
-    "untitled": "Deal #{{id}}"
+    "untitled": "Deal #{{id}}",
+    "claim": "Claim",
+    "claimed": "Deal claimed"
   },
   "verification": {
     "applicationUnderReview": "Application Under Review",

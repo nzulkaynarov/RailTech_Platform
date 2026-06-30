@@ -72,6 +72,29 @@ export const useRouteDeal = () => {
   });
 };
 
+// ─── Deal ownership / work-queue (ADR-0006 Move 2) ──────────────────────────
+export const useClaimDeal = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (dealId: number) => crmApi.claimDeal(dealId),
+    onSuccess: (_data, dealId) => {
+      queryClient.invalidateQueries({ queryKey: ['deals'] });
+      queryClient.invalidateQueries({ queryKey: ['deals', dealId] });
+    },
+  });
+};
+
+export const useReleaseDeal = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (dealId: number) => crmApi.releaseDeal(dealId),
+    onSuccess: (_data, dealId) => {
+      queryClient.invalidateQueries({ queryKey: ['deals'] });
+      queryClient.invalidateQueries({ queryKey: ['deals', dealId] });
+    },
+  });
+};
+
 export const useDealStages = () => useQuery({
   queryKey: ['deal-stages'],
   queryFn: crmApi.getDealStages,

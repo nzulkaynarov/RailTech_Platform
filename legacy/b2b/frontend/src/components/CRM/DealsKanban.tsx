@@ -1,10 +1,14 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Handshake } from 'lucide-react';
+import { Handshake, UserCheck, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useClaimDeal } from '@/hooks/useCRM';
+import { translateApiError } from '@/lib/apiError';
 import type { Deal } from '@/api/crmApi';
 
 interface DealStage {
@@ -30,6 +34,15 @@ interface DealsKanbanProps {
 export function DealsKanban({ deals, stages, onOpen }: DealsKanbanProps) {
   const { t } = useTranslation();
   const format = useCurrencyStore((s) => s.format);
+  const claimMut = useClaimDeal();
+
+  const handleClaim = (e: React.MouseEvent, dealId: number) => {
+    e.stopPropagation(); // don't open the deal — just take ownership from the queue
+    claimMut.mutate(dealId, {
+      onSuccess: () => toast.success(t('dealsKanban.claimed')),
+      onError: (err) => toast.error(translateApiError(err)),
+    });
+  };
 
   const grouped = useMemo(() => {
     const map: Record<string, Deal[]> = {};
@@ -108,6 +121,26 @@ export function DealsKanban({ deals, stages, onOpen }: DealsKanbanProps) {
                             {format(Number(d.total_value))}
                           </div>
                         ) : null}
+                        {/* Ownership: who's on it, or a claim button if it's unclaimed (queue). */}
+                        {d.assigned_to_name ? (
+                          <Badge variant="secondary" className="gap-1 text-xs font-normal">
+                            <UserCheck className="h-3 w-3" aria-hidden="true" />
+                            <span className="truncate">{d.assigned_to_name}</span>
+                          </Badge>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-6 w-full text-xs"
+                            disabled={claimMut.isPending}
+                            onClick={(e) => handleClaim(e, d.id)}
+                          >
+                            {claimMut.isPending && claimMut.variables === d.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+                            ) : null}
+                            {t('dealsKanban.claim')}
+                          </Button>
+                        )}
                       </CardContent>
                     </Card>
                   ))
