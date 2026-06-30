@@ -59,6 +59,31 @@ def test_invite_assigns_mapped_company_role(lookups):
 
 
 @pytest.mark.django_db
+def test_company_config_gate_allows_delegated_admin_not_regular_member(lookups):
+    """ADR-0005 U2: company-config gate (is_company_owner) keys on settings.edit, so a delegated
+    «Администратор компании» (NOT WorkspaceRole OWNER) passes and a regular member does not."""
+    from accounts.models import CompanyRole
+    from accounts.services.document_profile import is_company_owner
+
+    founder = CustomUser.objects.create_user(email="own@t.test", username="own@t.test", password="pw")
+    submit_company_profile(founder, company_name="Deleg LLC")
+    company = CompanyMember.objects.get(user=founder).company
+    member_ws = WorkspaceRole.objects.get_or_create(code="MEMBER", defaults={"name": "Member", "sort_order": 50})[0]
+
+    # delegated admin: the is_system «Администратор компании» role on a non-OWNER member
+    admin_role = CompanyRole.objects.get(company=company, name=COMPANY_ADMIN_ROLE_NAME)
+    delegate = CustomUser.objects.create_user(email="deleg@t.test", username="deleg@t.test", password="pw")
+    CompanyMember.objects.create(user=delegate, company=company, role=member_ws, company_role=admin_role, is_active=True)
+    assert is_company_owner(delegate, company) is True
+
+    # regular member: «Наблюдатель» (no settings.edit) must NOT manage company config
+    viewer_role = CompanyRole.objects.get(company=company, name="Наблюдатель")
+    viewer = CustomUser.objects.create_user(email="view@t.test", username="view@t.test", password="pw")
+    CompanyMember.objects.create(user=viewer, company=company, role=member_ws, company_role=viewer_role, is_active=True)
+    assert is_company_owner(viewer, company) is False
+
+
+@pytest.mark.django_db
 def test_me_capabilities_object(lookups):
     """ADR-0005 Phase B: /me exposes a consolidated capabilities object the unified nav reads."""
     from accounts.constants import ALL_PERMISSIONS

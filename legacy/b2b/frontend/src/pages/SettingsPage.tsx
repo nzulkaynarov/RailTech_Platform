@@ -46,11 +46,19 @@ function SettingRow({ icon: Icon, title, description, children }: {
 
 export function SettingsPage() {
   const { t, i18n } = useTranslation();
-  const { role, company, activeStatus } = useUserStore();
+  const { role, company, capabilities } = useUserStore();
   const { theme, setTheme } = useThemeStore();
   const isOwner = useAuthStore((s) => s.user?.workspace_role === 'OWNER');
   const isAdmin = role === 'ADMIN';
-  const isSeller = activeStatus === 'SELLER';
+  // ADR-0005 U2: gate the company-admin hub on the CompanyRole PERMISSION, not WorkspaceRole
+  // OWNER + seller-context. This (a) lets a delegated «Администратор компании» (settings.edit /
+  // charge_templates.manage) without the OWNER WorkspaceRole reach the hub the backend already
+  // authorizes them for, and (b) stops a dual buyer+seller owner losing the hub in BUYER context.
+  // Fallback to isOwner when permission data is absent (old /me payload); backend still enforces.
+  const perms = capabilities.permissions;
+  const canEditCompany = perms.length
+    ? perms.includes('settings.edit') || perms.includes('charge_templates.manage')
+    : isOwner;
   // Fake rows trimmed — currency/timezone/dateFormat/density/sidebar didn't
   // feed back into any consumer and made the panel feel like a mock. Only
   // Language (i18next) and Theme (themeStore) actually change the UI.
@@ -65,9 +73,9 @@ export function SettingsPage() {
       <Tabs defaultValue="general">
         <TabsList>
           <TabsTrigger value="general">{t('settings.tabs.general')}</TabsTrigger>
-          {/* Company-Admin hub — seller business config (defaults, numbering, templates,
-              document profile). Gated to a seller OWNER (org-admin zone). */}
-          {!isAdmin && isSeller && isOwner && (
+          {/* Company-Admin hub — company business config (defaults, numbering, templates,
+              document profile). Gated on the settings.edit / charge_templates.manage PERMISSION. */}
+          {!isAdmin && canEditCompany && (
             <TabsTrigger value="companyAdmin">{t('settings.tabs.companyAdmin')}</TabsTrigger>
           )}
           {/* Workspace members manage their team here; the OWNER also gets the
@@ -108,10 +116,10 @@ export function SettingsPage() {
           </Card>
         </TabsContent>
 
-        {/* Company-Admin hub (seller OWNER) — one coherent place for the company's
-            КП defaults, document numbering, charge templates and document profile.
-            A nested sub-navigation keeps the page tidy instead of N top-level tabs. */}
-        {!isAdmin && isSeller && isOwner && (
+        {/* Company-Admin hub — one coherent place for the company's КП defaults, document
+            numbering, charge templates and document profile. Gated on settings.edit /
+            charge_templates.manage (U2), not WorkspaceRole — so a delegated company admin sees it. */}
+        {!isAdmin && canEditCompany && (
           <TabsContent value="companyAdmin" className="space-y-4">
             <CompanyAdminHub />
           </TabsContent>

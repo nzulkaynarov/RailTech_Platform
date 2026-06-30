@@ -6,6 +6,7 @@ import { Hash, Loader2, Shield } from 'lucide-react';
 
 import { accountsApi } from '@/api/accountsApi';
 import { useAuthStore } from '@/store/authStore';
+import { useHasCompanyPermission } from '@/hooks/useCapabilities';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -34,7 +35,7 @@ export function CompanyNumberingSettings() {
   const user = useAuthStore((s) => s.user);
 
   const companyId = user?.company?.id ?? user?.primary_company?.id ?? null;
-  const isOwner = user?.workspace_role === 'OWNER';
+  const canEditSettings = useHasCompanyPermission('settings.edit');
   const year = new Date().getFullYear();
 
   const [prefix, setPrefix] = useState('');
@@ -42,7 +43,7 @@ export function CompanyNumberingSettings() {
   const { data: settings, isLoading } = useQuery({
     queryKey: ['company-settings', companyId],
     queryFn: () => accountsApi.getCompanySettings(companyId as number),
-    enabled: companyId != null && isOwner,
+    enabled: companyId != null && canEditSettings,
   });
 
   useEffect(() => {
@@ -59,7 +60,7 @@ export function CompanyNumberingSettings() {
     onError: () => toast.error(t('common.error')),
   });
 
-  if (!isOwner) {
+  if (!canEditSettings) {
     return (
       <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/40 p-4">
         <Shield className="h-5 w-5 text-muted-foreground" aria-hidden="true" />

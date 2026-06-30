@@ -13,8 +13,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 
 from core.validators import validate_image_upload
 
-from ..constants import WorkspaceRoleCode
-from ..models import Company, CompanyDocumentProfile, CompanyMember, CustomUser
+from ..models import Company, CompanyDocumentProfile, CustomUser
 
 logger = logging.getLogger(__name__)
 
@@ -33,22 +32,21 @@ _EDITABLE_FIELDS = (
 
 
 def is_company_owner(user: "CustomUser", company: Company) -> bool:
-    """True if `user` is an active OWNER member of `company` (or platform admin/superuser).
-
-    The document profile is tenant org-admin data: only the company's own OWNER may
-    read/write it; a member of another tenant is refused (never another company).
-    Platform admin / superuser pass for moderation/support.
+    """True if `user` may manage `company`'s org-admin config (document profile, КП defaults,
+    numbering). ADR-0005 U2: gated on the `settings.edit` CompanyRole PERMISSION — not the OWNER
+    WorkspaceRole — so a delegated «Администратор компании» can manage it, not only the founder.
+    member_has_permission already returns True for the OWNER (is_system role / legacy OWNER
+    short-circuit) and False for a regular member (settings.edit ∈ _ADMIN_PERMS), so this stays
+    a strict tenant-scoped gate. Platform admin / superuser pass for moderation/support.
+    (Name kept for call-site stability; semantics widened from owner-only to settings.edit.)
     """
     if not user or not user.is_authenticated:
         return False
     if getattr(user, "is_superuser", False) or getattr(user, "is_platform_admin", False):
         return True
-    return CompanyMember.objects.filter(
-        user=user,
-        company=company,
-        is_active=True,
-        role__code=WorkspaceRoleCode.OWNER,
-    ).exists()
+    from .permissions import member_has_permission
+
+    return member_has_permission(user, company.id, "settings.edit")
 
 
 def get_document_profile(company: Company) -> CompanyDocumentProfile:
