@@ -429,6 +429,32 @@ class QuoteSerializer(serializers.ModelSerializer):
         return data
 
 
+def _assigned_to_display(obj, request):
+    """Display name of the deal's claimed owner — REDACTED across tenants (confidentiality).
+
+    Returns the assignee's full name (falling back to email, since invited members often have
+    blank first/last name) ONLY to viewers who may see that individual: platform admin/superuser,
+    the assignee themselves, or someone sharing an active company membership with the assignee
+    (their own seller team). A co-routed COMPETITOR seller — or the buyer — must NOT learn a rival
+    seller's individual employee identity, so they get None. The deal still reports `assigned_to`
+    (the id) so the UI can show claimed/unclaimed without leaking the name.
+    """
+    if not obj.assigned_to_id:
+        return None
+    user = getattr(request, "user", None)
+    if user is None or not getattr(user, "is_authenticated", False):
+        return None
+    assignee = obj.assigned_to
+    display = assignee.get_full_name() or assignee.email
+    if getattr(user, "is_superuser", False) or getattr(user, "is_platform_admin", False):
+        return display
+    if user.id == assignee.id:
+        return display
+    viewer_company_ids = set(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
+    assignee_company_ids = set(assignee.memberships.filter(is_active=True).values_list("company_id", flat=True))
+    return display if (viewer_company_ids & assignee_company_ids) else None
+
+
 class DealListSerializer(serializers.ModelSerializer):
     """MED-3: Optimized list serializer with human-readable names."""
 
@@ -437,7 +463,10 @@ class DealListSerializer(serializers.ModelSerializer):
     company_name = serializers.CharField(source="company.name", read_only=True)
     active_quote = QuoteSerializer(read_only=True)
     target_sellers_data = serializers.SerializerMethodField()
-    assigned_to_name = serializers.CharField(source="assigned_to.get_full_name", read_only=True)
+    assigned_to_name = serializers.SerializerMethodField()
+
+    def get_assigned_to_name(self, obj):
+        return _assigned_to_display(obj, self.context.get("request"))
 
     def get_target_sellers_data(self, obj) -> list:
         """Seller companies this RFQ is routed to (multi-seller routing)."""
@@ -474,9 +503,12 @@ class DealDetailSerializer(serializers.ModelSerializer):
     company_name = serializers.CharField(source="company.name", read_only=True)
     client_name = serializers.CharField(source="client.get_full_name", read_only=True)
     manager_name = serializers.CharField(source="manager.get_full_name", read_only=True)
-    assigned_to_name = serializers.CharField(source="assigned_to.get_full_name", read_only=True)
+    assigned_to_name = serializers.SerializerMethodField()
     can_edit_request = serializers.SerializerMethodField()
     target_sellers_data = serializers.SerializerMethodField()
+
+    def get_assigned_to_name(self, obj):
+        return _assigned_to_display(obj, self.context.get("request"))
 
     def get_target_sellers_data(self, obj) -> list:
         """Seller companies this RFQ is routed to (multi-seller routing)."""

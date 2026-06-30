@@ -341,7 +341,12 @@ class DealViewSet(viewsets.ModelViewSet):
                 else status.HTTP_400_BAD_REQUEST
             )
             return Response({"error": err}, status=http_status)
-        deal = self.get_queryset().get(pk=deal.pk)
+        # Re-fetch UNSCOPED (not via get_queryset): the service already authorized the mutation,
+        # but get_queryset() is context-sensitive and excludes this deal for a delegated admin
+        # (can_sell=False) or in BUYER context → would raise DoesNotExist → HTTP 500 after a
+        # successful write. The service-returned object is the same deal; re-fetch only to refresh
+        # prefetched caches for the serializer.
+        deal = Deal.objects.get(pk=deal.pk)
         return Response(DealDetailSerializer(deal, context={"request": request}).data)
 
     @extend_schema(summary="Claim a deal (take it from the shared queue)", tags=["CRM"])

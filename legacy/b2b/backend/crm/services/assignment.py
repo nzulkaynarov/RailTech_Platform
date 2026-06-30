@@ -44,6 +44,8 @@ def claim_deal(deal_id: int, actor: CustomUser) -> Tuple[Optional[Deal], Optiona
         return None, "MEMBER_REQUIRED_FOR_ACTION"
     if deal.assigned_to_id and deal.assigned_to_id != actor.id:
         return None, "DEAL_ALREADY_CLAIMED"  # someone else owns it — release/reassign first
+    if deal.assigned_to_id == actor.id:
+        return deal, None  # already owned by this member — true no-op (preserve the assigned_at SLA anchor)
     deal.assigned_to = actor
     deal.assigned_at = timezone.now()
     deal.save(update_fields=["assigned_to", "assigned_at", "updated_at"])
@@ -61,10 +63,17 @@ def release_deal(deal_id: int, actor: CustomUser) -> Tuple[Optional[Deal], Optio
     deal = Deal.objects.select_for_update().filter(pk=deal_id).first()
     if deal is None:
         return None, "DEAL_NOT_FOUND"
+    if deal.assigned_to_id is None:
+        return deal, None  # already in the shared queue — no-op
     is_owner = deal.assigned_to_id == actor.id
+    # An admin may release ONLY a claim held by a member of their OWN routed seller company —
+    # never yank a competitor seller's in-progress claim on a multi-routed RFQ (tenant isolation).
+    routed_ids = set(deal.seller_routings.values_list("seller_company_id", flat=True))
+    owner_company_ids = set(
+        deal.assigned_to.memberships.filter(is_active=True).values_list("company_id", flat=True)
+    )
     can_manage = any(
-        member_has_permission(actor, m.seller_company_id, "team.manage")
-        for m in deal.seller_routings.all()
+        member_has_permission(actor, cid, "team.manage") for cid in (routed_ids & owner_company_ids)
     )
     if not (getattr(actor, "is_superuser", False) or is_owner or can_manage):
         return None, "MEMBER_REQUIRED_FOR_ACTION"
@@ -87,15 +96,26 @@ def assign_deal(deal_id: int, actor: CustomUser, assignee_id: int) -> Tuple[Opti
     if deal is None:
         return None, "DEAL_NOT_FOUND"
     routed_company_ids = list(deal.seller_routings.values_list("seller_company_id", flat=True))
-    can_manage = getattr(actor, "is_superuser", False) or any(
-        member_has_permission(actor, cid, "team.manage") for cid in routed_company_ids
-    )
-    if not can_manage:
+    # The actor manages ONLY the routed companies where they hold team.manage (superuser → all).
+    if getattr(actor, "is_superuser", False):
+        managed_company_ids = list(routed_company_ids)
+    else:
+        managed_company_ids = [
+            cid for cid in routed_company_ids if member_has_permission(actor, cid, "team.manage")
+        ]
+    if not managed_company_ids:
         return None, "MEMBER_REQUIRED_FOR_ACTION"
+    # Never overwrite a claim owned by a member OUTSIDE the actor's managed companies — that would
+    # let a competitor seller's admin seize another routed seller's claim (tenant isolation).
+    if deal.assigned_to_id and not deal.assigned_to.memberships.filter(
+        is_active=True, company_id__in=managed_company_ids
+    ).exists():
+        return None, "DEAL_ALREADY_CLAIMED"
     assignee = CustomUser.objects.filter(pk=assignee_id).first()
     if assignee is None:
         return None, "ASSIGNEE_NOT_FOUND"
-    if not assignee.memberships.filter(is_active=True, company_id__in=routed_company_ids).exists():
+    # Assignee must belong to one of the actor's OWN managed seller companies (not just any routed one).
+    if not assignee.memberships.filter(is_active=True, company_id__in=managed_company_ids).exists():
         return None, "ASSIGNEE_NOT_IN_ROUTED_COMPANY"
     deal.assigned_to = assignee
     deal.assigned_at = timezone.now()
@@ -118,7 +138,9 @@ def _notify_assignee(deal: Deal, assignee: CustomUser) -> None:
         link=f"/crm/deals/{deal.pk}",
         deal=deal,
     )
-    push_notification_ws(notif)
+    # Defer the WS push until the surrounding transaction commits (codebase on_commit convention) —
+    # never announce a notification id that a rollback would delete.
+    transaction.on_commit(lambda: push_notification_ws(notif))
 
 
 def _log(deal: Deal, actor: CustomUser, action: str, detail: str) -> None:

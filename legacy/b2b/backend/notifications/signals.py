@@ -9,18 +9,14 @@ from .models import Notification, NotificationType
 from .services import push_notification_ws
 
 
-def _notify_seller_team(deal, info_type):
-    """Alert ONLY the seller teams this заявка was ROUTED to (DealSellerRouting), deep-linking to
-    the specific deal — not a fan-out to the whole seller pool (ADR-0006 Move 2). Fires on the
-    RFQ_OPEN transition, by which point routing is set. A заявка lands in the routed company's
-    shared work-queue; a member then CLAIMS it (crm.services.assignment) — that's the targeted,
-    quiet, scalable signal, replacing the noisy whole-pool blast that linked to a generic list."""
+def _routed_seller_user_ids(deal) -> set:
+    """Active can_sell members of the seller companies this deal was ROUTED to (DealSellerRouting)."""
     from accounts.models import CustomUser
 
     routed_company_ids = list(deal.seller_routings.values_list("seller_company_id", flat=True))
     if not routed_company_ids:
-        return
-    seller_user_ids = (
+        return set()
+    return set(
         CustomUser.objects.filter(
             is_active=True,
             memberships__is_active=True,
@@ -30,6 +26,17 @@ def _notify_seller_team(deal, info_type):
         .values_list("id", flat=True)
         .distinct()
     )
+
+
+def _notify_seller_team(deal, info_type):
+    """Alert ONLY the seller teams this заявка was ROUTED to (DealSellerRouting), deep-linking to
+    the specific deal — not a fan-out to the whole seller pool (ADR-0006 Move 2). Fires on the
+    RFQ_OPEN transition, by which point routing is set. A заявка lands in the routed company's
+    shared work-queue; a member then CLAIMS it (crm.services.assignment) — that's the targeted,
+    quiet, scalable signal, replacing the noisy whole-pool blast that linked to a generic list."""
+    seller_user_ids = _routed_seller_user_ids(deal)
+    if not seller_user_ids:
+        return
     company_name = deal.company.name if deal.company else ""
     notifications = [
         Notification(
@@ -79,12 +86,19 @@ def notify_new_message(sender, instance, created, **kwargs):
     info_type = NotificationType.objects.filter(code="INFO").first()
     short_text = instance.text[:80] + ("..." if len(instance.text) > 80 else "")
 
-    # Collect recipients: client + manager, excluding the sender
+    # Collect recipients, excluding the sender. Buyer↔seller must be symmetric: the seller side of a
+    # claimed deal is `assigned_to` (the КП author), NOT `manager` (legacy, ~always NULL for real
+    # buyer/seller deals — ADR-0006 Move 2). If the deal is still unclaimed, alert the routed seller
+    # team so the buyer's message isn't lost in the queue.
     recipients = set()
     if deal.client_id and deal.client_id != sender_user.id:
         recipients.add(deal.client_id)
     if deal.manager_id and deal.manager_id != sender_user.id:
         recipients.add(deal.manager_id)
+    if deal.assigned_to_id and deal.assigned_to_id != sender_user.id:
+        recipients.add(deal.assigned_to_id)
+    elif not deal.assigned_to_id:
+        recipients.update(_routed_seller_user_ids(deal) - {sender_user.id})
 
     notifications = [
         Notification(

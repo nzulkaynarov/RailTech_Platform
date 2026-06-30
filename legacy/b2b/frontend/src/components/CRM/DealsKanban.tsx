@@ -121,11 +121,13 @@ export function DealsKanban({ deals, stages, onOpen }: DealsKanbanProps) {
                             {format(Number(d.total_value))}
                           </div>
                         ) : null}
-                        {/* Ownership: who's on it, or a claim button if it's unclaimed (queue). */}
-                        {d.assigned_to_name ? (
+                        {/* Ownership keys off assigned_to (the id) — NOT the name, which is empty for
+                            invited members (blank full name) and redacted across tenants, so a claimed
+                            deal would otherwise render as unclaimed. Name is display-only with a fallback. */}
+                        {d.assigned_to != null ? (
                           <Badge variant="secondary" className="gap-1 text-xs font-normal">
                             <UserCheck className="h-3 w-3" aria-hidden="true" />
-                            <span className="truncate">{d.assigned_to_name}</span>
+                            <span className="truncate">{d.assigned_to_name || t('dealsKanban.assigned')}</span>
                           </Badge>
                         ) : (
                           <Button
