@@ -3,6 +3,7 @@ from typing import Optional, Tuple
 
 from django.db import transaction
 
+from ..constants import COMPANY_ADMIN_ROLE_NAME
 from ..models import Company, CompanyMember, CustomUser, VerificationStatus, WorkspaceRole
 
 logger = logging.getLogger(__name__)
@@ -45,7 +46,14 @@ def submit_company_profile(
     if client_type:
         company.types.add(client_type)
 
-    CompanyMember.objects.create(user=user, company=company, role=owner_role, is_primary=True)
+    member = CompanyMember.objects.create(user=user, company=company, role=owner_role, is_primary=True)
+    # Seed the company's default CompanyRoles (so the access matrix isn't empty for a fresh
+    # tenant) and give the founding OWNER the immutable «Администратор компании» role — otherwise
+    # the G4 permission engine is silently bypassed for every company registered after mig 0023.
+    from .roles import ensure_default_company_roles
+
+    member.company_role = ensure_default_company_roles(company)[COMPANY_ADMIN_ROLE_NAME]
+    member.save(update_fields=["company_role"])
 
     if position:
         user.position = position

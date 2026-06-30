@@ -22,6 +22,8 @@ type DefaultsForm = {
   default_delivery_basis: string;
   default_vat_rate: string;
   default_margin_percent: string;
+  min_margin_percent: string;
+  target_margin_percent: string;
   default_offer_validity_days: string;
 };
 
@@ -30,6 +32,8 @@ const EMPTY_FORM: DefaultsForm = {
   default_delivery_basis: NONE,
   default_vat_rate: '',
   default_margin_percent: '',
+  min_margin_percent: '',
+  target_margin_percent: '',
   default_offer_validity_days: '',
 };
 
@@ -39,6 +43,8 @@ function toForm(settings: CompanySettings): DefaultsForm {
     default_delivery_basis: settings.default_delivery_basis_code || NONE,
     default_vat_rate: settings.default_vat_rate ?? '',
     default_margin_percent: settings.default_margin_percent ?? '',
+    min_margin_percent: settings.min_margin_percent ?? '',
+    target_margin_percent: settings.target_margin_percent ?? '',
     default_offer_validity_days:
       settings.default_offer_validity_days != null
         ? String(settings.default_offer_validity_days)
@@ -109,6 +115,10 @@ export function CompanyDefaultsSettings() {
       default_vat_rate: form.default_vat_rate.trim() === '' ? null : form.default_vat_rate.trim(),
       default_margin_percent:
         form.default_margin_percent.trim() === '' ? null : form.default_margin_percent.trim(),
+      min_margin_percent:
+        form.min_margin_percent.trim() === '' ? null : form.min_margin_percent.trim(),
+      target_margin_percent:
+        form.target_margin_percent.trim() === '' ? null : form.target_margin_percent.trim(),
       default_offer_validity_days:
         form.default_offer_validity_days.trim() === ''
           ? null
@@ -194,6 +204,32 @@ export function CompanyDefaultsSettings() {
         </div>
 
         <div className="space-y-2">
+          <Label htmlFor="cd-min-margin">{t('companyDefaults.minMarginPercent')}</Label>
+          <Input
+            id="cd-min-margin"
+            type="number"
+            step="0.01"
+            min="0"
+            value={form.min_margin_percent}
+            onChange={(e) => setForm({ ...form, min_margin_percent: e.target.value })}
+            placeholder="15"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="cd-target-margin">{t('companyDefaults.targetMarginPercent')}</Label>
+          <Input
+            id="cd-target-margin"
+            type="number"
+            step="0.01"
+            min="0"
+            value={form.target_margin_percent}
+            onChange={(e) => setForm({ ...form, target_margin_percent: e.target.value })}
+            placeholder="25"
+          />
+        </div>
+
+        <div className="space-y-2">
           <Label htmlFor="cd-validity">{t('companyDefaults.offerValidityDays')}</Label>
           <Input
             id="cd-validity"
@@ -207,6 +243,7 @@ export function CompanyDefaultsSettings() {
         </div>
       </div>
 
+      <p className="text-xs text-muted-foreground">{t('companyDefaults.marginHelp')}</p>
       <p className="text-xs text-muted-foreground">{t('companyDefaults.help')}</p>
 
       <Button onClick={handleSave} disabled={saveMut.isPending}>

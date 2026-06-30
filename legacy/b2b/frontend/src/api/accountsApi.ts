@@ -67,6 +67,8 @@ export interface CompanySettings {
 	default_delivery_basis_code?: string | null;
 	default_vat_rate?: string | null;
 	default_margin_percent?: string | null;
+	min_margin_percent?: string | null;     // loss-prevention floor (below → warn + approval)
+	target_margin_percent?: string | null;  // healthy target (≥ → green traffic-light)
 	default_offer_validity_days?: number | null;
 	doc_number_prefix?: string;
 	created_at?: string;
@@ -80,6 +82,8 @@ export interface CompanySettingsUpdate {
 	default_delivery_basis?: string;
 	default_vat_rate?: string | null;
 	default_margin_percent?: string | null;
+	min_margin_percent?: string | null;
+	target_margin_percent?: string | null;
 	default_offer_validity_days?: number | null;
 	doc_number_prefix?: string;
 }

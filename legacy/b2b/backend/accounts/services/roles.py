@@ -10,9 +10,47 @@ from typing import Optional, Tuple
 from django.db import transaction
 from django.db.models import Count
 
-from ..constants import ALL_PERMISSIONS
+from ..constants import ALL_PERMISSIONS, COMPANY_ADMIN_ROLE_NAME, ROLE_TEMPLATES
 from ..models import CompanyMember, CompanyRole, CustomUser
 from .permissions import member_has_permission
+
+# Legacy WorkspaceRole.code → default CompanyRole template name (mirror of migration 0023's
+# ROLE_MAP, kept as the runtime source so a member invited by WorkspaceRole gets a sane
+# starting CompanyRole). Unknown codes → «Наблюдатель» (no permissions).
+_WORKSPACE_TO_ROLE = {
+    "OWNER": COMPANY_ADMIN_ROLE_NAME,
+    "DIRECTOR": COMPANY_ADMIN_ROLE_NAME,
+    "SALES_MANAGER": "Менеджер по продажам",
+    "LOGIST": "Менеджер по продажам",
+    "CONTRACT_MANAGER": "Менеджер по продажам",
+    "FOREIGN_TRADE_SPECIALIST": "Менеджер по продажам",
+    "PROCUREMENT_MANAGER": "Менеджер закупок",
+    "BUYER_MANAGER": "Менеджер закупок",
+}
+
+
+def ensure_default_company_roles(company) -> dict:
+    """Seed the starting CompanyRole templates for a company (idempotent), returning
+    {name: CompanyRole}. Migration 0023 seeded only companies existing at migration time —
+    tenants registered AFTER it had NO roles, so the assign dropdown was empty and the G4
+    permission engine was silently bypassed (every member fell to the can_sell/can_buy
+    fallback). Call this on every company creation so new tenants match the seeded ones."""
+    roles = {}
+    for name, perms in ROLE_TEMPLATES.items():
+        roles[name] = CompanyRole.objects.get_or_create(
+            company=company,
+            name=name,
+            defaults={"permissions": list(perms), "is_system": name == COMPANY_ADMIN_ROLE_NAME},
+        )[0]
+    return roles
+
+
+def default_company_role_for(company, workspace_role_code: str) -> CompanyRole:
+    """The seeded CompanyRole a member with this WorkspaceRole should start with (seeding the
+    company's default roles first if needed)."""
+    roles = ensure_default_company_roles(company)
+    name = _WORKSPACE_TO_ROLE.get(workspace_role_code, "Наблюдатель")
+    return roles.get(name) or roles[COMPANY_ADMIN_ROLE_NAME]
 
 
 def _seller_or_admin_company_ids(user: "CustomUser") -> list:
