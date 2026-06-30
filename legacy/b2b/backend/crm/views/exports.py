@@ -33,14 +33,11 @@ def handle_quote_export(request, quote):
     try:
         return export_quote(quote, export_format, include_costs=include_costs)
     except ValueError as exc:
-        if str(exc) == "QUOTE_NOT_CLAIMED":
-            return Response(
-                {
-                    "error": "QUOTE_NOT_CLAIMED",
-                    "detail": "КП ещё не сформировано продавцом — экспорт станет доступен после отправки на согласование.",
-                },
-                status=status.HTTP_409_CONFLICT,
-            )
+        code = str(exc)
+        # Loss-prevention / claim guards (HOLE 2): a КП with no FX rate, below cost, or unclaimed
+        # must not render to a downloadable client document — surface the specific 409, not a 400.
+        if code in ("QUOTE_NOT_CLAIMED", "FX_RATE_MISSING", "QUOTE_BELOW_COST"):
+            return Response({"error": code}, status=status.HTTP_409_CONFLICT)
         return Response(
             {"error": "UNSUPPORTED_FORMAT", "supported": ["pdf", "xlsx", "csv"]},
             status=status.HTTP_400_BAD_REQUEST,

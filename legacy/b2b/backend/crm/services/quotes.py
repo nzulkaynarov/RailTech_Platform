@@ -1,5 +1,5 @@
 import logging
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Optional, Tuple
 
 from django.db import models, transaction
@@ -239,6 +239,20 @@ def effective_quote_lead_time(quote, items=None) -> int:
     return max((row.lead_time_days for row in rows), default=0)
 
 
+def _positive_fx_rate(value):
+    """Parse a stored FX rate; return Decimal ONLY if strictly positive, else None.
+    A stray 0 / negative / non-numeric (e.g. a hand-edited fx_manual) is ignored rather than
+    used to zero or flip a line's landed cost (adversarial HOLE 1). The serializer rejects such
+    values on write; this is the defensive read for any pre-existing bad data."""
+    if value in (None, ""):
+        return None
+    try:
+        rate = Decimal(str(value))
+    except (InvalidOperation, ValueError, TypeError):
+        return None
+    return rate if rate > 0 else None
+
+
 class QuoteCalculationService:
     """
     Centralized engine for financial calculations.
@@ -321,11 +335,13 @@ class QuoteCalculationService:
             if code in ("UZS", ""):
                 rate_map[code] = Decimal("1")
                 continue
-            if code in manual and manual[code] not in (None, ""):
-                rate_map[code] = Decimal(str(manual[code]))
+            manual_rate = _positive_fx_rate(manual.get(code))
+            if manual_rate is not None:
+                rate_map[code] = manual_rate
                 continue
-            if code in snapshot and snapshot[code] not in (None, ""):
-                rate_map[code] = Decimal(str(snapshot[code]))
+            snapshot_rate = _positive_fx_rate(snapshot.get(code))
+            if snapshot_rate is not None:
+                rate_map[code] = snapshot_rate
                 continue
             market = get_rate_to_uzs(code)
             if market is None:
@@ -476,7 +492,9 @@ def compute_quote_economics(quote) -> dict:
         if ccy in ("UZS", "") or ccy in _seen_ccy:
             continue
         _seen_ccy.add(ccy)
-        if manual.get(ccy) not in (None, "") or snapshot.get(ccy) not in (None, ""):
+        # A POSITIVE manual override or frozen snapshot satisfies the rate (a stray 0/negative
+        # is ignored — HOLE 1). Otherwise fall back to the market; None there → genuinely missing.
+        if _positive_fx_rate(manual.get(ccy)) is not None or _positive_fx_rate(snapshot.get(ccy)) is not None:
             continue
         if get_rate_to_uzs(ccy) is None:
             fx_missing.append(ccy)
@@ -579,6 +597,15 @@ class QuoteLifecycleService:
         seller_company = _quote_seller_company(quote)
         if seller_company is None:
             raise ValueError("QUOTE_NOT_CLAIMED")
+        # HOLE 2 (loss-prevention): the render/export surface was the gate bypass — a seller could
+        # generate a КП PDF on a DRAFT at the placeholder rate 1 (or below cost) and hand it to the
+        # client out-of-band, never touching submit/send. Refuse to render a client КП document
+        # whose numbers are wrong (no FX rate) or loss-making — the same gate as send_to_client.
+        _econ = compute_quote_economics(quote)
+        if _econ["fx_missing"]:
+            raise ValueError("FX_RATE_MISSING")
+        if _econ["below_cost"]:
+            raise ValueError("QUOTE_BELOW_COST")
         # The seller's filled-in document profile (legal name, requisites, logo, footer).
         # When present, the «Поставщик» block + header logo + footer render from it; when
         # absent the template falls back to the seller Company fields → platform name.
@@ -650,6 +677,10 @@ class QuoteLifecycleService:
         # LOSS PREVENTION (authoritative server gate): never send a КП priced below its landed
         # cost — even if items/charges were edited after the internal approval. Mirrors the
         # live G1 guardrail in the builder; can't be bypassed via the API.
+        # A value-less КП (no priced lines) must not go to the client even if it carries charges
+        # (HOLE 4 — submit had this guard, send did not; items can change after READY_TO_SEND).
+        if (quote.subtotal_excl_vat or 0) <= 0:
+            raise ValueError("QUOTE_HAS_UNPRICED_LINES")
         _econ = compute_quote_economics(quote)
         if _econ["fx_missing"]:
             raise ValueError("FX_RATE_MISSING")
