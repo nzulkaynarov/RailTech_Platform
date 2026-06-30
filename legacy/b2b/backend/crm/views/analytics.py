@@ -364,3 +364,36 @@ class CRMAnalyticsView(APIView):
 
         data = get_crm_analytics_data()
         return Response(data)
+
+
+@extend_schema(
+    summary="Time-to-first-КП wedge metric",
+    description=(
+        "Hours from RFQ routed → first КП sent, aggregated (median/avg/p90). Platform admin sees "
+        "the platform-wide loop speed; a seller sees their OWN company's. The headline wedge KPI."
+    ),
+    parameters=[
+        OpenApiParameter(name="since_days", type=int, location=OpenApiParameter.QUERY, required=False),
+    ],
+    responses={200: OpenApiResponse(description="{sample_size, median_hours, avg_hours, p90_hours, ...}")},
+    tags=["Analytics"],
+)
+class TimeToFirstQuoteView(APIView):
+    """ADR-0006 Move 4 wedge metric. GET /api/v1/crm/analytics/time-to-first-quote/?since_days=30"""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from accounts.services.permissions import seller_acting_company_ids
+        from crm.services.metrics import time_to_first_quote_stats
+
+        is_staff = getattr(request.user, "is_platform_admin", False)
+        # Platform admin → whole platform (None). A seller → only their OWN company's КП (never a
+        # competitor's). A pure buyer has no seller companies → empty scope → zero sample.
+        seller_company_ids = None if is_staff else list(seller_acting_company_ids(request.user, request) or [])
+        try:
+            since_days = int(request.query_params.get("since_days")) if request.query_params.get("since_days") else None
+        except (TypeError, ValueError):
+            since_days = None
+        data = time_to_first_quote_stats(seller_company_ids=seller_company_ids, since_days=since_days)
+        return Response(data)
