@@ -29,6 +29,18 @@ export interface CompanyStatusEntry {
   verification: VerificationStatus;
 }
 
+/** Consolidated effective capabilities (mirrors backend MeSerializer.capabilities, ADR-0005).
+ * Single source the unified nav engine (config/navigation.tsx) reads to render/gate items. */
+export interface Capabilities {
+  kyc_level: string | null;
+  can_buy: boolean;
+  can_sell: boolean;
+  subscription_active: boolean;
+  permissions: string[];
+  is_platform_admin: boolean;
+  operator_permissions: string[] | null;
+}
+
 /* ─── System Role (Platform-level) ─────────────────────────────────────
  * After accounts/0010_platform_admin_model the only SystemRoles are ADMIN
  * (Platform Admin — owns the platform, no CompanyMember) and USER (everyone
@@ -100,6 +112,8 @@ interface UserState {
    * gating (audit F3-UX). `null` = unrestricted (superuser, or an operator with no
    * sub-role assigned); an array = exactly the codes the assigned sub-role grants. */
   operatorPermissions: string[] | null;
+  /** ADR-0005: consolidated capability object driving the unified nav engine. */
+  capabilities: Capabilities;
 
   /* ── Auth integration ── */
   loadFromAuth: () => Promise<void>;
@@ -125,6 +139,10 @@ export const useUserStore = create<UserState>((set, _get) => ({
   sellerSubscriptionOperational: null,
   isSuperuser: false,
   operatorPermissions: null,
+  capabilities: {
+    kyc_level: null, can_buy: true, can_sell: true, subscription_active: false,
+    permissions: [], is_platform_admin: false, operator_permissions: null,
+  },
   profile: {
     firstName: '',
     lastName: '',
@@ -173,6 +191,7 @@ export const useUserStore = create<UserState>((set, _get) => ({
         seller_subscription_operational?: boolean | null;
         is_superuser?: boolean;
         operator_permissions?: string[] | null;
+        capabilities?: Capabilities;
       };
       const canSell = userPayload.can_sell !== false;
       const canBuy = userPayload.can_buy !== false;
@@ -205,6 +224,19 @@ export const useUserStore = create<UserState>((set, _get) => ({
         ? statusEntries[0].status
         : 'BUYER';
 
+      // ADR-0005: prefer the backend's consolidated capability object; synthesize a safe
+      // fallback from the legacy flags if an older /me payload omits it (empty permissions →
+      // the nav engine treats perm-gates as "unknown" and doesn't over-hide; backend enforces).
+      const capabilities: Capabilities = userPayload.capabilities ?? {
+        kyc_level: company?.verification_status != null ? String(company.verification_status) : null,
+        can_buy: canBuy,
+        can_sell: canSell,
+        subscription_active: sellerSubscriptionOperational === true,
+        permissions: [],
+        is_platform_admin: isPlatformAdmin,
+        operator_permissions: operatorPermissions,
+      };
+
       set({
         screen: 'main',
         activeStatus,
@@ -214,6 +246,7 @@ export const useUserStore = create<UserState>((set, _get) => ({
         sellerSubscriptionOperational,
         isSuperuser,
         operatorPermissions,
+        capabilities,
         role: isPlatformAdmin ? 'ADMIN' : 'USER',
         profile: {
           firstName: first_name || '',

@@ -56,3 +56,20 @@ def test_invite_assigns_mapped_company_role(lookups):
     # SALES_MANAGER → «Менеджер по продажам» (not None, not the can_sell/can_buy fallback)
     assert member.company_role is not None
     assert member.company_role.name == "Менеджер по продажам"
+
+
+@pytest.mark.django_db
+def test_me_capabilities_object(lookups):
+    """ADR-0005 Phase B: /me exposes a consolidated capabilities object the unified nav reads."""
+    from accounts.constants import ALL_PERMISSIONS
+    from accounts.serializers import MeSerializer
+
+    founder = CustomUser.objects.create_user(email="caps@t.test", username="caps@t.test", password="pw")
+    submit_company_profile(founder, company_name="Caps LLC")
+    caps = MeSerializer(founder).data["capabilities"]
+
+    assert caps["can_buy"] is True  # CLIENT company, default can_buy
+    # OWNER holds the is_system admin role → ALL_PERMISSIONS (mirrors CompanyRole.has_perm)
+    assert set(caps["permissions"]) == set(ALL_PERMISSIONS)
+    assert caps["is_platform_admin"] is False
+    assert "kyc_level" in caps and "subscription_active" in caps

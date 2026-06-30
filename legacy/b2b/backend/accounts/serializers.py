@@ -340,6 +340,11 @@ class MeSerializer(serializers.ModelSerializer):
     operator_role_code = serializers.CharField(source="operator_role.code", read_only=True)
     operator_permissions = serializers.SerializerMethodField()
     is_superuser = serializers.BooleanField(read_only=True)
+    # ADR-0005 (unified nav, Phase B): ONE explicit capability object the frontend's
+    # buildNavigation() reads to render/gate the single nav from — instead of re-deriving it
+    # from scattered company_types/can_sell/can_buy/kyc/subscription/operator fields. UI gating
+    # only; backend enforcement stays independent (member_has_permission / subscription / KYC-floor).
+    capabilities = serializers.SerializerMethodField()
 
     class Meta:
         model = CustomUser
@@ -365,6 +370,7 @@ class MeSerializer(serializers.ModelSerializer):
             "can_sell",
             "can_buy",
             "seller_subscription_operational",
+            "capabilities",
             "is_active",
             "primary_company",
             "last_login",
@@ -430,6 +436,28 @@ class MeSerializer(serializers.ModelSerializer):
         if getattr(obj, "is_superuser", False) or op_role is None or op_role.is_system:
             return None
         return list(op_role.permissions or [])
+
+    def get_capabilities(self, obj):
+        """Consolidated effective-capability object (ADR-0005). `permissions` are the member's
+        effective CompanyRole permission codes — is_system role → ALL_PERMISSIONS (mirrors
+        CompanyRole.has_perm's short-circuit, so a perm added later isn't wrongly missing for an
+        existing company admin). Drives the unified nav's per-item `requires` gates."""
+        from .constants import ALL_PERMISSIONS
+
+        membership = self._primary_membership(obj)
+        permissions = []
+        if membership and getattr(membership, "company_role", None):
+            role = membership.company_role
+            permissions = list(ALL_PERMISSIONS) if role.is_system else list(role.permissions or [])
+        return {
+            "kyc_level": self.get_kyc_status(obj),
+            "can_buy": self.get_can_buy(obj),
+            "can_sell": self.get_can_sell(obj),
+            "subscription_active": bool(self.get_seller_subscription_operational(obj)),
+            "permissions": permissions,
+            "is_platform_admin": bool(getattr(obj, "is_platform_admin", False)),
+            "operator_permissions": self.get_operator_permissions(obj),
+        }
 
 
 class KYCVerificationSerializer(serializers.Serializer):
