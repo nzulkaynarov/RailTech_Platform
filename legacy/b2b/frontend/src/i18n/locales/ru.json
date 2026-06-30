@@ -728,6 +728,16 @@
       "belowFloor": "Маржа ниже порога компании ({{floor}}%) — потребуется согласование.",
       "thresholds": "Порог {{floor}}% · Цель {{target}}%"
     },
+    "rail": {
+      "title": "Экономика и итоги",
+      "params": "Параметры КП",
+      "totals": "К оплате",
+      "collapse": "Свернуть панель",
+      "expand": "Развернуть панель"
+    },
+    "lineDetails": "Детализация позиции",
+    "discountPercent": "Скидка позиции (%)",
+    "lineProfit": "Прибыль позиции",
     "leadTime": "Срок",
     "leadTimeHelp": "Срок поставки позиции в днях",
     "leadTimeBadge": "до {{days}} дн.",
