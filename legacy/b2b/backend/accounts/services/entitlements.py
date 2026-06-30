@@ -11,13 +11,20 @@ from typing import Optional
 
 from django.db import transaction
 
-from ..constants import FREE_FLOOR_FEATURES
+from ..constants import FREE_FLOOR_FEATURES, SUBSCRIPTION_BASELINE_FEATURES, FeatureKey
 from ..models import CompanyEntitlement
 
 
 def _key(feature_key) -> str:
     """Accept either a FeatureKey enum member or its raw string value."""
     return getattr(feature_key, "value", feature_key)
+
+
+def _has_operational_subscription(company_id: int) -> bool:
+    from ..models import SupplierSubscription
+
+    sub = SupplierSubscription.objects.filter(company_id=company_id).order_by("-updated_at").first()
+    return bool(sub and sub.is_operational)
 
 
 def entitlement_state(company_id: int, feature_key) -> Optional[CompanyEntitlement]:
@@ -40,7 +47,11 @@ def has_entitlement(company_id: int, feature_key) -> bool:
     if not company_id:
         return False
     row = CompanyEntitlement.objects.filter(company_id=company_id, feature_key=key).first()
-    return bool(row and row.is_currently_granted())
+    if row is not None:
+        return row.is_currently_granted()  # an explicit grant/revoke/demo ALWAYS wins
+    # No explicit row → an operational subscription grants the baseline feature set (so a paying
+    # seller is never locked out). Unsubscribed + no row → locked (build is free; send/export aren't).
+    return key in SUBSCRIPTION_BASELINE_FEATURES and _has_operational_subscription(company_id)
 
 
 def is_demo(company_id: int, feature_key) -> bool:
@@ -92,3 +103,14 @@ def grant_entitlement(
         defaults={"access": access, "limit": limit, "credits": credits, "expires_at": expires_at, "note": note},
     )
     return row
+
+
+def can_send_kp(company_id: int) -> bool:
+    """May this seller company SEND a КП to the client? A paid output action: requires the kp.send
+    entitlement and NOT a DEMO state (demo can build + watermark, but not actually send)."""
+    return has_entitlement(company_id, FeatureKey.KP_SEND) and not is_demo(company_id, FeatureKey.KP_SEND)
+
+
+def can_export_kp(company_id: int) -> bool:
+    """May this seller company EXPORT a КП (PDF/Excel)? Same paid-output gate as send."""
+    return has_entitlement(company_id, FeatureKey.KP_EXPORT) and not is_demo(company_id, FeatureKey.KP_EXPORT)
