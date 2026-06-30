@@ -10,6 +10,12 @@
     "closedWon": "Closed (Won)",
     "closedLost": "Closed (Lost)"
   },
+  "pricingAssist": {
+    "button": "Prices from offers",
+    "applied": "Prefilled {{count}} prices",
+    "none": "No offers for the matched lines",
+    "error": "Could not prefill prices"
+  },
   "aiMatch": {
     "button": "AI catalog match",
     "title": "AI catalog match",

@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { QuoteItem, QuoteEconomics } from '@/api/crmApi';
+import { QuoteItem, QuoteEconomics, crmApi } from '@/api/crmApi';
 import {
-	Loader2, Save, AlertTriangle, Plus, Trash2, Sparkles, FileText, Settings,
+	Loader2, Save, AlertTriangle, Plus, Trash2, Sparkles, FileText, Settings, Tag,
 	ChevronRight, ChevronDown, PanelRightClose, PanelRightOpen,
 } from 'lucide-react';
 import { useQuoteItems, useUpdateQuoteItem, useCreateQuoteItem, useDeleteQuoteItem, useDeal, useSetQuoteDeliveryBasis } from '@/hooks/useCRM';
@@ -66,6 +66,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	const [showAiMatch, setShowAiMatch] = useState(false);
 	const [showGenerateQuote, setShowGenerateQuote] = useState(false);
 	const [showSettings, setShowSettings] = useState(false);
+	const [pricingBusy, setPricingBusy] = useState(false);
 	// UI-only state — deliberately kept OUT of localItems so it never trips hasUnsavedChanges.
 	const [expandedRowId, setExpandedRowId] = useState<number | null>(null);
 	const [railOpen, setRailOpen] = useState<boolean>(() => {
@@ -217,6 +218,31 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	// (Себестоимость / Сумма / итоги) render in it. Defaults to UZS.
 	const presentationCurrency = activeQuote?.quote_currency || 'UZS';
 	const vatRate = activeQuote?.vat_rate || '12';
+
+	// Pricing-assist (Move 3): pull line costs from the seller's own SupplierOffers and prefill the
+	// matched lines — the seller reviews before sending. Speeds time-to-first-КП.
+	const handlePricingAssist = async () => {
+		if (!activeQuote) return;
+		setPricingBusy(true);
+		try {
+			const { suggestions } = await crmApi.pricingAssist(activeQuote.id);
+			if (!suggestions.length) {
+				toast.info(t('pricingAssist.none'));
+				return;
+			}
+			for (const s of suggestions) {
+				await updateMutation.mutateAsync({
+					id: s.item_id,
+					data: { frozen_base_price: s.base_price, frozen_currency: s.currency, lead_time_days: s.lead_time_days },
+				});
+			}
+			toast.success(t('pricingAssist.applied', { count: suggestions.length }));
+		} catch {
+			toast.error(t('pricingAssist.error'));
+		} finally {
+			setPricingBusy(false);
+		}
+	};
 
 	// Cost-viewer gate: the server already redacts cost fields + returns economics === null
 	// for a member without quote.view_cost_margin (G4 redaction). One derived flag drives
@@ -471,6 +497,12 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 								<Button variant="outline" size="sm" onClick={() => setShowAiMatch(true)}>
 									<Sparkles className="size-3" />
 									{t('aiMatch.button')}
+								</Button>
+							)}
+							{!activeQuote.frozen_at && localItems.some(item => item.product) && (
+								<Button variant="outline" size="sm" onClick={handlePricingAssist} disabled={pricingBusy}>
+									{pricingBusy ? <Loader2 className="size-3 animate-spin" /> : <Tag className="size-3" />}
+									{t('pricingAssist.button')}
 								</Button>
 							)}
 							<Button variant="outline" size="sm" onClick={() => setShowAddRow(!showAddRow)}>

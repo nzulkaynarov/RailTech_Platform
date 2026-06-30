@@ -323,6 +323,34 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
         return Response(self.get_serializer(quote).data)
 
     @extend_schema(
+        summary="Pricing-assist: suggest КП line costs from the seller's SupplierOffers",
+        description=(
+            "For each matched (product-linked) line, returns the seller's own active SupplierOffer "
+            "price / currency / lead-time so the КП builder can autofill costs (ADR-0006 Move 3 — "
+            "speed). Read-only suggestion; the seller reviews before applying. Cost-confidential: "
+            "only the quote's own seller company sees its offers."
+        ),
+        responses={200: OpenApiResponse(description="{suggestions: [{item_id, product_id, base_price, ...}]}")},
+        tags=["CRM"],
+    )
+    @action(detail=True, methods=["get"], url_path="pricing-assist", permission_classes=[IsAuthenticated])
+    def pricing_assist(self, request, pk=None):
+        """Thin wrapper (Rule 8) — suggest line costs from the seller's catalog offers."""
+        from crm.services.pricing_assist import suggest_quote_pricing
+
+        data, err = suggest_quote_pricing(int(pk), request.user)
+        if err:
+            http_status = (
+                status.HTTP_403_FORBIDDEN
+                if err == "ONLY_SELLER_CAN_BUILD_QUOTE"
+                else status.HTTP_404_NOT_FOUND
+                if err == "QUOTE_NOT_FOUND"
+                else status.HTTP_400_BAD_REQUEST
+            )
+            return Response({"error": err}, status=http_status)
+        return Response(data)
+
+    @extend_schema(
         summary="Approve quote",
         description="Client approves the quote. Only the client's company members or staff can approve.",
         responses={
