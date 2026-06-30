@@ -5,7 +5,11 @@ Re-exports all ViewSets and Views for backwards compatibility so that
 ``from accounts.views import CompanyViewSet`` continues to work unchanged.
 """
 
-from accounts.views.applications import CompanyRoleApplicationViewSet, SupplierSubscriptionViewSet  # noqa: F401
+from accounts.views.applications import (  # noqa: F401
+    CompanyEntitlementViewSet,
+    CompanyRoleApplicationViewSet,
+    SupplierSubscriptionViewSet,
+)
 from accounts.views.operators import OperatorPermissionCatalogView, OperatorRoleViewSet  # noqa: F401
 from accounts.views.roles import CompanyRoleViewSet, PermissionCatalogView  # noqa: F401
 from accounts.views.auth import (  # noqa: F401
@@ -49,6 +53,7 @@ __all__ = [
     # applications & subscriptions
     "SupplierSubscriptionViewSet",
     "CompanyRoleApplicationViewSet",
+    "CompanyEntitlementViewSet",
     # lookups
     "CompanyTypeViewSet",
     "SystemRoleViewSet",

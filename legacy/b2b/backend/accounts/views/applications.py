@@ -7,8 +7,12 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 
 from accounts import services
-from accounts.models import CompanyRoleApplication, SupplierSubscription
-from accounts.serializers import CompanyRoleApplicationSerializer, SupplierSubscriptionSerializer
+from accounts.models import CompanyEntitlement, CompanyRoleApplication, SupplierSubscription
+from accounts.serializers import (
+    CompanyEntitlementSerializer,
+    CompanyRoleApplicationSerializer,
+    SupplierSubscriptionSerializer,
+)
 from core.permissions import OperatorScoped
 
 
@@ -329,3 +333,36 @@ class CompanyRoleApplicationViewSet(viewsets.ModelViewSet):
         if error:
             return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
         return Response(self.get_serializer(result).data)
+
+
+@extend_schema_view(
+    list=extend_schema(summary="List company entitlements", tags=["Accounts"]),
+    create=extend_schema(summary="Grant a company entitlement", tags=["Accounts"]),
+    retrieve=extend_schema(summary="Get entitlement", tags=["Accounts"]),
+    update=extend_schema(summary="Update entitlement", tags=["Accounts"]),
+    partial_update=extend_schema(summary="Patch entitlement", tags=["Accounts"]),
+    destroy=extend_schema(summary="Revoke (delete) entitlement", tags=["Accounts"]),
+)
+class CompanyEntitlementViewSet(viewsets.ModelViewSet):
+    """Platform-admin CRUD of feature entitlements — the monetization control plane (ADR-0006 §3).
+
+    Lets an operator grant a promo, put a company in DEMO, or DISABLE a feature; the app gates on
+    `has_entitlement(company, FeatureKey)`. Gated by the billing operator capability (G1).
+    """
+
+    serializer_class = CompanyEntitlementSerializer
+    permission_classes = [permissions.IsAuthenticated, OperatorScoped]
+    operator_permissions = {
+        "list": "billing.view",
+        "retrieve": "billing.view",
+        "create": "billing.manage",
+        "update": "billing.manage",
+        "partial_update": "billing.manage",
+        "destroy": "billing.manage",
+    }
+    filterset_fields = ["company", "feature_key", "access"]
+    search_fields = ["company__name", "company__inn", "feature_key"]
+    ordering = ["-updated_at"]
+
+    def get_queryset(self):
+        return CompanyEntitlement.objects.select_related("company").order_by("-updated_at")
