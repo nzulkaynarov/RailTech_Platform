@@ -73,6 +73,17 @@ export interface MatchCatalogPayload {
 	top_k?: number;
 }
 
+// ─── Pricing-assist (Move 3): suggested line cost from the seller's SupplierOffer ─────────
+export interface PricingSuggestion {
+	item_id: number;
+	product_id: number;
+	base_price: string;
+	currency: string | null;
+	lead_time_days: number;
+	supplier_sku?: string;
+	delivery_basis?: string | null;
+}
+
 // AI #7 pre-flight quality check — one advisory finding per flagged line.
 // line_index references a line in the sent array (NOT a QuoteItem id).
 export interface PreflightFinding {
@@ -761,6 +772,16 @@ export const crmApi = {
 		const response = await apiClient.post<{ matches: CatalogMatch[] }>(
 			'sourcing/match-catalog/',
 			payload,
+		);
+		return response.data;
+	},
+
+	// ─── Pricing-assist (Move 3) ─────────────────────────────
+	// GET suggested line costs from the seller's own SupplierOffers for the КП's matched lines.
+	// Cost-confidential (only the owning seller); empty {suggestions:[]} when no offers match.
+	pricingAssist: async (quoteId: number) => {
+		const response = await apiClient.get<{ suggestions: PricingSuggestion[] }>(
+			`crm/quotes/${quoteId}/pricing-assist/`,
 		);
 		return response.data;
 	},
