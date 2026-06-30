@@ -260,7 +260,9 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 			for (const s of suggestions) {
 				await updateMutation.mutateAsync({
 					id: s.item_id,
-					data: { frozen_base_price: s.base_price, frozen_currency: s.currency, lead_time_days: s.lead_time_days },
+					// s.currency is string|null (offer may lack a currency); the field is string|undefined,
+					// so coerce null→undefined to skip overriding the line currency when none is suggested.
+					data: { frozen_base_price: s.base_price, frozen_currency: s.currency ?? undefined, lead_time_days: s.lead_time_days },
 				});
 			}
 			toast.success(t('pricingAssist.applied', { count: suggestions.length }));
