@@ -177,8 +177,13 @@ def _ready_to_send_quote(deal, prepared_by):
 
 
 def _sent_quote(deal, prepared_by):
-    """Create a SENT Quote (prices frozen)."""
+    """Create a SENT Quote (prices frozen). A SENT quote means the deal is in QUOTE_SENT — keep
+    the fixture consistent with reality (send_to_client moves the deal there), so approve/reject
+    can legally advance the FSM (the service now raises on an illegal transition, not swallows)."""
     from django.utils import timezone
+
+    deal.stage = DealStage.objects.get(code="QUOTE_SENT")
+    deal.save(update_fields=["stage"])
     return Quote.objects.create(
         deal=deal,
         version=1,
@@ -566,3 +571,49 @@ def test_approve_quote_legacy_can_buy_passes(lookups, buyer_company, seller_comp
     assert result is not None
     result.refresh_from_db()
     assert result.status.code == "APPROVED"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 6.  P0-1 loop integrity — no silent FSM desync (ADR-0006 Move 0)
+# ─────────────────────────────────────────────────────────────────────────────
+@pytest.mark.django_db
+def test_send_kp_from_rfq_open_advances_deal_not_stuck(lookups, buyer_company, seller_company, deal):
+    """A КП sent while the deal is in RFQ_OPEN (the REAL buyer path via submit_request) must
+    advance the deal to QUOTE_SENT. Previously the FSM error (RFQ_OPEN→QUOTE_SENT is illegal)
+    was swallowed → КП marked SENT + emailed while the deal stuck in RFQ_OPEN forever."""
+    seller = _make_user("send_rfq_seller@s.test")
+    _make_member(seller, seller_company, can_sell=True, is_primary=True)
+    _op_subscription(seller_company)
+
+    deal.stage = DealStage.objects.get(code="RFQ_OPEN")  # real post-submit_request state
+    deal.save(update_fields=["stage"])
+
+    quote = _ready_to_send_quote(deal, prepared_by=seller)
+    quote.number = "TEST-KP-001"  # pre-set → skip the document-number minting dependency
+    quote.subtotal_excl_vat = Decimal("100")
+    quote.vat_amount = Decimal("12")
+    quote.total_incl_vat = Decimal("112")
+    quote.save()
+
+    QuoteLifecycleService.send_to_client(quote.id, seller)
+
+    deal.refresh_from_db()
+    assert deal.stage.code == "QUOTE_SENT", "P0-1: deal must advance through CALCULATING, not stay stuck in RFQ_OPEN"
+
+
+@pytest.mark.django_db
+def test_approve_raises_on_illegal_stage_no_silent_desync(lookups, buyer_company, seller_company, deal):
+    """approve_quote must RAISE (not silently 'succeed') when the deal can't legally advance —
+    the anti-swallow guarantee. A SENT quote on a deal forced back to CALCULATING can't go to
+    CONTRACT_SIGNED, and that must surface, not desync."""
+    seller = _make_user("illegal_seller@s.test")
+    _make_member(seller, seller_company, is_primary=True)
+    quote = _sent_quote(deal, prepared_by=seller)  # this sets deal → QUOTE_SENT
+    deal.stage = DealStage.objects.get(code="CALCULATING")  # force an illegal pre-state
+    deal.save(update_fields=["stage"])
+
+    buyer = _make_user("illegal_buyer@b.test")
+    _make_member(buyer, buyer_company, can_buy=True, is_primary=True)
+
+    with pytest.raises(ValueError):
+        QuoteLifecycleService.approve_quote(quote.id, buyer)
