@@ -15,10 +15,14 @@ from catalog.models import Category, DomainType, EquipmentGroup, Product
 
 class DomainConstraintsTest(TestCase):
     def setUp(self):
-        self.railway_domain = DomainType.objects.create(
-            name="Railway Machinery", code="RAILWAY_MACHINERY", sku_prefix="RM"
-        )
-        self.services_domain = DomainType.objects.create(name="Services", code="SERVICES", sku_prefix="SV")
+        # RAILWAY_MACHINERY / SERVICES are seeded by a data migration (Rule 1), so use
+        # get_or_create — a plain create() collides with the seeded row (UniqueViolation).
+        self.railway_domain = DomainType.objects.get_or_create(
+            code="RAILWAY_MACHINERY", defaults={"name": "Railway Machinery", "sku_prefix": "RM"}
+        )[0]
+        self.services_domain = DomainType.objects.get_or_create(
+            code="SERVICES", defaults={"name": "Services", "sku_prefix": "SV"}
+        )[0]
 
     def test_railway_machinery_product_save(self):
         """
