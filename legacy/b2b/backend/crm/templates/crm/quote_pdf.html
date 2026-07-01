@@ -167,9 +167,25 @@
     color: #9aa0a6;
     text-align: center;
   }
+  /* Move 4 monetization: DEMO watermark. position:fixed repeats on every page in WeasyPrint. */
+  .demo-watermark {
+    position: fixed;
+    top: 45%;
+    left: -5%;
+    right: -5%;
+    text-align: center;
+    transform: rotate(-27deg);
+    transform-origin: center;
+    font-size: 22pt;
+    font-weight: 700;
+    letter-spacing: 2pt;
+    color: rgba(200, 55, 55, 0.13);
+    white-space: nowrap;
+  }
 </style>
 </head>
 <body>
+  {% if is_demo %}<div class="demo-watermark">ДЕМО — не для коммерческого использования</div>{% endif %}
   {% with pres_ccy=quote.quote_currency.code|default:"UZS" %}
   {% comment %} Seller display name: branded legal_name → Company name → platform. {% endcomment %}
   {% firstof seller_profile.legal_name seller.name "RailTech B2B" as seller_name %}
