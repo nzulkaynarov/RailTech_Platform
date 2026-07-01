@@ -6,7 +6,7 @@ import { QuoteItem, QuoteEconomics, crmApi } from '@/api/crmApi';
 import { translateApiError } from '@/lib/apiError';
 import {
 	Loader2, Save, AlertTriangle, Plus, Trash2, Sparkles, FileText, Settings, Tag,
-	ChevronRight, ChevronDown, PanelRightClose, PanelRightOpen,
+	ChevronRight, ChevronDown, PanelRightClose, PanelRightOpen, Link2,
 } from 'lucide-react';
 import { useQuoteItems, useUpdateQuoteItem, useCreateQuoteItem, useDeleteQuoteItem, useDeal, useSetQuoteDeliveryBasis } from '@/hooks/useCRM';
 import { useCurrencies } from '@/hooks/useMasterData';
@@ -34,6 +34,7 @@ import { QuoteApprovalChain } from '@/components/CRM/QuoteApprovalChain';
 import { AICatalogMatchDialog } from '@/components/Admin/AICatalogMatchDialog';
 import { GenerateQuoteDialog } from '@/components/CRM/GenerateQuoteDialog';
 import { QuoteSettingsDialog } from '@/components/CRM/QuoteSettingsDialog';
+import { ReassignProductDialog } from '@/components/CRM/ReassignProductDialog';
 import { ExportMenu } from '@/components/Shared/ExportMenu';
 
 interface QuoteBuilderGridProps {
@@ -178,6 +179,9 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	};
 
 	const [deleteTarget, setDeleteTarget] = useState<number | null>(null);
+	// Manual product attach/re-match for a КП line (the human counterpart to AI-подбор):
+	// unmatched lines («Совпадение не найдено») had no way to bind a catalog product.
+	const [reassignItemId, setReassignItemId] = useState<number | null>(null);
 
 	const handleDeleteItem = (id: number) => {
 		setDeleteTarget(id);
@@ -610,9 +614,20 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 																	<Badge variant="outline" className="text-xs px-1.5 py-0">{item.product_domain}</Badge>
 																)}
 															</div>
-															<span className="text-xs text-muted-foreground mt-0.5 truncate">
-																{item.offer_supplier_name || t('sourcing.noMatch')}
-															</span>
+															{item.product ? (
+																<span className="text-xs text-muted-foreground mt-0.5 truncate">
+																	{item.offer_supplier_name || t('sourcing.noMatch')}
+																</span>
+															) : (
+																<button
+																	type="button"
+																	onClick={() => setReassignItemId(item.id)}
+																	className="mt-0.5 flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+																>
+																	<Link2 className="size-3 shrink-0" />
+																	{t('quote.attachProduct')}
+																</button>
+															)}
 														</div>
 													</TableCell>
 													<TableCell className="p-0">
@@ -792,6 +807,11 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 
 			<AICatalogMatchDialog open={showAiMatch} onOpenChange={setShowAiMatch} items={localItems} />
 			<QuoteSettingsDialog quote={activeQuote} open={showSettings} onOpenChange={setShowSettings} />
+			<ReassignProductDialog
+				quoteItemId={reassignItemId}
+				open={reassignItemId != null}
+				onOpenChange={(o) => !o && setReassignItemId(null)}
+			/>
 
 			<AlertDialog open={deleteTarget != null} onOpenChange={(o) => !o && setDeleteTarget(null)}>
 				<AlertDialogContent>
