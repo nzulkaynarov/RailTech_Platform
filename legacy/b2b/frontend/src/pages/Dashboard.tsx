@@ -41,7 +41,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useTranslation } from 'react-i18next';
 import { useUserStore } from '@/store/userStore';
 import { useCurrencyStore } from '@/store/currencyStore';
-import { useDeals } from '@/hooks/useCRM';
+import { useDeals, useTimeToFirstQuote } from '@/hooks/useCRM';
 import { buyerStatus } from '@/lib/requestStatus';
 import { dashboardApi, type DashboardStats } from '@/api/dashboardApi';
 
@@ -447,6 +447,43 @@ function BuyerDashboard({ onProductClick: _onProductClick, period: _period, stat
   );
 }
 
+// ─── Wedge metric card: time-to-first-КП (ADR-0006 Move 4) ───────────────
+function TimeToFirstQuoteCard() {
+  const { t } = useTranslation();
+  const { data } = useTimeToFirstQuote(30);
+  const fmt = (h: number) =>
+    h >= 24 ? t('dashboardPage.ttfk.days', { n: (h / 24).toFixed(1) }) : t('dashboardPage.ttfk.hoursN', { n: h.toFixed(1) });
+
+  return (
+    <Card className="border-primary/30 bg-primary/5">
+      <CardContent className="p-5">
+        <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          <Clock className="h-4 w-4 text-primary" aria-hidden="true" />
+          {t('dashboardPage.ttfk.title')}
+        </div>
+        {!data || data.sample_size === 0 ? (
+          <p className="mt-2 text-sm text-muted-foreground">{t('dashboardPage.ttfk.empty')}</p>
+        ) : (
+          <div className="mt-3 flex flex-wrap items-baseline gap-x-6 gap-y-1">
+            <div>
+              <span className="text-2xl font-bold tabular-nums">{fmt(data.median_hours)}</span>{' '}
+              <span className="text-xs text-muted-foreground">{t('dashboardPage.ttfk.median')}</span>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {t('dashboardPage.ttfk.p90')}: <span className="tabular-nums text-foreground">{fmt(data.p90_hours)}</span>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {t('dashboardPage.ttfk.fastest')}: <span className="tabular-nums text-foreground">{fmt(data.fastest_hours)}</span>
+            </div>
+            <div className="text-xs text-muted-foreground">{t('dashboardPage.ttfk.sample', { n: data.sample_size })}</div>
+          </div>
+        )}
+        <p className="mt-2 text-xs text-muted-foreground">{t('dashboardPage.ttfk.hint')}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ─── SELLER Dashboard ───────────────────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -464,6 +501,9 @@ function SellerDashboard({ onProductClick, period: _period, stats, onNavigate }:
     <div className="flex flex-col gap-6">
       {/* КП waiting on my approval (renders only when non-empty) */}
       <QuoteApprovalQueue onNavigate={onNavigate} />
+
+      {/* Wedge north-star: how fast we answer an RFQ with the first КП. */}
+      <TimeToFirstQuoteCard />
 
       {/* KPI Row */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

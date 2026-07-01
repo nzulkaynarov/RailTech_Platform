@@ -2057,6 +2057,17 @@
     "lastWeek": "Last week",
     "prevPeriod": "prev. period",
     "vsPrevPeriod": "vs. prev. period",
+    "ttfk": {
+      "title": "Time to first quote",
+      "median": "median",
+      "p90": "90th percentile",
+      "fastest": "fastest",
+      "sample": "over {{n}} deals",
+      "empty": "No quotes sent this period yet — the metric appears after the first sends.",
+      "hint": "From when an RFQ reached you to your first КП sent. Response speed is our key win-rate lever.",
+      "hoursN": "{{n}}h",
+      "days": "{{n}}d"
+    },
     "topProducts": "Top Products by Requests",
     "productName": "Name",
     "requests": "Requests",
