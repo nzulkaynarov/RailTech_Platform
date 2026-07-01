@@ -52,3 +52,15 @@ def test_regular_member_forbidden(company):
     CompanyMember.objects.create(user=user, company=company, role=ws, is_active=True)
     resp = _client(user).get(URL)
     assert resp.status_code == 403  # OperatorScoped — not a platform operator
+
+
+def test_choices_endpoint_lists_features_and_access(company):
+    """The admin form's option lists come from the backend (no FE-hardcoded enums)."""
+    su = CustomUser.objects.create_superuser(email="su2@x.uz", username="su2@x.uz", password="pw")
+    resp = _client(su).get(f"{URL}choices/")
+    assert resp.status_code == 200, resp.content
+    data = resp.json()
+    feature_values = {f["value"] for f in data["feature_keys"]}
+    access_values = {a["value"] for a in data["access_states"]}
+    assert {"quote.send", "quote.export", "ai.draft"}.issubset(feature_values)
+    assert access_values == {"ENABLED", "DISABLED", "DEMO"}

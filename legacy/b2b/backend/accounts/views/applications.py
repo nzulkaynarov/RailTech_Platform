@@ -355,6 +355,7 @@ class CompanyEntitlementViewSet(viewsets.ModelViewSet):
     operator_permissions = {
         "list": "billing.view",
         "retrieve": "billing.view",
+        "choices": "billing.view",
         "create": "billing.manage",
         "update": "billing.manage",
         "partial_update": "billing.manage",
@@ -366,3 +367,17 @@ class CompanyEntitlementViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return CompanyEntitlement.objects.select_related("company").order_by("-updated_at")
+
+    @extend_schema(summary="Feature-key + access-state option lists for the entitlement form", tags=["Accounts"])
+    @action(detail=False, methods=["get"], url_path="choices")
+    def choices(self, request):
+        """Backend-driven option lists for the admin form — the FE never hard-codes the FeatureKey
+        or access enums; adding a feature key here surfaces it in the UI with no frontend change."""
+        from accounts.constants import FeatureKey
+
+        return Response(
+            {
+                "feature_keys": [{"value": value, "label": str(label)} for value, label in FeatureKey.choices],
+                "access_states": [{"value": value, "label": str(label)} for value, label in CompanyEntitlement.ACCESS_CHOICES],
+            }
+        )
