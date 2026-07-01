@@ -1,6 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { adminApi, emailTemplatesApi, operatorRolesApi } from '@/api/adminApi';
-import type { EmailTemplateDraft, OperatorRoleDraft } from '@/api/adminApi';
+import { adminApi, emailTemplatesApi, operatorRolesApi, entitlementsApi } from '@/api/adminApi';
+import type { EmailTemplateDraft, OperatorRoleDraft, CompanyEntitlementDraft } from '@/api/adminApi';
 
 export const useAdminQueue = (queueType?: string) =>
   useQuery({
@@ -198,5 +198,49 @@ export const useBulkSubscriptionStatus = () => {
       queryClient.invalidateQueries({ queryKey: ['admin-queue'] });
       queryClient.invalidateQueries({ queryKey: ['platform-dashboard'] });
     },
+  });
+};
+
+/* ─── Company entitlements — Move 4 monetization control plane (ADR-0006) ─── */
+
+const ENTITLEMENTS_KEY = ['admin-entitlements'];
+
+export const useEntitlements = (params?: { company?: number; feature_key?: string; access?: string; search?: string }) =>
+  useQuery({
+    queryKey: [...ENTITLEMENTS_KEY, params ?? {}],
+    queryFn: () => entitlementsApi.list(params),
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
+  });
+
+export const useEntitlementChoices = () =>
+  useQuery({
+    queryKey: ['admin-entitlement-choices'],
+    queryFn: () => entitlementsApi.choices(),
+    staleTime: 5 * 60_000,
+  });
+
+export const useCreateEntitlement = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CompanyEntitlementDraft) => entitlementsApi.create(data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ENTITLEMENTS_KEY }),
+  });
+};
+
+export const useUpdateEntitlement = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<CompanyEntitlementDraft> }) =>
+      entitlementsApi.update(id, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ENTITLEMENTS_KEY }),
+  });
+};
+
+export const useDeleteEntitlement = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => entitlementsApi.remove(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ENTITLEMENTS_KEY }),
   });
 };

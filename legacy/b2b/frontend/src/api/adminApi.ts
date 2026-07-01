@@ -239,6 +239,69 @@ export const operatorRolesApi = {
   },
 };
 
+/* ─── Company entitlements — Move 4 monetization control plane (ADR-0006) ─── */
+
+export interface CompanyEntitlement {
+  id: number;
+  company: number;
+  company_name: string;
+  company_inn: string;
+  feature_key: string;
+  access: string;           // ENABLED | DISABLED | DEMO (codes from the backend choices)
+  access_display: string;
+  limit: number | null;
+  credits: number | null;
+  expires_at: string | null;
+  note: string;
+  is_granted: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+/** Mutable fields when granting / editing an entitlement. */
+export interface CompanyEntitlementDraft {
+  company: number;
+  feature_key: string;
+  access: string;
+  limit?: number | null;
+  credits?: number | null;
+  expires_at?: string | null;
+  note?: string;
+}
+
+export interface EntitlementChoice {
+  value: string;
+  label: string;
+}
+
+export const entitlementsApi = {
+  // Backend-driven option lists (FeatureKey + access states) — no hard-coded enums in the FE.
+  choices: async () => {
+    const res = await apiClient.get<{ feature_keys: EntitlementChoice[]; access_states: EntitlementChoice[] }>(
+      'admin/entitlements/choices/',
+    );
+    return res.data;
+  },
+  list: async (params?: { company?: number; feature_key?: string; access?: string; search?: string }) => {
+    const res = await apiClient.get<CompanyEntitlement[] | { results: CompanyEntitlement[] }>(
+      'admin/entitlements/',
+      { params },
+    );
+    return Array.isArray(res.data) ? res.data : res.data.results;
+  },
+  create: async (data: CompanyEntitlementDraft) => {
+    const res = await apiClient.post<CompanyEntitlement>('admin/entitlements/', data);
+    return res.data;
+  },
+  update: async (id: number, data: Partial<CompanyEntitlementDraft>) => {
+    const res = await apiClient.patch<CompanyEntitlement>(`admin/entitlements/${id}/`, data);
+    return res.data;
+  },
+  remove: async (id: number) => {
+    await apiClient.delete(`admin/entitlements/${id}/`);
+  },
+};
+
 export const adminApi = {
   getQueue: async (params?: { queue_type?: string; limit?: number }) => {
     const res = await apiClient.get<AdminQueueResponse>('admin/queue/', { params });

@@ -38,6 +38,7 @@ const MyRequestsPage = lazyWithRetry(() => import('./pages/MyRequestsPage'));
 const AdminUsersPage = lazyWithRetry(() => import('./pages/AdminUsersPage'));
 const AdminKYCPage = lazyWithRetry(() => import('./pages/AdminKYCPage'));
 const AdminSubscriptionsPage = lazyWithRetry(() => import('./pages/AdminSubscriptionsPage'));
+const AdminEntitlementsPage = lazyWithRetry(() => import('./pages/AdminEntitlementsPage'));
 const AdminRoleApplicationsPage = lazyWithRetry(() => import('./pages/AdminRoleApplicationsPage'));
 const AdminCatalogPage = lazyWithRetry(() => import('./pages/AdminCatalogPage'));
 const AdminCategoriesPage = lazyWithRetry(() => import('./pages/AdminCategoriesPage'));
@@ -80,6 +81,7 @@ type Page =
   | { type: 'admin-users' }
   | { type: 'admin-kyc' }
   | { type: 'admin-subscriptions' }
+  | { type: 'admin-entitlements' }
   | { type: 'admin-role-apps' }
   | { type: 'admin-catalog' }
   | { type: 'admin-categories' }
@@ -294,7 +296,7 @@ function App() {
 }
 
 const ADMIN_PAGES = new Set([
-  'admin-users', 'admin-kyc', 'admin-subscriptions', 'admin-role-apps',
+  'admin-users', 'admin-kyc', 'admin-subscriptions', 'admin-entitlements', 'admin-role-apps',
   'admin-catalog', 'admin-categories', 'admin-equipment-groups', 'admin-offers',
   'admin-companies', 'admin-deals', 'admin-master-data', 'admin-email-templates',
   'admin-operator-roles', 'admin-access-log', 'admin-support',
@@ -425,7 +427,7 @@ function MainApp() {
       'crm-deals', 'crm-quotes',
       'categories', 'equipment-groups',
       'help', 'my-requests',
-      'admin-users', 'admin-kyc', 'admin-subscriptions', 'admin-role-apps',
+      'admin-users', 'admin-kyc', 'admin-subscriptions', 'admin-entitlements', 'admin-role-apps',
       'admin-catalog', 'admin-categories', 'admin-equipment-groups', 'admin-offers',
       'admin-companies', 'admin-deals', 'admin-master-data', 'admin-email-templates',
       'admin-operator-roles', 'admin-access-log', 'admin-support',
@@ -558,6 +560,9 @@ function MainApp() {
       break;
     case 'admin-subscriptions':
       content = <AdminSubscriptionsPage />;
+      break;
+    case 'admin-entitlements':
+      content = <AdminEntitlementsPage />;
       break;
     case 'admin-role-apps':
       content = <AdminRoleApplicationsPage />;
