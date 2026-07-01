@@ -277,7 +277,13 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
             return _chain_error_response(
                 code
                 if code
-                in ("QUOTE_BELOW_COST", "QUOTE_NOT_CLAIMED", "FX_RATE_MISSING", "QUOTE_HAS_UNPRICED_LINES", "QUOTE_SEND_NOT_ENTITLED")
+                in (
+                    "QUOTE_BELOW_COST",
+                    "QUOTE_NOT_CLAIMED",
+                    "FX_RATE_MISSING",
+                    "QUOTE_HAS_UNPRICED_LINES",
+                    "QUOTE_SEND_NOT_ENTITLED",
+                )
                 else "INVALID_STATUS"
             )
         return Response(self.get_serializer(quote).data)
@@ -292,9 +298,7 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
 
         Thin wrapper — all logic lives in crm.services.charges (Rule 8).
         """
-        quote, err = crm_services.set_quote_delivery_basis(
-            int(pk), request.data.get("delivery_basis"), request.user
-        )
+        quote, err = crm_services.set_quote_delivery_basis(int(pk), request.data.get("delivery_basis"), request.user)
         if err:
             http_status = (
                 status.HTTP_403_FORBIDDEN
@@ -306,7 +310,9 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
 
     @extend_schema(
         summary="Reorder КП charges (cascade order)",
-        request=inline_serializer("ChargesReorderRequest", fields={"order": drf_serializers.ListField(child=drf_serializers.IntegerField())}),
+        request=inline_serializer(
+            "ChargesReorderRequest", fields={"order": drf_serializers.ListField(child=drf_serializers.IntegerField())}
+        ),
         tags=["CRM"],
     )
     @action(detail=True, methods=["post"], url_path="charges-reorder", permission_classes=[IsAuthenticated])
@@ -345,9 +351,7 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
             http_status = (
                 status.HTTP_403_FORBIDDEN
                 if err == "ONLY_SELLER_CAN_BUILD_QUOTE"
-                else status.HTTP_404_NOT_FOUND
-                if err == "QUOTE_NOT_FOUND"
-                else status.HTTP_400_BAD_REQUEST
+                else status.HTTP_404_NOT_FOUND if err == "QUOTE_NOT_FOUND" else status.HTTP_400_BAD_REQUEST
             )
             return Response({"error": err}, status=http_status)
         return Response(data)
@@ -392,7 +396,6 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
         assignment pass through this new path (no accidental promotion).
         """
         from accounts.services.permissions import is_member_of, is_platform_admin_viewer
-
         from crm.services._params import has_explicit_company_role_perm
 
         if is_platform_admin_viewer(user):
@@ -498,7 +501,11 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
                 "comment": drf_serializers.CharField(required=False, default=""),
             },
         ),
-        responses={200: QuoteSerializer, 400: OpenApiResponse(description="Wrong status/step"), 403: OpenApiResponse(description="Role not permitted")},
+        responses={
+            200: QuoteSerializer,
+            400: OpenApiResponse(description="Wrong status/step"),
+            403: OpenApiResponse(description="Role not permitted"),
+        },
         tags=["CRM"],
     )
     @action(detail=True, methods=["post"], url_path="approval-act", permission_classes=[IsAuthenticated])
@@ -520,7 +527,11 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
 
     @extend_schema(
         summary="Recall a КП from approval back to DRAFT (submitter / head)",
-        responses={200: QuoteSerializer, 400: OpenApiResponse(description="Wrong status"), 403: OpenApiResponse(description="Not permitted")},
+        responses={
+            200: QuoteSerializer,
+            400: OpenApiResponse(description="Wrong status"),
+            403: OpenApiResponse(description="Not permitted"),
+        },
         tags=["CRM"],
     )
     @action(detail=True, methods=["post"], url_path="recall", permission_classes=[IsAuthenticated])
@@ -690,13 +701,11 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
             # and hide their OWN company's legitimately-prepared КП from their own viewers.
             # Subtract members of the viewer's OWN seller companies so only PURELY-competing
             # preparers are excluded.
-            own_member_ids = CompanyMember.objects.filter(
-                is_active=True, company_id__in=seller_ids
-            ).values_list("user_id", flat=True)
+            own_member_ids = CompanyMember.objects.filter(is_active=True, company_id__in=seller_ids).values_list(
+                "user_id", flat=True
+            )
             competing_preparer_ids = (
-                CompanyMember.objects.filter(
-                    is_active=True, company__types__code__in=SELLER_COMPANY_TYPES
-                )
+                CompanyMember.objects.filter(is_active=True, company__types__code__in=SELLER_COMPANY_TYPES)
                 .exclude(company_id__in=seller_ids)
                 .exclude(user_id__in=own_member_ids)
                 .values_list("user_id", flat=True)
@@ -797,9 +806,7 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
         return Response(QuoteItemSerializer(updated).data)
 
     @extend_schema(summary="Get top-N smart-match candidates for this item", tags=["CRM"])
-    @action(
-        detail=True, methods=["get"], url_path="match-candidates", permission_classes=[IsAuthenticated]
-    )
+    @action(detail=True, methods=["get"], url_path="match-candidates", permission_classes=[IsAuthenticated])
     def match_candidates(self, request, pk=None):
         from sourcing.services import smart_match_candidates
 
@@ -854,13 +861,11 @@ class QuoteChargeViewSet(viewsets.ModelViewSet):
             # and hide their OWN company's legitimately-prepared КП from their own viewers.
             # Subtract members of the viewer's OWN seller companies so only PURELY-competing
             # preparers are excluded.
-            own_member_ids = CompanyMember.objects.filter(
-                is_active=True, company_id__in=seller_ids
-            ).values_list("user_id", flat=True)
+            own_member_ids = CompanyMember.objects.filter(is_active=True, company_id__in=seller_ids).values_list(
+                "user_id", flat=True
+            )
             competing_preparer_ids = (
-                CompanyMember.objects.filter(
-                    is_active=True, company__types__code__in=SELLER_COMPANY_TYPES
-                )
+                CompanyMember.objects.filter(is_active=True, company__types__code__in=SELLER_COMPANY_TYPES)
                 .exclude(company_id__in=seller_ids)
                 .exclude(user_id__in=own_member_ids)
                 .values_list("user_id", flat=True)

@@ -777,9 +777,7 @@ class DocumentExtractView(APIView):
         if not quote_id and not contract_id:
             return Response({"error": "QUOTE_OR_CONTRACT_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
 
-        expected_total, expected_currency, kind = _resolve_expected(
-            request.user, request, quote_id, contract_id
-        )
+        expected_total, expected_currency, kind = _resolve_expected(request.user, request, quote_id, contract_id)
         if kind is None:
             return Response({"error": "REFERENCE_NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)
 

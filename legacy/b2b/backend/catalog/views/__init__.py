@@ -3,6 +3,7 @@
 Public API re-exported so existing import paths keep working.
 """
 
+from .ai import ProductEnrichView
 from .lookups import (
     LIST_CACHE_TTL,
     LOOKUP_CACHE_TTL,
@@ -13,7 +14,6 @@ from .lookups import (
     ProductStatusViewSet,
     StockStatusViewSet,
 )
-from .ai import ProductEnrichView
 from .offers import SupplierOfferViewSet
 from .products import ProductViewSet
 

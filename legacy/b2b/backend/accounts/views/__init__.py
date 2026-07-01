@@ -10,8 +10,6 @@ from accounts.views.applications import (  # noqa: F401
     CompanyRoleApplicationViewSet,
     SupplierSubscriptionViewSet,
 )
-from accounts.views.operators import OperatorPermissionCatalogView, OperatorRoleViewSet  # noqa: F401
-from accounts.views.roles import CompanyRoleViewSet, PermissionCatalogView  # noqa: F401
 from accounts.views.auth import (  # noqa: F401
     CookieTokenObtainPairView,
     CookieTokenRefreshView,
@@ -27,6 +25,8 @@ from accounts.views.auth import (  # noqa: F401
 )
 from accounts.views.company import CompanyViewSet  # noqa: F401
 from accounts.views.lookups import CompanyTypeViewSet, SystemRoleViewSet, WorkspaceRoleViewSet  # noqa: F401
+from accounts.views.operators import OperatorPermissionCatalogView, OperatorRoleViewSet  # noqa: F401
+from accounts.views.roles import CompanyRoleViewSet, PermissionCatalogView  # noqa: F401
 from accounts.views.users import UserViewSet  # noqa: F401
 
 __all__ = [

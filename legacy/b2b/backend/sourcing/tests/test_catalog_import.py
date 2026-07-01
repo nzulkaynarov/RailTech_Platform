@@ -125,7 +125,9 @@ def test_non_positive_price_is_row_error(lookups, company_factory, bad_price):
     """M3: a zero/negative price is a data error — reject the row, write no offer."""
     supplier = company_factory(inn="111111111")
     result = run_catalog_import(
-        _xlsx([{"Наименование": "Z", "Бренд": "B", "Артикул производителя": "Z-1", "Цена": bad_price, "Валюта": "UZS"}]),
+        _xlsx(
+            [{"Наименование": "Z", "Бренд": "B", "Артикул производителя": "Z-1", "Цена": bad_price, "Валюта": "UZS"}]
+        ),
         supplier_company_id=supplier.id,
     )
 
@@ -217,7 +219,17 @@ def test_import_stamps_owner_company(lookups, company_factory):
     see/manage it (without this it's orphaned + invisible)."""
     supplier = company_factory(name="Importer", inn="111111111")
     run_catalog_import(
-        _xlsx([{"Наименование": "Реле", "Бренд": "Siemens", "Артикул производителя": "S-1", "Цена": "10", "Валюта": "UZS"}]),
+        _xlsx(
+            [
+                {
+                    "Наименование": "Реле",
+                    "Бренд": "Siemens",
+                    "Артикул производителя": "S-1",
+                    "Цена": "10",
+                    "Валюта": "UZS",
+                }
+            ]
+        ),
         supplier_company_id=supplier.id,
     )
     from catalog.models import Product
@@ -238,12 +250,19 @@ def test_import_backfills_orphan_but_never_hijacks_other_tenant(lookups, company
     owned = Product.objects.create(name="X", brand=brand, manufacturer_part_number="A-1", owner_company=owner_a)
     orphan = Product.objects.create(name="Y", brand=brand, manufacturer_part_number="A-2", owner_company=None)
 
-    row = lambda mpn: {"Наименование": "upd", "Бренд": "ACME", "Артикул производителя": mpn, "Цена": "9", "Валюта": "UZS"}
+    def row(mpn):
+        return {
+            "Наименование": "upd",
+            "Бренд": "ACME",
+            "Артикул производителя": mpn,
+            "Цена": "9",
+            "Валюта": "UZS",
+        }
     run_catalog_import(_xlsx([row("A-1"), row("A-2")]), supplier_company_id=importer_b.id)
 
     owned.refresh_from_db()
     orphan.refresh_from_db()
-    assert owned.owner_company_id == owner_a.id      # NOT hijacked by importer B
+    assert owned.owner_company_id == owner_a.id  # NOT hijacked by importer B
     assert orphan.owner_company_id == importer_b.id  # orphan backfilled
 
 

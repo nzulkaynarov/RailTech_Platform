@@ -28,9 +28,7 @@ def test_charge_engine_seed_creates_types_and_global_templates():
     global_templates = ChargeTemplate.objects.filter(company__isnull=True)
     assert global_templates.exists()
     # DDP is the heaviest profile: freight + insurance + customs + certification.
-    ddp_charges = set(
-        global_templates.filter(delivery_basis__code="DDP").values_list("charge_type__code", flat=True)
-    )
+    ddp_charges = set(global_templates.filter(delivery_basis__code="DDP").values_list("charge_type__code", flat=True))
     assert {"FREIGHT", "INSURANCE", "CERTIFICATION"} <= ddp_charges  # F3.8: freight is a document charge
     assert "CUSTOMS" not in ddp_charges  # customs stays per-line (driven by the line ТНВЭД)
 

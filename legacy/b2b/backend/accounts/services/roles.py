@@ -156,9 +156,7 @@ def assign_role_to_member(user, member_id, role_id) -> Tuple[Optional[CompanyMem
 def _is_sole_active_system_admin(member: CompanyMember) -> bool:
     """True if `member` is the only active member of their company holding an is_system role."""
     other_admins = (
-        CompanyMember.objects.filter(
-            company_id=member.company_id, is_active=True, company_role__is_system=True
-        )
+        CompanyMember.objects.filter(company_id=member.company_id, is_active=True, company_role__is_system=True)
         .exclude(pk=member.pk)
         .exists()
     )

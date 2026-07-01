@@ -12,15 +12,7 @@ from decimal import Decimal
 import pytest
 
 from accounts.models import Company, CompanyType, CustomUser, VerificationStatus
-from crm.models import (
-    ChargeType,
-    Deal,
-    DealStage,
-    Quote,
-    QuoteCharge,
-    QuoteItem,
-    QuoteStatus,
-)
+from crm.models import ChargeType, Deal, DealStage, Quote, QuoteCharge, QuoteItem, QuoteStatus
 from master_data.models import Country
 
 
@@ -29,9 +21,7 @@ def quote(db):
     DealStage.objects.get_or_create(code="DRAFT", defaults={"name": "DRAFT", "sort_order": 10})
     QuoteStatus.objects.get_or_create(code="DRAFT", defaults={"name": "DRAFT", "sort_order": 10})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
-    vs = VerificationStatus.objects.get_or_create(
-        code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30}
-    )[0]
+    vs = VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})[0]
     uz = Country.objects.get_or_create(code="UZ", defaults={"name": "Uzbekistan", "sort_order": 10})[0]
 
     user = CustomUser.objects.create_user(
@@ -95,9 +85,7 @@ def test_allowance_is_subtracted(quote):
     freight = ChargeType.objects.get_or_create(code="FREIGHT", defaults={"name": "Фрахт"})[0]
     discount = ChargeType.objects.get_or_create(code="DISCOUNT", defaults={"name": "Скидка"})[0]
     QuoteCharge.objects.create(quote=quote, charge_type=freight, amount=Decimal("50.00"))
-    QuoteCharge.objects.create(
-        quote=quote, charge_type=discount, amount=Decimal("10.00"), is_deduction=True
-    )
+    QuoteCharge.objects.create(quote=quote, charge_type=discount, amount=Decimal("10.00"), is_deduction=True)
     quote.refresh_from_db()
 
     assert quote.charges_total == Decimal("40.00")
@@ -109,9 +97,7 @@ def test_allowance_is_subtracted(quote):
 def test_percent_discount_on_whole_quote(quote):
     """−5% on subtotal 100 → charges −5; tax_excl 95; vat 11.40; total 106.40."""
     discount = ChargeType.objects.get_or_create(code="DISCOUNT", defaults={"name": "Скидка"})[0]
-    QuoteCharge.objects.create(
-        quote=quote, charge_type=discount, rate_percent=Decimal("5"), is_deduction=True
-    )
+    QuoteCharge.objects.create(quote=quote, charge_type=discount, rate_percent=Decimal("5"), is_deduction=True)
     quote.refresh_from_db()
 
     assert quote.charges_total == Decimal("-5.00")
@@ -136,17 +122,13 @@ def test_percent_charge_resolves_off_quantized_subtotal(quote):
     quote.items.all().delete()
     for _ in range(3):
         QuoteItem.objects.create(quote=quote, frozen_base_price=Decimal("33.33"), quantity=1)
-    QuoteCharge.objects.create(
-        quote=quote, charge_type=discount, rate_percent=Decimal("10"), is_deduction=True
-    )
+    QuoteCharge.objects.create(quote=quote, charge_type=discount, rate_percent=Decimal("10"), is_deduction=True)
     quote.refresh_from_db()
 
     # The percent base is the persisted (quantized) subtotal, so the charge equals
     # −(subtotal_excl_vat × 10%) quantized — never a value derived from a differently
     # rounded raw aggregate.
-    expected = -(quote.subtotal_excl_vat * Decimal("0.10")).quantize(
-        Decimal("0.01"), rounding=ROUND_HALF_UP
-    )
+    expected = -(quote.subtotal_excl_vat * Decimal("0.10")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
     assert quote.subtotal_excl_vat == Decimal("99.99")
     assert quote.charges_total == expected
     assert quote.charges_total == Decimal("-10.00")  # 10% of 99.99 = 9.999 → 10.00
@@ -156,9 +138,7 @@ def test_percent_charge_resolves_off_quantized_subtotal(quote):
 def test_percent_takes_priority_over_amount(quote):
     """rate_percent set → amount is ignored (10% of 100 = 10, not the 999 amount)."""
     freight = ChargeType.objects.get_or_create(code="FREIGHT", defaults={"name": "Фрахт"})[0]
-    QuoteCharge.objects.create(
-        quote=quote, charge_type=freight, amount=Decimal("999.00"), rate_percent=Decimal("10")
-    )
+    QuoteCharge.objects.create(quote=quote, charge_type=freight, amount=Decimal("999.00"), rate_percent=Decimal("10"))
     quote.refresh_from_db()
 
     assert quote.charges_total == Decimal("10.00")  # 10% of subtotal 100, amount ignored
@@ -253,7 +233,9 @@ def _seller_user_with_supplier_company(inn):
     owner_role = WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})[0]
     co = Company.objects.create(name=f"Seller {inn}", inn=inn)
     co.types.add(CompanyType.objects.get(code="SUPPLIER"))
-    user = CustomUser.objects.create_user(email=f"s{inn}@s.test", username=f"s{inn}@s.test", password="pw", is_active=True)
+    user = CustomUser.objects.create_user(
+        email=f"s{inn}@s.test", username=f"s{inn}@s.test", password="pw", is_active=True
+    )
     CompanyMember.objects.create(user=user, company=co, role=owner_role, is_active=True, can_sell=True)
     return user, co
 
@@ -304,7 +286,6 @@ def test_per_line_cost_is_base_plus_customs_regardless_of_basis(quote):
     per-line cost; freight/logistics is NEVER per-line (it's a document-level charge на всю
     партию). So landed = base + customs and logistics is always zeroed, independent of basis."""
     from crm.services.quotes import QuoteCalculationService
-
     from master_data.models import DeliveryBasis
 
     item = quote.items.first()

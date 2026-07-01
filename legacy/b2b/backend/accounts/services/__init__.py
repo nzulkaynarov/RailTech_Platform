@@ -25,12 +25,14 @@ from .document_profile import (
     update_document_profile,
     upload_document_profile_logo,
 )
-from .roles import (
-    assign_role_to_member,
-    create_company_role,
-    delete_company_role,
-    list_roles_for_user,
-    update_company_role,
+from .entitlements import (
+    consume_credit,
+    entitlement_state,
+    grant_entitlement,
+    has_entitlement,
+    is_demo,
+    quote_export_entitled,
+    quote_send_entitled,
 )
 from .kyc import bulk_verify_kyc, delete_kyc_document, upload_kyc_document, verify_company_kyc
 from .members import (
@@ -52,6 +54,7 @@ from .operators import (
 from .permissions import (
     acting_context,
     assert_seller_can_operate,
+    can_edit_quote_pricing,
     company_has_operational_subscription,
     is_member_of,
     is_platform_admin_viewer,
@@ -59,23 +62,20 @@ from .permissions import (
     member_has_permission,
     operator_has_permission,
     primary_seller_company_id,
-    can_edit_quote_pricing,
     seller_acting_company_ids,
     seller_can_access_deal,
     seller_company_routed_to_deal,
     seller_sees_all_deals,
     seller_visible_deal_ids,
 )
-from .entitlements import (
-    consume_credit,
-    entitlement_state,
-    grant_entitlement,
-    has_entitlement,
-    is_demo,
-    quote_export_entitled,
-    quote_send_entitled,
-)
 from .profile import submit_company_profile
+from .roles import (
+    assign_role_to_member,
+    create_company_role,
+    delete_company_role,
+    list_roles_for_user,
+    update_company_role,
+)
 from .subscriptions import (
     change_subscription_status,
     check_and_expire_subscriptions,
@@ -139,4 +139,15 @@ __all__ = [
     "upload_kyc_document",
     "verify_and_setup_password",
     "verify_company_kyc",
+    "create_offline_client",
+    "find_client_company",
+    "can_edit_quote_pricing",
+    "member_has_permission",
+    "seller_acting_company_ids",
+    "seller_company_routed_to_deal",
+    "assign_role_to_member",
+    "create_company_role",
+    "delete_company_role",
+    "list_roles_for_user",
+    "update_company_role",
 ]

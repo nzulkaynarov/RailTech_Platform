@@ -23,7 +23,7 @@ from accounts.models import (
     VerificationStatus,
     WorkspaceRole,
 )
-from crm.models import Deal, DealStage, Quote, QuoteApprovalStep, QuoteStatus
+from crm.models import Deal, DealStage, Quote, QuoteStatus
 from crm.models.approvals import StepParticipation, StepStatus
 from crm.services.approvals import act_on_step, recall_quote
 from crm.services.quotes import QuoteLifecycleService as QLS

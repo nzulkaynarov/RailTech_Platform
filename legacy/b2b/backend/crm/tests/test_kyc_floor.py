@@ -21,16 +21,24 @@ def lookups(db):
 
 
 def _buyer_on(company):
-    user = CustomUser.objects.create_user(email=f"b{company.id}@t.test", username=f"b{company.id}@t.test", password="pw", is_active=True)
+    user = CustomUser.objects.create_user(
+        email=f"b{company.id}@t.test", username=f"b{company.id}@t.test", password="pw", is_active=True
+    )
     CompanyMember.objects.create(
-        user=user, company=company, role=WorkspaceRole.objects.get(code="MEMBER"),
-        is_active=True, can_buy=True, is_primary=True,
+        user=user,
+        company=company,
+        role=WorkspaceRole.objects.get(code="MEMBER"),
+        is_active=True,
+        can_buy=True,
+        is_primary=True,
     )
     return user
 
 
 def _company(status_code):
-    c = Company.objects.create(name=f"Co-{status_code}", verification_status=VerificationStatus.objects.get(code=status_code))
+    c = Company.objects.create(
+        name=f"Co-{status_code}", verification_status=VerificationStatus.objects.get(code=status_code)
+    )
     c.types.add(CompanyType.objects.get(code="CLIENT"))
     return c
 

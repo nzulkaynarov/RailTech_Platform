@@ -25,11 +25,7 @@ def has_explicit_company_role_perm(user: "CustomUser", company_id: int, perm: st
         return False
     if getattr(user, "is_superuser", False):
         return True
-    membership = (
-        user.memberships.filter(company_id=company_id, is_active=True)
-        .select_related("company_role")
-        .first()
-    )
+    membership = user.memberships.filter(company_id=company_id, is_active=True).select_related("company_role").first()
     if membership is None or not membership.company_role_id:
         return False
     return membership.company_role.has_perm(perm)

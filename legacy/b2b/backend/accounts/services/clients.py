@@ -35,9 +35,7 @@ def seller_clients(user: CustomUser):
     if not seller_ids:
         return Company.objects.none()
     return (
-        Company.objects.filter(contacts__created_by__memberships__company_id__in=seller_ids)
-        .distinct()
-        .order_by("name")
+        Company.objects.filter(contacts__created_by__memberships__company_id__in=seller_ids).distinct().order_by("name")
     )
 
 

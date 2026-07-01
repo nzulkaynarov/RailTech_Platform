@@ -31,7 +31,9 @@ class Command(BaseCommand):
         with open(path, "rb") as handle:
             content = handle.read()
 
-        self.stdout.write(self.style.WARNING(f"Extracting from {os.path.basename(path)} via {settings.AI_IMPORT_MODEL} …"))
+        self.stdout.write(
+            self.style.WARNING(f"Extracting from {os.path.basename(path)} via {settings.AI_IMPORT_MODEL} …")
+        )
         items = extract_request_items(content, os.path.basename(path))
         self.stdout.write(self.style.SUCCESS(f"Recognised {len(items)} items:"))
         self.stdout.write(json.dumps(items, ensure_ascii=False, indent=2))

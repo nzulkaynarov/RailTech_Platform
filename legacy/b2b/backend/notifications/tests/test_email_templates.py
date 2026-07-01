@@ -13,14 +13,7 @@ from django.core import mail
 from django.urls import reverse
 from rest_framework.test import APIClient
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SystemRole,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from notifications.emails import _render_bodies, send_templated_email
 from notifications.models import EmailLog, EmailTemplate
 
@@ -35,18 +28,14 @@ def _locmem_channels(settings):
     captures sends. EMAIL_CHANNELS bakes the backend at settings import, and the
     container sets EMAIL_BACKEND=console — overriding EMAIL_BACKEND alone is not
     enough, the channel config itself must point at locmem."""
-    settings.EMAIL_CHANNELS = {
-        name: {**cfg, "backend": _LOCMEM} for name, cfg in settings.EMAIL_CHANNELS.items()
-    }
+    settings.EMAIL_CHANNELS = {name: {**cfg, "backend": _LOCMEM} for name, cfg in settings.EMAIL_CHANNELS.items()}
 
 
 @pytest.fixture
 def platform_admin():
     """SystemRole=ADMIN, no memberships → is_platform_admin == True."""
     role, _ = SystemRole.objects.get_or_create(code="ADMIN", defaults={"name": "Admin"})
-    return CustomUser.objects.create_user(
-        email="ops@railtech.uz", username="ops@railtech.uz", password="x", role=role
-    )
+    return CustomUser.objects.create_user(email="ops@railtech.uz", username="ops@railtech.uz", password="x", role=role)
 
 
 @pytest.fixture
@@ -59,8 +48,11 @@ def regular_user():
     company = Company.objects.create(name="Buyer Co", inn="B1")
     company.types.add(CompanyType.objects.get(code="CLIENT"))
     CompanyMember.objects.create(
-        user=user, company=company, role=WorkspaceRole.objects.get(code="OWNER"),
-        is_active=True, is_primary=True,
+        user=user,
+        company=company,
+        role=WorkspaceRole.objects.get(code="OWNER"),
+        is_active=True,
+        is_primary=True,
     )
     return user
 
@@ -223,7 +215,9 @@ def test_non_admin_gets_403(regular_user):
     # list
     assert client.get(reverse("admin-email-template-list")).status_code == 403
     # preview
-    assert client.post(reverse("admin-email-template-preview", args=[template.pk]), {}, format="json").status_code == 403
+    assert (
+        client.post(reverse("admin-email-template-preview", args=[template.pk]), {}, format="json").status_code == 403
+    )
     # test-send
     assert (
         client.post(
@@ -239,7 +233,7 @@ def test_anonymous_gets_401(regular_user):
     template = _make_template()
     client = APIClient()
     assert client.get(reverse("admin-email-template-list")).status_code in (401, 403)
-    assert (
-        client.post(reverse("admin-email-template-preview", args=[template.pk]), {}, format="json").status_code
-        in (401, 403)
+    assert client.post(reverse("admin-email-template-preview", args=[template.pk]), {}, format="json").status_code in (
+        401,
+        403,
     )

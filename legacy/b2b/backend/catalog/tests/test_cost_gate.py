@@ -1,8 +1,9 @@
 """Regression: supplier cost (offers / base_price) must NOT leak to buyers (C1),
 and the owning seller can edit their own product (H1)."""
 
-import pytest
 from decimal import Decimal
+
+import pytest
 from rest_framework.test import APIClient
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
@@ -33,7 +34,8 @@ def owned_product(db):
 @pytest.mark.django_db
 def test_buyer_cannot_see_cost(owned_product):
     product, _seller, buyer = owned_product
-    c = APIClient(); c.force_authenticate(buyer)
+    c = APIClient()
+    c.force_authenticate(buyer)
     data = c.get(f"/api/v1/catalog/products/{product.id}/", SERVER_NAME="localhost").json()
     assert "offers" not in data
     assert "base_price" not in data
@@ -42,7 +44,8 @@ def test_buyer_cannot_see_cost(owned_product):
 @pytest.mark.django_db
 def test_owner_seller_sees_cost(owned_product):
     product, seller, _buyer = owned_product
-    c = APIClient(); c.force_authenticate(seller)
+    c = APIClient()
+    c.force_authenticate(seller)
     data = c.get(f"/api/v1/catalog/products/{product.id}/", SERVER_NAME="localhost").json()
     assert "offers" in data and "base_price" in data
 
@@ -50,7 +53,19 @@ def test_owner_seller_sees_cost(owned_product):
 @pytest.mark.django_db
 def test_owner_can_edit_buyer_cannot(owned_product):
     product, seller, buyer = owned_product
-    cs = APIClient(); cs.force_authenticate(seller)
-    assert cs.patch(f"/api/v1/catalog/products/{product.id}/", {"description": "x"}, format="json", SERVER_NAME="localhost").status_code == 200
-    cb = APIClient(); cb.force_authenticate(buyer)
-    assert cb.patch(f"/api/v1/catalog/products/{product.id}/", {"description": "hax"}, format="json", SERVER_NAME="localhost").status_code == 403
+    cs = APIClient()
+    cs.force_authenticate(seller)
+    assert (
+        cs.patch(
+            f"/api/v1/catalog/products/{product.id}/", {"description": "x"}, format="json", SERVER_NAME="localhost"
+        ).status_code
+        == 200
+    )
+    cb = APIClient()
+    cb.force_authenticate(buyer)
+    assert (
+        cb.patch(
+            f"/api/v1/catalog/products/{product.id}/", {"description": "hax"}, format="json", SERVER_NAME="localhost"
+        ).status_code
+        == 403
+    )

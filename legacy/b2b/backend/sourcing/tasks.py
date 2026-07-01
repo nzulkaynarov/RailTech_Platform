@@ -52,20 +52,81 @@ def route_domain(text: str) -> str:
 # (RU / UZ-Latin / UZ-Cyrillic / EN). Matching is substring + case-insensitive.
 # Keep UNIT keywords specific so they don't swallow the name column.
 _COL_KEYWORDS = {
-    "name": ["наименование", "номенклатур", "название", "товар", "материал", "номи", "номланиш",
-             "қисм", "эҳтиёт", "qism", "name", "description", "item", "mahsulot"],
-    "qty": ["кол-во", "колл", "кол.", "количество", "миқдор", "miqdor", "сони", "soni",
-            "qty", "quantity", "amount", "адет"],
-    "unit": ["ед.изм", "ед изм", "ед.", "единиц", "ўлчов", "улчов", "бирлик", "бир-ги",
-             "birlik", "o'lchov", "olchov", "unit", "uom", "measure"],
-    "note": ["примечан", "коммент", "izoh", "izoh", "note", "comment", "remark",
-             "характеристик", "спецификац", "описание"],
+    "name": [
+        "наименование",
+        "номенклатур",
+        "название",
+        "товар",
+        "материал",
+        "номи",
+        "номланиш",
+        "қисм",
+        "эҳтиёт",
+        "qism",
+        "name",
+        "description",
+        "item",
+        "mahsulot",
+    ],
+    "qty": [
+        "кол-во",
+        "колл",
+        "кол.",
+        "количество",
+        "миқдор",
+        "miqdor",
+        "сони",
+        "soni",
+        "qty",
+        "quantity",
+        "amount",
+        "адет",
+    ],
+    "unit": [
+        "ед.изм",
+        "ед изм",
+        "ед.",
+        "единиц",
+        "ўлчов",
+        "улчов",
+        "бирлик",
+        "бир-ги",
+        "birlik",
+        "o'lchov",
+        "olchov",
+        "unit",
+        "uom",
+        "measure",
+    ],
+    "note": [
+        "примечан",
+        "коммент",
+        "izoh",
+        "izoh",
+        "note",
+        "comment",
+        "remark",
+        "характеристик",
+        "спецификац",
+        "описание",
+    ],
     "link": ["ссылка", "ссылк", "havola", "link", "url"],
     # Manufacturer Part Number / каталожный код. Kept narrow so it doesn't
     # swallow the name column ("товар"/"материал" live under "name" above and are
     # matched first, so their column is already taken before we look for article).
-    "article": ["артикул", "артик", "artikul", "каталожн", "katalog", "kataloq",
-                "mpn", "part no", "part num", "part#", "код произв"],
+    "article": [
+        "артикул",
+        "артик",
+        "artikul",
+        "каталожн",
+        "katalog",
+        "kataloq",
+        "mpn",
+        "part no",
+        "part num",
+        "part#",
+        "код произв",
+    ],
 }
 
 
@@ -122,13 +183,19 @@ def detect_header_and_columns(raw_df):
             taken.add(article_i)
         link_i = _match_column(cells, _COL_KEYWORDS["link"], taken)
         return row_idx, {
-            "name": name_i, "qty": qty_i, "unit": unit_i,
-            "note": note_i, "article": article_i, "link": link_i,
+            "name": name_i,
+            "qty": qty_i,
+            "unit": unit_i,
+            "note": note_i,
+            "article": article_i,
+            "link": link_i,
         }
     return None, None
 
 
-def _build_quote_item(quote, name, quantity, unit="", note="", unit_code="", mpn="", gost_drawing="", name_canonical=""):
+def _build_quote_item(
+    quote, name, quantity, unit="", note="", unit_code="", mpn="", gost_drawing="", name_canonical=""
+):
     """One place to turn a parsed/AI-extracted row into a QuoteItem — runs domain
     routing + smart-match so both the deterministic and the AI path behave the same.
     Smart-match runs on the name OR the identifier so name-less coded lines still try.
@@ -182,7 +249,9 @@ def _build_quote_item(quote, name, quantity, unit="", note="", unit_code="", mpn
     autoretry_for=(Exception,),
     retry_backoff=True,
 )
-def process_excel_import(self, deal_id: int, file_content_b64: str, user_id: int = None, use_ai: bool = False, filename: str = None):
+def process_excel_import(
+    self, deal_id: int, file_content_b64: str, user_id: int = None, use_ai: bool = False, filename: str = None
+):
     """
     Turns an uploaded client file into QuoteItems on the deal's active Quote.
 
@@ -194,7 +263,7 @@ def process_excel_import(self, deal_id: int, file_content_b64: str, user_id: int
     The buyer reviews every recognised item before submitting, so the AI never
     writes a final заявка unattended. file_content_b64 is the base64 file (JSON-safe).
     """
-    from crm.models import Deal, Quote, QuoteItem, QuoteStatus
+    from crm.models import Deal, Quote, QuoteStatus
 
     try:
         file_content = base64.b64decode(file_content_b64)
@@ -247,12 +316,15 @@ def process_excel_import(self, deal_id: int, file_content_b64: str, user_id: int
             raw_df = pd.read_excel(BytesIO(file_content), header=None, nrows=MAX_EXCEL_ROWS)
             header_idx, cols = detect_header_and_columns(raw_df)
             if cols is None:
-                return {"status": "error", "message": "Не удалось распознать колонки (нужны «Наименование» и «Кол-во»)."}
+                return {
+                    "status": "error",
+                    "message": "Не удалось распознать колонки (нужны «Наименование» и «Кол-во»).",
+                }
 
             name_i = cols["name"]
             qty_i, unit_i, note_i, link_i = cols["qty"], cols["unit"], cols["note"], cols["link"]
             article_i = cols["article"]
-            data = raw_df.iloc[header_idx + 1:]
+            data = raw_df.iloc[header_idx + 1 :]
             total_rows = len(data)
 
             for offset, (_, row) in enumerate(data.iterrows()):
@@ -291,9 +363,7 @@ def process_excel_import(self, deal_id: int, file_content_b64: str, user_id: int
             created, merged = merge_request_lines(quote, items_to_create)
 
         quote.recalculate_totals()
-        logger.info(
-            "Excel import done: deal=%s user=%s created=%s merged=%s", deal_id, user_id, len(created), merged
-        )
+        logger.info("Excel import done: deal=%s user=%s created=%s merged=%s", deal_id, user_id, len(created), merged)
         return {"status": "success", "items_processed": len(created), "merged": merged}
 
     except Deal.DoesNotExist:

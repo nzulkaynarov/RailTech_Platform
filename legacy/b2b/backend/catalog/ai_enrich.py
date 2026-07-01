@@ -44,7 +44,10 @@ ENRICH_RESULT_SCHEMA = {
             "items": {
                 "type": "object",
                 "properties": {
-                    "key": {"type": "string", "description": "Название характеристики (напр. 'Материал', 'Напряжение')"},
+                    "key": {
+                        "type": "string",
+                        "description": "Название характеристики (напр. 'Материал', 'Напряжение')",
+                    },
                     "value": {"type": "string", "description": "Значение характеристики (напр. 'Сталь 45', '24 В')"},
                 },
                 "required": ["key", "value"],

@@ -22,9 +22,7 @@ def _client(user):
 def test_superuser_can_grant_and_list(company):
     su = CustomUser.objects.create_superuser(email="su@x.uz", username="su@x.uz", password="pw")
     client = _client(su)
-    resp = client.post(
-        URL, {"company": company.id, "feature_key": "quote.send", "access": "ENABLED"}, format="json"
-    )
+    resp = client.post(URL, {"company": company.id, "feature_key": "quote.send", "access": "ENABLED"}, format="json")
     assert resp.status_code == 201, resp.content
     assert CompanyEntitlement.objects.filter(company=company, feature_key="quote.send").exists()
 

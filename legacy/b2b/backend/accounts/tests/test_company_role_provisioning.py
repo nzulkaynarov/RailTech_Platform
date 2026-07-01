@@ -7,14 +7,7 @@ access matrix and members fell through to the can_sell/can_buy fallback (G4 bypa
 import pytest
 
 from accounts.constants import COMPANY_ADMIN_ROLE_NAME, ROLE_TEMPLATES
-from accounts.models import (
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SystemRole,
-    VerificationStatus,
-    WorkspaceRole,
-)
+from accounts.models import CompanyMember, CompanyType, CustomUser, SystemRole, VerificationStatus, WorkspaceRole
 from accounts.services.members import invite_workspace_member
 from accounts.services.profile import submit_company_profile
 
@@ -73,7 +66,9 @@ def test_company_config_gate_allows_delegated_admin_not_regular_member(lookups):
     # delegated admin: the is_system «Администратор компании» role on a non-OWNER member
     admin_role = CompanyRole.objects.get(company=company, name=COMPANY_ADMIN_ROLE_NAME)
     delegate = CustomUser.objects.create_user(email="deleg@t.test", username="deleg@t.test", password="pw")
-    CompanyMember.objects.create(user=delegate, company=company, role=member_ws, company_role=admin_role, is_active=True)
+    CompanyMember.objects.create(
+        user=delegate, company=company, role=member_ws, company_role=admin_role, is_active=True
+    )
     assert is_company_owner(delegate, company) is True
 
     # regular member: «Наблюдатель» (no settings.edit) must NOT manage company config

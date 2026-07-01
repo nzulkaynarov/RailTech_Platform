@@ -26,8 +26,13 @@ def lookups(db):
 def _member(company, email, *, can_sell, can_buy):
     user = CustomUser.objects.create_user(email=email, username=email, password="x")
     CompanyMember.objects.create(
-        user=user, company=company, role=WorkspaceRole.objects.get(code="OWNER"),
-        is_active=True, is_primary=True, can_sell=can_sell, can_buy=can_buy,
+        user=user,
+        company=company,
+        role=WorkspaceRole.objects.get(code="OWNER"),
+        is_active=True,
+        is_primary=True,
+        can_sell=can_sell,
+        can_buy=can_buy,
     )
     return user
 

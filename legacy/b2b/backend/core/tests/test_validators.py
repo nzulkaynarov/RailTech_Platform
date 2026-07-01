@@ -131,7 +131,7 @@ def test_export_neutralizes_formula_injection():
     won't execute them."""
     from core.exporters import _normalize_value
 
-    assert _normalize_value("=HYPERLINK(\"http://evil\")") == "'=HYPERLINK(\"http://evil\")"
+    assert _normalize_value('=HYPERLINK("http://evil")') == '\'=HYPERLINK("http://evil")'
     assert _normalize_value("+1+1") == "'+1+1"
     assert _normalize_value("@SUM(A1)") == "'@SUM(A1)"
     assert _normalize_value("-2") == "'-2"

@@ -4,11 +4,7 @@ from django.core.validators import RegexValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from core.storage import (
-    company_document_profile_logo_path,
-    company_logo_path,
-    get_public_storage,
-)
+from core.storage import company_document_profile_logo_path, company_logo_path, get_public_storage
 from master_data.models import Country
 
 # ────────────────────────────────────────────

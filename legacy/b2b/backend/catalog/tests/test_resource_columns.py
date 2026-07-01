@@ -18,8 +18,9 @@ def test_product_resource_exports_mpn_and_hs_code():
 
 @pytest.mark.django_db
 def test_export_template_has_mpn_and_hs_code_columns(user_factory):
-    import openpyxl
     from io import BytesIO
+
+    import openpyxl
 
     client = APIClient()
     client.force_authenticate(user=user_factory(email="tpl@example.com", username="tpl"))

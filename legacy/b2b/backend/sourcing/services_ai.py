@@ -41,7 +41,10 @@ ITEM_SCHEMA = {
         },
         "quantity": {"type": "number", "description": "Количество (число; 1 если не указано)"},
         "unit": {"type": "string", "description": "Единица измерения как в файле (шт., м., дона, компл. …)"},
-        "unit_code": {"type": "string", "description": "Код единицы из справочника UN/ECE Rec 20 (см. список в инструкции); '' если непонятно"},
+        "unit_code": {
+            "type": "string",
+            "description": "Код единицы из справочника UN/ECE Rec 20 (см. список в инструкции); '' если непонятно",
+        },
         "mpn": {"type": "string", "description": "Артикул / код производителя (Manufacturer Part Number); '' если нет"},
         "gost_drawing": {
             "type": "string",
@@ -118,13 +121,21 @@ def file_to_payload(content: bytes, filename: str):
     if ext == "pdf":
         block = {
             "type": "document",
-            "source": {"type": "base64", "media_type": "application/pdf", "data": base64.standard_b64encode(content).decode()},
+            "source": {
+                "type": "base64",
+                "media_type": "application/pdf",
+                "data": base64.standard_b64encode(content).decode(),
+            },
         }
         return None, block
     if ext in _IMAGE_TYPES:
         block = {
             "type": "image",
-            "source": {"type": "base64", "media_type": _IMAGE_TYPES[ext], "data": base64.standard_b64encode(content).decode()},
+            "source": {
+                "type": "base64",
+                "media_type": _IMAGE_TYPES[ext],
+                "data": base64.standard_b64encode(content).decode(),
+            },
         }
         return None, block
     # Unknown — try to decode as text and let the model do its best.
@@ -385,9 +396,7 @@ def _shortlist_products(line: dict, domain_code: str | None, limit: int = 8):
         similarities = [TrigramSimilarity("name", term) for term in terms]
         # GREATEST across terms — a hit on either the raw or canonical name counts.
         similarity = similarities[0] if len(similarities) == 1 else Greatest(*similarities)
-        ranked = (
-            qs.annotate(similarity=similarity).filter(similarity__gt=0.1).order_by("-similarity")[:limit]
-        )
+        ranked = qs.annotate(similarity=similarity).filter(similarity__gt=0.1).order_by("-similarity")[:limit]
         for product in ranked:
             found.setdefault(product.id, product)
     return list(found.values())[:limit]
@@ -442,7 +451,9 @@ def match_lines_to_catalog(lines: list[dict], domain_code: str | None = None, to
     )
     usage = getattr(response, "usage", None)
     if usage is not None:
-        logger.info("AI match usage: input=%s output=%s lines=%s", usage.input_tokens, usage.output_tokens, len(prompt_blocks))
+        logger.info(
+            "AI match usage: input=%s output=%s lines=%s", usage.input_tokens, usage.output_tokens, len(prompt_blocks)
+        )
     if response.stop_reason == "refusal":
         logger.warning("AI match: model declined (%s)", getattr(response, "stop_details", None))
         return []

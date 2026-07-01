@@ -33,8 +33,13 @@ def _published_product(owner_co, name):
     from catalog.models import Product, ProductStatus
 
     return Product.objects.create(
-        name=name, sku=name, description="", manufacturer_part_number="", gost_drawing="",
-        owner_company=owner_co, status=ProductStatus.objects.get(code="PUBLISHED"),
+        name=name,
+        sku=name,
+        description="",
+        manufacturer_part_number="",
+        gost_drawing="",
+        owner_company=owner_co,
+        status=ProductStatus.objects.get(code="PUBLISHED"),
     )
 
 
@@ -43,8 +48,12 @@ def _seller(name, inn, email):
     company.types.add(CompanyType.objects.get(code="SUPPLIER"))
     user = CustomUser.objects.create_user(email=email, username=email, password="x")
     CompanyMember.objects.create(
-        user=user, company=company, role=WorkspaceRole.objects.get(code="OWNER"),
-        is_active=True, is_primary=True, can_sell=True,
+        user=user,
+        company=company,
+        role=WorkspaceRole.objects.get(code="OWNER"),
+        is_active=True,
+        is_primary=True,
+        can_sell=True,
     )
     return user, company
 
@@ -62,9 +71,13 @@ def _deal_with_quote(buyer_co, title, total):
     """A buyer deal carrying a single quote worth `total` (drives deals_volume)."""
     deal = Deal.objects.create(title=title, company=buyer_co, stage=DealStage.objects.get(code="DRAFT"))
     Quote.objects.create(
-        deal=deal, version=1, status=QuoteStatus.objects.get(code="DRAFT"),
-        vat_rate=Decimal("12"), subtotal_excl_vat=total,
-        vat_amount=Decimal("0"), total_incl_vat=total,
+        deal=deal,
+        version=1,
+        status=QuoteStatus.objects.get(code="DRAFT"),
+        vat_rate=Decimal("12"),
+        subtotal_excl_vat=total,
+        vat_amount=Decimal("0"),
+        total_incl_vat=total,
     )
     return deal
 
@@ -124,12 +137,12 @@ def test_catalog_and_clients_kpis_are_tenant_scoped(lookups):
     other_buyer = Company.objects.create(name="Other Buyer", inn="C200")
     other_buyer.types.add(CompanyType.objects.get(code="CLIENT"))
 
-    _published_product(co_a, "A-rail-clamp")          # A's own product → counts for A
-    _published_product(co_b, "B-competitor-part")     # competitor's → must NOT count for A
+    _published_product(co_a, "A-rail-clamp")  # A's own product → counts for A
+    _published_product(co_b, "B-competitor-part")  # competitor's → must NOT count for A
 
     routed = _deal_with_quote(buyer_co, "A's RFQ", Decimal("1000"))
     DealSellerRouting.objects.create(deal=routed, seller_company=co_a)
 
     body = _api(seller_a).get("/api/v1/crm/analytics/dashboard/?period=90d").json()
-    assert body["catalog_items"] == 1, body      # only A's own published product
-    assert body["clients_count"] == 1, body       # only the one routed buyer, not all CLIENTs
+    assert body["catalog_items"] == 1, body  # only A's own published product
+    assert body["clients_count"] == 1, body  # only the one routed buyer, not all CLIENTs

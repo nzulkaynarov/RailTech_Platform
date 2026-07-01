@@ -26,26 +26,16 @@ from accounts.models import (
     CompanyRole,
     CompanyType,
     CustomUser,
-    SystemRole,
     SupplierSubscription,
+    SystemRole,
     VerificationStatus,
     WorkspaceRole,
 )
-from crm.models import (
-    Contract,
-    ContractStatus,
-    Deal,
-    DealStage,
-    Invoice,
-    InvoiceStatus,
-    Quote,
-    QuoteStatus,
-)
+from crm.models import Contract, ContractStatus, Deal, DealStage, Invoice, InvoiceStatus, Quote, QuoteStatus
 from crm.services.billing import record_payment
 from crm.services.contracts import sign_contract_by_client, sign_contract_by_manager
 from crm.services.quotes import QuoteLifecycleService, can_send_quote_to_client
 from master_data.models import Country, Currency
-
 
 # ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -80,8 +70,9 @@ def _make_member(user, company, *, company_role=None, can_sell=True, can_buy=Tru
 
 def _op_subscription(company):
     """Give company an ACTIVE SupplierSubscription so the paid-seller gate passes."""
-    from django.utils import timezone
     from datetime import timedelta
+
+    from django.utils import timezone
 
     return SupplierSubscription.objects.create(
         company=company,
@@ -122,6 +113,7 @@ def lookups(db):
     SystemRole.objects.get_or_create(code="USER", defaults={"name": "User", "sort_order": 10})
     for code in ["INFO", "SUCCESS", "WARNING", "ERROR"]:
         from notifications.models import NotificationType
+
         NotificationType.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
 
 
@@ -443,6 +435,7 @@ def test_record_payment_with_perm_passes(lookups, buyer_company, seller_company,
     buyer_member.save()
 
     from django.utils import timezone
+
     result, err = record_payment(
         invoice.id,
         buyer,
@@ -468,6 +461,7 @@ def test_record_payment_without_perm_denied(lookups, buyer_company, seller_compa
     _make_member(buyer, buyer_company, can_buy=False, is_primary=True)
 
     from django.utils import timezone
+
     result, err = record_payment(
         invoice.id,
         buyer,
@@ -493,6 +487,7 @@ def test_record_payment_legacy_can_buy_passes(lookups, buyer_company, seller_com
     _make_member(buyer, buyer_company, can_buy=True, is_primary=True)
 
     from django.utils import timezone
+
     result, err = record_payment(
         invoice.id,
         buyer,
@@ -542,7 +537,7 @@ def test_approve_quote_without_perm_denied(lookups, buyer_company, seller_compan
     """
     seller = _make_user("approve_seller2@s.test")
     _make_member(seller, seller_company, is_primary=True)
-    quote = _sent_quote(deal, prepared_by=seller)
+    _sent_quote(deal, prepared_by=seller)
 
     # An outsider (no membership at all) — no capability, no perm.
     outsider = _make_user("approve_outsider@b.test")

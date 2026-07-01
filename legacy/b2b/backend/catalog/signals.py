@@ -25,8 +25,7 @@ def validate_railway_equipment_groups(sender, instance, action, **kwargs):
             raise ValidationError(
                 {
                     "equipment_groups": (
-                        "Товары домена RAILWAY_MACHINERY должны быть привязаны "
-                        "минимум к одной группе оборудования."
+                        "Товары домена RAILWAY_MACHINERY должны быть привязаны " "минимум к одной группе оборудования."
                     )
                 }
             )

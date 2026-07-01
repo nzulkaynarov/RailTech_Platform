@@ -166,8 +166,8 @@ def assign_operator_role(user, target_user_id, role_id) -> Tuple[Optional[Custom
             return None, "ROLE_NOT_FOUND"
 
     # Never-orphan: don't strip the last operators.manage holder of that capability.
-    currently_can_manage = (
-        target.operator_role is None or target.operator_role.has_perm(OperatorPermission.OPERATORS_MANAGE)
+    currently_can_manage = target.operator_role is None or target.operator_role.has_perm(
+        OperatorPermission.OPERATORS_MANAGE
     )
     will_can_manage = new_role is None or new_role.has_perm(OperatorPermission.OPERATORS_MANAGE)
     if currently_can_manage and not will_can_manage and _is_sole_active_operator_manager(target):

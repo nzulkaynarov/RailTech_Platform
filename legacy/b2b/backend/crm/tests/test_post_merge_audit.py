@@ -38,8 +38,13 @@ def _user(email):
 
 def _member(user, company, *, company_role=None, can_sell=True, can_buy=False):
     return CompanyMember.objects.create(
-        user=user, company=company, role=_ws("MEMBER"), company_role=company_role,
-        is_active=True, can_sell=can_sell, can_buy=can_buy,
+        user=user,
+        company=company,
+        role=_ws("MEMBER"),
+        company_role=company_role,
+        is_active=True,
+        can_sell=can_sell,
+        can_buy=can_buy,
     )
 
 
@@ -78,15 +83,27 @@ def scenario(lookups):
     DealSellerRouting.objects.create(deal=deal, seller_company=seller_a)
     DealSellerRouting.objects.create(deal=deal, seller_company=seller_b)
 
-    a_member = _user("a.member@a.uz"); _member(a_member, seller_a)
-    a_admin = _user("a.admin@a.uz"); _member(a_admin, seller_a, company_role=_team_manager_role(seller_a))
-    b_member = _user("b.member@b.uz"); _member(b_member, seller_b)
-    b_admin = _user("b.admin@b.uz"); _member(b_admin, seller_b, company_role=_team_manager_role(seller_b))
-    buyer_user = _user("buyer@buyer.uz"); _member(buyer_user, buyer, can_sell=False, can_buy=True)
+    a_member = _user("a.member@a.uz")
+    _member(a_member, seller_a)
+    a_admin = _user("a.admin@a.uz")
+    _member(a_admin, seller_a, company_role=_team_manager_role(seller_a))
+    b_member = _user("b.member@b.uz")
+    _member(b_member, seller_b)
+    b_admin = _user("b.admin@b.uz")
+    _member(b_admin, seller_b, company_role=_team_manager_role(seller_b))
+    buyer_user = _user("buyer@buyer.uz")
+    _member(buyer_user, buyer, can_sell=False, can_buy=True)
 
     return SimpleNamespace(
-        deal=deal, buyer=buyer, seller_a=seller_a, seller_b=seller_b,
-        a_member=a_member, a_admin=a_admin, b_member=b_member, b_admin=b_admin, buyer_user=buyer_user,
+        deal=deal,
+        buyer=buyer,
+        seller_a=seller_a,
+        seller_b=seller_b,
+        a_member=a_member,
+        a_admin=a_admin,
+        b_member=b_member,
+        b_admin=b_admin,
+        buyer_user=buyer_user,
     )
 
 
@@ -107,7 +124,8 @@ def test_sellers_claim_independently(scenario):
 
 
 def test_teammate_cannot_double_claim_same_company_copy(scenario):
-    a_member2 = _user("a.member2@a.uz"); _member(a_member2, scenario.seller_a)
+    a_member2 = _user("a.member2@a.uz")
+    _member(a_member2, scenario.seller_a)
     claim_deal(scenario.deal.id, scenario.a_member)
     _, err = claim_deal(scenario.deal.id, a_member2)
     assert err == "DEAL_ALREADY_CLAIMED"  # a teammate already owns company A's copy
@@ -125,8 +143,8 @@ def test_reclaim_by_owner_is_noop_and_preserves_assigned_at(scenario):
 
 
 def test_competitor_admin_cannot_release_another_sellers_claim(scenario):
-    claim_deal(scenario.deal.id, scenario.a_member)   # A owns its copy
-    claim_deal(scenario.deal.id, scenario.b_member)   # B owns its own copy
+    claim_deal(scenario.deal.id, scenario.a_member)  # A owns its copy
+    claim_deal(scenario.deal.id, scenario.b_member)  # B owns its own copy
     # B's admin releases — may only touch B's OWN routing, never A's claim (cross-seller isolation).
     release_deal(scenario.deal.id, scenario.b_admin)
     assert _routing(scenario.deal, scenario.seller_a).assigned_to_id == scenario.a_member.id  # A intact
@@ -166,9 +184,9 @@ def _name_as_seen_by(deal, viewer):
 def test_assigned_to_name_scoped_to_viewers_own_company(scenario):
     claim_deal(scenario.deal.id, scenario.a_member)  # only A's copy claimed
     deal = Deal.objects.get(pk=scenario.deal.id)
-    assert _name_as_seen_by(deal, scenario.a_member) == scenario.a_member.email   # own claim
-    assert _name_as_seen_by(deal, scenario.a_admin) == scenario.a_member.email    # same company
-    assert _name_as_seen_by(deal, scenario.b_admin) is None   # B's own copy is unclaimed → nothing
+    assert _name_as_seen_by(deal, scenario.a_member) == scenario.a_member.email  # own claim
+    assert _name_as_seen_by(deal, scenario.a_admin) == scenario.a_member.email  # same company
+    assert _name_as_seen_by(deal, scenario.b_admin) is None  # B's own copy is unclaimed → nothing
     assert _name_as_seen_by(deal, scenario.buyer_user) is None  # buyer doesn't own
 
 

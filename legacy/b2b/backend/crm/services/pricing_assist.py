@@ -57,9 +57,7 @@ def suggest_pricing_for_products(product_ids, seller_company_id: Optional[int]) 
         return {}
     today = timezone.now().date()
     offers = (
-        SupplierOffer.objects.filter(
-            product_id__in=ids, supplier_id=seller_company_id, is_active=True
-        )
+        SupplierOffer.objects.filter(product_id__in=ids, supplier_id=seller_company_id, is_active=True)
         .filter(Q(valid_from__isnull=True) | Q(valid_from__lte=today))
         .filter(Q(valid_until__isnull=True) | Q(valid_until__gte=today))
         .select_related("currency", "delivery_basis")
@@ -107,8 +105,6 @@ def suggest_quote_pricing(quote_id: int, actor) -> Tuple[Optional[dict], Optiona
     items = [it for it in quote.items.all() if it.product_id]
     pricing_by_product = suggest_pricing_for_products([it.product_id for it in items], company_id)
     suggestions = [
-        {"item_id": it.id, **pricing_by_product[it.product_id]}
-        for it in items
-        if it.product_id in pricing_by_product
+        {"item_id": it.id, **pricing_by_product[it.product_id]} for it in items if it.product_id in pricing_by_product
     ]
     return {"suggestions": suggestions}, None

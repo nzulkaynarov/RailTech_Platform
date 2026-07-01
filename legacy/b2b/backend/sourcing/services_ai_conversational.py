@@ -49,13 +49,19 @@ COMPOSE_ITEM_SCHEMA = {
             ),
         },
         "quantity": {"type": "number", "description": "Количество (число; 1 если не указано)"},
-        "unit": {"type": "string", "description": "Единица измерения как сказал покупатель (шт., компл., м. …); '' если не указано"},
+        "unit": {
+            "type": "string",
+            "description": "Единица измерения как сказал покупатель (шт., компл., м. …); '' если не указано",
+        },
         "mpn": {"type": "string", "description": "Артикул / код производителя, если упомянут; '' если нет"},
         "gost_drawing": {
             "type": "string",
             "description": "Номер ГОСТ или чертежа, если упомянут (напр. 'ГОСТ 8752-79'); '' если нет. НЕ штрихкод.",
         },
-        "note": {"type": "string", "description": "Доп. требования/уточнения покупателя (срок, замена, параметры); иначе ''"},
+        "note": {
+            "type": "string",
+            "description": "Доп. требования/уточнения покупателя (срок, замена, параметры); иначе ''",
+        },
     },
     "required": ["name", "name_canonical", "quantity", "unit", "mpn", "gost_drawing", "note"],
     "additionalProperties": False,
@@ -120,7 +126,10 @@ def build_request_from_text(
         max_tokens=3000,
         system=COMPOSE_SYSTEM_PROMPT,
         messages=[
-            {"role": "user", "content": [{"type": "text", "text": f"Опиши потребность покупателя в позиции заявки:\n\n{bounded}"}]}
+            {
+                "role": "user",
+                "content": [{"type": "text", "text": f"Опиши потребность покупателя в позиции заявки:\n\n{bounded}"}],
+            }
         ],
         output_config={"format": {"type": "json_schema", "schema": COMPOSE_RESULT_SCHEMA}},
     )

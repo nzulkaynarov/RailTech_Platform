@@ -378,6 +378,8 @@ class CompanyEntitlementViewSet(viewsets.ModelViewSet):
         return Response(
             {
                 "feature_keys": [{"value": value, "label": str(label)} for value, label in FeatureKey.choices],
-                "access_states": [{"value": value, "label": str(label)} for value, label in CompanyEntitlement.ACCESS_CHOICES],
+                "access_states": [
+                    {"value": value, "label": str(label)} for value, label in CompanyEntitlement.ACCESS_CHOICES
+                ],
             }
         )

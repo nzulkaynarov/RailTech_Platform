@@ -9,15 +9,7 @@ from .charges import ChargeTemplate, QuoteCharge
 from .contracts import Contract
 from .deals import ActivityLog, Deal, DealSellerRouting, Lead, Message
 from .fulfillment import Fulfillment
-from .lookups import (
-    ActStatus,
-    ChargeType,
-    ContractStatus,
-    DealStage,
-    FulfillmentStatus,
-    InvoiceStatus,
-    QuoteStatus,
-)
+from .lookups import ActStatus, ChargeType, ContractStatus, DealStage, FulfillmentStatus, InvoiceStatus, QuoteStatus
 from .quotes import Quote, QuoteItem, QuoteItemHistory
 from .sequences import DocumentSequence
 
