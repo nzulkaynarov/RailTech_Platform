@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, FileText, Send, FileSignature, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, FileText, Send, FileSignature, AlertTriangle, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { StatusBadge, getDealStageVariant } from '@/components/ui/StatusBadge';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useDeal, useSendQuoteToClient } from '@/hooks/useCRM';
 import { translateApiError } from '@/lib/apiError';
 import { QuoteBuilderGrid } from '@/components/Admin/QuoteBuilderGrid';
+import { DealChatPanel } from '@/components/Sourcing/DealChatPanel';
 import { GenerateContractDialog } from '@/components/CRM/GenerateContractDialog';
 import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
 import { QuoteStatus, DEAL_STAGE_LABEL_KEY } from '@/lib/codes';
@@ -31,6 +33,10 @@ export function DealQuotePage({ dealId, onBack }: DealQuotePageProps) {
   const sendQuote = useSendQuoteToClient();
   const [contractOpen, setContractOpen] = useState(false);
   const [sendConfirmOpen, setSendConfirmOpen] = useState(false);
+  // Single Deal-workspace (#3b): the buyer's request context lives ON the builder
+  // screen, so a seller prices the КП without bouncing back to the deal page. The
+  // ask (deal.notes) is always visible; the full thread opens in a slide-over.
+  const [chatOpen, setChatOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -122,6 +128,10 @@ export function DealQuotePage({ dealId, onBack }: DealQuotePageProps) {
               {formatCurrency(Number(deal.total_value))}
             </span>
           ) : null}
+          <Button variant="outline" size="sm" onClick={() => setChatOpen(true)}>
+            <MessageSquare className="mr-2 h-4 w-4" />
+            {t('pages.dealQuote.openChat')}
+          </Button>
           {canSend && (
             <Button size="sm" disabled={sendQuote.isPending} onClick={() => setSendConfirmOpen(true)}>
               <Send className="mr-2 h-4 w-4" />
@@ -137,6 +147,19 @@ export function DealQuotePage({ dealId, onBack }: DealQuotePageProps) {
         </div>
       </div>
 
+      {/* Buyer's ask, always in view while pricing (single Deal-workspace #3b). */}
+      {(deal.notes ?? '').trim() && (
+        <div className="flex gap-3 rounded-lg border border-border bg-muted/40 px-4 py-3">
+          <MessageSquare className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {t('pages.dealQuote.buyerNote')}
+            </p>
+            <p className="mt-1 whitespace-pre-line text-sm text-foreground">{deal.notes}</p>
+          </div>
+        </div>
+      )}
+
       {/* Builder — full width/height. QuoteBuilderGrid renders its own approval
           chain bar + toolbar + summary footer; it only needs a tall container. */}
       {quote ? (
@@ -151,6 +174,18 @@ export function DealQuotePage({ dealId, onBack }: DealQuotePageProps) {
           action={{ label: t('common.back'), onClick: onBack }}
         />
       )}
+
+      {/* Buyer thread — slide-over so the seller never leaves the builder to reply. */}
+      <Sheet open={chatOpen} onOpenChange={setChatOpen}>
+        <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
+          <SheetHeader className="border-b px-4 py-3">
+            <SheetTitle>{t('pages.dealQuote.contextTitle')}</SheetTitle>
+          </SheetHeader>
+          <div className="min-h-0 flex-1 overflow-hidden p-4">
+            <DealChatPanel dealId={dealId} />
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <GenerateContractDialog
         quoteId={quote?.id ?? null}
