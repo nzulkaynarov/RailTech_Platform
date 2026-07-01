@@ -14,7 +14,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, VerificationStatus, WorkspaceRole
-from crm.models import Deal, DealStage, Quote, QuoteStatus
+from crm.models import ContractStatus, Deal, DealStage, Quote, QuoteStatus
 
 pytestmark = pytest.mark.django_db
 
@@ -25,6 +25,9 @@ def lookups(db):
         DealStage.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
     for code in ["DRAFT", "SENT", "APPROVED", "REJECTED"]:
         QuoteStatus.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
+    # Approving a SENT КП generates a contract (--nomigrations skips the seeding migration).
+    for code in ["DRAFT", "PENDING_CLIENT", "PENDING_MANAGER", "SIGNED", "CANCELLED"]:
+        ContractStatus.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
