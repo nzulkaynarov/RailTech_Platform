@@ -3407,7 +3407,10 @@
       "title": "Quote builder",
       "noQuote": "No quote yet",
       "noQuoteHint": "Go back to the deal and click “Create quote” to start.",
-      "notFound": "Deal not found"
+      "notFound": "Deal not found",
+      "buyerNote": "What the buyer asked for",
+      "openChat": "Chat with buyer",
+      "contextTitle": "Request & chat"
     }
   },
   "dealSplit": {
