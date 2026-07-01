@@ -615,8 +615,10 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 																)}
 															</div>
 															{item.product ? (
+																// Product IS bound: show the supplier (if an offer exists) or the SKU —
+																// never «Совпадение не найдено», which contradicts a matched line.
 																<span className="text-xs text-muted-foreground mt-0.5 truncate">
-																	{item.offer_supplier_name || t('sourcing.noMatch')}
+																	{item.offer_supplier_name || item.product_sku || '—'}
 																</span>
 															) : (
 																<button
