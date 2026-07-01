@@ -4387,6 +4387,7 @@
     "MEMBER_REQUIRED_FOR_ACTION": "Only a company member (buyer or seller side) can perform this action",
     "ONLY_SELLER_CAN_BUILD_QUOTE": "Only the seller can build a commercial proposal",
     "ONLY_BUYER_CAN_SUBMIT_REQUEST": "Only the buyer can submit the request",
+    "KYC_REQUIRED_TO_SUBMIT": "Complete company verification (KYC) to submit requests. You can prepare a draft without it.",
     "REQUEST_EMPTY": "Add at least one line item before submitting",
     "REQUEST_HAS_INCOMPLETE_ITEMS": "Complete the highlighted rows before submitting",
     "REQUEST_ALREADY_SUBMITTED": "The request has already been submitted",

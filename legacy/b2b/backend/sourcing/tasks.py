@@ -285,7 +285,7 @@ def process_excel_import(self, deal_id: int, file_content_b64: str, user_id: int
 
         # Dedup/merge against existing lines AND within this batch — a re-imported
         # file (or two files sharing items) sums quantities instead of doubling rows.
-        from crm.services.quotes import merge_request_lines
+        from crm.services.rfq import merge_request_lines
 
         with transaction.atomic():
             created, merged = merge_request_lines(quote, items_to_create)

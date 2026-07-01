@@ -2,14 +2,18 @@
 
 Owner-reported: notifications felt dead on the seller side. Cause: every
 seller-facing notification targeted `deal.manager`, but in the single-seller
-model a buyer's deal has no manager → the seller's bell stayed empty. Now the
-RFQ_OPEN transition fans out to the seller team.
+model a buyer's deal has no manager → the seller's bell stayed empty. The
+RFQ_OPEN transition now alerts the seller team.
+
+ADR-0006 Move 2: the alert is ROUTING-SCOPED — only the seller companies this
+заявка was routed to (DealSellerRouting) are notified, not the whole pool. So
+the fixture routes the deal to the seller company explicitly.
 """
 
 import pytest
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, VerificationStatus, WorkspaceRole
-from crm.models import Deal, DealStage
+from crm.models import Deal, DealSellerRouting, DealStage
 from notifications.models import Notification, NotificationType
 
 
@@ -46,6 +50,8 @@ def parties(lookups):
     deal = Deal.objects.create(
         title="z", company=buyer_co, client=buyer, stage=DealStage.objects.get(code="DRAFT")
     )
+    # ADR-0006 Move 2: the seller hears about the заявка because it was ROUTED to their company.
+    DealSellerRouting.objects.create(deal=deal, seller_company=seller_co)
     return {"seller": seller, "buyer": buyer, "deal": deal}
 
 

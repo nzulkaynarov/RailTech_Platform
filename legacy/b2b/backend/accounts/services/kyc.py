@@ -12,6 +12,21 @@ from ..models import Company, CustomUser, VerificationStatus
 
 logger = logging.getLogger(__name__)
 
+# ADR-0006 Phase E — the KYC floor. A company completes KYC at L2; below it can register + browse
+# + build a DRAFT заявка, but not SUBMIT it (or otherwise trade). This makes «после KYC = минимум»
+# real on the BACKEND (it was FE-cosmetic only — the Layer-0 gap).
+KYC_VERIFIED_CODES = frozenset({VerificationStatusCode.L2_VERIFIED, VerificationStatusCode.L3_CONTRACTED})
+
+
+def company_kyc_verified(company_id: int) -> bool:
+    """True if the company has completed KYC (rank ≥ L2) — the floor for submitting a заявка."""
+    company = (
+        Company.objects.filter(pk=company_id).select_related("verification_status").first()
+    )
+    if company is None or not company.verification_status_id:
+        return False
+    return company.verification_status.code in KYC_VERIFIED_CODES
+
 
 def verify_company_kyc(
     company: Company,
