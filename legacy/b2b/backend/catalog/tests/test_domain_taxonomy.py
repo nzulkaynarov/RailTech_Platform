@@ -1,3 +1,10 @@
+"""Domain constraints + taxonomy-dedupe migration tests.
+
+Moved out of the legacy catalog/tests.py file, which collided with the
+catalog/tests/ package (both resolve to module `catalog.tests`, breaking pytest
+collection on a clean checkout). Content is unchanged.
+"""
+
 import importlib
 
 from django.apps import apps as django_apps

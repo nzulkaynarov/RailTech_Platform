@@ -258,6 +258,7 @@ def test_import_backfills_orphan_but_never_hijacks_other_tenant(lookups, company
             "Цена": "9",
             "Валюта": "UZS",
         }
+
     run_catalog_import(_xlsx([row("A-1"), row("A-2")]), supplier_company_id=importer_b.id)
 
     owned.refresh_from_db()
