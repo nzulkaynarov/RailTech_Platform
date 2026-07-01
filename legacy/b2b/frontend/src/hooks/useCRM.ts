@@ -101,6 +101,13 @@ export const useDealStages = () => useQuery({
   staleTime: 30 * 60_000,
 });
 
+// Wedge metric — time-to-first-КП (ADR-0006 Move 4).
+export const useTimeToFirstQuote = (sinceDays = 30) => useQuery({
+  queryKey: ['time-to-first-quote', sinceDays],
+  queryFn: () => crmApi.getTimeToFirstQuote(sinceDays),
+  staleTime: 60_000,
+});
+
 export const useQuoteStatuses = () => useQuery({
   queryKey: ['quote-statuses'],
   queryFn: crmApi.getQuoteStatuses,

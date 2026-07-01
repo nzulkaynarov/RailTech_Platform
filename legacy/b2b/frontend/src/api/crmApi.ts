@@ -359,6 +359,16 @@ export interface Deal {
 	updated_at?: string;
 }
 
+/** Wedge metric — hours from RFQ routed → first КП sent (ADR-0006 Move 4). */
+export interface TimeToFirstQuoteStats {
+	sample_size: number;
+	median_hours: number;
+	avg_hours: number;
+	p90_hours: number;
+	fastest_hours: number;
+	slowest_hours: number;
+}
+
 export interface CRMAnalytics {
 	pipeline_by_status: { stage__name: string, count: number }[];
 	sourcing_backlog: number;
@@ -446,6 +456,13 @@ export const crmApi = {
 	},
 	assignDeal: async (dealId: number, assigneeId: number) => {
 		const response = await apiClient.post<Deal>(`crm/deals/${dealId}/assign/`, { assignee_id: assigneeId });
+		return response.data;
+	},
+	// ─── Wedge metric: time-to-first-КП (ADR-0006 Move 4) ─────────────────────
+	getTimeToFirstQuote: async (sinceDays = 30) => {
+		const response = await apiClient.get<TimeToFirstQuoteStats>('crm/analytics/time-to-first-quote/', {
+			params: { since_days: sinceDays },
+		});
 		return response.data;
 	},
 	// ─── Multi-seller routing ────────────────────────────────────────────────
