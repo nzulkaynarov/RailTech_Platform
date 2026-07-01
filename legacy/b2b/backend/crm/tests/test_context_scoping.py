@@ -55,7 +55,19 @@ def world(lookups):
     buyer_co.types.add(CompanyType.objects.get(code="CLIENT"))
     buyer = _member(buyer_co, "buyer@t.test", can_sell=False, can_buy=True)
     other_deal = Deal.objects.create(title="other", company=buyer_co, client=buyer, stage=draft)
-    return {"dual": dual, "buyer": buyer, "own_deal": own_deal, "other_deal": other_deal}
+    # A seller-owned КП (on the seller company's own deal) that a pure buyer must never see,
+    # so the invariant can be asserted on /crm/quotes/ too — not just /crm/deals/.
+    from crm.models import Quote, QuoteStatus
+
+    qs_draft = QuoteStatus.objects.get_or_create(code="DRAFT", defaults={"name": "Draft", "sort_order": 10})[0]
+    seller_quote = Quote.objects.create(deal=own_deal, version=1, status=qs_draft)
+    return {
+        "dual": dual,
+        "buyer": buyer,
+        "own_deal": own_deal,
+        "other_deal": other_deal,
+        "seller_quote": seller_quote,
+    }
 
 
 def _ids(resp):
@@ -117,3 +129,14 @@ def test_pure_buyer_never_sees_other_companies(world):
         ids = _ids(resp)
         assert world["other_deal"].id in ids  # own
         assert world["own_deal"].id not in ids  # seller_co's — never visible to a pure buyer
+
+
+def test_pure_buyer_forged_header_sees_no_seller_quotes(world):
+    """ADR-0005 Phase C contract: the invariant (is_seller() gates BEFORE the header is read)
+    holds for /crm/quotes/ too — a pure buyer forging any context header sees ZERO seller-owned
+    КП. This test must stay green through every Phase C slice (nav merge, page-derived context,
+    switcher removal) — it is the guard that the unified shell can't leak seller data to a buyer."""
+    for ctx in (None, "BUYER", "SELLER", "MANUFACTURER"):
+        resp = _client(world["buyer"], ctx=ctx).get("/api/v1/crm/quotes/")
+        assert resp.status_code == 200
+        assert world["seller_quote"].id not in _ids(resp)  # seller's КП — never visible to a pure buyer
