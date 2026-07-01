@@ -648,6 +648,12 @@ class QuoteLifecycleService:
             except (ValueError, OSError):  # storage backend unavailable / missing key
                 seller_logo_url = None
 
+        # Move 4 monetization: a seller in DEMO for quote.send may BUILD + preview the КП, but the
+        # rendered document is watermarked «ДЕМО — не для коммерческого использования» (send/export
+        # stay gated by quote_send_entitled). The template overlays it when is_demo is truthy.
+        from accounts.constants import FeatureKey
+        from accounts.services.entitlements import is_demo
+
         html_string = render_to_string(
             "crm/quote_pdf.html",
             {
@@ -657,6 +663,7 @@ class QuoteLifecycleService:
                 "seller": seller_company,
                 "seller_profile": seller_profile,
                 "seller_logo_url": seller_logo_url,
+                "is_demo": is_demo(seller_company.id, FeatureKey.QUOTE_SEND),
             },
         )
 
