@@ -18,7 +18,7 @@ from accounts.models import (
     WorkspaceRole,
 )
 from crm.models import Deal, DealStage, QuoteStatus
-from crm.services.quotes import buyer_add_request_item
+from crm.services.rfq import buyer_add_request_item
 
 
 @pytest.fixture
@@ -90,7 +90,7 @@ def test_cart_line_inherits_product_attributes(deal):
     uom / MPN / ГОСТ / ТНВЭД — not arrive as name+qty only (single source of truth)."""
     from catalog.models import Product, ProductStatus
     from crm.models import QuoteItem
-    from crm.services.quotes import buyer_add_request_items
+    from crm.services.rfq import buyer_add_request_items
     from master_data.models import UnitOfMeasure
 
     deal_obj, buyer = deal

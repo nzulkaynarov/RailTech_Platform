@@ -14,7 +14,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
 from catalog.models import Product, ProductStatus
 from crm.models import Deal, DealSellerRouting, DealStage, Quote, QuoteItem, QuoteStatus
-from crm.services.quotes import route_deal_from_catalog
+from crm.services.rfq import route_deal_from_catalog
 from master_data.models import Currency
 
 
