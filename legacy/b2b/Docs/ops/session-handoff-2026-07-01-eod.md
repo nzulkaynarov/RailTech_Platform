@@ -1,8 +1,21 @@
-# Session handoff — 2026-07-01 EOD — Move 4 polish COMPLETE · quotes.py split · KYC-floor · FE dead-code
+# Session handoff — 2026-07-01 EOD — Move 4 polish · quotes.py split · KYC-floor · FE dead-code · watermark fix · #3b deal-workspace (EYES-ON)
 
 > **READ FIRST on the new machine.** `git pull`, then read this. Memory is machine-local; this git
 > doc is the cross-machine source of truth. Supersedes `session-handoff-2026-06-30-EOD.md`.
-> **Two branches are UNMERGED and ready to merge (see below).** Everything else is in `main`.
+> **FOUR branches are UNMERGED and ready to merge (see below).** Everything else is in `main`.
+
+## ⭐ Eyes-on IS possible on LOCAL (owner granted full carte blanche 2026-07-01)
+The local Docker stack (`docker compose ps` — all healthy) IS a real running app: FE prod build on
+`:5173`, backend `:8000`, DB with seed data (19 users, 26 deals). **Verify UI with your own eyes
+here** — don't declare "can't verify / needs a channel" (owner: «без отмазок»). Loop: edit FE →
+`docker compose up -d --build frontend` (this IS the tsc-b+vite gate) → drive the already-authenticated
+Claude-in-Chrome tab. Context switcher (top-left) toggles Покупатель/Продавец; a full URL reload
+defaults to Покупатель, so switch to Продавец then navigate IN-APP (hash nav keeps context). Owner
+grants free creation of seed/users/roles/data on local to test before prod. HARD limits still hold
+(safety, not owner-overridable): never type a password into a login field, never print/inject a live
+token to the transcript (the safety layer blocks it) — but those don't block Django-shell data/user
+creation, which is the sanctioned path. Backend-only visual checks (e.g. a PDF) can render via
+`manage.py shell` + WeasyPrint to a mounted path and be read directly.
 
 ## State
 Move 4 monetization polish (items 1–4 from the 06-30 EOD handoff) is **DONE**. All four polish PRs
@@ -38,6 +51,20 @@ Phase E)**, and a **frontend dead-code pass** — these sit on two open branches
    by `claimDeal`/routing claim); `crmApi.submitLead` (lead-creation stub; listLeads/convertLead stay);
    `sourcingApi.getRequests/getRequestDetail` + `SourcingRequest` interface (legacy sourcing-requests,
    consolidated into Deals).
+3. **`fix/demo-watermark-clip`** (backend template; 1 commit; off `main`) — **eyes-on bug fix**. Rendered
+   a real КП PDF with the DEMO watermark and READ it: the phrase clipped off the page edge
+   («…использов»). At 22pt/2pt-bold it was ~615pt wide vs A4 content ~505pt → overflowed once rotated
+   -27°. Shrunk to 16pt/1pt; re-rendered + read to confirm the full «ДЕМО — не для коммерческого
+   использования» now fits on every page. `crm/templates/crm/quote_pdf.html` only.
+4. **`feat/deal-workspace-context`** (frontend; 1 commit; off `main`) — **#3b, eyes-on verified**. The
+   seller КП builder (`DealQuotePage`, the thin 175-line shell — NOT the 812-line `QuoteBuilderGrid` nor
+   the 607-line `RequestDetailPage`) is now a single workspace: always-visible «Что просит покупатель»
+   banner (`deal.notes`) + a «Чат с покупателем» header button opening a right slide-over that hosts the
+   existing `DealChatPanel` (chat + docs, live WS). Reply/read buyer context without leaving the builder.
+   i18n `pages.dealQuote.{buyerNote,openChat,contextTitle}` (symmetric). Verified in the running app
+   (Продавец, deal #2): banner shows note, slide-over opens live chat, closes clean, builder stays
+   interactive (line expand + economics OK). Merge AFTER `fix/demo-watermark-clip` (both touch КП surface
+   but different files — no conflict).
 
 ## 🟨 OWNER DECISION — dead FUNCTIONALITY, deliberately NOT deleted
 The FE dead-code survey flagged these as "unreferenced", but each is a **live-but-unwired capability**,
@@ -53,18 +80,22 @@ not dead code — deleting silently would remove a real feature or roadmap work.
   `sourcing/requests/`. Candidates for a **dedicated backend removal pass** (viewset+serializer; check
   for other consumers first — not touched here because BE removal is riskier).
 
-## ⛔ NEXT — needs a RUNNING-APP eyes-on channel (do NOT ship blind)
-Both remaining big items are god-component UI refactors. Memory rule (CRITICAL): never ship UI verified
-only by `tsc`/tests. This machine can't run React natively (no node/`rollup-darwin`) and I cannot enter
-admin credentials to drive admin pages. Get a verify channel first (seller login + Playwright, or a
-Docker preview, or `npm install` on a capable box).
-- **#3b Single Deal-workspace UX** — merge deal-detail + КП-builder into one seller screen; surface the
-  **time-to-first-КП KPI card** there (already shipped standalone on the SellerDashboard this session —
-  `Dashboard.tsx` `TimeToFirstQuoteCard`, endpoint `crm/analytics/time-to-first-quote/`).
-- **ADR-0005 Phase C** — unify buyer+seller into one shell. **Security-adjacent:** `X-Active-Context`
+## NEXT
+Eyes-on is now available on LOCAL (see the box at the top) — verify with own eyes, don't ship blind.
+- **#3b — remaining/optional:** the core friction (pricing without buyer context) is SOLVED by
+  `feat/deal-workspace-context`. Fully collapsing `request-detail` into the builder (so there's ONE
+  surface, not overview + builder) is optional — with the builder now carrying context, the
+  overview+focused-editor split is a defensible world-standard pattern. Confirm with owner before
+  removing `request-detail`. TTFK KPI card already lives on the SellerDashboard (`Dashboard.tsx`
+  `TimeToFirstQuoteCard`, endpoint `crm/analytics/time-to-first-quote/`) — arguably its right home
+  (aggregate metric), not per-deal.
+- **ADR-0005 Phase C** — unify buyer+seller into one shell. BIG + **security-adjacent:** `X-Active-Context`
   currently scopes backend data; unifying the shell needs a page-derived-context redesign so a buyer
   can't see seller-scoped data. Keep every server-side gate (can_sell/can_buy + CompanyType-floor +
-  cost redaction + routing-scope + ADMIN_VIEWER_CANNOT_ACT) — the shell blur is cosmetic only.
+  cost redaction + routing-scope + ADMIN_VIEWER_CANNOT_ACT) — the shell blur is cosmetic only. Do this
+  deliberately with eyes-on on BOTH contexts; don't rush.
+- **Owner-decision items** above (reassign-product re-wire is a natural fit now that the builder shows
+  «Совпадение не найдено» per line; `crm/status-choices/` + `sourcing/requests/` BE removal pass).
 
 ## ⚠️ Standing notes (unchanged)
 - **CI (GitHub-hosted) billing-blocked** — pre-merge green-gate does NOT run. Verify locally before
