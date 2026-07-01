@@ -454,10 +454,6 @@ export const crmApi = {
 		const response = await apiClient.post<Deal>(`crm/deals/${dealId}/release/`);
 		return response.data;
 	},
-	assignDeal: async (dealId: number, assigneeId: number) => {
-		const response = await apiClient.post<Deal>(`crm/deals/${dealId}/assign/`, { assignee_id: assigneeId });
-		return response.data;
-	},
 	// ─── Wedge metric: time-to-first-КП (ADR-0006 Move 4) ─────────────────────
 	getTimeToFirstQuote: async (sinceDays = 30) => {
 		const response = await apiClient.get<TimeToFirstQuoteStats>('crm/analytics/time-to-first-quote/', {
@@ -622,10 +618,6 @@ export const crmApi = {
 	getActivityLogs: async () => {
 		const response = await apiClient.get<PaginatedResponse<ActivityLog>>('crm/activity-logs/');
 		return response.data.results;
-	},
-	submitLead: async (data: Lead) => {
-		const response = await apiClient.post<Lead>('crm/leads/', data);
-		return response.data;
 	},
 	getQuotes: async () => {
 		const response = await apiClient.get<PaginatedResponse<Quote>>('crm/quotes/');
