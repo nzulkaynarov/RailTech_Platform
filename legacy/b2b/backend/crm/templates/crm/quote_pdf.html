@@ -176,9 +176,11 @@
     text-align: center;
     transform: rotate(-27deg);
     transform-origin: center;
-    font-size: 22pt;
+    /* 16pt/1pt keeps the full phrase inside A4 content width (~505pt) once rotated —
+       22pt/2pt overflowed the page edge and clipped the tail «…использования». */
+    font-size: 16pt;
     font-weight: 700;
-    letter-spacing: 2pt;
+    letter-spacing: 1pt;
     color: rgba(200, 55, 55, 0.13);
     white-space: nowrap;
   }
