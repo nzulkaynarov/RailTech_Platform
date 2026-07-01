@@ -10,7 +10,6 @@ from rest_framework.response import Response
 
 from accounts import services
 from accounts.constants import SELLER_COMPANY_TYPES, VerificationStatusCode, WorkspaceRoleCode
-from accounts.services.permissions import member_has_permission
 from accounts.models import Company, CompanyMember, CustomUser
 from accounts.serializers import (
     CompanyDocumentProfileSerializer,
@@ -20,6 +19,7 @@ from accounts.serializers import (
     KYCVerificationSerializer,
     UserSerializer,
 )
+from accounts.services.permissions import member_has_permission
 from core.permissions import OperatorScoped
 
 
@@ -123,7 +123,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
         # own in-action authz and must NOT hit the operator gate — BUT only for non-operators.
         # A platform OPERATOR calling these still goes through OperatorScoped so a narrow role
         # (e.g. SUPPORT) cannot edit company data via update/partial_update (escalation fix).
-        if self.action in self._MEMBER_ALLOWED_ACTIONS and not self.request.user.is_platform_admin:
+        if self.action in self._MEMBER_ALLOWED_ACTIONS and not getattr(self.request.user, "is_platform_admin", False):
             return [permissions.IsAuthenticated()]
         return super().get_permissions()
 
@@ -655,9 +655,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
         result, error = services.set_member_workspace_role(member, role_code)
         if error:
             http_status = (
-                status.HTTP_409_CONFLICT
-                if error == "CANNOT_DEMOTE_LAST_COMPANY_ADMIN"
-                else status.HTTP_400_BAD_REQUEST
+                status.HTTP_409_CONFLICT if error == "CANNOT_DEMOTE_LAST_COMPANY_ADMIN" else status.HTTP_400_BAD_REQUEST
             )
             return Response({"detail": error}, status=http_status)
         return Response({"id": result.id, "user_id": result.user_id, "role": result.role.code})
