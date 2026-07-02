@@ -128,6 +128,31 @@ def test_send_uses_db_template_and_logs():
     assert log.status == EmailLog.STATUS_SENT
 
 
+@pytest.mark.django_db
+def test_emaillog_redacts_setup_reset_tokens():
+    """SEC-02: the one-time credential params (?uid=&token=) in the SENT link must NOT be
+    persisted to EmailLog (Unfold / DB-backup account-takeover vector). The delivered email
+    keeps the real link; only the stored copy is redacted."""
+    EmailTemplate.objects.create(
+        key="setup_password",
+        subject="Setup",
+        html_body='<a href="{{ setup_url }}">set</a>',
+        text_body="Open {{ setup_url }}",
+        is_active=True,
+    )
+    mail.outbox = []
+    url = "https://b2b.railtech.uz/setup-password?uid=MTI3&token=abc123-secretTOKEN&x=1"
+    log = send_templated_email("setup_password", {"setup_url": url}, to=["r@example.com"])
+    # Delivered email keeps the working link.
+    assert "abc123-secretTOKEN" in mail.outbox[0].body
+    # Persisted log has the token/uid redacted (non-secret params like x=1 survive).
+    assert "abc123-secretTOKEN" not in log.body_text
+    assert "abc123-secretTOKEN" not in log.body_html
+    assert "MTI3" not in log.body_text
+    assert "[REDACTED]" in log.body_text
+    assert "x=1" in log.body_text
+
+
 # --------------------------------------------------------------------------- #
 # DRF: preview / test-send / permission gate                                  #
 # --------------------------------------------------------------------------- #

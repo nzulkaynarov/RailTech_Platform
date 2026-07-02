@@ -203,6 +203,38 @@ class TestSetupPassword:
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
+    def test_setup_enforces_validators_and_revokes_tokens(self, client, user_factory):
+        """SEC-01: AUTH_PASSWORD_VALIDATORS run on the setup path (not just min-length) —
+        a length-OK but all-numeric password is rejected. SEC-05: a successful setup
+        revokes the user's existing refresh tokens (a leaked setup link can't keep a
+        session alive). Both need a REAL token, unlike the placeholder tests above."""
+        from django.contrib.auth.tokens import default_token_generator
+        from django.utils.encoding import force_bytes
+        from django.utils.http import urlsafe_base64_encode
+        from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
+
+        user = user_factory()
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+
+        # SEC-01: passes the 8-char floor but fails NumericPasswordValidator.
+        weak = client.post(
+            "/api/v1/auth/setup-password/",
+            {"uid": uid, "token": token, "password": "29481725"},
+            format="json",
+        )
+        assert weak.status_code == status.HTTP_400_BAD_REQUEST
+
+        # A pre-existing refresh token that a successful setup must invalidate (SEC-05).
+        refresh = RefreshToken.for_user(user)
+        ok = client.post(
+            "/api/v1/auth/setup-password/",
+            {"uid": uid, "token": token, "password": "Str0ng-Pass-9xQ"},
+            format="json",
+        )
+        assert ok.status_code == status.HTTP_200_OK
+        assert BlacklistedToken.objects.filter(token__jti=refresh["jti"]).exists()
+
 
 @pytest.mark.django_db
 class TestSubmitProfile:

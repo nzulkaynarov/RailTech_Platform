@@ -1,7 +1,10 @@
+import logging
 import time
 
 from django.db import connection
 from django.http import JsonResponse
+
+logger = logging.getLogger(__name__)
 
 _cache = {"result": None, "ts": 0}
 _TTL = 10  # seconds
@@ -27,8 +30,10 @@ def health_check(request):
         health_status["database"] = "up"
         health_status["status"] = "healthy"
         resp = JsonResponse(health_status, status=200)
-    except Exception as e:
-        health_status["error"] = str(e)
+    except Exception:
+        # SEC-11: log the real DB error server-side, but never leak driver/host
+        # internals to an unauthenticated health probe — a generic status only.
+        logger.exception("Health check DB connection failed")
         resp = JsonResponse(health_status, status=503)
 
     _cache["result"] = resp

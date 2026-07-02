@@ -3,8 +3,9 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
 from accounts.models import (
@@ -38,9 +39,26 @@ def _seed(model, code, **defaults):
 
 
 class Command(BaseCommand):
-    help = "Seeds the database with master data (all names in Russian)."
+    help = "Seeds the database with master data + DEMO users (dev/demo only, all names in Russian)."
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--force-prod",
+            action="store_true",
+            help="Override the DEBUG=False safety guard (dangerous — creates demo login "
+            "accounts with a known password).",
+        )
 
     def handle(self, *args, **options):
+        # SEC-03: this command creates DEMO login accounts with DEFAULT_SEED_PASSWORD.
+        # Business lookups on prod come from data migrations (Rule 1), not from here — so
+        # refuse to run against a non-DEBUG environment unless explicitly forced.
+        if not settings.DEBUG and not options.get("force_prod"):
+            raise CommandError(
+                "core_seed is a dev/demo seeder and creates accounts with a known password. "
+                "Refusing to run with DEBUG=False. Prod lookups come from migrations. "
+                "Pass --force-prod only if you truly intend to seed demo data in production."
+            )
         self.stdout.write("Загрузка справочников...")
 
         seed_data = json.loads(SEED_DATA_PATH.read_text(encoding="utf-8"))
