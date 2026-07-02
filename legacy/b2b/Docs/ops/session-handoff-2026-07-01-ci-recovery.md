@@ -64,13 +64,29 @@ ownership/permission-gated, NEVER header/`showPrices`-derived; (5) **context-key
 user navigating seller→buyer reads the other context's cached rows (the login/logout `clear()` in this
 PR only covers identity change, not intra-session context change).
 
-**Slice order (each shippable + eyes-on BOTH contexts, low-risk first):** 1 contract test ✅ (in this PR);
-2 backend empty-header→BUYER safety net; 3 client `||'BUYER'` + SPA marker; 4 nav curation — dedup the
-overlapping targets (`shell.deals`→my-requests(buy)/crm-deals(sell); both `shell.catalog` & nomenclature
-→ the same `products` page) with distinct labels; 5 page-derived context (App.tsx `PAGE_CONTEXT` map,
-switcher kept); 6 context-only chrome (cart/badges) follows resolved context; 7 remove the switcher +
-show both sides' nav (needs guard #5); 8 merge Documents pages; 9 merge Deals page (high risk); 10 merge
-Dashboard (high risk). Backend is largely untouched — the work is FE nav/pages + the cache-keying guard.
+**Slice order (each shippable + eyes-on BOTH contexts, low-risk first):**
+- 1 contract test ✅ (merged in PR #189).
+- 3+5 **page-derived context ✅ DONE — branch `feat/phase-c-page-context` (verify CI + merge).**
+  `api/client.ts` sends a concrete header default `BUYER`; `App.tsx` `pageContextOf()` + the context
+  guard ADOPTS a page's context for a user who has that capability (invalidating queries) instead of
+  bouncing. Pure buyer/seller still bounced (no other verified statusEntry). Switcher kept. Eyes-on
+  verified BOTH ways (dual user: #crm-deals→SELLER, #my-requests→BUYER). Guards #1/#2 satisfied.
+- 2 backend empty-header→BUYER safety net — LOWER priority now (guard #2 makes the SPA never send empty;
+  empty already resolves to routing-scope not see-all; contract test proves pure buyers safe). Optional.
+- 4 nav curation — dedup overlapping targets (`shell.deals`→my-requests(buy)/crm-deals(sell); both
+  `shell.catalog` & `nomenclature`→the same `products` page) with distinct labels.
+- **NEXT ⇒ Slice B (unified nav):** show BOTH sides' nav sections for a DUAL user (buildNavigation gates
+  by the user's VERIFIED statusEntries, not the single active context) so no manual switcher is needed to
+  reach the other context — clicking a context-unique item already flips context via `pageContextOf`.
+  DESIGN: attach each item's `side` to the resolved nav item; AppShell onClick does `setActiveStatus(side)`
+  + invalidate for buy/sell items (handles shared-but-side-labelled items like Каталог(buy)/Номенклатура
+  (sell), both id=`products`, which `pageContextOf` treats as neutral). Dedup the deals label. RISK: changes
+  the nav for all users — must eyes-on BOTH a pure buyer AND a pure seller (need those logins), not just
+  the dual test user, before merge.
+- 6 context chrome (cart/badges) follows resolved context; 7 remove switcher (needs guard #5 cache-keying);
+  8 merge Documents pages; 9 merge Deals page (high risk); 10 merge Dashboard (high risk). Guard #5
+  (context-key list caches OR invalidate-on-context-change) is currently satisfied by the
+  invalidateQueries() on both the switcher AND the page-derived adoption — keep that when removing the switcher.
 
 Also outstanding (owner-decision, from 07-01-eod handoff): reassign-product was RE-WIRED into the builder
 («Привязать товар», merged); `crm/status-choices/` + `sourcing/requests/` are FE-orphaned BE endpoints
