@@ -4438,6 +4438,7 @@
     "ROLE_APPLICATION_MISSING_CONTRACT_NDA": "Contract and NDA files are required for SUPPLIER",
     "ROLE_APPLICATION_MISSING_PARTNERSHIP": "Partnership agreement file is required for MANUFACTURER",
     "CURRENT_PASSWORD_WRONG": "Current password is incorrect",
+    "PASSWORD_TOO_WEAK": "Password is too weak. Use at least 8 characters; not all-numeric, not common, and not similar to your email.",
     "CANNOT_DEACTIVATE_SELF": "Cannot deactivate yourself",
     "FILE_TOO_LARGE": "File is too large (max 10 MB)",
     "STAGE_CODE_REQUIRED": "stage_code is required",

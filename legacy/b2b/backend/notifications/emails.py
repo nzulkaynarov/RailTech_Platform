@@ -29,6 +29,7 @@ Why channels (transactional / marketing / system):
 from __future__ import annotations
 
 import logging
+import re
 from typing import Iterable, Optional
 
 from django.conf import settings
@@ -213,6 +214,18 @@ def send_templated_email(
     )
 
 
+# SEC-02: one-time credential params carried in email links (setup/reset). The SENT email
+# keeps the real link; the copy PERSISTED to EmailLog (viewable in Unfold / DB backups) must
+# not expose a still-valid token, or a Platform Engineer / backup reader could take over the
+# account before the legitimate click (OWASP A09).
+# Prefix handles `?`, raw `&`, AND the HTML-escaped `&amp;` (the html_body renders links escaped).
+_SECRET_QS_RE = re.compile(r"((?:\?|&amp;|&)(?:token|uid|code)=)[^&\s\"'<>]+", re.IGNORECASE)
+
+
+def _redact_secrets(body: Optional[str]) -> str:
+    return _SECRET_QS_RE.sub(r"\1[REDACTED]", body or "")
+
+
 def _record_log(
     template, channel, subject, from_email, recipients, user, text_body, html_body, status, error_text
 ) -> EmailLog:
@@ -224,8 +237,8 @@ def _record_log(
             from_email=from_email,
             to_emails=recipients,
             user=user,
-            body_text=text_body,
-            body_html=html_body,
+            body_text=_redact_secrets(text_body),
+            body_html=_redact_secrets(html_body),
             status=status,
             error=error_text,
         )

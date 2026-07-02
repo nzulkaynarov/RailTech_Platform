@@ -4442,6 +4442,7 @@
     "ROLE_APPLICATION_MISSING_CONTRACT_NDA": "Для SUPPLIER требуются контракт и NDA",
     "ROLE_APPLICATION_MISSING_PARTNERSHIP": "Для MANUFACTURER требуется партнёрское соглашение",
     "CURRENT_PASSWORD_WRONG": "Неверный текущий пароль",
+    "PASSWORD_TOO_WEAK": "Пароль слишком простой. Минимум 8 символов; не только цифры, не распространённый и не похожий на ваш email.",
     "CANNOT_DEACTIVATE_SELF": "Нельзя деактивировать самого себя",
     "FILE_TOO_LARGE": "Файл слишком большой (максимум 10 МБ)",
     "STAGE_CODE_REQUIRED": "Параметр stage_code обязателен",

@@ -2,7 +2,9 @@ import logging
 from typing import Optional, Tuple
 
 from django.conf import settings
+from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 
@@ -11,6 +13,23 @@ from notifications.emails import EmailDeliveryError, send_templated_email
 from ..models import CustomUser, SystemRole
 
 logger = logging.getLogger(__name__)
+
+
+def _password_error(password: str, user: Optional[CustomUser] = None) -> Optional[str]:
+    """Enforce AUTH_PASSWORD_VALIDATORS on EVERY password-setting path (SEC-01).
+
+    The validators were declared in settings.py but never invoked — only an 8-char
+    min was checked, so `password`, `12345678`, `aaaaaaaa` slipped through. Returns a
+    stable error CODE on failure (i18n `apiErrors.PASSWORD_TOO_WEAK`), else None — the
+    callers surface it as (None, code) rather than raising, matching their contract.
+    """
+    if not password or len(password) < 8:
+        return "PASSWORD_TOO_WEAK"
+    try:
+        validate_password(password, user)
+    except DjangoValidationError:
+        return "PASSWORD_TOO_WEAK"
+    return None
 
 
 def revoke_user_refresh_tokens(user: CustomUser) -> int:
@@ -127,8 +146,9 @@ def reset_password(uidb64: str, token: str, password: str) -> Tuple[Optional[Cus
         return None, "RESET_PASSWORD_INVALID_USER"
     if not default_token_generator.check_token(user, token):
         return None, "RESET_PASSWORD_INVALID_TOKEN"
-    if not password or len(password) < 8:
-        return None, "RESET_PASSWORD_WEAK"
+    weak = _password_error(password, user)
+    if weak:
+        return None, weak
     user.set_password(password)
     if not user.is_active:
         user.is_active = True
@@ -147,9 +167,16 @@ def verify_and_setup_password(uidb64: str, token: str, password: str) -> Tuple[O
     if not default_token_generator.check_token(user, token):
         return None, "SETUP_PASSWORD_INVALID_TOKEN"
 
+    weak = _password_error(password, user)
+    if weak:
+        return None, weak
+
     user.set_password(password)
     user.is_active = True
     user.save()
+    # SEC-05: treat setup like reset — invalidate any refresh tokens so a leaked/replayed
+    # setup link can't keep a session alive after the password is set.
+    revoke_user_refresh_tokens(user)
     return user, None
 
 
@@ -164,6 +191,9 @@ def change_user_password(
     """
     if not user.check_password(current_password):
         return None, "CURRENT_PASSWORD_WRONG"
+    weak = _password_error(new_password, user)
+    if weak:
+        return None, weak
     user.set_password(new_password)
     user.save(update_fields=["password"])
     revoke_user_refresh_tokens(user)
