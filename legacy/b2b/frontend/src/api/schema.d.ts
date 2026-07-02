@@ -6151,7 +6151,7 @@ export interface components {
             readonly client_signer_name: string;
             /** Format: date-time */
             readonly client_signed_at: string | null;
-            /** Подписал со стороны RailTech */
+            /** Подписал со стороны продавца */
             readonly manager_signer: number | null;
             readonly manager_signer_name: string;
             /** Format: date-time */
