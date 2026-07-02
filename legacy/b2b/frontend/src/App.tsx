@@ -302,7 +302,11 @@ const ADMIN_PAGES = new Set([
   'admin-companies', 'admin-deals', 'admin-master-data', 'admin-email-templates',
   'admin-operator-roles', 'admin-access-log', 'admin-support',
 ]);
-const KYC_ALLOWED_PAGES = new Set(['dashboard', 'profile', 'settings', 'help']);
+// ADR-0005 tier T0 (KYC pending): Главная/Профиль/каталог-read + utility pages.
+// `products` (catalog listing) and `product_detail` are catalog-READ, allowed pre-KYC;
+// every write/document/seller surface stays gated (nav hides them via requires.kyc — the
+// two stay in lock-step so a T0 user is never shown a link that then bounces).
+const KYC_ALLOWED_PAGES = new Set(['dashboard', 'profile', 'settings', 'help', 'products', 'product_detail']);
 
 // Platform Admin is a viewer/moderator (ADR-0002): they reach moderation +
 // platform-CRUD surfaces only, NEVER a buyer/seller business page (deals,
