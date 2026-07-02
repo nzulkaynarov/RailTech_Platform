@@ -58,7 +58,11 @@ export interface ResolvedNavItem {
 }
 
 // KYC codes that count as "verified" for capability gating (L2 floor; L3 is higher).
-const KYC_VERIFIED = new Set(['L2_VERIFIED', 'L3_VERIFIED']);
+// The seeded VerificationStatus codes are L2_VERIFIED and L3_CONTRACTED (see
+// backend/core/migrations/0002_seed_enterprise_lookups.py + accounts/constants.py);
+// there is no `L3_VERIFIED` code — it was a phantom that hid every kyc-gated nav
+// item from L3_CONTRACTED companies. userStore.ts already treats both as verified.
+const KYC_VERIFIED = new Set(['L2_VERIFIED', 'L3_CONTRACTED']);
 
 export function isKycVerified(level: string | null | undefined): boolean {
   return !!level && KYC_VERIFIED.has(level);
@@ -93,26 +97,32 @@ export const TENANT_NAV: NavNodeDef[] = [
   // Сделки — в unified shell обе стороны видны сразу у dual-компании, поэтому у них
   // РАЗНЫЕ ярлыки: закупочная сторона → «Мои заявки», продающая → «Сделки» (CRM).
   { labelKey: 'shell.myRequests', id: 'my-requests', icon: <ClipboardList className="h-4 w-4" />, side: 'buy', requires: { kyc: true, anyPerm: ['request.create', 'quote.approve'] } },
-  { labelKey: 'shell.deals', id: 'crm-deals', icon: <Handshake className="h-4 w-4" />, side: 'sell', requires: { anyPerm: ['quote.build', 'quote.send'] } },
+  { labelKey: 'shell.deals', id: 'crm-deals', icon: <Handshake className="h-4 w-4" />, side: 'sell', requires: { kyc: true, anyPerm: ['quote.build', 'quote.send'] } },
 
   // Документы — КП · Договоры · Счета · Акты (фильтр направления — на самих страницах).
+  // ADR-0005 tier table: every document surface is a T1/T2 (KYC L2+) action — a T0
+  // (KYC-pending) user only gets Главная/Профиль/каталог-read. Each child carries
+  // kyc:true so the group is HIDDEN pre-KYC, matching the App.tsx KYC_ALLOWED_PAGES
+  // guard (which bounces these pages) — no shown-but-bounced items.
   {
     labelKey: 'shell.documents', icon: <FileText className="h-4 w-4" />,
     children: [
-      { labelKey: 'shell.quotes', id: 'crm-quotes', side: 'sell', requires: { anyPerm: ['quote.build', 'quote.send'] } },
-      { labelKey: 'shell.contracts', id: 'contracts' },
-      { labelKey: 'shell.invoices', id: 'invoices' },
-      { labelKey: 'shell.payments', id: 'payments' },
-      { labelKey: 'shell.acts', id: 'acts', side: 'sell' },
-      { labelKey: 'shell.fulfillments', id: 'fulfillments' },
+      { labelKey: 'shell.quotes', id: 'crm-quotes', side: 'sell', requires: { kyc: true, anyPerm: ['quote.build', 'quote.send'] } },
+      { labelKey: 'shell.contracts', id: 'contracts', requires: { kyc: true } },
+      { labelKey: 'shell.invoices', id: 'invoices', requires: { kyc: true } },
+      { labelKey: 'shell.payments', id: 'payments', requires: { kyc: true } },
+      { labelKey: 'shell.acts', id: 'acts', side: 'sell', requires: { kyc: true } },
+      { labelKey: 'shell.fulfillments', id: 'fulfillments', requires: { kyc: true } },
     ],
   },
 
   // Номенклатура — Товары · Справочники (Клиенты — Phase F). Покупатель видит каталог read-only.
+  // Каталог (products) stays UNGATED — ADR-0005 T0 explicitly allows catalog-read pre-KYC.
   { labelKey: 'shell.catalog', id: 'products', icon: <Package className="h-4 w-4" />, side: 'buy' },
   {
     labelKey: 'shell.nomenclatureSection', icon: <Boxes className="h-4 w-4" />, side: 'sell',
-    requires: { anyPerm: ['catalog.manage', 'catalog.publish'] },
+    // Managing/publishing nomenclature is a T2 (catalog.*) seller action → KYC L2+ floor.
+    requires: { kyc: true, anyPerm: ['catalog.manage', 'catalog.publish'] },
     children: [
       { labelKey: 'shell.nomenclature', id: 'products' },
       { labelKey: 'shell.categories', id: 'categories' },
@@ -121,8 +131,9 @@ export const TENANT_NAV: NavNodeDef[] = [
     ],
   },
 
-  // Подписка — seller billing entry that isn't a "document".
-  { labelKey: 'shell.mySubscription', id: 'my-subscription', icon: <Receipt className="h-4 w-4" />, side: 'sell' },
+  // Подписка — seller billing entry that isn't a "document". A seller subscribes only
+  // after KYC (L2) to reach T2, so this is KYC-gated too (App.tsx bounces it pre-KYC).
+  { labelKey: 'shell.mySubscription', id: 'my-subscription', icon: <Receipt className="h-4 w-4" />, side: 'sell', requires: { kyc: true } },
 ];
 
 export const TENANT_BOTTOM_NAV: NavNodeDef[] = [
