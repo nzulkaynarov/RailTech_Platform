@@ -6351,7 +6351,7 @@
             },
             "patch": {
                 "operationId": "catalog_products_partial_update",
-                "description": "CRUD for PIM products.\n\nPublic read access (PUBLISHED only for non-admin);\nwrite operations require Admin role.",
+                "description": "CRUD for PIM products.\n\nPublic read access (PUBLISHED only for non-admin);\nwrite operations require Admin role.\n\nNOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER\n(catalog _CostGateMixin), so a response is viewer-specific and must never be\nshared; the old cache_page keyed on the rotating Authorization JWT gave a ~0%\nhit rate + per-token cache bloat anyway. The queryset is select_related/\nprefetch (N+1-free), so uncached list reads are cheap.",
                 "summary": "Partially update product",
                 "parameters": [
                     {
@@ -6406,7 +6406,7 @@
             },
             "delete": {
                 "operationId": "catalog_products_destroy",
-                "description": "CRUD for PIM products.\n\nPublic read access (PUBLISHED only for non-admin);\nwrite operations require Admin role.",
+                "description": "CRUD for PIM products.\n\nPublic read access (PUBLISHED only for non-admin);\nwrite operations require Admin role.\n\nNOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER\n(catalog _CostGateMixin), so a response is viewer-specific and must never be\nshared; the old cache_page keyed on the rotating Authorization JWT gave a ~0%\nhit rate + per-token cache bloat anyway. The queryset is select_related/\nprefetch (N+1-free), so uncached list reads are cheap.",
                 "summary": "Delete product",
                 "parameters": [
                     {
@@ -6437,7 +6437,7 @@
         "/api/v1/catalog/products/{id}/delete-document/{doc_id}/": {
             "delete": {
                 "operationId": "catalog_products_delete_document_destroy",
-                "description": "CRUD for PIM products.\n\nPublic read access (PUBLISHED only for non-admin);\nwrite operations require Admin role.",
+                "description": "CRUD for PIM products.\n\nPublic read access (PUBLISHED only for non-admin);\nwrite operations require Admin role.\n\nNOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER\n(catalog _CostGateMixin), so a response is viewer-specific and must never be\nshared; the old cache_page keyed on the rotating Authorization JWT gave a ~0%\nhit rate + per-token cache bloat anyway. The queryset is select_related/\nprefetch (N+1-free), so uncached list reads are cheap.",
                 "summary": "Delete product document",
                 "parameters": [
                     {
@@ -6480,7 +6480,7 @@
         "/api/v1/catalog/products/{id}/delete-image/{image_id}/": {
             "delete": {
                 "operationId": "catalog_products_delete_image_destroy",
-                "description": "CRUD for PIM products.\n\nPublic read access (PUBLISHED only for non-admin);\nwrite operations require Admin role.",
+                "description": "CRUD for PIM products.\n\nPublic read access (PUBLISHED only for non-admin);\nwrite operations require Admin role.\n\nNOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER\n(catalog _CostGateMixin), so a response is viewer-specific and must never be\nshared; the old cache_page keyed on the rotating Authorization JWT gave a ~0%\nhit rate + per-token cache bloat anyway. The queryset is select_related/\nprefetch (N+1-free), so uncached list reads are cheap.",
                 "summary": "Delete product image",
                 "parameters": [
                     {
