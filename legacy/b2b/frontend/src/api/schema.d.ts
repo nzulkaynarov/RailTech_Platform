@@ -2240,6 +2240,12 @@ export interface paths {
          *
          *     Public read access (PUBLISHED only for non-admin);
          *     write operations require Admin role.
+         *
+         *     NOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER
+         *     (catalog _CostGateMixin), so a response is viewer-specific and must never be
+         *     shared; the old cache_page keyed on the rotating Authorization JWT gave a ~0%
+         *     hit rate + per-token cache bloat anyway. The queryset is select_related/
+         *     prefetch (N+1-free), so uncached list reads are cheap.
          */
         delete: operations["catalog_products_destroy"];
         options?: never;
@@ -2250,6 +2256,12 @@ export interface paths {
          *
          *     Public read access (PUBLISHED only for non-admin);
          *     write operations require Admin role.
+         *
+         *     NOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER
+         *     (catalog _CostGateMixin), so a response is viewer-specific and must never be
+         *     shared; the old cache_page keyed on the rotating Authorization JWT gave a ~0%
+         *     hit rate + per-token cache bloat anyway. The queryset is select_related/
+         *     prefetch (N+1-free), so uncached list reads are cheap.
          */
         patch: operations["catalog_products_partial_update"];
         trace?: never;
@@ -2270,6 +2282,12 @@ export interface paths {
          *
          *     Public read access (PUBLISHED only for non-admin);
          *     write operations require Admin role.
+         *
+         *     NOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER
+         *     (catalog _CostGateMixin), so a response is viewer-specific and must never be
+         *     shared; the old cache_page keyed on the rotating Authorization JWT gave a ~0%
+         *     hit rate + per-token cache bloat anyway. The queryset is select_related/
+         *     prefetch (N+1-free), so uncached list reads are cheap.
          */
         delete: operations["catalog_products_delete_document_destroy"];
         options?: never;
@@ -2293,6 +2311,12 @@ export interface paths {
          *
          *     Public read access (PUBLISHED only for non-admin);
          *     write operations require Admin role.
+         *
+         *     NOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER
+         *     (catalog _CostGateMixin), so a response is viewer-specific and must never be
+         *     shared; the old cache_page keyed on the rotating Authorization JWT gave a ~0%
+         *     hit rate + per-token cache bloat anyway. The queryset is select_related/
+         *     prefetch (N+1-free), so uncached list reads are cheap.
          */
         delete: operations["catalog_products_delete_image_destroy"];
         options?: never;
