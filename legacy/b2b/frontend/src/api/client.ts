@@ -31,8 +31,12 @@ apiClient.interceptors.request.use((config) => {
 // This only ever NARROWS access — never grants more than the user's memberships.
 apiClient.interceptors.request.use((config) => {
 	try {
-		const ctx = useUserStore.getState().activeStatus;
-		if (ctx) config.headers['X-Active-Context'] = ctx;
+		// Always emit a concrete context, defaulting to the NARROWER 'BUYER' — a null/absent
+		// header must never let the backend fall back to a wider (seller) scope for the SPA
+		// (ADR-0005 Phase C guard: the header may only narrow). is_seller() still gates the
+		// real boundary server-side, so this is defense-in-depth, not the primary control.
+		const ctx = useUserStore.getState().activeStatus || 'BUYER';
+		config.headers['X-Active-Context'] = ctx;
 	} catch { /* noop */ }
 	return config;
 });

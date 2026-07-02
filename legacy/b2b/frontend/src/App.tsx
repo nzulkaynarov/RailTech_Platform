@@ -1,4 +1,5 @@
 import { Suspense, useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { lazyWithRetry } from './lib/lazyWithRetry';
 import { toast } from 'sonner';
@@ -7,7 +8,7 @@ import { PlatformAdminShell } from './layouts/PlatformAdminShell';
 import { ErrorBoundary } from './components/Shared/ErrorBoundary';
 import { OnboardingTour } from './components/Shared/OnboardingTour';
 import { PageBreadcrumb, getPageLabel } from './components/Shared/PageBreadcrumb';
-import { useUserStore } from './store/userStore';
+import { useUserStore, type CompanyStatus } from './store/userStore';
 import { useAuthStore } from './store/authStore';
 import { LoginPage } from './components/Auth/LoginPage';
 import { KYCRegistrationForm } from './components/Auth/KYCRegistrationForm';
@@ -335,11 +336,26 @@ const SELLER_PAGES = new Set([
   'contracts', 'invoices', 'payments', 'acts', 'fulfillments',
 ]);
 
+// ADR-0005 Phase C — page-derived context. A page UNIQUE to one side implies that
+// working context; pages in BOTH sets (dashboard, products, request-detail, the shared
+// document pages…) are context-neutral → keep whatever context the user is already in.
+// Derived from the two sets above so they stay the single source of truth.
+function pageContextOf(pageType: string): CompanyStatus | null {
+  const inBuyer = BUYER_PAGES.has(pageType);
+  const inSeller = SELLER_PAGES.has(pageType);
+  if (inBuyer && !inSeller) return 'BUYER';
+  if (inSeller && !inBuyer) return 'SELLER';
+  return null;
+}
+
 function MainApp() {
   const { t } = useTranslation();
   const role = useUserStore((s) => s.role);
   const activeStatus = useUserStore((s) => s.activeStatus);
+  const setActiveStatus = useUserStore((s) => s.setActiveStatus);
+  const statusEntries = useUserStore((s) => s.company.statusEntries);
   const kycStatus = useUserStore((s) => s.company.kycStatus);
+  const queryClient = useQueryClient();
   const [page, setPage] = useState<Page>(() => parseHashToPage(window.location.hash));
   const [showTour, setShowTour] = useState(false);
 
@@ -386,13 +402,27 @@ function MainApp() {
       }
       return;
     }
+    // Phase C page-derived context: if this page belongs to the user's OTHER capability
+    // (a dual buyer+seller reaching a seller page while in BUYER context, or vice versa),
+    // ADOPT that context instead of bouncing — the working context follows the page. A pure
+    // buyer/seller lacks the other verified statusEntry, so they still get bounced (the
+    // cross-role guard holds). Invalidate queries so the new context refetches (mirrors the
+    // manual switcher) — no stale cross-context rows.
+    const pageCtx = pageContextOf(page.type);
+    const hasContext = (c: CompanyStatus) =>
+      statusEntries.some((e) => e.status === c && e.verification === 'verified');
+    if (pageCtx && pageCtx !== activeStatus && hasContext(pageCtx)) {
+      setActiveStatus(pageCtx);
+      queryClient.invalidateQueries();
+      return;
+    }
     const allowed = activeStatus === 'BUYER' ? BUYER_PAGES : SELLER_PAGES;
     if (!allowed.has(page.type)) {
       toast.info(t('guards.notAvailableHere'));
       setPage({ type: 'dashboard' });
       window.history.replaceState(null, '', '#dashboard');
     }
-  }, [page.type, role, activeStatus, t]);
+  }, [page.type, role, activeStatus, statusEntries, setActiveStatus, queryClient, t]);
 
   // Handle browser back/forward
   useEffect(() => {
