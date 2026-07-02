@@ -1,7 +1,8 @@
 # ==============================================================================
 # RailTech B2B SaaS — Development Docker Compose
 # Full stack: Django, React, Redis (x2), MinIO, Celery
-# Database: External Neon Cloud PostgreSQL (no local postgres)
+# Database (dev): local Postgres `db` from docker-compose.override.yml (prod =
+# self-hosted PostgreSQL 17 on the DB-VPS over WireGuard; Neon retired 2026-06-19)
 # ==============================================================================
 
 services:
