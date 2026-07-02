@@ -795,7 +795,8 @@
     "deliveryLeadTime": "Срок поставки",
     "lineCurrency": "Валюта себестоимости позиции",
     "costInPresentation": "Себестоимость: {{value}}",
-    "fxRateAt": "Курс {{from}}→{{to}}: {{rate}}"
+    "fxRateAt": "Курс {{from}}→{{to}}: {{rate}}",
+    "marginQuoteLevelHint": "Наценка задаётся на весь КП — измените её в «Настройки КП»"
   },
   "admin": {
     "dashboard": {
