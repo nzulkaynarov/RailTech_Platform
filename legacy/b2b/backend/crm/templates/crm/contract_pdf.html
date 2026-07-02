@@ -27,13 +27,18 @@
     <div class="party">
       <h3>Поставщик</h3>
       {% if supplier %}
-      <p>{{ supplier.name }}</p>
-      <p>ИНН {{ supplier.inn }}</p>
-      {% if supplier.legal_address %}<p>{{ supplier.legal_address }}</p>{% endif %}
+      {# Branded legal_name from the seller's document profile → Company name (never a platform name). #}
+      <p>{% firstof seller_profile.legal_name supplier.name %}</p>
+      {% firstof seller_profile.inn supplier.inn as supplier_inn %}
+      {% if supplier_inn %}<p>ИНН {{ supplier_inn }}</p>{% endif %}
+      {% firstof seller_profile.legal_address supplier.legal_address as supplier_addr %}
+      {% if supplier_addr %}<p>{{ supplier_addr }}</p>{% endif %}
+      {% if seller_profile.bank_details %}<p>{{ seller_profile.bank_details }}</p>{% endif %}
       {% if supplier.contact_person %}<p>Контактное лицо: {{ supplier.contact_person }}</p>{% endif %}
       {% else %}
-      <p>ООО «RailTech»</p>
-      <p>Узбекистан</p>
+      {# No seller resolved — a contract should never reach here (a КП is claimed before a
+         contract exists). Show a neutral placeholder rather than the platform's own name. #}
+      <p>Поставщик не указан</p>
       {% endif %}
     </div>
     <div class="party">

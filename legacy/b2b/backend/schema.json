@@ -17363,7 +17363,7 @@
                         "type": "integer",
                         "readOnly": true,
                         "nullable": true,
-                        "title": "Подписал со стороны RailTech"
+                        "title": "Подписал со стороны продавца"
                     },
                     "manager_signer_name": {
                         "type": "string",

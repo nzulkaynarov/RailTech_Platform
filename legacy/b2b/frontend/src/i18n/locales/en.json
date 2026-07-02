@@ -3956,7 +3956,7 @@
     "downloadPdf": "Download PDF",
     "uploadSigned": "Upload signed copy",
     "signClient": "Sign as client",
-    "signManager": "Sign as RailTech",
+    "signManager": "Sign as seller",
     "cancel": "Cancel contract",
     "confirmCancel": "Confirm cancel",
     "cancelReason": "Reason",

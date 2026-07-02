@@ -93,7 +93,7 @@ class Contract(models.Model):
         null=True,
         blank=True,
         related_name="contracts_signed_as_manager",
-        verbose_name=_("Подписал со стороны RailTech"),
+        verbose_name=_("Подписал со стороны продавца"),
     )
     manager_signed_at = models.DateTimeField(null=True, blank=True)
 
