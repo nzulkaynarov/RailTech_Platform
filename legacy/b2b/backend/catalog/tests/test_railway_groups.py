@@ -25,9 +25,7 @@ def railway_setup(db):
 
     seller_co = Company.objects.create(name="Seller Co", inn="7100000001")
     seller_co.types.add(CompanyType.objects.get(code="SUPPLIER"))
-    seller = CustomUser.objects.create_user(
-        email="rw@s.test", username="rw@s.test", password="pw", is_active=True
-    )
+    seller = CustomUser.objects.create_user(email="rw@s.test", username="rw@s.test", password="pw", is_active=True)
     CompanyMember.objects.create(user=seller, company=seller_co, role=owner_role, is_active=True, can_sell=True)
     return domain, group, seller, seller_co
 
@@ -69,7 +67,9 @@ def test_remove_last_group_returns_400_not_500(railway_setup):
     """H6: clearing the last equipment group → clean 400 (DRF), never an unhandled 500."""
     domain, group, seller, seller_co = railway_setup
     product = Product.objects.create(
-        name="Тележка", domain_type=domain, owner_company=seller_co,
+        name="Тележка",
+        domain_type=domain,
+        owner_company=seller_co,
         status=ProductStatus.objects.get(code="DRAFT"),
     )
     product.equipment_groups.add(group)

@@ -113,8 +113,15 @@ class OperatorRoleSerializer(serializers.ModelSerializer):
     class Meta:
         model = OperatorRole
         fields = [
-            "id", "code", "name", "permissions", "is_system",
-            "description", "operator_count", "created_at", "updated_at",
+            "id",
+            "code",
+            "name",
+            "permissions",
+            "is_system",
+            "description",
+            "operator_count",
+            "created_at",
+            "updated_at",
         ]
         read_only_fields = ["id", "code", "is_system", "created_at", "updated_at"]
 
@@ -572,7 +579,15 @@ class CompanyEntitlementSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "company_name", "company_inn", "access_display", "is_granted", "created_at", "updated_at"]
+        read_only_fields = [
+            "id",
+            "company_name",
+            "company_inn",
+            "access_display",
+            "is_granted",
+            "created_at",
+            "updated_at",
+        ]
 
 
 class CompanyRoleApplicationSerializer(serializers.ModelSerializer):

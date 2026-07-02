@@ -270,8 +270,7 @@ class ProductSerializer(_CostGateMixin, serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {
                     "equipment_groups": (
-                        "Товары домена RAILWAY_MACHINERY должны быть привязаны "
-                        "минимум к одной группе оборудования."
+                        "Товары домена RAILWAY_MACHINERY должны быть привязаны " "минимум к одной группе оборудования."
                     )
                 }
             )

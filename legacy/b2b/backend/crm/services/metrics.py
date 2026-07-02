@@ -9,8 +9,8 @@ import statistics
 from datetime import timedelta
 from typing import Optional
 
-from django.utils import timezone
 from django.db.models import Min
+from django.utils import timezone
 
 from ..models import DealSellerRouting, Quote
 
@@ -36,7 +36,14 @@ def time_to_first_quote_stats(seller_company_ids: Optional[list] = None, since_d
     # Earliest sent КП per (deal, seller_company) — the seller's FIRST quote on that заявка.
     firsts = list(sent.values("deal_id", "seller_company_id").annotate(first_sent=Min("frozen_at")))
     if not firsts:
-        return {"sample_size": 0, "median_hours": 0.0, "avg_hours": 0.0, "p90_hours": 0.0, "fastest_hours": 0.0, "slowest_hours": 0.0}
+        return {
+            "sample_size": 0,
+            "median_hours": 0.0,
+            "avg_hours": 0.0,
+            "p90_hours": 0.0,
+            "fastest_hours": 0.0,
+            "slowest_hours": 0.0,
+        }
 
     # One query for all relevant routings → {(deal_id, seller_company_id): routed_at}.
     pairs = {(f["deal_id"], f["seller_company_id"]) for f in firsts}
@@ -53,7 +60,14 @@ def time_to_first_quote_stats(seller_company_ids: Optional[list] = None, since_d
         if anchor and f["first_sent"] >= anchor:
             hours.append((f["first_sent"] - anchor).total_seconds() / 3600.0)
     if not hours:
-        return {"sample_size": 0, "median_hours": 0.0, "avg_hours": 0.0, "p90_hours": 0.0, "fastest_hours": 0.0, "slowest_hours": 0.0}
+        return {
+            "sample_size": 0,
+            "median_hours": 0.0,
+            "avg_hours": 0.0,
+            "p90_hours": 0.0,
+            "fastest_hours": 0.0,
+            "slowest_hours": 0.0,
+        }
 
     hours.sort()
     return {

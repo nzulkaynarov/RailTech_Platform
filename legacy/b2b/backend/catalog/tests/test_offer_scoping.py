@@ -1,19 +1,12 @@
 """C2 — SupplierOffer tenant isolation (a seller sees/edits only its own offers,
 can't spoof a competitor's supplier) + M6 — owner_company immutable for non-admins."""
 
-import pytest
 from decimal import Decimal
 
+import pytest
 from rest_framework.test import APIClient
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SupplierSubscription,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SupplierSubscription, WorkspaceRole
 from catalog.models import Product, ProductStatus, SupplierOffer
 from master_data.models import Currency
 
@@ -49,9 +42,16 @@ def two_sellers(db):
         email="adm@p.test", username="adm@p.test", password="pw", is_active=True, is_staff=True, is_superuser=True
     )
     return {
-        "co_a": co_a, "seller_a": seller_a, "co_b": co_b, "seller_b": seller_b,
-        "product": product, "offer_a": offer_a, "offer_b": offer_b,
-        "buyer": buyer, "admin": admin, "usd": usd,
+        "co_a": co_a,
+        "seller_a": seller_a,
+        "co_b": co_b,
+        "seller_b": seller_b,
+        "product": product,
+        "offer_a": offer_a,
+        "offer_b": offer_b,
+        "buyer": buyer,
+        "admin": admin,
+        "usd": usd,
     }
 
 
@@ -62,6 +62,7 @@ def _client(user):
 
 
 # ---- C2: read scoping ----
+
 
 @pytest.mark.django_db
 def test_seller_sees_only_own_offers(two_sellers):
@@ -83,10 +84,13 @@ def test_admin_sees_all_offers(two_sellers):
 
 # ---- C2: write scoping / spoofing ----
 
+
 @pytest.mark.django_db
 def test_seller_creates_offer_for_own_supplier(two_sellers):
     """Seller creates an offer for their own company → allowed."""
-    p2 = Product.objects.create(name="Деталь 2", owner_company=two_sellers["co_a"], status=two_sellers["product"].status)
+    p2 = Product.objects.create(
+        name="Деталь 2", owner_company=two_sellers["co_a"], status=two_sellers["product"].status
+    )
     resp = _client(two_sellers["seller_a"]).post(
         "/api/v1/catalog/offers/",
         {"product": p2.id, "supplier": two_sellers["co_a"].id, "base_price": "55", "currency": two_sellers["usd"].id},
@@ -98,7 +102,9 @@ def test_seller_creates_offer_for_own_supplier(two_sellers):
 
 @pytest.mark.django_db
 def test_seller_cannot_spoof_competitor_supplier_on_create(two_sellers):
-    p2 = Product.objects.create(name="Деталь 3", owner_company=two_sellers["co_a"], status=two_sellers["product"].status)
+    p2 = Product.objects.create(
+        name="Деталь 3", owner_company=two_sellers["co_a"], status=two_sellers["product"].status
+    )
     resp = _client(two_sellers["seller_a"]).post(
         "/api/v1/catalog/offers/",
         {"product": p2.id, "supplier": two_sellers["co_b"].id, "base_price": "55", "currency": two_sellers["usd"].id},
@@ -127,6 +133,7 @@ def test_seller_cannot_reassign_own_offer_supplier(two_sellers):
 
 
 # ---- M6: owner_company immutability ----
+
 
 @pytest.mark.django_db
 def test_seller_cannot_patch_owner_company(two_sellers):

@@ -21,9 +21,7 @@ from ..models import Deal, DealSellerRouting
 
 def _actor_seller_company_ids(actor: CustomUser) -> set:
     """Active seller (can_sell) company ids the actor belongs to."""
-    return set(
-        actor.memberships.filter(is_active=True, can_sell=True).values_list("company_id", flat=True)
-    )
+    return set(actor.memberships.filter(is_active=True, can_sell=True).values_list("company_id", flat=True))
 
 
 @transaction.atomic
@@ -107,17 +105,12 @@ def assign_deal(deal_id: int, actor: CustomUser, assignee_id: int) -> Tuple[Opti
     managed = [
         r
         for r in DealSellerRouting.objects.select_for_update().select_related("deal").filter(deal_id=deal_id)
-        if getattr(actor, "is_superuser", False)
-        or member_has_permission(actor, r.seller_company_id, "team.manage")
+        if getattr(actor, "is_superuser", False) or member_has_permission(actor, r.seller_company_id, "team.manage")
     ]
     if not managed:
         return None, "MEMBER_REQUIRED_FOR_ACTION"
     target = next(
-        (
-            r
-            for r in managed
-            if assignee.memberships.filter(is_active=True, company_id=r.seller_company_id).exists()
-        ),
+        (r for r in managed if assignee.memberships.filter(is_active=True, company_id=r.seller_company_id).exists()),
         None,
     )
     if target is None:

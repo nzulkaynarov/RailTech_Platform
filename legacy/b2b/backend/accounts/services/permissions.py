@@ -33,7 +33,14 @@ def is_member_of(user: "CustomUser", company_id: int, *, capability: Optional[st
     return True
 
 
-_SELL_PERMS = {"quote.build", "quote.send", "quote.view_cost_margin", "quote.edit_pricing", "catalog.manage", "catalog.publish"}
+_SELL_PERMS = {
+    "quote.build",
+    "quote.send",
+    "quote.view_cost_margin",
+    "quote.edit_pricing",
+    "catalog.manage",
+    "catalog.publish",
+}
 _BUY_PERMS = {"request.create", "quote.approve", "contract.sign", "payment.record"}
 _ADMIN_PERMS = {"team.manage", "settings.edit", "charge_templates.manage"}
 
@@ -50,9 +57,7 @@ def member_has_permission(user: "CustomUser", company_id: int, perm: str) -> boo
     if getattr(user, "is_superuser", False):
         return True
     membership = (
-        user.memberships.filter(company_id=company_id, is_active=True)
-        .select_related("company_role", "role")
-        .first()
+        user.memberships.filter(company_id=company_id, is_active=True).select_related("company_role", "role").first()
     )
     if membership is None:
         return False
@@ -307,9 +312,7 @@ def seller_visible_deal_ids(user: "CustomUser", request) -> Optional[set]:
     # "offers my product" case is covered for submitted deals; unrouted drafts must stay
     # invisible to every seller.
     return set(
-        Deal.objects.filter(seller_routings__seller_company_id__in=seller_company_ids).values_list(
-            "id", flat=True
-        )
+        Deal.objects.filter(seller_routings__seller_company_id__in=seller_company_ids).values_list("id", flat=True)
     )
 
 
@@ -330,9 +333,7 @@ def seller_can_access_deal(user: "CustomUser", request, deal_id) -> bool:
         ).values_list("company_id", flat=True)
     )
     # Routing rows only — see seller_visible_deal_ids (the product-owner OR-clause leaked).
-    return Deal.objects.filter(
-        pk=deal_id, seller_routings__seller_company_id__in=seller_company_ids
-    ).exists()
+    return Deal.objects.filter(pk=deal_id, seller_routings__seller_company_id__in=seller_company_ids).exists()
 
 
 def seller_company_routed_to_deal(user: "CustomUser", deal_id) -> bool:

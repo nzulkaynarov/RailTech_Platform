@@ -18,14 +18,7 @@ import pytest
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
 from catalog.models import Product
-from crm.models import (
-    Deal,
-    DealSellerRouting,
-    DealStage,
-    Quote,
-    QuoteItem,
-    QuoteStatus,
-)
+from crm.models import Deal, DealSellerRouting, DealStage, Quote, QuoteItem, QuoteStatus
 from master_data.models import Currency
 
 
@@ -72,8 +65,11 @@ def _make_world():
     seller_co = Company.objects.create(name="Diff Seller Co", inn="810810810")
     seller_co.types.add(CompanyType.objects.get(code="SUPPLIER"))
     CompanyMember.objects.create(
-        user=seller, company=seller_co, role=WorkspaceRole.objects.get(code="OWNER"),
-        is_active=True, can_sell=True,
+        user=seller,
+        company=seller_co,
+        role=WorkspaceRole.objects.get(code="OWNER"),
+        is_active=True,
+        can_sell=True,
     )
 
     stranger = CustomUser.objects.create_user(
@@ -81,15 +77,21 @@ def _make_world():
     )
 
     deal = Deal.objects.create(
-        title="Diff Deal", company=buyer_co, client=buyer,
+        title="Diff Deal",
+        company=buyer_co,
+        client=buyer,
         stage=DealStage.objects.get(code="SOURCING"),
     )
     DealSellerRouting.objects.create(deal=deal, seller_company=seller_co)
 
     quote = Quote.objects.create(
-        deal=deal, version=1, status=QuoteStatus.objects.get(code="DRAFT"),
-        vat_rate=Decimal("12"), subtotal_excl_vat=Decimal("0"),
-        vat_amount=Decimal("0"), total_incl_vat=Decimal("0"),
+        deal=deal,
+        version=1,
+        status=QuoteStatus.objects.get(code="DRAFT"),
+        vat_rate=Decimal("12"),
+        subtotal_excl_vat=Decimal("0"),
+        vat_amount=Decimal("0"),
+        total_incl_vat=Decimal("0"),
     )
 
     def _add_item(**fields):
@@ -102,22 +104,35 @@ def _make_world():
 
     # Line 0 — uncovered: requested by name, no product, zero price.
     _add_item(
-        imported_raw_name="Тормозная колодка ГОСТ 1205", quantity=10, unit="шт.",
-        frozen_base_price=Decimal("0"), final_price_excl_vat=Decimal("0"),
+        imported_raw_name="Тормозная колодка ГОСТ 1205",
+        quantity=10,
+        unit="шт.",
+        frozen_base_price=Decimal("0"),
+        final_price_excl_vat=Decimal("0"),
     )
     # Line 1 — substituted: priced with a DIFFERENT-named catalog product.
     substitute = Product.objects.create(name="Колодка тормозная аналог XYZ")
     _add_item(
-        imported_raw_name="Тормозная колодка ГОСТ 1205", product=substitute,
-        quantity=5, unit="шт.", frozen_base_price=Decimal("100"), frozen_currency=usd,
-        margin_percent=Decimal("10"), final_price_excl_vat=Decimal("110"),
+        imported_raw_name="Тормозная колодка ГОСТ 1205",
+        product=substitute,
+        quantity=5,
+        unit="шт.",
+        frozen_base_price=Decimal("100"),
+        frozen_currency=usd,
+        margin_percent=Decimal("10"),
+        final_price_excl_vat=Decimal("110"),
         note="Только оригинал, замена не допускается",
     )
     # Line 2 — covered cleanly.
     matched = Product.objects.create(name="Болт М12")
     _add_item(
-        imported_raw_name="Болт М12", product=matched, quantity=100, unit="шт.",
-        frozen_base_price=Decimal("1"), frozen_currency=usd, margin_percent=Decimal("5"),
+        imported_raw_name="Болт М12",
+        product=matched,
+        quantity=100,
+        unit="шт.",
+        frozen_base_price=Decimal("1"),
+        frozen_currency=usd,
+        margin_percent=Decimal("5"),
         final_price_excl_vat=Decimal("1.05"),
     )
     return buyer, seller, stranger, quote

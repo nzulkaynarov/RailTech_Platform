@@ -20,9 +20,7 @@ KYC_VERIFIED_CODES = frozenset({VerificationStatusCode.L2_VERIFIED, Verification
 
 def company_kyc_verified(company_id: int) -> bool:
     """True if the company has completed KYC (rank ≥ L2) — the floor for submitting a заявка."""
-    company = (
-        Company.objects.filter(pk=company_id).select_related("verification_status").first()
-    )
+    company = Company.objects.filter(pk=company_id).select_related("verification_status").first()
     if company is None or not company.verification_status_id:
         return False
     return company.verification_status.code in KYC_VERIFIED_CODES

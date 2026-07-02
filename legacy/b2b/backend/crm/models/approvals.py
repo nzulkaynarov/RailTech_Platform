@@ -53,7 +53,10 @@ class QuoteApprovalStep(models.Model):
         help_text=_("Одинаковый порядок = параллельно; меньший = раньше. Руководитель — последним."),
     )
     participation = models.CharField(
-        max_length=12, choices=StepParticipation.choices, default=StepParticipation.APPROVER, verbose_name=_("Роль в цепочке")
+        max_length=12,
+        choices=StepParticipation.choices,
+        default=StepParticipation.APPROVER,
+        verbose_name=_("Роль в цепочке"),
     )
     # WHO should act: a specific member, and/or any holder of a role (queue model — lets a
     # small team have a stand-in). The act path re-checks the permission regardless.

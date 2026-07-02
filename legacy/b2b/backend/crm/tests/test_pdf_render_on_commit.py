@@ -33,9 +33,11 @@ class LazyStreamFallbackTest(SimpleTestCase):
     def test_renders_on_demand_when_pdf_missing(self):
         # Unsaved instance → pdf_file is empty (falsy). The fallback must render it.
         obj = Contract(id=1)
-        with mock.patch("crm.tasks._render_pdf_for") as render, mock.patch.object(
-            Contract, "refresh_from_db"
-        ), mock.patch("crm.views.billing.stream_file_field", return_value="STREAM") as stream:
+        with (
+            mock.patch("crm.tasks._render_pdf_for") as render,
+            mock.patch.object(Contract, "refresh_from_db"),
+            mock.patch("crm.views.billing.stream_file_field", return_value="STREAM") as stream,
+        ):
             result = billing._stream_or_render_pdf(obj)
         render.assert_called_once_with("contract", 1)  # doc_type derived from model class
         stream.assert_called_once()
@@ -44,8 +46,9 @@ class LazyStreamFallbackTest(SimpleTestCase):
     def test_streams_directly_when_pdf_present(self):
         obj = Invoice(id=2)
         obj.pdf_file = "invoices/already.pdf"  # truthy
-        with mock.patch("crm.tasks._render_pdf_for") as render, mock.patch(
-            "crm.views.billing.stream_file_field", return_value="STREAM"
+        with (
+            mock.patch("crm.tasks._render_pdf_for") as render,
+            mock.patch("crm.views.billing.stream_file_field", return_value="STREAM"),
         ):
             billing._stream_or_render_pdf(obj)
         render.assert_not_called()  # no re-render when the file is ready

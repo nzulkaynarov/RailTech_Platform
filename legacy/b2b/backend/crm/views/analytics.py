@@ -46,11 +46,7 @@ class DashboardAnalyticsView(APIView):
     def get(self, request):
         from django.core.cache import cache
 
-        from accounts.services.permissions import (
-            acting_context,
-            seller_acting_company_ids,
-            seller_visible_deal_ids,
-        )
+        from accounts.services.permissions import acting_context, seller_acting_company_ids, seller_visible_deal_ids
 
         # B2B data isolation. Three mutually-exclusive scopes:
         #   * platform admin            → see-all (company_ids=None, deal_scope=None)
@@ -206,9 +202,7 @@ class DashboardAnalyticsView(APIView):
             # Baseline = distinct buyer companies that ALREADY had a routed deal before the period
             # (audit M4). The earlier "minus in-period-created" math wrongly dropped repeat clients
             # (deals in both periods) from prev, garbling the trend arrow.
-            prev_clients = (
-                routed.filter(created_at__lt=period_start).values("company_id").distinct().count()
-            )
+            prev_clients = routed.filter(created_at__lt=period_start).values("company_id").distinct().count()
         else:
             current_clients = prev_clients = 0
         return {

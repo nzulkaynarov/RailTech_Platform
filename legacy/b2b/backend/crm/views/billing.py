@@ -7,7 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.services.permissions import is_seller, seller_visible_deal_ids
+from accounts.services.permissions import seller_visible_deal_ids
 from core.file_streaming import stream_file_field
 from core.optimistic_locking import OptimisticLockingMixin
 from core.permissions import IsCompanyMemberOrPlatformAdmin, OperatorScoped

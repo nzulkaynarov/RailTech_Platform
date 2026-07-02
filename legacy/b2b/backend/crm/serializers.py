@@ -36,9 +36,22 @@ class QuoteApprovalStepSerializer(serializers.ModelSerializer):
     class Meta:
         model = QuoteApprovalStep
         fields = [
-            "id", "order", "participation", "status", "approver", "approver_name", "approver_role",
-            "acted_by", "acted_by_name", "is_mandatory", "is_auto", "trigger_reason", "comment",
-            "decided_at", "created_at", "can_act",
+            "id",
+            "order",
+            "participation",
+            "status",
+            "approver",
+            "approver_name",
+            "approver_role",
+            "acted_by",
+            "acted_by_name",
+            "is_mandatory",
+            "is_auto",
+            "trigger_reason",
+            "comment",
+            "decided_at",
+            "created_at",
+            "can_act",
         ]
 
     @staticmethod
@@ -253,7 +266,14 @@ class QuoteChargeSerializer(serializers.ModelSerializer):
         ]
         # sort_order is set server-side (append on create / dedicated reorder endpoint); the
         # resolved_* snapshots are computed by recalc — all read-only on the charge serializer.
-        read_only_fields = ["created_by", "created_at", "sort_order", "resolved_base", "resolved_amount", "from_template"]
+        read_only_fields = [
+            "created_by",
+            "created_at",
+            "sort_order",
+            "resolved_base",
+            "resolved_amount",
+            "from_template",
+        ]
 
     # Seller-cost / per-charge breakdown — same redaction invariant as QuoteItem/QuoteSerializer.
     # The standalone quote-charges endpoint must NOT serve these to a teammate who lacks

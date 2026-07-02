@@ -3,7 +3,7 @@ from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Optional, Tuple
 
 from django.db import models, transaction
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, Sum
 
 from accounts.constants import SystemRoleCode, VerificationStatusCode, WorkspaceRoleCode
 from accounts.models import Company, CompanyMember, CustomUser
@@ -205,7 +205,6 @@ def approval_queue_for(user):
     """
     from accounts.constants import Permission
     from accounts.services.permissions import member_has_permission
-
     from crm.models import QuoteApprovalStep
     from crm.models.approvals import StepParticipation, StepStatus
 
@@ -313,9 +312,9 @@ class QuoteCalculationService:
             item.customs_duty = Decimal("0")
         # Convert (base + customs), both in the line currency, into UZS via the resolved rate.
         fx_rate = Decimal("1") if rate is None else Decimal(str(rate))
-        item.landed_cost = (
-            (item.frozen_base_price + item.customs_duty) * fx_rate
-        ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        item.landed_cost = ((item.frozen_base_price + item.customs_duty) * fx_rate).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
 
         # себестоимость → +наценка (маржа на ВЕСЬ КП) → −скидка позиции. Маржа приходит из
         # quote.margin_percent; прямые вызовы без неё падают на позиционное значение (задел).
@@ -347,9 +346,7 @@ class QuoteCalculationService:
         snapshot = quote.fx_snapshot if isinstance(quote.fx_snapshot, dict) else {}
         manual = quote.fx_manual if isinstance(quote.fx_manual, dict) else {}
         rate_map: dict = {}
-        codes = {
-            (item.frozen_currency.code if item.frozen_currency_id else "UZS").upper() for item in items
-        }
+        codes = {(item.frozen_currency.code if item.frozen_currency_id else "UZS").upper() for item in items}
         for code in codes:
             if code in ("UZS", ""):
                 rate_map[code] = Decimal("1")
@@ -925,7 +922,7 @@ class QuoteLifecycleService:
         # Unified approval workflow: build the permission-driven step list (mandatory head +
         # optional reviewer(s) + risk-aware reason), then route. Source of truth = the steps,
         # not a granular status — the КП goes to a single «На согласовании» (PENDING_APPROVAL).
-        from .approvals import HEAD_ORDER, build_approval_chain, _active_order, _notify_order
+        from .approvals import _active_order, _notify_order, build_approval_chain
 
         build_approval_chain(quote, company_id, economics=_econ)
         _set_quote_status(quote, QuoteStatusCode.PENDING_APPROVAL)

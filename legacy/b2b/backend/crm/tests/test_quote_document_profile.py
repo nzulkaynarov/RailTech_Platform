@@ -11,14 +11,7 @@ from decimal import Decimal
 import pytest
 from django.template.loader import render_to_string
 
-from accounts.models import (
-    Company,
-    CompanyDocumentProfile,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyDocumentProfile, CompanyMember, CompanyType, CustomUser, WorkspaceRole
 from crm.models import Deal, DealStage, Quote, QuoteItem, QuoteStatus
 from crm.services.quotes import _seller_document_profile
 
@@ -70,7 +63,7 @@ def _render(quote, buyer, seller, profile):
 @pytest.mark.django_db
 def test_seller_profile_drives_document(scenario):
     buyer, seller, quote = scenario
-    profile = CompanyDocumentProfile.objects.create(
+    CompanyDocumentProfile.objects.create(
         company=seller,
         legal_name="ООО «РемПуть Логистика»",
         inn="3001112223",

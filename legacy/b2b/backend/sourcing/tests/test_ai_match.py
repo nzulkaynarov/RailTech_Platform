@@ -9,7 +9,7 @@ from types import SimpleNamespace
 import pytest
 from rest_framework.test import APIClient
 
-from accounts.models import CompanyType, Company, CompanyMember, CustomUser, WorkspaceRole
+from accounts.models import CustomUser
 from catalog.models import Product
 
 
@@ -73,18 +73,20 @@ def test_extract_returns_canonical_russian_name(settings, monkeypatch):
     settings.AI_IMPORT_ENABLED = True
     settings.AI_IMPORT_MODEL = "stub-model"
     settings.AI_IMPORT_CHUNK_ROWS = 100
-    fake = _stub_extract_response([
-        {
-            "name": "Tormoznaya koloda",
-            "name_canonical": "Тормозная колодка",
-            "quantity": 2,
-            "unit": "шт.",
-            "unit_code": "",
-            "mpn": "",
-            "gost_drawing": "",
-            "note": "",
-        }
-    ])
+    fake = _stub_extract_response(
+        [
+            {
+                "name": "Tormoznaya koloda",
+                "name_canonical": "Тормозная колодка",
+                "quantity": 2,
+                "unit": "шт.",
+                "unit_code": "",
+                "mpn": "",
+                "gost_drawing": "",
+                "note": "",
+            }
+        ]
+    )
     monkeypatch.setattr(
         "sourcing.services_ai._client",
         lambda: SimpleNamespace(messages=SimpleNamespace(create=lambda **kw: fake)),
@@ -105,7 +107,17 @@ def test_normalize_falls_back_to_name_when_canonical_missing():
     from sourcing.services_ai import _normalize_items
 
     cleaned = _normalize_items(
-        [{"name": "Баббит Б-83", "quantity": 1, "unit": "", "unit_code": "", "mpn": "", "gost_drawing": "", "note": ""}],
+        [
+            {
+                "name": "Баббит Б-83",
+                "quantity": 1,
+                "unit": "",
+                "unit_code": "",
+                "mpn": "",
+                "gost_drawing": "",
+                "note": "",
+            }
+        ],
         valid_codes=set(),
     )
     assert cleaned[0]["name_canonical"] == "Баббит Б-83"
@@ -117,10 +129,17 @@ def test_match_rejects_ids_outside_shortlist(products, settings, monkeypatch):
     settings.AI_IMPORT_ENABLED = True
     p1, _ = products
     # Model returns the real candidate AND a hallucinated id 99999 → only the real one survives.
-    fake = _stub_response([{"line_index": 0, "candidates": [
-        {"product_id": p1.id, "confidence": 0.9, "reason": "match"},
-        {"product_id": 99999, "confidence": 0.99, "reason": "hallucinated"},
-    ]}])
+    fake = _stub_response(
+        [
+            {
+                "line_index": 0,
+                "candidates": [
+                    {"product_id": p1.id, "confidence": 0.9, "reason": "match"},
+                    {"product_id": 99999, "confidence": 0.99, "reason": "hallucinated"},
+                ],
+            }
+        ]
+    )
     monkeypatch.setattr(
         "sourcing.services_ai._client",
         lambda: SimpleNamespace(messages=SimpleNamespace(create=lambda **kw: fake)),
@@ -148,7 +167,8 @@ def test_match_disabled_returns_empty(products, settings):
 def test_endpoint_guards(products, settings):
     settings.AI_IMPORT_ENABLED = True
     user = CustomUser.objects.create_user(email="m@x.test", username="m@x.test", password="pw", is_active=True)
-    client = APIClient(); client.force_authenticate(user)
+    client = APIClient()
+    client.force_authenticate(user)
     # missing lines → 400
     assert client.post("/api/v1/sourcing/match-catalog/", {}, format="json").status_code == 400
     # disabled → 503

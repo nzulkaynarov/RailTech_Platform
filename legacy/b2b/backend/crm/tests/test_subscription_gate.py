@@ -11,14 +11,7 @@ from datetime import timedelta
 import pytest
 from django.utils import timezone
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SupplierSubscription,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SupplierSubscription, WorkspaceRole
 from accounts.services import assert_seller_can_operate
 from crm import services as crm_services
 from crm.models import Quote

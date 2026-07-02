@@ -35,8 +35,12 @@ def _seller(name, inn, email):
     company.types.add(CompanyType.objects.get(code="SUPPLIER"))
     user = CustomUser.objects.create_user(email=email, username=email, password="x")
     CompanyMember.objects.create(
-        user=user, company=company, role=WorkspaceRole.objects.get(code="OWNER"),
-        is_active=True, is_primary=True, can_sell=True,
+        user=user,
+        company=company,
+        role=WorkspaceRole.objects.get(code="OWNER"),
+        is_active=True,
+        is_primary=True,
+        can_sell=True,
     )
     return user, company
 
@@ -44,8 +48,12 @@ def _seller(name, inn, email):
 def _buyer(name, inn, email, buyer_co):
     user = CustomUser.objects.create_user(email=email, username=email, password="x")
     CompanyMember.objects.create(
-        user=user, company=buyer_co, role=WorkspaceRole.objects.get(code="OWNER"),
-        is_active=True, is_primary=True, can_buy=True,
+        user=user,
+        company=buyer_co,
+        role=WorkspaceRole.objects.get(code="OWNER"),
+        is_active=True,
+        is_primary=True,
+        can_buy=True,
     )
     return user
 
@@ -95,9 +103,13 @@ def test_seller_a_cannot_see_seller_b_quote(world):
     deal_b = Deal.objects.create(title="B's RFQ", company=world["buyer_co"], stage=draft_stage)
     DealSellerRouting.objects.create(deal=deal_b, seller_company=world["sb_co"])
     quote_b = Quote.objects.create(
-        deal=deal_b, version=1, status=QuoteStatus.objects.get(code="DRAFT"),
-        vat_rate=Decimal("12"), subtotal_excl_vat=Decimal("0"),
-        vat_amount=Decimal("0"), total_incl_vat=Decimal("0"),
+        deal=deal_b,
+        version=1,
+        status=QuoteStatus.objects.get(code="DRAFT"),
+        vat_rate=Decimal("12"),
+        subtotal_excl_vat=Decimal("0"),
+        vat_amount=Decimal("0"),
+        total_incl_vat=Decimal("0"),
     )
     # Seller A's quote list must not leak B's quote; retrieve denied too.
     assert quote_b.id not in _ids(_api(world["sa_user"]).get("/api/v1/crm/quotes/"))
@@ -110,17 +122,25 @@ def test_routing_inferred_from_catalog(world):
     draft_stage = DealStage.objects.get(code="DRAFT")
     deal = Deal.objects.create(title="cart RFQ", company=world["buyer_co"], stage=draft_stage)
     quote = Quote.objects.create(
-        deal=deal, version=1, status=QuoteStatus.objects.get(code="DRAFT"),
-        vat_rate=Decimal("12"), subtotal_excl_vat=Decimal("0"),
-        vat_amount=Decimal("0"), total_incl_vat=Decimal("0"),
+        deal=deal,
+        version=1,
+        status=QuoteStatus.objects.get(code="DRAFT"),
+        vat_rate=Decimal("12"),
+        subtotal_excl_vat=Decimal("0"),
+        vat_amount=Decimal("0"),
+        total_incl_vat=Decimal("0"),
     )
     product = Product.objects.create(
         name="A's part", owner_company=world["sa_co"], status=ProductStatus.objects.get(code="PUBLISHED")
     )
     QuoteItem.objects.create(
-        quote=quote, product=product, quantity=1,
-        frozen_base_price=Decimal("100"), frozen_currency=Currency.objects.get(code="USD"),
-        margin_percent=Decimal("10"), final_price_excl_vat=Decimal("0"),
+        quote=quote,
+        product=product,
+        quantity=1,
+        frozen_base_price=Decimal("100"),
+        frozen_currency=Currency.objects.get(code="USD"),
+        margin_percent=Decimal("10"),
+        final_price_excl_vat=Decimal("0"),
     )
 
     seller_ids = route_deal_from_catalog(deal)
@@ -209,8 +229,13 @@ def test_seller_cannot_see_deal_offering_their_product_routed_elsewhere(world):
     deal_b = Deal.objects.create(title="B deal", company=world["buyer_co"], stage=draft)
     DealSellerRouting.objects.create(deal=deal_b, seller_company=world["sb_co"])
     quote = Quote.objects.create(
-        deal=deal_b, version=1, status=QuoteStatus.objects.get(code="DRAFT"),
-        vat_rate=Decimal("12"), subtotal_excl_vat=Decimal("0"), vat_amount=Decimal("0"), total_incl_vat=Decimal("0"),
+        deal=deal_b,
+        version=1,
+        status=QuoteStatus.objects.get(code="DRAFT"),
+        vat_rate=Decimal("12"),
+        subtotal_excl_vat=Decimal("0"),
+        vat_amount=Decimal("0"),
+        total_incl_vat=Decimal("0"),
     )
     a_product = Product.objects.create(
         name="A part", owner_company=world["sa_co"], status=ProductStatus.objects.get(code="PUBLISHED")
@@ -228,8 +253,13 @@ def test_seller_cannot_write_item_to_unrouted_quote(world):
     deal_b = Deal.objects.create(title="B deal", company=world["buyer_co"], stage=draft)
     DealSellerRouting.objects.create(deal=deal_b, seller_company=world["sb_co"])
     quote = Quote.objects.create(
-        deal=deal_b, version=1, status=QuoteStatus.objects.get(code="DRAFT"),
-        vat_rate=Decimal("12"), subtotal_excl_vat=Decimal("0"), vat_amount=Decimal("0"), total_incl_vat=Decimal("0"),
+        deal=deal_b,
+        version=1,
+        status=QuoteStatus.objects.get(code="DRAFT"),
+        vat_rate=Decimal("12"),
+        subtotal_excl_vat=Decimal("0"),
+        vat_amount=Decimal("0"),
+        total_incl_vat=Decimal("0"),
     )
     a_product = Product.objects.create(
         name="A part", owner_company=world["sa_co"], status=ProductStatus.objects.get(code="PUBLISHED")
@@ -249,12 +279,22 @@ def test_seller_a_cannot_see_seller_b_quote_costs_on_corouted_deal(world):
     DealSellerRouting.objects.create(deal=deal, seller_company=world["sa_co"])
     DealSellerRouting.objects.create(deal=deal, seller_company=world["sb_co"])
     b_quote = Quote.objects.create(
-        deal=deal, version=1, status=QuoteStatus.objects.get(code="DRAFT"), prepared_by=world["sb_user"],
-        vat_rate=Decimal("12"), subtotal_excl_vat=Decimal("0"), vat_amount=Decimal("0"), total_incl_vat=Decimal("0"),
+        deal=deal,
+        version=1,
+        status=QuoteStatus.objects.get(code="DRAFT"),
+        prepared_by=world["sb_user"],
+        vat_rate=Decimal("12"),
+        subtotal_excl_vat=Decimal("0"),
+        vat_amount=Decimal("0"),
+        total_incl_vat=Decimal("0"),
     )
     QuoteItem.objects.create(
-        quote=b_quote, imported_raw_name="part", quantity=1,
-        frozen_base_price=Decimal("100"), margin_percent=Decimal("30"), final_price_excl_vat=Decimal("130"),
+        quote=b_quote,
+        imported_raw_name="part",
+        quantity=1,
+        frozen_base_price=Decimal("100"),
+        margin_percent=Decimal("30"),
+        final_price_excl_vat=Decimal("130"),
     )
     resp = _api(world["sa_user"]).get(f"/api/v1/crm/quote-items/?quote__deal_id={deal.id}")
     assert resp.status_code == 200
@@ -276,16 +316,22 @@ def test_routed_seller_can_price_buyer_prepared_quote(world):
     DealSellerRouting.objects.create(deal=deal, seller_company=world["sb_co"])  # routed to Seller B
     buyer_user = _buyer("Buyer U", "C100", "buyeru@t.test", world["buyer_co"])
     quote = Quote.objects.create(
-        deal=deal, version=1, status=QuoteStatus.objects.get(code="DRAFT"),
-        prepared_by=buyer_user, vat_rate=Decimal("12"),
-        subtotal_excl_vat=Decimal("0"), vat_amount=Decimal("0"), total_incl_vat=Decimal("0"),
+        deal=deal,
+        version=1,
+        status=QuoteStatus.objects.get(code="DRAFT"),
+        prepared_by=buyer_user,
+        vat_rate=Decimal("12"),
+        subtotal_excl_vat=Decimal("0"),
+        vat_amount=Decimal("0"),
+        total_incl_vat=Decimal("0"),
     )
     item = QuoteItem.objects.create(quote=quote, imported_raw_name="Рельс Р65", quantity=10)
 
     # Routed seller B prices the buyer-prepared line → 200, subtotal recalculated (was 404 → 0).
     resp = _api(world["sb_user"]).patch(
         f"/api/v1/crm/quote-items/{item.id}/",
-        {"frozen_base_price": "500", "margin_percent": "20", "quantity": "10"}, format="json",
+        {"frozen_base_price": "500", "margin_percent": "20", "quantity": "10"},
+        format="json",
     )
     assert resp.status_code == 200, resp.content
     quote.refresh_from_db()
@@ -293,7 +339,9 @@ def test_routed_seller_can_price_buyer_prepared_quote(world):
 
     # Competing seller A (not routed) still cannot touch it — H1 preserved.
     blocked = _api(world["sa_user"]).patch(
-        f"/api/v1/crm/quote-items/{item.id}/", {"frozen_base_price": "1"}, format="json",
+        f"/api/v1/crm/quote-items/{item.id}/",
+        {"frozen_base_price": "1"},
+        format="json",
     )
     assert blocked.status_code in (403, 404)
 
@@ -312,29 +360,47 @@ def test_dual_membership_preparer_own_kp_stays_visible(world):
     DealSellerRouting.objects.create(deal=deal, seller_company=world["sb_co"])
 
     # `dual_preparer` belongs to BOTH seller A (their own company) and competing seller B.
-    dual_preparer = CustomUser.objects.create_user(
-        email="dualprep@t.test", username="dualprep@t.test", password="x"
+    dual_preparer = CustomUser.objects.create_user(email="dualprep@t.test", username="dualprep@t.test", password="x")
+    CompanyMember.objects.create(
+        user=dual_preparer,
+        company=world["sa_co"],
+        role=WorkspaceRole.objects.get(code="OWNER"),
+        is_active=True,
+        is_primary=True,
+        can_sell=True,
     )
     CompanyMember.objects.create(
-        user=dual_preparer, company=world["sa_co"], role=WorkspaceRole.objects.get(code="OWNER"),
-        is_active=True, is_primary=True, can_sell=True,
-    )
-    CompanyMember.objects.create(
-        user=dual_preparer, company=world["sb_co"], role=WorkspaceRole.objects.get(code="OWNER"),
-        is_active=True, is_primary=False, can_sell=True,
+        user=dual_preparer,
+        company=world["sb_co"],
+        role=WorkspaceRole.objects.get(code="OWNER"),
+        is_active=True,
+        is_primary=False,
+        can_sell=True,
     )
 
     # A's own КП, prepared by the dual member acting for A.
     a_quote = Quote.objects.create(
-        deal=deal, version=1, status=QuoteStatus.objects.get(code="DRAFT"), prepared_by=dual_preparer,
-        vat_rate=Decimal("12"), subtotal_excl_vat=Decimal("0"), vat_amount=Decimal("0"), total_incl_vat=Decimal("0"),
+        deal=deal,
+        version=1,
+        status=QuoteStatus.objects.get(code="DRAFT"),
+        prepared_by=dual_preparer,
+        vat_rate=Decimal("12"),
+        subtotal_excl_vat=Decimal("0"),
+        vat_amount=Decimal("0"),
+        total_incl_vat=Decimal("0"),
     )
     a_item = QuoteItem.objects.create(quote=a_quote, imported_raw_name="A part", quantity=1)
 
     # A purely-competing B preparer's КП — must stay hidden from the pure-A viewer.
     b_quote = Quote.objects.create(
-        deal=deal, version=2, status=QuoteStatus.objects.get(code="DRAFT"), prepared_by=world["sb_user"],
-        vat_rate=Decimal("12"), subtotal_excl_vat=Decimal("0"), vat_amount=Decimal("0"), total_incl_vat=Decimal("0"),
+        deal=deal,
+        version=2,
+        status=QuoteStatus.objects.get(code="DRAFT"),
+        prepared_by=world["sb_user"],
+        vat_rate=Decimal("12"),
+        subtotal_excl_vat=Decimal("0"),
+        vat_amount=Decimal("0"),
+        total_incl_vat=Decimal("0"),
     )
     b_item = QuoteItem.objects.create(quote=b_quote, imported_raw_name="B part", quantity=1)
 
@@ -358,12 +424,24 @@ def test_quote_items_filter_scopes_to_requested_deal(world):
     DealSellerRouting.objects.create(deal=deal_b, seller_company=world["sb_co"])
 
     quote_a = Quote.objects.create(
-        deal=deal_a, version=1, status=QuoteStatus.objects.get(code="DRAFT"), prepared_by=world["sb_user"],
-        vat_rate=Decimal("12"), subtotal_excl_vat=Decimal("0"), vat_amount=Decimal("0"), total_incl_vat=Decimal("0"),
+        deal=deal_a,
+        version=1,
+        status=QuoteStatus.objects.get(code="DRAFT"),
+        prepared_by=world["sb_user"],
+        vat_rate=Decimal("12"),
+        subtotal_excl_vat=Decimal("0"),
+        vat_amount=Decimal("0"),
+        total_incl_vat=Decimal("0"),
     )
     quote_b = Quote.objects.create(
-        deal=deal_b, version=1, status=QuoteStatus.objects.get(code="DRAFT"), prepared_by=world["sb_user"],
-        vat_rate=Decimal("12"), subtotal_excl_vat=Decimal("0"), vat_amount=Decimal("0"), total_incl_vat=Decimal("0"),
+        deal=deal_b,
+        version=1,
+        status=QuoteStatus.objects.get(code="DRAFT"),
+        prepared_by=world["sb_user"],
+        vat_rate=Decimal("12"),
+        subtotal_excl_vat=Decimal("0"),
+        vat_amount=Decimal("0"),
+        total_incl_vat=Decimal("0"),
     )
     item_a = QuoteItem.objects.create(quote=quote_a, imported_raw_name="A line", quantity=1)
     item_b = QuoteItem.objects.create(quote=quote_b, imported_raw_name="B line", quantity=1)

@@ -58,10 +58,19 @@ class Permission(models.TextChoices):
 # Grouping for the settings UI (the checkbox sections).
 PERMISSION_GROUPS = {
     "sales": [
-        Permission.QUOTE_BUILD, Permission.QUOTE_SEND, Permission.QUOTE_VIEW_COST_MARGIN,
-        Permission.QUOTE_EDIT_PRICING, Permission.QUOTE_REVIEW, Permission.QUOTE_APPROVE_FINAL,
+        Permission.QUOTE_BUILD,
+        Permission.QUOTE_SEND,
+        Permission.QUOTE_VIEW_COST_MARGIN,
+        Permission.QUOTE_EDIT_PRICING,
+        Permission.QUOTE_REVIEW,
+        Permission.QUOTE_APPROVE_FINAL,
     ],
-    "procurement": [Permission.REQUEST_CREATE, Permission.QUOTE_APPROVE, Permission.CONTRACT_SIGN, Permission.PAYMENT_RECORD],
+    "procurement": [
+        Permission.REQUEST_CREATE,
+        Permission.QUOTE_APPROVE,
+        Permission.CONTRACT_SIGN,
+        Permission.PAYMENT_RECORD,
+    ],
     "catalog": [Permission.CATALOG_MANAGE, Permission.CATALOG_PUBLISH],
     "company": [Permission.TEAM_MANAGE, Permission.SETTINGS_EDIT, Permission.CHARGE_TEMPLATES_MANAGE],
     "data": [Permission.DATA_EXPORT],
@@ -75,16 +84,22 @@ COMPANY_ADMIN_ROLE_NAME = "Администратор компании"
 ROLE_TEMPLATES = {
     COMPANY_ADMIN_ROLE_NAME: ALL_PERMISSIONS,
     "Менеджер по продажам": [
-        Permission.QUOTE_BUILD.value, Permission.QUOTE_SEND.value,
-        Permission.QUOTE_VIEW_COST_MARGIN.value, Permission.QUOTE_EDIT_PRICING.value,
+        Permission.QUOTE_BUILD.value,
+        Permission.QUOTE_SEND.value,
+        Permission.QUOTE_VIEW_COST_MARGIN.value,
+        Permission.QUOTE_EDIT_PRICING.value,
         Permission.CATALOG_MANAGE.value,
     ],
     "Менеджер закупок": [
-        Permission.REQUEST_CREATE.value, Permission.QUOTE_APPROVE.value,
-        Permission.CONTRACT_SIGN.value, Permission.PAYMENT_RECORD.value,
+        Permission.REQUEST_CREATE.value,
+        Permission.QUOTE_APPROVE.value,
+        Permission.CONTRACT_SIGN.value,
+        Permission.PAYMENT_RECORD.value,
     ],
     "Финансы": [
-        Permission.PAYMENT_RECORD.value, Permission.QUOTE_VIEW_COST_MARGIN.value, Permission.DATA_EXPORT.value,
+        Permission.PAYMENT_RECORD.value,
+        Permission.QUOTE_VIEW_COST_MARGIN.value,
+        Permission.DATA_EXPORT.value,
     ],
     "Наблюдатель": [],
 }
@@ -166,8 +181,10 @@ OPERATOR_ROLE_TEMPLATES = {
     OperatorRoleCode.SUPPORT.value: {
         "name": "Поддержка",
         "permissions": [
-            OperatorPermission.USERS_VIEW.value, OperatorPermission.COMPANIES_VIEW.value,
-            OperatorPermission.KYC_VIEW.value, OperatorPermission.BILLING_VIEW.value,
+            OperatorPermission.USERS_VIEW.value,
+            OperatorPermission.COMPANIES_VIEW.value,
+            OperatorPermission.KYC_VIEW.value,
+            OperatorPermission.BILLING_VIEW.value,
         ],
         "is_system": False,
         "description": "Только просмотр пользователей, компаний, KYC и биллинга для триажа обращений.",
@@ -175,8 +192,10 @@ OPERATOR_ROLE_TEMPLATES = {
     OperatorRoleCode.KYC_OFFICER.value: {
         "name": "Офицер KYC",
         "permissions": [
-            OperatorPermission.USERS_VIEW.value, OperatorPermission.COMPANIES_VIEW.value,
-            OperatorPermission.KYC_VIEW.value, OperatorPermission.KYC_VERIFY.value,
+            OperatorPermission.USERS_VIEW.value,
+            OperatorPermission.COMPANIES_VIEW.value,
+            OperatorPermission.KYC_VIEW.value,
+            OperatorPermission.KYC_VERIFY.value,
         ],
         "is_system": False,
         "description": "Проверка и верификация KYC (L1→L3), загрузка документов.",
@@ -184,8 +203,10 @@ OPERATOR_ROLE_TEMPLATES = {
     OperatorRoleCode.BILLING_OPERATOR.value: {
         "name": "Оператор биллинга",
         "permissions": [
-            OperatorPermission.USERS_VIEW.value, OperatorPermission.COMPANIES_VIEW.value,
-            OperatorPermission.BILLING_VIEW.value, OperatorPermission.BILLING_MANAGE.value,
+            OperatorPermission.USERS_VIEW.value,
+            OperatorPermission.COMPANIES_VIEW.value,
+            OperatorPermission.BILLING_VIEW.value,
+            OperatorPermission.BILLING_MANAGE.value,
         ],
         "is_system": False,
         "description": "Управление подписками поставщиков и проведение платежей.",
@@ -193,7 +214,8 @@ OPERATOR_ROLE_TEMPLATES = {
     OperatorRoleCode.MODERATOR.value: {
         "name": "Модератор",
         "permissions": [
-            OperatorPermission.USERS_VIEW.value, OperatorPermission.COMPANIES_VIEW.value,
+            OperatorPermission.USERS_VIEW.value,
+            OperatorPermission.COMPANIES_VIEW.value,
             OperatorPermission.KYC_VIEW.value,
             OperatorPermission.MODERATION_ROLE_APPLICATIONS.value,
             OperatorPermission.MODERATION_FORCE_OVERRIDE.value,

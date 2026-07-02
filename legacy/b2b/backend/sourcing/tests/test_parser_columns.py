@@ -30,16 +30,12 @@ class DetectColumnsTest(SimpleTestCase):
 
     def test_article_synonyms(self):
         for header in ("Каталожный №", "MPN", "Part No", "Код производителя"):
-            _, cols = self._detect(
-                [["Наименование", header, "Кол-во"], ["Болт", "X-1", "5"]]
-            )
+            _, cols = self._detect([["Наименование", header, "Кол-во"], ["Болт", "X-1", "5"]])
             self.assertIsNotNone(cols, f"header row not found for {header!r}")
             self.assertEqual(cols["article"], 1, f"article not detected for {header!r}")
 
     def test_article_absent_is_none(self):
-        _, cols = self._detect(
-            [["Наименование", "Кол-во", "Ед.изм"], ["Болт", "10", "шт"]]
-        )
+        _, cols = self._detect([["Наименование", "Кол-во", "Ед.изм"], ["Болт", "10", "шт"]])
         self.assertIsNone(cols["article"])
         # The other columns still resolve as before.
         self.assertEqual(cols["name"], 0)

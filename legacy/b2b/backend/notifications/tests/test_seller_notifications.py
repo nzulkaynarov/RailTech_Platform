@@ -31,8 +31,13 @@ def lookups(db):
 def _member(company, email, *, can_sell=False, can_buy=False):
     user = CustomUser.objects.create_user(email=email, username=email, password="x")
     CompanyMember.objects.create(
-        user=user, company=company, role=WorkspaceRole.objects.get(code="OWNER"),
-        is_active=True, is_primary=True, can_sell=can_sell, can_buy=can_buy,
+        user=user,
+        company=company,
+        role=WorkspaceRole.objects.get(code="OWNER"),
+        is_active=True,
+        is_primary=True,
+        can_sell=can_sell,
+        can_buy=can_buy,
     )
     return user
 
@@ -47,9 +52,7 @@ def parties(lookups):
     buyer_co.types.add(CompanyType.objects.get(code="CLIENT"))
     buyer = _member(buyer_co, "buyer@t.test", can_buy=True)
 
-    deal = Deal.objects.create(
-        title="z", company=buyer_co, client=buyer, stage=DealStage.objects.get(code="DRAFT")
-    )
+    deal = Deal.objects.create(title="z", company=buyer_co, client=buyer, stage=DealStage.objects.get(code="DRAFT"))
     # ADR-0006 Move 2: the seller hears about the заявка because it was ROUTED to their company.
     DealSellerRouting.objects.create(deal=deal, seller_company=seller_co)
     return {"seller": seller, "buyer": buyer, "deal": deal}
@@ -93,9 +96,7 @@ def test_quote_outcome_notifies_the_kp_author_when_no_manager(parties):
     QuoteStatus.objects.get_or_create(code="SENT", defaults={"name": "Sent", "sort_order": 30})
     seller, deal = parties["seller"], parties["deal"]
     assert deal.manager_id is None  # the gap's precondition
-    quote = Quote.objects.create(
-        deal=deal, version=1, prepared_by=seller, status=QuoteStatus.objects.get(code="SENT")
-    )
+    quote = Quote.objects.create(deal=deal, version=1, prepared_by=seller, status=QuoteStatus.objects.get(code="SENT"))
 
     _notify_quote_outcome(quote, type_code="SUCCESS", title="КП одобрено клиентом", message="ok")
 

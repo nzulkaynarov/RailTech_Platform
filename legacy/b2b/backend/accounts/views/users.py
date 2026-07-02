@@ -393,9 +393,7 @@ class UserViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["delete"], url_path="remove-membership/(?P<membership_id>[0-9]+)")
     def remove_membership(self, request, pk=None, membership_id=None):
         user = self.get_object()
-        membership = (
-            CompanyMember.objects.filter(pk=membership_id, user=user).select_related("company", "role").first()
-        )
+        membership = CompanyMember.objects.filter(pk=membership_id, user=user).select_related("company", "role").first()
         if not membership:
             return Response({"detail": "MEMBERSHIP_NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)
         # Never-orphan invariant lives in the service (Rule 8).

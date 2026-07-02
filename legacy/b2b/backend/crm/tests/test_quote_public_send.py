@@ -39,6 +39,7 @@ def sent_quote(db):
 
 # ---- public token view ----
 
+
 @pytest.mark.django_db
 def test_public_view_streams_pdf_by_token(sent_quote):
     resp = APIClient().get(f"/api/v1/public/quotes/{sent_quote.public_access_token}/", SERVER_NAME="localhost")
@@ -58,10 +59,13 @@ def test_public_view_unsent_quote_404(db):
     company = Company.objects.create(name="X")
     deal = Deal.objects.create(company=company)
     q = Quote.objects.create(deal=deal, version=1, public_access_token="tok_draft", frozen_at=None)
-    assert APIClient().get(f"/api/v1/public/quotes/{q.public_access_token}/", SERVER_NAME="localhost").status_code == 404
+    assert (
+        APIClient().get(f"/api/v1/public/quotes/{q.public_access_token}/", SERVER_NAME="localhost").status_code == 404
+    )
 
 
 # ---- unified email send ----
+
 
 @pytest.mark.django_db
 def test_send_email_to_registered_client(sent_quote, settings):
@@ -78,7 +82,9 @@ def test_send_email_to_registered_client(sent_quote, settings):
 @pytest.mark.django_db
 def test_send_email_to_offline_contact(sent_quote, settings):
     settings.EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
-    contact = Contact.objects.create(company=sent_quote.deal.company, name="Ivan", email="ivan@offline.test", is_primary=True)
+    contact = Contact.objects.create(
+        company=sent_quote.deal.company, name="Ivan", email="ivan@offline.test", is_primary=True
+    )
     sent_quote.deal.contact = contact
     sent_quote.deal.save()
     send_quote_email(sent_quote.id)

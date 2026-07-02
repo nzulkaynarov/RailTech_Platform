@@ -190,10 +190,7 @@ def _build_ai_lines(items) -> list[dict]:
 def _format_ai_lines(lines: list[dict]) -> str:
     blocks = []
     for entry in lines:
-        parts = [
-            f"Строка {entry['line']}: запрошено «{entry['requested']}»; "
-            f"в КП предложено «{entry['quoted']}»"
-        ]
+        parts = [f"Строка {entry['line']}: запрошено «{entry['requested']}»; " f"в КП предложено «{entry['quoted']}»"]
         if entry["note"]:
             parts.append(f"примечание заявки: {entry['note'][:300]}")
         blocks.append("; ".join(parts))
@@ -212,9 +209,7 @@ def _semantic_findings(ai_lines: list[dict]) -> list[dict]:
     bounded = ai_lines[:MAX_DIFF_LINES]
     valid_indices = {entry["line"] for entry in bounded}
 
-    user_msg = (
-        f"Проверь {len(bounded)} строк (наименования заявки и КП).\n\n" + _format_ai_lines(bounded)
-    )
+    user_msg = f"Проверь {len(bounded)} строк (наименования заявки и КП).\n\n" + _format_ai_lines(bounded)
 
     client = _client()
     response = client.messages.create(
@@ -269,9 +264,7 @@ def quote_vs_request_diff(quote: Quote) -> dict:
     quote's items in their natural order, so the frontend can resolve it back to the
     requested/quoted names for display. NEVER raises for an empty/odd quote.
     """
-    items = list(
-        quote.items.select_related("product").order_by("id")
-    )
+    items = list(quote.items.select_related("product").order_by("id"))
     if not items:
         return {"ai_enabled": bool(getattr(settings, "AI_IMPORT_ENABLED", False)), "findings": []}
 

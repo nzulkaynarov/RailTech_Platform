@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { apiClient } from '../api/client';
 import { setAccessToken } from '../api/accessToken';
 import { User } from '../api/accountsApi';
+import { queryClient } from '../lib/queryClient';
 
 // Backend SystemRole vocabulary after migration accounts/0010_platform_admin_model.
 // Only ADMIN (Platform Admin — owns the platform, not attached to any company)
@@ -72,6 +73,11 @@ export const useAuthStore = create<AuthState>()(
                     setAccessToken(access);
                     set({ accessToken: access, error: null });
 
+                    // SHARED-BROWSER SAFETY: wipe any prior user's cached queries before the
+                    // new identity's data loads — otherwise refetchOnMount:false + staleTime
+                    // would serve the previous tenant's ['deals']/['quotes']/analytics rows.
+                    queryClient.clear();
+
                     // Fetch user profile with the new token
                     await get().initAuth();
                 } catch (e) {
@@ -98,6 +104,9 @@ export const useAuthStore = create<AuthState>()(
                     accessToken: null,
                     isAuthenticated: false,
                 });
+                // Drop every cached query so the next user on this browser starts clean
+                // (cross-tenant cache-leak guard — pairs with the clear() on login).
+                queryClient.clear();
             },
 
             initAuth: async () => {

@@ -69,11 +69,7 @@ def consume_credit(company_id: int, feature_key, amount: int = 1) -> bool:
     key = _key(feature_key)
     if key in FREE_FLOOR_FEATURES:
         return True
-    row = (
-        CompanyEntitlement.objects.select_for_update()
-        .filter(company_id=company_id, feature_key=key)
-        .first()
-    )
+    row = CompanyEntitlement.objects.select_for_update().filter(company_id=company_id, feature_key=key).first()
     if row is None:
         # No explicit row → an operational subscription grants the baseline UNMETERED (mirrors
         # has_entitlement so a subscribed seller isn't blocked just for lacking a credit row).

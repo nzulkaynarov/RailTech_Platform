@@ -5,17 +5,11 @@ Public API is re-exported here so `crm.services.X` and
 """
 
 from ._params import PaymentData
-from .availability import (
-    Tranche,
-    auto_split_quote_by_availability,
-    resolve_seller_offer,
-    split_line_by_availability,
-)
 from .ai_chat import suggest_chat_reply
 from .ai_diff import quote_vs_request_diff, user_can_view_quote_diff
+from .availability import Tranche, auto_split_quote_by_availability, resolve_seller_offer, split_line_by_availability
 from .billing import generate_act, generate_invoice_from_contract, record_payment, sign_act
 from .charges import apply_charge_template_to_quote, set_quote_delivery_basis
-from .exporters import export_quote
 from .contracts import (
     cancel_contract,
     force_cancel_contract,
@@ -34,6 +28,7 @@ from .deals import (
     register_new_deal,
     transition_deal_stage,
 )
+from .exporters import export_quote
 from .fulfillment import ensure_fulfillment, update_fulfillment_status
 from .messaging import archive_messages_sync, send_deal_message, user_can_access_deal_chat
 from .quotes import (

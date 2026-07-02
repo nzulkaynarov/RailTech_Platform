@@ -10,14 +10,7 @@ accounts.services.permissions.can_view_quote_costs_for → member_has_permission
 import pytest
 from rest_framework.test import APIRequestFactory
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyRole,
-    CompanyType,
-    CustomUser,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyRole, CompanyType, CustomUser, WorkspaceRole
 from crm.models import ChargeType, Deal, DealStage, Quote, QuoteCharge, QuoteItem
 from crm.serializers import QuoteChargeSerializer, QuoteItemSerializer
 
@@ -52,8 +45,13 @@ def quote_item(db):
     # currency setup; the redaction only reads attributes via serializer.to_representation,
     # so an unsaved instance is enough and keeps the test focused on the permission gate.
     item = QuoteItem(
-        quote=quote, quantity=1, frozen_base_price="100.00", logistics_cost="5.00",
-        customs_duty="2.00", margin_percent="20.00", landed_cost="107.00",
+        quote=quote,
+        quantity=1,
+        frozen_base_price="100.00",
+        logistics_cost="5.00",
+        customs_duty="2.00",
+        margin_percent="20.00",
+        landed_cost="107.00",
     )
     return seller_co, item
 
@@ -94,8 +92,13 @@ def quote_charge(db):
     quote = Quote.objects.create(deal=deal, version=1, prepared_by=preparer)
     ctype = ChargeType.objects.get_or_create(code="FREIGHT", defaults={"name": "Freight", "sort_order": 10})[0]
     charge = QuoteCharge(
-        quote=quote, charge_type=ctype, rate_percent="10.00", amount="0.00",
-        cost_amount="400000.00", resolved_base="950000.00", resolved_amount="95000.00",
+        quote=quote,
+        charge_type=ctype,
+        rate_percent="10.00",
+        amount="0.00",
+        cost_amount="400000.00",
+        resolved_base="950000.00",
+        resolved_amount="95000.00",
     )
     return seller_co, charge
 

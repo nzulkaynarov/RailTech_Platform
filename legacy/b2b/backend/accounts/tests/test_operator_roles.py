@@ -19,19 +19,8 @@ import pytest
 from rest_framework.test import APIClient
 
 from accounts import services
-from accounts.constants import (
-    ALL_OPERATOR_PERMISSIONS,
-    OPERATOR_ROLE_TEMPLATES,
-    OperatorPermission,
-    OperatorRoleCode,
-)
-from accounts.models import (
-    CompanyMember,
-    CustomUser,
-    OperatorRole,
-    SupplierSubscription,
-    VerificationStatus,
-)
+from accounts.constants import ALL_OPERATOR_PERMISSIONS, OPERATOR_ROLE_TEMPLATES, OperatorPermission, OperatorRoleCode
+from accounts.models import CompanyMember, CustomUser, OperatorRole, SupplierSubscription, VerificationStatus
 from accounts.services.permissions import operator_has_permission
 
 pytestmark = pytest.mark.django_db
@@ -119,9 +108,7 @@ def normal_user(db, system_role_factory, workspace_role_factory, company_factory
 @pytest.fixture
 def superuser(db):
     """is_superuser=True but NOT a platform-admin-role operator (DBA emergency bypass)."""
-    return CustomUser.objects.create_superuser(
-        email="root@platform.test", username="root", password="rootpass123"
-    )
+    return CustomUser.objects.create_superuser(email="root@platform.test", username="root", password="rootpass123")
 
 
 @pytest.fixture
@@ -314,9 +301,7 @@ def test_create_operator_role_requires_super_operator(make_operator):
 
 def test_super_operator_can_create_role(make_operator):
     super_op = make_operator(OperatorRoleCode.SUPER_OPERATOR.value)
-    role, err = services.create_operator_role(
-        super_op, "Аудитор платформы", [OperatorPermission.USERS_VIEW.value]
-    )
+    role, err = services.create_operator_role(super_op, "Аудитор платформы", [OperatorPermission.USERS_VIEW.value])
     assert err is None
     assert role is not None
     assert role.is_system is False

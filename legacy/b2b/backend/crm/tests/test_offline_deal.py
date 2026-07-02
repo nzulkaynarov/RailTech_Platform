@@ -32,19 +32,21 @@ def seller_with_client(db):
 @pytest.mark.django_db
 def test_seller_opens_deal_for_offline_client(seller_with_client):
     seller, company, contact = seller_with_client
-    c = APIClient(); c.force_authenticate(seller)
+    c = APIClient()
+    c.force_authenticate(seller)
     resp = c.post("/api/v1/crm/deals/", {"contact_id": contact.id, "title": "Offline RFQ"}, format="json")
     assert resp.status_code == 201, resp.content
     deal = Deal.objects.get(pk=resp.json()["id"])
-    assert deal.company_id == company.id      # the client's company, not the seller's
+    assert deal.company_id == company.id  # the client's company, not the seller's
     assert deal.contact_id == contact.id
-    assert deal.client_id is None             # no platform user — it's offline
+    assert deal.client_id is None  # no platform user — it's offline
 
 
 @pytest.mark.django_db
 def test_seller_cannot_open_deal_for_other_sellers_contact(seller_with_client):
     _, _, contact = seller_with_client
     other = _seller("rep@other.test", "700000002")
-    c = APIClient(); c.force_authenticate(other)
+    c = APIClient()
+    c.force_authenticate(other)
     resp = c.post("/api/v1/crm/deals/", {"contact_id": contact.id, "title": "x"}, format="json")
     assert resp.status_code == 403  # contact not in this seller's book

@@ -7,6 +7,7 @@ from drf_spectacular.utils import extend_schema
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from rest_framework.permissions import IsAdminUser
 from rest_framework.routers import DefaultRouter
+
 from accounts.views import (
     CompanyEntitlementViewSet,
     CompanyRoleApplicationViewSet,
@@ -22,7 +23,6 @@ from accounts.views import (
     OperatorRoleViewSet,
     PermissionCatalogView,
     RegisterView,
-    WsTicketView,
     ResetPasswordView,
     SetupPasswordView,
     SubmitProfileView,
@@ -30,6 +30,7 @@ from accounts.views import (
     SystemRoleViewSet,
     UserViewSet,
     WorkspaceRoleViewSet,
+    WsTicketView,
 )
 from accounts.wizard import WIZARD_FORMS, CompanyWizardView
 from catalog.views import (
@@ -56,10 +57,11 @@ from core.views import PageStatsView, PlatformDashboardView, SupportTicketViewSe
 from crm.views import (
     ActivityLogViewSet,
     ActViewSet,
+    ChargeTemplateViewSet,
+    ChargeTypeViewSet,
     ContractViewSet,
     CRMAnalyticsView,
     DashboardAnalyticsView,
-    TimeToFirstQuoteView,
     DealStageViewSet,
     DealViewSet,
     FulfillmentViewSet,
@@ -68,8 +70,6 @@ from crm.views import (
     LeadViewSet,
     MessageViewSet,
     PaymentViewSet,
-    ChargeTemplateViewSet,
-    ChargeTypeViewSet,
     Phase2StatusChoicesView,
     PublicQuoteView,
     QuoteChargeViewSet,
@@ -78,24 +78,22 @@ from crm.views import (
     QuoteStatusViewSet,
     QuoteViewSet,
     SuggestChatReplyView,
+    TimeToFirstQuoteView,
 )
 from master_data.views import CountryViewSet, CurrencyViewSet, DeliveryBasisViewSet, UnitOfMeasureViewSet
 from notifications.views import EmailTemplateViewSet, NotificationViewSet
-from sourcing.views import (
+from sourcing.views import (  # noqa: F811
     AttachmentViewSet,
     CatalogImportView,
     CatalogTemplateView,
+    DocumentExtractView,
     ExcelImportView,
     ImportStatusView,
-    DocumentExtractView,
     MatchCatalogView,
-    SourcingRequestViewSet,
-)
-from sourcing.views_ai_conversational import ComposeRequestView  # noqa: E402,F811
-from sourcing.views import (  # noqa: F811
     PreflightCheckView,
     SourcingRequestViewSet,
 )
+from sourcing.views_ai_conversational import ComposeRequestView  # noqa: E402,F811
 
 router = DefaultRouter()
 router.register(r"catalog/products", ProductViewSet, basename="product")
@@ -187,8 +185,12 @@ urlpatterns = (
         path("api/v1/sourcing/extract-document/", DocumentExtractView.as_view(), name="extract-document"),
         path("api/v1/sourcing/compose-request/", ComposeRequestView.as_view(), name="compose-request"),
         path("api/v1/catalog/product-enrich/", ProductEnrichView.as_view(), name="product-enrich"),
-        path("api/v1/crm/deals/<int:deal_id>/suggest-reply/", SuggestChatReplyView.as_view(), name="suggest-chat-reply"),
-        path("api/v1/crm/quotes/<int:quote_id>/request-diff/", QuoteRequestDiffView.as_view(), name="quote-request-diff"),
+        path(
+            "api/v1/crm/deals/<int:deal_id>/suggest-reply/", SuggestChatReplyView.as_view(), name="suggest-chat-reply"
+        ),
+        path(
+            "api/v1/crm/quotes/<int:quote_id>/request-diff/", QuoteRequestDiffView.as_view(), name="quote-request-diff"
+        ),
         path("api/v1/sourcing/import-catalog/", CatalogImportView.as_view(), name="import-catalog"),
         path("api/v1/sourcing/catalog-template/", CatalogTemplateView.as_view(), name="catalog-template"),
         path("api/v1/sourcing/import-status/<str:task_id>/", ImportStatusView.as_view(), name="import-status"),

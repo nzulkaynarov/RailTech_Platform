@@ -398,15 +398,22 @@ class DealViewSet(viewsets.ModelViewSet):
             http_status = (
                 status.HTTP_403_FORBIDDEN
                 if err
-                in ("ADMIN_VIEWER_CANNOT_ACT", "ONLY_SELLER_CAN_BUILD_QUOTE", "MEMBER_REQUIRED_FOR_ACTION", "AI_DRAFT_NOT_ENTITLED")
-                else status.HTTP_404_NOT_FOUND
-                if err == "DEAL_NOT_FOUND"
-                else status.HTTP_400_BAD_REQUEST
+                in (
+                    "ADMIN_VIEWER_CANNOT_ACT",
+                    "ONLY_SELLER_CAN_BUILD_QUOTE",
+                    "MEMBER_REQUIRED_FOR_ACTION",
+                    "AI_DRAFT_NOT_ENTITLED",
+                )
+                else status.HTTP_404_NOT_FOUND if err == "DEAL_NOT_FOUND" else status.HTTP_400_BAD_REQUEST
             )
             return Response({"error": err}, status=http_status)
         deal = Deal.objects.get(pk=quote.deal_id)
         return Response(
-            {"prefilled": prefilled, "quote_id": quote.id, "deal": DealDetailSerializer(deal, context={"request": request}).data}
+            {
+                "prefilled": prefilled,
+                "quote_id": quote.id,
+                "deal": DealDetailSerializer(deal, context={"request": request}).data,
+            }
         )
 
     @extend_schema(

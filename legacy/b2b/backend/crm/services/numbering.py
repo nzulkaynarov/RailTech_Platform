@@ -19,8 +19,6 @@ fall back to the single platform counter, so they share ONE monotonic sequence a
 can never mint the same `{label}-{year}-{NNNNN}` twice.
 """
 
-from typing import Optional
-
 from django.utils import timezone
 
 
@@ -60,7 +58,7 @@ def next_document_number(doc_type: str, label: str, company=None) -> str:
     prefix = _company_prefix(company)
     # Only a prefixed company is routed to its own counter; without a prefix we share
     # the platform counter so the global number can't collide across companies.
-    sequence_company_id = (getattr(company, "pk", company) if prefix else None)
+    sequence_company_id = getattr(company, "pk", company) if prefix else None
 
     year = timezone.now().year
     # select_for_update locks the row; get_or_create's internal IntegrityError retry

@@ -22,7 +22,9 @@ def setup(db):
 
 
 def _client(user):
-    c = APIClient(); c.force_authenticate(user); return c
+    c = APIClient()
+    c.force_authenticate(user)
+    return c
 
 
 @pytest.mark.django_db
@@ -32,7 +34,9 @@ def test_create_role_requires_team_manage(setup):
     plain_role = CompanyRole.objects.create(company=co, name="Sales", permissions=["quote.send"])
     plain = CustomUser.objects.create_user(email="p@acme.test", username="p@acme.test", password="pw", is_active=True)
     ws = WorkspaceRole.objects.get(code="OWNER")
-    CompanyMember.objects.create(user=plain, company=co, role=ws, company_role=plain_role, is_active=True, can_sell=False, can_buy=False)
+    CompanyMember.objects.create(
+        user=plain, company=co, role=ws, company_role=plain_role, is_active=True, can_sell=False, can_buy=False
+    )
     r = _client(plain).post("/api/v1/accounts/company-roles/", {"name": "X", "permissions": []}, format="json")
     assert r.status_code == 403
 
@@ -40,7 +44,9 @@ def test_create_role_requires_team_manage(setup):
 @pytest.mark.django_db
 def test_admin_creates_role(setup):
     co, admin = setup
-    r = _client(admin).post("/api/v1/accounts/company-roles/", {"name": "Логист", "permissions": ["catalog.manage"]}, format="json")
+    r = _client(admin).post(
+        "/api/v1/accounts/company-roles/", {"name": "Логист", "permissions": ["catalog.manage"]}, format="json"
+    )
     assert r.status_code == 201, r.content
     assert r.json()["name"] == "Логист"
 
@@ -48,7 +54,9 @@ def test_admin_creates_role(setup):
 @pytest.mark.django_db
 def test_create_rejects_unknown_permission(setup):
     co, admin = setup
-    r = _client(admin).post("/api/v1/accounts/company-roles/", {"name": "Bad", "permissions": ["not.a.perm"]}, format="json")
+    r = _client(admin).post(
+        "/api/v1/accounts/company-roles/", {"name": "Bad", "permissions": ["not.a.perm"]}, format="json"
+    )
     assert r.status_code == 400
 
 
@@ -75,9 +83,13 @@ def test_assign_role_to_member(setup):
     # Assign to a NON-admin member (reassigning the sole is_system admin is blocked by the
     # never-orphan invariant — covered by test_cannot_strip_last_company_admin).
     ws = WorkspaceRole.objects.get(code="OWNER")
-    target_user = CustomUser.objects.create_user(email="t@acme.test", username="t@acme.test", password="pw", is_active=True)
+    target_user = CustomUser.objects.create_user(
+        email="t@acme.test", username="t@acme.test", password="pw", is_active=True
+    )
     member = CompanyMember.objects.create(user=target_user, company=co, role=ws, is_active=True)
-    r = _client(admin).post("/api/v1/accounts/company-roles/assign/", {"member_id": member.id, "role_id": sales.id}, format="json")
+    r = _client(admin).post(
+        "/api/v1/accounts/company-roles/assign/", {"member_id": member.id, "role_id": sales.id}, format="json"
+    )
     assert r.status_code == 200
     member.refresh_from_db()
     assert member.company_role_id == sales.id

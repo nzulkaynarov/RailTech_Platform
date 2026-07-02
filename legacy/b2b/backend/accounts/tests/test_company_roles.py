@@ -15,8 +15,13 @@ def _member(company, email, *, role=None, can_sell=True, can_buy=True, wsrole_co
     ws = WorkspaceRole.objects.get_or_create(code=wsrole_code, defaults={"name": wsrole_code, "sort_order": 10})[0]
     user = CustomUser.objects.create_user(email=email, username=email, password="pw", is_active=True)
     return CompanyMember.objects.create(
-        user=user, company=company, role=ws, company_role=role,
-        is_active=True, can_sell=can_sell, can_buy=can_buy,
+        user=user,
+        company=company,
+        role=ws,
+        company_role=role,
+        is_active=True,
+        can_sell=can_sell,
+        can_buy=can_buy,
     )
 
 
@@ -87,9 +92,9 @@ def test_member_permission_from_company_role(company):
 def test_legacy_fallback_when_no_company_role(company):
     # No company_role → derive from can_sell/can_buy.
     seller = _member(company, "sell@a.test", role=None, can_sell=True, can_buy=False)
-    assert member_has_permission(seller.user, company.id, "quote.send") is True       # sell perm
-    assert member_has_permission(seller.user, company.id, "contract.sign") is False   # buy perm
-    assert member_has_permission(seller.user, company.id, "team.manage") is False     # admin perm
+    assert member_has_permission(seller.user, company.id, "quote.send") is True  # sell perm
+    assert member_has_permission(seller.user, company.id, "contract.sign") is False  # buy perm
+    assert member_has_permission(seller.user, company.id, "team.manage") is False  # admin perm
 
 
 @pytest.mark.django_db
@@ -121,7 +126,9 @@ def test_can_view_quote_costs_gated_by_permission(db):
     from accounts.services.permissions import can_view_quote_costs
 
     seller_co = Company.objects.create(name="SellerCo")
-    supplier_type = CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 1})[0]
+    supplier_type = CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 1})[
+        0
+    ]
     seller_co.types.add(supplier_type)
 
     with_perm = CompanyRole.objects.create(company=seller_co, name="Sales", permissions=["quote.view_cost_margin"])
@@ -141,7 +148,9 @@ def test_can_edit_quote_pricing_gated_by_permission(db):
     from accounts.services.permissions import can_edit_quote_pricing
 
     seller_co = Company.objects.create(name="SellerCoH2")
-    supplier_type = CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 1})[0]
+    supplier_type = CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 1})[
+        0
+    ]
     seller_co.types.add(supplier_type)
 
     with_perm = CompanyRole.objects.create(company=seller_co, name="Sales", permissions=["quote.edit_pricing"])

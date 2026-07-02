@@ -27,9 +27,8 @@ def _clear_refresh_cookie(response) -> None:
         samesite=settings.REFRESH_COOKIE_SAMESITE,
     )
 
-from accounts.throttles import PasswordResetEmailThrottle, ScopedRateThrottle
 
-from accounts.serializers import (
+from accounts.serializers import (  # noqa: E402
     ForgotPasswordSerializer,
     RegisterInterestSerializer,
     ResetPasswordSerializer,
@@ -37,7 +36,7 @@ from accounts.serializers import (
     SubmitProfileSerializer,
     UserSerializer,
 )
-from accounts.services import (
+from accounts.services import (  # noqa: E402
     create_pending_user,
     reset_password,
     revoke_user_refresh_tokens,
@@ -45,6 +44,7 @@ from accounts.services import (
     submit_company_profile,
     verify_and_setup_password,
 )
+from accounts.throttles import PasswordResetEmailThrottle, ScopedRateThrottle  # noqa: E402
 
 
 @extend_schema(

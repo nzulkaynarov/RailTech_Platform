@@ -5,13 +5,8 @@ from decimal import Decimal
 import pytest
 
 from catalog.models import Product, ProductStatus, SupplierOffer
-from crm.services.availability import (
-    Tranche,
-    auto_split_quote_by_availability,
-    split_line_by_availability,
-)
+from crm.services.availability import Tranche, auto_split_quote_by_availability, split_line_by_availability
 from master_data.models import Currency
-
 
 # ── Pure split rule (no DB needed for the math, but offer is an ORM row) ──────
 
@@ -105,15 +100,13 @@ def seller_quote(db):
     seller_co = Company.objects.create(name="Seller", inn="9000000002")
     seller_co.types.add(supplier_type)
     buyer_co = Company.objects.create(name="Buyer", inn="9000000003")
-    seller = CustomUser.objects.create_user(
-        email="s2@s.test", username="s2@s.test", password="pw", is_active=True
-    )
+    seller = CustomUser.objects.create_user(email="s2@s.test", username="s2@s.test", password="pw", is_active=True)
     CompanyMember.objects.create(
         user=seller, company=seller_co, role=sales_role, is_active=True, is_primary=True, can_sell=True
     )
 
     product = Product.objects.create(name="Колодка", owner_company=seller_co, status=pub)
-    offer = SupplierOffer.objects.create(
+    SupplierOffer.objects.create(
         product=product,
         supplier=seller_co,
         base_price=Decimal("100"),
@@ -125,9 +118,7 @@ def seller_quote(db):
     deal = Deal.objects.create(company=buyer_co, stage=draft_stage)
     # Explicit 1:1 USD rate (KP-01): the engine no longer fabricates a silent rate=1 for an
     # unrated line currency, so submit/send would block on FX_RATE_MISSING without a stated rate.
-    quote = Quote.objects.create(
-        deal=deal, version=1, status=draft_qs, prepared_by=seller, fx_manual={"USD": "1"}
-    )
+    quote = Quote.objects.create(deal=deal, version=1, status=draft_qs, prepared_by=seller, fx_manual={"USD": "1"})
     item = QuoteItem.objects.create(
         quote=quote,
         product=product,

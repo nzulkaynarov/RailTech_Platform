@@ -71,7 +71,7 @@ export function RequestItemsEditor({
   // [[feedback]]). We expose ONE field and auto-classify: a ГОСТ/ОСТ/ТУ/чертёж marker
   // or a drawing-number pattern → gost_drawing, otherwise a manufacturer part number.
   const looksLikeGost = (v: string) =>
-    /(гост|gost|ост\s|\bту\b|чертёж|чертеж|drawing)/i.test(v) || /^\d{1,4}[.\-]\d/.test(v.trim());
+    /(гост|gost|ост\s|\bту\b|чертёж|чертеж|drawing)/i.test(v) || /^\d{1,4}[.-]\d/.test(v.trim());
   const partCode = (item: QuoteItem) => item.gost_drawing || item.mpn || '';
   const saveCode = async (item: QuoteItem, value: string) => {
     const v = value.trim();

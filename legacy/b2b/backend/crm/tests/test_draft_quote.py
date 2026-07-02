@@ -44,8 +44,11 @@ def scene(db):
     from accounts.models import SupplierSubscription
 
     SupplierSubscription.objects.create(
-        company=seller, plan="BASIC", status="ACTIVE",
-        valid_from=timezone.now().date(), valid_until=(timezone.now() + timedelta(days=365)).date(),
+        company=seller,
+        plan="BASIC",
+        status="ACTIVE",
+        valid_from=timezone.now().date(),
+        valid_until=(timezone.now() + timedelta(days=365)).date(),
     )
 
     product = Product.objects.create(name="Автосцепка СА-3")

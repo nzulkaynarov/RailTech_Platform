@@ -10,9 +10,7 @@ pytestmark = pytest.mark.django_db
 
 
 def _owner(email, company):
-    owner_role = WorkspaceRole.objects.get_or_create(
-        code="OWNER", defaults={"name": "Владелец", "sort_order": 1}
-    )[0]
+    owner_role = WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Владелец", "sort_order": 1})[0]
     user = CustomUser.objects.create_user(email=email, username=email, password="pw", is_active=True)
     CompanyMember.objects.create(user=user, company=company, role=owner_role, is_primary=True, is_active=True)
     return user

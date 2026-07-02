@@ -97,8 +97,12 @@ def test_cart_line_inherits_product_attributes(deal):
     uom = UnitOfMeasure.objects.create(code="PCE", name="шт")
     pub = ProductStatus.objects.get_or_create(code="PUBLISHED", defaults={"name": "P", "sort_order": 1})[0]
     product = Product.objects.create(
-        name="Автосцепка СА-3", status=pub, uom=uom,
-        manufacturer_part_number="SA3-001", gost_drawing="ГОСТ 3475-81", hs_code="8607300000",
+        name="Автосцепка СА-3",
+        status=pub,
+        uom=uom,
+        manufacturer_part_number="SA3-001",
+        gost_drawing="ГОСТ 3475-81",
+        hs_code="8607300000",
     )
     buyer_add_request_items(buyer, deal_obj, [{"product_id": product.id, "quantity": 3}])
     line = QuoteItem.objects.filter(quote__deal=deal_obj, product=product).first()

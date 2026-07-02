@@ -82,9 +82,7 @@ class TestMultiCurrencyConversion:
         monkeypatch.setattr("master_data.fx.get_rate_to_uzs", lambda code, on_date=None: Decimal("12000"))
         _, deal = _company_and_deal()
         usd = _usd()
-        quote = _draft_quote(
-            deal, margin_percent=Decimal("0"), vat_rate=Decimal("0"), fx_manual={"USD": "13000"}
-        )
+        quote = _draft_quote(deal, margin_percent=Decimal("0"), vat_rate=Decimal("0"), fx_manual={"USD": "13000"})
         item = QuoteItem(
             quote=quote,
             imported_raw_name="USD widget manual rate",
@@ -132,9 +130,7 @@ class TestMultiCurrencyConversion:
     def test_snapshot_freezes_and_survives_rate_change(self, monkeypatch):
         # First recalc freezes 12000; a later market move to 15000 must NOT change the КП.
         rate_box = {"value": Decimal("12000")}
-        monkeypatch.setattr(
-            "master_data.fx.get_rate_to_uzs", lambda code, on_date=None: rate_box["value"]
-        )
+        monkeypatch.setattr("master_data.fx.get_rate_to_uzs", lambda code, on_date=None: rate_box["value"])
         _, deal = _company_and_deal()
         usd = _usd()
         quote = _draft_quote(deal, margin_percent=Decimal("0"), vat_rate=Decimal("0"))

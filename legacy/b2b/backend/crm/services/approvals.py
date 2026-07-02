@@ -27,9 +27,8 @@ HEAD_ORDER = 100  # the руководитель is always the last (highest-ord
 
 # ── helpers ────────────────────────────────────────────────────────────────
 def _members_with_permission(company_id: int, perm: str) -> list:
-    members = (
-        CompanyMember.objects.filter(company_id=company_id, is_active=True)
-        .select_related("user", "company_role", "role")
+    members = CompanyMember.objects.filter(company_id=company_id, is_active=True).select_related(
+        "user", "company_role", "role"
     )
     return [m for m in members if m.user_id and member_has_permission(m.user, company_id, perm)]
 
@@ -37,9 +36,7 @@ def _members_with_permission(company_id: int, perm: str) -> list:
 def _fallback_head(company_id: int) -> Optional[CompanyMember]:
     """Never-orphan: if no quote.approve_final holder is found, the company OWNER is the head."""
     return (
-        CompanyMember.objects.filter(
-            company_id=company_id, is_active=True, role__code=WorkspaceRoleCode.OWNER
-        )
+        CompanyMember.objects.filter(company_id=company_id, is_active=True, role__code=WorkspaceRoleCode.OWNER)
         .select_related("user")
         .first()
     )
@@ -91,9 +88,7 @@ def build_approval_chain(quote: Quote, company_id: int, economics: Optional[dict
     head_candidates = _members_with_permission(company_id, Permission.QUOTE_APPROVE_FINAL.value)
     head_member = head_candidates[0] if head_candidates else _fallback_head(company_id)
     head_ids = {m.id for m in head_candidates}
-    reviewers = [
-        m for m in _members_with_permission(company_id, Permission.QUOTE_REVIEW.value) if m.id not in head_ids
-    ]
+    reviewers = [m for m in _members_with_permission(company_id, Permission.QUOTE_REVIEW.value) if m.id not in head_ids]
 
     sequential = getattr(quote, "approval_routing_mode", "PARALLEL") == "SEQUENTIAL"
     new_steps = []
@@ -114,9 +109,7 @@ def build_approval_chain(quote: Quote, company_id: int, economics: Optional[dict
         if sequential:
             order += 1  # parallel keeps order=1 for everyone
 
-    head_reason = (
-        StepTrigger.BELOW_FLOOR_ESCALATION if (economics or {}).get("below_floor") else StepTrigger.HEAD_FINAL
-    )
+    head_reason = StepTrigger.BELOW_FLOOR_ESCALATION if (economics or {}).get("below_floor") else StepTrigger.HEAD_FINAL
     margin = (economics or {}).get("gross_margin_percent")
     new_steps.append(
         QuoteApprovalStep(
@@ -136,9 +129,11 @@ def build_approval_chain(quote: Quote, company_id: int, economics: Optional[dict
 
 def _active_order(quote: Quote) -> Optional[int]:
     """The lowest order with a PENDING acting (non-informed) step — the current stage."""
-    pending = quote.approval_steps.filter(
-        status=StepStatus.PENDING
-    ).exclude(participation=StepParticipation.INFORMED).order_by("order")
+    pending = (
+        quote.approval_steps.filter(status=StepStatus.PENDING)
+        .exclude(participation=StepParticipation.INFORMED)
+        .order_by("order")
+    )
     first = pending.first()
     return first.order if first else None
 
@@ -200,9 +195,9 @@ def act_on_step(step_id: int, actor, decision: str, comment: str = "") -> Tuple[
         step.decided_at = timezone.now()
         step.comment = comment
         step.save(update_fields=["status", "acted_by", "decided_at", "comment"])
-        quote.approval_steps.filter(status=StepStatus.PENDING).exclude(
-            participation=StepParticipation.INFORMED
-        ).update(status=StepStatus.RECALLED)
+        quote.approval_steps.filter(status=StepStatus.PENDING).exclude(participation=StepParticipation.INFORMED).update(
+            status=StepStatus.RECALLED
+        )
         _set_status(quote, QuoteStatusCode.DRAFT)
         _log(quote, actor, "quote.approval_reject", f"Шаг отклонён: {comment}".strip())
         _notify_user(
@@ -261,9 +256,9 @@ def recall_quote(quote_id: int, actor) -> Tuple[Optional[Quote], Optional[str]]:
         return None, "ROLE_NOT_PERMITTED"
     if not quote.status or quote.status.code != QuoteStatusCode.PENDING_APPROVAL:
         return None, "INVALID_STATUS"
-    quote.approval_steps.filter(status=StepStatus.PENDING).exclude(
-        participation=StepParticipation.INFORMED
-    ).update(status=StepStatus.RECALLED)
+    quote.approval_steps.filter(status=StepStatus.PENDING).exclude(participation=StepParticipation.INFORMED).update(
+        status=StepStatus.RECALLED
+    )
     _set_status(quote, QuoteStatusCode.DRAFT)
     _log(quote, actor, "quote.approval_recall", "КП отозван из согласования на доработку")
     return quote, None

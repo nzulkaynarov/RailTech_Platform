@@ -102,6 +102,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/accounts/companies/{id}/document-profile/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read / update company document profile
+         * @description The branded requisites a company prints on its own КП / contract documents (legal name, ИНН, юр.адрес, банк, подписант, колонтитул, акцентный цвет). GET returns the profile (auto-created); PATCH updates it. OWNER of THIS company (or platform admin) only — never another tenant. Logo is uploaded separately.
+         */
+        get: operations["accounts_companies_document_profile_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Read / update company document profile
+         * @description The branded requisites a company prints on its own КП / contract documents (legal name, ИНН, юр.адрес, банк, подписант, колонтитул, акцентный цвет). GET returns the profile (auto-created); PATCH updates it. OWNER of THIS company (or platform admin) only — never another tenant. Logo is uploaded separately.
+         */
+        patch: operations["accounts_companies_document_profile_partial_update"];
+        trace?: never;
+    };
+    "/api/v1/accounts/companies/{id}/document-profile/upload-logo/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload company document-profile logo
+         * @description Upload or replace the logo printed in the КП / contract header (multipart/form-data). OWNER only.
+         */
+        post: operations["accounts_companies_document_profile_upload_logo_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/accounts/companies/{id}/download-document/{doc_id}/": {
         parameters: {
             query?: never;
@@ -160,6 +204,30 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/accounts/companies/{id}/settings/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read / update company КП defaults + numbering
+         * @description The selling company's КП defaults (Incoterm, валюта себестоимости, ставка НДС, маржа, срок действия) and its document-numbering prefix. GET returns the settings (auto-created); PATCH updates them. delivery_basis / cost_currency are sent as master-data CODES (e.g. 'USD', 'FCA'). OWNER of THIS company (or platform admin) only.
+         */
+        get: operations["accounts_companies_settings_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Read / update company КП defaults + numbering
+         * @description The selling company's КП defaults (Incoterm, валюта себестоимости, ставка НДС, маржа, срок действия) and its document-numbering prefix. GET returns the settings (auto-created); PATCH updates them. delivery_basis / cost_currency are sent as master-data CODES (e.g. 'USD', 'FCA'). OWNER of THIS company (or platform admin) only.
+         */
+        patch: operations["accounts_companies_settings_partial_update"];
         trace?: never;
     };
     "/api/v1/accounts/companies/{id}/team/": {
@@ -323,6 +391,83 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/accounts/company-roles/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description CRUD for a company's own roles. Scoped to the requester's company; writes need
+         *     the `team.manage` permission. Platform admins manage roles via Django Unfold.
+         */
+        get: operations["accounts_company_roles_list"];
+        put?: never;
+        /**
+         * @description CRUD for a company's own roles. Scoped to the requester's company; writes need
+         *     the `team.manage` permission. Platform admins manage roles via Django Unfold.
+         */
+        post: operations["accounts_company_roles_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/accounts/company-roles/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description CRUD for a company's own roles. Scoped to the requester's company; writes need
+         *     the `team.manage` permission. Platform admins manage roles via Django Unfold.
+         */
+        get: operations["accounts_company_roles_retrieve"];
+        /**
+         * @description CRUD for a company's own roles. Scoped to the requester's company; writes need
+         *     the `team.manage` permission. Platform admins manage roles via Django Unfold.
+         */
+        put: operations["accounts_company_roles_update"];
+        post?: never;
+        /**
+         * @description CRUD for a company's own roles. Scoped to the requester's company; writes need
+         *     the `team.manage` permission. Platform admins manage roles via Django Unfold.
+         */
+        delete: operations["accounts_company_roles_destroy"];
+        options?: never;
+        head?: never;
+        /**
+         * @description CRUD for a company's own roles. Scoped to the requester's company; writes need
+         *     the `team.manage` permission. Platform admins manage roles via Django Unfold.
+         */
+        patch: operations["accounts_company_roles_partial_update"];
+        trace?: never;
+    };
+    "/api/v1/accounts/company-roles/assign/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Assign a company role to a member
+         * @description CRUD for a company's own roles. Scoped to the requester's company; writes need
+         *     the `team.manage` permission. Platform admins manage roles via Django Unfold.
+         */
+        post: operations["accounts_company_roles_assign_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/accounts/company-types/": {
         parameters: {
             query?: never;
@@ -372,6 +517,26 @@ export interface paths {
          * @description Returns the authenticated user's full profile including memberships and company data.
          */
         get: operations["accounts_me_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/accounts/permissions/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Company permission catalog
+         * @description The permission checkbox catalog for the role editor (grouped, bilingual labels).
+         */
+        get: operations["accounts_permissions_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1047,6 +1212,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/access-log/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Access log — break-glass + force-override feed
+         * @description Platform-wide feed of break-glass grants and force-override actions (force-approve quote, force-cancel contract, forced deal-stage), newest first. Powers the admin «Журнал доступа» page.
+         */
+        get: operations["admin_access_log_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/activity/": {
         parameters: {
             query?: never;
@@ -1061,6 +1246,338 @@ export interface paths {
         get: operations["admin_activity_retrieve"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/break-glass/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Open a break-glass access grant (audited, time-boxed)
+         * @description Records a reason-required, entity-scoped BREAK_GLASS log so an operator's access to a tenant's private deal/quote/contract is attributable and expires.
+         */
+        post: operations["admin_break_glass_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/email-templates/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List email templates
+         * @description Platform-Operator CRUD for DB-editable email templates.
+         *
+         *     An active row here overrides the file template of the same key when
+         *     `notifications.emails.send_templated_email` renders. Thin wrapper — preview
+         *     and test-send delegate to `services_email_templates`.
+         */
+        get: operations["admin_email_templates_list"];
+        put?: never;
+        /**
+         * Create email template
+         * @description Platform-Operator CRUD for DB-editable email templates.
+         *
+         *     An active row here overrides the file template of the same key when
+         *     `notifications.emails.send_templated_email` renders. Thin wrapper — preview
+         *     and test-send delegate to `services_email_templates`.
+         */
+        post: operations["admin_email_templates_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/email-templates/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get email template
+         * @description Platform-Operator CRUD for DB-editable email templates.
+         *
+         *     An active row here overrides the file template of the same key when
+         *     `notifications.emails.send_templated_email` renders. Thin wrapper — preview
+         *     and test-send delegate to `services_email_templates`.
+         */
+        get: operations["admin_email_templates_retrieve"];
+        /**
+         * Update email template
+         * @description Platform-Operator CRUD for DB-editable email templates.
+         *
+         *     An active row here overrides the file template of the same key when
+         *     `notifications.emails.send_templated_email` renders. Thin wrapper — preview
+         *     and test-send delegate to `services_email_templates`.
+         */
+        put: operations["admin_email_templates_update"];
+        post?: never;
+        /**
+         * Delete email template
+         * @description Platform-Operator CRUD for DB-editable email templates.
+         *
+         *     An active row here overrides the file template of the same key when
+         *     `notifications.emails.send_templated_email` renders. Thin wrapper — preview
+         *     and test-send delegate to `services_email_templates`.
+         */
+        delete: operations["admin_email_templates_destroy"];
+        options?: never;
+        head?: never;
+        /**
+         * Patch email template
+         * @description Platform-Operator CRUD for DB-editable email templates.
+         *
+         *     An active row here overrides the file template of the same key when
+         *     `notifications.emails.send_templated_email` renders. Thin wrapper — preview
+         *     and test-send delegate to `services_email_templates`.
+         */
+        patch: operations["admin_email_templates_partial_update"];
+        trace?: never;
+    };
+    "/api/v1/admin/email-templates/{id}/preview/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview email template
+         * @description Render the template's subject/html/text against a SAMPLE context (or a provided override context). Does NOT send. Reflects DB override vs file fallback.
+         */
+        post: operations["admin_email_templates_preview_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/email-templates/{id}/test-send/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send a test email
+         * @description Render the template and send it to the provided email via the real pipeline. Writes an EmailLog. Use to verify copy and transport before going live.
+         */
+        post: operations["admin_email_templates_test_send_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/entitlements/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List company entitlements
+         * @description Platform-admin CRUD of feature entitlements — the monetization control plane (ADR-0006 §3).
+         *
+         *     Lets an operator grant a promo, put a company in DEMO, or DISABLE a feature; the app gates on
+         *     `has_entitlement(company, FeatureKey)`. Gated by the billing operator capability (G1).
+         */
+        get: operations["admin_entitlements_list"];
+        put?: never;
+        /**
+         * Grant a company entitlement
+         * @description Platform-admin CRUD of feature entitlements — the monetization control plane (ADR-0006 §3).
+         *
+         *     Lets an operator grant a promo, put a company in DEMO, or DISABLE a feature; the app gates on
+         *     `has_entitlement(company, FeatureKey)`. Gated by the billing operator capability (G1).
+         */
+        post: operations["admin_entitlements_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/entitlements/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get entitlement
+         * @description Platform-admin CRUD of feature entitlements — the monetization control plane (ADR-0006 §3).
+         *
+         *     Lets an operator grant a promo, put a company in DEMO, or DISABLE a feature; the app gates on
+         *     `has_entitlement(company, FeatureKey)`. Gated by the billing operator capability (G1).
+         */
+        get: operations["admin_entitlements_retrieve"];
+        /**
+         * Update entitlement
+         * @description Platform-admin CRUD of feature entitlements — the monetization control plane (ADR-0006 §3).
+         *
+         *     Lets an operator grant a promo, put a company in DEMO, or DISABLE a feature; the app gates on
+         *     `has_entitlement(company, FeatureKey)`. Gated by the billing operator capability (G1).
+         */
+        put: operations["admin_entitlements_update"];
+        post?: never;
+        /**
+         * Revoke (delete) entitlement
+         * @description Platform-admin CRUD of feature entitlements — the monetization control plane (ADR-0006 §3).
+         *
+         *     Lets an operator grant a promo, put a company in DEMO, or DISABLE a feature; the app gates on
+         *     `has_entitlement(company, FeatureKey)`. Gated by the billing operator capability (G1).
+         */
+        delete: operations["admin_entitlements_destroy"];
+        options?: never;
+        head?: never;
+        /**
+         * Patch entitlement
+         * @description Platform-admin CRUD of feature entitlements — the monetization control plane (ADR-0006 §3).
+         *
+         *     Lets an operator grant a promo, put a company in DEMO, or DISABLE a feature; the app gates on
+         *     `has_entitlement(company, FeatureKey)`. Gated by the billing operator capability (G1).
+         */
+        patch: operations["admin_entitlements_partial_update"];
+        trace?: never;
+    };
+    "/api/v1/admin/entitlements/choices/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Feature-key + access-state option lists for the entitlement form
+         * @description Backend-driven option lists for the admin form — the FE never hard-codes the FeatureKey
+         *     or access enums; adding a feature key here surfaces it in the UI with no frontend change.
+         */
+        get: operations["admin_entitlements_choices_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/operator-permissions/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Operator permission catalog
+         * @description The operator capability catalog for the role editor (grouped, bilingual labels).
+         */
+        get: operations["admin_operator_permissions_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/operator-roles/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description CRUD for platform-operator sub-roles. Any platform operator may read; mutating
+         *     needs the `operators.manage` capability (SUPER_OPERATOR). Platform-scoped.
+         */
+        get: operations["admin_operator_roles_list"];
+        put?: never;
+        /**
+         * @description CRUD for platform-operator sub-roles. Any platform operator may read; mutating
+         *     needs the `operators.manage` capability (SUPER_OPERATOR). Platform-scoped.
+         */
+        post: operations["admin_operator_roles_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/operator-roles/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description CRUD for platform-operator sub-roles. Any platform operator may read; mutating
+         *     needs the `operators.manage` capability (SUPER_OPERATOR). Platform-scoped.
+         */
+        get: operations["admin_operator_roles_retrieve"];
+        /**
+         * @description CRUD for platform-operator sub-roles. Any platform operator may read; mutating
+         *     needs the `operators.manage` capability (SUPER_OPERATOR). Platform-scoped.
+         */
+        put: operations["admin_operator_roles_update"];
+        post?: never;
+        /**
+         * @description CRUD for platform-operator sub-roles. Any platform operator may read; mutating
+         *     needs the `operators.manage` capability (SUPER_OPERATOR). Platform-scoped.
+         */
+        delete: operations["admin_operator_roles_destroy"];
+        options?: never;
+        head?: never;
+        /**
+         * @description CRUD for platform-operator sub-roles. Any platform operator may read; mutating
+         *     needs the `operators.manage` capability (SUPER_OPERATOR). Platform-scoped.
+         */
+        patch: operations["admin_operator_roles_partial_update"];
+        trace?: never;
+    };
+    "/api/v1/admin/operator-roles/assign/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Assign an operator role to a platform operator
+         * @description CRUD for platform-operator sub-roles. Any platform operator may read; mutating
+         *     needs the `operators.manage` capability (SUPER_OPERATOR). Platform-scoped.
+         */
+        post: operations["admin_operator_roles_assign_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1621,6 +2138,26 @@ export interface paths {
         patch: operations["catalog_offers_partial_update"];
         trace?: never;
     };
+    "/api/v1/catalog/product-enrich/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * AI enrich: draft PIM product fields (advisory)
+         * @description From a product name (+ optional MPN / ГОСТ / domain) DRAFTS a description, key specifications, and a likely-category HINT string for a seller's catalog card. SUGGESTION ONLY — the seller reviews/edits before saving; nothing is auto-written. The category is a free-text hint, never a resolved id (Rule 1). 503 when AI is off.
+         */
+        post: operations["catalog_product_enrich_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/product-statuses/": {
         parameters: {
             query?: never;
@@ -2055,6 +2592,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/crm/analytics/time-to-first-quote/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Time-to-first-КП wedge metric
+         * @description Hours from RFQ routed → first КП sent, aggregated (median/avg/p90). Platform admin sees the platform-wide loop speed; a seller sees their OWN company's. The headline wedge KPI.
+         */
+        get: operations["crm_analytics_time_to_first_quote_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/charge-templates/": {
         parameters: {
             query?: never;
@@ -2414,6 +2971,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/crm/deals/{deal_id}/suggest-reply/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * AI suggest reply for a deal chat
+         * @description Drafts a professional reply DRAFT for the deal's chat from its recent message history + minimal deal context. The user reviews/edits the draft before sending (human-in-loop — never auto-sent). The draft is built ONLY from the actual conversation in our DB (Rule 1: no invented commitments/prices). Returns an empty draft when the user cannot access this deal's chat, when there is no conversation yet, or when AI is off.
+         */
+        post: operations["crm_deals_suggest_reply_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/deals/{id}/": {
         parameters: {
             query?: never;
@@ -2495,6 +3072,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/crm/deals/{id}/assign/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Assign a deal to a team member (company admin)
+         * @description CRUD for deals (the core CRM entity).
+         *
+         *     Deal lifecycle: DRAFT -> KYC_PENDING -> SOURCING -> CALCULATING ->
+         *     QUOTE_SENT -> CONTRACT_SIGNED -> CLOSED_WON / CLOSED_LOST.
+         */
+        post: operations["crm_deals_assign_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/deals/{id}/change-stage/": {
         parameters: {
             query?: never;
@@ -2509,6 +3109,26 @@ export interface paths {
          * @description Transition the deal to a new stage using FSM validation. Valid transitions are enforced by the backend.
          */
         post: operations["crm_deals_change_stage_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/deals/{id}/claim/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Claim a deal (take it from the shared queue)
+         * @description ADR-0006 Move 2: a routed seller-team member takes ownership of an unclaimed заявка.
+         */
+        post: operations["crm_deals_claim_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2555,6 +3175,69 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/crm/deals/{id}/generate-draft-quote/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate a pre-filled draft КП from the buyer request (AI moat / speed)
+         * @description Creates a fresh DRAFT Quote for the seller, copying the buyer's request lines and prefilling matched products' cost / currency / lead-time from the seller's SupplierOffers (ADR-0006 Move 3). The seller reviews-and-sends instead of building from scratch.
+         */
+        post: operations["crm_deals_generate_draft_quote_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/deals/{id}/release/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Release a deal back to the queue
+         * @description CRUD for deals (the core CRM entity).
+         *
+         *     Deal lifecycle: DRAFT -> KYC_PENDING -> SOURCING -> CALCULATING ->
+         *     QUOTE_SENT -> CONTRACT_SIGNED -> CLOSED_WON / CLOSED_LOST.
+         */
+        post: operations["crm_deals_release_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/deals/{id}/route/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Route the request (RFQ) to seller companies
+         * @description Buyer-only, while the deal is still DRAFT. Addresses a (typically free-text) заявка to chosen seller companies — multi-seller routing. Idempotent; each id must be an active SUPPLIER-type company.
+         */
+        post: operations["crm_deals_route_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/deals/{id}/submit-request/": {
         parameters: {
             query?: never;
@@ -2593,6 +3276,26 @@ export interface paths {
          * @description Buyer-only, while the request is still DRAFT.
          */
         patch: operations["crm_deals_update_request_meta_partial_update"];
+        trace?: never;
+    };
+    "/api/v1/crm/deals/suppliers/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List seller companies for the routing picker
+         * @description Buyer-facing lightweight directory of active SUPPLIER companies.
+         */
+        get: operations["crm_deals_suppliers_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/crm/fulfillments/": {
@@ -3203,6 +3906,26 @@ export interface paths {
         patch: operations["crm_quotes_partial_update"];
         trace?: never;
     };
+    "/api/v1/crm/quotes/{id}/approval-act/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Act on a КП approval step (approve / reject)
+         * @description An approver approves or rejects their step in the КП approval chain.
+         */
+        post: operations["crm_quotes_approval_act_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/quotes/{id}/approve/": {
         parameters: {
             query?: never;
@@ -3223,7 +3946,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/crm/quotes/{id}/confirm-trade-review/": {
+    "/api/v1/crm/quotes/{id}/charges-reorder/": {
         parameters: {
             query?: never;
             header?: never;
@@ -3233,36 +3956,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Confirm trade review (FOREIGN_TRADE_SPECIALIST / ВЭД)
-         * @description CRUD for quotes (commercial proposals).
-         *
-         *     Quote lifecycle: DRAFT -> SENT -> APPROVED / REJECTED.
-         *     Includes PDF generation, send-to-client, approve, and reject actions.
+         * Reorder КП charges (cascade order)
+         * @description Reorder the КП's charges top-to-bottom (drives the cascade base). Thin wrapper (Rule 8).
          */
-        post: operations["crm_quotes_confirm_trade_review_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/crm/quotes/{id}/director-approve/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Approve КП internally (DIRECTOR)
-         * @description CRUD for quotes (commercial proposals).
-         *
-         *     Quote lifecycle: DRAFT -> SENT -> APPROVED / REJECTED.
-         *     Includes PDF generation, send-to-client, approve, and reject actions.
-         */
-        post: operations["crm_quotes_director_approve_create"];
+        post: operations["crm_quotes_charges_reorder_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3281,6 +3978,26 @@ export interface paths {
          * @description Download the previously generated PDF file for a quote.
          */
         get: operations["crm_quotes_download_pdf_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/quotes/{id}/export/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export quote in a chosen format (pdf | xlsx | csv)
+         * @description On-demand, user-chosen export of the КП. ?format=pdf returns the CLIENT projection (no seller cost/margin); ?format=xlsx|csv returns the seller line table, including cost/margin columns only when the requester may view КП costs.
+         */
+        get: operations["crm_quotes_export_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3329,6 +4046,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/crm/quotes/{id}/pricing-assist/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Pricing-assist: suggest КП line costs from the seller's SupplierOffers
+         * @description For each matched (product-linked) line, returns the seller's own active SupplierOffer price / currency / lead-time so the КП builder can autofill costs (ADR-0006 Move 3 — speed). Read-only suggestion; the seller reviews before applying. Cost-confidential: only the quote's own seller company sees its offers.
+         */
+        get: operations["crm_quotes_pricing_assist_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/quotes/{id}/recall/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Recall a КП from approval back to DRAFT (submitter / head)
+         * @description Pull a КП back out of the approval chain to edit it (PENDING_APPROVAL → DRAFT).
+         */
+        post: operations["crm_quotes_recall_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/quotes/{id}/reject/": {
         parameters: {
             query?: never;
@@ -3343,29 +4100,6 @@ export interface paths {
          * @description Client rejects the quote with an optional reason.
          */
         post: operations["crm_quotes_reject_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/crm/quotes/{id}/send-back/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Send КП back to sales for rework (ВЭД / DIRECTOR)
-         * @description CRUD for quotes (commercial proposals).
-         *
-         *     Quote lifecycle: DRAFT -> SENT -> APPROVED / REJECTED.
-         *     Includes PDF generation, send-to-client, approve, and reject actions.
-         */
-        post: operations["crm_quotes_send_back_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3431,6 +4165,30 @@ export interface paths {
          *     Includes PDF generation, send-to-client, approve, and reject actions.
          */
         post: operations["crm_quotes_submit_for_review_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/quotes/{quote_id}/request-diff/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * AI КП-vs-заявка coverage / discrepancy check
+         * @description Compares a received КП against the buyer's original request lines and returns a plain-language list of discrepancies: uncovered (unpriced) lines and — when AI is enabled — non-equivalent substitutions and notes the КП may have ignored. The deterministic coverage facts are always returned; the AI part is purely additive. Result is ASSISTIVE and never blocks. Scoped to the deal's buyer or routed seller.
+         */
+        get: operations["crm_quotes_request_diff_retrieve"];
+        put?: never;
+        /**
+         * AI КП-vs-заявка coverage / discrepancy check
+         * @description Compares a received КП against the buyer's original request lines and returns a plain-language list of discrepancies: uncovered (unpriced) lines and — when AI is enabled — non-equivalent substitutions and notes the КП may have ignored. The deterministic coverage facts are always returned; the AI part is purely additive. Result is ASSISTIVE and never blocks. Scoped to the deal's buyer or routed seller.
+         */
+        post: operations["crm_quotes_request_diff_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3953,6 +4711,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sourcing/compose-request/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * AI compose: free-text need → structured заявка lines (AI #8)
+         * @description The buyer describes a need in plain text ("нужны тормозные колодки на вагон, 4 комплекта, и подшипники буксовые") and Claude proposes structured request line items {name, quantity, unit, mpn, gost_drawing, note} plus REAL catalog product candidates per line (ids always from a DB trigram shortlist — never invented). Human-in-loop: the buyer reviews/edits/confirms in the grid; nothing is auto-submitted. Returns {items: []} contents when AI is disabled.
+         */
+        post: operations["sourcing_compose_request_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sourcing/extract-document/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * AI extract + reconcile a signed contract / counter-invoice PDF (AI #6)
+         * @description Buyer uploads a signed contract or counter-invoice (PDF/scan/image). Claude transcribes {total, currency_code, valid_until, bank_details, line_totals} with the same vision pattern as the заявка path; the financial comparison vs the referenced Quote/Contract is recomputed in CODE with Decimal precision (LLM numbers are never trusted for money). Flags total mismatch, foreign/unknown currency and expired date. Pass quote_id OR contract_id.
+         */
+        post: operations["sourcing_extract_document_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sourcing/import-catalog/": {
         parameters: {
             query?: never;
@@ -4007,6 +4805,46 @@ export interface paths {
         get: operations["sourcing_import_status_retrieve"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sourcing/match-catalog/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * AI semantic match: заявка lines → catalog products
+         * @description For each request line (name / mpn / gost_drawing) returns up to top_k catalog Product candidates ranked by Claude (product_id always from a DB trigram shortlist — the model never invents ids). The buyer/seller confirms a candidate in the grid (human-in-loop). Capped at 50 lines per call.
+         */
+        post: operations["sourcing_match_catalog_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sourcing/preflight-check/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * AI pre-flight quality check for a заявка (advisory)
+         * @description Runs an ADVISORY quality pass over draft request lines before the buyer submits the RFQ. Claude flags vague descriptions, missing/implausible qty or units, likely-duplicate lines and missing key specs. Returns warnings only — never a hard block (line_index always references a GIVEN line; out-of-range indices are dropped). Capped at 50 lines per call.
+         */
+        post: operations["sourcing_preflight_check_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4258,6 +5096,13 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * @description * `ENABLED` - Включено
+         *     * `DISABLED` - Выключено
+         *     * `DEMO` - Демо
+         * @enum {string}
+         */
+        AccessEnum: "ENABLED" | "DISABLED" | "DEMO";
         Act: {
             readonly id: number;
             /** Сделка */
@@ -4343,6 +5188,15 @@ export interface components {
             items: {
                 [key: string]: unknown;
             }[];
+        };
+        ApprovalActRequestRequest: {
+            step_id: number;
+            decision: components["schemas"]["DecisionEnum"];
+            /** @default  */
+            comment: string;
+        };
+        AssignDealRequestRequest: {
+            assignee_id: number;
         };
         Attachment: {
             readonly id: number;
@@ -4597,6 +5451,9 @@ export interface components {
              */
             name: string;
         };
+        ChargesReorderRequestRequest: {
+            order: number[];
+        };
         Company: {
             readonly id: number;
             /**
@@ -4688,6 +5545,145 @@ export interface components {
             readonly user_count: string;
             readonly company_types: string;
         };
+        /**
+         * @description The branded requisites a company prints on its own КП / contract documents.
+         *
+         *     Read/update by the company OWNER for THEIR OWN company. `logo` is read-only here
+         *     (multipart upload goes through the dedicated upload-document-logo action, mirroring
+         *     the company-logo pattern); all textual requisites are flat-writable.
+         */
+        CompanyDocumentProfile: {
+            readonly id: number;
+            /**
+             * Компания
+             * @description Организация, чьи документы оформляются по этому профилю
+             */
+            readonly company: number;
+            /**
+             * Логотип для документов
+             * Format: uri
+             * @description Логотип, печатаемый в шапке КП / договора
+             */
+            readonly logo: string | null;
+            readonly logo_url: string;
+            /**
+             * Полное юридическое наименование
+             * @description Наименование организации для документов (напр. ООО «РемПуть»)
+             */
+            legal_name?: string;
+            /**
+             * ИНН
+             * @description ИНН организации для реквизитов в документах
+             */
+            inn?: string;
+            /**
+             * Юридический адрес
+             * @description Юридический адрес для реквизитов в документах
+             */
+            legal_address?: string;
+            /**
+             * Банковские реквизиты
+             * @description Р/с, банк, МФО, корр. счёт и пр.
+             */
+            bank_details?: string;
+            /**
+             * ФИО подписанта
+             * @description Лицо, подписывающее документы от имени компании
+             */
+            signatory_name?: string;
+            /**
+             * Должность подписанта
+             * @description Должность подписанта (напр. Генеральный директор)
+             */
+            signatory_position?: string;
+            /**
+             * Колонтитул / оговорка
+             * @description Текст внизу документа: дисклеймер, условия, контакты
+             */
+            footer_text?: string;
+            /**
+             * Акцентный цвет
+             * @description HEX-цвет фирменного стиля для шапки документа (напр. #15294d)
+             */
+            accent_color?: string;
+            /**
+             * Создан
+             * Format: date-time
+             */
+            readonly created_at: string;
+            /**
+             * Обновлён
+             * Format: date-time
+             */
+            readonly updated_at: string;
+        };
+        /** @description Platform-admin view/CRUD of a company's feature entitlements (ADR-0006 Move 4 monetization). */
+        CompanyEntitlement: {
+            readonly id: number;
+            /** Компания */
+            company: number;
+            readonly company_name: string;
+            readonly company_inn: string;
+            /**
+             * Ключ функции
+             * @description Стабильный код функции (accounts.constants.FeatureKey), напр. quote.send
+             */
+            feature_key: string;
+            /** Доступ */
+            access?: components["schemas"]["AccessEnum"];
+            readonly access_display: string;
+            /**
+             * Лимит
+             * @description Потолок использования (пусто — без лимита)
+             */
+            limit?: number | null;
+            /**
+             * Кредиты
+             * @description Расходуемый баланс (пусто — неприменимо)
+             */
+            credits?: number | null;
+            /**
+             * Действует до
+             * Format: date-time
+             */
+            expires_at?: string | null;
+            /** Заметка */
+            note?: string;
+            readonly is_granted: boolean;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
+        /** @description Platform-admin view/CRUD of a company's feature entitlements (ADR-0006 Move 4 monetization). */
+        CompanyEntitlementRequest: {
+            /** Компания */
+            company: number;
+            /**
+             * Ключ функции
+             * @description Стабильный код функции (accounts.constants.FeatureKey), напр. quote.send
+             */
+            feature_key: string;
+            /** Доступ */
+            access?: components["schemas"]["AccessEnum"];
+            /**
+             * Лимит
+             * @description Потолок использования (пусто — без лимита)
+             */
+            limit?: number | null;
+            /**
+             * Кредиты
+             * @description Расходуемый баланс (пусто — неприменимо)
+             */
+            credits?: number | null;
+            /**
+             * Действует до
+             * Format: date-time
+             */
+            expires_at?: string | null;
+            /** Заметка */
+            note?: string;
+        };
         /** @description Lightweight company serializer for nested use — no extra queries. */
         CompanyLight: {
             readonly id: number;
@@ -4750,6 +5746,12 @@ export interface components {
             readonly role_code: string;
             readonly role_name: string;
             /**
+             * Роль (с правами)
+             * @description Роль компании с набором прав; назначается администратором компании
+             */
+            company_role?: number | null;
+            readonly company_role_name: string;
+            /**
              * Основная компания
              * @description Основное рабочее пространство пользователя
              */
@@ -4791,6 +5793,11 @@ export interface components {
              * @description Функциональная роль внутри рабочего пространства
              */
             role: number;
+            /**
+             * Роль (с правами)
+             * @description Роль компании с набором прав; назначается администратором компании
+             */
+            company_role?: number | null;
             /**
              * Основная компания
              * @description Основное рабочее пространство пользователя
@@ -4877,13 +5884,36 @@ export interface components {
              */
             logo?: string | null;
         };
+        /** @description A company-defined role with its permission set (the access matrix). */
+        CompanyRole: {
+            readonly id: number;
+            /** Компания */
+            readonly company: number;
+            /** Название роли */
+            name: string;
+            /**
+             * Права
+             * @description Список кодов прав (accounts.constants.Permission)
+             */
+            permissions?: unknown;
+            /**
+             * Системная (Администратор компании)
+             * @description Полноправная роль администратора компании — нельзя удалить/урезать
+             */
+            readonly is_system: boolean;
+            readonly member_count: string;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
         CompanyRoleApplication: {
             readonly id: number;
             /**
              * Компания
              * @description Организация, подавшая заявку
              */
-            company: number;
+            readonly company: number;
             readonly company_name: string;
             readonly company_inn: string;
             /**
@@ -4903,13 +5933,13 @@ export interface components {
              *     * `APPROVED` - Одобрено
              *     * `REJECTED` - Отклонено
              */
-            status?: components["schemas"]["CompanyRoleApplicationStatusEnum"];
+            readonly status: components["schemas"]["CompanyRoleApplicationStatusEnum"];
             readonly status_display: string;
             /**
              * Подал заявку
              * @description Пользователь, инициировавший заявку
              */
-            submitted_by?: number | null;
+            readonly submitted_by: number | null;
             readonly submitted_by_email: string;
             /**
              * Договор
@@ -4933,18 +5963,18 @@ export interface components {
              * Рассмотрел
              * @description Администратор, рассмотревший заявку
              */
-            reviewed_by?: number | null;
+            readonly reviewed_by: number | null;
             readonly reviewed_by_email: string;
             /**
              * Комментарий
              * @description Внутренний комментарий администратора
              */
-            review_notes?: string;
+            readonly review_notes: string;
             /**
              * Дата рассмотрения
              * Format: date-time
              */
-            reviewed_at?: string | null;
+            readonly reviewed_at: string | null;
             /**
              * Дата подачи
              * Format: date-time
@@ -4958,31 +5988,10 @@ export interface components {
         };
         CompanyRoleApplicationRequest: {
             /**
-             * Компания
-             * @description Организация, подавшая заявку
-             */
-            company: number;
-            /**
              * Запрашиваемая роль
              * @description Роль, на которую подаётся заявка (SUPPLIER или MANUFACTURER)
              */
             requested_type: number;
-            /**
-             * Статус
-             * @description Текущий статус рассмотрения заявки
-             *
-             *     * `PENDING` - На рассмотрении
-             *     * `DOCUMENTS_REQUIRED` - Требуются документы
-             *     * `PAYMENT_REQUIRED` - Ожидание оплаты
-             *     * `APPROVED` - Одобрено
-             *     * `REJECTED` - Отклонено
-             */
-            status?: components["schemas"]["CompanyRoleApplicationStatusEnum"];
-            /**
-             * Подал заявку
-             * @description Пользователь, инициировавший заявку
-             */
-            submitted_by?: number | null;
             /**
              * Договор
              * Format: binary
@@ -5001,21 +6010,6 @@ export interface components {
              * @description Партнёрское соглашение (обязательно для MANUFACTURER)
              */
             partnership_agreement?: string | null;
-            /**
-             * Рассмотрел
-             * @description Администратор, рассмотревший заявку
-             */
-            reviewed_by?: number | null;
-            /**
-             * Комментарий
-             * @description Внутренний комментарий администратора
-             */
-            review_notes?: string;
-            /**
-             * Дата рассмотрения
-             * Format: date-time
-             */
-            reviewed_at?: string | null;
         };
         /**
          * @description * `PENDING` - На рассмотрении
@@ -5026,6 +6020,79 @@ export interface components {
          * @enum {string}
          */
         CompanyRoleApplicationStatusEnum: "PENDING" | "DOCUMENTS_REQUIRED" | "PAYMENT_REQUIRED" | "APPROVED" | "REJECTED";
+        /** @description A company-defined role with its permission set (the access matrix). */
+        CompanyRoleRequest: {
+            /** Название роли */
+            name: string;
+            /**
+             * Права
+             * @description Список кодов прав (accounts.constants.Permission)
+             */
+            permissions?: unknown;
+        };
+        /**
+         * @description A selling company's КП defaults + document-numbering prefix.
+         *
+         *     Read/update by the company OWNER for THEIR OWN company. FK defaults
+         *     (delivery_basis / cost_currency) are exposed AND written as master-data CODES
+         *     (e.g. "USD", "FCA") — the service resolves them — so the field names below are
+         *     read-only projections; PATCH bodies carry `default_cost_currency` /
+         *     `default_delivery_basis` codes which the view hands to update_company_settings.
+         */
+        CompanySettings: {
+            readonly id: number;
+            /**
+             * Компания
+             * @description Организация, к которой относятся настройки
+             */
+            readonly company: number;
+            readonly default_cost_currency_code: string | null;
+            readonly default_delivery_basis_code: string | null;
+            /**
+             * Ставка НДС по умолчанию (%)
+             * Format: decimal
+             * @description Ставка НДС, подставляемая в новый КП
+             */
+            default_vat_rate?: string | null;
+            /**
+             * Маржа по умолчанию (%)
+             * Format: decimal
+             * @description Наценка на себестоимость, подставляемая в новый КП
+             */
+            default_margin_percent?: string | null;
+            /**
+             * Срок действия КП по умолчанию (дней)
+             * @description Через сколько дней истекает новый КП (valid_until = сегодня + N)
+             */
+            default_offer_validity_days?: number | null;
+            /**
+             * Порог маржи (%)
+             * Format: decimal
+             * @description Минимальная валовая маржа (на цене). Ниже — КП требует согласования.
+             */
+            min_margin_percent?: string;
+            /**
+             * Целевая маржа (%)
+             * Format: decimal
+             * @description Желаемая валовая маржа (на цене) — зелёная зона в конструкторе КП.
+             */
+            target_margin_percent?: string;
+            /**
+             * Префикс нумерации документов
+             * @description Префикс номеров документов компании (напр. «ACME» → ACME-CT-2026-00001)
+             */
+            doc_number_prefix?: string;
+            /**
+             * Создан
+             * Format: date-time
+             */
+            readonly created_at: string;
+            /**
+             * Обновлён
+             * Format: date-time
+             */
+            readonly updated_at: string;
+        };
         Contract: {
             readonly id: number;
             /** Сделка */
@@ -5209,6 +6276,9 @@ export interface components {
              */
             manager?: number | null;
             readonly manager_name: string;
+            readonly assigned_to: string;
+            readonly assigned_to_name: string;
+            readonly assigned_at: string;
             /**
              * Этап воронки
              * @description Текущий этап сделки в воронке продаж
@@ -5230,6 +6300,8 @@ export interface components {
             readonly quotes: components["schemas"]["Quote"][];
             /** @description Whether the current user may add/edit/remove this deal's request rows. */
             readonly can_edit_request: boolean;
+            /** @description Seller companies this RFQ is routed to (multi-seller routing). */
+            readonly target_sellers_data: unknown[];
             /**
              * Дата создания
              * Format: date-time
@@ -5301,13 +6373,24 @@ export interface components {
              * @description Ответственный менеджер RailTech
              */
             manager?: number | null;
+            readonly assigned_to: string;
+            readonly assigned_to_name: string;
+            readonly assigned_at: string;
             readonly active_quote: components["schemas"]["Quote"];
+            /** @description Seller companies this RFQ is routed to (multi-seller routing). */
+            readonly target_sellers_data: unknown[];
             /**
              * Дата создания
              * Format: date-time
              */
             readonly created_at: string;
         };
+        /**
+         * @description * `APPROVE` - APPROVE
+         *     * `REJECT` - REJECT
+         * @enum {string}
+         */
+        DecisionEnum: "APPROVE" | "REJECT";
         DeliveryBasis: {
             readonly id: number;
             /**
@@ -5370,6 +6453,95 @@ export interface components {
              * @description Неактивные записи скрыты в формах выбора
              */
             is_active?: boolean;
+        };
+        /** @description DB-editable email template — Platform-Operator admin CRUD. */
+        EmailTemplate: {
+            readonly id: number;
+            /**
+             * Ключ
+             * @description Совпадает с именем файлового шаблона: 'setup_password', 'kyc_verified', 'quote_sent', …
+             */
+            key: string;
+            /**
+             * Тема
+             * @description Шаблон темы письма. Поддерживает переменные контекста, напр. {{ company_name }}.
+             */
+            subject: string;
+            /**
+             * Тело (HTML)
+             * @description HTML-версия письма. Пусто — HTML-альтернатива не прикладывается.
+             */
+            html_body?: string;
+            /**
+             * Текст (plain)
+             * @description Текстовая версия письма. Рендерится без HTML-экранирования (ссылки не ломаются).
+             */
+            text_body: string;
+            /**
+             * Доступные переменные
+             * @description Человекочитаемая справка по merge-переменным, которые передаёт контекст для этого ключа.
+             */
+            available_variables?: string;
+            /**
+             * Активен
+             * @description Неактивный шаблон игнорируется — отправка возвращается к файловому шаблону.
+             */
+            is_active?: boolean;
+            /** Кто изменил */
+            readonly updated_by: number | null;
+            readonly updated_by_email: string;
+            /**
+             * Изменён
+             * Format: date-time
+             */
+            readonly updated_at: string;
+        };
+        /** @description Optional override context for preview/test-send. Empty = use SAMPLE context. */
+        EmailTemplatePreviewRequest: {
+            context?: {
+                [key: string]: unknown;
+            };
+        };
+        /** @description DB-editable email template — Platform-Operator admin CRUD. */
+        EmailTemplateRequest: {
+            /**
+             * Ключ
+             * @description Совпадает с именем файлового шаблона: 'setup_password', 'kyc_verified', 'quote_sent', …
+             */
+            key: string;
+            /**
+             * Тема
+             * @description Шаблон темы письма. Поддерживает переменные контекста, напр. {{ company_name }}.
+             */
+            subject: string;
+            /**
+             * Тело (HTML)
+             * @description HTML-версия письма. Пусто — HTML-альтернатива не прикладывается.
+             */
+            html_body?: string;
+            /**
+             * Текст (plain)
+             * @description Текстовая версия письма. Рендерится без HTML-экранирования (ссылки не ломаются).
+             */
+            text_body: string;
+            /**
+             * Доступные переменные
+             * @description Человекочитаемая справка по merge-переменным, которые передаёт контекст для этого ключа.
+             */
+            available_variables?: string;
+            /**
+             * Активен
+             * @description Неактивный шаблон игнорируется — отправка возвращается к файловому шаблону.
+             */
+            is_active?: boolean;
+        };
+        /** @description Input for the test-send action: a single recipient email. */
+        EmailTemplateTestSendRequest: {
+            context?: {
+                [key: string]: unknown;
+            };
+            /** Format: email */
+            to_email: string;
         };
         EquipmentGroup: {
             readonly id: number;
@@ -5795,6 +6967,46 @@ export interface components {
              */
             readonly created_at: string;
         };
+        /** @description A platform-operator sub-role with its capability set (ADR-0004 G1). */
+        OperatorRole: {
+            readonly id: number;
+            /**
+             * Код роли
+             * @description Стабильный код (accounts.constants.OperatorRoleCode); сравнение в коде по нему
+             */
+            readonly code: string;
+            /** Название роли */
+            name: string;
+            /**
+             * Права
+             * @description Список кодов прав (accounts.constants.OperatorPermission)
+             */
+            permissions?: unknown;
+            /**
+             * Системная (Супероператор)
+             * @description Полноправная роль оператора — нельзя удалить/урезать
+             */
+            readonly is_system: boolean;
+            /** Описание */
+            description?: string;
+            readonly operator_count: string;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
+        /** @description A platform-operator sub-role with its capability set (ADR-0004 G1). */
+        OperatorRoleRequest: {
+            /** Название роли */
+            name: string;
+            /**
+             * Права
+             * @description Список кодов прав (accounts.constants.OperatorPermission)
+             */
+            permissions?: unknown;
+            /** Описание */
+            description?: string;
+        };
         PaginatedActList: {
             /** @example 123 */
             count: number;
@@ -5855,6 +7067,21 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["Category"][];
         };
+        PaginatedCompanyEntitlementList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["CompanyEntitlement"][];
+        };
         PaginatedCompanyList: {
             /** @example 123 */
             count: number;
@@ -5885,6 +7112,21 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["CompanyRoleApplication"][];
         };
+        PaginatedCompanyRoleList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["CompanyRole"][];
+        };
         PaginatedContractList: {
             /** @example 123 */
             count: number;
@@ -5914,6 +7156,21 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["DealList"][];
+        };
+        PaginatedEmailTemplateList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["EmailTemplate"][];
         };
         PaginatedEquipmentGroupList: {
             /** @example 123 */
@@ -6019,6 +7276,21 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["Notification"][];
+        };
+        PaginatedOperatorRoleList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["OperatorRole"][];
         };
         PaginatedPaymentList: {
             /** @example 123 */
@@ -6278,6 +7550,84 @@ export interface components {
             /** Активен */
             is_active?: boolean;
         };
+        /**
+         * @description The branded requisites a company prints on its own КП / contract documents.
+         *
+         *     Read/update by the company OWNER for THEIR OWN company. `logo` is read-only here
+         *     (multipart upload goes through the dedicated upload-document-logo action, mirroring
+         *     the company-logo pattern); all textual requisites are flat-writable.
+         */
+        PatchedCompanyDocumentProfileRequest: {
+            /**
+             * Полное юридическое наименование
+             * @description Наименование организации для документов (напр. ООО «РемПуть»)
+             */
+            legal_name?: string;
+            /**
+             * ИНН
+             * @description ИНН организации для реквизитов в документах
+             */
+            inn?: string;
+            /**
+             * Юридический адрес
+             * @description Юридический адрес для реквизитов в документах
+             */
+            legal_address?: string;
+            /**
+             * Банковские реквизиты
+             * @description Р/с, банк, МФО, корр. счёт и пр.
+             */
+            bank_details?: string;
+            /**
+             * ФИО подписанта
+             * @description Лицо, подписывающее документы от имени компании
+             */
+            signatory_name?: string;
+            /**
+             * Должность подписанта
+             * @description Должность подписанта (напр. Генеральный директор)
+             */
+            signatory_position?: string;
+            /**
+             * Колонтитул / оговорка
+             * @description Текст внизу документа: дисклеймер, условия, контакты
+             */
+            footer_text?: string;
+            /**
+             * Акцентный цвет
+             * @description HEX-цвет фирменного стиля для шапки документа (напр. #15294d)
+             */
+            accent_color?: string;
+        };
+        /** @description Platform-admin view/CRUD of a company's feature entitlements (ADR-0006 Move 4 monetization). */
+        PatchedCompanyEntitlementRequest: {
+            /** Компания */
+            company?: number;
+            /**
+             * Ключ функции
+             * @description Стабильный код функции (accounts.constants.FeatureKey), напр. quote.send
+             */
+            feature_key?: string;
+            /** Доступ */
+            access?: components["schemas"]["AccessEnum"];
+            /**
+             * Лимит
+             * @description Потолок использования (пусто — без лимита)
+             */
+            limit?: number | null;
+            /**
+             * Кредиты
+             * @description Расходуемый баланс (пусто — неприменимо)
+             */
+            credits?: number | null;
+            /**
+             * Действует до
+             * Format: date-time
+             */
+            expires_at?: string | null;
+            /** Заметка */
+            note?: string;
+        };
         PatchedCompanyRequest: {
             /**
              * Название
@@ -6345,31 +7695,10 @@ export interface components {
         };
         PatchedCompanyRoleApplicationRequest: {
             /**
-             * Компания
-             * @description Организация, подавшая заявку
-             */
-            company?: number;
-            /**
              * Запрашиваемая роль
              * @description Роль, на которую подаётся заявка (SUPPLIER или MANUFACTURER)
              */
             requested_type?: number;
-            /**
-             * Статус
-             * @description Текущий статус рассмотрения заявки
-             *
-             *     * `PENDING` - На рассмотрении
-             *     * `DOCUMENTS_REQUIRED` - Требуются документы
-             *     * `PAYMENT_REQUIRED` - Ожидание оплаты
-             *     * `APPROVED` - Одобрено
-             *     * `REJECTED` - Отклонено
-             */
-            status?: components["schemas"]["CompanyRoleApplicationStatusEnum"];
-            /**
-             * Подал заявку
-             * @description Пользователь, инициировавший заявку
-             */
-            submitted_by?: number | null;
             /**
              * Договор
              * Format: binary
@@ -6388,21 +7717,61 @@ export interface components {
              * @description Партнёрское соглашение (обязательно для MANUFACTURER)
              */
             partnership_agreement?: string | null;
+        };
+        /** @description A company-defined role with its permission set (the access matrix). */
+        PatchedCompanyRoleRequest: {
+            /** Название роли */
+            name?: string;
             /**
-             * Рассмотрел
-             * @description Администратор, рассмотревший заявку
+             * Права
+             * @description Список кодов прав (accounts.constants.Permission)
              */
-            reviewed_by?: number | null;
+            permissions?: unknown;
+        };
+        /**
+         * @description A selling company's КП defaults + document-numbering prefix.
+         *
+         *     Read/update by the company OWNER for THEIR OWN company. FK defaults
+         *     (delivery_basis / cost_currency) are exposed AND written as master-data CODES
+         *     (e.g. "USD", "FCA") — the service resolves them — so the field names below are
+         *     read-only projections; PATCH bodies carry `default_cost_currency` /
+         *     `default_delivery_basis` codes which the view hands to update_company_settings.
+         */
+        PatchedCompanySettingsRequest: {
             /**
-             * Комментарий
-             * @description Внутренний комментарий администратора
+             * Ставка НДС по умолчанию (%)
+             * Format: decimal
+             * @description Ставка НДС, подставляемая в новый КП
              */
-            review_notes?: string;
+            default_vat_rate?: string | null;
             /**
-             * Дата рассмотрения
-             * Format: date-time
+             * Маржа по умолчанию (%)
+             * Format: decimal
+             * @description Наценка на себестоимость, подставляемая в новый КП
              */
-            reviewed_at?: string | null;
+            default_margin_percent?: string | null;
+            /**
+             * Срок действия КП по умолчанию (дней)
+             * @description Через сколько дней истекает новый КП (valid_until = сегодня + N)
+             */
+            default_offer_validity_days?: number | null;
+            /**
+             * Порог маржи (%)
+             * Format: decimal
+             * @description Минимальная валовая маржа (на цене). Ниже — КП требует согласования.
+             */
+            min_margin_percent?: string;
+            /**
+             * Целевая маржа (%)
+             * Format: decimal
+             * @description Желаемая валовая маржа (на цене) — зелёная зона в конструкторе КП.
+             */
+            target_margin_percent?: string;
+            /**
+             * Префикс нумерации документов
+             * @description Префикс номеров документов компании (напр. «ACME» → ACME-CT-2026-00001)
+             */
+            doc_number_prefix?: string;
         };
         PatchedContractRequest: {
             /** Сделка */
@@ -6562,6 +7931,39 @@ export interface components {
              */
             seller_pays_delivery?: boolean;
         };
+        /** @description DB-editable email template — Platform-Operator admin CRUD. */
+        PatchedEmailTemplateRequest: {
+            /**
+             * Ключ
+             * @description Совпадает с именем файлового шаблона: 'setup_password', 'kyc_verified', 'quote_sent', …
+             */
+            key?: string;
+            /**
+             * Тема
+             * @description Шаблон темы письма. Поддерживает переменные контекста, напр. {{ company_name }}.
+             */
+            subject?: string;
+            /**
+             * Тело (HTML)
+             * @description HTML-версия письма. Пусто — HTML-альтернатива не прикладывается.
+             */
+            html_body?: string;
+            /**
+             * Текст (plain)
+             * @description Текстовая версия письма. Рендерится без HTML-экранирования (ссылки не ломаются).
+             */
+            text_body?: string;
+            /**
+             * Доступные переменные
+             * @description Человекочитаемая справка по merge-переменным, которые передаёт контекст для этого ключа.
+             */
+            available_variables?: string;
+            /**
+             * Активен
+             * @description Неактивный шаблон игнорируется — отправка возвращается к файловому шаблону.
+             */
+            is_active?: boolean;
+        };
         PatchedEquipmentGroupRequest: {
             /**
              * Название
@@ -6683,6 +8085,18 @@ export interface components {
              */
             is_read?: boolean;
         };
+        /** @description A platform-operator sub-role with its capability set (ADR-0004 G1). */
+        PatchedOperatorRoleRequest: {
+            /** Название роли */
+            name?: string;
+            /**
+             * Права
+             * @description Список кодов прав (accounts.constants.OperatorPermission)
+             */
+            permissions?: unknown;
+            /** Описание */
+            description?: string;
+        };
         PatchedPaymentRequest: {
             /** Инвойс */
             invoice?: number;
@@ -6795,6 +8209,12 @@ export interface components {
              */
             rate_percent?: string | null;
             /**
+             * Ваша стоимость статьи
+             * Format: decimal
+             * @description Сколько статья реально стоит продавцу. Пусто = по себестоимости (= выставленной сумме).
+             */
+            cost_amount?: string | null;
+            /**
              * Скидка (вычет)
              * @description Если включено — сумма вычитается из базы до НДС (UBL allowance)
              */
@@ -6821,6 +8241,11 @@ export interface components {
              * @description Строка из Excel-импорта (для нераспознанных позиций)
              */
             imported_raw_name?: string;
+            /**
+             * Каноническое наименование (RU)
+             * @description Нормализованное русское наименование из AI-импорта (для поиска по каталогу)
+             */
+            name_canonical?: string;
             /**
              * Количество
              * @description Количество единиц товара
@@ -6897,6 +8322,11 @@ export interface components {
              * @description Процент скидки на позицию (0–100%)
              */
             discount_percent?: string;
+            /**
+             * Срок поставки (дней)
+             * @description Срок поставки позиции в днях от заказа/предоплаты
+             */
+            lead_time_days?: number;
         };
         PatchedQuoteRequest: {
             /**
@@ -6926,6 +8356,16 @@ export interface components {
              */
             quote_currency?: string | null;
             /**
+             * Код
+             * @description Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')
+             */
+            cost_currency_default?: string | null;
+            /**
+             * Ручные курсы КП (FX override)
+             * @description Договорные курсы валют к UZS, заданные вручную {код: курс} — побеждают снимок
+             */
+            fx_manual?: unknown;
+            /**
              * Страна налогообложения
              * @description Определяет ставку НДС для расчёта
              */
@@ -6936,6 +8376,22 @@ export interface components {
              * @description Зафиксированная ставка НДС на момент создания КП
              */
             vat_rate?: string;
+            /**
+             * Маржа КП (%)
+             * Format: decimal
+             * @description Наценка на себестоимость всех позиций (на весь КП)
+             */
+            margin_percent?: string;
+            /**
+             * Срок поставки КП (дней)
+             * @description Срок поставки всего КП в днях. Если пусто — берётся максимум по позициям
+             */
+            delivery_lead_time_days?: number | null;
+            /**
+             * Условие поставки
+             * @description Уточнение по срокам/наличию («в наличии», «под заказ» и т. п.)
+             */
+            delivery_note?: string;
             /**
              * Действует до
              * Format: date
@@ -7029,9 +8485,24 @@ export interface components {
             stock_status?: number | null;
             /**
              * Срок поставки
-             * @description Ориентировочный срок поставки (напр. '14-21 дн.')
+             * @description Ориентировочный срок поставки (напр. '14-21 дн.') — свободный текст
              */
             delivery_lead_time?: string;
+            /**
+             * Остаток на складе
+             * @description Доступное количество на складе (ATP) для отгрузки в короткий срок
+             */
+            stock_quantity?: number;
+            /**
+             * Срок поставки со склада (дней)
+             * @description Срок отгрузки единиц, имеющихся на складе (наличие)
+             */
+            in_stock_lead_time_days?: number;
+            /**
+             * Срок поставки под заказ (дней)
+             * @description Срок поставки единиц сверх складского остатка (под заказ)
+             */
+            order_lead_time_days?: number;
             /**
              * Мин. заказ
              * @description Минимальное количество для заказа
@@ -7717,6 +9188,11 @@ export interface components {
              */
             version: number;
             /**
+             * Номер КП
+             * @description Человекочитаемый сквозной номер КП, выдаётся при отправке клиенту (напр. ACME-КП-2026-00001). Пусто, пока КП не отправлено.
+             */
+            readonly number: string | null;
+            /**
              * Статус
              * @description Текущий статус КП (черновик, отправлено, одобрено)
              */
@@ -7740,6 +9216,21 @@ export interface components {
              */
             quote_currency?: string | null;
             /**
+             * Код
+             * @description Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')
+             */
+            cost_currency_default?: string | null;
+            /**
+             * Снимок курсов (FX)
+             * @description Замороженные курсы валют себестоимости к UZS на момент расчёта {код: курс}
+             */
+            readonly fx_snapshot: unknown;
+            /**
+             * Ручные курсы КП (FX override)
+             * @description Договорные курсы валют к UZS, заданные вручную {код: курс} — побеждают снимок
+             */
+            fx_manual?: unknown;
+            /**
              * Страна налогообложения
              * @description Определяет ставку НДС для расчёта
              */
@@ -7750,6 +9241,12 @@ export interface components {
              * @description Зафиксированная ставка НДС на момент создания КП
              */
             vat_rate?: string;
+            /**
+             * Маржа КП (%)
+             * Format: decimal
+             * @description Наценка на себестоимость всех позиций (на весь КП)
+             */
+            margin_percent?: string;
             /**
              * Сумма без НДС
              * Format: decimal
@@ -7774,6 +9271,17 @@ export interface components {
              * @description Полная сумма КП с учётом НДС (авто-расчёт)
              */
             readonly total_incl_vat: string;
+            /**
+             * Срок поставки КП (дней)
+             * @description Срок поставки всего КП в днях. Если пусто — берётся максимум по позициям
+             */
+            delivery_lead_time_days?: number | null;
+            readonly effective_delivery_lead_time_days: number;
+            /**
+             * Условие поставки
+             * @description Уточнение по срокам/наличию («в наличии», «под заказ» и т. п.)
+             */
+            delivery_note?: string;
             /**
              * Действует до
              * Format: date
@@ -7810,6 +9318,8 @@ export interface components {
             readonly approved_at: string | null;
             readonly items: components["schemas"]["QuoteItem"][];
             readonly charges: components["schemas"]["QuoteCharge"][];
+            readonly economics: string;
+            readonly approval_steps: string;
             /**
              * Дата создания
              * Format: date-time
@@ -7853,10 +9363,36 @@ export interface components {
              */
             rate_percent?: string | null;
             /**
+             * Ваша стоимость статьи
+             * Format: decimal
+             * @description Сколько статья реально стоит продавцу. Пусто = по себестоимости (= выставленной сумме).
+             */
+            cost_amount?: string | null;
+            /**
              * Скидка (вычет)
              * @description Если включено — сумма вычитается из базы до НДС (UBL allowance)
              */
             is_deduction?: boolean;
+            /**
+             * Порядок
+             * @description Позиция в каскаде: статья считается от нарастающего итога всех строк выше неё.
+             */
+            readonly sort_order: number;
+            /**
+             * База (нарастающий итог до строки)
+             * Format: decimal
+             */
+            readonly resolved_base: string | null;
+            /**
+             * Рассчитанная сумма (со знаком)
+             * Format: decimal
+             */
+            readonly resolved_amount: string | null;
+            /**
+             * Из шаблона
+             * @description Строка создана автоматически из шаблона базиса поставки
+             */
+            readonly from_template: boolean;
             /**
              * Внёс
              * @description Кто добавил статью расхода
@@ -7898,6 +9434,12 @@ export interface components {
              */
             rate_percent?: string | null;
             /**
+             * Ваша стоимость статьи
+             * Format: decimal
+             * @description Сколько статья реально стоит продавцу. Пусто = по себестоимости (= выставленной сумме).
+             */
+            cost_amount?: string | null;
+            /**
              * Скидка (вычет)
              * @description Если включено — сумма вычитается из базы до НДС (UBL allowance)
              */
@@ -7919,6 +9461,8 @@ export interface components {
             readonly product_domain: string;
             readonly product_sku: string;
             readonly product_gost: string;
+            readonly product_mpn: string;
+            readonly product_uom: string;
             /**
              * Оффер поставщика
              * @description Конкретный оффер, из которого взята базовая цена
@@ -7930,6 +9474,11 @@ export interface components {
              * @description Строка из Excel-импорта (для нераспознанных позиций)
              */
             imported_raw_name?: string;
+            /**
+             * Каноническое наименование (RU)
+             * @description Нормализованное русское наименование из AI-импорта (для поиска по каталогу)
+             */
+            name_canonical?: string;
             /**
              * Количество
              * @description Количество единиц товара
@@ -8008,6 +9557,11 @@ export interface components {
              */
             discount_percent?: string;
             /**
+             * Срок поставки (дней)
+             * @description Срок поставки позиции в днях от заказа/предоплаты
+             */
+            lead_time_days?: number;
+            /**
              * Себестоимость
              * Format: decimal
              * @description = базовая цена + логистика + пошлина (авто-расчёт)
@@ -8041,6 +9595,11 @@ export interface components {
              * @description Строка из Excel-импорта (для нераспознанных позиций)
              */
             imported_raw_name?: string;
+            /**
+             * Каноническое наименование (RU)
+             * @description Нормализованное русское наименование из AI-импорта (для поиска по каталогу)
+             */
+            name_canonical?: string;
             /**
              * Количество
              * @description Количество единиц товара
@@ -8117,6 +9676,11 @@ export interface components {
              * @description Процент скидки на позицию (0–100%)
              */
             discount_percent?: string;
+            /**
+             * Срок поставки (дней)
+             * @description Срок поставки позиции в днях от заказа/предоплаты
+             */
+            lead_time_days?: number;
         };
         QuoteRequest: {
             /**
@@ -8146,6 +9710,16 @@ export interface components {
              */
             quote_currency?: string | null;
             /**
+             * Код
+             * @description Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')
+             */
+            cost_currency_default?: string | null;
+            /**
+             * Ручные курсы КП (FX override)
+             * @description Договорные курсы валют к UZS, заданные вручную {код: курс} — побеждают снимок
+             */
+            fx_manual?: unknown;
+            /**
              * Страна налогообложения
              * @description Определяет ставку НДС для расчёта
              */
@@ -8156,6 +9730,22 @@ export interface components {
              * @description Зафиксированная ставка НДС на момент создания КП
              */
             vat_rate?: string;
+            /**
+             * Маржа КП (%)
+             * Format: decimal
+             * @description Наценка на себестоимость всех позиций (на весь КП)
+             */
+            margin_percent?: string;
+            /**
+             * Срок поставки КП (дней)
+             * @description Срок поставки всего КП в днях. Если пусто — берётся максимум по позициям
+             */
+            delivery_lead_time_days?: number | null;
+            /**
+             * Условие поставки
+             * @description Уточнение по срокам/наличию («в наличии», «под заказ» и т. п.)
+             */
+            delivery_note?: string;
             /**
              * Действует до
              * Format: date
@@ -8214,6 +9804,9 @@ export interface components {
             token: string;
             password: string;
         };
+        RouteRequestRequestRequest: {
+            seller_company_ids: number[];
+        };
         /**
          * @description Fields a user may edit on their OWN profile via /users/update-me/.
          *
@@ -8243,10 +9836,6 @@ export interface components {
              * @description Фото пользователя для профиля
              */
             avatar?: string | null;
-        };
-        SendBackQuoteRequestRequest: {
-            /** @default  */
-            reason: string;
         };
         SetMemberRoleRequest: {
             member_id: number;
@@ -8318,9 +9907,24 @@ export interface components {
             stock_status?: number | null;
             /**
              * Срок поставки
-             * @description Ориентировочный срок поставки (напр. '14-21 дн.')
+             * @description Ориентировочный срок поставки (напр. '14-21 дн.') — свободный текст
              */
             delivery_lead_time?: string;
+            /**
+             * Остаток на складе
+             * @description Доступное количество на складе (ATP) для отгрузки в короткий срок
+             */
+            stock_quantity?: number;
+            /**
+             * Срок поставки со склада (дней)
+             * @description Срок отгрузки единиц, имеющихся на складе (наличие)
+             */
+            in_stock_lead_time_days?: number;
+            /**
+             * Срок поставки под заказ (дней)
+             * @description Срок поставки единиц сверх складского остатка (под заказ)
+             */
+            order_lead_time_days?: number;
             /**
              * Мин. заказ
              * @description Минимальное количество для заказа
@@ -8371,9 +9975,24 @@ export interface components {
             stock_status?: number | null;
             /**
              * Срок поставки
-             * @description Ориентировочный срок поставки (напр. '14-21 дн.')
+             * @description Ориентировочный срок поставки (напр. '14-21 дн.') — свободный текст
              */
             delivery_lead_time?: string;
+            /**
+             * Остаток на складе
+             * @description Доступное количество на складе (ATP) для отгрузки в короткий срок
+             */
+            stock_quantity?: number;
+            /**
+             * Срок поставки со склада (дней)
+             * @description Срок отгрузки единиц, имеющихся на складе (наличие)
+             */
+            in_stock_lead_time_days?: number;
+            /**
+             * Срок поставки под заказ (дней)
+             * @description Срок поставки единиц сверх складского остатка (под заказ)
+             */
+            order_lead_time_days?: number;
             /**
              * Мин. заказ
              * @description Минимальное количество для заказа
@@ -8384,6 +10003,10 @@ export interface components {
              * @description Неактивные офферы не отображаются при выборе
              */
             is_active?: boolean;
+        };
+        SupplierPickerItem: {
+            id: number;
+            name: string;
         };
         SupplierSubscription: {
             readonly id: number;
@@ -8767,6 +10390,13 @@ export interface components {
             readonly workspace_role: string;
             readonly kyc_status: string;
             /**
+             * Роль оператора
+             * @description Гранулярная под-роль платформенного оператора (ADR-0004 G1). Имеет смысл только для SystemRole=ADMIN; пусто = полный доступ (Супероператор).
+             */
+            readonly operator_role: number | null;
+            readonly operator_role_data: string;
+            readonly is_platform_admin: boolean;
+            /**
              * Активный
              * @description Отметьте, если пользователь должен считаться активным. Уберите эту отметку вместо удаления учётной записи.
              */
@@ -9031,6 +10661,99 @@ export interface operations {
             };
         };
     };
+    accounts_companies_document_profile_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Компания. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyDocumentProfile"];
+                };
+            };
+            /** @description Only the company OWNER may read/update the profile */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    accounts_companies_document_profile_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Компания. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedCompanyDocumentProfileRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedCompanyDocumentProfileRequest"];
+                "multipart/form-data": components["schemas"]["PatchedCompanyDocumentProfileRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyDocumentProfile"];
+                };
+            };
+            /** @description Only the company OWNER may read/update the profile */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    accounts_companies_document_profile_upload_logo_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Компания. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    logo?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyDocumentProfile"];
+                };
+            };
+        };
+    };
     accounts_companies_download_document_retrieve: {
         parameters: {
             query?: never;
@@ -9143,6 +10866,70 @@ export interface operations {
             };
             /** @description Cannot demote the last admin */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    accounts_companies_settings_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Компания. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanySettings"];
+                };
+            };
+            /** @description Only the company OWNER may read/update the settings */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    accounts_companies_settings_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Компания. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedCompanySettingsRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedCompanySettingsRequest"];
+                "multipart/form-data": components["schemas"]["PatchedCompanySettingsRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanySettings"];
+                };
+            };
+            /** @description Only the company OWNER may read/update the settings */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -9375,6 +11162,179 @@ export interface operations {
             };
         };
     };
+    accounts_company_roles_list: {
+        parameters: {
+            query?: {
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedCompanyRoleList"];
+                };
+            };
+        };
+    };
+    accounts_company_roles_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompanyRoleRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["CompanyRoleRequest"];
+                "multipart/form-data": components["schemas"]["CompanyRoleRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyRole"];
+                };
+            };
+        };
+    };
+    accounts_company_roles_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Роль компании. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyRole"];
+                };
+            };
+        };
+    };
+    accounts_company_roles_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Роль компании. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompanyRoleRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["CompanyRoleRequest"];
+                "multipart/form-data": components["schemas"]["CompanyRoleRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyRole"];
+                };
+            };
+        };
+    };
+    accounts_company_roles_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Роль компании. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    accounts_company_roles_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Роль компании. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedCompanyRoleRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedCompanyRoleRequest"];
+                "multipart/form-data": components["schemas"]["PatchedCompanyRoleRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyRole"];
+                };
+            };
+        };
+    };
+    accounts_company_roles_assign_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompanyRoleRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["CompanyRoleRequest"];
+                "multipart/form-data": components["schemas"]["CompanyRoleRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyRole"];
+                };
+            };
+        };
+    };
     accounts_company_types_retrieve: {
         parameters: {
             query?: never;
@@ -9430,6 +11390,24 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["User"];
                 };
+            };
+        };
+    };
+    accounts_permissions_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -10510,6 +12488,27 @@ export interface operations {
             };
         };
     };
+    admin_access_log_retrieve: {
+        parameters: {
+            query?: {
+                /** @description Max items (default 100, max 500) */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Access-log entries */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     admin_activity_retrieve: {
         parameters: {
             query: {
@@ -10534,6 +12533,592 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    admin_break_glass_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Break-glass grant recorded */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    admin_email_templates_list: {
+        parameters: {
+            query?: {
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedEmailTemplateList"];
+                };
+            };
+        };
+    };
+    admin_email_templates_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailTemplateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["EmailTemplateRequest"];
+                "multipart/form-data": components["schemas"]["EmailTemplateRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailTemplate"];
+                };
+            };
+        };
+    };
+    admin_email_templates_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Шаблон email. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailTemplate"];
+                };
+            };
+        };
+    };
+    admin_email_templates_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Шаблон email. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailTemplateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["EmailTemplateRequest"];
+                "multipart/form-data": components["schemas"]["EmailTemplateRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailTemplate"];
+                };
+            };
+        };
+    };
+    admin_email_templates_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Шаблон email. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    admin_email_templates_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Шаблон email. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedEmailTemplateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedEmailTemplateRequest"];
+                "multipart/form-data": components["schemas"]["PatchedEmailTemplateRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailTemplate"];
+                };
+            };
+        };
+    };
+    admin_email_templates_preview_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Шаблон email. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["EmailTemplatePreviewRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["EmailTemplatePreviewRequest"];
+                "multipart/form-data": components["schemas"]["EmailTemplatePreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Rendered subject/text_body/html_body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    admin_email_templates_test_send_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Шаблон email. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailTemplateTestSendRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["EmailTemplateTestSendRequest"];
+                "multipart/form-data": components["schemas"]["EmailTemplateTestSendRequest"];
+            };
+        };
+        responses: {
+            /** @description Send result with EmailLog id and status */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    admin_entitlements_list: {
+        parameters: {
+            query?: {
+                /**
+                 * @description * `ENABLED` - Включено
+                 *     * `DISABLED` - Выключено
+                 *     * `DEMO` - Демо
+                 */
+                access?: "DEMO" | "DISABLED" | "ENABLED";
+                company?: number;
+                feature_key?: string;
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedCompanyEntitlementList"];
+                };
+            };
+        };
+    };
+    admin_entitlements_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompanyEntitlementRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["CompanyEntitlementRequest"];
+                "multipart/form-data": components["schemas"]["CompanyEntitlementRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyEntitlement"];
+                };
+            };
+        };
+    };
+    admin_entitlements_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Право доступа компании. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyEntitlement"];
+                };
+            };
+        };
+    };
+    admin_entitlements_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Право доступа компании. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompanyEntitlementRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["CompanyEntitlementRequest"];
+                "multipart/form-data": components["schemas"]["CompanyEntitlementRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyEntitlement"];
+                };
+            };
+        };
+    };
+    admin_entitlements_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Право доступа компании. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    admin_entitlements_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Право доступа компании. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedCompanyEntitlementRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedCompanyEntitlementRequest"];
+                "multipart/form-data": components["schemas"]["PatchedCompanyEntitlementRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyEntitlement"];
+                };
+            };
+        };
+    };
+    admin_entitlements_choices_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyEntitlement"];
+                };
+            };
+        };
+    };
+    admin_operator_permissions_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    admin_operator_roles_list: {
+        parameters: {
+            query?: {
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedOperatorRoleList"];
+                };
+            };
+        };
+    };
+    admin_operator_roles_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OperatorRoleRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["OperatorRoleRequest"];
+                "multipart/form-data": components["schemas"]["OperatorRoleRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperatorRole"];
+                };
+            };
+        };
+    };
+    admin_operator_roles_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Роль оператора. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperatorRole"];
+                };
+            };
+        };
+    };
+    admin_operator_roles_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Роль оператора. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OperatorRoleRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["OperatorRoleRequest"];
+                "multipart/form-data": components["schemas"]["OperatorRoleRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperatorRole"];
+                };
+            };
+        };
+    };
+    admin_operator_roles_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Роль оператора. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    admin_operator_roles_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Роль оператора. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedOperatorRoleRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedOperatorRoleRequest"];
+                "multipart/form-data": components["schemas"]["PatchedOperatorRoleRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperatorRole"];
+                };
+            };
+        };
+    };
+    admin_operator_roles_assign_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OperatorRoleRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["OperatorRoleRequest"];
+                "multipart/form-data": components["schemas"]["OperatorRoleRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperatorRole"];
+                };
             };
         };
     };
@@ -11410,6 +13995,24 @@ export interface operations {
             };
         };
     };
+    catalog_product_enrich_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     catalog_product_statuses_list: {
         parameters: {
             query?: {
@@ -12143,6 +14746,26 @@ export interface operations {
             };
         };
     };
+    crm_analytics_time_to_first_quote_retrieve: {
+        parameters: {
+            query?: {
+                since_days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description {sample_size, median_hours, avg_hours, p90_hours, ...} */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     crm_charge_templates_list: {
         parameters: {
             query?: {
@@ -12784,6 +15407,33 @@ export interface operations {
             };
         };
     };
+    crm_deals_suggest_reply_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deal_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description {'draft': str} — may be empty */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description AI assist disabled */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     crm_deals_retrieve: {
         parameters: {
             query?: never;
@@ -12944,6 +15594,34 @@ export interface operations {
             };
         };
     };
+    crm_deals_assign_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Сделка. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignDealRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AssignDealRequestRequest"];
+                "multipart/form-data": components["schemas"]["AssignDealRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealDetail"];
+                };
+            };
+        };
+    };
     crm_deals_change_stage_create: {
         parameters: {
             query?: never;
@@ -12983,6 +15661,34 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    crm_deals_claim_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Сделка. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["DealDetailRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["DealDetailRequest"];
+                "multipart/form-data": components["schemas"]["DealDetailRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealDetail"];
+                };
             };
         };
     };
@@ -13063,6 +15769,90 @@ export interface operations {
             };
         };
     };
+    crm_deals_generate_draft_quote_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Сделка. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["DealDetailRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["DealDetailRequest"];
+                "multipart/form-data": components["schemas"]["DealDetailRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealDetail"];
+                };
+            };
+        };
+    };
+    crm_deals_release_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Сделка. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["DealDetailRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["DealDetailRequest"];
+                "multipart/form-data": components["schemas"]["DealDetailRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealDetail"];
+                };
+            };
+        };
+    };
+    crm_deals_route_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Сделка. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RouteRequestRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["RouteRequestRequestRequest"];
+                "multipart/form-data": components["schemas"]["RouteRequestRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealDetail"];
+                };
+            };
+        };
+    };
     crm_deals_submit_request_create: {
         parameters: {
             query?: never;
@@ -13115,6 +15905,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DealDetail"];
+                };
+            };
+        };
+    };
+    crm_deals_suppliers_list: {
+        parameters: {
+            query?: {
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupplierPickerItem"][];
                 };
             };
         };
@@ -14561,6 +17373,48 @@ export interface operations {
             };
         };
     };
+    crm_quotes_approval_act_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Коммерческое предложение. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApprovalActRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ApprovalActRequestRequest"];
+                "multipart/form-data": components["schemas"]["ApprovalActRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Quote"];
+                };
+            };
+            /** @description Wrong status/step */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Role not permitted */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     crm_quotes_approve_create: {
         parameters: {
             query?: never;
@@ -14596,7 +17450,7 @@ export interface operations {
             };
         };
     };
-    crm_quotes_confirm_trade_review_create: {
+    crm_quotes_charges_reorder_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -14608,9 +17462,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["QuoteRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["QuoteRequest"];
-                "multipart/form-data": components["schemas"]["QuoteRequest"];
+                "application/json": components["schemas"]["ChargesReorderRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ChargesReorderRequestRequest"];
+                "multipart/form-data": components["schemas"]["ChargesReorderRequestRequest"];
             };
         };
         responses: {
@@ -14621,62 +17475,6 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Quote"];
                 };
-            };
-            /** @description Wrong status */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Role not permitted */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    crm_quotes_director_approve_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Коммерческое предложение. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["QuoteRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["QuoteRequest"];
-                "multipart/form-data": components["schemas"]["QuoteRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Quote"];
-                };
-            };
-            /** @description Wrong status */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Role not permitted */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
             };
         };
     };
@@ -14701,6 +17499,37 @@ export interface operations {
             };
             /** @description PDF not generated yet */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    crm_quotes_export_retrieve: {
+        parameters: {
+            query?: {
+                /** @description Export format: pdf (default), xlsx, or csv. */
+                format?: "csv" | "pdf" | "xlsx";
+            };
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Коммерческое предложение. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Rendered file (PDF / XLSX / CSV) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unsupported format */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -14777,6 +17606,69 @@ export interface operations {
             };
         };
     };
+    crm_quotes_pricing_assist_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Коммерческое предложение. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description {suggestions: [{item_id, product_id, base_price, ...}]} */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    crm_quotes_recall_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Коммерческое предложение. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuoteRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["QuoteRequest"];
+                "multipart/form-data": components["schemas"]["QuoteRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Quote"];
+                };
+            };
+            /** @description Wrong status */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not permitted */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     crm_quotes_reject_create: {
         parameters: {
             query?: never;
@@ -14804,48 +17696,6 @@ export interface operations {
                 };
             };
             /** @description Not authorized */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    crm_quotes_send_back_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Коммерческое предложение. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["SendBackQuoteRequestRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["SendBackQuoteRequestRequest"];
-                "multipart/form-data": components["schemas"]["SendBackQuoteRequestRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Quote"];
-                };
-            };
-            /** @description Wrong status */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Role not permitted */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -14959,6 +17809,74 @@ export interface operations {
             };
             /** @description Role not permitted */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    crm_quotes_request_diff_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description {'ai_enabled': bool, 'findings': [{issue_type, line, explanation}]} */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Caller is neither the deal's buyer nor a routed seller */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Quote not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    crm_quotes_request_diff_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                quote_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description {'ai_enabled': bool, 'findings': [{issue_type, line, explanation}]} */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Caller is neither the deal's buyer nor a routed seller */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Quote not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -15891,6 +18809,98 @@ export interface operations {
             };
         };
     };
+    sourcing_compose_request_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** @description Free-text description of the need */
+                    text: string;
+                    /** @description Optional domain hint for catalog matching */
+                    domain_code?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Proposed request line items with catalog candidates */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing/empty text */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description AI compose disabled */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    sourcing_extract_document_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description Contract/invoice PDF or image
+                     */
+                    file?: string;
+                    quote_id?: number;
+                    contract_id?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Extracted fields + code-computed reconciliation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No file or missing quote_id/contract_id */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Quote/Contract not found or not visible */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description AI extraction disabled */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     sourcing_import_catalog_create: {
         parameters: {
             query?: never;
@@ -15997,6 +19007,42 @@ export interface operations {
             };
             /** @description No access to this task */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    sourcing_match_catalog_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    sourcing_preflight_check_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

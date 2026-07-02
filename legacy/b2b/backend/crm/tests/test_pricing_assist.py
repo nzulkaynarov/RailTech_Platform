@@ -13,11 +13,7 @@ from django.utils import timezone
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, VerificationStatus, WorkspaceRole
 from catalog.models import Product, SupplierOffer
 from crm.models import Deal, DealStage, Quote, QuoteItem, QuoteStatus
-from crm.services.pricing_assist import (
-    suggest_line_pricing,
-    suggest_pricing_for_products,
-    suggest_quote_pricing,
-)
+from crm.services.pricing_assist import suggest_line_pricing, suggest_pricing_for_products, suggest_quote_pricing
 from master_data.models import Currency
 
 
@@ -36,13 +32,24 @@ def base(db):
 
 def _offer(product, supplier, price, **kw):
     return SupplierOffer.objects.create(
-        product=product, supplier=supplier, base_price=Decimal(price),
-        currency=kw.pop("currency", None), is_active=kw.pop("is_active", True), **kw,
+        product=product,
+        supplier=supplier,
+        base_price=Decimal(price),
+        currency=kw.pop("currency", None),
+        is_active=kw.pop("is_active", True),
+        **kw,
     )
 
 
 def test_suggest_line_pricing_returns_sellers_own_offer(base):
-    _offer(base["product"], base["seller_a"], "100.00", currency=base["usd"], in_stock_lead_time_days=7, supplier_sku="SKU-A")
+    _offer(
+        base["product"],
+        base["seller_a"],
+        "100.00",
+        currency=base["usd"],
+        in_stock_lead_time_days=7,
+        supplier_sku="SKU-A",
+    )
     out = suggest_line_pricing(base["product"].id, base["seller_a"].id)
     assert out["base_price"] == "100.00" and out["currency"] == "USD"
     assert out["lead_time_days"] == 7 and out["supplier_sku"] == "SKU-A"

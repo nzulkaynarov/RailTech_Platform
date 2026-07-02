@@ -118,17 +118,21 @@ def authenticated_user(user_factory):
 
 @pytest.fixture(scope="session")
 def django_db_setup(django_db_setup, django_db_blocker):
-    """Install pgtrigger triggers and the pghistory context stub.
+    """Install pgtrigger triggers, the pghistory context stub, and pg_trgm.
 
     --nomigrations short-circuits migrations so pgtrigger/pghistory schema
-    objects are never installed. We stub/install them once per session so
-    business-logic tests that trigger INSERT...DealEvent (via pghistory snapshot
-    triggers) don't fail with "_pgh_attach_context() does not exist".
+    objects and the pg_trgm extension (created in migration catalog/0006) are
+    never installed. We install them once per session so business-logic tests
+    that trigger INSERT...DealEvent (pghistory snapshot triggers) don't fail with
+    "_pgh_attach_context() does not exist", and Smart-Match / AI-shortlist tests
+    that call SIMILARITY() don't fail with "function similarity(...) does not exist".
     """
     from django.db import connection
 
     with django_db_blocker.unblock():
         with connection.cursor() as c:
+            # Trigram similarity backs Smart Match + the AI catalog shortlist.
+            c.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")
             c.execute(
                 "CREATE OR REPLACE FUNCTION _pgh_attach_context() "
                 "RETURNS uuid AS $$ SELECT NULL::uuid $$ LANGUAGE sql"

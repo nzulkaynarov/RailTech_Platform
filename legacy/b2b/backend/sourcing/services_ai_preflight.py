@@ -128,9 +128,8 @@ def pre_flight_check(lines: list[dict], domain_code: str | None = None) -> list[
     valid_indices = set(range(len(bounded)))
 
     domain_hint = f" Предметная область заявки: {domain_code}." if domain_code else ""
-    user_msg = (
-        f"Проверь {len(bounded)} строк заявки (индексы 0..{len(bounded) - 1}).{domain_hint}\n\n"
-        + _format_lines(bounded)
+    user_msg = f"Проверь {len(bounded)} строк заявки (индексы 0..{len(bounded) - 1}).{domain_hint}\n\n" + _format_lines(
+        bounded
     )
 
     client = _client()

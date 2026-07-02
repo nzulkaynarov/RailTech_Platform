@@ -90,7 +90,15 @@ def test_compose_drops_noise_rows(settings, monkeypatch):
     settings.AI_IMPORT_ENABLED = True
     fake = _stub_response(
         [
-            {"name": "Болт М12", "name_canonical": "Болт М12", "quantity": 100, "unit": "шт", "mpn": "", "gost_drawing": "", "note": ""},
+            {
+                "name": "Болт М12",
+                "name_canonical": "Болт М12",
+                "quantity": 100,
+                "unit": "шт",
+                "mpn": "",
+                "gost_drawing": "",
+                "note": "",
+            },
             {"name": "", "name_canonical": "", "quantity": 1, "unit": "", "mpn": "", "gost_drawing": "", "note": ""},
         ]
     )

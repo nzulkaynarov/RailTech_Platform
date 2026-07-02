@@ -8,12 +8,12 @@ from django.utils import timezone
 from accounts.constants import FeatureKey
 from accounts.models import Company, CompanyEntitlement, SupplierSubscription
 from accounts.services.entitlements import (
-    quote_export_entitled,
-    quote_send_entitled,
     consume_credit,
     grant_entitlement,
     has_entitlement,
     is_demo,
+    quote_export_entitled,
+    quote_send_entitled,
 )
 
 
@@ -24,8 +24,11 @@ def company(db):
 
 def _operational_sub(company):
     return SupplierSubscription.objects.create(
-        company=company, plan="BASIC", status="ACTIVE",
-        valid_from=timezone.now().date(), valid_until=(timezone.now() + timedelta(days=365)).date(),
+        company=company,
+        plan="BASIC",
+        status="ACTIVE",
+        valid_from=timezone.now().date(),
+        valid_until=(timezone.now() + timedelta(days=365)).date(),
     )
 
 
@@ -100,8 +103,8 @@ def test_demo_access_is_granted_and_flagged(company):
 def test_credit_metering_consumes_and_blocks_when_exhausted(company):
     grant_entitlement(company.id, FeatureKey.AI_DRAFT, access="ENABLED", credits=2)
     assert has_entitlement(company.id, FeatureKey.AI_DRAFT) is True
-    assert consume_credit(company.id, FeatureKey.AI_DRAFT) is True   # 2 → 1
-    assert consume_credit(company.id, FeatureKey.AI_DRAFT) is True   # 1 → 0
+    assert consume_credit(company.id, FeatureKey.AI_DRAFT) is True  # 2 → 1
+    assert consume_credit(company.id, FeatureKey.AI_DRAFT) is True  # 1 → 0
     assert consume_credit(company.id, FeatureKey.AI_DRAFT) is False  # exhausted
     assert has_entitlement(company.id, FeatureKey.AI_DRAFT) is False  # 0 credits ⇒ not granted
     assert CompanyEntitlement.objects.get(company=company, feature_key="ai.draft").credits == 0

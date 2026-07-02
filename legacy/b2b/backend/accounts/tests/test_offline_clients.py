@@ -28,8 +28,11 @@ def seller(db):
 @pytest.mark.django_db
 def test_creates_offline_company_and_primary_contact(seller):
     result, err = create_offline_client(
-        seller=seller, company_name="Offline Co", contact_name="Ivan Petrov",
-        email="ivan@offline.test", inn="305111222",
+        seller=seller,
+        company_name="Offline Co",
+        contact_name="Ivan Petrov",
+        email="ivan@offline.test",
+        inn="305111222",
     )
     assert err is None
     company, contact = result["company"], result["contact"]

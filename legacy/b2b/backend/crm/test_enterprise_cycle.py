@@ -28,6 +28,7 @@ from crm.models import (
     ContractStatus,
     Deal,
     DealStage,
+    FulfillmentStatus,
     InvoiceStatus,
     Quote,
     QuoteItem,
@@ -71,6 +72,8 @@ def master_data(db):
         InvoiceStatus.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
     for code in ["DRAFT", "ISSUED", "SIGNED", "CANCELLED"]:
         ActStatus.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
+    for code in ["PENDING", "SHIPPED", "IN_TRANSIT", "DELIVERED", "ACCEPTED", "DISPUTED"]:
+        FulfillmentStatus.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
     Country.objects.get_or_create(code="UZ", defaults={"name": "Uzbekistan", "sort_order": 10})
     Currency.objects.get_or_create(code="USD", defaults={"name": "US Dollar", "symbol": "$", "sort_order": 10})
     UnitOfMeasure.objects.get_or_create(code="PCS", defaults={"name": "Piece", "sort_order": 10})

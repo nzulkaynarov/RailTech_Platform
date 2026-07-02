@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts import services
-from accounts.constants import Permission, PERMISSION_GROUPS
+from accounts.constants import PERMISSION_GROUPS
 from accounts.serializers import CompanyRoleSerializer
 
 # Service error code → HTTP status.
