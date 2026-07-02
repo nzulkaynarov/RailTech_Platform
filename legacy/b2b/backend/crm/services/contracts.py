@@ -132,13 +132,14 @@ def _render_contract_pdf(contract) -> None:
     from django.template.loader import render_to_string
     from weasyprint import HTML
 
-    # Supplier party = the company that owns the КП (the seller that prepared it),
-    # NOT a hardcoded RailTech. Derived from the preparer's primary membership.
-    supplier = None
-    preparer = contract.quote.prepared_by
-    if preparer:
-        membership = preparer.memberships.filter(is_primary=True, is_active=True).select_related("company").first()
-        supplier = membership.company if membership else None
+    # Supplier party = the company that OWNS the КП (authoritative — from the quote, not
+    # a preparer's primary membership which can be missing/wrong), plus its branded
+    # document profile (legal name + requisites), mirroring the КП PDF. NEVER a hardcoded
+    # platform identity: a contract is a legal document and must name the real counterparty.
+    from .quotes import _quote_seller_company, _seller_document_profile
+
+    supplier = _quote_seller_company(contract.quote)
+    seller_profile = _seller_document_profile(supplier)
 
     html_string = render_to_string(
         "crm/contract_pdf.html",
@@ -147,6 +148,7 @@ def _render_contract_pdf(contract) -> None:
             "deal": contract.deal,
             "company": contract.deal.company,
             "supplier": supplier,
+            "seller_profile": seller_profile,
             "quote": contract.quote,
             "items": contract.quote.items.select_related("product", "frozen_currency").all(),
         },
