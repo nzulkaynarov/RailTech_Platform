@@ -59,7 +59,7 @@ computed span (margin is quote-level). No affordance signals this. Minor frictio
 
 ## ⚠️ HEADLINE FINDING
 
-### F7 (CRITICAL — financial misrepresentation) — UZS-priced КП shown to buyer with a «$» sign, off by the FX rate
+### F7 (CRITICAL — financial misrepresentation) — ✅ FIXED (PR pending) — UZS-priced КП shown to buyer with a «$» sign, off by the FX rate
 Repro: seller prices a КП in UZS (line currency «UZ»); the builder correctly shows «UZS 141,120,000».
 Buyer opens the received КП → sees «$141,120,000.00» / «$11,400,000.00 per wheelset».
 
@@ -84,4 +84,11 @@ Recommended fix (needs care — money display architecture, not a one-liner):
   (UZS→«сум», USD→«$»), instead of routing every value through the USD-assuming global toggle. The
   global USD/UZS toggle should CONVERT a known-currency amount, not reinterpret an unlabelled number.
 - Add a serializer field exposing the quote/line currency so the buyer view can format correctly.
-Deferred from this session (high blast-radius on all money display) — flagged as #1 for a focused fix.
+FIXED: `currencyStore` flipped to UZS-canonical — `format(amountUZS)` renders via the
+shared currency-aware `formatMoney` (UZS mode → «UZS 141 120 000.00»; USD mode → the UZS
+amount ÷ rate → «$11,289.60»). Default currency switched to UZS (national). `format`/`convert`
+identities are rebuilt on toggle so subscribed views re-render (the toggle previously did
+nothing — a stable fn ref never triggered a re-render). Catalog prices (ProductDetail/
+ProductManagement) now format in the offer's own currency. Backend defaults `quote_currency=UZS`
+on quote build (best-effort). Eyes-on verified on the exact КП: «UZS 141 120 000.00» native,
+«$11,289.60» in USD mode — no more «$141M» / «1.76 trillion». +vitest regression test.
