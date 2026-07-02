@@ -67,7 +67,13 @@ b2b.railtech.uz {
         # identical policy injected into the local prod-build nginx. If a future
         # asset breaks, flip the name back to Content-Security-Policy-Report-Only,
         # reload, and re-verify — do not loosen directives blindly.
-        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://b2b.railtech.uz; font-src 'self' data:; connect-src 'self' wss: https://b2b.railtech.uz; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'"
+        # connect-src is scoped to this origin only (API + same-origin wss:// for
+        # /ws/*). No bare `wss:` wildcard — that would allow a WebSocket to ANY
+        # host and become an exfil channel if a script were ever injected. Inter
+        # is self-hosted (@fontsource, same origin) so no fonts.gstatic.com in
+        # font-src. If Sentry is enabled in prod (VITE_SENTRY_DSN), its ingest
+        # origin must be added to connect-src or error events are CSP-blocked.
+        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://b2b.railtech.uz; font-src 'self' data:; connect-src 'self' https://b2b.railtech.uz wss://b2b.railtech.uz; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'"
     }
 
     log {

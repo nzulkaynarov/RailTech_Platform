@@ -548,7 +548,9 @@ REST_FRAMEWORK = {
     # Prod/staging = 1 (host Caddy OVERWRITES XFF with the client IP — see
     # deploy/caddy/b2b.railtech.uz.caddy). Dev = 0 (no proxy; XFF is client-forgeable
     # and must be ignored, otherwise per-IP throttles are trivially bypassed).
-    "NUM_PROXIES": int(os.environ.get("DRF_NUM_PROXIES", "0")),
+    # Tolerate an empty/blank env value (e.g. DRF_NUM_PROXIES= in a .env) so a
+    # malformed override fails safe to 0 instead of crashing app boot on int("").
+    "NUM_PROXIES": int((os.environ.get("DRF_NUM_PROXIES") or "0").strip() or "0"),
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
