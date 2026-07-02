@@ -127,14 +127,17 @@ interface UserState {
 
 /* ─── Store ─────────────────────────────────────────────────────────── */
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export const useUserStore = create<UserState>((set, _get) => ({
+export const useUserStore = create<UserState>((set, get) => ({
   /* Default: empty until loaded from auth. Default role is USER — an admin
    * default would make short-lived UI before auth finishes resolve into
    * admin-only screens. */
   screen: 'onboarding',
   role: 'USER',
-  activeStatus: 'SELLER',
+  /* Pre-auth default context is the NARROWEST/safest side, BUYER. It matches the
+   * `|| 'BUYER'` fallback in api/client.ts (X-Active-Context) and the
+   * `statusEntries.length === 0 ? 'BUYER'` fallback in loadFromAuth, so cold-load
+   * requests never go out under a wider seller scope before /me resolves. */
+  activeStatus: 'BUYER',
   isViewerMode: false,
   sellerSubscriptionOperational: null,
   isSuperuser: false,
@@ -237,6 +240,10 @@ export const useUserStore = create<UserState>((set, _get) => ({
         operator_permissions: operatorPermissions,
       };
 
+      // Snapshot the context the store held BEFORE we resolve /me, so we can detect
+      // a context flip (e.g. pre-auth 'BUYER' default → a seller-only company's 'SELLER').
+      const previousActiveStatus = get().activeStatus;
+
       set({
         screen: 'main',
         activeStatus,
@@ -286,6 +293,17 @@ export const useUserStore = create<UserState>((set, _get) => ({
           statusEntries: [],
         },
       });
+
+      // ADR-0005 Phase C: if the resolved context differs from what the store held,
+      // any cold-load queries that already fired under the old X-Active-Context header
+      // (e.g. ['dashboard-stats', period], which is not context-keyed) must refetch under
+      // the new one — otherwise the dashboard can render one cycle of wrong-context data.
+      // invalidateQueries() refetches (less jarring than clear()). Dynamic import keeps the
+      // store free of a static queryClient import cycle (mirrors the authStore import above).
+      if (activeStatus !== previousActiveStatus) {
+        const { queryClient } = await import('../lib/queryClient');
+        queryClient.invalidateQueries();
+      }
     }
   },
 

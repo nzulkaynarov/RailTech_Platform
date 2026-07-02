@@ -7,7 +7,7 @@ describe('userStore', () => {
     useUserStore.setState({
       screen: 'onboarding',
       role: 'USER',
-      activeStatus: 'SELLER',
+      activeStatus: 'BUYER',
       isViewerMode: false,
       profile: {
         firstName: '',
@@ -36,7 +36,8 @@ describe('userStore', () => {
     const state = useUserStore.getState();
     expect(state.screen).toBe('onboarding');
     expect(state.role).toBe('USER');
-    expect(state.activeStatus).toBe('SELLER');
+    // Pre-auth default context is the narrowest/safest side (BUYER); see userStore.ts.
+    expect(state.activeStatus).toBe('BUYER');
     expect(state.isViewerMode).toBe(false);
     expect(state.profile.firstName).toBe('');
     expect(state.company.id).toBeNull();
