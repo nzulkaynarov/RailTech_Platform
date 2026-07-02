@@ -13,6 +13,12 @@ import { test, expect, Page } from '@playwright/test';
 
 const BUYER = { email: 'buyer.local@railtech.uz', password: 'Test1234!' };
 const SELLER = { email: 'seller.local@railtech.uz', password: 'Test1234!' };
+
+// These specs log in with the SEEDED local test users — they only exist on a local/staging
+// stack, never on prod. e2e.yml defaults E2E_BASE_URL to prod, where the logins (and thus the
+// authenticated shell / bell) can't work. Skip the whole suite unless the target is local
+// (audit INF-11: point e2e at a stack with seeded users, don't run auth specs against prod).
+const IS_LOCAL_STACK = /localhost|127\.0\.0\.1/.test(process.env.E2E_BASE_URL || 'http://localhost:5173');
 const RAW_KEY = /\b(common|dashboardpage|shell|productmanagement|requestitems|dealattachments|companystatus)\.[a-z]/;
 
 async function login(page: Page, email: string, password: string) {
@@ -31,6 +37,8 @@ async function expectNoRawKeys(page: Page, where: string) {
 }
 
 test.describe('owner review fixes', () => {
+  test.skip(!IS_LOCAL_STACK, 'Local-stack specs — need seeded buyer.local/seller.local users. Run with a local/staging E2E_BASE_URL.');
+
   test('login label is "Email", not "Email / ИНН"', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByText('Email / ИНН')).toHaveCount(0);
