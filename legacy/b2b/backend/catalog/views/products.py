@@ -1,6 +1,3 @@
-from django.utils.decorators import method_decorator
-from django.views.decorators.cache import cache_page
-from django.views.decorators.vary import vary_on_headers
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema, extend_schema_view
 from rest_framework import filters, permissions, status, viewsets
@@ -12,7 +9,6 @@ from accounts.constants import CompanyTypeCode
 
 from ..models import Product, ProductDocument, ProductImage
 from ..serializers import ProductDocumentSerializer, ProductImageSerializer, ProductListSerializer, ProductSerializer
-from .lookups import LIST_CACHE_TTL
 
 
 @extend_schema_view(
@@ -43,14 +39,18 @@ from .lookups import LIST_CACHE_TTL
     partial_update=extend_schema(summary="Partially update product", tags=["Catalog"]),
     destroy=extend_schema(summary="Delete product", tags=["Catalog"]),
 )
-@method_decorator(vary_on_headers("Accept-Language", "Authorization"), name="list")
-@method_decorator(cache_page(LIST_CACHE_TTL), name="list")
 class ProductViewSet(viewsets.ModelViewSet):
     """
     CRUD for PIM products.
 
     Public read access (PUBLISHED only for non-admin);
     write operations require Admin role.
+
+    NOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER
+    (catalog _CostGateMixin), so a response is viewer-specific and must never be
+    shared; the old cache_page keyed on the rotating Authorization JWT gave a ~0%
+    hit rate + per-token cache bloat anyway. The queryset is select_related/
+    prefetch (N+1-free), so uncached list reads are cheap.
     """
 
     serializer_class = ProductSerializer
