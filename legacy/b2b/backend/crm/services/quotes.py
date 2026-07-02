@@ -78,6 +78,19 @@ def apply_company_quote_defaults(quote: Quote, company: Optional[Company]) -> Qu
     valid_until (= today + default_offer_validity_days). No-op when the company has no
     settings configured. Reads settings via a plain filter (no write on read).
     """
+    # Every client КП is denominated in the national currency (UZS): the cost engine
+    # converts each line (USD/EUR/…) to UZS, so subtotal/vat/total are stored in UZS.
+    # Persist quote_currency=UZS so the value is EXPLICIT end-to-end (buyer view, PDF and
+    # builder otherwise fall back to a guessed 'UZS'). Best-effort — skip silently if the
+    # UZS lookup row isn't present (Currency is a lookup, not guaranteed on every env).
+    if quote.quote_currency_id is None:
+        from master_data.models import Currency
+
+        uzs = Currency.objects.filter(code="UZS").first()
+        if uzs is not None:
+            quote.quote_currency_id = uzs.id
+            quote.save(update_fields=["quote_currency", "updated_at"])
+
     if company is None:
         return quote
     from datetime import timedelta

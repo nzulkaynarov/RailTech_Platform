@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { systemApi } from '@/api/systemApi';
-import { toDecimal } from '@/utils/decimal';
+import { toDecimal, formatMoney } from '@/utils/decimal';
 
 export type Currency = 'USD' | 'UZS';
 
@@ -10,16 +10,44 @@ interface CurrencyState {
   rateLoaded: boolean;
   setCurrency: (currency: Currency) => void;
   loadRate: () => Promise<void>;
-  convert: (amountUSD: number) => number;
-  format: (amountUSD: number) => string;
+  convert: (amountUZS: number) => number;
+  format: (amountUZS: number) => string;
 }
 
+// Amounts across the app are canonical UZS: the cost engine converts every quote line
+// (USD/EUR/…) to UZS via a frozen FX rate, so what reaches this store is already UZS.
+// `convert` DIVIDES by the rate for a USD view; `format` renders via the shared
+// currency-aware formatMoney (same as the КП builder + PDF) so money reads consistently.
+//
+// This fixed the critical bug where a UZS КП was shown to the buyer as "$141,120,000"
+// (the old code assumed USD input → "$" on the raw UZS number, or ×rate in UZS mode →
+// 1.76 trillion). `convert`/`format` are rebuilt on every currency/rate change so their
+// identity changes — components that select `s.format` re-render, making the toggle live
+// (a stable function ref never triggered a re-render, so the toggle silently did nothing).
+const buildConvert = (currency: Currency, rate: number) => (amountUZS: number): number =>
+  currency === 'USD' && rate > 0 ? toDecimal(amountUZS).div(rate).toNumber() : amountUZS;
+
+const buildFormat = (currency: Currency, rate: number) => (amountUZS: number): string => {
+  if (currency === 'USD') {
+    const amountUSD = rate > 0 ? toDecimal(amountUZS).div(rate).toNumber() : 0;
+    return formatMoney(amountUSD, 'USD');
+  }
+  return formatMoney(amountUZS, 'UZS');
+};
+
+const DEFAULT_RATE = 12650;
+
 export const useCurrencyStore = create<CurrencyState>((set, get) => ({
-  currency: 'USD',
-  rate: 12650,
+  // National currency by default — КП / deals / contracts / invoices are denominated in UZS.
+  currency: 'UZS',
+  rate: DEFAULT_RATE,
   rateLoaded: false,
 
-  setCurrency: (currency: Currency) => set({ currency }),
+  convert: buildConvert('UZS', DEFAULT_RATE),
+  format: buildFormat('UZS', DEFAULT_RATE),
+
+  setCurrency: (currency: Currency) =>
+    set({ currency, convert: buildConvert(currency, get().rate), format: buildFormat(currency, get().rate) }),
 
   loadRate: async () => {
     if (get().rateLoaded) return;
@@ -27,27 +55,11 @@ export const useCurrencyStore = create<CurrencyState>((set, get) => ({
       const settings = await systemApi.getSettings();
       const rate = toDecimal(settings.exchange_rate_usd_uzs).toNumber();
       if (rate > 0) {
-        set({ rate, rateLoaded: true });
+        const currency = get().currency;
+        set({ rate, rateLoaded: true, convert: buildConvert(currency, rate), format: buildFormat(currency, rate) });
       }
     } catch {
       // Keep fallback rate on error — will retry on next call
     }
-  },
-
-  convert: (amountUSD: number): number => {
-    const { currency, rate } = get();
-    return currency === 'USD' ? amountUSD : toDecimal(amountUSD).mul(rate).toNumber();
-  },
-
-  format: (amountUSD: number): string => {
-    const { currency, rate } = get();
-    if (currency === 'USD') {
-      return '$' + amountUSD.toLocaleString('en-US', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      });
-    }
-    const amountUZS = toDecimal(amountUSD).mul(rate).toNumber();
-    return amountUZS.toLocaleString('ru-RU') + ' сум';
   },
 }));

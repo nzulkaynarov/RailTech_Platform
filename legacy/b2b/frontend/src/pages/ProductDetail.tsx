@@ -16,7 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 import { useProduct } from '@/hooks/useCatalog';
 import { useCartStore } from '@/store/cartStore';
-import { useCurrencyStore } from '@/store/currencyStore';
+import { formatMoney } from '@/utils/decimal';
 import { useUserStore } from '@/store/userStore';
 import { getDomainLabelKey } from '@/config/domainConfig';
 
@@ -29,7 +29,6 @@ interface ProductDetailProps {
 export function ProductDetail({ productId, onBack }: ProductDetailProps) {
   const { t } = useTranslation();
   const { addItem, openCart } = useCartStore();
-  const formatCurrency = useCurrencyStore((s) => s.format);
   const { activeStatus } = useUserStore();
   const canSendRequest = activeStatus === 'BUYER';
   const showPrices = activeStatus === 'SELLER';
@@ -253,7 +252,7 @@ export function ProductDetail({ productId, onBack }: ProductDetailProps) {
               <CardContent className="p-5 text-center">
                 <p className="text-xs text-muted-foreground mb-1">{t('productDetail.priceFCA')}</p>
                 <p className="text-2xl font-bold text-primary tabular-nums">
-                  {formatCurrency(parseFloat(product.base_price))}
+                  {formatMoney(product.base_price, 'UZS')}
                 </p>
 
               </CardContent>
@@ -314,8 +313,7 @@ export function ProductDetail({ productId, onBack }: ProductDetailProps) {
                           <span className="text-sm font-medium truncate">{offer.supplier_data?.name}</span>
                         </div>
                         <p className="text-lg font-bold text-primary tabular-nums">
-                          {formatCurrency(parseFloat(offer.base_price))}
-                          {offer.currency_data?.code ? ` ${offer.currency_data.code}` : ''}
+                          {formatMoney(offer.base_price, offer.currency_data?.code || 'UZS')}
                         </p>
                         <div className="flex flex-col gap-1 text-xs text-muted-foreground">
                           {offer.delivery_basis_data?.name && (

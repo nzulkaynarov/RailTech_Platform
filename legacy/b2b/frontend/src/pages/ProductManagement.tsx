@@ -23,7 +23,7 @@ import { getDomainLabelKey } from '@/config/domainConfig';
 import { useUserStore } from '@/store/userStore';
 import { useAuthStore } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
-import { useCurrencyStore } from '@/store/currencyStore';
+import { formatMoney } from '@/utils/decimal';
 import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 
 interface ProductManagementProps {
@@ -35,7 +35,6 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
   const { activeStatus } = useUserStore();
   const sellerCompanyId = useAuthStore((s) => s.user?.company?.id);
   const cartStore = useCartStore();
-  const formatCurrency = useCurrencyStore((s) => s.format);
   const { data: domainTypes = [] } = useDomainTypes();
   const { data: stockStatuses = [] } = useStockStatuses();
   const { data: manufacturers = [] } = useManufacturers();
@@ -249,7 +248,7 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
                     {showPrices && (
                       <TableCell className="text-right font-medium tabular-nums text-sm">
                         {product.base_price && parseFloat(product.base_price) > 0
-                          ? formatCurrency(parseFloat(product.base_price))
+                          ? formatMoney(product.base_price, 'UZS')
                           : ''}
                       </TableCell>
                     )}
