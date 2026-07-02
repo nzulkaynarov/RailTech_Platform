@@ -81,6 +81,10 @@ jobs:
           DJANGO_DEBUG=False
           PRODUCTION=true
           ALLOWED_HOSTS=b2b.railtech.uz,localhost,127.0.0.1
+          # SEC-04: exactly one trusted proxy (host Caddy overwrites X-Forwarded-For
+          # with the client IP). Without this the DRF default (0) keys throttles on
+          # REMOTE_ADDR = the fixed Docker-bridge IP → every client shares one bucket.
+          DRF_NUM_PROXIES=1
           DATABASE_URL=${DATABASE_URL}
           DB_SSLMODE=require
           REDIS_URL=redis://redis:6379/0

@@ -67,13 +67,15 @@ b2b.railtech.uz {
         # identical policy injected into the local prod-build nginx. If a future
         # asset breaks, flip the name back to Content-Security-Policy-Report-Only,
         # reload, and re-verify — do not loosen directives blindly.
-        # connect-src is scoped to this origin only (API + same-origin wss:// for
-        # /ws/*). No bare `wss:` wildcard — that would allow a WebSocket to ANY
-        # host and become an exfil channel if a script were ever injected. Inter
-        # is self-hosted (@fontsource, same origin) so no fonts.gstatic.com in
-        # font-src. If Sentry is enabled in prod (VITE_SENTRY_DSN), its ingest
-        # origin must be added to connect-src or error events are CSP-blocked.
-        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://b2b.railtech.uz; font-src 'self' data:; connect-src 'self' https://b2b.railtech.uz wss://b2b.railtech.uz; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'"
+        # connect-src is scoped to this origin (API + same-origin wss:// for /ws/*)
+        # plus the Sentry DE-region ingest (prod sets VITE_SENTRY_DSN → the SPA
+        # POSTs error/session events to o<org>.ingest.de.sentry.io; without this
+        # the enforcing CSP silently drops all telemetry). Wildcard so the org
+        # subdomain survives a DSN rotation within the DE region — narrow it if
+        # the project ever moves regions. No bare `wss:` wildcard (any-host
+        # WebSocket = exfil channel if a script is injected). Inter is self-hosted
+        # (@fontsource, same origin) so no fonts.gstatic.com in font-src.
+        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://b2b.railtech.uz; font-src 'self' data:; connect-src 'self' https://b2b.railtech.uz wss://b2b.railtech.uz https://*.ingest.de.sentry.io; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'"
     }
 
     log {
