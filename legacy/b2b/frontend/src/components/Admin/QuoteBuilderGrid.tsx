@@ -340,6 +340,9 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 					<div className="flex flex-col gap-0.5">
 						<span>{t('quote.economics.landedCost')}: {formatMoney(item.landed_cost, presentationCurrency)}</span>
 						<span>{t('quote.lineProfit')}: {formatMoney(sig.profit, presentationCurrency)}</span>
+						{/* F6: the per-line margin is derived, not editable — markup is one value for the
+						    whole КП. Point the seller at where to change it instead of clicking the cell. */}
+						<span className="mt-0.5 text-muted-foreground">{t('quote.marginQuoteLevelHint')}</span>
 					</div>
 				</TooltipContent>
 			</Tooltip>

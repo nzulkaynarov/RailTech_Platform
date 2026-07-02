@@ -247,12 +247,17 @@ export const useUpdateQuoteSettings = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['quotes'] });
             queryClient.invalidateQueries({ queryKey: ['deals'] });
+            // F5: a quote-level margin/VAT change recomputes EVERY line's final price on the
+            // server. Without this the КП builder's line grid kept showing 0% margin + cost-only
+            // sums until an unrelated action forced a refetch — a confusing stale view while pricing.
+            queryClient.invalidateQueries({ queryKey: ['quote-items'] });
         },
     });
 };
 
 // Seller picks Incoterm → basis set + charge template auto-applied. Refresh quotes,
-// deals (active_quote), and the charges list (template rows appear).
+// deals (active_quote), the charges list (template rows appear), and the line grid
+// (F5: freight/basis recomputes each line's landed cost → final price).
 export const useSetQuoteDeliveryBasis = () => {
     const queryClient = useQueryClient();
     return useMutation({
@@ -262,6 +267,7 @@ export const useSetQuoteDeliveryBasis = () => {
             queryClient.invalidateQueries({ queryKey: ['quotes'] });
             queryClient.invalidateQueries({ queryKey: ['deals'] });
             queryClient.invalidateQueries({ queryKey: ['quote-charges'] });
+            queryClient.invalidateQueries({ queryKey: ['quote-items'] });
         },
     });
 };

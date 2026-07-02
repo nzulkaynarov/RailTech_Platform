@@ -793,7 +793,8 @@
     "deliveryLeadTime": "Delivery lead time",
     "lineCurrency": "Line cost currency",
     "costInPresentation": "Landed cost: {{value}}",
-    "fxRateAt": "Rate {{from}}→{{to}}: {{rate}}"
+    "fxRateAt": "Rate {{from}}→{{to}}: {{rate}}",
+    "marginQuoteLevelHint": "Markup is set for the whole КП — change it in «Настройки КП»"
   },
   "admin": {
     "dashboard": {
