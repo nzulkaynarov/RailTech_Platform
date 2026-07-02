@@ -387,18 +387,27 @@ jobs:
           cd backend
           pip install -r requirements.txt
 
+      # INF-02: hard gate — verified clean (2026-07-02: "No known vulnerabilities
+      # found" for requirements.txt). A new advisory now FAILS the job; triage with
+      # `pip-audit --ignore-vuln <ID>` for accepted risks instead of re-adding `|| true`.
       - name: Run pip audit
         run: |
           pip install pip-audit
           cd backend
-          pip-audit || true
+          pip-audit
 
       - name: Install frontend dependencies
         run: |
           cd frontend
           npm ci
 
+      # INF-02 (partial): NOT yet a hard gate — as of 2026-07-02 npm audit reports
+      # 8 high + 2 critical (axios, react-router, form-data, lodash, picomatch, ws;
+      # all have non-breaking `npm audit fix` upgrades). continue-on-error surfaces
+      # the failure as a red step annotation instead of `|| true` silently hiding it.
+      # TODO: run `npm audit fix`, verify the FE, then delete continue-on-error.
       - name: Run npm audit
+        continue-on-error: true
         run: |
           cd frontend
-          npm audit || true
+          npm audit --audit-level=high
