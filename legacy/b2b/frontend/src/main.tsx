@@ -6,6 +6,7 @@ import { I18nextProvider } from 'react-i18next';
 import i18n from './i18n';
 import { queryClient } from './lib/queryClient';
 import { ErrorBoundary } from './components/Shared/ErrorBoundary';
+import { Toaster } from './components/ui/sonner';
 import { initObservability } from './lib/observability';
 import './index.css';
 import App from './App';
@@ -21,6 +22,10 @@ createRoot(document.getElementById('root')!).render(
         <ErrorBoundary>
           <App />
         </ErrorBoundary>
+        {/* Root mount for sonner: every toast.success/error in the app renders here.
+            Outside the ErrorBoundary so feedback survives a subtree crash; one mount
+            covers auth routes and all shells. */}
+        <Toaster position="top-right" richColors closeButton />
       </QueryClientProvider>
     </I18nextProvider>
   </StrictMode>,

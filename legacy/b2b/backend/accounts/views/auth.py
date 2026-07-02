@@ -1,9 +1,10 @@
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import permissions, status, views
 from rest_framework.generics import RetrieveAPIView
 from rest_framework.response import Response
-from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 
@@ -316,8 +317,14 @@ class CookieTokenRefreshView(TokenRefreshView):
         serializer = self.get_serializer(data={"refresh": token})
         try:
             serializer.is_valid(raise_exception=True)
-        except TokenError as exc:
-            raise InvalidToken(exc.args[0])
+        except (TokenError, get_user_model().DoesNotExist):
+            # A structurally valid token can still be dead: expired/blacklisted, or its
+            # user no longer exists (rotation re-reads the user → DoesNotExist would
+            # otherwise 500). Answer 401 AND clear the cookie, otherwise the browser
+            # replays the dead token on every visit forever.
+            response = Response({"detail": "INVALID_REFRESH_TOKEN"}, status=status.HTTP_401_UNAUTHORIZED)
+            _clear_refresh_cookie(response)
+            return response
         data = dict(serializer.validated_data)
         rotated = data.pop("refresh", None)  # present when ROTATE_REFRESH_TOKENS
         response = Response(data, status=status.HTTP_200_OK)

@@ -386,7 +386,12 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
             4. nothing yet         → empty state */}
         {canEditRequest ? (
           <>
-            <RequestItemsEditor dealId={deal.id} items={quote?.items ?? []} canEdit />
+            <RequestItemsEditor
+              dealId={deal.id}
+              items={quote?.items ?? []}
+              canEdit
+              hasRecipients={(deal.target_sellers_data?.length ?? 0) > 0}
+            />
             {/* AI #7 advisory pre-flight quality check — buyer reviews warnings
                 before submitting; never blocks. Only shown when there are lines. */}
             {preflightLines.length > 0 && (
