@@ -14,8 +14,6 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
-# IsPlatformAdmin previously required here — now inline member-check covers
-# the seller self-serve flow. Keeping the import removed for cleanliness.
 from .models import ImportTask
 from .tasks import process_catalog_import, process_excel_import
 

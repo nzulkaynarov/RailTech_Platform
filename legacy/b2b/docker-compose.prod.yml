@@ -11,7 +11,8 @@
 #   - All published ports stay on 127.0.0.1 (see base compose) so Docker's iptables
 #     rules cannot bypass ufw and expose Redis/MinIO to the internet.
 #   - Resource limits are sized for a 2 vCPU / 3.8 GB box shared with other tenants.
-#   - Database is external (Neon Cloud); no postgres here.
+#   - Database is external (self-hosted PostgreSQL 17 on the DB-VPS, reached over
+#     WireGuard; Neon retired 2026-06-19); no postgres container here.
 # ==============================================================================
 
 services:

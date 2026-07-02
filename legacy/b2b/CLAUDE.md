@@ -202,14 +202,10 @@ make clean               # remove all containers, volumes, cache (DESTRUCTIVE)
 
 ## Testing
 
-- **Backend:** pytest + pytest-django, markers: slow, integration, unit; coverage threshold: 30% enforced on CI (`--cov-fail-under=30`), aspirational target 50%+. Current state (2026-04-27): 79 tests collected, ~30% coverage. Local tests run against the local Docker Postgres (`db` service from `docker-compose.override.yml`, `sslmode=disable`) — fast and isolated, no remote DROP-hang. CI uses an ephemeral Postgres service container.
-- **Frontend:** vitest + @testing-library/react + jsdom (5 store/hook unit tests). Run locally — frontend Docker container is the prod nginx build, so `npm test` lives on the developer machine, not in Compose.
-- **CI:** GitHub Actions — 7 jobs (i18n-symmetry, backend-lint, backend-test, frontend-lint, frontend-build, docker-build, security)
-- **Known test debt** (audit 2026-04-27, not blocking but listed for sprint planning):
-  - `crm/services.py` (57.9 KB of business logic) has no service-level tests for `force_approve_quote`, `send_deal_message`, `QuoteLifecycleService`, Deal FSM transitions — only the smoke `crm/test_enterprise_cycle.py` exercises them implicitly
-  - `accounts/services.py` lacks unit tests for `verify_company_kyc`, `bulk_verify_kyc`, `upload_kyc_document`
-  - No DRF integration tests for new admin endpoints (force-approve quote, force-cancel contract, KYC actions)
-  - Frontend has zero component tests for AdminDataTable / DetailKPIGrid / DealsKanban / GenerateQuoteDialog / OnboardingChecklist — only stores covered
+- **Backend:** pytest + pytest-django, markers: slow, integration, unit; coverage threshold: 30% enforced on CI (`--cov-fail-under=30`), aspirational target 50%+. Current state (2026-07-02): **~575 test functions across ~87 files, ~78% coverage** (well above the 30% gate). CI runs `pytest --create-db --nomigrations` on an ephemeral Postgres — a `conftest.py django_db_setup` fixture installs `pg_trgm` + the pghistory/pgtrigger stubs since `--nomigrations` skips them. Local tests run against the local Docker Postgres (`db` service from `docker-compose.override.yml`, `sslmode=disable`); note `--reuse-db` masks pg_trgm/seed gaps, so reproduce CI failures with `--create-db`.
+- **Frontend:** vitest + @testing-library/react + jsdom (store/hook unit tests). Run locally — frontend Docker container is the prod nginx build, so `npm test` lives on the developer machine, not in Compose.
+- **CI:** GitHub Actions — jobs: i18n-symmetry, backend-lint (flake8 + black + isort, config at repo root), backend-test, migration-check, api-contract (spectacular + openapi-typescript drift), frontend-lint, frontend-build, security, docker-build. (Nightly Playwright e2e is a separate workflow.)
+- **Known test debt** (much of the 2026-04 debt is now paid — `test_quote_services.py`, `test_fsm.py`, `test_kyc_service.py`, DRF admin-endpoint tests, `test_context_scoping.py` all exist). Remaining gaps: service-level tests for `crm/services/fulfillment.py` + `messaging.py` (side-effecting: WS-notify, archival); frontend component tests (AdminDataTable / DealsKanban / GenerateQuoteDialog — only stores covered).
 
 ## Auth Flow (production)
 

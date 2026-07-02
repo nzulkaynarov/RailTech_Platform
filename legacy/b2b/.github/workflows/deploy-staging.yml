@@ -6,7 +6,8 @@ name: Deploy staging.b2b.railtech.uz
 # INERT until set up — manual trigger only. Before this can run, complete the 3
 # prerequisites in Docs/ops/staging.md:
 #   1. DNS A record  staging.b2b.railtech.uz → 176.101.56.141
-#   2. GitHub environment `staging` with its OWN secrets (separate Neon DB!)
+#   2. GitHub environment `staging` with its OWN secrets (separate staging DB —
+#      e.g. the `railtech_staging` database on the DB-VPS, NOT the prod DB!)
 #   3. Caddy block for the new host → web root /var/www/railtech-staging,
 #      proxy /api + /ws to the staging backend container.
 #

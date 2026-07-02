@@ -1,9 +1,10 @@
 """
 JWT Auth Middleware for Django Channels WebSockets.
 
-Standard DRF JWT (simplejwt) only works with HTTP requests.
-This middleware reads the token from the query string (`?token=...`)
-and populates scope['user'] for use inside AsyncWebsocketConsumers.
+Standard DRF JWT (simplejwt) only works with HTTP requests. This middleware
+resolves a one-time `?ticket=` (minted by /auth/ws-ticket/) into scope['user']
+for AsyncWebsocketConsumers — so the long-lived JWT never travels in the URL
+(where it would land in proxy/CDN logs).
 """
 
 import logging
@@ -38,36 +39,12 @@ def get_user_from_ticket(ticket):
         return AnonymousUser()
 
 
-@database_sync_to_async
-def get_user_from_token(token_key):
-    from django.contrib.auth.models import AnonymousUser
-    from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
-
-    from accounts.models import CustomUser
-
-    try:
-        from rest_framework_simplejwt.tokens import AccessToken
-
-        access_token = AccessToken(token_key)
-        user_id = access_token["user_id"]
-        return CustomUser.objects.get(id=user_id)
-    except (InvalidToken, TokenError, KeyError, CustomUser.DoesNotExist):
-        # Expired/invalid token or unknown user → anonymous, expected path.
-        return AnonymousUser()
-    except Exception:
-        # Unexpected failure (e.g. DB error): log it instead of silently
-        # masking it as "no token", then still fail closed to anonymous.
-        logger.exception("Unexpected error authenticating WebSocket token")
-        return AnonymousUser()
-
-
 class JwtAuthMiddleware(BaseMiddleware):
     """
-    Authenticates a WebSocket connection before the consumer starts.
-
-    Prefers a one-time `?ticket=` (minted by /auth/ws-ticket/) so the long-lived
-    JWT no longer travels in the URL. Falls back to the legacy `?token=<JWT>` for
-    backward compatibility during the SPA rollout.
+    Authenticates a WebSocket connection before the consumer starts, from a
+    one-time `?ticket=` (minted by /auth/ws-ticket/). The legacy `?token=<JWT>`
+    fallback was removed (SEC-07): the SPA has used tickets only since rollout,
+    and a long-lived JWT in the query string leaks into proxy/CDN logs.
     """
 
     async def __call__(self, scope, receive, send):
@@ -76,14 +53,8 @@ class JwtAuthMiddleware(BaseMiddleware):
         query_string = scope.get("query_string", b"").decode()
         params = parse_qs(query_string)
         ticket = params.get("ticket", [None])[0]
-        token = params.get("token", [None])[0]
 
-        if ticket:
-            scope["user"] = await get_user_from_ticket(ticket)
-        elif token:
-            scope["user"] = await get_user_from_token(token)
-        else:
-            scope["user"] = AnonymousUser()
+        scope["user"] = await get_user_from_ticket(ticket) if ticket else AnonymousUser()
 
         return await super().__call__(scope, receive, send)
 
