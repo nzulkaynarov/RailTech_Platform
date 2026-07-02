@@ -1594,6 +1594,8 @@
     "approveL2": "Approve KYC (L2)",
     "upgradeL3": "Upgrade to Partner (L3)",
     "revokeL1": "Revoke verification (L1)",
+    "confirmDeleteDocTitle": "Delete KYC document?",
+    "confirmDeleteDocDesc": "The document will be permanently deleted — it's compliance evidence. This can't be undone.",
     "revokeHint": "Revoking sends the company back to L1 and removes supplier capabilities. This action is audit-logged.",
     "bulkApproveL2": "Approve L2 (bulk)",
     "bulkApproveDesc": "KYC will be approved to L2 for {{count}} companies. Skipped items (missing documents, etc.) will be listed separately.",

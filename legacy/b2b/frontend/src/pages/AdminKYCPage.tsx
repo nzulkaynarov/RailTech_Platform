@@ -73,6 +73,9 @@ function DetailSheet({
   const [selectedDocType, setSelectedDocType] = useState('CHARTER');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [confirmAction, setConfirmAction] = useState<null | 'approve-l2' | 'upgrade-l3' | 'revoke-l1'>(null);
+  // UX-01: deleting a KYC document is irreversible (compliance evidence) — gate it behind
+  // the same ConfirmActionDialog every other destructive action here already uses.
+  const [confirmDeleteDoc, setConfirmDeleteDoc] = useState<number | null>(null);
 
   if (!company) return null;
 
@@ -220,7 +223,7 @@ function DetailSheet({
                 variant="ghost"
                 className="h-7 w-7 text-destructive"
                 disabled={deleteMutation.isPending}
-                onClick={() => handleDeleteDoc(doc.id)}
+                onClick={() => setConfirmDeleteDoc(doc.id)}
                 aria-label={t('fileUpload.remove')}
               >
                 <Trash2 className="h-3.5 w-3.5" />
@@ -388,6 +391,17 @@ function DetailSheet({
           variant="destructive"
           onConfirm={(p) => runVerify('L1_UNVERIFIED', p.reason)}
           translateError={(code) => translateApiError(code)}
+        />
+        <ConfirmActionDialog
+          open={confirmDeleteDoc !== null}
+          onOpenChange={(v) => !v && setConfirmDeleteDoc(null)}
+          title={t('kycManager.confirmDeleteDocTitle')}
+          description={t('kycManager.confirmDeleteDocDesc')}
+          confirmLabel={t('common.delete')}
+          variant="destructive"
+          onConfirm={async () => {
+            if (confirmDeleteDoc !== null) await handleDeleteDoc(confirmDeleteDoc);
+          }}
         />
       </SheetContent>
     </Sheet>
