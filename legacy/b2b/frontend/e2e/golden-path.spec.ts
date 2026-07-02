@@ -25,11 +25,14 @@ test.describe('smoke', () => {
   });
 
   test('backend health endpoint is up', async ({ request }) => {
-    // The backend (not the SPA nginx) owns /health/. In the docker harness
-    // localhost:8000 is socat-forwarded to the host backend; against staging the
-    // env URL serves it at the same origin. Allow both.
-    const base = process.env.E2E_API_URL || 'http://localhost:8000';
-    const res = await request.get(`${base}/health/`);
+    // The backend (not the SPA nginx) owns /health/. Local docker harness reaches it
+    // at localhost:8000; against staging/prod the edge (Caddy) serves /health/ at the
+    // SAME origin as the SPA — so derive from the target URL instead of hardcoding
+    // localhost:8000 (which ECONNREFUSEs when E2E_BASE_URL is remote).
+    const baseUrl = process.env.E2E_BASE_URL || 'http://localhost:5173';
+    const isLocal = /localhost|127\.0\.0\.1/.test(baseUrl);
+    const apiBase = process.env.E2E_API_URL || (isLocal ? 'http://localhost:8000' : baseUrl);
+    const res = await request.get(`${apiBase}/health/`);
     expect(res.ok()).toBeTruthy();
   });
 });
