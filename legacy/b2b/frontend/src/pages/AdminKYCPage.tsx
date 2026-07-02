@@ -82,6 +82,18 @@ function DetailSheet({
   const statusCode = getStatusCode(company) as KYCCode;
   const badge = STATUS_BADGE_MAP[statusCode] || STATUS_BADGE_MAP.L1_UNVERIFIED;
 
+  // F4: verifying KYC without evidence (no uploaded documents / no INN) stays ALLOWED
+  // (owner policy 2026-06-03) but must be a conscious, JUSTIFIED exception — the L2 dialog
+  // turns into a warning and requires a reason, so the audit trail records WHY a company
+  // was trusted without checked evidence instead of it being a silent one-click approval.
+  const docCount = company.kyc_documents?.length || 0;
+  const hasInn = !!(company.inn && String(company.inn).trim());
+  const evidenceGaps = [
+    ...(docCount === 0 ? [t('kycManager.gapNoDocs')] : []),
+    ...(!hasInn ? [t('kycManager.gapNoInn')] : []),
+  ];
+  const missingEvidence = evidenceGaps.length > 0;
+
   async function runVerify(target: string, reason: string) {
     if (!company) return;
     await verifyMutation.mutateAsync({
@@ -353,12 +365,24 @@ function DetailSheet({
           open={confirmAction === 'approve-l2'}
           onOpenChange={(v) => !v && setConfirmAction(null)}
           title={t('adminQueue.confirm.kycApproveTitle')}
-          description={t('adminQueue.confirm.kycApproveDescription', { name: company.name })}
+          description={
+            missingEvidence ? (
+              <>
+                {t('adminQueue.confirm.kycApproveDescription', { name: company.name })}
+                <span className="mt-2 block font-medium text-warning">
+                  {t('kycManager.approveWithoutEvidence', { gaps: evidenceGaps.join(', ') })}
+                </span>
+              </>
+            ) : (
+              t('adminQueue.confirm.kycApproveDescription', { name: company.name })
+            )
+          }
           diff={[{ label: t('confirmDialog.kycLevel'), before: statusCode, after: 'L2_VERIFIED' }]}
           showReason
-          reasonLabel={t('adminQueue.confirm.commentOptional')}
+          requireReason={missingEvidence}
+          reasonLabel={missingEvidence ? t('kycManager.approveReasonRequired') : t('adminQueue.confirm.commentOptional')}
           confirmLabel={t('common.approve')}
-          variant="primary"
+          variant={missingEvidence ? 'warning' : 'primary'}
           onConfirm={(p) => runVerify('L2_VERIFIED', p.reason)}
           translateError={(code) => translateApiError(code)}
         />
