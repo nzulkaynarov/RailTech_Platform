@@ -1648,7 +1648,11 @@
     "description": "Company identity verification and trust level management",
     "allStatuses": "All statuses",
     "verified": "Verification complete",
-    "revoked": "Verification revoked"
+    "revoked": "Verification revoked",
+    "gapNoDocs": "uploaded documents",
+    "gapNoInn": "a stated tax ID (ИНН)",
+    "approveWithoutEvidence": "⚠️ Verifying this company without: {{gaps}}. This is an exception to the standard check — a reason is required for the audit trail.",
+    "approveReasonRequired": "Reason (required — verifying without checked evidence)"
   },
   "breadcrumb": {
     "productDetail": "Product details",
