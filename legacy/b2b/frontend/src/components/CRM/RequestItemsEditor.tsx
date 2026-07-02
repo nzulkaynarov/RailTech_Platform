@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { Plus, Trash2, PackagePlus, AlertTriangle, Send, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import type { QuoteItem } from '@/api/crmApi';
-import { useAddRequestItem, useUpdateQuoteItem, useDeleteQuoteItem, useSubmitRequest } from '@/hooks/useCRM';
+import { useAddRequestItem, useUpdateQuoteItem, useDeleteQuoteItem, useSubmitRequest, useRouteDeal } from '@/hooks/useCRM';
+import { usePartnerSuppliers } from '@/hooks/useAccounts';
 import { translateApiError } from '@/lib/apiError';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +13,8 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ImportRequestDialog } from '@/components/CRM/ImportRequestDialog';
 import { ConversationalRequest } from '@/components/Sourcing/ConversationalRequest';
 import { useUnits } from '@/hooks/useMasterData';
@@ -33,22 +36,34 @@ export function RequestItemsEditor({
   dealId,
   items,
   canEdit,
+  hasRecipients = false,
 }: {
   dealId: number;
   items: RequestItem[];
   canEdit: boolean;
+  /** True when the deal is already routed to ≥1 seller (catalog lines or a prior
+      explicit routing). A free-text заявка has no implied seller, so submit first
+      opens the supplier picker — otherwise the backend rejects with NO_RECIPIENTS. */
+  hasRecipients?: boolean;
 }) {
   const { t } = useTranslation();
   const addItem = useAddRequestItem();
   const updateItem = useUpdateQuoteItem();
   const deleteItem = useDeleteQuoteItem();
   const submitRequest = useSubmitRequest();
+  const routeDeal = useRouteDeal();
 
   const { data: units, isLoading: unitsLoading } = useUnits();
   const [newName, setNewName] = useState('');
   const [newQty, setNewQty] = useState('1');
   const [newUnit, setNewUnit] = useState('');
   const [importOpen, setImportOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [selectedSellerIds, setSelectedSellerIds] = useState<number[]>([]);
+  // The catalog-implied routing happens server-side at submit, so client-side we only
+  // know about EXPLICIT routings (hasRecipients) or catalog-linked lines (product set).
+  const hasCatalogLines = items.some((item) => item.product != null);
+  const { data: suppliers, isLoading: suppliersLoading } = usePartnerSuppliers(pickerOpen);
 
   const unitName = (code?: string) => units?.find((u) => u.code === code)?.name || '';
 
@@ -89,14 +104,37 @@ export function RequestItemsEditor({
   const hasIncomplete = items.some((item) => item.is_incomplete);
   const isEmpty = items.length === 0;
 
-  const handleSubmit = async () => {
+  const doSubmit = async () => {
     try {
       await submitRequest.mutateAsync(dealId);
       toast.success(t('requestItems.submittedToast'));
+      setPickerOpen(false);
     } catch (e) {
       toast.error(translateApiError(e));
     }
   };
+
+  const handleSubmit = async () => {
+    // A free-text заявка reaches no seller by itself — ask WHO to send it to first.
+    if (!hasRecipients && !hasCatalogLines) {
+      setPickerOpen(true);
+      return;
+    }
+    await doSubmit();
+  };
+
+  const handleRouteAndSubmit = async () => {
+    try {
+      await routeDeal.mutateAsync({ dealId, sellerCompanyIds: selectedSellerIds });
+    } catch (e) {
+      toast.error(translateApiError(e));
+      return;
+    }
+    await doSubmit();
+  };
+
+  const toggleSeller = (id: number) =>
+    setSelectedSellerIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
   const handleAdd = async () => {
     const name = newName.trim();
@@ -418,6 +456,50 @@ export function RequestItemsEditor({
       </CardContent>
 
       {canEdit && <ImportRequestDialog dealId={dealId} open={importOpen} onOpenChange={setImportOpen} />}
+
+      {/* Recipient picker for free-text заявки: the backend requires ≥1 seller routing
+          (NO_RECIPIENTS invariant), and typed lines imply none — so the buyer chooses here. */}
+      <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('requestItems.pickSuppliersTitle')}</DialogTitle>
+            <DialogDescription>{t('requestItems.pickSuppliersDesc')}</DialogDescription>
+          </DialogHeader>
+          <div className="max-h-64 space-y-1 overflow-y-auto">
+            {suppliersLoading ? (
+              <p className="py-4 text-center text-sm text-muted-foreground">…</p>
+            ) : (suppliers?.length ?? 0) === 0 ? (
+              <p className="py-4 text-center text-sm text-muted-foreground">{t('requestItems.noSuppliers')}</p>
+            ) : (
+              suppliers!.map((supplier) => (
+                <label
+                  key={supplier.id}
+                  className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 hover:bg-accent"
+                >
+                  <Checkbox
+                    checked={selectedSellerIds.includes(supplier.id)}
+                    onCheckedChange={() => toggleSeller(supplier.id)}
+                  />
+                  <span className="flex-1 text-sm">{supplier.name}</span>
+                  {supplier.inn && <span className="text-xs text-muted-foreground">{t('nav.inn')} {supplier.inn}</span>}
+                </label>
+              ))
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPickerOpen(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              onClick={handleRouteAndSubmit}
+              disabled={selectedSellerIds.length === 0 || routeDeal.isPending || submitRequest.isPending}
+            >
+              <Send className="mr-1.5 h-4 w-4" />
+              {t('requestItems.sendToSelected')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
