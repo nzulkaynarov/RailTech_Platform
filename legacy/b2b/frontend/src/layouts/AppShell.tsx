@@ -1,5 +1,4 @@
 import { useState, useMemo } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import {
   ShoppingCart,
   Settings,
@@ -8,8 +7,6 @@ import {
   User,
   LogOut,
   ChevronUp,
-  Store,
-  Check,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -28,7 +25,6 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
 import {
   Tooltip,
@@ -52,10 +48,7 @@ import {
 } from '@/components/ui/sidebar';
 
 import { useTranslation } from 'react-i18next';
-import {
-  useUserStore,
-  type CompanyStatus,
-} from '@/store/userStore';
+import { useUserStore } from '@/store/userStore';
 import { buildNavigation, TENANT_NAV, TENANT_BOTTOM_NAV } from '@/config/navigation';
 import { useCartStore, useCartCount } from '@/store/cartStore';
 import { useCurrencyStore } from '@/store/currencyStore';
@@ -81,32 +74,6 @@ interface NavItem {
   active?: boolean;
   badge?: number;
   children?: NavChild[];
-}
-
-/* ─── Status icon helper ────────────────────────────────────────────── */
-
-function StatusIcon({ status, className }: { status: CompanyStatus; className?: string }) {
-  switch (status) {
-    case 'BUYER':
-      return <ShoppingCart className={className} />;
-    case 'SELLER':
-      return <Store className={className} />;
-  }
-}
-
-/* ─── Status color helper ───────────────────────────────────────────── */
-
-// Distinct semantic colour per workspace context, so the context-switcher icon
-// and badge read at a glance which role the user is acting as. Was a dead no-op
-// that always returned 'text-primary' (every context looked identical).
-function statusColor(status: CompanyStatus): string {
-  switch (status) {
-    case 'BUYER':
-      return 'text-info';
-    case 'SELLER':
-    default:
-      return 'text-primary';
-  }
 }
 
 /* ─── Sidebar nav item component ────────────────────────────────────── */
@@ -236,22 +203,32 @@ export function AppShell(props: AppShellProps) {
 
 function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShellProps) {
   const { t } = useTranslation();
-  const { role, activeStatus, profile, company, capabilities, setActiveStatus } = useUserStore();
-  const queryClient = useQueryClient();
+  const { role, profile, company, capabilities } = useUserStore();
   const cartCount = useCartCount();
   const { currency, setCurrency } = useCurrencyStore();
   const { state } = useSidebar();
   const sidebarCollapsed = state === 'collapsed';
+  // Phase C — unified shell: nav visibility follows the company's CAPABILITIES (a dual
+  // buy+sell company sees both object groups at once), replacing the Покупатель↔Продавец
+  // switcher. The active data-context (X-Active-Context header) follows the PAGE the user
+  // opens (App.tsx pageContextOf), not a toggle, so it can only ever NARROW to a capable side.
+  const capableSides = useMemo(
+    () => ({
+      buy: company.statusEntries.some((e) => e.status === 'BUYER' && e.verification === 'verified'),
+      sell: company.statusEntries.some((e) => e.status !== 'BUYER' && e.verification === 'verified'),
+    }),
+    [company.statusEntries],
+  );
   // ADR-0005: ONE config-driven nav, filtered by effective capabilities. Items the user can't
-  // access are HIDDEN (not greyed) — e.g. before KYC the buyer "Сделки" simply isn't shown,
+  // access are HIDDEN (not greyed) — e.g. before KYC the buyer "Мои заявки" simply isn't shown,
   // leaving Главная/Каталог/Настройки + the onboarding checklist. No disabled-state gating.
   const navigation = useMemo(
-    () => buildNavigation(TENANT_NAV, capabilities, activeStatus, activePage, t),
-    [capabilities, activeStatus, activePage, t],
+    () => buildNavigation(TENANT_NAV, capabilities, capableSides, activePage, t),
+    [capabilities, capableSides, activePage, t],
   );
   const bottomNav = useMemo(
-    () => buildNavigation(TENANT_BOTTOM_NAV, capabilities, activeStatus, activePage, t),
-    [capabilities, activeStatus, activePage, t],
+    () => buildNavigation(TENANT_BOTTOM_NAV, capabilities, capableSides, activePage, t),
+    [capabilities, capableSides, activePage, t],
   );
 
 
@@ -277,49 +254,8 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
         </SidebarHeader>
 
         <SidebarContent>
-          {/* Company status switcher */}
-          {company.statusEntries.filter(e => e.verification === 'verified').length > 1 && (
-            <div className="px-3 pt-3 group-data-[collapsible=icon]:hidden">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="flex w-full items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2 text-sm hover:bg-accent transition-colors h-auto">
-                    <StatusIcon status={activeStatus} className={cn('h-4 w-4', statusColor(activeStatus))} />
-                    <span className="flex-1 text-left font-medium">
-                      {t(`companyStatus.${activeStatus}`)}
-                    </span>
-                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-56">
-                  <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
-                    {t('shell.workContext')}
-                  </DropdownMenuLabel>
-                  {company.statusEntries.filter(e => e.verification === 'verified').map((entry) => (
-                    <DropdownMenuItem
-                      key={entry.status}
-                      className={cn('gap-3', activeStatus === entry.status && 'bg-accent')}
-                      onClick={() => {
-                        setActiveStatus(entry.status);
-                        // Switching Buyer↔Seller changes the X-Active-Context header and
-                        // therefore the scoped data (deals/quotes/billing differ per
-                        // context after multi-seller routing). Invalidate so every query
-                        // refetches under the new context instead of serving stale cache.
-                        queryClient.invalidateQueries();
-                        onNavigate('dashboard');
-                      }}
-                    >
-                      <StatusIcon status={entry.status} className={cn('h-4 w-4', statusColor(entry.status))} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium">{t(`companyStatus.${entry.status}`)}</p>
-                        <p className="text-xs text-muted-foreground truncate">{t(`companyStatusDesc.${entry.status}`)}</p>
-                      </div>
-                      {activeStatus === entry.status && <Check className="h-4 w-4 text-primary" />}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          )}
+          {/* Phase C: no Покупатель↔Продавец switcher — a dual company sees buy + sell
+              objects together in one nav below; single-side companies see only their side. */}
 
           {/* Main navigation */}
           <nav aria-label={t('shell.mainNavigation')} className="flex-1 space-y-0.5 overflow-y-auto py-3 px-3 group-data-[collapsible=icon]:px-1.5">
@@ -378,9 +314,6 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
                     <Badge variant="secondary" className="text-xs">
                       {t(`roles.${role}`)}
                     </Badge>
-                    <Badge variant="outline" className={cn('text-xs', statusColor(activeStatus))}>
-                      {t(`companyStatus.${activeStatus}`)}
-                    </Badge>
                   </div>
                 </div>
 
@@ -414,9 +347,6 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <SidebarTrigger className="-ml-1" />
               <Separator orientation="vertical" className="mr-2 h-4" />
-              <StatusIcon status={activeStatus} className={cn('h-4 w-4 hidden sm:block', statusColor(activeStatus))} />
-              <span className="hidden sm:inline">{t(`companyStatus.${activeStatus}`)}</span>
-              <span className="hidden sm:inline text-muted-foreground/50">/</span>
               <span className="truncate">{company.name}</span>
             </div>
             <div className="flex items-center gap-2">
@@ -458,9 +388,9 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
               )}
 
               <Separator orientation="vertical" className="h-6" />
-              {/* Cart is a BUYER affordance (cart → RFQ). A seller has nothing to add
-                  to a cart, so it's hidden in the seller/manufacturer context. */}
-              {activeStatus === 'BUYER' && (
+              {/* Cart is a BUYER affordance (cart → RFQ). Shown for any buy-capable company
+                  (a pure seller has nothing to add to a cart). */}
+              {capableSides.buy && (
                 <>
                   <Tooltip>
                     <TooltipTrigger asChild>
