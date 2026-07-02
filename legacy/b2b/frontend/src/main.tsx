@@ -3,6 +3,16 @@ import { createRoot } from 'react-dom/client';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { I18nextProvider } from 'react-i18next';
 
+// Self-hosted Inter (weights used across the UI, see index.css font-family).
+// Registers the 'Inter' family from same-origin assets so the enforcing CSP
+// (font-src 'self') is satisfied without any fonts.gstatic.com origin.
+import '@fontsource/inter/400.css';
+import '@fontsource/inter/500.css';
+import '@fontsource/inter/600.css';
+import '@fontsource/inter/700.css';
+import '@fontsource/inter/800.css';
+import '@fontsource/inter/900.css';
+
 import i18n from './i18n';
 import { queryClient } from './lib/queryClient';
 import { ErrorBoundary } from './components/Shared/ErrorBoundary';

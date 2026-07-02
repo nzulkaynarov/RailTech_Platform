@@ -544,6 +544,13 @@ REST_FRAMEWORK = {
         "ai_extract": "20/minute",  # AI PDF contract/invoice extraction — each call is a paid Claude request
         "ai_compose": "20/minute",  # AI conversational заявка builder — each call is a paid Claude request
     },
+    # SEC-04: number of trusted reverse proxies that set X-Forwarded-For before Django.
+    # Prod/staging = 1 (host Caddy OVERWRITES XFF with the client IP — see
+    # deploy/caddy/b2b.railtech.uz.caddy). Dev = 0 (no proxy; XFF is client-forgeable
+    # and must be ignored, otherwise per-IP throttles are trivially bypassed).
+    # Tolerate an empty/blank env value (e.g. DRF_NUM_PROXIES= in a .env) so a
+    # malformed override fails safe to 0 instead of crashing app boot on int("").
+    "NUM_PROXIES": int((os.environ.get("DRF_NUM_PROXIES") or "0").strip() or "0"),
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",

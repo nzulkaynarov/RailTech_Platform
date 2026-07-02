@@ -29,6 +29,8 @@ b2b.railtech.uz {
             header_up Host {host}
             header_up X-Forwarded-Proto {scheme}
             header_up X-Forwarded-For {remote_host}
+            # SEC-04: drop the client-forgeable X-Real-IP — nothing downstream consumes it
+            header_up -X-Real-IP
         }
     }
 
@@ -59,10 +61,19 @@ b2b.railtech.uz {
         # SPA CSP. If you ever move TLS termination or split the SPA onto a
         # different host-Caddy block, copy this Content-Security-Policy verbatim
         # there too — and keep it in sync with backend/core/csp.py's CSP_POLICY.
-        # Conservative first rollout: deliver as *-Report-Only* so a missed asset
-        # only warns. Switch the header NAME to "Content-Security-Policy" (drop
-        # "-Report-Only") once the browser console is clean.
-        Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://b2b.railtech.uz; font-src 'self' data:; connect-src 'self' wss: https://b2b.railtech.uz; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'"
+        # ENFORCING since 2026-07-02: the Report-Only run was verified clean —
+        # zero violations on prod public pages AND on authenticated buyer/seller
+        # walks (dashboard, catalog, requests, КП builder, номенклатура) with the
+        # identical policy injected into the local prod-build nginx. If a future
+        # asset breaks, flip the name back to Content-Security-Policy-Report-Only,
+        # reload, and re-verify — do not loosen directives blindly.
+        # connect-src is scoped to this origin only (API + same-origin wss:// for
+        # /ws/*). No bare `wss:` wildcard — that would allow a WebSocket to ANY
+        # host and become an exfil channel if a script were ever injected. Inter
+        # is self-hosted (@fontsource, same origin) so no fonts.gstatic.com in
+        # font-src. If Sentry is enabled in prod (VITE_SENTRY_DSN), its ingest
+        # origin must be added to connect-src or error events are CSP-blocked.
+        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://b2b.railtech.uz; font-src 'self' data:; connect-src 'self' https://b2b.railtech.uz wss://b2b.railtech.uz; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'"
     }
 
     log {
