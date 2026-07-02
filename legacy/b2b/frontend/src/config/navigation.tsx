@@ -16,7 +16,7 @@ import {
   LayoutDashboard, Package, ClipboardList, Handshake, Receipt,
   FileText, Boxes, Settings, HelpCircle,
 } from 'lucide-react';
-import type { Capabilities, CompanyStatus } from '@/store/userStore';
+import type { Capabilities } from '@/store/userStore';
 
 /** Per-item capability gate. All present conditions must hold (AND). */
 export interface NavRequirement {
@@ -26,6 +26,18 @@ export interface NavRequirement {
 }
 
 type Side = 'buy' | 'sell' | 'both';
+
+/**
+ * The sides a company is CAPABLE of (a verified BUYER entry → buy; a verified
+ * SUPPLIER/MANUFACTURER entry → sell). Phase C unifies the shell: nav visibility
+ * follows capability (a dual company sees BOTH sides at once), replacing the old
+ * Покупатель↔Продавец switcher that showed one transient side at a time. The
+ * active data-context (X-Active-Context header) now follows the PAGE, not a toggle.
+ */
+export interface CapableSides {
+  buy: boolean;
+  sell: boolean;
+}
 
 export interface NavNodeDef {
   labelKey: string;
@@ -65,10 +77,10 @@ function meetsRequirement(req: NavRequirement | undefined, caps: Capabilities): 
   return true;
 }
 
-function sideAllowed(side: Side | undefined, context: CompanyStatus): boolean {
+function sideAllowed(side: Side | undefined, sides: CapableSides): boolean {
   if (!side || side === 'both') return true;
-  if (side === 'buy') return context === 'BUYER';
-  return context === 'SELLER';
+  if (side === 'buy') return sides.buy;
+  return sides.sell;
 }
 
 /**
@@ -78,8 +90,9 @@ function sideAllowed(side: Side | undefined, context: CompanyStatus): boolean {
 export const TENANT_NAV: NavNodeDef[] = [
   { labelKey: 'shell.dashboard', id: 'dashboard', icon: <LayoutDashboard className="h-4 w-4" /> },
 
-  // Сделки — единый объект; в контексте Покупатель → мои заявки, Продавец → CRM-сделки.
-  { labelKey: 'shell.deals', id: 'my-requests', icon: <ClipboardList className="h-4 w-4" />, side: 'buy', requires: { kyc: true, anyPerm: ['request.create', 'quote.approve'] } },
+  // Сделки — в unified shell обе стороны видны сразу у dual-компании, поэтому у них
+  // РАЗНЫЕ ярлыки: закупочная сторона → «Мои заявки», продающая → «Сделки» (CRM).
+  { labelKey: 'shell.myRequests', id: 'my-requests', icon: <ClipboardList className="h-4 w-4" />, side: 'buy', requires: { kyc: true, anyPerm: ['request.create', 'quote.approve'] } },
   { labelKey: 'shell.deals', id: 'crm-deals', icon: <Handshake className="h-4 w-4" />, side: 'sell', requires: { anyPerm: ['quote.build', 'quote.send'] } },
 
   // Документы — КП · Договоры · Счета · Акты (фильтр направления — на самих страницах).
@@ -126,17 +139,17 @@ type TFn = (key: string) => string;
 export function buildNavigation(
   defs: NavNodeDef[],
   caps: Capabilities,
-  context: CompanyStatus,
+  sides: CapableSides,
   activePage: string,
   t: TFn,
 ): ResolvedNavItem[] {
   const items: ResolvedNavItem[] = [];
   for (const def of defs) {
-    if (!sideAllowed(def.side, context) || !meetsRequirement(def.requires, caps)) continue;
+    if (!sideAllowed(def.side, sides) || !meetsRequirement(def.requires, caps)) continue;
 
     if (def.children) {
       const children: ResolvedNavChild[] = def.children
-        .filter((child) => sideAllowed(child.side, context) && meetsRequirement(child.requires, caps))
+        .filter((child) => sideAllowed(child.side, sides) && meetsRequirement(child.requires, caps))
         .map((child) => ({ label: t(child.labelKey), id: child.id as string, active: activePage === child.id }));
       if (children.length === 0) continue; // never render an empty group
       items.push({ label: t(def.labelKey), icon: def.icon, children });
