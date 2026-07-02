@@ -760,7 +760,8 @@
       "fxOverride": "Exchange rates (manual override)",
       "fxOverrideHelp": "The CBU rate is frozen by the engine. Set your own if needed — soum per 1 unit of currency",
       "fxCbuRate": "CBU rate: {{rate}}",
-      "fxOverrideFor": "Rate for {{code}}"
+      "fxOverrideFor": "Rate for {{code}}",
+      "currencyHelp": "The КП is denominated in the national currency (UZS) — all amounts are computed in UZS. Per-line cost currency can differ (below)."
     },
     "marginApplied": "Margin",
     "economics": {

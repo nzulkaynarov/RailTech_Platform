@@ -178,18 +178,25 @@ export function QuoteSettingsDialog({ quote, open, onOpenChange }: QuoteSettings
 
 						<div className="flex flex-col gap-1.5">
 							<Label htmlFor="quote-currency">{t('quote.settings.currency')}</Label>
+							{/* The КП presentation currency is UZS: the cost engine converts EVERY line
+							    (USD/EUR/…) to UZS via a frozen FX rate, so subtotal/VAT/total are stored
+							    in UZS. Offering another quote_currency here would only MISLABEL those UZS
+							    amounts (the builder + PDF print quote_currency's code). Restrict to UZS
+							    until the engine can target a non-UZS presentation currency. Per-line COST
+							    currency stays multi-currency below. */}
 							<Select value={currency} onValueChange={setCurrency}>
 								<SelectTrigger id="quote-currency">
 									<SelectValue placeholder={t('quote.settings.currencyPlaceholder')} />
 								</SelectTrigger>
 								<SelectContent>
-									{currencies.map((item) => (
+									{currencies.filter((item) => item.code === 'UZS').map((item) => (
 										<SelectItem key={item.id} value={item.code}>
 											{item.code} — {item.name}
 										</SelectItem>
 									))}
 								</SelectContent>
 							</Select>
+							<p className="text-xs text-muted-foreground">{t('quote.settings.currencyHelp')}</p>
 						</div>
 
 						<div className="flex flex-col gap-1.5">
