@@ -61,10 +61,13 @@ b2b.railtech.uz {
         # SPA CSP. If you ever move TLS termination or split the SPA onto a
         # different host-Caddy block, copy this Content-Security-Policy verbatim
         # there too — and keep it in sync with backend/core/csp.py's CSP_POLICY.
-        # Conservative first rollout: deliver as *-Report-Only* so a missed asset
-        # only warns. Switch the header NAME to "Content-Security-Policy" (drop
-        # "-Report-Only") once the browser console is clean.
-        Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://b2b.railtech.uz; font-src 'self' data:; connect-src 'self' wss: https://b2b.railtech.uz; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'"
+        # ENFORCING since 2026-07-02: the Report-Only run was verified clean —
+        # zero violations on prod public pages AND on authenticated buyer/seller
+        # walks (dashboard, catalog, requests, КП builder, номенклатура) with the
+        # identical policy injected into the local prod-build nginx. If a future
+        # asset breaks, flip the name back to Content-Security-Policy-Report-Only,
+        # reload, and re-verify — do not loosen directives blindly.
+        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://b2b.railtech.uz; font-src 'self' data:; connect-src 'self' wss: https://b2b.railtech.uz; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'"
     }
 
     log {
