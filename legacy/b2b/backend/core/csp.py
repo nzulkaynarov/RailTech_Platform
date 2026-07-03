@@ -2,41 +2,52 @@
 Content-Security-Policy middleware for the Django app (API + Unfold /admin/).
 
 Why a custom middleware instead of django-csp:
-    django-csp is not (and need not be) a dependency — our policy is small and
-    differs only between the Unfold admin HTML and the JSON API, which a ~30-line
-    middleware expresses more clearly than the per-view nonce machinery django-csp
-    pulls in. If the policy ever grows nonces/per-view overrides, switch to
-    django-csp then.
+    django-csp is not (and need not be) a dependency — our policy is small and a
+    ~30-line middleware expresses it more clearly than the per-view nonce
+    machinery django-csp pulls in. Switch to django-csp only if the policy ever
+    grows nonces / per-view overrides.
 
-Where CSP actually matters in this deployment:
-    The public-facing surface that renders HTML to a browser is the React SPA,
-    served by the **host Caddy** on the VPS (deploy/caddy/b2b.railtech.uz.caddy) —
-    NOT Django. Django serves the JSON API and the Unfold /admin/ HTML. So:
-      * This middleware protects the /admin/ HTML (and stamps a header on every
-        API response, harmless for JSON).
-      * The SPA's CSP MUST be mirrored on the host Caddy — see the comment block
-        added to deploy/caddy/b2b.railtech.uz.caddy.
+Where CSP actually comes from on the prod host (IMPORTANT — read before editing):
+    On the VPS the **host Caddy** (deploy/caddy/b2b.railtech.uz.caddy) sets a
+    site-level `header { Content-Security-Policy ... }`. In Caddy a site-level
+    header directive applies to EVERY response on the origin — the React SPA it
+    serves directly AND the /api + /admin responses it reverse-proxies to
+    Django — and it REPLACES any header the backend already set. So on prod,
+    Caddy's CSP is the effective policy for the whole origin and the header this
+    middleware sets is overwritten (verified 2026-07-03:
+    `curl -I https://b2b.railtech.uz/admin/login/` returns Caddy's policy).
 
-Posture (conservative first rollout):
-    Defaults to **Content-Security-Policy-Report-Only** so a missed Unfold asset
-    can only produce a console warning, never a broken admin page. Flip to the
-    enforcing header by setting env CSP_REPORT_ONLY=false once the report-only run
-    confirms Unfold loads cleanly. The policy itself is identical in both modes.
+    This middleware is therefore the FALLBACK, not the prod source of truth: it
+    stamps a CSP on deploys that have no fronting proxy setting one (local dev,
+    a bare staging box, `runserver`). Keep CSP_POLICY in sync with the Caddy
+    block so the fallback matches what prod actually enforces.
 
-Policy rationale:
-    Unfold/Django admin emits inline <style>/<script> and inline event handlers,
-    so style-src and script-src need 'unsafe-inline'. It also uses data: images
-    and (Trix editor) blob: workers. The API path gets the same self-only policy;
-    JSON responses don't execute it, so it's a no-op there but documents intent.
+Policy rationale (verified against the running Unfold /admin/, 2026-07-03):
+    Unfold/Django admin loads ALL JavaScript from external /static/ files — the
+    dashboard, changelists, and inline-formset add/change forms emit ZERO inline
+    <script> and ZERO inline event handlers — so `script-src 'self'` (no
+    'unsafe-inline') is sufficient, and is exactly what prod already enforces via
+    Caddy. The admin DOES use inline `style=` attributes and data: images /
+    blob: workers, so style-src keeps 'unsafe-inline' and img/worker keep
+    data:/blob:. The API path gets the same policy; JSON doesn't execute it, so
+    it's a no-op there but documents intent.
+
+Posture:
+    Defaults to **Content-Security-Policy-Report-Only** so a fallback deploy can
+    only warn, never break, on a missed asset. Set env CSP_REPORT_ONLY=false to
+    enforce. On the prod host the mode chosen here is moot — Caddy's enforcing
+    header wins regardless.
 """
 
 import os
 
-# Single source of truth for the policy string. Kept self-only with the minimal
-# 'unsafe-inline' the legacy Django/Unfold admin requires; no third-party origins.
+# Single source of truth for the policy string — mirror of the Caddy edge policy
+# (minus the SPA-only origins Django's /api + /admin never need). self-only for
+# scripts (verified: Unfold admin has no inline scripts); 'unsafe-inline' kept for
+# styles only (admin inline style= attributes); no third-party origins.
 CSP_POLICY = (
     "default-src 'self'; "
-    "script-src 'self' 'unsafe-inline'; "
+    "script-src 'self'; "
     "style-src 'self' 'unsafe-inline'; "
     "img-src 'self' data: blob:; "
     "font-src 'self' data:; "
@@ -57,8 +68,10 @@ CSP_HEADER_NAME = "Content-Security-Policy-Report-Only" if _REPORT_ONLY else "Co
 class ContentSecurityPolicyMiddleware:
     """Stamp a Content-Security-Policy[-Report-Only] header on every response.
 
-    Does not overwrite a CSP header already set upstream (e.g. by a fronting
-    proxy), so the host Caddy / nginx remains the source of truth if it sets one.
+    Does not overwrite a CSP header already set by an inner middleware or view.
+    Note this guard is about headers set INSIDE Django — the host Caddy sits
+    OUTSIDE and overwrites whatever we set at the edge (see module docstring), so
+    on prod Caddy is the effective source of truth regardless of this guard.
     """
 
     def __init__(self, get_response):
