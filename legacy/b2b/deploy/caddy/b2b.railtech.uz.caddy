@@ -47,15 +47,26 @@ b2b.railtech.uz {
         Referrer-Policy "strict-origin-when-cross-origin"
         -Server
 
-        # Content-Security-Policy for the React SPA (Caddy serves the SPA HTML;
-        # Django serves /api + /admin and stamps its OWN CSP via
-        # backend/core/csp.py — this block does NOT cover those backend paths).
+        # Content-Security-Policy — this is a SITE-LEVEL header directive, so in
+        # Caddy it applies to EVERY response on the origin: the React SPA Caddy
+        # serves directly AND the /api + /admin responses reverse-proxied to
+        # Django. A Caddy `header` directive REPLACES, so this is the EFFECTIVE
+        # prod CSP for the WHOLE origin — it overwrites the fallback header
+        # backend/core/csp.py stamps (that middleware only takes effect on a
+        # deploy WITHOUT this edge, e.g. local dev). Keep the two in sync.
         #
-        # The SPA is a Vite build. Vite/Tailwind inject runtime inline <style>,
-        # so style-src needs 'unsafe-inline'. WebSocket (/ws/*) needs wss: in
-        # connect-src. img-src allows data:/blob: for inline icons and
-        # object-url previews. script-src is 'self' only (no inline scripts in
-        # the built SPA) — tighten further (nonces) only if a build needs it.
+        # Verified compatible with BOTH surfaces (2026-07-03):
+        #   * SPA: a Vite build. Vite/Tailwind inject runtime inline <style> so
+        #     style-src needs 'unsafe-inline'; the built SPA has no inline
+        #     scripts, so script-src is 'self' only.
+        #   * Unfold /admin: loads all JS from external /static/ files (zero
+        #     inline <script>, zero inline event handlers on dashboard /
+        #     changelists / inline-formset add-forms) and uses only inline
+        #     style= attributes — so the same script-src 'self' + style-src
+        #     'unsafe-inline' covers it. Tighten script-src (nonces) only if a
+        #     future build needs it.
+        # WebSocket (/ws/*) needs wss: in connect-src; img-src allows data:/blob:
+        # for inline icons and object-url previews.
         #
         # MIRROR-NOTE for the prod host operator: this file is the canonical
         # SPA CSP. If you ever move TLS termination or split the SPA onto a
