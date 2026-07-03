@@ -1,6 +1,8 @@
 """CB-send: unified КП delivery (email to registered client OR offline contact) +
 public tokenized view/download. Uses a dummy PDF to avoid WeasyPrint in tests."""
 
+from unittest import mock
+
 import pytest
 from django.core import mail
 from django.core.files.base import ContentFile
@@ -42,9 +44,48 @@ def sent_quote(db):
 
 @pytest.mark.django_db
 def test_public_view_streams_pdf_by_token(sent_quote):
-    resp = APIClient().get(f"/api/v1/public/quotes/{sent_quote.public_access_token}/", SERVER_NAME="localhost")
+    # PDF present → 200 stream, and NO render is triggered (nothing to enqueue).
+    with mock.patch("crm.tasks.render_document_pdf.delay") as render_delay:
+        resp = APIClient().get(f"/api/v1/public/quotes/{sent_quote.public_access_token}/", SERVER_NAME="localhost")
     assert resp.status_code == 200
     assert b"%PDF" in b"".join(resp.streaming_content) if resp.streaming else True
+    render_delay.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_public_view_pdf_absent_returns_202_and_enqueues_render(sent_quote):
+    # ARCH-03: race window — КП sent, but the off-thread render has not landed yet.
+    # The anon request must NOT render inline; it enqueues the celery task and returns 202.
+    sent_quote.pdf_file.delete(save=True)  # simulate the not-yet-rendered state
+    with mock.patch("crm.tasks.render_document_pdf.delay") as render_delay:
+        resp = APIClient().get(
+            f"/api/v1/public/quotes/{sent_quote.public_access_token}/",
+            SERVER_NAME="localhost",
+            HTTP_ACCEPT="application/json",
+        )
+    assert resp.status_code == 202
+    assert resp.data == {"detail": "GENERATING", "retry_after": 2}
+    assert resp["Retry-After"] == "2"
+    render_delay.assert_called_once_with("quote", sent_quote.pk)
+
+
+@pytest.mark.django_db
+def test_public_view_pdf_absent_browser_gets_html_interstitial(sent_quote):
+    # A browser (Accept: text/html) opening the emailed link during the race gets a graceful,
+    # self-refreshing «PDF готовится» page (202) rather than raw JSON or a hang.
+    sent_quote.pdf_file.delete(save=True)
+    with mock.patch("crm.tasks.render_document_pdf.delay") as render_delay:
+        resp = APIClient().get(
+            f"/api/v1/public/quotes/{sent_quote.public_access_token}/",
+            SERVER_NAME="localhost",
+            HTTP_ACCEPT="text/html,application/xhtml+xml",
+        )
+    assert resp.status_code == 202
+    assert resp["Retry-After"] == "2"
+    assert resp["Content-Type"].startswith("text/html")
+    body = resp.content.decode()
+    assert "PDF готовится" in body
+    render_delay.assert_called_once_with("quote", sent_quote.pk)
 
 
 @pytest.mark.django_db

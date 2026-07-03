@@ -18642,8 +18642,22 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
+            /** @description КП PDF (client projection) */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description PDF still rendering off-thread — retry after Retry-After seconds */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unknown or not-yet-sent token */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
