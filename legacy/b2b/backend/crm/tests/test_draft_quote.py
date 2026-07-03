@@ -23,6 +23,14 @@ from crm.services.draft_quote import generate_draft_quote
 from master_data.models import Currency
 
 
+@pytest.fixture(autouse=True)
+def _disable_ai_by_default(settings):
+    # Local dev has ANTHROPIC_API_KEY → AI_IMPORT_ENABLED=True, which would make the exact-match
+    # tests fire REAL Claude calls on their unmatched lines. Default AI OFF here; the fuzzy tests
+    # opt back in and mock the matcher.
+    settings.AI_IMPORT_ENABLED = False
+
+
 @pytest.fixture
 def scene(db):
     VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
@@ -170,3 +178,63 @@ def test_ambiguous_gost_is_not_auto_matched(scene):
     unbound = quote.items.get(gost_drawing="ГОСТ 9999")
     assert unbound.product_id is None  # ambiguous → not auto-bound
     assert prefilled == 1  # only the originally pre-matched line
+
+
+def _koloda(scene, priced=True):
+    from catalog.models import ProductStatus
+
+    pub = ProductStatus.objects.get_or_create(code="PUBLISHED", defaults={"name": "Published", "sort_order": 10})[0]
+    product = Product.objects.create(name="Тормозная колодка гребневая", status=pub)
+    if priced:
+        SupplierOffer.objects.create(
+            product=product,
+            supplier=scene["seller"],
+            base_price=Decimal("15.00"),
+            currency=scene["usd"],
+            in_stock_lead_time_days=7,
+        )
+    return product
+
+
+def _fake_match(product, confidence):
+    def _inner(lines, domain_code=None, top_k=3):
+        return [
+            {
+                "line_index": 0,
+                "name_canonical": "",
+                "candidates": [
+                    {"product_id": product.id, "name": product.name, "sku": "", "confidence": confidence, "reason": "x"}
+                ],
+            }
+        ]
+
+    return _inner
+
+
+def test_ai_fuzzy_match_binds_high_confidence(scene, settings, monkeypatch):
+    """Move 3 fuzzy: a raw line with no exact identifier gets its top AI candidate auto-bound into
+    the draft (+ priced) when confidence ≥ threshold — the seller reviews before send."""
+    koloda = _koloda(scene)
+    settings.AI_IMPORT_ENABLED = True
+    settings.AI_DRAFT_MATCH_CONFIDENCE = 0.9
+    monkeypatch.setattr("sourcing.services_ai.match_lines_to_catalog", _fake_match(koloda, 0.95))
+
+    quote, err, prefilled = generate_draft_quote(scene["deal"].id, scene["seller_user"])
+    assert err is None
+    bound = quote.items.get(imported_raw_name="Тормозная колодка")
+    assert bound.product_id == koloda.id
+    assert bound.frozen_base_price == Decimal("15.00")
+    assert prefilled == 2  # pre-matched line + the AI-matched+priced line
+
+
+def test_ai_fuzzy_match_below_threshold_not_bound(scene, settings, monkeypatch):
+    """A weak AI candidate (confidence < threshold) is NOT auto-bound — left for manual Smart Match."""
+    koloda = _koloda(scene, priced=False)
+    settings.AI_IMPORT_ENABLED = True
+    settings.AI_DRAFT_MATCH_CONFIDENCE = 0.9
+    monkeypatch.setattr("sourcing.services_ai.match_lines_to_catalog", _fake_match(koloda, 0.5))
+
+    quote, err, _ = generate_draft_quote(scene["deal"].id, scene["seller_user"])
+    assert err is None
+    line = quote.items.get(imported_raw_name="Тормозная колодка")
+    assert line.product_id is None

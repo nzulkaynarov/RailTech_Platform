@@ -10,6 +10,7 @@ import logging
 from decimal import Decimal
 from typing import Optional, Tuple
 
+from django.conf import settings
 from django.db import transaction
 from django.db.models import Max
 
@@ -81,6 +82,51 @@ def _resolve_exact_catalog_matches(request_items) -> dict:
     return resolved
 
 
+def _resolve_ai_catalog_matches(request_items, resolved: dict) -> int:
+    """Augment `resolved` in place with FUZZY AI matches for lines still unmatched after the exact
+    pass, and return how many were added (ADR-0006 Move 3, the AI half).
+
+    Auto-binds ONLY the top candidate and ONLY when its confidence ≥ AI_DRAFT_MATCH_CONFIDENCE (a
+    high bar) — and only INTO A DRAFT the seller reviews + edits before sending. That review is the
+    human-in-the-loop step: unlike a buyer-submitted заявка (which is final), a mis-bound draft line
+    is seen and corrected before the КП goes out, so a confident auto-bind here is safe. Lower-
+    confidence lines are left unmatched for the manual Smart Match. AI disabled / no key / any API
+    error → no-op (the exact-matched draft is already useful; the accelerator must never break it)."""
+    if not getattr(settings, "AI_IMPORT_ENABLED", False):
+        return 0
+    pending = [src for src in request_items if not src.product_id and src.pk not in resolved]
+    if not pending:
+        return 0
+    lines = [
+        {
+            "name": src.imported_raw_name or "",
+            "name_canonical": src.name_canonical or "",
+            "gost_drawing": src.gost_drawing or "",
+            "mpn": src.mpn or "",
+        }
+        for src in pending
+    ]
+    try:
+        from sourcing.services_ai import match_lines_to_catalog
+
+        matches = match_lines_to_catalog(lines)
+    except Exception as exc:  # noqa: BLE001 — an AI/API failure must never break the (already useful) draft
+        logger.warning("AI draft match failed; keeping exact matches only: %s", exc)
+        return 0
+    threshold = float(getattr(settings, "AI_DRAFT_MATCH_CONFIDENCE", 0.9))
+    added = 0
+    for match in matches:
+        idx = match.get("line_index")
+        candidates = match.get("candidates") or []
+        if not candidates or not isinstance(idx, int) or not (0 <= idx < len(pending)):
+            continue
+        top = candidates[0]
+        if float(top.get("confidence") or 0) >= threshold:
+            resolved[pending[idx].pk] = top["product_id"]
+            added += 1
+    return added
+
+
 @transaction.atomic
 def generate_draft_quote(deal_id: int, actor: CustomUser) -> Tuple[Optional[Quote], Optional[str], int]:
     """Build a pre-filled draft КП for `actor`'s seller company from the deal's buyer request.
@@ -133,9 +179,11 @@ def generate_draft_quote(deal_id: int, actor: CustomUser) -> Tuple[Optional[Quot
 
         apply_company_quote_defaults(quote, Company.objects.filter(pk=seller_company_id).first())
 
-    # Move 3: deterministically bind still-unmatched lines by exact GOST/MPN BEFORE pricing,
-    # so pricing-assist covers the freshly-matched products too.
+    # Move 3: bind still-unmatched lines to catalog products BEFORE pricing (so pricing-assist
+    # covers them too) — first deterministically by exact GOST/MPN, then a fuzzy AI pass for
+    # high-confidence raw-text matches.
     resolved_matches = _resolve_exact_catalog_matches(request_items)
+    ai_matched = _resolve_ai_catalog_matches(request_items, resolved_matches)
     effective_ids = [it.product_id or resolved_matches.get(it.pk) for it in request_items]
     pricing = (
         suggest_pricing_for_products([pid for pid in effective_ids if pid], seller_company_id)
@@ -165,9 +213,11 @@ def generate_draft_quote(deal_id: int, actor: CustomUser) -> Tuple[Optional[Quot
 
     if auto_matched:
         logger.info(
-            "draft КП %s: auto-matched %s line(s) to catalog by exact identifier (GOST/MPN)",
+            "draft КП %s: auto-matched %s line(s) to catalog (%s exact GOST/MPN, %s fuzzy AI)",
             quote.id,
             auto_matched,
+            auto_matched - ai_matched,
+            ai_matched,
         )
 
     from .quotes import QuoteCalculationService
