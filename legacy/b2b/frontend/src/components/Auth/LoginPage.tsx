@@ -44,7 +44,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, onRegister, on
             await login(data.email, data.password);
             onNavigate?.('dashboard');
         } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : t('auth.genericError');
+            const raw = err instanceof Error ? err.message : '';
+            let msg: string;
+            if (raw === 'TOO_MANY_LOGIN_ATTEMPTS') {
+                // SEC-06 per-account lockout — friendly, localized message.
+                msg = t('auth.tooManyAttempts');
+            } else if (raw.startsWith('auth.')) {
+                // Store handed back an i18n key (no server detail) — localize it.
+                msg = t(raw);
+            } else {
+                msg = raw || t('auth.genericError');
+            }
             setServerError(msg);
         }
     };

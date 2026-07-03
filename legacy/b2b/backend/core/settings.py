@@ -590,6 +590,15 @@ REFRESH_COOKIE_SECURE = os.environ.get("REFRESH_COOKIE_SECURE", "false" if DEBUG
 REFRESH_COOKIE_SAMESITE = os.environ.get("REFRESH_COOKIE_SAMESITE", "Lax")
 REFRESH_COOKIE_MAX_AGE = int(SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"].total_seconds())
 
+# SEC-06: per-account login lockout (accounts/services/login_guard.py). Layered on
+# top of the per-IP `login` throttle to blunt DISTRIBUTED brute-force against a
+# single account. Conservative defaults keep an ordinary password typo far from
+# the limit: 10 failures within a 15-min window → 15-min temporary lock. Blank/
+# malformed env values fail safe to the default rather than crashing app boot.
+LOGIN_LOCKOUT_THRESHOLD = int((os.environ.get("LOGIN_LOCKOUT_THRESHOLD") or "10").strip() or "10")
+LOGIN_LOCKOUT_WINDOW = int((os.environ.get("LOGIN_LOCKOUT_WINDOW") or "900").strip() or "900")
+LOGIN_LOCKOUT_COOLDOWN = int((os.environ.get("LOGIN_LOCKOUT_COOLDOWN") or "900").strip() or "900")
+
 # DRF Spectacular (API Documentation)
 SPECTACULAR_SETTINGS = {
     "TITLE": "RailTech B2B API",

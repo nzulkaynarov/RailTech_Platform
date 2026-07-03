@@ -2,6 +2,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import permissions, status, views
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.generics import RetrieveAPIView
 from rest_framework.response import Response
 from rest_framework_simplejwt.exceptions import TokenError
@@ -39,6 +40,7 @@ from accounts.serializers import (  # noqa: E402
 )
 from accounts.services import (  # noqa: E402
     create_pending_user,
+    login_guard,
     reset_password,
     revoke_user_refresh_tokens,
     send_password_reset_email,
@@ -285,11 +287,30 @@ class WsTicketView(views.APIView):
 
 
 class ThrottledTokenObtainPairView(TokenObtainPairView):
-    """Login (token obtain) with a per-IP brute-force throttle (`login` scope).
-    Plain TokenObtainPairView only had the loose global anon limit."""
+    """Login (token obtain) with two brute-force layers:
+
+    * a per-IP throttle (`login` scope, 10/min) — blunts a single-source attack;
+    * a per-ACCOUNT lockout (SEC-06, accounts/services/login_guard) — blunts a
+      DISTRIBUTED attack (many IPs) against one victim account, which the per-IP
+      throttle alone cannot stop.
+    """
 
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "login"
+
+    def post(self, request, *args, **kwargs):
+        email = (request.data.get("email") or "").strip()
+        if login_guard.is_locked(email):
+            return login_guard.locked_response()
+        try:
+            response = super().post(request, *args, **kwargs)
+        except AuthenticationFailed:
+            # Bad credentials / inactive account → count it against the lockout.
+            login_guard.record_failure(email)
+            raise
+        if response.status_code == status.HTTP_200_OK:
+            login_guard.reset(email)
+        return response
 
 
 class CookieTokenObtainPairView(ThrottledTokenObtainPairView):
