@@ -811,11 +811,16 @@ class QuoteLifecycleService:
         # Create notification for client contact
         if quote.deal.client:
             info_type = NotificationType.objects.filter(code="INFO").first()
+            # N2: name the SENDER + deal + the next action, so the client sees WHAT arrived, from
+            # WHOM, and what to do — not a status line with no context.
+            seller_name = getattr(quote.seller_company, "name", None) or "Поставщик"
+            deal_ref = quote.deal.title or f"#{quote.deal_id}"
             Notification.objects.create(
                 user=quote.deal.client,
                 type=info_type,
-                title="Новое коммерческое предложение",
-                message=f"Вам отправлено КП v{quote.version} по сделке #{quote.deal_id}",
+                title="Новое КП от поставщика",
+                message=f"«{seller_name}» отправил вам КП v{quote.version} по сделке «{deal_ref}» — "
+                f"откройте, чтобы принять или отклонить.",
                 link="/cabinet/deals",
                 deal=quote.deal,
             )
