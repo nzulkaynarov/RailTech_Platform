@@ -36,9 +36,14 @@ def handle_quote_export(request, quote):
     # demo/unsubscribed can't export cost data. Superuser = platform escalation, bypasses.
     if include_costs and not getattr(request.user, "is_superuser", False):
         from accounts.services import quote_export_entitled
+        from accounts.services.kyc import company_kyc_verified
         from crm.services.quotes import _quote_owner_company_id
 
-        if not quote_export_entitled(_quote_owner_company_id(quote)):
+        owner_company_id = _quote_owner_company_id(quote)
+        # Phase E: KYC first (distinct "do KYC" message), then the paid-export gate.
+        if not company_kyc_verified(owner_company_id):
+            return Response({"error": "SELLER_KYC_REQUIRED"}, status=status.HTTP_403_FORBIDDEN)
+        if not quote_export_entitled(owner_company_id):
             return Response({"error": "QUOTE_EXPORT_NOT_ENTITLED"}, status=status.HTTP_403_FORBIDDEN)
     try:
         return export_quote(quote, export_format, include_costs=include_costs)

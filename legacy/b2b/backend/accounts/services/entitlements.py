@@ -106,12 +106,28 @@ def grant_entitlement(
 
 
 def quote_send_entitled(company_id: int) -> bool:
-    """May this seller company SEND a КП (Quote) to the client? A paid output action: requires the
-    quote.send entitlement and NOT a DEMO state (demo can build + watermark, but not actually send).
-    Distinct from can_send_quote_to_client (the role-PERMISSION check) — this is the billing gate."""
-    return has_entitlement(company_id, FeatureKey.QUOTE_SEND) and not is_demo(company_id, FeatureKey.QUOTE_SEND)
+    """May this seller company SEND a КП (Quote) to the client? Requires all of:
+      1. KYC-verified (L2+) — «без KYC только демо»: an unverified seller may build a КП and see a
+         watermarked preview, but never send a real one (the seller half of the ADR-0006 KYC floor);
+      2. the quote.send entitlement — an operational subscription grants it;
+      3. NOT a DEMO grant (demo = build + watermark, but not actually send).
+    Distinct from can_send_quote_to_client (the role-PERMISSION check) — this is the KYC+billing gate."""
+    from .kyc import company_kyc_verified
+
+    return (
+        company_kyc_verified(company_id)
+        and has_entitlement(company_id, FeatureKey.QUOTE_SEND)
+        and not is_demo(company_id, FeatureKey.QUOTE_SEND)
+    )
 
 
 def quote_export_entitled(company_id: int) -> bool:
-    """May this seller company EXPORT a КП (Quote, PDF/Excel cost data)? Same paid-output gate as send."""
-    return has_entitlement(company_id, FeatureKey.QUOTE_EXPORT) and not is_demo(company_id, FeatureKey.QUOTE_EXPORT)
+    """May this seller company EXPORT a КП (Quote, PDF/Excel cost data)? Same KYC + paid-output gate
+    as send — an unverified seller stays in demo (no commercial export)."""
+    from .kyc import company_kyc_verified
+
+    return (
+        company_kyc_verified(company_id)
+        and has_entitlement(company_id, FeatureKey.QUOTE_EXPORT)
+        and not is_demo(company_id, FeatureKey.QUOTE_EXPORT)
+    )

@@ -230,20 +230,29 @@ def company_has_operational_subscription(company_id: int) -> bool:
 
 
 def assert_seller_can_operate(actor: "CustomUser") -> Optional[str]:
-    """Subscription gate for paid seller writes (send КП, sign contract, issue act).
+    """KYC + subscription gate for paid seller writes (send КП, sign contract, issue act).
 
+    The seller half of the business model: «без KYC только демо», продавать = KYC + подписка.
     Returns an error code string to abort with, or None if the actor may proceed:
       * superuser → None (DBA emergency bypass, parity with the other guards)
-      * no seller company / no operational SupplierSubscription → "SUBSCRIPTION_REQUIRED"
+      * no seller company → "SUBSCRIPTION_REQUIRED"
+      * company not KYC-verified (< L2) → "SELLER_KYC_REQUIRED" (ADR-0006 Phase E, seller floor)
+      * KYC-verified but no operational SupplierSubscription → "SUBSCRIPTION_REQUIRED"
 
-    Callers must already have established that `actor` is a seller (is_seller);
-    this layers the *paid* requirement on top. CLIENT/buyer actions never call it.
-    Documented in ADR-0002 ("subscription-gated seller writes").
+    Callers must already have established that `actor` is a seller (is_seller); this layers the
+    KYC + *paid* requirement on top. CLIENT/buyer actions never call it (buyers verify at заявка
+    submit). Documented in ADR-0002 ("subscription-gated seller writes") + ADR-0006 Phase E.
     """
     if getattr(actor, "is_superuser", False):
         return None
     company_id = primary_seller_company_id(actor)
-    if company_id is None or not company_has_operational_subscription(company_id):
+    if company_id is None:
+        return "SUBSCRIPTION_REQUIRED"
+    from accounts.services.kyc import company_kyc_verified
+
+    if not company_kyc_verified(company_id):
+        return "SELLER_KYC_REQUIRED"
+    if not company_has_operational_subscription(company_id):
         return "SUBSCRIPTION_REQUIRED"
     return None
 

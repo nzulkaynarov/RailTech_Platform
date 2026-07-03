@@ -664,11 +664,11 @@ class QuoteLifecycleService:
             except (ValueError, OSError):  # storage backend unavailable / missing key
                 seller_logo_url = None
 
-        # Move 4 monetization: a seller in DEMO for quote.send may BUILD + preview the КП, but the
-        # rendered document is watermarked «ДЕМО — не для коммерческого использования» (send/export
-        # stay gated by quote_send_entitled). The template overlays it when is_demo is truthy.
-        from accounts.constants import FeatureKey
-        from accounts.services.entitlements import is_demo
+        # Watermark «ДЕМО — не для коммерческого использования» whenever the seller cannot
+        # commercially SEND this КП — i.e. an explicit DEMO grant, no operational subscription, OR
+        # (ADR-0006 Phase E) no KYC («без KYC только демо»). Building + previewing stays free; only a
+        # fully verified + subscribed seller gets a clean, sendable document.
+        from accounts.services.entitlements import quote_send_entitled
 
         html_string = render_to_string(
             "crm/quote_pdf.html",
@@ -679,7 +679,7 @@ class QuoteLifecycleService:
                 "seller": seller_company,
                 "seller_profile": seller_profile,
                 "seller_logo_url": seller_logo_url,
-                "is_demo": is_demo(seller_company.id, FeatureKey.QUOTE_SEND),
+                "is_demo": not quote_send_entitled(seller_company.id),
             },
         )
 
@@ -728,13 +728,17 @@ class QuoteLifecycleService:
         if seller_company is None and not getattr(sent_by_user, "is_superuser", False):
             raise ValueError("QUOTE_NOT_CLAIMED")
 
-        # MONETIZATION GATE (ADR-0006 Move 4): sending a КП to the client is a PAID action. The
-        # seller's company must hold the quote.send entitlement — an operational subscription grants it
-        # by default, so paying sellers are unaffected; a demo/unsubscribed seller can build the КП
-        # but not send it. Superuser = platform escalation, allowed through.
+        # SELLER FLOOR (ADR-0006 Phase E): «без KYC только демо». A seller must be KYC-verified (L2+)
+        # to send a real КП — checked first so an unverified seller gets a clear "do KYC" message
+        # rather than a generic billing error. Then the MONETIZATION GATE (Move 4): sending is a PAID
+        # action needing the quote.send entitlement (an operational subscription grants it). A
+        # demo/unsubscribed seller can build the КП but not send it. Superuser = platform escalation.
         if seller_company is not None and not getattr(sent_by_user, "is_superuser", False):
             from accounts.services import quote_send_entitled
+            from accounts.services.kyc import company_kyc_verified
 
+            if not company_kyc_verified(seller_company.id):
+                raise ValueError("SELLER_KYC_REQUIRED")
             if not quote_send_entitled(seller_company.id):
                 raise ValueError("QUOTE_SEND_NOT_ENTITLED")
 
