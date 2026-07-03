@@ -125,3 +125,48 @@ def test_ai_draft_gated_without_entitlement(scene):
     )
     _, err, _ = generate_draft_quote(scene["deal"].id, member)
     assert err == "AI_DRAFT_NOT_ENTITLED"
+
+
+def test_auto_matches_unmatched_line_by_exact_gost(scene):
+    """Move 3: a free-text request line carrying an exact GOST that UNIQUELY matches a PUBLISHED
+    product is auto-bound at draft time and gets its price prefilled."""
+    from catalog.models import ProductStatus
+
+    pub = ProductStatus.objects.get_or_create(code="PUBLISHED", defaults={"name": "Published", "sort_order": 10})[0]
+    koloda = Product.objects.create(name="Тормозная колодка", gost_drawing="ГОСТ 1205-73", status=pub)
+    SupplierOffer.objects.create(
+        product=koloda,
+        supplier=scene["seller"],
+        base_price=Decimal("15.00"),
+        currency=scene["usd"],
+        in_stock_lead_time_days=7,
+    )
+    free_line = scene["request_quote"].items.get(imported_raw_name="Тормозная колодка")
+    free_line.gost_drawing = "ГОСТ 1205-73"
+    free_line.save(update_fields=["gost_drawing"])
+
+    quote, err, prefilled = generate_draft_quote(scene["deal"].id, scene["seller_user"])
+    assert err is None
+    assert prefilled == 2  # the pre-matched line + the newly GOST-matched line
+    bound = quote.items.get(gost_drawing="ГОСТ 1205-73")
+    assert bound.product_id == koloda.id
+    assert bound.frozen_base_price == Decimal("15.00")
+    assert bound.lead_time_days == 7
+
+
+def test_ambiguous_gost_is_not_auto_matched(scene):
+    """Move 3 safety: 2+ PUBLISHED products sharing a GOST → the line is left unmatched, never guessed."""
+    from catalog.models import ProductStatus
+
+    pub = ProductStatus.objects.get_or_create(code="PUBLISHED", defaults={"name": "Published", "sort_order": 10})[0]
+    Product.objects.create(name="Колодка A", gost_drawing="ГОСТ 9999", status=pub)
+    Product.objects.create(name="Колодка B", gost_drawing="ГОСТ 9999", status=pub)
+    free_line = scene["request_quote"].items.get(imported_raw_name="Тормозная колодка")
+    free_line.gost_drawing = "ГОСТ 9999"
+    free_line.save(update_fields=["gost_drawing"])
+
+    quote, err, prefilled = generate_draft_quote(scene["deal"].id, scene["seller_user"])
+    assert err is None
+    unbound = quote.items.get(gost_drawing="ГОСТ 9999")
+    assert unbound.product_id is None  # ambiguous → not auto-bound
+    assert prefilled == 1  # only the originally pre-matched line
