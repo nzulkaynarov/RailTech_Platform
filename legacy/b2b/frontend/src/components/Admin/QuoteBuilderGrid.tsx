@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useQuoteItems, useUpdateQuoteItem, useCreateQuoteItem, useDeleteQuoteItem, useDeal, useSetQuoteDeliveryBasis } from '@/hooks/useCRM';
 import { useCurrencies } from '@/hooks/useMasterData';
+import { useMediaQuery } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { formatMoney, calculateLineTotal, toDecimal } from '@/utils/decimal';
 import { DeliveryBasisSelect } from '@/components/CRM/DeliveryBasisSelect';
@@ -23,6 +24,7 @@ import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/comp
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
 	Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
@@ -110,6 +112,16 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 			return next;
 		});
 	};
+
+	// Below Tailwind `xl` (1280px) the economics rail becomes a slide-over Sheet instead of
+	// eating horizontal space; ≥xl it stays the inline collapsible <aside>. railSheetOpen is
+	// transient (NOT persisted) — localStorage `kp.rail.open` governs only the ≥xl inline collapse.
+	const railAsSheet = useMediaQuery('(max-width: 1279px)');
+	const [railSheetOpen, setRailSheetOpen] = useState(false);
+	// Below 1200px the cost columns (себестоимость + наценка) drop out of the main table so the
+	// line grid stays readable; economics stay reachable in each row's expanded detail (see below).
+	const isCompact = useMediaQuery('(max-width: 1199px)');
+
 	const toggleRow = (id: number) => setExpandedRowId((current) => (current === id ? null : id));
 
 	useEffect(() => {
@@ -290,6 +302,10 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	// every cost-bearing column/panel; client-facing numbers (Кол-во, Сумма, итог) are never gated.
 	const econ: QuoteEconomics | null = activeQuote.economics ?? null;
 	const canViewCost = !!econ;
+	// Viewport gate layered on top of the cost-viewer gate: on narrow laptops (<1200px) the two
+	// cost columns collapse out of the main table. `canViewCost` still guards the expanded detail
+	// row, which stays the escape hatch to see/edit economics when the columns are hidden.
+	const showCostColumns = canViewCost && !isCompact;
 
 	// FX rate (сум per 1 unit) for a line cost currency: manual override wins over
 	// the frozen snapshot; UZS is always 1. Strings → Decimal for display math.
@@ -328,7 +344,9 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	};
 
 	// Visible main-row columns (for the detail row colSpan): chevron, name, qty, [base], [margin], sum, delete.
-	const mainColCount = canViewCost ? 7 : 5;
+	// Gated on showCostColumns (not canViewCost) so colSpan tracks the two cost columns that the
+	// <1200px viewport gate hides — a table can't drop columns via Tailwind `hidden` without drift.
+	const mainColCount = showCostColumns ? 7 : 5;
 
 	const marginCell = (item: QuoteItem) => {
 		if (!canViewCost || !econ) return <span className="text-xs text-muted-foreground">—</span>;
@@ -373,7 +391,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	);
 
 	const railOpenContent = (
-		<div id="kp-econ-rail" className="flex h-full w-80 shrink-0 flex-col">
+		<div id="kp-econ-rail" className={cn('flex flex-col', railAsSheet ? 'min-h-0 w-full flex-1' : 'h-full w-80 shrink-0')}>
 			<div className="flex items-center justify-between border-b px-3 py-2">
 				<span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{t('quote.rail.title')}</span>
 				<Button variant="ghost" size="icon-xs" onClick={toggleRail} aria-expanded={true} aria-controls="kp-econ-rail" title={t('quote.rail.collapse')}>
@@ -553,6 +571,13 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 								<Plus className="size-3" />
 								{t('common.add')}
 							</Button>
+							{/* Below xl the rail is a slide-over — this opens it (no inline rail to click). */}
+							{railAsSheet && (
+								<Button variant="outline" size="sm" onClick={() => setRailSheetOpen(true)}>
+									<PanelRightOpen className="size-3" />
+									{t('quote.rail.expand')}
+								</Button>
+							)}
 						</div>
 					</div>
 
@@ -572,7 +597,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 												<TooltipContent>{t('quote.quantityHelp')}</TooltipContent>
 											</Tooltip>
 										</TableHead>
-										{canViewCost && (
+										{showCostColumns && (
 											<TableHead className="px-2 py-2 text-xs font-semibold text-muted-foreground w-52 bg-muted/30">
 												<Tooltip>
 													<TooltipTrigger asChild><span className="cursor-help">{t('quote.basePrice')}</span></TooltipTrigger>
@@ -580,7 +605,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 												</Tooltip>
 											</TableHead>
 										)}
-										{canViewCost && (
+										{showCostColumns && (
 											<TableHead className="px-2 py-2 text-center text-xs font-semibold text-muted-foreground w-16">
 												{t('quote.marginApplied')}
 											</TableHead>
@@ -650,7 +675,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 															onChange={(e) => updateItemLocally(item.id, 'quantity', e.target.value)}
 														/>
 													</TableCell>
-													{canViewCost && (
+													{showCostColumns && (
 														<TableCell className="p-0 bg-muted/20">
 															<div className="flex items-center">
 																<Tooltip>
@@ -685,7 +710,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 															</div>
 														</TableCell>
 													)}
-													{canViewCost && (
+													{showCostColumns && (
 														<TableCell className="px-2 py-1.5 text-center">{marginCell(item)}</TableCell>
 													)}
 													<TableCell className="px-2 py-1.5 text-right pr-4">
@@ -808,12 +833,23 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 					{activeQuote && <QuoteChargesSection quoteId={activeQuote.id} currency={presentationCurrency} />}
 				</div>
 
-				{/* Collapsible «Экономика и итоги» rail */}
-				<TooltipProvider>
-					<aside className={cn('shrink-0 self-stretch overflow-hidden rounded-md border bg-card transition-[width] duration-200 ease-in-out', railOpen ? 'w-80' : 'w-14')}>
-						{railOpen ? railOpenContent : railCollapsedContent}
-					</aside>
-				</TooltipProvider>
+				{/* «Экономика и итоги»: inline collapsible rail ≥xl, slide-over Sheet below xl */}
+				{railAsSheet ? (
+					<Sheet open={railSheetOpen} onOpenChange={setRailSheetOpen}>
+						<SheetContent side="right" className="w-full p-0 sm:max-w-sm">
+							<SheetHeader className="sr-only">
+								<SheetTitle>{t('quote.rail.title')}</SheetTitle>
+							</SheetHeader>
+							<TooltipProvider>{railOpenContent}</TooltipProvider>
+						</SheetContent>
+					</Sheet>
+				) : (
+					<TooltipProvider>
+						<aside className={cn('shrink-0 self-stretch overflow-hidden rounded-md border bg-card transition-[width] duration-200 ease-in-out', railOpen ? 'w-80' : 'w-14')}>
+							{railOpen ? railOpenContent : railCollapsedContent}
+						</aside>
+					</TooltipProvider>
+				)}
 			</div>
 
 			<AICatalogMatchDialog open={showAiMatch} onOpenChange={setShowAiMatch} items={localItems} />
