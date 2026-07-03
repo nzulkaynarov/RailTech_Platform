@@ -31,7 +31,7 @@ from crm.serializers import (
 
 def _chain_error_response(error):
     """Map a КП approval-chain service error code to an HTTP response."""
-    forbidden = {"ROLE_NOT_PERMITTED", "QUOTE_SEND_NOT_ENTITLED"}
+    forbidden = {"ROLE_NOT_PERMITTED", "QUOTE_SEND_NOT_ENTITLED", "SELLER_KYC_REQUIRED"}
     http_status = status.HTTP_403_FORBIDDEN if error in forbidden else status.HTTP_400_BAD_REQUEST
     return Response({"error": error}, status=http_status)
 
@@ -283,6 +283,7 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
                     "FX_RATE_MISSING",
                     "QUOTE_HAS_UNPRICED_LINES",
                     "QUOTE_SEND_NOT_ENTITLED",
+                    "SELLER_KYC_REQUIRED",
                 )
                 else "INVALID_STATUS"
             )
