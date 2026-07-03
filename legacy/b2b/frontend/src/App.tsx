@@ -29,7 +29,6 @@ const RequestDetailPage = lazyWithRetry(() => import('./pages/RequestDetailPage'
 
 // Lazy load individual page modules
 const PlatformAdminDashboard = lazyWithRetry(() => import('./pages/PlatformAdminDashboard'));
-const SourcingImportPage = lazyWithRetry(() => import('./pages/SourcingImportPage'));
 const DealsPage = lazyWithRetry(() => import('./pages/DealsPage'));
 const QuotesPage = lazyWithRetry(() => import('./pages/QuotesPage'));
 const CategoriesPage = lazyWithRetry(() => import('./pages/CategoriesPage'));
@@ -71,7 +70,6 @@ type Page =
   | { type: 'profile' }
   | { type: 'settings' }
   | { type: 'sourcing-requests' }
-  | { type: 'sourcing-import' }
   | { type: 'crm-deals' }
   | { type: 'deal-quote'; dealId: number }
   | { type: 'crm-quotes' }
@@ -160,7 +158,7 @@ function useAuthRoute() {
 // `product_detail/<id>` so deep links / refresh / back-forward work.
 function parseHashToPage(rawHash: string): Page {
   const hash = rawHash.replace(/^#/, '');
-  // Drop any query suffix (e.g. `sourcing-import?deal=123`) — the target page reads
+  // Drop any query suffix (e.g. `crm-quotes?deal=123`) — the target page reads
   // its own params from the hash; the page TYPE must be the bare route.
   const path = hash.split('?')[0];
   if (!path || path === 'dashboard') return { type: 'dashboard' };
@@ -335,7 +333,7 @@ const BUYER_PAGES = new Set([
 const SELLER_PAGES = new Set([
   ...COMMON_PAGES,
   'products', 'product_detail', 'categories', 'equipment-groups', 'catalog-import',
-  'sourcing-requests', 'sourcing-import', 'crm-deals', 'crm-quotes',
+  'sourcing-requests', 'crm-deals', 'crm-quotes',
   'deal-quote', 'request-detail', 'my-subscription',
   'contracts', 'invoices', 'payments', 'acts', 'fulfillments',
 ]);
@@ -457,7 +455,7 @@ function MainApp() {
   const handleNavigate = (target: string) => {
     const validTypes = [
       'dashboard', 'products', 'profile', 'settings',
-      'sourcing-requests', 'sourcing-import',
+      'sourcing-requests',
       'crm-deals', 'crm-quotes',
       'categories', 'equipment-groups',
       'help', 'my-requests',
@@ -503,10 +501,6 @@ function MainApp() {
           ? { label: getPageLabel('crm-deals', t), pageId: 'crm-deals' }
           : { label: getPageLabel('my-requests', t), pageId: 'my-requests' },
         { label: t('breadcrumb.requestDetail') },
-      ];
-      case 'sourcing-import': return [
-        { label: getPageLabel('crm-deals', t), pageId: 'crm-deals' },
-        { label: getPageLabel('sourcing-import', t) },
       ];
       case 'deal-quote': return [
         { label: getPageLabel('crm-deals', t), pageId: 'crm-deals' },
@@ -558,9 +552,6 @@ function MainApp() {
       // working by rendering the canonical Deals surface (no separate page).
       content = <DealsPage />;
       activePageId = 'crm-deals';
-      break;
-    case 'sourcing-import':
-      content = <SourcingImportPage />;
       break;
     case 'crm-deals':
       content = <DealsPage />;

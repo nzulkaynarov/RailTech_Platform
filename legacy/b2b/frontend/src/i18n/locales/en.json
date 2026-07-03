@@ -2542,7 +2542,7 @@
       },
       "1": {
         "title": "Purchase Request",
-        "description": "Import Excel with items. Smart Match automatically finds products in the catalog."
+        "description": "Import line items from Excel straight into the request — the system automatically matches them to the catalog."
       },
       "2": {
         "title": "Commercial Offer",

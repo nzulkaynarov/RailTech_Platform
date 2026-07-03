@@ -3,11 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { FileText, Clock, Eye } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
 import { StatusBadge, getDealStageVariant } from '@/components/ui/StatusBadge';
-import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/DataTable';
+import { ResponsiveDataTable, type ResponsiveColumn } from '@/components/ResponsiveDataTable';
+import { Toolbar, Pager, useListParams, applyListParams } from '@/components/DataTable';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useUserStore } from '@/store/userStore';
 import { useDeals, useDealStages } from '@/hooks/useCRM';
@@ -49,6 +47,64 @@ export function DealsPage() {
     { label: t('pages.deals.stats.active'), value: String(deals?.filter(d => !['CLOSED_WON', 'CLOSED_LOST'].includes(d.stage_code ?? '')).length ?? 0) },
     { label: t('pages.deals.stats.quoteSent'), value: String(deals?.filter(d => d.stage_code === 'QUOTE_SENT').length ?? 0) },
     { label: t('pages.deals.stats.closedWon'), value: String(deals?.filter(d => d.stage_code === 'CLOSED_WON').length ?? 0) },
+  ];
+
+  const columns: ResponsiveColumn<Deal>[] = [
+    {
+      id: 'deal', sortKey: 'id', header: t('pages.deals.table.deal'), mobileTitle: true,
+      cell: (deal) => (
+        <>
+          <span className="font-medium">{deal.title || `#${deal.id}`}</span>
+          {/* Multi-seller routing — show which sellers this RFQ targets. */}
+          {(deal.target_sellers_data?.length ?? 0) > 0 && (
+            <span className="mt-0.5 block text-xs text-muted-foreground">
+              {t('pages.deals.routedTo')}: {deal.target_sellers_data!.map((seller) => seller.name).join(', ')}
+            </span>
+          )}
+        </>
+      ),
+    },
+    {
+      id: 'client', sortKey: 'client', header: t('pages.deals.table.client'),
+      cell: (deal) => <span className="text-muted-foreground">{deal.client_name || deal.company_name || ''}</span>,
+    },
+    {
+      id: 'stage', sortKey: 'stage', header: t('pages.deals.table.stage'),
+      cell: (deal) => <StatusBadge label={deal.stage_name ?? ''} variant={getDealStageVariant(deal.stage_code ?? '')} />,
+    },
+    {
+      id: 'value', sortKey: 'value', header: t('pages.deals.table.value'), className: 'text-right',
+      cell: (deal) => (
+        <span className="font-medium tabular-nums">
+          {deal.total_value ? formatCurrency(Number(deal.total_value)) : <span className="text-muted-foreground">—</span>}
+        </span>
+      ),
+    },
+    {
+      id: 'manager', header: t('pages.deals.table.manager'),
+      cell: (deal) => (deal.manager_name
+        ? <span>{deal.manager_name}</span>
+        : <span className="text-muted-foreground italic">{t('pages.deals.table.managerUnassigned')}</span>),
+    },
+    {
+      id: 'date', sortKey: 'created_at', header: t('pages.deals.table.date'), className: 'text-muted-foreground text-xs',
+      cell: (deal) => (
+        <span className="inline-flex items-center gap-1">
+          <Clock className="h-3 w-3" />
+          {new Date(deal.created_at).toLocaleDateString()}
+        </span>
+      ),
+    },
+    {
+      id: 'open', header: '', className: 'w-10', mobileHidden: true,
+      cell: (deal) => (
+        <div className="flex justify-center" onClick={(e) => e.stopPropagation()}>
+          <Button variant="ghost" size="sm" onClick={() => openDeal(deal)} aria-label={t('pages.deals.detail.openQuote')}>
+            <Eye className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      ),
+    },
   ];
 
   return (
@@ -129,68 +185,13 @@ export function DealsPage() {
             if (!pageItems.length) return <EmptyState icon={<FileText className="h-5 w-5" />} message={t('pages.common.noData')} />;
             return (
             <>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <SortableHead sortKey="id" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('pages.deals.table.deal')}</SortableHead>
-                  <SortableHead sortKey="client" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('pages.deals.table.client')}</SortableHead>
-                  <SortableHead sortKey="stage" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('pages.deals.table.stage')}</SortableHead>
-                  <SortableHead sortKey="value" current={listParams.ordering} onChange={listParams.toggleOrdering} className="text-right">{t('pages.deals.table.value')}</SortableHead>
-                  <TableHead>{t('pages.deals.table.manager')}</TableHead>
-                  <SortableHead sortKey="created_at" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('pages.deals.table.date')}</SortableHead>
-                  <TableHead className="w-10" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pageItems.map((deal) => (
-                  <TableRow
-                    key={deal.id}
-                    className="cursor-pointer"
-                    onClick={() => openDeal(deal)}
-                  >
-                    <TableCell>
-                      <span className="font-medium">{deal.title || `#${deal.id}`}</span>
-                      {/* Multi-seller routing — show which sellers this RFQ targets. */}
-                      {(deal.target_sellers_data?.length ?? 0) > 0 && (
-                        <span className="mt-0.5 block text-xs text-muted-foreground">
-                          {t('pages.deals.routedTo')}: {deal.target_sellers_data!.map((seller) => seller.name).join(', ')}
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {deal.client_name || deal.company_name || ''}
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge
-                        label={deal.stage_name ?? ''}
-                        variant={getDealStageVariant(deal.stage_code ?? '')}
-                      />
-                    </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">
-                      {deal.total_value ? formatCurrency(Number(deal.total_value)) : <span className="text-muted-foreground">—</span>}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {deal.manager_name
-                        ? <span>{deal.manager_name}</span>
-                        : <span className="text-muted-foreground italic">{t('pages.deals.table.managerUnassigned')}</span>}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-xs">
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {new Date(deal.created_at).toLocaleDateString()}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex justify-center" onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="sm" onClick={() => openDeal(deal)} aria-label={t('pages.deals.detail.openQuote')}>
-                          <Eye className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <ResponsiveDataTable
+              columns={columns}
+              rows={pageItems}
+              getRowId={(deal) => deal.id}
+              onRowClick={openDeal}
+              sorting={{ ordering: listParams.ordering, onToggle: listParams.toggleOrdering }}
+            />
             <Pager page={listParams.page} pageSize={listParams.pageSize} total={total} onPageChange={listParams.setPage} />
             </>
             );

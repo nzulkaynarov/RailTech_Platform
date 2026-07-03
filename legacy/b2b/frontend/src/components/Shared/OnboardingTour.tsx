@@ -26,7 +26,7 @@ const stepIcons = [Package, FileSpreadsheet, Calculator, Rocket, BarChart3]
  * Keeping this in the component (not i18n) because it's structural, not text. */
 const stepTargets: (string | null)[] = [
   'products',        // step 0 — Catalog
-  'sourcing-import', // step 1 — Excel import
+  null,              // step 1 — Excel import now lives inline in the request flow; no standalone page to deep-link
   'crm-quotes',      // step 2 — Quotes builder
   'crm-deals',       // step 3 — Deals pipeline
   null,              // step 4 — (analytics page cut in Move 1; step shows its blurb, no nav)

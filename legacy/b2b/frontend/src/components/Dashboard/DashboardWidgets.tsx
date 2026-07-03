@@ -182,6 +182,7 @@ export function MetricStrip({ stats, role }: { stats: DashboardStats | null; rol
       ? [
           { label: t('dashboardPage.kpi.dealsVolume'), value: formatCurrency(stats?.deals_volume ?? 0) },
           { label: t('dashboardPage.kpi.activeRequests'), value: String(stats?.active_requests ?? 0) },
+          { label: t('dashboardPage.kpi.catalogItems'), value: String(stats?.catalog_items ?? 0) },
           { label: t('dashboardPage.kpi.clients'), value: String(stats?.clients_count ?? 0) },
         ]
       : [

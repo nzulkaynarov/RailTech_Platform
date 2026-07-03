@@ -3,9 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
+import { ResponsiveDataTable, type ResponsiveColumn } from '@/components/ResponsiveDataTable';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,7 +30,7 @@ import { crmApi } from '@/api/crmApi';
 import type { Quote } from '@/api/crmApi';
 import { toast } from 'sonner';
 import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
-import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/DataTable';
+import { Toolbar, Pager, useListParams, applyListParams } from '@/components/DataTable';
 
 export function QuotesPage() {
   const { t } = useTranslation();
@@ -114,6 +112,84 @@ export function QuotesPage() {
     }
   };
 
+  const columns: ResponsiveColumn<Quote>[] = [
+    {
+      id: 'number', sortKey: 'id', header: t('pages.quotes.table.number'), mobileTitle: true,
+      cell: (q) => <span className="font-medium">#{q.id}-v{q.version}</span>,
+    },
+    {
+      id: 'party', header: isBuyer ? t('pages.quotes.table.supplier') : t('pages.quotes.table.client'),
+      cell: (q) => t('pages.quotes.dealRef', { id: q.deal }),
+    },
+    {
+      id: 'items', header: t('pages.quotes.table.items'), className: 'text-center',
+      cell: (q) => <span className="tabular-nums">{q.items?.length ?? 0}</span>,
+    },
+    {
+      id: 'amount', sortKey: 'amount', header: t('pages.quotes.table.amount'), className: 'text-right',
+      cell: (q) => <span className="tabular-nums font-medium">{formatCurrency(Number(q.total_incl_vat))}</span>,
+    },
+    {
+      id: 'status', sortKey: 'status', header: t('pages.quotes.table.status'),
+      cell: (q) => (
+        <Badge variant={getStatusBadgeVariant(q.status_code)}>
+          {quoteStatusLabelKey(q.status_code) ? t(quoteStatusLabelKey(q.status_code)) : q.status_name}
+        </Badge>
+      ),
+    },
+    {
+      id: 'date', sortKey: 'created_at', header: t('pages.quotes.table.date'), className: 'text-muted-foreground',
+      cell: (q) => new Date(q.created_at).toLocaleDateString(),
+    },
+    {
+      id: 'actions', header: t('pages.quotes.table.actions'), className: 'text-center', mobileActions: true,
+      cell: (q) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {!isBuyer && (
+              <>
+                {/* Only an internally-approved КП can be sent — otherwise the
+                    backend FSM rejects it. The actual chain steps live on the
+                    КП builder (deal detail). */}
+                {q.status_code === QuoteStatus.READY_TO_SEND && (
+                  <DropdownMenuItem onClick={() => setSendConfirmId(q.id)}>
+                    <Send className="mr-2 h-4 w-4" />
+                    {t('pages.quotes.actions.sendToClient')}
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={() => handleGeneratePDF(q.id)}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  {t('pages.quotes.actions.generatePDF')}
+                </DropdownMenuItem>
+              </>
+            )}
+            {/* Buyer accept/reject lives only on the canonical
+                request-detail surface (My Requests → open). This
+                list stays read-only for the buyer. */}
+            <DropdownMenuItem onClick={() => handleDownloadPDF(q.id)}>
+              <FileDown className="mr-2 h-4 w-4" />
+              {t('pages.quotes.actions.downloadPDF')}
+            </DropdownMenuItem>
+            {isPlatformAdmin && q.status_code !== QuoteStatus.APPROVED && (
+              <DropdownMenuItem
+                onClick={() => setForceApproveTarget(q)}
+                className="text-warning"
+              >
+                <ShieldAlert className="mr-2 h-4 w-4" />
+                {t('pages.quotes.actions.forceApprove')}
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    },
+  ];
+
   return (
     <PageShell
       title={title}
@@ -155,79 +231,12 @@ export function QuotesPage() {
             if (!pageItems.length) return <EmptyState icon={<Calculator className="h-5 w-5" />} message={t('pages.common.noData')} />;
             return (
             <>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <SortableHead sortKey="id" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('pages.quotes.table.number')}</SortableHead>
-                  <TableHead>{isBuyer ? t('pages.quotes.table.supplier') : t('pages.quotes.table.client')}</TableHead>
-                  <TableHead className="text-center">{t('pages.quotes.table.items')}</TableHead>
-                  <SortableHead sortKey="amount" current={listParams.ordering} onChange={listParams.toggleOrdering} className="text-right">{t('pages.quotes.table.amount')}</SortableHead>
-                  <SortableHead sortKey="status" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('pages.quotes.table.status')}</SortableHead>
-                  <SortableHead sortKey="created_at" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('pages.quotes.table.date')}</SortableHead>
-                  <TableHead className="text-center">{t('pages.quotes.table.actions')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pageItems.map((q: Quote) => (
-                  <TableRow key={q.id}>
-                    <TableCell className="font-medium">#{q.id}-v{q.version}</TableCell>
-                    <TableCell>{t('pages.quotes.dealRef', { id: q.deal })}</TableCell>
-                    <TableCell className="text-center tabular-nums">{q.items?.length ?? 0}</TableCell>
-                    <TableCell className="text-right tabular-nums font-medium">{formatCurrency(Number(q.total_incl_vat))}</TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusBadgeVariant(q.status_code)}>
-                        {quoteStatusLabelKey(q.status_code) ? t(quoteStatusLabelKey(q.status_code)) : q.status_name}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{new Date(q.created_at).toLocaleDateString()}</TableCell>
-                    <TableCell className="text-center">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {!isBuyer && (
-                            <>
-                              {/* Only an internally-approved КП can be sent — otherwise the
-                                  backend FSM rejects it. The actual chain steps live on the
-                                  КП builder (deal detail). */}
-                              {q.status_code === QuoteStatus.READY_TO_SEND && (
-                                <DropdownMenuItem onClick={() => setSendConfirmId(q.id)}>
-                                  <Send className="mr-2 h-4 w-4" />
-                                  {t('pages.quotes.actions.sendToClient')}
-                                </DropdownMenuItem>
-                              )}
-                              <DropdownMenuItem onClick={() => handleGeneratePDF(q.id)}>
-                                <FileText className="mr-2 h-4 w-4" />
-                                {t('pages.quotes.actions.generatePDF')}
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                          {/* Buyer accept/reject lives only on the canonical
-                              request-detail surface (My Requests → open). This
-                              list stays read-only for the buyer. */}
-                          <DropdownMenuItem onClick={() => handleDownloadPDF(q.id)}>
-                            <FileDown className="mr-2 h-4 w-4" />
-                            {t('pages.quotes.actions.downloadPDF')}
-                          </DropdownMenuItem>
-                          {isPlatformAdmin && q.status_code !== QuoteStatus.APPROVED && (
-                            <DropdownMenuItem
-                              onClick={() => setForceApproveTarget(q)}
-                              className="text-warning"
-                            >
-                              <ShieldAlert className="mr-2 h-4 w-4" />
-                              {t('pages.quotes.actions.forceApprove')}
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <ResponsiveDataTable
+              columns={columns}
+              rows={pageItems}
+              getRowId={(q) => q.id}
+              sorting={{ ordering: listParams.ordering, onToggle: listParams.toggleOrdering }}
+            />
             <Pager page={listParams.page} pageSize={listParams.pageSize} total={total} onPageChange={listParams.setPage} />
             </>
             );
