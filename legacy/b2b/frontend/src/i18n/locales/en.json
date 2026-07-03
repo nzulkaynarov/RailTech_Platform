@@ -2071,6 +2071,16 @@
     "lastWeek": "Last week",
     "prevPeriod": "prev. period",
     "vsPrevPeriod": "vs. prev. period",
+    "attn": {
+      "approvals": "Quotes to approve",
+      "signContract": "Contracts to sign",
+      "rfqNoKp": "RFQs without a quote",
+      "expiredKp": "Expired quotes",
+      "reviewKp": "Quotes to review"
+    },
+    "funnel": {
+      "title": "Deal pipeline"
+    },
     "ttfk": {
       "title": "Time to first quote",
       "median": "median",
