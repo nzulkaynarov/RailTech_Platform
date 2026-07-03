@@ -14198,7 +14198,13 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "No response body"
+                        "description": "КП PDF (client projection)"
+                    },
+                    "202": {
+                        "description": "PDF still rendering off-thread — retry after Retry-After seconds"
+                    },
+                    "404": {
+                        "description": "Unknown or not-yet-sent token"
                     }
                 }
             }
