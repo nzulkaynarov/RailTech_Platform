@@ -1,29 +1,49 @@
-"""SEC-06 — per-account login lockout (defense-in-depth over the per-IP throttle).
+"""SEC-06 — per-account login lockout keyed on DISTINCT source IPs.
 
-The `login` ScopedRateThrottle (10/min per IP, core/settings.py) blunts a
-single-source brute-force but does NOT protect one victim account against a
-*distributed* attack (many IPs, few tries each). This adds a per-account layer:
-after N failed logins for the same email within a rolling window, that account is
-temporarily locked regardless of source IP.
+The `login` ScopedRateThrottle (10/min per IP, core/settings.py) already stops a
+single-source brute-force. This layer exists for the one thing the per-IP throttle
+cannot see: a DISTRIBUTED credential-stuffing run — many IPs, a few tries each —
+against one victim account. So the account lock trips on the number of DISTINCT
+IPs that fail for an email, NOT on the raw failure count.
 
-Design (OWASP "Authentication — account lockout", NIST 800-63B rate-limiting):
-    * Counters live in the Redis `default` cache — same store the throttles use,
-      no new dependency (django-axes was rejected for Django 6.0 compat risk).
-    * Threshold / window / cooldown are env-tunable with conservative defaults
-      (10 failures / 15-min window → 15-min lock) so an ordinary user fat-
-      fingering a password is nowhere near the limit.
-    * SHORT, temporary lock only — never a permanent one. A per-account lock is
-      inherently a small DoS lever (an attacker can burn a victim's session by
-      failing on purpose), so the blast radius is bounded to the cooldown and the
-      per-IP throttle already makes sustaining failures expensive. This is the
-      accepted trade for stopping distributed credential-stuffing; monitoring
-      (a logged security event on every lock) is the compensating control.
+Why distinct-IP and not raw attempts (adversarial-review finding, 2026-07-03):
+    A raw-attempt counter let a SINGLE IP — well within its own 10/min budget —
+    lock any account permanently (re-hit the threshold each cooldown). Since a
+    B2B counterparty's email is semi-public (invites, quotes, contracts, chat),
+    that turned "attacker needs the password to deny login" into "attacker needs
+    only the email" — a targeted-DoS regression. Counting distinct IPs removes
+    that: a one-IP flood never advances the lock (the per-IP throttle handles it),
+    and locking a victim now costs the attacker THRESHOLD distinct IPs — i.e. it
+    only trips when a genuinely distributed attack is already underway, which is
+    exactly when locking is the correct response.
+
+Design (OWASP auth-lockout / NIST 800-63B rate-limiting; django-axes was rejected
+for Django 6.0 compat risk):
+    * State lives in the Redis `default` cache (same store the throttles use). The
+      per-account key holds the SET of distinct IPs seen failing in the window;
+      once |IPs| >= LOGIN_LOCKOUT_DISTINCT_IPS the account is locked for
+      LOGIN_LOCKOUT_COOLDOWN. All keys carry TTLs (window / cooldown) — bounded,
+      self-expiring, and the set is capped at the threshold, so no cache-flood.
+    * Fixed window anchored at the first failure (the TTL is not refreshed on each
+      failure) — NOT a rolling window. This is deliberate: it reliably catches the
+      fast distributed burst that is this layer's job. It does NOT try to stop a
+      patient low-and-slow grind that paces under the threshold; that residual is
+      inherent to any count-based lockout and is left to the per-IP throttle,
+      strong-password policy, and the alerting below.
+    * Every lock is logged at ERROR so prod Sentry raises it as an ALERT (a
+      WARNING would only be a breadcrumb) — this is the compensating monitoring
+      control for the availability trade-off. It logs the sha256 `account_hash`,
+      never the raw email / password / token.
     * No account enumeration: failures are recorded and the lock applies for ANY
-      submitted email, whether or not a user exists, and the response is generic
-      — an attacker cannot tell "locked because real account" from "locked
-      because I hammered a bogus address".
-    * The email is never used as a raw cache key (key-injection / PII at rest):
-      it is normalized and hashed.
+      submitted email (real or bogus) and the 429 response is generic.
+    * The email is normalized (trim + lowercase) and sha256-hashed — never a raw
+      cache key (PII at rest / key injection). Lockout identity is therefore
+      case-insensitive: variants of one address share a lock.
+
+Operational note: the `default` cache shares Redis DB 0 with Channels / WS
+tickets. All lockout keys are TTL-bounded; the store is assumed `noeviction`
+(prod default). If an LRU `maxmemory` policy is ever set on that instance, move
+the lockout keys to a dedicated cache DB so a lock can't be evicted early.
 """
 
 import hashlib
@@ -36,12 +56,12 @@ from rest_framework.response import Response
 
 logger = logging.getLogger("security")
 
-_COUNTER_PREFIX = "login_fail:"
+_COUNTER_PREFIX = "login_fail_ips:"
 _LOCK_PREFIX = "login_lock:"
 
 
-def _threshold() -> int:
-    return int(getattr(settings, "LOGIN_LOCKOUT_THRESHOLD", 10))
+def _distinct_ip_threshold() -> int:
+    return int(getattr(settings, "LOGIN_LOCKOUT_DISTINCT_IPS", 10))
 
 
 def _window() -> int:
@@ -65,39 +85,61 @@ def is_locked(email: str) -> bool:
     return cache.get(_LOCK_PREFIX + _identifier(email)) is not None
 
 
-def record_failure(email: str) -> None:
-    """Register one failed login for `email`; lock the account once it crosses the threshold."""
-    if not email:
+def record_failure(email: str, ip: str) -> None:
+    """Register one failed login for `email` from source `ip`.
+
+    Locks the account only once LOGIN_LOCKOUT_DISTINCT_IPS *distinct* IPs have
+    failed within the window — repeated failures from the same IP do not advance
+    the count (that is the per-IP throttle's job).
+    """
+    if not email or not ip:
         return
     ident = _identifier(email)
     counter_key = _COUNTER_PREFIX + ident
-    # `add` is a no-op if the key exists (atomic SETNX) so concurrent misses can't
-    # reset a live counter; `incr` on the guaranteed-present key is atomic.
-    cache.add(counter_key, 0, timeout=_window())
-    try:
-        failures = cache.incr(counter_key)
-    except ValueError:
-        # Key expired between add and incr (window boundary) — treat as a fresh count.
-        cache.set(counter_key, 1, timeout=_window())
-        failures = 1
 
-    if failures >= _threshold():
+    seen_ips = cache.get(counter_key)
+    if not isinstance(seen_ips, set):
+        seen_ips = set()
+    if ip in seen_ips:
+        return  # this IP already counts toward this window — don't re-lock on repeats
+    seen_ips.add(ip)
+    # Fixed window: set the TTL once, anchored at the first failure (get→set is not
+    # perfectly atomic, but a lost concurrent IP only UNDER-counts, favouring the user).
+    cache.set(counter_key, seen_ips, timeout=_window())
+
+    if len(seen_ips) >= _distinct_ip_threshold():
         cache.set(_LOCK_PREFIX + ident, 1, timeout=_cooldown())
         cache.delete(counter_key)  # fresh slate once the cooldown elapses
-        logger.warning(
-            "SEC-06 login lockout engaged: account_hash=%s after %d failures (cooldown=%ds)",
+        logger.error(
+            "SEC-06 login lockout engaged: account_hash=%s locked after failures from "
+            "%d distinct IPs (cooldown=%ds) — possible distributed credential-stuffing",
             ident,
-            failures,
+            len(seen_ips),
             _cooldown(),
         )
 
 
 def reset(email: str) -> None:
-    """Clear the failure counter and any lock — call on a successful login."""
+    """Clear the distinct-IP set and any lock — call on a successful login."""
     if not email:
         return
     ident = _identifier(email)
     cache.delete_many([_COUNTER_PREFIX + ident, _LOCK_PREFIX + ident])
+
+
+def note_django_auth_failure(username: str, ip: str, path: str) -> None:
+    """Detection-only hook for Django-auth (e.g. /admin/login/) failures.
+
+    Django's authenticate() fires `user_login_failed` on failure; simplejwt (the
+    DRF app login) does NOT, so this covers the Unfold admin login and any
+    management auth WITHOUT double-counting the DRF path already handled by
+    record_failure(). We LOG for alerting but deliberately do NOT lock: the sole
+    superadmin is the break-glass account and must stay reachable at /admin/login/
+    — a hard lock there would be a self-inflicted DoS. Per-IP rate limiting for
+    /admin/ belongs at the edge (host Caddy). Logs the hashed identity only.
+    """
+    ident = _identifier(username) if username else "?"
+    logger.warning("Django auth login failed: account_hash=%s ip=%s path=%s", ident, ip or "?", path or "?")
 
 
 def locked_response() -> Response:

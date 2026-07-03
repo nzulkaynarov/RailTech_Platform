@@ -5,6 +5,7 @@ from rest_framework import permissions, status, views
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.generics import RetrieveAPIView
 from rest_framework.response import Response
+from rest_framework.throttling import BaseThrottle
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
@@ -305,8 +306,10 @@ class ThrottledTokenObtainPairView(TokenObtainPairView):
         try:
             response = super().post(request, *args, **kwargs)
         except AuthenticationFailed:
-            # Bad credentials / inactive account → count it against the lockout.
-            login_guard.record_failure(email)
+            # Bad credentials / inactive account → count it against the lockout,
+            # keyed on the source IP (BaseThrottle.get_ident mirrors the per-IP
+            # `login` throttle's client-IP resolution, honouring NUM_PROXIES).
+            login_guard.record_failure(email, BaseThrottle().get_ident(request))
             raise
         if response.status_code == status.HTTP_200_OK:
             login_guard.reset(email)
