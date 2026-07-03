@@ -2,7 +2,7 @@ import json
 
 from django.core.cache import cache
 from django.core.serializers.json import DjangoJSONEncoder
-from django.db.models import Count, Sum
+from django.db.models import Count, Q, Sum
 from django.utils import translation
 from django.utils.translation import gettext_lazy as _
 
@@ -84,36 +84,32 @@ def dashboard_callback(request, context):
 def _compute_dashboard_payload() -> dict:
     """Build stats + charts dict. Extracted for caching; see dashboard_callback."""
 
-    # ─── KPI Metrics ───
+    # ─── KPI Metrics (ARCH-04: one query per table — same-table counts merged) ───
 
-    # 1. Pipeline value (SENT + APPROVED quotes)
-    pipeline_value = (
-        Quote.objects.filter(status__code__in=["SENT", "APPROVED"]).aggregate(total=Sum("total_incl_vat"))["total"] or 0
+    # Quote table: pipeline value (SENT+APPROVED) + total count, in one aggregate.
+    quote_agg = Quote.objects.aggregate(
+        pipeline=Sum("total_incl_vat", filter=Q(status__code__in=["SENT", "APPROVED"])),
+        total=Count("id"),
     )
+    pipeline_value = quote_agg["pipeline"] or 0
+    total_quotes = quote_agg["total"]
 
-    # 2. Active deals count
+    # Company table: KYC-pending + total, in one aggregate.
+    company_agg = Company.objects.aggregate(
+        pending=Count("id", filter=Q(verification_status__code="PROFILE_SUBMITTED")),
+        total=Count("id"),
+    )
+    kyc_pending = company_agg["pending"]
+    total_companies = company_agg["total"]
+
+    # Single-metric tables (distinct models → distinct queries; can't merge across tables).
     active_deals = Deal.objects.exclude(stage__code__in=["CLOSED_WON", "CLOSED_LOST"]).count()
-
-    # 3. KYC pending
-    kyc_pending = Company.objects.filter(verification_status__code="PROFILE_SUBMITTED").count()
-
-    # 4. Role applications pending
     role_apps_pending = CompanyRoleApplication.objects.filter(
         status__in=["PENDING", "DOCUMENTS_REQUIRED", "PAYMENT_REQUIRED"]
     ).count()
-
-    # 5. Unprocessed leads
     unprocessed_leads = Lead.objects.filter(is_processed=False).count()
-
-    # 6. Sourcing backlog (unmatched items)
     sourcing_backlog = QuoteItem.objects.filter(product__isnull=True).count()
-
-    # 7. Total companies
-    total_companies = Company.objects.count()
-
-    # 8. Productivity (quotes per active manager)
     managers_count = CustomUser.objects.filter(role__code="ADMIN").count()
-    total_quotes = Quote.objects.count()
     productivity = round(total_quotes / managers_count, 1) if managers_count > 0 else 0
 
     # ─── Charts ───
