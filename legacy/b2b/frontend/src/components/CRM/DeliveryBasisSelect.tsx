@@ -26,7 +26,7 @@ export const DeliveryBasisSelect: React.FC<DeliveryBasisSelectProps> = ({ value,
 			onValueChange={(v) => onChange(Number(v))}
 			disabled={disabled}
 		>
-			<SelectTrigger className="h-8 w-[240px]" aria-label={t('quote.deliveryBasis')}>
+			<SelectTrigger className="h-8 w-full max-w-[240px]" aria-label={t('quote.deliveryBasis')}>
 				<SelectValue placeholder={t('quote.deliveryBasisPlaceholder')} />
 			</SelectTrigger>
 			<SelectContent>

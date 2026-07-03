@@ -575,7 +575,7 @@
       "title": "Активные сделки",
       "noDealSelected": "Выберите сделку из списка слева",
       "emptyState": "У вас пока нет сделок",
-      "emptyStateHint": "Создайте первый запрос на коммерческое предложение",
+      "emptyStateHint": "Здесь появятся сделки — из входящих заявок покупателей или созданных вами.",
       "createRFQ": "Создать запрос КП",
       "bulkImport": "Импорт из Excel",
       "complianceData": "Данные комплаенса",
@@ -1671,7 +1671,7 @@
     "myRequests": "Мои заявки",
     "requestDetail": "Заявка",
     "crmDeals": "Сделки",
-    "crmQuotes": "Котировки",
+    "crmQuotes": "Коммерческие предложения",
     "crmClients": "Клиенты",
     "sourcingRequests": "Заявки на снабжение",
     "sourcingImport": "Импорт",
@@ -2881,7 +2881,7 @@
     "quotes": {
       "buyerTitle": "Коммерческие предложения",
       "buyerDescription": "Полученные КП от поставщиков",
-      "sellerTitle": "Котировки",
+      "sellerTitle": "Коммерческие предложения",
       "sellerDescription": "Quote Builder — расчёт Landed Cost и формирование КП",
       "createQuote": "Создать котировку",
       "searchPlaceholder": "Поиск по номеру КП / сделке",
@@ -3151,7 +3151,7 @@
       "sections": {
         "gettingStarted": "Начало работы",
         "procurement": "Закупки и заявки",
-        "quotesAndPricing": "Котировки и ценообразование",
+        "quotesAndPricing": "КП и ценообразование",
         "securityAndAccess": "Безопасность и доступ",
         "roleResponsibilities": "Роли и обязанности"
       },
