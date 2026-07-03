@@ -100,7 +100,14 @@ _IMAGE_TYPES = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg", "
 def _client():
     import anthropic
 
-    return anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+    # ARCH-01: bound the per-attempt timeout (SDK default is 600s → a hung call
+    # would pin a request worker). One factory for ALL AI call sites, so every
+    # endpoint inherits the cap. See core.settings.AI_REQUEST_TIMEOUT.
+    return anthropic.Anthropic(
+        api_key=settings.ANTHROPIC_API_KEY,
+        timeout=settings.AI_REQUEST_TIMEOUT,
+        max_retries=settings.AI_MAX_RETRIES,
+    )
 
 
 def file_to_payload(content: bytes, filename: str):
