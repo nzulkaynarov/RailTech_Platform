@@ -7,6 +7,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
@@ -34,7 +35,7 @@ function readDealIdFromHash(): string {
 
 export function SourcingImportPage() {
   const { t } = useTranslation();
-  const { data: deals } = useDeals();
+  const { data: deals, isLoading: dealsLoading, isError: dealsError } = useDeals();
   const [selectedDealId, setSelectedDealId] = useState<string>(() => readDealIdFromHash());
   const [importDone, setImportDone] = useState(false);
   // Headline mode: let AI read any file. Falls back to the deterministic xlsx
@@ -93,24 +94,34 @@ export function SourcingImportPage() {
               <Badge variant="outline" className="text-xs">1</Badge>
               {t('pages.sourcingImport.selectDeal')}
             </h3>
-            <Select
-              value={selectedDealId || undefined}
-              onValueChange={(v) => { setSelectedDealId(v); setImportDone(false); }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={t('pages.sourcingImport.selectDealPlaceholder')} />
-              </SelectTrigger>
-              <SelectContent>
-                {importableDeals.map((deal) => (
-                  <SelectItem key={deal.id} value={String(deal.id)}>
-                    {deal.title || `#${deal.id}`} — {deal.company_name || deal.client_name || ''}
-                    {deal.stage_code && ` (${t(buyerStatus(deal.stage_code).labelKey)})`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {importableDeals.length === 0 && (
-              <p className="text-xs text-muted-foreground">{t('pages.sourcingImport.noDeals')}</p>
+            {dealsError ? (
+              // UX-04: distinguish a failed read from a genuinely empty list — otherwise
+              // an error silently rendered as "no deals" (misleading dead-end).
+              <p className="text-xs text-destructive">{t('pages.sourcingImport.dealsError')}</p>
+            ) : dealsLoading ? (
+              <Skeleton className="h-10 w-full" />
+            ) : (
+              <>
+                <Select
+                  value={selectedDealId || undefined}
+                  onValueChange={(v) => { setSelectedDealId(v); setImportDone(false); }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('pages.sourcingImport.selectDealPlaceholder')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {importableDeals.map((deal) => (
+                      <SelectItem key={deal.id} value={String(deal.id)}>
+                        {deal.title || `#${deal.id}`} — {deal.company_name || deal.client_name || ''}
+                        {deal.stage_code && ` (${t(buyerStatus(deal.stage_code).labelKey)})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {importableDeals.length === 0 && (
+                  <p className="text-xs text-muted-foreground">{t('pages.sourcingImport.noDeals')}</p>
+                )}
+              </>
             )}
           </CardContent>
         </Card>

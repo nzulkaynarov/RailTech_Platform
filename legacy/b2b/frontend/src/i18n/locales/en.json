@@ -2786,6 +2786,7 @@
       "selectDeal": "Select deal for import",
       "selectDealPlaceholder": "Select a deal...",
       "noDeals": "No available deals. Create a deal first to upload a specification.",
+      "dealsError": "Couldn't load the deals list. Refresh the page or try again later.",
       "importSuccess": "Import started",
       "importSuccessHint": "The file's line items are being added to the request's КП. Open the request to see the result.",
       "openDeal": "Open request",
