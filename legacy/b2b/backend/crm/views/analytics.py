@@ -57,8 +57,8 @@ class DashboardAnalyticsView(APIView):
         #   * buyer (and dual user in BUYER context) → scope by own company ids (unchanged)
         is_staff = request.user.is_platform_admin
         deal_scope = None if is_staff else seller_visible_deal_ids(request.user, request)
-        # The acting seller's OWN company ids — used to scope the catalog-positions KPI to
-        # the seller's own products (audit F4: it previously showed the platform-wide count).
+        # The acting seller's OWN company ids — used to scope the catalog KPI to the seller's
+        # own active offers (audit E4: it previously counted Product.owner_company and read 0).
         seller_company_ids = None if is_staff else seller_acting_company_ids(request.user, request)
         if is_staff or deal_scope is not None:
             user_company_ids = None
@@ -160,27 +160,32 @@ class DashboardAnalyticsView(APIView):
         }
 
     def _get_catalog_kpis(self, period_start, is_staff, seller_company_ids) -> dict:
-        """Compute catalog item counts with period-over-period change.
+        """Compute the seller's catalog size ("Active listings") with period-over-period change.
 
-        Scoped to the acting context (audit F4): a platform admin sees the whole PIM; a
-        seller sees only ITS OWN published products (Product.owner_company); a buyer has no
-        owned catalog (the KPI isn't shown to buyers) so the count is 0.
+        A seller's catalog is NOT the shared PIM (catalog.Product is cross-tenant master data);
+        it's the set of live offers the seller has published — SupplierOffer rows where the
+        seller is the supplier and is_active=True. This is the world-standard seller KPI
+        (cf. Amazon Seller Central "Active listings" / Alibaba "Products online"), and fixes
+        audit E4 where the old Product.owner_company count read 0 despite live offers.
+
+        Scoped to the acting context (audit F4): a platform admin sees every active offer;
+        a seller sees only ITS OWN; a buyer has none (the KPI isn't shown to buyers) so it's 0.
         """
-        from catalog.models import Product
+        from catalog.models import SupplierOffer
 
-        products = Product.objects.filter(status__code="PUBLISHED")
+        offers = SupplierOffer.objects.filter(is_active=True)
         if not is_staff:
-            products = products.filter(owner_company_id__in=(seller_company_ids or []))
+            offers = offers.filter(supplier_id__in=(seller_company_ids or []))
         # ARCH-04: current + prior-period counts over the SAME queryset in one aggregate.
-        counts = products.aggregate(
+        counts = offers.aggregate(
             current=Count("id"),
             prev=Count("id", filter=Q(created_at__lt=period_start)),
         )
-        published_products = counts["current"]
-        prev_published = counts["prev"]
+        active_offers = counts["current"]
+        prev_active = counts["prev"]
         return {
-            "catalog_items": published_products,
-            "catalog_items_change": self._calculate_percentage_change(prev_published, published_products),
+            "catalog_items": active_offers,
+            "catalog_items_change": self._calculate_percentage_change(prev_active, active_offers),
         }
 
     def _get_client_kpis(self, period_start, is_staff, deal_scope) -> dict:
@@ -248,7 +253,10 @@ class DashboardAnalyticsView(APIView):
         # ARCH-04: completed + total over the SAME queryset in one aggregate.
         counts = quotes_qs.aggregate(
             total=Count("id"),
-            completed=Count("id", filter=Q(status__code__in=[QuoteStatusCode.APPROVED, QuoteStatusCode.SENT])),
+            completed=Count(
+                "id",
+                filter=Q(status__code__in=[QuoteStatusCode.APPROVED, QuoteStatusCode.SENT]),
+            ),
         )
         completed, total = counts["completed"], counts["total"]
         pct = (completed / total * 100) if total > 0 else 0
@@ -258,9 +266,20 @@ class DashboardAnalyticsView(APIView):
     def _get_buyer_stats(all_deals) -> dict:
         """Buyer-specific stage counts — three stage buckets in one aggregate (ARCH-04)."""
         counts = all_deals.aggregate(
-            in_progress=Count("id", filter=Q(stage__code__in=[DealStageCode.SOURCING, DealStageCode.CALCULATING])),
+            in_progress=Count(
+                "id",
+                filter=Q(stage__code__in=[DealStageCode.SOURCING, DealStageCode.CALCULATING]),
+            ),
             received=Count("id", filter=Q(stage__code=DealStageCode.QUOTE_SENT)),
-            completed=Count("id", filter=Q(stage__code__in=[DealStageCode.CLOSED_WON, DealStageCode.CONTRACT_SIGNED])),
+            completed=Count(
+                "id",
+                filter=Q(
+                    stage__code__in=[
+                        DealStageCode.CLOSED_WON,
+                        DealStageCode.CONTRACT_SIGNED,
+                    ]
+                ),
+            ),
         )
         return {
             "deals_in_progress": counts["in_progress"],

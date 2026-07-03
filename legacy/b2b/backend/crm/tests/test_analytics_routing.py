@@ -29,7 +29,7 @@ def lookups(db):
 
 
 def _published_product(owner_co, name):
-    """A PUBLISHED catalog product owned by `owner_co` (drives the catalog_items KPI)."""
+    """A PUBLISHED catalog product owned by `owner_co` (a PIM row to hang offers on)."""
     from catalog.models import Product, ProductStatus
 
     return Product.objects.create(
@@ -126,9 +126,12 @@ def test_pure_seller_with_no_routing_sees_zero_not_error(lookups):
 
 @pytest.mark.django_db
 def test_catalog_and_clients_kpis_are_tenant_scoped(lookups):
-    """F4: catalog_items counts only the seller's OWN products (not the whole PIM), and
-    clients_count counts only the distinct buyers on deals routed to the seller — not every
-    CLIENT company on the platform."""
+    """E4/F4: catalog_items counts only the seller's OWN active offers ("Active listings" —
+    SupplierOffer where the seller is the supplier and is_active=True), NOT the shared PIM, a
+    deactivated offer, or a competitor's offers. clients_count counts only the distinct buyers on
+    deals routed to the seller — not every CLIENT company on the platform."""
+    from catalog.models import SupplierOffer
+
     seller_a, co_a = _seller("Seller A", "A100", "sa@t.test")
     _seller_b, co_b = _seller("Seller B", "B100", "sb@t.test")
     buyer_co = Company.objects.create(name="Buyer Co", inn="C100")
@@ -137,12 +140,19 @@ def test_catalog_and_clients_kpis_are_tenant_scoped(lookups):
     other_buyer = Company.objects.create(name="Other Buyer", inn="C200")
     other_buyer.types.add(CompanyType.objects.get(code="CLIENT"))
 
-    _published_product(co_a, "A-rail-clamp")  # A's own product → counts for A
-    _published_product(co_b, "B-competitor-part")  # competitor's → must NOT count for A
+    # A's catalog = its own ACTIVE offers. One active + one deactivated (excluded); the
+    # competitor's active offer must not leak into A's count. (A SupplierOffer is unique per
+    # (product, supplier), so the deactivated offer hangs on a second product.)
+    product_a = _published_product(co_a, "A-rail-clamp")
+    product_a_old = _published_product(co_a, "A-retired-part")
+    product_b = _published_product(co_b, "B-competitor-part")
+    SupplierOffer.objects.create(product=product_a, supplier=co_a, is_active=True)
+    SupplierOffer.objects.create(product=product_a_old, supplier=co_a, is_active=False)
+    SupplierOffer.objects.create(product=product_b, supplier=co_b, is_active=True)
 
     routed = _deal_with_quote(buyer_co, "A's RFQ", Decimal("1000"))
     DealSellerRouting.objects.create(deal=routed, seller_company=co_a)
 
     body = _api(seller_a).get("/api/v1/crm/analytics/dashboard/?period=90d").json()
-    assert body["catalog_items"] == 1, body  # only A's own published product
+    assert body["catalog_items"] == 1, body  # only A's own ACTIVE offer
     assert body["clients_count"] == 1, body  # only the one routed buyer, not all CLIENTs

@@ -29,7 +29,6 @@ const pageI18nKeys: Record<string, string> = {
   'crm-quotes': 'breadcrumbs.crmQuotes',
   'crm-clients': 'breadcrumbs.crmClients',
   'sourcing-requests': 'breadcrumbs.sourcingRequests',
-  'sourcing-import': 'breadcrumbs.sourcingImport',
   'production-orders': 'breadcrumbs.productionOrders',
   'production-schedule': 'breadcrumbs.productionSchedule',
   analytics: 'breadcrumbs.analytics',
