@@ -111,14 +111,18 @@ def _notify_contract_pending(contract) -> None:
     from notifications.services import push_notification_ws
 
     info = NotificationType.objects.filter(code="INFO").first()
+    # N2: the contract needs BOTH signatures (client + seller), so at PENDING_CLIENT each party's
+    # OWN signature is what's outstanding — say «требуется ВАША подпись» per recipient instead of
+    # the ambiguous «требуется подпись сторон» (which left neither side knowing who has to act).
+    deal_ref = contract.deal.title or f"#{contract.deal_id}"
     for recipient in {contract.deal.client, _contract_seller_recipient(contract)}:
         if recipient is None:
             continue
         notif = Notification.objects.create(
             user=recipient,
             type=info,
-            title="Контракт ожидает подписания",
-            message=f"Контракт {contract.number} по сделке #{contract.deal_id} готов — требуется подпись сторон",
+            title="Требуется ваша подпись",
+            message=f"Контракт {contract.number} по сделке «{deal_ref}» готов — требуется ваша подпись.",
             link="/crm/deals",
             deal=contract.deal,
         )

@@ -7,6 +7,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ru, enUS } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
+import { getAccessToken } from '@/api/accessToken';
 import { useUserStore } from '@/store/userStore';
 
 import {
@@ -50,24 +51,27 @@ interface NotificationCenterProps {
     onNavigate?: (pageId: string) => void;
 }
 
-// Map a notification's backend link to an AppShell page id, by the user's active
-// context. Backend links (/crm/deals, /cabinet/deals, …) encode intent, not a route
-// the AppShell buyer/seller can reach — translate to their hash pages.
-function notificationTargetPage(link: string | undefined, activeStatus: string): string {
-    const l = (link || '').toLowerCase();
-    if (l.includes('profile')) return 'profile';
+// Where a notification click should land the user. N1: a deal-scoped notification
+// DEEP-LINKS to the deal WORKSPACE (where the КП / contract / chat live) using the
+// `deal` id the backend already sends — instead of the generic /crm/deals *list* the
+// legacy `link` field encoded (which dropped the user with no way to find the document
+// the alert was about). Returns a hash route for deal notifications, or a plain AppShell
+// page id for the rest (profile / KYC). Seller lands in the КП builder, buyer in the
+// request detail — both show the deal's documents in context.
+function notificationTarget(n: Notification, activeStatus: string): { hash?: string; page?: string } {
     const isSeller = activeStatus === 'SELLER';
-    if (isSeller) {
-        if (l.includes('quote')) return 'crm-quotes';
-        return 'crm-deals'; // deals + contracts
+    if (n.deal) {
+        return { hash: `${isSeller ? 'deal-quote' : 'request-detail'}/${n.deal}` };
     }
-    if (l.includes('contract')) return 'contracts';
-    return 'my-requests'; // buyer: deals + quotes land on the unified requests page
+    const l = (n.link || '').toLowerCase();
+    if (l.includes('profile')) return { page: 'profile' };
+    return { page: isSeller ? 'crm-deals' : 'my-requests' };
 }
 
 export const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNavigate }) => {
     const { t, i18n } = useTranslation();
     const activeStatus = useUserStore((s) => s.activeStatus);
+    const accessToken = useAuthStore((s) => s.accessToken);
     const [isOpen, setIsOpen] = useState(false);
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
@@ -75,8 +79,10 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNaviga
     const dateLocale = i18n.language === 'ru' ? ru : enUS;
 
     const fetchNotifications = useCallback(async () => {
-        const authRaw = localStorage.getItem('railtech-auth');
-        if (!authRaw || !authRaw.includes('"accessToken"')) return;
+        // F2.1 moved the access token to memory (never localStorage), so the old
+        // localStorage('"accessToken"') gate ALWAYS failed → notifications never loaded (empty
+        // panel, the root of "уведомления не приходят"). Gate on the in-memory token instead.
+        if (!getAccessToken()) return;
         if (typeof document !== 'undefined' && document.hidden) return;
         try {
             const data = await notificationsApi.getNotifications();
@@ -96,10 +102,11 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNaviga
             clearInterval(interval);
             document.removeEventListener('visibilitychange', onVisibility);
         };
-    }, [fetchNotifications]);
+        // Re-run once the in-memory access token is set (after initAuth — otherwise the first
+        // fetch on mount no-ops before auth is ready), and when the panel is opened.
+    }, [fetchNotifications, accessToken, isOpen]);
 
     // Realtime WebSocket subscription — falls back to the poll above if WS fails.
-    const accessToken = useAuthStore((s) => s.accessToken);
     const socketRef = useRef<WebSocket | null>(null);
     useEffect(() => {
         if (!accessToken) return;
@@ -291,7 +298,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNaviga
                                                             <Clock className="size-3" aria-hidden="true" />
                                                             {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: dateLocale })}
                                                         </span>
-                                                        {n.link && (
+                                                        {(n.link || n.deal) && (
                                                             onNavigate ? (
                                                                 <Button
                                                                     variant="link"
@@ -300,7 +307,9 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNaviga
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
                                                                         if (!n.is_read) handleMarkAsRead(n.id);
-                                                                        onNavigate(notificationTargetPage(n.link, activeStatus));
+                                                                        const target = notificationTarget(n, activeStatus);
+                                                                        if (target.hash) window.location.hash = target.hash;
+                                                                        else if (target.page) onNavigate(target.page);
                                                                         setIsOpen(false);
                                                                     }}
                                                                 >
