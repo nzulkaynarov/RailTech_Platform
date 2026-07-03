@@ -44,7 +44,19 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, onRegister, on
             await login(data.email, data.password);
             onNavigate?.('dashboard');
         } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : t('auth.genericError');
+            const raw = err instanceof Error ? err.message : '';
+            let msg: string;
+            if (raw === 'TOO_MANY_LOGIN_ATTEMPTS' || raw.toLowerCase().includes('throttled')) {
+                // Both rate-limit responses (SEC-06 account lockout code + the
+                // per-IP DRF throttle's English "Request was throttled" 429) →
+                // one friendly, localized message.
+                msg = t('auth.tooManyAttempts');
+            } else if (raw.startsWith('auth.')) {
+                // Store handed back an i18n key (no server detail) — localize it.
+                msg = t(raw);
+            } else {
+                msg = raw || t('auth.genericError');
+            }
             setServerError(msg);
         }
     };

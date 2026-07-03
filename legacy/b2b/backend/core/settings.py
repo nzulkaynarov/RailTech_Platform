@@ -590,6 +590,18 @@ REFRESH_COOKIE_SECURE = os.environ.get("REFRESH_COOKIE_SECURE", "false" if DEBUG
 REFRESH_COOKIE_SAMESITE = os.environ.get("REFRESH_COOKIE_SAMESITE", "Lax")
 REFRESH_COOKIE_MAX_AGE = int(SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"].total_seconds())
 
+# SEC-06: per-account login lockout (accounts/services/login_guard.py). Layered on
+# top of the per-IP `login` throttle to blunt DISTRIBUTED brute-force against a
+# single account. The lock trips on the number of DISTINCT source IPs that fail
+# for an email within the window — NOT on raw attempts, so a single IP (already
+# capped by the per-IP throttle) can never lock a victim (that would be a cheap
+# targeted DoS since B2B emails are semi-public). 10 distinct IPs failing one
+# account in 15 min is a clear distributed-attack signature with ~zero false
+# positives. Blank/malformed env values fail safe to the default.
+LOGIN_LOCKOUT_DISTINCT_IPS = int((os.environ.get("LOGIN_LOCKOUT_DISTINCT_IPS") or "10").strip() or "10")
+LOGIN_LOCKOUT_WINDOW = int((os.environ.get("LOGIN_LOCKOUT_WINDOW") or "900").strip() or "900")
+LOGIN_LOCKOUT_COOLDOWN = int((os.environ.get("LOGIN_LOCKOUT_COOLDOWN") or "900").strip() or "900")
+
 # DRF Spectacular (API Documentation)
 SPECTACULAR_SETTINGS = {
     "TITLE": "RailTech B2B API",

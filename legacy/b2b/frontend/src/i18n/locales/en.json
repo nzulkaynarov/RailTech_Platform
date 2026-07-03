@@ -99,6 +99,7 @@
     "passwordPlaceholder": "••••••••",
     "submitButton": "Sign in",
     "loginError": "Invalid email or password",
+    "tooManyAttempts": "Too many failed login attempts. This account is temporarily locked — please try again in a few minutes.",
     "genericError": "Login failed. Please try again later.",
     "newCompany": "New company?",
     "registerLink": "Register with your TIN",
