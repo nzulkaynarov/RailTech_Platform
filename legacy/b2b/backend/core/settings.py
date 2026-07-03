@@ -671,6 +671,10 @@ AI_IMPORT_ENABLED = bool(ANTHROPIC_API_KEY) and os.environ.get("AI_IMPORT_ENABLE
 # Rows-per-chunk cap so a 10k-line spec is split into bounded LLM calls (token
 # limits) and merged — keeps each request fast, cheap, and within output budget.
 AI_IMPORT_CHUNK_ROWS = int(os.environ.get("AI_IMPORT_CHUNK_ROWS", "400"))
+# ADR-0006 Move 3: minimum AI confidence (0–1) to AUTO-BIND a fuzzy catalog match into a draft КП.
+# High by default — a confident bind into a seller-reviewed draft is safe; below it the line is left
+# for the manual Smart Match. Exact GOST/MPN matches bypass this (they're deterministic, not fuzzy).
+AI_DRAFT_MATCH_CONFIDENCE = float((os.environ.get("AI_DRAFT_MATCH_CONFIDENCE") or "0.9").strip() or "0.9")
 # ARCH-01: cap how long a single synchronous LLM call may hold a request worker.
 # The interactive AI endpoints (catalog-match / pre-flight / КП-diff / chat-assist
 # / PIM-enrich / contract-extract / conversational builder) call Claude IN the
