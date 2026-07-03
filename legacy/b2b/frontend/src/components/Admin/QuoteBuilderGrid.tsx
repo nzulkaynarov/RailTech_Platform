@@ -94,7 +94,13 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	// UI-only state — deliberately kept OUT of localItems so it never trips hasUnsavedChanges.
 	const [expandedRowId, setExpandedRowId] = useState<number | null>(null);
 	const [railOpen, setRailOpen] = useState<boolean>(() => {
-		try { return localStorage.getItem('kp.rail.open') !== 'false'; } catch { return true; }
+		try {
+			const saved = localStorage.getItem('kp.rail.open');
+			if (saved !== null) return saved !== 'false'; // an explicit user toggle always wins
+			// Default: open on wide screens, COLLAPSED on laptops (≤~1400px) so the fixed 320px
+			// economics rail doesn't squeeze the line table into truncation/overflow (audit A1).
+			return typeof window === 'undefined' || window.innerWidth >= 1400;
+		} catch { return true; }
 	});
 
 	const toggleRail = () => {
@@ -560,14 +566,14 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 										<TableHead className="px-2 py-2 text-xs font-semibold text-muted-foreground min-w-[200px] sticky left-8 z-30 bg-muted">
 											{t('catalog.table.name')}
 										</TableHead>
-										<TableHead className="px-2 py-2 text-center text-xs font-semibold text-muted-foreground w-16">
+										<TableHead className="px-2 py-2 text-center text-xs font-semibold text-muted-foreground w-20">
 											<Tooltip>
 												<TooltipTrigger asChild><span className="cursor-help">{t('quote.quantity')}</span></TooltipTrigger>
 												<TooltipContent>{t('quote.quantityHelp')}</TooltipContent>
 											</Tooltip>
 										</TableHead>
 										{canViewCost && (
-											<TableHead className="px-2 py-2 text-xs font-semibold text-muted-foreground w-40 bg-muted/30">
+											<TableHead className="px-2 py-2 text-xs font-semibold text-muted-foreground w-52 bg-muted/30">
 												<Tooltip>
 													<TooltipTrigger asChild><span className="cursor-help">{t('quote.basePrice')}</span></TooltipTrigger>
 													<TooltipContent>{t('quote.basePriceHelp')}</TooltipContent>
@@ -610,7 +616,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 																	<AlertTriangle className="size-3 text-warning shrink-0" aria-label={t('sourcing.noMatch')} />
 																)}
 																<span className="text-xs font-mono text-muted-foreground tabular-nums">{idx + 1}.</span>
-																<span className="text-sm font-semibold truncate max-w-[260px]">
+																<span className="text-sm font-semibold truncate max-w-[260px]" title={item.product_name || item.imported_raw_name || undefined}>
 																	{item.product_name || item.imported_raw_name}
 																</span>
 																{item.product_domain && (
@@ -669,7 +675,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 																	</TooltipContent>
 																</Tooltip>
 																<Select value={item.frozen_currency || 'UZS'} onValueChange={(code) => updateItemCurrency(item.id, code)}>
-																	<SelectTrigger aria-label={t('quote.lineCurrency')} className="h-8 w-16 shrink-0 border-none shadow-none rounded-none text-xs focus:ring-1">
+																	<SelectTrigger aria-label={t('quote.lineCurrency')} className="h-8 w-20 shrink-0 border-none shadow-none rounded-none text-xs focus:ring-1">
 																		<SelectValue />
 																	</SelectTrigger>
 																	<SelectContent>
