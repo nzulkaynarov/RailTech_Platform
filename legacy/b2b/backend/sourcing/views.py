@@ -599,6 +599,18 @@ class AttachmentViewSet(viewsets.ModelViewSet):
             from rest_framework.exceptions import ValidationError
 
             raise ValidationError({"file": "NO_FILE_PROVIDED"})
+        # SEC-08: attachments are stored and later streamed for download — enforce the same
+        # extension/content-type/size + magic-byte guard as other document uploads instead of
+        # accepting arbitrary bytes (a .pdf-named executable was previously stored unchecked).
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        from rest_framework.exceptions import ValidationError as DRFValidationError
+
+        from core.validators import validate_document_upload
+
+        try:
+            validate_document_upload(file_obj)
+        except DjangoValidationError as exc:
+            raise DRFValidationError({"file": str(exc)})
         serializer.save(
             uploaded_by=self.request.user,
             original_filename=file_obj.name,

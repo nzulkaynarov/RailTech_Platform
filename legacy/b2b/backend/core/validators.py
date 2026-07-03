@@ -43,26 +43,47 @@ _MAGIC_SIGNATURES = {
     ".gif": [b"GIF87a", b"GIF89a"],
     ".jpg": [b"\xff\xd8\xff"],
     ".jpeg": [b"\xff\xd8\xff"],
-    ".webp": [b"RIFF"],  # bytes 0-3; "WEBP" lives at 8-11
     # OOXML (xlsx/docx) and legacy OLE2 (xls/doc) containers
     ".xlsx": [b"PK\x03\x04"],
     ".docx": [b"PK\x03\x04"],
     ".xls": [b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"],
     ".doc": [b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"],
+    # NOTE: .webp is NOT here — it's a RIFF container (bytes 0-3 "RIFF") whose PREFIX is
+    # shared by WAV and AVI. Matching "RIFF" alone would let a .webp-named WAV/AVI through
+    # (SEC-08 adversarial finding). WebP is checked specially in `_matches_signature`:
+    # "RIFF" at 0-3 AND the "WEBP" form-type at bytes 8-11.
 }
+
+
+def _matches_signature(header: bytes, ext: str) -> bool:
+    """True if `header` matches the magic signature for `ext`.
+
+    WebP needs a COMPOUND check (RIFF prefix + "WEBP" form-type) because "RIFF" alone also
+    matches WAV/AVI. Extensions with no known signature (text: csv/txt/tsv, or unknown) return
+    True — there is nothing reliable to verify.
+    """
+    if ext == ".webp":
+        return header[:4] == b"RIFF" and header[8:12] == b"WEBP"
+    signatures = _MAGIC_SIGNATURES.get(ext)
+    if not signatures:
+        return True
+    return any((header or b"").startswith(sig) for sig in signatures)
+
+
+def _has_signature(ext: str) -> bool:
+    return ext == ".webp" or ext in _MAGIC_SIGNATURES
 
 
 def _check_magic_bytes(file, ext, label):
     """Verify the file header matches its extension. No-op for text formats."""
-    signatures = _MAGIC_SIGNATURES.get(ext)
-    if not signatures:
+    if not _has_signature(ext):
         return
     try:
         file.seek(0)
         header = file.read(16)
     finally:
         file.seek(0)
-    if not any(header.startswith(sig) for sig in signatures):
+    if not _matches_signature(header, ext):
         raise ValidationError(f"{label}: file content does not match its '{ext}' extension (possible spoofing).")
 
 
@@ -76,10 +97,7 @@ def content_matches_extension(header: bytes, ext: str) -> bool:
     ext = (ext or "").lower()
     if ext and not ext.startswith("."):
         ext = "." + ext
-    signatures = _MAGIC_SIGNATURES.get(ext)
-    if not signatures:
-        return True
-    return any((header or b"").startswith(sig) for sig in signatures)
+    return _matches_signature(header, ext)
 
 
 def assert_content_matches_extension(file, label="File"):

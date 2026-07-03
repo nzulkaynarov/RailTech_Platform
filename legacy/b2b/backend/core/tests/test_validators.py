@@ -60,6 +60,18 @@ class TestValidateImageUpload:
         with pytest.raises(ValidationError, match="does not match"):
             validate_image_upload(f)
 
+    def test_valid_webp(self):
+        # Real WebP: RIFF + 4-byte size + "WEBP" form-type at bytes 8-11.
+        body = b"RIFF" + b"\x00\x00\x00\x00" + b"WEBP" + b"\x00" * 64
+        validate_image_upload(SimpleUploadedFile("pic.webp", body, content_type="image/webp"))
+
+    def test_rejects_riff_non_webp_spoof(self):
+        # SEC-08 adversarial finding: a RIFF container that is NOT WebP (WAV/AVI share "RIFF")
+        # renamed .webp must be REJECTED — checking "RIFF" alone was the bypass.
+        wav = b"RIFF" + b"\x00\x00\x00\x00" + b"WAVE" + b"\x00" * 64
+        with pytest.raises(ValidationError, match="does not match"):
+            validate_image_upload(SimpleUploadedFile("audio.webp", wav, content_type="image/webp"))
+
 
 class TestValidateAvatarUpload:
     """Tests for validate_avatar_upload (2MB limit)."""
@@ -139,6 +151,12 @@ class TestContentMatchesExtension:
     def test_spoofed_header_fails(self):
         assert content_matches_extension(b"MZ\x90\x00", ".pdf") is False  # PE/EXE posing as pdf
         assert content_matches_extension(b"<html>", ".xlsx") is False
+
+    def test_webp_compound_signature(self):
+        # RIFF + "WEBP" passes; RIFF + "WAVE"/"AVI " (other RIFF containers) must fail.
+        assert content_matches_extension(b"RIFF\x00\x00\x00\x00WEBP....", ".webp") is True
+        assert content_matches_extension(b"RIFF\x00\x00\x00\x00WAVE....", ".webp") is False
+        assert content_matches_extension(b"RIFF\x00\x00\x00\x00AVI ....", "webp") is False
 
     def test_text_and_unknown_formats_pass(self):
         # No reliable signature → never blocks (csv/txt/tsv + unknown extensions).
