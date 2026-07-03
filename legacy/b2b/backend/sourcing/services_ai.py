@@ -97,16 +97,25 @@ SYSTEM_PROMPT = (
 _IMAGE_TYPES = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg", "webp": "image/webp", "gif": "image/gif"}
 
 
-def _client():
+def _client(max_retries: int | None = None):
     import anthropic
 
     # ARCH-01: bound the per-attempt timeout (SDK default is 600s → a hung call
     # would pin a request worker). One factory for ALL AI call sites, so every
     # endpoint inherits the cap. See core.settings.AI_REQUEST_TIMEOUT.
+    #
+    # ARCH-03 (retry policy): request-path callers — chat reply, diff, enrich, match, doc-extract,
+    # conversational, preflight — are all SYNC DRF views, so they use a SINGLE attempt
+    # (max_retries=0, the default here). That makes AI_REQUEST_TIMEOUT the true latency ceiling
+    # instead of (1 + AI_MAX_RETRIES) × timeout pinning a threadpool slot for minutes. Only the
+    # celery bulk-import path (extract_request_items ← process_excel_import) opts into
+    # AI_MAX_RETRIES: it runs off the request thread and can afford backoff.
+    # Future initiative (deferred, out of scope): an AsyncAnthropic/ASGI migration would let
+    # request-path calls retry without holding a worker.
     return anthropic.Anthropic(
         api_key=settings.ANTHROPIC_API_KEY,
         timeout=settings.AI_REQUEST_TIMEOUT,
-        max_retries=settings.AI_MAX_RETRIES,
+        max_retries=0 if max_retries is None else max_retries,
     )
 
 
@@ -280,7 +289,10 @@ def extract_request_items(content: bytes, filename: str) -> list[dict]:
     model = settings.AI_IMPORT_MODEL
     import anthropic  # local import: the package is only required when AI import is enabled
 
-    client = _client()
+    # Celery bulk-import path (process_excel_import) — the ONE AI call site that keeps retries:
+    # it runs off the request thread, so backoff is affordable. All request-path callers use the
+    # no-retry default (see _client / ARCH-03). Deferred: full AsyncAnthropic/ASGI migration.
+    client = _client(max_retries=settings.AI_MAX_RETRIES)
     valid_codes, code_guidance = _unit_code_reference()
     system = (
         SYSTEM_PROMPT

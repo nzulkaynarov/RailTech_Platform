@@ -88,8 +88,9 @@ def test_extract_returns_canonical_russian_name(settings, monkeypatch):
         ]
     )
     monkeypatch.setattr(
+        # ARCH-03: _client now takes an optional max_retries kwarg (celery path passes it).
         "sourcing.services_ai._client",
-        lambda: SimpleNamespace(messages=SimpleNamespace(create=lambda **kw: fake)),
+        lambda max_retries=None: SimpleNamespace(messages=SimpleNamespace(create=lambda **kw: fake)),
     )
     # Avoid DB hit for the unit-code справочник; the model returned ''.
     monkeypatch.setattr("sourcing.services_ai._unit_code_reference", lambda: (set(), ""))
@@ -141,8 +142,9 @@ def test_match_rejects_ids_outside_shortlist(products, settings, monkeypatch):
         ]
     )
     monkeypatch.setattr(
+        # ARCH-03: _client now takes an optional max_retries kwarg (celery path passes it).
         "sourcing.services_ai._client",
-        lambda: SimpleNamespace(messages=SimpleNamespace(create=lambda **kw: fake)),
+        lambda max_retries=None: SimpleNamespace(messages=SimpleNamespace(create=lambda **kw: fake)),
     )
     from sourcing.services_ai import match_lines_to_catalog
 

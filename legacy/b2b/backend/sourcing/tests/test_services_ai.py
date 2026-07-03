@@ -9,11 +9,54 @@ import json
 from types import SimpleNamespace
 from unittest import mock
 
-from django.test import SimpleTestCase
+from django.conf import settings
+from django.test import SimpleTestCase, override_settings
 
-from sourcing.services_ai import _extract_one, _normalize_items
+import sourcing.services_ai as services_ai
+from sourcing.services_ai import _client, _extract_one, _normalize_items
 
 VALID_CODES = {"PCE", "MTR", "KGM"}
+
+
+@override_settings(ANTHROPIC_API_KEY="test-key", AI_REQUEST_TIMEOUT=60.0, AI_MAX_RETRIES=2)
+class ClientRetryPolicyTest(SimpleTestCase):
+    """ARCH-03: request-path AI calls get a SINGLE attempt (bounded latency); only the celery
+    bulk-import path opts into AI_MAX_RETRIES. We patch anthropic.Anthropic to capture the
+    kwargs the factory builds — no client is constructed and no API call is made."""
+
+    def test_request_path_client_has_no_retries(self):
+        with mock.patch("anthropic.Anthropic") as anthropic_cls:
+            _client()  # request-path default
+            self.assertEqual(anthropic_cls.call_args.kwargs["max_retries"], 0)
+
+    def test_celery_path_client_keeps_retries(self):
+        with mock.patch("anthropic.Anthropic") as anthropic_cls:
+            _client(max_retries=settings.AI_MAX_RETRIES)  # celery bulk-import path
+            self.assertEqual(anthropic_cls.call_args.kwargs["max_retries"], 2)
+
+    def test_per_attempt_timeout_still_bounded(self):
+        # The ARCH-01 timeout cap is unchanged by the retry split.
+        with mock.patch("anthropic.Anthropic") as anthropic_cls:
+            _client()
+            self.assertEqual(anthropic_cls.call_args.kwargs["timeout"], 60.0)
+
+    def test_celery_bulk_import_routes_through_retrying_client(self):
+        # extract_request_items (the ONLY celery caller) must build its client with AI_MAX_RETRIES.
+        captured = {}
+
+        def fake_client(max_retries=None):
+            captured["max_retries"] = max_retries
+            return mock.Mock()
+
+        with override_settings(AI_IMPORT_ENABLED=True):
+            with (
+                mock.patch.object(services_ai, "_client", side_effect=fake_client),
+                mock.patch.object(services_ai, "_unit_code_reference", return_value=(set(), "")),
+                mock.patch.object(services_ai, "file_to_payload", return_value=("row1\n", None)),
+                mock.patch.object(services_ai, "_extract_one", return_value=[]),
+            ):
+                services_ai.extract_request_items(b"row1\n", "req.csv")
+        self.assertEqual(captured["max_retries"], settings.AI_MAX_RETRIES)
 
 
 class NormalizeItemsTest(SimpleTestCase):
