@@ -659,6 +659,17 @@ AI_IMPORT_ENABLED = bool(ANTHROPIC_API_KEY) and os.environ.get("AI_IMPORT_ENABLE
 # Rows-per-chunk cap so a 10k-line spec is split into bounded LLM calls (token
 # limits) and merged — keeps each request fast, cheap, and within output budget.
 AI_IMPORT_CHUNK_ROWS = int(os.environ.get("AI_IMPORT_CHUNK_ROWS", "400"))
+# ARCH-01: cap how long a single synchronous LLM call may hold a request worker.
+# The interactive AI endpoints (catalog-match / pre-flight / КП-diff / chat-assist
+# / PIM-enrich / contract-extract / conversational builder) call Claude IN the
+# request path on Daphne; the anthropic SDK's DEFAULT read timeout is 600s, so one
+# slow/hung completion could pin a worker for up to 600s × (1 + max_retries) —
+# ~30 min worst case — starving all other requests. Cap the per-attempt timeout
+# well below that but comfortably above normal Structured-Outputs latency (a few
+# seconds). The bulk Excel import shares this client but runs off the request path
+# (Celery: sourcing.tasks.process_excel_import), so the cap is safe there too.
+AI_REQUEST_TIMEOUT = float((os.environ.get("AI_REQUEST_TIMEOUT") or "60").strip() or "60")
+AI_MAX_RETRIES = int((os.environ.get("AI_MAX_RETRIES") or "2").strip() or "2")
 # Hard byte cap before a file is sent to the model. Vision payloads (PDF/image) go
 # as one base64 request, so an oversized file means a 413 + wasted spend — reject it
 # early. Default 10 MB (the upload endpoint already caps the raw file at 20 MB).
