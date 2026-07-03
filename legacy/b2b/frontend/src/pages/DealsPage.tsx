@@ -9,6 +9,7 @@ import {
 import { StatusBadge, getDealStageVariant } from '@/components/ui/StatusBadge';
 import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/DataTable';
 import { useCurrencyStore } from '@/store/currencyStore';
+import { useUserStore } from '@/store/userStore';
 import { useDeals, useDealStages } from '@/hooks/useCRM';
 import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import { CreateDealDialog } from '@/components/CRM/CreateDealDialog';
@@ -29,6 +30,7 @@ export function DealsPage() {
   const { data: deals, isLoading, isError, refetch } = useDeals();
   const { data: stages } = useDealStages();
   const formatCurrency = useCurrencyStore((s) => s.format);
+  const activeStatus = useUserStore((s) => s.activeStatus);
 
   const listParams = useListParams(['stage'] as const, { defaultOrdering: '-created_at' });
   const [createOpen, setCreateOpen] = useState(false);
@@ -69,8 +71,8 @@ export function DealsPage() {
             options: (stages ?? []).map((s) => ({ value: s.code, label: s.name })),
           },
         ]}
-        newLabel={t('createDeal.title')}
-        onNew={() => setCreateOpen(true)}
+        newLabel={activeStatus === 'BUYER' ? t('createDeal.title') : undefined}
+        onNew={activeStatus === 'BUYER' ? () => setCreateOpen(true) : undefined}
         extra={
           <div className="inline-flex rounded-md border p-0.5 text-xs">
             <button

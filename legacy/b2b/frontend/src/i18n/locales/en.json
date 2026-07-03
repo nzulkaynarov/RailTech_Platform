@@ -724,6 +724,8 @@
         "PENDING_APPROVAL": "In approval",
         "READY_TO_SEND": "Ready to send"
       },
+      "pendingApprovalHelper": "The quote is awaiting approval from the approval chain participants. The next step depends on the participant type — trade review or director approval.",
+      "sendNewVersionHelper": "Sending a quote is irreversible and creates a new version. Prices will be frozen and the client will receive the offer. You can work on the next version for any follow-up adjustments.",
       "stepStatus": {
         "PENDING": "Pending",
         "APPROVED": "Approved",
@@ -1212,6 +1214,7 @@
     "emptyHint": "Deal events and system alerts will appear here",
     "markAllRead": "Mark all read",
     "unread": "Unread: {{count}}",
+    "caughtUp": "You're all caught up",
     "viewAll": "All notifications",
     "unreadLabel": "Unread"
   },
@@ -1219,6 +1222,7 @@
     "title": "Purchase Request",
     "empty": "Purchase request is empty",
     "emptyHint": "Add products from the catalog",
+    "rfqExplanation": "A purchase request invites suppliers to submit an offer with pricing and delivery timeline.",
     "addToCart": "Add to cart",
     "addedToCart": "Added",
     "added": "«{{name}}» added to request",

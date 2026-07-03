@@ -133,6 +133,7 @@ export const QuoteApprovalChain: React.FC<QuoteApprovalChainProps> = ({ quote })
 
       {status === 'PENDING_APPROVAL' && steps.length > 0 && (
         <div className="flex flex-col gap-2">
+          <p className="text-xs text-muted-foreground">{t('quote.approvalChain.pendingApprovalHelper')}</p>
           {groups.filter((g) => g.items.length > 0).map((group) => (
             <div key={group.key} className="rounded-md border bg-background px-3 py-1.5">
               <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
