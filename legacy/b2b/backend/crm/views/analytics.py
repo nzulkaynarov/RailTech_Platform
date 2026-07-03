@@ -1,7 +1,7 @@
 from datetime import timedelta
 from decimal import Decimal
 
-from django.db.models import Count, OuterRef, Subquery, Sum
+from django.db.models import Count, OuterRef, Q, Subquery, Sum
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework.permissions import IsAuthenticated
@@ -171,8 +171,13 @@ class DashboardAnalyticsView(APIView):
         products = Product.objects.filter(status__code="PUBLISHED")
         if not is_staff:
             products = products.filter(owner_company_id__in=(seller_company_ids or []))
-        published_products = products.count()
-        prev_published = products.filter(created_at__lt=period_start).count()
+        # ARCH-04: current + prior-period counts over the SAME queryset in one aggregate.
+        counts = products.aggregate(
+            current=Count("id"),
+            prev=Count("id", filter=Q(created_at__lt=period_start)),
+        )
+        published_products = counts["current"]
+        prev_published = counts["prev"]
         return {
             "catalog_items": published_products,
             "catalog_items_change": self._calculate_percentage_change(prev_published, published_products),
@@ -240,22 +245,27 @@ class DashboardAnalyticsView(APIView):
             quotes_qs = quotes_qs.filter(deal_id__in=deal_scope)
         elif user_company_ids is not None:
             quotes_qs = quotes_qs.filter(deal__company_id__in=user_company_ids)
-        completed = quotes_qs.filter(status__code__in=[QuoteStatusCode.APPROVED, QuoteStatusCode.SENT]).count()
-        total = quotes_qs.count()
+        # ARCH-04: completed + total over the SAME queryset in one aggregate.
+        counts = quotes_qs.aggregate(
+            total=Count("id"),
+            completed=Count("id", filter=Q(status__code__in=[QuoteStatusCode.APPROVED, QuoteStatusCode.SENT])),
+        )
+        completed, total = counts["completed"], counts["total"]
         pct = (completed / total * 100) if total > 0 else 0
         return {"request_completion": round(pct, 1)}
 
     @staticmethod
     def _get_buyer_stats(all_deals) -> dict:
-        """Buyer-specific stage counts."""
+        """Buyer-specific stage counts — three stage buckets in one aggregate (ARCH-04)."""
+        counts = all_deals.aggregate(
+            in_progress=Count("id", filter=Q(stage__code__in=[DealStageCode.SOURCING, DealStageCode.CALCULATING])),
+            received=Count("id", filter=Q(stage__code=DealStageCode.QUOTE_SENT)),
+            completed=Count("id", filter=Q(stage__code__in=[DealStageCode.CLOSED_WON, DealStageCode.CONTRACT_SIGNED])),
+        )
         return {
-            "deals_in_progress": all_deals.filter(
-                stage__code__in=[DealStageCode.SOURCING, DealStageCode.CALCULATING]
-            ).count(),
-            "quotes_received": all_deals.filter(stage__code=DealStageCode.QUOTE_SENT).count(),
-            "deals_completed": all_deals.filter(
-                stage__code__in=[DealStageCode.CLOSED_WON, DealStageCode.CONTRACT_SIGNED]
-            ).count(),
+            "deals_in_progress": counts["in_progress"],
+            "quotes_received": counts["received"],
+            "deals_completed": counts["completed"],
         }
 
     def _calculate_percentage_change(self, previous, current):

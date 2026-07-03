@@ -3,7 +3,7 @@ from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Optional, Tuple
 
 from django.db import models, transaction
-from django.db.models import Count, Sum
+from django.db.models import Count, Q, Sum
 
 from accounts.constants import SystemRoleCode, VerificationStatusCode, WorkspaceRoleCode
 from accounts.models import Company, CompanyMember, CustomUser
@@ -583,10 +583,16 @@ def get_crm_analytics_data():
     items = QuoteItem.objects.all()
 
     pipeline_by_status = list(deals.values("stage__name").annotate(count=Count("id")))
-    sourcing_backlog = items.filter(product__isnull=True).count()
 
-    total_items = items.count()
-    mapped_items = items.filter(product__isnull=False).count()
+    # ARCH-04: total / backlog (unmapped) / mapped over the SAME items queryset in one aggregate.
+    item_counts = items.aggregate(
+        total=Count("id"),
+        backlog=Count("id", filter=Q(product__isnull=True)),
+        mapped=Count("id", filter=Q(product__isnull=False)),
+    )
+    sourcing_backlog = item_counts["backlog"]
+    total_items = item_counts["total"]
+    mapped_items = item_counts["mapped"]
     mapped_items_percentage = (mapped_items / total_items * 100) if total_items > 0 else 0
 
     kyc_backlog = Company.objects.filter(
