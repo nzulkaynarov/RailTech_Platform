@@ -401,13 +401,12 @@ jobs:
           cd frontend
           npm ci
 
-      # INF-02 (partial): NOT yet a hard gate — as of 2026-07-02 npm audit reports
-      # 8 high + 2 critical (axios, react-router, form-data, lodash, picomatch, ws;
-      # all have non-breaking `npm audit fix` upgrades). continue-on-error surfaces
-      # the failure as a red step annotation instead of `|| true` silently hiding it.
-      # TODO: run `npm audit fix`, verify the FE, then delete continue-on-error.
+      # INF-02: hard gate — the runtime advisories were fixed (npm audit fix in #204)
+      # and the dev-only vite/vitest chain was cleared by the vitest 4 upgrade (#209).
+      # Verified clean 2026-07-03: `npm audit --audit-level=high` → 0 vulnerabilities.
+      # A new high/critical advisory now FAILS the job; for an accepted risk, pin/patch
+      # or add a documented `--omit` rather than re-adding continue-on-error.
       - name: Run npm audit
-        continue-on-error: true
         run: |
           cd frontend
           npm audit --audit-level=high
