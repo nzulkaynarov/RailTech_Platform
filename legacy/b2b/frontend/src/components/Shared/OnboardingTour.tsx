@@ -66,7 +66,7 @@ export function OnboardingTour({ open, onClose, onNavigate }: OnboardingTourProp
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-50 bg-black/20"
+        className="fixed inset-0 z-50 bg-foreground/20"
         onClick={handleSkip}
       />
 
