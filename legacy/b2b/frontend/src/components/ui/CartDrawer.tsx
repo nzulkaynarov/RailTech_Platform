@@ -179,7 +179,7 @@ export const CartDrawer: React.FC = () => {
                     <>
                         <Separator />
                         <SheetFooter className="px-5 py-4">
-                            <div className="w-full space-y-1.5 text-left">
+                            <div className="w-full space-y-3 text-left">
                                 <Label htmlFor="cart-title" className="text-xs text-muted-foreground">{t('cart.titleLabel')}</Label>
                                 <Input
                                     id="cart-title"
@@ -188,6 +188,7 @@ export const CartDrawer: React.FC = () => {
                                     placeholder={`${t('cart.requestFrom')} ${new Date().toLocaleDateString()}`}
                                     className="h-9"
                                 />
+                                <p className="text-xs text-muted-foreground">{t('cart.rfqExplanation')}</p>
                             </div>
                             <Button
                                 variant="ghost"

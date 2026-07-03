@@ -190,7 +190,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNaviga
                     <Bell className="size-4" aria-hidden="true" />
                     {unreadCount > 0 && (
                         <Badge className="absolute -top-1 -right-1 size-4 p-0 text-xs font-bold">
-                            {unreadCount > 9 ? '9+' : unreadCount}
+                            {unreadCount > 99 ? '99+' : unreadCount}
                         </Badge>
                     )}
                 </Button>
@@ -206,10 +206,10 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNaviga
                             <SheetTitle className="text-sm">
                                 {t('notifications.title')}
                             </SheetTitle>
-                            <SheetDescription className={cn(unreadCount > 0 ? '' : 'sr-only')}>
+                            <SheetDescription>
                                 {unreadCount > 0
                                     ? t('notifications.unread', { count: unreadCount })
-                                    : t('notifications.title')
+                                    : t('notifications.caughtUp')
                                 }
                             </SheetDescription>
                         </div>
@@ -270,8 +270,8 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNaviga
                                             className={cn(
                                                 'cursor-pointer px-5 py-4 transition-colors border-l-2',
                                                 n.is_read
-                                                    ? 'border-transparent opacity-60 hover:opacity-80'
-                                                    : 'border-primary bg-primary/[0.02] hover:bg-primary/5'
+                                                    ? 'border-transparent opacity-50 hover:opacity-70'
+                                                    : 'border-primary bg-primary/8 hover:bg-primary/12'
                                             )}
                                         >
                                             <div className="flex gap-3">

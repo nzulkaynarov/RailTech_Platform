@@ -174,7 +174,7 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
   };
 
   return (
-    <div className="flex gap-4">
+    <div className="flex gap-4 w-full min-w-0">
       <div className="flex flex-col gap-3 flex-[7] min-w-0">
 
         {/* Header */}
@@ -574,7 +574,7 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
       </div>
 
       {/* Chat Panel */}
-      <div className="flex-[3] min-w-72 max-w-sm sticky top-0 self-start">
+      <div className="w-80 shrink-0 sticky top-0 self-start hidden lg:flex flex-col">
         <DealChatPanel dealId={deal.id} />
       </div>
 

@@ -208,6 +208,8 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
   const { currency, setCurrency } = useCurrencyStore();
   const { state } = useSidebar();
   const sidebarCollapsed = state === 'collapsed';
+  // E2: Header flex shrinking — left container (min-w-0) allows company name truncation,
+  // right container (flex-shrink-0) protects action icons from clipping at 1366px.
   // Phase C — unified shell: nav visibility follows the company's CAPABILITIES (a dual
   // buy+sell company sees both object groups at once), replacing the Покупатель↔Продавец
   // switcher. The active data-context (X-Active-Context header) follows the PAGE the user
@@ -344,12 +346,12 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
       <SidebarInset>
         {/* Main */}
           <header className="flex h-14 items-center justify-between border-b bg-background px-4 md:px-6">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0">
               <SidebarTrigger className="-ml-1" />
               <Separator orientation="vertical" className="mr-2 h-4" />
               <span className="truncate">{company.name}</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-shrink-0">
               {/* Currency toggle */}
               <div className="flex items-center rounded-lg border p-0.5 gap-0.5" role="radiogroup" aria-label={t('shell.currencySelector')}>
                 <Button
