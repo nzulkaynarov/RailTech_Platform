@@ -85,6 +85,11 @@ jobs:
           # with the client IP). Without this the DRF default (0) keys throttles on
           # REMOTE_ADDR = the fixed Docker-bridge IP → every client shares one bucket.
           DRF_NUM_PROXIES=1
+          # INF-03: enforce the Django CSP on /api + /admin (was Report-Only). Verified
+          # against the running Unfold /admin — every page loads ONLY self-origin resources
+          # + inline styles/scripts (the policy already allows 'unsafe-inline' + data:/blob:),
+          # so nothing is blocked. The code default stays Report-Only (core/csp.py) for safety.
+          CSP_REPORT_ONLY=false
           DATABASE_URL=${DATABASE_URL}
           DB_SSLMODE=require
           REDIS_URL=redis://redis:6379/0
