@@ -94,3 +94,15 @@ def test_upload_kyc_document_accepts_pdf(verification_levels, company_factory):
     assert err is None
     assert doc is not None
     assert company.kyc_documents.count() == 1
+
+
+@pytest.mark.django_db
+def test_upload_kyc_document_rejects_content_spoof(verification_levels, company_factory):
+    # SEC-08: an allowed extension (.pdf) whose body is NOT a PDF (here PNG bytes) must be
+    # rejected by the magic-byte check, not stored as a "document".
+    company = company_factory()
+    spoof = SimpleUploadedFile("charter.pdf", b"\x89PNG\r\n\x1a\n" + b"\x00" * 32, content_type="application/pdf")
+    doc, err = acc_services.upload_kyc_document(company, spoof, "OTHER")
+    assert doc is None
+    assert err is not None
+    assert company.kyc_documents.count() == 0

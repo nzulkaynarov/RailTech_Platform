@@ -66,6 +66,32 @@ def _check_magic_bytes(file, ext, label):
         raise ValidationError(f"{label}: file content does not match its '{ext}' extension (possible spoofing).")
 
 
+def content_matches_extension(header: bytes, ext: str) -> bool:
+    """True if `header` (a file's first bytes) matches the magic signature for `ext`.
+
+    Bytes-based sibling of `_check_magic_bytes` for callers that already hold the content
+    (streamed uploads sent straight to a task / the LLM, where the Django file object may be
+    exhausted). Text / unknown formats have no reliable signature → always True.
+    """
+    ext = (ext or "").lower()
+    if ext and not ext.startswith("."):
+        ext = "." + ext
+    signatures = _MAGIC_SIGNATURES.get(ext)
+    if not signatures:
+        return True
+    return any((header or b"").startswith(sig) for sig in signatures)
+
+
+def assert_content_matches_extension(file, label="File"):
+    """Magic-byte-only guard on a Django UploadedFile — content must match its extension.
+
+    For callers that keep their OWN extension/size allowlist (e.g. KYC has a stricter list
+    than `validate_document_upload`) but still need anti-spoofing. Raises ValidationError.
+    """
+    ext = os.path.splitext(file.name)[1].lower()
+    _check_magic_bytes(file, ext, label)
+
+
 def _validate_file(file, allowed_extensions, allowed_content_types, max_size, label="File"):
     """Common validation logic for uploaded files."""
     ext = os.path.splitext(file.name)[1].lower()

@@ -240,6 +240,18 @@ class UserViewSet(viewsets.ModelViewSet):
         avatar = request.FILES.get("avatar")
         if not avatar:
             return Response({"detail": "NO_FILE_PROVIDED"}, status=status.HTTP_400_BAD_REQUEST)
+
+        from django.core.exceptions import ValidationError
+
+        from core.validators import validate_avatar_upload
+
+        # SEC-08: same extension/content-type/size/magic-byte guard the self-service
+        # upload_avatar already enforces — this admin path stored the file unchecked.
+        try:
+            validate_avatar_upload(avatar)
+        except ValidationError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
         if target.avatar:
             target.avatar.delete(save=False)
         target.avatar = avatar
