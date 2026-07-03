@@ -118,9 +118,21 @@ class ExcelImportView(APIView):
             file_content = file_obj.read()
 
             if use_ai:
-                if not str(file_obj.name or "").lower().endswith(ai_extensions):
+                name_lower = str(file_obj.name or "").lower()
+                if not name_lower.endswith(ai_extensions):
                     return Response(
                         {"error": "Unsupported file type. Allowed: Excel, CSV, PDF, image, text."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                # SEC-08: the extension is spoofable — verify the header matches it before we
+                # base64 the bytes to Claude (text formats have no signature and pass; a .xlsx
+                # that is really HTML/an executable is rejected).
+                from core.validators import content_matches_extension
+
+                ai_ext = "." + name_lower.rsplit(".", 1)[-1] if "." in name_lower else ""
+                if not content_matches_extension(file_content[:16], ai_ext):
+                    return Response(
+                        {"error": "File content does not match its extension."},
                         status=status.HTTP_400_BAD_REQUEST,
                     )
             else:
@@ -587,6 +599,18 @@ class AttachmentViewSet(viewsets.ModelViewSet):
             from rest_framework.exceptions import ValidationError
 
             raise ValidationError({"file": "NO_FILE_PROVIDED"})
+        # SEC-08: attachments are stored and later streamed for download — enforce the same
+        # extension/content-type/size + magic-byte guard as other document uploads instead of
+        # accepting arbitrary bytes (a .pdf-named executable was previously stored unchecked).
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        from rest_framework.exceptions import ValidationError as DRFValidationError
+
+        from core.validators import validate_document_upload
+
+        try:
+            validate_document_upload(file_obj)
+        except DjangoValidationError as exc:
+            raise DRFValidationError({"file": str(exc)})
         serializer.save(
             uploaded_by=self.request.user,
             original_filename=file_obj.name,
@@ -763,6 +787,13 @@ class DocumentExtractView(APIView):
         extension = (uploaded.name or "").rsplit(".", 1)[-1].lower() if "." in (uploaded.name or "") else ""
         if extension not in _DOC_EXT_ALLOWLIST:
             return Response({"error": "FILE_TYPE_UNSUPPORTED"}, status=status.HTTP_400_BAD_REQUEST)
+        # SEC-08: read the bytes once and verify the header matches the extension (spoof guard)
+        # before handing them to the vision model; text formats have no signature and pass.
+        from core.validators import content_matches_extension
+
+        raw = uploaded.read()
+        if not content_matches_extension(raw[:16], extension):
+            return Response({"error": "FILE_TYPE_UNSUPPORTED"}, status=status.HTTP_400_BAD_REQUEST)
 
         def _to_int(value):
             try:
@@ -782,7 +813,7 @@ class DocumentExtractView(APIView):
         from sourcing.services_ai_extract import extract_document_fields, reconcile
 
         try:
-            extracted = extract_document_fields(uploaded.read(), uploaded.name)
+            extracted = extract_document_fields(raw, uploaded.name)
         except RuntimeError as exc:
             logger.warning("AI doc-extract failed: %s", exc)
             return Response({"error": "AI_EXTRACT_FAILED"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)

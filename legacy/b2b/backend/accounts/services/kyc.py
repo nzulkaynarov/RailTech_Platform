@@ -194,6 +194,8 @@ def upload_kyc_document(
     from django.core.exceptions import ValidationError as DjangoValidationError
     from django.core.validators import FileExtensionValidator
 
+    from core.validators import assert_content_matches_extension
+
     from ..models import KYCDocType, KYCDocument
 
     allowed_extensions = ["pdf", "jpg", "jpeg", "png", "doc", "docx"]
@@ -205,6 +207,10 @@ def upload_kyc_document(
     ext_validator = FileExtensionValidator(allowed_extensions)
     try:
         ext_validator(file_obj)
+        # SEC-08: the extension + client content_type are spoofable — verify the file
+        # HEADER matches its extension too (a .pdf that is really an executable/HTML is
+        # rejected). KYC keeps its own stricter allowlist above; this only adds anti-spoofing.
+        assert_content_matches_extension(file_obj, "KYC document")
     except DjangoValidationError as e:
         return None, str(e)
 
