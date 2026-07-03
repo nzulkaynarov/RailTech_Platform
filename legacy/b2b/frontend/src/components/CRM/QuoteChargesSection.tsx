@@ -266,7 +266,7 @@ export const QuoteChargesSection: React.FC<QuoteChargesSectionProps> = ({ quoteI
 				{/* Add charge row */}
 				<div className="flex flex-wrap items-center gap-2">
 					<Select value={chargeType} onValueChange={setChargeType}>
-						<SelectTrigger className="h-8 w-[200px]" aria-label={t('quote.charges.type')}>
+						<SelectTrigger className="h-8 w-full sm:w-[200px]" aria-label={t('quote.charges.type')}>
 							<SelectValue placeholder={t('quote.charges.typePlaceholder')} />
 						</SelectTrigger>
 						<SelectContent>
