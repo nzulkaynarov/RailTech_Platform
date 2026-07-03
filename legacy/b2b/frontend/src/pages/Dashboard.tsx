@@ -3,19 +3,12 @@ import { useQuery } from '@tanstack/react-query';
 import {
   Package,
   FileText,
-  Users,
-  DollarSign,
   Calendar,
-  MoreHorizontal,
   ShoppingCart,
   AlertCircle,
   Loader2,
   Clock,
 } from 'lucide-react';
-import {
-  AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip as RechartsTooltip, ResponsiveContainer,
-} from 'recharts';
 
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,13 +22,11 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { KPICard } from '@/components/ui/KPICard';
 import { OnboardingChecklist } from '@/components/Shared/OnboardingChecklist';
 import { QuoteApprovalQueue } from '@/components/CRM/QuoteApprovalQueue';
-
+import {
+  SellerAttentionStrip, BuyerAttentionStrip, PipelineFunnel, MetricStrip,
+} from '@/components/Dashboard/DashboardWidgets';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 
 import { useTranslation } from 'react-i18next';
@@ -44,83 +35,6 @@ import { useCurrencyStore } from '@/store/currencyStore';
 import { useDeals, useTimeToFirstQuote } from '@/hooks/useCRM';
 import { buyerStatus } from '@/lib/requestStatus';
 import { dashboardApi, type DashboardStats } from '@/api/dashboardApi';
-
-// ─── Top Products Table ─────────────────────────────────────────────────
-
-function TopProductsTable({ onProductClick, onShowAll, topProducts }: { onProductClick?: (id: string) => void; onShowAll?: () => void; topProducts: DashboardStats['top_products'] }) {
-  const { t } = useTranslation();
-  return (
-    <Card className="py-0 gap-0">
-      <CardHeader className="flex flex-row items-center justify-between px-4 py-3">
-        <CardTitle className="text-sm font-semibold">{t('dashboardPage.topProducts')}</CardTitle>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t('dashboardPage.actions')}>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={() => {
-              const rows: (string | number)[][] = [
-                ['id', 'name', 'category', 'quantity'],
-                ...topProducts.map((p) => [p.id, p.name, p.category, p.quantity]),
-              ];
-              const csv = rows.map((r) => r.join(',')).join('\n');
-              const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-              const url = URL.createObjectURL(blob);
-              const link = document.createElement('a');
-              link.href = url; link.download = 'top_products.csv';
-              document.body.appendChild(link); link.click(); link.remove();
-              URL.revokeObjectURL(url);
-            }}>{t('dashboardPage.export')}</DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => onShowAll?.()}>
-              {t('dashboardPage.showAll')}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </CardHeader>
-      <Table>
-        <TableHeader>
-          <TableRow className="bg-muted/40">
-            <TableHead className="text-xs">{t('common.id')}</TableHead>
-            <TableHead className="text-xs">{t('dashboardPage.productName')}</TableHead>
-            <TableHead className="text-right text-xs">{t('dashboardPage.quantity')}</TableHead>
-            <TableHead className="text-xs">{t('dashboardPage.category')}</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {topProducts.length === 0 && (
-            <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">{t('common.noData')}</TableCell></TableRow>
-          )}
-          {topProducts.map((p) => (
-            <TableRow
-              key={p.id}
-              className="cursor-pointer"
-              tabIndex={0}
-              role="link"
-              onClick={() => onProductClick?.(p.id)}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onProductClick?.(p.id); } }}
-            >
-              <TableCell className="font-mono text-xs text-muted-foreground">{p.id}</TableCell>
-              <TableCell>
-                <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
-                    <Package className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                  <span className="text-sm font-medium truncate max-w-xs">{p.name}</span>
-                </div>
-              </TableCell>
-              <TableCell className="text-right tabular-nums text-sm font-medium">
-                {p.quantity}
-              </TableCell>
-              <TableCell className="text-xs text-muted-foreground">{p.category}</TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </Card>
-  );
-}
 
 // ─── KYC Pending Banner ────────────────────────────────────────────────
 
@@ -391,7 +305,6 @@ function RecentRequestsCard({ onNavigate }: { onNavigate: (page: string) => void
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function BuyerDashboard({ onProductClick: _onProductClick, period: _period, stats, onNavigate }: { onProductClick?: (id: string) => void; period: string; stats: DashboardStats | null; onNavigate: (page: string) => void }) {
-  const { t } = useTranslation();
   const { company } = useUserStore();
 
   // State 1: KYC not verified — show verification status
@@ -401,48 +314,14 @@ function BuyerDashboard({ onProductClick: _onProductClick, period: _period, stat
   const isEmpty = !stats || ((stats.active_requests ?? 0) === 0 && (stats.deals_completed ?? 0) === 0 && (stats.quotes_received ?? 0) === 0);
   if (isEmpty) return <BuyerWelcome onNavigate={onNavigate} />;
 
-  // Trend badge only when there is a previous-period baseline worth comparing.
-  // A 1400% delta on a 4→60 jump is technically correct but is visual noise
-  // for a buyer's personal dashboard — suppress until at least one side had
-  // meaningful volume.
-  const trendFor = (current: number, change: number, suffix: string) => {
-    if (!current || change === 0) return undefined;
-    return {
-      value: `${change > 0 ? '+' : ''}${change}% ${suffix}`,
-      direction: (change > 0 ? 'up' : 'down') as 'up' | 'down',
-    };
-  };
-  const vsPrev = t('dashboardPage.vsPrevPeriod');
-
+  // Operations inbox: what needs my decision (КП to review / contracts to sign) → recent
+  // requests → pipeline → low-ink metrics. Actions above metrics.
   return (
     <div className="flex flex-col gap-6">
-      {/* KPI Row — buyer-scoped: own activity, not platform totals. */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KPICard
-          label={t('dashboardPage.kpi.activeRequests')}
-          value={String(stats?.active_requests ?? 0)}
-          icon={<ShoppingCart className="h-5 w-5 text-muted-foreground" />}
-          trend={trendFor(stats?.active_requests ?? 0, stats?.active_requests_change ?? 0, vsPrev)}
-        />
-        <KPICard
-          label={t('dashboardPage.kpi.inProgress')}
-          value={String(stats?.deals_in_progress ?? 0)}
-          icon={<Clock className="h-5 w-5 text-muted-foreground" />}
-        />
-        <KPICard
-          label={t('dashboardPage.kpi.quotesReceived')}
-          value={String(stats?.quotes_received ?? 0)}
-          icon={<FileText className="h-5 w-5 text-muted-foreground" />}
-        />
-        <KPICard
-          label={t('dashboardPage.kpi.completed')}
-          value={String(stats?.deals_completed ?? 0)}
-          icon={<Package className="h-5 w-5 text-muted-foreground" />}
-        />
-      </div>
-
-      {/* Recent requests — buyer's own latest RFQs (real data via useDeals) */}
+      <BuyerAttentionStrip onNavigate={onNavigate} />
       <RecentRequestsCard onNavigate={onNavigate} />
+      <PipelineFunnel onNavigate={onNavigate} />
+      <MetricStrip stats={stats} role="buyer" />
     </div>
   );
 }
@@ -487,117 +366,20 @@ function TimeToFirstQuoteCard() {
 // ─── SELLER Dashboard ───────────────────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-function SellerDashboard({ onProductClick, period: _period, stats, onNavigate }: { onProductClick?: (id: string) => void; period: string; stats: DashboardStats | null; onNavigate: (page: string) => void }) {
-  const { t } = useTranslation();
-  const formatCurrency = useCurrencyStore((s) => s.format);
+function SellerDashboard({ period: _period, stats, onNavigate }: { period: string; stats: DashboardStats | null; onNavigate: (page: string) => void }) {
   const { company } = useUserStore();
 
   if (company.kycStatus !== 'verified') return <KYCPendingBanner onNavigate={onNavigate} />;
 
-  const dealVolumeData = stats?.deals_by_month ?? [];
-  const activityByDay = stats?.activity_by_day ?? [];
-
+  // Operations inbox: what needs me now (attention strip + approval queue) → the wedge
+  // north-star (TTFK) → pipeline distribution → a low-ink metric strip. Actions above metrics.
   return (
     <div className="flex flex-col gap-6">
-      {/* КП waiting on my approval (renders only when non-empty) */}
+      <SellerAttentionStrip onNavigate={onNavigate} />
       <QuoteApprovalQueue onNavigate={onNavigate} />
-
-      {/* Wedge north-star: how fast we answer an RFQ with the first КП. */}
       <TimeToFirstQuoteCard />
-
-      {/* KPI Row */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KPICard
-          label={t('dashboardPage.kpi.dealsVolume')}
-          value={formatCurrency(stats?.deals_volume ?? 0)}
-          icon={<DollarSign className="h-5 w-5 text-muted-foreground" />}
-          trend={{ value: `${stats?.deals_volume_change ?? 0}% ${t('dashboardPage.vsPrevPeriod')}`, direction: (stats?.deals_volume_change ?? 0) >= 0 ? "up" : "down" }}
-        />
-        <KPICard
-          label={t('dashboardPage.kpi.activeRequests')}
-          value={String(stats?.active_requests ?? 0)}
-          icon={<ShoppingCart className="h-5 w-5 text-muted-foreground" />}
-          trend={{ value: `${stats?.active_requests_change ?? 0}% ${t('dashboardPage.vsPrevPeriod')}`, direction: (stats?.active_requests_change ?? 0) >= 0 ? "up" : "down" }}
-        />
-        <KPICard
-          label={t('dashboardPage.kpi.catalogItems')}
-          value={String(stats?.catalog_items ?? 0)}
-          icon={<Package className="h-5 w-5 text-muted-foreground" />}
-          trend={{ value: `${stats?.catalog_items_change ?? 0}% ${t('dashboardPage.vsPrevPeriod')}`, direction: (stats?.catalog_items_change ?? 0) >= 0 ? "up" : "down" }}
-        />
-        <KPICard
-          label={t('dashboardPage.kpi.clients')}
-          value={String(stats?.clients_count ?? 0)}
-          icon={<Users className="h-5 w-5 text-muted-foreground" />}
-          trend={{ value: `${stats?.clients_count_change ?? 0}% ${t('dashboardPage.vsPrevPeriod')}`, direction: (stats?.clients_count_change ?? 0) >= 0 ? "up" : "down" }}
-        />
-      </div>
-
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {/* Area Chart — Deal Volume */}
-        <Card className="lg:col-span-2 py-0 gap-0">
-          <CardHeader className="flex flex-row items-center justify-between px-4 py-3">
-            <div>
-              <CardTitle className="text-sm font-semibold">{t('dashboardPage.seller.dealsVolume')}</CardTitle>
-              <div className="mt-1 flex items-baseline gap-2">
-                <span className="text-2xl font-bold tabular-nums">{formatCurrency(stats?.deals_volume ?? 0)}</span>
-                <span className="text-xs font-medium text-muted-foreground">{stats?.deals_volume_change ?? 0}% {t('dashboardPage.vsPrevPeriod')}</span>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="px-2 pb-4">
-            <div role="img" aria-label={t('dashboardPage.seller.dealsVolumeChart')}>
-            <ResponsiveContainer width="100%" height={220}>
-              <AreaChart data={dealVolumeData}>
-                <defs>
-                  <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--color-chart-1)" stopOpacity={0.15} />
-                    <stop offset="95%" stopColor="var(--color-chart-1)" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(v: number) => formatCurrency(v)} />
-                <RechartsTooltip
-                  formatter={(value: number) => [formatCurrency(value), t('dashboardPage.seller.volume')]}
-                  contentStyle={{ borderRadius: '8px', fontSize: '12px', border: '1px solid var(--color-border)' }}
-                />
-                <Area type="monotone" dataKey="value" stroke="var(--color-chart-1)" strokeWidth={2} fill="url(#colorVal)" />
-              </AreaChart>
-            </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Bar Chart — Activity by Day */}
-        <Card className="py-0 gap-0">
-          <CardHeader className="flex flex-row items-center justify-between px-4 py-3">
-            <CardTitle className="text-sm font-semibold">{t('dashboardPage.seller.activityByDay')}</CardTitle>
-          </CardHeader>
-          <CardContent className="px-2 pb-4">
-            <div className="mb-2 text-center">
-              <span className="text-2xl font-bold tabular-nums">{activityByDay.reduce((s, d) => s + d.count, 0)}</span>
-              <p className="text-xs text-muted-foreground">{t('dashboardPage.seller.requestsPerWeek')}</p>
-            </div>
-            <div role="img" aria-label={t('dashboardPage.seller.activityByDayChart')}>
-            <ResponsiveContainer width="100%" height={160}>
-              <BarChart data={activityByDay}>
-                <XAxis dataKey="day" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                <RechartsTooltip
-                  formatter={(value: number) => [value, t('dashboardPage.requests')]}
-                  contentStyle={{ borderRadius: '8px', fontSize: '12px', border: '1px solid var(--color-border)' }}
-                />
-                <Bar dataKey="count" fill="var(--color-chart-1)" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Top Products */}
-      <TopProductsTable onProductClick={onProductClick} onShowAll={() => onNavigate?.("products")} topProducts={stats?.top_products ?? []} />
+      <PipelineFunnel onNavigate={onNavigate} />
+      <MetricStrip stats={stats} role="seller" />
     </div>
   );
 }
@@ -685,7 +467,7 @@ export function Dashboard({ onProductClick, onNavigate }: DashboardProps) {
 
       {/* Role-based dashboard content — fallback to BuyerDashboard */}
       {activeStatus === 'SELLER' ? (
-        <SellerDashboard onProductClick={onProductClick} period={period} stats={stats} onNavigate={onNavigate ?? (() => {})} />
+        <SellerDashboard period={period} stats={stats} onNavigate={onNavigate ?? (() => {})} />
       ) : (
         <BuyerDashboard onProductClick={onProductClick} period={period} stats={stats} onNavigate={onNavigate ?? (() => {})} />
       )}
