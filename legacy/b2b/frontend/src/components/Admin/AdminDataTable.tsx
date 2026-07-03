@@ -552,23 +552,41 @@ export function AdminDataTable<T>(props: AdminDataTableProps<T>): React.ReactNod
                 const id = getRowId(row);
                 const isSelected = selectedIds.has(id);
                 const isFocused = idx === focusIndex;
+                const isClickable = Boolean(onRowClick);
+                const activateRow = (e: React.MouseEvent | React.KeyboardEvent) => {
+                  const target = e.target as HTMLElement;
+                  // Avoid row-click when interacting with row controls
+                  if (target.closest('[data-row-action]')) return;
+                  if (target.closest('[data-checkbox]')) return;
+                  onRowClick?.(row);
+                };
                 return (
                   <TableRow
                     key={String(id)}
                     data-selected={isSelected || undefined}
                     data-focused={isFocused || undefined}
+                    role={isClickable ? 'button' : undefined}
+                    tabIndex={isClickable ? 0 : undefined}
                     className={cn(
-                      'cursor-pointer text-xs transition-colors',
+                      'text-xs transition-colors',
+                      isClickable &&
+                        'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
                       isSelected && 'bg-accent/40',
                       isFocused && 'ring-1 ring-primary/50 ring-inset',
                     )}
-                    onClick={(e) => {
-                      const target = e.target as HTMLElement;
-                      // Avoid row-click when interacting with row controls
-                      if (target.closest('[data-row-action]')) return;
-                      if (target.closest('[data-checkbox]')) return;
-                      onRowClick?.(row);
-                    }}
+                    onClick={isClickable ? activateRow : undefined}
+                    onKeyDown={
+                      isClickable
+                        ? (e) => {
+                            // Only activate when the row itself is focused, not a nested control.
+                            if (e.target !== e.currentTarget) return;
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              activateRow(e);
+                            }
+                          }
+                        : undefined
+                    }
                   >
                     {bulkActions && bulkActions.length > 0 ? (
                       <TableCell className={cn('w-8', rowPad)} data-checkbox>
