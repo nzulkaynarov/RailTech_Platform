@@ -599,17 +599,10 @@ export const crmApi = {
 		link.remove();
 		window.URL.revokeObjectURL(objectUrl);
 	},
+	// Polls through the 202 GENERATING window (ARCH-03) before saving the blob.
 	exportDealPDF: async (dealId: number) => {
-		const response = await apiClient.get(`crm/deals/${dealId}/export-pdf/`, {
-			responseType: 'blob'
-		});
-		const url = window.URL.createObjectURL(new Blob([response.data]));
-		const link = document.createElement('a');
-		link.href = url;
-		link.setAttribute('download', `RailTech_Quote_${dealId}.pdf`);
-		document.body.appendChild(link);
-		link.click();
-		link.remove();
+		const { downloadFile } = await import('@/lib/download');
+		await downloadFile(`crm/deals/${dealId}/export-pdf/`, `RailTech_Quote_${dealId}.pdf`);
 	},
 	getAnalytics: async () => {
 		const response = await apiClient.get<CRMAnalytics>('crm/analytics/');
@@ -686,8 +679,12 @@ export const crmApi = {
 		const response = await apiClient.post<Quote>(`crm/quotes/${quoteId}/charges-reorder/`, { order });
 		return response.data;
 	},
+	// ARCH-03: the render is enqueued off-thread — the backend answers 202 GENERATING;
+	// poll downloadQuotePDF (it retries on 202) to obtain the fresh file.
 	generateQuotePDF: async (id: number) => {
-		const response = await apiClient.post<{ url: string }>(`crm/quotes/${id}/generate-pdf/`);
+		const response = await apiClient.post<{ detail: string; retry_after: number }>(
+			`crm/quotes/${id}/generate-pdf/`,
+		);
 		return response.data;
 	},
 	sendQuoteToClient: async (id: number) => {
@@ -732,17 +729,10 @@ export const crmApi = {
 		const response = await apiClient.get<PaginatedResponse<Quote>>('crm/quotes/my-approval-queue/');
 		return response.data.results;
 	},
+	// Polls through the 202 GENERATING window (lib/download.ts) before saving the blob.
 	downloadQuotePDF: async (id: number) => {
-		const response = await apiClient.get(`crm/quotes/${id}/download-pdf/`, {
-			responseType: 'blob'
-		});
-		const url = window.URL.createObjectURL(new Blob([response.data]));
-		const link = document.createElement('a');
-		link.href = url;
-		link.setAttribute('download', `RailTech_Quote_${id}.pdf`);
-		document.body.appendChild(link);
-		link.click();
-		link.remove();
+		const { downloadFile } = await import('@/lib/download');
+		await downloadFile(`crm/quotes/${id}/download-pdf/`, `RailTech_Quote_${id}.pdf`);
 	},
 
 	// ─── Lead ops ─────────────────────────────────────────────

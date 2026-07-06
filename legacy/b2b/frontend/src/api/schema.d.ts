@@ -3168,7 +3168,7 @@ export interface paths {
         };
         /**
          * Export deal PDF
-         * @description Export PDF of the deal's active quote. Auto-generates the PDF if not yet created.
+         * @description Export PDF of the deal's active quote; 202 + off-thread render when it is not ready yet.
          */
         get: operations["crm_deals_export_pdf_retrieve"];
         put?: never;
@@ -3999,7 +3999,7 @@ export interface paths {
         };
         /**
          * Download quote PDF
-         * @description Download the previously generated PDF file for a quote.
+         * @description Download the persisted КП PDF; 202 + off-thread render when it is not ready yet.
          */
         get: operations["crm_quotes_download_pdf_retrieve"];
         put?: never;
@@ -4061,7 +4061,7 @@ export interface paths {
         put?: never;
         /**
          * Generate quote PDF
-         * @description Generate a PDF file for the quote using WeasyPrint.
+         * @description Validate the render guards, drop the stale PDF and enqueue an off-thread render (ARCH-03: WeasyPrint never runs in the request thread). Poll download-pdf until it stops returning 202.
          */
         post: operations["crm_quotes_generate_pdf_create"];
         delete?: never;
@@ -15735,6 +15735,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description PDF rendering off-thread — retry after Retry-After seconds */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description No active quote */
             404: {
                 headers: {
@@ -15742,8 +15749,8 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description PDF generation failed */
-            500: {
+            /** @description QUOTE_NOT_CLAIMED / FX_RATE_MISSING / QUOTE_BELOW_COST */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -17521,8 +17528,15 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description PDF not generated yet */
-            404: {
+            /** @description PDF rendering off-thread — retry after Retry-After seconds */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description QUOTE_NOT_CLAIMED / FX_RATE_MISSING / QUOTE_BELOW_COST */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -17614,8 +17628,15 @@ export interface operations {
             };
         };
         responses: {
-            /** @description PDF generated, URL returned */
-            200: {
+            /** @description Render enqueued — poll download-pdf (Retry-After hint) */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description QUOTE_NOT_CLAIMED / FX_RATE_MISSING / QUOTE_BELOW_COST */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

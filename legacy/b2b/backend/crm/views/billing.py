@@ -35,16 +35,16 @@ _PDF_DOC_TYPE = {"Contract": "contract", "Invoice": "invoice", "Act": "act"}
 
 
 def _stream_or_render_pdf(obj):
-    """Stream a document's PDF, rendering it on demand if it isn't ready yet.
+    """Stream a document's PDF, or 202 + enqueue the off-thread render (ARCH-03).
 
-    Creation schedules the render asynchronously (F1.6), so a download that races
-    ahead of the Celery task — or arrives while the worker is down — would otherwise
-    404. Here we render lazily as a fallback so the download always succeeds."""
+    Creation schedules the render asynchronously (F1.6), so a download can race ahead
+    of the Celery task — or arrive while the worker is down. WeasyPrint never runs
+    inline in the request thread: the idempotent render task is (re-)enqueued and the
+    caller polls with the Retry-After hint (lib/download.ts in the SPA)."""
     if not obj.pdf_file:
-        from crm.tasks import _render_pdf_for
+        from crm.views._pdf import pdf_generating_response
 
-        _render_pdf_for(_PDF_DOC_TYPE[type(obj).__name__], obj.id)
-        obj.refresh_from_db()
+        return pdf_generating_response(_PDF_DOC_TYPE[type(obj).__name__], obj.id)
     return stream_file_field(obj.pdf_file)
 
 

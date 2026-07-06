@@ -78,7 +78,10 @@ export function QuotesPage() {
 
   const handleGeneratePDF = async (id: number) => {
     try {
+      // ARCH-03: generate enqueues the render (202) — poll the download until the
+      // fresh file lands so the click still ends with a saved PDF.
       await generatePDF.mutateAsync(id);
+      await crmApi.downloadQuotePDF(id);
       toast.success(t('pages.quotes.toast.pdfGenerated'));
     } catch {
       /* error toast handled globally */

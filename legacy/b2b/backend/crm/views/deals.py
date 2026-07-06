@@ -492,11 +492,12 @@ class DealViewSet(viewsets.ModelViewSet):
 
     @extend_schema(
         summary="Export deal PDF",
-        description=("Export PDF of the deal's active quote. " "Auto-generates the PDF if not yet created."),
+        description="Export PDF of the deal's active quote; 202 + off-thread render when it is not ready yet.",
         responses={
             (200, "application/pdf"): OpenApiResponse(description="PDF file download"),
+            202: OpenApiResponse(description="PDF rendering off-thread — retry after Retry-After seconds"),
             404: OpenApiResponse(description="No active quote"),
-            500: OpenApiResponse(description="PDF generation failed"),
+            409: OpenApiResponse(description="QUOTE_NOT_CLAIMED / FX_RATE_MISSING / QUOTE_BELOW_COST"),
         },
         tags=["CRM"],
     )
@@ -508,19 +509,18 @@ class DealViewSet(viewsets.ModelViewSet):
         if not quote:
             return Response({"error": "No active quote for this deal"}, status=status.HTTP_404_NOT_FOUND)
         if not quote.pdf_file:
-            # Auto-generate PDF if not yet generated
+            # ARCH-03: enqueue the off-thread render + 202 instead of running WeasyPrint
+            # inline; only the cheap render guards run synchronously (409 on failure).
             from crm.services import QuoteLifecycleService
+            from crm.views._pdf import pdf_generating_response
 
             try:
-                quote = QuoteLifecycleService.generate_pdf(quote.pk)
+                QuoteLifecycleService.assert_pdf_renderable(quote.pk)
             except ValueError as exc:
                 if str(exc) in ("QUOTE_NOT_CLAIMED", "FX_RATE_MISSING", "QUOTE_BELOW_COST"):
                     return Response({"error": str(exc)}, status=status.HTTP_409_CONFLICT)
                 return Response({"error": "Failed to generate PDF"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            except (OSError, RuntimeError):
-                return Response({"error": "Failed to generate PDF"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        if not quote.pdf_file:
-            return Response({"error": "PDF generation failed"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return pdf_generating_response("quote", quote.pk)
         from django.http import FileResponse
 
         return FileResponse(

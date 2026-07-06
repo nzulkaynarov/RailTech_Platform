@@ -18,6 +18,7 @@ from core.file_streaming import stream_file_field
 from core.optimistic_locking import OptimisticLockingMixin
 from core.permissions import IsCompanyMemberOrPlatformAdmin, OperatorScoped
 from crm import services as crm_services
+from crm.views._pdf import pdf_generating_response
 from crm.constants import QuoteStatusCode
 from crm.models import ChargeTemplate, ChargeType, Quote, QuoteCharge, QuoteItem, QuoteStatus
 from crm.serializers import (
@@ -260,37 +261,37 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
 
     @extend_schema(
         summary="Generate quote PDF",
-        description="Generate a PDF file for the quote using WeasyPrint.",
+        description=(
+            "Validate the render guards, drop the stale PDF and enqueue an off-thread "
+            "render (ARCH-03: WeasyPrint never runs in the request thread). Poll "
+            "download-pdf until it stops returning 202."
+        ),
         responses={
-            200: OpenApiResponse(description="PDF generated, URL returned"),
+            202: OpenApiResponse(description="Render enqueued — poll download-pdf (Retry-After hint)"),
+            409: OpenApiResponse(description="QUOTE_NOT_CLAIMED / FX_RATE_MISSING / QUOTE_BELOW_COST"),
             500: OpenApiResponse(description="PDF generation failed"),
         },
         tags=["CRM"],
     )
     @action(detail=True, methods=["post"], url_path="generate-pdf")
     def generate_pdf(self, request, pk=None):
-        """Generate PDF for a quote."""
+        """Re-render the КП PDF off-thread."""
         quote = self.get_object()
         from crm.services import QuoteLifecycleService
 
         try:
-            quote = QuoteLifecycleService.generate_pdf(quote.pk)
-            return Response(
-                {
-                    "status": "PDF generated",
-                    "url": (request.build_absolute_uri(quote.pdf_file.url) if quote.pdf_file else None),
-                }
-            )
+            # Claim + loss-prevention guards (HOLE 2) stay synchronous → 409, not 500.
+            QuoteLifecycleService.assert_pdf_renderable(quote.pk)
         except ValueError as e:
-            # Claim + loss-prevention guards (HOLE 2) → 409, not 500.
             if str(e) in ("QUOTE_NOT_CLAIMED", "FX_RATE_MISSING", "QUOTE_BELOW_COST"):
                 return Response({"error": str(e)}, status=status.HTTP_409_CONFLICT)
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        except (OSError, RuntimeError) as e:
-            return Response(
-                {"error": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+        # Explicit regenerate: drop the stale file reference first so a concurrent
+        # download can't serve the outdated render while the task rebuilds it.
+        if quote.pdf_file:
+            quote.pdf_file = None
+            quote.save(update_fields=["pdf_file"])
+        return pdf_generating_response("quote", quote.pk)
 
     @extend_schema(
         summary="Send quote to client",
@@ -620,10 +621,11 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
 
     @extend_schema(
         summary="Download quote PDF",
-        description="Download the previously generated PDF file for a quote.",
+        description="Download the persisted КП PDF; 202 + off-thread render when it is not ready yet.",
         responses={
             (200, "application/pdf"): OpenApiResponse(description="PDF file"),
-            404: OpenApiResponse(description="PDF not generated yet"),
+            202: OpenApiResponse(description="PDF rendering off-thread — retry after Retry-After seconds"),
+            409: OpenApiResponse(description="QUOTE_NOT_CLAIMED / FX_RATE_MISSING / QUOTE_BELOW_COST"),
         },
         tags=["CRM"],
     )
@@ -632,21 +634,19 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
         """Download the generated PDF."""
         quote = self.get_object()
         if not quote.pdf_file:
-            # Render lazily: the КП PDF is rendered asynchronously after the quote
-            # is sent (F1.6), so a download may race ahead of the Celery task.
+            # The КП PDF is rendered asynchronously after the quote is sent (F1.6), so a
+            # download may race ahead of the Celery task — or arrive while the worker is
+            # down. ARCH-03: enqueue + 202 instead of running WeasyPrint inline; only the
+            # cheap render guards run synchronously so guard failures still 409.
             from crm.services import QuoteLifecycleService
 
             try:
-                quote = QuoteLifecycleService.generate_pdf(quote.pk)
+                QuoteLifecycleService.assert_pdf_renderable(quote.pk)
             except ValueError as exc:
                 if str(exc) in ("QUOTE_NOT_CLAIMED", "FX_RATE_MISSING", "QUOTE_BELOW_COST"):
                     return Response({"error": str(exc)}, status=status.HTTP_409_CONFLICT)
                 return Response({"error": "PDF generation failed"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            except (OSError, RuntimeError):
-                return Response(
-                    {"error": "PDF generation failed"},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                )
+            return pdf_generating_response("quote", quote.pk)
 
         from django.http import FileResponse
 

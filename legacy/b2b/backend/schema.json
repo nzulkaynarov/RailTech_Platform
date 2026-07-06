@@ -9024,7 +9024,7 @@
         "/api/v1/crm/deals/{id}/export-pdf/": {
             "get": {
                 "operationId": "crm_deals_export_pdf_retrieve",
-                "description": "Export PDF of the deal's active quote. Auto-generates the PDF if not yet created.",
+                "description": "Export PDF of the deal's active quote; 202 + off-thread render when it is not ready yet.",
                 "summary": "Export deal PDF",
                 "parameters": [
                     {
@@ -9049,11 +9049,14 @@
                     "200": {
                         "description": "PDF file download"
                     },
+                    "202": {
+                        "description": "PDF rendering off-thread — retry after Retry-After seconds"
+                    },
                     "404": {
                         "description": "No active quote"
                     },
-                    "500": {
-                        "description": "PDF generation failed"
+                    "409": {
+                        "description": "QUOTE_NOT_CLAIMED / FX_RATE_MISSING / QUOTE_BELOW_COST"
                     }
                 }
             }
@@ -12272,7 +12275,7 @@
         "/api/v1/crm/quotes/{id}/download-pdf/": {
             "get": {
                 "operationId": "crm_quotes_download_pdf_retrieve",
-                "description": "Download the previously generated PDF file for a quote.",
+                "description": "Download the persisted КП PDF; 202 + off-thread render when it is not ready yet.",
                 "summary": "Download quote PDF",
                 "parameters": [
                     {
@@ -12297,8 +12300,11 @@
                     "200": {
                         "description": "PDF file"
                     },
-                    "404": {
-                        "description": "PDF not generated yet"
+                    "202": {
+                        "description": "PDF rendering off-thread — retry after Retry-After seconds"
+                    },
+                    "409": {
+                        "description": "QUOTE_NOT_CLAIMED / FX_RATE_MISSING / QUOTE_BELOW_COST"
                     }
                 }
             }
@@ -12414,7 +12420,7 @@
         "/api/v1/crm/quotes/{id}/generate-pdf/": {
             "post": {
                 "operationId": "crm_quotes_generate_pdf_create",
-                "description": "Generate a PDF file for the quote using WeasyPrint.",
+                "description": "Validate the render guards, drop the stale PDF and enqueue an off-thread render (ARCH-03: WeasyPrint never runs in the request thread). Poll download-pdf until it stops returning 202.",
                 "summary": "Generate quote PDF",
                 "parameters": [
                     {
@@ -12456,8 +12462,11 @@
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "PDF generated, URL returned"
+                    "202": {
+                        "description": "Render enqueued — poll download-pdf (Retry-After hint)"
+                    },
+                    "409": {
+                        "description": "QUOTE_NOT_CLAIMED / FX_RATE_MISSING / QUOTE_BELOW_COST"
                     },
                     "500": {
                         "description": "PDF generation failed"
