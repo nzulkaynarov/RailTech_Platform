@@ -14,7 +14,8 @@ logs:
 shell:
 	docker compose exec backend bash
 
-# Database commands (external Neon Cloud DB — migrations run via backend container)
+# Database commands (local dev: `db` container из docker-compose.override.yml;
+# prod: DB-VPS через WireGuard — миграции всегда через backend-контейнер)
 migrate:
 	docker compose exec backend python manage.py migrate
 
@@ -24,8 +25,11 @@ makemigrations:
 createsuperuser:
 	docker compose exec backend python manage.py createsuperuser
 
+# core_seed = dev/demo-справочники + тест-пользователи (SEED_USER_PASSWORD).
+# Бизнес-коды создаются data-миграциями (IRON RULE 1), loaddata здесь не используется —
+# seed_data.json имеет кастомный формат core_seed и loaddata его не читает.
 seed:
-	docker compose exec backend python manage.py loaddata seed_data
+	docker compose exec backend python manage.py core_seed
 
 # Testing commands
 test:
@@ -34,8 +38,9 @@ test:
 test-backend:
 	docker compose exec backend pytest --cov=. --cov-report=html
 
+# vitest запускается на машине разработчика (frontend-контейнер — prod nginx-сборка без npm)
 test-frontend:
-	docker compose exec frontend npm test
+	cd frontend && npm test
 
 # Linting commands
 lint: lint-backend lint-frontend

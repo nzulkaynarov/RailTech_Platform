@@ -1,180 +1,85 @@
 # RailTech B2B — Roadmap
 
-**Последняя актуализация:** 2026-04-17
+**Последняя актуализация:** 2026-07-06 (HEAD `c6cb04f`, после PR #229)
 
-## Контекст
-
-Проект реализован на ~70%. После sprint 0 (security hardening, 2026-03-20), sprint 0.5 (shadcn/ui migration, 2026-03-21) и апрельского cleanup'а проведено упрощение архитектуры фронтенда (единый `AppShell`, удаление дубликатов, унификация padding/header), а также Enterprise Hardening backend (security, cleanup, performance — коммит `114f93f`).
-
-**Этапность деплоя:** Local dev (Neon Cloud DB) → Staging на VPS → Production.
+> **Живой канон планирования** — `Docs/ops/`: датированные `session-handoff-*.md` (последний: `session-handoff-2026-07-02-horizon1-security.md`), `roadmap-2026-06-19.md` (фазы F0–F7), `master-scope-2026-06-24.md` (P0-блокеры и клиентская база), `ai-features-roadmap-2026-06-18.md` (F6 #1–#8), `stability-program.md`. Этот файл — верхнеуровневый индекс: что сделано по периодам и какие треки открыты.
 
 ---
 
-## Sprint 0 — Security Hardening (ВЫПОЛНЕН 2026-03-20)
+## Где проект сейчас
 
-Цель: устранить критические уязвимости перед локальным тестированием. Подробности — [security-audit-2026-03-20.md](security-audit-2026-03-20.md).
+Продакшн живёт на `b2b.railtech.uz` (app-VPS + Caddy edge, БД на отдельном DB-VPS через WireGuard; Neon выведен 2026-06-19). Деплой — self-hosted runner (`deploy-b2b.yml`), Sentry на бэке и SPA, CI c жёсткими security-гейтами (pip-audit + npm audit, SHA-pinned Actions). Архитектурный канон — ADR-0001…0006 (`Docs/adr/`).
 
-- [x] IDOR fix: Excel import + task status (`sourcing/views.py`).
-- [x] `ImportTask` модель — persistent task ownership (заменяет volatile cache).
-- [x] Deal FSM — explicit transition matrix.
-- [x] Стандартизация auth checks (`IsManagerOrAdmin` вместо `is_staff`).
-- [x] ActivityLog RBAC — фильтрация по user.
-- [x] WebSocket access control — проверка deal-level доступа.
-- [x] XLSX magic bytes validation.
-- [x] Security headers: CSP, X-Frame-Options DENY, HSTS-ready.
-- [x] Nginx rate limiting: `api_general`, `api_auth`, `ws_connect`.
-- [x] Split Redis: channels+cache / celery broker (2 инстанса).
-- [x] Celery multi-queue: `default`, `pdf`, `imports`.
-- [x] `QuoteItemHistory` — immutable audit trail.
-- [x] DB indexes: `Deal.stage`, `Deal.manager`, `Deal.company`, `Product.domain_type`.
-- [x] Catalog signals: M2M validation + cache invalidation.
-- [x] KYC Zod validation на фронтенде.
-- [x] WebSocket auth: token через first message (подготовка под security hardening).
-- [x] `services.py` fix: aggregate на QuerySet.
+Ядро продукта (ADR-0006 «клин»): **заявка → КП → контракт** с AI-ускорением как монетизируемым преимуществом. Реализованы: multi-seller routing (DealSellerRouting, скрытая конкуренция), entitlement-слой (FeatureKey: `quote.send`/`quote.export`/`ai.*`/`roles.custom`, DEMO-водяной знак), KYC-пол (без L2 — только просмотр и черновики), AI-разбор заявок + автопривязка каталога в черновике КП, публичная ссылка на КП (202+Celery PDF), дашборд «Operations Inbox».
 
 ---
 
-## Sprint 0.5 — UI Migration to shadcn/ui (ВЫПОЛНЕН 2026-03-21)
+## Хроника (сводно)
 
-- [x] shadcn/ui init: Tailwind v4 CSS variables, path aliases, `components.json`.
-- [x] 64 shadcn-компонента установлены.
-- [x] Все формы: `LoginPage`, `KYCRegistration`, `PasswordSetup`, `ProfileCompletion` → shadcn Form + Input + Select.
-- [x] Все drawers: `CartDrawer`, `NotificationCenter` → shadcn Sheet + ScrollArea.
-- [x] Все slide panels, modals, таблицы переведены на shadcn.
-- [x] `DealSplitView` → Tabs + ScrollArea + Dialog.
-- [x] Все layout shell'ы перешли на `<Sidebar>` с `collapsible="icon"`.
-- [x] Dark/light mode через CSS variables (`:root` / `.dark`).
-- [x] `@hookform/resolvers/zod` (стандартный) вместо кастомного.
-
----
-
-## Sprint 0.6 — UI/UX Audit & Fixes (ВЫПОЛНЕН 2026-04-07)
-
-Подробности — [ui-audit-2026-04-07.md](ui-audit-2026-04-07.md).
-
-- [x] 4 CRITICAL бага устранены (logout, dashboard fallback, password setup error state, API error toast).
-- [x] 60+ хардкод-цветов → semantic tokens (`text-success`, `bg-warning`, `bg-destructive`).
-- [x] 14 raw `<table>` → shadcn `<Table>`.
-- [x] 60+ arbitrary-size `text-[9px]` → Tailwind scale.
-- [x] 130+ i18n-ключей добавлены, паритет ru/en восстановлен.
-- [x] Custom ESLint `railtechPlugin`: `no-hardcoded-colors`, `no-arbitrary-text-size`.
-- [x] Husky 9 + lint-staged 15 pre-commit hooks.
-- [x] `scripts/check_i18n_symmetry.py` + CI step.
-- [x] `AppShell` → `<Sidebar>` примитивы (убран custom `<aside>`).
+| Период | Что сделано |
+|---|---|
+| 2026-03-20…04-17 | Sprint 0–0.8: security hardening, миграция на shadcn/ui, UI/UX-аудит, enterprise hardening (pghistory, Swagger, ADR-0001), единый AppShell |
+| 2026-04…05 | Ядро сделок: КП-движок (unit-economics, каскадные charges, цепочка согласования), PDF/Excel/CSV экспорт, email-каналы (EmailLog), WS-уведомления |
+| 2026-06-02…19 | Прод-деплой на VPS, миграция БД Neon → DB-VPS (WireGuard), AI-импорт заявок (Claude, prod-live), стабилизационная программа |
+| 2026-06-24…30 | ADR-0003/0004: три админ-плоскости, operator sub-roles (SUPPORT/KYC_OFFICER/…), break-glass, CompanyRole-матрица доступа, DocumentProfile + нумерация документов; ADR-0005: единая capability-навигация (T0/T1/T2, page-derived context); ADR-0006 Moves 0–4: целостность цикла, cuts, routing+claim, AI-moat (pricing-assist, AI-draft КП), монетизация (CompanyEntitlement, TTFK-метрика, DEMO-watermark) |
+| 2026-07-01…02 | CI-восстановление, tenant-изоляция (React-Query cache), E2E-аудит жизненного цикла F1–F8 (UZS-канонизация валюты, реальный продавец в договоре), Security Horizon-1 (NUM_PROXIES, SHA-pin, enforcing CSP на SPA) |
+| 2026-07-03…04 | PR #207–229: SEC-06 lockout, SEC-08 magic-bytes, CSP enforcing (Django+Caddy), ARCH-03 публичный PDF → 202+Celery, ARCH-04 aggregate(), Move 3 детерминированный+fuzzy автоматч, Phase E KYC-пол продавца, UX-аудит полностью (Operations Inbox, адаптивный КП-билдер, deep-link уведомлений), npm audit hard gate, тесты fulfillment+messaging |
 
 ---
 
-## Sprint 0.7 — Enterprise Hardening (ВЫПОЛНЕН 2026-04-12, commit 114f93f)
+## Открытые треки (приоритет ↓)
 
-Коммит: `feat: enterprise hardening — security, cleanup, performance`.
+### Безопасность / инфраструктура
+- [ ] INF-12: сделать CI-job `security` обязательным status-check в branch protection (настройка владельца GitHub)
+- [ ] ARCH-01 (остаток, High): увести request-path LLM-вызовы из sync HTTP-хендлеров (AsyncAnthropic или Celery) — сейчас ограничены 1×60s, но пиннят ASGI-воркеры
+- [ ] ARCH-03 (остаток): авторизованные generate-pdf/download — ещё синхронный WeasyPrint (202-паттерн только на публичном КП)
+- [ ] ARCH-05: единый формат ошибок API (`error` vs `detail`, вариант — RFC 9457 на уровне exception handler)
+- [ ] Хвост: SEC-09 (secure-cookies только при PRODUCTION=true), SEC-10 (init_superadmin get_or_create + безусловный сброс пароля), SEC-12 (reset_password реактивирует аккаунт), ARCH-07 (14 bare except), ARCH-09 (is_superuser в ActivityLogViewSet)
+- [ ] INF-01 edge rate-limit в Caddy; INF-04 backup-gate перед `migrate --noinput`; INF-05/09 пиннинг зависимостей + уход с psycopg2-binary; INF-07 пиннинг minio-образов; INF-08 `volumes: !reset` для /app в прод-compose
+- [ ] Staging-окружение (DNS + GitHub environment + Caddy block) — тогда nightly e2e перестанет ходить в прод
 
-- [x] Mermaid-диаграммы (`Docs/architecture-diagrams.md`).
-- [x] Swagger/ReDoc (`drf-spectacular`) — `/api/docs/`, `/api/redoc/`, `/api/schema/` (только DEBUG).
-- [x] WebSocket dictionary (`Docs/websocket-messages.md`).
-- [x] `django-pghistory` на Deal, Quote, QuoteItem (full audit).
-- [x] `list_editable` для быстрого inline-редактирования в Unfold.
-- [x] ADR-0001 — разделение Unfold ↔ React Admin.
-- [x] Celery-таск архивирования чата (`crm.tasks.archive_old_messages`).
+### Продукт
+- [ ] Клиентская база: CB-send (КП офлайн-контакту), CB-public-link, CB-invite, CB-deal-for-offline, CB-auto-populate (разблокирован MS-routing), инструмент слияния компаний
+- [ ] AI F6 (порядок из ai-features-roadmap): #5 билингв-нормализация → #1 семантический матч → #3 КП-vs-заявка diff → #7 pre-flight → #4 reply-assist → #6 PDF-extract → #2 PIM-enrich → #8 conversational; калибровка `AI_DRAFT_MATCH_CONFIDENCE` на реальных данных
+- [ ] ADR-0005 Phase E/F: U3 (CompanyRole как единственный источник прав, деприкация WorkspaceRole), ContactViewSet, unified document direction-view, глобальная «+Создать»
+- [ ] ADR-0004 G5 (designated primary admin) + G6 (логирование доступа инженера)
+- [ ] Сверка cut-list ADR-0006 с кодом: Leads (бэкенд) и Fulfillment живы — амендмент ADR или завершение cut
+- [ ] post-deploy-todos: join-existing-company (COMPANY_INN_TAKEN тупик), строгая INN-валидация, внешний S3, owner-UI для can_sell/can_buy, DMARC p=none→quarantine
+- [ ] Решения владельца: orphan-эндпоинты `crm/status-choices/` + `sourcing/requests/` (removal pass), supportApi.deleteTicket (не подключён). ReassignProductDialog уже переподключён (a8e8a21, 2026-07-01) — снят с повестки
 
----
+### Качество
+- [ ] Компонентные тесты фронтенда: AdminDataTable / DealsKanban / GenerateQuoteDialog / Operations Inbox (сейчас только stores/hooks/utils, 9 файлов)
+- [ ] Backend coverage держится ~78% (гейт 30%) — поднять гейт после стабилизации
+- [ ] F4.x структурный долг: onNavigate prop-drilling, userStore↔authStore
 
-## Sprint 0.8 — Admin Separation & Frontend Cleanup (ВЫПОЛНЕН 2026-04-16/17)
-
-Последние коммиты: `5dc2f4a`, `1edde99`, `2c11547`.
-
-- [x] Phase 4 ADR-0001: `ReadOnlyInspectionMixin` на всех бизнес-моделях в Unfold.
-- [x] Аварийные экшены помечены `[Emergency]`, ограничены `is_superuser`.
-- [x] Декоратор `@superuser_only_action` (`core/admin_mixins.py`).
-- [x] Phase 6: message history archive → S3 (Celery + Unfold).
-- [x] Единый `AppShell` — удалены `AdminShell`, `ClientShell`, `ManagerShell`, `CatalogShell` (hash-based навигация с контекстом).
-- [x] Удалён `QuoteBuilderGrid` (заменён унифицированным flow в `RequestDetailPage`).
-- [x] Чистка неиспользуемых типов store.
-- [x] Синхронизация полей frontend request store с API-схемой.
-- [x] Убран дубль currency data source — единый источник `offers`.
-
----
-
-## Sprint 1 — Ядро сделок (в работе)
-
-- [ ] Quote PDF export через Celery + WeasyPrint (текущая реализация — синхронная через `QuoteViewSet.generate-pdf` @action).
-- [ ] Send quote email с attach PDF.
-- [ ] Approve/Reject Quote на клиентской стороне → Action Banner (UI-часть реализована, нужно добить backend flow).
-- [ ] Sentry Integration (backend + frontend ErrorBoundary).
-
-## Sprint 2 — Real-time Notifications (план)
-
-- [ ] `NotificationConsumer` (WebSocket) — замена polling'а.
-- [ ] Signal triggers на Deal/Quote/KYC status changes.
-- [ ] Badge count в header, sound alerts, exponential backoff reconnect.
-- [ ] Celery tasks для transactional email (quote sent, quote approved, KYC status change).
-
-## Sprint 3 — Financial Settings & Currency (план)
-
-- [ ] Модель `PlatformSetting` (VAT rate, default margin, min margin).
-- [ ] Daily exchange rate sync (ЦБ Узбекистана) — Celery Beat.
-- [ ] Currency conversion в `QuoteCalculationService`.
-- [ ] Margin validation на уровне `QuoteItem.save()`.
-
-## Sprint 4 — Documents & Advanced Catalog (план)
-
-- [ ] Deal document management (`Attachment` model уже есть, нужен UI).
-- [ ] Full-text search (PostgreSQL FTS).
-- [ ] Фасетная фильтрация по domain/category/equipment group.
-- [ ] Product image gallery.
-
-## Sprint 5 — Testing & Quality (план)
-
-- [ ] Backend coverage ≥ 60% (сейчас ≥ 50%).
-- [ ] Frontend component tests (vitest + Testing Library) для ключевых страниц.
-- [ ] E2E тесты (Playwright): login → create deal → import Excel → send quote → approve.
-
-## Sprint 6 — Production Readiness (план)
-
-- [ ] SSL через Let's Encrypt + Certbot (раскомментировать SSL в `nginx/nginx.conf`).
-- [ ] HSTS headers после SSL.
-- [ ] Prometheus metrics endpoint + Grafana dashboards.
-- [ ] Automated PostgreSQL dump + S3 upload (Celery Beat).
-- [ ] GitHub Actions deploy via SSH.
-
-## Sprint 7 — Advanced Features (план)
-
-- [ ] Deal templates (сохранение из существующих сделок).
-- [ ] Supplier performance dashboard (delivery time, price stability, quality score).
-- [ ] Multi-language: uz локаль.
+### P0 коммерческие блокеры (сознательно отложены владельцем — master-scope §2)
+- [ ] Платёжный провайдер (Click/Payme) + идемпотентность платежей (UniqueConstraint(invoice, reference))
+- [ ] E-IMZO квалифицированная э-подпись
+- [ ] Перепроверить ЗРУ-547 (локализация данных) — БД уже на собственном VPS
 
 ---
 
-## Deployment Pipeline
+## Deployment Pipeline (факт)
 
 ```text
-Local Dev (текущий этап)
-  ↓ .env + remote Neon Cloud DB
-  ↓ docker compose up -d --build
-  ↓ Тестирование user journeys
+Local Dev
+  ↓ .env + docker-compose.override.yml (локальный postgres:17)
+  ↓ make up / make migrate / make seed / init_superadmin
   ↓
-Staging VPS
-  ↓ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-  ↓ SSL (Let's Encrypt), HSTS
-  ↓ E2E Playwright + OWASP ZAP
+CI (GitHub Actions): lint, tests, migration-check, api-contract, security (HARD), docker-build
+  ↓ merge в main
   ↓
-Production
-  ↓ DNS switch
-  ↓ Monitoring (Sentry + Prometheus)
-  ↓ Backup verification
+Production (staging пока НЕТ)
+  ↓ self-hosted runner → deploy-b2b.yml (prod .env из secrets-heredoc)
+  ↓ Caddy edge (TLS, CSP, XFF) — конфиг применяется вручную
+  ↓ Sentry (backend + SPA), nightly Playwright e2e (prod-safe)
 ```
-
----
-
-## Технический долг
-
-- `ProductManagement` и `ProductDetail` — частично используют реальный `catalogApi`, остаточные ссылки на `data/products.ts` (пустой массив) — подчистить.
-- `PlatformSetting` ещё не внедрён — VAT и margin хардкодятся в `Quote`.
-- Нет HttpOnly cookie для refresh-токена (сейчас localStorage) — см. SEC-04.
 
 ---
 
 ## См. также
 
-- [master-system-document.md](master-system-document.md) — архитектура.
-- [audit-checklist.md](audit-checklist.md) — чеклист апрельского аудита.
-- [adr/0001-admin-separation.md](adr/0001-admin-separation.md) — ADR по админкам.
+- [master-system-document.md](master-system-document.md) — архитектура (частично устарел — сверяйтесь с ADR)
+- `Docs/adr/0001…0006` — действующие архитектурные решения
+- [audit-2026-07-02-security-arch-ux.md](audit-2026-07-02-security-arch-ux.md) + [audit-2026-07-03-ux-ui-eyes-on.md](audit-2026-07-03-ux-ui-eyes-on.md) — последние аудиты (статусы находок)
+- `Docs/ops/` — session handoffs, оперативные роадмапы, smoke-чеклисты
