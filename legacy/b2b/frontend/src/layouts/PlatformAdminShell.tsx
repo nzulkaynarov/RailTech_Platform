@@ -351,7 +351,7 @@ function PlatformAdminShellInner({ children, activePage, onNavigate }: PlatformA
                   <>
                     <div className="flex-1 text-left min-w-0">
                       <p className="text-sm font-medium leading-none truncate">
-                        {profile.lastName} {profile.firstName[0]}.
+                        {profile.firstName ? `${profile.lastName} ${profile.firstName[0]}.` : profile.email}
                       </p>
                       <div className="flex items-center gap-1 mt-0.5">
                         <Badge variant="outline" className="text-xs px-1 py-0 h-4">
@@ -366,7 +366,9 @@ function PlatformAdminShellInner({ children, activePage, onNavigate }: PlatformA
             </DropdownMenuTrigger>
             <DropdownMenuContent align={sidebarCollapsed ? 'end' : 'start'} className="w-64" side="top">
               <div className="px-2 py-2">
-                <p className="text-sm font-medium">{profile.lastName} {profile.firstName}</p>
+                <p className="text-sm font-medium">
+                  {profile.firstName ? `${profile.lastName} ${profile.firstName}` : profile.email}
+                </p>
                 <p className="text-xs text-muted-foreground">{profile.email}</p>
                 <Badge variant="secondary" className="text-xs mt-1.5">{t('roles.ADMIN')}</Badge>
               </div>
