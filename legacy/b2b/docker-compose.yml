@@ -57,7 +57,11 @@ services:
   # --profile with-minio up` only when you specifically need to exercise S3.
   # ===========================================================================
   minio:
-    image: minio/minio:latest
+    # INF-07: pinned release (was :latest). NOTE: this tag needs x86-64-v2; for
+    # v1-only CPUs (the prod VPS — see Docs/dev/ops/vps-cpu-constraints.md) MinIO
+    # publishes a `-cpuv1` variant of the same release. Prod never starts this
+    # profile either way.
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
     container_name: railtech_minio
     profiles: ["with-minio"]
     env_file: .env
@@ -85,7 +89,8 @@ services:
   # MinIO Bucket Initialization
   # ===========================================================================
   minio-init:
-    image: minio/mc:latest
+    # INF-07: pinned release (was :latest); `-cpuv1` variant exists for v1-only CPUs.
+    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
     container_name: railtech_minio_init
     profiles: ["with-minio"]
     depends_on:
