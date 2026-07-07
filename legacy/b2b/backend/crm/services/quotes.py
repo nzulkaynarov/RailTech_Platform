@@ -758,6 +758,11 @@ class QuoteLifecycleService:
         quote.frozen_at = timezone.now()
         quote.save(update_fields=["status", "number", "frozen_at", "public_access_token", "updated_at"])
 
+        # AI-калибровка: the sent КП is the ground truth for the draft's AI match candidates.
+        from .ai_telemetry import finalize_outcomes_on_send
+
+        finalize_outcomes_on_send(quote)
+
         # Email the КП off the request thread, after commit (F1.6 — no render inside the
         # atomic block, no orphan on rollback). The task renders the PDF if needed, then
         # emails it (with the public link) to the recipient — registered client OR offline
@@ -1133,6 +1138,10 @@ def reassign_quote_item_product(
     else:
         item.product = None
     item.save(update_fields=["product", "assigned_at", "hs_code", "lead_time_days"])
+    # AI-калибровка: an explicit re-match is the seller's verdict on the AI candidate for this line.
+    from .ai_telemetry import resolve_outcome_on_reassign
+
+    resolve_outcome_on_reassign(item, product_id)
     ActivityLog.objects.create(
         action="Переназначен продукт в позиции КП",
         detail=f"QuoteItem #{item.id} → Product #{product_id}",
