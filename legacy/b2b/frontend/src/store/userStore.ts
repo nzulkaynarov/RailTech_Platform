@@ -173,7 +173,11 @@ export const useUserStore = create<UserState>((set, get) => ({
     const authState = authStoreHook.getState();
     if (authState.user) {
       const { first_name, last_name, email, phone, position, role_code, company, avatar } = authState.user;
-      const initials = `${(first_name || '')[0] || ''}${(last_name || '')[0] || ''}`.toUpperCase();
+      // Nameless accounts (e.g. init_superadmin) fall back to the email local part
+      // so the avatar never renders the "??" placeholder.
+      const initials = (
+        `${(first_name || '')[0] || ''}${(last_name || '')[0] || ''}` || (email || '').slice(0, 2)
+      ).toUpperCase();
 
       // Map backend company_types to frontend CompanyStatus
       // MANUFACTURER/PLANT were retired as participant roles → a selling company is

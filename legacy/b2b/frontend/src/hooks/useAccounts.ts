@@ -316,13 +316,18 @@ export const useSubscriptions = (params?: { search?: string; status?: string; pl
 
 export const useMySubscription = () => {
   // Platform admins have no company → no subscription; the endpoint 403s for them.
-  // Skip the call entirely instead of firing a guaranteed-failing request.
+  // The isViewerMode gate alone is racy: right after login the store still holds
+  // the pre-auth defaults (role USER, context BUYER) for one render, AppShell
+  // mounts and the query fires before loadFromAuth flips the flags. Subscriptions
+  // are a seller concern, so idle until the store actually reads SELLER — the
+  // pre-auth default is BUYER, which also closes the race window.
   const isPlatformAdmin = useUserStore((s) => s.isViewerMode);
+  const activeStatus = useUserStore((s) => s.activeStatus);
   return useQuery({
     queryKey: ['my-subscription'],
     queryFn: () => accountsApi.getMySubscription(),
     staleTime: 60_000,
-    enabled: !isPlatformAdmin,
+    enabled: !isPlatformAdmin && activeStatus === 'SELLER',
   });
 };
 
