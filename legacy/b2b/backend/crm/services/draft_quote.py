@@ -82,21 +82,25 @@ def _resolve_exact_catalog_matches(request_items) -> dict:
     return resolved
 
 
-def _resolve_ai_catalog_matches(request_items, resolved: dict) -> int:
+def _resolve_ai_catalog_matches(request_items, resolved: dict) -> Tuple[int, list]:
     """Augment `resolved` in place with FUZZY AI matches for lines still unmatched after the exact
-    pass, and return how many were added (ADR-0006 Move 3, the AI half).
+    pass. Returns (how many were auto-bound, telemetry rows) — ADR-0006 Move 3, the AI half.
 
     Auto-binds ONLY the top candidate and ONLY when its confidence ≥ AI_DRAFT_MATCH_CONFIDENCE (a
     high bar) — and only INTO A DRAFT the seller reviews + edits before sending. That review is the
     human-in-the-loop step: unlike a buyer-submitted заявка (which is final), a mis-bound draft line
     is seen and corrected before the КП goes out, so a confident auto-bind here is safe. Lower-
     confidence lines are left unmatched for the manual Smart Match. AI disabled / no key / any API
-    error → no-op (the exact-matched draft is already useful; the accelerator must never break it)."""
+    error → no-op (the exact-matched draft is already useful; the accelerator must never break it).
+
+    Telemetry rows carry the top candidate for EVERY line the AI answered — including
+    below-threshold ones (auto_bound=False): those rows are what lets `ai_match_report` evaluate
+    lower thresholds against the seller's eventual manual matches (AI-калибровка)."""
     if not getattr(settings, "AI_IMPORT_ENABLED", False):
-        return 0
+        return 0, []
     pending = [src for src in request_items if not src.product_id and src.pk not in resolved]
     if not pending:
-        return 0
+        return 0, []
     lines = [
         {
             "name": src.imported_raw_name or "",
@@ -112,19 +116,33 @@ def _resolve_ai_catalog_matches(request_items, resolved: dict) -> int:
         matches = match_lines_to_catalog(lines)
     except Exception as exc:  # noqa: BLE001 — an AI/API failure must never break the (already useful) draft
         logger.warning("AI draft match failed; keeping exact matches only: %s", exc)
-        return 0
+        return 0, []
     threshold = float(getattr(settings, "AI_DRAFT_MATCH_CONFIDENCE", 0.9))
     added = 0
+    telemetry = []
     for match in matches:
         idx = match.get("line_index")
         candidates = match.get("candidates") or []
         if not candidates or not isinstance(idx, int) or not (0 <= idx < len(pending)):
             continue
+        src = pending[idx]
         top = candidates[0]
-        if float(top.get("confidence") or 0) >= threshold:
-            resolved[pending[idx].pk] = top["product_id"]
+        confidence = float(top.get("confidence") or 0)
+        auto_bound = confidence >= threshold
+        if auto_bound:
+            resolved[src.pk] = top["product_id"]
             added += 1
-    return added
+        telemetry.append(
+            {
+                "src_pk": src.pk,
+                "line_raw": src.imported_raw_name or src.name_canonical or "",
+                "product_id": top["product_id"],
+                "confidence": confidence,
+                "threshold": threshold,
+                "auto_bound": auto_bound,
+            }
+        )
+    return added, telemetry
 
 
 def _run_draft_quote_gates(deal_id: int, actor: CustomUser):
@@ -190,7 +208,7 @@ def generate_draft_quote(deal_id: int, actor: CustomUser) -> Tuple[Optional[Quot
     # (pre-existing rows) — nothing created below — so the LLM call is hoisted OUT of the atomic
     # block and no longer holds a DB transaction open for up to AI_REQUEST_TIMEOUT seconds.
     resolved_matches = _resolve_exact_catalog_matches(request_items)
-    ai_matched = _resolve_ai_catalog_matches(request_items, resolved_matches)
+    ai_matched, ai_telemetry = _resolve_ai_catalog_matches(request_items, resolved_matches)
 
     with transaction.atomic():
         # MONETIZATION GATE (ADR-0006 Move 4): AI draft is a paid accelerator. An operational
@@ -230,6 +248,7 @@ def generate_draft_quote(deal_id: int, actor: CustomUser) -> Tuple[Optional[Quot
         )
         prefilled = 0
         auto_matched = 0
+        item_by_src_pk = {}
         for src in request_items:
             data = {field: getattr(src, field) for field in _LINE_FIELDS}
             if not data["product_id"]:
@@ -247,7 +266,12 @@ def generate_draft_quote(deal_id: int, actor: CustomUser) -> Tuple[Optional[Quot
 
                     data["frozen_currency"] = Currency.objects.filter(code=offer["currency"]).first()
                 prefilled += 1
-            QuoteItem.objects.create(quote=quote, **data)
+            item_by_src_pk[src.pk] = QuoteItem.objects.create(quote=quote, **data)
+
+        if ai_telemetry:
+            from .ai_telemetry import record_draft_match_outcomes
+
+            record_draft_match_outcomes(quote, ai_telemetry, item_by_src_pk)
 
         if auto_matched:
             logger.info(

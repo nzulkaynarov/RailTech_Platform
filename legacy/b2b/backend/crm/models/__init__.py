@@ -3,6 +3,7 @@
 Public API re-exported so existing import paths keep working.
 """
 
+from .ai_match import AIMatchOutcome
 from .approvals import QuoteApprovalStep, StepParticipation, StepStatus, StepTrigger
 from .billing import Act, Invoice, InvoiceItem, Payment
 from .charges import ChargeTemplate, QuoteCharge
@@ -14,6 +15,7 @@ from .quotes import Quote, QuoteItem, QuoteItemHistory
 from .sequences import DocumentSequence
 
 __all__ = [
+    "AIMatchOutcome",
     "Act",
     "ActStatus",
     "ActivityLog",
