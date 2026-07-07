@@ -619,6 +619,40 @@ class QuoteLifecycleService:
     """Manages Quote state transitions: generate PDF, send, approve, reject."""
 
     @staticmethod
+    def _assert_renderable(quote: Quote):
+        """КП render guards; returns the issuing seller company.
+
+        - An unclaimed buyer-request КП (prepared_by NULL) has NO issuing seller, so
+          rendering it would brand a "коммерческое предложение" with the platform
+          identity ("RailTech B2B") — misrepresenting the supplier on a commercial
+          document (audit F1) → QUOTE_NOT_CLAIMED.
+        - HOLE 2 (loss-prevention): the render/export surface was the gate bypass — a
+          seller could generate a КП PDF on a DRAFT at the placeholder rate 1 (or below
+          cost) and hand it to the client out-of-band, never touching submit/send.
+          Refuse a client document whose numbers are wrong (no FX rate) or loss-making —
+          the same gate as send_to_client.
+        """
+        seller_company = _quote_seller_company(quote)
+        if seller_company is None:
+            raise ValueError("QUOTE_NOT_CLAIMED")
+        economics = compute_quote_economics(quote)
+        if economics["fx_missing"]:
+            raise ValueError("FX_RATE_MISSING")
+        if economics["below_cost"]:
+            raise ValueError("QUOTE_BELOW_COST")
+        return seller_company
+
+    @staticmethod
+    def assert_pdf_renderable(quote_id: int) -> None:
+        """Run the КП render guards WITHOUT rendering (ARCH-03).
+
+        Views call this to surface the 409 guard errors synchronously while the
+        WeasyPrint render itself happens off-thread in crm.tasks.render_document_pdf.
+        """
+        quote = Quote.objects.select_related("deal__company", "prepared_by").prefetch_related("items").get(pk=quote_id)
+        QuoteLifecycleService._assert_renderable(quote)
+
+    @staticmethod
     @transaction.atomic
     def generate_pdf(quote_id: int) -> Quote:
         """Generate PDF for a quote using WeasyPrint."""
@@ -636,23 +670,7 @@ class QuoteLifecycleService:
             .get(pk=quote_id)
         )
 
-        # Issuer (seller) block for a branded offer header — the company that owns the КП
-        # (the preparer's seller company). An unclaimed buyer-request КП (prepared_by NULL)
-        # has NO issuing seller, so rendering it would brand a "коммерческое предложение"
-        # with the platform identity ("RailTech B2B") — misrepresenting the supplier on a
-        # commercial document. Refuse to render until a seller has claimed it (audit F1).
-        seller_company = _quote_seller_company(quote)
-        if seller_company is None:
-            raise ValueError("QUOTE_NOT_CLAIMED")
-        # HOLE 2 (loss-prevention): the render/export surface was the gate bypass — a seller could
-        # generate a КП PDF on a DRAFT at the placeholder rate 1 (or below cost) and hand it to the
-        # client out-of-band, never touching submit/send. Refuse to render a client КП document
-        # whose numbers are wrong (no FX rate) or loss-making — the same gate as send_to_client.
-        _econ = compute_quote_economics(quote)
-        if _econ["fx_missing"]:
-            raise ValueError("FX_RATE_MISSING")
-        if _econ["below_cost"]:
-            raise ValueError("QUOTE_BELOW_COST")
+        seller_company = QuoteLifecycleService._assert_renderable(quote)
         # The seller's filled-in document profile (legal name, requisites, logo, footer).
         # When present, the «Поставщик» block + header logo + footer render from it; when
         # absent the template falls back to the seller Company fields → platform name.

@@ -2,9 +2,11 @@
 
 Document PDFs are no longer rendered synchronously inside the create transaction
 (which orphaned a file on rollback and blocked the request). Creation schedules
-`render_document_pdf` via transaction.on_commit; downloads render lazily as a
-fallback. These tests cover the new wiring (task dispatch + lazy fallback) without
-a DB or WeasyPrint — the full create chain is exercised by the golden-path test.
+`render_document_pdf` via transaction.on_commit; a download that races ahead of the
+task re-enqueues it and answers 202 + Retry-After (ARCH-03 — WeasyPrint never runs
+inline in the request thread). These tests cover the wiring (task dispatch + 202
+fallback) without a DB or WeasyPrint — the full create chain is exercised by the
+golden-path test.
 """
 
 from unittest import mock
@@ -30,28 +32,26 @@ class RenderDispatchTest(SimpleTestCase):
 
 
 class LazyStreamFallbackTest(SimpleTestCase):
-    def test_renders_on_demand_when_pdf_missing(self):
-        # Unsaved instance → pdf_file is empty (falsy). The fallback must render it.
+    def test_202_and_enqueue_when_pdf_missing(self):
+        # Unsaved instance → pdf_file is empty (falsy). ARCH-03: the fallback enqueues
+        # the off-thread render and answers 202 — it never renders inline.
         obj = Contract(id=1)
-        with (
-            mock.patch("crm.tasks._render_pdf_for") as render,
-            mock.patch.object(Contract, "refresh_from_db"),
-            mock.patch("crm.views.billing.stream_file_field", return_value="STREAM") as stream,
-        ):
+        with mock.patch("crm.tasks.render_document_pdf.delay") as delay:
             result = billing._stream_or_render_pdf(obj)
-        render.assert_called_once_with("contract", 1)  # doc_type derived from model class
-        stream.assert_called_once()
-        self.assertEqual(result, "STREAM")
+        delay.assert_called_once_with("contract", 1)  # doc_type derived from model class
+        self.assertEqual(result.status_code, 202)
+        self.assertEqual(result["Retry-After"], "2")
+        self.assertEqual(result.data["detail"], "GENERATING")
 
     def test_streams_directly_when_pdf_present(self):
         obj = Invoice(id=2)
         obj.pdf_file = "invoices/already.pdf"  # truthy
         with (
-            mock.patch("crm.tasks._render_pdf_for") as render,
+            mock.patch("crm.tasks.render_document_pdf.delay") as delay,
             mock.patch("crm.views.billing.stream_file_field", return_value="STREAM"),
         ):
             billing._stream_or_render_pdf(obj)
-        render.assert_not_called()  # no re-render when the file is ready
+        delay.assert_not_called()  # no re-render when the file is ready
 
     def test_doc_type_map_covers_all_billing_docs(self):
         self.assertEqual(billing._PDF_DOC_TYPE[Contract.__name__], "contract")

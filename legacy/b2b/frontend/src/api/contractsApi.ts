@@ -52,17 +52,10 @@ export const contractsApi = {
     return response.data;
   },
   // Stream the PDF through the authenticated endpoint — the raw pdf_url (/media/…)
-  // 404s on prod (local storage, no MinIO). Mirrors crmApi.downloadQuotePDF.
+  // 404s on prod (local storage, no MinIO). Polls through 202 GENERATING (ARCH-03).
   downloadPdf: async (id: number) => {
-    const response = await apiClient.get(`crm/contracts/${id}/download-pdf/`, { responseType: 'blob' });
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `RailTech_Contract_${id}.pdf`);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
+    const { downloadFile } = await import('@/lib/download');
+    await downloadFile(`crm/contracts/${id}/download-pdf/`, `RailTech_Contract_${id}.pdf`);
   },
   generateFromQuote: async (quoteId: number, notes?: string) => {
     const response = await apiClient.post<Contract>('crm/contracts/generate-from-quote/', {
