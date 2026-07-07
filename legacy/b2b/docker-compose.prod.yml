@@ -138,6 +138,13 @@ services:
       DJANGO_DEBUG: "False"
     # Concurrency capped so Excel imports don't exhaust the shared box.
     command: celery -A core worker -l info -Q default,pdf,imports --concurrency=2
+    # Must share the backend's PROD media volume (overrides the base backend_media
+    # mount): the pdf-queue tasks (render_document_pdf, send_quote_email) SAVE the
+    # rendered КП/contract/invoice/act files that backend then streams from ITS
+    # /app/media — without this the worker wrote into the dev volume and every
+    # async-rendered document 404'd (download-pdf kept answering 202 forever).
+    volumes:
+      - backend_media_prod:/app/media
     # Liveness: a worker that stops consuming (deadlock, broker drop) fails the
     # ping and Docker restarts it instead of leaving tasks silently unprocessed.
     healthcheck:
