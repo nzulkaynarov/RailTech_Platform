@@ -95,7 +95,10 @@ services:
       --access-logfile=-
       --error-logfile=-
       core.asgi:application
-    volumes:
+    # INF-08: `!override` REPLACES the base volume list instead of merging with it —
+    # prod must run the immutable image, not the host source tree the base compose
+    # bind-mounts for dev hot-reload (`./backend:/app` shadowed the built /app).
+    volumes: !override
       - backend_static_prod:/app/staticfiles
       - backend_media_prod:/app/media
     # `!reset` drops the inherited `minio: service_healthy` from the base file
@@ -138,12 +141,13 @@ services:
       DJANGO_DEBUG: "False"
     # Concurrency capped so Excel imports don't exhaust the shared box.
     command: celery -A core worker -l info -Q default,pdf,imports --concurrency=2
-    # Must share the backend's PROD media volume (overrides the base backend_media
-    # mount): the pdf-queue tasks (render_document_pdf, send_quote_email) SAVE the
-    # rendered КП/contract/invoice/act files that backend then streams from ITS
-    # /app/media — without this the worker wrote into the dev volume and every
-    # async-rendered document 404'd (download-pdf kept answering 202 forever).
-    volumes:
+    # Must share the backend's PROD media volume: the pdf-queue tasks
+    # (render_document_pdf, send_quote_email) SAVE the rendered КП/contract/
+    # invoice/act files that backend then streams from ITS /app/media — without
+    # this the worker wrote into the dev volume and every async-rendered document
+    # 404'd (download-pdf kept answering 202 forever). INF-08: `!override` also
+    # drops the inherited dev `./backend:/app` bind mount (immutable image).
+    volumes: !override
       - backend_media_prod:/app/media
     # Liveness: a worker that stops consuming (deadlock, broker drop) fails the
     # ping and Docker restarts it instead of leaving tasks silently unprocessed.
@@ -180,10 +184,10 @@ services:
       DJANGO_SETTINGS_MODULE: core.settings
       DJANGO_DEBUG: "False"
     command: celery -A core worker -l info -Q ai --concurrency=2
-    # Must share the backend's PROD media volume (overrides the base backend_media
-    # mount): extract-document stages the uploaded file in default_storage
-    # (ai_extract_tmp/) for this worker to read + delete.
-    volumes:
+    # Must share the backend's PROD media volume: extract-document stages the
+    # uploaded file in default_storage (ai_extract_tmp/) for this worker to read
+    # + delete. INF-08: `!override` also drops the dev `./backend:/app` bind mount.
+    volumes: !override
       - backend_media_prod:/app/media
     healthcheck:
       test: ["CMD", "celery", "-A", "core", "inspect", "ping", "-t", "10"]
@@ -215,6 +219,8 @@ services:
       PYTHONUNBUFFERED: 1
       DJANGO_SETTINGS_MODULE: core.settings
       DJANGO_DEBUG: "False"
+    # INF-08: beat needs no volumes at all — drop the inherited dev bind mount.
+    volumes: !reset []
     # No healthcheck: beat is PID 1 here, so a crash exits the container and
     # `restart: always` brings it back. A *hung* (alive but not scheduling) beat
     # would need a heartbeat probe against last_run_at — deferred (roadmap F1.4).

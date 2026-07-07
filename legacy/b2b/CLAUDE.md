@@ -143,8 +143,10 @@ cp .env.example .env        # заполнить DJANGO_SECRET_KEY, SUPERADMIN_P
 # docker-compose.override.yml в .gitignore — на свежем клоне его НЕТ. Создать из шаблона:
 cp docker-compose.override.yml.example docker-compose.override.yml   # локальный postgres:17 `db`
 make up                      # собрать и поднять все контейнеры (~1-3 мин; первый билд дольше).
-                             # ВНИМАНИЕ: entrypoint.sh бэкенда сам выполняет migrate --noinput
-                             # при каждом старте (INF-04) — make migrate по факту идемпотентен
+                             # Локально entrypoint.sh сам выполняет migrate --noinput при старте
+                             # (AUTO_MIGRATE=true по умолчанию) — make migrate идемпотентен.
+                             # На проде AUTO_MIGRATE=false: миграции применяет deploy-workflow
+                             # явным шагом ПОСЛЕ pg_dump backup-gate (INF-04)
 make migrate                 # применить миграции (создают и business-коды — Rule 1)
 make seed                    # core_seed: справочники (валюты, страны) + демо-пользователи
 docker compose exec backend python manage.py init_superadmin   # создать суперадмина из .env

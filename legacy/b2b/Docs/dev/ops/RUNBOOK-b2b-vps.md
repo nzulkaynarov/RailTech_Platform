@@ -164,12 +164,24 @@ ls /var/www/railtech-b2b   # expect index.html, assets/
 ```
 > VITE_API_URL=/api and VITE_WS_URL=/ws are baked in (same-origin via Caddy).
 
-## 6. Start the backend stack (migrations run automatically)
+## 6. Start the backend stack
+
+> INF-04: prod `.env` sets `AUTO_MIGRATE=false` — a container (re)start never
+> mutates the schema. The deploy workflow applies migrations EXPLICITLY after
+> the pg_dump backup gate (see § "Pre-deploy backups & restore"). For a manual
+> first-time bootstrap run the same two steps by hand:
+
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
-# entrypoint runs `migrate` + `collectstatic` for the web (gunicorn) container only.
-docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
-docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f backend   # watch boot, Ctrl-C when healthy
+DC="docker compose -f docker-compose.yml -f docker-compose.prod.yml"
+$DC build backend
+# backup gate (skip only on a first-ever empty DB):
+mkdir -p backups && DB_URL=$(grep -m1 '^DATABASE_URL=' .env | cut -d= -f2-) && \
+  docker run --rm -e PGURL="$DB_URL" postgres:17-alpine sh -c 'exec pg_dump "$PGURL" -Fc' \
+  > "backups/predeploy-$(date -u +%Y%m%dT%H%M%SZ).dump"
+$DC run --rm --no-deps -T backend python manage.py migrate --noinput
+$DC up -d --build
+$DC ps
+$DC logs -f backend   # watch boot, Ctrl-C when healthy
 curl -s http://127.0.0.1:8000/health/   # backend health
 ```
 Seed business lookups + create the superadmin:
@@ -240,12 +252,36 @@ Hard limits (per docker-compose.prod.yml): backend ≤1.2 G, celery-worker ≤76
 beat ≤192 M, redis×2 ≤160 M each, minio ≤320 M. Total ceiling ~2.6 G — fits the
 ~2.7 G free alongside GradeSentinel, but watch during Excel-import bursts.
 
+## Pre-deploy backups & restore (INF-04)
+
+Every deploy takes a `pg_dump -Fc` of the prod DB **before** applying migrations
+(workflow step "Pre-deploy DB backup (gate)"). Dumps land in
+`/opt/railtech-b2b/backups/predeploy-<UTC-ts>.dump` (rsync-excluded, 14 kept).
+A failed/empty/unlistable dump **aborts the deploy** — migrations never run
+against a database we can't restore. Independently, the DB-VPS keeps a daily
+`pg_dump` cron (`/var/backups/railtech-db/`, 14-day retention).
+
+**Restore a pre-deploy dump** (after a bad migration):
+```bash
+cd /opt/railtech-b2b
+DC="docker compose -f docker-compose.yml -f docker-compose.prod.yml"
+$DC stop backend celery-worker celery-worker-ai celery-beat   # stop writers
+DB_URL=$(grep -m1 '^DATABASE_URL=' .env | cut -d= -f2-)
+LATEST=$(ls -t backups/predeploy-*.dump | head -1)
+# --clean --if-exists: drop and recreate objects from the dump (full rollback)
+docker run --rm -i -e PGURL="$DB_URL" postgres:17-alpine \
+  sh -c 'exec pg_restore -d "$PGURL" --clean --if-exists --no-owner' < "$LATEST"
+# roll the CODE back too (redeploy the pre-migration commit), then:
+$DC up -d
+curl -s http://127.0.0.1:8000/health/
+```
+> Restore drops data written AFTER the dump — it is a disaster rollback, not an
+> undo button. For surgical fixes prefer a reverse migration.
+
 ## Post-deploy TODO (not blocking, schedule soon)
 - **Public file URLs:** MinIO is internal-only. Public assets (logos/images) currently
   flow through the backend `/media` route. If volume grows, expose a `files.b2b.railtech.uz`
   Caddy block → MinIO, or switch the public bucket to local storage served by Caddy.
-- **Neon backups:** enable Neon's PITR/branching; document RTO/RPO. The app keeps no
-  local DB, so Neon is the single source of truth.
 - **Error tracking:** add Sentry (sentry-sdk) — currently no error aggregation.
 - **CI/CD:** a self-hosted GitHub Actions runner already exists on this box (for
   GradeSentinel). A separate runner/workflow could automate steps 5–6 on tag push.

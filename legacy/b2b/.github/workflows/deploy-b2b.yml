@@ -80,6 +80,9 @@ jobs:
           DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
           DJANGO_DEBUG=False
           PRODUCTION=true
+          # INF-04: container (re)starts must never mutate the schema — the deploy
+          # applies migrations EXPLICITLY below, after the pg_dump backup gate.
+          AUTO_MIGRATE=false
           ALLOWED_HOSTS=b2b.railtech.uz,localhost,127.0.0.1
           # SEC-04: exactly one trusted proxy (host Caddy overwrites X-Forwarded-For
           # with the client IP). Without this the DRF default (0) keys throttles on
@@ -138,7 +141,40 @@ jobs:
           docker cp "$CID":/usr/share/nginx/html/. "$WEB_ROOT"/
           docker rm "$CID"
 
-      - name: Deploy backend stack (migrations auto-apply on the web container)
+      - name: Build backend image
+        working-directory: /opt/railtech-b2b
+        run: $COMPOSE build backend
+
+      # INF-04: the backup GATE. A failed/empty/corrupt dump aborts the deploy —
+      # migrations below never run against a database we can't restore.
+      - name: Pre-deploy DB backup (gate)
+        working-directory: /opt/railtech-b2b
+        run: |
+          set -euo pipefail
+          mkdir -p backups
+          TS=$(date -u +%Y%m%dT%H%M%SZ)
+          DB_URL=$(grep -m1 '^DATABASE_URL=' .env | cut -d= -f2-)
+          test -n "$DB_URL" || { echo "::error::DATABASE_URL missing from .env"; exit 1; }
+          # Version-matched client (DB-VPS runs PG 17; Debian's postgresql-client
+          # in the backend image is older and cannot dump a newer server). The
+          # container reaches 10.0.0.2 the same way the app does — routed through
+          # the host's WireGuard.
+          docker run --rm -e PGURL="$DB_URL" postgres:17-alpine \
+            sh -c 'exec pg_dump "$PGURL" -Fc' > "backups/predeploy-$TS.dump"
+          test -s "backups/predeploy-$TS.dump" || { echo "::error::backup is empty — refusing to deploy"; exit 1; }
+          # Integrity probe: a dump pg_restore can't even list is not a backup.
+          docker run --rm -i postgres:17-alpine pg_restore --list >/dev/null \
+            < "backups/predeploy-$TS.dump"
+          # Retention: keep the 14 most recent pre-deploy dumps.
+          ls -t backups/predeploy-*.dump | tail -n +15 | xargs -r rm --
+          echo "backup OK: backups/predeploy-$TS.dump ($(du -h "backups/predeploy-$TS.dump" | cut -f1))"
+
+      # Restore procedure: Docs/dev/ops/RUNBOOK-b2b-vps.md § "Pre-deploy backups & restore".
+      - name: Apply migrations (after the backup gate)
+        working-directory: /opt/railtech-b2b
+        run: $COMPOSE run --rm --no-deps -T backend python manage.py migrate --noinput
+
+      - name: Deploy backend stack
         working-directory: /opt/railtech-b2b
         run: |
           $COMPOSE up -d --build
