@@ -82,7 +82,7 @@ ADR index (`Docs/adr/`): **0001** admin separation · **0002** role responsibili
 - **Deal FSM** — DRAFT → KYC_PENDING → RFQ_OPEN → SOURCING → CALCULATING → QUOTE_SENT → CONTRACT_SIGNED → CLOSED_WON/CLOSED_LOST (`ALLOWED_STAGE_TRANSITIONS` in `crm/services/deals.py`; terminal states manager-reopenable). Move 0 auto-transitions: send КП → QUOTE_SENT; client approves КП → CONTRACT_SIGNED (+ Contract materialized); dual contract sign → CLOSED_WON (dispatches `auto_invoice_on_closed_won`)
 - **Entitlement layer (ADR-0006 Move 4)** — `FeatureKey` codes in `accounts/constants.py`: `quote.send`, `quote.export`, `ai.match`, `ai.draft`, `ai.preflight`, `roles.custom`. `FREE_FLOOR_FEATURES={ai.match, ai.preflight}`; `SUBSCRIPTION_BASELINE_FEATURES={quote.send, quote.export, ai.draft, roles.custom}` (granted by operational `SupplierSubscription`; explicit `CompanyEntitlement` rows OVERRIDE — promo grant or DEMO downgrade → watermarked PDF). Service: `accounts/services/entitlements.py` (`has_entitlement`, `quote_send_entitled`, `consume_credit`, `is_demo`)
 - **KYC floor (ADR-0006 Phase E)** — below L2: register + browse + DRAFT заявка only. Buyer submit raises `KYC_REQUIRED_TO_SUBMIT`; seller send/export requires KYC L2+ (`SELLER_KYC_REQUIRED`, checked before `SUBSCRIPTION_REQUIRED`). KYC-verified codes = `{L2_VERIFIED, L3_CONTRACTED}` (`accounts/services/kyc.py`)
-- **AI layer** — ONE client factory `_client()` in `sourcing/services_ai.py` (anthropic.Anthropic, `AI_REQUEST_TIMEOUT`=60s). **Request-path convention: `max_retries=0`** — only the Celery bulk import (`extract_request_items`) uses `AI_MAX_RETRIES`. Features: заявка file-parse/preflight/conversational builder (sourcing), deal-chat reply assist + КП-vs-заявка diff + AI draft КП (crm), PIM enrichment (catalog). Draft-КП auto-match: deterministic exact GOST/MPN (only if exactly 1 PUBLISHED product) then fuzzy AI auto-bind at confidence ≥ `AI_DRAFT_MATCH_CONFIDENCE` (0.9); AI failures are logged no-ops
+- **AI layer (ARCH-01, 2026-07-07)** — **no LLM call ever runs in the request path.** The 8 interactive AI endpoints validate synchronously (clamps, visibility, 503 AI_DISABLED) then enqueue `sourcing.run_ai_job(feature, payload)` on the dedicated Celery queue `ai` (own `celery-worker-ai` service; the main worker does NOT consume `ai`) and answer **202 {task_id}**; the SPA polls `GET /api/v1/sourcing/ai-status/<task_id>/` (ownership = `AIJob` row, IDOR guard like ImportTask) via `frontend/src/lib/aiJob.ts`. `run_ai_job` is SINGLE-ATTEMPT (max_retries=0, no autoretry — handlers are paid-per-call and draft_quote writes + consumes a credit; documented deviation from the Celery convention). extract-document stages uploads in `default_storage` `ai_extract_tmp/` — file bytes never go through the Redis broker. ONE client factory `_client()` in `sourcing/services_ai.py` (anthropic.Anthropic, `AI_REQUEST_TIMEOUT`=60s); only the Celery bulk import (`extract_request_items`) uses `AI_MAX_RETRIES`. Features: match/preflight/extract/compose (sourcing), chat_reply/quote_diff/draft_quote (crm), enrich (catalog). Draft-КП auto-match: deterministic exact GOST/MPN (only if exactly 1 PUBLISHED product) then fuzzy AI auto-bind at confidence ≥ `AI_DRAFT_MATCH_CONFIDENCE` (0.9); AI failures are logged no-ops; the AI match runs OUTSIDE the write transaction and the worker re-checks the entitlement before the paid call
 - **Public КП sharing** — unauthenticated `GET /api/v1/public/quotes/<token>/` (throttle `public_quote` 30/min; only frozen SENT quotes). PDF cache miss → enqueue `crm.tasks.render_document_pdf` + **202 + Retry-After**; browsers get a self-refreshing interstitial (`templates/public/quote_generating.html`). No SPA page in front of it by design
 - **Currency: UZS-canonical** — `currencyStore` formats UZS, `Quote.quote_currency` defaults to UZS, КП presentation currency is locked to UZS (cost engine outputs UZS). Do NOT revert to USD
 - **Financial precision** — `decimal.js` on frontend, `DecimalField` on backend, `QuoteItemHistory` audit trail; SAP-style cascading charges (`crm/services/charges.py`); optimistic locking on QuoteViewSet (`core/optimistic_locking.py`)
@@ -106,7 +106,7 @@ ADR index (`Docs/adr/`): **0001** admin separation · **0002** role responsibili
 - `crm/` — deals (change-stage, claim, export-pdf, AI draft КП), quotes (generate-pdf, send-to-client, approve, internal review chain), quote-items, messages, activity-logs, analytics (incl. time-to-first-quote), leads, exports, AI chat-assist + КП-diff, billing (invoices/acts/payments)
 - `admin/` — entitlements, operator-roles, operator-permissions, break-glass (audited), platform admin CRUD
 - `public/` — quotes/<token>/ (unauthenticated КП, 202-pattern), public media whitelist
-- `sourcing/` — requests, import-deal/{id}, import-catalog, import-status/{task_id}, conversational заявка builder
+- `sourcing/` — requests, import-deal/{id}, import-catalog, import-status/{task_id}, ai-status/{task_id} (poll for ALL interactive AI jobs), match-catalog, preflight-check, extract-document, compose-request — AI endpoints answer 202 {task_id} (ARCH-01)
 - `master-data/` — countries, currencies, units, delivery-basis
 - `notifications/` — CRUD + mark as read (structured FKs for deep-links)
 - `health/` — health check (also at root `/health/`)
@@ -116,8 +116,9 @@ Full schema: `Docs/schema.json` + generated `frontend/src/api/schema.d.ts`. **An
 ## Celery Tasks
 
 - `sourcing.tasks.process_excel_import` / `process_catalog_import` — bulk imports, routed to queue `imports` via `CELERY_TASK_ROUTES`
-- `crm.tasks`: `render_document_pdf` (КП/contract PDF off-thread), `send_quote_email`, `archive_old_messages`, `check_overdue_deliveries`, `auto_invoice_on_closed_won`, `expire_stale_quotes`
-- Worker consumes queues `default,pdf,imports`; Celery Beat — `django_celery_beat.schedulers:DatabaseScheduler`
+- `sourcing.run_ai_job` (`sourcing/tasks_ai.py`) — ALL interactive AI work (ARCH-01), queue `ai`, single-attempt; registered via `autodiscover_tasks(related_name="tasks_ai")` in `core/celery.py`
+- `crm.tasks`: `render_document_pdf` (ALL document PDFs render off-thread — request paths answer 202, ARCH-03), `send_quote_email`, `archive_old_messages`, `check_overdue_deliveries`, `auto_invoice_on_closed_won`, `expire_stale_quotes`
+- Two workers: `celery-worker` (`default,pdf,imports`) + `celery-worker-ai` (`ai` only — real isolation from long imports). Both must mount the SAME media volume as backend (prod: `backend_media_prod`) — pdf tasks save files backend streams. Celery Beat — `django_celery_beat.schedulers:DatabaseScheduler`
 
 ## Environment
 
@@ -156,7 +157,8 @@ Command `init_superadmin` reads these env vars, creates user with `is_active=Tru
 | db (override) | railtech_db | 5432 | PostgreSQL 17 (local dev only, gitignored override) | `pg_isready` |
 | redis | railtech_redis_channels | 6379 | Django Channels (WebSocket) | `redis-cli ping` |
 | redis-celery | railtech_redis_celery | 6380 | Celery broker + result backend | `redis-cli ping` |
-| celery-worker | railtech_celery_worker | — | Async tasks: Excel import, PDF gen | `celery inspect ping` |
+| celery-worker | railtech_celery_worker | — | Queues default,pdf,imports: Excel import, PDF gen | `celery inspect ping` |
+| celery-worker-ai | railtech_celery_worker_ai | — | Queue `ai` only: interactive AI jobs (ARCH-01) | `celery inspect ping` |
 | celery-beat | railtech_celery_beat | — | Scheduled tasks (DatabaseScheduler) | — |
 | minio / minio-init | railtech_minio | 9000, 9001 | **Opt-in only**: `docker compose --profile with-minio up` | `curl /minio/health/live` |
 
@@ -232,7 +234,7 @@ make clean               # remove all containers, volumes, cache (DESTRUCTIVE)
 - **Zod validation messages:** For i18n, use factory pattern: `const createSchema = (t: TFn) => z.object(...)` — call inside component where `t()` is available
 - **Query optimization:** Use `aggregate(total=Count('id'), active=Count('id', filter=Q(...)))` for dashboard stats — NEVER fire individual `.count()` queries in loops
 - **Celery tasks:** ALL tasks must have `time_limit=600, soft_time_limit=540, max_retries=3, autoretry_for=(Exception,), retry_backoff=True`. Exception: bulk-import tasks in `sourcing/tasks.py` use `time_limit=1800, soft_time_limit=1700` (50k-row catalogs) — retry/backoff still apply
-- **AI calls:** request-path (HTTP handler) AI clients MUST use `max_retries=0` — one attempt bounded by `AI_REQUEST_TIMEOUT`; retries belong to Celery tasks only. AI match/enrich failures are logged no-ops, never user-facing 500s
+- **AI calls:** NEVER call the Anthropic client from an HTTP handler — new interactive AI features go through `enqueue_ai_job(feature, payload, user)` (202 + `ai-status` polling; add the handler to `sourcing/tasks_ai.py` FEATURE_HANDLERS). The job task is single-attempt; AI match/enrich failures inside services are logged no-ops, never user-facing 500s
 - **Uploads:** every new upload path must call the `core/validators.py` helpers incl. magic-byte content check (`assert_content_matches_extension`)
 - **Exception handling:** Use specific exceptions (`ValidationError`, `OSError`, `ValueError`) — NEVER bare `except Exception`
 - **Variable naming:** Descriptive names always — NEVER single-letter variables in business logic
@@ -250,10 +252,10 @@ make clean               # remove all containers, volumes, cache (DESTRUCTIVE)
 
 ## Testing
 
-- **Backend:** pytest + pytest-django, markers: slow, integration, unit; coverage threshold: 30% enforced on CI (`--cov-fail-under=30`). Current state (2026-07-06): **~640 test functions across ~91 files, ~78% coverage**. CI runs `pytest --create-db --nomigrations` on an ephemeral Postgres — a `conftest.py django_db_setup` fixture installs `pg_trgm` + the pghistory/pgtrigger stubs since `--nomigrations` skips them. Local tests run against the local Docker Postgres (`db` from `docker-compose.override.yml`, `sslmode=disable`); `--reuse-db` masks pg_trgm/seed gaps — reproduce CI failures with `--create-db`.
-- **Frontend:** vitest 4 + @testing-library/react + jsdom — 9 test files (stores/hooks/utils only). Runs on the developer machine and in the CI `frontend-test` job — NOT in Compose (the frontend container is a prod nginx build).
+- **Backend:** pytest + pytest-django, markers: slow, integration, unit; coverage threshold: 30% enforced on CI (`--cov-fail-under=30`). Current state (2026-07-07): **~672 tests, ~78% coverage**. CI runs `pytest --create-db --nomigrations` on an ephemeral Postgres — a `conftest.py django_db_setup` fixture installs `pg_trgm` + the pghistory/pgtrigger stubs since `--nomigrations` skips them. Local tests run against the local Docker Postgres (`db` from `docker-compose.override.yml`, `sslmode=disable`); `--reuse-db` masks pg_trgm/seed gaps — reproduce CI failures with `--create-db`.
+- **Frontend:** vitest 4 + @testing-library/react + jsdom — 13 test files, 93 tests (stores/hooks/utils + component tests for AdminDataTable/DealsKanban/GenerateQuoteDialog/DashboardWidgets; shared `src/test/renderWithProviders.tsx` with a real ru.json i18n instance). Runs on the developer machine and in the CI `frontend-test` job — NOT in Compose (the frontend container is a prod nginx build).
 - **CI:** GitHub Actions — jobs: i18n-symmetry, backend-lint, backend-test, migration-check, api-contract (spectacular + openapi-typescript drift), frontend-lint, frontend-test (vitest), frontend-build, security (pip-audit + npm audit, HARD gates), docker-build. Nightly Playwright e2e is a separate workflow (targets prod, prod-safe specs).
-- **Known test debt:** frontend component tests only (AdminDataTable / DealsKanban / GenerateQuoteDialog / Dashboard Operations Inbox — only stores/hooks covered). Backend service-test debt is paid (incl. fulfillment + messaging, PR #228).
+- **Known test debt:** none named — the last items (frontend component tests, PR #234; backend fulfillment/messaging services, PR #228) are paid. Playwright e2e specs remain thin (nightly, prod-safe subset only).
 
 ## Auth Flow (production)
 
