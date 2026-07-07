@@ -95,7 +95,7 @@ make seed
 docker compose exec backend python manage.py init_superadmin
 ```
 
-Команда создаст (или обновит) суперпользователя с email/паролем из `.env` (`SUPERADMIN_EMAIL` / `SUPERADMIN_PASSWORD`). Аккаунт будет `is_active=True`, `is_staff=True`, `is_superuser=True`.
+Команда создаст суперпользователя с email/паролем из `.env` (`SUPERADMIN_EMAIL` / `SUPERADMIN_PASSWORD`); аккаунт будет `is_active=True`, `is_staff=True`, `is_superuser=True`. Существующий аккаунт команда **не трогает** (SEC-10) — для ротации пароля/флагов добавь `--reset-password`.
 
 ### 8. Проверить, что всё работает
 
@@ -275,7 +275,7 @@ from accounts.models import CustomUser
 u = CustomUser.objects.filter(email='admin@railtech.uz').first()
 print(f'Found: {u}, active: {u.is_active}, staff: {u.is_staff}' if u else 'NOT FOUND')
 "
-docker compose exec backend python manage.py init_superadmin   # пересоздать
+docker compose exec backend python manage.py init_superadmin --reset-password   # сбросить пароль/флаги (SEC-10: без флага существующий аккаунт не трогается)
 ```
 
 Учти: после ≥10 неудачных попыток с разных IP аккаунт блокируется на 15 минут (login lockout, SEC-06).

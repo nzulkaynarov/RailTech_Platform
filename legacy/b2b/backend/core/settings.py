@@ -342,14 +342,28 @@ if not DEBUG:
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = "DENY"
     SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+    # SEC-09: safe on any origin (no domain/HTTPS coupling) — not prod-gated.
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = "Lax"
+
+# SEC-09: the PRODUCTION gate stays (DEBUG=False over plain http is a legit local
+# prod-like flow — Secure cookies + .railtech.uz domain would break it), but a box
+# that FORGOT the flag must not run silently without secure cookies/HSTS.
+if not DEBUG and not _is_real_production:
+    import warnings
+
+    warnings.warn(
+        "DJANGO_DEBUG=False but PRODUCTION!=true: secure-cookie/HSTS settings are OFF. "
+        "Set PRODUCTION=true on any internet-facing deployment.",
+        RuntimeWarning,
+        stacklevel=1,
+    )
 
 if _is_real_production:
     SESSION_COOKIE_DOMAIN = ".railtech.uz"
     CSRF_COOKIE_DOMAIN = ".railtech.uz"
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-    SESSION_COOKIE_HTTPONLY = True
-    SESSION_COOKIE_SAMESITE = "Lax"
 
     # HTTPS enforcement — opt-in via env so DEBUG=False can still be used for local testing
     # with remote DB. Enable these in real production deployment (behind HTTPS nginx).

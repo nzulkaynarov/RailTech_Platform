@@ -108,9 +108,12 @@ class ActivityLogViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated, IsPlatformAdmin]
 
     def get_queryset(self):
-        """Staff see all logs. Non-admin managers see only their own."""
+        """The audit trail is a platform-moderation surface (IsPlatformAdmin gates the
+        viewset): every platform admin sees all logs. ARCH-09: the old is_superuser
+        branch left non-superuser platform operators seeing only their own actions —
+        the wrong privilege model for an audit endpoint."""
         user = self.request.user
         queryset = ActivityLog.objects.all().select_related("user")
-        if user.is_superuser:
+        if getattr(user, "is_platform_admin", False):
             return queryset
         return queryset.filter(user=user)

@@ -174,7 +174,7 @@ def send_templated_email(
     error_text = ""
     try:
         message.send(fail_silently=False)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 — transport fault barrier: ANY backend failure → EmailLog(FAILED)
         status = EmailLog.STATUS_FAILED
         error_text = f"{exc.__class__.__name__}: {exc}"
         logger.exception(
@@ -242,7 +242,7 @@ def _record_log(
             status=status,
             error=error_text,
         )
-    except Exception:
+    except DatabaseError:
         # Log-write failure must never break the caller. Transport succeeded,
         # audit trail didn't — record to app log and move on.
         logger.exception("EmailLog write failed (template=%s)", template)

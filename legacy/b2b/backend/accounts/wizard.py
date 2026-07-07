@@ -256,7 +256,7 @@ class CompanyWizardView(SessionWizardView):
                     user=user,
                     fail_silently=True,
                 )
-            except Exception:
+            except Exception:  # noqa: BLE001 — fault barrier: best-effort email must not break company creation
                 logger.exception(f"Failed to send setup email to {owner_email}")
 
         # Create membership

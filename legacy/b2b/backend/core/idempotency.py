@@ -63,7 +63,7 @@ class IdempotencyMiddleware:
 
         try:
             response = self.get_response(request)
-        except Exception:
+        except Exception:  # noqa: BLE001 — fault barrier: any view crash must release the lock, then re-raise
             # View blew up — release the slot so the client can retry, then re-raise.
             cache.delete(lock_key)
             raise
