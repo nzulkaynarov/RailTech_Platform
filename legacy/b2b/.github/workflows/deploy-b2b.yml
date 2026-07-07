@@ -3,7 +3,7 @@ name: Deploy b2b.railtech.uz
 # Push-to-deploy onto the VPS via a self-hosted runner registered to THIS repo
 # (label: railtech-b2b). The runner executes on 176.101.56.141 alongside Caddy.
 # One-time bootstrap (Docker, runner registration, Caddy block) is in
-# deploy/RUNBOOK-b2b-vps.md.
+# Docs/dev/ops/RUNBOOK-b2b-vps.md.
 #
 # Secrets come from GitHub (Environment: production) and are rendered into
 # /opt/railtech-b2b/.env on the runner at deploy time. Required secrets:

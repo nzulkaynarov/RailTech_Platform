@@ -2,9 +2,9 @@
 
 **Last Updated:** 2026-04-17
 
-Mermaid-диаграммы ключевых потоков и архитектуры RailTech. Источник правды по моделям — [technical-specification.md](technical-specification.md); по стадиям сделки — [business-logic.md](business-logic.md).
+Mermaid-диаграммы ключевых потоков и архитектуры RailTech. Источник правды по моделям — [technical-specification.md](technical-specification.md); по стадиям сделки — [business-logic.md](../../business/business-logic.md).
 
-> **Примечание:** На схеме мульти-тенантности блок `RFQRequest` — концептуальный (часть Sprint 4). В текущей реализации RFQ моделируется через `Deal` + `QuoteItem` (см. [business-logic.md](business-logic.md) §2.3).
+> **Примечание:** На схеме мульти-тенантности блок `RFQRequest` — концептуальный (часть Sprint 4). В текущей реализации RFQ моделируется через `Deal` + `QuoteItem` (см. [business-logic.md](../../business/business-logic.md) §2.3).
 
 ---
 
@@ -828,7 +828,7 @@ sequenceDiagram
 For detailed implementation specifics, see:
 
 - [technical-specification.md](technical-specification.md) — API endpoints, schemas
-- [business-logic.md](business-logic.md) — Deal FSM, quote calculation
-- [interface-architecture.md](interface-architecture.md) — Frontend component architecture
-- [docker-setup.md](docker-setup.md) — Container orchestration guide
+- [business-logic.md](../../business/business-logic.md) — Deal FSM, quote calculation
+- [interface-architecture.md](../../old/misc/interface-architecture.md) — Frontend component architecture
+- [docker-setup.md](../ops/docker-setup.md) — Container orchestration guide
 - [websocket-messages.md](websocket-messages.md) — WebSocket protocol

@@ -9,7 +9,7 @@ date: 2026-04-17
 
 # Архитектура бизнес-процессов
 
-Документ описывает пользовательские сценарии и доменную логику RailTech B2B. Вся бизнес-логика реализована в `backend/<app>/services.py` (см. IRON RULE 8 в CLAUDE.md и [adr/0001-admin-separation.md](adr/0001-admin-separation.md)). ViewSets и admin-действия — тонкие обёртки.
+Документ описывает пользовательские сценарии и доменную логику RailTech B2B. Вся бизнес-логика реализована в `backend/<app>/services.py` (см. IRON RULE 8 в CLAUDE.md и [adr/0001-admin-separation.md](../dev/adr/0001-admin-separation.md)). ViewSets и admin-действия — тонкие обёртки.
 
 ---
 
@@ -37,7 +37,7 @@ Membership хранится в `CompanyMember` (`user`, `company`, `role` → `W
 `can_sell`/`can_buy`). Набор ролей зависит от стороны (seller: `SALES_MANAGER`, `ВЭД`,
 `CONTRACT_MANAGER`, `LOGIST`; buyer: `PROCUREMENT_MANAGER`, `BUYER_MANAGER`; везде —
 `OWNER`). Полный перечень и применимость к `CompanyType` — в
-[role-model.md](role-model.md) §2.
+[role-model.md](../old/misc/role-model.md) §2.
 
 Приглашение сотрудников: `POST /api/v1/accounts/companies/{id}/invite/` — отправка email со ссылкой setup-password.
 
@@ -216,7 +216,7 @@ def get_queryset(self):
 
 > 🔴 `is_seller(user)` обязан проверять `CompanyType ∈ SELLER_COMPANY_TYPES`, а не
 > только `can_sell` (defaults `True`) — иначе свежий CLIENT проходит как продавец и
-> видит чужие сделки (реальная утечка, исправлена 2026-06-11). См. [role-model.md](role-model.md) §4.
+> видит чужие сделки (реальная утечка, исправлена 2026-06-11). См. [role-model.md](../old/misc/role-model.md) §4.
 
 Object-level permission (`IsCompanyMemberOrPlatformAdmin`) дублирует проверку на
 detail-endpoint'ах для защиты от IDOR.
@@ -237,7 +237,7 @@ detail-endpoint'ах для защиты от IDOR.
 
 ## 9. См. также
 
-- [role-model.md](role-model.md) — разграничение прав.
-- [architecture-diagrams.md](architecture-diagrams.md) — Mermaid-диаграммы (Deal FSM, KYC flow, Sourcing).
-- [technical-specification.md](technical-specification.md) — API endpoints и модели.
-- [websocket-messages.md](websocket-messages.md) — WebSocket-протокол чата.
+- [role-model.md](../old/misc/role-model.md) — разграничение прав.
+- [architecture-diagrams.md](../dev/architecture/architecture-diagrams.md) — Mermaid-диаграммы (Deal FSM, KYC flow, Sourcing).
+- [technical-specification.md](../dev/architecture/technical-specification.md) — API endpoints и модели.
+- [websocket-messages.md](../dev/architecture/websocket-messages.md) — WebSocket-протокол чата.

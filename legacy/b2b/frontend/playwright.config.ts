@@ -6,7 +6,7 @@ import { defineConfig, devices } from '@playwright/test';
  *
  * Kept out of vitest (vitest.config.ts excludes e2e/**), tsc (tsconfig includes
  * only src), and eslint (ignored) so the rest of CI is unaffected until it's
- * installed. Specs live in e2e/. See Docs/ops/e2e.md.
+ * installed. Specs live in e2e/. See Docs/dev/ops/e2e.md.
  *
  * BASE_URL points at a running app — staging once it exists, otherwise a local
  * `npm run dev` / `npm run preview`, or prod for a read-only smoke.

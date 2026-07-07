@@ -832,7 +832,7 @@ FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")
 # SENTRY_TRACES_SAMPLE_RATE) in the deploy secrets to turn it on. When live,
 # every unhandled 500 / Celery task failure lands in Sentry with a stack trace
 # and request context — so a break is seen in a dashboard, not via a frustrated
-# client. See Docs/ops/observability.md.
+# client. See Docs/dev/ops/observability.md.
 # ──────────────────────────────────────────────────────────────────────────
 SENTRY_DSN = os.environ.get("SENTRY_DSN", "").strip()
 if SENTRY_DSN:

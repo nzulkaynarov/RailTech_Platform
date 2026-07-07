@@ -156,7 +156,7 @@
 
 ## Ссылки
 
-- ADR-0001: Разделение Django Unfold Admin и React Admin (`Docs/adr/0001-admin-separation.md`)
+- ADR-0001: Разделение Django Unfold Admin и React Admin (`Docs/dev/adr/0001-admin-separation.md`)
 - `accounts/migrations/0010_platform_admin_model.py` — миграция инварианта
 - `accounts/services.is_platform_admin_viewer` / `.add_company_member` / `.change_user_role` — гейты
 - `core/permissions.py` — `IsPlatformAdmin`, `IsCompanyMemberOrPlatformAdmin`, `IsSupplierWithActiveSubscription`

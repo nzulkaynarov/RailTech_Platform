@@ -5,7 +5,7 @@ least-privilege sub-roles. Unlike CompanyRole this is PLATFORM-scoped — there 
 company FK; an OperatorRole governs platform-staff capabilities, never tenant
 operations. The five presets are seeded (accounts.constants.OPERATOR_ROLE_TEMPLATES);
 SUPER_OPERATOR is the immutable full-rights role (= the legacy single ADMIN).
-See Docs/adr/0004-three-admin-planes-core.md.
+See Docs/dev/adr/0004-three-admin-planes-core.md.
 """
 
 from django.db import models

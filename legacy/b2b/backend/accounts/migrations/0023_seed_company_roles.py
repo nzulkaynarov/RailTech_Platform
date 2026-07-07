@@ -2,7 +2,7 @@
 
 Each company gets 5 starting roles; each member's company_role is derived from their
 legacy WorkspaceRole. Values are inlined (migrations must stay frozen — do NOT import
-accounts.constants). See Docs/ops/rbac-roles-design-2026-06-25.md.
+accounts.constants). See Docs/dev/specs/rbac-roles-design-2026-06-25.md.
 """
 
 from django.db import migrations

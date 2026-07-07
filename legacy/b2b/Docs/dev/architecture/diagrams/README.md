@@ -178,7 +178,7 @@ role: (role_code === 'ADMIN' || role_code === 'SALES_MANAGER') ? 'ADMIN'
 | 🔴 `publish_products` — только Unfold | `backend/catalog/admin.py:193` | В React Admin — не действие, а изменение `status`. |
 | 🔴 Subscriptions без биллинга | `backend/accounts/models.py:436-533` | Статус меняется вручную. |
 | 🔴 Subscription не enforced | — | `is_active` не используется как gate. |
-| 🔴 Конфликт двух админок | ADR `Docs/adr/0001-admin-separation.md` | Декларация «features → React Admin», практика — «stable features → Unfold». Админу приходится работать в двух местах. |
+| 🔴 Конфликт двух админок | ADR `Docs/dev/adr/0001-admin-separation.md` | Декларация «features → React Admin», практика — «stable features → Unfold». Админу приходится работать в двух местах. |
 
 ---
 
@@ -262,4 +262,4 @@ role: (role_code === 'ADMIN' || role_code === 'SALES_MANAGER') ? 'ADMIN'
 - KYC / Role Apps / Subscriptions: `backend/accounts/services.py` (24-360), `accounts/admin.py`
 - Роль-маппинг фронта: `frontend/src/store/userStore.ts` (148-204)
 - Навигация по ролям: `frontend/src/layouts/AppShell.tsx` (98-198)
-- ADR об админке: `Docs/adr/0001-admin-separation.md`
+- ADR об админке: `Docs/dev/adr/0001-admin-separation.md`

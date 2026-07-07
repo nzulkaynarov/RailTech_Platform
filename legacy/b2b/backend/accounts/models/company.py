@@ -438,7 +438,7 @@ class CompanyRole(models.Model):
     World-standard Role+Permission-set: the company admin creates named roles and ticks
     permission checkboxes (accounts.constants.Permission). Replaces the cryptic
     can_sell/can_buy toggles. Scoped per company — each company has its own role policy.
-    See Docs/ops/rbac-roles-design-2026-06-25.md.
+    See Docs/dev/specs/rbac-roles-design-2026-06-25.md.
     """
 
     company = models.ForeignKey(

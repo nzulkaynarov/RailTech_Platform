@@ -65,14 +65,19 @@ frontend/                   # React app
   src/i18n/locales/         # ru.json, en.json
 deploy/caddy/               # Caddy edge config FRAGMENT (prod applies it manually — see Production)
 nginx/                      # LEGACY, unreferenced by any compose file (dead-config candidate)
-Docs/                       # Canonical docs tree in git: adr/ (0001–0006), ops/ (roadmaps, session
-                            #   handoffs, audits), mockups, presentations. NOTE: macOS is
-                            #   case-insensitive — docs/ and Docs/ are the SAME dir locally
+Docs/                       # Docs by audience (reorg 2026-07-07 — map: Docs/README.md):
+  dev/                      #   adr/ (0001–0006), architecture/ (MSD, techspec, diagrams, schema.json,
+                            #   websocket), ops/ (RUNBOOK, deploy/observability/staging/smoke/e2e…,
+                            #   latest session-handoff), specs/ (spec-remaining, client-base/rbac design)
+  business/                 #   ROADMAP, business-logic, ux-ui-brief, presentations/, mockups/
+  user/                     #   end-user guides (stub — app Help lives in code, HelpPage.tsx)
+  old/                      #   archive: handoffs/, audits/, roadmaps/, checkups/, misc/ (frozen)
+                            # NOTE: macOS is case-insensitive — docs/ and Docs/ are the SAME dir
 ```
 
 ## Key Architecture Decisions
 
-ADR index (`Docs/adr/`): **0001** admin separation · **0002** role responsibilities · **0003** multi-tenant admin planes · **0004** three admin planes core (G1–G6) · **0005** unified capability-driven navigation · **0006** wedge loop + entitlements (Moves 0–4, KYC floor).
+ADR index (`Docs/dev/adr/`): **0001** admin separation · **0002** role responsibilities · **0003** multi-tenant admin planes · **0004** three admin planes core (G1–G6) · **0005** unified capability-driven navigation · **0006** wedge loop + entitlements (Moves 0–4, KYC floor).
 
 - **Hybrid routing** — auth routes (`/`, `/register`, `/setup-password`) via `useAuthRoute()` in App.tsx; everything else is hash-based SPA navigation in App.tsx (`#dashboard`, `#deal-quote/{id}`, `#admin-*` for the operator plane; shells receive `activePage`/`onNavigate` as props). NO React Router anywhere — `react-router-dom` in package.json is an unused dependency
 - **2 shells only** — `AppShell` (all company users; buyer/seller context is **page-derived**, the manual context switcher was retired in ADR-0005 Phase C) and `PlatformAdminShell` (Platform Operators). Both use shadcn `<Sidebar>` `collapsible="icon"`, `p-6` content, `h-14` header
@@ -111,7 +116,7 @@ ADR index (`Docs/adr/`): **0001** admin separation · **0002** role responsibili
 - `notifications/` — CRUD + mark as read (structured FKs for deep-links)
 - `health/` — health check (also at root `/health/`)
 
-Full schema: `Docs/schema.json` + generated `frontend/src/api/schema.d.ts`. **Any model label/verbose_name change flows into the OpenAPI schema — regenerate (spectacular + `gen:api-types`) or the `api-contract` CI gate fails.**
+Full schema: `Docs/dev/architecture/schema.json` + generated `frontend/src/api/schema.d.ts`. **Any model label/verbose_name change flows into the OpenAPI schema — regenerate (spectacular + `gen:api-types`) or the `api-contract` CI gate fails.**
 
 ## Celery Tasks
 
@@ -313,7 +318,7 @@ make clean               # remove all containers, volumes, cache (DESTRUCTIVE)
 - ALL business logic (state transitions, validations, side effects, email sends, Celery dispatches, multi-model updates) MUST live in `<app>/services/` (or `services.py`) as plain functions
 - `admin.py` actions and `views.py` ViewSets are THIN WRAPPERS: authorize → validate → call ONE service function → return
 - NEVER duplicate logic between an admin action and a DRF endpoint — both call the same service
-- See `Docs/adr/0001-admin-separation.md` (Django Unfold = engineers; React Admin = business users)
+- See `Docs/dev/adr/0001-admin-separation.md` (Django Unfold = engineers; React Admin = business users)
 
 **Right:**
 ```python
@@ -332,7 +337,7 @@ def verify_company_kyc(company, approver, level_code): ...
 
 ## Roles & Permissions (ADR-0002 → refined by ADR-0003/0004)
 
-Canonical sources: `Docs/adr/0002-role-responsibilities.md` (layers), `0003` (planes + never-orphan), `0004` (operator sub-roles, break-glass).
+Canonical sources: `Docs/dev/adr/0002-role-responsibilities.md` (layers), `0003` (planes + never-orphan), `0004` (operator sub-roles, break-glass).
 
 **Layers (not interchangeable):**
 - **SystemRole** on `CustomUser.role` — only `ADMIN` (Platform Operator, no memberships) and `USER`
@@ -407,5 +412,5 @@ Transformation happens in: `userStore.loadFromAuth()` and DRF serializers.
 - **Superadmin is NOT auto-created** — run `init_superadmin` manually; credentials from `.env`, never hardcode
 - **No demo/simulation shortcuts** — no hardcoded test flows, no backend bypass. Test via real registration or `init_superadmin`
 - **Don't assume code structure** — read files before editing; the codebase moves fast and docs (including this file) lag
-- **docs/ vs Docs/**: canonical git tree is `Docs/` — on macOS they alias to one directory, on Linux/CI they don't. Always add docs under `Docs/`
+- **docs/ vs Docs/**: canonical git tree is `Docs/` — on macOS they alias to one directory, on Linux/CI they don't. Always add docs under `Docs/`, in the right audience folder: `Docs/dev/` (adr/architecture/ops/specs), `Docs/business/`, `Docs/user/`; archive superseded/point-in-time docs to `Docs/old/`. Map: `Docs/README.md`
 - KYC L2 approval without documents is owner policy (warning + justification required) — not a bug to fix

@@ -118,5 +118,5 @@ class CompanyViewSet(viewsets.ModelViewSet):
 
 ## Связанные документы
 
-- [CLAUDE.md](../../CLAUDE.md) — IRON RULE 8 (services.py only)
+- [CLAUDE.md](../../../CLAUDE.md) — IRON RULE 8 (services.py only)
 - [Phase 0 audit findings](../audits/phase-0-audit.md) (TODO)

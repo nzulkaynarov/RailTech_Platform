@@ -247,7 +247,7 @@ urlpatterns = (
     )
     # Serve PUBLIC media (avatars, logos, product images, category/manufacturer
     # assets) in production. When MinIO is disabled (VPS CPU lacks x86-64-v2,
-    # see Docs/ops/vps-cpu-constraints.md) storage falls back to FileSystemStorage,
+    # see Docs/dev/ops/vps-cpu-constraints.md) storage falls back to FileSystemStorage,
     # but Django doesn't serve MEDIA with DEBUG=False — so uploads saved but never
     # displayed. This whitelists ONLY public display-asset prefixes; private files
     # (companies/*/kyc, companies/*/documents, deals/**, sourcing/imports, temp)
