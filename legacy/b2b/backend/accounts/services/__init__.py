@@ -44,6 +44,7 @@ from .members import (
     set_member_workspace_role,
     toggle_user_active,
 )
+from .merge import auto_populate_history, find_offline_duplicates, merge_companies
 from .operators import (
     assign_operator_role,
     create_operator_role,
@@ -139,8 +140,11 @@ __all__ = [
     "upload_kyc_document",
     "verify_and_setup_password",
     "verify_company_kyc",
+    "auto_populate_history",
     "create_offline_client",
     "find_client_company",
+    "find_offline_duplicates",
+    "merge_companies",
     "can_edit_quote_pricing",
     "member_has_permission",
     "seller_acting_company_ids",

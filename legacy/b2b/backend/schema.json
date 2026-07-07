@@ -630,6 +630,91 @@
                 }
             }
         },
+        "/api/v1/accounts/companies/{id}/merge/": {
+            "post": {
+                "operationId": "accounts_companies_merge_create",
+                "description": "Platform Admin: fold an OFFLINE duplicate (its contacts, deals, activity, relationship edges) into this surviving company (CRM Phase C). Body: {duplicate_id, reason?}.",
+                "summary": "Merge a duplicate offline company into this one",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Компания.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Accounts"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "duplicate_id": {
+                                        "type": "integer"
+                                    },
+                                    "reason": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "duplicate_id"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{merged: true}"
+                    },
+                    "400": {
+                        "description": "error code"
+                    }
+                }
+            }
+        },
+        "/api/v1/accounts/companies/{id}/merge-candidates/": {
+            "get": {
+                "operationId": "accounts_companies_merge_candidates_retrieve",
+                "description": "Platform Admin: offline placeholder companies whose stated INN matches this company's canonical INN — candidates to fold in via merge (CRM Phase C).",
+                "summary": "Duplicate offline companies (merge candidates)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Компания.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Accounts"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of {id, name, stated_inn, is_registered}"
+                    }
+                }
+            }
+        },
         "/api/v1/accounts/companies/{id}/set-member-role/": {
             "post": {
                 "operationId": "accounts_companies_set_member_role_create",

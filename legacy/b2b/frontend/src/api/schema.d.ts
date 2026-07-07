@@ -186,6 +186,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/accounts/companies/{id}/merge/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Merge a duplicate offline company into this one
+         * @description Platform Admin: fold an OFFLINE duplicate (its contacts, deals, activity, relationship edges) into this surviving company (CRM Phase C). Body: {duplicate_id, reason?}.
+         */
+        post: operations["accounts_companies_merge_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/accounts/companies/{id}/merge-candidates/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Duplicate offline companies (merge candidates)
+         * @description Platform Admin: offline placeholder companies whose stated INN matches this company's canonical INN — candidates to fold in via merge (CRM Phase C).
+         */
+        get: operations["accounts_companies_merge_candidates_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/accounts/companies/{id}/set-member-role/": {
         parameters: {
             query?: never;
@@ -11210,6 +11250,62 @@ export interface operations {
             };
             /** @description Not authorized */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    accounts_companies_merge_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Компания. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    duplicate_id: number;
+                    reason?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description {merged: true} */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description error code */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    accounts_companies_merge_candidates_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Компания. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of {id, name, stated_inn, is_registered} */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

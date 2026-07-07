@@ -228,6 +228,20 @@ export const accountsApi = {
 		);
 		return response.data;
 	},
+	// CRM Phase C — offline placeholder companies matching this company's INN, and the merge.
+	getMergeCandidates: async (id: number) => {
+		const response = await apiClient.get<{ id: number; name: string; stated_inn: string; is_registered: boolean }[]>(
+			`accounts/companies/${id}/merge-candidates/`,
+		);
+		return response.data;
+	},
+	mergeCompany: async (survivorId: number, duplicateId: number, reason?: string) => {
+		const response = await apiClient.post<{ merged: boolean }>(
+			`accounts/companies/${survivorId}/merge/`,
+			{ duplicate_id: duplicateId, reason },
+		);
+		return response.data;
+	},
 	uploadDocument: async (companyId: number, file: File, docType: string) => {
 		const formData = new FormData();
 		formData.append('file', file);

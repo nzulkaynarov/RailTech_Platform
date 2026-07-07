@@ -3772,6 +3772,14 @@
     "description": "Company registry, details and team management",
     "new": "New company",
     "edit": "Edit company",
+    "merge": {
+      "action": "Merge duplicates",
+      "title": "Merge duplicate company",
+      "description": "Fold an offline duplicate (by TIN) into «{{name}}» — contacts, deals and history",
+      "empty": "No duplicates found by TIN",
+      "confirm": "Merge",
+      "done": "Duplicate merged"
+    },
     "allKyc": "All KYC statuses",
     "allTypes": "All types",
     "searchPlaceholder": "Search by name or INN",

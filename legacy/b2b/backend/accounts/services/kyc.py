@@ -86,6 +86,17 @@ def verify_company_kyc(
         company_id=company.id,
     )
 
+    # CB-auto-populate (Phase C): a KYC upgrade gives the company its canonical identity, so any
+    # offline placeholders a seller created under the same INN are now known duplicates — fold
+    # their history in so the seller's book is continuous. Best-effort (never breaks verification).
+    if not is_downgrade and company.inn:
+        from .merge import auto_populate_history
+
+        try:
+            auto_populate_history(company, actor=approver)
+        except Exception:  # noqa: BLE001 — auto-populate is a convenience; a failure must not block KYC
+            logger.exception("CB-auto-populate failed for company %s", company.pk)
+
     # Notify owner(s) by email and in-app (only on upgrades). Deferred to
     # transaction.on_commit so a "KYC verified" email is never sent if the
     # surrounding transaction rolls back. Runs immediately when no transaction
