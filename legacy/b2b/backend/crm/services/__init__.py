@@ -36,7 +36,6 @@ from .quotes import (
     QuoteLifecycleService,
     apply_company_quote_defaults,
     effective_quote_lead_time,
-    get_crm_analytics_data,
     reassign_quote_item_product,
 )
 from .rfq import (
@@ -79,7 +78,6 @@ __all__ = [
     "generate_contract_from_quote",
     "generate_invoice_from_contract",
     "get_allowed_transitions",
-    "get_crm_analytics_data",
     "mark_leads_processed",
     "reassign_quote_item_product",
     "record_payment",

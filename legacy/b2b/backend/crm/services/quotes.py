@@ -3,15 +3,14 @@ from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Optional, Tuple
 
 from django.db import models, transaction
-from django.db.models import Count, Q, Sum
 
-from accounts.constants import SystemRoleCode, VerificationStatusCode, WorkspaceRoleCode
+from accounts.constants import SystemRoleCode, WorkspaceRoleCode
 from accounts.models import Company, CompanyMember, CustomUser
 from accounts.services.permissions import has_workspace_role, routed_seller_company_id
 from core.audit import log_admin_action
 
 from ..constants import DealStageCode, QuoteStatusCode
-from ..models import ActivityLog, Deal, Quote, QuoteItem, QuoteItemHistory, QuoteStatus
+from ..models import ActivityLog, Quote, QuoteItem, QuoteItemHistory, QuoteStatus
 from ._params import has_explicit_company_role_perm
 from .availability import resolve_seller_offer, split_line_by_availability
 from .deals import transition_deal_stage
@@ -574,44 +573,6 @@ def compute_quote_economics(quote) -> dict:
         "min_margin_percent": min_margin,
         "target_margin_percent": target_margin,
         "fx_missing": fx_missing,
-    }
-
-
-def get_crm_analytics_data():
-    """LOW-4: Extracted analytics logic from views to service."""
-    deals = Deal.objects.all()
-    items = QuoteItem.objects.all()
-
-    pipeline_by_status = list(deals.values("stage__name").annotate(count=Count("id")))
-
-    # ARCH-04: total / backlog (unmapped) / mapped over the SAME items queryset in one aggregate.
-    item_counts = items.aggregate(
-        total=Count("id"),
-        backlog=Count("id", filter=Q(product__isnull=True)),
-        mapped=Count("id", filter=Q(product__isnull=False)),
-    )
-    sourcing_backlog = item_counts["backlog"]
-    total_items = item_counts["total"]
-    mapped_items = item_counts["mapped"]
-    mapped_items_percentage = (mapped_items / total_items * 100) if total_items > 0 else 0
-
-    kyc_backlog = Company.objects.filter(
-        verification_status__code__in=[VerificationStatusCode.L1_UNVERIFIED, VerificationStatusCode.PROFILE_SUBMITTED]
-    ).count()
-
-    total_pipeline_value = (
-        Quote.objects.filter(status__code__in=[QuoteStatusCode.SENT, QuoteStatusCode.APPROVED]).aggregate(
-            total=Sum("total_incl_vat")
-        )["total"]
-        or 0
-    )
-
-    return {
-        "pipeline_by_status": pipeline_by_status,
-        "sourcing_backlog": sourcing_backlog,
-        "kyc_backlog": kyc_backlog,
-        "total_pipeline_value": float(total_pipeline_value),
-        "mapped_items_percentage": round(mapped_items_percentage, 1),
     }
 
 

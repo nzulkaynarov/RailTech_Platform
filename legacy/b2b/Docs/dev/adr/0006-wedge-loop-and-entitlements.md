@@ -3,6 +3,10 @@
 Status: Accepted (2026-06-30, owner: «принимаю все»). Supersedes the "broad multi-service platform"
 framing of the prior discussion; refines (does NOT reverse) ADR-0005.
 
+Amended 2026-07-07 (owner decision, see `Docs/dev/specs/spec-remaining-2026-07-07.md` §2/§3):
+**Leads reclassified CUT → KEEP** as the top-of-funnel of the CRM counterparty layer — see
+"Amendment 2026-07-07" below.
+
 ## Context / decision
 
 The bottleneck is **throughput of client requests**: a 5-person team works заявки sequentially,
@@ -38,10 +42,30 @@ differentiator you monetize". This is a refinement, not a reversal.
 - **KEEP minimal (loop finish line, NOT an ERP):** catalog Product/SupplierOffer (price source),
   RBAC/DocProfile, master_data, notifications, messages, a flat Contract + one Invoice as "контракт
   взят", the subscription GATE (not the tier UI).
-- **CUT (ballast / dead / duplicates ERP·EDO·marketplace):** Leads (403 dead page), Analytics page +
-  CRMAnalyticsView (orphan), Clients page (orphan), Fulfillment (WMS dupe); DEFER carefully (migrations):
-  Payment-ledger + Act (EDO dupe); DEFER: subscription tier UI. Every cut shrinks the test surface —
-  the GOOD "fewer tests".
+- **CUT (ballast / dead / duplicates ERP·EDO·marketplace):** ~~Leads (403 dead page)~~ → **KEEP,
+  amendment 2026-07-07 below**, Analytics page + CRMAnalyticsView (orphan — cut executed 2026-07-07),
+  Clients page (orphan — cut executed; superseded by the CRM counterparty layer), Fulfillment (WMS dupe);
+  DEFER carefully (migrations): Payment-ledger + Act (EDO dupe); DEFER: subscription tier UI. Every cut
+  shrinks the test surface — the GOOD "fewer tests".
+
+## Amendment 2026-07-07 — Leads = KEEP (top of the CRM funnel); analytics cut executed
+
+Owner decision (2026-07-07): the platform gets a **CRM counterparty layer** — "книга контрагентов
+с историей" (clients AND suppliers with an interaction timeline), spec:
+`Docs/dev/specs/spec-remaining-2026-07-07.md` §2. That changes the cut-list:
+
+- **Leads — KEEP (was CUT).** `Lead` (`crm/models/deals.py`) + `LeadViewSet`/public `LeadCreateView`
+  + `convert_lead_to_deal` are NOT ballast: they are the canonical top-of-funnel of the CRM layer
+  (unqualified inbound prospect → converts into Account+Contact+Relationship+Deal). The 2026-06-30
+  framing saw only the dead frontend page; the backend loop is load-bearing for the counterparty book.
+  Follow-up (CRM layer, not this amendment): a leads inbox page + `convert_lead_to_deal` creating the
+  Relationship edge.
+- **Analytics — partial cut, executed 2026-07-07.** Orphan `CRMAnalyticsView` + route
+  `/api/v1/crm/analytics/` + dead frontend caller removed (zero callers, zero tests).
+  `DashboardAnalyticsView` and `TimeToFirstQuoteView` STAY — they feed the Operations Inbox and the
+  wedge KPI.
+- **Clients page cut stands** — replaced by the CRM layer's «Контрагенты» page (spec §2.2), which is
+  relationship-scoped (seller sees «Клиенты», buyer sees «Поставщики»), not the old flat page.
 
 ## Roadmap (loop first, monetization wraps it, cut early)
 

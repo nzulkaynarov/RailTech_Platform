@@ -7271,26 +7271,6 @@
                 }
             }
         },
-        "/api/v1/crm/analytics/": {
-            "get": {
-                "operationId": "crm_analytics_retrieve",
-                "description": "Aggregated CRM analytics data. Manager/Admin only.",
-                "summary": "CRM analytics",
-                "tags": [
-                    "Analytics"
-                ],
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "CRM analytics data"
-                    }
-                }
-            }
-        },
         "/api/v1/crm/analytics/dashboard/": {
             "get": {
                 "operationId": "crm_analytics_dashboard_retrieve",

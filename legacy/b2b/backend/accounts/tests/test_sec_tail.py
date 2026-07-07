@@ -43,9 +43,7 @@ def test_init_superadmin_creates_by_email(monkeypatch):
 def test_init_superadmin_does_not_hijack_unrelated_local_part_account(monkeypatch):
     """SEC-10 core case: a regular user whose USERNAME equals the email local part
     must not be promoted; the superadmin is created as a separate account."""
-    bystander = CustomUser.objects.create_user(
-        email="someone@else.uz", username="admin", password="x", is_active=True
-    )
+    bystander = CustomUser.objects.create_user(email="someone@else.uz", username="admin", password="x", is_active=True)
     for key, value in ENV.items():
         monkeypatch.setenv(key, value)
     _run_command()
@@ -113,9 +111,7 @@ def test_reset_password_refuses_deactivated_account():
 
 @pytest.mark.django_db
 def test_reset_password_active_account_still_works_and_stays_active():
-    user = CustomUser.objects.create_user(
-        email="ok@x.uz", username="ok@x.uz", password="Old-Pass-1!", is_active=True
-    )
+    user = CustomUser.objects.create_user(email="ok@x.uz", username="ok@x.uz", password="Old-Pass-1!", is_active=True)
     uidb64, token = _reset_args(user)
     result, error = reset_password(uidb64, token, "New-Strong-Pass-2!")
     assert error is None and result is not None
