@@ -4,6 +4,7 @@ import {
   RelationshipDirection, RelationshipStage, OfflineClientPayload,
 } from '../api/crmApi';
 import { aiApi, type ComposeRequestPayload } from '../api/aiApi';
+import { accountsApi } from '../api/accountsApi';
 
 export const useDeals = () => useQuery({
   queryKey: ['deals'],
@@ -260,6 +261,11 @@ export const useCreateOfflineClient = () => {
         },
     });
 };
+
+// CRM Phase D — invite an offline client's contact to register and claim its company.
+export const useInviteContact = () => useMutation({
+    mutationFn: (contactId: number) => accountsApi.inviteContact(contactId),
+});
 
 export const useQuotes = () => useQuery({
     queryKey: ['quotes'],

@@ -43,10 +43,16 @@ export const ProfileCompletionForm: React.FC<ProfileCompletionFormProps> = ({ on
     const onSubmit = async (data: ProfileFormValues) => {
         setServerError('');
         try {
+            // CRM Phase D — a CB-invite token (stashed from /register?invite=…) claims the
+            // existing offline company instead of creating a new one. Cleared after a successful
+            // claim so a later manual company creation isn't mis-attached.
+            const invite = sessionStorage.getItem('cb_invite_token') || undefined;
             await accountsApi.submitProfile({
                 companyName: data.companyName,
                 position: data.position,
+                invite,
             });
+            sessionStorage.removeItem('cb_invite_token');
             await initAuth();
             onComplete();
         } catch (err: unknown) {

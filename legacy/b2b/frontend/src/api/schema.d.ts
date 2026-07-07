@@ -593,6 +593,26 @@ export interface paths {
         patch: operations["accounts_contacts_partial_update"];
         trace?: never;
     };
+    "/api/v1/accounts/contacts/{id}/invite/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Invite an offline client to register
+         * @description CRM Phase D: email this contact an invite to register and CLAIM its existing offline company (no duplicate). Throttled per user.
+         */
+        post: operations["accounts_contacts_invite_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/accounts/me/": {
         parameters: {
             query?: never;
@@ -10159,6 +10179,7 @@ export interface components {
             readonly inn: string | null;
             readonly stated_inn: string;
             readonly is_registered: boolean;
+            readonly primary_contact_id: string;
         };
         RelationshipRequest: {
             /** Стадия отношения */
@@ -10249,6 +10270,8 @@ export interface components {
             companyName: string;
             /** @description Free-text job title, e.g. 'Директор по закупкам' */
             position: string;
+            /** @default  */
+            invite: string;
         };
         SupplierOffer: {
             readonly id: number;
@@ -11956,6 +11979,33 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Contact"];
                 };
+            };
+        };
+    };
+    accounts_contacts_invite_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description {invited: true} */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description error code */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

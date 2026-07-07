@@ -1791,6 +1791,39 @@
                 }
             }
         },
+        "/api/v1/accounts/contacts/{id}/invite/": {
+            "post": {
+                "operationId": "accounts_contacts_invite_create",
+                "description": "CRM Phase D: email this contact an invite to register and CLAIM its existing offline company (no duplicate). Throttled per user.",
+                "summary": "Invite an offline client to register",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Client Base"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{invited: true}"
+                    },
+                    "400": {
+                        "description": "error code"
+                    }
+                }
+            }
+        },
         "/api/v1/accounts/me/": {
             "get": {
                 "operationId": "accounts_me_retrieve",
@@ -24524,6 +24557,10 @@
                     "is_registered": {
                         "type": "boolean",
                         "readOnly": true
+                    },
+                    "primary_contact_id": {
+                        "type": "string",
+                        "readOnly": true
                     }
                 },
                 "required": [
@@ -24531,6 +24568,7 @@
                     "inn",
                     "is_registered",
                     "name",
+                    "primary_contact_id",
                     "stated_inn"
                 ]
             },
@@ -24721,6 +24759,10 @@
                         "minLength": 1,
                         "description": "Free-text job title, e.g. 'Директор по закупкам'",
                         "maxLength": 120
+                    },
+                    "invite": {
+                        "type": "string",
+                        "default": ""
                     }
                 },
                 "required": [

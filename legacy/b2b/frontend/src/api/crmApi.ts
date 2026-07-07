@@ -430,6 +430,8 @@ export interface RelationshipCounterparty {
 	// INN as stated by the book owner for an offline (unregistered) counterparty.
 	stated_inn: string;
 	is_registered: boolean;
+	// The counterparty's primary contact — the CB-invite target (Phase D); null if none.
+	primary_contact_id: number | null;
 }
 
 export interface Relationship {

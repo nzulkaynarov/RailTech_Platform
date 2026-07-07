@@ -129,6 +129,10 @@ function parseAuthRoute(): { view: AuthRouteView; uid: string | null; token: str
     return { view: 'forgot-password', uid: null, token: null };
   }
   if (path === '/register') {
+    // CRM Phase D — a CB-invite link (/register?invite=…) claims an existing offline company.
+    // Stash the token so it survives the register → setup-password → submit-profile steps.
+    const invite = url.searchParams.get('invite');
+    if (invite) sessionStorage.setItem('cb_invite_token', invite);
     return { view: 'register', uid: null, token: null };
   }
   return { view: 'login', uid: null, token: null };

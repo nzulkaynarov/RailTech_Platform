@@ -20,6 +20,13 @@ class RelationshipCounterpartySerializer(serializers.Serializer):
     inn = serializers.CharField(read_only=True, allow_null=True)
     stated_inn = serializers.CharField(read_only=True)
     is_registered = serializers.BooleanField(read_only=True)
+    primary_contact_id = serializers.SerializerMethodField()
+
+    def get_primary_contact_id(self, company):
+        """The counterparty's primary contact — the target for a CB-invite (Phase D). Only
+        meaningful for an offline company; a registered one has real members instead."""
+        contact = company.contacts.order_by("-is_primary", "id").first()
+        return contact.id if contact else None
 
 
 class RelationshipSerializer(serializers.ModelSerializer):
@@ -80,9 +87,11 @@ class RelationshipViewSet(
         from django.db.models import Count
 
         user = self.request.user
-        queryset = CounterpartyRelationship.objects.select_related(
-            "counterparty_company", "owner_member__user"
-        ).annotate(contacts_count=Count("counterparty_company__contacts", distinct=True))
+        queryset = (
+            CounterpartyRelationship.objects.select_related("counterparty_company", "owner_member__user")
+            .prefetch_related("counterparty_company__contacts")
+            .annotate(contacts_count=Count("counterparty_company__contacts", distinct=True))
+        )
         if not (getattr(user, "is_platform_admin", False) or getattr(user, "is_superuser", False)):
             my_company_ids = list(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
             queryset = queryset.filter(owner_company_id__in=my_company_ids)

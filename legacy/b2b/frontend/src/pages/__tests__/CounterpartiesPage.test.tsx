@@ -20,7 +20,7 @@ function makeEdge(overrides: Partial<Relationship> & { id: number }): Relationsh
     direction: 'CLIENT',
     stage: 'ACTIVE',
     source: 'OFFLINE_CREATED',
-    counterparty: { id: overrides.id * 10, name: 'X', inn: null, stated_inn: '', is_registered: true },
+    counterparty: { id: overrides.id * 10, name: 'X', inn: null, stated_inn: '', is_registered: true, primary_contact_id: null },
     owner_member: null,
     owner_member_name: '',
     contacts_count: 0,
@@ -37,13 +37,13 @@ function makeEdge(overrides: Partial<Relationship> & { id: number }): Relationsh
 const EDGES: Relationship[] = [
   makeEdge({
     id: 1,
-    counterparty: { id: 10, name: 'ООО Магистраль', inn: '300123456', stated_inn: '', is_registered: true },
+    counterparty: { id: 10, name: 'ООО Магистраль', inn: '300123456', stated_inn: '', is_registered: true, primary_contact_id: null },
     deals_count: 3,
     won_count: 1,
   }),
   makeEdge({
     id: 2,
-    counterparty: { id: 20, name: 'Оффлайн Клиент', inn: null, stated_inn: '301999888', is_registered: false },
+    counterparty: { id: 20, name: 'Оффлайн Клиент', inn: null, stated_inn: '301999888', is_registered: false, primary_contact_id: 77 },
     stage: 'PROSPECT',
   }),
 ];

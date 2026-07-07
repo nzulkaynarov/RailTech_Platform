@@ -547,6 +547,7 @@ REST_FRAMEWORK = {
         "password_reset": "5/hour",  # forgot-password, per IP
         "password_reset_email": "3/hour",  # forgot-password, per TARGET email (cross-IP victim shield)
         "register": "5/hour",  # account/verification-email spam, per IP
+        "client_invite": "20/hour",  # seller invites an offline client to register (CRM Phase D), per user
         "password_set": "20/hour",  # setup/reset-password token submission, per IP (brute-force)
         "login": "10/minute",  # token obtain, per IP (brute-force; lenient enough for typos)
         "public_quote": "30/minute",  # unauthenticated КП-by-token view; blunts token brute-forcing

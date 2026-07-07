@@ -17,7 +17,7 @@ from .auth import (
     send_password_reset_email,
     verify_and_setup_password,
 )
-from .clients import create_offline_client, find_client_company
+from .clients import accept_client_invite, create_offline_client, find_client_company, send_client_invite
 from .company_settings import get_company_settings, update_company_settings
 from .document_profile import (
     get_document_profile,
@@ -140,11 +140,13 @@ __all__ = [
     "upload_kyc_document",
     "verify_and_setup_password",
     "verify_company_kyc",
+    "accept_client_invite",
     "auto_populate_history",
     "create_offline_client",
     "find_client_company",
     "find_offline_duplicates",
     "merge_companies",
+    "send_client_invite",
     "can_edit_quote_pricing",
     "member_has_permission",
     "seller_acting_company_ids",

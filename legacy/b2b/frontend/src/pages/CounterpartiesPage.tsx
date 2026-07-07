@@ -4,10 +4,11 @@ import { formatDistanceToNow } from 'date-fns';
 import { ru, enUS } from 'date-fns/locale';
 import { toast } from 'sonner';
 import {
-  Users, Truck, Clock, History, CheckCircle2, AlertTriangle, XCircle, Info,
+  Users, Truck, Clock, History, CheckCircle2, AlertTriangle, XCircle, Info, Send, Loader2,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -18,7 +19,7 @@ import {
 import { ResponsiveDataTable, type ResponsiveColumn } from '@/components/ResponsiveDataTable';
 import { Toolbar, Pager, useListParams, applyListParams } from '@/components/DataTable';
 import { useCurrencyStore } from '@/store/currencyStore';
-import { useRelationships, useUpdateRelationship, useCompanyTimeline } from '@/hooks/useCRM';
+import { useRelationships, useUpdateRelationship, useCompanyTimeline, useInviteContact } from '@/hooks/useCRM';
 import { translateApiError } from '@/lib/apiError';
 import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import { CreateOfflineClientDialog } from '@/components/CRM/CreateOfflineClientDialog';
@@ -108,6 +109,7 @@ export function CounterpartiesPage({ direction }: CounterpartiesPageProps) {
   const { t, i18n } = useTranslation();
   const { data: relationships, isLoading, isError, refetch } = useRelationships(direction);
   const updateMut = useUpdateRelationship();
+  const inviteMut = useInviteContact();
   const formatCurrency = useCurrencyStore((s) => s.format);
   const dateLocale = i18n.language?.startsWith('ru') ? ru : enUS;
 
@@ -127,6 +129,15 @@ export function CounterpartiesPage({ direction }: CounterpartiesPageProps) {
       const updated = await updateMut.mutateAsync({ id: relationship.id, data: { stage } });
       setSelected(updated);
       toast.success(t('counterparties.stageUpdated'));
+    } catch (err) {
+      toast.error(translateApiError(err));
+    }
+  };
+
+  const onInvite = async (contactId: number) => {
+    try {
+      await inviteMut.mutateAsync(contactId);
+      toast.success(t('counterparties.inviteSent'));
     } catch (err) {
       toast.error(translateApiError(err));
     }
@@ -342,6 +353,20 @@ export function CounterpartiesPage({ direction }: CounterpartiesPageProps) {
                   </SelectContent>
                 </Select>
               </div>
+
+              {isClientBook && !selected.counterparty.is_registered && selected.counterparty.primary_contact_id && (
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  disabled={inviteMut.isPending}
+                  onClick={() => onInvite(selected.counterparty.primary_contact_id!)}
+                >
+                  {inviteMut.isPending
+                    ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                    : <Send className="h-4 w-4" aria-hidden="true" />}
+                  {t('counterparties.invite')}
+                </Button>
+              )}
 
               <CompanyTimeline companyId={selected.counterparty.id} />
             </div>
