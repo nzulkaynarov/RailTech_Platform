@@ -69,6 +69,14 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 });
 
+// Mock ResizeObserver (used by Radix ScrollArea and other primitives; missing in jsdom)
+global.ResizeObserver = class ResizeObserver {
+  disconnect() {}
+  observe() {}
+  unobserve() {}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+} as any;
+
 // Mock IntersectionObserver
 global.IntersectionObserver = class IntersectionObserver {
   constructor() {}
