@@ -41,7 +41,7 @@ docker cp "$CID":/usr/share/nginx/html/. "$WEB_ROOT"/
 
 **Commit:** `585ddfc`
 
-`minio/minio:latest` (and the 2024+ release line) exits with `Fatal glibc error: CPU does not support x86-64-v2` on the production VPS. See `Docs/ops/vps-cpu-constraints.md` for the underlying CPU caveat.
+`minio/minio:latest` (and the 2024+ release line) exits with `Fatal glibc error: CPU does not support x86-64-v2` on the production VPS. See `Docs/dev/ops/vps-cpu-constraints.md` for the underlying CPU caveat.
 
 Backend depended on `minio: service_healthy`, so the whole stack stayed in restart loop when MinIO failed.
 

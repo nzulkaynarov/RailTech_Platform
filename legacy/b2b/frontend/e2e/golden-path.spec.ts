@@ -39,7 +39,7 @@ test.describe('smoke', () => {
 
 // ── Full golden path (buyer → seller → КП → contract). Fill selectors, unskip. ──
 test.describe('golden path', () => {
-  test.skip(true, 'Selector skeleton — fill against the real UI, then enable. See Docs/ops/e2e.md');
+  test.skip(true, 'Selector skeleton — fill against the real UI, then enable. See Docs/dev/ops/e2e.md');
 
   test('buyer single RFQ → seller bid → КП → approve', async ({ page }) => {
     // 1. Buyer logs in

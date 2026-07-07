@@ -10,7 +10,7 @@ date: 2026-04-17
 
 # Техническая спецификация
 
-Актуальная сводка технического стека, моделей БД и API. Отражает фактическое состояние репозитория на 2026-04-17. Для бизнес-логики см. [business-logic.md](business-logic.md), для ролей — [role-model.md](role-model.md).
+Актуальная сводка технического стека, моделей БД и API. Отражает фактическое состояние репозитория на 2026-04-17. Для бизнес-логики см. [business-logic.md](../../business/business-logic.md), для ролей — [role-model.md](../../old/misc/role-model.md).
 
 ## 1. Технологический стек
 
@@ -259,7 +259,7 @@ JWT: access 30 мин, refresh 7 дней, `ROTATE_REFRESH_TOKENS=True`.
 - Nginx rate limiting zones: `api_general`, `api_auth`, `ws_connect`.
 - CSP, X-Frame-Options DENY, HSTS-ready headers.
 
-Подробный аудит — [security-audit-2026-03-20.md](security-audit-2026-03-20.md).
+Подробный аудит — [security-audit-2026-03-20.md](../../old/audits/security-audit-2026-03-20.md).
 
 ---
 
@@ -309,7 +309,7 @@ GitHub Actions (`.github/workflows/ci.yml`), 6 параллельных jobs:
 ## 10. См. также
 
 - [master-system-document.md](master-system-document.md) — общая архитектура и топология.
-- [business-logic.md](business-logic.md) — FSM и пользовательские сценарии.
-- [role-model.md](role-model.md) — RBAC.
-- [adr/0001-admin-separation.md](adr/0001-admin-separation.md) — разделение Unfold ↔ React Admin.
-- `Docs/schema.json` — актуальный OpenAPI schema (копия из `/api/schema/`).
+- [business-logic.md](../../business/business-logic.md) — FSM и пользовательские сценарии.
+- [role-model.md](../../old/misc/role-model.md) — RBAC.
+- [adr/0001-admin-separation.md](../adr/0001-admin-separation.md) — разделение Unfold ↔ React Admin.
+- `Docs/dev/architecture/schema.json` — актуальный OpenAPI schema (копия из `/api/schema/`).

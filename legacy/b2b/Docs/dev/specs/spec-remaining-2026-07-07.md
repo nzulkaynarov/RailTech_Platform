@@ -23,7 +23,7 @@
 
 ### INF-04 — Backup-gate перед авто-миграцией ⚠️ наивысший инфра-риск
 
-**Проблема.** `backend/entrypoint.sh:10-17` безусловно выполняет `migrate --noinput` при старте web-контейнера (gunicorn/daphne). В `deploy-b2b.yml` НЕТ шага `pg_dump` — новый образ поднимается (`compose up -d --build`), и `entrypoint.sh` накатывает миграции на живую прод-БД без снапшота. Откат сломанной миграции невозможен без свежего дампа. Есть только rsync-исключённая директория `backups/` (никто в неё не пишет из workflow) и aspirational-TODO про Neon PITR (`deploy/RUNBOOK-b2b-vps.md:247`, устарел — БД давно на своём VPS).
+**Проблема.** `backend/entrypoint.sh:10-17` безусловно выполняет `migrate --noinput` при старте web-контейнера (gunicorn/daphne). В `deploy-b2b.yml` НЕТ шага `pg_dump` — новый образ поднимается (`compose up -d --build`), и `entrypoint.sh` накатывает миграции на живую прод-БД без снапшота. Откат сломанной миграции невозможен без свежего дампа. Есть только rsync-исключённая директория `backups/` (никто в неё не пишет из workflow) и aspirational-TODO про Neon PITR (`Docs/dev/ops/RUNBOOK-b2b-vps.md:247`, устарел — БД давно на своём VPS).
 
 **Решение (2 части):**
 
@@ -54,7 +54,7 @@
 - [ ] Симуляция: локально `AUTO_MIGRATE=false docker compose up backend` → web стартует БЕЗ применения миграций (проверить логом).
 - [ ] Локально прогнать шаг backup вручную → в `backups/` появляется непустой `.dump`, `pg_restore --list` его читает.
 - [ ] Провальный `pg_dump` (например, неверный `DATABASE_URL`) → workflow-шаг падает, «Apply migrations» и «Deploy» не выполняются.
-- [ ] `deploy/RUNBOOK-b2b-vps.md` дополнен процедурой restore из `predeploy-*.dump` (`pg_restore -d "$DATABASE_URL" --clean --if-exists file.dump`).
+- [ ] `Docs/dev/ops/RUNBOOK-b2b-vps.md` дополнен процедурой restore из `predeploy-*.dump` (`pg_restore -d "$DATABASE_URL" --clean --if-exists file.dump`).
 
 **Тесты.** Нет unit-тестов (инфра); добавить shell-lint (`shellcheck backend/entrypoint.sh`) в CI security-job если тривиально. Ручная проверка по чек-листу выше на dev-стеке.
 
@@ -71,7 +71,7 @@
 **Решение (2-pronged):**
 
 1. **Основное — модуль `caddy-ratelimit` на host-Caddy.** Стандартный Caddy НЕ содержит `rate_limit`; нужен модуль `github.com/mholt/caddy-ratelimit`, собранный через `xcaddy`.
-   - Собрать бинарь на DB/app-VPS: `xcaddy build --with github.com/mholt/caddy-ratelimit`, заменить host-бинарь Caddy, `systemctl restart caddy`. Задокументировать в `deploy/RUNBOOK-b2b-vps.md` (сборка + версия модуля).
+   - Собрать бинарь на DB/app-VPS: `xcaddy build --with github.com/mholt/caddy-ratelimit`, заменить host-бинарь Caddy, `systemctl restart caddy`. Задокументировать в `Docs/dev/ops/RUNBOOK-b2b-vps.md` (сборка + версия модуля).
    - В `deploy/caddy/b2b.railtech.uz.caddy` в `@backend`-handle добавить зоны:
      ```
      rate_limit {

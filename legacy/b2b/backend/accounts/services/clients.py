@@ -3,7 +3,7 @@
 World-standard Account(Company)+Contact: a seller records a client they reached through
 other channels (no self-registration), then builds a КП for it. Search-before-create
 de-dup avoids duplicate accounts (the #1 CRM pitfall). See
-Docs/ops/client-base-design-2026-06-24.md.
+Docs/dev/specs/client-base-design-2026-06-24.md.
 """
 
 import logging

@@ -242,7 +242,7 @@ make collectstatic       # Собрать статику Django
 
 Каталог `nginx/` — legacy-конфиг, не используется ни одним compose-файлом.
 
-Операционные руководства: `Docs/ops/` (session handoffs, smoke-checklist, deploy-lessons, observability).
+Операционные руководства: `Docs/dev/ops/` (RUNBOOK, smoke-checklist, deploy-lessons, observability, staging). Полная структура документации — `Docs/README.md`.
 
 ---
 

@@ -2,13 +2,13 @@
 
 **Последняя актуализация:** 2026-07-07 (HEAD `937b3a4`, после PR #237)
 
-> **Живой канон планирования** — `Docs/ops/`: датированные `session-handoff-*.md` (последний: `session-handoff-2026-07-02-horizon1-security.md`), `roadmap-2026-06-19.md` (фазы F0–F7), `master-scope-2026-06-24.md` (P0-блокеры и клиентская база), `ai-features-roadmap-2026-06-18.md` (F6 #1–#8), `stability-program.md`. Этот файл — верхнеуровневый индекс: что сделано по периодам и какие треки открыты.
+> **Живой канон планирования** — актуальное ТЗ `Docs/dev/specs/spec-remaining-2026-07-07.md`, последний хендофф `Docs/dev/ops/session-handoff-2026-07-07-audit-closeout.md`, `Docs/dev/ops/stability-program.md`. Историческое (роадмапы, session-handoff'ы, аудиты) — в `Docs/old/`. Этот файл — верхнеуровневый индекс: что сделано по периодам и какие треки открыты. Полная карта документации — `Docs/README.md`.
 
 ---
 
 ## Где проект сейчас
 
-Продакшн живёт на `b2b.railtech.uz` (app-VPS + Caddy edge, БД на отдельном DB-VPS через WireGuard; Neon выведен 2026-06-19). Деплой — self-hosted runner (`deploy-b2b.yml`), Sentry на бэке и SPA, CI c жёсткими security-гейтами (pip-audit + npm audit, SHA-pinned Actions). Архитектурный канон — ADR-0001…0006 (`Docs/adr/`).
+Продакшн живёт на `b2b.railtech.uz` (app-VPS + Caddy edge, БД на отдельном DB-VPS через WireGuard; Neon выведен 2026-06-19). Деплой — self-hosted runner (`deploy-b2b.yml`), Sentry на бэке и SPA, CI c жёсткими security-гейтами (pip-audit + npm audit, SHA-pinned Actions). Архитектурный канон — ADR-0001…0006 (`Docs/dev/adr/`).
 
 Ядро продукта (ADR-0006 «клин»): **заявка → КП → контракт** с AI-ускорением как монетизируемым преимуществом. Реализованы: multi-seller routing (DealSellerRouting, скрытая конкуренция), entitlement-слой (FeatureKey: `quote.send`/`quote.export`/`ai.*`/`roles.custom`, DEMO-водяной знак), KYC-пол (без L2 — только просмотр и черновики), AI-разбор заявок + автопривязка каталога в черновике КП, публичная ссылка на КП (202+Celery PDF), дашборд «Operations Inbox».
 
@@ -32,7 +32,7 @@
 
 ## Открытые треки (приоритет ↓)
 
-> Подробное ТЗ на пункты ниже — **[spec-remaining-2026-07-07.md](ops/spec-remaining-2026-07-07.md)** (задачи, критерии приёмки, файлы, риски).
+> Подробное ТЗ на пункты ниже — **[spec-remaining-2026-07-07.md](../dev/specs/spec-remaining-2026-07-07.md)** (задачи, критерии приёмки, файлы, риски).
 
 ### На стороне владельца (не код)
 - [ ] Починить биллинг GitHub Actions — CI-гейты и nightly e2e не работают с ~2026-07-06
@@ -87,7 +87,8 @@ Production (staging пока НЕТ)
 
 ## См. также
 
-- [master-system-document.md](master-system-document.md) — архитектура (частично устарел — сверяйтесь с ADR)
-- `Docs/adr/0001…0006` — действующие архитектурные решения
-- [audit-2026-07-02-security-arch-ux.md](audit-2026-07-02-security-arch-ux.md) + [audit-2026-07-03-ux-ui-eyes-on.md](audit-2026-07-03-ux-ui-eyes-on.md) — последние аудиты (статусы находок)
-- `Docs/ops/` — session handoffs, оперативные роадмапы, smoke-чеклисты
+- `../dev/specs/spec-remaining-2026-07-07.md` — актуальное ТЗ на оставшуюся работу
+- `../dev/adr/0001…0006` — действующие архитектурные решения
+- `../dev/architecture/master-system-document.md` — архитектура (частично устарел — сверяйтесь с ADR)
+- `../old/audits/` — закрытые аудиты (статусы находок); `../old/handoffs/` — session-handoff'ы; `../old/roadmaps/` — прежние роадмапы
+- `../README.md` — полная карта документации

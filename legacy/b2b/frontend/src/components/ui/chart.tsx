@@ -295,7 +295,7 @@ function ChartLegendContent({
                 // vendored shadcn <ChartLegendContent> and `item.color` is a runtime per-series value
                 // (from the chart config, not a static --color-chart-N index) that can't be expressed
                 // as a static Tailwind class. Kept as upstream — accepted exception for the vendored
-                // primitive (see Docs/audit-2026-07-02 UX-02).
+                // primitive (see Docs/old/audits/audit-2026-07-02-security-arch-ux.md UX-02).
                 <div
                   className="h-2 w-2 shrink-0 rounded-[2px]"
                   style={{

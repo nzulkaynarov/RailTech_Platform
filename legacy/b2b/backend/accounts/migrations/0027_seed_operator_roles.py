@@ -3,7 +3,7 @@
 SUPER_OPERATOR is the immutable full-rights role (= the legacy single ADMIN). Every existing
 platform operator (SystemRole.ADMIN, no active membership) is mapped to SUPER_OPERATOR so the
 granular split is backward-compatible — nobody loses access. Values are inlined (migrations
-must stay frozen — do NOT import accounts.constants). See Docs/adr/0004-three-admin-planes-core.md.
+must stay frozen — do NOT import accounts.constants). See Docs/dev/adr/0004-three-admin-planes-core.md.
 """
 
 from django.db import migrations

@@ -2,7 +2,7 @@
 # RailTech B2B SaaS — Production Docker Compose Override
 # Use: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 #
-# Architecture on the shared railtech.uz VPS (see deploy/RUNBOOK-b2b-vps.md):
+# Architecture on the shared railtech.uz VPS (see Docs/dev/ops/RUNBOOK-b2b-vps.md):
 #   - The host's existing Caddy owns 80/443 and terminates TLS. This stack runs
 #     NO reverse proxy of its own — Caddy proxies b2b.railtech.uz/api,/ws,/admin,
 #     /static -> backend (127.0.0.1:8000) and serves the built SPA as static files.

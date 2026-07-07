@@ -5,7 +5,7 @@
  * VITE_SENTRY_DSN — when unset (dev without a project), captureError falls
  * back to console.error so nothing is silently dropped.
  *
- * See Docs/ops/observability.md.
+ * See Docs/dev/ops/observability.md.
  */
 
 import * as Sentry from '@sentry/react';

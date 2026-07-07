@@ -20,8 +20,8 @@ in service of keeping *that* flow always working.
 | **6. Type + lint gates** | Type drift, dead code, style | CI `frontend-lint`, `backend-lint` |
 | **7. Browser E2E (Playwright)** | The actual buyer/seller clicks end-to-end | `frontend/e2e/` — manual workflow (see below) |
 | **8. Observability (Sentry)** | Whatever the net missed — seen in a dashboard, not by a client | backend live behind `SENTRY_DSN`; frontend ready |
-| **9. Manual smoke (10 min)** | Final human eyes before a release | `Docs/ops/smoke-checklist.md` |
-| **10. Staging buffer** | Catches it on staging, not prod | `Docs/ops/staging.md` (needs DNS) |
+| **9. Manual smoke (10 min)** | Final human eyes before a release | `Docs/dev/ops/smoke-checklist.md` |
+| **10. Staging buffer** | Catches it on staging, not prod | `Docs/dev/ops/staging.md` (needs DNS) |
 
 If layers 1–6 are green, **the core business flow provably works** — that is the
 "I know it's stable" signal. CI gates `docker-build` on all of them, so a red
@@ -46,12 +46,12 @@ test blocks the merge that would otherwise reach prod.
 - **Backend Sentry:** set `SENTRY_DSN` (and optionally `SENTRY_ENVIRONMENT`,
   `SENTRY_TRACES_SAMPLE_RATE`) in the `production` GitHub environment secrets.
 - **Browser E2E:** `cd frontend && npm i -D @playwright/test && npx playwright install`,
-  then run `.github/workflows/e2e.yml` (manual trigger). See `Docs/ops/e2e.md`.
+  then run `.github/workflows/e2e.yml` (manual trigger). See `Docs/dev/ops/e2e.md`.
 - **OpenAPI → TS types:** `cd frontend && npm i -D openapi-typescript`, then
   `npm run gen:api-types`. Turns backend field renames into TS compile errors.
 - **Staging:** add DNS for `staging.b2b.railtech.uz`, a `staging` GitHub
   environment, and a Caddy block — then `deploy-staging.yml` goes live. See
-  `Docs/ops/staging.md`.
+  `Docs/dev/ops/staging.md`.
 
 ## The release ritual (target state)
 

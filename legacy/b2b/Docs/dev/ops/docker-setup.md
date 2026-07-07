@@ -371,5 +371,5 @@ docker compose exec minio-init mc mirror railtech/ /tmp/minio-backup/
 ## См. также
 
 - [docker-quick-reference.md](docker-quick-reference.md) — краткая шпаргалка.
-- [technical-specification.md](technical-specification.md) — версии библиотек.
-- [master-system-document.md](master-system-document.md) — общая архитектура.
+- [technical-specification.md](../architecture/technical-specification.md) — версии библиотек.
+- [master-system-document.md](../architecture/master-system-document.md) — общая архитектура.

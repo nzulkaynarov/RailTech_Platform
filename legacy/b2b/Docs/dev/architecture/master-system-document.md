@@ -230,10 +230,10 @@ nginx/nginx.conf            Production reverse proxy (SSL-ready)
 ## 7. См. также
 
 - [technical-specification.md](technical-specification.md) — детали стека, моделей, API.
-- [business-logic.md](business-logic.md) — пользовательские сценарии.
-- [role-model.md](role-model.md) — RBAC в деталях.
+- [business-logic.md](../../business/business-logic.md) — пользовательские сценарии.
+- [role-model.md](../../old/misc/role-model.md) — RBAC в деталях.
 - [architecture-diagrams.md](architecture-diagrams.md) — Mermaid-диаграммы.
-- [interface-architecture.md](interface-architecture.md) — UI-архитектура.
-- [ROADMAP.md](ROADMAP.md) — план и статус спринтов.
-- [adr/0001-admin-separation.md](adr/0001-admin-separation.md) — разделение Unfold ↔ React.
-- [../CLAUDE.md](../CLAUDE.md) — жёсткие правила для AI-агентов и разработчиков.
+- [interface-architecture.md](../../old/misc/interface-architecture.md) — UI-архитектура.
+- [ROADMAP.md](../../business/ROADMAP.md) — план и статус спринтов.
+- [adr/0001-admin-separation.md](../adr/0001-admin-separation.md) — разделение Unfold ↔ React.
+- [../CLAUDE.md](../../../CLAUDE.md) — жёсткие правила для AI-агентов и разработчиков.

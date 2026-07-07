@@ -1,5 +1,8 @@
 # Master scope — debts + features (2026-06-24)
 
+> ⚠️ **Частично устарел (2026-07-07).** CB-send, CB-public-link, CB-deal-for-offline и все 8 AI F6-фич с тех пор реализованы; аудит 2026-07-02 закрыт в коде. Актуальный остаток и ТЗ — `spec-remaining-2026-07-07.md`.
+
+
 Consolidated from every backlog doc (roadmap, 3 handoffs, catalog/UI/platform audits, tech-debt,
 stability, AI roadmap, ADR-0003, client-base design) via a 5-agent sweep, **status re-verified against
 current code** + this session's work. 204 raw items → deduplicated below. Contradictions reconciled in §5.
