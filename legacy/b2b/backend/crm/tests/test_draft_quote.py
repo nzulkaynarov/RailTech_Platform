@@ -238,3 +238,108 @@ def test_ai_fuzzy_match_below_threshold_not_bound(scene, settings, monkeypatch):
     assert err is None
     line = quote.items.get(imported_raw_name="Тормозная колодка")
     assert line.product_id is None
+
+
+# ── ARCH-01: pre-enqueue gate validation + async endpoint contract ─────────────
+
+
+def test_validate_gates_pass_is_read_only(scene):
+    """The pre-enqueue validation clears an entitled routed seller WITHOUT side effects —
+    no draft Quote is created and no credit is consumed (has_entitlement, not consume_credit)."""
+    from crm.services.draft_quote import validate_draft_quote_gates
+
+    assert validate_draft_quote_gates(scene["deal"].id, scene["seller_user"]) is None
+    assert scene["deal"].quotes.count() == 1  # only the buyer request quote
+
+
+def test_validate_gates_maps_same_error_codes(scene):
+    """The read-only gates return the SAME stable codes as generate_draft_quote."""
+    from crm.services.draft_quote import validate_draft_quote_gates
+
+    outsider_co = Company.objects.create(name="OtherV", inn="2220000098")
+    outsider_co.types.add(CompanyType.objects.get(code="SUPPLIER"))
+    role = CompanyRole.objects.create(company=outsider_co, name="М", permissions=["quote.edit_pricing"])
+    ws = WorkspaceRole.objects.get(code="SALES_MANAGER")
+    outsider = CustomUser.objects.create_user(email="ov@o.uz", username="ov@o.uz", password="pw", is_active=True)
+    CompanyMember.objects.create(
+        user=outsider, company=outsider_co, role=ws, company_role=role, is_active=True, is_primary=True, can_sell=True
+    )
+    assert validate_draft_quote_gates(scene["deal"].id, outsider) == "MEMBER_REQUIRED_FOR_ACTION"
+    assert validate_draft_quote_gates(999999, scene["seller_user"]) == "DEAL_NOT_FOUND"
+
+
+def test_endpoint_enqueues_202_with_owned_aijob(scene, monkeypatch):
+    """ARCH-01: gates pass → the draft build is queued on Celery — 202 {task_id} + AIJob row."""
+    from types import SimpleNamespace
+
+    from rest_framework.test import APIClient
+
+    from sourcing.models import AIJob
+
+    captured = {}
+
+    def _apply_async(args=None, task_id=None, **kwargs):
+        captured.update(feature=args[0], payload=args[1])
+        return SimpleNamespace(id=task_id)
+
+    monkeypatch.setattr("sourcing.tasks_ai.run_ai_job.apply_async", _apply_async)
+    client = APIClient()
+    client.force_authenticate(scene["seller_user"])
+    response = client.post(f"/api/v1/crm/deals/{scene['deal'].id}/generate-draft-quote/", {}, format="json")
+    assert response.status_code == 202
+    task_id = response.json()["task_id"]
+    assert AIJob.objects.filter(celery_task_id=task_id, owner=scene["seller_user"], feature="draft_quote").exists()
+    assert captured["payload"] == {"deal_id": scene["deal"].id, "user_id": scene["seller_user"].id}
+    # No draft quote yet — the worker builds it (only the buyer request quote exists).
+    assert scene["deal"].quotes.count() == 1
+
+
+def test_endpoint_gate_error_short_circuits_before_enqueue(scene, monkeypatch):
+    """A cheap gate failure (unentitled seller) 4xxs synchronously and never queues a job."""
+    import pytest as _pytest
+    from rest_framework.test import APIClient
+
+    seller2 = Company.objects.create(name="Seller2V", inn="2220000076")
+    seller2.types.add(CompanyType.objects.get(code="SUPPLIER"))  # no subscription, no entitlement
+    DealSellerRouting.objects.create(deal=scene["deal"], seller_company=seller2)
+    role = CompanyRole.objects.create(company=seller2, name="М", permissions=["quote.edit_pricing"])
+    ws = WorkspaceRole.objects.get(code="SALES_MANAGER")
+    member = CustomUser.objects.create_user(email="s2v@s.uz", username="s2v@s.uz", password="pw", is_active=True)
+    CompanyMember.objects.create(
+        user=member, company=seller2, role=ws, company_role=role, is_active=True, is_primary=True, can_sell=True
+    )
+
+    monkeypatch.setattr(
+        "sourcing.tasks_ai.run_ai_job.apply_async",
+        lambda *a, **kw: _pytest.fail("gate error must short-circuit before enqueue"),
+    )
+    client = APIClient()
+    client.force_authenticate(member)
+    response = client.post(f"/api/v1/crm/deals/{scene['deal'].id}/generate-draft-quote/", {}, format="json")
+    assert response.status_code == 403
+    assert response.json() == {"error": "AI_DRAFT_NOT_ENTITLED"}
+
+
+def test_draft_quote_handler_serializes_deal_with_pdf_quote(scene):
+    """Regression (adversarial review, CRITICAL): the worker-side handler serializes the deal
+    with a stand-in request; a deal whose earlier quote carries a generated PDF (raw FileField
+    → request.build_absolute_uri) must serialize instead of crashing with AttributeError."""
+    from sourcing.tasks_ai import run_ai_job
+
+    # The buyer request quote already exists in `scene` — give it a generated PDF file
+    # reference (no bytes needed; FileField serialization only builds the URL).
+    request_quote = scene["request_quote"]
+    request_quote.pdf_file.name = "quotes/pdfs/test-kp.pdf"
+    request_quote.save(update_fields=["pdf_file"])
+
+    result = run_ai_job("draft_quote", {"deal_id": scene["deal"].id, "user_id": scene["seller_user"].id})
+
+    assert "error" not in result
+    assert result["prefilled"] == 1
+    assert result["quote_id"]
+    deal_data = result["deal"]
+    assert deal_data["id"] == scene["deal"].id
+    # Both quotes serialized (request + fresh draft), incl. the pdf-bearing one.
+    assert len(deal_data["quotes"]) == 2
+    pdf_urls = [q.get("pdf_file") for q in deal_data["quotes"] if q.get("pdf_file")]
+    assert pdf_urls, "the pdf-bearing quote must serialize its file URL"

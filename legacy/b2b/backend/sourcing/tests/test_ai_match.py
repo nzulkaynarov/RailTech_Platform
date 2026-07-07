@@ -166,13 +166,24 @@ def test_match_disabled_returns_empty(products, settings):
 
 
 @pytest.mark.django_db
-def test_endpoint_guards(products, settings):
+def test_endpoint_guards(products, settings, monkeypatch):
     settings.AI_IMPORT_ENABLED = True
     user = CustomUser.objects.create_user(email="m@x.test", username="m@x.test", password="pw", is_active=True)
     client = APIClient()
     client.force_authenticate(user)
     # missing lines → 400
     assert client.post("/api/v1/sourcing/match-catalog/", {}, format="json").status_code == 400
+    # ARCH-01: valid input → the LLM call is queued on Celery — 202 {task_id} + an owned AIJob row.
+    monkeypatch.setattr(
+        "sourcing.tasks_ai.run_ai_job.apply_async",
+        lambda args=None, task_id=None, **kw: SimpleNamespace(id=task_id),
+    )
+    ok = client.post("/api/v1/sourcing/match-catalog/", {"lines": [{"name": "x"}]}, format="json")
+    assert ok.status_code == 202
+    task_id = ok.json()["task_id"]
+    from sourcing.models import AIJob
+
+    assert AIJob.objects.filter(celery_task_id=task_id, owner=user, feature="match").exists()
     # disabled → 503
     settings.AI_IMPORT_ENABLED = False
     r = client.post("/api/v1/sourcing/match-catalog/", {"lines": [{"name": "x"}]}, format="json")

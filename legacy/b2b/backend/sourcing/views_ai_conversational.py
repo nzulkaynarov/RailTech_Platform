@@ -43,7 +43,9 @@ MAX_TEXT_CHARS = 4000
         }
     },
     responses={
-        200: OpenApiResponse(description="Proposed request line items with catalog candidates"),
+        202: OpenApiResponse(
+            description="AI job queued, task_id returned (poll sourcing/ai-status/<task_id>/ for {items: []})"
+        ),
         400: OpenApiResponse(description="Missing/empty text"),
         503: OpenApiResponse(description="AI compose disabled"),
     },
@@ -65,7 +67,8 @@ class ComposeRequestView(APIView):
             return Response({"error": "TEXT_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
         domain_code = request.data.get("domain_code") or None
 
-        from sourcing.services_ai_conversational import build_request_from_text
+        # ARCH-01: TWO sequential Claude calls — the slowest interactive AI path; runs on Celery.
+        from sourcing.ai_jobs import enqueue_ai_job
 
-        result = build_request_from_text(text[:MAX_TEXT_CHARS], domain_code=domain_code)
-        return Response(result)
+        payload = {"text": text[:MAX_TEXT_CHARS], "domain_code": domain_code}
+        return enqueue_ai_job("compose", payload, request.user)

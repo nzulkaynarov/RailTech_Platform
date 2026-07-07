@@ -169,6 +169,41 @@ services:
     restart: unless-stopped
 
   # ===========================================================================
+  # Celery Worker — AI queue (ARCH-01)
+  # DEDICATED consumer for the interactive AI jobs: on a shared worker two
+  # 30-min Excel imports would occupy every slot and starve AI jobs past the
+  # frontend's 150s poll budget. The jobs are IO-bound HTTP waits on Claude,
+  # so a small concurrency is enough.
+  # ===========================================================================
+  celery-worker-ai:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: railtech_celery_worker_ai
+    env_file: .env
+    environment:
+      PYTHONUNBUFFERED: 1
+      DJANGO_SETTINGS_MODULE: core.settings
+    command: celery -A core worker -l info -Q ai --concurrency=2
+    volumes:
+      - ./backend:/app
+      # Shared with backend: extract-document stages the uploaded file in
+      # default_storage (ai_extract_tmp/) for this worker to read + delete.
+      - backend_media:/app/media
+    healthcheck:
+      test: ["CMD", "celery", "-A", "core", "inspect", "ping", "-t", "10"]
+      interval: 60s
+      timeout: 20s
+      retries: 3
+      start_period: 45s
+    depends_on:
+      redis-celery:
+        condition: service_healthy
+    networks:
+      - railtech
+    restart: unless-stopped
+
+  # ===========================================================================
   # Celery Beat (Scheduled tasks)
   # ===========================================================================
   celery-beat:

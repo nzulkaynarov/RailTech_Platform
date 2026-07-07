@@ -128,6 +128,17 @@ def test_compose_endpoint_guards(settings, monkeypatch):
     assert client.post("/api/v1/sourcing/compose-request/", {}, format="json").status_code == 400
     # blank text → 400
     assert client.post("/api/v1/sourcing/compose-request/", {"text": "  "}, format="json").status_code == 400
+    # ARCH-01: valid input → the (double) LLM call is queued on Celery — 202 {task_id} + AIJob row.
+    monkeypatch.setattr(
+        "sourcing.tasks_ai.run_ai_job.apply_async",
+        lambda args=None, task_id=None, **kw: SimpleNamespace(id=task_id),
+    )
+    ok = client.post("/api/v1/sourcing/compose-request/", {"text": "болты М12"}, format="json")
+    assert ok.status_code == 202
+    task_id = ok.json()["task_id"]
+    from sourcing.models import AIJob
+
+    assert AIJob.objects.filter(celery_task_id=task_id, owner=user, feature="compose").exists()
     # disabled → 503
     settings.AI_IMPORT_ENABLED = False
     response = client.post("/api/v1/sourcing/compose-request/", {"text": "болты"}, format="json")

@@ -2149,7 +2149,7 @@ export interface paths {
         put?: never;
         /**
          * AI enrich: draft PIM product fields (advisory)
-         * @description From a product name (+ optional MPN / ГОСТ / domain) DRAFTS a description, key specifications, and a likely-category HINT string for a seller's catalog card. SUGGESTION ONLY — the seller reviews/edits before saving; nothing is auto-written. The category is a free-text hint, never a resolved id (Rule 1). 503 when AI is off.
+         * @description From a product name (+ optional MPN / ГОСТ / domain) DRAFTS a description, key specifications, and a likely-category HINT string for a seller's catalog card. SUGGESTION ONLY — the seller reviews/edits before saving; nothing is auto-written. The category is a free-text hint, never a resolved id (Rule 1). 503 when AI is off. ARCH-01: the LLM call runs on Celery — returns 202 + task_id; poll sourcing/ai-status/<task_id>/ for {suggestion: {}}.
          */
         post: operations["catalog_product_enrich_create"];
         delete?: never;
@@ -3210,7 +3210,7 @@ export interface paths {
         put?: never;
         /**
          * Generate a pre-filled draft КП from the buyer request (AI moat / speed)
-         * @description Creates a fresh DRAFT Quote for the seller, copying the buyer's request lines and prefilling matched products' cost / currency / lead-time from the seller's SupplierOffers (ADR-0006 Move 3). The seller reviews-and-sends instead of building from scratch.
+         * @description Creates a fresh DRAFT Quote for the seller, copying the buyer's request lines and prefilling matched products' cost / currency / lead-time from the seller's SupplierOffers (ADR-0006 Move 3). The seller reviews-and-sends instead of building from scratch. ARCH-01: the build (incl. the AI fuzzy match) runs on Celery — returns 202 + task_id; poll sourcing/ai-status/<task_id>/ for {prefilled, quote_id, deal}.
          */
         post: operations["crm_deals_generate_draft_quote_create"];
         delete?: never;
@@ -4590,6 +4590,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sourcing/ai-status/{task_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Check AI job status
+         * @description Check the status of a background AI job by Celery task_id (the interactive AI endpoints return 202 + task_id — ARCH-01). Users can only check their own jobs; platform admins can check any job.
+         */
+        get: operations["sourcing_ai_status_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sourcing/attachments/": {
         parameters: {
             query?: never;
@@ -4846,7 +4866,7 @@ export interface paths {
         put?: never;
         /**
          * AI semantic match: заявка lines → catalog products
-         * @description For each request line (name / mpn / gost_drawing) returns up to top_k catalog Product candidates ranked by Claude (product_id always from a DB trigram shortlist — the model never invents ids). The buyer/seller confirms a candidate in the grid (human-in-loop). Capped at 50 lines per call.
+         * @description For each request line (name / mpn / gost_drawing) returns up to top_k catalog Product candidates ranked by Claude (product_id always from a DB trigram shortlist — the model never invents ids). The buyer/seller confirms a candidate in the grid (human-in-loop). Capped at 50 lines per call. ARCH-01: the LLM call runs on Celery — returns 202 + task_id; poll sourcing/ai-status/<task_id>/ for {matches: []}.
          */
         post: operations["sourcing_match_catalog_create"];
         delete?: never;
@@ -4866,7 +4886,7 @@ export interface paths {
         put?: never;
         /**
          * AI pre-flight quality check for a заявка (advisory)
-         * @description Runs an ADVISORY quality pass over draft request lines before the buyer submits the RFQ. Claude flags vague descriptions, missing/implausible qty or units, likely-duplicate lines and missing key specs. Returns warnings only — never a hard block (line_index always references a GIVEN line; out-of-range indices are dropped). Capped at 50 lines per call.
+         * @description Runs an ADVISORY quality pass over draft request lines before the buyer submits the RFQ. Claude flags vague descriptions, missing/implausible qty or units, likely-duplicate lines and missing key specs. Returns warnings only — never a hard block (line_index always references a GIVEN line; out-of-range indices are dropped). Capped at 50 lines per call. ARCH-01: the LLM call runs on Celery — returns 202 + task_id; poll sourcing/ai-status/<task_id>/ for {findings: []}.
          */
         post: operations["sourcing_preflight_check_create"];
         delete?: never;
@@ -14028,8 +14048,22 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
-            200: {
+            /** @description AI job queued, task_id returned */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or too-long name */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description AI enrichment disabled */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -15442,8 +15476,8 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description {'draft': str} — may be empty */
-            200: {
+            /** @description AI job queued, task_id returned (poll sourcing/ai-status/<task_id>/ for {'draft': str}) */
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -15818,13 +15852,33 @@ export interface operations {
             };
         };
         responses: {
-            200: {
+            /** @description AI draft job queued, task_id returned */
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["DealDetail"];
+                content?: never;
+            };
+            /** @description No request lines */
+            400: {
+                headers: {
+                    [name: string]: unknown;
                 };
+                content?: never;
+            };
+            /** @description Not a routed seller / not entitled */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Deal not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -17872,8 +17926,8 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description {'ai_enabled': bool, 'findings': [{issue_type, line, explanation}]} */
-            200: {
+            /** @description AI job queued, task_id returned (poll sourcing/ai-status/<task_id>/ for {'ai_enabled': bool, 'findings': [{issue_type, line, explanation}]}) */
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -17906,8 +17960,8 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description {'ai_enabled': bool, 'findings': [{issue_type, line, explanation}]} */
-            200: {
+            /** @description AI job queued, task_id returned (poll sourcing/ai-status/<task_id>/ for {'ai_enabled': bool, 'findings': [{issue_type, line, explanation}]}) */
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -18686,6 +18740,33 @@ export interface operations {
             };
         };
     };
+    sourcing_ai_status_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Task status with the result payload when ready */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No access to this task */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     sourcing_attachments_list: {
         parameters: {
             query?: {
@@ -18886,8 +18967,8 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Proposed request line items with catalog candidates */
-            200: {
+            /** @description AI job queued, task_id returned (poll sourcing/ai-status/<task_id>/ for {items: []}) */
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -18930,8 +19011,8 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Extracted fields + code-computed reconciliation */
-            200: {
+            /** @description AI job queued, task_id returned (poll sourcing/ai-status/<task_id>/) */
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -19082,8 +19163,22 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
-            200: {
+            /** @description AI job queued, task_id returned */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing lines */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description AI matching disabled */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -19100,8 +19195,22 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
-            200: {
+            /** @description AI job queued, task_id returned */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing lines */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description AI pre-flight disabled */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

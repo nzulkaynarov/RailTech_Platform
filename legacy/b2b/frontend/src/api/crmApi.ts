@@ -1,3 +1,4 @@
+import { runAiJob } from '@/lib/aiJob';
 import { apiClient } from './client';
 import { Product as CatalogProduct } from './catalogApi';
 import { PaginatedResponse } from './types';
@@ -767,12 +768,15 @@ export const crmApi = {
 	// ─── AI catalog match ────────────────────────────────────
 	// POST a batch of unmatched lines → candidate catalog products per line.
 	// Only lines with ≥1 candidate are returned; may 503 {error:'AI_DISABLED'}.
+	// ARCH-01: 202 + task_id, resolved via the ai-status poll (same return shape).
 	matchCatalog: async (payload: MatchCatalogPayload) => {
-		const response = await apiClient.post<{ matches: CatalogMatch[] }>(
-			'sourcing/match-catalog/',
-			payload,
-		);
-		return response.data;
+		return runAiJob<{ matches: CatalogMatch[] }>(async () => {
+			const response = await apiClient.post<{ task_id: string }>(
+				'sourcing/match-catalog/',
+				payload,
+			);
+			return response.data;
+		});
 	},
 
 	// ─── Pricing-assist (Move 3) ─────────────────────────────
@@ -787,52 +791,66 @@ export const crmApi = {
 
 	// ─── AI draft-КП generation (Move 3) ─────────────────────
 	// Build a pre-filled draft КП from the buyer request (copied lines + pricing-assist on matches).
+	// ARCH-01: 202 + task_id, resolved via the ai-status poll. Service gate errors arrive in
+	// the result as {error: CODE} and are re-thrown as Error(CODE) for the apiErrors.* map.
 	generateDraftQuote: async (dealId: number) => {
-		const response = await apiClient.post<{ prefilled: number; quote_id: number }>(
-			`crm/deals/${dealId}/generate-draft-quote/`,
-			{},
-		);
-		return response.data;
+		return runAiJob<{ prefilled: number; quote_id: number }>(async () => {
+			const response = await apiClient.post<{ task_id: string }>(
+				`crm/deals/${dealId}/generate-draft-quote/`,
+				{},
+			);
+			return response.data;
+		});
 	},
 
 	// ─── AI #7 pre-flight quality check ──────────────────────
 	// POST draft request lines → advisory quality findings per line.
 	// Advisory only (never blocks submit); may 503 {error:'AI_DISABLED'}.
+	// ARCH-01: 202 + task_id, resolved via the ai-status poll (same return shape).
 	preflightCheck: async (payload: PreflightPayload) => {
-		const response = await apiClient.post<{ findings: PreflightFinding[] }>(
-			'sourcing/preflight-check/',
-			payload,
-		);
-		return response.data;
+		return runAiJob<{ findings: PreflightFinding[] }>(async () => {
+			const response = await apiClient.post<{ task_id: string }>(
+				'sourcing/preflight-check/',
+				payload,
+			);
+			return response.data;
+		});
 	},
 
 	// ─── AI #6 contract/invoice extraction + reconciliation ──
 	// POST a signed contract/counter-invoice PDF + a quote OR contract id → extracted
 	// fields and a CODE-computed (Decimal) comparison vs the КП/Contract record. The
 	// money verdict comes from the backend; LLM numbers are never trusted. May 503.
+	// ARCH-01: the multipart POST is unchanged, but the view now returns 202 + task_id;
+	// the vision extraction runs on Celery and the result comes from the ai-status poll.
 	checkDocument: async ({ file, quoteId, contractId }: DocCheckPayload) => {
 		const formData = new FormData();
 		formData.append('file', file);
 		if (quoteId != null) formData.append('quote_id', String(quoteId));
 		if (contractId != null) formData.append('contract_id', String(contractId));
-		const response = await apiClient.post<DocCheckResult>(
-			'sourcing/extract-document/',
-			formData,
-			{ headers: { 'Content-Type': 'multipart/form-data' } },
-		);
-		return response.data;
+		return runAiJob<DocCheckResult>(async () => {
+			const response = await apiClient.post<{ task_id: string }>(
+				'sourcing/extract-document/',
+				formData,
+				{ headers: { 'Content-Type': 'multipart/form-data' } },
+			);
+			return response.data;
+		});
 	},
 
 	// ─── AI #4 deal-chat reply assist ────────────────────────
 	// POST a deal id → a professional reply DRAFT built from the recent chat history.
 	// The draft fills the input for the user to review/edit before sending (never
 	// auto-sent). Empty draft when no conversation / no access; may 503 AI_DISABLED.
+	// ARCH-01: 202 + task_id, resolved via the ai-status poll (same return shape).
 	suggestChatReply: async (dealId: number) => {
-		const response = await apiClient.post<{ draft: string }>(
-			`crm/deals/${dealId}/suggest-reply/`,
-			{},
-		);
-		return response.data;
+		return runAiJob<{ draft: string }>(async () => {
+			const response = await apiClient.post<{ task_id: string }>(
+				`crm/deals/${dealId}/suggest-reply/`,
+				{},
+			);
+			return response.data;
+		});
 	},
 
 	// ─── AI #3 «КП vs заявка» coverage / diff ────────────────
@@ -840,11 +858,15 @@ export const crmApi = {
 	// when AI is on, semantic discrepancies (non-equivalent substitution, ignored
 	// note). Read-only & assistive — never blocks. Scoped to the deal's buyer or
 	// the routed seller (403 otherwise).
+	// ARCH-01: the GET now returns 202 + task_id; the diff runs on Celery and the
+	// result (same shape) is fetched via the ai-status poll.
 	quoteRequestDiff: async (quoteId: number) => {
-		const response = await apiClient.get<QuoteDiffResult>(
-			`crm/quotes/${quoteId}/request-diff/`,
-		);
-		return response.data;
+		return runAiJob<QuoteDiffResult>(async () => {
+			const response = await apiClient.get<{ task_id: string }>(
+				`crm/quotes/${quoteId}/request-diff/`,
+			);
+			return response.data;
+		});
 	},
 };
 

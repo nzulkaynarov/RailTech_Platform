@@ -1,5 +1,6 @@
 import base64
 import logging
+import uuid
 
 from celery.result import AsyncResult
 from django.db import DatabaseError
@@ -633,8 +634,14 @@ class AttachmentViewSet(viewsets.ModelViewSet):
         "For each request line (name / mpn / gost_drawing) returns up to top_k catalog "
         "Product candidates ranked by Claude (product_id always from a DB trigram shortlist — "
         "the model never invents ids). The buyer/seller confirms a candidate in the grid "
-        "(human-in-loop). Capped at 50 lines per call."
+        "(human-in-loop). Capped at 50 lines per call. ARCH-01: the LLM call runs on Celery — "
+        "returns 202 + task_id; poll sourcing/ai-status/<task_id>/ for {matches: []}."
     ),
+    responses={
+        202: OpenApiResponse(description="AI job queued, task_id returned"),
+        400: OpenApiResponse(description="Missing lines"),
+        503: OpenApiResponse(description="AI matching disabled"),
+    },
     tags=["Sourcing"],
 )
 class MatchCatalogView(APIView):
@@ -658,10 +665,10 @@ class MatchCatalogView(APIView):
         except (TypeError, ValueError):
             top_k = 3
 
-        from sourcing.services_ai import match_lines_to_catalog
+        from .ai_jobs import enqueue_ai_job
 
-        matches = match_lines_to_catalog(lines[:50], domain_code=domain_code, top_k=top_k)
-        return Response({"matches": matches})
+        payload = {"lines": lines[:50], "domain_code": domain_code, "top_k": top_k}
+        return enqueue_ai_job("match", payload, request.user)
 
 
 @extend_schema(
@@ -671,8 +678,14 @@ class MatchCatalogView(APIView):
         "submits the RFQ. Claude flags vague descriptions, missing/implausible qty or "
         "units, likely-duplicate lines and missing key specs. Returns warnings only — "
         "never a hard block (line_index always references a GIVEN line; out-of-range "
-        "indices are dropped). Capped at 50 lines per call."
+        "indices are dropped). Capped at 50 lines per call. ARCH-01: the LLM call runs on "
+        "Celery — returns 202 + task_id; poll sourcing/ai-status/<task_id>/ for {findings: []}."
     ),
+    responses={
+        202: OpenApiResponse(description="AI job queued, task_id returned"),
+        400: OpenApiResponse(description="Missing lines"),
+        503: OpenApiResponse(description="AI pre-flight disabled"),
+    },
     tags=["Sourcing"],
 )
 class PreflightCheckView(APIView):
@@ -692,10 +705,10 @@ class PreflightCheckView(APIView):
             return Response({"error": "LINES_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
         domain_code = request.data.get("domain_code") or None
 
-        from sourcing.services_ai_preflight import pre_flight_check
+        from .ai_jobs import enqueue_ai_job
 
-        findings = pre_flight_check(lines[:50], domain_code=domain_code)
-        return Response({"findings": findings})
+        payload = {"lines": lines[:50], "domain_code": domain_code}
+        return enqueue_ai_job("preflight", payload, request.user)
 
 
 # Max size for an uploaded contract/invoice document (one base64 vision call). Aligned at
@@ -758,7 +771,7 @@ def _resolve_expected(user, request, quote_id, contract_id):
         }
     },
     responses={
-        200: OpenApiResponse(description="Extracted fields + code-computed reconciliation"),
+        202: OpenApiResponse(description="AI job queued, task_id returned (poll sourcing/ai-status/<task_id>/)"),
         400: OpenApiResponse(description="No file or missing quote_id/contract_id"),
         404: OpenApiResponse(description="Quote/Contract not found or not visible"),
         503: OpenApiResponse(description="AI extraction disabled"),
@@ -810,19 +823,23 @@ class DocumentExtractView(APIView):
         if kind is None:
             return Response({"error": "REFERENCE_NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)
 
-        from sourcing.services_ai_extract import extract_document_fields, reconcile
+        # ARCH-01: the visibility-scoped record of truth is resolved HERE (needs request.user);
+        # the worker only receives the JSON-safe expected values + a STORAGE KEY for the
+        # document. The bytes must never travel through the Redis broker: prod redis-celery
+        # runs maxmemory 128mb + noeviction, so a handful of queued 10MB uploads would brick
+        # every Celery publish platform-wide. The worker deletes the temp file after the run.
+        from django.core.files.base import ContentFile
+        from django.core.files.storage import default_storage
 
-        try:
-            extracted = extract_document_fields(raw, uploaded.name)
-        except RuntimeError as exc:
-            logger.warning("AI doc-extract failed: %s", exc)
-            return Response({"error": "AI_EXTRACT_FAILED"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        from .ai_jobs import enqueue_ai_job
 
-        comparison = reconcile(extracted, expected_total, expected_currency)
-        return Response(
-            {
-                "reference": {"kind": kind, "id": contract_id or quote_id},
-                "extracted": extracted,
-                "comparison": comparison,
-            }
-        )
+        file_key = default_storage.save(f"ai_extract_tmp/{uuid.uuid4().hex}.{extension}", ContentFile(raw))
+        payload = {
+            "file_key": file_key,
+            "filename": uploaded.name,
+            "expected_total": str(expected_total) if expected_total is not None else None,
+            "expected_currency": expected_currency,
+            "kind": kind,
+            "reference_id": contract_id or quote_id,
+        }
+        return enqueue_ai_job("extract", payload, request.user)

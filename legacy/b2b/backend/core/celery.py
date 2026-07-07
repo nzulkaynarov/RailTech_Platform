@@ -15,3 +15,8 @@ app.config_from_object("django.conf:settings", namespace="CELERY")
 
 # Load task modules from all registered Django apps.
 app.autodiscover_tasks()
+
+# ARCH-01: also register the off-thread AI job runner (sourcing/tasks_ai.py) —
+# autodiscover_tasks() only imports `<app>.tasks` by default, so without this the
+# worker would reject "sourcing.run_ai_job" as an unregistered task.
+app.autodiscover_tasks(related_name="tasks_ai")

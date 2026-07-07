@@ -217,10 +217,13 @@ def test_endpoint_scope_stranger_403(settings):
 
 
 @pytest.mark.django_db
-def test_endpoint_buyer_ok(settings):
-    """The deal's buyer gets a 200 with deterministic findings even with AI off."""
+def test_endpoint_buyer_ok(settings, monkeypatch):
+    """ARCH-01: the deal's buyer passes the visibility gate and the diff is queued on
+    Celery — 202 {task_id} + an owned AIJob row (the findings arrive via ai-status)."""
     from django.urls import NoReverseMatch, reverse
     from rest_framework.test import APIClient
+
+    from sourcing.models import AIJob
 
     settings.AI_IMPORT_ENABLED = False
     buyer, _seller, _stranger, quote = _make_world()
@@ -229,8 +232,18 @@ def test_endpoint_buyer_ok(settings):
     except NoReverseMatch:
         pytest.skip("quote-request-diff route not wired yet (orchestrator registers it in core/urls.py)")
 
+    captured = {}
+
+    def _apply_async(args=None, task_id=None, **kwargs):
+        captured.update(feature=args[0], payload=args[1])
+        return SimpleNamespace(id=task_id)
+
+    monkeypatch.setattr("sourcing.tasks_ai.run_ai_job.apply_async", _apply_async)
     client = APIClient()
     client.force_authenticate(buyer)
     response = client.get(url)
-    assert response.status_code == 200
-    assert any(f["issue_type"] == "uncovered" for f in response.data["findings"])
+    assert response.status_code == 202
+    task_id = response.json()["task_id"]
+    assert AIJob.objects.filter(celery_task_id=task_id, owner=buyer, feature="quote_diff").exists()
+    # user_id travels with the job so the worker re-runs the visibility gate (TOCTOU).
+    assert captured["payload"] == {"quote_id": quote.id, "user_id": buyer.id}

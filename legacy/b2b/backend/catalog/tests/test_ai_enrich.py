@@ -85,7 +85,7 @@ def test_enrich_refusal_returns_empty(settings, monkeypatch):
 
 
 @pytest.mark.django_db
-def test_enrich_endpoint_guards(settings):
+def test_enrich_endpoint_guards(settings, monkeypatch):
     # The URL route + throttle scope are wired by the orchestrator in core/urls.py +
     # core/settings.py (this bucket must not touch those shared files). Skip the HTTP
     # contract assertions until the route exists so the unit tests above still run.
@@ -102,6 +102,17 @@ def test_enrich_endpoint_guards(settings):
     client.force_authenticate(user)
     # missing name → 400
     assert client.post(url, {}, format="json").status_code == 400
+    # ARCH-01: valid input → the LLM call is queued on Celery — 202 {task_id} + an owned AIJob row.
+    monkeypatch.setattr(
+        "sourcing.tasks_ai.run_ai_job.apply_async",
+        lambda args=None, task_id=None, **kw: SimpleNamespace(id=task_id),
+    )
+    ok = client.post(url, {"name": "Тормозная колодка"}, format="json")
+    assert ok.status_code == 202
+    task_id = ok.json()["task_id"]
+    from sourcing.models import AIJob
+
+    assert AIJob.objects.filter(celery_task_id=task_id, owner=user, feature="enrich").exists()
     # disabled → 503
     settings.AI_IMPORT_ENABLED = False
     response = client.post(url, {"name": "x"}, format="json")

@@ -127,11 +127,16 @@ def _resolve_ai_catalog_matches(request_items, resolved: dict) -> int:
     return added
 
 
-@transaction.atomic
-def generate_draft_quote(deal_id: int, actor: CustomUser) -> Tuple[Optional[Quote], Optional[str], int]:
-    """Build a pre-filled draft КП for `actor`'s seller company from the deal's buyer request.
-    Returns (quote, error_code, prefilled_count). The quote is a fresh DRAFT owned by the actor's
-    seller company — never touches the buyer request or a competitor's КП."""
+def _run_draft_quote_gates(deal_id: int, actor: CustomUser):
+    """Read-only gate checks shared by generate_draft_quote and the pre-enqueue validation
+    (ARCH-01): actor role, deal existence, seller routing, request lines, and a cheap
+    read-only entitlement look (has_entitlement — never consumed). No writes, no LLM.
+    Running the entitlement check HERE means the worker refuses BEFORE the paid AI match
+    when the credits are already gone; the authoritative consume_credit still runs inside
+    the atomic write block of generate_draft_quote.
+
+    Returns (deal, request_items, seller_company_id, error_code) — error_code None when clear.
+    """
     from accounts.services.permissions import (
         can_edit_quote_pricing,
         is_platform_admin_viewer,
@@ -140,88 +145,121 @@ def generate_draft_quote(deal_id: int, actor: CustomUser) -> Tuple[Optional[Quot
     )
 
     if is_platform_admin_viewer(actor):
-        return None, "ADMIN_VIEWER_CANNOT_ACT", 0
+        return None, None, None, "ADMIN_VIEWER_CANNOT_ACT"
     if not (getattr(actor, "is_superuser", False) or can_edit_quote_pricing(actor)):
-        return None, "ONLY_SELLER_CAN_BUILD_QUOTE", 0
+        return None, None, None, "ONLY_SELLER_CAN_BUILD_QUOTE"
     deal = Deal.objects.filter(pk=deal_id).first()
     if deal is None:
-        return None, "DEAL_NOT_FOUND", 0
+        return None, None, None, "DEAL_NOT_FOUND"
     if not (getattr(actor, "is_superuser", False) or seller_company_routed_to_deal(actor, deal_id)):
-        return None, "MEMBER_REQUIRED_FOR_ACTION", 0
+        return None, None, None, "MEMBER_REQUIRED_FOR_ACTION"
     request_items = _request_items(deal)
     if not request_items:
-        return None, "NO_REQUEST_LINES", 0
-
+        return deal, [], None, "NO_REQUEST_LINES"
     seller_company_id = primary_seller_company_id(actor)
-    # MONETIZATION GATE (ADR-0006 Move 4): AI draft is a paid accelerator. An operational subscription
-    # grants it (unmetered) by the baseline; a credit-limited entitlement meters it. consume_credit
-    # decrements only when metered, and the whole function is atomic so a credit rolls back on error.
-    # Superuser = platform escalation (no seller company), bypasses.
     if not getattr(actor, "is_superuser", False):
         from accounts.constants import FeatureKey
-        from accounts.services import consume_credit
+        from accounts.services import has_entitlement
 
-        if not consume_credit(seller_company_id, FeatureKey.AI_DRAFT):
-            return None, "AI_DRAFT_NOT_ENTITLED", 0
-    version = (deal.quotes.aggregate(max_v=Max("version"))["max_v"] or 0) + 1
-    quote = Quote.objects.create(
-        deal=deal,
-        version=version,
-        prepared_by=actor,
-        status=QuoteStatus.objects.get(code=QuoteStatusCode.DRAFT),
-        seller_company_id=seller_company_id,
-    )
-    # КП-level defaults (Incoterm / VAT / margin / validity) from the seller's CompanySettings.
-    if seller_company_id:
-        from accounts.models import Company
+        if not has_entitlement(seller_company_id, FeatureKey.AI_DRAFT):
+            return None, None, None, "AI_DRAFT_NOT_ENTITLED"
+    return deal, request_items, seller_company_id, None
 
-        from .quotes import apply_company_quote_defaults
 
-        apply_company_quote_defaults(quote, Company.objects.filter(pk=seller_company_id).first())
+def validate_draft_quote_gates(deal_id: int, actor: CustomUser) -> Optional[str]:
+    """Cheap pre-enqueue validation for the async draft-КП endpoint (ARCH-01): the same gates
+    as generate_draft_quote but read-only — the entitlement is CHECKED (has_entitlement, inside
+    _run_draft_quote_gates), never consumed, so the view can 4xx before queueing without
+    double-spending a credit. The worker re-runs the authoritative gates (incl. consume_credit)
+    inside generate_draft_quote."""
+    _deal, _request_items, _seller_company_id, err = _run_draft_quote_gates(deal_id, actor)
+    return err
+
+
+def generate_draft_quote(deal_id: int, actor: CustomUser) -> Tuple[Optional[Quote], Optional[str], int]:
+    """Build a pre-filled draft КП for `actor`'s seller company from the deal's buyer request.
+    Returns (quote, error_code, prefilled_count). The quote is a fresh DRAFT owned by the actor's
+    seller company — never touches the buyer request or a competitor's КП."""
+    deal, request_items, seller_company_id, err = _run_draft_quote_gates(deal_id, actor)
+    if err:
+        return None, err, 0
 
     # Move 3: bind still-unmatched lines to catalog products BEFORE pricing (so pricing-assist
     # covers them too) — first deterministically by exact GOST/MPN, then a fuzzy AI pass for
-    # high-confidence raw-text matches.
+    # high-confidence raw-text matches. ARCH-01: both passes consume the buyer's request LINES
+    # (pre-existing rows) — nothing created below — so the LLM call is hoisted OUT of the atomic
+    # block and no longer holds a DB transaction open for up to AI_REQUEST_TIMEOUT seconds.
     resolved_matches = _resolve_exact_catalog_matches(request_items)
     ai_matched = _resolve_ai_catalog_matches(request_items, resolved_matches)
-    effective_ids = [it.product_id or resolved_matches.get(it.pk) for it in request_items]
-    pricing = (
-        suggest_pricing_for_products([pid for pid in effective_ids if pid], seller_company_id)
-        if seller_company_id
-        else {}
-    )
-    prefilled = 0
-    auto_matched = 0
-    for src in request_items:
-        data = {field: getattr(src, field) for field in _LINE_FIELDS}
-        if not data["product_id"]:
-            resolved_pid = resolved_matches.get(src.pk)
-            if resolved_pid:
-                data["product_id"] = resolved_pid
-                auto_matched += 1
-        product_id = data["product_id"]
-        offer = pricing.get(product_id) if product_id else None
-        if offer:
-            data["frozen_base_price"] = Decimal(offer["base_price"])  # str (JSON-safe) → Decimal field
-            data["lead_time_days"] = offer["lead_time_days"]
-            if offer["currency"]:
-                from master_data.models import Currency
 
-                data["frozen_currency"] = Currency.objects.filter(code=offer["currency"]).first()
-            prefilled += 1
-        QuoteItem.objects.create(quote=quote, **data)
+    with transaction.atomic():
+        # MONETIZATION GATE (ADR-0006 Move 4): AI draft is a paid accelerator. An operational
+        # subscription grants it (unmetered) by the baseline; a credit-limited entitlement meters
+        # it. consume_credit decrements only when metered, and the write block is atomic so a
+        # credit rolls back on error. Superuser = platform escalation (no seller company), bypasses.
+        # Exhausted credits were already refused read-only in _run_draft_quote_gates (before the
+        # paid AI match above); the remaining window — a credit spent by a CONCURRENT job between
+        # that check and this consume — is an accepted tiny in-flight race (one stray LLM call).
+        if not getattr(actor, "is_superuser", False):
+            from accounts.constants import FeatureKey
+            from accounts.services import consume_credit
 
-    if auto_matched:
-        logger.info(
-            "draft КП %s: auto-matched %s line(s) to catalog (%s exact GOST/MPN, %s fuzzy AI)",
-            quote.id,
-            auto_matched,
-            auto_matched - ai_matched,
-            ai_matched,
+            if not consume_credit(seller_company_id, FeatureKey.AI_DRAFT):
+                return None, "AI_DRAFT_NOT_ENTITLED", 0
+        version = (deal.quotes.aggregate(max_v=Max("version"))["max_v"] or 0) + 1
+        quote = Quote.objects.create(
+            deal=deal,
+            version=version,
+            prepared_by=actor,
+            status=QuoteStatus.objects.get(code=QuoteStatusCode.DRAFT),
+            seller_company_id=seller_company_id,
         )
+        # КП-level defaults (Incoterm / VAT / margin / validity) from the seller's CompanySettings.
+        if seller_company_id:
+            from accounts.models import Company
 
-    from .quotes import QuoteCalculationService
+            from .quotes import apply_company_quote_defaults
 
-    QuoteCalculationService.recalculate_quote(quote.id)
+            apply_company_quote_defaults(quote, Company.objects.filter(pk=seller_company_id).first())
+
+        effective_ids = [it.product_id or resolved_matches.get(it.pk) for it in request_items]
+        pricing = (
+            suggest_pricing_for_products([pid for pid in effective_ids if pid], seller_company_id)
+            if seller_company_id
+            else {}
+        )
+        prefilled = 0
+        auto_matched = 0
+        for src in request_items:
+            data = {field: getattr(src, field) for field in _LINE_FIELDS}
+            if not data["product_id"]:
+                resolved_pid = resolved_matches.get(src.pk)
+                if resolved_pid:
+                    data["product_id"] = resolved_pid
+                    auto_matched += 1
+            product_id = data["product_id"]
+            offer = pricing.get(product_id) if product_id else None
+            if offer:
+                data["frozen_base_price"] = Decimal(offer["base_price"])  # str (JSON-safe) → Decimal field
+                data["lead_time_days"] = offer["lead_time_days"]
+                if offer["currency"]:
+                    from master_data.models import Currency
+
+                    data["frozen_currency"] = Currency.objects.filter(code=offer["currency"]).first()
+                prefilled += 1
+            QuoteItem.objects.create(quote=quote, **data)
+
+        if auto_matched:
+            logger.info(
+                "draft КП %s: auto-matched %s line(s) to catalog (%s exact GOST/MPN, %s fuzzy AI)",
+                quote.id,
+                auto_matched,
+                auto_matched - ai_matched,
+                ai_matched,
+            )
+
+        from .quotes import QuoteCalculationService
+
+        QuoteCalculationService.recalculate_quote(quote.id)
     quote.refresh_from_db()
     return quote, None, prefilled

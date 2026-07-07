@@ -6,6 +6,7 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import UserRateThrottle
 
 from core.permissions import IsCompanyMemberOrPlatformAdmin, OperatorScoped
 from crm.constants import DealStageCode
@@ -21,6 +22,15 @@ from crm.services import (
     submit_request,
     transition_deal_stage,
 )
+
+
+class AiDraftThrottle(UserRateThrottle):
+    """Per-user throttle for the async AI draft-КП build (ARCH-01) — each call is a paid
+    Claude fuzzy-match + a new Quote row. Fixed-scope throttle class (the LeadSubmitThrottle
+    pattern) because ViewSet actions can't carry the view-level `throttle_scope` attribute
+    the other AI endpoints use; the rate lives in DEFAULT_THROTTLE_RATES["ai_draft"]."""
+
+    scope = "ai_draft"
 
 
 @extend_schema_view(
@@ -383,17 +393,34 @@ class DealViewSet(viewsets.ModelViewSet):
         description=(
             "Creates a fresh DRAFT Quote for the seller, copying the buyer's request lines and "
             "prefilling matched products' cost / currency / lead-time from the seller's SupplierOffers "
-            "(ADR-0006 Move 3). The seller reviews-and-sends instead of building from scratch."
+            "(ADR-0006 Move 3). The seller reviews-and-sends instead of building from scratch. "
+            "ARCH-01: the build (incl. the AI fuzzy match) runs on Celery — returns 202 + task_id; "
+            "poll sourcing/ai-status/<task_id>/ for {prefilled, quote_id, deal}."
         ),
-        responses={200: DealDetailSerializer},
+        responses={
+            202: OpenApiResponse(description="AI draft job queued, task_id returned"),
+            400: OpenApiResponse(description="No request lines"),
+            403: OpenApiResponse(description="Not a routed seller / not entitled"),
+            404: OpenApiResponse(description="Deal not found"),
+        },
         tags=["CRM"],
     )
-    @action(detail=True, methods=["post"], url_path="generate-draft-quote", permission_classes=[IsAuthenticated])
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="generate-draft-quote",
+        permission_classes=[IsAuthenticated],
+        throttle_classes=[AiDraftThrottle],
+    )
     def generate_draft_quote(self, request, pk=None):
-        """Thin wrapper (Rule 8) — build a pre-filled draft КП from the buyer request."""
-        from crm.services.draft_quote import generate_draft_quote as build_draft
+        """Thin wrapper (Rule 8) — validate the cheap gates, then queue the draft-КП build."""
+        from crm.services.draft_quote import validate_draft_quote_gates
+        from sourcing.ai_jobs import enqueue_ai_job
 
-        quote, err, prefilled = build_draft(int(pk), request.user)
+        # ARCH-01: run the read-only gate checks synchronously (no LLM, no writes) so an
+        # unauthorized / unentitled caller still gets an immediate 4xx instead of a queued job.
+        # The worker re-runs the authoritative gates (incl. credit consumption) in the service.
+        err = validate_draft_quote_gates(int(pk), request.user)
         if err:
             http_status = (
                 status.HTTP_403_FORBIDDEN
@@ -407,14 +434,8 @@ class DealViewSet(viewsets.ModelViewSet):
                 else status.HTTP_404_NOT_FOUND if err == "DEAL_NOT_FOUND" else status.HTTP_400_BAD_REQUEST
             )
             return Response({"error": err}, status=http_status)
-        deal = Deal.objects.get(pk=quote.deal_id)
-        return Response(
-            {
-                "prefilled": prefilled,
-                "quote_id": quote.id,
-                "deal": DealDetailSerializer(deal, context={"request": request}).data,
-            }
-        )
+        payload = {"deal_id": int(pk), "user_id": request.user.id}
+        return enqueue_ai_job("draft_quote", payload, request.user)
 
     @extend_schema(
         summary="List seller companies for the routing picker",
