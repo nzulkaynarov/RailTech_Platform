@@ -73,6 +73,10 @@ def create_offline_client(
     inn = (inn or "").strip()
     email = (email or "").strip()
     phone = (phone or "").strip()
+    # Client books belong to seller teams; a non-seller would create an orphan company
+    # invisible even to themselves (seller_clients scoping) — refuse instead.
+    if not _seller_company_ids(seller):
+        return None, "ONLY_SELLER_CAN_CREATE_CLIENTS"
     if not company_name or not contact_name:
         return None, "CLIENT_FIELDS_REQUIRED"
     if not (email or phone):
@@ -107,4 +111,22 @@ def create_offline_client(
             is_primary=not company.contacts.filter(is_primary=True).exists(),
             created_by=seller,
         )
+
+    # Counterparty book (Phase B): recording an offline client IS the relationship —
+    # the seller's book gains a CLIENT edge owned by the creator's seller company.
+    from .permissions import primary_seller_company_id
+
+    owner_company_id = primary_seller_company_id(seller)
+    if owner_company_id:
+        from crm.models import RelationshipDirection, RelationshipSource
+        from crm.services.relationships import touch_relationship
+
+        touch_relationship(
+            owner_company_id=owner_company_id,
+            counterparty_company_id=company.id,
+            direction=RelationshipDirection.CLIENT,
+            source=RelationshipSource.OFFLINE_CREATED,
+            owner_member=seller.memberships.filter(company_id=owner_company_id, is_active=True).first(),
+        )
+
     return {"company": company, "contact": contact, "company_created": company_created}, None

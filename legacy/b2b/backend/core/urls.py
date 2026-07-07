@@ -14,6 +14,7 @@ from accounts.views import (
     CompanyRoleViewSet,
     CompanyTypeViewSet,
     CompanyViewSet,
+    ContactViewSet,
     CookieTokenObtainPairView,
     CookieTokenRefreshView,
     ForgotPasswordView,
@@ -77,6 +78,7 @@ from crm.views import (
     QuoteRequestDiffView,
     QuoteStatusViewSet,
     QuoteViewSet,
+    RelationshipViewSet,
     SuggestChatReplyView,
     TimelineView,
     TimeToFirstQuoteView,
@@ -123,8 +125,12 @@ router.register(r"crm/payments", PaymentViewSet, basename="payment")
 router.register(r"crm/acts", ActViewSet, basename="act")
 router.register(r"crm/fulfillments", FulfillmentViewSet, basename="fulfillment")
 router.register(r"crm/leads", LeadViewSet, basename="lead")
+# CRM Phase B — counterparty book (relationship edges of the user's own companies).
+router.register(r"crm/relationships", RelationshipViewSet, basename="relationship")
 
 router.register(r"accounts/companies", CompanyViewSet)
+# CRM Phase B — offline-client contacts (seller team's own book).
+router.register(r"accounts/contacts", ContactViewSet, basename="contact")
 router.register(r"accounts/users", UserViewSet)
 router.register(r"accounts/subscriptions", SupplierSubscriptionViewSet, basename="subscription")
 router.register(r"admin/entitlements", CompanyEntitlementViewSet, basename="entitlement")

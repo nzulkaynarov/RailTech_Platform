@@ -416,6 +416,64 @@ export interface Lead {
 	created_at?: string;
 }
 
+// ─── CRM Phase B — counterparty relationship book («Книга контрагентов») ──
+// Direction/stage/source are stable DB codes (Rule 2: compare by code, translate for display).
+export type RelationshipDirection = 'CLIENT' | 'SUPPLIER';
+export type RelationshipStage = 'PROSPECT' | 'ACTIVE' | 'DORMANT' | 'LOST';
+export type RelationshipSource = 'LEAD' | 'OFFLINE_CREATED' | 'INBOUND_RFQ' | 'SELF_REGISTERED';
+
+/** Account summary embedded in a relationship edge (nested read, flat write pattern). */
+export interface RelationshipCounterparty {
+	id: number;
+	name: string;
+	inn: string | null;
+	// INN as stated by the book owner for an offline (unregistered) counterparty.
+	stated_inn: string;
+	is_registered: boolean;
+}
+
+export interface Relationship {
+	id: number;
+	direction: RelationshipDirection;
+	stage: RelationshipStage;
+	source: RelationshipSource;
+	counterparty: RelationshipCounterparty;
+	owner_member: number | null;
+	owner_member_name: string;
+	contacts_count: number;
+	first_interaction_at: string | null;
+	last_interaction_at: string | null;
+	deals_count: number;
+	won_count: number;
+	// Decimal string — total_incl_vat of won deals, UZS-канон.
+	gmv: string;
+	created_at: string;
+}
+
+/** Contact of a company in the team's own client book. */
+export interface Contact {
+	id: number;
+	company: number;
+	company_name: string;
+	company_is_registered: boolean;
+	name: string;
+	email?: string;
+	phone?: string;
+	position?: string;
+	is_primary?: boolean;
+	created_at: string;
+}
+
+/** «Завести оффлайн-клиента» — company + contact in one step (flat write). */
+export interface OfflineClientPayload {
+	company_name: string;
+	contact_name: string;
+	inn?: string;
+	email?: string;
+	phone?: string;
+	position?: string;
+}
+
 export const crmApi = {
 	getDeals: async () => {
 		const response = await apiClient.get<PaginatedResponse<Deal>>('crm/deals/');
@@ -631,6 +689,31 @@ export const crmApi = {
 	// CRM Phase A — read-only timeline scoped to a deal or a counterparty company.
 	getTimeline: async (params: { deal_id?: number; company_id?: number; limit?: number }) => {
 		const response = await apiClient.get<TimelineEntry[]>('crm/timeline/', { params });
+		return response.data;
+	},
+	// ─── CRM Phase B — counterparty book («Книга контрагентов») ─────────────
+	// direction=CLIENT → книга клиентов (seller context), SUPPLIER → книга поставщиков (buyer).
+	getRelationships: async (direction?: RelationshipDirection) => {
+		const response = await apiClient.get<PaginatedResponse<Relationship>>('crm/relationships/', {
+			params: direction ? { direction } : undefined,
+		});
+		return response.data.results;
+	},
+	// Only the two human-managed fields are writable: stage verdict + account owner.
+	updateRelationship: async (id: number, data: { stage?: RelationshipStage; owner_member?: number | null }) => {
+		const response = await apiClient.patch<Relationship>(`crm/relationships/${id}/`, data);
+		return response.data;
+	},
+	// Contacts of the team's OWN client book (confidentiality boundary is server-side).
+	getContacts: async () => {
+		const response = await apiClient.get<PaginatedResponse<Contact>>('accounts/contacts/');
+		return response.data.results;
+	},
+	// «Завести оффлайн-клиента»: company + primary contact in one step → 201 Contact.
+	// Errors arrive as {"detail": CODE} — CLIENT_FIELDS_REQUIRED /
+	// CONTACT_NEEDS_EMAIL_OR_PHONE / ONLY_SELLER_CAN_CREATE_CLIENTS (apiErrors.* map).
+	createOfflineClient: async (payload: OfflineClientPayload) => {
+		const response = await apiClient.post<Contact>('accounts/contacts/', payload);
 		return response.data;
 	},
 	getQuotes: async () => {

@@ -369,6 +369,12 @@ def route_request_to_sellers(user: CustomUser, deal: Deal, seller_company_ids: l
     for seller_id in valid_ids:
         DealSellerRouting.objects.get_or_create(deal=deal, seller_company_id=seller_id)
 
+    # Counterparty book (Phase B): first interaction of a buyer↔seller pair creates both edges
+    # (buyer gains a SUPPLIER, each routed seller gains a CLIENT); repeats just touch them.
+    from .relationships import ensure_edges_for_deal_routing
+
+    ensure_edges_for_deal_routing(deal, valid_ids)
+
     ActivityLog.objects.create(
         action="Заявка адресована продавцам (RFQ routing)",
         detail=f"Deal #{deal.id}: {len(valid_ids)} продавцов",

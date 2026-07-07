@@ -1,5 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { crmApi, QuoteItem, QuoteCharge, MatchCatalogPayload, PreflightPayload, DocCheckPayload } from '../api/crmApi';
+import {
+  crmApi, QuoteItem, QuoteCharge, MatchCatalogPayload, PreflightPayload, DocCheckPayload,
+  RelationshipDirection, RelationshipStage, OfflineClientPayload,
+} from '../api/crmApi';
 import { aiApi, type ComposeRequestPayload } from '../api/aiApi';
 
 export const useDeals = () => useQuery({
@@ -219,6 +222,44 @@ export const useDealTimeline = (dealId: number) => useQuery({
     queryFn: () => crmApi.getTimeline({ deal_id: dealId }),
     enabled: !!dealId,
 });
+
+// CRM Phase B — company-scoped timeline (the counterparty card's history feed).
+export const useCompanyTimeline = (companyId: number) => useQuery({
+    queryKey: ['timeline', 'company', companyId],
+    queryFn: () => crmApi.getTimeline({ company_id: companyId }),
+    enabled: !!companyId,
+});
+
+// ─── CRM Phase B — counterparty relationship book («Книга контрагентов») ────
+export const useRelationships = (direction?: RelationshipDirection) => useQuery({
+    queryKey: ['relationships', direction ?? 'all'],
+    queryFn: () => crmApi.getRelationships(direction),
+});
+
+// PATCH is limited to the two human-managed fields: stage verdict + account owner.
+export const useUpdateRelationship = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, data }: { id: number; data: { stage?: RelationshipStage; owner_member?: number | null } }) =>
+            crmApi.updateRelationship(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['relationships'] });
+        },
+    });
+};
+
+// «Завести оффлайн-клиента» — creates a client company edge + primary contact,
+// so both the book and the contacts list refresh.
+export const useCreateOfflineClient = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (payload: OfflineClientPayload) => crmApi.createOfflineClient(payload),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['relationships'] });
+            queryClient.invalidateQueries({ queryKey: ['contacts'] });
+        },
+    });
+};
 
 export const useQuotes = () => useQuery({
     queryKey: ['quotes'],
