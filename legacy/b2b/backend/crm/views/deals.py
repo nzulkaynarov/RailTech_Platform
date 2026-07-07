@@ -350,7 +350,7 @@ class DealViewSet(viewsets.ModelViewSet):
                 if err in ("ADMIN_VIEWER_CANNOT_ACT", "MEMBER_REQUIRED_FOR_ACTION")
                 else status.HTTP_400_BAD_REQUEST
             )
-            return Response({"error": err}, status=http_status)
+            return Response({"detail": err}, status=http_status)
         # Re-fetch UNSCOPED (not via get_queryset): the service already authorized the mutation,
         # but get_queryset() is context-sensitive and excludes this deal for a delegated admin
         # (can_sell=False) or in BUYER context → would raise DoesNotExist → HTTP 500 after a
@@ -433,7 +433,7 @@ class DealViewSet(viewsets.ModelViewSet):
                 )
                 else status.HTTP_404_NOT_FOUND if err == "DEAL_NOT_FOUND" else status.HTTP_400_BAD_REQUEST
             )
-            return Response({"error": err}, status=http_status)
+            return Response({"detail": err}, status=http_status)
         payload = {"deal_id": int(pk), "user_id": request.user.id}
         return enqueue_ai_job("draft_quote", payload, request.user)
 
@@ -528,7 +528,7 @@ class DealViewSet(viewsets.ModelViewSet):
         deal = self.get_object()
         quote = deal.active_quote
         if not quote:
-            return Response({"error": "No active quote for this deal"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": "No active quote for this deal"}, status=status.HTTP_404_NOT_FOUND)
         if not quote.pdf_file:
             # ARCH-03: enqueue the off-thread render + 202 instead of running WeasyPrint
             # inline; only the cheap render guards run synchronously (409 on failure).
@@ -539,8 +539,8 @@ class DealViewSet(viewsets.ModelViewSet):
                 QuoteLifecycleService.assert_pdf_renderable(quote.pk)
             except ValueError as exc:
                 if str(exc) in ("QUOTE_NOT_CLAIMED", "FX_RATE_MISSING", "QUOTE_BELOW_COST"):
-                    return Response({"error": str(exc)}, status=status.HTTP_409_CONFLICT)
-                return Response({"error": "Failed to generate PDF"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                    return Response({"detail": str(exc)}, status=status.HTTP_409_CONFLICT)
+                return Response({"detail": "Failed to generate PDF"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             return pdf_generating_response("quote", quote.pk)
         from django.http import FileResponse
 

@@ -170,7 +170,7 @@ def test_extract_endpoint_guards(settings, monkeypatch):
     binary = SimpleUploadedFile("malware.exe", b"MZ\x00\x00binary", content_type="application/octet-stream")
     resp = client.post(url, {"file": binary, "quote_id": 1}, format="multipart")
     assert resp.status_code == 400
-    assert resp.json().get("error") == "FILE_TYPE_UNSUPPORTED"
+    assert resp.json().get("detail") == "FILE_TYPE_UNSUPPORTED"
 
 
 @pytest.mark.django_db

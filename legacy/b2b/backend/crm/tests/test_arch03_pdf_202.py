@@ -106,7 +106,7 @@ def test_generate_pdf_unclaimed_guard_409_and_not_enqueued(api, quote):
     with patch(RENDER_DELAY) as delay:
         response = api.post(f"/api/v1/crm/quotes/{quote.pk}/generate-pdf/")
     assert response.status_code == 409
-    assert response.data["error"] == "QUOTE_NOT_CLAIMED"
+    assert response.data["detail"] == "QUOTE_NOT_CLAIMED"
     delay.assert_not_called()
 
 
@@ -117,7 +117,7 @@ def test_download_pdf_unclaimed_guard_409(api, quote):
     with patch(RENDER_DELAY) as delay:
         response = api.get(f"/api/v1/crm/quotes/{quote.pk}/download-pdf/")
     assert response.status_code == 409
-    assert response.data["error"] == "QUOTE_NOT_CLAIMED"
+    assert response.data["detail"] == "QUOTE_NOT_CLAIMED"
     delay.assert_not_called()
 
 

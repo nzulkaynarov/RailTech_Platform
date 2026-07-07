@@ -38,7 +38,7 @@ def enqueue_ai_job(feature: str, payload: dict, user) -> Response:
     except DatabaseError:
         logger.exception("Failed to record AI job ownership (feature=%s)", feature)
         return Response(
-            {"error": "Failed to queue AI job. Please try again."},
+            {"detail": "Failed to queue AI job. Please try again."},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
     try:
@@ -49,7 +49,7 @@ def enqueue_ai_job(feature: str, payload: dict, user) -> Response:
         logger.exception("Failed to publish AI job (feature=%s)", feature)
         AIJob.objects.filter(celery_task_id=task_id).delete()
         return Response(
-            {"error": "Failed to queue AI job. Please try again."},
+            {"detail": "Failed to queue AI job. Please try again."},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
     return Response({"task_id": task_id}, status=status.HTTP_202_ACCEPTED)
@@ -78,7 +78,7 @@ class AIJobStatusView(APIView):
         if not request.user.is_platform_admin:
             job_exists = AIJob.objects.filter(celery_task_id=task_id, owner=request.user).exists()
             if not job_exists:
-                return Response({"error": "You do not have access to this task"}, status=status.HTTP_403_FORBIDDEN)
+                return Response({"detail": "You do not have access to this task"}, status=status.HTTP_403_FORBIDDEN)
 
         res = AsyncResult(task_id)
         result_data = None

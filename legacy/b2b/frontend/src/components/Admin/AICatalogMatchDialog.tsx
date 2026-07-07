@@ -20,8 +20,8 @@ interface AICatalogMatchDialogProps {
   items: QuoteItem[];
 }
 
-// Narrow shape for reading the backend's {error: '...'} payload off an axios error.
-type AxiosLike = { response?: { status?: number; data?: { error?: string } } };
+// Narrow shape for reading the backend's {detail: '...'} payload off an axios error.
+type AxiosLike = { response?: { status?: number; data?: { detail?: string; error?: string } } };
 
 const lineName = (item: QuoteItem) => item.product_name || item.imported_raw_name || '';
 
@@ -64,7 +64,8 @@ export const AICatalogMatchDialog: React.FC<AICatalogMatchDialogProps> = ({ open
         onSuccess: (data) => setMatches(data.matches),
         onError: (error) => {
           const axiosError = error as AxiosLike;
-          if (axiosError.response?.data?.error === 'AI_DISABLED' || axiosError.response?.status === 503) {
+          const code = axiosError.response?.data?.detail ?? axiosError.response?.data?.error;
+          if (code === 'AI_DISABLED' || axiosError.response?.status === 503) {
             setAiDisabled(true);
           } else {
             setFailed(true);

@@ -42,9 +42,9 @@ def handle_quote_export(request, quote):
         owner_company_id = _quote_owner_company_id(quote)
         # Phase E: KYC first (distinct "do KYC" message), then the paid-export gate.
         if not company_kyc_verified(owner_company_id):
-            return Response({"error": "SELLER_KYC_REQUIRED"}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"detail": "SELLER_KYC_REQUIRED"}, status=status.HTTP_403_FORBIDDEN)
         if not quote_export_entitled(owner_company_id):
-            return Response({"error": "QUOTE_EXPORT_NOT_ENTITLED"}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"detail": "QUOTE_EXPORT_NOT_ENTITLED"}, status=status.HTTP_403_FORBIDDEN)
     try:
         return export_quote(quote, export_format, include_costs=include_costs)
     except ValueError as exc:
@@ -52,8 +52,8 @@ def handle_quote_export(request, quote):
         # Loss-prevention / claim guards (HOLE 2): a КП with no FX rate, below cost, or unclaimed
         # must not render to a downloadable client document — surface the specific 409, not a 400.
         if code in ("QUOTE_NOT_CLAIMED", "FX_RATE_MISSING", "QUOTE_BELOW_COST"):
-            return Response({"error": code}, status=status.HTTP_409_CONFLICT)
+            return Response({"detail": code}, status=status.HTTP_409_CONFLICT)
         return Response(
-            {"error": "UNSUPPORTED_FORMAT", "supported": ["pdf", "xlsx", "csv"]},
+            {"detail": "UNSUPPORTED_FORMAT", "supported": ["pdf", "xlsx", "csv"]},
             status=status.HTTP_400_BAD_REQUEST,
         )

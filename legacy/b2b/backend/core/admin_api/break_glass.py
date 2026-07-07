@@ -65,13 +65,13 @@ class BreakGlassView(APIView):
         reason = (request.data.get("reason") or "").strip()
         entity_id_raw = request.data.get("entity_id")
         if entity_type not in BREAK_GLASS_ENTITIES:
-            return Response({"error": "INVALID_ENTITY_TYPE", "allowed": sorted(BREAK_GLASS_ENTITIES)}, status=400)
+            return Response({"detail": "INVALID_ENTITY_TYPE", "allowed": sorted(BREAK_GLASS_ENTITIES)}, status=400)
         try:
             entity_id = int(entity_id_raw)
         except (TypeError, ValueError):
-            return Response({"error": "INVALID_ENTITY_ID"}, status=400)
+            return Response({"detail": "INVALID_ENTITY_ID"}, status=400)
         if not reason:
-            return Response({"error": "FORCE_REASON_REQUIRED"}, status=400)
+            return Response({"detail": "FORCE_REASON_REQUIRED"}, status=400)
         try:
             minutes = int(request.data.get("minutes", _DEFAULT_MINUTES))
         except (TypeError, ValueError):

@@ -85,25 +85,25 @@ class ExcelImportView(APIView):
             deal = Deal.objects.select_related("company").get(pk=deal_id)
         except Deal.DoesNotExist:
             return Response(
-                {"error": "Deal not found"},
+                {"detail": "Deal not found"},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
         # IDOR protection: verify deal access
         if not _check_deal_access(request.user, deal):
-            return Response({"error": "You do not have access to this deal"}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"detail": "You do not have access to this deal"}, status=status.HTTP_403_FORBIDDEN)
 
         file_obj = request.FILES.get("file")
         if not file_obj:
             return Response(
-                {"error": "No file uploaded"},
+                {"detail": "No file uploaded"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         # File size validation
         if file_obj.size > MAX_EXCEL_FILE_SIZE:
             return Response(
-                {"error": f"File too large (max {MAX_EXCEL_FILE_SIZE // (1024*1024)}MB)"},
+                {"detail": f"File too large (max {MAX_EXCEL_FILE_SIZE // (1024*1024)}MB)"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -122,7 +122,7 @@ class ExcelImportView(APIView):
                 name_lower = str(file_obj.name or "").lower()
                 if not name_lower.endswith(ai_extensions):
                     return Response(
-                        {"error": "Unsupported file type. Allowed: Excel, CSV, PDF, image, text."},
+                        {"detail": "Unsupported file type. Allowed: Excel, CSV, PDF, image, text."},
                         status=status.HTTP_400_BAD_REQUEST,
                     )
                 # SEC-08: the extension is spoofable — verify the header matches it before we
@@ -133,14 +133,14 @@ class ExcelImportView(APIView):
                 ai_ext = "." + name_lower.rsplit(".", 1)[-1] if "." in name_lower else ""
                 if not content_matches_extension(file_content[:16], ai_ext):
                     return Response(
-                        {"error": "File content does not match its extension."},
+                        {"detail": "File content does not match its extension."},
                         status=status.HTTP_400_BAD_REQUEST,
                     )
             else:
                 # MIME/magic byte validation (non-AI path is xlsx-only)
                 if not _validate_xlsx_signature(file_content):
                     return Response(
-                        {"error": "Invalid file format. Only .xlsx files are accepted."},
+                        {"detail": "Invalid file format. Only .xlsx files are accepted."},
                         status=status.HTTP_400_BAD_REQUEST,
                     )
 
@@ -178,7 +178,7 @@ class ExcelImportView(APIView):
             # Attachment create; OperationalError: Celery broker unreachable.
             logger.exception("Failed to queue Excel import task")
             return Response(
-                {"error": "Failed to process import. Please try again."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"detail": "Failed to process import. Please try again."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
 
@@ -240,7 +240,7 @@ class CatalogImportView(APIView):
             )
             if not seller_membership:
                 return Response(
-                    {"error": "NOT_A_SELLER_MEMBER"},
+                    {"detail": "NOT_A_SELLER_MEMBER"},
                     status=status.HTTP_403_FORBIDDEN,
                 )
             supplier_company_id = seller_membership.company_id
@@ -248,13 +248,13 @@ class CatalogImportView(APIView):
         file_obj = request.FILES.get("file")
         if not file_obj:
             return Response(
-                {"error": "No file uploaded"},
+                {"detail": "No file uploaded"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         if file_obj.size > MAX_EXCEL_FILE_SIZE:
             return Response(
-                {"error": f"File too large (max {MAX_EXCEL_FILE_SIZE // (1024*1024)}MB)"},
+                {"detail": f"File too large (max {MAX_EXCEL_FILE_SIZE // (1024*1024)}MB)"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -263,7 +263,8 @@ class CatalogImportView(APIView):
 
             if not _validate_xlsx_signature(file_content):
                 return Response(
-                    {"error": "Invalid file format. Only .xlsx files are accepted."}, status=status.HTTP_400_BAD_REQUEST
+                    {"detail": "Invalid file format. Only .xlsx files are accepted."},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
 
             file_content_b64 = base64.b64encode(file_content).decode("ascii")
@@ -281,7 +282,7 @@ class CatalogImportView(APIView):
         except (OSError, ValueError, DatabaseError, OperationalError):
             logger.exception("Failed to queue catalog import task")
             return Response(
-                {"error": "Failed to process import. Please try again."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"detail": "Failed to process import. Please try again."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
 
@@ -307,7 +308,7 @@ class ImportStatusView(APIView):
         if not request.user.is_platform_admin:
             task_exists = ImportTask.objects.filter(celery_task_id=task_id, owner=request.user).exists()
             if not task_exists:
-                return Response({"error": "You do not have access to this task"}, status=status.HTTP_403_FORBIDDEN)
+                return Response({"detail": "You do not have access to this task"}, status=status.HTTP_403_FORBIDDEN)
 
         res = AsyncResult(task_id)
         result_data = None
@@ -655,10 +656,10 @@ class MatchCatalogView(APIView):
         from django.conf import settings
 
         if not getattr(settings, "AI_IMPORT_ENABLED", False):
-            return Response({"error": "AI_DISABLED"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            return Response({"detail": "AI_DISABLED"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         lines = request.data.get("lines")
         if not isinstance(lines, list) or not lines:
-            return Response({"error": "LINES_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "LINES_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
         domain_code = request.data.get("domain_code") or None
         try:
             top_k = max(1, min(5, int(request.data.get("top_k") or 3)))
@@ -699,10 +700,10 @@ class PreflightCheckView(APIView):
         from django.conf import settings
 
         if not getattr(settings, "AI_IMPORT_ENABLED", False):
-            return Response({"error": "AI_DISABLED"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            return Response({"detail": "AI_DISABLED"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         lines = request.data.get("lines")
         if not isinstance(lines, list) or not lines:
-            return Response({"error": "LINES_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "LINES_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
         domain_code = request.data.get("domain_code") or None
 
         from .ai_jobs import enqueue_ai_job
@@ -790,23 +791,23 @@ class DocumentExtractView(APIView):
         from django.conf import settings
 
         if not getattr(settings, "AI_IMPORT_ENABLED", False):
-            return Response({"error": "AI_DISABLED"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            return Response({"detail": "AI_DISABLED"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
         uploaded = request.FILES.get("file")
         if uploaded is None:
-            return Response({"error": "FILE_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "FILE_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
         if uploaded.size > getattr(settings, "AI_IMPORT_MAX_BYTES", MAX_DOC_FILE_SIZE):
-            return Response({"error": "FILE_TOO_LARGE"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "FILE_TOO_LARGE"}, status=status.HTTP_400_BAD_REQUEST)
         extension = (uploaded.name or "").rsplit(".", 1)[-1].lower() if "." in (uploaded.name or "") else ""
         if extension not in _DOC_EXT_ALLOWLIST:
-            return Response({"error": "FILE_TYPE_UNSUPPORTED"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "FILE_TYPE_UNSUPPORTED"}, status=status.HTTP_400_BAD_REQUEST)
         # SEC-08: read the bytes once and verify the header matches the extension (spoof guard)
         # before handing them to the vision model; text formats have no signature and pass.
         from core.validators import content_matches_extension
 
         raw = uploaded.read()
         if not content_matches_extension(raw[:16], extension):
-            return Response({"error": "FILE_TYPE_UNSUPPORTED"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "FILE_TYPE_UNSUPPORTED"}, status=status.HTTP_400_BAD_REQUEST)
 
         def _to_int(value):
             try:
@@ -817,11 +818,11 @@ class DocumentExtractView(APIView):
         quote_id = _to_int(request.data.get("quote_id"))
         contract_id = _to_int(request.data.get("contract_id"))
         if not quote_id and not contract_id:
-            return Response({"error": "QUOTE_OR_CONTRACT_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "QUOTE_OR_CONTRACT_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
 
         expected_total, expected_currency, kind = _resolve_expected(request.user, request, quote_id, contract_id)
         if kind is None:
-            return Response({"error": "REFERENCE_NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": "REFERENCE_NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)
 
         # ARCH-01: the visibility-scoped record of truth is resolved HERE (needs request.user);
         # the worker only receives the JSON-safe expected values + a STORAGE KEY for the

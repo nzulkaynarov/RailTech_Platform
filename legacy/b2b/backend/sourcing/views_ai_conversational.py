@@ -60,11 +60,11 @@ class ComposeRequestView(APIView):
 
     def post(self, request):
         if not getattr(settings, "AI_IMPORT_ENABLED", False):
-            return Response({"error": "AI_DISABLED"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            return Response({"detail": "AI_DISABLED"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
         text = request.data.get("text")
         if not isinstance(text, str) or not text.strip():
-            return Response({"error": "TEXT_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "TEXT_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
         domain_code = request.data.get("domain_code") or None
 
         # ARCH-01: TWO sequential Claude calls — the slowest interactive AI path; runs on Celery.

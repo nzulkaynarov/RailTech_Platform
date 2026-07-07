@@ -55,8 +55,8 @@ export const ForgotPasswordPage: React.FC<ForgotPasswordPageProps> = ({ onLogin 
         } catch (err: unknown) {
             type AxiosLike = { response?: { data?: { detail?: string; error?: string } } };
             const detail =
-                (err as AxiosLike)?.response?.data?.error ||
                 (err as AxiosLike)?.response?.data?.detail ||
+                (err as AxiosLike)?.response?.data?.error ||
                 (err instanceof Error ? err.message : '') ||
                 t('forgotPassword.genericError');
             setServerError(detail);

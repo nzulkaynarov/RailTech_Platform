@@ -157,7 +157,7 @@ def test_seller_cannot_approve_quote(seller, deal):
     quote = _quote(deal, status_code="SENT", prepared_by=seller_user)
     resp = _api(seller_user).post(f"/api/v1/crm/quotes/{quote.id}/approve/")
     assert resp.status_code == 403
-    assert resp.data["error"] == "MEMBER_REQUIRED_FOR_ACTION"
+    assert resp.data["detail"] == "MEMBER_REQUIRED_FOR_ACTION"
 
 
 def test_buyer_without_can_buy_cannot_approve(buyer, deal):

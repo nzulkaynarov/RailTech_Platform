@@ -18,7 +18,6 @@ from core.file_streaming import stream_file_field
 from core.optimistic_locking import OptimisticLockingMixin
 from core.permissions import IsCompanyMemberOrPlatformAdmin, OperatorScoped
 from crm import services as crm_services
-from crm.views._pdf import pdf_generating_response
 from crm.constants import QuoteStatusCode
 from crm.models import ChargeTemplate, ChargeType, Quote, QuoteCharge, QuoteItem, QuoteStatus
 from crm.serializers import (
@@ -28,13 +27,14 @@ from crm.serializers import (
     QuoteItemSerializer,
     QuoteSerializer,
 )
+from crm.views._pdf import pdf_generating_response
 
 
 def _chain_error_response(error):
     """Map a КП approval-chain service error code to an HTTP response."""
     forbidden = {"ROLE_NOT_PERMITTED", "QUOTE_SEND_NOT_ENTITLED", "SELLER_KYC_REQUIRED"}
     http_status = status.HTTP_403_FORBIDDEN if error in forbidden else status.HTTP_400_BAD_REQUEST
-    return Response({"error": error}, status=http_status)
+    return Response({"detail": error}, status=http_status)
 
 
 # ARCH-03: race-window polling hints for the public КП PDF. When a client opens the emailed
@@ -284,8 +284,8 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
             QuoteLifecycleService.assert_pdf_renderable(quote.pk)
         except ValueError as e:
             if str(e) in ("QUOTE_NOT_CLAIMED", "FX_RATE_MISSING", "QUOTE_BELOW_COST"):
-                return Response({"error": str(e)}, status=status.HTTP_409_CONFLICT)
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                return Response({"detail": str(e)}, status=status.HTTP_409_CONFLICT)
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         # Explicit regenerate: drop the stale file reference first so a concurrent
         # download can't serve the outdated render while the task rebuilds it.
         if quote.pdf_file:
@@ -321,7 +321,7 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
 
         quote = Quote.objects.select_related("status", "prepared_by", "deal").filter(pk=pk).first()
         if quote is None:
-            return Response({"error": "QUOTE_NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": "QUOTE_NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)
         if not can_send_quote_to_client(request.user, quote):
             return _chain_error_response("ROLE_NOT_PERMITTED")
         # Paid-seller gate: sending the КП to the client is the monetised seller action.
@@ -364,7 +364,7 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
                 if err in ("ADMIN_VIEWER_CANNOT_ACT", "ONLY_SELLER_CAN_BUILD_QUOTE")
                 else status.HTTP_400_BAD_REQUEST
             )
-            return Response({"error": err}, status=http_status)
+            return Response({"detail": err}, status=http_status)
         return Response(self.get_serializer(quote).data)
 
     @extend_schema(
@@ -386,7 +386,7 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
                 if err in ("ADMIN_VIEWER_CANNOT_ACT", "ONLY_SELLER_CAN_BUILD_QUOTE")
                 else status.HTTP_400_BAD_REQUEST
             )
-            return Response({"error": err}, status=http_status)
+            return Response({"detail": err}, status=http_status)
         return Response(self.get_serializer(quote).data)
 
     @extend_schema(
@@ -412,7 +412,7 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
                 if err == "ONLY_SELLER_CAN_BUILD_QUOTE"
                 else status.HTTP_404_NOT_FOUND if err == "QUOTE_NOT_FOUND" else status.HTTP_400_BAD_REQUEST
             )
-            return Response({"error": err}, status=http_status)
+            return Response({"detail": err}, status=http_status)
         return Response(data)
 
     @extend_schema(
@@ -458,14 +458,14 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
         from crm.services._params import has_explicit_company_role_perm
 
         if is_platform_admin_viewer(user):
-            return Response({"error": "ADMIN_VIEWER_CANNOT_ACT"}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"detail": "ADMIN_VIEWER_CANNOT_ACT"}, status=status.HTTP_403_FORBIDDEN)
         company_id = quote.deal.company_id
         if not (
             getattr(user, "is_superuser", False)
             or is_member_of(user, company_id, capability="buy")
             or has_explicit_company_role_perm(user, company_id, "quote.approve")
         ):
-            return Response({"error": "MEMBER_REQUIRED_FOR_ACTION"}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"detail": "MEMBER_REQUIRED_FOR_ACTION"}, status=status.HTTP_403_FORBIDDEN)
         return None
 
     @extend_schema(
@@ -525,7 +525,7 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
         reason = request.data.get("reason", "")
         quote, error = QuoteLifecycleService.force_approve_quote(int(pk), request.user, reason)
         if error:
-            return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
         return Response(self.get_serializer(quote).data)
 
     # ── Internal approval chain (документооборот) ──────────────────────────
@@ -644,8 +644,8 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
                 QuoteLifecycleService.assert_pdf_renderable(quote.pk)
             except ValueError as exc:
                 if str(exc) in ("QUOTE_NOT_CLAIMED", "FX_RATE_MISSING", "QUOTE_BELOW_COST"):
-                    return Response({"error": str(exc)}, status=status.HTTP_409_CONFLICT)
-                return Response({"error": "PDF generation failed"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                    return Response({"detail": str(exc)}, status=status.HTTP_409_CONFLICT)
+                return Response({"detail": "PDF generation failed"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             return pdf_generating_response("quote", quote.pk)
 
         from django.http import FileResponse

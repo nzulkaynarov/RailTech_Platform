@@ -317,7 +317,7 @@ def test_endpoint_gate_error_short_circuits_before_enqueue(scene, monkeypatch):
     client.force_authenticate(member)
     response = client.post(f"/api/v1/crm/deals/{scene['deal'].id}/generate-draft-quote/", {}, format="json")
     assert response.status_code == 403
-    assert response.json() == {"error": "AI_DRAFT_NOT_ENTITLED"}
+    assert response.json() == {"detail": "AI_DRAFT_NOT_ENTITLED"}
 
 
 def test_draft_quote_handler_serializes_deal_with_pdf_quote(scene):

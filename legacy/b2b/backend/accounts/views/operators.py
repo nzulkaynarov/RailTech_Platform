@@ -25,7 +25,7 @@ _ERROR_STATUS = {
 
 
 def _err(code):
-    return Response({"error": code}, status=_ERROR_STATUS.get(code, status.HTTP_400_BAD_REQUEST))
+    return Response({"detail": code}, status=_ERROR_STATUS.get(code, status.HTTP_400_BAD_REQUEST))
 
 
 _GROUP_LABELS = {

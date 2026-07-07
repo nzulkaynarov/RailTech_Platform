@@ -42,7 +42,7 @@ class SuggestChatReplyView(APIView):
 
     def post(self, request, deal_id):
         if not getattr(settings, "AI_IMPORT_ENABLED", False):
-            return Response({"error": "AI_DISABLED"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            return Response({"detail": "AI_DISABLED"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
         # ARCH-01: deal-visibility scoping lives INSIDE the service (needs the user), so the
         # worker re-runs it with the recorded user_id — the payload carries no privileged data.

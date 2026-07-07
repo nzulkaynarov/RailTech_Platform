@@ -132,7 +132,7 @@ class UserViewSet(viewsets.ModelViewSet):
             serializer.validated_data["new_password"],
         )
         if error:
-            return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"message": str(_("Password changed successfully"))})
 
     @extend_schema(
@@ -319,7 +319,7 @@ class UserViewSet(viewsets.ModelViewSet):
         user = self.get_object()
         result, error = services.toggle_user_active(user, request.user)
         if error:
-            return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
         return Response(
             {
                 "status": "activated" if result.is_active else "deactivated",

@@ -211,7 +211,7 @@ class SupplierSubscriptionViewSet(viewsets.ModelViewSet):
             manual=True,
         )
         if error:
-            return Response({"error": error}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"detail": error}, status=status.HTTP_403_FORBIDDEN)
         return Response(self.get_serializer(sub).data)
 
 
@@ -309,7 +309,7 @@ class CompanyRoleApplicationViewSet(viewsets.ModelViewSet):
         app = self.get_object()
         result, error = services.approve_role_application(app, request.user)
         if error:
-            return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
         return Response(self.get_serializer(result).data)
 
     @extend_schema(
@@ -331,7 +331,7 @@ class CompanyRoleApplicationViewSet(viewsets.ModelViewSet):
         reason = request.data.get("reason", "")
         result, error = services.reject_role_application(app, request.user, reason)
         if error:
-            return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
         return Response(self.get_serializer(result).data)
 
 
