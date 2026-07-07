@@ -292,7 +292,7 @@ def process_excel_import(
 
                 ai_rows = extract_request_items(file_content, filename or "upload.xlsx")
                 logger.info("AI import: deal=%s recognised %s items", deal_id, len(ai_rows))
-            except Exception:
+            except Exception:  # noqa: BLE001 — an AI/API failure must never break the import (parser fallback)
                 logger.exception("AI import failed deal=%s — falling back to deterministic parser", deal_id)
                 ai_rows = None
 

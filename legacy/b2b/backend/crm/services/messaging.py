@@ -1,3 +1,4 @@
+import logging
 from typing import Optional, Tuple
 
 from django.db.models import QuerySet
@@ -5,6 +6,8 @@ from django.db.models import QuerySet
 from accounts.models import CustomUser
 
 from ..models import Deal, Message
+
+logger = logging.getLogger(__name__)
 
 MAX_MESSAGE_LENGTH = 5000
 
@@ -52,7 +55,8 @@ def archive_messages_sync(messages: QuerySet[Message]) -> dict:
             else:
                 content = jsonl
             storage.save(path, ContentFile(content.encode("utf-8")))
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 — storage fault barrier: isolate one archive file, keep the rest
+            logger.exception("Message archive write failed for %s", path)
             errors.append(f"{path}: {exc}")
             continue
 

@@ -2,6 +2,7 @@ import logging
 from typing import List, Optional, Tuple
 
 from django.conf import settings
+from django.db import DatabaseError
 from django.db.models import QuerySet
 from django.utils import timezone
 
@@ -68,13 +69,13 @@ def approve_role_application(
     if requested_code in ("SUPPLIER", "MANUFACTURER"):
         try:
             ensure_trial_subscription(application.company)
-        except Exception:
+        except DatabaseError:
             logger.exception("Failed to create trial subscription for company %s", application.company_id)
 
     # Notify applicant
     try:
         _send_role_application_email(application, approved=True)
-    except Exception:
+    except Exception:  # noqa: BLE001 — fault barrier: notifying the applicant must never roll back the approval
         logger.exception("Failed to send role application approval email for application %s", application.pk)
 
     return application, None
@@ -143,7 +144,7 @@ def reject_role_application(
 
     try:
         _send_role_application_email(application, approved=False)
-    except Exception:
+    except Exception:  # noqa: BLE001 — fault barrier: notifying the applicant must never roll back the rejection
         logger.exception("Failed to send role application rejection email for application %s", application.pk)
 
     return application, None

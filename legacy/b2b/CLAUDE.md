@@ -146,7 +146,7 @@ docker compose exec backend python manage.py init_superadmin   # создать 
 ```
 
 Superadmin credentials: `SUPERADMIN_EMAIL` / `SUPERADMIN_PASSWORD` from `.env` (default email: `admin@railtech.uz`).
-Command `init_superadmin` reads these env vars, creates user with `is_active=True, is_staff=True, is_superuser=True`.
+Command `init_superadmin` reads these env vars and creates the user (`is_active/is_staff/is_superuser=True`). An EXISTING account is left untouched (SEC-10 — redeploys must not undo password rotations); rotate explicitly with `--reset-password`.
 
 ## Docker Services (dev)
 

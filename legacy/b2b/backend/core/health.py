@@ -30,7 +30,7 @@ def health_check(request):
         health_status["database"] = "up"
         health_status["status"] = "healthy"
         resp = JsonResponse(health_status, status=200)
-    except Exception:
+    except Exception:  # noqa: BLE001 — fault barrier: health probe must answer 503 on ANY failure, never crash
         # SEC-11: log the real DB error server-side, but never leak driver/host
         # internals to an unauthenticated health probe — a generic status only.
         logger.exception("Health check DB connection failed")

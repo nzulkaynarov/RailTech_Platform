@@ -72,5 +72,5 @@ def push_notification_ws(notification: Notification):
                 },
             },
         )
-    except Exception:
+    except Exception:  # noqa: BLE001 — fault barrier: best-effort WS push must never break the caller
         logger.exception("Failed to push WebSocket notification %s", notification.pk)

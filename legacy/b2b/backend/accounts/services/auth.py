@@ -144,15 +144,20 @@ def reset_password(uidb64: str, token: str, password: str) -> Tuple[Optional[Cus
         user = CustomUser.objects.get(pk=uid)
     except (TypeError, ValueError, OverflowError, CustomUser.DoesNotExist):
         return None, "RESET_PASSWORD_INVALID_USER"
+    # SEC-12: a password reset must not resurrect a deactivated account — deactivation
+    # (operator ban / offboarding) is reversible only by a platform operator. The old
+    # code silently flipped is_active=True here. Never-activated registrations go
+    # through verify_and_setup_password, not this flow. Same generic code as an
+    # unknown user so account state doesn't leak.
+    if not user.is_active:
+        return None, "RESET_PASSWORD_INVALID_USER"
     if not default_token_generator.check_token(user, token):
         return None, "RESET_PASSWORD_INVALID_TOKEN"
     weak = _password_error(password, user)
     if weak:
         return None, weak
     user.set_password(password)
-    if not user.is_active:
-        user.is_active = True
-    user.save(update_fields=["password", "is_active"])
+    user.save(update_fields=["password"])
     revoke_user_refresh_tokens(user)
     return user, None
 
