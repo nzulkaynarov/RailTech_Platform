@@ -1,3 +1,4 @@
+import { runAiJob } from '@/lib/aiJob';
 import { apiClient } from './client';
 import { PaginatedResponse } from './types';
 
@@ -318,17 +319,21 @@ export const catalogApi = {
     // AI #2: draft description / specs / category-hint from a product name (+ optional
     // MPN / ГОСТ / domain). SUGGESTION ONLY — the seller reviews & edits before saving.
     // Returns an empty suggestion ({}) when AI is disabled server-side.
+    // ARCH-01: 202 + task_id, resolved via the ai-status poll (same return shape).
     enrichProduct: async (params: {
         name: string;
         domain_code?: string;
         mpn?: string;
         gost?: string;
     }): Promise<ProductEnrichSuggestion> => {
-        const response = await apiClient.post<{ suggestion: ProductEnrichSuggestion }>(
-            'catalog/product-enrich/',
-            params,
-        );
-        return response.data.suggestion ?? {};
+        const result = await runAiJob<{ suggestion: ProductEnrichSuggestion }>(async () => {
+            const response = await apiClient.post<{ task_id: string }>(
+                'catalog/product-enrich/',
+                params,
+            );
+            return response.data;
+        });
+        return result.suggestion ?? {};
     },
 };
 

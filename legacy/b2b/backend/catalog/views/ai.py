@@ -7,7 +7,7 @@ function (`catalog.ai_enrich.enrich_product`) and returns the suggestion. The se
 reviews/edits the draft in the product form before saving; nothing is auto-written.
 """
 
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -21,8 +21,15 @@ from rest_framework.views import APIView
         "From a product name (+ optional MPN / ГОСТ / domain) DRAFTS a description, key "
         "specifications, and a likely-category HINT string for a seller's catalog card. "
         "SUGGESTION ONLY — the seller reviews/edits before saving; nothing is auto-written. "
-        "The category is a free-text hint, never a resolved id (Rule 1). 503 when AI is off."
+        "The category is a free-text hint, never a resolved id (Rule 1). 503 when AI is off. "
+        "ARCH-01: the LLM call runs on Celery — returns 202 + task_id; poll "
+        "sourcing/ai-status/<task_id>/ for {suggestion: {}}."
     ),
+    responses={
+        202: OpenApiResponse(description="AI job queued, task_id returned"),
+        400: OpenApiResponse(description="Missing or too-long name"),
+        503: OpenApiResponse(description="AI enrichment disabled"),
+    },
     tags=["Catalog"],
 )
 class ProductEnrichView(APIView):
@@ -49,7 +56,7 @@ class ProductEnrichView(APIView):
         mpn = str(request.data.get("mpn") or "").strip()[:120] or None
         gost = str(request.data.get("gost") or "").strip()[:120] or None
 
-        from catalog.ai_enrich import enrich_product
+        from sourcing.ai_jobs import enqueue_ai_job
 
-        suggestion = enrich_product(name, domain_code=domain_code, mpn=mpn, gost=gost)
-        return Response({"suggestion": suggestion})
+        payload = {"name": name, "domain_code": domain_code, "mpn": mpn, "gost": gost}
+        return enqueue_ai_job("enrich", payload, request.user)

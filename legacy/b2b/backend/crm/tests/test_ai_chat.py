@@ -194,3 +194,35 @@ def test_suggest_reply_endpoint_503_when_disabled(settings):
     client.force_authenticate(buyer)
     response = client.post(url, {}, format="json")
     assert response.status_code == 503
+
+
+@pytest.mark.django_db
+def test_suggest_reply_endpoint_enqueues_202(settings, monkeypatch):
+    """ARCH-01: AI on → the endpoint queues the LLM call on Celery and returns 202 {task_id}
+    with an owned AIJob row; the payload carries only ids (scoping re-runs in the worker)."""
+    from django.urls import NoReverseMatch, reverse
+    from rest_framework.test import APIClient
+
+    from sourcing.models import AIJob
+
+    buyer, _seller, deal = _make_deal_with_chat()
+    try:
+        url = reverse("suggest-chat-reply", kwargs={"deal_id": deal.id})
+    except NoReverseMatch:
+        pytest.skip("suggest-chat-reply route not wired yet (orchestrator registers it in core/urls.py)")
+
+    settings.AI_IMPORT_ENABLED = True
+    captured = {}
+
+    def _apply_async(args=None, task_id=None, **kwargs):
+        captured.update(feature=args[0], payload=args[1])
+        return SimpleNamespace(id=task_id)
+
+    monkeypatch.setattr("sourcing.tasks_ai.run_ai_job.apply_async", _apply_async)
+    client = APIClient()
+    client.force_authenticate(buyer)
+    response = client.post(url, {}, format="json")
+    assert response.status_code == 202
+    task_id = response.json()["task_id"]
+    assert AIJob.objects.filter(celery_task_id=task_id, owner=buyer, feature="chat_reply").exists()
+    assert captured["payload"] == {"deal_id": deal.id, "user_id": buyer.id}

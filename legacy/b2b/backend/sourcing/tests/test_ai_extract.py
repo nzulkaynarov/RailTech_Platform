@@ -171,3 +171,55 @@ def test_extract_endpoint_guards(settings, monkeypatch):
     resp = client.post(url, {"file": binary, "quote_id": 1}, format="multipart")
     assert resp.status_code == 400
     assert resp.json().get("error") == "FILE_TYPE_UNSUPPORTED"
+
+
+@pytest.mark.django_db
+def test_extract_endpoint_enqueues_202(settings, monkeypatch):
+    """ARCH-01: a valid upload with a visible reference is queued on Celery — 202 {task_id}
+    + an owned AIJob row. The document is staged in default_storage and only its KEY travels
+    in the payload (bytes must never go through the Redis broker); expected values are
+    resolved + JSON-serialized in the view (never the ORM)."""
+    from django.core.files.storage import default_storage
+    from django.core.files.uploadedfile import SimpleUploadedFile
+    from rest_framework.test import APIClient
+
+    from accounts.models import CustomUser
+    from sourcing.models import AIJob
+
+    settings.AI_IMPORT_ENABLED = True
+    user = CustomUser.objects.create_user(email="dx202@x.test", username="dx202@x.test", password="pw", is_active=True)
+    client = APIClient()
+    client.force_authenticate(user)
+
+    # The visibility-scoped record of truth is resolved in the view BEFORE enqueue.
+    monkeypatch.setattr("sourcing.views._resolve_expected", lambda *a: (Decimal("1000000.00"), "UZS", "quote"))
+    captured = {}
+
+    def _apply_async(args=None, task_id=None, **kwargs):
+        captured.update(feature=args[0], payload=args[1], task_id=task_id)
+        return SimpleNamespace(id=task_id)
+
+    monkeypatch.setattr("sourcing.tasks_ai.run_ai_job.apply_async", _apply_async)
+
+    pdf = SimpleUploadedFile("contract.pdf", b"%PDF-1.4 stub", content_type="application/pdf")
+    response = client.post("/api/v1/sourcing/extract-document/", {"file": pdf, "quote_id": 7}, format="multipart")
+
+    assert response.status_code == 202
+    task_id = response.json()["task_id"]
+    assert captured["task_id"] == task_id
+    assert AIJob.objects.filter(celery_task_id=task_id, owner=user, feature="extract").exists()
+    assert captured["feature"] == "extract"
+    payload = captured["payload"]
+    assert payload["filename"] == "contract.pdf"
+    assert payload["expected_total"] == "1000000.00"  # Decimal serialized JSON-safe
+    assert payload["expected_currency"] == "UZS"
+    assert payload["kind"] == "quote"
+    assert payload["reference_id"] == 7
+    # Bytes staged in storage, not shipped through the broker.
+    assert "file_b64" not in payload
+    assert payload["file_key"].startswith("ai_extract_tmp/")
+    try:
+        with default_storage.open(payload["file_key"]) as staged:
+            assert staged.read() == b"%PDF-1.4 stub"
+    finally:
+        default_storage.delete(payload["file_key"])

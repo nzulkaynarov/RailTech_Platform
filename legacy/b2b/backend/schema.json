@@ -6027,7 +6027,7 @@
         "/api/v1/catalog/product-enrich/": {
             "post": {
                 "operationId": "catalog_product_enrich_create",
-                "description": "From a product name (+ optional MPN / ГОСТ / domain) DRAFTS a description, key specifications, and a likely-category HINT string for a seller's catalog card. SUGGESTION ONLY — the seller reviews/edits before saving; nothing is auto-written. The category is a free-text hint, never a resolved id (Rule 1). 503 when AI is off.",
+                "description": "From a product name (+ optional MPN / ГОСТ / domain) DRAFTS a description, key specifications, and a likely-category HINT string for a seller's catalog card. SUGGESTION ONLY — the seller reviews/edits before saving; nothing is auto-written. The category is a free-text hint, never a resolved id (Rule 1). 503 when AI is off. ARCH-01: the LLM call runs on Celery — returns 202 + task_id; poll sourcing/ai-status/<task_id>/ for {suggestion: {}}.",
                 "summary": "AI enrich: draft PIM product fields (advisory)",
                 "tags": [
                     "Catalog"
@@ -6038,8 +6038,14 @@
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "No response body"
+                    "202": {
+                        "description": "AI job queued, task_id returned"
+                    },
+                    "400": {
+                        "description": "Missing or too-long name"
+                    },
+                    "503": {
+                        "description": "AI enrichment disabled"
                     }
                 }
             }
@@ -8522,8 +8528,8 @@
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "{'draft': str} — may be empty"
+                    "202": {
+                        "description": "AI job queued, task_id returned (poll sourcing/ai-status/<task_id>/ for {'draft': str})"
                     },
                     "503": {
                         "description": "AI assist disabled"
@@ -9125,7 +9131,7 @@
         "/api/v1/crm/deals/{id}/generate-draft-quote/": {
             "post": {
                 "operationId": "crm_deals_generate_draft_quote_create",
-                "description": "Creates a fresh DRAFT Quote for the seller, copying the buyer's request lines and prefilling matched products' cost / currency / lead-time from the seller's SupplierOffers (ADR-0006 Move 3). The seller reviews-and-sends instead of building from scratch.",
+                "description": "Creates a fresh DRAFT Quote for the seller, copying the buyer's request lines and prefilling matched products' cost / currency / lead-time from the seller's SupplierOffers (ADR-0006 Move 3). The seller reviews-and-sends instead of building from scratch. ARCH-01: the build (incl. the AI fuzzy match) runs on Celery — returns 202 + task_id; poll sourcing/ai-status/<task_id>/ for {prefilled, quote_id, deal}.",
                 "summary": "Generate a pre-filled draft КП from the buyer request (AI moat / speed)",
                 "parameters": [
                     {
@@ -9166,15 +9172,17 @@
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/DealDetail"
-                                }
-                            }
-                        },
-                        "description": ""
+                    "202": {
+                        "description": "AI draft job queued, task_id returned"
+                    },
+                    "400": {
+                        "description": "No request lines"
+                    },
+                    "403": {
+                        "description": "Not a routed seller / not entitled"
+                    },
+                    "404": {
+                        "description": "Deal not found"
                     }
                 }
             }
@@ -12830,8 +12838,8 @@
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "{'ai_enabled': bool, 'findings': [{issue_type, line, explanation}]}"
+                    "202": {
+                        "description": "AI job queued, task_id returned (poll sourcing/ai-status/<task_id>/ for {'ai_enabled': bool, 'findings': [{issue_type, line, explanation}]})"
                     },
                     "403": {
                         "description": "Caller is neither the deal's buyer nor a routed seller"
@@ -12864,8 +12872,8 @@
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "{'ai_enabled': bool, 'findings': [{issue_type, line, explanation}]}"
+                    "202": {
+                        "description": "AI job queued, task_id returned (poll sourcing/ai-status/<task_id>/ for {'ai_enabled': bool, 'findings': [{issue_type, line, explanation}]})"
                     },
                     "403": {
                         "description": "Caller is neither the deal's buyer nor a routed seller"
@@ -14209,6 +14217,39 @@
                 }
             }
         },
+        "/api/v1/sourcing/ai-status/{task_id}/": {
+            "get": {
+                "operationId": "sourcing_ai_status_retrieve",
+                "description": "Check the status of a background AI job by Celery task_id (the interactive AI endpoints return 202 + task_id — ARCH-01). Users can only check their own jobs; platform admins can check any job.",
+                "summary": "Check AI job status",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "task_id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Sourcing"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Task status with the result payload when ready"
+                    },
+                    "403": {
+                        "description": "No access to this task"
+                    }
+                }
+            }
+        },
         "/api/v1/sourcing/attachments/": {
             "get": {
                 "operationId": "sourcing_attachments_list",
@@ -14536,8 +14577,8 @@
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "Proposed request line items with catalog candidates"
+                    "202": {
+                        "description": "AI job queued, task_id returned (poll sourcing/ai-status/<task_id>/ for {items: []})"
                     },
                     "400": {
                         "description": "Missing/empty text"
@@ -14584,8 +14625,8 @@
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "Extracted fields + code-computed reconciliation"
+                    "202": {
+                        "description": "AI job queued, task_id returned (poll sourcing/ai-status/<task_id>/)"
                     },
                     "400": {
                         "description": "No file or missing quote_id/contract_id"
@@ -14729,7 +14770,7 @@
         "/api/v1/sourcing/match-catalog/": {
             "post": {
                 "operationId": "sourcing_match_catalog_create",
-                "description": "For each request line (name / mpn / gost_drawing) returns up to top_k catalog Product candidates ranked by Claude (product_id always from a DB trigram shortlist — the model never invents ids). The buyer/seller confirms a candidate in the grid (human-in-loop). Capped at 50 lines per call.",
+                "description": "For each request line (name / mpn / gost_drawing) returns up to top_k catalog Product candidates ranked by Claude (product_id always from a DB trigram shortlist — the model never invents ids). The buyer/seller confirms a candidate in the grid (human-in-loop). Capped at 50 lines per call. ARCH-01: the LLM call runs on Celery — returns 202 + task_id; poll sourcing/ai-status/<task_id>/ for {matches: []}.",
                 "summary": "AI semantic match: заявка lines → catalog products",
                 "tags": [
                     "Sourcing"
@@ -14740,8 +14781,14 @@
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "No response body"
+                    "202": {
+                        "description": "AI job queued, task_id returned"
+                    },
+                    "400": {
+                        "description": "Missing lines"
+                    },
+                    "503": {
+                        "description": "AI matching disabled"
                     }
                 }
             }
@@ -14749,7 +14796,7 @@
         "/api/v1/sourcing/preflight-check/": {
             "post": {
                 "operationId": "sourcing_preflight_check_create",
-                "description": "Runs an ADVISORY quality pass over draft request lines before the buyer submits the RFQ. Claude flags vague descriptions, missing/implausible qty or units, likely-duplicate lines and missing key specs. Returns warnings only — never a hard block (line_index always references a GIVEN line; out-of-range indices are dropped). Capped at 50 lines per call.",
+                "description": "Runs an ADVISORY quality pass over draft request lines before the buyer submits the RFQ. Claude flags vague descriptions, missing/implausible qty or units, likely-duplicate lines and missing key specs. Returns warnings only — never a hard block (line_index always references a GIVEN line; out-of-range indices are dropped). Capped at 50 lines per call. ARCH-01: the LLM call runs on Celery — returns 202 + task_id; poll sourcing/ai-status/<task_id>/ for {findings: []}.",
                 "summary": "AI pre-flight quality check for a заявка (advisory)",
                 "tags": [
                     "Sourcing"
@@ -14760,8 +14807,14 @@
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "No response body"
+                    "202": {
+                        "description": "AI job queued, task_id returned"
+                    },
+                    "400": {
+                        "description": "Missing lines"
+                    },
+                    "503": {
+                        "description": "AI pre-flight disabled"
                     }
                 }
             }

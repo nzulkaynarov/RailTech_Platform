@@ -1,3 +1,4 @@
+import { runAiJob } from '@/lib/aiJob';
 import { apiClient } from './client';
 import type { CatalogCandidate } from './crmApi';
 
@@ -31,11 +32,14 @@ export interface ComposeRequestPayload {
 export const aiApi = {
 	// POST a free-text need → proposed structured заявка lines + catalog candidates.
 	// Advisory only (buyer confirms in the grid); may 503 {error:'AI_DISABLED'}.
+	// ARCH-01: 202 + task_id, resolved via the ai-status poll (same return shape).
 	composeRequest: async (payload: ComposeRequestPayload) => {
-		const response = await apiClient.post<{ items: ComposedItem[] }>(
-			'sourcing/compose-request/',
-			payload,
-		);
-		return response.data;
+		return runAiJob<{ items: ComposedItem[] }>(async () => {
+			const response = await apiClient.post<{ task_id: string }>(
+				'sourcing/compose-request/',
+				payload,
+			);
+			return response.data;
+		});
 	},
 };

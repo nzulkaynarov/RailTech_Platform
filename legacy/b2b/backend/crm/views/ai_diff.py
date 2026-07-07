@@ -20,7 +20,7 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from crm.models import Quote
-from crm.services import quote_vs_request_diff, user_can_view_quote_diff
+from crm.services import user_can_view_quote_diff
 
 
 @extend_schema(
@@ -33,7 +33,12 @@ from crm.services import quote_vs_request_diff, user_can_view_quote_diff
         "Result is ASSISTIVE and never blocks. Scoped to the deal's buyer or routed seller."
     ),
     responses={
-        200: OpenApiResponse(description="{'ai_enabled': bool, 'findings': [{issue_type, line, explanation}]}"),
+        202: OpenApiResponse(
+            description=(
+                "AI job queued, task_id returned (poll sourcing/ai-status/<task_id>/ for "
+                "{'ai_enabled': bool, 'findings': [{issue_type, line, explanation}]})"
+            )
+        ),
         403: OpenApiResponse(description="Caller is neither the deal's buyer nor a routed seller"),
         404: OpenApiResponse(description="Quote not found"),
     },
@@ -55,7 +60,12 @@ class QuoteRequestDiffView(APIView):
         if not user_can_view_quote_diff(request.user, quote):
             return Response({"error": "NOT_AUTHORIZED"}, status=status.HTTP_403_FORBIDDEN)
 
-        return Response(quote_vs_request_diff(quote))
+        # ARCH-01: the visibility 403/404 stays synchronous; the (possibly paid) diff runs on
+        # Celery. user_id travels too — the worker RE-RUNS user_can_view_quote_diff so a
+        # routing revoked between enqueue and execution can't still deliver the diff (TOCTOU).
+        from sourcing.ai_jobs import enqueue_ai_job
+
+        return enqueue_ai_job("quote_diff", {"quote_id": quote.id, "user_id": request.user.id}, request.user)
 
     def get(self, request, quote_id):
         return self._diff(request, quote_id)

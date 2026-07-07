@@ -162,6 +162,44 @@ services:
         max-file: "5"
 
   # ---------------------------------------------------------------------------
+  # Celery worker — AI queue (ARCH-01): DEDICATED consumer so bulk imports can
+  # never occupy the slots interactive AI jobs need. IO-bound (HTTP waits on
+  # Claude) → concurrency=2 with modest limits on the shared 2 vCPU box.
+  # ---------------------------------------------------------------------------
+  celery-worker-ai:
+    env_file: .env
+    environment:
+      PYTHONUNBUFFERED: 1
+      DJANGO_SETTINGS_MODULE: core.settings
+      DJANGO_DEBUG: "False"
+    command: celery -A core worker -l info -Q ai --concurrency=2
+    # Must share the backend's PROD media volume (overrides the base backend_media
+    # mount): extract-document stages the uploaded file in default_storage
+    # (ai_extract_tmp/) for this worker to read + delete.
+    volumes:
+      - backend_media_prod:/app/media
+    healthcheck:
+      test: ["CMD", "celery", "-A", "core", "inspect", "ping", "-t", "10"]
+      interval: 60s
+      timeout: 20s
+      retries: 3
+      start_period: 45s
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  # ---------------------------------------------------------------------------
   # Celery beat (scheduler)
   # ---------------------------------------------------------------------------
   celery-beat:

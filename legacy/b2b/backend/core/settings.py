@@ -543,6 +543,7 @@ REST_FRAMEWORK = {
         "ai_diff": "20/minute",  # AI КП-vs-заявка diff — each call is a paid Claude request
         "ai_extract": "20/minute",  # AI PDF contract/invoice extraction — each call is a paid Claude request
         "ai_compose": "20/minute",  # AI conversational заявка builder — each call is a paid Claude request
+        "ai_draft": "20/minute",  # AI draft-КП build — paid Claude match + a new Quote row per call
     },
     # SEC-04: number of trusted reverse proxies that set X-Forwarded-For before Django.
     # Prod/staging = 1 (host Caddy OVERWRITES XFF with the client IP — see
@@ -646,17 +647,23 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 
-# Queue routing. The worker is started with `-Q default,pdf,imports` (see
-# docker-compose / deploy). Celery's built-in default queue is "celery", which
-# that worker does NOT consume — so without this block every `.delay()` lands in
-# an orphaned "celery" queue and silently never runs (Excel import dead-end +
-# stale-quote/auto-invoice beat jobs never firing). Pin the default queue to one
-# the worker consumes, and route the heavy bulk imports to their own queue so a
-# 50k-row import can't starve transactional tasks.
+# Queue routing. TWO worker services consume the queues (see docker-compose[.prod].yml):
+# `celery-worker` runs `-Q default,pdf,imports` and `celery-worker-ai` runs `-Q ai` —
+# a DEDICATED process, because queue names alone give no isolation: on one shared worker
+# two 30-min Excel imports would occupy every slot and starve interactive AI jobs past the
+# frontend's 150s poll budget. Celery's built-in default queue is "celery", which no worker
+# consumes — so without this block every `.delay()` lands in an orphaned "celery" queue and
+# silently never runs (Excel import dead-end + stale-quote/auto-invoice beat jobs never
+# firing). Pin the default queue to one the main worker consumes, and route the heavy bulk
+# imports to their own queue so a 50k-row import can't starve transactional tasks.
 CELERY_TASK_DEFAULT_QUEUE = "default"
 CELERY_TASK_ROUTES = {
     "sourcing.tasks.process_excel_import": {"queue": "imports"},
     "sourcing.tasks.process_catalog_import": {"queue": "imports"},
+    # ARCH-01: interactive AI jobs (request-path LLM calls offloaded from DRF views) go to
+    # the "ai" queue, consumed ONLY by the dedicated celery-worker-ai service (IO-bound
+    # HTTP waits — a bulk import can never occupy the slots an interactive job needs).
+    "sourcing.run_ai_job": {"queue": "ai"},
 }
 
 # ── AI заявка normalisation ─────────────────────────────────────────────────

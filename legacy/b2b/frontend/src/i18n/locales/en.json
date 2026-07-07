@@ -4480,6 +4480,9 @@
     "NO_QUOTE_COMPANY": "The quote has no owning company — assign a preparer first",
     "UNKNOWN": "Unknown error",
     "AI_DISABLED": "The AI check is currently unavailable.",
+    "AI_EXTRACT_FAILED": "Could not read the document. Try again or upload a clearer file.",
+    "AI_JOB_FAILED": "The AI task failed. Please try again.",
+    "AI_JOB_TIMEOUT": "The AI task is taking too long. Please try again later.",
     "NOT_AUTHORIZED": "You are not allowed to perform this action",
     "QUOTE_NOT_FOUND": "Quote not found"
   },
