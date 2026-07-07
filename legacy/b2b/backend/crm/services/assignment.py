@@ -50,7 +50,13 @@ def claim_deal(deal_id: int, actor: CustomUser) -> Tuple[Optional[Deal], Optiona
     routing.assigned_to = actor
     routing.assigned_at = timezone.now()
     routing.save(update_fields=["assigned_to", "assigned_at"])
-    _log(deal_id, actor, "Заявка взята в работу", f"{actor.email} взял заявку #{deal_id}")
+    _log(
+        deal_id,
+        actor,
+        "Заявка взята в работу",
+        f"{actor.email} взял заявку #{deal_id}",
+        company_id=routing.deal.company_id,
+    )
     return routing.deal, None
 
 
@@ -86,7 +92,13 @@ def release_deal(deal_id: int, actor: CustomUser) -> Tuple[Optional[Deal], Optio
     target.assigned_to = None
     target.assigned_at = None
     target.save(update_fields=["assigned_to", "assigned_at"])
-    _log(deal_id, actor, "Заявка возвращена в очередь", f"{actor.email} освободил заявку #{deal_id}")
+    _log(
+        deal_id,
+        actor,
+        "Заявка возвращена в очередь",
+        f"{actor.email} освободил заявку #{deal_id}",
+        company_id=target.deal.company_id,
+    )
     return target.deal, None
 
 
@@ -119,7 +131,13 @@ def assign_deal(deal_id: int, actor: CustomUser, assignee_id: int) -> Tuple[Opti
     target.assigned_at = timezone.now()
     target.save(update_fields=["assigned_to", "assigned_at"])
     _notify_assignee(target.deal, assignee)
-    _log(deal_id, actor, "Заявка назначена", f"{actor.email} назначил заявку #{deal_id} → {assignee.email}")
+    _log(
+        deal_id,
+        actor,
+        "Заявка назначена",
+        f"{actor.email} назначил заявку #{deal_id} → {assignee.email}",
+        company_id=target.deal.company_id,
+    )
     return target.deal, None
 
 
@@ -141,9 +159,16 @@ def _notify_assignee(deal: Deal, assignee: CustomUser) -> None:
     transaction.on_commit(lambda: push_notification_ws(notif))
 
 
-def _log(deal_id: int, actor: CustomUser, action: str, detail: str) -> None:
+def _log(deal_id: int, actor: CustomUser, action: str, detail: str, company_id: Optional[int] = None) -> None:
     from ..models import ActivityLog
 
     ActivityLog.objects.create(
-        action=action, detail=detail, user=actor, level="INFO", entity_type="deal", entity_id=deal_id
+        action=action,
+        detail=detail,
+        user=actor,
+        level="INFO",
+        entity_type="deal",
+        entity_id=deal_id,
+        deal_id=deal_id,
+        company_id=company_id,
     )

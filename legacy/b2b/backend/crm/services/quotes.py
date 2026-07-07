@@ -163,6 +163,8 @@ def _log_quote(quote, actor, action: str, detail: str = "") -> None:
         level="INFO",
         entity_type="quote",
         entity_id=quote.id,
+        deal_id=quote.deal_id,
+        company_id=quote.deal.company_id if quote.deal_id else None,
     )
 
 
@@ -802,6 +804,10 @@ class QuoteLifecycleService:
 
         finalize_outcomes_on_send(quote)
 
+        # Counterparty timeline (Phase A): the send was only visible as a stage flip before —
+        # record it as a first-class event on the client's history.
+        _log_quote(quote, sent_by_user, "КП отправлено клиенту", f"КП v{quote.version} ({quote.number})")
+
         # Email the КП off the request thread, after commit (F1.6 — no render inside the
         # atomic block, no orphan on rollback). The task renders the PDF if needed, then
         # emails it (with the public link) to the recipient — registered client OR offline
@@ -902,6 +908,10 @@ class QuoteLifecycleService:
             title="КП одобрено клиентом",
             message=f"{quote.deal.company.name} одобрил КП v{quote.version}",
         )
+
+        # Counterparty timeline (Phase A): the acceptance itself was only visible as a stage
+        # flip before — record it as a first-class event on the client's history.
+        _log_quote(quote, approved_by_user, "КП принято клиентом", f"КП v{quote.version} ({quote.number or '—'})")
 
         return quote
 
@@ -1135,6 +1145,10 @@ class QuoteLifecycleService:
             message=f"{quote.deal.company.name} отклонил КП v{quote.version}. {reason}".strip(),
         )
 
+        # Counterparty timeline (Phase A): first-class rejection event (the reason already
+        # lives on the stage-transition audit row; keep the client-PDF leak fix intact).
+        _log_quote(quote, rejected_by_user, "КП отклонено клиентом", f"КП v{quote.version}")
+
         return quote
 
 
@@ -1186,5 +1200,9 @@ def reassign_quote_item_product(
         detail=f"QuoteItem #{item.id} → Product #{product_id}",
         user=actor,
         level="INFO",
+        entity_type="quote",
+        entity_id=item.quote_id,
+        deal_id=item.quote.deal_id,
+        company_id=item.quote.deal.company_id if item.quote.deal_id else None,
     )
     return item, None

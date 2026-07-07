@@ -85,6 +85,7 @@ def record_subscription_payment(
         ),
         user=actor,
         level="SUCCESS",
+        company=subscription.company,
     )
     return subscription, None
 

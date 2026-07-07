@@ -83,6 +83,7 @@ def verify_company_kyc(
         before={"verification_status": before_code},
         after={"verification_status": level_code},
         level="WARNING" if is_downgrade else "SUCCESS",
+        company_id=company.id,
     )
 
     # Notify owner(s) by email and in-app (only on upgrades). Deferred to

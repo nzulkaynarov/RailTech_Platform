@@ -213,6 +213,13 @@ export const useActivityLogs = () => useQuery({
     queryFn: () => crmApi.getActivityLogs(),
 });
 
+// CRM Phase A — deal-scoped activity timeline (read-only history feed).
+export const useDealTimeline = (dealId: number) => useQuery({
+    queryKey: ['timeline', 'deal', dealId],
+    queryFn: () => crmApi.getTimeline({ deal_id: dealId }),
+    enabled: !!dealId,
+});
+
 export const useQuotes = () => useQuery({
     queryKey: ['quotes'],
     queryFn: crmApi.getQuotes,

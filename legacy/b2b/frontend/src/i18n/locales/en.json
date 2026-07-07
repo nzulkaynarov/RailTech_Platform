@@ -1208,6 +1208,9 @@
       }
     }
   },
+  "timeline": {
+    "title": "History"
+  },
   "notifications": {
     "title": "Notifications",
     "empty": "No notifications",

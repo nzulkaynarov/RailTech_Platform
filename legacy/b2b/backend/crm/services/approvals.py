@@ -67,7 +67,14 @@ def _set_status(quote: Quote, code: str) -> None:
 
 def _log(quote: Quote, actor, action: str, detail: str = "") -> None:
     ActivityLog.objects.create(
-        action=action, detail=detail, user=actor, level="INFO", entity_type="quote", entity_id=quote.id
+        action=action,
+        detail=detail,
+        user=actor,
+        level="INFO",
+        entity_type="quote",
+        entity_id=quote.id,
+        deal_id=quote.deal_id,
+        company_id=quote.deal.company_id,
     )
 
 

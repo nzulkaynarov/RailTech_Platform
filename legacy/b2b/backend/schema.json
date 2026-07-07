@@ -12959,6 +12959,68 @@
                 }
             }
         },
+        "/api/v1/crm/timeline/": {
+            "get": {
+                "operationId": "crm_timeline_list",
+                "description": "Chronological business events (deal opened, КП sent/accepted/rejected, contract signed, payments, messages, KYC) linked to a deal or a counterparty company. Pass deal_id OR company_id. Scoping: a deal timeline needs access to the deal (member of the client company, routed seller, or platform admin); a company timeline shows a member their own company's history, while a routed seller sees only events on deals visible to them.",
+                "summary": "Counterparty / deal activity timeline",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "company_id",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "deal_id",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "limit",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "tags": [
+                    "CRM Timeline"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/TimelineEntry"
+                                    }
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Neither deal_id nor company_id given"
+                    },
+                    "403": {
+                        "description": "No access to the requested deal"
+                    },
+                    "404": {
+                        "description": "Deal not found"
+                    }
+                }
+            }
+        },
         "/api/v1/master-data/countries/": {
             "get": {
                 "operationId": "master_data_countries_list",
@@ -24490,6 +24552,87 @@
                 },
                 "required": [
                     "updated_at"
+                ]
+            },
+            "TimelineEntry": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "action": {
+                        "type": "string",
+                        "title": "Действие",
+                        "description": "Краткое описание совершённого действия",
+                        "maxLength": 255
+                    },
+                    "detail": {
+                        "type": "string",
+                        "title": "Детали",
+                        "description": "Подробная информация о событии"
+                    },
+                    "level": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/LevelEnum"
+                            }
+                        ],
+                        "title": "Уровень",
+                        "description": "Уровень важности события\n\n* `INFO` - Информация\n* `SUCCESS` - Успех\n* `WARNING` - Предупреждение\n* `ERROR` - Ошибка"
+                    },
+                    "timestamp": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "title": "Время события"
+                    },
+                    "user_name": {
+                        "type": "string",
+                        "readOnly": true,
+                        "default": ""
+                    },
+                    "entity_type": {
+                        "type": "string",
+                        "title": "Тип сущности",
+                        "description": "Код сущности, к которой относится запись (company, user, deal, subscription, ...)",
+                        "maxLength": 40
+                    },
+                    "entity_id": {
+                        "type": "integer",
+                        "maximum": 2147483647,
+                        "minimum": 0,
+                        "nullable": true,
+                        "title": "ID сущности"
+                    },
+                    "deal_id": {
+                        "type": "integer",
+                        "nullable": true,
+                        "title": "Сделка",
+                        "readOnly": true
+                    },
+                    "company_id": {
+                        "type": "integer",
+                        "nullable": true,
+                        "title": "Компания-контрагент",
+                        "description": "Организация, к которой относится событие (таймлайн контрагента)",
+                        "readOnly": true
+                    },
+                    "contact_id": {
+                        "type": "integer",
+                        "nullable": true,
+                        "title": "Контакт",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "action",
+                    "company_id",
+                    "contact_id",
+                    "deal_id",
+                    "id",
+                    "timestamp",
+                    "user_name"
                 ]
             },
             "TokenObtainPair": {

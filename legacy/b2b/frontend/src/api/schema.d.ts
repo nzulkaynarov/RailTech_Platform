@@ -4261,6 +4261,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/crm/timeline/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Counterparty / deal activity timeline
+         * @description Chronological business events (deal opened, КП sent/accepted/rejected, contract signed, payments, messages, KYC) linked to a deal or a counterparty company. Pass deal_id OR company_id. Scoping: a deal timeline needs access to the deal (member of the client company, routed seller, or platform admin); a company timeline shows a member their own company's history, while a routed seller sees only events on deals visible to them.
+         */
+        get: operations["crm_timeline_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/master-data/countries/": {
         parameters: {
             query?: never;
@@ -10349,6 +10369,52 @@ export interface components {
              * Format: date-time
              */
             readonly updated_at: string;
+        };
+        TimelineEntry: {
+            readonly id: number;
+            /**
+             * Действие
+             * @description Краткое описание совершённого действия
+             */
+            action: string;
+            /**
+             * Детали
+             * @description Подробная информация о событии
+             */
+            detail?: string;
+            /**
+             * Уровень
+             * @description Уровень важности события
+             *
+             *     * `INFO` - Информация
+             *     * `SUCCESS` - Успех
+             *     * `WARNING` - Предупреждение
+             *     * `ERROR` - Ошибка
+             */
+            level?: components["schemas"]["LevelEnum"];
+            /**
+             * Время события
+             * Format: date-time
+             */
+            readonly timestamp: string;
+            /** @default  */
+            readonly user_name: string;
+            /**
+             * Тип сущности
+             * @description Код сущности, к которой относится запись (company, user, deal, subscription, ...)
+             */
+            entity_type?: string;
+            /** ID сущности */
+            entity_id?: number | null;
+            /** Сделка */
+            readonly deal_id: number | null;
+            /**
+             * Компания-контрагент
+             * @description Организация, к которой относится событие (таймлайн контрагента)
+             */
+            readonly company_id: number | null;
+            /** Контакт */
+            readonly contact_id: number | null;
         };
         TokenObtainPair: {
             readonly access: string;
@@ -18018,6 +18084,50 @@ export interface operations {
         responses: {
             /** @description No response body */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    crm_timeline_list: {
+        parameters: {
+            query?: {
+                company_id?: number;
+                deal_id?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimelineEntry"][];
+                };
+            };
+            /** @description Neither deal_id nor company_id given */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No access to the requested deal */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Deal not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

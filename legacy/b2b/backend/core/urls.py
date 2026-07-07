@@ -78,6 +78,7 @@ from crm.views import (
     QuoteStatusViewSet,
     QuoteViewSet,
     SuggestChatReplyView,
+    TimelineView,
     TimeToFirstQuoteView,
 )
 from master_data.views import CountryViewSet, CurrencyViewSet, DeliveryBasisViewSet, UnitOfMeasureViewSet
@@ -200,6 +201,8 @@ urlpatterns = (
         path("api/v1/crm/analytics/", CRMAnalyticsView.as_view(), name="crm-analytics"),
         path("api/v1/crm/analytics/dashboard/", DashboardAnalyticsView.as_view(), name="dashboard-analytics"),
         path("api/v1/crm/analytics/time-to-first-quote/", TimeToFirstQuoteView.as_view(), name="time-to-first-quote"),
+        # CRM Phase A — counterparty / deal activity timeline (read-only).
+        path("api/v1/crm/timeline/", TimelineView.as_view(), name="crm-timeline"),
         path("api/v1/analytics/page-stats/", PageStatsView.as_view(), name="page-stats"),
         path("api/v1/analytics/platform-dashboard/", PlatformDashboardView.as_view(), name="platform-dashboard"),
         # Admin Platform API

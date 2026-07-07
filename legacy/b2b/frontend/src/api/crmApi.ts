@@ -390,6 +390,21 @@ export interface ActivityLog {
 	timestamp: string;
 }
 
+// CRM Phase A — counterparty / deal activity timeline entry.
+export interface TimelineEntry {
+	id: number;
+	action: string;
+	detail: string;
+	level: 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR';
+	timestamp: string;
+	user_name: string;
+	entity_type: string;
+	entity_id: number | null;
+	deal_id: number | null;
+	company_id: number | null;
+	contact_id: number | null;
+}
+
 export interface Lead {
 	id?: number;
 	name: string;
@@ -612,6 +627,11 @@ export const crmApi = {
 	getActivityLogs: async () => {
 		const response = await apiClient.get<PaginatedResponse<ActivityLog>>('crm/activity-logs/');
 		return response.data.results;
+	},
+	// CRM Phase A — read-only timeline scoped to a deal or a counterparty company.
+	getTimeline: async (params: { deal_id?: number; company_id?: number; limit?: number }) => {
+		const response = await apiClient.get<TimelineEntry[]>('crm/timeline/', { params });
+		return response.data;
 	},
 	getQuotes: async () => {
 		const response = await apiClient.get<PaginatedResponse<Quote>>('crm/quotes/');

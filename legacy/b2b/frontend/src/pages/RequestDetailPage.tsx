@@ -24,6 +24,7 @@ import { RequestItemsEditor } from '@/components/CRM/RequestItemsEditor';
 import { PreflightWarnings } from '@/components/CRM/PreflightWarnings';
 import { GenerateQuoteDialog } from '@/components/CRM/GenerateQuoteDialog';
 import { CoverageCheck } from '@/components/CRM/CoverageCheck';
+import { DealTimeline } from '@/components/CRM/DealTimeline';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { buyerStatus } from '@/lib/requestStatus';
 
@@ -571,6 +572,9 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
             </CardContent>
           </Card>
         )}
+
+        {/* CRM Phase A — deal history feed (renders nothing while empty) */}
+        <DealTimeline dealId={deal.id} />
       </div>
 
       {/* Chat Panel */}

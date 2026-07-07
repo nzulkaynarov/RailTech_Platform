@@ -62,6 +62,9 @@ def register_new_deal(deal: Deal, actor: CustomUser) -> Deal:
         ),
         user=actor,
         level="INFO",
+        deal=deal,
+        company=deal.company,
+        contact=deal.contact,
     )
     return deal
 
@@ -129,6 +132,8 @@ def transition_deal_stage(
         before={"stage_code": old_stage_code, "stage_name": old_stage_name},
         after={"stage_code": target_stage.code, "stage_name": target_stage.name},
         level="WARNING" if not validate_fsm else "INFO",
+        deal_id=deal.id,
+        company_id=deal.company_id,
     )
 
     # Post-sale hook: on CLOSED_WON, auto-generate Invoice + Act (async).
@@ -248,5 +253,7 @@ def convert_lead_to_deal(
         detail=f"Lead #{lead.id} → Deal #{deal.id}",
         user=actor,
         level="SUCCESS",
+        deal=deal,
+        company=company,
     )
     return deal, None
