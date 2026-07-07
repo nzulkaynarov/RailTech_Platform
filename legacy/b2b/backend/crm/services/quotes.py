@@ -168,21 +168,6 @@ def _log_quote(quote, actor, action: str, detail: str = "") -> None:
     )
 
 
-# Which КП statuses each WorkspaceRole is responsible for advancing — drives the
-# per-role "my approval queue".
-_ROLE_QUEUE_STATUSES = {
-    WorkspaceRoleCode.SALES_MANAGER: {QuoteStatusCode.DRAFT},
-    WorkspaceRoleCode.FOREIGN_TRADE_SPECIALIST: {QuoteStatusCode.PENDING_TRADE_REVIEW},
-    WorkspaceRoleCode.DIRECTOR: {QuoteStatusCode.PENDING_APPROVAL},
-    WorkspaceRoleCode.OWNER: {
-        QuoteStatusCode.DRAFT,
-        QuoteStatusCode.PENDING_TRADE_REVIEW,
-        QuoteStatusCode.PENDING_APPROVAL,
-        QuoteStatusCode.READY_TO_SEND,
-    },
-}
-
-
 def can_send_quote_to_client(actor, quote) -> bool:
     """Who may push an internally-approved КП out to the client.
 
@@ -991,66 +976,6 @@ class QuoteLifecycleService:
         if first_order is not None:
             _notify_order(quote, first_order)
         _log_quote(quote, actor, "quote.submit_for_review", f"КП v{quote.version} на согласование (цепочка построена)")
-        return quote, None
-
-    @staticmethod
-    @transaction.atomic
-    def confirm_trade_review(quote_id: int, actor: CustomUser) -> Tuple[Optional[Quote], Optional[str]]:
-        """ВЭД confirms. PENDING_TRADE_REVIEW → PENDING_APPROVAL."""
-        quote = Quote.objects.select_related("status", "prepared_by").get(pk=quote_id)
-        company_id = _quote_owner_company_id(quote)
-        if not company_id:
-            return None, "NO_QUOTE_COMPANY"
-        if not has_workspace_role(actor, company_id, [WorkspaceRoleCode.FOREIGN_TRADE_SPECIALIST]):
-            return None, "ROLE_NOT_PERMITTED"
-        if not quote.status or quote.status.code != QuoteStatusCode.PENDING_TRADE_REVIEW:
-            return None, "INVALID_STATUS"
-        _set_quote_status(quote, QuoteStatusCode.PENDING_APPROVAL)
-        _log_quote(
-            quote, actor, "quote.confirm_trade_review", f"КП v{quote.version} подтверждено ВЭД → PENDING_APPROVAL"
-        )
-        return quote, None
-
-    @staticmethod
-    @transaction.atomic
-    def director_approve(quote_id: int, actor: CustomUser) -> Tuple[Optional[Quote], Optional[str]]:
-        """Director approves internally. PENDING_APPROVAL → READY_TO_SEND."""
-        quote = Quote.objects.select_related("status", "prepared_by").get(pk=quote_id)
-        company_id = _quote_owner_company_id(quote)
-        if not company_id:
-            return None, "NO_QUOTE_COMPANY"
-        if not has_workspace_role(actor, company_id, [WorkspaceRoleCode.DIRECTOR]):
-            return None, "ROLE_NOT_PERMITTED"
-        if not quote.status or quote.status.code != QuoteStatusCode.PENDING_APPROVAL:
-            return None, "INVALID_STATUS"
-        _set_quote_status(quote, QuoteStatusCode.READY_TO_SEND)
-        _log_quote(quote, actor, "quote.director_approve", f"КП v{quote.version} утверждено директором → READY_TO_SEND")
-        return quote, None
-
-    @staticmethod
-    @transaction.atomic
-    def send_back(quote_id: int, actor: CustomUser, reason: str = "") -> Tuple[Optional[Quote], Optional[str]]:
-        """Return a КП under review to sales for rework. Any review status → DRAFT.
-        Allowed for ВЭД, DIRECTOR (and OWNER)."""
-        quote = Quote.objects.select_related("status", "prepared_by").get(pk=quote_id)
-        company_id = _quote_owner_company_id(quote)
-        if not company_id:
-            return None, "NO_QUOTE_COMPANY"
-        if not has_workspace_role(
-            actor, company_id, [WorkspaceRoleCode.FOREIGN_TRADE_SPECIALIST, WorkspaceRoleCode.DIRECTOR]
-        ):
-            return None, "ROLE_NOT_PERMITTED"
-        review_states = {
-            QuoteStatusCode.PENDING_TRADE_REVIEW,
-            QuoteStatusCode.PENDING_APPROVAL,
-            QuoteStatusCode.READY_TO_SEND,
-        }
-        if not quote.status or quote.status.code not in review_states:
-            return None, "INVALID_STATUS"
-        # LEAK FIX: the rework reason is INTERNAL — it goes to the audit log only, NEVER into
-        # quote.notes (which is rendered verbatim in the CLIENT-facing КП PDF «Примечания»).
-        _set_quote_status(quote, QuoteStatusCode.DRAFT)
-        _log_quote(quote, actor, "quote.send_back", f"КП v{quote.version} возвращено на доработку. {reason}".strip())
         return quote, None
 
     @staticmethod
