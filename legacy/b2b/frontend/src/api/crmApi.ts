@@ -370,17 +370,6 @@ export interface TimeToFirstQuoteStats {
 	slowest_hours: number;
 }
 
-export interface CRMAnalytics {
-	pipeline_by_status: { stage__name: string, count: number }[];
-	sourcing_backlog: number;
-	kyc_backlog: number;
-	total_pipeline_value: number;
-	mapped_items_percentage: number;
-	conversion_rate?: number;
-	avg_margin?: number;
-	sourcing_speed_avg?: number;
-}
-
 export interface ActivityLog {
 	id: number;
 	action: string;
@@ -604,10 +593,6 @@ export const crmApi = {
 	exportDealPDF: async (dealId: number) => {
 		const { downloadFile } = await import('@/lib/download');
 		await downloadFile(`crm/deals/${dealId}/export-pdf/`, `RailTech_Quote_${dealId}.pdf`);
-	},
-	getAnalytics: async () => {
-		const response = await apiClient.get<CRMAnalytics>('crm/analytics/');
-		return response.data;
 	},
 	getActivityLogs: async () => {
 		const response = await apiClient.get<PaginatedResponse<ActivityLog>>('crm/activity-logs/');

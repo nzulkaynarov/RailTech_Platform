@@ -9,7 +9,6 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.constants import CompanyTypeCode
-from core.permissions import IsPlatformAdmin
 from crm.constants import DealStageCode, QuoteStatusCode
 from crm.models import Deal, Quote
 
@@ -369,24 +368,6 @@ class DashboardAnalyticsView(APIView):
             }
             for p in top
         ]
-
-
-@extend_schema(
-    summary="CRM analytics",
-    description="Aggregated CRM analytics data. Manager/Admin only.",
-    responses={200: OpenApiResponse(description="CRM analytics data")},
-    tags=["Analytics"],
-)
-class CRMAnalyticsView(APIView):
-    """CRM analytics endpoint for managers and admins."""
-
-    permission_classes = [IsAuthenticated, IsPlatformAdmin]
-
-    def get(self, request):
-        from crm.services import get_crm_analytics_data
-
-        data = get_crm_analytics_data()
-        return Response(data)
 
 
 @extend_schema(
