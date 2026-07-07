@@ -17,12 +17,6 @@ export const useDeal = (id: number) => useQuery({
   enabled: !!id,
 });
 
-export const useAnalytics = () => useQuery({
-  queryKey: ['crm-analytics'],
-  queryFn: crmApi.getAnalytics,
-  refetchInterval: 60_000,
-});
-
 export interface QuoteItemsFilterParams {
   deal_id?: number;
   product_is_null?: boolean;

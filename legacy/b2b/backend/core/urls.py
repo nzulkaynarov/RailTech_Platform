@@ -61,7 +61,6 @@ from crm.views import (
     ChargeTemplateViewSet,
     ChargeTypeViewSet,
     ContractViewSet,
-    CRMAnalyticsView,
     DashboardAnalyticsView,
     DealStageViewSet,
     DealViewSet,
@@ -204,7 +203,6 @@ urlpatterns = (
         path("api/v1/sourcing/import-status/<str:task_id>/", ImportStatusView.as_view(), name="import-status"),
         # ARCH-01: polling endpoint for the off-thread AI jobs (202 + task_id pattern).
         path("api/v1/sourcing/ai-status/<str:task_id>/", AIJobStatusView.as_view(), name="ai-status"),
-        path("api/v1/crm/analytics/", CRMAnalyticsView.as_view(), name="crm-analytics"),
         path("api/v1/crm/analytics/dashboard/", DashboardAnalyticsView.as_view(), name="dashboard-analytics"),
         path("api/v1/crm/analytics/time-to-first-quote/", TimeToFirstQuoteView.as_view(), name="time-to-first-quote"),
         # CRM Phase A — counterparty / deal activity timeline (read-only).
