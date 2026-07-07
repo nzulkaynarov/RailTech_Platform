@@ -119,7 +119,7 @@ def test_cannot_strip_last_company_admin(setup):
         format="json",
     )
     assert r.status_code == 409
-    assert r.json()["error"] == "CANNOT_DEMOTE_LAST_COMPANY_ADMIN"
+    assert r.json()["detail"] == "CANNOT_DEMOTE_LAST_COMPANY_ADMIN"
     admin_member.refresh_from_db()
     assert admin_member.company_role.is_system is True  # unchanged
 

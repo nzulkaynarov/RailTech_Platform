@@ -55,10 +55,10 @@ class QuoteRequestDiffView(APIView):
         try:
             quote = Quote.objects.select_related("deal").get(pk=quote_id)
         except Quote.DoesNotExist:
-            return Response({"error": "QUOTE_NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": "QUOTE_NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)
 
         if not user_can_view_quote_diff(request.user, quote):
-            return Response({"error": "NOT_AUTHORIZED"}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"detail": "NOT_AUTHORIZED"}, status=status.HTTP_403_FORBIDDEN)
 
         # ARCH-01: the visibility 403/404 stays synchronous; the (possibly paid) diff runs on
         # Celery. user_id travels too — the worker RE-RUNS user_can_view_quote_diff so a

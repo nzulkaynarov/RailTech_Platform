@@ -101,7 +101,7 @@ function permLabelKey(code: string): string {
 /** Resolve a thrown axios error to a localized, human-readable message. */
 function resolveRoleError(err: unknown, translate: TFunction, fallbackKey: string): string {
   const data = (err as BackendErrorShape)?.response?.data;
-  const code = data?.error;
+  const code = data?.detail ?? data?.error;
   if (code && ROLE_ERROR_KEYS[code]) {
     return translate(ROLE_ERROR_KEYS[code]);
   }

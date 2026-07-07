@@ -79,7 +79,7 @@ class RegisterView(views.APIView):
             phone=serializer.validated_data["phone"],
         )
         if error:
-            return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"message": "Verification email sent.", "email": user.email}, status=status.HTTP_201_CREATED)
 
 
@@ -110,7 +110,7 @@ class SetupPasswordView(views.APIView):
             password=serializer.validated_data["password"],
         )
         if error:
-            return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"message": "Password setup successful.", "user": UserSerializer(user).data})
 
 
@@ -137,7 +137,7 @@ class ForgotPasswordView(views.APIView):
         serializer.is_valid(raise_exception=True)
         ok, error = send_password_reset_email(serializer.validated_data["email"])
         if error == "EMAIL_SEND_FAILED":
-            return Response({"error": error}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            return Response({"detail": error}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         # Neutral 200 regardless of whether the email was found.
         return Response({"message": "If an account exists, a reset link was sent."})
 
@@ -166,7 +166,7 @@ class ResetPasswordView(views.APIView):
             password=serializer.validated_data["password"],
         )
         if error:
-            return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"message": "Password has been reset.", "email": user.email})
 
 
@@ -195,7 +195,7 @@ class SubmitProfileView(views.APIView):
             position=serializer.validated_data.get("position", ""),
         )
         if error:
-            return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"message": "Profile submitted successful.", "user": UserSerializer(user).data})
 
 

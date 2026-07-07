@@ -43,14 +43,14 @@ class ProductEnrichView(APIView):
         from django.conf import settings
 
         if not getattr(settings, "AI_IMPORT_ENABLED", False):
-            return Response({"error": "AI_DISABLED"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            return Response({"detail": "AI_DISABLED"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
         name = str(request.data.get("name") or "").strip()
         if not name:
-            return Response({"error": "NAME_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "NAME_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
         # Input cap: keep the prompt bounded (mirrors the line caps on the other AI views).
         if len(name) > 255:
-            return Response({"error": "NAME_TOO_LONG"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "NAME_TOO_LONG"}, status=status.HTTP_400_BAD_REQUEST)
 
         domain_code = str(request.data.get("domain_code") or "").strip() or None
         mpn = str(request.data.get("mpn") or "").strip()[:120] or None

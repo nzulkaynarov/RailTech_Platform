@@ -236,6 +236,7 @@ make clean               # remove all containers, volumes, cache (DESTRUCTIVE)
 - **Celery tasks:** ALL tasks must have `time_limit=600, soft_time_limit=540, max_retries=3, autoretry_for=(Exception,), retry_backoff=True`. Exception: bulk-import tasks in `sourcing/tasks.py` use `time_limit=1800, soft_time_limit=1700` (50k-row catalogs) — retry/backoff still apply
 - **AI calls:** NEVER call the Anthropic client from an HTTP handler — new interactive AI features go through `enqueue_ai_job(feature, payload, user)` (202 + `ai-status` polling; add the handler to `sourcing/tasks_ai.py` FEATURE_HANDLERS). The job task is single-attempt; AI match/enrich failures inside services are logged no-ops, never user-facing 500s
 - **Uploads:** every new upload path must call the `core/validators.py` helpers incl. magic-byte content check (`assert_content_matches_extension`)
+- **API errors:** always `{"detail": "<CODE>"}` (DRF-native shape; codes compared by value on the frontend) — NEVER `{"error": ...}`. Guarded by `core/tests/test_error_shape.py`
 - **Exception handling:** Use specific exceptions (`ValidationError`, `OSError`, `ValueError`) — NEVER bare `except Exception`
 - **Variable naming:** Descriptive names always — NEVER single-letter variables in business logic
 - **Function length:** Max 50 lines for production code. **File length:** max 500 lines — split into packages. **Parameters:** max 5 — use dataclasses beyond that

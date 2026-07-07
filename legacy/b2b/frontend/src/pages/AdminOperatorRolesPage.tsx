@@ -82,7 +82,7 @@ function resolveOperatorRoleError(
   fallbackKey: string,
 ): string {
   const data = (err as BackendErrorShape)?.response?.data;
-  const code = data?.error;
+  const code = data?.detail ?? data?.error;
   if (code && OPERATOR_ROLE_ERROR_KEYS[code]) {
     return translate(OPERATOR_ROLE_ERROR_KEYS[code]);
   }

@@ -287,7 +287,7 @@ function DetailSheet({
       toast.success(t('operatorRoles.assignSuccess'));
     } catch (e) {
       const data = (e as { response?: { data?: { error?: string; detail?: string } } })?.response?.data;
-      const code = data?.error;
+      const code = data?.detail ?? data?.error;
       toast.error(
         code
           ? t(`operatorRoles.errors.${code}`, { defaultValue: data?.detail ?? t('common.error') })

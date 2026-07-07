@@ -6,9 +6,13 @@ import i18n from '@/i18n';
  * Backend services return stable UPPER_SNAKE codes (see memory/tech_debt & CRITICAL-1 pass).
  * Frontend maps them via `apiErrors.<CODE>` i18n keys.
  *
+ * ARCH-05: `{"detail": CODE}` is now the canonical API error shape (DRF-native) — every
+ * hand-written backend error response uses it. The `.error` read below is a legacy
+ * compatibility fallback only; do not add new backend responses that rely on it.
+ *
  * Accepts:
  *  - plain string ("CONTRACT_NEEDS_APPROVAL")
- *  - Axios error (takes `error.response.data.detail` or `.error`)
+ *  - Axios error (takes `error.response.data.detail`, with legacy `.error` fallback)
  *  - any unknown value (returns apiErrors.UNKNOWN)
  */
 export function translateApiError(err: unknown): string {

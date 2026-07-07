@@ -212,7 +212,7 @@ class ContractViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
             reason=request.data.get("reason", ""),
         )
         if err:
-            return Response({"error": err}, status=400)
+            return Response({"detail": err}, status=400)
         return Response(ContractSerializer(contract).data)
 
 

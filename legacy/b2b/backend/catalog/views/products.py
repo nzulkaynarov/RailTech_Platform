@@ -165,13 +165,13 @@ class ProductViewSet(viewsets.ModelViewSet):
         product_ids = request.data.get("product_ids", [])
         if not product_ids:
             return Response(
-                {"error": "No product IDs provided"},
+                {"detail": "No product IDs provided"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         if not isinstance(product_ids, list):
             return Response(
-                {"error": "product_ids must be a list"},
+                {"detail": "product_ids must be a list"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -179,13 +179,13 @@ class ProductViewSet(viewsets.ModelViewSet):
             product_ids = [int(pid) for pid in product_ids]
         except (ValueError, TypeError):
             return Response(
-                {"error": "product_ids must contain valid integers"},
+                {"detail": "product_ids must contain valid integers"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         if len(product_ids) > 500:
             return Response(
-                {"error": "Maximum 500 products per batch"},
+                {"detail": "Maximum 500 products per batch"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -196,7 +196,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 
         if not updated and skipped:
             return Response(
-                {"error": skipped[0] if len(skipped) == 1 else f"Skipped: {', '.join(skipped)}"},
+                {"detail": skipped[0] if len(skipped) == 1 else f"Skipped: {', '.join(skipped)}"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         return Response(

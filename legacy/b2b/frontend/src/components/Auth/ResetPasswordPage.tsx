@@ -73,8 +73,8 @@ export const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ uid, token
         } catch (err: unknown) {
             type AxiosLike = { response?: { data?: { detail?: string; error?: string } } };
             const code =
-                (err as AxiosLike)?.response?.data?.error ||
                 (err as AxiosLike)?.response?.data?.detail ||
+                (err as AxiosLike)?.response?.data?.error ||
                 '';
             const map: Record<string, string> = {
                 RESET_PASSWORD_INVALID_USER: t('resetPassword.invalidUser'),

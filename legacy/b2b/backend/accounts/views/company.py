@@ -240,7 +240,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
                 reason=reason,
             )
             if error:
-                return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
 
             if comment:
                 result.kyc_notes = comment
@@ -344,7 +344,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
         doc_type_code = request.data.get("doc_type", "OTHER")
         doc, error = services.upload_kyc_document(company, file_obj, doc_type_code)
         if error:
-            return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
         return Response(KYCDocumentSerializer(doc).data, status=status.HTTP_201_CREATED)
 
     @extend_schema(
@@ -697,6 +697,6 @@ class CompanyViewSet(viewsets.ModelViewSet):
 
         user, error = invite_workspace_member(company, email, role_code)
         if error:
-            return Response({"error": error}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
