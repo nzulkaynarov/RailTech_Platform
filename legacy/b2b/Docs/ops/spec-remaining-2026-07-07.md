@@ -166,9 +166,68 @@ celery-beat:
 
 ---
 
-## Раздел 2. Продукт (implementation-ready)
+## Раздел 2. Продукт — CRM-слой «книга контрагентов с историей» (implementation-ready)
 
-### CB-invite — регистрация офлайн-клиента по инвайту, привязанному к его Company
+> Уточнение владельца (2026-07-07): нужна **база клиентов И продавцов, с кем были взаимодействия, с историей** — по лучшей мировой практике. Ниже — целевой дизайн (Salesforce/HubSpot/Pipedrive, адаптировано к двустороннему маркетплейсу) и решение по обоим открытым вопросам (Leads, CB-auto-populate).
+
+### 2.0 Концепция и решение по мировой практике
+
+**Четыре уровня (канон CRM):**
+
+| Уровень | Что это | Маппинг на код |
+|---|---|---|
+| **Lead** | Входящий, ещё не квалифицированный проспект (верх воронки) | `Lead` (`crm/models/deals.py:285`, форма с лендинга) + `convert_lead_to_deal` — **уже есть** |
+| **Account** | Организация-контрагент | `Company` (identity по `inn` unique на KYC + `stated_inn` толерантный к дублям) — **уже есть** |
+| **Contact** | Человек в организации | `Contact` (`accounts/models/company.py:384`) — **уже есть** |
+| **Relationship + Activity Timeline** | Ребро отношения + лента истории взаимодействий | **НЕТ — главный недостающий кусок** |
+
+**Ключевое решение для двустороннего рынка (это и есть «лучшая практика» под твой вопрос «клиентов ИЛИ продавцов»):** роль контрагента (клиент/поставщик) НЕ вешается на `Company` глобально — одна и та же компания является *клиентом* для продавца A и *поставщиком* для покупателя B. Роль живёт на **ребре отношения** относительно того, кто смотрит. Это устраняет неоднозначность и даёт симметричные книги: «мои клиенты» у продавца и «мои поставщики» у покупателя — одним механизмом.
+
+**Ответ на вопрос про Leads:** текущий `Lead` — это НЕ книга контрагентов, а форма входящей заявки с лендинга (верх воронки). По мировой практике его **не режем** (это легитимный «inbox непроверенных проспектов», который конвертируется в Account+Contact+Deal). А «база с историей», которую ты хочешь, — это отдельный, больший **CRM-слой** поверх `Company`+`Contact`. Оба сосуществуют: Lead → (конверсия) → Account+Contact+Relationship+Deal → Timeline копит историю. **ADR-0006 амендмент:** Leads переклассифицировать из «CUT» в «KEEP как верх воронки» (см. Раздел 3).
+
+**Ответ на CB-auto-populate / «MS-routing блокер»:** формулировка «зависит от MS-routing» в старом дизайне неточна. Реальная зависимость — **разрешение идентичности компании по ИНН + инструмент слияния**, а не маршрутизация. `Company.inn` уже unique (на KYC), `stated_inn` толерантен к дублям — это ровно мировая практика (dedup на верификации, админ мержит). Мультиселлерный нюанс (один реальный покупатель заведён как несколько офлайн-`Company` у разных продавцов) решается так: **один канонический Account (по ИНН) + отдельное relationship-ребро на каждого продавца** — каждый видит только свою книгу и свой срез таймлайна, Account общий. Значит auto-populate можно делать сейчас, он разблокирован.
+
+### 2.1 Новые объекты (ядро CRM-слоя)
+
+**`CounterpartyRelationship`** (новая модель, `accounts/models/` или новый `crm/models/relationships.py`):
+- `owner_company` (FK Company) — чья это книга
+- `counterparty_company` (FK Company)
+- `direction` — `CLIENT` (они покупают у нас) | `SUPPLIER` (мы покупаем у них), с точки зрения owner
+- `stage` — жизненный цикл: `PROSPECT` → `ACTIVE` → `DORMANT` → `LOST` (лейбл здоровья отношения; сравнение по коду, Rule 2)
+- `owner_member` (FK CompanyMember, nullable) — «владелец аккаунта» в команде
+- `source` — как появился: `LEAD` | `OFFLINE_CREATED` | `INBOUND_RFQ` | `SELF_REGISTERED`
+- `first_interaction_at`, `last_interaction_at`
+- денормализованные rollup'ы (для списка без N+1): `deals_count`, `won_count`, `gmv` — пересчёт сигналами/periodic
+- `UniqueConstraint(owner_company, counterparty_company, direction)`
+
+**Activity Timeline — расширить существующий `ActivityLog`, не плодить сущность.** `ActivityLog` уже generic-лог (`entity_type`/`entity_id`/`user`/`action`/`detail`/`level`/`created_at`). Добавить nullable-связи для таймлайна контрагента:
+- `company` (FK Company, nullable, db_index) — контрагент, к которому относится событие
+- `contact` (FK Contact, nullable), `deal` (FK Deal, nullable)
+- обеспечить, что КАЖДЫЙ сервис-производитель взаимодействия пишет строку `ActivityLog` со связью на контрагента: сделка открыта, КП отправлено/принято/отклонено, контракт подписан, сообщение в чате (`Message`), письмо (`EmailLog`), платёж записан, KYC-изменение. Многие уже пишут `ActivityLog` — доревизовать связи.
+- Таймлайн-эндпоинт = `ActivityLog.filter(company=…)` (или contact/deal) по времени, обогащённый. Это world-practice «engagement/activity object» на существующей основе.
+
+**Идентичность и слияние (разблокирует auto-populate):**
+- Канон = `Company.inn` (unique на KYC). Офлайн — `stated_inn` (толерантно).
+- **Admin company-merge** (React Admin + сервис): при совпадении реальной компании (один ИНН на KYC) слить — переподвесить contacts/deals/relationships/timeline на выжившую Company, `inn` остаётся unique.
+- **CB-auto-populate** = при регистрации офлайн-компании (через инвайт) ИЛИ при верификации с ИНН, совпавшим с прежним `stated_inn`, автоматически поднять/слить прежнюю историю взаимодействий.
+
+### 2.2 API + фронтенд (ADR-0005 Phase F «Клиенты-REST»)
+
+- `ContactSerializer` + `CounterpartyRelationshipSerializer` + `AccountSerializer` (Company как account: id, name, inn/stated_inn, is_registered, contacts[], relationship-срез).
+- `ContactViewSet` + `RelationshipViewSet` (`accounts/views/clients.py`), `get_queryset` строго scoped: owner видит только свои рёбра/контакты (через `seller_clients`/аналог для buyer-side); platform-admin — read-all.
+- Роуты: `router.register(r"accounts/contacts", …)`, `r"crm/relationships"`; `GET /api/v1/crm/relationships/<id>/timeline/` — лента.
+- Фронтенд: страница **«Контрагенты»** (симметрично: в seller-контексте «Клиенты», в buyer-контексте «Поставщики») — `ResponsiveDataTable` со списком рёбер (имя, стадия, последнее взаимодействие, deals/won/GMV), карточка контрагента с **таймлайном** (лента событий) + контактами. Компонент «выбрать/создать контрагента» в потоке сделки/КП. i18n ru+en, shadcn/ui, hash-навигация + `config/navigation.tsx`.
+
+### 2.3 Фазировка (порядок реализации CRM-слоя)
+
+1. **Фаза A — фундамент чтения:** расширить `ActivityLog` (company/contact/deal FK + миграция), доревизовать сервисы-производители, чтобы взаимодействия писали связанные строки; таймлайн-эндпоинт + карточка контрагента (только чтение истории того, что уже есть). Быстрая ценность, низкий риск.
+2. **Фаза B — Relationship-модель + книга:** `CounterpartyRelationship` + rollup-сигналы; `ContactViewSet`/`RelationshipViewSet`; страница «Контрагенты» (список + карточка). Автосоздание ребра при `create_offline_client` / открытии сделки / входящей заявке.
+3. **Фаза C — идентичность + слияние + auto-populate:** admin company-merge tool (сервис + React Admin), CB-auto-populate по ИНН.
+4. **Фаза D — петля привлечения (CB-invite):** инвайт офлайн-контакта на регистрацию с привязкой к существующей Company (детали — в 2.4).
+
+**Оценка всего CRM-слоя:** ~2–3 недели (A ~3–4 дня, B ~1 неделя, C ~3–4 дня, D ~2 дня). Делать фазами, каждая — отдельный PR с тестами (backend + компонентные по образцу #234) и eyes-on.
+
+### 2.4 CB-invite — регистрация офлайн-контрагента по инвайту (Фаза D)
 
 **Цель (петля привлечения, `client-base-design-2026-06-24.md` фаза 4).** Продавец создал офлайн-клиента (`Company(is_registered=False)` + `Contact`, `create_offline_client`), отправил КП по публичной ссылке. Теперь — пригласить контакт **зарегистрироваться и заявить существующую Company** (флип `is_registered=True`), а не создавать дубликат. Так офлайн-книга продавца превращается в зарегистрированных пользователей платформы.
 
@@ -178,7 +237,7 @@ celery-beat:
 1. **Токен.** Подписанный (itsdangerous/Django signer, как `setup_password`) токен, кодирующий `company_id` + `contact_id` + TTL (напр. 14 дней). Хранить не обязательно (stateless signed), но лучше — модель `ClientInvite(company, contact, created_by, token_hash, expires_at, accepted_at)` для аудита и одноразовости.
 2. **Сервис** `accounts/services/clients.py`: `send_client_invite(*, seller, contact_id) -> (invite, error_code)` — проверяет, что контакт принадлежит клиентской компании продавца (scoped, как `seller_clients`), что компания ещё `is_registered=False`, генерит токен, шлёт письмо.
 3. **Email-шаблон** `backend/templates/emails/invite_client.{html,txt,_subject.txt}` (канал `transactional`), ссылка `FRONTEND_URL/register?invite=<token>`.
-4. **Эндпоинт отправки** — `@action` на будущем `ContactViewSet` (см. ниже) или на deals: `POST /api/v1/accounts/contacts/<id>/invite/`. Тонкая обёртка → сервис. Throttle-скоуп `client_invite` (напр. `20/hour`).
+4. **Эндпоинт отправки** — `@action invite` на `ContactViewSet` (2.2): `POST /api/v1/accounts/contacts/<id>/invite/`. Тонкая обёртка → сервис. Throttle-скоуп `client_invite` (напр. `20/hour`).
 5. **Приём инвайта в регистрации.** Расширить register-флоу (`accounts/views/auth.py` register): если пришёл валидный `invite`-токен — вместо создания новой Company привязать нового `CustomUser` к существующей `Company` (флип `is_registered=True`, создать `CompanyMember(role=OWNER, is_active=True)`, пометить `ClientInvite.accepted_at`). Дедуп по INN: если `stated_inn` совпал с уже зарегистрированной компанией — не сливать автоматически, увести на «join existing company»-путь (см. post-deploy-todos COMPANY_INN_TAKEN) или пометить для admin company-merge.
 6. **Гварды.** Инвайт валиден один раз; истёкший/использованный → `CLIENT_INVITE_INVALID`. Нельзя пригласить в уже зарегистрированную компанию (`COMPANY_ALREADY_REGISTERED`).
 
@@ -195,39 +254,7 @@ celery-beat:
 
 ---
 
-### ContactViewSet + фронтенд клиентской базы (ADR-0005 Phase F «Клиенты-REST»)
-
-**Цель.** REST-CRUD для `Contact`/клиентских компаний + UI: страница «Клиенты» продавца и «выбрать или создать клиента» в потоке создания сделки/КП. Замыкает CB-фазу 3 и Phase F ADR-0005.
-
-**Текущее состояние.** `ContactViewSet`/`ContactSerializer`/route — НЕТ (grep пусто). Нет фронтенд-страницы клиентов. Сервисы `seller_clients(user)`, `find_client_company`, `create_offline_client` — есть.
-
-**Решение (backend).**
-1. `accounts/serializers.py`: `ContactSerializer` (nested read / flat write, `_data`-суффикс по конвенции), `ClientCompanySerializer` (id, name, inn/stated_inn, is_registered, contacts[]).
-2. `accounts/views/clients.py` (новый или в существующем): `ContactViewSet` (ModelViewSet), `get_queryset` — строго scoped через `seller_clients(user)` (только контакты клиентских компаний команды продавца; platform-admin — read-all). Permissions: `IsAuthenticated` + capability `sell`. `@action invite` (см. CB-invite).
-3. Роут `core/urls.py`: `router.register(r"accounts/contacts", ContactViewSet)` + endpoint списка клиентских компаний `GET /api/v1/accounts/clients/` (обёртка над `seller_clients`).
-4. Дедуп на create: переиспользовать `find_client_company` (мягкий, «дубликатов не боимся», админ мержит на KYC).
-
-**Решение (frontend).**
-1. `frontend/src/api/` — `contactsApi`/расширить `accountsApi`: list/create/update/delete + invite.
-2. `frontend/src/hooks/useAccounts.ts` — `useClients`, `useCreateClient`, `useSendClientInvite` (React Query).
-3. Страница `frontend/src/pages/ClientsPage.tsx` (продавец, в AppShell seller-контексте) — `ResponsiveDataTable` со списком клиентских компаний+контактов, кнопки: создать офлайн-клиента, пригласить, открыть сделку. Навигация — hash `#clients`, добавить в `config/navigation.tsx` под `side:'sell'` + `requires`.
-4. Компонент «выбрать или создать клиента» в `CreateDealDialog`/КП-потоке.
-5. i18n ru+en, semantic tokens, shadcn/ui (Rule 4/5).
-
-**Критерии приёмки.**
-- [ ] Продавец видит только своих клиентов (scoped); чужие — 404/пусто.
-- [ ] CRUD контактов работает; создание офлайн-клиента из UI = `create_offline_client`.
-- [ ] Кнопка «пригласить» дергает CB-invite.
-- [ ] OpenAPI-схема регенерирована, `schema.d.ts` синхронен (api-contract-гейт).
-- [ ] Компонентные тесты страницы (по образцу PR #234); backend-тесты scope/CRUD.
-
-**Риск.** Низкий-средний (новая изолированная поверхность). **Оценка:** ~3–4 дня (backend + фронт + тесты).
-
----
-
-### CB-auto-populate — ⚠️ требует уточнения (возможный блокер)
-
-Дизайн (`client-base-design-2026-06-24.md:63`) помечает auto-populate как «зависит от MS-routing». При этом `DealSellerRouting` (модель multi-seller routing) в коде **есть** (Move 2). Нужно уточнить у владельца/в дизайне, что именно понимается под «MS-routing» блокером — полный ли UX-маршрутизации входящих заявок или только модель. **До уточнения — не начинать.** Вынести отдельным вопросом.
+> **ContactViewSet + фронтенд** и **CB-auto-populate** свёрнуты в CRM-слой выше (2.2 API+фронт, Фаза B; и 2.0/2.1 идентичность+слияние, Фаза C) — отдельными разделами больше не идут.
 
 ---
 
@@ -250,15 +277,19 @@ celery-beat:
 
 ## Раздел 3. Архитектурный долг (ADR-реконсиляция)
 
-### ADR-0006 — решение по cut-list Leads/Analytics (нужно решение владельца)
+### ADR-0006 — амендмент cut-list: Leads = KEEP (решено), Analytics-orphan = убрать
 
-**Факт.** Фронтенд-страницы Leads/Analytics/Clients удалены (cut исполнен). Но бэкенд жив: `crm/views/leads.py` (`LeadViewSet`), `crm/views/analytics.py` (`CRMAnalyticsView` — orphan; `DashboardAnalyticsView` + `TimeToFirstQuoteView` — используются дашбордом/TTFK), `Lead`-модель, роуты. ADR-0006 объявлял Leads/Analytics/Clients как CUT.
+**Решение владельца (2026-07-07):** нужна книга контрагентов с историей → `Lead` (входящая форма с лендинга) **сохраняется** как верх воронки CRM-слоя (Раздел 2), НЕ режется. Это меняет ADR-0006.
 
-**Рекомендуемый путь (не чистый cut, а амендмент ADR):**
-- Оставить `DashboardAnalyticsView` + `TimeToFirstQuoteView` (реально питают Operations Inbox / TTFK-метрику).
-- Удалить orphan `CRMAnalyticsView` + его роут `/api/v1/crm/analytics/`, если ничто не дергает (проверить фронт/тесты).
-- По `Lead`: решить — используется ли lead-capture где-то (публичная форма?). Если нет входящей точки — удалить `LeadViewSet`+модель+admin+роут (миграция удаления) ИЛИ явно оставить и **амендментом ADR-0006** зафиксировать «Leads-backend сохранён под будущий lead-capture».
-- Обновить ADR-0006 (раздел CUT) под фактическое решение.
+**Факт (код).** Фронтенд-страницы Leads/Analytics/Clients удалены. Бэкенд жив: `crm/views/leads.py` (`LeadViewSet` + публичный `LeadCreateView`, throttled), `crm/services/deals.py:211 convert_lead_to_deal`, `Lead`-модель (`crm/models/deals.py:285`, форма с лендинга), `crm/views/analytics.py` (`CRMAnalyticsView` — orphan; `DashboardAnalyticsView` + `TimeToFirstQuoteView` — используются).
+
+**Действия:**
+- **Leads — KEEP.** Амендмент ADR-0006: переклассифицировать Leads из «CUT» в «KEEP (верх воронки CRM)». Дореализовать: фронтенд-inbox лидов (оператор/продавец), и на `convert_lead_to_deal` создавать Account+Contact+Relationship (связка с CRM-слоем 2.1).
+- **Analytics — частичный cut.** Удалить orphan `CRMAnalyticsView` + роут `/api/v1/crm/analytics/`, если ничто не дергает (проверить фронт/тесты); оставить `DashboardAnalyticsView` + `TimeToFirstQuoteView` (питают Operations Inbox / TTFK).
+- **Clients-page cut** уже исполнен корректно (заменяется CRM-страницей «Контрагенты» из Раздела 2).
+- Обновить ADR-0006 (раздел CUT) под это решение + сослаться на CRM-слой.
+
+**Оценка:** ~0.5 дня на амендмент ADR + удаление orphan-analytics; Leads-inbox фронт — в рамках CRM-слоя (Раздел 2).
 
 **Действие:** сначала вопрос владельцу — Leads планируется? Затем cut-миграция ИЛИ ADR-амендмент. **Оценка:** ~0.5 дня после решения.
 
@@ -321,9 +352,10 @@ celery-beat:
 1. **INF-04** backup-gate (риск ↑, дёшево) → **INF-08** reset bind-mount → **INF-07** minio-пины (тривиально).
 2. **INF-05/09** пиннинг + lock (после — воспроизводимые сборки для всего дальнейшего).
 3. **INF-01** Caddy rate-limit (нужна возня с host-Caddy).
-4. **ContactViewSet + фронт клиентской базы** → **CB-invite** (продуктовая ценность, петля привлечения).
+4. **CRM-слой** (главная продуктовая ценность, фазами A→B→C→D — Раздел 2.3): Фаза A таймлайн истории → Фаза B книга контрагентов → Фаза C идентичность+слияние+auto-populate → Фаза D CB-invite. Параллельно — **ADR-0006 амендмент** (Leads=KEEP, orphan-analytics убрать) как первый шаг, т.к. Leads = верх этой воронки.
 5. **AI-калибровка** (телеметрия — параллельно, тюнинг по накоплению трафика).
-6. **ADR-0006 cut-решение** (после вопроса владельцу).
-7. **ADR-0005 Phase E U3** (крупный рискованный рефактор — отдельным заходом, максимум тестов).
+6. **ADR-0005 Phase E U3** (крупный рискованный рефактор WorkspaceRole — отдельным заходом, максимум тестов).
+
+**Примечание про инфру vs продукт.** Инфра (п.1–3) — быстрая, риск-driven, готова к старту хоть сейчас (валидируется локально). CRM-слой (п.4) — ~2–3 недели, главная продуктовая ценность; если приоритет — продукт, можно начать с Фазы A параллельно инфре (они не пересекаются).
 
 ⚠️ Всё это без работающего CI валидируется локально (полный backend-сьют + фронт lint/test/build); деплой (self-hosted runner) не затронут биллингом.
