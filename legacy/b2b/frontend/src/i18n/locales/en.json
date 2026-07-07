@@ -1208,6 +1208,71 @@
       }
     }
   },
+  "timeline": {
+    "title": "History"
+  },
+  "counterparties": {
+    "title": {
+      "clients": "Clients",
+      "suppliers": "Suppliers"
+    },
+    "description": {
+      "clients": "Companies that buy from you — with interaction history",
+      "suppliers": "Companies you buy from — with interaction history"
+    },
+    "searchPlaceholder": "Search by name or TIN",
+    "newClient": "New client",
+    "invite": "Invite to register",
+    "inviteSent": "Invitation sent",
+    "inn": "TIN",
+    "offline": "Offline",
+    "registered": "Registered",
+    "stageUpdated": "Stage updated",
+    "emptyState": "No counterparties yet",
+    "emptyStateHintClients": "Add your first client or wait for an inbound request",
+    "emptyStateHintSuppliers": "Route a request to sellers — they will appear here",
+    "table": {
+      "counterparty": "Counterparty",
+      "stage": "Stage",
+      "deals": "Deals / won",
+      "gmv": "GMV",
+      "lastInteraction": "Last interaction",
+      "owner": "Account owner",
+      "ownerUnassigned": "Unassigned"
+    },
+    "detail": {
+      "stage": "Relationship stage",
+      "deals": "Deals / won",
+      "source": "Source",
+      "firstInteraction": "First interaction",
+      "lastInteraction": "Last interaction"
+    },
+    "stage": {
+      "PROSPECT": "Prospect",
+      "ACTIVE": "Active",
+      "DORMANT": "Dormant",
+      "LOST": "Lost"
+    },
+    "source": {
+      "LEAD": "Landing lead",
+      "OFFLINE_CREATED": "Created manually",
+      "INBOUND_RFQ": "Inbound request",
+      "SELF_REGISTERED": "Self-registered"
+    },
+    "dialog": {
+      "title": "New client",
+      "description": "Record an offline client — a company and a contact person",
+      "companyName": "Company name",
+      "contactName": "Contact person",
+      "inn": "TIN",
+      "email": "Email",
+      "phone": "Phone",
+      "position": "Position",
+      "hint": "Provide a name, a contact person and an email or phone",
+      "submit": "Create",
+      "created": "Client created"
+    }
+  },
   "notifications": {
     "title": "Notifications",
     "empty": "No notifications",
@@ -3709,6 +3774,14 @@
     "description": "Company registry, details and team management",
     "new": "New company",
     "edit": "Edit company",
+    "merge": {
+      "action": "Merge duplicates",
+      "title": "Merge duplicate company",
+      "description": "Fold an offline duplicate (by TIN) into «{{name}}» — contacts, deals and history",
+      "empty": "No duplicates found by TIN",
+      "confirm": "Merge",
+      "done": "Duplicate merged"
+    },
     "allKyc": "All KYC statuses",
     "allTypes": "All types",
     "searchPlaceholder": "Search by name or INN",
@@ -4397,6 +4470,14 @@
     "companyDocDescription": "The document will be removed permanently."
   },
   "apiErrors": {
+    "CLIENT_FIELDS_REQUIRED": "Provide a company name and a contact person",
+    "CONTACT_NEEDS_EMAIL_OR_PHONE": "The contact needs an email or a phone",
+    "ONLY_SELLER_CAN_CREATE_CLIENTS": "Only a seller can create clients",
+    "OWNER_MEMBER_NOT_IN_COMPANY": "The account owner must be a member of your company",
+    "CONTACT_NOT_IN_YOUR_BOOK": "The contact is not in your client book",
+    "CONTACT_HAS_NO_EMAIL": "The contact has no email to invite",
+    "COMPANY_ALREADY_REGISTERED": "The company is already registered",
+    "CLIENT_INVITE_INVALID": "The invitation is invalid or has expired",
     "SUBSCRIPTION_REQUIRED": "An active subscription is required to perform seller actions. Activate a subscription to continue.",
     "CONTRACT_NEEDS_APPROVAL": "A contract can only be created from an approved quote",
     "CONTRACT_CLIENT_SIGN_NOT_ALLOWED": "Contract cannot be signed by the client in current status",

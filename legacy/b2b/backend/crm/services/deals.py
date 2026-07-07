@@ -62,7 +62,28 @@ def register_new_deal(deal: Deal, actor: CustomUser) -> Deal:
         ),
         user=actor,
         level="INFO",
+        deal=deal,
+        company=deal.company,
+        contact=deal.contact,
     )
+
+    # Counterparty book (Phase B): a deal opened FOR an offline contact is a seller acting on
+    # their own client — touch the CLIENT edge (creates it for pre-Phase-B books). Buyer-opened
+    # RFQs get their edges at routing time instead (both sides at once).
+    if deal.contact_id and deal.company_id:
+        from accounts.services.permissions import primary_seller_company_id
+
+        seller_company_id = primary_seller_company_id(actor)
+        if seller_company_id:
+            from ..models import RelationshipDirection, RelationshipSource
+            from .relationships import touch_relationship
+
+            touch_relationship(
+                owner_company_id=seller_company_id,
+                counterparty_company_id=deal.company_id,
+                direction=RelationshipDirection.CLIENT,
+                source=RelationshipSource.OFFLINE_CREATED,
+            )
     return deal
 
 
@@ -129,7 +150,15 @@ def transition_deal_stage(
         before={"stage_code": old_stage_code, "stage_name": old_stage_name},
         after={"stage_code": target_stage.code, "stage_name": target_stage.name},
         level="WARNING" if not validate_fsm else "INFO",
+        deal_id=deal.id,
+        company_id=deal.company_id,
     )
+
+    # Counterparty book (Phase B): a stage change is an interaction — refresh the deal's
+    # relationship-edge rollups (deals_count/won_count/gmv stay honest without a nightly job).
+    from .relationships import recompute_rollups_for_deal
+
+    recompute_rollups_for_deal(deal)
 
     # Post-sale hook: on CLOSED_WON, auto-generate Invoice + Act (async).
     # Dispatched via transaction.on_commit so the financial task NEVER fires
@@ -248,5 +277,7 @@ def convert_lead_to_deal(
         detail=f"Lead #{lead.id} → Deal #{deal.id}",
         user=actor,
         level="SUCCESS",
+        deal=deal,
+        company=company,
     )
     return deal, None

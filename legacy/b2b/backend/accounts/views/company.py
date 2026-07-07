@@ -20,7 +20,7 @@ from accounts.serializers import (
     UserSerializer,
 )
 from accounts.services.permissions import member_has_permission
-from core.permissions import OperatorScoped
+from core.permissions import IsPlatformAdmin, OperatorScoped
 
 
 @extend_schema_view(
@@ -248,6 +248,54 @@ class CompanyViewSet(viewsets.ModelViewSet):
 
             return Response({"status": "Status updated", "new_status": result.verification_status.name})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @extend_schema(
+        summary="Duplicate offline companies (merge candidates)",
+        description="Platform Admin: offline placeholder companies whose stated INN matches this "
+        "company's canonical INN — candidates to fold in via merge (CRM Phase C).",
+        responses={200: OpenApiResponse(description="List of {id, name, stated_inn, is_registered}")},
+        tags=["Accounts"],
+    )
+    @action(detail=True, methods=["get"], url_path="merge-candidates", permission_classes=[IsPlatformAdmin])
+    def merge_candidates(self, request, pk=None):
+        from accounts.services.merge import find_offline_duplicates
+
+        company = self.get_object()
+        duplicates = find_offline_duplicates(company).values("id", "name", "stated_inn", "is_registered")
+        return Response(list(duplicates))
+
+    @extend_schema(
+        summary="Merge a duplicate offline company into this one",
+        description="Platform Admin: fold an OFFLINE duplicate (its contacts, deals, activity, "
+        "relationship edges) into this surviving company (CRM Phase C). Body: {duplicate_id, reason?}.",
+        request={
+            "application/json": {
+                "type": "object",
+                "properties": {"duplicate_id": {"type": "integer"}, "reason": {"type": "string"}},
+                "required": ["duplicate_id"],
+            }
+        },
+        responses={200: OpenApiResponse(description="{merged: true}"), 400: OpenApiResponse(description="error code")},
+        tags=["Accounts"],
+    )
+    @action(detail=True, methods=["post"], permission_classes=[IsPlatformAdmin])
+    def merge(self, request, pk=None):
+        from accounts.services.merge import merge_companies
+
+        survivor = self.get_object()
+        try:
+            duplicate_id = int(request.data.get("duplicate_id"))
+        except (TypeError, ValueError):
+            return Response({"detail": "DUPLICATE_ID_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
+        duplicate = Company.objects.filter(pk=duplicate_id).first()
+        if duplicate is None:
+            return Response({"detail": "COMPANY_NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)
+        _survivor, error = merge_companies(
+            survivor, duplicate, actor=request.user, reason=(request.data.get("reason") or "").strip()
+        )
+        if error:
+            return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"merged": True})
 
     @extend_schema(
         summary="Bulk verify KYC",

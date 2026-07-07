@@ -131,5 +131,7 @@ def send_deal_message(user: CustomUser, deal: Deal, text: str) -> Tuple[Optional
         detail=preview,
         actor=user,
         level="INFO",
+        deal_id=deal.id,
+        company_id=deal.company_id,
     )
     return message, None

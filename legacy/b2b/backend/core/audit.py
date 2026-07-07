@@ -35,12 +35,18 @@ def log_admin_action(
     after: Optional[dict[str, Any]] = None,
     level: str = "INFO",
     expires_at=None,
+    company_id: Optional[int] = None,
+    contact_id: Optional[int] = None,
+    deal_id: Optional[int] = None,
 ):
     """
     Create an ActivityLog entry scoped to a single entity.
 
     All admin override actions must route through this helper so the timeline
     remains consistent. `expires_at` time-boxes a break-glass access grant (G2).
+    company_id/contact_id/deal_id link the entry into the CRM counterparty
+    timeline (Phase A, spec-remaining-2026-07-07 §2.1) — call sites pass
+    whatever counterparty scope they have in context.
     """
     from crm.models import ActivityLog
 
@@ -55,4 +61,7 @@ def log_admin_action(
         before_data=before,
         after_data=after,
         expires_at=expires_at,
+        company_id=company_id,
+        contact_id=contact_id,
+        deal_id=deal_id,
     )

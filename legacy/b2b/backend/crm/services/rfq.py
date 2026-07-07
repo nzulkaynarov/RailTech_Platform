@@ -130,6 +130,8 @@ def buyer_add_request_item(
         level="INFO",
         entity_type="deal",
         entity_id=str(deal.id),
+        deal=deal,
+        company_id=deal.company_id,
     )
     return item
 
@@ -199,6 +201,8 @@ def buyer_add_request_items(user: CustomUser, deal: Deal, rows: list) -> list:
             level="INFO",
             entity_type="deal",
             entity_id=str(deal.id),
+            deal=deal,
+            company_id=deal.company_id,
         )
     return to_create
 
@@ -265,6 +269,8 @@ def buyer_remove_request_item(user: CustomUser, item: QuoteItem) -> None:
         level="INFO",
         entity_type="deal",
         entity_id=str(deal.id),
+        deal=deal,
+        company_id=deal.company_id,
     )
 
 
@@ -363,6 +369,12 @@ def route_request_to_sellers(user: CustomUser, deal: Deal, seller_company_ids: l
     for seller_id in valid_ids:
         DealSellerRouting.objects.get_or_create(deal=deal, seller_company_id=seller_id)
 
+    # Counterparty book (Phase B): first interaction of a buyer↔seller pair creates both edges
+    # (buyer gains a SUPPLIER, each routed seller gains a CLIENT); repeats just touch them.
+    from .relationships import ensure_edges_for_deal_routing
+
+    ensure_edges_for_deal_routing(deal, valid_ids)
+
     ActivityLog.objects.create(
         action="Заявка адресована продавцам (RFQ routing)",
         detail=f"Deal #{deal.id}: {len(valid_ids)} продавцов",
@@ -370,6 +382,8 @@ def route_request_to_sellers(user: CustomUser, deal: Deal, seller_company_ids: l
         level="INFO",
         entity_type="deal",
         entity_id=str(deal.id),
+        deal=deal,
+        company_id=deal.company_id,
     )
     return deal
 
@@ -429,5 +443,7 @@ def submit_request(user: CustomUser, deal: Deal) -> Deal:
         level="INFO",
         entity_type="deal",
         entity_id=str(deal.id),
+        deal=deal,
+        company_id=deal.company_id,
     )
     return deal

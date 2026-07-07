@@ -292,7 +292,7 @@ def expire_stale_quotes(self) -> dict:
     if expired_status is None:
         logger.error("QuoteStatus 'EXPIRED' missing — seed migration not applied")
         return {"expired": 0, "error": "expired_status_missing"}
-    stale_qs = Quote.objects.select_related("status", "prepared_by").filter(
+    stale_qs = Quote.objects.select_related("status", "prepared_by", "deal").filter(
         status__code="SENT",
         valid_until__isnull=False,
         valid_until__lt=today,
@@ -309,6 +309,8 @@ def expire_stale_quotes(self) -> dict:
             detail=f"Quote #{q.id} v{q.version} (deal #{q.deal_id}) — valid_until={q.valid_until}",
             user=None,
             level="WARNING",
+            deal_id=q.deal_id,
+            company_id=q.deal.company_id,
         )
         if q.prepared_by and warn_type:
             notif = Notification.objects.create(

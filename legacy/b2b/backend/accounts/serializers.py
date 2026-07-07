@@ -506,6 +506,8 @@ class SubmitProfileSerializer(serializers.Serializer):
     # INN is collected later at KYC, selling is granted via CompanyRoleApplication.
     companyName = serializers.CharField(max_length=255)
     position = serializers.CharField(max_length=120, help_text="Free-text job title, e.g. 'Директор по закупкам'")
+    # CRM Phase D — a CB-invite token: claim an existing offline company instead of a new one.
+    invite = serializers.CharField(required=False, allow_blank=True, default="")
 
 
 class ChangePasswordSerializer(serializers.Serializer):

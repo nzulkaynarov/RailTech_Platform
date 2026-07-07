@@ -14,7 +14,7 @@
  */
 import {
   LayoutDashboard, Package, ClipboardList, Handshake, Receipt,
-  FileText, Boxes, Settings, HelpCircle,
+  FileText, Boxes, Settings, HelpCircle, Users, Truck,
 } from 'lucide-react';
 import type { Capabilities } from '@/store/userStore';
 
@@ -98,6 +98,11 @@ export const TENANT_NAV: NavNodeDef[] = [
   // РАЗНЫЕ ярлыки: закупочная сторона → «Мои заявки», продающая → «Сделки» (CRM).
   { labelKey: 'shell.myRequests', id: 'my-requests', icon: <ClipboardList className="h-4 w-4" />, side: 'buy', requires: { kyc: true, anyPerm: ['request.create', 'quote.approve'] } },
   { labelKey: 'shell.deals', id: 'crm-deals', icon: <Handshake className="h-4 w-4" />, side: 'sell', requires: { kyc: true, anyPerm: ['quote.build', 'quote.send'] } },
+
+  // Книга контрагентов (CRM Phase B) — симметрична: продающая сторона видит «Клиентов»,
+  // закупочная — «Поставщиков». Отношение с историей = T1 (KYC L2+) продуктовый слой.
+  { labelKey: 'counterparties.title.clients', id: 'clients', icon: <Users className="h-4 w-4" />, side: 'sell', requires: { kyc: true } },
+  { labelKey: 'counterparties.title.suppliers', id: 'suppliers', icon: <Truck className="h-4 w-4" />, side: 'buy', requires: { kyc: true } },
 
   // Документы — КП · Договоры · Счета · Акты (фильтр направления — на самих страницах).
   // ADR-0005 tier table: every document surface is a T1/T2 (KYC L2+) action — a T0

@@ -193,6 +193,7 @@ class SubmitProfileView(views.APIView):
             user=request.user,
             company_name=serializer.validated_data["companyName"],
             position=serializer.validated_data.get("position", ""),
+            invite_token=serializer.validated_data.get("invite", ""),
         )
         if error:
             return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)

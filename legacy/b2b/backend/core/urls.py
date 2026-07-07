@@ -14,6 +14,7 @@ from accounts.views import (
     CompanyRoleViewSet,
     CompanyTypeViewSet,
     CompanyViewSet,
+    ContactViewSet,
     CookieTokenObtainPairView,
     CookieTokenRefreshView,
     ForgotPasswordView,
@@ -76,7 +77,9 @@ from crm.views import (
     QuoteRequestDiffView,
     QuoteStatusViewSet,
     QuoteViewSet,
+    RelationshipViewSet,
     SuggestChatReplyView,
+    TimelineView,
     TimeToFirstQuoteView,
 )
 from master_data.views import CountryViewSet, CurrencyViewSet, DeliveryBasisViewSet, UnitOfMeasureViewSet
@@ -121,8 +124,12 @@ router.register(r"crm/payments", PaymentViewSet, basename="payment")
 router.register(r"crm/acts", ActViewSet, basename="act")
 router.register(r"crm/fulfillments", FulfillmentViewSet, basename="fulfillment")
 router.register(r"crm/leads", LeadViewSet, basename="lead")
+# CRM Phase B — counterparty book (relationship edges of the user's own companies).
+router.register(r"crm/relationships", RelationshipViewSet, basename="relationship")
 
 router.register(r"accounts/companies", CompanyViewSet)
+# CRM Phase B — offline-client contacts (seller team's own book).
+router.register(r"accounts/contacts", ContactViewSet, basename="contact")
 router.register(r"accounts/users", UserViewSet)
 router.register(r"accounts/subscriptions", SupplierSubscriptionViewSet, basename="subscription")
 router.register(r"admin/entitlements", CompanyEntitlementViewSet, basename="entitlement")
@@ -198,6 +205,8 @@ urlpatterns = (
         path("api/v1/sourcing/ai-status/<str:task_id>/", AIJobStatusView.as_view(), name="ai-status"),
         path("api/v1/crm/analytics/dashboard/", DashboardAnalyticsView.as_view(), name="dashboard-analytics"),
         path("api/v1/crm/analytics/time-to-first-quote/", TimeToFirstQuoteView.as_view(), name="time-to-first-quote"),
+        # CRM Phase A — counterparty / deal activity timeline (read-only).
+        path("api/v1/crm/timeline/", TimelineView.as_view(), name="crm-timeline"),
         path("api/v1/analytics/page-stats/", PageStatsView.as_view(), name="page-stats"),
         path("api/v1/analytics/platform-dashboard/", PlatformDashboardView.as_view(), name="platform-dashboard"),
         # Admin Platform API

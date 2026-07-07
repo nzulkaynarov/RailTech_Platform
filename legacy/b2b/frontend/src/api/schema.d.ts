@@ -186,6 +186,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/accounts/companies/{id}/merge/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Merge a duplicate offline company into this one
+         * @description Platform Admin: fold an OFFLINE duplicate (its contacts, deals, activity, relationship edges) into this surviving company (CRM Phase C). Body: {duplicate_id, reason?}.
+         */
+        post: operations["accounts_companies_merge_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/accounts/companies/{id}/merge-candidates/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Duplicate offline companies (merge candidates)
+         * @description Platform Admin: offline placeholder companies whose stated INN matches this company's canonical INN — candidates to fold in via merge (CRM Phase C).
+         */
+        get: operations["accounts_companies_merge_candidates_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/accounts/companies/{id}/set-member-role/": {
         parameters: {
             query?: never;
@@ -499,6 +539,74 @@ export interface paths {
         get: operations["accounts_company_types_retrieve_2"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/accounts/contacts/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Contacts of the seller team's OWN client book. Create = «завести офлайн-клиента»
+         *     (company + contact in one step, via the service). No delete — history stays.
+         */
+        get: operations["accounts_contacts_list"];
+        put?: never;
+        /**
+         * @description Contacts of the seller team's OWN client book. Create = «завести офлайн-клиента»
+         *     (company + contact in one step, via the service). No delete — history stays.
+         */
+        post: operations["accounts_contacts_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/accounts/contacts/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Contacts of the seller team's OWN client book. Create = «завести офлайн-клиента»
+         *     (company + contact in one step, via the service). No delete — history stays.
+         */
+        get: operations["accounts_contacts_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * @description Contacts of the seller team's OWN client book. Create = «завести офлайн-клиента»
+         *     (company + contact in one step, via the service). No delete — history stays.
+         */
+        patch: operations["accounts_contacts_partial_update"];
+        trace?: never;
+    };
+    "/api/v1/accounts/contacts/{id}/invite/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Invite an offline client to register
+         * @description CRM Phase D: email this contact an invite to register and CLAIM its existing offline company (no duplicate). Throttled per user.
+         */
+        post: operations["accounts_contacts_invite_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4219,6 +4327,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/crm/relationships/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description The counterparty book of the user's own companies. No create/delete over the API —
+         *     edges are born from real interactions (routing, offline clients, lead conversion).
+         */
+        get: operations["crm_relationships_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/relationships/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description The counterparty book of the user's own companies. No create/delete over the API —
+         *     edges are born from real interactions (routing, offline clients, lead conversion).
+         */
+        get: operations["crm_relationships_retrieve"];
+        /**
+         * @description The counterparty book of the user's own companies. No create/delete over the API —
+         *     edges are born from real interactions (routing, offline clients, lead conversion).
+         */
+        put: operations["crm_relationships_update"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * @description The counterparty book of the user's own companies. No create/delete over the API —
+         *     edges are born from real interactions (routing, offline clients, lead conversion).
+         */
+        patch: operations["crm_relationships_partial_update"];
+        trace?: never;
+    };
     "/api/v1/crm/status-choices/": {
         parameters: {
             query?: never;
@@ -4233,6 +4389,26 @@ export interface paths {
          *     Response: {contract: [{code, label}], invoice: [...], ...}
          */
         get: operations["crm_status_choices_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/timeline/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Counterparty / deal activity timeline
+         * @description Chronological business events (deal opened, КП sent/accepted/rejected, contract signed, payments, messages, KYC) linked to a deal or a counterparty company. Pass deal_id OR company_id. Scoping: a deal timeline needs access to the deal (member of the client company, routed seller, or platform admin); a company timeline shows a member their own company's history, while a routed seller sees only events on deals visible to them.
+         */
+        get: operations["crm_timeline_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6117,6 +6293,34 @@ export interface components {
              */
             readonly updated_at: string;
         };
+        Contact: {
+            readonly id: number;
+            /**
+             * Компания
+             * @description Организация, к которой относится контакт
+             */
+            readonly company: number;
+            readonly company_name: string;
+            readonly company_is_registered: boolean;
+            /** ФИО */
+            name: string;
+            /**
+             * Адрес электронной почты
+             * Format: email
+             */
+            email?: string;
+            /** Телефон */
+            phone?: string;
+            /** Должность */
+            position?: string;
+            /**
+             * Основной контакт
+             * @description Контакт по умолчанию для отправки КП
+             */
+            is_primary?: boolean;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
         Contract: {
             readonly id: number;
             /** Сделка */
@@ -6450,6 +6654,12 @@ export interface components {
              */
             description?: string;
         };
+        /**
+         * @description * `CLIENT` - Клиент (они покупают у нас)
+         *     * `SUPPLIER` - Поставщик (мы покупаем у них)
+         * @enum {string}
+         */
+        DirectionEnum: "CLIENT" | "SUPPLIER";
         DomainType: {
             readonly id: number;
             /**
@@ -6991,6 +7201,22 @@ export interface components {
              */
             readonly created_at: string;
         };
+        /** @description Flat write payload for the create action (nested read, flat write pattern). */
+        OfflineClientCreateRequest: {
+            company_name: string;
+            contact_name: string;
+            /** @default  */
+            inn: string;
+            /**
+             * Format: email
+             * @default
+             */
+            email: string;
+            /** @default  */
+            phone: string;
+            /** @default  */
+            position: string;
+        };
         /** @description A platform-operator sub-role with its capability set (ADR-0004 G1). */
         OperatorRole: {
             readonly id: number;
@@ -7150,6 +7376,21 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["CompanyRole"][];
+        };
+        PaginatedContactList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["Contact"][];
         };
         PaginatedContractList: {
             /** @example 123 */
@@ -7390,6 +7631,21 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["Quote"][];
+        };
+        PaginatedRelationshipList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["Relationship"][];
         };
         PaginatedSupplierOfferList: {
             /** @example 123 */
@@ -7796,6 +8052,24 @@ export interface components {
              * @description Префикс номеров документов компании (напр. «ACME» → ACME-CT-2026-00001)
              */
             doc_number_prefix?: string;
+        };
+        PatchedContactRequest: {
+            /** ФИО */
+            name?: string;
+            /**
+             * Адрес электронной почты
+             * Format: email
+             */
+            email?: string;
+            /** Телефон */
+            phone?: string;
+            /** Должность */
+            position?: string;
+            /**
+             * Основной контакт
+             * @description Контакт по умолчанию для отправки КП
+             */
+            is_primary?: boolean;
         };
         PatchedContractRequest: {
             /** Сделка */
@@ -8439,6 +8713,15 @@ export interface components {
              * @description Момент фиксации цен при отправке клиенту
              */
             frozen_at?: string | null;
+        };
+        PatchedRelationshipRequest: {
+            /** Стадия отношения */
+            stage?: components["schemas"]["StageEnum"];
+            /**
+             * Владелец аккаунта
+             * @description Сотрудник команды, ответственный за отношение
+             */
+            owner_member?: number | null;
         };
         /**
          * @description Fields a user may edit on their OWN profile via /users/update-me/.
@@ -9823,6 +10106,70 @@ export interface components {
             /** @default  */
             reason: string;
         };
+        Relationship: {
+            readonly id: number;
+            /**
+             * Роль контрагента
+             * @description Кем контрагент является ДЛЯ владельца книги (Rule 2: сравнивать по коду)
+             *
+             *     * `CLIENT` - Клиент (они покупают у нас)
+             *     * `SUPPLIER` - Поставщик (мы покупаем у них)
+             */
+            readonly direction: components["schemas"]["DirectionEnum"];
+            /** Стадия отношения */
+            stage?: components["schemas"]["StageEnum"];
+            /** Источник */
+            readonly source: components["schemas"]["SourceEnum"];
+            readonly counterparty: components["schemas"]["RelationshipCounterparty"];
+            /**
+             * Владелец аккаунта
+             * @description Сотрудник команды, ответственный за отношение
+             */
+            owner_member?: number | null;
+            /** @default  */
+            readonly owner_member_name: string;
+            /** @default 0 */
+            readonly contacts_count: number;
+            /**
+             * Первое взаимодействие
+             * Format: date-time
+             */
+            readonly first_interaction_at: string | null;
+            /**
+             * Последнее взаимодействие
+             * Format: date-time
+             */
+            readonly last_interaction_at: string | null;
+            /** Сделок */
+            readonly deals_count: number;
+            /** Выиграно */
+            readonly won_count: number;
+            /**
+             * Format: decimal
+             * @description Сумма total_incl_vat выигранных сделок (UZS-канон)
+             */
+            readonly gmv: string;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
+        /** @description Account summary embedded in an edge (nested read, flat write pattern). */
+        RelationshipCounterparty: {
+            readonly id: number;
+            readonly name: string;
+            readonly inn: string | null;
+            readonly stated_inn: string;
+            readonly is_registered: boolean;
+            readonly primary_contact_id: string;
+        };
+        RelationshipRequest: {
+            /** Стадия отношения */
+            stage?: components["schemas"]["StageEnum"];
+            /**
+             * Владелец аккаунта
+             * @description Сотрудник команды, ответственный за отношение
+             */
+            owner_member?: number | null;
+        };
         ResetPasswordRequest: {
             uid: string;
             token: string;
@@ -9870,6 +10217,22 @@ export interface components {
             token: string;
             password: string;
         };
+        /**
+         * @description * `LEAD` - Лид с лендинга
+         *     * `OFFLINE_CREATED` - Заведён вручную (офлайн)
+         *     * `INBOUND_RFQ` - Входящая заявка
+         *     * `SELF_REGISTERED` - Саморегистрация
+         * @enum {string}
+         */
+        SourceEnum: "LEAD" | "OFFLINE_CREATED" | "INBOUND_RFQ" | "SELF_REGISTERED";
+        /**
+         * @description * `PROSPECT` - Проспект
+         *     * `ACTIVE` - Активный
+         *     * `DORMANT` - Спящий
+         *     * `LOST` - Потерян
+         * @enum {string}
+         */
+        StageEnum: "PROSPECT" | "ACTIVE" | "DORMANT" | "LOST";
         StockStatus: {
             readonly id: number;
             /**
@@ -9887,6 +10250,8 @@ export interface components {
             companyName: string;
             /** @description Free-text job title, e.g. 'Директор по закупкам' */
             position: string;
+            /** @default  */
+            invite: string;
         };
         SupplierOffer: {
             readonly id: number;
@@ -10329,6 +10694,52 @@ export interface components {
              * Format: date-time
              */
             readonly updated_at: string;
+        };
+        TimelineEntry: {
+            readonly id: number;
+            /**
+             * Действие
+             * @description Краткое описание совершённого действия
+             */
+            action: string;
+            /**
+             * Детали
+             * @description Подробная информация о событии
+             */
+            detail?: string;
+            /**
+             * Уровень
+             * @description Уровень важности события
+             *
+             *     * `INFO` - Информация
+             *     * `SUCCESS` - Успех
+             *     * `WARNING` - Предупреждение
+             *     * `ERROR` - Ошибка
+             */
+            level?: components["schemas"]["LevelEnum"];
+            /**
+             * Время события
+             * Format: date-time
+             */
+            readonly timestamp: string;
+            /** @default  */
+            readonly user_name: string;
+            /**
+             * Тип сущности
+             * @description Код сущности, к которой относится запись (company, user, deal, subscription, ...)
+             */
+            entity_type?: string;
+            /** ID сущности */
+            entity_id?: number | null;
+            /** Сделка */
+            readonly deal_id: number | null;
+            /**
+             * Компания-контрагент
+             * @description Организация, к которой относится событие (таймлайн контрагента)
+             */
+            readonly company_id: number | null;
+            /** Контакт */
+            readonly contact_id: number | null;
         };
         TokenObtainPair: {
             readonly access: string;
@@ -10842,6 +11253,62 @@ export interface operations {
             };
             /** @description Not authorized */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    accounts_companies_merge_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Компания. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    duplicate_id: number;
+                    reason?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description {merged: true} */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description error code */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    accounts_companies_merge_candidates_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Компания. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List of {id, name, stated_inn, is_registered} */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -11391,6 +11858,130 @@ export interface operations {
         responses: {
             /** @description No response body */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    accounts_contacts_list: {
+        parameters: {
+            query?: {
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedContactList"];
+                };
+            };
+        };
+    };
+    accounts_contacts_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OfflineClientCreateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["OfflineClientCreateRequest"];
+                "multipart/form-data": components["schemas"]["OfflineClientCreateRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Contact"];
+                };
+            };
+        };
+    };
+    accounts_contacts_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Contact"];
+                };
+            };
+        };
+    };
+    accounts_contacts_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedContactRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedContactRequest"];
+                "multipart/form-data": components["schemas"]["PatchedContactRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Contact"];
+                };
+            };
+        };
+    };
+    accounts_contacts_invite_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description {invited: true} */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description error code */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -17969,6 +18560,116 @@ export interface operations {
             };
         };
     };
+    crm_relationships_list: {
+        parameters: {
+            query?: {
+                /** @description CLIENT → книга клиентов (seller context), SUPPLIER → книга поставщиков (buyer context) */
+                direction?: "CLIENT" | "SUPPLIER";
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedRelationshipList"];
+                };
+            };
+        };
+    };
+    crm_relationships_retrieve: {
+        parameters: {
+            query?: {
+                /** @description CLIENT → книга клиентов (seller context), SUPPLIER → книга поставщиков (buyer context) */
+                direction?: "CLIENT" | "SUPPLIER";
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Relationship"];
+                };
+            };
+        };
+    };
+    crm_relationships_update: {
+        parameters: {
+            query?: {
+                /** @description CLIENT → книга клиентов (seller context), SUPPLIER → книга поставщиков (buyer context) */
+                direction?: "CLIENT" | "SUPPLIER";
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["RelationshipRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["RelationshipRequest"];
+                "multipart/form-data": components["schemas"]["RelationshipRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Relationship"];
+                };
+            };
+        };
+    };
+    crm_relationships_partial_update: {
+        parameters: {
+            query?: {
+                /** @description CLIENT → книга клиентов (seller context), SUPPLIER → книга поставщиков (buyer context) */
+                direction?: "CLIENT" | "SUPPLIER";
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedRelationshipRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedRelationshipRequest"];
+                "multipart/form-data": components["schemas"]["PatchedRelationshipRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Relationship"];
+                };
+            };
+        };
+    };
     crm_status_choices_retrieve: {
         parameters: {
             query?: never;
@@ -17980,6 +18681,50 @@ export interface operations {
         responses: {
             /** @description No response body */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    crm_timeline_list: {
+        parameters: {
+            query?: {
+                company_id?: number;
+                deal_id?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimelineEntry"][];
+                };
+            };
+            /** @description Neither deal_id nor company_id given */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No access to the requested deal */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Deal not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

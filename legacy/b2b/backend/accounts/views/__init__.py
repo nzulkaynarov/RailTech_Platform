@@ -23,6 +23,7 @@ from accounts.views.auth import (  # noqa: F401
     ThrottledTokenObtainPairView,
     WsTicketView,
 )
+from accounts.views.clients import ContactViewSet  # noqa: F401
 from accounts.views.company import CompanyViewSet  # noqa: F401
 from accounts.views.lookups import CompanyTypeViewSet, SystemRoleViewSet, WorkspaceRoleViewSet  # noqa: F401
 from accounts.views.operators import OperatorPermissionCatalogView, OperatorRoleViewSet  # noqa: F401
@@ -36,6 +37,8 @@ __all__ = [
     "OperatorPermissionCatalogView",
     # company
     "CompanyViewSet",
+    # client base (CRM Phase B)
+    "ContactViewSet",
     # users
     "UserViewSet",
     # auth

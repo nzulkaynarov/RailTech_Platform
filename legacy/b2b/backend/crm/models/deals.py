@@ -411,6 +411,36 @@ class ActivityLog(models.Model):
             "записей журнала."
         ),
     )
+    # ── CRM counterparty timeline (Phase A, spec-remaining-2026-07-07 §2.1) ──
+    # Nullable relation links so this one generic log doubles as the counterparty
+    # "activity timeline": every business-cycle producer sets what it has in context.
+    # `company` is the counterparty ORGANIZATION the event is about (for deal-flow
+    # events — the client org, deal.company), NOT the acting user's own company.
+    company = models.ForeignKey(
+        "accounts.Company",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="counterparty_activity",
+        verbose_name=_("Компания-контрагент"),
+        help_text=_("Организация, к которой относится событие (таймлайн контрагента)"),
+    )
+    contact = models.ForeignKey(
+        "accounts.Contact",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="activity_logs",
+        verbose_name=_("Контакт"),
+    )
+    deal = models.ForeignKey(
+        "crm.Deal",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="timeline_logs",
+        verbose_name=_("Сделка"),
+    )
 
     class Meta:
         verbose_name = _("Запись активности")
@@ -418,6 +448,8 @@ class ActivityLog(models.Model):
         ordering = ["-timestamp"]
         indexes = [
             models.Index(fields=["entity_type", "entity_id", "-timestamp"]),
+            models.Index(fields=["company", "-timestamp"]),
+            models.Index(fields=["deal", "-timestamp"]),
         ]
 
     def __str__(self):

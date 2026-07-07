@@ -98,6 +98,8 @@ def generate_contract_from_quote(
         detail=f"Контракт {contract.number} по сделке #{quote.deal_id}",
         user=actor,
         level="INFO",
+        deal=quote.deal,
+        company_id=quote.deal.company_id,
     )
     # P1: a created contract must not be silent — tell BOTH parties it awaits signature
     # (previously generate set PENDING_CLIENT and nobody was notified → dead-end after accept).
@@ -205,6 +207,8 @@ def sign_contract_by_client(
         detail=f"Контракт {contract.number} / сделка #{contract.deal_id}",
         user=client_user,
         level="INFO",
+        deal=contract.deal,
+        company_id=contract.deal.company_id,
     )
     _finalize_if_signed(contract)
     return contract, None
@@ -282,6 +286,8 @@ def sign_contract_by_manager(
         detail=f"Контракт {contract.number} / сделка #{contract.deal_id}",
         user=manager_user,
         level="INFO",
+        deal=contract.deal,
+        company_id=contract.deal.company_id,
     )
     _finalize_if_signed(contract)
     return contract, None
@@ -315,6 +321,8 @@ def _finalize_if_signed(contract) -> None:
             action="Авто-переход в CLOSED_WON не выполнен",
             detail=f"Контракт {contract.number} / сделка #{contract.deal_id}: {err}",
             level="WARNING",
+            deal=contract.deal,
+            company_id=contract.deal.company_id,
         )
     _notify_contract_signed(contract)
 
@@ -400,5 +408,7 @@ def force_cancel_contract(
         before={"status": old_status},
         after={"status": ContractStatusCode.CANCELLED},
         level="WARNING",
+        deal_id=contract.deal_id,
+        company_id=contract.deal.company_id,
     )
     return contract, None

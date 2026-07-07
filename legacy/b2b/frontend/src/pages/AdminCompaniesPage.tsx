@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Building2, Pencil, Trash2, UserPlus } from 'lucide-react';
+import { Building2, Pencil, Trash2, UserPlus, GitMerge } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +32,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { MergeDuplicatesDialog } from '@/components/Admin/MergeDuplicatesDialog';
 import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import {
   useCompanies, useCreateCompany, useUpdateCompany, useDeleteCompany,
@@ -371,6 +372,7 @@ export function AdminCompaniesPage() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Company | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Company | null>(null);
+  const [mergeTarget, setMergeTarget] = useState<Company | null>(null);
 
   const onEdit = (c: Company) => {
     setEditTarget(c);
@@ -488,6 +490,12 @@ export function AdminCompaniesPage() {
             onRun: (c) => onEdit(c),
           },
           {
+            id: 'merge',
+            label: t('adminCompanies.merge.action'),
+            icon: <GitMerge className="h-3.5 w-3.5" />,
+            onRun: (c) => setMergeTarget(c),
+          },
+          {
             id: 'delete',
             label: t('adminCompanies.delete'),
             icon: <Trash2 className="h-3.5 w-3.5" />,
@@ -501,6 +509,11 @@ export function AdminCompaniesPage() {
       )}
 
       <CompanyFormSheet open={sheetOpen} onOpenChange={setSheetOpen} target={editTarget} />
+
+      <MergeDuplicatesDialog
+        survivor={mergeTarget}
+        onOpenChange={(open) => !open && setMergeTarget(null)}
+      />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <AlertDialogContent>

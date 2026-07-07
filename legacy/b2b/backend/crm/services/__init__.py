@@ -38,6 +38,12 @@ from .quotes import (
     effective_quote_lead_time,
     reassign_quote_item_product,
 )
+from .relationships import (
+    ensure_edges_for_deal_routing,
+    recompute_rollups_for_deal,
+    recompute_rollups_for_edge,
+    touch_relationship,
+)
 from .rfq import (
     buyer_add_request_item,
     buyer_add_request_items,
@@ -70,6 +76,7 @@ __all__ = [
     "cancel_contract",
     "convert_lead_to_deal",
     "effective_quote_lead_time",
+    "ensure_edges_for_deal_routing",
     "ensure_fulfillment",
     "export_quote",
     "force_cancel_contract",
@@ -80,6 +87,8 @@ __all__ = [
     "get_allowed_transitions",
     "mark_leads_processed",
     "reassign_quote_item_product",
+    "recompute_rollups_for_deal",
+    "recompute_rollups_for_edge",
     "record_payment",
     "register_new_deal",
     "resolve_seller_offer",
@@ -93,6 +102,7 @@ __all__ = [
     "submit_request",
     "suggest_chat_reply",
     "quote_vs_request_diff",
+    "touch_relationship",
     "user_can_view_quote_diff",
     "transition_deal_stage",
     "update_fulfillment_status",

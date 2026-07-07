@@ -12,6 +12,7 @@ from .deals import ActivityLog, Deal, DealSellerRouting, Lead, Message
 from .fulfillment import Fulfillment
 from .lookups import ActStatus, ChargeType, ContractStatus, DealStage, FulfillmentStatus, InvoiceStatus, QuoteStatus
 from .quotes import Quote, QuoteItem, QuoteItemHistory
+from .relationships import CounterpartyRelationship, RelationshipDirection, RelationshipSource, RelationshipStage
 from .sequences import DocumentSequence
 
 __all__ = [
@@ -23,6 +24,7 @@ __all__ = [
     "ChargeType",
     "Contract",
     "ContractStatus",
+    "CounterpartyRelationship",
     "Deal",
     "DealSellerRouting",
     "DealStage",
@@ -37,6 +39,9 @@ __all__ = [
     "Payment",
     "Quote",
     "QuoteApprovalStep",
+    "RelationshipDirection",
+    "RelationshipSource",
+    "RelationshipStage",
     "QuoteCharge",
     "QuoteItem",
     "QuoteItemHistory",

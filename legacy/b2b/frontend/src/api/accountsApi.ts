@@ -228,6 +228,25 @@ export const accountsApi = {
 		);
 		return response.data;
 	},
+	// CRM Phase D — invite an offline client's contact to register and claim its company.
+	inviteContact: async (contactId: number) => {
+		const response = await apiClient.post<{ invited: boolean }>(`accounts/contacts/${contactId}/invite/`);
+		return response.data;
+	},
+	// CRM Phase C — offline placeholder companies matching this company's INN, and the merge.
+	getMergeCandidates: async (id: number) => {
+		const response = await apiClient.get<{ id: number; name: string; stated_inn: string; is_registered: boolean }[]>(
+			`accounts/companies/${id}/merge-candidates/`,
+		);
+		return response.data;
+	},
+	mergeCompany: async (survivorId: number, duplicateId: number, reason?: string) => {
+		const response = await apiClient.post<{ merged: boolean }>(
+			`accounts/companies/${survivorId}/merge/`,
+			{ duplicate_id: duplicateId, reason },
+		);
+		return response.data;
+	},
 	uploadDocument: async (companyId: number, file: File, docType: string) => {
 		const formData = new FormData();
 		formData.append('file', file);
@@ -349,10 +368,12 @@ export const accountsApi = {
 		const response = await apiClient.post<{ message: string; email: string }>('auth/reset-password/', data);
 		return response.data;
 	},
-	submitProfile: async (data: { companyName: string; position: string }) => {
+	submitProfile: async (data: { companyName: string; position: string; invite?: string }) => {
 		const response = await apiClient.post<{ message: string; user: User }>('auth/submit-profile/', {
 			companyName: data.companyName,
 			position: data.position,
+			// CRM Phase D — a CB-invite token claims an existing offline company instead of a new one.
+			...(data.invite ? { invite: data.invite } : {}),
 		});
 		return response.data.user;
 	},

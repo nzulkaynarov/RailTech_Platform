@@ -28,6 +28,8 @@ from crm.views.quotes import (  # noqa: F401
     QuoteStatusViewSet,
     QuoteViewSet,
 )
+from crm.views.relationships import RelationshipViewSet  # noqa: F401
+from crm.views.timeline import TimelineView  # noqa: F401
 
 __all__ = [
     # deals
@@ -60,4 +62,8 @@ __all__ = [
     # ai
     "SuggestChatReplyView",
     "QuoteRequestDiffView",
+    # timeline (CRM Phase A)
+    "TimelineView",
+    # counterparty book (CRM Phase B)
+    "RelationshipViewSet",
 ]

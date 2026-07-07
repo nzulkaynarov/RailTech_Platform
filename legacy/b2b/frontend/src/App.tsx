@@ -59,6 +59,7 @@ const FulfillmentsPage = lazyWithRetry(() => import('./pages/FulfillmentsPage'))
 const MySubscriptionPage = lazyWithRetry(() => import('./pages/MySubscriptionPage'));
 const CatalogImportPage = lazyWithRetry(() => import('./pages/CatalogImportPage'));
 const DealQuotePage = lazyWithRetry(() => import('./pages/DealQuotePage'));
+const CounterpartiesPage = lazyWithRetry(() => import('./pages/CounterpartiesPage'));
 
 import { LoadingSkeleton } from './components/LoadingSkeleton';
 
@@ -100,6 +101,8 @@ type Page =
   | { type: 'fulfillments' }
   | { type: 'my-subscription' }
   | { type: 'catalog-import' }
+  | { type: 'clients' }
+  | { type: 'suppliers' }
 ;
 
 /** Parse URL path and query params for auth routes */
@@ -126,6 +129,10 @@ function parseAuthRoute(): { view: AuthRouteView; uid: string | null; token: str
     return { view: 'forgot-password', uid: null, token: null };
   }
   if (path === '/register') {
+    // CRM Phase D — a CB-invite link (/register?invite=…) claims an existing offline company.
+    // Stash the token so it survives the register → setup-password → submit-profile steps.
+    const invite = url.searchParams.get('invite');
+    if (invite) sessionStorage.setItem('cb_invite_token', invite);
     return { view: 'register', uid: null, token: null };
   }
   return { view: 'login', uid: null, token: null };
@@ -329,6 +336,7 @@ const BUYER_PAGES = new Set([
   ...COMMON_PAGES,
   'products', 'product_detail', 'my-requests', 'request-detail',
   'contracts', 'invoices', 'payments', 'fulfillments', 'my-subscription',
+  'suppliers',
 ]);
 const SELLER_PAGES = new Set([
   ...COMMON_PAGES,
@@ -336,6 +344,7 @@ const SELLER_PAGES = new Set([
   'sourcing-requests', 'crm-deals', 'crm-quotes',
   'deal-quote', 'request-detail', 'my-subscription',
   'contracts', 'invoices', 'payments', 'acts', 'fulfillments',
+  'clients',
 ]);
 
 // ADR-0005 Phase C — page-derived context. A page UNIQUE to one side implies that
@@ -624,6 +633,12 @@ function MainApp() {
       break;
     case 'admin-support':
       content = <AdminSupportPage />;
+      break;
+    case 'clients':
+      content = <CounterpartiesPage direction="CLIENT" />;
+      break;
+    case 'suppliers':
+      content = <CounterpartiesPage direction="SUPPLIER" />;
       break;
     case 'contracts':
       content = <ContractsPage />;

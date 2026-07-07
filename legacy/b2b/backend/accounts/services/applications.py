@@ -63,6 +63,7 @@ def approve_role_application(
         actor=reviewer,
         after={"added_type": application.requested_type.code},
         level="SUCCESS",
+        company_id=application.company_id,
     )
 
     # Auto-create TRIAL subscription for SUPPLIER / MANUFACTURER — 30 days

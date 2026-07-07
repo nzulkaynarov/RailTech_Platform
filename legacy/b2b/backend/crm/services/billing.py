@@ -114,6 +114,8 @@ def generate_invoice_from_contract(
         detail=f"Инвойс {invoice.number} по сделке #{invoice.deal_id}",
         user=actor,
         level="INFO",
+        deal=invoice.deal,
+        company_id=invoice.deal.company_id,
     )
     return invoice, None
 
@@ -246,6 +248,8 @@ def record_payment(
         detail=f"Инвойс {invoice.number}: получено {amount_d} (итого {invoice.amount_paid}/{invoice.total_incl_vat})",
         user=actor,
         level="SUCCESS",
+        deal=invoice.deal,
+        company_id=invoice.deal.company_id,
     )
     return payment, None
 
