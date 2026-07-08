@@ -8,7 +8,7 @@ import { PlatformAdminShell } from './layouts/PlatformAdminShell';
 import { ErrorBoundary } from './components/Shared/ErrorBoundary';
 import { OnboardingTour } from './components/Shared/OnboardingTour';
 import { PageBreadcrumb, getPageLabel } from './components/Shared/PageBreadcrumb';
-import { useUserStore, type CompanyStatus } from './store/userStore';
+import { useUserStore, type CompanyStatus, type CompanyStatusEntry } from './store/userStore';
 import { useAuthStore } from './store/authStore';
 import { LoginPage } from './components/Auth/LoginPage';
 import { KYCRegistrationForm } from './components/Auth/KYCRegistrationForm';
@@ -165,7 +165,7 @@ function useAuthRoute() {
 
 // Parse a URL hash back into a Page, restoring parameterised routes like
 // `product_detail/<id>` so deep links / refresh / back-forward work.
-function parseHashToPage(rawHash: string): Page {
+export function parseHashToPage(rawHash: string): Page {
   const hash = rawHash.replace(/^#/, '');
   // Drop any query suffix (e.g. `crm-quotes?deal=123`) — the target page reads
   // its own params from the hash; the page TYPE must be the bare route.
@@ -361,6 +361,73 @@ function pageContextOf(pageType: string): CompanyStatus | null {
   return null;
 }
 
+// Unified page-access decision (role → KYC → context), extracted as a PURE
+// function so it can be unit-tested and so the three historically-separate guard
+// effects share a single source of truth.
+//
+// `bootstrapped` is the load-bearing input for the cold-load deep-link fix: until
+// userStore's `loadFromAuth` has resolved real capabilities (signalled by
+// `screen === 'main'`), the store still holds pre-auth DEFAULTS — role 'USER',
+// kycStatus 'not_started', activeStatus 'BUYER', empty statusEntries. Enforcing
+// the guards against those defaults on a cold deep-link (e.g. `#request-detail/3`,
+// `#deal-quote/7`) would wrongly fail the KYC/context checks and bounce the page
+// to #dashboard (clobbering the hash via replaceState) before auth even resolves.
+// So while `!bootstrapped` we ALLOW (defer); the effect re-runs once capabilities
+// land and then enforces exactly as before — cross-role/KYC/admin bounces intact.
+export type PageGuardDecision =
+  | { action: 'allow' }
+  | { action: 'adopt'; context: CompanyStatus }
+  | { action: 'bounce'; reason: 'admin' | 'kyc' | 'context' };
+
+export interface PageGuardInput {
+  pageType: string;
+  role: string;
+  kycStatus: string;
+  activeStatus: CompanyStatus;
+  statusEntries: CompanyStatusEntry[];
+  bootstrapped: boolean;
+}
+
+export function evaluatePageGuard(input: PageGuardInput): PageGuardDecision {
+  const { pageType, role, kycStatus, activeStatus, statusEntries, bootstrapped } = input;
+
+  // Cold-load guard-deferral (see block comment above): never enforce against
+  // pre-auth defaults, or a valid deep-link is clobbered before bootstrap.
+  if (!bootstrapped) return { action: 'allow' };
+
+  // Role guard: a non-admin can never open an admin-* page.
+  if (ADMIN_PAGES.has(pageType) && role !== 'ADMIN') {
+    return { action: 'bounce', reason: 'admin' };
+  }
+
+  // Platform admin is a viewer/moderator (ADR-0002): gated to the moderation +
+  // platform-CRUD allowlist; the KYC/context guards below never apply to them.
+  if (role === 'ADMIN') {
+    if (!ADMIN_REACHABLE_PAGES.has(pageType)) return { action: 'bounce', reason: 'context' };
+    return { action: 'allow' };
+  }
+
+  // KYC floor: below L2 only dashboard/profile/settings/help + catalog-read.
+  if (kycStatus !== 'verified' && !KYC_ALLOWED_PAGES.has(pageType)) {
+    return { action: 'bounce', reason: 'kyc' };
+  }
+
+  // Page-derived context (ADR-0005 Phase C): a page unique to the user's OTHER
+  // verified capability adopts that context rather than bouncing.
+  const pageCtx = pageContextOf(pageType);
+  const hasContext = (candidate: CompanyStatus) =>
+    statusEntries.some((entry) => entry.status === candidate && entry.verification === 'verified');
+  if (pageCtx && pageCtx !== activeStatus && hasContext(pageCtx)) {
+    return { action: 'adopt', context: pageCtx };
+  }
+
+  // Cross-role guard: a buyer can't reach seller-only pages and vice versa.
+  const allowed = activeStatus === 'BUYER' ? BUYER_PAGES : SELLER_PAGES;
+  if (!allowed.has(pageType)) return { action: 'bounce', reason: 'context' };
+
+  return { action: 'allow' };
+}
+
 function MainApp() {
   const { t } = useTranslation();
   const role = useUserStore((s) => s.role);
@@ -368,6 +435,10 @@ function MainApp() {
   const setActiveStatus = useUserStore((s) => s.setActiveStatus);
   const statusEntries = useUserStore((s) => s.company.statusEntries);
   const kycStatus = useUserStore((s) => s.company.kycStatus);
+  // `screen` flips to 'main' only when loadFromAuth() has populated real
+  // capabilities. Guards are deferred until then (see evaluatePageGuard) so a
+  // cold-load deep-link isn't bounced by pre-auth default state.
+  const bootstrapped = useUserStore((s) => s.screen === 'main');
   const queryClient = useQueryClient();
   const [page, setPage] = useState<Page>(() => parseHashToPage(window.location.hash));
   const [showTour, setShowTour] = useState(false);
@@ -379,63 +450,46 @@ function MainApp() {
     window.history.pushState({ page: p }, '', `#${hash}`);
   };
 
-  // Role guard: redirect away from admin pages if not admin
+  // Unified page-access guard (role → KYC → context), driven by the pure
+  // evaluatePageGuard. DEFERRED until userStore bootstrap (`bootstrapped`,
+  // i.e. screen === 'main'): on a cold deep-link the store still holds pre-auth
+  // defaults, and enforcing then would bounce a valid hash to #dashboard and
+  // clobber it via replaceState. Once loadFromAuth resolves real capabilities the
+  // effect re-runs (deps below) and enforces exactly as before —
+  //   • non-admin on an admin-* page → toast.error(adminRequired) → dashboard;
+  //   • platform admin off its allowlist → toast.info(notAvailableHere) → dashboard;
+  //   • unverified user off the KYC floor → toast.info(kycRequired) → dashboard;
+  //   • page unique to the user's OTHER verified context → adopt it (+ refetch);
+  //   • cross-role page (buyer→seller-only etc.) → toast.info(notAvailableHere) → dashboard.
   useEffect(() => {
-    if (ADMIN_PAGES.has(page.type) && role !== 'ADMIN') {
-      toast.error(t('guards.adminRequired'));
-      setPage({ type: 'dashboard' });
-      window.history.replaceState(null, '', '#dashboard');
-      return;
-    }
-  }, [page.type, role, t]);
-
-  // KYC guard: if not verified, only allow dashboard/profile/settings/help.
-  // Platform admins are moderators, not business actors — their personal
-  // company's KYC must not gate platform-admin navigation (see ADR-0002).
-  useEffect(() => {
-    if (role === 'ADMIN') return;
-    if (kycStatus !== 'verified' && !KYC_ALLOWED_PAGES.has(page.type)) {
-      // LOW-20: surface why the user was bounced back instead of silent redirect.
-      toast.info(t('guards.kycRequired'));
-      setPage({ type: 'dashboard' });
-      window.history.replaceState(null, '', '#dashboard');
-    }
-  }, [page.type, kycStatus, role, t]);
-
-  // Context guard: a buyer can't reach seller/CRM pages (and vice versa) even by
-  // deep link — keeps each role to one coherent surface, no orphaned pages.
-  // The platform admin (viewer) is gated to its own moderation allowlist so a
-  // business page (deals, my-requests, sourcing…) never renders for them.
-  useEffect(() => {
-    if (role === 'ADMIN') {
-      if (!ADMIN_REACHABLE_PAGES.has(page.type)) {
-        toast.info(t('guards.notAvailableHere'));
-        setPage({ type: 'dashboard' });
-        window.history.replaceState(null, '', '#dashboard');
-      }
-      return;
-    }
-    // Phase C page-derived context: if this page belongs to the user's OTHER capability
-    // (a dual buyer+seller reaching a seller page while in BUYER context, or vice versa),
-    // ADOPT that context instead of bouncing — the working context follows the page. A pure
-    // buyer/seller lacks the other verified statusEntry, so they still get bounced (the
-    // cross-role guard holds). Invalidate queries so the new context refetches (mirrors the
-    // manual switcher) — no stale cross-context rows.
-    const pageCtx = pageContextOf(page.type);
-    const hasContext = (c: CompanyStatus) =>
-      statusEntries.some((e) => e.status === c && e.verification === 'verified');
-    if (pageCtx && pageCtx !== activeStatus && hasContext(pageCtx)) {
-      setActiveStatus(pageCtx);
+    const decision = evaluatePageGuard({
+      pageType: page.type,
+      role,
+      kycStatus,
+      activeStatus,
+      statusEntries,
+      bootstrapped,
+    });
+    if (decision.action === 'allow') return;
+    if (decision.action === 'adopt') {
+      // Phase C page-derived context: the working context follows the page.
+      // Invalidate queries so the new context refetches (mirrors the manual switcher).
+      setActiveStatus(decision.context);
       queryClient.invalidateQueries();
       return;
     }
-    const allowed = activeStatus === 'BUYER' ? BUYER_PAGES : SELLER_PAGES;
-    if (!allowed.has(page.type)) {
+    // decision.action === 'bounce' — surface WHY, then fall back to the dashboard.
+    if (decision.reason === 'admin') {
+      toast.error(t('guards.adminRequired'));
+    } else if (decision.reason === 'kyc') {
+      // LOW-20: surface why the user was bounced back instead of silent redirect.
+      toast.info(t('guards.kycRequired'));
+    } else {
       toast.info(t('guards.notAvailableHere'));
-      setPage({ type: 'dashboard' });
-      window.history.replaceState(null, '', '#dashboard');
     }
-  }, [page.type, role, activeStatus, statusEntries, setActiveStatus, queryClient, t]);
+    setPage({ type: 'dashboard' });
+    window.history.replaceState(null, '', '#dashboard');
+  }, [page.type, role, kycStatus, activeStatus, statusEntries, bootstrapped, setActiveStatus, queryClient, t]);
 
   // Handle browser back/forward
   useEffect(() => {

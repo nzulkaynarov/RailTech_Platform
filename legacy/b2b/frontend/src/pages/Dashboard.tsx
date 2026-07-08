@@ -30,7 +30,7 @@ import {
 import { StatusBadge } from '@/components/ui/StatusBadge';
 
 import { useTranslation } from 'react-i18next';
-import { useUserStore } from '@/store/userStore';
+import { useUserStore, selectIsSellerCapable } from '@/store/userStore';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useDeals, useTimeToFirstQuote } from '@/hooks/useCRM';
 import { buyerStatus } from '@/lib/requestStatus';
@@ -395,6 +395,7 @@ export function Dashboard({ onProductClick, onNavigate }: DashboardProps) {
   const { t, i18n } = useTranslation();
   const [period, setPeriod] = useState('30d');
   const activeStatus = useUserStore((s) => s.activeStatus);
+  const isSellerCapable = useUserStore(selectIsSellerCapable);
 
   // Locale-aware "start – end year" caption derived from the selected period
   // (previously a hardcoded "1 Янв – 21 Мар 2026" that ignored the picker).
@@ -465,8 +466,15 @@ export function Dashboard({ onProductClick, onNavigate }: DashboardProps) {
         </div>
       </div>
 
-      {/* Role-based dashboard content — fallback to BuyerDashboard */}
-      {activeStatus === 'SELLER' ? (
+      {/* Context-aware dashboard landing (WP-2). The pre-auth default context is BUYER
+          (ADR-0005, narrowest cold-load scope), so a dual/seller-capable company would
+          otherwise land on BuyerDashboard → the buyer onboarding («Начните за 3 шага»)
+          even though its real inbound work (routed заявки / КП to build) lives on the
+          seller side. On the dashboard specifically we route any seller-capable company
+          to the seller inbox WITHOUT flipping the global activeStatus default (that would
+          break the X-Active-Context header + ADR-0005 cache invalidation). Pure buyers
+          (no verified SELLER context / can_sell revoked) keep the unchanged BuyerDashboard. */}
+      {activeStatus === 'SELLER' || isSellerCapable ? (
         <SellerDashboard period={period} stats={stats} onNavigate={onNavigate ?? (() => {})} />
       ) : (
         <BuyerDashboard onProductClick={onProductClick} period={period} stats={stats} onNavigate={onNavigate ?? (() => {})} />

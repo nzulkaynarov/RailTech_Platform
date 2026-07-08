@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
@@ -65,9 +65,20 @@ export function QuoteSettingsDialog({ quote, open, onOpenChange }: QuoteSettings
 		vatRateNumber !== null &&
 		(Number.isNaN(vatRateNumber) || vatRateNumber < VAT_RATE_MIN || vatRateNumber > VAT_RATE_MAX);
 
-	// Re-seed the form from the КП whenever it opens (the seller may switch quotes).
+	// Seed the form from the КП when the dialog OPENS or the seller switches to a
+	// different КП — keyed on quote.id, never on the `quote` object reference. Saving
+	// invalidates ['quotes'] (useUpdateQuoteSettings), so a background refetch hands us
+	// a fresh `quote` object mid-edit; re-seeding on that reference change would silently
+	// overwrite the value the seller just typed (P2-3 silent-save). The ref guard makes
+	// the seed idempotent per open КП, so those refetches leave the form untouched.
+	const seededQuoteIdRef = useRef<number | null>(null);
 	useEffect(() => {
-		if (!open) return;
+		if (!open) {
+			seededQuoteIdRef.current = null;
+			return;
+		}
+		if (seededQuoteIdRef.current === quote.id) return;
+		seededQuoteIdRef.current = quote.id;
 		setMarginPercent(quote.margin_percent ?? '');
 		setVatRate(quote.vat_rate ?? '');
 		setTaxCountry(quote.tax_country != null ? String(quote.tax_country) : '');
@@ -118,7 +129,7 @@ export function QuoteSettingsDialog({ quote, open, onOpenChange }: QuoteSettings
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="sm:max-w-md">
+			<DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
 				<form onSubmit={submit}>
 					<DialogHeader>
 						<DialogTitle>{t('quote.settings.title')}</DialogTitle>
@@ -128,7 +139,15 @@ export function QuoteSettingsDialog({ quote, open, onOpenChange }: QuoteSettings
 					<div className="mt-4 flex flex-col gap-4">
 						<div className="flex flex-col gap-1.5">
 							<Label htmlFor="quote-margin">{t('quote.settings.margin')}</Label>
-							<Input id="quote-margin" type="number" step="0.01" min={0} value={marginPercent} onChange={(e) => setMarginPercent(e.target.value)} />
+							<Input
+								id="quote-margin"
+								type="number"
+								step="0.01"
+								min={0}
+								value={marginPercent}
+								onChange={(event) => setMarginPercent(event.target.value)}
+								onFocus={(event) => event.target.select()}
+							/>
 							<p className="text-xs text-muted-foreground">{t('quote.settings.marginHelp')}</p>
 						</div>
 						<div className="flex flex-col gap-1.5">
@@ -141,6 +160,7 @@ export function QuoteSettingsDialog({ quote, open, onOpenChange }: QuoteSettings
 								max={VAT_RATE_MAX}
 								value={vatRate}
 								onChange={(event) => setVatRate(event.target.value)}
+								onFocus={(event) => event.target.select()}
 								aria-invalid={vatRateInvalid}
 							/>
 							{vatRateInvalid && (
@@ -224,6 +244,7 @@ export function QuoteSettingsDialog({ quote, open, onOpenChange }: QuoteSettings
 								min={0}
 								value={deliveryLeadTime}
 								onChange={(event) => setDeliveryLeadTime(event.target.value)}
+								onFocus={(event) => event.target.select()}
 								placeholder={String(quote.effective_delivery_lead_time_days ?? 0)}
 							/>
 							<p className="text-xs text-muted-foreground">{t('quote.settings.deliveryLeadTimeHelp')}</p>
@@ -263,6 +284,7 @@ export function QuoteSettingsDialog({ quote, open, onOpenChange }: QuoteSettings
 												aria-label={t('quote.settings.fxOverrideFor', { code })}
 												value={fxManual[code] ?? ''}
 												onChange={(event) => setOverride(code, event.target.value)}
+												onFocus={(event) => event.target.select()}
 												placeholder={fxSnapshot[code]}
 											/>
 										</div>

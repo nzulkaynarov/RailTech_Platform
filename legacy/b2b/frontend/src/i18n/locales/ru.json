@@ -6,7 +6,7 @@
     "sourcing": "Закупка",
     "calculating": "Расчёт",
     "quoteSent": "КП отправлено",
-    "contractSigned": "Договор подписан",
+    "contractSigned": "Договор оформляется",
     "closedWon": "Закрыта (выиграна)",
     "closedLost": "Закрыта (проиграна)"
   },
@@ -4113,7 +4113,12 @@
       "total": "Сумма",
       "status": "Статус",
       "created": "Создан",
-      "actions": "Действия"
+      "actions": "Действия",
+      "side": "Сторона"
+    },
+    "side": {
+      "buyer": "Мы — покупатель",
+      "seller": "Мы — продавец"
     },
     "status": {
       "DRAFT": "Черновик",

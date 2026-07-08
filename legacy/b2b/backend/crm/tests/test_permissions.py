@@ -112,7 +112,11 @@ class TestIsCompanyMemberOrPlatformAdmin:
         user.is_platform_admin = False
         user.memberships.filter.return_value.exists.return_value = True
 
-        obj = MagicMock()
+        # A plain company-owning resource (has .company, NOT a routed Deal): spec the
+        # mock so hasattr(obj, "seller_routings"/"deal_id"/"quote") is False and the
+        # seller-routing branch stays inert — this test asserts the company-membership
+        # grant, not the seller path (which reaches the ORM under force=True).
+        obj = MagicMock(spec=["company"])
         obj.company = company
 
         request = self._make_request(user)

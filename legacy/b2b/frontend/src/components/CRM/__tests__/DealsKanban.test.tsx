@@ -66,8 +66,8 @@ describe('DealsKanban', () => {
     // Stage names come from the lookup (display), order follows the stages array (FSM sort_order).
     const text = container.textContent ?? '';
     expect(text.indexOf('Заявка открыта')).toBeGreaterThanOrEqual(0);
-    expect(text.indexOf('Заявка открыта')).toBeLessThan(text.indexOf('Проработка'));
-    expect(text.indexOf('Проработка')).toBeLessThan(text.indexOf('КП отправлено'));
+    expect(text.indexOf('Заявка открыта')).toBeLessThan(text.indexOf('Закупка'));
+    expect(text.indexOf('Закупка')).toBeLessThan(text.indexOf('КП отправлено'));
 
     // Deals are grouped by stage_code (CODE, not translated name): 2 / 1 / 0.
     const header = (name: string) => {
@@ -76,7 +76,7 @@ describe('DealsKanban', () => {
       return el;
     };
     expect(within(header('Заявка открыта')).getByText('2')).toBeInTheDocument();
-    expect(within(header('Проработка')).getByText('1')).toBeInTheDocument();
+    expect(within(header('Закупка')).getByText('1')).toBeInTheDocument();
     expect(within(header('КП отправлено')).getByText('0')).toBeInTheDocument();
   });
 

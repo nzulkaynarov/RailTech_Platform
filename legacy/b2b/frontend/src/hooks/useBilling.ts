@@ -58,7 +58,10 @@ export const useUploadSignedContract = () => {
   return useMutation({
     mutationFn: ({ id, file }: { id: number; file: File }) =>
       contractsApi.uploadSigned(id, file),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['contracts'] }),
+    onSuccess: (_data, { id }) => {
+      qc.invalidateQueries({ queryKey: ['contracts'] });
+      qc.invalidateQueries({ queryKey: ['contract', id] });
+    },
   });
 };
 
@@ -67,7 +70,10 @@ export const useCancelContract = () => {
   return useMutation({
     mutationFn: ({ id, reason }: { id: number; reason?: string }) =>
       contractsApi.cancel(id, reason),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['contracts'] }),
+    onSuccess: (_data, { id }) => {
+      qc.invalidateQueries({ queryKey: ['contracts'] });
+      qc.invalidateQueries({ queryKey: ['contract', id] });
+    },
   });
 };
 
@@ -76,7 +82,10 @@ export const useForceCancelContract = () => {
   return useMutation({
     mutationFn: ({ id, reason }: { id: number; reason: string }) =>
       contractsApi.forceCancel(id, reason),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['contracts'] }),
+    onSuccess: (_data, { id }) => {
+      qc.invalidateQueries({ queryKey: ['contracts'] });
+      qc.invalidateQueries({ queryKey: ['contract', id] });
+    },
   });
 };
 

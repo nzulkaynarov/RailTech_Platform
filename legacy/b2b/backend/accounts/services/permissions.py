@@ -274,7 +274,7 @@ def seller_sees_all_deals(user: "CustomUser", request) -> bool:
     return ctx == "" or ctx in _SELLER_CONTEXTS
 
 
-def seller_visible_deal_ids(user: "CustomUser", request) -> Optional[set]:
+def seller_visible_deal_ids(user: "CustomUser", request, *, force: bool = False) -> Optional[set]:
     """The deal ids a context-acting seller may see: those routed to one of their
     seller companies (DealSellerRouting) OR offering one of their catalog products
     (defense-in-depth for drafts whose routing rows aren't written yet). This is
@@ -284,12 +284,20 @@ def seller_visible_deal_ids(user: "CustomUser", request) -> Optional[set]:
     applies platform-admin see-all (check `is_platform_admin` first) or the
     buyer-company scope. A seller acting in the BUYER context also gets None, so a
     dual seller+buyer user is scoped to its own company while purchasing.
+
+    `force=True` bypasses ONLY the acting-context gate, so a seller resolves its
+    routed deals regardless of the SPA X-Active-Context header. Used to make
+    billing documents (contract/invoice/act/payment/fulfillment) visible to BOTH
+    sides of a deal no matter which context the viewer landed in (WP-1). It never
+    widens the routing boundary — the returned set is still ROUTING-only, so a
+    seller still never sees an unrelated buyer's deals. Default False keeps every
+    existing caller's behaviour unchanged.
     """
     if getattr(user, "is_platform_admin", False):
         return None
     if not is_seller(user):
         return None
-    if acting_context(request) not in ({""} | _SELLER_CONTEXTS):
+    if not force and acting_context(request) not in ({""} | _SELLER_CONTEXTS):
         return None
     from crm.models import Deal
 
@@ -309,14 +317,22 @@ def seller_visible_deal_ids(user: "CustomUser", request) -> Optional[set]:
     )
 
 
-def seller_can_access_deal(user: "CustomUser", request, deal_id) -> bool:
+def seller_can_access_deal(user: "CustomUser", request, deal_id, *, force: bool = False) -> bool:
     """Object-level counterpart of `seller_visible_deal_ids` — a single EXISTS query
     for one deal. A context-acting seller may act on `deal_id` IFF it is routed to
-    one of their seller companies or offers one of their catalog products.
+    one of their seller companies.
+
+    `force=True` bypasses ONLY the acting-context gate — the object-permission
+    counterpart of `seller_visible_deal_ids(force=True)` (WP-1). Without it a routed
+    seller who landed in the BUYER context sees a billing document in the LIST but
+    gets 403/404 on the DETAIL retrieve / PDF download (`get_object`), because this
+    gate returned False off the X-Active-Context header. The routing boundary is
+    unchanged (still an EXISTS on DealSellerRouting), so a seller never gains access
+    to an unrelated deal. Default False keeps every existing caller's behaviour.
     """
     if not is_seller(user):
         return False
-    if acting_context(request) not in ({""} | _SELLER_CONTEXTS):
+    if not force and acting_context(request) not in ({""} | _SELLER_CONTEXTS):
         return False
     from crm.models import Deal
 

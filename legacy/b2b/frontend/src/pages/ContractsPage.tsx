@@ -50,7 +50,7 @@ const STATUS_CODES: ContractStatus[] = [
 export function ContractsPage() {
   const { t } = useTranslation();
   const listParams = useListParams(['status'] as const, { defaultOrdering: '-created_at' });
-  const [selected, setSelected] = useState<Contract | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const [cancelTarget, setCancelTarget] = useState<Contract | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [forceCancelTarget, setForceCancelTarget] = useState<Contract | null>(null);
@@ -71,6 +71,29 @@ export function ContractsPage() {
   const uploadSigned = useUploadSignedContract();
   const cancelMut = useCancelContract();
   const forceCancelMut = useForceCancelContract();
+
+  // P2-2: render the detail panel from the LIVE query cache (not a captured
+  // snapshot). A sign/cancel mutation invalidates ['contracts'] → the list refetches
+  // → this memo re-derives `selected` → the panel reflects the new signature without
+  // a close+reopen.
+  const selected = useMemo(
+    () => (contracts ?? []).find((contract) => contract.id === selectedId) ?? null,
+    [contracts, selectedId],
+  );
+  // Side indicator (P0-1): which side WE act as on these contracts. Derived from the
+  // page context (activeStatus) — the same signal that already gates the sign buttons.
+  // The Contract response carries no buyer/seller company id, so a truthful
+  // per-contract side would need a serializer field (reported in CROSS-WP).
+  const viewerSide: 'buyer' | 'seller' = isBuyer ? 'buyer' : 'seller';
+  const sideBadge = (
+    <Badge
+      variant="outline"
+      data-side={viewerSide}
+      className={isBuyer ? 'border-info text-info' : 'border-primary text-primary'}
+    >
+      {t(`contractsPage.side.${viewerSide}`)}
+    </Badge>
+  );
 
   const stats = useMemo(() => {
     const list = contracts ?? [];
@@ -137,7 +160,7 @@ export function ContractsPage() {
       toast.success(t('contractsPage.forceCancelled'));
       setForceCancelTarget(null);
       setForceCancelReason('');
-      setSelected(null);
+      setSelectedId(null);
     } catch (e) {
       toast.error(translateApiError(e));
     }
@@ -204,6 +227,7 @@ export function ContractsPage() {
                       <SortableHead sortKey="deal" current={listParams.ordering} onChange={listParams.toggleOrdering}>
                         {t('contractsPage.table.deal')}
                       </SortableHead>
+                      <TableHead>{t('contractsPage.table.side')}</TableHead>
                       <SortableHead sortKey="total" current={listParams.ordering} onChange={listParams.toggleOrdering}>
                         {t('contractsPage.table.total')}
                       </SortableHead>
@@ -218,9 +242,30 @@ export function ContractsPage() {
                   </TableHeader>
                   <TableBody>
                     {pageItems.map((c) => (
-                      <TableRow key={c.id}>
+                      <TableRow
+                        key={c.id}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`${t('common.open')} ${c.number}`}
+                        className="cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                        onClick={(event) => {
+                          // Ignore clicks that originate inside a row control (the action button
+                          // and DealLink already open the panel / navigate themselves).
+                          if ((event.target as HTMLElement).closest('[data-row-action]')) return;
+                          setSelectedId(c.id);
+                        }}
+                        onKeyDown={(event) => {
+                          // Only activate when the row itself is focused, not a nested control.
+                          if (event.target !== event.currentTarget) return;
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            setSelectedId(c.id);
+                          }
+                        }}
+                      >
                         <TableCell className="font-medium">{c.number}</TableCell>
                         <TableCell><DealLink dealId={c.deal} /></TableCell>
+                        <TableCell>{sideBadge}</TableCell>
                         <TableCell className="tabular-nums">{formatCurrency(Number(c.total_amount))}</TableCell>
                         <TableCell>
                           <Badge variant={STATUS_VARIANT[c.status]}>
@@ -230,8 +275,8 @@ export function ContractsPage() {
                         <TableCell className="text-xs text-muted-foreground">
                           {new Date(c.created_at).toLocaleDateString()}
                         </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" onClick={() => setSelected(c)}>
+                        <TableCell className="text-right" data-row-action>
+                          <Button variant="ghost" size="sm" onClick={() => setSelectedId(c.id)}>
                             <FileText className="h-4 w-4" />
                           </Button>
                         </TableCell>
@@ -247,14 +292,15 @@ export function ContractsPage() {
       </Card>
 
       {selected && (
-        <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
+        <Sheet open={!!selected} onOpenChange={(o) => !o && setSelectedId(null)}>
           <SheetContent className="overflow-y-auto sm:max-w-lg">
             <SheetHeader>
               <SheetTitle>{selected.number}</SheetTitle>
-              <SheetDescription>
+              <SheetDescription className="flex flex-wrap items-center gap-2">
                 <Badge variant={STATUS_VARIANT[selected.status]}>
                   {t(`contractsPage.status.${selected.status}`)}
                 </Badge>
+                {sideBadge}
               </SheetDescription>
             </SheetHeader>
             <div className="space-y-4 p-4">
@@ -292,7 +338,7 @@ export function ContractsPage() {
                     size="default"
                   />
                 )}
-                {isBuyer && (selected.status === 'PENDING_CLIENT' || selected.status === 'DRAFT') && (
+                {isBuyer && !selected.client_signed_at && (selected.status === 'PENDING_CLIENT' || selected.status === 'DRAFT') && (
                   <Button
                     onClick={() => onSignClient(selected)}
                     disabled={signClient.isPending || isViewer}
@@ -302,7 +348,7 @@ export function ContractsPage() {
                     {t('contractsPage.signClient')}
                   </Button>
                 )}
-                {isSeller && (selected.status === 'PENDING_MANAGER' || selected.status === 'PENDING_CLIENT' || selected.status === 'DRAFT') && (
+                {isSeller && !selected.manager_signed_at && (selected.status === 'PENDING_MANAGER' || selected.status === 'PENDING_CLIENT' || selected.status === 'DRAFT') && (
                   <Button
                     onClick={() => onSignManager(selected)}
                     disabled={signManager.isPending || isViewer}
