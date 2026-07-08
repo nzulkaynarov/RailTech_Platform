@@ -23,8 +23,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
+# requirements.txt is a fully-pinned, hashed lock (pip-compile from
+# requirements.in, INF-05). pip auto-enters --require-hashes mode when any hash
+# is present, so a tampered/невоспроизводимый wheel fails the build. psycopg2 is
+# built from source here (libpq-dev above) — the binary variant is out (INF-09).
 RUN pip install --upgrade pip && \
-    pip install --no-cache-dir --prefix=/install -r requirements.txt
+    pip install --no-cache-dir --require-hashes --prefix=/install -r requirements.txt
 
 
 # ── Stage 2: Runtime ──────────────────────────────────────────────────────────

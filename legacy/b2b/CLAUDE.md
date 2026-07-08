@@ -227,6 +227,7 @@ make clean               # remove all containers, volumes, cache (DESTRUCTIVE)
 ## Coding Conventions
 
 - **Python:** black (120 line length), isort (profile=black), flake8; target Python 3.11
+- **Backend deps (INF-05):** `backend/requirements.txt` + `requirements-dev.txt` are GENERATED, hashed pip-compile locks — never hand-edit them. Change a floor/cap in `requirements.{in,dev.in}`, then recompile: `pip-compile --generate-hashes --no-strip-extras requirements.in -o requirements.txt` (+ the `-dev` variant with `-c requirements.txt`) in a linux py3.12 env with `gcc`+`libpq-dev` (pip-tools 7.5.3). The CI `deps-lock` gate fails on drift. psycopg2 is built from source (not `-binary`, INF-09).
 - **TypeScript:** strict mode, ESLint, path alias `@/` → `src/`
 - **Styling:** Tailwind v4 utility-first, oklch color tokens, CSS variables, dark mode via `.dark` class
 - **Models:** `AbstractLookup` base for reference tables (code, name, sort_order, is_active)
