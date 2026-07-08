@@ -127,12 +127,25 @@ def _render_invoice_pdf(invoice) -> None:
     from django.template.loader import render_to_string
     from weasyprint import HTML
 
+    # Supplier = the REAL seller that owns the underlying КП (via the invoice's contract),
+    # plus its branded document profile — NEVER a hardcoded platform identity. An invoice is a
+    # legal document and must name the real counterparty (Rule 1/2). Falls back gracefully when
+    # the seller can't be resolved (manual invoice without a contract) — the template shows "—",
+    # not a fake ИНН.
+    from .quotes import _quote_seller_company, _seller_document_profile
+
+    quote = invoice.contract.quote if (invoice.contract_id and invoice.contract.quote_id) else None
+    supplier = _quote_seller_company(quote) if quote else None
+    seller_profile = _seller_document_profile(supplier) if supplier else None
+
     html_string = render_to_string(
         "crm/invoice_pdf.html",
         {
             "invoice": invoice,
             "items": invoice.items.select_related("source_quote_item").all(),
             "company": invoice.deal.company,
+            "supplier": supplier,
+            "seller_profile": seller_profile,
         },
     )
     buf = BytesIO()

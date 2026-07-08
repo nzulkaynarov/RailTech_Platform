@@ -347,14 +347,12 @@
       <span class="k">Предложение действительно до:</span> {{ quote.valid_until|date:"d.m.Y" }}
     </div>
     {% endif %}
-
-    {% if quote.fx_snapshot %}
-    <div class="fx-note">
-      Курс ЦБ на {{ quote.frozen_at|default:quote.updated_at|date:"d.m.Y" }}:
-      {% for ccy_code, rate in quote.fx_snapshot.items %}{{ ccy_code }} = {{ rate|floatformat:2 }} сум{% if not forloop.last %}; {% endif %}{% endfor %}.
-      Суммы в КП пересчитаны в {{ pres_ccy }} по указанному курсу.
-    </div>
-    {% endif %}
+    {% comment %}
+      CBU FX-snapshot note intentionally NOT rendered on the client КП: the offer is
+      UZS-canonical (client projection) — the buyer only needs the final сум price, and
+      exposing the conversion rate is soft sourcing/margin leakage. A per-seller opt-in
+      «show FX basis» toggle is planned for the document-settings panel (P3).
+    {% endcomment %}
   </div>
 
   {% if quote.notes %}
