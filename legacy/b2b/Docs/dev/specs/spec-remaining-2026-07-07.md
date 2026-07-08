@@ -2,6 +2,30 @@
 
 **База:** main @ `937b3a4`. Аудит 2026-07-02 (архитектура + безопасность) полностью закрыт в коде (PR #230–237).
 
+> ## 🟢 СТАТУС на 2026-07-08 — бэклог этого ТЗ фактически ЗАКРЫТ
+> Сверка кода 2026-07-08 (чекбоксы ниже устарели — обновлять их не стали, вот сводная правда):
+> - **Инфра INF-01/04/05/07/08/09 — все в коде.** INF-01 (Caddy rate-limit) — на проде (PR #253). INF-04
+>   (backup-gate): `entrypoint.sh` гейтит миграции на `AUTO_MIGRATE`, `deploy-b2b.yml` делает `pg_dump` до
+>   миграций. INF-05/09 (пиннинг + hashed lock + psycopg2 source, PR #251). INF-07 (MinIO запинен `RELEASE.*`).
+>   INF-08 (`volumes: !override` в `docker-compose.prod.yml` — прод бежит образ, не bind-mount).
+> - **CRM-слой «книга контрагентов» (Раздел 2) — построен.** `CounterpartyRelationship` + `RelationshipViewSet`,
+>   `ContactViewSet` + CB-invite (`accounts/views/clients.py`, `send_client_invite`), офлайн-клиенты, фронтенд
+>   `CounterpartiesPage` (CLIENT+SUPPLIER, wired в `App.tsx`). Тесты: `test_relationships.py`/`test_client_invite.py`/
+>   `test_offline_clients.py` = 31 pass.
+> - **ADR-0006 cut-list — исполнен.** Leads = KEEP: бэкенд жив + **фронтенд-inbox добавлен** (PR #254,
+>   `AdminLeadsPage`). Analytics-orphan: `CRMAnalyticsView` **уже удалён** (остались `DashboardAnalyticsView` +
+>   `TimeToFirstQuoteView`).
+> - **ADR-0005 Phase E U3 (деприкация WorkspaceRole) — ЗАКРЫТ** (шаги 0–5). Шаги 3–5 — PR #255
+>   (never-orphan union, `_fallback_head`→is_system, `can_send`→fail-closed, tie-break→`quote.build`,
+>   `has_workspace_role` удалён, `add_company_member` сидит company_role). Полный accounts+crm = 541 pass +
+>   adversarial-verify (4 линзы) чисто. Детали — `spec-phase-e-u3-workspacerole-deprecation-2026-07-07.md`.
+>
+> **Реально осталось (не блокировано кодом):**
+> 1. **AI-порог `AI_DRAFT_MATCH_CONFIDENCE`** — калибровка на реальном трафике (Раздел 2, «AI»). Ждёт данных.
+> 2. **Сторона владельца** — GitHub Actions billing (CI/nightly-e2e стоят), INF-12 required-check, F0.3
+>    deploy-on-green-CI (Раздел 4).
+> 3. eyes-on прогон заявка→КП→контракт на мигрированном тенанте (рекомендация после мержа #255).
+
 ## Важная поправка к бэклогу
 
 Разведка по коду (2026-07-07) показала, что **значительная часть продуктового бэклога уже реализована** — roadmap-доки (`ai-features-roadmap-2026-06-18.md`, `master-scope-2026-06-24.md`) устарели:
