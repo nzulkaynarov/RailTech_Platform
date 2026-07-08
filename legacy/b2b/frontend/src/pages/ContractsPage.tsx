@@ -57,11 +57,10 @@ export function ContractsPage() {
   const [forceCancelReason, setForceCancelReason] = useState('');
 
   const role = useUserStore((s) => s.role);
-  const activeStatus = useUserStore((s) => s.activeStatus);
   const isPlatformAdmin = role === 'ADMIN';
-  // Contract is double-signed: the buyer signs as client, the seller as manager.
-  const isBuyer = activeStatus === 'BUYER';
-  const isSeller = !isBuyer; // SELLER / MANUFACTURER context
+  // Contract is double-signed: the buyer signs as client, the seller as manager. Which side the
+  // viewer may sign is server-computed per contract (viewer_can_sign_client/manager) — NOT the
+  // page context — so a dual buy+sell company gets the correct button either way.
   const isViewer = useIsViewerMode();
   const viewerTip = t('apiErrors.ADMIN_VIEWER_CANNOT_ACT');
   const { data: contracts, isLoading, isError, refetch } = useContracts(undefined);
@@ -80,20 +79,27 @@ export function ContractsPage() {
     () => (contracts ?? []).find((contract) => contract.id === selectedId) ?? null,
     [contracts, selectedId],
   );
-  // Side indicator (P0-1): which side WE act as on these contracts. Derived from the
-  // page context (activeStatus) — the same signal that already gates the sign buttons.
-  // The Contract response carries no buyer/seller company id, so a truthful
-  // per-contract side would need a serializer field (reported in CROSS-WP).
-  const viewerSide: 'buyer' | 'seller' = isBuyer ? 'buyer' : 'seller';
-  const sideBadge = (
-    <Badge
-      variant="outline"
-      data-side={viewerSide}
-      className={isBuyer ? 'border-info text-info' : 'border-primary text-primary'}
-    >
-      {t(`contractsPage.side.${viewerSide}`)}
-    </Badge>
-  );
+  // Side indicator: which side the VIEWER acts as on THIS contract — derived from the
+  // server-computed sign hints (viewer_can_sign_client/manager), not the SPA page context, so a
+  // dual buy+sell company sees the correct side per contract regardless of which context it
+  // landed in. Null when the viewer is neither side (platform viewer / non-signer).
+  const sideBadgeFor = (contract: Contract) => {
+    const side: 'buyer' | 'seller' | null = contract.viewer_can_sign_client
+      ? 'buyer'
+      : contract.viewer_can_sign_manager
+        ? 'seller'
+        : null;
+    if (!side) return null;
+    return (
+      <Badge
+        variant="outline"
+        data-side={side}
+        className={side === 'buyer' ? 'border-info text-info' : 'border-primary text-primary'}
+      >
+        {t(`contractsPage.side.${side}`)}
+      </Badge>
+    );
+  };
 
   const stats = useMemo(() => {
     const list = contracts ?? [];
@@ -265,7 +271,7 @@ export function ContractsPage() {
                       >
                         <TableCell className="font-medium">{c.number}</TableCell>
                         <TableCell><DealLink dealId={c.deal} /></TableCell>
-                        <TableCell>{sideBadge}</TableCell>
+                        <TableCell>{sideBadgeFor(c)}</TableCell>
                         <TableCell className="tabular-nums">{formatCurrency(Number(c.total_amount))}</TableCell>
                         <TableCell>
                           <Badge variant={STATUS_VARIANT[c.status]}>
@@ -300,7 +306,7 @@ export function ContractsPage() {
                 <Badge variant={STATUS_VARIANT[selected.status]}>
                   {t(`contractsPage.status.${selected.status}`)}
                 </Badge>
-                {sideBadge}
+                {sideBadgeFor(selected)}
               </SheetDescription>
             </SheetHeader>
             <div className="space-y-4 p-4">
@@ -338,7 +344,7 @@ export function ContractsPage() {
                     size="default"
                   />
                 )}
-                {isBuyer && !selected.client_signed_at && (selected.status === 'PENDING_CLIENT' || selected.status === 'DRAFT') && (
+                {selected.viewer_can_sign_client && !selected.client_signed_at && (selected.status === 'PENDING_CLIENT' || selected.status === 'DRAFT') && (
                   <Button
                     onClick={() => onSignClient(selected)}
                     disabled={signClient.isPending || isViewer}
@@ -348,7 +354,7 @@ export function ContractsPage() {
                     {t('contractsPage.signClient')}
                   </Button>
                 )}
-                {isSeller && !selected.manager_signed_at && (selected.status === 'PENDING_MANAGER' || selected.status === 'PENDING_CLIENT' || selected.status === 'DRAFT') && (
+                {selected.viewer_can_sign_manager && !selected.manager_signed_at && (selected.status === 'PENDING_MANAGER' || selected.status === 'PENDING_CLIENT' || selected.status === 'DRAFT') && (
                   <Button
                     onClick={() => onSignManager(selected)}
                     disabled={signManager.isPending || isViewer}

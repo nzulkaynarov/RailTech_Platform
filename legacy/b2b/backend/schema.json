@@ -18198,6 +18198,14 @@
                         "readOnly": true,
                         "nullable": true
                     },
+                    "viewer_can_sign_client": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "viewer_can_sign_manager": {
+                        "type": "string",
+                        "readOnly": true
+                    },
                     "valid_from": {
                         "type": "string",
                         "format": "date",
@@ -18240,7 +18248,9 @@
                     "status",
                     "status_name",
                     "total_amount",
-                    "updated_at"
+                    "updated_at",
+                    "viewer_can_sign_client",
+                    "viewer_can_sign_manager"
                 ]
             },
             "ContractRequest": {

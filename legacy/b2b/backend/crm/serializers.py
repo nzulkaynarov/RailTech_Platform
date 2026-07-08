@@ -662,6 +662,11 @@ class ContractSerializer(serializers.ModelSerializer):
     status_name = serializers.CharField(source="status.name", read_only=True)
     pdf_url = serializers.SerializerMethodField()
     signed_file_url = serializers.SerializerMethodField()
+    # Which side the VIEWER may sign, derived from their relationship to this contract's deal
+    # (not the SPA page context) — a dual buy+sell company gets the correct button regardless of
+    # the context it landed in. Mirrors the sign_contract_by_* authorization (review fix).
+    viewer_can_sign_client = serializers.SerializerMethodField()
+    viewer_can_sign_manager = serializers.SerializerMethodField()
 
     class Meta:
         model = Contract
@@ -684,6 +689,8 @@ class ContractSerializer(serializers.ModelSerializer):
             "manager_signer",
             "manager_signer_name",
             "manager_signed_at",
+            "viewer_can_sign_client",
+            "viewer_can_sign_manager",
             "valid_from",
             "valid_until",
             "notes",
@@ -707,6 +714,18 @@ class ContractSerializer(serializers.ModelSerializer):
 
     def get_signed_file_url(self, obj):
         return obj.signed_file.url if obj.signed_file else None
+
+    def get_viewer_can_sign_client(self, obj):
+        from crm.services.contracts import viewer_can_sign_client
+
+        request = self.context.get("request")
+        return bool(request and viewer_can_sign_client(request.user, obj))
+
+    def get_viewer_can_sign_manager(self, obj):
+        from crm.services.contracts import viewer_can_sign_manager
+
+        request = self.context.get("request")
+        return bool(request and viewer_can_sign_manager(request.user, obj))
 
 
 class InvoiceItemSerializer(serializers.ModelSerializer):

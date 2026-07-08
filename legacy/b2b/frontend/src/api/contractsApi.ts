@@ -26,6 +26,10 @@ export interface Contract {
   manager_signer: number | null;
   manager_signer_name: string | null;
   manager_signed_at: string | null;
+  // Which side the VIEWER may sign, derived server-side from their relationship to the deal
+  // (not the SPA page context) — a dual buy+sell company gets the right button either way.
+  viewer_can_sign_client: boolean;
+  viewer_can_sign_manager: boolean;
   valid_from: string | null;
   valid_until: string | null;
   notes: string;

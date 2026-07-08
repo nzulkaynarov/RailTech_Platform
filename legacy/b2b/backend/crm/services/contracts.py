@@ -165,6 +165,44 @@ def _render_contract_pdf(contract) -> None:
 
 
 @transaction.atomic
+def viewer_can_sign_client(user, contract) -> bool:
+    """Buyer-side signing capability for THIS contract, independent of the SPA page context.
+
+    The single source of truth for BOTH the sign_contract_by_client authorization and the
+    ContractSerializer's `viewer_can_sign_client` hint — so the UI shows the right button to a
+    dual buy+sell company regardless of which context it landed in (review fix), and never drifts
+    from what the backend actually permits.
+    """
+    from accounts.services import is_member_of, is_platform_admin_viewer
+
+    from ._params import has_explicit_company_role_perm
+
+    if user is None or getattr(user, "is_anonymous", False) or is_platform_admin_viewer(user):
+        return False
+    company_id = contract.deal.company_id
+    return is_member_of(user, company_id, capability="buy") or has_explicit_company_role_perm(
+        user, company_id, "contract.sign"
+    )
+
+
+def viewer_can_sign_manager(user, contract) -> bool:
+    """Seller-side signing capability for THIS contract, bound to deal routing (a seller can only
+    sign contracts on deals routed to its company — audit H3), independent of page context. Shared
+    by sign_contract_by_manager and the serializer hint."""
+    from accounts.constants import SELLER_COMPANY_TYPES
+    from accounts.services import is_platform_admin_viewer, is_seller, seller_company_routed_to_deal
+
+    from ._params import has_explicit_company_role_perm
+
+    if user is None or getattr(user, "is_anonymous", False) or is_platform_admin_viewer(user):
+        return False
+    seller_memberships = user.memberships.filter(
+        is_active=True, company__types__code__in=SELLER_COMPANY_TYPES
+    ).only("company_id")
+    has_sign_perm = any(has_explicit_company_role_perm(user, m.company_id, "contract.sign") for m in seller_memberships)
+    return (is_seller(user) or has_sign_perm) and seller_company_routed_to_deal(user, contract.deal_id)
+
+
 def sign_contract_by_client(
     contract_id: int,
     client_user: CustomUser,
@@ -174,24 +212,16 @@ def sign_contract_by_client(
     """
     from django.utils import timezone
 
-    from accounts.services import is_member_of, is_platform_admin_viewer
+    from accounts.services import is_platform_admin_viewer
 
     from ..models import Contract
 
     contract = Contract.objects.select_for_update().select_related("deal").get(pk=contract_id)
     if is_platform_admin_viewer(client_user):
         return None, "ADMIN_VIEWER_CANNOT_ACT"
-    # Additive guard (defense-in-depth): legacy can_buy capability OR explicit
-    # contract.sign CompanyRole permission. has_explicit_company_role_perm skips
-    # the legacy can_buy fallback so only members with an intentional CompanyRole
-    # assignment pass through this new path (no accidental promotion).
-    from ._params import has_explicit_company_role_perm
-
-    if not (
-        getattr(client_user, "is_superuser", False)
-        or is_member_of(client_user, contract.deal.company_id, capability="buy")
-        or has_explicit_company_role_perm(client_user, contract.deal.company_id, "contract.sign")
-    ):
+    # Buyer-side capability via the shared predicate (legacy can_buy OR explicit contract.sign
+    # CompanyRole) — same source of truth as the serializer's sign hint.
+    if not (getattr(client_user, "is_superuser", False) or viewer_can_sign_client(client_user, contract)):
         return None, "MEMBER_REQUIRED_FOR_ACTION"
     if contract.status_code not in {ContractStatusCode.DRAFT, ContractStatusCode.PENDING_CLIENT}:
         return None, "CONTRACT_CLIENT_SIGN_NOT_ALLOWED"
@@ -226,44 +256,17 @@ def sign_contract_by_manager(
     """
     from django.utils import timezone
 
-    from accounts.services import (
-        assert_seller_can_operate,
-        is_platform_admin_viewer,
-        is_seller,
-        seller_company_routed_to_deal,
-    )
+    from accounts.services import assert_seller_can_operate, is_platform_admin_viewer
 
     from ..models import Contract
 
     contract = Contract.objects.select_for_update().select_related("deal").get(pk=contract_id)
     if is_platform_admin_viewer(manager_user):
         return None, "ADMIN_VIEWER_CANNOT_ACT"
-    # Seller side signs as "manager". Single-seller model: any can_sell member
-    # (RailTech). The accepted-bid-supplier check is subsumed by is_seller — a
-    # winning supplier's member also carries can_sell.
-    # Additive guard (defense-in-depth): legacy is_seller() OR explicit contract.sign
-    # CompanyRole permission in any active SELLER-type company membership.
-    # has_explicit_company_role_perm skips the legacy fallback so only members with
-    # an intentional CompanyRole assignment pass through this new path.
-    from accounts.constants import SELLER_COMPANY_TYPES
-
-    from ._params import has_explicit_company_role_perm
-
-    seller_memberships = manager_user.memberships.filter(
-        is_active=True, company__types__code__in=SELLER_COMPANY_TYPES
-    ).only("company_id")
-    has_contract_sign_perm = any(
-        has_explicit_company_role_perm(manager_user, m.company_id, "contract.sign") for m in seller_memberships
-    )
-    # Bind to THIS contract's deal routing — any seller could otherwise sign a competitor's
-    # contract by enumerating ids (audit H3).
-    if not (
-        getattr(manager_user, "is_superuser", False)
-        or (
-            (is_seller(manager_user) or has_contract_sign_perm)
-            and seller_company_routed_to_deal(manager_user, contract.deal_id)
-        )
-    ):
+    # Seller-side capability via the shared predicate: (legacy is_seller OR explicit contract.sign
+    # CompanyRole) AND bound to THIS deal's routing (a seller can't sign a competitor's contract by
+    # enumerating ids — audit H3). Same source of truth as the serializer's sign hint.
+    if not (getattr(manager_user, "is_superuser", False) or viewer_can_sign_manager(manager_user, contract)):
         return None, "MEMBER_REQUIRED_FOR_ACTION"
     # Paid-seller gate: signing commits the seller — requires an active subscription.
     if sub_err := assert_seller_can_operate(manager_user):

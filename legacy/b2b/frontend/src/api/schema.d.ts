@@ -6388,6 +6388,8 @@ export interface components {
             readonly manager_signer_name: string;
             /** Format: date-time */
             readonly manager_signed_at: string | null;
+            readonly viewer_can_sign_client: string;
+            readonly viewer_can_sign_manager: string;
             /** Format: date */
             valid_from?: string | null;
             /** Format: date */

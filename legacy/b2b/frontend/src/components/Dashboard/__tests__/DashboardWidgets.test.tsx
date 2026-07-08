@@ -77,6 +77,8 @@ function makeContract(id: number, status: ContractStatus): Contract {
     manager_signer: null,
     manager_signer_name: null,
     manager_signed_at: null,
+    viewer_can_sign_client: false,
+    viewer_can_sign_manager: false,
     valid_from: null,
     valid_until: null,
     notes: '',
