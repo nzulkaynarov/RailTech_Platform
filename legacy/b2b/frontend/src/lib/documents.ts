@@ -38,15 +38,6 @@ export function saveBlob(blob: Blob, filename: string): void {
   window.URL.revokeObjectURL(url);
 }
 
-/** Open a blob inline in a new browser tab (PDF preview). Returns false if the popup was blocked. */
-export function openBlobInNewTab(blob: Blob): boolean {
-  const url = window.URL.createObjectURL(blob);
-  const win = window.open(url, '_blank', 'noopener,noreferrer');
-  // Revoke after the tab has had time to load; revoking immediately would break the preview.
-  window.setTimeout(() => window.URL.revokeObjectURL(url), 60_000);
-  return win !== null;
-}
-
 /**
  * Print a PDF blob via a hidden iframe (prints without navigating away). Falls back to opening
  * the blob in a new tab (where the user can print manually) if the iframe print can't fire.

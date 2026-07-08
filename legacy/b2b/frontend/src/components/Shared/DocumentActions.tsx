@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { translateApiError } from '@/lib/apiError';
-import { extractBlobErrorCode, fetchDocumentBlob, openBlobInNewTab, printBlob, saveBlob } from '@/lib/documents';
+import { extractBlobErrorCode, fetchDocumentBlob, printBlob, saveBlob } from '@/lib/documents';
 
 export type DocFormat = 'pdf' | 'xlsx' | 'csv';
 
@@ -80,10 +80,35 @@ export const DocumentActions: React.FC<DocumentActionsProps> = ({
 
   const onDownload = (format: DocFormat) =>
     run((blob) => saveBlob(blob, `${filenameBase}.${format}`), format);
-  const onPreview = () =>
-    run((blob) => {
-      if (!openBlobInNewTab(blob)) toast.error(t('docActions.popupBlocked'));
-    }, 'pdf');
+
+  const onPreview = async () => {
+    // window.open MUST run synchronously inside the click gesture — after an `await` the browser
+    // has consumed the user-activation and the popup blocker kills it. So open a blank tab NOW,
+    // then point it at the blob once the fetch lands. (No `noopener` — that makes open() return
+    // null, hiding whether it was truly blocked.)
+    const previewWindow = window.open('', '_blank');
+    setBusy(true);
+    try {
+      const { path, params } = request('pdf');
+      const blob = await fetchDocumentBlob(path, params);
+      const url = window.URL.createObjectURL(blob);
+      if (previewWindow) {
+        previewWindow.location.href = url;
+        window.setTimeout(() => window.URL.revokeObjectURL(url), 60_000);
+      } else {
+        // Popup blocked at open time → save the file so the user still gets it.
+        saveBlob(blob, `${filenameBase}.pdf`);
+        toast.error(t('docActions.popupBlocked'));
+      }
+    } catch (err) {
+      previewWindow?.close();
+      const code = await extractBlobErrorCode(err);
+      toast.error(code ? translateApiError(code) : t('errors.operationFailed'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const onPrint = () => run((blob) => printBlob(blob), 'pdf');
 
   const onCopyLink = async () => {
