@@ -887,7 +887,20 @@ class QuoteLifecycleService:
             company_id = routed_seller_company_id(actor, quote.deal_id)
             if not company_id:
                 return None, "ROLE_NOT_PERMITTED"
-        if not has_workspace_role(actor, company_id, [WorkspaceRoleCode.SALES_MANAGER]):
+        # ADR-0005 Phase E U3 Step 2: gate the approval-chain ENTRY on the quote.build CompanyRole
+        # permission instead of the SALES_MANAGER WorkspaceRole — the ADR intent is "gate on the
+        # capability, not the role title". Effective policy shift (intended, within-tenant only):
+        #   • member WITH a CompanyRole → passes iff that role grants quote.build (an OWNER/SALES_MANAGER
+        #     WorkspaceRole no longer overrides a restrictive CompanyRole — CompanyRole is authoritative);
+        #   • company_role-less member → fallback: quote.build ∈ _SELL_PERMS → grants ANY can_sell member
+        #     of the owning company (broader than the old SALES_MANAGER/OWNER-only gate, but same-tenant
+        #     and capability-based; it collapses to precise once tenants are fully on CompanyRoles).
+        # No buyer/cross-tenant leak (member_has_permission scopes to company_id; a can_sell=False buyer
+        # is denied). Dev data-check: 0 of 13 active SALES_MANAGER/OWNER members lose submit. can_send
+        # (the only NARROWING site) stays on WorkspaceRole until the Step-4 coverage migration.
+        from accounts.services.permissions import member_has_permission
+
+        if not member_has_permission(actor, company_id, "quote.build"):
             return None, "ROLE_NOT_PERMITTED"
         if not quote.status or quote.status.code != QuoteStatusCode.DRAFT:
             return None, "INVALID_STATUS"

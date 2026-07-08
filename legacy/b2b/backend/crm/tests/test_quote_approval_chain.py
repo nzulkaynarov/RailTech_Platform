@@ -190,11 +190,24 @@ def test_reviewer_then_head(seller, deal):
     assert _status(quote) == "READY_TO_SEND"
 
 
-def test_submit_gate_requires_sales_role(seller, deal):
+def test_submit_gate_requires_quote_build_permission(seller, deal):
+    """ADR-0005 Phase E U3 Step 2: the submit gate is now the quote.build CompanyRole permission,
+    not the SALES_MANAGER WorkspaceRole. A member whose CompanyRole omits quote.build (and no
+    can_sell fallback) is denied."""
     quote = _quote(deal, prepared_by=seller["sales"])
-    # The head (no SALES_MANAGER workspace role) cannot submit.
-    _, err = QLS.submit_for_review(quote.id, seller["head"])
+    noperm_role = CompanyRole.objects.create(company=seller["company"], name="Наблюдатель", permissions=[])
+    noperm_user = _user("noperm@seller.test")
+    _member(seller["company"], noperm_user, workspace_role="MEMBER", company_role=noperm_role)
+    _, err = QLS.submit_for_review(quote.id, noperm_user)
     assert err == "ROLE_NOT_PERMITTED" and _status(quote) == "DRAFT"
+
+
+def test_submit_allowed_for_is_system_admin(seller, deal):
+    """The company admin (is_system CompanyRole) holds every permission incl. quote.build, so under
+    the permission model they may submit — a deliberate widening vs the old SALES_MANAGER-only gate."""
+    quote = _quote(deal, prepared_by=seller["sales"])
+    _, err = QLS.submit_for_review(quote.id, seller["head"])  # head = MEMBER workspace + is_system role
+    assert err is None
 
 
 def test_send_to_client_blocked_until_ready(seller, deal):
