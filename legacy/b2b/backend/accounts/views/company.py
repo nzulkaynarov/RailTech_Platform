@@ -9,7 +9,7 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 
 from accounts import services
-from accounts.constants import SELLER_COMPANY_TYPES, VerificationStatusCode, WorkspaceRoleCode
+from accounts.constants import SELLER_COMPANY_TYPES, VerificationStatusCode
 from accounts.models import Company, CompanyMember, CustomUser
 from accounts.serializers import (
     CompanyDocumentProfileSerializer,
@@ -190,13 +190,14 @@ class CompanyViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if user.is_platform_admin:
             return
-        is_owner = CompanyMember.objects.filter(
-            user=user,
-            company=company,
-            is_active=True,
-            role__code=WorkspaceRoleCode.OWNER,
-        ).exists()
-        if not is_owner:
+        # ADR-0005 Phase E U3: gate on the CompanyRole permission, not the legacy OWNER
+        # WorkspaceRole. member_has_permission's legacy fallback still grants a company_role-less
+        # OWNER (the OWNER-role branch returns True for any perm), so an un-migrated OWNER keeps
+        # access; a delegated admin holding settings.edit now passes too (the point of the engine).
+        # A company_role-less NON-OWNER stays denied (settings.edit ∈ _ADMIN_PERMS → fallback False).
+        # An OWNER deliberately reassigned to a restricted CompanyRole is governed by that role —
+        # the intended U3 supersession, not an accidental lockout.
+        if not member_has_permission(user, company.id, "settings.edit"):
             raise exceptions.PermissionDenied("ONLY_COMPANY_OWNER_OR_ADMIN")
 
     def update(self, request, *args, **kwargs):
@@ -684,13 +685,12 @@ class CompanyViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"], url_path="set-member-role")
     def set_member_role(self, request, pk=None):
         company = self.get_object()
-        # Authorization: Company Admin (OWNER) of this company, or platform staff.
-        if not request.user.is_platform_admin:
-            is_admin = CompanyMember.objects.filter(
-                user=request.user, company=company, is_active=True, role__code=WorkspaceRoleCode.OWNER
-            ).exists()
-            if not is_admin:
-                return Response({"detail": "ONLY_COMPANY_ADMIN_CAN_CHANGE_ROLES"}, status=status.HTTP_403_FORBIDDEN)
+        # Authorization (ADR-0005 Phase E U3): team.manage CompanyRole permission, or platform
+        # staff. Mirrors update_member_capabilities / invite (member_has_permission 'team.manage').
+        # The is_platform_admin bypass stays — member_has_permission is True for a superuser but
+        # NOT for a non-superuser platform operator.
+        if not request.user.is_platform_admin and not member_has_permission(request.user, company.id, "team.manage"):
+            return Response({"detail": "ONLY_COMPANY_ADMIN_CAN_CHANGE_ROLES"}, status=status.HTTP_403_FORBIDDEN)
 
         member_id = request.data.get("member_id")
         role_code = request.data.get("role")

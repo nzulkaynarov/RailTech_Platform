@@ -1022,17 +1022,21 @@ class ChargeTemplateViewSet(viewsets.ModelViewSet):
     def _assert_company_admin(self, company_id):
         from rest_framework.exceptions import PermissionDenied
 
-        from accounts.constants import WorkspaceRoleCode
+        from accounts.services.permissions import member_has_permission
 
         user = self.request.user
         if getattr(user, "is_superuser", False):
             return
+        # Keep the explicit NO_SELLER_COMPANY signal: member_has_permission(user, None, …) is False
+        # and would otherwise collapse into the generic denial below.
         if not company_id:
             raise PermissionDenied("NO_SELLER_COMPANY")
-        is_admin = user.memberships.filter(
-            company_id=company_id, is_active=True, role__code=WorkspaceRoleCode.OWNER
-        ).exists()
-        if not is_admin:
+        # ADR-0005 Phase E U3: gate on the charge_templates.manage CompanyRole permission instead of
+        # the legacy OWNER WorkspaceRole. A company_role-less OWNER still passes (OWNER-role fallback
+        # branch); a company_role-less non-OWNER stays denied (charge_templates.manage ∈ _ADMIN_PERMS
+        # → fallback False, so can_sell does not leak template management). An OWNER on a restricted
+        # CompanyRole is governed by that role — intended U3 supersession.
+        if not member_has_permission(user, company_id, "charge_templates.manage"):
             raise PermissionDenied("ONLY_COMPANY_ADMIN_CAN_MANAGE_TEMPLATES")
 
     def get_queryset(self):

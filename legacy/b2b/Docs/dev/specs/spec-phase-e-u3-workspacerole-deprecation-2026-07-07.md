@@ -42,15 +42,24 @@
 
 ## Таблица замен (по возрастанию риска)
 
-### Тривиальные (1 строка, прецедент есть) — Шаг 1
-| Сайт | Что гейтит | Замена |
-|---|---|---|
-| `crm/services/quotes.py` `can_send_quote_to_client` (~:186) | отправка READY_TO_SEND клиенту | уже есть дизъюнкт `quote.send` через `has_explicit_company_role_perm` — **просто убрать `has_workspace_role(SALES_MANAGER)`-терм** |
-| `accounts/views/company.py:197` `_assert_owner_or_admin` | правка профиля компании | `member_has_permission(settings.edit)` |
-| `accounts/views/company.py:690` `set_member_role` | смена WorkspaceRole члена | `member_has_permission(team.manage)` |
-| `crm/views/quotes.py:1033` `ChargeTemplateViewSet._assert_company_admin` | CRUD ChargeTemplate | `member_has_permission(charge_templates.manage)` |
+### Тривиальные (view-гейты, чистое расширение) — Шаг 1 ✅ ИСПОЛНЕНО
+| Сайт | Что гейтит | Замена | Статус |
+|---|---|---|---|
+| `accounts/views/company.py` `_assert_owner_or_admin` | правка профиля компании | `member_has_permission(settings.edit)` | ✅ |
+| `accounts/views/company.py` `set_member_role` | смена роли члена | `member_has_permission(team.manage)` | ✅ |
+| `crm/views/quotes.py` `ChargeTemplateViewSet._assert_company_admin` | CRUD ChargeTemplate | `member_has_permission(charge_templates.manage)` | ✅ |
 
-Прецедент уже в коде: `company.py:635/738` (`update_member_capabilities`/`invite`) — на `team.manage`.
+Все три — **чистое расширение**: legacy-fallback `member_has_permission` пускает company_role-less OWNER,
+а делегированный админ с нужным permission теперь тоже проходит (смысл движка прав). Никто не теряет
+доступ. Прецедент: `company.py:635/738` (`update_member_capabilities`/`invite`, `team.manage`). Тесты:
+`accounts/tests/test_workspace_role_deprecation_step1.py` (allow/deny/legacy-fallback × 3 гейта, 8 тестов).
+`is_platform_admin`-байпас и `NO_SELLER_COMPANY`-precheck сохранены; неиспользуемые `WorkspaceRoleCode`-импорты убраны.
+
+**`can_send_quote_to_client` ОТЛОЖЕН из Шага 1 в Шаг 4** — это единственное *сужение* (не расширение):
+`has_explicit_company_role_perm(quote.send)` не имеет legacy-fallback, и продавец с `company_role=NULL`,
+слащий КП по WorkspaceRole SALES_MANAGER/OWNER, потерял бы доступ. Data-check на dev-стеке: 0 таких
+активных продавцов — но прод авторитетно не проверить, поэтому убираем этот WorkspaceRole-терм только
+ВМЕСТЕ с data-миграцией покрытия Шага 4 (которая гарантирует `quote.send` каждому продавцу до сужения).
 
 ### Средний риск — Шаг 2 (живой гейт согласования)
 | Сайт | Что гейтит | Замена | Риск |
