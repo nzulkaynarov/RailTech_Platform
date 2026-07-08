@@ -357,7 +357,7 @@ export function ProfilePage() {
 
 
   return (
-    <div className="flex flex-col gap-6 max-w-4xl">
+    <div className="flex flex-col gap-6 max-w-6xl">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{t('profile.title')}</h1>
         <p className="text-sm text-muted-foreground mt-1">{t('profile.subtitle')}</p>

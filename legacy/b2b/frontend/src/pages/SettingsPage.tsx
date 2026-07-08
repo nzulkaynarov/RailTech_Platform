@@ -64,7 +64,7 @@ export function SettingsPage() {
   // Language (i18next) and Theme (themeStore) actually change the UI.
 
   return (
-    <div className="flex flex-col gap-6 max-w-4xl">
+    <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{t('settings.title')}</h1>
         <p className="text-sm text-muted-foreground mt-1">{t('settings.subtitle')}</p>
@@ -85,8 +85,8 @@ export function SettingsPage() {
           {isAdmin && <TabsTrigger value="platform">{t('settings.tabs.platform')}</TabsTrigger>}
         </TabsList>
 
-        {/* General — language + theme, both actually wired. */}
-        <TabsContent value="general" className="space-y-4">
+        {/* General — language + theme, both actually wired. Simple rows read best narrow. */}
+        <TabsContent value="general" className="space-y-4 max-w-3xl">
           <Card>
             <CardHeader>
               <CardTitle className="text-base">{t('settings.general.title')}</CardTitle>
