@@ -113,22 +113,6 @@ def primary_seller_company_id(user: "CustomUser") -> Optional[int]:
     return membership.company_id if membership else None
 
 
-def has_workspace_role(user: "CustomUser", company_id: int, role_codes) -> bool:
-    """True if `user` is an active member of `company_id` holding one of `role_codes`.
-
-    OWNER always passes — they administer the team and are the escape hatch. Used
-    to gate the КП approval chain so each step is advanced only by the right role,
-    and only inside the company that owns the quote (no cross-tenant action).
-    """
-    if not user or not user.is_authenticated:
-        return False
-    membership = user.memberships.filter(company_id=company_id, is_active=True).select_related("role").first()
-    if membership is None or membership.role is None:
-        return False
-    code = membership.role.code
-    return code == WorkspaceRoleCode.OWNER or code in set(role_codes)
-
-
 def is_platform_admin_viewer(user: "CustomUser") -> bool:
     """Platform Admin acting on platform-level — never acts on behalf of a company.
 
@@ -383,8 +367,9 @@ def routed_seller_company_id(user: "CustomUser", deal_id) -> Optional[int]:
         return None
     # The actor's active can_sell SELLER memberships that are routed to this deal, ordered
     # DETERMINISTICALLY (audit M5 — no arbitrary .first()): prefer the primary membership, then
-    # prefer a company where the actor holds a chain-advancing role (OWNER/SALES_MANAGER), so the
-    # downstream role check in submit_for_review resolves against the RIGHT company.
+    # prefer a company where the actor can actually build the КП (holds quote.build), so the
+    # downstream permission check in submit_for_review resolves against the RIGHT company.
+    # ADR-0005 Phase E U3: the tie-break reads the quote.build permission, not a WorkspaceRole.
     memberships = (
         user.memberships.filter(
             is_active=True,
@@ -392,15 +377,14 @@ def routed_seller_company_id(user: "CustomUser", deal_id) -> Optional[int]:
             company__types__code__in=SELLER_COMPANY_TYPES,
             company_id__in=routed_ids,
         )
-        .select_related("role")
+        .select_related("company_role", "role")
         .order_by("-is_primary", "company_id")
     )
-    chain_roles = {WorkspaceRoleCode.OWNER, WorkspaceRoleCode.SALES_MANAGER}
     fallback_id = None
     for membership in memberships:
         if fallback_id is None:
             fallback_id = membership.company_id
-        if membership.role and membership.role.code in chain_roles:
+        if member_has_permission(user, membership.company_id, "quote.build"):
             return membership.company_id
     return fallback_id
 

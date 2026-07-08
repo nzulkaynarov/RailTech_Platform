@@ -128,3 +128,43 @@ def test_can_deactivate_admin_when_another_exists(company_with_admin):
     requester = CustomUser.objects.create_user(email="req2@x.test", username="req2@x.test", password="pw")
     result, error = toggle_user_active(admin.user, requester)
     assert error is None and result is not None
+
+
+# ─── add_company_member seeds a CompanyRole (ADR-0005 Phase E U3) ────────────
+
+
+@pytest.mark.django_db
+def test_add_company_member_seeds_company_role(company_with_admin):
+    """The operator add-membership path must seed a CompanyRole (like invite / profile submit), so
+    it stops minting permission-less company_role=NULL members that the permission engine can only
+    serve via the shrinking legacy fallback."""
+    from accounts.services import add_company_member
+
+    company, _admin, _owner_role, _manager_role = company_with_admin
+    user = CustomUser.objects.create_user(email="added@acme.test", username="added@acme.test", password="pw")
+
+    membership, error = add_company_member(user, company, "SALES_MANAGER")
+
+    assert error is None
+    assert membership.company_role_id is not None
+    # SALES_MANAGER derives «Менеджер по продажам», which carries quote.send.
+    assert membership.company_role.has_perm("quote.send")
+
+
+@pytest.mark.django_db
+def test_add_company_member_preserves_existing_company_role_on_readd(company_with_admin):
+    """Re-adding an existing member must NOT clobber a custom CompanyRole the admin assigned."""
+    from accounts.models import CompanyRole
+    from accounts.services import add_company_member
+
+    company, _admin, _owner_role, _manager_role = company_with_admin
+    user = CustomUser.objects.create_user(email="readd@acme.test", username="readd@acme.test", password="pw")
+    membership, _ = add_company_member(user, company, "SALES_MANAGER")
+    custom = CompanyRole.objects.create(company=company, name="Custom Sender", permissions=["quote.send"])
+    membership.company_role = custom
+    membership.save(update_fields=["company_role"])
+
+    again, error = add_company_member(user, company, "SALES_MANAGER")
+
+    assert error is None
+    assert again.company_role_id == custom.id  # untouched

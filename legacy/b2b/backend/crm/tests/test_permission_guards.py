@@ -276,6 +276,37 @@ def test_quote_send_perm_without_legacy_ws_role_passes(lookups, seller_company, 
     assert can_send_quote_to_client(seller, quote) is True
 
 
+@pytest.mark.django_db
+def test_quote_send_null_company_role_non_sales_with_can_sell_denied(lookups, seller_company, deal):
+    """ADR-0005 Phase E U3 regression guard: a company_role=NULL member with a NON-sales legacy
+    WorkspaceRole (LOGIST) and the DEFAULT can_sell=True must NOT be auto-granted client-facing
+    send. The gate keys on the intentional quote.send permission (or the OWNER/SALES_MANAGER legacy
+    bridge), never the bare can_sell capability — mirrors contract.sign / payment.record."""
+    seller = _make_user("send_logist@seller.test")
+    ws_logist = WorkspaceRole.objects.get_or_create(code="LOGIST", defaults={"name": "Logist", "sort_order": 30})[0]
+    CompanyMember.objects.create(
+        user=seller, company=seller_company, role=ws_logist,
+        is_primary=True, is_active=True, can_sell=True, can_buy=True,
+    )  # company_role stays NULL — the un-migrated shape the add-membership path used to create
+    quote = _ready_to_send_quote(deal, prepared_by=seller)
+
+    assert can_send_quote_to_client(seller, quote) is False
+
+
+@pytest.mark.django_db
+def test_quote_send_legacy_owner_role_passes(lookups, seller_company, deal):
+    """Legacy OWNER WorkspaceRole (no CompanyRole) retains send via the transitional bridge."""
+    seller = _make_user("send_owner@seller.test")
+    ws_owner = WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})[0]
+    CompanyMember.objects.create(
+        user=seller, company=seller_company, role=ws_owner,
+        is_primary=True, is_active=True, can_sell=True, can_buy=True,
+    )
+    quote = _ready_to_send_quote(deal, prepared_by=seller)
+
+    assert can_send_quote_to_client(seller, quote) is True
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # 2.  sign_contract_by_client  (contract.sign)
 # ═══════════════════════════════════════════════════════════════════════════════
