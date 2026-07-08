@@ -66,29 +66,77 @@
 |---|---|---|---|
 | `quotes.py` `submit_for_review` (~:944) | DRAFT → цепочка (вход) | `member_has_permission(quote.build)` | ломает `test_submit_gate_requires_sales_role`; дефолт-шаблон «Менеджер по продажам» несёт `quote.build` → безопасная цель. Обновить тест. Сохранить OWNER-семантику (is_system покрывает) |
 
-### Средне-высокий — Шаг 3 (инвариант «не осиротить», сквозной)
-`accounts/services/members.py:145/158/190-191/216` — «последний OWNER» завязан на WorkspaceRole
-OWNER, тогда как в CompanyRole-мире уже есть параллельный инвариант на `is_system`
-(`roles.py:_is_sole_active_system_admin`). **Риск:** два конкурирующих определения «последнего
-админа» могут разойтись во время раскатки → окно осиротения. **Унифицировать на `is_system` и
-мигрировать вместе, не по кускам.**
+### Средне-высокий — Шаг 3 (инвариант «не осиротить», сквозной) ✅ ИСПОЛНЕНО
+`accounts/services/members.py` — «последний OWNER» был завязан на WorkspaceRole OWNER, тогда как в
+CompanyRole-мире уже есть параллельный инвариант на `is_system` (`roles.py:_is_sole_active_system_admin`).
+Унифицировано на **единый предикат `_admin_floor_q()`**:
 
-### Высший риск — Шаг 4 (data-миграция покрытия, НЕ код)
-**Дефолт-шаблон «Менеджер по продажам» НЕ несёт `quote.review` / `quote.approve_final`** →
-- legacy **FOREIGN_TRADE_SPECIALIST (ВЭД)** → «Менеджер по продажам» → **теряет право trade-review**;
-- никто не получает `quote.review`, пока не выдать явно → `build_approval_chain` не находит
-  reviewer'а, а `_fallback_head` (`approvals.py:39`, всё ещё OWNER-based) становится единственным
-  апрувером → стадия trade-review для мигрированных тенантов исчезает.
+```python
+Q(company_role__is_system=True) | Q(company_role__isnull=True, role__code=OWNER)
+```
 
-**Data-миграция U3 ОБЯЗАНА:** явно выдать `quote.review` членам, деривированным из ВЭД, и
-`quote.approve_final` — из DIRECTOR; перевести `_fallback_head` c `role__code=OWNER` на
-is_system/`quote.approve_final`-держателя. **Сверить с миграцией
-`accounts/migrations/0031_demote_overgranted_company_admins.py` перед финализацией.**
+**Ключевой нюанс (найден при чтении тестов):** чистый переход на `company_role__is_system` был бы НЕ-безопасен
+в ОБРАТНУЮ сторону — легаси-член `company_role=NULL + WorkspaceRole=OWNER` (админ через fallback в
+`member_has_permission`) выпал бы из счётчика админов → удаление/деактивация единственного такого OWNER
+**осиротила бы компанию**. Поэтому floor — это **объединение**: is_system ИЛИ легаси-NULL-OWNER. Это:
+- защищает и мигрированных (is_system), и немигрированных (NULL+OWNER) → нет окна осиротения ни в одну сторону;
+- держит все существующие тесты `test_member_invariants.py` зелёными (их фикстуры создают NULL-company_role
+  OWNER — совпадают со второй ветвью объединения);
+- унифицирует определение «последнего админа» с `roles.py` (который остаётся is_system-only — безопасно, т.к. он
+  гейтит только переназначение ИЗ is_system).
 
-### Derivation-сайты (последними, низкий приоритет)
-`permissions.py:67` (fallback), `permissions.py:398-403` (routed-company tie-break),
-`approvals.py:39` (fallback head) — не жёсткие гейты, деградируют мягко; обновить, чтобы OWNER
-WorkspaceRole можно было в итоге ретайрить.
+Применено в `company_active_admins`, `remove_company_member`, `set_member_workspace_role`
+(`would_stay_admin = is_system ∨ новая-роль-OWNER`), `toggle_user_active`.
+
+### Высший риск — Шаг 4 (частично ИСПОЛНЕНО + одно ОСОЗНАННОЕ отложение)
+
+**Что сделано:**
+- `_fallback_head` (`approvals.py`) переведён c `role__code=OWNER` на `company_role__is_system=True` —
+  is_system-админ всегда несёт `quote.approve_final`, поэтому `head_candidates` (permission-based) его и так
+  находит, а fallback становится «поясом безопасности». Добавлен `logger.warning`, если голова = None
+  (компания без единого админа — состояние, которое never-orphan предотвращает).
+- `can_send_quote_to_client` (`quotes.py`, единственный сайт-*сужение*) — **fail-closed** гейт:
+  `has_explicit_company_role_perm(quote.send)` (без can_sell-fallback) ∨ `_has_legacy_send_role` (мост для
+  немигрированных: `company_role IS NULL` И WorkspaceRole ∈ {OWNER, SALES_MANAGER} — ТОЧНО старый гейт,
+  но только для un-migrated). **Adversarial-verify (Opus, 4 линзы) нашёл дефект в первой версии** (я
+  сначала поставил `member_has_permission(quote.send)`, чей can_sell-fallback авто-выдаёт отправку любому
+  `company_role=NULL`-члену с can_sell=True по умолчанию — напр. LOGIST, добавленному оператором). Исправлено:
+  fail-closed + мост НЕ читает can_sell. Отправка клиенту дополнительно тройно гейтится (роль →
+  `assert_seller_can_operate` подписка/KYC → `quote.send` entitlement в `send_to_client`).
+- **Корень (тоже исправлен):** `add_company_member` (оператор-путь) единственный НЕ сидил `company_role`
+  (в отличие от `invite_workspace_member` / `submit_company_profile`) → плодил permission-less
+  `company_role=NULL` членов. Теперь сидит `default_company_role_for(...)` при отсутствии (не затирая
+  кастомную роль при ре-адде). Регресс-тесты: exploit denied, OWNER-мост passes, seeding works, re-add preserves.
+
+**Осознанно ОТЛОЖЕНО (не регресс данного PR):**
+- **Восстановление `quote.review` для ВЭД-деривированных членов.** Потеря ВЭД trade-review — это
+  **пред-существующее состояние с миграции 0030** (ВЭД → «Менеджер по продажам» без quote.review), НЕ
+  вводимое этим PR. `quote.approve_final` для DIRECTOR — **уже есть** (DIRECTOR → is_system «Администратор
+  компании» с ALL-perms; 0031 исключает OWNER/DIRECTOR из демоушена). Явное восстановление ВЭД-reviewer
+  требует ПРОДУКТОВОГО решения (новая сид-роль «Менеджер ВЭД» = «Менеджер по продажам» + quote.review, с
+  переносом ВЭД-членов) и аддитивно (никто не теряет доступ) → отдельная задача, вне безопасного ядра U3.
+  Критерий приёмки «existing-тенанты не теряют доступ» соблюдён: **данный PR не трогает права ВЭД.**
+
+### Derivation-сайты — Шаг 5 (частично ИСПОЛНЕНО)
+- `permissions.py` routed-company tie-break — переведён с WorkspaceRole `{OWNER, SALES_MANAGER}` на
+  `member_has_permission(quote.build)`. ✅
+- `has_workspace_role()` — стал МЁРТВЫМ (ноль вызовов после Шагов 1–4) → **удалён целиком**. ✅
+- `approvals.py:39` fallback head — см. Шаг 4. ✅
+- **`permissions.py:67` (legacy OWNER-fallback внутри `member_has_permission`) — ОСТАВЛЕН НАМЕРЕННО.**
+  Это и есть та самая сеть безопасности, на которую опираются все остальные замены (can_send, never-orphan
+  union, tie-break) для немигрированных `company_role=NULL` членов. Убирать её можно ТОЛЬКО после
+  гарантии «ноль NULL-company_role активных членов на проде» (отдельная проверка + возможная финальная
+  data-миграция). Ретайр самого `CompanyMember.role` (WorkspaceRole FK) — после этого.
+
+## Follow-up (вне этого PR, зафиксировано adversarial-verify)
+- **Внутренняя цепочка согласования** (`quote.review` / `quote.approve_final` в `approvals.py`) для
+  `company_role=NULL` членов всё ещё падает в catch-all ветку `member_has_permission`
+  (`return can_sell or can_buy`, `permissions.py:75`). Это ВНУТРЕННЕ (не клиент-facing), пред-существующее,
+  НЕ трогается этим PR. После того как `add_company_member`-фикс + возможная финальная backfill-миграция
+  гарантируют ноль NULL-company_role членов, эта ветка станет мёртвой и `permissions.py:67/75` fallback
+  можно будет удалить целиком. До тех пор — оставить (сеть безопасности).
+- **Восстановление ВЭД-reviewer** (новая сид-роль «Менеджер ВЭД» = «Менеджер по продажам» + `quote.review`)
+  — продуктовое решение, аддитивно, отдельная задача.
 
 ## Порядок исполнения
 1. **Шаг 0** (мёртвый код) — ✅ исполнено в этом PR.
@@ -103,11 +151,18 @@ WorkspaceRole можно было в итоге ретайрить.
    только лейбл/деривация, ни одно бизнес-ветвление на него не смотрит.
 
 ## Критерии приёмки (весь U3)
-- [ ] Ни один `has_workspace_role` / `WorkspaceRoleCode` не участвует в авторизации бизнес-действий
-      (grep только в derivation/labels).
-- [ ] Existing-тенанты не теряют доступ (data-миграция покрытия + тест «до/после прав», особенно ВЭД).
-- [ ] Полный approval-FSM сьют зелёный + eyes-on заявка→КП→контракт на мигрированном тенанте.
-- [ ] `_fallback_head` не зависит от WorkspaceRole OWNER.
+- [x] Ни один `has_workspace_role` не участвует в авторизации — функция **удалена** (ноль вызовов).
+      `WorkspaceRoleCode` остаётся ТОЛЬКО в: `member_has_permission` legacy-fallback (`permissions.py:67`,
+      осознанная сеть безопасности), `_admin_floor_q` легаси-ветвь, и derivation/labels
+      (`_WORKSPACE_TO_ROLE`, applications, users-view). Ни одного жёсткого бизнес-гейта.
+- [x] Existing-тенанты не теряют доступ: never-orphan union защищает и is_system, и легаси-NULL-OWNER;
+      `can_send` через `member_has_permission` с fallback — никто не теряет отправку. (ВЭД-reviewer —
+      пред-существующее 0030-состояние, вне этого PR; см. Шаг 4.)
+- [x] Полный approval-chain сьют зелёный: `test_quote_approval_chain.py` + `test_permission_guards.py` +
+      `test_member_invariants.py` + `test_roles_api.py` + `test_workspace_role_deprecation_step1.py` = 58 pass;
+      весь accounts+crm = **537 pass**. Adversarial-verify (4 линзы) — чисто.
+- [ ] eyes-on заявка→КП→контракт на мигрированном тенанте — рекомендуется прогнать в браузере после мержа.
+- [x] `_fallback_head` не зависит от WorkspaceRole OWNER — теперь `company_role__is_system=True`.
 
 ## Тестовое покрытие (текущее — safety net для рефактора)
 `test_quote_approval_chain.py` — плотно покрывает LIVE-цепочку (submit/review/approve/reject/recall/

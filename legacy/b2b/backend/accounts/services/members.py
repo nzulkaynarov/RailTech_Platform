@@ -133,16 +133,44 @@ def add_company_member(
         company=company,
         defaults={"role": role, "is_primary": is_primary, "is_active": True},
     )
+    # Seed the permission-engine CompanyRole exactly like invite_workspace_member /
+    # submit_company_profile do, so this operator path stops minting permission-less
+    # company_role=NULL members (which the G4 permission engine can only serve via the
+    # shrinking legacy fallback). Only when missing — never clobber an admin's custom
+    # role assignment on a re-add.
+    if membership.company_role_id is None:
+        from .roles import default_company_role_for
+
+        membership.company_role = default_company_role_for(company, workspace_role_code)
+        membership.save(update_fields=["company_role"])
     return membership, None
 
 
-def company_active_admins(company: Company):
-    """Active members holding the full-admin workspace role (code OWNER).
+def _admin_floor_q() -> "Q":
+    """The never-orphan admin floor as ONE reusable predicate (ADR-0005 Phase E U3).
 
-    OWNER is the internal code; its display label is «Администратор компании».
-    This is the company's irreducible admin set — see remove_company_member.
+    A member counts as a company admin if they hold the immutable is_system
+    «Администратор компании» CompanyRole — the SAME floor `roles.py` enforces on
+    CompanyRole reassignment — OR, during the WorkspaceRole→CompanyRole transition,
+    they are an un-migrated legacy OWNER (company_role IS NULL). The legacy clause is
+    what keeps never-orphan protecting tenants whose members predate the 0030 backfill:
+    without it, deleting/deactivating the sole legacy OWNER (whose admin rights come
+    from member_has_permission's OWNER fallback) would silently orphan the company.
+    Unifying every never-orphan check on this predicate removes the two-definitions
+    divergence window the deprecation ADR called out.
     """
-    return CompanyMember.objects.filter(company=company, is_active=True, role__code=WorkspaceRoleCode.OWNER)
+    from django.db.models import Q
+
+    return Q(company_role__is_system=True) | Q(company_role__isnull=True, role__code=WorkspaceRoleCode.OWNER)
+
+
+def company_active_admins(company: Company):
+    """The company's irreducible admin set for the never-orphan invariant.
+
+    See `_admin_floor_q` for the unified definition. Used by remove_company_member,
+    set_member_workspace_role and toggle_user_active — all share this one query.
+    """
+    return CompanyMember.objects.filter(_admin_floor_q(), company=company, is_active=True)
 
 
 def remove_company_member(
@@ -151,11 +179,12 @@ def remove_company_member(
     """
     Remove a member, enforcing the never-orphan invariant.
 
-    A company must ALWAYS keep at least one active admin (OWNER) — the party
-    accountable for KYC/billing. Removing the last one would orphan the company,
-    so it's refused; the admin role must be transferred first.
+    A company must ALWAYS keep at least one active admin — the party accountable
+    for KYC/billing. Removing the last one would orphan the company, so it's
+    refused; the admin role must be transferred first. "Admin" is the unified
+    is_system / legacy-OWNER floor (see `_admin_floor_q`).
     """
-    is_admin = membership.is_active and membership.role_id and membership.role.code == WorkspaceRoleCode.OWNER
+    is_admin = membership.is_active and company_active_admins(membership.company).filter(pk=membership.pk).exists()
     if is_admin:
         other_admins = company_active_admins(membership.company).exclude(pk=membership.pk)
         if not other_admins.exists():
@@ -173,8 +202,11 @@ def set_member_workspace_role(
 
     Invariants:
       - role must exist and be applicable to the company's type(s);
-      - never-orphan: the LAST active admin (OWNER) cannot be demoted away from
-        OWNER (transfer/promote someone else first) → CANNOT_DEMOTE_LAST_COMPANY_ADMIN.
+      - never-orphan: if this member is the company's SOLE admin (unified floor,
+        see `_admin_floor_q`) and the new WorkspaceRole would strip their admin
+        standing, refuse → CANNOT_DEMOTE_LAST_COMPANY_ADMIN (transfer first). A
+        member on the is_system CompanyRole keeps admin standing regardless of the
+        WorkspaceRole label, so relabeling them is never blocked.
     """
     role = WorkspaceRole.objects.filter(code=role_code).first()
     if not role:
@@ -187,8 +219,13 @@ def set_member_workspace_role(
         if not (company_type_codes & allowed_codes):
             return None, "WORKSPACE_ROLE_NOT_APPLICABLE_TO_COMPANY_TYPE"
 
-    currently_admin = membership.is_active and membership.role_id and membership.role.code == WorkspaceRoleCode.OWNER
-    if currently_admin and role.code != WorkspaceRoleCode.OWNER:
+    currently_admin = (
+        membership.is_active and company_active_admins(membership.company).filter(pk=membership.pk).exists()
+    )
+    would_stay_admin = bool(
+        (membership.company_role_id and membership.company_role.is_system) or role.code == WorkspaceRoleCode.OWNER
+    )
+    if currently_admin and not would_stay_admin:
         other_admins = company_active_admins(membership.company).exclude(pk=membership.pk)
         if not other_admins.exists():
             return None, "CANNOT_DEMOTE_LAST_COMPANY_ADMIN"
@@ -209,13 +246,14 @@ def toggle_user_active(
     if user.pk == requester.pk:
         return None, "CANNOT_DEACTIVATE_SELF"
     # Never-orphan (audit L3): deactivating the user disables their account platform-wide; if
-    # they are the SOLE active OWNER of any company, that company would be left with no admin
-    # (no one to manage team/KYC/billing). Block — transfer ownership first.
+    # they are the SOLE active admin of any company, that company would be left with no admin
+    # (no one to manage team/KYC/billing). Block — transfer ownership first. "Admin" is the
+    # unified is_system / legacy-OWNER floor (see `_admin_floor_q`), matching every other check.
     if user.is_active:  # about to deactivate
-        owner_memberships = CompanyMember.objects.filter(
-            user=user, is_active=True, role__code=WorkspaceRoleCode.OWNER
+        admin_memberships = CompanyMember.objects.filter(
+            _admin_floor_q(), user=user, is_active=True
         ).select_related("company")
-        for membership in owner_memberships:
+        for membership in admin_memberships:
             if not company_active_admins(membership.company).exclude(user=user).exists():
                 return None, "CANNOT_DEACTIVATE_SOLE_COMPANY_ADMIN"
         # Operator-plane never-orphan (ADR-0004 G1): deactivating the sole operator who can

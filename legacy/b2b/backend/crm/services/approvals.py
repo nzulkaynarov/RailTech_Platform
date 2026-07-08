@@ -13,7 +13,7 @@ from typing import Optional, Tuple
 from django.db import transaction
 from django.utils import timezone
 
-from accounts.constants import Permission, WorkspaceRoleCode
+from accounts.constants import Permission
 from accounts.models import CompanyMember
 from accounts.services.permissions import member_has_permission
 from crm.constants import QuoteStatusCode
@@ -34,9 +34,12 @@ def _members_with_permission(company_id: int, perm: str) -> list:
 
 
 def _fallback_head(company_id: int) -> Optional[CompanyMember]:
-    """Never-orphan: if no quote.approve_final holder is found, the company OWNER is the head."""
+    """Never-orphan head fallback (ADR-0005 Phase E U3): if no quote.approve_final holder is
+    found, fall back to the company's immutable admin (is_system «Администратор компании») — the
+    never-orphan floor, which always carries quote.approve_final. No WorkspaceRole read. Returns
+    None only for an admin-less company (a state never-orphan prevents); the caller logs that."""
     return (
-        CompanyMember.objects.filter(company_id=company_id, is_active=True, role__code=WorkspaceRoleCode.OWNER)
+        CompanyMember.objects.filter(company_id=company_id, is_active=True, company_role__is_system=True)
         .select_related("user")
         .first()
     )
@@ -94,6 +97,12 @@ def build_approval_chain(quote: Quote, company_id: int, economics: Optional[dict
 
     head_candidates = _members_with_permission(company_id, Permission.QUOTE_APPROVE_FINAL.value)
     head_member = head_candidates[0] if head_candidates else _fallback_head(company_id)
+    if head_member is None:
+        logger.warning(
+            "build_approval_chain: company %s has no quote.approve_final holder and no is_system "
+            "admin — the head approval step will have no approver (company is orphaned)",
+            company_id,
+        )
     head_ids = {m.id for m in head_candidates}
     reviewers = [m for m in _members_with_permission(company_id, Permission.QUOTE_REVIEW.value) if m.id not in head_ids]
 
