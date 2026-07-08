@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { translateApiError } from '@/lib/apiError';
-import { Receipt, Download, DollarSign, ScrollText } from 'lucide-react';
+import { Receipt, DollarSign, ScrollText } from 'lucide-react';
+import { DocumentActions } from '@/components/Shared/DocumentActions';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -27,7 +28,6 @@ import {
 import { useIsViewerMode } from '@/hooks/useViewerMode';
 import { useUserStore } from '@/store/userStore';
 import { useCurrencyStore } from '@/store/currencyStore';
-import { invoicesApi } from '@/api/billingApi';
 import type { Invoice, InvoiceStatus } from '@/api/billingApi';
 
 const STATUS_VARIANT: Record<InvoiceStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -212,19 +212,11 @@ export function InvoicesPage() {
               <Separator />
               <div className="flex flex-col gap-2">
                 {selected.pdf_url && (
-                  <Button
-                    variant="outline"
-                    onClick={async () => {
-                      try {
-                        await invoicesApi.downloadPdf(selected.id);
-                      } catch (e) {
-                        toast.error(translateApiError(e));
-                      }
-                    }}
-                  >
-                    <Download className="mr-2 h-4 w-4" />
-                    {t('invoicesPage.downloadPdf')}
-                  </Button>
+                  <DocumentActions
+                    request={() => ({ path: `crm/invoices/${selected.id}/download-pdf/` })}
+                    filenameBase={`RailTech_Invoice_${selected.id}`}
+                    size="default"
+                  />
                 )}
                 {isBuyer && selected.status !== 'PAID' && selected.status !== 'CANCELLED' && (
                   <Button

@@ -2,10 +2,10 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { translateApiError } from '@/lib/apiError';
-import { ScrollText, Download, PenLine } from 'lucide-react';
+import { ScrollText, PenLine } from 'lucide-react';
+import { DocumentActions } from '@/components/Shared/DocumentActions';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
@@ -15,7 +15,6 @@ import {
 } from '@/components/DataTable';
 import { useActs, useSignAct } from '@/hooks/useBilling';
 import { useIsViewerMode } from '@/hooks/useViewerMode';
-import { actsApi } from '@/api/billingApi';
 import type { ActStatus } from '@/api/billingApi';
 
 const STATUS_VARIANT: Record<ActStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -127,19 +126,12 @@ export function ActsPage() {
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
                             {a.pdf_url && (
-                              <Button
+                              <DocumentActions
+                                request={() => ({ path: `crm/acts/${a.id}/download-pdf/` })}
+                                filenameBase={`RailTech_Act_${a.id}`}
                                 variant="ghost"
-                                size="sm"
-                                onClick={async () => {
-                                  try {
-                                    await actsApi.downloadPdf(a.id);
-                                  } catch (e) {
-                                    toast.error(translateApiError(e));
-                                  }
-                                }}
-                              >
-                                <Download className="h-4 w-4" />
-                              </Button>
+                                iconOnly
+                              />
                             )}
                             {a.status === 'ISSUED' && (
                               <label
