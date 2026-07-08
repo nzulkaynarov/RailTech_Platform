@@ -252,6 +252,31 @@ Hard limits (per docker-compose.prod.yml): backend ≤1.2 G, celery-worker ≤76
 beat ≤192 M, redis×2 ≤160 M each, minio ≤320 M. Total ceiling ~2.6 G — fits the
 ~2.7 G free alongside GradeSentinel, but watch during Excel-import bursts.
 
+## DB connection budget (why a deploy once hit "connection slots reserved")
+
+dj-db-conn-pool opens a SQLAlchemy pool **per process**. The stack has ~9
+pool-owning processes (gunicorn ×2, celery-worker parent+2, celery-worker-ai
+parent+2, beat). Peak connections = `9 × (DB_POOL_SIZE + DB_MAX_OVERFLOW)`.
+
+The old `10 + 20` gave a ~270 ceiling → it exhausted the DB-VPS
+(`SHOW max_connections;` default 100) and the INF-04 backup gate then failed with
+`FATAL: remaining connection slots are reserved for roles with the SUPERUSER
+attribute` (2026-07-08 incident). New defaults `DB_POOL_SIZE=3` /
+`DB_MAX_OVERFLOW=5` → ~72 ceiling, ~27 idle; `DB_CONN_MAX_AGE=0` returns each
+connection to the pool per request. All three are env-tunable (no code deploy).
+
+**Diagnose / mitigate on the DB-VPS:**
+```bash
+psql "$DATABASE_URL" -c "SHOW max_connections;"
+psql "$DATABASE_URL" -c "SELECT count(*), usename, state FROM pg_stat_activity GROUP BY usename, state ORDER BY 1 DESC;"
+# reset the app pools (frees connections immediately):
+cd /opt/railtech-b2b && docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+  restart backend celery-worker celery-worker-ai celery-beat
+```
+If peak still crowds `max_connections`, lower `DB_MAX_OVERFLOW` (or raise the
+server's `max_connections` and `superuser_reserved_connections` headroom). Keep
+`9 × (POOL_SIZE + MAX_OVERFLOW) + ~15 (backup/migrations/psql) < max_connections`.
+
 ## Pre-deploy backups & restore (INF-04)
 
 Every deploy takes a `pg_dump -Fc` of the prod DB **before** applying migrations
