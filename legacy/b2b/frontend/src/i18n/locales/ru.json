@@ -1208,6 +1208,44 @@
         "sent": "Письмо отправлено на {{email}}",
         "failed": "Не удалось отправить письмо"
       }
+    },
+    "leads": {
+      "title": "Лиды",
+      "subtitle": "Входящие заявки с лендинга",
+      "searchPlaceholder": "Поиск по имени, email, компании…",
+      "tabs": {
+        "all": "Все",
+        "new": "Новые",
+        "processed": "Обработанные"
+      },
+      "col": {
+        "name": "Имя",
+        "company": "Компания",
+        "email": "Email",
+        "phone": "Телефон",
+        "created": "Получен",
+        "status": "Статус"
+      },
+      "status": {
+        "new": "Новый",
+        "processed": "Обработан"
+      },
+      "actions": {
+        "convert": "Конвертировать в сделку"
+      },
+      "toast": {
+        "converted": "Лид сконвертирован в сделку #{{id}}"
+      },
+      "empty": {
+        "title": "Лидов пока нет",
+        "description": "Входящие заявки с публичного лендинга появятся здесь"
+      },
+      "detail": {
+        "title": "Лид",
+        "message": "Сообщение",
+        "noMessage": "Без сообщения",
+        "noCompany": "Компания не указана"
+      }
     }
   },
   "timeline": {
@@ -1762,6 +1800,7 @@
     "adminAccessLog": "Журнал доступа",
     "adminEmailTemplates": "Email-шаблоны",
     "adminRoleApps": "Заявки на роли",
+    "adminLeads": "Лиды",
     "adminMasterData": "Справочники",
     "adminSupport": "Тикеты поддержки",
     "adminCatalog": "Каталог (админ)",

@@ -21,6 +21,7 @@ import {
   LifeBuoy,
   Mail,
   ScrollText,
+  Inbox,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -122,6 +123,7 @@ function getAdminNavigation(
     },
     { label: t('shell.entitlements'), icon: <KeyRound className="h-4 w-4" />, id: 'admin-entitlements', active: activePage === 'admin-entitlements', requires: 'billing.view' },
     { label: t('shell.roleApplications'), icon: <ClipboardList className="h-4 w-4" />, id: 'admin-role-apps', active: activePage === 'admin-role-apps', badge: attention.roleApps, requires: 'moderation.role_applications' },
+    { label: t('shell.leads'), icon: <Inbox className="h-4 w-4" />, id: 'admin-leads', active: activePage === 'admin-leads' },
     { label: t('shell.adminDeals'), icon: <Handshake className="h-4 w-4" />, id: 'admin-deals', active: activePage === 'admin-deals' },
     { label: t('shell.adminQuotes'), icon: <FileText className="h-4 w-4" />, id: 'crm-quotes', active: activePage === 'crm-quotes' },
     { label: t('shell.adminContracts'), icon: <FileSignature className="h-4 w-4" />, id: 'contracts', active: activePage === 'contracts' },

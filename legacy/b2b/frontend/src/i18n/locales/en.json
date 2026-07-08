@@ -1206,6 +1206,44 @@
         "sent": "Email sent to {{email}}",
         "failed": "Failed to send the email"
       }
+    },
+    "leads": {
+      "title": "Leads",
+      "subtitle": "Inbound requests from the landing page",
+      "searchPlaceholder": "Search by name, email, company…",
+      "tabs": {
+        "all": "All",
+        "new": "New",
+        "processed": "Processed"
+      },
+      "col": {
+        "name": "Name",
+        "company": "Company",
+        "email": "Email",
+        "phone": "Phone",
+        "created": "Received",
+        "status": "Status"
+      },
+      "status": {
+        "new": "New",
+        "processed": "Processed"
+      },
+      "actions": {
+        "convert": "Convert to deal"
+      },
+      "toast": {
+        "converted": "Lead converted to deal #{{id}}"
+      },
+      "empty": {
+        "title": "No leads yet",
+        "description": "Inbound requests from the public landing page will show up here"
+      },
+      "detail": {
+        "title": "Lead",
+        "message": "Message",
+        "noMessage": "No message",
+        "noCompany": "No company given"
+      }
     }
   },
   "timeline": {
@@ -1758,6 +1796,7 @@
     "adminAccessLog": "Access log",
     "adminEmailTemplates": "Email templates",
     "adminRoleApps": "Role Applications",
+    "adminLeads": "Leads",
     "adminMasterData": "Master Data",
     "adminSupport": "Support Tickets",
     "adminCatalog": "Catalog (admin)",

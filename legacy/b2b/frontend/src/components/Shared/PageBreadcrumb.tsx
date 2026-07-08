@@ -46,6 +46,7 @@ const pageI18nKeys: Record<string, string> = {
   'admin-access-log': 'breadcrumbs.adminAccessLog',
   'admin-email-templates': 'breadcrumbs.adminEmailTemplates',
   'admin-role-apps': 'breadcrumbs.adminRoleApps',
+  'admin-leads': 'breadcrumbs.adminLeads',
   'admin-master-data': 'breadcrumbs.adminMasterData',
   'admin-operator-roles': 'breadcrumbs.adminOperatorRoles',
   'admin-support': 'breadcrumbs.adminSupport',

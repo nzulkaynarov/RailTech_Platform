@@ -88,3 +88,14 @@ global.IntersectionObserver = class IntersectionObserver {
   unobserve() {}
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 } as any;
+
+// Radix primitives (DropdownMenu/Select/…) call these Pointer/scroll APIs that jsdom
+// doesn't implement — without the shims their triggers never open in tests.
+if (!Element.prototype.hasPointerCapture) {
+  Element.prototype.hasPointerCapture = () => false;
+  Element.prototype.releasePointerCapture = () => {};
+  Element.prototype.setPointerCapture = () => {};
+}
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = () => {};
+}
