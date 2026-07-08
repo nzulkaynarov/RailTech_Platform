@@ -156,7 +156,10 @@ export function CompanyDocumentProfileSettings() {
         <p className="mt-1 text-sm text-muted-foreground">{t('documentProfile.subtitle')}</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      {/* Form/preview split: the editor is a fixed-width sidebar, the live document preview
+          takes the rest (A4 КП needs the room to render all columns). Capped so it doesn't
+          sprawl on ultra-wide monitors. */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,440px)_1fr]">
         <div className="space-y-6">
           {companyId != null && (
             <ImageUpload
