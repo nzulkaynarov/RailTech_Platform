@@ -59,7 +59,7 @@ def _render(quote, buyer, supplier, profile):
             "contract": contract,
             "deal": quote.deal,
             "company": buyer,
-            "supplier": supplier,
+            "seller": supplier,
             "seller_profile": profile,
             "quote": quote,
             "items": quote.items.all(),

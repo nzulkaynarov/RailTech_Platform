@@ -634,22 +634,14 @@ class QuoteLifecycleService:
         )
 
         seller_company = QuoteLifecycleService._assert_renderable(quote)
-        # The seller's filled-in document profile (legal name, requisites, logo, footer).
-        # When present, the «Поставщик» block + header logo + footer render from it; when
-        # absent the template falls back to the seller Company fields → platform name.
-        seller_profile = _seller_document_profile(seller_company)
-        seller_logo_url = None
-        if seller_profile and seller_profile.logo:
-            try:
-                seller_logo_url = seller_profile.logo.url
-            except (ValueError, OSError):  # storage backend unavailable / missing key
-                seller_logo_url = None
-
-        # Watermark «ДЕМО — не для коммерческого использования» whenever the seller cannot
-        # commercially SEND this КП — i.e. an explicit DEMO grant, no operational subscription, OR
-        # (ADR-0006 Phase E) no KYC («без KYC только демо»). Building + previewing stays free; only a
-        # fully verified + subscribed seller gets a clean, sendable document.
+        # Shared branding bundle (issuing company + its document profile + logo) — the same
+        # shape every document feeds the base template. Watermark «ДЕМО» whenever the seller
+        # cannot commercially SEND this КП (explicit DEMO grant, no operational subscription,
+        # OR — ADR-0006 Phase E — no KYC). Building/previewing stays free; only a fully verified
+        # + subscribed seller gets a clean, sendable document.
         from accounts.services.entitlements import quote_send_entitled
+
+        from .documents import document_brand_context
 
         html_string = render_to_string(
             "crm/quote_pdf.html",
@@ -657,10 +649,7 @@ class QuoteLifecycleService:
                 "quote": quote,
                 "items": quote.items.select_related("product", "frozen_currency").all(),
                 "company": quote.deal.company,
-                "seller": seller_company,
-                "seller_profile": seller_profile,
-                "seller_logo_url": seller_logo_url,
-                "is_demo": not quote_send_entitled(seller_company.id),
+                **document_brand_context(seller_company, is_demo=not quote_send_entitled(seller_company.id)),
             },
         )
 

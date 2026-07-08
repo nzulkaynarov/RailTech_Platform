@@ -1,271 +1,27 @@
-<!DOCTYPE html>
+{% extends "crm/_document_base.html" %}
 {% comment %}
   Client-facing КП (commercial offer) — CLIENT PROJECTION.
 
-  Hard rule (UNCHANGED): never expose seller cost internals from which the buyer
-  could derive the markup — no landed_cost, margin_percent, logistics_cost,
-  customs_duty or any QuoteCharge row here. Only the per-unit sale price, line
-  totals and the document totals bridge (subtotal → charges-as-one-line → VAT →
-  total) are shown, all in the КП presentation currency (quote_currency, UZS).
+  Hard rule (UNCHANGED): never expose seller cost internals from which the buyer could
+  derive the markup — no landed_cost, margin_percent, logistics_cost, customs_duty or any
+  QuoteCharge row here, and NO FX/CBU rate snapshot (soft sourcing leak). Only the per-unit
+  sale price, line totals and the document totals bridge (subtotal → charges-as-one-line →
+  VAT → total) are shown, all in the КП presentation currency (quote_currency, UZS).
 
-  Context variables (set by QuoteLifecycleService.generate_pdf): quote, items,
-  company (the buyer), seller (the issuing Company, may be None), seller_profile (the
-  selling company's branded CompanyDocumentProfile — legal name, requisites, signatory,
-  footer, accent color; may be None) and seller_logo_url (its logo, may be None).
-
-  The «Поставщик» block + header logo + footer render from seller_profile when present,
-  falling back to the seller Company fields and finally the platform name when absent.
-  CSS is inline + WeasyPrint-supported (no flexbox/grid reliance; tables for layout).
+  Branding (header logo, «Поставщик» block, accent, footer, DEMO watermark) is provided by
+  the shared base from the seller's CompanyDocumentProfile. Context: quote, items, company
+  (buyer) + the brand bundle (seller, seller_profile, seller_logo_url, is_demo).
 {% endcomment %}
-<html lang="ru">
-<head>
-<meta charset="utf-8">
-<style>
-  @page {
-    size: A4;
-    margin: 18mm 16mm 20mm 16mm;
-    @bottom-center {
-      content: "Стр. " counter(page) " из " counter(pages);
-      font-family: 'Helvetica', 'Arial', sans-serif;
-      font-size: 8pt;
-      color: #9aa0a6;
-    }
-  }
+{% block doc_meta %}
+  <div class="doc-no">{% if quote.number %}КП № {{ quote.number }}{% else %}КП № {{ quote.deal_id }}-{{ quote.version }}{% endif %}</div>
+  <div>от {{ quote.created_at|date:"d.m.Y" }}</div>
+  {% if quote.valid_until %}<div>действ. до {{ quote.valid_until|date:"d.m.Y" }}</div>{% endif %}
+{% endblock %}
 
-  * { box-sizing: border-box; }
+{% block doc_title %}Коммерческое предложение{% endblock %}
 
-  body {
-    font-family: 'Helvetica', 'Arial', sans-serif;
-    font-size: 9.5pt;
-    line-height: 1.45;
-    color: #20242b;
-    margin: 0;
-  }
-
-  /* ── Brand header ─────────────────────────────────────────── */
-  .brandbar {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 14pt;
-  }
-  .brandbar td { vertical-align: top; padding: 0; }
-  .brand-name {
-    font-size: 16pt;
-    font-weight: 700;
-    color: #15294d;
-    letter-spacing: 0.2pt;
-  }
-  .brand-meta { font-size: 8.5pt; color: #5a6270; margin-top: 2pt; }
-  .doc-id {
-    text-align: right;
-    font-size: 8.5pt;
-    color: #5a6270;
-  }
-  .doc-id .doc-no {
-    font-size: 13pt;
-    font-weight: 700;
-    color: #15294d;
-    letter-spacing: 0.2pt;
-  }
-  .rule {
-    height: 2.5pt;
-    background: #15294d;
-    margin: 0 0 16pt 0;
-  }
-
-  h1.offer-title {
-    font-size: 14pt;
-    font-weight: 700;
-    color: #15294d;
-    margin: 0 0 14pt 0;
-  }
-
-  /* ── Parties ──────────────────────────────────────────────── */
-  .parties { width: 100%; border-collapse: separate; border-spacing: 10pt 0; margin-bottom: 16pt; }
-  .parties td { vertical-align: top; width: 50%; }
-  .party {
-    border: 0.75pt solid #dfe3ea;
-    border-radius: 4pt;
-    padding: 9pt 11pt;
-    background: #f7f9fc;
-  }
-  .party h3 {
-    margin: 0 0 5pt 0;
-    font-size: 8pt;
-    text-transform: uppercase;
-    letter-spacing: 0.6pt;
-    color: #7a828f;
-    font-weight: 700;
-  }
-  .party .pname { font-weight: 700; font-size: 10.5pt; color: #20242b; }
-  .party p { margin: 1.5pt 0; font-size: 8.7pt; color: #3c424c; }
-
-  /* ── Line items ───────────────────────────────────────────── */
-  table.lines { width: 100%; border-collapse: collapse; margin-bottom: 4pt; }
-  table.lines thead th {
-    background: #15294d;
-    color: #ffffff;
-    padding: 7pt 7pt;
-    text-align: left;
-    font-size: 8pt;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.3pt;
-  }
-  table.lines tbody td {
-    padding: 6pt 7pt;
-    border-bottom: 0.5pt solid #e6e9ef;
-    font-size: 9pt;
-    vertical-align: top;
-  }
-  table.lines tbody tr:nth-child(even) { background: #f6f8fb; }
-  .num { text-align: right; white-space: nowrap; }
-  .center { text-align: center; white-space: nowrap; }
-  .item-name { font-weight: 600; color: #20242b; }
-  .item-sub { font-size: 7.6pt; color: #7a828f; margin-top: 1pt; }
-
-  /* ── Totals bridge ────────────────────────────────────────── */
-  .totals-wrap { width: 100%; border-collapse: collapse; margin-top: 12pt; }
-  .totals-wrap td { vertical-align: top; }
-  table.totals { width: 62%; border-collapse: collapse; margin-left: 38%; }
-  table.totals td { padding: 5pt 9pt; font-size: 9.2pt; }
-  table.totals td.lbl { color: #4a515c; }
-  table.totals td.val { text-align: right; white-space: nowrap; }
-  table.totals tr.sep td { border-top: 0.5pt solid #d7dbe3; }
-  table.totals tr.grand td {
-    background: #15294d;
-    color: #ffffff;
-    font-weight: 700;
-    font-size: 10.5pt;
-    border-radius: 3pt;
-  }
-
-  /* ── Notes / terms ────────────────────────────────────────── */
-  .terms { margin-top: 18pt; }
-  .term-box {
-    border-left: 2.5pt solid #15294d;
-    background: #f7f9fc;
-    padding: 7pt 11pt;
-    margin-bottom: 8pt;
-    font-size: 8.8pt;
-    color: #3c424c;
-  }
-  .term-box .k { font-weight: 700; color: #20242b; }
-  .valid-box {
-    border-left-color: #b8860b;
-    background: #fdf8ec;
-  }
-  .fx-note { font-size: 7.8pt; color: #8a909b; margin-top: 6pt; }
-  .notes-block { margin-top: 12pt; font-size: 8.8pt; color: #3c424c; }
-  .notes-block .k { font-weight: 700; color: #20242b; }
-
-  .footer {
-    margin-top: 26pt;
-    padding-top: 8pt;
-    border-top: 0.5pt solid #e6e9ef;
-    font-size: 7.6pt;
-    color: #9aa0a6;
-    text-align: center;
-  }
-  /* Move 4 monetization: DEMO watermark. position:fixed repeats on every page in WeasyPrint. */
-  .demo-watermark {
-    position: fixed;
-    top: 45%;
-    left: -5%;
-    right: -5%;
-    text-align: center;
-    transform: rotate(-27deg);
-    transform-origin: center;
-    /* 16pt/1pt keeps the full phrase inside A4 content width (~505pt) once rotated —
-       22pt/2pt overflowed the page edge and clipped the tail «…использования». */
-    font-size: 16pt;
-    font-weight: 700;
-    letter-spacing: 1pt;
-    color: rgba(200, 55, 55, 0.13);
-    white-space: nowrap;
-  }
-</style>
-</head>
-<body>
-  {% if is_demo %}<div class="demo-watermark">ДЕМО — не для коммерческого использования</div>{% endif %}
+{% block content %}
   {% with pres_ccy=quote.quote_currency.code|default:"UZS" %}
-  {% comment %} Seller display name: branded legal_name → Company name → platform. {% endcomment %}
-  {% firstof seller_profile.legal_name seller.name "RailTech B2B" as seller_name %}
-  {% with accent=seller_profile.accent_color|default:"#15294d" %}
-
-  <!-- ── Brand header ── -->
-  <table class="brandbar">
-    <tr>
-      {% if seller_logo_url %}
-      <td style="width:54pt; vertical-align:middle;">
-        <img src="{{ seller_logo_url }}" style="max-height:46pt; max-width:120pt;" alt="logo">
-      </td>
-      {% endif %}
-      <td>
-        <div class="brand-name" {% if accent %}style="color:{{ accent }};"{% endif %}>{% if seller_name %}{{ seller_name }}{% else %}RailTech B2B{% endif %}</div>
-        <div class="brand-meta">
-          {% if seller_profile %}
-            {% if seller_profile.inn %}ИНН {{ seller_profile.inn }}{% elif seller.inn %}ИНН {{ seller.inn }}{% endif %}
-            {% if seller.phone %} · тел. {{ seller.phone }}{% endif %}
-            {% if seller.email %} · {{ seller.email }}{% endif %}
-          {% elif seller %}
-            {% if seller.inn %}ИНН {{ seller.inn }}{% endif %}
-            {% if seller.phone %} · тел. {{ seller.phone }}{% endif %}
-            {% if seller.email %} · {{ seller.email }}{% endif %}
-          {% else %}
-            RailTech B2B Ecosystem
-          {% endif %}
-        </div>
-      </td>
-      <td class="doc-id">
-        <div class="doc-no">{% if quote.number %}КП № {{ quote.number }}{% else %}КП № {{ quote.deal_id }}-{{ quote.version }}{% endif %}</div>
-        <div>от {{ quote.created_at|date:"d.m.Y" }}</div>
-        {% if quote.valid_until %}<div>действ. до {{ quote.valid_until|date:"d.m.Y" }}</div>{% endif %}
-      </td>
-    </tr>
-  </table>
-  <div class="rule" {% if accent %}style="background:{{ accent }};"{% endif %}></div>
-
-  <h1 class="offer-title">Коммерческое предложение</h1>
-
-  <!-- ── Parties ── -->
-  <table class="parties">
-    <tr>
-      <td>
-        <div class="party">
-          <h3>Поставщик</h3>
-          {% if seller_profile %}
-            <div class="pname">{{ seller_profile.legal_name|default:seller.name }}</div>
-            {% if seller_profile.inn %}<p>ИНН: {{ seller_profile.inn }}</p>{% elif seller.inn %}<p>ИНН: {{ seller.inn }}</p>{% endif %}
-            {% if seller_profile.legal_address %}<p>{{ seller_profile.legal_address }}</p>{% elif seller.legal_address %}<p>{{ seller.legal_address }}</p>{% endif %}
-            {% if seller_profile.bank_details %}<p>{{ seller_profile.bank_details|linebreaksbr }}</p>{% endif %}
-            {% if seller.phone %}<p>Тел.: {{ seller.phone }}</p>{% endif %}
-            {% if seller.email %}<p>{{ seller.email }}</p>{% endif %}
-            {% if seller_profile.signatory_name %}<p>{{ seller_profile.signatory_position|default:"Подписант" }}: {{ seller_profile.signatory_name }}</p>{% endif %}
-          {% elif seller %}
-            <div class="pname">{{ seller.name }}</div>
-            {% if seller.inn %}<p>ИНН: {{ seller.inn }}</p>{% endif %}
-            {% if seller.legal_address %}<p>{{ seller.legal_address }}</p>{% endif %}
-            {% if seller.phone %}<p>Тел.: {{ seller.phone }}</p>{% endif %}
-            {% if seller.email %}<p>{{ seller.email }}</p>{% endif %}
-          {% else %}
-            <div class="pname">RailTech B2B</div>
-            <p>Платформа b2b.railtech.uz</p>
-          {% endif %}
-        </div>
-      </td>
-      <td>
-        <div class="party">
-          <h3>Покупатель</h3>
-          <div class="pname">{{ company.name }}</div>
-          {% if company.inn %}<p>ИНН: {{ company.inn }}</p>{% endif %}
-          {% if company.legal_address %}<p>{{ company.legal_address }}</p>{% endif %}
-          {% if company.contact_person %}<p>Контакт: {{ company.contact_person }}</p>{% endif %}
-        </div>
-      </td>
-    </tr>
-  </table>
-
   <!-- ── Line items (client projection — NO cost/margin) ── -->
   <table class="lines">
     <thead>
@@ -348,10 +104,9 @@
     </div>
     {% endif %}
     {% comment %}
-      CBU FX-snapshot note intentionally NOT rendered on the client КП: the offer is
-      UZS-canonical (client projection) — the buyer only needs the final сум price, and
-      exposing the conversion rate is soft sourcing/margin leakage. A per-seller opt-in
-      «show FX basis» toggle is planned for the document-settings panel (P3).
+      CBU FX-snapshot note intentionally NOT rendered on the client КП — the offer is
+      UZS-canonical; exposing the conversion rate is soft sourcing leakage. A per-seller
+      opt-in «show FX basis» toggle is planned for the document-settings panel (P3).
     {% endcomment %}
   </div>
 
@@ -360,16 +115,5 @@
     <span class="k">Примечания:</span><br>{{ quote.notes|linebreaks }}
   </div>
   {% endif %}
-
-  <div class="footer">
-    {% if seller_profile.footer_text %}
-      {{ seller_profile.footer_text|linebreaksbr }}
-    {% else %}
-      Документ сформирован в RailTech B2B Ecosystem &middot; {{ quote.created_at|date:"d.m.Y" }}
-    {% endif %}
-  </div>
-
   {% endwith %}
-  {% endwith %}
-</body>
-</html>
+{% endblock %}

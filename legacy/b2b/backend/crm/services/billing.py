@@ -128,15 +128,15 @@ def _render_invoice_pdf(invoice) -> None:
     from weasyprint import HTML
 
     # Supplier = the REAL seller that owns the underlying КП (via the invoice's contract),
-    # plus its branded document profile — NEVER a hardcoded platform identity. An invoice is a
-    # legal document and must name the real counterparty (Rule 1/2). Falls back gracefully when
-    # the seller can't be resolved (manual invoice without a contract) — the template shows "—",
-    # not a fake ИНН.
-    from .quotes import _quote_seller_company, _seller_document_profile
+    # plus its branded document profile (shared document_brand_context) — NEVER a hardcoded
+    # platform identity. An invoice is a legal document and must name the real counterparty
+    # (Rule 1/2). Falls back gracefully when the seller can't be resolved (manual invoice
+    # without a contract) — the template shows "—", not a fake ИНН.
+    from .documents import document_brand_context
+    from .quotes import _quote_seller_company
 
     quote = invoice.contract.quote if (invoice.contract_id and invoice.contract.quote_id) else None
     supplier = _quote_seller_company(quote) if quote else None
-    seller_profile = _seller_document_profile(supplier) if supplier else None
 
     html_string = render_to_string(
         "crm/invoice_pdf.html",
@@ -144,8 +144,7 @@ def _render_invoice_pdf(invoice) -> None:
             "invoice": invoice,
             "items": invoice.items.select_related("source_quote_item").all(),
             "company": invoice.deal.company,
-            "supplier": supplier,
-            "seller_profile": seller_profile,
+            **document_brand_context(supplier),
         },
     )
     buf = BytesIO()
@@ -333,12 +332,21 @@ def _render_act_pdf(act) -> None:
     from django.template.loader import render_to_string
     from weasyprint import HTML
 
+    # Real seller (via the act's contract → КП) so «От Поставщика» names the counterparty,
+    # not a blank line. Shared branding bundle, same shape as every other document.
+    from .documents import document_brand_context
+    from .quotes import _quote_seller_company
+
+    quote = act.contract.quote if (act.contract_id and act.contract.quote_id) else None
+    supplier = _quote_seller_company(quote) if quote else None
+
     html_string = render_to_string(
         "crm/act_pdf.html",
         {
             "act": act,
             "invoice": act.invoice,
             "company": act.deal.company,
+            **document_brand_context(supplier),
         },
     )
     buf = BytesIO()
