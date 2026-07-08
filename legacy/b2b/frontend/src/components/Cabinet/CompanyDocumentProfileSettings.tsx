@@ -275,10 +275,13 @@ export function CompanyDocumentProfileSettings() {
             )}
           </div>
           <p className="text-xs text-muted-foreground">{t('documentProfile.previewHint')}</p>
+          {/* allow-same-origin lets Chrome actually PAINT the srcDoc (an opaque-origin
+              sandbox="" renders blank); scripts stay blocked (no allow-scripts) so any markup
+              a seller injects into their requisites can't execute in the preview. */}
           <iframe
             title={t('documentProfile.preview')}
             srcDoc={previewQuery.data ?? ''}
-            sandbox=""
+            sandbox="allow-same-origin"
             className="h-[70vh] w-full rounded-lg border border-border bg-white"
           />
         </div>
