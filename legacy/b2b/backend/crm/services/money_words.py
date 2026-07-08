@@ -30,7 +30,12 @@ _SCALES = [
     ("миллион", "миллиона", "миллионов", "m"),
     ("миллиард", "миллиарда", "миллиардов", "m"),
     ("триллион", "триллиона", "триллионов", "m"),
+    ("квадриллион", "квадриллиона", "квадриллионов", "m"),
+    ("квинтиллион", "квинтиллиона", "квинтиллионов", "m"),
 ]
+# Largest integer the scale table can spell (below 10^21). Beyond it we degrade gracefully instead
+# of an IndexError that would crash the whole WeasyPrint render for one oversized cell.
+_MAX_SPELLABLE = 10 ** (3 * (len(_SCALES) - 1) + 3)
 
 # Currency words: (main one/few/many + gender, subunit one/few/many). UZS «сум»/«тийин» are invariable.
 _CURRENCIES = {
@@ -114,17 +119,28 @@ def money_in_words(value, currency_code="UZS"):
     integer_part = int(amount)
     subunit = int((amount - integer_part) * 100)
 
-    (main_one, main_few, main_many, main_gender), (sub_one, sub_few, sub_many) = _CURRENCIES.get(
-        (currency_code or "").upper(), _DEFAULT_CURRENCY
-    )
+    if integer_part >= _MAX_SPELLABLE:
+        # Absurdly large total — degrade gracefully instead of crashing the WeasyPrint render;
+        # the numeric money cell still shows the value.
+        return "—"
 
-    words, base_group = _integer_to_words(integer_part)
-    words.extend(_group_to_words(base_group, main_gender) if integer_part else [])
-    words.append(_plural(integer_part, main_one, main_few, main_many))
+    known = _CURRENCIES.get((currency_code or "").upper())
+    if known:
+        (main_one, main_few, main_many, main_gender), (sub_one, sub_few, sub_many) = known
+        words, base_group = _integer_to_words(integer_part)
+        words.extend(_group_to_words(base_group, main_gender) if integer_part else [])
+        words.append(_plural(integer_part, main_one, main_few, main_many))
+        tail = f"{subunit:02d} {_plural(subunit, sub_one, sub_few, sub_many)}"
+    else:
+        # Unknown currency (e.g. CNY): NEVER claim «сум» — that would contradict the numeric total's
+        # currency. Spell the number (masculine) and append the raw ISO code + subunit as digits.
+        words, base_group = _integer_to_words(integer_part)
+        words.extend(_group_to_words(base_group, "m") if integer_part else [])
+        code = (currency_code or "").upper()
+        tail = f"{code} {subunit:02d}/100".strip()
 
     phrase = " ".join(part for part in words if part)
     phrase = phrase[:1].upper() + phrase[1:]
     if negative:
         phrase = "минус " + phrase
-    sub_word = _plural(subunit, sub_one, sub_few, sub_many)
-    return f"{phrase} {subunit:02d} {sub_word}"
+    return f"{phrase} {tail}"
