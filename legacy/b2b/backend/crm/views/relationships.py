@@ -98,4 +98,7 @@ class RelationshipViewSet(
         direction = self.request.query_params.get("direction")
         if direction in RelationshipDirection.values:
             queryset = queryset.filter(direction=direction)
-        return queryset
+        # Deterministic order — the counterparty book reads "most recently active first", and a
+        # unique -id tiebreaker keeps DRF pagination stable (an unordered queryset can drop or
+        # repeat rows across pages: UnorderedObjectListWarning).
+        return queryset.order_by("-last_interaction_at", "-id")
