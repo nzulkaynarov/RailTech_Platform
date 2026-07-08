@@ -64,9 +64,11 @@
 
 ---
 
-### INF-01 — Edge rate-limit в Caddy для `/api/v1/auth/*` и `/admin/*`
+### INF-01 — Edge rate-limit в Caddy для `/api/v1/auth/*` и `/admin/*` ✅ СДЕЛАНО (2026-07-08, на проде)
 
-**Проблема.** `deploy/caddy/b2b.railtech.uz.caddy` — «голый» reverse-proxy без единой rate_limit-директивы; `/api/*`, `/admin/*` идут прямо на `127.0.0.1:8000`. Единственный слой — DRF app-throttle (`core/settings.py:540-561`): покрывает `/api/v1/auth/*` именованными скоупами (`login 10/min`, `register 5/h`, `password_reset 5/h`, …), но **`/admin/*` (Django session-вьюхи) НЕ покрыт DRF-троттлингом вообще** — брутфорс/скан админки не ограничен ничем на edge.
+> Установлен модуль `caddy-ratelimit` (host Caddy 2.11.2→2.11.4, `apt-mark hold`), зоны auth 30/min + admin 60/min в `deploy/caddy/b2b.railtech.uz.caddy`, `order rate_limit before basicauth` в host-мастере. Проверено на проде: `/admin/login/` 61-й запрос/мин → 429 `server: Caddy`; оба тенанта (b2b+grades) живы. Процедура установки/обновления/отката — в RUNBOOK § «Edge rate-limit (INF-01)».
+
+**Проблема (исходная).** `deploy/caddy/b2b.railtech.uz.caddy` — «голый» reverse-proxy без единой rate_limit-директивы; `/api/*`, `/admin/*` идут прямо на `127.0.0.1:8000`. Единственный слой — DRF app-throttle (`core/settings.py:540-561`): покрывает `/api/v1/auth/*` именованными скоупами (`login 10/min`, `register 5/h`, `password_reset 5/h`, …), но **`/admin/*` (Django session-вьюхи) НЕ покрыт DRF-троттлингом вообще** — брутфорс/скан админки не ограничен ничем на edge.
 
 **Решение (2-pronged):**
 
