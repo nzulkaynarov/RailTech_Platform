@@ -37,7 +37,7 @@ import { AICatalogMatchDialog } from '@/components/Admin/AICatalogMatchDialog';
 import { GenerateQuoteDialog } from '@/components/CRM/GenerateQuoteDialog';
 import { QuoteSettingsDialog } from '@/components/CRM/QuoteSettingsDialog';
 import { ReassignProductDialog } from '@/components/CRM/ReassignProductDialog';
-import { ExportMenu } from '@/components/Shared/ExportMenu';
+import { DocumentActions } from '@/components/Shared/DocumentActions';
 
 interface QuoteBuilderGridProps {
 	dealId?: number;
@@ -475,7 +475,12 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 				{/* Действия */}
 				<div className="mt-auto flex flex-col gap-2 pt-2">
 					{saveButton}
-					<ExportMenu quoteId={activeQuote.id} />
+					<DocumentActions
+						request={(format) => ({ path: `crm/quotes/${activeQuote.id}/export/`, params: { format } })}
+						filenameBase={`RailTech_Quote_${activeQuote.id}`}
+						formats={['pdf', 'xlsx', 'csv']}
+						variant="default"
+					/>
 				</div>
 			</div>
 		</div>

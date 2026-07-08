@@ -4780,6 +4780,19 @@
     "excel": "Excel",
     "csv": "CSV"
   },
+  "docActions": {
+    "menu": "Export",
+    "preview": "Preview",
+    "print": "Print",
+    "copyLink": "Copy link",
+    "linkCopied": "Link copied",
+    "popupBlocked": "Allow pop-ups to open the preview",
+    "download": {
+      "pdf": "Download PDF",
+      "xlsx": "Download Excel",
+      "csv": "Download CSV"
+    }
+  },
   "documentProfile": {
     "title": "Company document profile",
     "subtitle": "This data is printed in the «Supplier» block on quotes and contracts: logo, legal details, signatory and footer.",

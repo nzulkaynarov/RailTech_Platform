@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { translateApiError } from '@/lib/apiError';
-import { FileText, Download, PenLine, Upload, Ban, FileSignature, ShieldAlert } from 'lucide-react';
+import { FileText, PenLine, Upload, Ban, FileSignature, ShieldAlert } from 'lucide-react';
+import { DocumentActions } from '@/components/Shared/DocumentActions';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -30,7 +31,6 @@ import {
 import { useUserStore } from '@/store/userStore';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useIsViewerMode } from '@/hooks/useViewerMode';
-import { contractsApi } from '@/api/contractsApi';
 import type { Contract, ContractStatus } from '@/api/contractsApi';
 import { DealLink } from '@/components/Shared/DealLink';
 import { DocumentCheck } from '@/components/CRM/DocumentCheck';
@@ -286,19 +286,11 @@ export function ContractsPage() {
               )}
               <div className="flex flex-col gap-2">
                 {selected.pdf_url && (
-                  <Button
-                    variant="outline"
-                    onClick={async () => {
-                      try {
-                        await contractsApi.downloadPdf(selected.id);
-                      } catch (e) {
-                        toast.error(translateApiError(e));
-                      }
-                    }}
-                  >
-                    <Download className="mr-2 h-4 w-4" />
-                    {t('contractsPage.downloadPdf')}
-                  </Button>
+                  <DocumentActions
+                    request={() => ({ path: `crm/contracts/${selected.id}/download-pdf/` })}
+                    filenameBase={`RailTech_Contract_${selected.id}`}
+                    size="default"
+                  />
                 )}
                 {isBuyer && (selected.status === 'PENDING_CLIENT' || selected.status === 'DRAFT') && (
                   <Button
