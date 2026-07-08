@@ -40,6 +40,7 @@ const AdminKYCPage = lazyWithRetry(() => import('./pages/AdminKYCPage'));
 const AdminSubscriptionsPage = lazyWithRetry(() => import('./pages/AdminSubscriptionsPage'));
 const AdminEntitlementsPage = lazyWithRetry(() => import('./pages/AdminEntitlementsPage'));
 const AdminRoleApplicationsPage = lazyWithRetry(() => import('./pages/AdminRoleApplicationsPage'));
+const AdminLeadsPage = lazyWithRetry(() => import('./pages/AdminLeadsPage'));
 const AdminCatalogPage = lazyWithRetry(() => import('./pages/AdminCatalogPage'));
 const AdminCategoriesPage = lazyWithRetry(() => import('./pages/AdminCategoriesPage'));
 const AdminEquipmentGroupsPage = lazyWithRetry(() => import('./pages/AdminEquipmentGroupsPage'));
@@ -94,6 +95,7 @@ type Page =
   | { type: 'admin-operator-roles' }
   | { type: 'admin-access-log' }
   | { type: 'admin-support' }
+  | { type: 'admin-leads' }
   | { type: 'contracts' }
   | { type: 'invoices' }
   | { type: 'payments' }
@@ -305,7 +307,7 @@ const ADMIN_PAGES = new Set([
   'admin-users', 'admin-kyc', 'admin-subscriptions', 'admin-entitlements', 'admin-role-apps',
   'admin-catalog', 'admin-categories', 'admin-equipment-groups', 'admin-offers',
   'admin-companies', 'admin-deals', 'admin-master-data', 'admin-email-templates',
-  'admin-operator-roles', 'admin-access-log', 'admin-support',
+  'admin-operator-roles', 'admin-access-log', 'admin-support', 'admin-leads',
 ]);
 // ADR-0005 tier T0 (KYC pending): Главная/Профиль/каталог-read + utility pages.
 // `products` (catalog listing) and `product_detail` are catalog-READ, allowed pre-KYC;
@@ -471,7 +473,7 @@ function MainApp() {
       'admin-users', 'admin-kyc', 'admin-subscriptions', 'admin-entitlements', 'admin-role-apps',
       'admin-catalog', 'admin-categories', 'admin-equipment-groups', 'admin-offers',
       'admin-companies', 'admin-deals', 'admin-master-data', 'admin-email-templates',
-      'admin-operator-roles', 'admin-access-log', 'admin-support',
+      'admin-operator-roles', 'admin-access-log', 'admin-support', 'admin-leads',
       'contracts', 'invoices', 'payments', 'acts', 'fulfillments',
       'my-subscription', 'catalog-import',
     ];
@@ -633,6 +635,9 @@ function MainApp() {
       break;
     case 'admin-support':
       content = <AdminSupportPage />;
+      break;
+    case 'admin-leads':
+      content = <AdminLeadsPage />;
       break;
     case 'clients':
       content = <CounterpartiesPage direction="CLIENT" />;
