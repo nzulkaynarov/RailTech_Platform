@@ -1,3 +1,4 @@
+from django.db.models import Q
 from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
 from rest_framework import serializers as drf_serializers
 from rest_framework import status, viewsets
@@ -48,6 +49,26 @@ def _stream_or_render_pdf(obj):
     return stream_file_field(obj.pdf_file)
 
 
+def _billing_visibility_q(user, request, *, deal_path):
+    """Tenant-scope Q for a non-admin billing queryset.
+
+    A billing document (contract / invoice / act / payment / fulfillment) is
+    visible to a member of EITHER side of its deal: the buyer company that
+    initiated the deal, UNION the seller company the deal is routed to
+    (DealSellerRouting). Visibility is INDEPENDENT of the SPA X-Active-Context
+    header — a seller landing from the dashboard defaults to BUYER context and
+    must still see its routed deals' billing (WP-1 regression). The seller side
+    stays confined to ROUTED deals only, so a seller never sees an unrelated
+    buyer's records (hidden competition, ADR-0003 §5).
+
+    `deal_path` is the ORM lookup prefix from the queried model to its Deal FK:
+    "deal" for Contract/Invoice/Act/Fulfillment, "invoice__deal" for Payment.
+    """
+    seller_deal_ids = seller_visible_deal_ids(user, request, force=True) or set()
+    user_company_ids = list(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
+    return Q(**{f"{deal_path}__company_id__in": user_company_ids}) | Q(**{f"{deal_path}_id__in": seller_deal_ids})
+
+
 class Phase2StatusChoicesView(APIView):
     """Expose TextChoices-style status sets of the Phase 2 business models
     so the frontend doesn't hardcode them (IRON RULE 2).
@@ -94,15 +115,12 @@ class ContractViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
         qs = Contract.objects.select_related(
             "deal__company", "quote", "currency", "client_signer", "manager_signer", "status"
         ).order_by("-created_at")
-        # Platform admin sees every billing record; a context-seller sees only records
-        # on deals routed to them (multi-seller); buyer sees its own company's records.
+        # Platform admin sees every billing record; otherwise BOTH sides of a deal
+        # (buyer company + routed seller) see its records, regardless of the SPA
+        # X-Active-Context header (WP-1). Seller side stays routing-scoped.
         if getattr(user, "is_platform_admin", False):
             return qs
-        visible_deal_ids = seller_visible_deal_ids(user, self.request)
-        if visible_deal_ids is not None:
-            return qs.filter(deal_id__in=visible_deal_ids)
-        user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
-        return qs.filter(deal__company_id__in=user_company_ids)
+        return qs.filter(_billing_visibility_q(user, self.request, deal_path="deal")).distinct()
 
     # Private PDFs are streamed through these authenticated endpoints (get_object
     # enforces tenant scope) — NOT via the raw /media URL, which 404s on prod
@@ -232,15 +250,12 @@ class InvoiceViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
             )
             .order_by("-created_at")
         )
-        # Platform admin sees every billing record; a context-seller sees only records
-        # on deals routed to them (multi-seller); buyer sees its own company's records.
+        # Platform admin sees every billing record; otherwise BOTH sides of a deal
+        # (buyer company + routed seller) see its records, regardless of the SPA
+        # X-Active-Context header (WP-1). Seller side stays routing-scoped.
         if getattr(user, "is_platform_admin", False):
             return qs
-        visible_deal_ids = seller_visible_deal_ids(user, self.request)
-        if visible_deal_ids is not None:
-            return qs.filter(deal_id__in=visible_deal_ids)
-        user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
-        return qs.filter(deal__company_id__in=user_company_ids)
+        return qs.filter(_billing_visibility_q(user, self.request, deal_path="deal")).distinct()
 
     @action(detail=True, methods=["get"], url_path="download-pdf")
     def download_pdf(self, request, pk=None):
@@ -313,15 +328,12 @@ class PaymentViewSet(viewsets.ModelViewSet):
             return Payment.objects.none()
         user = self.request.user
         qs = Payment.objects.select_related("invoice__deal__company").order_by("-paid_at")
-        # Platform admin sees every billing record; a context-seller sees only records
-        # on deals routed to them (multi-seller); buyer sees its own company's records.
+        # Platform admin sees every billing record; otherwise BOTH sides of a deal
+        # (buyer company + routed seller) see its records, regardless of the SPA
+        # X-Active-Context header (WP-1). Payment reaches its deal via invoice__deal.
         if getattr(user, "is_platform_admin", False):
             return qs
-        visible_deal_ids = seller_visible_deal_ids(user, self.request)
-        if visible_deal_ids is not None:
-            return qs.filter(invoice__deal_id__in=visible_deal_ids)
-        user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
-        return qs.filter(invoice__deal__company_id__in=user_company_ids)
+        return qs.filter(_billing_visibility_q(user, self.request, deal_path="invoice__deal")).distinct()
 
 
 class ActViewSet(viewsets.ModelViewSet):
@@ -333,15 +345,12 @@ class ActViewSet(viewsets.ModelViewSet):
             return Act.objects.none()
         user = self.request.user
         qs = Act.objects.select_related("deal__company", "contract", "invoice", "status").order_by("-created_at")
-        # Platform admin sees every billing record; a context-seller sees only records
-        # on deals routed to them (multi-seller); buyer sees its own company's records.
+        # Platform admin sees every billing record; otherwise BOTH sides of a deal
+        # (buyer company + routed seller) see its records, regardless of the SPA
+        # X-Active-Context header (WP-1). Seller side stays routing-scoped.
         if getattr(user, "is_platform_admin", False):
             return qs
-        visible_deal_ids = seller_visible_deal_ids(user, self.request)
-        if visible_deal_ids is not None:
-            return qs.filter(deal_id__in=visible_deal_ids)
-        user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
-        return qs.filter(deal__company_id__in=user_company_ids)
+        return qs.filter(_billing_visibility_q(user, self.request, deal_path="deal")).distinct()
 
     @action(detail=True, methods=["get"], url_path="download-pdf")
     def download_pdf(self, request, pk=None):
@@ -380,15 +389,12 @@ class FulfillmentViewSet(viewsets.ModelViewSet):
             return Fulfillment.objects.none()
         user = self.request.user
         qs = Fulfillment.objects.select_related("deal__company").order_by("-updated_at")
-        # Platform admin sees every billing record; a context-seller sees only records
-        # on deals routed to them (multi-seller); buyer sees its own company's records.
+        # Platform admin sees every billing record; otherwise BOTH sides of a deal
+        # (buyer company + routed seller) see its records, regardless of the SPA
+        # X-Active-Context header (WP-1). Seller side stays routing-scoped.
         if getattr(user, "is_platform_admin", False):
             return qs
-        visible_deal_ids = seller_visible_deal_ids(user, self.request)
-        if visible_deal_ids is not None:
-            return qs.filter(deal_id__in=visible_deal_ids)
-        user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
-        return qs.filter(deal__company_id__in=user_company_ids)
+        return qs.filter(_billing_visibility_q(user, self.request, deal_path="deal")).distinct()
 
     @extend_schema(summary="Update fulfillment status", tags=["CRM"])
     @action(detail=False, methods=["post"], url_path="update-status", permission_classes=[IsAuthenticated])

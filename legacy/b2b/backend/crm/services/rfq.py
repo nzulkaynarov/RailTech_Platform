@@ -12,6 +12,7 @@ from accounts.models import CustomUser
 
 from ..constants import DealStageCode, QuoteStatusCode
 from ..models import ActivityLog, Deal, Quote, QuoteItem, QuoteStatus
+from ._plural import pluralize_ru
 from .availability import resolve_seller_offer, split_line_by_availability
 from .deals import transition_deal_stage
 
@@ -194,9 +195,10 @@ def buyer_add_request_items(user: CustomUser, deal: Deal, rows: list) -> list:
     if to_create:
         merge_request_lines(quote, to_create)
         quote.recalculate_totals()
+        item_word = pluralize_ru(len(to_create), "позиция", "позиции", "позиций")
         ActivityLog.objects.create(
             action="Добавлены позиции заявки (корзина)",
-            detail=f"Deal #{deal.id}: {len(to_create)} позиций",
+            detail=f"Deal #{deal.id}: {len(to_create)} {item_word}",
             user=user,
             level="INFO",
             entity_type="deal",
@@ -375,9 +377,10 @@ def route_request_to_sellers(user: CustomUser, deal: Deal, seller_company_ids: l
 
     ensure_edges_for_deal_routing(deal, valid_ids)
 
+    seller_word = pluralize_ru(len(valid_ids), "продавцу", "продавцам", "продавцам")
     ActivityLog.objects.create(
         action="Заявка адресована продавцам (RFQ routing)",
-        detail=f"Deal #{deal.id}: {len(valid_ids)} продавцов",
+        detail=f"Deal #{deal.id}: {len(valid_ids)} {seller_word}",
         user=user,
         level="INFO",
         entity_type="deal",
@@ -436,9 +439,10 @@ def submit_request(user: CustomUser, deal: Deal) -> Deal:
     deal, error = transition_deal_stage(deal, DealStageCode.RFQ_OPEN, actor=user)
     if error:
         raise ValidationError({"detail": error})
+    item_word = pluralize_ru(len(items), "позиция", "позиции", "позиций")
     ActivityLog.objects.create(
         action="Заявка отправлена поставщику (RFQ)",
-        detail=f"Deal #{deal.id}: {len(items)} позиций",
+        detail=f"Deal #{deal.id}: {len(items)} {item_word}",
         user=user,
         level="INFO",
         entity_type="deal",

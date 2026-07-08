@@ -176,6 +176,10 @@ class IsCompanyMemberOrPlatformAdmin(BasePermission):
         # deal/quote/chat). If not routed, fall through to the buyer-membership
         # check, so a dual seller+buyer can still reach their own buyer company's
         # objects while purchasing.
+        # force=True: object access is context-INDEPENDENT (mirrors WP-1's list scope
+        # for billing docs) — a routed seller who landed in the BUYER context must be
+        # able to open/download the contract it can already see in the list. Routing
+        # boundary preserved, so this never widens access to an unrelated deal.
         from accounts.services.permissions import is_seller, seller_can_access_deal
 
         if is_seller(user):
@@ -186,7 +190,7 @@ class IsCompanyMemberOrPlatformAdmin(BasePermission):
                 deal_id = obj.deal_id
             elif hasattr(obj, "quote"):  # QuoteItem
                 deal_id = obj.quote.deal_id
-            if deal_id is not None and seller_can_access_deal(user, request, deal_id):
+            if deal_id is not None and seller_can_access_deal(user, request, deal_id, force=True):
                 return True
 
         target_company = None
