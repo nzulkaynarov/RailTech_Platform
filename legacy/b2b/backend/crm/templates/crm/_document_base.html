@@ -25,83 +25,128 @@
 <head>
 <meta charset="utf-8">
 {% firstof seller_profile.legal_name seller.name "RailTech B2B" as seller_name %}
-{% with accent=seller_profile.accent_color|default:"#15294d" %}
+{% firstof accent seller_profile.accent_color "#15294d" as accent %}
+{% with accent_contrast=accent_contrast|default:"#ffffff" %}
 <style>
+  /* ── Design tokens ─────────────────────────────────────────
+     One accent drives every branded surface (F-03). WeasyPrint 68 supports var(); the accent
+     and its readable on-fill contrast come from crm.services.documents.document_brand_context. */
+  :root {
+    --accent: {{ accent }};
+    --accent-contrast: {{ accent_contrast }};
+    --ink: #20242b;
+    --ink-soft: #3c424c;
+    --muted: #7a828f;
+    --line: #e6e9ef;
+    --panel: #f7f9fc;
+    /* Typographic scale — replaces ad-hoc pt values (F-14) */
+    --fs-xs: 7.5pt;
+    --fs-sm: 8.5pt;
+    --fs-base: 9.5pt;
+    --fs-md: 10.5pt;
+    --fs-lg: 13pt;
+    --fs-xl: 16pt;
+  }
   @page {
     size: A4;
     margin: 18mm 16mm 20mm 16mm;
     @bottom-center {
       content: "Стр. " counter(page) " из " counter(pages);
       font-family: 'Helvetica', 'Arial', sans-serif;
-      font-size: 8pt;
+      font-size: var(--fs-xs);
+      color: #9aa0a6;
+    }
+    /* Running header on continuation pages: the document № (F-16). string-set is on .doc-no. */
+    @top-right {
+      content: string(doc-ref);
+      font-family: 'Helvetica', 'Arial', sans-serif;
+      font-size: var(--fs-xs);
       color: #9aa0a6;
     }
   }
+  @page:first { @top-right { content: none; } }
   * { box-sizing: border-box; }
   body {
     font-family: 'Helvetica', 'Arial', sans-serif;
-    font-size: 9.5pt;
+    font-size: var(--fs-base);
     line-height: 1.45;
-    color: #20242b;
+    color: var(--ink);
     margin: 0;
+    font-variant-numeric: tabular-nums;  /* lining figures so money columns align (F-15) */
   }
+  p, .notes-block, .term-box, .legal-article p { orphans: 3; widows: 3; }
 
   /* ── Brand header ─────────────────────────────────────────── */
   .brandbar { width: 100%; border-collapse: collapse; margin-bottom: 14pt; }
   .brandbar td { vertical-align: top; padding: 0; }
-  .brand-name { font-size: 16pt; font-weight: 700; color: #15294d; letter-spacing: 0.2pt; }
-  .brand-meta { font-size: 8.5pt; color: #5a6270; margin-top: 2pt; }
-  .doc-id { text-align: right; font-size: 8.5pt; color: #5a6270; }
-  .doc-id .doc-no { font-size: 13pt; font-weight: 700; color: #15294d; letter-spacing: 0.2pt; }
-  .rule { height: 2.5pt; background: #15294d; margin: 0 0 16pt 0; }
+  .brand-name { font-size: var(--fs-xl); font-weight: 700; color: var(--accent); letter-spacing: 0.2pt; }
+  .brand-meta { font-size: var(--fs-sm); color: #5a6270; margin-top: 2pt; }
+  .doc-id { text-align: right; font-size: var(--fs-sm); color: #5a6270; }
+  .doc-id .doc-no { font-size: var(--fs-lg); font-weight: 700; color: var(--accent); letter-spacing: 0.2pt; string-set: doc-ref content(); }
+  .rule { height: 2.5pt; background: var(--accent); margin: 0 0 16pt 0; }
 
-  h1.doc-title { font-size: 14pt; font-weight: 700; color: #15294d; margin: 0 0 14pt 0; }
+  h1.doc-title { font-size: 14pt; font-weight: 700; color: var(--accent); margin: 0 0 14pt 0; }
 
   /* ── Parties ──────────────────────────────────────────────── */
   .parties { width: 100%; border-collapse: separate; border-spacing: 10pt 0; margin-bottom: 16pt; }
   .parties td { vertical-align: top; width: 50%; }
-  .party { border: 0.75pt solid #dfe3ea; border-radius: 4pt; padding: 9pt 11pt; background: #f7f9fc; }
-  .party h3 { margin: 0 0 5pt 0; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.6pt; color: #7a828f; font-weight: 700; }
-  .party .pname { font-weight: 700; font-size: 10.5pt; color: #20242b; }
-  .party p { margin: 1.5pt 0; font-size: 8.7pt; color: #3c424c; }
+  .party { border: 0.75pt solid #dfe3ea; border-radius: 4pt; padding: 9pt 11pt; background: var(--panel); break-inside: avoid; }
+  .party h3 { margin: 0 0 5pt 0; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.6pt; color: var(--muted); font-weight: 700; }
+  .party .pname { font-weight: 700; font-size: var(--fs-md); color: var(--ink); }
+  .party p { margin: 1.5pt 0; font-size: 8.7pt; color: var(--ink-soft); }
 
   /* ── Line items ───────────────────────────────────────────── */
   table.lines { width: 100%; border-collapse: collapse; margin-bottom: 4pt; }
-  table.lines thead th { background: #15294d; color: #ffffff; padding: 7pt 7pt; text-align: left; font-size: 8pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3pt; }
-  table.lines tbody td { padding: 6pt 7pt; border-bottom: 0.5pt solid #e6e9ef; font-size: 9pt; vertical-align: top; }
+  table.lines thead { display: table-header-group; }  /* repeat header on every page (F-16) */
+  table.lines thead th { background: var(--accent); color: var(--accent-contrast); padding: 7pt 7pt; text-align: left; font-size: 8pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3pt; }
+  table.lines tbody td { padding: 6pt 7pt; border-bottom: 0.5pt solid var(--line); font-size: 9pt; vertical-align: top; }
+  table.lines tbody tr { break-inside: avoid; }  /* a row never splits across pages (F-04) */
   table.lines tbody tr:nth-child(even) { background: #f6f8fb; }
-  .num { text-align: right; white-space: nowrap; }
+  .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
   .center { text-align: center; white-space: nowrap; }
-  .item-name { font-weight: 600; color: #20242b; }
-  .item-sub { font-size: 7.6pt; color: #7a828f; margin-top: 1pt; }
+  .item-name { font-weight: 600; color: var(--ink); }
+  .item-sub { font-size: var(--fs-xs); color: var(--muted); margin-top: 1pt; }
 
   /* ── Totals bridge ────────────────────────────────────────── */
-  .totals-wrap { width: 100%; border-collapse: collapse; margin-top: 12pt; }
+  .totals-wrap { width: 100%; border-collapse: collapse; margin-top: 12pt; break-inside: avoid; }
   .totals-wrap td { vertical-align: top; }
   table.totals { width: 62%; border-collapse: collapse; margin-left: 38%; }
   table.totals td { padding: 5pt 9pt; font-size: 9.2pt; }
   table.totals td.lbl { color: #4a515c; }
-  table.totals td.val { text-align: right; white-space: nowrap; }
+  table.totals td.val { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
   table.totals tr.sep td { border-top: 0.5pt solid #d7dbe3; }
-  table.totals tr.grand td { background: #15294d; color: #ffffff; font-weight: 700; font-size: 10.5pt; border-radius: 3pt; }
+  table.totals tr.grand td { background: var(--accent); color: var(--accent-contrast); font-weight: 700; font-size: var(--fs-md); }
+  .amount-words { margin-top: 8pt; font-size: 8.8pt; color: var(--ink-soft); break-inside: avoid; }
+  .amount-words .k { font-weight: 700; color: var(--ink); }
 
   /* ── Terms / notes ────────────────────────────────────────── */
   .terms { margin-top: 18pt; }
-  .term-box { border-left: 2.5pt solid #15294d; background: #f7f9fc; padding: 7pt 11pt; margin-bottom: 8pt; font-size: 8.8pt; color: #3c424c; }
-  .term-box .k { font-weight: 700; color: #20242b; }
+  .term-box { border-left: 2.5pt solid var(--accent); background: var(--panel); padding: 7pt 11pt; margin-bottom: 8pt; font-size: 8.8pt; color: var(--ink-soft); break-inside: avoid; }
+  .term-box .k { font-weight: 700; color: var(--ink); }
   .valid-box { border-left-color: #b8860b; background: #fdf8ec; }
   .fx-note { font-size: 7.8pt; color: #8a909b; margin-top: 6pt; }
-  .notes-block { margin-top: 12pt; font-size: 8.8pt; color: #3c424c; }
-  .notes-block .k { font-weight: 700; color: #20242b; }
+  .notes-block { margin-top: 12pt; font-size: 8.8pt; color: var(--ink-soft); }
+  .notes-block .k { font-weight: 700; color: var(--ink); }
+
+  /* ── Legal articles (contract) ────────────────────────────── */
+  .legal-article { margin: 9pt 0; break-inside: avoid; font-size: 8.8pt; color: var(--ink-soft); }
+  .legal-article h2 { font-size: 9.2pt; font-weight: 700; color: var(--ink); margin: 0 0 3pt 0; text-transform: none; }
+  .legal-article p { margin: 2pt 0; }
+
+  /* ── Payment requisites (invoice) ─────────────────────────── */
+  .pay-block { border: 0.75pt solid var(--accent); border-radius: 4pt; background: var(--panel); padding: 9pt 11pt; margin-top: 12pt; font-size: 8.8pt; color: var(--ink-soft); break-inside: avoid; }
+  .pay-block h3 { margin: 0 0 4pt 0; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.6pt; color: var(--accent); font-weight: 700; }
+  .pay-block .k { font-weight: 700; color: var(--ink); }
 
   /* ── Signatures ───────────────────────────────────────────── */
-  .signatures { width: 100%; border-collapse: separate; border-spacing: 16pt 0; margin-top: 34pt; }
+  .signatures { width: 100%; border-collapse: separate; border-spacing: 16pt 0; margin-top: 34pt; break-inside: avoid; }
   .signatures td { width: 50%; vertical-align: top; }
-  .sign-box { font-size: 8.8pt; color: #3c424c; }
-  .sign-box .role { font-weight: 700; color: #20242b; margin-bottom: 2pt; }
-  .sign-line { margin-top: 26pt; border-top: 0.75pt solid #9aa0a6; padding-top: 3pt; font-size: 7.8pt; color: #7a828f; }
+  .sign-box { font-size: 8.8pt; color: var(--ink-soft); break-inside: avoid; }
+  .sign-box .role { font-weight: 700; color: var(--ink); margin-bottom: 2pt; }
+  .sign-line { margin-top: 26pt; border-top: 0.75pt solid #9aa0a6; padding-top: 3pt; font-size: 7.8pt; color: var(--muted); }
+  .seal { margin-top: 10pt; font-size: 7.8pt; color: var(--muted); }
 
-  .footer { margin-top: 26pt; padding-top: 8pt; border-top: 0.5pt solid #e6e9ef; font-size: 7.6pt; color: #9aa0a6; text-align: center; }
+  .footer { margin-top: 26pt; padding-top: 8pt; border-top: 0.5pt solid var(--line); font-size: var(--fs-xs); color: #9aa0a6; text-align: center; }
 
   /* Move 4 monetization: DEMO watermark. position:fixed repeats on every page in WeasyPrint. */
   .demo-watermark {

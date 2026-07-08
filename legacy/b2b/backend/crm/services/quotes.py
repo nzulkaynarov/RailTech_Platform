@@ -648,13 +648,15 @@ class QuoteLifecycleService:
         # + subscribed seller gets a clean, sendable document.
         from accounts.services.entitlements import quote_send_entitled
 
-        from .documents import document_brand_context
+        from .documents import client_projection_items, document_brand_context
 
         html_string = render_to_string(
             "crm/quote_pdf.html",
             {
                 "quote": quote,
-                "items": quote.items.select_related("product", "frozen_currency").all(),
+                # Client projection: charges distributed into per-line delivered prices (no
+                # goods-vs-charges breakout — confidentiality). Lines sum to quote.total_excl_vat.
+                "items": client_projection_items(quote),
                 "company": quote.deal.company,
                 **document_brand_context(seller_company, is_demo=not quote_send_entitled(seller_company.id)),
             },

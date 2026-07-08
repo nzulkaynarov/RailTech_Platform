@@ -39,6 +39,7 @@ def _quote_ctx(**toggles):
         "valid_until": None,
         "subtotal_excl_vat": Decimal("200.00"),
         "charges_total": Decimal("0"),
+        "total_excl_vat": Decimal("200.00"),
         "vat_rate": Decimal("12"),
         "vat_amount": Decimal("24.00"),
         "total_incl_vat": Decimal("224.00"),

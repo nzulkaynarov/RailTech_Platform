@@ -1,13 +1,16 @@
 {% extends "crm/_document_base.html" %}
+{% load document_format %}
 {% comment %}
   Инвойс (счёт на оплату). «Поставщик» = the REAL seller resolved from the invoice's
   contract→quote (document_brand_context) — NEVER a hardcoded platform identity (Rule 1/2).
-  Line «Сумма» = InvoiceItem.line_total_excl_vat (already price × qty).
+  Line «Сумма» = InvoiceItem.line_total_excl_vat (already price × qty). Currency = invoice.currency
+  (default UZS). Payment requisites + purpose-of-payment make the invoice actually payable (F-06).
 {% endcomment %}
 {% block doc_meta %}
   <div class="doc-no">Инвойс № {{ invoice.number }}</div>
   <div>от {{ invoice.issued_at|date:"d.m.Y" }}</div>
   {% if invoice.due_date %}<div>оплата до {{ invoice.due_date|date:"d.m.Y" }}</div>{% endif %}
+  {% if invoice.contract %}<div>по договору № {{ invoice.contract.number }}</div>{% endif %}
 {% endblock %}
 
 {% block doc_title %}Счёт на оплату{% endblock %}
@@ -22,7 +25,6 @@
           <div class="pname">{{ seller_profile.legal_name|default:seller.name }}</div>
           {% if seller_profile.inn %}<p>ИНН: {{ seller_profile.inn }}</p>{% elif seller.inn %}<p>ИНН: {{ seller.inn }}</p>{% endif %}
           {% if seller_profile.legal_address %}<p>{{ seller_profile.legal_address }}</p>{% elif seller.legal_address %}<p>{{ seller.legal_address }}</p>{% endif %}
-          {% if seller_profile.bank_details %}<p>{{ seller_profile.bank_details|linebreaksbr }}</p>{% endif %}
         {% elif seller %}
           <div class="pname">{{ seller.name }}</div>
           {% if seller.inn %}<p>ИНН: {{ seller.inn }}</p>{% endif %}
@@ -45,14 +47,15 @@
 {% endblock %}
 
 {% block content %}
+  {% with ccy=invoice.currency.code|default:"UZS" %}
   <table class="lines">
     <thead>
       <tr>
         <th style="width:6%">№</th>
-        <th style="width:50%">Описание</th>
-        <th style="width:11%" class="center">Кол-во</th>
-        <th style="width:16%" class="num">Цена</th>
-        <th style="width:17%" class="num">Сумма</th>
+        <th style="width:48%">Описание</th>
+        <th style="width:10%" class="center">Кол-во</th>
+        <th style="width:18%" class="num">Цена, {{ ccy }}</th>
+        <th style="width:18%" class="num">Сумма, {{ ccy }}</th>
       </tr>
     </thead>
     <tbody>
@@ -60,9 +63,9 @@
       <tr>
         <td class="num">{{ forloop.counter }}</td>
         <td class="item-name">{{ it.description }}</td>
-        <td class="center">{{ it.quantity }}</td>
-        <td class="num">{{ it.unit_price_excl_vat|floatformat:2 }}</td>
-        <td class="num">{{ it.line_total_excl_vat|floatformat:2 }}</td>
+        <td class="center">{{ it.quantity|qty }}</td>
+        <td class="num">{{ it.unit_price_excl_vat|money }}</td>
+        <td class="num">{{ it.line_total_excl_vat|money }}</td>
       </tr>
       {% endfor %}
     </tbody>
@@ -71,14 +74,50 @@
   <table class="totals-wrap">
     <tr><td>
       <table class="totals">
-        <tr><td class="lbl">Сумма без НДС:</td><td class="val">{{ invoice.subtotal_excl_vat|floatformat:2 }}</td></tr>
-        <tr class="sep"><td class="lbl">НДС:</td><td class="val">{{ invoice.vat_amount|floatformat:2 }}</td></tr>
-        <tr class="grand"><td class="lbl">К оплате:</td><td class="val">{{ invoice.total_incl_vat|floatformat:2 }}</td></tr>
+        <tr><td class="lbl">Сумма без НДС:</td><td class="val">{{ invoice.subtotal_excl_vat|money:ccy }}</td></tr>
+        <tr class="sep"><td class="lbl">НДС{% if invoice.subtotal_excl_vat %} ({% widthratio invoice.vat_amount invoice.subtotal_excl_vat 100 %}%){% endif %}:</td><td class="val">{{ invoice.vat_amount|money:ccy }}</td></tr>
+        <tr class="grand"><td class="lbl">К оплате:</td><td class="val">{{ invoice.total_incl_vat|money:ccy }}</td></tr>
+        {% if invoice.amount_paid %}
+        <tr><td class="lbl">Оплачено:</td><td class="val">{{ invoice.amount_paid|money:ccy }}</td></tr>
+        <tr class="sep"><td class="lbl">Остаток к оплате:</td><td class="val">{{ invoice.balance_due|money:ccy }}</td></tr>
+        {% endif %}
       </table>
     </td></tr>
   </table>
+  <div class="amount-words"><span class="k">Сумма прописью:</span> {{ invoice.total_incl_vat|money_words:ccy }}</div>
+
+  <div class="pay-block">
+    <h3>Платёжные реквизиты</h3>
+    <p><span class="k">Получатель:</span> {% firstof seller_profile.legal_name seller.name "—" %}{% if seller_profile.inn or seller.inn %} · ИНН {% firstof seller_profile.inn seller.inn %}{% endif %}</p>
+    {% if seller_profile.bank_details %}
+    <p>{{ seller_profile.bank_details|linebreaksbr }}</p>
+    {% elif seller.bank_account %}
+    <p><span class="k">Р/с:</span> {{ seller.bank_account }}{% if seller.mfo %} · <span class="k">МФО:</span> {{ seller.mfo }}{% endif %}</p>
+    {% endif %}
+    <p><span class="k">Назначение платежа:</span> Оплата по счёту № {{ invoice.number }} от {{ invoice.issued_at|date:"d.m.Y" }}{% if invoice.contract %}, договор № {{ invoice.contract.number }}{% endif %}, в т.ч. НДС {{ invoice.vat_amount|money:ccy }}.</p>
+  </div>
 
   {% if invoice.notes %}
   <div class="notes-block"><span class="k">Примечание:</span><br>{{ invoice.notes|linebreaks }}</div>
   {% endif %}
+
+  <table class="signatures">
+    <tr>
+      <td>
+        <div class="sign-box">
+          <div class="role">Руководитель:</div>
+          {% if seller_profile.signatory_name %}{{ seller_profile.signatory_name }}{% endif %}
+          <div class="sign-line">Подпись</div>
+          <div class="seal">М.П.</div>
+        </div>
+      </td>
+      <td>
+        <div class="sign-box">
+          <div class="role">Главный бухгалтер:</div>
+          <div class="sign-line">Подпись</div>
+        </div>
+      </td>
+    </tr>
+  </table>
+  {% endwith %}
 {% endblock %}

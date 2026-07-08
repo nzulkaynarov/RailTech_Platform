@@ -1,12 +1,14 @@
 {% extends "crm/_document_base.html" %}
+{% load document_format %}
 {% comment %}
   Client-facing КП (commercial offer) — CLIENT PROJECTION.
 
   Hard rule (UNCHANGED): never expose seller cost internals from which the buyer could
-  derive the markup — no landed_cost, margin_percent, logistics_cost, customs_duty or any
-  QuoteCharge row here, and NO FX/CBU rate snapshot (soft sourcing leak). Only the per-unit
-  sale price, line totals and the document totals bridge (subtotal → charges-as-one-line →
-  VAT → total) are shown, all in the КП presentation currency (quote_currency, UZS).
+  derive the markup — no landed_cost, margin_percent, logistics_cost, customs_duty, no
+  goods-vs-charges breakout, and NO FX/CBU rate snapshot (soft sourcing leak). The buyer
+  sees ONE all-in delivered price per line (document charges distributed in by
+  client_projection_items) and a flat totals bridge (Итого без НДС → VAT → total), all in
+  the КП presentation currency (quote_currency, UZS).
 
   Branding (header logo, «Поставщик» block, accent, footer, DEMO watermark) is provided by
   the shared base from the seller's CompanyDocumentProfile. Context: quote, items, company
@@ -30,8 +32,8 @@
         <th style="width:{% if show_lead_time %}43{% else %}55{% endif %}%">Наименование</th>
         <th style="width:10%" class="center">Кол-во</th>
         {% if show_lead_time %}<th style="width:12%" class="center">Срок</th>{% endif %}
-        <th style="width:15%" class="num">Цена за ед.</th>
-        <th style="width:15%" class="num">Сумма</th>
+        <th style="width:15%" class="num">Цена за ед., {{ pres_ccy }}</th>
+        <th style="width:15%" class="num">Сумма, {{ pres_ccy }}</th>
       </tr>
     </thead>
     <tbody>
@@ -48,46 +50,39 @@
           </div>
           {% endif %}
         </td>
-        <td class="center">{{ item.quantity }}{% if item.unit %} {{ item.unit }}{% endif %}</td>
+        <td class="center">{{ item.quantity|qty:item.unit }}</td>
         {% if show_lead_time %}<td class="center">{% if item.lead_time_days %}до {{ item.lead_time_days }} дн.{% else %}&mdash;{% endif %}</td>{% endif %}
-        <td class="num">{{ item.final_price_excl_vat|floatformat:2 }}</td>
-        <td class="num">{{ item.line_total|floatformat:2 }}</td>
+        <td class="num">{{ item.final_price_excl_vat|money }}</td>
+        <td class="num">{{ item.line_total|money }}</td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
 
-  <!-- ── Totals bridge: Subtotal → Charges → VAT → Total ── -->
+  <!-- ── Totals bridge: pre-VAT total → VAT → grand total. CONFIDENTIALITY: no goods-vs-charges
+       breakout — charges are distributed into the delivered line prices above (client_projection_items),
+       so the buyer sees ONE all-in price per line summing exactly to «Итого без НДС». ── -->
   <table class="totals-wrap">
     <tr>
       <td>
         <table class="totals">
-          <tr>
-            <td class="lbl">Сумма позиций (без НДС):</td>
-            <td class="val">{{ quote.subtotal_excl_vat|floatformat:2 }} {{ pres_ccy }}</td>
-          </tr>
-          {% if quote.charges_total %}
-          <tr>
-            <td class="lbl">Доп. расходы / скидки:</td>
-            <td class="val">{{ quote.charges_total|floatformat:2 }} {{ pres_ccy }}</td>
-          </tr>
           <tr class="sep">
             <td class="lbl">Итого без НДС:</td>
-            <td class="val">{{ quote.total_excl_vat|floatformat:2 }} {{ pres_ccy }}</td>
+            <td class="val">{{ quote.total_excl_vat|money:pres_ccy }}</td>
           </tr>
-          {% endif %}
-          <tr {% if not quote.charges_total %}class="sep"{% endif %}>
+          <tr>
             <td class="lbl">НДС {{ quote.vat_rate|floatformat:0 }}%:</td>
-            <td class="val">{{ quote.vat_amount|floatformat:2 }} {{ pres_ccy }}</td>
+            <td class="val">{{ quote.vat_amount|money:pres_ccy }}</td>
           </tr>
           <tr class="grand">
             <td class="lbl">ИТОГО к оплате:</td>
-            <td class="val">{{ quote.total_incl_vat|floatformat:2 }} {{ pres_ccy }}</td>
+            <td class="val">{{ quote.total_incl_vat|money:pres_ccy }}</td>
           </tr>
         </table>
       </td>
     </tr>
   </table>
+  <div class="amount-words"><span class="k">Сумма прописью:</span> {{ quote.total_incl_vat|money_words:pres_ccy }}</div>
 
   <!-- ── Terms ── -->
   <div class="terms">
