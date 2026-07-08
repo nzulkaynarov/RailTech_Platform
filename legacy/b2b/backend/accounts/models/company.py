@@ -272,6 +272,22 @@ class CompanyDocumentProfile(models.Model):
         verbose_name=_("Акцентный цвет"),
         help_text=_("HEX-цвет фирменного стиля для шапки документа (напр. #15294d)"),
     )
+    # ── Layout toggles (P3 document-settings) — what the seller shows on its documents ──
+    show_logo = models.BooleanField(
+        default=True,
+        verbose_name=_("Показывать логотип"),
+        help_text=_("Печатать логотип в шапке документов"),
+    )
+    show_lead_time = models.BooleanField(
+        default=True,
+        verbose_name=_("Показывать колонку «Срок»"),
+        help_text=_("Колонка срока поставки по позициям в КП"),
+    )
+    show_fx_note = models.BooleanField(
+        default=False,
+        verbose_name=_("Показывать курс ЦБ в КП"),
+        help_text=_("Печатать курс ЦБ (FX-базис) на клиентском КП. По умолчанию скрыто — клиент видит цену в сумах."),
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Создан"))
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Обновлён"))
 

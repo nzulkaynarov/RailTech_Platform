@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
 import { ImageUpload } from '@/components/Shared/ImageUpload';
 
 type ProfileForm = {
@@ -23,6 +24,9 @@ type ProfileForm = {
   signatory_position: string;
   footer_text: string;
   accent_color: string;
+  show_logo: boolean;
+  show_lead_time: boolean;
+  show_fx_note: boolean;
 };
 
 const EMPTY_FORM: ProfileForm = {
@@ -34,6 +38,9 @@ const EMPTY_FORM: ProfileForm = {
   signatory_position: '',
   footer_text: '',
   accent_color: '',
+  show_logo: true,
+  show_lead_time: true,
+  show_fx_note: false,
 };
 
 function toForm(profile: CompanyDocumentProfile): ProfileForm {
@@ -46,6 +53,9 @@ function toForm(profile: CompanyDocumentProfile): ProfileForm {
     signatory_position: profile.signatory_position ?? '',
     footer_text: profile.footer_text ?? '',
     accent_color: profile.accent_color ?? '',
+    show_logo: profile.show_logo ?? true,
+    show_lead_time: profile.show_lead_time ?? true,
+    show_fx_note: profile.show_fx_note ?? false,
   };
 }
 
@@ -74,12 +84,21 @@ export function CompanyDocumentProfileSettings() {
     if (profile) setForm(toForm(profile));
   }, [profile]);
 
+  // Live preview: a SAMPLE КП rendered with the company's CURRENT (saved) profile. Refetched
+  // after each save so the seller immediately sees how branding + toggles look.
+  const previewQuery = useQuery({
+    queryKey: ['company-document-profile-preview', companyId],
+    queryFn: () => accountsApi.getCompanyDocumentProfilePreview(companyId as number),
+    enabled: companyId != null && canEditSettings,
+  });
+
   const saveMut = useMutation({
     mutationFn: (data: ProfileForm) =>
       accountsApi.updateCompanyDocumentProfile(companyId as number, data),
     onSuccess: (updated) => {
       queryClient.setQueryData(['company-document-profile', companyId], updated);
       toast.success(t('documentProfile.saved'));
+      previewQuery.refetch();
     },
     onError: () => toast.error(t('common.error')),
   });
@@ -106,7 +125,26 @@ export function CompanyDocumentProfileSettings() {
     if (companyId == null) throw new Error('NO_COMPANY');
     const updated = await accountsApi.uploadCompanyDocumentLogo(companyId, file);
     queryClient.setQueryData(['company-document-profile', companyId], updated);
+    previewQuery.refetch();
   };
+
+  const toggleRow = (
+    key: 'show_logo' | 'show_lead_time' | 'show_fx_note',
+    labelKey: string,
+    descKey: string,
+  ) => (
+    <div className="flex items-start justify-between gap-4 rounded-lg border border-border p-3">
+      <div className="space-y-0.5">
+        <Label htmlFor={`dp-${key}`} className="cursor-pointer">{t(labelKey)}</Label>
+        <p className="text-xs text-muted-foreground">{t(descKey)}</p>
+      </div>
+      <Switch
+        id={`dp-${key}`}
+        checked={form[key]}
+        onCheckedChange={(v) => setForm({ ...form, [key]: v })}
+      />
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -118,19 +156,21 @@ export function CompanyDocumentProfileSettings() {
         <p className="mt-1 text-sm text-muted-foreground">{t('documentProfile.subtitle')}</p>
       </div>
 
-      {companyId != null && (
-        <ImageUpload
-          value={profile?.logo_url ?? null}
-          onUpload={handleLogoUpload}
-          fallback={form.legal_name ? form.legal_name.slice(0, 2).toUpperCase() : '—'}
-          label={t('documentProfile.logo')}
-          description={t('documentProfile.logoDescription')}
-        />
-      )}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="space-y-6">
+          {companyId != null && (
+            <ImageUpload
+              value={profile?.logo_url ?? null}
+              onUpload={handleLogoUpload}
+              fallback={form.legal_name ? form.legal_name.slice(0, 2).toUpperCase() : '—'}
+              label={t('documentProfile.logo')}
+              description={t('documentProfile.logoDescription')}
+            />
+          )}
 
-      <Separator />
+          <Separator />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2 sm:col-span-2">
           <Label htmlFor="dp-legal-name">{t('documentProfile.legalName')}</Label>
           <Input
@@ -210,13 +250,42 @@ export function CompanyDocumentProfileSettings() {
             onChange={(e) => setForm({ ...form, footer_text: e.target.value })}
             placeholder={t('documentProfile.footerTextPlaceholder')}
           />
+          </div>
+          </div>
+
+          <Separator />
+          <div className="space-y-3">
+            <h4 className="text-sm font-semibold text-foreground">{t('documentProfile.toggles')}</h4>
+            {toggleRow('show_logo', 'documentProfile.showLogo', 'documentProfile.showLogoHint')}
+            {toggleRow('show_lead_time', 'documentProfile.showLeadTime', 'documentProfile.showLeadTimeHint')}
+            {toggleRow('show_fx_note', 'documentProfile.showFxNote', 'documentProfile.showFxNoteHint')}
+          </div>
+
+          <Button onClick={() => saveMut.mutate(form)} disabled={saveMut.isPending}>
+            {saveMut.isPending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+            {t('common.save')}
+          </Button>
+        </div>
+
+        <div className="space-y-2 lg:sticky lg:top-4 lg:self-start">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-semibold text-foreground">{t('documentProfile.preview')}</h4>
+            {previewQuery.isFetching && (
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-hidden="true" />
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">{t('documentProfile.previewHint')}</p>
+          {/* allow-same-origin lets Chrome actually PAINT the srcDoc (an opaque-origin
+              sandbox="" renders blank); scripts stay blocked (no allow-scripts) so any markup
+              a seller injects into their requisites can't execute in the preview. */}
+          <iframe
+            title={t('documentProfile.preview')}
+            srcDoc={previewQuery.data ?? ''}
+            sandbox="allow-same-origin"
+            className="h-[70vh] w-full rounded-lg border border-border bg-white"
+          />
         </div>
       </div>
-
-      <Button onClick={() => saveMut.mutate(form)} disabled={saveMut.isPending}>
-        {saveMut.isPending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-        {t('common.save')}
-      </Button>
     </div>
   );
 }

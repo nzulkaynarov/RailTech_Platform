@@ -78,6 +78,9 @@ class CompanyDocumentProfileSerializer(serializers.ModelSerializer):
             "signatory_position",
             "footer_text",
             "accent_color",
+            "show_logo",
+            "show_lead_time",
+            "show_fx_note",
             "created_at",
             "updated_at",
         ]

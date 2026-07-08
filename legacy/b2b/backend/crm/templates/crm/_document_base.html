@@ -90,6 +90,7 @@
   .term-box { border-left: 2.5pt solid #15294d; background: #f7f9fc; padding: 7pt 11pt; margin-bottom: 8pt; font-size: 8.8pt; color: #3c424c; }
   .term-box .k { font-weight: 700; color: #20242b; }
   .valid-box { border-left-color: #b8860b; background: #fdf8ec; }
+  .fx-note { font-size: 7.8pt; color: #8a909b; margin-top: 6pt; }
   .notes-block { margin-top: 12pt; font-size: 8.8pt; color: #3c424c; }
   .notes-block .k { font-weight: 700; color: #20242b; }
 
@@ -118,7 +119,7 @@
   <!-- ── Brand header ── -->
   <table class="brandbar">
     <tr>
-      {% if seller_logo_url %}
+      {% if seller_logo_url and show_logo %}
       <td style="width:54pt; vertical-align:middle;">
         <img src="{{ seller_logo_url }}" style="max-height:46pt; max-width:120pt;" alt="logo">
       </td>

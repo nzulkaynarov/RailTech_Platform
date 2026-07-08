@@ -30,6 +30,13 @@ _EDITABLE_FIELDS = (
     "accent_color",
 )
 
+# Layout toggles (P3) — coerced to bool, so a False value isn't turned into "" like the text fields.
+_EDITABLE_BOOL_FIELDS = (
+    "show_logo",
+    "show_lead_time",
+    "show_fx_note",
+)
+
 
 def is_company_owner(user: "CustomUser", company: Company) -> bool:
     """True if `user` may manage `company`'s org-admin config (document profile, КП defaults,
@@ -70,9 +77,20 @@ def update_document_profile(
         if field in data:
             setattr(profile, field, data[field] or "")
             changed.append(field)
+    for field in _EDITABLE_BOOL_FIELDS:
+        if field in data:
+            setattr(profile, field, _as_bool(data[field]))
+            changed.append(field)
     if changed:
         profile.save(update_fields=[*changed, "updated_at"])
     return profile, None
+
+
+def _as_bool(value) -> bool:
+    """Coerce a JSON-ish value to bool (handles the string forms a form/query can send)."""
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return bool(value)
 
 
 def upload_document_profile_logo(

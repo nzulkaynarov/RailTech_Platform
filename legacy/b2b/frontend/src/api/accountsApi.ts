@@ -52,6 +52,10 @@ export interface CompanyDocumentProfile {
 	signatory_position?: string;
 	footer_text?: string;
 	accent_color?: string;
+	// P3 layout toggles — what the seller shows on its documents.
+	show_logo?: boolean;
+	show_lead_time?: boolean;
+	show_fx_note?: boolean;
 	created_at?: string;
 	updated_at?: string;
 }
@@ -290,6 +294,15 @@ export const accountsApi = {
 			data,
 		);
 		return response.data;
+	},
+	// Live preview: a SAMPLE КП rendered as HTML with the company's CURRENT profile (branding +
+	// toggles). Shown in an iframe on the document-settings panel; refetched after each save.
+	getCompanyDocumentProfilePreview: async (companyId: number): Promise<string> => {
+		const response = await apiClient.get(
+			`accounts/companies/${companyId}/document-profile/preview/`,
+			{ responseType: 'text' },
+		);
+		return response.data as string;
 	},
 	uploadCompanyDocumentLogo: async (companyId: number, file: File) => {
 		const formData = new FormData();
