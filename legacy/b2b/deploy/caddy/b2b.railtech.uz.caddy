@@ -5,6 +5,10 @@
 #  which only holds the global block + `import /etc/caddy/conf.d/*.caddy`).
 #  then:  caddy validate --config /etc/caddy/Caddyfile  &&  systemctl reload caddy
 #
+#  INF-01 requires the caddy-ratelimit module (github.com/mholt/caddy-ratelimit)
+#  in the host Caddy binary AND `order rate_limit before basicauth` in the master
+#  global block. See Docs/dev/ops/RUNBOOK-b2b-vps.md § "Edge rate-limit (INF-01)".
+#
 #  Caddy terminates TLS (auto Let's Encrypt) and routes:
 #    /api/*, /ws/*, /admin/*, /static/*, /media/*, /health, API docs -> Django (127.0.0.1:8000)
 #    everything else -> the built React SPA served from /var/www/railtech-b2b
@@ -13,6 +17,30 @@ b2b.railtech.uz {
     encode gzip zstd
 
     root * /var/www/railtech-b2b
+
+    # ── INF-01: edge rate-limit (caddy-ratelimit module) ──────────────────────
+    # COARSE abuse ceilings keyed on the client IP — NOT normal-traffic limits.
+    # The app-layer DRF throttle (login 10/min, register 5/h, …) + login_guard
+    # stay the primary control; this only blunts brute-force/scan floods at the
+    # edge, and crucially covers /admin/* which has NO DRF throttle (Django
+    # session views). {remote_host} = the real client IP (Caddy terminates TLS,
+    # so it sees the client directly, not a proxy). A tripped caller gets 429.
+    @rl_auth path /api/v1/auth/*
+    rate_limit @rl_auth {
+        zone b2b_auth {
+            key    {remote_host}
+            events 30
+            window 1m
+        }
+    }
+    @rl_admin path /admin/*
+    rate_limit @rl_admin {
+        zone b2b_admin {
+            key    {remote_host}
+            events 60
+            window 1m
+        }
+    }
 
     # Django backend (Daphne/gunicorn in Docker, loopback only).
     # WhiteNoise serves /static/ (collectstatic) from the same app.

@@ -222,6 +222,34 @@ curl -sI https://grades.railtech.uz/ | head -1
 
 ---
 
+## Edge rate-limit (INF-01)
+
+The `b2b.caddy` fragment uses the **caddy-ratelimit** module (`github.com/mholt/
+caddy-ratelimit`) — NOT in the stock apt Caddy. Coarse per-IP abuse ceilings:
+`/api/v1/auth/*` 30/min, `/admin/*` 60/min (a tripped caller gets Caddy's own
+429 + `Retry-After`). The app-layer DRF throttle stays the primary control; the
+edge layer matters most for `/admin/*`, which has no DRF throttle.
+
+**Installed on prod 2026-07-08** (v2.11.2 apt → v2.11.4 + module):
+```bash
+# 1. official on-demand build with the plugin (no Go toolchain needed):
+curl -fsSL -o /tmp/caddy-rl "https://caddyserver.com/api/download?os=linux&arch=amd64&p=github.com/mholt/caddy-ratelimit"
+chmod +x /tmp/caddy-rl && /tmp/caddy-rl list-modules | grep rate   # http.handlers.rate_limit
+# 2. master /etc/caddy/Caddyfile global block needs the directive order:
+#      order rate_limit before basicauth
+# 3. backup, swap the RUNNING binary via mv (cp fails: "text file busy"):
+mkdir -p /root/caddy-backups && cp -a /usr/bin/caddy /root/caddy-backups/caddy.bin.$(date +%F)
+mv /usr/bin/caddy /usr/bin/caddy.old && cp /tmp/caddy-rl /usr/bin/caddy
+caddy validate --config /etc/caddy/Caddyfile && systemctl restart caddy
+apt-mark hold caddy      # so `apt upgrade` never clobbers the custom binary
+```
+**Updating Caddy later** (apt is held, so security updates are manual): re-run the
+download + `mv`-swap + `systemctl restart caddy` above with a fresh download.
+**Rollback:** `mv -f /usr/bin/caddy.old /usr/bin/caddy` (or a `/root/caddy-backups/
+caddy.bin.*`) → restore the master + fragment backups → `systemctl restart caddy`.
+Verify: `curl -sI https://b2b.railtech.uz/admin/login/` after 60 hits/min → 429
+`server: Caddy`; both b2b + grades still 200.
+
 ## Updating / redeploying a new version
 **Normal path: just `git push` to `main`** — the deploy-b2b workflow rebuilds the SPA,
 restarts the backend (migrations auto-apply), and health-checks. Or trigger it manually
