@@ -73,7 +73,7 @@
           </tr>
           <tr class="sep">
             <td class="lbl">Итого без НДС:</td>
-            <td class="val">{{ quote.subtotal_excl_vat|add:quote.charges_total|floatformat:2 }} {{ pres_ccy }}</td>
+            <td class="val">{{ quote.total_excl_vat|floatformat:2 }} {{ pres_ccy }}</td>
           </tr>
           {% endif %}
           <tr {% if not quote.charges_total %}class="sep"{% endif %}>

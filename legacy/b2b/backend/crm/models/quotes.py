@@ -289,6 +289,17 @@ class Quote(models.Model):
         return f"КП v{self.version} — {self.deal}"
 
     @property
+    def total_excl_vat(self):
+        """Pre-VAT document total = subtotal_excl_vat + charges_total (the VAT base). Exposed as a
+        property so the PDF renders the SAME Decimal value the backend taxes — the template must NOT
+        recompute it with Django's `|add:` filter, which int-truncates Decimal operands (dropping
+        kopecks, e.g. 2 722 500,00 + 166 361,09 → 2 888 861,00 instead of …,09, so the document
+        stopped adding up while VAT/total were correct)."""
+        from decimal import Decimal
+
+        return (self.subtotal_excl_vat or Decimal("0")) + (self.charges_total or Decimal("0"))
+
+    @property
     def effective_delivery_lead_time_days(self) -> int:
         """Срок поставки КП: ручное переопределение, иначе max(сроков позиций).
 
