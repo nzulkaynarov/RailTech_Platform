@@ -97,9 +97,11 @@
 
 ---
 
-### INF-05 / INF-09 — Пиннинг зависимостей + lock-файл; уход с psycopg2-binary
+### INF-05 / INF-09 — Пиннинг зависимостей + lock-файл; уход с psycopg2-binary ✅ СДЕЛАНО (2026-07-08, infra/inf05-09-pin-deps-lock)
 
-**Проблема.** `backend/requirements.txt` — 55 строк с `>=`-полами, ноль `==`, нет lock-файла (`git grep` не находит `requirements.lock`/`poetry.lock`/`uv.lock`). Сборка невоспроизводима: `docker build` в разные дни ставит разные версии. `psycopg2-binary>=2.9` (INF-09) — binary-вариант не рекомендован для прода (бандлит свой libpq, конфликты/безопасность). Конфликт версий: base пинит `pytest>=9.0`, dev — `pytest>=8.0.0`.
+> requirements.{in,dev.in} — source; requirements.{txt,dev.txt} — сгенерированные хешированные локи (pip-compile --generate-hashes --no-strip-extras). psycopg2 из исходников (не binary). CI: build-deps (libpq-dev) в 4 backend-джобах, `deps-lock` drift-гейт (pip-tools 7.5.3, в docker-build needs), pytest-cov в локе. Проверено: 679 тестов, pip-audit чист по нашим deps, идемпотентность лока.
+
+**Проблема (исходная).** `backend/requirements.txt` — 55 строк с `>=`-полами, ноль `==`, нет lock-файла (`git grep` не находит `requirements.lock`/`poetry.lock`/`uv.lock`). Сборка невоспроизводима: `docker build` в разные дни ставит разные версии. `psycopg2-binary>=2.9` (INF-09) — binary-вариант не рекомендован для прода (бандлит свой libpq, конфликты/безопасность). Конфликт версий: base пинит `pytest>=9.0`, dev — `pytest>=8.0.0`.
 
 **Решение.**
 1. **Ввести pip-tools.** Переименовать текущий `requirements.txt` → `requirements.in` (сохранив `>=`-полы и `<`-кэпы как constraints замысла). Добавить `pip-tools` в dev. Компилировать хэшированный lock: `pip-compile --generate-hashes --output-file requirements.txt requirements.in`. `requirements.txt` становится сгенерированным lock (точные `==` + хэши); Dockerfile ставит `pip install --require-hashes -r requirements.txt`.

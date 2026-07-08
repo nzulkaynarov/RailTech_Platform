@@ -95,10 +95,17 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
 
+      # INF-09: psycopg2 is built from source (no more psycopg2-binary), so the
+      # runner needs libpq-dev + a compiler (gcc is pre-installed on ubuntu).
+      - name: Install system build deps (psycopg2 source)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq libpq-dev
+
       - name: Install dependencies
         run: |
           cd backend
-          pip install -r requirements.txt pytest-cov
+          # pytest-cov is in the hashed lock now — do NOT append it on the CLI
+          # (an unhashed name aborts pip's --require-hashes mode).
+          pip install -r requirements.txt
 
       - name: Run tests with coverage
         env:
@@ -158,6 +165,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
 
+      - name: Install system build deps (psycopg2 source)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq libpq-dev
+
       - name: Install dependencies
         run: |
           cd backend
@@ -207,6 +217,9 @@ jobs:
         with:
           python-version: '3.12'
           cache: 'pip'
+
+      - name: Install system build deps (psycopg2 source)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq libpq-dev
 
       - name: Install backend dependencies
         run: |
@@ -335,7 +348,7 @@ jobs:
 
   docker-build:
     runs-on: ubuntu-latest
-    needs: [backend-lint, backend-test, migration-check, frontend-lint, frontend-build, frontend-test]
+    needs: [backend-lint, backend-test, migration-check, frontend-lint, frontend-build, frontend-test, deps-lock]
 
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
@@ -382,8 +395,16 @@ jobs:
           cache: 'npm'
           cache-dependency-path: 'frontend/package-lock.json'
 
+      - name: Install system build deps (psycopg2 source)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq libpq-dev
+
       - name: Install Python dependencies
         run: |
+          # Upgrade pip first: pip-audit audits pip itself, and the setup-python
+          # baseline pip periodically carries its own advisories (unrelated to our
+          # locked deps, which are clean). Keeping pip current keeps the gate about
+          # OUR dependencies.
+          python -m pip install --upgrade pip
           cd backend
           pip install -r requirements.txt
 
@@ -410,3 +431,31 @@ jobs:
         run: |
           cd frontend
           npm audit --audit-level=high
+
+  deps-lock:
+    # INF-05: fail if requirements.txt / requirements-dev.txt drift from the .in
+    # sources (someone edited an .in but forgot to recompile). Recompiles with the
+    # SAME pinned pip-tools used to author the lock and asserts no diff.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+
+      - name: Install build deps + pinned pip-tools
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq libpq-dev
+          pip install "pip-tools==7.5.3"
+
+      - name: Recompile locks and fail on drift
+        run: |
+          cd backend
+          pip-compile --quiet --generate-hashes --no-strip-extras --output-file=requirements.txt requirements.in
+          pip-compile --quiet --generate-hashes --no-strip-extras -c requirements.txt --output-file=requirements-dev.txt requirements-dev.in
+          if ! git diff --exit-code -- requirements.txt requirements-dev.txt; then
+            echo "::error::requirements*.txt is out of sync with requirements*.in. Run: cd backend && pip-compile --generate-hashes --no-strip-extras requirements.in -o requirements.txt (and the -dev variant), then commit."
+            exit 1
+          fi
