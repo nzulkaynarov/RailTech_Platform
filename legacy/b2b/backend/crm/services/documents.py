@@ -9,6 +9,31 @@ document-polish P1). Rule 8: logic lives here; the render functions are thin.
 
 from typing import Optional
 
+_DEFAULT_ACCENT = "#15294d"
+_DARK_INK = "#1b1f27"
+_LIGHT_INK = "#ffffff"
+
+
+def accent_contrast(accent_hex: Optional[str]) -> str:
+    """Readable text color to place ON the accent fill (table head / ИТОГО row). WeasyPrint can't
+    compute contrast, so we pick it here: dark ink on a light brand accent, white on a dark one.
+    Uses the WCAG relative-luminance threshold; malformed/short hex falls back to white."""
+    value = (accent_hex or "").strip().lstrip("#")
+    if len(value) == 3:
+        value = "".join(ch * 2 for ch in value)
+    if len(value) != 6:
+        return _LIGHT_INK
+    try:
+        red, green, blue = (int(value[index : index + 2], 16) / 255 for index in (0, 2, 4))
+    except ValueError:
+        return _LIGHT_INK
+
+    def _linear(channel):
+        return channel / 12.92 if channel <= 0.03928 else ((channel + 0.055) / 1.055) ** 2.4
+
+    luminance = 0.2126 * _linear(red) + 0.7152 * _linear(green) + 0.0722 * _linear(blue)
+    return _DARK_INK if luminance > 0.45 else _LIGHT_INK
+
 
 def seller_logo_url(seller_profile) -> Optional[str]:
     """The seller's logo URL, or None when unset / the storage backend can't resolve it."""
@@ -64,6 +89,7 @@ def render_document_profile_preview_html(company) -> str:
         "valid_until": date(2026, 8, 8),
         "subtotal_excl_vat": Decimal("18400000.00"),
         "charges_total": Decimal("0"),
+        "total_excl_vat": Decimal("18400000.00"),
         "vat_rate": Decimal("12"),
         "vat_amount": Decimal("2208000.00"),
         "total_incl_vat": Decimal("20608000.00"),
@@ -90,6 +116,54 @@ def render_document_profile_preview_html(company) -> str:
     return render_to_string("crm/quote_pdf.html", context)
 
 
+def client_projection_items(quote) -> list:
+    """Client-facing КП lines with document-level charges distributed proportionally into each
+    line's delivered price.
+
+    Confidentiality: the buyer sees ONE all-in price per line, never a separate «Доп. расходы»
+    line — breaking goods vs charges apart lets the buyer decompose the seller's cost/charge
+    structure on a competitive offer. The charges (freight/handling/…) are spread across the lines
+    in proportion to line value; the rounding remainder lands on the LAST line so the lines sum
+    EXACTLY to quote.total_excl_vat (= subtotal + charges), the pre-VAT base the document taxes.
+    """
+    from decimal import ROUND_HALF_UP, Decimal
+
+    penny = Decimal("0.01")
+    items = list(quote.items.select_related("product", "frozen_currency").all())
+    subtotal = quote.subtotal_excl_vat or Decimal("0")
+    charges = quote.charges_total or Decimal("0")
+    projected = []
+    allocated = Decimal("0")
+    last = len(items) - 1
+    for idx, item in enumerate(items):
+        base = item.line_total or Decimal("0")
+        if charges and subtotal:
+            if idx < last:
+                share = (charges * base / subtotal).quantize(penny, rounding=ROUND_HALF_UP)
+                allocated += share
+            else:
+                share = charges - allocated  # last line absorbs the remainder → penny-exact Σ
+        else:
+            share = Decimal("0")
+        line_total = base + share
+        qty = item.quantity or Decimal("1")
+        unit = (line_total / qty).quantize(penny, rounding=ROUND_HALF_UP) if qty else line_total
+        projected.append(
+            {
+                "product": item.product,
+                "imported_raw_name": item.imported_raw_name,
+                "mpn": item.mpn,
+                "gost_drawing": item.gost_drawing,
+                "quantity": item.quantity,
+                "unit": item.unit,
+                "lead_time_days": item.lead_time_days,
+                "final_price_excl_vat": unit,
+                "line_total": line_total,
+            }
+        )
+    return projected
+
+
 def document_brand_context(seller_company, *, is_demo: bool = False) -> dict:
     """The branding bundle every concrete document template feeds the base with. Resolves the
     seller's CompanyDocumentProfile + logo. Safe when `seller_company` is None (renders the
@@ -106,6 +180,7 @@ def document_brand_context(seller_company, *, is_demo: bool = False) -> dict:
     # колонку срока» without also filling their legal name.
     row = CompanyDocumentProfile.objects.filter(company=seller_company).first() if seller_company else None
     branded = row if _profile_has_branding(row) else None
+    accent = (getattr(branded, "accent_color", None) or _DEFAULT_ACCENT) if branded else _DEFAULT_ACCENT
     return {
         "seller": seller_company,
         "seller_profile": branded,
@@ -114,4 +189,8 @@ def document_brand_context(seller_company, *, is_demo: bool = False) -> dict:
         "show_logo": row.show_logo if row else True,
         "show_lead_time": row.show_lead_time if row else True,
         "show_fx_note": row.show_fx_note if row else False,
+        # Full-theming inputs for _document_base.html (F-03): every accent surface reads --accent,
+        # and text on the accent fill reads --accent-contrast so a light brand accent stays legible.
+        "accent": accent,
+        "accent_contrast": accent_contrast(accent),
     }

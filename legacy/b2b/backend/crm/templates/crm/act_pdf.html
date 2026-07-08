@@ -1,7 +1,10 @@
 {% extends "crm/_document_base.html" %}
+{% load document_format %}
 {% comment %}
   Акт приёма-передачи. «Поставщик» = the REAL seller resolved from the act's contract→quote
-  (document_brand_context), named on the signature line — never a blank/anonymous party.
+  (document_brand_context). Uses the shared base parties block (seller + buyer requisites) and a
+  line-item table sourced from the linked invoice (act.invoice.items) — never a blank party or a
+  one-line stub (F-07/F-18). Currency = the invoice currency (default UZS).
 {% endcomment %}
 {% block doc_meta %}
   <div class="doc-no">Акт № {{ act.number }}</div>
@@ -10,18 +13,56 @@
 
 {% block doc_title %}Акт приёма-передачи{% endblock %}
 
-{% block parties %}{% endblock %}
-
 {% block content %}
+  {% with ccy=invoice.currency.code|default:"UZS" %}
   <div class="term-box">
     <span class="k">Сделка:</span> #{{ act.deal_id }}
     {% if act.contract %} &middot; <span class="k">Договор:</span> {{ act.contract.number }} от {{ act.contract.created_at|date:"d.m.Y" }}{% endif %}
-    {% if act.invoice %} &middot; <span class="k">Инвойс:</span> {{ act.invoice.number }} на {{ act.invoice.total_incl_vat|floatformat:2 }}{% endif %}
+    {% if act.invoice %} &middot; <span class="k">Счёт:</span> {{ act.invoice.number }} от {{ act.invoice.issued_at|date:"d.m.Y" }}{% endif %}
   </div>
 
   <p style="font-size:9pt;color:#3c424c;margin:12pt 0;">
-    Стороны подтверждают, что услуги / товары по указанной сделке оказаны / поставлены в полном
-    объёме. Сумма: <strong>{{ act.total_amount|floatformat:2 }}</strong>.
+    Настоящий Акт составлен о том, что Поставщик передал, а Покупатель принял следующие
+    товары / услуги по указанной сделке:
+  </p>
+
+  {% if invoice.items.all %}
+  <table class="lines">
+    <thead>
+      <tr>
+        <th style="width:6%">№</th>
+        <th style="width:48%">Наименование</th>
+        <th style="width:10%" class="center">Кол-во</th>
+        <th style="width:18%" class="num">Цена, {{ ccy }}</th>
+        <th style="width:18%" class="num">Сумма, {{ ccy }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for it in invoice.items.all %}
+      <tr>
+        <td class="num">{{ forloop.counter }}</td>
+        <td class="item-name">{{ it.description }}</td>
+        <td class="center">{{ it.quantity|qty }}</td>
+        <td class="num">{{ it.unit_price_excl_vat|money }}</td>
+        <td class="num">{{ it.line_total_excl_vat|money }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  <table class="totals-wrap">
+    <tr><td>
+      <table class="totals">
+        <tr class="grand"><td class="lbl">Итого:</td><td class="val">{{ act.total_amount|money:ccy }}</td></tr>
+      </table>
+    </td></tr>
+  </table>
+  <div class="amount-words"><span class="k">Сумма прописью:</span> {{ act.total_amount|money_words:ccy }}</div>
+
+  <p style="font-size:8.8pt;color:#3c424c;margin:12pt 0;">
+    Услуги / товары оказаны / поставлены в полном объёме и в согласованные сроки. Стороны претензий
+    по объёму, качеству, комплектности и срокам друг к другу не имеют.
   </p>
 
   <table class="signatures">
@@ -31,6 +72,7 @@
           <div class="role">От Поставщика:</div>
           {% firstof seller_profile.legal_name seller.name "—" %}
           {% if seller_profile.signatory_name %}<div class="sign-line">{{ seller_profile.signatory_position|default:"Подписант" }}: {{ seller_profile.signatory_name }}</div>{% else %}<div class="sign-line">Подпись / дата</div>{% endif %}
+          <div class="seal">М.П.</div>
         </div>
       </td>
       <td>
@@ -38,8 +80,10 @@
           <div class="role">От Покупателя:</div>
           {{ company.name }}
           <div class="sign-line">Подпись / дата</div>
+          <div class="seal">М.П.</div>
         </div>
       </td>
     </tr>
   </table>
+  {% endwith %}
 {% endblock %}

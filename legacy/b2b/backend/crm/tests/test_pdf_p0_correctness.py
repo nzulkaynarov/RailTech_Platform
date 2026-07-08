@@ -188,7 +188,54 @@ def test_quote_pdf_subtotal_excl_vat_keeps_kopecks_and_document_adds_up(quote_qt
             "is_demo": False,
         },
     )
-    # The correct pre-VAT total is rendered (locale-robust: ru renders "2888861,09").
-    assert ("2888861,09" in html) or ("2888861.09" in html)
-    # The truncated value must NOT appear as the «Итого без НДС» line.
-    assert "2888861,00" not in html and "2888861.00" not in html
+    # The correct pre-VAT total is rendered with grouped, comma-decimal money formatting
+    # (NBSP thousands separator via the `money` filter): «2 888 861,09 UZS».
+    nbsp = " "
+    assert f"2{nbsp}888{nbsp}861,09" in html
+    # The kopeck-truncated value must NOT appear as the «Итого без НДС» line.
+    assert f"2{nbsp}888{nbsp}861,00" not in html
+
+
+# ─────────────────────────────────────────────────────────────────────
+# 5. Charges are distributed into delivered line prices — no «Доп. расходы» leak (prod КП-2026-00006)
+# ─────────────────────────────────────────────────────────────────────
+@pytest.mark.django_db
+def test_client_projection_distributes_charges_and_hides_the_breakout(quote_qty2):
+    """The client КП must NOT show a «Доп. расходы / скидки» line — the goods-vs-charges breakout
+    lets the buyer decompose the seller's cost/charge structure (confidentiality). Charges are
+    spread into per-line delivered prices, which sum EXACTLY to total_excl_vat."""
+    from crm.models import QuoteItem
+    from crm.services.documents import client_projection_items
+
+    buyer, seller, quote = quote_qty2  # line 1: Колодка ×2 @100 → 200
+    QuoteItem.objects.create(quote=quote, imported_raw_name="Втулка", quantity=1, frozen_base_price=Decimal("300"))
+    quote.recalculate_totals()  # subtotal = 500 from the two lines; charges recomputed to 0
+    # recalculate_totals() persists via QuoteCalculationService.recalculate_quote(pk) but does NOT
+    # mutate this in-memory instance — reload so subtotal_excl_vat reflects the two lines.
+    quote.refresh_from_db()
+    quote.charges_total = Decimal("50.05")  # inject a fractional document charge (as a % charge would)
+    quote.save(update_fields=["charges_total"])
+
+    lines = client_projection_items(quote)
+    # Charges distributed pro-rata by line value, last line absorbs the rounding remainder.
+    line_sum = sum((line["line_total"] for line in lines), Decimal("0"))
+    assert line_sum == quote.total_excl_vat == Decimal("550.05")  # penny-exact
+    assert all(line["line_total"] >= 0 for line in lines)
+
+    html = render_to_string(
+        "crm/quote_pdf.html",
+        {
+            "quote": quote,
+            "items": lines,
+            "company": buyer,
+            "seller": seller,
+            "seller_profile": None,
+            "seller_logo_url": None,
+            "is_demo": False,
+        },
+    )
+    # No goods/charges decomposition on the client projection.
+    assert "Доп. расходы" not in html
+    assert "Сумма позиций" not in html
+    # The flat pre-VAT total is the distributed line sum.
+    assert ("550,05" in html) or ("550.05" in html)
