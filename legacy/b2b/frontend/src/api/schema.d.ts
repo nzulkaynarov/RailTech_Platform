@@ -126,6 +126,26 @@ export interface paths {
         patch: operations["accounts_companies_document_profile_partial_update"];
         trace?: never;
     };
+    "/api/v1/accounts/companies/{id}/document-profile/preview/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Live preview of a sample КП with the company's document profile
+         * @description Renders a SAMPLE КП as HTML using the company's CURRENT document profile (branding + layout toggles) — the live preview behind the document-settings panel. OWNER only. Returns text/html (no WeasyPrint in the request thread, ARCH-03).
+         */
+        get: operations["accounts_companies_document_profile_preview_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/accounts/companies/{id}/document-profile/upload-logo/": {
         parameters: {
             query?: never;
@@ -5665,7 +5685,7 @@ export interface components {
              * ИНН
              * @description Идентификационный номер налогоплательщика
              */
-            inn?: string | null;
+            inn?: (string) | null;
             /**
              * Статус верификации
              * @description Текущий статус KYC-проверки компании
@@ -5720,13 +5740,11 @@ export interface components {
             country?: number | null;
             /**
              * Веб-сайт
-             * Format: uri
              * @description Адрес корпоративного сайта
              */
             website?: string;
             /**
              * Адрес электронной почты
-             * Format: email
              * @description Основной email компании для уведомлений
              */
             email?: string;
@@ -5806,6 +5824,21 @@ export interface components {
              * @description HEX-цвет фирменного стиля для шапки документа (напр. #15294d)
              */
             accent_color?: string;
+            /**
+             * Показывать логотип
+             * @description Печатать логотип в шапке документов
+             */
+            show_logo?: boolean;
+            /**
+             * Показывать колонку «Срок»
+             * @description Колонка срока поставки по позициям в КП
+             */
+            show_lead_time?: boolean;
+            /**
+             * Показывать курс ЦБ в КП
+             * @description Печатать курс ЦБ (FX-базис) на клиентском КП. По умолчанию скрыто — клиент видит цену в сумах.
+             */
+            show_fx_note?: boolean;
             /**
              * Создан
              * Format: date-time
@@ -5896,7 +5929,7 @@ export interface components {
              * ИНН
              * @description Идентификационный номер налогоплательщика
              */
-            inn?: string | null;
+            inn?: (string) | null;
             /**
              * Логотип
              * Format: uri
@@ -5915,7 +5948,7 @@ export interface components {
              * ИНН
              * @description Идентификационный номер налогоплательщика
              */
-            inn?: string | null;
+            inn?: (string) | null;
             /**
              * Логотип
              * Format: binary
@@ -6029,7 +6062,7 @@ export interface components {
              * ИНН
              * @description Идентификационный номер налогоплательщика
              */
-            inn?: string | null;
+            inn?: (string) | null;
             /**
              * ISO 9001
              * @description Имеется сертификат качества ISO 9001
@@ -6067,13 +6100,11 @@ export interface components {
             country?: number | null;
             /**
              * Веб-сайт
-             * Format: uri
              * @description Адрес корпоративного сайта
              */
             website?: string;
             /**
              * Адрес электронной почты
-             * Format: email
              * @description Основной email компании для уведомлений
              */
             email?: string;
@@ -6304,10 +6335,7 @@ export interface components {
             readonly company_is_registered: boolean;
             /** ФИО */
             name: string;
-            /**
-             * Адрес электронной почты
-             * Format: email
-             */
+            /** Адрес электронной почты */
             email?: string;
             /** Телефон */
             phone?: string;
@@ -7088,7 +7116,6 @@ export interface components {
             readonly country_name: string;
             /**
              * Сайт
-             * Format: uri
              * @description Официальный сайт производителя
              */
             website?: string;
@@ -7207,11 +7234,7 @@ export interface components {
             contact_name: string;
             /** @default  */
             inn: string;
-            /**
-             * Format: email
-             * @default
-             */
-            email: string;
+            email?: string;
             /** @default  */
             phone: string;
             /** @default  */
@@ -7878,6 +7901,21 @@ export interface components {
              * @description HEX-цвет фирменного стиля для шапки документа (напр. #15294d)
              */
             accent_color?: string;
+            /**
+             * Показывать логотип
+             * @description Печатать логотип в шапке документов
+             */
+            show_logo?: boolean;
+            /**
+             * Показывать колонку «Срок»
+             * @description Колонка срока поставки по позициям в КП
+             */
+            show_lead_time?: boolean;
+            /**
+             * Показывать курс ЦБ в КП
+             * @description Печатать курс ЦБ (FX-базис) на клиентском КП. По умолчанию скрыто — клиент видит цену в сумах.
+             */
+            show_fx_note?: boolean;
         };
         /** @description Platform-admin view/CRUD of a company's feature entitlements (ADR-0006 Move 4 monetization). */
         PatchedCompanyEntitlementRequest: {
@@ -7918,7 +7956,7 @@ export interface components {
              * ИНН
              * @description Идентификационный номер налогоплательщика
              */
-            inn?: string | null;
+            inn?: (string) | null;
             /**
              * ISO 9001
              * @description Имеется сертификат качества ISO 9001
@@ -7956,13 +7994,11 @@ export interface components {
             country?: number | null;
             /**
              * Веб-сайт
-             * Format: uri
              * @description Адрес корпоративного сайта
              */
             website?: string;
             /**
              * Адрес электронной почты
-             * Format: email
              * @description Основной email компании для уведомлений
              */
             email?: string;
@@ -8056,10 +8092,7 @@ export interface components {
         PatchedContactRequest: {
             /** ФИО */
             name?: string;
-            /**
-             * Адрес электронной почты
-             * Format: email
-             */
+            /** Адрес электронной почты */
             email?: string;
             /** Телефон */
             phone?: string;
@@ -9064,7 +9097,7 @@ export interface components {
              * ИНН
              * @description Идентификационный номер налогоплательщика
              */
-            inn?: string | null;
+            inn?: (string) | null;
             /**
              * Статус верификации
              * @description Текущий статус KYC-проверки компании
@@ -9104,7 +9137,7 @@ export interface components {
              * ИНН
              * @description Идентификационный номер налогоплательщика
              */
-            inn?: string | null;
+            inn?: (string) | null;
             /**
              * Статус верификации
              * @description Текущий статус KYC-проверки компании
@@ -9246,10 +9279,9 @@ export interface components {
             file?: string | null;
             /**
              * URL документа
-             * Format: uri
              * @description Внешняя ссылка на документ (если файл не загружен)
              */
-            file_url?: string | null;
+            file_url?: (string) | null;
             /**
              * Название документа
              * @description Напр: Паспорт изделия, Сертификат ГОСТ
@@ -9270,10 +9302,9 @@ export interface components {
             file?: string | null;
             /**
              * URL документа
-             * Format: uri
              * @description Внешняя ссылка на документ (если файл не загружен)
              */
-            file_url?: string | null;
+            file_url?: (string) | null;
             /**
              * Название документа
              * @description Напр: Паспорт изделия, Сертификат ГОСТ
@@ -9290,10 +9321,9 @@ export interface components {
             image?: string | null;
             /**
              * URL изображения
-             * Format: uri
              * @description Внешняя ссылка на фото (если файл не загружен)
              */
-            image_url?: string | null;
+            image_url?: (string) | null;
             /**
              * Главное фото
              * @description Отображается первым в карточке товара
@@ -9314,10 +9344,9 @@ export interface components {
             image?: string | null;
             /**
              * URL изображения
-             * Format: uri
              * @description Внешняя ссылка на фото (если файл не загружен)
              */
-            image_url?: string | null;
+            image_url?: (string) | null;
             /**
              * Главное фото
              * @description Отображается первым в карточке товара
@@ -11153,6 +11182,27 @@ export interface operations {
             };
             /** @description Only the company OWNER may read/update the profile */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    accounts_companies_document_profile_preview_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Компания. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sample КП HTML */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
