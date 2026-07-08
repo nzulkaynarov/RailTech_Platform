@@ -468,6 +468,10 @@ function MainApp() {
       'dashboard', 'products', 'profile', 'settings',
       'sourcing-requests',
       'crm-deals', 'crm-quotes',
+      // Counterparty book (ADR-0005 Phase F): clients (seller ctx) / suppliers (buyer ctx).
+      // Their render cases + context sets existed, but this allowlist omitted them, so nav
+      // clicks bounced to the dashboard.
+      'clients', 'suppliers',
       'categories', 'equipment-groups',
       'help', 'my-requests',
       'admin-users', 'admin-kyc', 'admin-subscriptions', 'admin-entitlements', 'admin-role-apps',
