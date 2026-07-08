@@ -24,8 +24,17 @@
   <div class="info">
     <div>
       <strong>Поставщик</strong><br>
-      ООО «RailTech»<br>
-      ИНН 300000000001
+      {% if seller_profile %}
+        {{ seller_profile.legal_name|default:supplier.name }}<br>
+        {% if seller_profile.inn %}ИНН {{ seller_profile.inn }}{% elif supplier.inn %}ИНН {{ supplier.inn }}{% endif %}
+        {% if seller_profile.legal_address %}<br>{{ seller_profile.legal_address }}{% endif %}
+      {% elif supplier %}
+        {{ supplier.name }}<br>
+        {% if supplier.inn %}ИНН {{ supplier.inn }}{% endif %}
+        {% if supplier.legal_address %}<br>{{ supplier.legal_address }}{% endif %}
+      {% else %}
+        &mdash;
+      {% endif %}
     </div>
     <div>
       <strong>Плательщик</strong><br>

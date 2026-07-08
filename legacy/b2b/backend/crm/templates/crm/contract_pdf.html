@@ -68,8 +68,8 @@
         <td>{{ forloop.counter }}</td>
         <td>{% if item.product %}{{ item.product.name }}{% else %}{{ item.imported_raw_name }}{% endif %}</td>
         <td>{{ item.quantity }}</td>
-        <td>{{ item.final_price_excl_vat }}</td>
         <td>{{ item.final_price_excl_vat|floatformat:2 }}</td>
+        <td>{{ item.line_total|floatformat:2 }}</td>
       </tr>
       {% endfor %}
       <tr class="total-row">
