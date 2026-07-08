@@ -35,6 +35,18 @@ def accent_contrast(accent_hex: Optional[str]) -> str:
     return _DARK_INK if luminance > 0.45 else _LIGHT_INK
 
 
+def public_quote_url(quote) -> Optional[str]:
+    """Public no-login КП link built from the minted `public_access_token`, or None before send.
+    ONE place owns the URL pattern (Rule 8) — shared by the send-email task and the PDF «Принять
+    онлайн» CTA. Returns None when the token is unset (draft/preview → the CTA stays hidden)."""
+    from django.conf import settings
+
+    token = getattr(quote, "public_access_token", None)
+    if not token:
+        return None
+    return f"{settings.FRONTEND_URL}/api/v1/public/quotes/{token}/"
+
+
 def seller_logo_url(seller_profile) -> Optional[str]:
     """The seller's logo URL, or None when unset / the storage backend can't resolve it."""
     if not seller_profile or not seller_profile.logo:

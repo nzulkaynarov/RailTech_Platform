@@ -426,9 +426,9 @@ def send_quote_email(self, quote_id: int) -> dict:
         finally:
             quote.pdf_file.close()
 
-    public_link = ""
-    if quote.public_access_token:
-        public_link = f"{settings.FRONTEND_URL}/api/v1/public/quotes/{quote.public_access_token}/"
+    from crm.services.documents import public_quote_url
+
+    public_link = public_quote_url(quote) or ""
 
     send_templated_email(
         "quote_sent",
