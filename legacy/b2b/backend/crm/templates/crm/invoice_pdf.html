@@ -1,77 +1,84 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<style>
-  body { font-family: 'Arial', sans-serif; font-size: 12px; color: #333; margin: 40px; }
-  h1 { font-size: 22px; color: #1a1a2e; margin-bottom: 4px; }
-  .subtitle { color: #666; font-size: 13px; margin-bottom: 24px; }
-  .info { display: table; width: 100%; margin-bottom: 20px; }
-  .info > div { display: table-cell; width: 50%; padding: 12px; background: #f8f9fa; border-radius: 6px; vertical-align: top; }
-  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-  th { background: #1a1a2e; color: white; padding: 8px; text-align: left; font-size: 11px; }
-  td { padding: 7px 8px; border-bottom: 1px solid #e0e0e0; font-size: 11px; }
-  .totals { margin-top: 12px; float: right; width: 320px; }
-  .totals td { padding: 6px 10px; }
-  .totals .total { font-weight: bold; font-size: 13px; background: #1a1a2e; color: white; }
-  .footer { margin-top: 60px; font-size: 10px; color: #999; text-align: center; border-top: 1px solid #e0e0e0; padding-top: 10px; }
-</style>
-</head>
-<body>
-  <h1>Инвойс № {{ invoice.number }}</h1>
-  <p class="subtitle">Дата выставления: {{ invoice.issued_at|date:"d.m.Y" }} · Оплата до: {{ invoice.due_date|date:"d.m.Y" }}</p>
+{% extends "crm/_document_base.html" %}
+{% comment %}
+  Инвойс (счёт на оплату). «Поставщик» = the REAL seller resolved from the invoice's
+  contract→quote (document_brand_context) — NEVER a hardcoded platform identity (Rule 1/2).
+  Line «Сумма» = InvoiceItem.line_total_excl_vat (already price × qty).
+{% endcomment %}
+{% block doc_meta %}
+  <div class="doc-no">Инвойс № {{ invoice.number }}</div>
+  <div>от {{ invoice.issued_at|date:"d.m.Y" }}</div>
+  {% if invoice.due_date %}<div>оплата до {{ invoice.due_date|date:"d.m.Y" }}</div>{% endif %}
+{% endblock %}
 
-  <div class="info">
-    <div>
-      <strong>Поставщик</strong><br>
-      {% if seller_profile %}
-        {{ seller_profile.legal_name|default:supplier.name }}<br>
-        {% if seller_profile.inn %}ИНН {{ seller_profile.inn }}{% elif supplier.inn %}ИНН {{ supplier.inn }}{% endif %}
-        {% if seller_profile.legal_address %}<br>{{ seller_profile.legal_address }}{% endif %}
-      {% elif supplier %}
-        {{ supplier.name }}<br>
-        {% if supplier.inn %}ИНН {{ supplier.inn }}{% endif %}
-        {% if supplier.legal_address %}<br>{{ supplier.legal_address }}{% endif %}
-      {% else %}
-        &mdash;
-      {% endif %}
-    </div>
-    <div>
-      <strong>Плательщик</strong><br>
-      {{ company.name }}<br>
-      ИНН {{ company.inn }}<br>
-      {{ company.legal_address }}
-    </div>
-  </div>
+{% block doc_title %}Счёт на оплату{% endblock %}
 
-  <table>
+{% block parties %}
+<table class="parties">
+  <tr>
+    <td>
+      <div class="party">
+        <h3>Поставщик</h3>
+        {% if seller_profile %}
+          <div class="pname">{{ seller_profile.legal_name|default:seller.name }}</div>
+          {% if seller_profile.inn %}<p>ИНН: {{ seller_profile.inn }}</p>{% elif seller.inn %}<p>ИНН: {{ seller.inn }}</p>{% endif %}
+          {% if seller_profile.legal_address %}<p>{{ seller_profile.legal_address }}</p>{% elif seller.legal_address %}<p>{{ seller.legal_address }}</p>{% endif %}
+          {% if seller_profile.bank_details %}<p>{{ seller_profile.bank_details|linebreaksbr }}</p>{% endif %}
+        {% elif seller %}
+          <div class="pname">{{ seller.name }}</div>
+          {% if seller.inn %}<p>ИНН: {{ seller.inn }}</p>{% endif %}
+          {% if seller.legal_address %}<p>{{ seller.legal_address }}</p>{% endif %}
+        {% else %}
+          <div class="pname">&mdash;</div>
+        {% endif %}
+      </div>
+    </td>
+    <td>
+      <div class="party">
+        <h3>Плательщик</h3>
+        <div class="pname">{{ company.name }}</div>
+        {% if company.inn %}<p>ИНН: {{ company.inn }}</p>{% endif %}
+        {% if company.legal_address %}<p>{{ company.legal_address }}</p>{% endif %}
+      </div>
+    </td>
+  </tr>
+</table>
+{% endblock %}
+
+{% block content %}
+  <table class="lines">
     <thead>
-      <tr><th>#</th><th>Описание</th><th>Кол-во</th><th>Цена</th><th>Сумма</th></tr>
+      <tr>
+        <th style="width:6%">№</th>
+        <th style="width:50%">Описание</th>
+        <th style="width:11%" class="center">Кол-во</th>
+        <th style="width:16%" class="num">Цена</th>
+        <th style="width:17%" class="num">Сумма</th>
+      </tr>
     </thead>
     <tbody>
       {% for it in items %}
       <tr>
-        <td>{{ forloop.counter }}</td>
-        <td>{{ it.description }}</td>
-        <td>{{ it.quantity }}</td>
-        <td>{{ it.unit_price_excl_vat|floatformat:2 }}</td>
-        <td>{{ it.line_total_excl_vat|floatformat:2 }}</td>
+        <td class="num">{{ forloop.counter }}</td>
+        <td class="item-name">{{ it.description }}</td>
+        <td class="center">{{ it.quantity }}</td>
+        <td class="num">{{ it.unit_price_excl_vat|floatformat:2 }}</td>
+        <td class="num">{{ it.line_total_excl_vat|floatformat:2 }}</td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
 
-  <div class="totals">
-    <table>
-      <tr><td>Сумма без НДС</td><td>{{ invoice.subtotal_excl_vat|floatformat:2 }}</td></tr>
-      <tr><td>НДС</td><td>{{ invoice.vat_amount|floatformat:2 }}</td></tr>
-      <tr class="total"><td>К оплате</td><td>{{ invoice.total_incl_vat|floatformat:2 }}</td></tr>
-    </table>
-  </div>
-  <div style="clear:both"></div>
+  <table class="totals-wrap">
+    <tr><td>
+      <table class="totals">
+        <tr><td class="lbl">Сумма без НДС:</td><td class="val">{{ invoice.subtotal_excl_vat|floatformat:2 }}</td></tr>
+        <tr class="sep"><td class="lbl">НДС:</td><td class="val">{{ invoice.vat_amount|floatformat:2 }}</td></tr>
+        <tr class="grand"><td class="lbl">К оплате:</td><td class="val">{{ invoice.total_incl_vat|floatformat:2 }}</td></tr>
+      </table>
+    </td></tr>
+  </table>
 
-  {% if invoice.notes %}<p style="margin-top:20px"><strong>Примечание:</strong> {{ invoice.notes }}</p>{% endif %}
-
-  <div class="footer">RailTech B2B Ecosystem | © 2026</div>
-</body>
-</html>
+  {% if invoice.notes %}
+  <div class="notes-block"><span class="k">Примечание:</span><br>{{ invoice.notes|linebreaks }}</div>
+  {% endif %}
+{% endblock %}

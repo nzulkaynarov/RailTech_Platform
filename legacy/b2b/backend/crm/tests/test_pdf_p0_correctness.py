@@ -45,7 +45,7 @@ def _render_invoice(supplier=None, seller_profile=None):
     buyer = Company(name="Покупатель LLC", inn="7700000001", legal_address="г. Ташкент")
     return render_to_string(
         "crm/invoice_pdf.html",
-        {"invoice": invoice, "items": items, "company": buyer, "supplier": supplier, "seller_profile": seller_profile},
+        {"invoice": invoice, "items": items, "company": buyer, "seller": supplier, "seller_profile": seller_profile},
     )
 
 
@@ -112,7 +112,7 @@ def test_contract_line_sum_is_price_times_qty(quote_qty2):
             "contract": contract,
             "deal": quote.deal,
             "company": buyer,
-            "supplier": seller,
+            "seller": seller,
             "seller_profile": None,
             "quote": quote,
             "items": quote.items.all(),

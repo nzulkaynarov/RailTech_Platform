@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+{% comment %}
+  Shared document base for ALL seller-issued PDFs (КП / договор / инвойс / акт).
+
+  One design language, one branding pipeline (ADR-0006 document-polish P1). Every
+  concrete template `{% extends "crm/_document_base.html" %}` and fills the blocks:
+    doc_title   — the H1 (e.g. «Коммерческое предложение»)
+    doc_meta    — the right-side header block (doc № / date / valid-until)
+    parties     — the Поставщик / Покупатель cards (default provided; overridable)
+    content     — the document body (line items, totals, terms, signatures)
+    doc_footer  — footer line (default: seller_profile.footer_text → platform)
+    extra_head  — per-document extra <style> (rare)
+
+  Expected context (all builders pass the SAME shape via
+  crm.services.documents.document_brand_context):
+    seller          — the issuing Company (may be None)
+    seller_profile  — its branded CompanyDocumentProfile (may be None)
+    seller_logo_url — its logo URL (may be None)
+    company         — the buyer Company
+    is_demo         — draw the DEMO watermark (unsendable seller)
+
+  CSS is inline + WeasyPrint-safe (no flex/grid reliance; tables for layout; pt units).
+{% endcomment %}
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+{% firstof seller_profile.legal_name seller.name "RailTech B2B" as seller_name %}
+{% with accent=seller_profile.accent_color|default:"#15294d" %}
+<style>
+  @page {
+    size: A4;
+    margin: 18mm 16mm 20mm 16mm;
+    @bottom-center {
+      content: "Стр. " counter(page) " из " counter(pages);
+      font-family: 'Helvetica', 'Arial', sans-serif;
+      font-size: 8pt;
+      color: #9aa0a6;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Helvetica', 'Arial', sans-serif;
+    font-size: 9.5pt;
+    line-height: 1.45;
+    color: #20242b;
+    margin: 0;
+  }
+
+  /* ── Brand header ─────────────────────────────────────────── */
+  .brandbar { width: 100%; border-collapse: collapse; margin-bottom: 14pt; }
+  .brandbar td { vertical-align: top; padding: 0; }
+  .brand-name { font-size: 16pt; font-weight: 700; color: #15294d; letter-spacing: 0.2pt; }
+  .brand-meta { font-size: 8.5pt; color: #5a6270; margin-top: 2pt; }
+  .doc-id { text-align: right; font-size: 8.5pt; color: #5a6270; }
+  .doc-id .doc-no { font-size: 13pt; font-weight: 700; color: #15294d; letter-spacing: 0.2pt; }
+  .rule { height: 2.5pt; background: #15294d; margin: 0 0 16pt 0; }
+
+  h1.doc-title { font-size: 14pt; font-weight: 700; color: #15294d; margin: 0 0 14pt 0; }
+
+  /* ── Parties ──────────────────────────────────────────────── */
+  .parties { width: 100%; border-collapse: separate; border-spacing: 10pt 0; margin-bottom: 16pt; }
+  .parties td { vertical-align: top; width: 50%; }
+  .party { border: 0.75pt solid #dfe3ea; border-radius: 4pt; padding: 9pt 11pt; background: #f7f9fc; }
+  .party h3 { margin: 0 0 5pt 0; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.6pt; color: #7a828f; font-weight: 700; }
+  .party .pname { font-weight: 700; font-size: 10.5pt; color: #20242b; }
+  .party p { margin: 1.5pt 0; font-size: 8.7pt; color: #3c424c; }
+
+  /* ── Line items ───────────────────────────────────────────── */
+  table.lines { width: 100%; border-collapse: collapse; margin-bottom: 4pt; }
+  table.lines thead th { background: #15294d; color: #ffffff; padding: 7pt 7pt; text-align: left; font-size: 8pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3pt; }
+  table.lines tbody td { padding: 6pt 7pt; border-bottom: 0.5pt solid #e6e9ef; font-size: 9pt; vertical-align: top; }
+  table.lines tbody tr:nth-child(even) { background: #f6f8fb; }
+  .num { text-align: right; white-space: nowrap; }
+  .center { text-align: center; white-space: nowrap; }
+  .item-name { font-weight: 600; color: #20242b; }
+  .item-sub { font-size: 7.6pt; color: #7a828f; margin-top: 1pt; }
+
+  /* ── Totals bridge ────────────────────────────────────────── */
+  .totals-wrap { width: 100%; border-collapse: collapse; margin-top: 12pt; }
+  .totals-wrap td { vertical-align: top; }
+  table.totals { width: 62%; border-collapse: collapse; margin-left: 38%; }
+  table.totals td { padding: 5pt 9pt; font-size: 9.2pt; }
+  table.totals td.lbl { color: #4a515c; }
+  table.totals td.val { text-align: right; white-space: nowrap; }
+  table.totals tr.sep td { border-top: 0.5pt solid #d7dbe3; }
+  table.totals tr.grand td { background: #15294d; color: #ffffff; font-weight: 700; font-size: 10.5pt; border-radius: 3pt; }
+
+  /* ── Terms / notes ────────────────────────────────────────── */
+  .terms { margin-top: 18pt; }
+  .term-box { border-left: 2.5pt solid #15294d; background: #f7f9fc; padding: 7pt 11pt; margin-bottom: 8pt; font-size: 8.8pt; color: #3c424c; }
+  .term-box .k { font-weight: 700; color: #20242b; }
+  .valid-box { border-left-color: #b8860b; background: #fdf8ec; }
+  .notes-block { margin-top: 12pt; font-size: 8.8pt; color: #3c424c; }
+  .notes-block .k { font-weight: 700; color: #20242b; }
+
+  /* ── Signatures ───────────────────────────────────────────── */
+  .signatures { width: 100%; border-collapse: separate; border-spacing: 16pt 0; margin-top: 34pt; }
+  .signatures td { width: 50%; vertical-align: top; }
+  .sign-box { font-size: 8.8pt; color: #3c424c; }
+  .sign-box .role { font-weight: 700; color: #20242b; margin-bottom: 2pt; }
+  .sign-line { margin-top: 26pt; border-top: 0.75pt solid #9aa0a6; padding-top: 3pt; font-size: 7.8pt; color: #7a828f; }
+
+  .footer { margin-top: 26pt; padding-top: 8pt; border-top: 0.5pt solid #e6e9ef; font-size: 7.6pt; color: #9aa0a6; text-align: center; }
+
+  /* Move 4 monetization: DEMO watermark. position:fixed repeats on every page in WeasyPrint. */
+  .demo-watermark {
+    position: fixed; top: 45%; left: -5%; right: -5%;
+    text-align: center; transform: rotate(-27deg); transform-origin: center;
+    font-size: 16pt; font-weight: 700; letter-spacing: 1pt;
+    color: rgba(200, 55, 55, 0.13); white-space: nowrap;
+  }
+  {% block extra_head %}{% endblock %}
+</style>
+</head>
+<body>
+  {% block watermark %}{% if is_demo %}<div class="demo-watermark">ДЕМО — не для коммерческого использования</div>{% endif %}{% endblock %}
+
+  <!-- ── Brand header ── -->
+  <table class="brandbar">
+    <tr>
+      {% if seller_logo_url %}
+      <td style="width:54pt; vertical-align:middle;">
+        <img src="{{ seller_logo_url }}" style="max-height:46pt; max-width:120pt;" alt="logo">
+      </td>
+      {% endif %}
+      <td>
+        <div class="brand-name" style="color:{{ accent }};">{{ seller_name }}</div>
+        <div class="brand-meta">
+          {% if seller_profile.inn %}ИНН {{ seller_profile.inn }}{% elif seller.inn %}ИНН {{ seller.inn }}{% endif %}
+          {% if seller.phone %} · тел. {{ seller.phone }}{% endif %}
+          {% if seller.email %} · {{ seller.email }}{% endif %}
+          {% if not seller %}RailTech B2B Ecosystem{% endif %}
+        </div>
+      </td>
+      <td class="doc-id">{% block doc_meta %}{% endblock %}</td>
+    </tr>
+  </table>
+  <div class="rule" style="background:{{ accent }};"></div>
+
+  <h1 class="doc-title" style="color:{{ accent }};">{% block doc_title %}{% endblock %}</h1>
+
+  {% block parties %}
+  <table class="parties">
+    <tr>
+      <td>
+        <div class="party">
+          <h3>Поставщик</h3>
+          {% if seller_profile %}
+            <div class="pname">{{ seller_profile.legal_name|default:seller.name }}</div>
+            {% if seller_profile.inn %}<p>ИНН: {{ seller_profile.inn }}</p>{% elif seller.inn %}<p>ИНН: {{ seller.inn }}</p>{% endif %}
+            {% if seller_profile.legal_address %}<p>{{ seller_profile.legal_address }}</p>{% elif seller.legal_address %}<p>{{ seller.legal_address }}</p>{% endif %}
+            {% if seller_profile.bank_details %}<p>{{ seller_profile.bank_details|linebreaksbr }}</p>{% endif %}
+            {% if seller.phone %}<p>Тел.: {{ seller.phone }}</p>{% endif %}
+            {% if seller.email %}<p>{{ seller.email }}</p>{% endif %}
+            {% if seller_profile.signatory_name %}<p>{{ seller_profile.signatory_position|default:"Подписант" }}: {{ seller_profile.signatory_name }}</p>{% endif %}
+          {% elif seller %}
+            <div class="pname">{{ seller.name }}</div>
+            {% if seller.inn %}<p>ИНН: {{ seller.inn }}</p>{% endif %}
+            {% if seller.legal_address %}<p>{{ seller.legal_address }}</p>{% endif %}
+            {% if seller.phone %}<p>Тел.: {{ seller.phone }}</p>{% endif %}
+            {% if seller.email %}<p>{{ seller.email }}</p>{% endif %}
+          {% else %}
+            <div class="pname">RailTech B2B</div>
+            <p>Платформа b2b.railtech.uz</p>
+          {% endif %}
+        </div>
+      </td>
+      <td>
+        <div class="party">
+          <h3>Покупатель</h3>
+          <div class="pname">{{ company.name }}</div>
+          {% if company.inn %}<p>ИНН: {{ company.inn }}</p>{% endif %}
+          {% if company.legal_address %}<p>{{ company.legal_address }}</p>{% endif %}
+          {% if company.contact_person %}<p>Контакт: {{ company.contact_person }}</p>{% endif %}
+        </div>
+      </td>
+    </tr>
+  </table>
+  {% endblock %}
+
+  {% block content %}{% endblock %}
+
+  <div class="footer">
+    {% block doc_footer %}{% if seller_profile.footer_text %}{{ seller_profile.footer_text|linebreaksbr }}{% else %}Документ сформирован в RailTech B2B Ecosystem{% endif %}{% endblock %}
+  </div>
+{% endwith %}
+</body>
+</html>

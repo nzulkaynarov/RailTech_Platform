@@ -1,43 +1,45 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<style>
-  body { font-family: 'Arial', sans-serif; font-size: 12px; color: #333; margin: 40px; }
-  h1 { font-size: 22px; color: #1a1a2e; margin-bottom: 4px; }
-  .subtitle { color: #666; font-size: 13px; margin-bottom: 24px; }
-  .info { background: #f8f9fa; padding: 14px; border-radius: 6px; margin-bottom: 20px; }
-  table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-  th { background: #1a1a2e; color: white; padding: 8px; text-align: left; font-size: 11px; }
-  td { padding: 7px 8px; border-bottom: 1px solid #e0e0e0; font-size: 11px; }
-  .signatures { margin-top: 80px; display: table; width: 100%; }
-  .signature { display: table-cell; width: 50%; padding: 24px 12px 0; border-top: 1px solid #999; font-size: 11px; }
-  .footer { margin-top: 60px; font-size: 10px; color: #999; text-align: center; border-top: 1px solid #e0e0e0; padding-top: 10px; }
-</style>
-</head>
-<body>
-  <h1>Акт приёма-передачи № {{ act.number }}</h1>
-  <p class="subtitle">Дата: {{ act.issued_at|date:"d.m.Y" }}</p>
+{% extends "crm/_document_base.html" %}
+{% comment %}
+  Акт приёма-передачи. «Поставщик» = the REAL seller resolved from the act's contract→quote
+  (document_brand_context), named on the signature line — never a blank/anonymous party.
+{% endcomment %}
+{% block doc_meta %}
+  <div class="doc-no">Акт № {{ act.number }}</div>
+  <div>от {{ act.issued_at|date:"d.m.Y" }}</div>
+{% endblock %}
 
-  <div class="info">
-    <strong>Покупатель:</strong> {{ company.name }} (ИНН {{ company.inn }})<br>
-    <strong>Сделка:</strong> #{{ act.deal_id }}<br>
-    {% if act.contract %}<strong>Договор:</strong> {{ act.contract.number }} от {{ act.contract.created_at|date:"d.m.Y" }}<br>{% endif %}
-    {% if act.invoice %}<strong>Инвойс:</strong> {{ act.invoice.number }} на {{ act.invoice.total_incl_vat }}{% endif %}
+{% block doc_title %}Акт приёма-передачи{% endblock %}
+
+{% block parties %}{% endblock %}
+
+{% block content %}
+  <div class="term-box">
+    <span class="k">Сделка:</span> #{{ act.deal_id }}
+    {% if act.contract %} &middot; <span class="k">Договор:</span> {{ act.contract.number }} от {{ act.contract.created_at|date:"d.m.Y" }}{% endif %}
+    {% if act.invoice %} &middot; <span class="k">Инвойс:</span> {{ act.invoice.number }} на {{ act.invoice.total_incl_vat|floatformat:2 }}{% endif %}
   </div>
 
-  <p>Стороны подтверждают, что услуги / товары по указанной сделке оказаны / поставлены в полном объёме. Сумма: <strong>{{ act.total_amount|floatformat:2 }}</strong>.</p>
+  <p style="font-size:9pt;color:#3c424c;margin:12pt 0;">
+    Стороны подтверждают, что услуги / товары по указанной сделке оказаны / поставлены в полном
+    объёме. Сумма: <strong>{{ act.total_amount|floatformat:2 }}</strong>.
+  </p>
 
-  <div class="signatures">
-    <div class="signature">
-      <strong>От Поставщика:</strong><br>
-      ________________________
-    </div>
-    <div class="signature">
-      <strong>От Покупателя:</strong><br>
-      ________________________
-    </div>
-  </div>
-  <div class="footer">RailTech B2B Ecosystem | © 2026</div>
-</body>
-</html>
+  <table class="signatures">
+    <tr>
+      <td>
+        <div class="sign-box">
+          <div class="role">От Поставщика:</div>
+          {% firstof seller_profile.legal_name seller.name "—" %}
+          {% if seller_profile.signatory_name %}<div class="sign-line">{{ seller_profile.signatory_position|default:"Подписант" }}: {{ seller_profile.signatory_name }}</div>{% else %}<div class="sign-line">Подпись / дата</div>{% endif %}
+        </div>
+      </td>
+      <td>
+        <div class="sign-box">
+          <div class="role">От Покупателя:</div>
+          {{ company.name }}
+          <div class="sign-line">Подпись / дата</div>
+        </div>
+      </td>
+    </tr>
+  </table>
+{% endblock %}
