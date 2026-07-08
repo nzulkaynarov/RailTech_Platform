@@ -470,6 +470,37 @@
                 }
             }
         },
+        "/api/v1/accounts/companies/{id}/document-profile/preview/": {
+            "get": {
+                "operationId": "accounts_companies_document_profile_preview_retrieve",
+                "description": "Renders a SAMPLE КП as HTML using the company's CURRENT document profile (branding + layout toggles) — the live preview behind the document-settings panel. OWNER only. Returns text/html (no WeasyPrint in the request thread, ARCH-03).",
+                "summary": "Live preview of a sample КП with the company's document profile",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Компания.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Accounts"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Sample КП HTML"
+                    }
+                }
+            }
+        },
         "/api/v1/accounts/companies/{id}/document-profile/upload-logo/": {
             "post": {
                 "operationId": "accounts_companies_document_profile_upload_logo_create",
@@ -16282,8 +16313,8 @@
                     "pdf_file": {
                         "type": "string",
                         "format": "uri",
-                        "readOnly": true,
-                        "nullable": true
+                        "nullable": true,
+                        "readOnly": true
                     },
                     "pdf_url": {
                         "type": "string",
@@ -16919,12 +16950,20 @@
                         "maxLength": 255
                     },
                     "inn": {
-                        "type": "string",
                         "nullable": true,
                         "title": "ИНН",
                         "description": "Идентификационный номер налогоплательщика",
-                        "pattern": "^\\d{9}$",
-                        "maxLength": 20
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "pattern": "^\\d{9}$",
+                                "maxLength": 20
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
                     },
                     "verification_status": {
                         "type": "integer",
@@ -16994,18 +17033,34 @@
                         "description": "Страна регистрации юридического лица"
                     },
                     "website": {
-                        "type": "string",
-                        "format": "uri",
                         "title": "Веб-сайт",
                         "description": "Адрес корпоративного сайта",
-                        "maxLength": 255
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "format": "uri",
+                                "maxLength": 255
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
                     },
                     "email": {
-                        "type": "string",
-                        "format": "email",
                         "title": "Адрес электронной почты",
                         "description": "Основной email компании для уведомлений",
-                        "maxLength": 254
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "format": "email",
+                                "maxLength": 254
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
                     },
                     "logo": {
                         "type": "string",
@@ -17067,8 +17122,8 @@
                     "logo": {
                         "type": "string",
                         "format": "uri",
-                        "readOnly": true,
                         "nullable": true,
+                        "readOnly": true,
                         "title": "Логотип для документов",
                         "description": "Логотип, печатаемый в шапке КП / договора"
                     },
@@ -17120,6 +17175,21 @@
                         "title": "Акцентный цвет",
                         "description": "HEX-цвет фирменного стиля для шапки документа (напр. #15294d)",
                         "maxLength": 20
+                    },
+                    "show_logo": {
+                        "type": "boolean",
+                        "title": "Показывать логотип",
+                        "description": "Печатать логотип в шапке документов"
+                    },
+                    "show_lead_time": {
+                        "type": "boolean",
+                        "title": "Показывать колонку «Срок»",
+                        "description": "Колонка срока поставки по позициям в КП"
+                    },
+                    "show_fx_note": {
+                        "type": "boolean",
+                        "title": "Показывать курс ЦБ в КП",
+                        "description": "Печатать курс ЦБ (FX-базис) на клиентском КП. По умолчанию скрыто — клиент видит цену в сумах."
                     },
                     "created_at": {
                         "type": "string",
@@ -17306,12 +17376,20 @@
                         "maxLength": 255
                     },
                     "inn": {
-                        "type": "string",
                         "nullable": true,
                         "title": "ИНН",
                         "description": "Идентификационный номер налогоплательщика",
-                        "pattern": "^\\d{9}$",
-                        "maxLength": 20
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "pattern": "^\\d{9}$",
+                                "maxLength": 20
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
                     },
                     "logo": {
                         "type": "string",
@@ -17338,12 +17416,20 @@
                         "maxLength": 255
                     },
                     "inn": {
-                        "type": "string",
                         "nullable": true,
                         "title": "ИНН",
                         "description": "Идентификационный номер налогоплательщика",
-                        "pattern": "^\\d{9}$",
-                        "maxLength": 20
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "pattern": "^\\d{9}$",
+                                "maxLength": 20
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
                     },
                     "logo": {
                         "type": "string",
@@ -17508,12 +17594,20 @@
                         "maxLength": 255
                     },
                     "inn": {
-                        "type": "string",
                         "nullable": true,
                         "title": "ИНН",
                         "description": "Идентификационный номер налогоплательщика",
-                        "pattern": "^\\d{9}$",
-                        "maxLength": 20
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "pattern": "^\\d{9}$",
+                                "maxLength": 20
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
                     },
                     "has_iso9001": {
                         "type": "boolean",
@@ -17556,18 +17650,34 @@
                         "description": "Страна регистрации юридического лица"
                     },
                     "website": {
-                        "type": "string",
-                        "format": "uri",
                         "title": "Веб-сайт",
                         "description": "Адрес корпоративного сайта",
-                        "maxLength": 255
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "format": "uri",
+                                "maxLength": 255
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
                     },
                     "email": {
-                        "type": "string",
-                        "format": "email",
                         "title": "Адрес электронной почты",
                         "description": "Основной email компании для уведомлений",
-                        "maxLength": 254
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "format": "email",
+                                "maxLength": 254
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
                     },
                     "logo": {
                         "type": "string",
@@ -17952,10 +18062,18 @@
                         "maxLength": 255
                     },
                     "email": {
-                        "type": "string",
-                        "format": "email",
                         "title": "Адрес электронной почты",
-                        "maxLength": 254
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "format": "email",
+                                "maxLength": 254
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
                     },
                     "phone": {
                         "type": "string",
@@ -18030,8 +18148,8 @@
                     "pdf_file": {
                         "type": "string",
                         "format": "uri",
-                        "readOnly": true,
                         "nullable": true,
+                        "readOnly": true,
                         "title": "PDF контракта"
                     },
                     "pdf_url": {
@@ -19170,8 +19288,8 @@
                     "pdf_file": {
                         "type": "string",
                         "format": "uri",
-                        "readOnly": true,
-                        "nullable": true
+                        "nullable": true,
+                        "readOnly": true
                     },
                     "pdf_url": {
                         "type": "string",
@@ -19565,11 +19683,19 @@
                         "readOnly": true
                     },
                     "website": {
-                        "type": "string",
-                        "format": "uri",
                         "title": "Сайт",
                         "description": "Официальный сайт производителя",
-                        "maxLength": 200
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "format": "uri",
+                                "maxLength": 200
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
                     },
                     "company": {
                         "type": "integer",
@@ -19792,9 +19918,17 @@
                         "maxLength": 20
                     },
                     "email": {
-                        "type": "string",
-                        "format": "email",
-                        "default": ""
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "format": "email",
+                                "default": ""
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
                     },
                     "phone": {
                         "type": "string",
@@ -21058,6 +21192,21 @@
                         "title": "Акцентный цвет",
                         "description": "HEX-цвет фирменного стиля для шапки документа (напр. #15294d)",
                         "maxLength": 20
+                    },
+                    "show_logo": {
+                        "type": "boolean",
+                        "title": "Показывать логотип",
+                        "description": "Печатать логотип в шапке документов"
+                    },
+                    "show_lead_time": {
+                        "type": "boolean",
+                        "title": "Показывать колонку «Срок»",
+                        "description": "Колонка срока поставки по позициям в КП"
+                    },
+                    "show_fx_note": {
+                        "type": "boolean",
+                        "title": "Показывать курс ЦБ в КП",
+                        "description": "Печатать курс ЦБ (FX-базис) на клиентском КП. По умолчанию скрыто — клиент видит цену в сумах."
                     }
                 }
             },
@@ -21124,12 +21273,20 @@
                         "maxLength": 255
                     },
                     "inn": {
-                        "type": "string",
                         "nullable": true,
                         "title": "ИНН",
                         "description": "Идентификационный номер налогоплательщика",
-                        "pattern": "^\\d{9}$",
-                        "maxLength": 20
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "pattern": "^\\d{9}$",
+                                "maxLength": 20
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
                     },
                     "has_iso9001": {
                         "type": "boolean",
@@ -21172,18 +21329,34 @@
                         "description": "Страна регистрации юридического лица"
                     },
                     "website": {
-                        "type": "string",
-                        "format": "uri",
                         "title": "Веб-сайт",
                         "description": "Адрес корпоративного сайта",
-                        "maxLength": 255
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "format": "uri",
+                                "maxLength": 255
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
                     },
                     "email": {
-                        "type": "string",
-                        "format": "email",
                         "title": "Адрес электронной почты",
                         "description": "Основной email компании для уведомлений",
-                        "maxLength": 254
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "format": "email",
+                                "maxLength": 254
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
                     },
                     "logo": {
                         "type": "string",
@@ -21301,10 +21474,18 @@
                         "maxLength": 255
                     },
                     "email": {
-                        "type": "string",
-                        "format": "email",
                         "title": "Адрес электронной почты",
-                        "maxLength": 254
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "format": "email",
+                                "maxLength": 254
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
                     },
                     "phone": {
                         "type": "string",
@@ -22718,12 +22899,20 @@
                         "maxLength": 255
                     },
                     "inn": {
-                        "type": "string",
                         "nullable": true,
                         "title": "ИНН",
                         "description": "Идентификационный номер налогоплательщика",
-                        "pattern": "^\\d{9}$",
-                        "maxLength": 20
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "pattern": "^\\d{9}$",
+                                "maxLength": 20
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
                     },
                     "verification_status": {
                         "type": "integer",
@@ -22782,12 +22971,20 @@
                         "maxLength": 255
                     },
                     "inn": {
-                        "type": "string",
                         "nullable": true,
                         "title": "ИНН",
                         "description": "Идентификационный номер налогоплательщика",
-                        "pattern": "^\\d{9}$",
-                        "maxLength": 20
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "pattern": "^\\d{9}$",
+                                "maxLength": 20
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
                     },
                     "verification_status": {
                         "type": "integer",
@@ -23061,12 +23258,20 @@
                         "description": "Загруженный документ (PDF, DOCX)"
                     },
                     "file_url": {
-                        "type": "string",
-                        "format": "uri",
                         "nullable": true,
                         "title": "URL документа",
                         "description": "Внешняя ссылка на документ (если файл не загружен)",
-                        "maxLength": 500
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "format": "uri",
+                                "maxLength": 500
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
                     },
                     "name": {
                         "type": "string",
@@ -23098,12 +23303,20 @@
                         "description": "Загруженный документ (PDF, DOCX)"
                     },
                     "file_url": {
-                        "type": "string",
-                        "format": "uri",
                         "nullable": true,
                         "title": "URL документа",
                         "description": "Внешняя ссылка на документ (если файл не загружен)",
-                        "maxLength": 500
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "format": "uri",
+                                "maxLength": 500
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
                     },
                     "name": {
                         "type": "string",
@@ -23132,12 +23345,20 @@
                         "description": "Файл фотографии товара"
                     },
                     "image_url": {
-                        "type": "string",
-                        "format": "uri",
                         "nullable": true,
                         "title": "URL изображения",
                         "description": "Внешняя ссылка на фото (если файл не загружен)",
-                        "maxLength": 500
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "format": "uri",
+                                "maxLength": 500
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
                     },
                     "is_main": {
                         "type": "boolean",
@@ -23166,12 +23387,20 @@
                         "description": "Файл фотографии товара"
                     },
                     "image_url": {
-                        "type": "string",
-                        "format": "uri",
                         "nullable": true,
                         "title": "URL изображения",
                         "description": "Внешняя ссылка на фото (если файл не загружен)",
-                        "maxLength": 500
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "format": "uri",
+                                "maxLength": 500
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
                     },
                     "is_main": {
                         "type": "boolean",
