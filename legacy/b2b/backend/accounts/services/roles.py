@@ -137,27 +137,19 @@ def assign_role_to_member(user, member_id, role_id) -> Tuple[Optional[CompanyMem
         return None, "ROLE_NOT_FOUND"
     if role.company_id != member.company_id:
         return None, "ROLE_COMPANY_MISMATCH"
-    # Never-orphan invariant (ADR-0004): a company must always keep ≥1 active member
-    # holding the immutable «Администратор компании» (is_system) role. If this member is
-    # that role's sole active holder, reassigning them to a non-system role would strip the
-    # company of every admin — transfer admin to someone else first.
-    if (
-        member.company_role_id
-        and member.company_role.is_system
-        and not role.is_system
-        and _is_sole_active_system_admin(member)
-    ):
-        return None, "CANNOT_DEMOTE_LAST_COMPANY_ADMIN"
+    # Never-orphan invariant (ADR-0004 / ADR-0005 U3): a company must always keep ≥1 active
+    # admin. Reassigning to a non-system role drops this member from the admin floor, so block
+    # when they are the company's SOLE admin. The floor is the UNIFIED predicate (members.
+    # _admin_floor_q): is_system CompanyRole OR an un-migrated legacy OWNER (company_role IS
+    # NULL). Checking only is_system here missed a sole legacy OWNER — reassigning them to a
+    # permission-less role orphaned the company (they lose the OWNER permission fallback and no
+    # longer count as admin under either clause).
+    if not role.is_system:
+        from .members import company_active_admins
+
+        admins = company_active_admins(member.company)
+        if admins.filter(pk=member.pk).exists() and not admins.exclude(pk=member.pk).exists():
+            return None, "CANNOT_DEMOTE_LAST_COMPANY_ADMIN"
     member.company_role = role
     member.save(update_fields=["company_role"])
     return member, None
-
-
-def _is_sole_active_system_admin(member: CompanyMember) -> bool:
-    """True if `member` is the only active member of their company holding an is_system role."""
-    other_admins = (
-        CompanyMember.objects.filter(company_id=member.company_id, is_active=True, company_role__is_system=True)
-        .exclude(pk=member.pk)
-        .exists()
-    )
-    return not other_admins
