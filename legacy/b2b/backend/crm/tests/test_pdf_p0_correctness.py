@@ -93,7 +93,9 @@ def quote_qty2(db):
     seller = Company.objects.create(name="Seller LLC", inn="3000000002")
     preparer = CustomUser.objects.create_user(email="p2@s.test", username="p2@s.test", password="pw", is_active=True)
     deal = Deal.objects.create(company=buyer, stage=DealStage.objects.get(code="DRAFT"), title="LT")
-    quote = Quote.objects.create(deal=deal, version=1, status=QuoteStatus.objects.get(code="DRAFT"), prepared_by=preparer)
+    quote = Quote.objects.create(
+        deal=deal, version=1, status=QuoteStatus.objects.get(code="DRAFT"), prepared_by=preparer
+    )
     QuoteItem.objects.create(quote=quote, imported_raw_name="Колодка", quantity=2, frozen_base_price=Decimal("100"))
     quote.recalculate_totals()
     return buyer, seller, quote
@@ -105,7 +107,12 @@ def test_contract_line_sum_is_price_times_qty(quote_qty2):
     item = quote.items.first()
     assert item.quantity == 2
     assert item.line_total == item.final_price_excl_vat * 2  # 200, not 100
-    contract = {"number": "CT-2026-00001", "created_at": date(2026, 7, 8), "total_amount": Decimal("224.00"), "notes": ""}
+    contract = {
+        "number": "CT-2026-00001",
+        "created_at": date(2026, 7, 8),
+        "total_amount": Decimal("224.00"),
+        "notes": "",
+    }
     html = render_to_string(
         "crm/contract_pdf.html",
         {
@@ -144,3 +151,44 @@ def test_quote_pdf_hides_fx_rate_from_client(quote_qty2):
     assert "Курс ЦБ" not in html
     assert "пересчитаны" not in html
     assert "12500" not in html
+
+
+# ─────────────────────────────────────────────────────────────────────
+# 4. КП «Итого без НДС» keeps kopecks (Django |add: int-truncated Decimals — prod КП-2026-00006)
+# ─────────────────────────────────────────────────────────────────────
+@pytest.mark.django_db
+def test_quote_pdf_subtotal_excl_vat_keeps_kopecks_and_document_adds_up(quote_qty2):
+    """The pre-VAT total must equal subtotal + charges with FULL decimals. The template used to
+    recompute it via Django's `|add:` filter, which int-truncates Decimal operands and dropped the
+    kopecks (2 722 500,00 + 166 361,09 → 2 888 861,00 instead of …,09), so «Итого без НДС» no longer
+    matched VAT/total and the buyer's document stopped adding up (prod КП-2026-00006)."""
+    buyer, seller, quote = quote_qty2
+    # Exact prod numbers: a fractional charge (…,09).
+    quote.subtotal_excl_vat = Decimal("2722500.00")
+    quote.charges_total = Decimal("166361.09")
+    quote.vat_rate = Decimal("12")
+    quote.vat_amount = Decimal("346663.33")
+    quote.total_incl_vat = Decimal("3235524.42")
+    quote.save(update_fields=["subtotal_excl_vat", "charges_total", "vat_rate", "vat_amount", "total_incl_vat"])
+
+    # Property: the exact VAT base, kopecks intact (would be 2888861.00 under the |add: bug).
+    assert quote.total_excl_vat == Decimal("2888861.09")
+    # The document adds up: pre-VAT base + VAT == grand total.
+    assert quote.total_excl_vat + quote.vat_amount == quote.total_incl_vat
+
+    html = render_to_string(
+        "crm/quote_pdf.html",
+        {
+            "quote": quote,
+            "items": quote.items.all(),
+            "company": buyer,
+            "seller": seller,
+            "seller_profile": None,
+            "seller_logo_url": None,
+            "is_demo": False,
+        },
+    )
+    # The correct pre-VAT total is rendered (locale-robust: ru renders "2888861,09").
+    assert ("2888861,09" in html) or ("2888861.09" in html)
+    # The truncated value must NOT appear as the «Итого без НДС» line.
+    assert "2888861,00" not in html and "2888861.00" not in html
