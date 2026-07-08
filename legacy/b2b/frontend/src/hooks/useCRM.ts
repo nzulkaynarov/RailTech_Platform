@@ -200,8 +200,12 @@ export const useSubmitRequest = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (dealId: number) => crmApi.submitRequest(dealId),
-    onSuccess: () => {
+    onSuccess: (_data, dealId) => {
       queryClient.invalidateQueries({ queryKey: ['deals'] });
+      // P2-8: the submit-RFQ ActivityLog is written server-side, but the deal
+      // history feed served a stale ['timeline','deal',id] cache until reload —
+      // refresh it so «Заявка отправлена поставщику (RFQ)» appears immediately.
+      queryClient.invalidateQueries({ queryKey: ['timeline', 'deal', dealId] });
     },
   });
 };

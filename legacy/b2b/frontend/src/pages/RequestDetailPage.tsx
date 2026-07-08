@@ -1,12 +1,12 @@
 import { useState, Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Send, Calculator, ThumbsUp, ThumbsDown, User, Briefcase, Download, Loader2, AlertTriangle, FileText } from 'lucide-react';
+import { ArrowLeft, Send, Calculator, ThumbsUp, ThumbsDown, User, Briefcase, Download, Loader2, AlertTriangle, FileText, Handshake } from 'lucide-react';
 import { toast } from 'sonner';
 import { QuoteStatus, DealStage, DEAL_STAGE_LABEL_KEY, quoteStatusLabelKey } from '@/lib/codes';
 import { useUserStore } from '@/store/userStore';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useIsViewerMode } from '@/hooks/useViewerMode';
-import { useDeal, useChangeDealStage, useApproveQuote, useRejectQuote, useSendQuoteToClient, useUpdateRequestMeta, usePreflightCheck, useQuoteRequestDiff } from '@/hooks/useCRM';
+import { useDeal, useChangeDealStage, useApproveQuote, useRejectQuote, useSendQuoteToClient, useUpdateRequestMeta, usePreflightCheck, useQuoteRequestDiff, useClaimDeal } from '@/hooks/useCRM';
 import { crmApi } from '@/api/crmApi';
 import type { PreflightFinding, PreflightLine, QuoteDiffFinding } from '@/api/crmApi';
 import { Textarea } from '@/components/ui/textarea';
@@ -62,6 +62,7 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
   const rejectQuote = useRejectQuote();
   const sendQuote = useSendQuoteToClient();
   const updateMeta = useUpdateRequestMeta();
+  const claimMut = useClaimDeal();
 
   // Gate seller-side actions (start sourcing / calculation / send quote) to
   // sellers. A buyer would only hit backend guards — and the buttons are
@@ -98,6 +99,11 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
   // create the КП once the deal is in work, or open the focused builder if it exists.
   const canBuildQuote = isSellerSide && (isSourcing || isCalculating) && !deal.active_quote;
   const hasQuote = isSellerSide && !!deal.active_quote;
+  // Third in-funnel path to «взять в работу» (Kanban + deals list are the others).
+  // Seller-only pull from the routed queue; `assigned_to` (the id, derived from the
+  // viewer's OWN routing row) == null means this seller's copy is unclaimed. Reuses
+  // useClaimDeal + the `dealsKanban.claim`/`.claimed` keys.
+  const canClaim = isSellerSide && deal.assigned_to == null;
   const openQuoteBuilder = () => { window.location.hash = `deal-quote/${deal.id}`; };
   // Buyer may build/edit their own request (name + qty) until the seller engages.
   // The backend is the source of truth (can_edit_request); the UI only reflects it.
@@ -246,7 +252,7 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
         {(() => {
           const sellerActions = isSellerSide && (isDraft || isSourcing || isCalculating || hasQuote);
           const buyerActions = isBuyerSide && isQuoteSent && quote;
-          const showActionBar = sellerActions || buyerActions || isWon;
+          const showActionBar = sellerActions || buyerActions || isWon || canClaim;
           if (!showActionBar) {
             // A buyer editing a draft already gets this guidance from the "Your
             // request" card subtitle — don't waste a whole banner repeating it.
@@ -261,6 +267,22 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
             <Card className="bg-muted/30">
               <CardContent className="flex items-center gap-3 py-4">
                 <span className="text-sm font-medium">{t('requestDetailActions.actionsLabel')}:</span>
+                {canClaim && (
+                  <Button
+                    variant="outline"
+                    onClick={() => claimMut.mutate(deal.id, {
+                      onSuccess: () => toast.success(t('dealsKanban.claimed')),
+                      onError: (err) => toast.error(translateApiError(err)),
+                    })}
+                    disabled={isViewer || claimMut.isPending}
+                    title={isViewer ? viewerTip : undefined}
+                  >
+                    {claimMut.isPending
+                      ? <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" />
+                      : <Handshake className="h-4 w-4 mr-2" aria-hidden="true" />}
+                    {t('dealsKanban.claim')}
+                  </Button>
+                )}
                 {isSellerSide && isDraft && (
                   <Button
                     variant="default"
@@ -490,8 +512,13 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
                       <TableCell className="text-right tabular-nums">{item.quantity}</TableCell>
                       {isSellerSide && <TableCell className="text-right tabular-nums">{formatCurrency(Number(item.frozen_base_price))}</TableCell>}
                       {isSellerSide && (
-                        <TableCell className="text-right tabular-nums">
-                          {item.margin_percent ? `${Number(item.margin_percent).toFixed(1)}%` : '0%'}
+                        <TableCell className="text-right tabular-nums text-muted-foreground">
+                          {/* Per-line margin_percent is a dead placeholder (model default 0) — the КП
+                              markup is applied at quote level, so this endpoint never carries a real
+                              per-line value. Show «—» instead of a misleading «0.0%» (WP-7). */}
+                          {item.margin_percent != null && Number(item.margin_percent) !== 0
+                            ? `${Number(item.margin_percent).toFixed(1)}%`
+                            : '—'}
                         </TableCell>
                       )}
                       <TableCell className="text-right tabular-nums font-medium text-primary">

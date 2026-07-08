@@ -1,0 +1,125 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
+
+import { ContractsPage } from '../ContractsPage';
+import { contractsApi, type Contract } from '@/api/contractsApi';
+import { useUserStore } from '@/store/userStore';
+import { renderWithProviders } from '@/test/renderWithProviders';
+
+// Mock at the API-client layer: the real useContracts / useSignContractClient
+// react-query hooks run against these mocks (never the network).
+vi.mock('@/api/contractsApi', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/api/contractsApi')>();
+  return {
+    ...actual,
+    contractsApi: {
+      ...actual.contractsApi,
+      list: vi.fn(),
+      get: vi.fn(),
+      signClient: vi.fn(),
+      signManager: vi.fn(),
+      uploadSigned: vi.fn(),
+      cancel: vi.fn(),
+      forceCancel: vi.fn(),
+    },
+  };
+});
+
+function makeContract(overrides: Partial<Contract> & { id: number }): Contract {
+  return {
+    deal: 42,
+    quote: 7,
+    number: 'CT-001',
+    status: 'PENDING_CLIENT',
+    total_amount: '1000000.00',
+    currency: null,
+    pdf_file: null,
+    pdf_url: null,
+    signed_file: null,
+    signed_file_url: null,
+    client_signer: null,
+    client_signer_name: null,
+    client_signed_at: null,
+    manager_signer: null,
+    manager_signer_name: null,
+    manager_signed_at: null,
+    valid_from: null,
+    valid_until: null,
+    notes: '',
+    created_at: '2026-07-08T10:00:00Z',
+    updated_at: '2026-07-08T10:00:00Z',
+    ...overrides,
+  };
+}
+
+const PENDING = makeContract({ id: 1 });
+const SIGNED = makeContract({
+  id: 1,
+  status: 'SIGNED',
+  client_signed_at: '2026-07-08T11:00:00Z',
+  client_signer_name: 'Иван Клиент',
+  manager_signed_at: '2026-07-08T11:30:00Z',
+  manager_signer_name: 'Пётр Продавец',
+});
+
+describe('ContractsPage', () => {
+  // Toggled true once the sign mutation runs, so the LIST refetch returns the
+  // signed contract — deterministic regardless of how many times list() is called.
+  let signedState = false;
+
+  beforeEach(() => {
+    signedState = false;
+    // Regular company user, buyer context, not an admin viewer.
+    useUserStore.setState({ role: 'USER', activeStatus: 'BUYER', isViewerMode: false });
+    vi.mocked(contractsApi.list).mockImplementation(async () => (signedState ? [SIGNED] : [PENDING]));
+    vi.mocked(contractsApi.signClient).mockImplementation(async () => {
+      signedState = true;
+      return SIGNED;
+    });
+  });
+
+  it('opens the detail panel on row click', async () => {
+    renderWithProviders(<ContractsPage />);
+    fireEvent.click((await screen.findAllByText('CT-001'))[0]);
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('opens the detail panel when Enter is pressed on a focused row', async () => {
+    renderWithProviders(<ContractsPage />);
+    const numberCell = (await screen.findAllByText('CT-001'))[0];
+    const row = numberCell.closest('tr');
+    expect(row).not.toBeNull();
+    fireEvent.keyDown(row as HTMLElement, { key: 'Enter' });
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('updates the panel after a sign mutation resolves — no close+reopen', async () => {
+    renderWithProviders(<ContractsPage />);
+    fireEvent.click((await screen.findAllByText('CT-001'))[0]);
+
+    // Buyer on a PENDING_CLIENT contract → the "sign as client" button is offered.
+    const signButton = await screen.findByRole('button', { name: 'Подписать (клиент)' });
+    fireEvent.click(signButton);
+
+    // After the mutation resolves the list refetches (signed contract) and the LIVE
+    // panel re-derives: the client signature shows and the sign button disappears.
+    await waitFor(() => expect(screen.getByText(/Иван Клиент/)).toBeInTheDocument());
+    expect(screen.queryByRole('button', { name: 'Подписать (клиент)' })).not.toBeInTheDocument();
+  });
+
+  it('renders the buyer-side indicator in buyer context', async () => {
+    const { container } = renderWithProviders(<ContractsPage />);
+    await screen.findAllByText('CT-001');
+    // data-side carries the code (not the translated label) — i18n-independent.
+    expect(container.querySelector('[data-side="buyer"]')).not.toBeNull();
+    expect(container.querySelector('[data-side="seller"]')).toBeNull();
+  });
+
+  it('renders the seller-side indicator in seller context', async () => {
+    useUserStore.setState({ activeStatus: 'SELLER' });
+    const { container } = renderWithProviders(<ContractsPage />);
+    await screen.findAllByText('CT-001');
+    expect(container.querySelector('[data-side="seller"]')).not.toBeNull();
+    expect(container.querySelector('[data-side="buyer"]')).toBeNull();
+  });
+});

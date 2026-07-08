@@ -6,7 +6,7 @@
     "sourcing": "Sourcing",
     "calculating": "Calculating",
     "quoteSent": "Quote Sent",
-    "contractSigned": "Contract Signed",
+    "contractSigned": "Contract in signing",
     "closedWon": "Closed (Won)",
     "closedLost": "Closed (Lost)"
   },
@@ -4109,7 +4109,12 @@
       "total": "Total",
       "status": "Status",
       "created": "Created",
-      "actions": "Actions"
+      "actions": "Actions",
+      "side": "Side"
+    },
+    "side": {
+      "buyer": "We are the buyer",
+      "seller": "We are the seller"
     },
     "status": {
       "DRAFT": "Draft",

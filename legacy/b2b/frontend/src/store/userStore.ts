@@ -318,3 +318,21 @@ export const useUserStore = create<UserState>((set, get) => ({
   updateCompany: (partial) =>
     set((s) => ({ company: { ...s.company, ...partial } })),
 }));
+
+/**
+ * Derived, purely ADDITIVE selector — it only READS `company.statusEntries` and never
+ * touches `screen` / `activeStatus` / the `loadFromAuth` bootstrap flow, so it cannot
+ * affect the ADR-0005 cold-load BUYER context default or WP-4's `screen === 'main'`
+ * deep-link signal. Returns true iff the current member may act as a SELLER for their
+ * company: the company exposes a *verified* SELLER context AND the member's `can_sell`
+ * capability was not revoked — both already encoded into `statusEntries` by
+ * `loadFromAuth` (rawEntries from `company_types`, filtered by `can_sell`/`can_buy`).
+ * Mirrors the sell-capability derivation already used in App.tsx / AppShell.tsx.
+ *
+ * The Dashboard consumes this to give seller-capable (incl. dual buyer+seller)
+ * companies a seller-aware landing instead of the buyer onboarding, WITHOUT flipping
+ * the global BUYER `activeStatus` default (that would break the X-Active-Context header
+ * and the ADR-0005 cache invalidation).
+ */
+export const selectIsSellerCapable = (state: { company: Company }): boolean =>
+  state.company.statusEntries.some((entry) => entry.status === 'SELLER' && entry.verification === 'verified');

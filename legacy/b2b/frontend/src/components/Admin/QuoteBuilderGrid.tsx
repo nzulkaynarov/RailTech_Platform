@@ -348,16 +348,20 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	// <1200px viewport gate hides — a table can't drop columns via Tailwind `hidden` without drift.
 	const mainColCount = showCostColumns ? 7 : 5;
 
+	// F6/WP-7: the per-line margin is DERIVED and READ-ONLY — the markup is a single value for
+	// the whole КП (quote.margin_percent), never edited per line. Render it muted with NO edit
+	// affordance (no colour tone that reads as an actionable field) and a «Настройки КП» hint
+	// icon, so the cell can never be mistaken for an editable input.
 	const marginCell = (item: QuoteItem) => {
 		if (!canViewCost || !econ) return <span className="text-xs text-muted-foreground">—</span>;
 		const sig = lineSignal(item);
 		if (!sig) return <span className="text-xs text-muted-foreground">—</span>;
-		const tone = marginToneClass(sig.belowCost || sig.belowFloor, sig.marginPct, Number(econ.target_margin_percent));
 		return (
 			<Tooltip>
 				<TooltipTrigger asChild>
-					<span className={cn('cursor-help text-xs font-semibold tabular-nums', tone)}>
+					<span className="inline-flex cursor-help select-none items-center justify-center gap-1 text-xs tabular-nums text-muted-foreground">
 						{sig.marginPct.toFixed(0)}%
+						<Settings className="size-3 opacity-60" aria-hidden="true" />
 					</span>
 				</TooltipTrigger>
 				<TooltipContent>
@@ -365,8 +369,8 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 						<span>{t('quote.economics.landedCost')}: {formatMoney(item.landed_cost, presentationCurrency)}</span>
 						<span>{t('quote.lineProfit')}: {formatMoney(sig.profit, presentationCurrency)}</span>
 						{/* F6: the per-line margin is derived, not editable — markup is one value for the
-						    whole КП. Point the seller at where to change it instead of clicking the cell. */}
-						<span className="mt-0.5 text-muted-foreground">{t('quote.marginQuoteLevelHint')}</span>
+						    whole КП. Point the seller at «Настройки КП» instead of clicking the cell. */}
+						<span className="mt-0.5 font-medium text-foreground">{t('quote.marginQuoteLevelHint')}</span>
 					</div>
 				</TooltipContent>
 			</Tooltip>

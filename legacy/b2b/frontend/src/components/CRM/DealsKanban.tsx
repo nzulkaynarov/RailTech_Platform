@@ -8,6 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Handshake, UserCheck, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useClaimDeal } from '@/hooks/useCRM';
+import { DEAL_STAGE_LABEL_KEY } from '@/lib/codes';
 import { translateApiError } from '@/lib/apiError';
 import type { Deal } from '@/api/crmApi';
 
@@ -75,7 +76,7 @@ export function DealsKanban({ deals, stages, onOpen }: DealsKanbanProps) {
               <div className="flex items-center justify-between px-1 pt-0.5">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    {col.name}
+                    {DEAL_STAGE_LABEL_KEY[col.code] ? t(DEAL_STAGE_LABEL_KEY[col.code]) : col.name}
                   </span>
                   <Badge variant="secondary" className="text-xs">
                     {col.deals.length}
