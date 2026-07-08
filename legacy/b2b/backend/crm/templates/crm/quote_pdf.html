@@ -84,6 +84,24 @@
   </table>
   <div class="amount-words"><span class="k">Сумма прописью:</span> {{ quote.total_incl_vat|money_words:pres_ccy }}</div>
 
+  {% comment %}
+    Manager contact + online-accept CTA — seller-side contact only (no confidentiality impact);
+    the public link is the buyer's own no-login КП. CTA renders only after send (token minted).
+  {% endcomment %}
+  {% if quote.prepared_by %}
+  <div class="manager-box">
+    <span class="k">Ваш менеджер:</span> {% firstof quote.prepared_by.get_full_name quote.prepared_by.email %}{% if quote.prepared_by.phone %} &middot; тел. {{ quote.prepared_by.phone }}{% elif seller.phone %} &middot; тел. {{ seller.phone }}{% endif %}{% if quote.prepared_by.email %} &middot; {{ quote.prepared_by.email }}{% endif %}
+  </div>
+  {% endif %}
+
+  {% if public_quote_url %}
+  <div class="cta-box">
+    <span class="cta-title">Принять предложение онлайн.</span>
+    Ознакомьтесь с предложением и подтвердите согласие по ссылке:
+    <span class="cta-link">{{ public_quote_url }}</span>
+  </div>
+  {% endif %}
+
   <!-- ── Terms ── -->
   <div class="terms">
     <div class="term-box">
