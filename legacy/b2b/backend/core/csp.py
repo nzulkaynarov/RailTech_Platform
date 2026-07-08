@@ -22,15 +22,16 @@ Where CSP actually comes from on the prod host (IMPORTANT — read before editin
     a bare staging box, `runserver`). Keep CSP_POLICY in sync with the Caddy
     block so the fallback matches what prod actually enforces.
 
-Policy rationale (verified against the running Unfold /admin/, 2026-07-03):
-    Unfold/Django admin loads ALL JavaScript from external /static/ files — the
-    dashboard, changelists, and inline-formset add/change forms emit ZERO inline
-    <script> and ZERO inline event handlers — so `script-src 'self'` (no
-    'unsafe-inline') is sufficient, and is exactly what prod already enforces via
-    Caddy. The admin DOES use inline `style=` attributes and data: images /
-    blob: workers, so style-src keeps 'unsafe-inline' and img/worker keep
-    data:/blob:. The API path gets the same policy; JSON doesn't execute it, so
-    it's a no-op there but documents intent.
+Policy rationale (verified against the running Unfold /admin/, 2026-07-08):
+    Unfold/Django admin loads its JS from external /static/ files (zero inline
+    <script>), BUT it ships Alpine.js, which compiles x-data/x-show/x-cloak
+    directive expressions with new Function() at RUNTIME — and that needs
+    'unsafe-eval' in script-src, which external-file loading ('self') does NOT
+    cover. So the /admin/ path gets CSP_POLICY_ADMIN (script-src 'self'
+    'unsafe-eval'); the SPA + /api keep the strict CSP_POLICY (a Vite build never
+    evals). The admin also uses inline `style=` attributes and data:/blob: images,
+    so style-src keeps 'unsafe-inline' and img/worker keep data:/blob:. Prod
+    enforces the equivalent via the Caddy /admin/* override — keep the two in sync.
 
 Posture:
     Defaults to **Content-Security-Policy-Report-Only** so a fallback deploy can
@@ -59,6 +60,11 @@ CSP_POLICY = (
     "object-src 'none'"
 )
 
+# Unfold /admin/ ships Alpine.js, which evaluates its x-* directives with
+# new Function() at runtime → needs 'unsafe-eval'. Scoped to /admin/ so the SPA +
+# /api keep the strict policy above. Mirrors the Caddy @admin_csp override.
+CSP_POLICY_ADMIN = CSP_POLICY.replace("script-src 'self';", "script-src 'self' 'unsafe-eval';")
+
 # Report-Only by default — non-breaking first rollout. Set CSP_REPORT_ONLY=false
 # in prod env once Unfold /admin/ is confirmed clean to switch to enforcing.
 _REPORT_ONLY = os.environ.get("CSP_REPORT_ONLY", "true").strip().lower() != "false"
@@ -80,5 +86,8 @@ class ContentSecurityPolicyMiddleware:
     def __call__(self, request):
         response = self.get_response(request)
         if "Content-Security-Policy" not in response and "Content-Security-Policy-Report-Only" not in response:
-            response[CSP_HEADER_NAME] = CSP_POLICY
+            # Unfold /admin/ needs 'unsafe-eval' (Alpine's runtime new Function());
+            # every other path keeps the strict policy.
+            policy = CSP_POLICY_ADMIN if request.path.startswith("/admin") else CSP_POLICY
+            response[CSP_HEADER_NAME] = policy
         return response

@@ -65,3 +65,20 @@ class TestCspHeader:
     def test_csp_present_on_root_health(self, client):
         resp = client.get("/health/")
         assert self._csp(resp) is not None
+
+    def test_admin_csp_allows_unsafe_eval(self, client):
+        # Unfold /admin/ ships Alpine.js, which compiles x-* directives with
+        # new Function() at runtime → the admin CSP must allow 'unsafe-eval'
+        # (without it the login page renders dimmed + unclickable).
+        resp = client.get("/admin/login/")
+        csp = self._csp(resp)
+        assert csp is not None
+        assert "script-src 'self' 'unsafe-eval'" in csp, f"admin CSP must allow unsafe-eval, got: {csp}"
+
+    def test_non_admin_csp_has_no_unsafe_eval(self, client):
+        # The public SPA + /api keep the strict policy — a Vite build never evals,
+        # so 'unsafe-eval' must NOT leak onto non-admin responses.
+        resp = client.get("/health/")
+        csp = self._csp(resp)
+        assert csp is not None
+        assert "'unsafe-eval'" not in csp, f"non-admin CSP must NOT allow unsafe-eval, got: {csp}"

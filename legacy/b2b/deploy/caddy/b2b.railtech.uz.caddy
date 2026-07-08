@@ -87,12 +87,14 @@ b2b.railtech.uz {
         #   * SPA: a Vite build. Vite/Tailwind inject runtime inline <style> so
         #     style-src needs 'unsafe-inline'; the built SPA has no inline
         #     scripts, so script-src is 'self' only.
-        #   * Unfold /admin: loads all JS from external /static/ files (zero
-        #     inline <script>, zero inline event handlers on dashboard /
-        #     changelists / inline-formset add-forms) and uses only inline
-        #     style= attributes — so the same script-src 'self' + style-src
-        #     'unsafe-inline' covers it. Tighten script-src (nonces) only if a
-        #     future build needs it.
+        #   * Unfold /admin: loads its JS from external /static/ files (zero inline
+        #     <script>), BUT its Alpine.js compiles x-data/x-show/x-cloak directive
+        #     expressions with new Function() at RUNTIME → that needs 'unsafe-eval',
+        #     which the /admin/* override BELOW adds. External-file loading is
+        #     covered by 'self', but the runtime eval is a SEPARATE source — the
+        #     earlier "no inline scripts → 'self' is enough" note conflated the two,
+        #     which rendered the admin login dimmed + unclickable. style-src keeps
+        #     'unsafe-inline' for the admin's inline style= attributes.
         # WebSocket (/ws/*) needs wss: in connect-src; img-src allows data:/blob:
         # for inline icons and object-url previews.
         #
@@ -116,6 +118,18 @@ b2b.railtech.uz {
         # (@fontsource, same origin) so no fonts.gstatic.com in font-src.
         Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://b2b.railtech.uz; font-src 'self' data:; connect-src 'self' https://b2b.railtech.uz wss://b2b.railtech.uz https://*.ingest.de.sentry.io; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'"
     }
+
+    # ── /admin/ CSP override: Unfold's Alpine.js needs 'unsafe-eval' ───────────
+    # Alpine compiles its x-* directive expressions with new Function() at runtime.
+    # The strict script-src 'self' above blocks that (EvalError) → Alpine never
+    # boots, x-cloak is never cleared, and the /admin login/dashboard renders
+    # dimmed and unclickable. Add 'unsafe-eval' for /admin/* ONLY, so the public
+    # React SPA (a Vite build that never evals) keeps the strict script-src 'self'.
+    # This `header` runs AFTER the block above, so for /admin/* it REPLACES the CSP;
+    # every other path is untouched. Verify after `systemctl reload caddy`:
+    #   curl -sI https://b2b.railtech.uz/admin/login/ | grep -i content-security
+    @admin_csp path /admin/*
+    header @admin_csp Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://b2b.railtech.uz; font-src 'self' data:; connect-src 'self' https://b2b.railtech.uz wss://b2b.railtech.uz https://*.ingest.de.sentry.io; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'"
 
     log {
         output file /var/log/caddy/b2b.railtech.uz.log {
