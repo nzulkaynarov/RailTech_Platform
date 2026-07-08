@@ -104,16 +104,11 @@
     </div>
     {% endif %}
     {% comment %}
-      CBU FX-snapshot note is OFF by default (soft sourcing leakage on a UZS-canonical client
-      КП) — shown only when the seller opts in via the document-settings toggle (show_fx_note).
+      CONFIDENTIALITY: the CBU/FX-rate snapshot is NEVER shown on the client КП. Printing the rate
+      lets the buyer divide the UZS price by it to recover the seller's foreign-currency (e.g. USD)
+      cost basis — a sourcing leak (confidentiality invariant). The show_fx_note seller toggle no
+      longer renders here; the client only ever sees the final UZS price.
     {% endcomment %}
-    {% if show_fx_note and quote.fx_snapshot %}
-    <div class="fx-note">
-      Курс ЦБ на {{ quote.frozen_at|default:quote.updated_at|date:"d.m.Y" }}:
-      {% for ccy_code, rate in quote.fx_snapshot.items %}{{ ccy_code }} = {{ rate|floatformat:2 }} сум{% if not forloop.last %}; {% endif %}{% endfor %}.
-      Суммы в КП пересчитаны в {{ pres_ccy }} по указанному курсу.
-    </div>
-    {% endif %}
   </div>
 
   {% if quote.notes %}

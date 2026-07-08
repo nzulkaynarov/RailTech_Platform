@@ -79,15 +79,15 @@ def test_lead_time_column_hidden_when_toggle_off():
     assert "Коммерческое предложение" in html
 
 
-def test_fx_note_hidden_by_default():
-    html = render_to_string("crm/quote_pdf.html", _quote_ctx(show_fx_note=False))
-    assert "Курс ЦБ" not in html
-
-
-def test_fx_note_shown_when_toggle_on():
-    html = render_to_string("crm/quote_pdf.html", _quote_ctx(show_fx_note=True))
-    assert "Курс ЦБ" in html
-    assert "12500" in html
+def test_fx_note_never_shown_on_client_quote():
+    """CONFIDENTIALITY: the CBU/FX rate must NEVER appear on the client КП — printing it lets the
+    buyer divide the UZS price by the rate to recover the seller's foreign-currency cost basis
+    (sourcing leak). The show_fx_note seller toggle no longer renders it, even when ON."""
+    for toggle in (False, True):
+        html = render_to_string("crm/quote_pdf.html", _quote_ctx(show_fx_note=toggle))
+        assert "Курс ЦБ" not in html
+        assert "12500" not in html
+        assert "пересчитаны" not in html
 
 
 def test_logo_hidden_when_toggle_off():
@@ -129,4 +129,6 @@ def test_preview_html_reflects_profile_branding_and_toggles():
     assert "Подшипник буксовый ЦКБ тип 2726" in html  # sample data
     # lead-time COLUMN suppressed by the toggle (the «Срок поставки» delivery term still shows).
     assert '<th style="width:12%" class="center">Срок</th>' not in html
-    assert "Курс ЦБ" in html  # fx-note enabled by the toggle
+    # CONFIDENTIALITY: even with show_fx_note=True on the profile, the client КП never prints the
+    # CBU/FX rate — the toggle no longer leaks the seller's foreign-currency cost basis.
+    assert "Курс ЦБ" not in html
