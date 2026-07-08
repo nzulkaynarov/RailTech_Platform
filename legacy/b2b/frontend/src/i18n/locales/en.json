@@ -4810,7 +4810,16 @@
     "signatoryName": "Signatory name",
     "signatoryPosition": "Signatory position",
     "footerText": "Footer text",
-    "footerTextPlaceholder": "Disclaimer or contacts at the bottom of the document"
+    "footerTextPlaceholder": "Disclaimer or contacts at the bottom of the document",
+    "toggles": "What to show on documents",
+    "showLogo": "Logo in header",
+    "showLogoHint": "Print the company logo in the document header",
+    "showLeadTime": "«Lead time» column",
+    "showLeadTimeHint": "Show the per-line delivery lead time on the КП",
+    "showFxNote": "CBU FX rate on the КП",
+    "showFxNoteHint": "Print the CBU rate on the client КП. Off by default — the client sees the UZS price",
+    "preview": "Preview",
+    "previewHint": "A sample КП with your branding and settings. Refreshes after you save."
   },
   "companyDefaults": {
     "title": "Quote defaults",

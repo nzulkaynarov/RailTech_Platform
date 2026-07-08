@@ -62,10 +62,17 @@ def _seller_document_profile(seller_company):
     if seller_company is None:
         return None
     profile = CompanyDocumentProfile.objects.filter(company=seller_company).first()
+    return profile if _profile_has_branding(profile) else None
+
+
+def _profile_has_branding(profile) -> bool:
+    """True if the document profile has actual branding filled in (legal name / logo / bank
+    requisites) — the single predicate deciding whether the «Поставщик» block renders from the
+    profile or falls back to the Company. Shared with documents.document_brand_context so the two
+    never drift. The layout toggles are independent of this — they always apply."""
     if profile is None:
-        return None
-    has_content = bool((profile.legal_name or "").strip() or profile.logo or (profile.bank_details or "").strip())
-    return profile if has_content else None
+        return False
+    return bool((profile.legal_name or "").strip() or profile.logo or (profile.bank_details or "").strip())
 
 
 def apply_company_quote_defaults(quote: Quote, company: Optional[Company]) -> Quote:

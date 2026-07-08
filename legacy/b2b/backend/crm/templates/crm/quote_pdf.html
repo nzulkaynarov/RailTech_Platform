@@ -27,9 +27,9 @@
     <thead>
       <tr>
         <th style="width:5%">№</th>
-        <th style="width:43%">Наименование</th>
+        <th style="width:{% if show_lead_time %}43{% else %}55{% endif %}%">Наименование</th>
         <th style="width:10%" class="center">Кол-во</th>
-        <th style="width:12%" class="center">Срок</th>
+        {% if show_lead_time %}<th style="width:12%" class="center">Срок</th>{% endif %}
         <th style="width:15%" class="num">Цена за ед.</th>
         <th style="width:15%" class="num">Сумма</th>
       </tr>
@@ -49,7 +49,7 @@
           {% endif %}
         </td>
         <td class="center">{{ item.quantity }}{% if item.unit %} {{ item.unit }}{% endif %}</td>
-        <td class="center">{% if item.lead_time_days %}до {{ item.lead_time_days }} дн.{% else %}&mdash;{% endif %}</td>
+        {% if show_lead_time %}<td class="center">{% if item.lead_time_days %}до {{ item.lead_time_days }} дн.{% else %}&mdash;{% endif %}</td>{% endif %}
         <td class="num">{{ item.final_price_excl_vat|floatformat:2 }}</td>
         <td class="num">{{ item.line_total|floatformat:2 }}</td>
       </tr>
@@ -104,10 +104,16 @@
     </div>
     {% endif %}
     {% comment %}
-      CBU FX-snapshot note intentionally NOT rendered on the client КП — the offer is
-      UZS-canonical; exposing the conversion rate is soft sourcing leakage. A per-seller
-      opt-in «show FX basis» toggle is planned for the document-settings panel (P3).
+      CBU FX-snapshot note is OFF by default (soft sourcing leakage on a UZS-canonical client
+      КП) — shown only when the seller opts in via the document-settings toggle (show_fx_note).
     {% endcomment %}
+    {% if show_fx_note and quote.fx_snapshot %}
+    <div class="fx-note">
+      Курс ЦБ на {{ quote.frozen_at|default:quote.updated_at|date:"d.m.Y" }}:
+      {% for ccy_code, rate in quote.fx_snapshot.items %}{{ ccy_code }} = {{ rate|floatformat:2 }} сум{% if not forloop.last %}; {% endif %}{% endfor %}.
+      Суммы в КП пересчитаны в {{ pres_ccy }} по указанному курсу.
+    </div>
+    {% endif %}
   </div>
 
   {% if quote.notes %}

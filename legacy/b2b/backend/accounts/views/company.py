@@ -110,6 +110,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
         "upload_logo",
         "delete_logo",
         "document_profile",
+        "document_profile_preview",
         "upload_document_profile_logo",
         "company_settings",
         "team",
@@ -514,6 +515,26 @@ class CompanyViewSet(viewsets.ModelViewSet):
         else:
             profile = services.get_document_profile(company)
         return Response(CompanyDocumentProfileSerializer(profile, context={"request": request}).data)
+
+    @extend_schema(
+        summary="Live preview of a sample КП with the company's document profile",
+        description="Renders a SAMPLE КП as HTML using the company's CURRENT document profile "
+        "(branding + layout toggles) — the live preview behind the document-settings panel. "
+        "OWNER only. Returns text/html (no WeasyPrint in the request thread, ARCH-03).",
+        responses={200: OpenApiResponse(description="Sample КП HTML")},
+        tags=["Accounts"],
+    )
+    @action(detail=True, methods=["get"], url_path="document-profile/preview")
+    def document_profile_preview(self, request, pk=None):
+        from django.http import HttpResponse
+
+        from crm.services.documents import render_document_profile_preview_html
+
+        company = self.get_object()
+        if not services.is_company_owner(request.user, company):
+            return Response({"detail": "NOT_COMPANY_OWNER"}, status=status.HTTP_403_FORBIDDEN)
+        html = render_document_profile_preview_html(company)
+        return HttpResponse(html, content_type="text/html; charset=utf-8")
 
     @extend_schema(
         summary="Upload company document-profile logo",
