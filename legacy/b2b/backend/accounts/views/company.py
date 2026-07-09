@@ -86,6 +86,15 @@ class CompanyViewSet(viewsets.ModelViewSet):
         "destroy": "companies.manage",
         "verify_kyc": "kyc.verify",
         "bulk_verify_kyc": "kyc.verify",
+        # SEC (audit #8): team-management actions are member-facing (own in-action OWNER
+        # check) AND reachable by a platform operator. Without an explicit mapping,
+        # OperatorScoped._required_permission returns None → any operator (even a narrow
+        # SUPPORT with only *.view) passed the gate and could invite members / reassign
+        # roles / grant can_sell on ANY tenant. Require users.manage so a narrow role is
+        # refused (non-operator members still reach these via _MEMBER_ALLOWED_ACTIONS).
+        "invite": "users.manage",
+        "set_member_role": "users.manage",
+        "update_member_capabilities": "users.manage",
     }
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = {
