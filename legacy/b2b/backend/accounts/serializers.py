@@ -269,6 +269,7 @@ class UserSerializer(serializers.ModelSerializer):
             "phone",
             "position",
             "avatar",
+            "preferences",
             "role",
             "role_code",
             "role_name",
@@ -324,7 +325,7 @@ class SelfUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields = ["first_name", "last_name", "phone", "position", "avatar"]
+        fields = ["first_name", "last_name", "phone", "position", "avatar", "preferences"]
 
 
 class MeSerializer(serializers.ModelSerializer):
@@ -369,6 +370,7 @@ class MeSerializer(serializers.ModelSerializer):
             "phone",
             "position",
             "avatar",
+            "preferences",
             "role",
             "role_code",
             "role_name",
@@ -651,3 +653,10 @@ class CompanyRoleApplicationSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
+
+from rest_framework_simplejwt.token_blacklist.models import OutstandingToken
+
+class ActiveSessionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OutstandingToken
+        fields = ["id", "jti", "created_at", "expires_at"]

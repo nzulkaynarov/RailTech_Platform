@@ -41,6 +41,24 @@ class CustomUser(AbstractUser):
         verbose_name=_("Аватар"),
         help_text=_("Фото пользователя для профиля"),
     )
+    preferences = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name=_("Предпочтения"),
+        help_text=_("Пользовательские настройки (тема, язык, часовой пояс)"),
+    )
+    totp_secret = models.CharField(
+        max_length=32,
+        blank=True,
+        null=True,
+        verbose_name=_("TOTP Secret"),
+        help_text=_("Секретный ключ для 2FA (Google Authenticator)"),
+    )
+    is_2fa_enabled = models.BooleanField(
+        default=False,
+        verbose_name=_("2FA Включена"),
+        help_text=_("Включена ли двухфакторная аутентификация"),
+    )
     role = models.ForeignKey(
         "accounts.SystemRole",
         on_delete=models.PROTECT,
