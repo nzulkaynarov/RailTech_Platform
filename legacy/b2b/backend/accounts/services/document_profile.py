@@ -32,6 +32,7 @@ _EDITABLE_FIELDS = (
 
 # Layout toggles (P3) — coerced to bool, so a False value isn't turned into "" like the text fields.
 _EDITABLE_BOOL_FIELDS = (
+    "use_company_defaults",
     "show_logo",
     "show_lead_time",
     "show_fx_note",

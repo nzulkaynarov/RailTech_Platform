@@ -16,6 +16,7 @@ import { Switch } from '@/components/ui/switch';
 import { ImageUpload } from '@/components/Shared/ImageUpload';
 
 type ProfileForm = {
+  use_company_defaults: boolean;
   legal_name: string;
   inn: string;
   legal_address: string;
@@ -30,6 +31,7 @@ type ProfileForm = {
 };
 
 const EMPTY_FORM: ProfileForm = {
+  use_company_defaults: true,
   legal_name: '',
   inn: '',
   legal_address: '',
@@ -45,6 +47,7 @@ const EMPTY_FORM: ProfileForm = {
 
 function toForm(profile: CompanyDocumentProfile): ProfileForm {
   return {
+    use_company_defaults: profile.use_company_defaults ?? true,
     legal_name: profile.legal_name ?? '',
     inn: profile.inn ?? '',
     legal_address: profile.legal_address ?? '',
@@ -161,34 +164,65 @@ export function CompanyDocumentProfileSettings() {
           sprawl on ultra-wide monitors. */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,440px)_1fr]">
         <div className="space-y-6">
-          {companyId != null && (
-            <ImageUpload
-              value={profile?.logo_url ?? null}
-              onUpload={handleLogoUpload}
-              fallback={form.legal_name ? form.legal_name.slice(0, 2).toUpperCase() : '—'}
-              label={t('documentProfile.logo')}
-              description={t('documentProfile.logoDescription')}
+          <div className="flex items-start justify-between gap-4 rounded-lg border border-border p-3 bg-muted/30">
+            <div className="space-y-0.5">
+              <Label htmlFor="dp-use-company-defaults" className="cursor-pointer">
+                {t('documentProfile.useCompanyDefaults', 'Использовать данные профиля компании')}
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                {t('documentProfile.useCompanyDefaultsHint', 'Автоматически наследовать название, ИНН, адрес и логотип из основного профиля')}
+              </p>
+            </div>
+            <Switch
+              id="dp-use-company-defaults"
+              checked={form.use_company_defaults}
+              onCheckedChange={(v) => {
+                const updates: Partial<ProfileForm> = { use_company_defaults: v };
+                if (v) {
+                  updates.legal_name = '';
+                  updates.inn = '';
+                  updates.legal_address = '';
+                  updates.bank_details = '';
+                  updates.signatory_name = '';
+                  updates.signatory_position = '';
+                }
+                setForm({ ...form, ...updates });
+              }}
             />
+          </div>
+
+          {companyId != null && (
+            <div className={form.use_company_defaults ? 'opacity-50 pointer-events-none' : ''}>
+              <ImageUpload
+                value={profile?.logo_url ?? null}
+                onUpload={handleLogoUpload}
+                fallback={form.legal_name ? form.legal_name.slice(0, 2).toUpperCase() : '—'}
+                label={t('documentProfile.logo')}
+                description={t('documentProfile.logoDescription')}
+              />
+            </div>
           )}
 
           <Separator />
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="space-y-2 sm:col-span-2">
+        <div className={`space-y-2 sm:col-span-2 ${form.use_company_defaults ? 'opacity-50 pointer-events-none' : ''}`}>
           <Label htmlFor="dp-legal-name">{t('documentProfile.legalName')}</Label>
           <Input
             id="dp-legal-name"
             value={form.legal_name}
             onChange={(e) => setForm({ ...form, legal_name: e.target.value })}
             placeholder={t('documentProfile.legalNamePlaceholder')}
+            disabled={form.use_company_defaults}
           />
         </div>
-        <div className="space-y-2">
+        <div className={`space-y-2 ${form.use_company_defaults ? 'opacity-50 pointer-events-none' : ''}`}>
           <Label htmlFor="dp-inn">{t('documentProfile.inn')}</Label>
           <Input
             id="dp-inn"
             value={form.inn}
             onChange={(e) => setForm({ ...form, inn: e.target.value })}
+            disabled={form.use_company_defaults}
           />
         </div>
         <div className="space-y-2">
@@ -209,16 +243,17 @@ export function CompanyDocumentProfileSettings() {
             />
           </div>
         </div>
-        <div className="space-y-2 sm:col-span-2">
+        <div className={`space-y-2 sm:col-span-2 ${form.use_company_defaults ? 'opacity-50 pointer-events-none' : ''}`}>
           <Label htmlFor="dp-legal-address">{t('documentProfile.legalAddress')}</Label>
           <Textarea
             id="dp-legal-address"
             rows={2}
             value={form.legal_address}
             onChange={(e) => setForm({ ...form, legal_address: e.target.value })}
+            disabled={form.use_company_defaults}
           />
         </div>
-        <div className="space-y-2 sm:col-span-2">
+        <div className={`space-y-2 sm:col-span-2 ${form.use_company_defaults ? 'opacity-50 pointer-events-none' : ''}`}>
           <Label htmlFor="dp-bank">{t('documentProfile.bankDetails')}</Label>
           <Textarea
             id="dp-bank"
@@ -226,22 +261,25 @@ export function CompanyDocumentProfileSettings() {
             value={form.bank_details}
             onChange={(e) => setForm({ ...form, bank_details: e.target.value })}
             placeholder={t('documentProfile.bankDetailsPlaceholder')}
+            disabled={form.use_company_defaults}
           />
         </div>
-        <div className="space-y-2">
+        <div className={`space-y-2 ${form.use_company_defaults ? 'opacity-50 pointer-events-none' : ''}`}>
           <Label htmlFor="dp-signatory-name">{t('documentProfile.signatoryName')}</Label>
           <Input
             id="dp-signatory-name"
             value={form.signatory_name}
             onChange={(e) => setForm({ ...form, signatory_name: e.target.value })}
+            disabled={form.use_company_defaults}
           />
         </div>
-        <div className="space-y-2">
+        <div className={`space-y-2 ${form.use_company_defaults ? 'opacity-50 pointer-events-none' : ''}`}>
           <Label htmlFor="dp-signatory-position">{t('documentProfile.signatoryPosition')}</Label>
           <Input
             id="dp-signatory-position"
             value={form.signatory_position}
             onChange={(e) => setForm({ ...form, signatory_position: e.target.value })}
+            disabled={form.use_company_defaults}
           />
         </div>
         <div className="space-y-2 sm:col-span-2">

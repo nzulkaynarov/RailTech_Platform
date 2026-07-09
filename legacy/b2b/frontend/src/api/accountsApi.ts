@@ -52,6 +52,7 @@ export interface CompanyDocumentProfile {
 	signatory_position?: string;
 	footer_text?: string;
 	accent_color?: string;
+	use_company_defaults?: boolean;
 	// P3 layout toggles — what the seller shows on its documents.
 	show_logo?: boolean;
 	show_lead_time?: boolean;

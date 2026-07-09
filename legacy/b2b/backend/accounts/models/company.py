@@ -272,6 +272,11 @@ class CompanyDocumentProfile(models.Model):
         verbose_name=_("Акцентный цвет"),
         help_text=_("HEX-цвет фирменного стиля для шапки документа (напр. #15294d)"),
     )
+    use_company_defaults = models.BooleanField(
+        default=True,
+        verbose_name=_("Использовать реквизиты компании"),
+        help_text=_("Автоматически наследовать название, ИНН и адрес из профиля компании"),
+    )
     # ── Layout toggles (P3 document-settings) — what the seller shows on its documents ──
     show_logo = models.BooleanField(
         default=True,
