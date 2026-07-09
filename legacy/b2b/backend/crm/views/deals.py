@@ -216,6 +216,15 @@ class DealViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        # SEC (audit #7): user-initiated gate — this generic endpoint must not be a parallel
+        # path around submit_request's KYC/capability gates, nor let a co-routed seller close
+        # the shared deal. (Internal auto-transitions call the service directly, ungated.)
+        from crm.services.deals import assert_user_may_change_stage
+
+        guard_error = assert_user_may_change_stage(deal, request.user, stage_code)
+        if guard_error:
+            return Response({"detail": guard_error}, status=status.HTTP_403_FORBIDDEN)
+
         deal, error = transition_deal_stage(deal, stage_code, actor=request.user)
         if error:
             return Response(

@@ -87,6 +87,35 @@ def register_new_deal(deal: Deal, actor: CustomUser) -> Deal:
     return deal
 
 
+def assert_user_may_change_stage(deal: Deal, actor: Optional[CustomUser], target_stage_code: str) -> Optional[str]:
+    """SEC (audit #7): user-initiated FSM guard for the change-stage ENDPOINT only — NOT the
+    shared transition_deal_stage, which internal auto-transitions (Move-0 send-КП/approve/
+    dual-sign) invoke with seller/system actors and must not be re-gated.
+
+    Closes two bypasses of submit_request's gates via the generic change-stage endpoint:
+      (a) an unverified/non-buyer moving DRAFT→RFQ_OPEN (fanning the заявка to sellers below
+          KYC L2, skipping submit_request's KYC + buy-capability gates);
+      (b) a co-routed seller driving the SHARED Deal.stage to a terminal state (CLOSED_LOST/
+          CLOSED_WON), griefing the buyer and the competing seller on a multi-seller RFQ.
+    Returns an error code or None. superuser/internal (actor=None) bypass."""
+    if actor is None or getattr(actor, "is_superuser", False):
+        return None
+    from accounts.services.kyc import company_kyc_verified
+    from accounts.services.permissions import is_member_of
+
+    is_buyer_side = is_member_of(actor, deal.company_id, capability="buy")
+    if target_stage_code == DealStageCode.RFQ_OPEN:
+        if not is_buyer_side:
+            return "ONLY_BUYER_CAN_SUBMIT_REQUEST"
+        if not company_kyc_verified(deal.company_id):
+            return "KYC_REQUIRED_TO_SUBMIT"
+    # A seller may decline a SINGLE-seller deal, but must not close a SHARED (multi-seller)
+    # deal out from under the buyer and the competing sellers (CLOSED_LOST griefing).
+    if target_stage_code == DealStageCode.CLOSED_LOST and not is_buyer_side and deal.seller_routings.count() > 1:
+        return "ONLY_BUYER_CAN_CLOSE_SHARED_DEAL"
+    return None
+
+
 def transition_deal_stage(
     deal: Deal,
     target_stage_code: str,
