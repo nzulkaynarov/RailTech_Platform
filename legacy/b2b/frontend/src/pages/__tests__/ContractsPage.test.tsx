@@ -43,6 +43,8 @@ function makeContract(overrides: Partial<Contract> & { id: number }): Contract {
     manager_signer: null,
     manager_signer_name: null,
     manager_signed_at: null,
+    viewer_can_sign_client: true,
+    viewer_can_sign_manager: false,
     valid_from: null,
     valid_until: null,
     notes: '',
@@ -107,7 +109,9 @@ describe('ContractsPage', () => {
     expect(screen.queryByRole('button', { name: 'Подписать (клиент)' })).not.toBeInTheDocument();
   });
 
-  it('renders the buyer-side indicator in buyer context', async () => {
+  it('derives the BUYER side from the contract sign hint, not the page context', async () => {
+    // Even in SELLER page context, a contract the viewer can sign as CLIENT shows the buyer side.
+    useUserStore.setState({ activeStatus: 'SELLER' });
     const { container } = renderWithProviders(<ContractsPage />);
     await screen.findAllByText('CT-001');
     // data-side carries the code (not the translated label) — i18n-independent.
@@ -115,8 +119,11 @@ describe('ContractsPage', () => {
     expect(container.querySelector('[data-side="seller"]')).toBeNull();
   });
 
-  it('renders the seller-side indicator in seller context', async () => {
-    useUserStore.setState({ activeStatus: 'SELLER' });
+  it('derives the SELLER side from the contract sign hint, not the page context', async () => {
+    // Even in BUYER page context, a contract the viewer can sign as MANAGER shows the seller side.
+    const sellerContract = makeContract({ id: 1, viewer_can_sign_client: false, viewer_can_sign_manager: true });
+    vi.mocked(contractsApi.list).mockImplementation(async () => [sellerContract]);
+    useUserStore.setState({ activeStatus: 'BUYER' });
     const { container } = renderWithProviders(<ContractsPage />);
     await screen.findAllByText('CT-001');
     expect(container.querySelector('[data-side="seller"]')).not.toBeNull();
