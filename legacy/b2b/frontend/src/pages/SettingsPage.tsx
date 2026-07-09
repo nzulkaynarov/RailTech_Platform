@@ -37,6 +37,7 @@ export function SettingsPage() {
   // Fake rows trimmed — currency/timezone/dateFormat/density/sidebar didn't
   // feed back into any consumer and made the panel feel like a mock. Only
   // Language (i18next) and Theme (themeStore) actually change the UI.
+  const defaultTab = isAdmin ? 'platform' : (canEditCompany ? 'companyAdmin' : 'team');
 
   return (
     <div className="flex flex-col gap-6">
@@ -45,7 +46,7 @@ export function SettingsPage() {
         <p className="text-sm text-muted-foreground mt-1">{t('settings.subtitle')}</p>
       </div>
 
-      <Tabs defaultValue="companyAdmin">
+      <Tabs defaultValue={defaultTab}>
         <TabsList>
           {/* Company-Admin hub — company business config (defaults, numbering, templates,
               document profile). Gated on the settings.edit / charge_templates.manage PERMISSION. */}
@@ -65,7 +66,7 @@ export function SettingsPage() {
             charge_templates.manage (U2), not WorkspaceRole — so a delegated company admin sees it. */}
         {!isAdmin && canEditCompany && (
           <TabsContent value="companyAdmin" className="space-y-4">
-            <CompanyAdminHub />
+            <CompanyAdminHub canSell={capabilities.can_sell} />
           </TabsContent>
         )}
 
@@ -137,7 +138,7 @@ export function SettingsPage() {
  * document numbering, charge templates, document profile) under one tab with a nested
  * sub-navigation. Each sub-section is wired to its own OWNER-gated endpoint.
  */
-function CompanyAdminHub() {
+function CompanyAdminHub({ canSell }: { canSell: boolean }) {
   const { t } = useTranslation();
   return (
     <Card>
@@ -149,27 +150,31 @@ function CompanyAdminHub() {
         <Tabs defaultValue="profile" className="w-full">
           <TabsList className="flex-wrap">
             <TabsTrigger value="profile">{t('profile.tabs.company')}</TabsTrigger>
-            <TabsTrigger value="documentProfile">{t('settings.tabs.documentProfile')}</TabsTrigger>
-            <TabsTrigger value="defaults">{t('settings.tabs.defaults')}</TabsTrigger>
-            <TabsTrigger value="numbering">{t('settings.tabs.numbering')}</TabsTrigger>
-            <TabsTrigger value="templates">{t('settings.tabs.templates')}</TabsTrigger>
+            {canSell && <TabsTrigger value="documentProfile">{t('settings.tabs.documentProfile')}</TabsTrigger>}
+            {canSell && <TabsTrigger value="defaults">{t('settings.tabs.defaults')}</TabsTrigger>}
+            {canSell && <TabsTrigger value="numbering">{t('settings.tabs.numbering')}</TabsTrigger>}
+            {canSell && <TabsTrigger value="templates">{t('settings.tabs.templates')}</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="profile" className="mt-4">
             <CompanyTab />
           </TabsContent>
-          <TabsContent value="documentProfile" className="mt-4">
-            <CompanyDocumentProfileSettings />
-          </TabsContent>
-          <TabsContent value="defaults" className="mt-4">
-            <CompanyDefaultsSettings />
-          </TabsContent>
-          <TabsContent value="numbering" className="mt-4">
-            <CompanyNumberingSettings />
-          </TabsContent>
-          <TabsContent value="templates" className="mt-4">
-            <ChargeTemplatesSettings />
-          </TabsContent>
+          {canSell && (
+            <>
+              <TabsContent value="documentProfile" className="mt-4">
+                <CompanyDocumentProfileSettings />
+              </TabsContent>
+              <TabsContent value="defaults" className="mt-4">
+                <CompanyDefaultsSettings />
+              </TabsContent>
+              <TabsContent value="numbering" className="mt-4">
+                <CompanyNumberingSettings />
+              </TabsContent>
+              <TabsContent value="templates" className="mt-4">
+                <ChargeTemplatesSettings />
+              </TabsContent>
+            </>
+          )}
         </Tabs>
       </CardContent>
     </Card>
