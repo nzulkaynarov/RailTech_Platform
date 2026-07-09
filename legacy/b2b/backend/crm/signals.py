@@ -29,6 +29,7 @@ def broadcast_new_message(sender, instance: Message, created: bool, **kwargs):
         "type": "chat_message",
         "id": instance.id,
         "deal": instance.deal_id,
+        "seller_company": instance.seller_company_id,
         "text": instance.text,
         "sender": sender_user.id if sender_user else None,
         "sender_name": (sender_user.get_full_name() if sender_user else "")
@@ -36,7 +37,12 @@ def broadcast_new_message(sender, instance: Message, created: bool, **kwargs):
         "message_type": instance.message_type,
         "timestamp": instance.timestamp.isoformat(),
     }
+    # SEC (audit #4): push only to the message's LANE group — the buyer + that one seller —
+    # so a competing seller's live socket never receives another lane's message. A NULL lane
+    # ('all') is a deal-level/system message every connected party receives.
+    from .services.messaging import message_lane_group_name
+
     async_to_sync(channel_layer.group_send)(
-        f"chat_deal_{instance.deal_id}",
+        message_lane_group_name(instance.deal_id, instance.seller_company_id),
         payload,
     )

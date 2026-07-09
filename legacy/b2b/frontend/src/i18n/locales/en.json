@@ -2602,6 +2602,8 @@
     }
   },
   "dealChat": {
+    "pickSeller": "Select a seller",
+    "pickSellerHint": "Pick a seller to open the private chat",
     "tabs": {
       "chat": "Chat",
       "documents": "Documents"

@@ -233,6 +233,21 @@ class Message(models.Model):
         verbose_name=_("Отправитель"),
         help_text=_("Автор сообщения"),
     )
+    # SEC (audit #4): the private lane this message belongs to on a multi-seller RFQ — the
+    # seller company of the buyer↔seller thread. A seller's message carries its own company;
+    # a buyer's message carries the seller lane it's addressed to. NULL = a legacy/deal-level
+    # message (pre-lanes) visible to all parties. Read-scoping keys off this so a competing
+    # seller can't read another lane (hidden competition, ADR-0003 §5).
+    seller_company = models.ForeignKey(
+        "accounts.Company",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="lane_messages",
+        db_index=True,
+        verbose_name=_("Продавец (lane)"),
+        help_text=_("Приватный тред покупатель↔продавец на мульти-seller заявке"),
+    )
     text = models.TextField(
         verbose_name=_("Текст сообщения"),
     )
@@ -440,6 +455,20 @@ class ActivityLog(models.Model):
         blank=True,
         related_name="timeline_logs",
         verbose_name=_("Сделка"),
+    )
+    # SEC (audit #4): the seller lane a deal event belongs to on a multi-seller RFQ. A
+    # seller-authored event (КП sent/accepted, chat) carries that seller's company; buyer/
+    # system/deal-level events stay NULL and are visible to all parties. The «История» feed
+    # scopes a seller viewer to its own lane (own seller_company OR NULL) so a competitor's
+    # КП events don't leak (hidden competition).
+    seller_company = models.ForeignKey(
+        "accounts.Company",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="lane_timeline_logs",
+        db_index=True,
+        verbose_name=_("Продавец (lane)"),
     )
 
     class Meta:

@@ -634,6 +634,7 @@ class MessageSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "deal",
+            "seller_company",
             "sender",
             "sender_name",
             "text",
@@ -641,7 +642,9 @@ class MessageSerializer(serializers.ModelSerializer):
             "timestamp",
             "is_me",
         ]
-        read_only_fields = ["sender", "timestamp", "message_type"]
+        # seller_company (the private lane) is resolved server-side from the sender's routing
+        # / the buyer's selected counterparty — read-only here, never client-forgeable (audit #4).
+        read_only_fields = ["sender", "timestamp", "message_type", "seller_company"]
 
     def get_sender_name(self, obj):
         sender = obj.sender

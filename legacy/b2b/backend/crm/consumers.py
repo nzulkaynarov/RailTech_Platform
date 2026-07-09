@@ -16,7 +16,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     async def connect(self):
         self.deal_id = self.scope["url_route"]["kwargs"]["deal_id"]
-        self.room_group_name = f"chat_deal_{self.deal_id}"
+        # Optional buyer-selected lane (which routed seller's thread). A seller derives its
+        # own lane server-side and ignores this (audit #4).
+        self.requested_lane = self.scope["url_route"]["kwargs"].get("seller_company_id")
         user = self.scope.get("user")
         from django.contrib.auth.models import AnonymousUser
 
@@ -27,24 +29,20 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.close(code=4001)
             return
 
-        has_access = await self.check_deal_access(user, self.deal_id)
-        if not has_access:
+        # Resolve the LANE group(s) this user may receive (None = no chat access).
+        self.lane_groups = await self.resolve_lane_groups(user, self.deal_id, self.requested_lane)
+        if self.lane_groups is None:
             await self.accept()
             await self.close(code=4003)
             return
 
-        await self.channel_layer.group_add(
-            self.room_group_name,
-            self.channel_name,
-        )
+        for group in self.lane_groups:
+            await self.channel_layer.group_add(group, self.channel_name)
         await self.accept()
 
     async def disconnect(self, close_code):
-        if hasattr(self, "room_group_name"):
-            await self.channel_layer.group_discard(
-                self.room_group_name,
-                self.channel_name,
-            )
+        for group in getattr(self, "lane_groups", []) or []:
+            await self.channel_layer.group_discard(group, self.channel_name)
 
     async def receive(self, text_data):
         try:
@@ -67,6 +65,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 {
                     "id": event["id"],
                     "deal": event.get("deal"),
+                    "seller_company": event.get("seller_company"),
                     "text": event["text"],
                     "sender": event.get("sender"),
                     "sender_name": event.get("sender_name", ""),
@@ -77,15 +76,39 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
 
     @database_sync_to_async
-    def check_deal_access(self, user, deal_id):
+    def resolve_lane_groups(self, user, deal_id, requested_lane):
+        """The LANE group(s) this user may receive on the deal chat, or None if no access.
+        Always the deal-level NULL lane ('all'); PLUS a seller's own routed lane, or the
+        buyer's selected (validated) counterparty lane / the sole seller on a 1-seller deal
+        (audit #4 — a competing seller is never added to another lane's group)."""
+        from accounts.services.permissions import routed_seller_company_id
         from crm.models import Deal
         from crm.services import user_can_access_deal_chat
+        from crm.services.messaging import message_lane_group_name
 
         try:
             deal = Deal.objects.select_related("company").get(pk=deal_id)
         except Deal.DoesNotExist:
-            return False
-        return user_can_access_deal_chat(user, deal)
+            return None
+        if not user_can_access_deal_chat(user, deal):
+            return None
+        groups = [message_lane_group_name(deal_id, None)]
+        own = routed_seller_company_id(user, deal_id)
+        if own is not None:
+            groups.append(message_lane_group_name(deal_id, own))
+            return groups
+        routed_ids = list(deal.seller_routings.values_list("seller_company_id", flat=True))
+        lane = None
+        if requested_lane is not None:
+            try:
+                lane = int(requested_lane) if int(requested_lane) in routed_ids else None
+            except (TypeError, ValueError):
+                lane = None
+        elif len(routed_ids) == 1:
+            lane = routed_ids[0]
+        if lane is not None:
+            groups.append(message_lane_group_name(deal_id, lane))
+        return groups
 
     @database_sync_to_async
     def create_message(self, user, deal_id, text):
@@ -96,7 +119,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
             deal = Deal.objects.get(pk=deal_id)
         except Deal.DoesNotExist:
             return None, "DEAL_NOT_FOUND"
-        return send_deal_message(user, deal, text)
+        # A seller's lane is derived server-side; a buyer sends into its selected lane.
+        return send_deal_message(user, deal, text, seller_company_id=self.requested_lane)
 
 
 class FallbackConsumer(AsyncWebsocketConsumer):
