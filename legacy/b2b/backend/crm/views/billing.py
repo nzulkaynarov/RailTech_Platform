@@ -8,7 +8,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.services.permissions import seller_visible_deal_ids
+from accounts.services.permissions import seller_company_ids, seller_visible_deal_ids
 from core.file_streaming import stream_file_field
 from core.optimistic_locking import OptimisticLockingMixin
 from core.permissions import IsCompanyMemberOrPlatformAdmin, OperatorScoped
@@ -49,24 +49,38 @@ def _stream_or_render_pdf(obj):
     return stream_file_field(obj.pdf_file)
 
 
-def _billing_visibility_q(user, request, *, deal_path):
+def _billing_visibility_q(user, request, *, deal_path, seller_path):
     """Tenant-scope Q for a non-admin billing queryset.
 
-    A billing document (contract / invoice / act / payment / fulfillment) is
-    visible to a member of EITHER side of its deal: the buyer company that
-    initiated the deal, UNION the seller company the deal is routed to
-    (DealSellerRouting). Visibility is INDEPENDENT of the SPA X-Active-Context
-    header — a seller landing from the dashboard defaults to BUYER context and
-    must still see its routed deals' billing (WP-1 regression). The seller side
-    stays confined to ROUTED deals only, so a seller never sees an unrelated
-    buyer's records (hidden competition, ADR-0003 §5).
+    A billing document (contract / invoice / act / payment / fulfillment) is visible to:
+      • a member of the BUYER company that owns the deal (deal_path → company), UNION
+      • a member of the SELLER company that OWNS the document — the winning quote's
+        seller_company (seller_path → quote.seller_company).
 
-    `deal_path` is the ORM lookup prefix from the queried model to its Deal FK:
-    "deal" for Contract/Invoice/Act/Fulfillment, "invoice__deal" for Payment.
+    Scoping the seller side to the document's OWN seller_company — not to every deal the
+    seller is merely ROUTED to — is what stops a LOSING co-routed seller from seeing the
+    WINNER's contract/invoice/act/payment on a shared multi-seller deal (hidden competition,
+    ADR-0003 §5). Billing models carry no seller_company field, so ownership is derived through
+    the quote chain. Visibility is INDEPENDENT of the SPA X-Active-Context header — a seller
+    landing in the default BUYER context still sees its own deals' billing (WP-1).
+
+    `deal_path`   — ORM prefix from the model to its Deal FK ("deal", or "invoice__deal" for Payment).
+    `seller_path` — ORM prefix from the model to the owning quote's seller_company id.
     """
-    seller_deal_ids = seller_visible_deal_ids(user, request, force=True) or set()
     user_company_ids = list(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
-    return Q(**{f"{deal_path}__company_id__in": user_company_ids}) | Q(**{f"{deal_path}_id__in": seller_deal_ids})
+    buyer_q = Q(**{f"{deal_path}__company_id__in": user_company_ids})
+    owned_seller_ids = seller_company_ids(user)
+    if not owned_seller_ids:
+        return buyer_q
+    # The seller sees documents OWNED by its seller company (winning quote.seller_company).
+    owned_q = Q(**{f"{seller_path}__in": owned_seller_ids})
+    # Fallback ONLY for documents whose owner is unresolvable (quote.seller_company NULL —
+    # legacy/manual docs, NEVER a contracted winning quote, which is always owner-anchored on
+    # claim/submit): keep them visible to a ROUTED seller by deal (WP-1). This never re-exposes a
+    # winner's billing to a losing co-routed seller, because the winner's docs ARE owner-anchored.
+    routed_deal_ids = seller_visible_deal_ids(user, request, force=True) or set()
+    unresolved_q = Q(**{f"{seller_path}__isnull": True}) & Q(**{f"{deal_path}_id__in": routed_deal_ids})
+    return buyer_q | owned_q | unresolved_q
 
 
 class Phase2StatusChoicesView(APIView):
@@ -120,7 +134,9 @@ class ContractViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
         # X-Active-Context header (WP-1). Seller side stays routing-scoped.
         if getattr(user, "is_platform_admin", False):
             return qs
-        return qs.filter(_billing_visibility_q(user, self.request, deal_path="deal")).distinct()
+        return qs.filter(
+            _billing_visibility_q(user, self.request, deal_path="deal", seller_path="quote__seller_company_id")
+        ).distinct()
 
     # Private PDFs are streamed through these authenticated endpoints (get_object
     # enforces tenant scope) — NOT via the raw /media URL, which 404s on prod
@@ -255,7 +271,11 @@ class InvoiceViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
         # X-Active-Context header (WP-1). Seller side stays routing-scoped.
         if getattr(user, "is_platform_admin", False):
             return qs
-        return qs.filter(_billing_visibility_q(user, self.request, deal_path="deal")).distinct()
+        return qs.filter(
+            _billing_visibility_q(
+                user, self.request, deal_path="deal", seller_path="contract__quote__seller_company_id"
+            )
+        ).distinct()
 
     @action(detail=True, methods=["get"], url_path="download-pdf")
     def download_pdf(self, request, pk=None):
@@ -333,7 +353,14 @@ class PaymentViewSet(viewsets.ModelViewSet):
         # X-Active-Context header (WP-1). Payment reaches its deal via invoice__deal.
         if getattr(user, "is_platform_admin", False):
             return qs
-        return qs.filter(_billing_visibility_q(user, self.request, deal_path="invoice__deal")).distinct()
+        return qs.filter(
+            _billing_visibility_q(
+                user,
+                self.request,
+                deal_path="invoice__deal",
+                seller_path="invoice__contract__quote__seller_company_id",
+            )
+        ).distinct()
 
 
 class ActViewSet(viewsets.ModelViewSet):
@@ -350,7 +377,11 @@ class ActViewSet(viewsets.ModelViewSet):
         # X-Active-Context header (WP-1). Seller side stays routing-scoped.
         if getattr(user, "is_platform_admin", False):
             return qs
-        return qs.filter(_billing_visibility_q(user, self.request, deal_path="deal")).distinct()
+        return qs.filter(
+            _billing_visibility_q(
+                user, self.request, deal_path="deal", seller_path="invoice__contract__quote__seller_company_id"
+            )
+        ).distinct()
 
     @action(detail=True, methods=["get"], url_path="download-pdf")
     def download_pdf(self, request, pk=None):
@@ -394,7 +425,11 @@ class FulfillmentViewSet(viewsets.ModelViewSet):
         # X-Active-Context header (WP-1). Seller side stays routing-scoped.
         if getattr(user, "is_platform_admin", False):
             return qs
-        return qs.filter(_billing_visibility_q(user, self.request, deal_path="deal")).distinct()
+        return qs.filter(
+            _billing_visibility_q(
+                user, self.request, deal_path="deal", seller_path="contract__quote__seller_company_id"
+            )
+        ).distinct()
 
     @extend_schema(summary="Update fulfillment status", tags=["CRM"])
     @action(detail=False, methods=["post"], url_path="update-status", permission_classes=[IsAuthenticated])

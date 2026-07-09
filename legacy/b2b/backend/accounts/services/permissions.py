@@ -274,6 +274,23 @@ def seller_sees_all_deals(user: "CustomUser", request) -> bool:
     return ctx == "" or ctx in _SELLER_CONTEXTS
 
 
+def seller_company_ids(user: "CustomUser") -> list:
+    """The seller companies a user can act for (active membership, can_sell, seller company type).
+
+    Used to scope SELLER-side billing visibility to documents OWNED by the user's seller company
+    (via the doc's quote.seller_company) rather than to every routed deal — the fix for a losing
+    co-routed seller seeing the winner's contract/invoice/act on a shared multi-seller deal
+    (ADR-0003 §5 hidden competition). Empty for non-sellers / platform admins.
+    """
+    if getattr(user, "is_platform_admin", False):
+        return []
+    return list(
+        user.memberships.filter(
+            is_active=True, can_sell=True, company__types__code__in=SELLER_COMPANY_TYPES
+        ).values_list("company_id", flat=True)
+    )
+
+
 def seller_visible_deal_ids(user: "CustomUser", request, *, force: bool = False) -> Optional[set]:
     """The deal ids a context-acting seller may see: those routed to one of their
     seller companies (DealSellerRouting) OR offering one of their catalog products
