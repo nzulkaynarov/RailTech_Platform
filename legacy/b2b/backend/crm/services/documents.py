@@ -9,6 +9,8 @@ document-polish P1). Rule 8: logic lives here; the render functions are thin.
 
 from typing import Optional
 
+from core.validators import is_hex_color
+
 _DEFAULT_ACCENT = "#15294d"
 _DARK_INK = "#1b1f27"
 _LIGHT_INK = "#ffffff"
@@ -180,8 +182,6 @@ def document_brand_context(seller_company, *, is_demo: bool = False) -> dict:
     """The branding bundle every concrete document template feeds the base with. Resolves the
     seller's CompanyDocumentProfile + logo. Safe when `seller_company` is None (renders the
     neutral platform fallback — never fake counterparty data)."""
-    from .quotes import _seller_document_profile
-
     from accounts.models import CompanyDocumentProfile
 
     from .quotes import _profile_has_branding
@@ -192,7 +192,12 @@ def document_brand_context(seller_company, *, is_demo: bool = False) -> dict:
     # колонку срока» without also filling their legal name.
     row = CompanyDocumentProfile.objects.filter(company=seller_company).first() if seller_company else None
     branded = row if _profile_has_branding(row) else None
-    accent = (getattr(branded, "accent_color", None) or _DEFAULT_ACCENT) if branded else _DEFAULT_ACCENT
+    # SEC (audit #9): accent goes raw into a <style> block, so neutralize anything that
+    # isn't a #hex colour at render time too — defence-in-depth for any historical row
+    # written before update_document_profile validated it (belt-and-suspenders vs CSS
+    # injection → WeasyPrint SSRF).
+    raw_accent = getattr(branded, "accent_color", None) if branded else None
+    accent = raw_accent if is_hex_color(raw_accent) else _DEFAULT_ACCENT
     return {
         "seller": seller_company,
         "seller_profile": branded,
