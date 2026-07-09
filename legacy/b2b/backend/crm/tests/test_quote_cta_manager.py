@@ -81,13 +81,13 @@ def test_manager_falls_back_to_email_and_seller_phone():
 def test_cta_renders_when_public_url_present():
     url = "https://b2b.railtech.uz/api/v1/public/quotes/tok123/"
     html = render_to_string("crm/quote_pdf.html", _ctx(public_quote_url=url))
-    assert "Принять предложение онлайн" in html
+    assert "Онлайн-версия предложения" in html
     assert url in html
 
 
 def test_cta_absent_without_public_url():
     html = render_to_string("crm/quote_pdf.html", _ctx())
-    assert "Принять предложение онлайн" not in html
+    assert "Онлайн-версия предложения" not in html
 
 
 def test_template_comment_does_not_leak_into_output():
@@ -103,7 +103,7 @@ def test_preview_has_no_cta_or_leaked_token():
     """The settings preview renders a sample КП with no real token → no CTA (F-09 stays post-send)."""
     seller = Company.objects.create(name="Seller LLC", inn="3000000003")
     html = render_document_profile_preview_html(seller)
-    assert "Принять предложение онлайн" not in html
+    assert "Онлайн-версия предложения" not in html
 
 
 # ── public_quote_url helper ──────────────────────────────────────────

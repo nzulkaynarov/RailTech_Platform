@@ -85,6 +85,26 @@ def test_money_words_filter_delegates():
     assert money_words(Decimal("1.00"), "UZS") == "Один сум 00 тийин"
 
 
+def test_money_words_unknown_currency_uses_iso_code_not_som():
+    """An unknown currency (e.g. CNY) must NOT be spelled «сум» — that would contradict the numeric
+    total's currency. Spell the number + append the ISO code + subunit as digits."""
+    result = money_in_words(Decimal("1234.56"), "CNY")
+    assert "сум" not in result and "тийин" not in result
+    assert "CNY" in result
+    assert result.startswith("Одна тысяча двести тридцать четыре")
+    assert "56/100" in result
+
+
+def test_money_words_huge_number_degrades_without_crash():
+    """Amounts beyond the scale table degrade to «—» instead of raising IndexError and crashing
+    the whole WeasyPrint render for one oversized cell."""
+    assert money_in_words(Decimal("10000000000000000000000.00"), "UZS") == "—"  # 10^22
+
+
+def test_money_words_quadrillion_spells():
+    assert money_in_words(Decimal("1000000000000000.00"), "UZS").startswith("Один квадриллион")
+
+
 # ── qty ──────────────────────────────────────────────────────────────
 def test_qty_integer_has_no_decimals():
     assert qty(Decimal("10"), "шт.") == f"10{NBSP}шт."
