@@ -423,7 +423,12 @@ class QuoteSerializer(serializers.ModelSerializer):
     # The КП-level cost breakdown (charges list + its total) reveals internal
     # overhead/margin structure — seller/admin/superuser only. The buyer sees the
     # final total_incl_vat, never WHY (the two-projection rule).
-    _SELLER_ONLY_FIELDS = ("charges", "charges_total")
+    # SEC (audit #3): margin_percent (whole-КП markup) and the fx_snapshot/fx_manual
+    # cost-conversion rates must be popped for the buyer too — with the visible per-line
+    # final_price + discount the buyer could otherwise back out the seller's landed cost
+    # (the exact datum item-level redaction + the FX-stripped PDF, PR #269, hide). The
+    # item serializer already redacts item margin_percent; the quote level lagged behind.
+    _SELLER_ONLY_FIELDS = ("charges", "charges_total", "margin_percent", "fx_snapshot", "fx_manual")
 
     def _can_see_costs(self, quote) -> bool:
         # Per-quote (C1): cost/margin only on a quote the viewer's own company prepared —
