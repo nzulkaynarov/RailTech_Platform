@@ -125,3 +125,56 @@ def test_charge_cost_shown_to_member_with_permission(quote_charge):
     data = _serialize_charge_as(privileged, charge)
     for field in _CHARGE_COST_FIELDS:
         assert field in data, f"{field} hidden from a charge cost-viewer"
+
+
+# ─── QUOTE-LEVEL redaction (audit #3): margin_percent + fx_snapshot/fx_manual ────────────────
+_QUOTE_COST_FIELDS = ("margin_percent", "fx_snapshot", "fx_manual", "charges_total")
+
+
+@pytest.fixture
+def quote_row(db):
+    from crm.serializers import QuoteSerializer  # noqa: F401 — ensure importable
+
+    CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 10})
+    seller_co = Company.objects.create(name="QuoteCo")
+    seller_co.types.add(CompanyType.objects.get(code="SUPPLIER"))
+    preparer = _seller_member(seller_co, "qprep@s.test", perms=["quote.view_cost_margin"])
+    stage = DealStage.objects.get_or_create(code="DRAFT", defaults={"name": "Draft", "sort_order": 10})[0]
+    deal = Deal.objects.create(title="qd", company=seller_co, client=preparer, stage=stage)
+    quote = Quote.objects.create(
+        deal=deal,
+        version=1,
+        prepared_by=preparer,
+        margin_percent="22.00",
+        fx_snapshot={"USD": "12650"},
+        fx_manual={"USD": "12800"},
+    )
+    return seller_co, quote
+
+
+def _serialize_quote_as(user, quote):
+    from crm.serializers import QuoteSerializer
+
+    request = APIRequestFactory().get("/")
+    request.user = user
+    return QuoteSerializer(quote, context={"request": request}).data
+
+
+@pytest.mark.django_db
+def test_quote_margin_fx_hidden_from_non_cost_viewer(quote_row):
+    """A buyer / a seller-team member without quote.view_cost_margin must not receive the
+    whole-КП markup or the FX cost-conversion rates (they reconstruct landed cost)."""
+    seller_co, quote = quote_row
+    restricted = _seller_member(seller_co, "qnosee@s.test", perms=[])
+    data = _serialize_quote_as(restricted, quote)
+    for field in _QUOTE_COST_FIELDS:
+        assert field not in data, f"{field} leaked to a non-cost viewer at the quote level"
+
+
+@pytest.mark.django_db
+def test_quote_margin_fx_shown_to_cost_viewer(quote_row):
+    seller_co, quote = quote_row
+    privileged = _seller_member(seller_co, "qsee@s.test", perms=["quote.view_cost_margin"])
+    data = _serialize_quote_as(privileged, quote)
+    for field in ("margin_percent", "fx_snapshot", "fx_manual"):
+        assert field in data, f"{field} hidden from a cost viewer at the quote level"
