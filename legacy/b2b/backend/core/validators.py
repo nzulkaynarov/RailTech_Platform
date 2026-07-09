@@ -6,8 +6,20 @@ content-type, and file size checks.
 """
 
 import os
+import re
 
 from django.core.exceptions import ValidationError
+
+# A #RGB / #RRGGBB colour. Used to validate the seller's brand accent_color BEFORE it is
+# interpolated into a <style> block in the PDF templates — an unvalidated value is CSS
+# injection → WeasyPrint SSRF/LFI on render (audit #9).
+HEX_COLOR_RE = re.compile(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
+
+
+def is_hex_color(value) -> bool:
+    """True if `value` is a safe #RGB / #RRGGBB colour literal (nothing else may reach CSS)."""
+    return bool(value and HEX_COLOR_RE.match(str(value).strip()))
+
 
 # SVG removed (audit H6): SVGs carry inline <script>/onload, have no magic-byte signature,
 # and are served same-origin as image/svg+xml → stored XSS. Raster formats only.

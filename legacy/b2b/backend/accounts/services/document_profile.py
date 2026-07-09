@@ -11,7 +11,7 @@ from typing import Optional, Tuple
 
 from django.core.exceptions import ValidationError as DjangoValidationError
 
-from core.validators import validate_image_upload
+from core.validators import is_hex_color, validate_image_upload
 
 from ..models import Company, CompanyDocumentProfile, CustomUser
 
@@ -71,6 +71,12 @@ def update_document_profile(
     """
     if not is_company_owner(user, company):
         return None, "NOT_COMPANY_OWNER"
+    # SEC (audit #9): accent_color is interpolated raw into a <style> block in the PDF
+    # templates, so an unvalidated value ("red;background:url(http://10.0.0.2)") is CSS
+    # injection → WeasyPrint SSRF/LFI on render. Reject anything but a #hex colour.
+    accent = data.get("accent_color")
+    if accent not in (None, "") and not is_hex_color(accent):
+        return None, "INVALID_ACCENT_COLOR"
     profile = get_document_profile(company)
     changed = []
     for field in _EDITABLE_FIELDS:

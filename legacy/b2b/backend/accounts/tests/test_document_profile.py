@@ -108,3 +108,16 @@ def test_service_rejects_non_owner_and_whitelists_fields(two_companies):
     assert profile.legal_name == "ООО А"
     assert profile.bank_details == "р/с 123"
     assert not profile.logo
+
+
+@pytest.mark.django_db
+def test_update_rejects_css_injection_accent_color(two_companies):
+    """SEC audit #9: accent_color must be a #hex colour — a CSS-injection payload is refused
+    (it would otherwise reach a <style> block in the PDF template → WeasyPrint SSRF)."""
+    seller_a, owner_a, _, _ = two_companies
+    profile, err = update_document_profile(owner_a, seller_a, {"accent_color": "red;background:url(http://10.0.0.2)"})
+    assert profile is None
+    assert err == "INVALID_ACCENT_COLOR"
+    profile2, err2 = update_document_profile(owner_a, seller_a, {"accent_color": "#15294d"})
+    assert err2 is None
+    assert profile2.accent_color == "#15294d"

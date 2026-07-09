@@ -76,7 +76,7 @@ def test_lead_time_column_shown_by_default():
 def test_lead_time_column_hidden_when_toggle_off():
     html = render_to_string("crm/quote_pdf.html", _quote_ctx(show_lead_time=False))
     # The «Срок» column header is gone; the offer still renders.
-    assert "<th style=\"width:12%\" class=\"center\">Срок</th>" not in html
+    assert '<th style="width:12%" class="center">Срок</th>' not in html
     assert "Коммерческое предложение" in html
 
 
@@ -102,9 +102,7 @@ def test_logo_hidden_when_toggle_off():
 @pytest.mark.django_db
 def test_brand_context_resolves_toggles_from_profile():
     seller = Company.objects.create(name="Seller LLC", inn="3000000001")
-    CompanyDocumentProfile.objects.create(
-        company=seller, show_logo=False, show_lead_time=False, show_fx_note=True
-    )
+    CompanyDocumentProfile.objects.create(company=seller, show_logo=False, show_lead_time=False, show_fx_note=True)
     ctx = document_brand_context(seller)
     assert ctx["show_logo"] is False
     assert ctx["show_lead_time"] is False
@@ -133,3 +131,14 @@ def test_preview_html_reflects_profile_branding_and_toggles():
     # CONFIDENTIALITY: even with show_fx_note=True on the profile, the client КП never prints the
     # CBU/FX rate — the toggle no longer leaks the seller's foreign-currency cost basis.
     assert "Курс ЦБ" not in html
+
+
+@pytest.mark.django_db
+def test_brand_context_neutralizes_non_hex_accent():
+    """SEC audit #9 (defence-in-depth): a historical non-hex accent_color is neutralized to the
+    default at render time, so it never reaches the <style> block even if it bypassed input
+    validation."""
+    seller = Company.objects.create(name="Seller LLC", inn="3000000099")
+    CompanyDocumentProfile.objects.create(company=seller, legal_name="ООО Тест", accent_color="red;url(//1.1.1.1)")
+    ctx = document_brand_context(seller)
+    assert ctx["accent"] == "#15294d"
