@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Globe, Palette, Store, Building2, ShieldCheck } from 'lucide-react';
+import { Store, Building2, ShieldCheck } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,44 +10,21 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
+
 
 import { useAuthStore } from '@/store/authStore';
 import { useUserStore, companyStatusLabels } from '@/store/userStore';
-import { useThemeStore } from '@/store/themeStore';
 import { useSystemSettings, useUpdateSystemSettings } from '@/hooks/useSystemSettings';
 import { CompanyTeamSettings } from '@/components/Cabinet/CompanyTeamSettings';
 import { ChargeTemplatesSettings } from '@/components/Cabinet/ChargeTemplatesSettings';
 import { CompanyDocumentProfileSettings } from '@/components/Cabinet/CompanyDocumentProfileSettings';
 import { CompanyDefaultsSettings } from '@/components/Cabinet/CompanyDefaultsSettings';
 import { CompanyNumberingSettings } from '@/components/Cabinet/CompanyNumberingSettings';
-
-function SettingRow({ icon: Icon, title, description, children }: {
-  icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  description: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center justify-between rounded-lg border p-4">
-      <div className="flex items-center gap-3">
-        <Icon className="h-5 w-5 text-muted-foreground" />
-        <div>
-          <p className="text-sm font-medium">{title}</p>
-          <p className="text-xs text-muted-foreground">{description}</p>
-        </div>
-      </div>
-      {children}
-    </div>
-  );
-}
+import { CompanyTab } from '@/components/Cabinet/CompanyTab';
 
 export function SettingsPage() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { role, company, capabilities } = useUserStore();
-  const { theme, setTheme } = useThemeStore();
   const isOwner = useAuthStore((s) => s.user?.workspace_role === 'OWNER');
   const isAdmin = role === 'ADMIN';
   // ADR-0005 U2: gate the company-admin hub on the CompanyRole PERMISSION, not WorkspaceRole
@@ -70,9 +47,8 @@ export function SettingsPage() {
         <p className="text-sm text-muted-foreground mt-1">{t('settings.subtitle')}</p>
       </div>
 
-      <Tabs defaultValue="general">
+      <Tabs defaultValue="companyAdmin">
         <TabsList>
-          <TabsTrigger value="general">{t('settings.tabs.general')}</TabsTrigger>
           {/* Company-Admin hub — company business config (defaults, numbering, templates,
               document profile). Gated on the settings.edit / charge_templates.manage PERMISSION. */}
           {!isAdmin && canEditCompany && (
@@ -85,36 +61,6 @@ export function SettingsPage() {
           {isAdmin && <TabsTrigger value="platform">{t('settings.tabs.platform')}</TabsTrigger>}
         </TabsList>
 
-        {/* General — language + theme, both actually wired. Simple rows read best narrow. */}
-        <TabsContent value="general" className="space-y-4 max-w-3xl">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">{t('settings.general.title')}</CardTitle>
-              <CardDescription>{t('settings.general.description')}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <SettingRow icon={Globe} title={t('settings.general.language')} description={t('settings.general.languageDesc')}>
-                <Select value={i18n.language?.startsWith('ru') ? 'ru' : 'en'} onValueChange={(val) => i18n.changeLanguage(val)}>
-                  <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ru">{t('settings.general.langRu')}</SelectItem>
-                    <SelectItem value="en">{t('settings.general.langEn')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </SettingRow>
-
-              <SettingRow icon={Palette} title={t('settings.appearance.theme')} description={t('settings.appearance.themeDesc')}>
-                <Select value={theme} onValueChange={(val) => setTheme(val as 'light' | 'dark')}>
-                  <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="light">{t('settings.appearance.themeLight')}</SelectItem>
-                    <SelectItem value="dark">{t('settings.appearance.themeDark')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </SettingRow>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         {/* Company-Admin hub — one coherent place for the company's КП defaults, document
             numbering, charge templates and document profile. Gated on settings.edit /
@@ -148,7 +94,14 @@ export function SettingsPage() {
                 <CardDescription>{t('settings.company.description')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <SettingRow icon={Building2} title={t('settings.company.statuses')} description={t('settings.company.statusesDesc')}>
+                <div className="flex items-center justify-between rounded-lg border p-4">
+                  <div className="flex items-center gap-3">
+                    <Building2 className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">{t('settings.company.statuses')}</p>
+                      <p className="text-xs text-muted-foreground">{t('settings.company.statusesDesc')}</p>
+                    </div>
+                  </div>
                   <div className="flex gap-1.5">
                     {company.statusEntries.length === 0
                       ? <span className="text-xs text-muted-foreground">—</span>
@@ -159,12 +112,19 @@ export function SettingsPage() {
                           </Badge>
                         ))}
                   </div>
-                </SettingRow>
-                <SettingRow icon={Store} title={t('settings.company.companyInfo')} description={t('settings.company.companyInfoDesc')}>
+                </div>
+                <div className="flex items-center justify-between rounded-lg border p-4">
+                  <div className="flex items-center gap-3">
+                    <Store className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">{t('settings.company.companyInfo')}</p>
+                      <p className="text-xs text-muted-foreground">{t('settings.company.companyInfoDesc')}</p>
+                    </div>
+                  </div>
                   <Badge variant="outline" className="text-xs">
                     {company.name || '—'}
                   </Badge>
-                </SettingRow>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -188,14 +148,18 @@ function CompanyAdminHub() {
         <CardDescription>{t('settings.companyAdmin.description')}</CardDescription>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="documentProfile" className="w-full">
+        <Tabs defaultValue="profile" className="w-full">
           <TabsList className="flex-wrap">
+            <TabsTrigger value="profile">{t('profile.tabs.company')}</TabsTrigger>
             <TabsTrigger value="documentProfile">{t('settings.tabs.documentProfile')}</TabsTrigger>
             <TabsTrigger value="defaults">{t('settings.tabs.defaults')}</TabsTrigger>
             <TabsTrigger value="numbering">{t('settings.tabs.numbering')}</TabsTrigger>
             <TabsTrigger value="templates">{t('settings.tabs.templates')}</TabsTrigger>
           </TabsList>
 
+          <TabsContent value="profile" className="mt-4">
+            <CompanyTab />
+          </TabsContent>
           <TabsContent value="documentProfile" className="mt-4">
             <CompanyDocumentProfileSettings />
           </TabsContent>

@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from drf_spectacular.utils import OpenApiResponse, extend_schema
+from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
 from rest_framework import permissions, status, views
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.generics import RetrieveAPIView
@@ -322,6 +322,17 @@ class CookieTokenObtainPairView(ThrottledTokenObtainPairView):
     HttpOnly cookie (F2.1) — the refresh token is never exposed to JavaScript."""
 
     def post(self, request, *args, **kwargs):
+        email = (request.data.get("email") or "").strip()
+        user = get_user_model().objects.filter(email=email).first()
+        if user and user.is_2fa_enabled:
+            # Verify password first without returning tokens
+            from django.contrib.auth import authenticate
+            if authenticate(request, username=email, password=request.data.get("password")):
+                from django.core.signing import TimestampSigner
+                signer = TimestampSigner()
+                temp_token = signer.sign(str(user.id))
+                return Response({"2fa_required": True, "temp_token": temp_token})
+        
         response = super().post(request, *args, **kwargs)
         if response.status_code == status.HTTP_200_OK:
             refresh = response.data.pop("refresh", None)
@@ -356,3 +367,107 @@ class CookieTokenRefreshView(TokenRefreshView):
         if rotated:
             _set_refresh_cookie(response, rotated)
         return response
+
+import pyotp
+from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
+from rest_framework import serializers
+
+totp_signer = TimestampSigner()
+
+class TOTPSetupView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    @extend_schema(
+        summary="Setup 2FA",
+        responses={200: inline_serializer("TOTPSetup", fields={"secret": serializers.CharField(), "uri": serializers.CharField()})},
+        tags=["Auth"]
+    )
+    def post(self, request):
+        secret = pyotp.random_base32()
+        uri = pyotp.totp.TOTP(secret).provisioning_uri(name=request.user.email, issuer_name="RailTech")
+        return Response({"secret": secret, "uri": uri})
+
+
+class TOTPVerifyView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    @extend_schema(
+        summary="Verify and enable 2FA",
+        request=inline_serializer("TOTPVerify", fields={"secret": serializers.CharField(), "code": serializers.CharField()}),
+        responses={200: OpenApiResponse(description="2FA Enabled"), 400: OpenApiResponse(description="Invalid code")},
+        tags=["Auth"]
+    )
+    def post(self, request):
+        secret = request.data.get("secret")
+        code = request.data.get("code")
+        if not secret or not code:
+            return Response({"detail": "Secret and code are required."}, status=status.HTTP_400_BAD_REQUEST)
+        totp = pyotp.TOTP(secret)
+        if totp.verify(code):
+            request.user.totp_secret = secret
+            request.user.is_2fa_enabled = True
+            request.user.save(update_fields=["totp_secret", "is_2fa_enabled"])
+            return Response({"message": "2FA enabled."})
+        return Response({"detail": "Invalid code."}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class TOTPDisableView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    @extend_schema(
+        summary="Disable 2FA",
+        request=inline_serializer("TOTPDisable", fields={"code": serializers.CharField()}),
+        responses={200: OpenApiResponse(description="2FA Disabled"), 400: OpenApiResponse(description="Invalid code")},
+        tags=["Auth"]
+    )
+    def post(self, request):
+        code = request.data.get("code")
+        if not request.user.is_2fa_enabled or not request.user.totp_secret:
+            return Response({"message": "2FA is already disabled."})
+        totp = pyotp.TOTP(request.user.totp_secret)
+        if totp.verify(code):
+            request.user.is_2fa_enabled = False
+            request.user.totp_secret = None
+            request.user.save(update_fields=["is_2fa_enabled", "totp_secret"])
+            return Response({"message": "2FA disabled."})
+        return Response({"detail": "Invalid code."}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class TOTPLoginView(views.APIView):
+    permission_classes = [permissions.AllowAny]
+
+    @extend_schema(
+        summary="Login with 2FA code",
+        request=inline_serializer("TOTPLogin", fields={"temp_token": serializers.CharField(), "code": serializers.CharField()}),
+        responses={200: OpenApiResponse(description="Tokens returned"), 400: OpenApiResponse(description="Invalid token or code")},
+        tags=["Auth"]
+    )
+    def post(self, request):
+        temp_token = request.data.get("temp_token")
+        code = request.data.get("code")
+        try:
+            user_id = totp_signer.unsign(temp_token, max_age=300) # 5 minutes
+        except (BadSignature, SignatureExpired, TypeError):
+            return Response({"detail": "Invalid or expired token."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        User = get_user_model()
+        try:
+            user = User.objects.get(id=user_id, is_active=True)
+        except User.DoesNotExist:
+            return Response({"detail": "User not found."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        if not user.is_2fa_enabled or not user.totp_secret:
+            return Response({"detail": "2FA not enabled for user."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        totp = pyotp.TOTP(user.totp_secret)
+        if totp.verify(code):
+            from rest_framework_simplejwt.tokens import RefreshToken
+            refresh = RefreshToken.for_user(user)
+            response = Response({
+                "access": str(refresh.access_token),
+                "refresh": str(refresh)
+            })
+            _set_refresh_cookie(response, str(refresh))
+            return response
+            
+        return Response({"detail": "Invalid code."}, status=status.HTTP_400_BAD_REQUEST)

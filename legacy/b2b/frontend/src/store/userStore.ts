@@ -68,6 +68,7 @@ export interface UserProfile {
   position: string;
   avatarInitials: string;
   avatarUrl: string | null;
+  is_2fa_enabled?: boolean;
 }
 
 /* ─── Company ───────────────────────────────────────────────────────── */

@@ -22,6 +22,10 @@ from accounts.views.auth import (  # noqa: F401
     SubmitProfileView,
     ThrottledTokenObtainPairView,
     WsTicketView,
+    TOTPSetupView,
+    TOTPVerifyView,
+    TOTPDisableView,
+    TOTPLoginView,
 )
 from accounts.views.clients import ContactViewSet  # noqa: F401
 from accounts.views.company import CompanyViewSet  # noqa: F401
@@ -53,6 +57,10 @@ __all__ = [
     "ThrottledTokenObtainPairView",
     "CookieTokenObtainPairView",
     "CookieTokenRefreshView",
+    "TOTPSetupView",
+    "TOTPVerifyView",
+    "TOTPDisableView",
+    "TOTPLoginView",
     # applications & subscriptions
     "SupplierSubscriptionViewSet",
     "CompanyRoleApplicationViewSet",

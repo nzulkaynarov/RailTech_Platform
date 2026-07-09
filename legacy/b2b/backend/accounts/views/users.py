@@ -1,4 +1,5 @@
 from django.db.models import Prefetch
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view, inline_serializer
@@ -11,7 +12,8 @@ from rest_framework.response import Response
 
 from accounts import services
 from accounts.models import Company, CompanyMember, CustomUser
-from accounts.serializers import SelfUpdateSerializer, UserSerializer
+from accounts.serializers import ActiveSessionSerializer, SelfUpdateSerializer, UserSerializer
+from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 from core.permissions import OperatorScoped
 
 
@@ -150,6 +152,41 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
+
+    @extend_schema(
+        summary="Get active sessions",
+        description="Returns list of active refresh tokens (sessions) for the current user.",
+        responses={200: inline_serializer("SessionResponse", fields={"sessions": ActiveSessionSerializer(many=True)})},
+        tags=["Accounts"],
+    )
+    @action(detail=False, methods=["get"], url_path="me/sessions", permission_classes=[permissions.IsAuthenticated])
+    def my_sessions(self, request):
+        now = timezone.now()
+        tokens = OutstandingToken.objects.filter(
+            user=request.user,
+            expires_at__gt=now
+        ).exclude(blacklistedtoken__isnull=False).order_by("-created_at")
+        
+        return Response({"sessions": ActiveSessionSerializer(tokens, many=True).data})
+
+    @extend_schema(
+        summary="Revoke all other sessions",
+        description="Blacklists all active refresh tokens for the user.",
+        responses={200: OpenApiResponse(description="Sessions revoked")},
+        tags=["Accounts"],
+    )
+    @action(detail=False, methods=["post"], url_path="me/sessions/revoke-all", permission_classes=[permissions.IsAuthenticated])
+    def revoke_all_sessions(self, request):
+        now = timezone.now()
+        tokens = OutstandingToken.objects.filter(
+            user=request.user,
+            expires_at__gt=now
+        ).exclude(blacklistedtoken__isnull=False)
+        
+        blacklisted = [BlacklistedToken(token=t) for t in tokens]
+        BlacklistedToken.objects.bulk_create(blacklisted)
+        
+        return Response({"message": "All other sessions have been revoked."})
 
     @extend_schema(
         summary="Upload user avatar",

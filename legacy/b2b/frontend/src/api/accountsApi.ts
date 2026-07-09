@@ -1,6 +1,14 @@
 import { apiClient } from './client';
 import { PaginatedResponse } from './types';
 
+export interface Session {
+	id: number;
+	ip_address: string;
+	user_agent: string;
+	created_at: string;
+	is_current: boolean;
+}
+
 export interface KYCDocument {
 	id: number;
 	doc_type: number;
@@ -141,6 +149,7 @@ export interface User {
 	last_login?: string | null;
 	date_joined?: string;
 	avatar?: string | null;
+	is_2fa_enabled?: boolean;
 }
 
 /** Map backend `primary_company` → frontend `company` field */
@@ -421,6 +430,30 @@ export const accountsApi = {
 	},
 	changePassword: async (data: { current_password: string; new_password: string }) => {
 		const response = await apiClient.post<{ message: string }>('accounts/users/change-password/', data);
+		return response.data;
+	},
+
+	// ─── Security & 2FA ───────────────────────────────────────────────
+	getActiveSessions: async () => {
+		// Mock endpoint for now, or actual if backend has it.
+		// For the refactor, we provide the contract.
+		const response = await apiClient.get<Session[]>('auth/sessions/');
+		return response.data;
+	},
+	revokeAllSessions: async () => {
+		const response = await apiClient.post<{ message: string }>('auth/sessions/revoke-all/');
+		return response.data;
+	},
+	setup2FA: async () => {
+		const response = await apiClient.post<{ secret: string; uri: string }>('auth/totp/setup/');
+		return response.data;
+	},
+	verify2FA: async (data: { secret: string; code: string }) => {
+		const response = await apiClient.post<{ message: string }>('auth/totp/verify/', data);
+		return response.data;
+	},
+	disable2FA: async (data: { code: string }) => {
+		const response = await apiClient.post<{ message: string }>('auth/totp/disable/', data);
 		return response.data;
 	},
 

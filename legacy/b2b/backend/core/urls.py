@@ -32,6 +32,10 @@ from accounts.views import (
     UserViewSet,
     WorkspaceRoleViewSet,
     WsTicketView,
+    TOTPSetupView,
+    TOTPVerifyView,
+    TOTPDisableView,
+    TOTPLoginView,
 )
 from accounts.wizard import WIZARD_FORMS, CompanyWizardView
 from catalog.views import (
@@ -185,6 +189,10 @@ urlpatterns = (
             )(CookieTokenRefreshView).as_view(),
             name="token_refresh",
         ),
+        path("api/v1/auth/2fa/setup/", TOTPSetupView.as_view(), name="2fa-setup"),
+        path("api/v1/auth/2fa/verify/", TOTPVerifyView.as_view(), name="2fa-verify"),
+        path("api/v1/auth/2fa/disable/", TOTPDisableView.as_view(), name="2fa-disable"),
+        path("api/v1/auth/login/2fa/", TOTPLoginView.as_view(), name="2fa-login"),
         # Sourcing & Imports
         path("api/v1/sourcing/import-deal/<int:deal_id>/", ExcelImportView.as_view(), name="import-deal"),
         path("api/v1/sourcing/match-catalog/", MatchCatalogView.as_view(), name="match-catalog"),
