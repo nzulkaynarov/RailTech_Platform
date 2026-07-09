@@ -96,6 +96,13 @@ class DealViewSet(viewsets.ModelViewSet):
             .prefetch_related(Prefetch("items", queryset=quote_items_qs))
             .order_by("-version")
         )
+        # SEC (audit #2): scope the nested quotes to the viewer's own — otherwise the
+        # deal-nested `quotes`/`active_quote` (and export-pdf, which reads active_quote off
+        # this prefetch) leak a competitor's full КП on a multi-seller-routed deal. Same
+        # boundary QuoteViewSet enforces, via the shared helper so they can't diverge.
+        from crm.services.quotes import scope_quotes_for_viewer
+
+        quotes_qs = scope_quotes_for_viewer(quotes_qs, user, self.request)
         queryset = (
             Deal.objects.all()
             .select_related("client", "manager", "company", "stage")
