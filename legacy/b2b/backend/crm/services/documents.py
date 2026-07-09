@@ -191,6 +191,23 @@ def document_brand_context(seller_company, *, is_demo: bool = False) -> dict:
     # otherwise. The layout TOGGLES read from the raw row regardless, so a seller can flip «скрыть
     # колонку срока» without also filling their legal name.
     row = CompanyDocumentProfile.objects.filter(company=seller_company).first() if seller_company else None
+    
+    if row and getattr(row, "use_company_defaults", False) and seller_company:
+        row.legal_name = row.legal_name or seller_company.name
+        row.inn = row.inn or seller_company.inn
+        row.legal_address = row.legal_address or seller_company.legal_address
+        if not row.logo and seller_company.logo:
+            row.logo = seller_company.logo
+        if not row.bank_details:
+            bank_parts = []
+            if seller_company.bank_account:
+                bank_parts.append(f"р/с: {seller_company.bank_account}")
+            if seller_company.mfo:
+                bank_parts.append(f"МФО: {seller_company.mfo}")
+            row.bank_details = ", ".join(bank_parts) if bank_parts else ""
+        if not row.signatory_name and seller_company.contact_person:
+            row.signatory_name = seller_company.contact_person
+
     branded = row if _profile_has_branding(row) else None
     # SEC (audit #9): accent goes raw into a <style> block, so neutralize anything that
     # isn't a #hex colour at render time too — defence-in-depth for any historical row
