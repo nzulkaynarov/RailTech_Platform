@@ -507,3 +507,19 @@ def test_target_sellers_hidden_from_co_routed_seller(world):
     body_buyer = _api(buyer_user, ctx="BUYER").get(f"/api/v1/crm/deals/{deal.id}/").json()
     seller_ids_buyer = {s["id"] for s in body_buyer.get("target_sellers_data", [])}
     assert seller_ids_buyer == {world["sa_co"].id, world["sb_co"].id}, "buyer should see the full roster"
+
+
+@pytest.mark.django_db
+def test_quote_create_blocked_on_unrouted_deal(world):
+    """SEC audit #6: a seller with pricing capability cannot POST a КП onto a deal their
+    company is not routed to (rogue active_quote / integrity). Only the routed seller can."""
+    draft = DealStage.objects.get(code="DRAFT")
+    deal = Deal.objects.create(title="B-only RFQ", company=world["buyer_co"], stage=draft)
+    DealSellerRouting.objects.create(deal=deal, seller_company=world["sb_co"])  # only B routed
+
+    resp_a = _api(world["sa_user"]).post("/api/v1/crm/quotes/", {"deal": deal.id}, format="json")
+    assert resp_a.status_code == 403, resp_a.content
+    assert resp_a.json().get("detail") == "NO_ACCESS_TO_DEAL"
+
+    resp_b = _api(world["sb_user"]).post("/api/v1/crm/quotes/", {"deal": deal.id}, format="json")
+    assert resp_b.status_code == 201, resp_b.content

@@ -203,6 +203,18 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
         if not (getattr(user, "is_superuser", False) or can_edit_quote_pricing(user)):
             raise PermissionDenied("ONLY_SELLER_CAN_BUILD_QUOTE")
         deal = serializer.validated_data.get("deal")
+        # SEC (audit #6): `deal` comes straight from the request body and bypasses the scoped
+        # get_queryset, so bind it to the seller's routing — like QuoteItem/QuoteCharge create
+        # (_assert_seller_owns_quote_deal). Without this a seller with pricing capability could
+        # POST a rogue КП onto ANY deal id (incl. a competitor's), and version=max+1 makes it the
+        # deal's active_quote → the buyer's total flips to 0 and the deal is polluted for the
+        # legitimately-routed seller. Superuser bypasses; platform-admin already refused above.
+        from accounts.services.permissions import seller_can_access_deal
+
+        if deal is not None and not (
+            getattr(user, "is_superuser", False) or seller_can_access_deal(user, self.request, deal.id)
+        ):
+            raise PermissionDenied("NO_ACCESS_TO_DEAL")
         version = (deal.quotes.aggregate(max_v=Max("version"))["max_v"] or 0) + 1 if deal else 1
         # A brand-new КП always starts the approval chain at DRAFT. Without this the
         # status FK stays NULL → QuoteApprovalChain renders no actions and the seller
