@@ -388,6 +388,51 @@ def test_http_super_operator_can_edit_company(make_operator, company):
     assert resp.status_code != 403
 
 
+def _team_action_url(company, name):
+    from django.urls import reverse
+
+    return reverse(name, kwargs={"pk": company.pk})
+
+
+def test_http_support_cannot_manage_team_via_operator_bypass(make_operator, company):
+    """SEC audit #8: team-management actions (invite / set-member-role / update-member-
+    capabilities) are member-facing but reachable by a platform operator — a SUPPORT role
+    (no users.manage) must be refused, not waved through by the operator_permissions gap."""
+    client = _auth_client(make_operator(OperatorRoleCode.SUPPORT.value))
+    assert (
+        client.post(_team_action_url(company, "company-invite"), {"email": "x@y.test"}, format="json").status_code
+        == 403
+    )
+    assert (
+        client.post(
+            _team_action_url(company, "company-set-member-role"), {"member_id": 1, "role": "OWNER"}, format="json"
+        ).status_code
+        == 403
+    )
+    assert (
+        client.post(
+            _team_action_url(company, "company-update-member-capabilities"),
+            {"member_id": 1, "can_sell": True},
+            format="json",
+        ).status_code
+        == 403
+    )
+
+
+def test_http_super_operator_may_manage_team(make_operator, company):
+    """SUPER_OPERATOR holds users.manage → passes the OperatorScoped gate (the action may then
+    400/404 on the bogus member id, but that is NOT a 403 permission refusal)."""
+    client = _auth_client(make_operator(OperatorRoleCode.SUPER_OPERATOR.value))
+    assert (
+        client.post(
+            _team_action_url(company, "company-update-member-capabilities"),
+            {"member_id": 999999, "can_sell": True},
+            format="json",
+        ).status_code
+        != 403
+    )
+
+
 def test_change_user_role_blocks_demoting_the_last_operator_manager(make_operator, system_role_factory):
     system_role_factory(code="USER", name="Пользователь")
     sole_super = make_operator(OperatorRoleCode.SUPER_OPERATOR.value)
