@@ -488,6 +488,25 @@ def _assigned_at(obj, request):
     return routing.assigned_at if routing else None
 
 
+def _target_sellers_for_viewer(obj, request):
+    """Seller companies this RFQ is routed to — VIEWER-SCOPED (audit #5). The buyer (RFQ owner)
+    and platform admin see the full routed set; a routed SELLER viewer sees only its OWN company,
+    so a competitor never learns who else is bidding on the same заявка (hidden competition,
+    ADR-0003 §5). Previously the full roster leaked to every routed seller."""
+    sellers = list(obj.target_sellers.all())
+    user = getattr(request, "user", None)
+    if user is None or not getattr(user, "is_authenticated", False):
+        return []
+    as_dicts = [{"id": s.id, "name": s.name} for s in sellers]
+    if getattr(user, "is_platform_admin", False):
+        return as_dicts
+    company_ids = set(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
+    # Buyer owns the RFQ → sees everyone it fanned out to; a seller sees only itself.
+    if obj.company_id in company_ids:
+        return as_dicts
+    return [d for d in as_dicts if d["id"] in company_ids]
+
+
 class DealListSerializer(serializers.ModelSerializer):
     """MED-3: Optimized list serializer with human-readable names."""
 
@@ -512,7 +531,7 @@ class DealListSerializer(serializers.ModelSerializer):
 
     def get_target_sellers_data(self, obj) -> list:
         """Seller companies this RFQ is routed to (multi-seller routing)."""
-        return [{"id": seller.id, "name": seller.name} for seller in obj.target_sellers.all()]
+        return _target_sellers_for_viewer(obj, self.context.get("request"))
 
     class Meta:
         model = Deal
@@ -563,7 +582,7 @@ class DealDetailSerializer(serializers.ModelSerializer):
 
     def get_target_sellers_data(self, obj) -> list:
         """Seller companies this RFQ is routed to (multi-seller routing)."""
-        return [{"id": seller.id, "name": seller.name} for seller in obj.target_sellers.all()]
+        return _target_sellers_for_viewer(obj, self.context.get("request"))
 
     def get_can_edit_request(self, obj) -> bool:
         """Whether the current user may add/edit/remove this deal's request rows."""

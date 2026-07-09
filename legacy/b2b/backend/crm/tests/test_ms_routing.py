@@ -488,3 +488,22 @@ def test_deal_nested_quotes_scoped_per_seller(world):
     ids_a = {q["id"] for q in body_a.get("quotes", [])}
     assert quote_b.id not in ids_a, "seller A leaked seller B's quote via the deal detail"
     assert body_a.get("active_quote", {}).get("id") == quote_a.id
+
+
+@pytest.mark.django_db
+def test_target_sellers_hidden_from_co_routed_seller(world):
+    """SEC audit #5: on a deal routed to sellers A and B, seller B's deal view lists only B in
+    target_sellers_data (never competitor A); the buyer (RFQ owner) still sees the full roster."""
+    draft = DealStage.objects.get(code="DRAFT")
+    deal = Deal.objects.create(title="Shared RFQ", company=world["buyer_co"], stage=draft)
+    DealSellerRouting.objects.create(deal=deal, seller_company=world["sa_co"])
+    DealSellerRouting.objects.create(deal=deal, seller_company=world["sb_co"])
+
+    body_b = _api(world["sb_user"]).get(f"/api/v1/crm/deals/{deal.id}/").json()
+    seller_ids_b = {s["id"] for s in body_b.get("target_sellers_data", [])}
+    assert seller_ids_b == {world["sb_co"].id}, "seller B saw a competitor in target_sellers_data"
+
+    buyer_user = _buyer("Buyer", "C100b", "buyer@t.test", world["buyer_co"])
+    body_buyer = _api(buyer_user, ctx="BUYER").get(f"/api/v1/crm/deals/{deal.id}/").json()
+    seller_ids_buyer = {s["id"] for s in body_buyer.get("target_sellers_data", [])}
+    assert seller_ids_buyer == {world["sa_co"].id, world["sb_co"].id}, "buyer should see the full roster"
