@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import i18n from '@/i18n';
+import { useThemeStore } from './themeStore';
 
 /* ─── Company Status (what the company does on the platform) ──────────
    Two marketplace sides only: BUYER + SELLER. "Manufacturer" is an OEM brand
@@ -179,6 +181,16 @@ export const useUserStore = create<UserState>((set, get) => ({
       const initials = (
         `${(first_name || '')[0] || ''}${(last_name || '')[0] || ''}` || (email || '').slice(0, 2)
       ).toUpperCase();
+
+      const prefs = authState.user.preferences;
+      if (prefs) {
+        if (prefs.language && prefs.language !== i18n.language) {
+          i18n.changeLanguage(prefs.language);
+        }
+        if (prefs.theme) {
+          useThemeStore.getState().setTheme(prefs.theme as 'light' | 'dark');
+        }
+      }
 
       // Map backend company_types to frontend CompanyStatus
       // MANUFACTURER/PLANT were retired as participant roles → a selling company is

@@ -107,10 +107,18 @@
     "showPassword": "Показать пароль",
     "hidePassword": "Скрыть пароль",
     "login": "Войти",
+    "login2faTitle": "Двухфакторная аутентификация",
+    "login2faSubtitle": "Введите 6-значный код из вашего приложения Authenticator для подтверждения входа",
+    "totpLabel": "Код подтверждения (2FA)",
+    "totpPlaceholder": "000000",
+    "submit2faButton": "Подтвердить",
+    "invalid2faCode": "Неверный код 2FA. Попробуйте еще раз.",
     "validation": {
       "emailInvalid": "Укажите корректный email",
       "emailRequired": "Введите email",
-      "passwordRequired": "Введите пароль"
+      "passwordRequired": "Введите пароль",
+      "totpRequired": "Введите код подтверждения 2FA",
+      "totpLength": "Код должен состоять ровно из 6 цифр"
     }
   },
   "onboarding": {
@@ -1536,6 +1544,7 @@
       "unverified": "Загрузите устав компании и паспорт директора для прохождения верификации",
       "verified": "Ваш аккаунт успешно верифицирован менеджером RailTech"
     },
+    "docTypeLabel": "Тип загружаемого документа",
     "docTypes": {
       "CHARTER": "Устав компании",
       "LICENSE": "Лицензия",
@@ -2517,6 +2526,7 @@
       "patronymic": "Отчество",
       "position": "Должность",
       "email": "Email",
+      "emailDisabledHint": "Email используется как логин и не может быть изменен самостоятельно. Обратитесь в поддержку.",
       "phone": "Телефон"
     },
     "companyInfo": {

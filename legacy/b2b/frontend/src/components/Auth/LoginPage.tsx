@@ -32,6 +32,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, onRegister, on
     const { login, isLoading } = useAuthStore();
     const [showPassword, setShowPassword] = useState(false);
     const [serverError, setServerError] = useState('');
+    const [twoFactorRequired, setTwoFactorRequired] = useState(false);
+    const [tempToken, setTempToken] = useState<string | null>(null);
+    const [totpCode, setTotpCode] = useState('');
 
     const form = useForm<LoginFormData>({
         resolver: zodResolver(createLoginSchema(t)),
@@ -41,7 +44,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, onRegister, on
     const onSubmit = async (data: LoginFormData) => {
         setServerError('');
         try {
-            await login(data.email, data.password);
+            const res = await login(data.email, data.password);
+            if (res && res.twoFactorRequired && res.tempToken) {
+                setTwoFactorRequired(true);
+                setTempToken(res.tempToken);
+                return;
+            }
             onNavigate?.('dashboard');
         } catch (err: unknown) {
             const raw = err instanceof Error ? err.message : '';
@@ -57,6 +65,25 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, onRegister, on
             } else {
                 msg = raw || t('auth.genericError');
             }
+            setServerError(msg);
+        }
+    };
+
+    const on2FASubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setServerError('');
+        if (!tempToken) return;
+        if (!totpCode || totpCode.length !== 6) {
+            setServerError(t('auth.validation.totpLength'));
+            return;
+        }
+        try {
+            const { login2FA } = useAuthStore.getState();
+            await login2FA(tempToken, totpCode);
+            onNavigate?.('dashboard');
+        } catch (err: unknown) {
+            const raw = err instanceof Error ? err.message : '';
+            let msg = raw.startsWith('auth.') ? t(raw) : (raw || t('auth.genericError'));
             setServerError(msg);
         }
     };
@@ -83,70 +110,33 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, onRegister, on
                 <Card>
                     <CardHeader>
                         <CardTitle className="text-2xl font-black">
-                            {t('auth.loginTitle')}
+                            {twoFactorRequired ? t('auth.login2faTitle') : t('auth.loginTitle')}
                         </CardTitle>
                         <CardDescription>
-                            {t('auth.loginSubtitle')}
+                            {twoFactorRequired ? t('auth.login2faSubtitle') : t('auth.loginSubtitle')}
                         </CardDescription>
                     </CardHeader>
 
                     <CardContent>
-                        <Form {...form}>
-                            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" noValidate>
-                                {/* Email */}
-                                <FormField
-                                    control={form.control}
-                                    name="email"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>{t('auth.emailLabel')}</FormLabel>
-                                            <FormControl>
-                                                <Input
-                                                    type="email"
-                                                    autoComplete="email"
-                                                    placeholder={t('auth.emailPlaceholder')}
-                                                    {...field}
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+                        {twoFactorRequired ? (
+                            <form onSubmit={on2FASubmit} className="space-y-6" noValidate>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium leading-none">
+                                        {t('auth.totpLabel')}
+                                    </label>
+                                    <Input
+                                        type="text"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
+                                        maxLength={6}
+                                        placeholder={t('auth.totpPlaceholder')}
+                                        value={totpCode}
+                                        onChange={(e) => setTotpCode(e.target.value.replace(/[^0-9]/g, ''))}
+                                        className="text-center text-2xl tracking-widest font-mono"
+                                        autoFocus
+                                    />
+                                </div>
 
-                                {/* Password */}
-                                <FormField
-                                    control={form.control}
-                                    name="password"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>{t('auth.passwordLabel')}</FormLabel>
-                                            <FormControl>
-                                                <div className="relative">
-                                                    <Input
-                                                        type={showPassword ? 'text' : 'password'}
-                                                        autoComplete="current-password"
-                                                        placeholder={t('auth.passwordPlaceholder')}
-                                                        className="pr-10"
-                                                        {...field}
-                                                    />
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                                                        onClick={() => setShowPassword(p => !p)}
-                                                        aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
-                                                    >
-                                                        {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                                                    </Button>
-                                                </div>
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
-                                {/* Server Error */}
                                 {serverError && (
                                     <Alert variant="destructive">
                                         <AlertCircle className="size-4" />
@@ -154,7 +144,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, onRegister, on
                                     </Alert>
                                 )}
 
-                                {/* Submit */}
                                 <Button
                                     type="submit"
                                     disabled={isLoading}
@@ -162,22 +151,113 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, onRegister, on
                                     size="lg"
                                 >
                                     {isLoading && <Loader2 className="size-4 animate-spin" />}
-                                    {t('auth.submitButton')}
+                                    {t('auth.submit2faButton')}
                                 </Button>
-                                {onForgotPassword ? (
-                                    <div className="text-center">
-                                        <Button
-                                            type="button"
-                                            variant="link"
-                                            className="h-auto p-0 text-xs"
-                                            onClick={onForgotPassword}
-                                        >
-                                            {t('auth.forgotPassword')}
-                                        </Button>
-                                    </div>
-                                ) : null}
+                                <div className="text-center">
+                                    <Button
+                                        type="button"
+                                        variant="link"
+                                        className="h-auto p-0 text-xs"
+                                        onClick={() => {
+                                            setTwoFactorRequired(false);
+                                            setTempToken(null);
+                                            setTotpCode('');
+                                            setServerError('');
+                                        }}
+                                    >
+                                        ← {t('auth.login')}
+                                    </Button>
+                                </div>
                             </form>
-                        </Form>
+                        ) : (
+                            <Form {...form}>
+                                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" noValidate>
+                                    {/* Email */}
+                                    <FormField
+                                        control={form.control}
+                                        name="email"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>{t('auth.emailLabel')}</FormLabel>
+                                                <FormControl>
+                                                    <Input
+                                                        type="email"
+                                                        autoComplete="email"
+                                                        placeholder={t('auth.emailPlaceholder')}
+                                                        {...field}
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    {/* Password */}
+                                    <FormField
+                                        control={form.control}
+                                        name="password"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>{t('auth.passwordLabel')}</FormLabel>
+                                                <FormControl>
+                                                    <div className="relative">
+                                                        <Input
+                                                            type={showPassword ? 'text' : 'password'}
+                                                            autoComplete="current-password"
+                                                            placeholder={t('auth.passwordPlaceholder')}
+                                                            className="pr-10"
+                                                            {...field}
+                                                        />
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                                                            onClick={() => setShowPassword(p => !p)}
+                                                            aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
+                                                        >
+                                                            {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                                                        </Button>
+                                                    </div>
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    {/* Server Error */}
+                                    {serverError && (
+                                        <Alert variant="destructive">
+                                            <AlertCircle className="size-4" />
+                                            <AlertDescription>{serverError}</AlertDescription>
+                                        </Alert>
+                                    )}
+
+                                    {/* Submit */}
+                                    <Button
+                                        type="submit"
+                                        disabled={isLoading}
+                                        className="w-full"
+                                        size="lg"
+                                    >
+                                        {isLoading && <Loader2 className="size-4 animate-spin" />}
+                                        {t('auth.submitButton')}
+                                    </Button>
+                                    {onForgotPassword ? (
+                                        <div className="text-center">
+                                            <Button
+                                                type="button"
+                                                variant="link"
+                                                className="h-auto p-0 text-xs"
+                                                onClick={onForgotPassword}
+                                            >
+                                                {t('auth.forgotPassword')}
+                                            </Button>
+                                        </div>
+                                    ) : null}
+                                </form>
+                            </Form>
+                        )}
                     </CardContent>
 
                     <CardFooter className="flex-col border-t pt-6">

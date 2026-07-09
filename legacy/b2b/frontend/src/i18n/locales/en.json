@@ -107,10 +107,18 @@
     "showPassword": "Show password",
     "hidePassword": "Hide password",
     "login": "Sign in",
+    "login2faTitle": "Two-Factor Authentication",
+    "login2faSubtitle": "Enter the 6-digit verification code from your Authenticator app to sign in",
+    "totpLabel": "Verification Code (2FA)",
+    "totpPlaceholder": "000000",
+    "submit2faButton": "Verify",
+    "invalid2faCode": "Invalid 2FA code. Please try again.",
     "validation": {
       "emailInvalid": "Enter a valid email",
       "emailRequired": "Enter your email",
-      "passwordRequired": "Enter your password"
+      "passwordRequired": "Enter your password",
+      "totpRequired": "Enter your 2FA verification code",
+      "totpLength": "Code must be exactly 6 digits"
     }
   },
   "onboarding": {
@@ -1534,6 +1542,7 @@
       "unverified": "Upload company charter and director's passport for verification",
       "verified": "Your account has been verified by a RailTech manager"
     },
+    "docTypeLabel": "Type of document to upload",
     "docTypes": {
       "CHARTER": "Company Charter",
       "LICENSE": "License",
@@ -2348,6 +2357,7 @@
       "patronymic": "Patronymic",
       "position": "Position",
       "email": "Email",
+      "emailDisabledHint": "Email is used as your login identity and cannot be changed directly. Contact support.",
       "phone": "Phone"
     },
     "companyInfo": {

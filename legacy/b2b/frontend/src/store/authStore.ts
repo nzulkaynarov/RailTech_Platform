@@ -24,7 +24,8 @@ interface AuthState {
     isAuthenticated: boolean;
     error: string | null;
 
-    login: (email: string, password: string) => Promise<void>;
+    login: (email: string, password: string) => Promise<{ twoFactorRequired: boolean; tempToken?: string } | void>;
+    login2FA: (tempToken: string, code: string) => Promise<void>;
     logout: () => Promise<void>;
     initAuth: () => Promise<void>;
     setUser: (user: User) => void;
@@ -69,7 +70,15 @@ export const useAuthStore = create<AuthState>()(
                     }
 
                     // Only the access token comes back in the body; refresh is in the cookie.
-                    const { access } = await response.json();
+                    const data = await response.json() as { 2fa_required?: boolean; temp_token?: string; access?: string };
+                    if (data.2fa_required) {
+                        return { twoFactorRequired: true, tempToken: data.temp_token };
+                    }
+
+                    const access = data.access;
+                    if (!access) {
+                        throw new Error('auth.invalidResponse');
+                    }
                     setAccessToken(access);
                     set({ accessToken: access, error: null });
 
@@ -79,6 +88,39 @@ export const useAuthStore = create<AuthState>()(
                     queryClient.clear();
 
                     // Fetch user profile with the new token
+                    await get().initAuth();
+                    return { twoFactorRequired: false };
+                } catch (e) {
+                    const message = e instanceof Error ? e.message : 'auth.genericError';
+                    set({ error: message });
+                    throw e;
+                } finally {
+                    set({ isLoading: false });
+                }
+            },
+
+            login2FA: async (tempToken: string, code: string) => {
+                set({ isLoading: true, error: null });
+                try {
+                    const response = await fetch(`${API_URL}/auth/login/2fa/`, {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ temp_token: tempToken, code }),
+                    });
+
+                    if (!response.ok) {
+                        const err = await response.json().catch(() => ({}));
+                        const message = err.detail || 'auth.invalid2faCode';
+                        set({ error: message });
+                        throw new Error(message);
+                    }
+
+                    const { access } = await response.json() as { access: string };
+                    setAccessToken(access);
+                    set({ accessToken: access, error: null });
+
+                    queryClient.clear();
                     await get().initAuth();
                 } catch (e) {
                     const message = e instanceof Error ? e.message : 'auth.genericError';

@@ -83,7 +83,11 @@ export function ProfilePage() {
   const { t, i18n } = useTranslation();
   const { theme, setTheme } = useThemeStore();
   const { profile, role, updateProfile } = useUserStore();
-  const [form, setForm] = useState({ ...profile });
+  const [form, setForm] = useState({
+    ...profile,
+    language: i18n.language?.startsWith('ru') ? 'ru' : 'en',
+    theme: theme,
+  });
   const [saving, setSaving] = useState(false);
   const [passwordDialog, setPasswordDialog] = useState(false);
 
@@ -95,6 +99,10 @@ export function ProfilePage() {
         last_name: form.lastName,
         phone: form.phone,
         position: form.position,
+        preferences: {
+          language: form.language,
+          theme: form.theme,
+        },
       });
       updateProfile(form);
       toast.success(t('profile.personalInfo.saved'));
@@ -160,6 +168,9 @@ export function ProfilePage() {
                 <div className="space-y-2">
                   <Label htmlFor="email">{t('profile.fields.email')}</Label>
                   <Input id="email" type="email" value={form.email} disabled />
+                  <p className="text-xs text-muted-foreground">
+                    {t('profile.fields.emailDisabledHint')}
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phone">{t('profile.fields.phone')}</Label>
@@ -183,7 +194,10 @@ export function ProfilePage() {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>{t('settings.general.language')}</Label>
-                  <Select value={i18n.language?.startsWith('ru') ? 'ru' : 'en'} onValueChange={(val) => i18n.changeLanguage(val)}>
+                  <Select value={form.language} onValueChange={(val) => {
+                    setForm({ ...form, language: val });
+                    i18n.changeLanguage(val);
+                  }}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ru">{t('settings.general.langRu')}</SelectItem>
@@ -193,7 +207,10 @@ export function ProfilePage() {
                 </div>
                 <div className="space-y-2">
                   <Label>{t('settings.appearance.theme')}</Label>
-                  <Select value={theme} onValueChange={(val) => setTheme(val as 'light' | 'dark')}>
+                  <Select value={form.theme} onValueChange={(val) => {
+                    setForm({ ...form, theme: val as 'light' | 'dark' });
+                    setTheme(val as 'light' | 'dark');
+                  }}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="light">{t('settings.appearance.themeLight')}</SelectItem>
