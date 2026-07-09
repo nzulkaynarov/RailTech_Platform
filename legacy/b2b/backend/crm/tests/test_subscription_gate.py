@@ -112,3 +112,48 @@ def test_generate_contract_passes_gate_with_subscription(lookups):
     user, _ = _seller_user(email="gc-ok@gate.test", with_subscription=True, operational=True)
     with pytest.raises(Quote.DoesNotExist):
         crm_services.generate_contract_from_quote(999999, actor=user)
+
+
+# ── SEC audit #1: routing bind — an unrouted subscribed seller can't touch the contract ──
+
+
+def _deal_with_quote(seller_company):
+    """A buyer deal ROUTED to seller_company, carrying a DRAFT quote."""
+    from decimal import Decimal
+
+    from crm.models import Deal, DealSellerRouting, DealStage, QuoteStatus
+
+    DealStage.objects.get_or_create(code="DRAFT", defaults={"name": "Draft", "sort_order": 10})
+    QuoteStatus.objects.get_or_create(code="DRAFT", defaults={"name": "Draft", "sort_order": 10})
+    buyer = Company.objects.create(name="Buyer sec1", inn=f"b{seller_company.id}")
+    buyer.types.add(CompanyType.objects.get(code="CLIENT"))
+    deal = Deal.objects.create(title="D", company=buyer, stage=DealStage.objects.get(code="DRAFT"))
+    DealSellerRouting.objects.create(deal=deal, seller_company=seller_company)
+    quote = Quote.objects.create(
+        deal=deal,
+        version=1,
+        status=QuoteStatus.objects.get(code="DRAFT"),
+        subtotal_excl_vat=Decimal("0"),
+        vat_amount=Decimal("0"),
+        total_incl_vat=Decimal("0"),
+    )
+    return deal, quote
+
+
+def test_generate_contract_blocks_unrouted_seller(lookups):
+    _, routed_co = _seller_user(email="routed@gate.test", with_subscription=True)
+    _, quote = _deal_with_quote(routed_co)
+    # A different subscribed + KYC seller NOT routed to this deal must be blocked.
+    other_user, _ = _seller_user(email="other@gate.test", with_subscription=True)
+    contract, err = crm_services.generate_contract_from_quote(quote.id, actor=other_user)
+    assert contract is None
+    assert err == "MEMBER_REQUIRED_FOR_ACTION"
+
+
+def test_generate_contract_allows_routed_seller_past_bind(lookups):
+    routed_user, routed_co = _seller_user(email="routed2@gate.test", with_subscription=True)
+    _, quote = _deal_with_quote(routed_co)
+    # Routed seller clears the bind → reaches the status check (DRAFT quote, not APPROVED/SENT).
+    contract, err = crm_services.generate_contract_from_quote(quote.id, actor=routed_user)
+    assert contract is None
+    assert err == "CONTRACT_NEEDS_APPROVAL"

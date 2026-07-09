@@ -37,6 +37,7 @@ def generate_contract_from_quote(
 ) -> Tuple[Optional["Contract"], Optional[str]]:  # noqa: F821
     """Create a Contract tied to an approved Quote, render its PDF."""
     from accounts.services import assert_seller_can_operate, is_platform_admin_viewer, is_seller
+    from accounts.services.permissions import seller_company_routed_to_deal
 
     from ..models import Contract
 
@@ -49,6 +50,16 @@ def generate_contract_from_quote(
     if actor is not None and (sub_err := assert_seller_can_operate(actor)):
         return None, sub_err
     quote = Quote.objects.select_related("deal__company", "status").get(pk=quote_id)
+
+    # SEC (audit #1): bind the actor to THIS deal's routing before reading/creating the
+    # contract — like sign_contract_by_manager. Without this any subscribed seller could
+    # enumerate quote_id and read a competitor's contract (pricing/winner/bank details) or
+    # materialize one on the live deal + spam both parties. superuser/internal (actor=None)
+    # bypass; a routed seller passes.
+    if actor is not None and not (
+        getattr(actor, "is_superuser", False) or seller_company_routed_to_deal(actor, quote.deal_id)
+    ):
+        return None, "MEMBER_REQUIRED_FOR_ACTION"
 
     if not quote.status or quote.status.code not in {QuoteStatusCode.APPROVED, QuoteStatusCode.SENT}:
         return None, "CONTRACT_NEEDS_APPROVAL"
