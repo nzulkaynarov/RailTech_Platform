@@ -70,8 +70,8 @@ export const useAuthStore = create<AuthState>()(
                     }
 
                     // Only the access token comes back in the body; refresh is in the cookie.
-                    const data = await response.json() as { 2fa_required?: boolean; temp_token?: string; access?: string };
-                    if (data.2fa_required) {
+                    const data = await response.json() as { '2fa_required'?: boolean; temp_token?: string; access?: string };
+                    if (data['2fa_required']) {
                         return { twoFactorRequired: true, tempToken: data.temp_token };
                     }
 
