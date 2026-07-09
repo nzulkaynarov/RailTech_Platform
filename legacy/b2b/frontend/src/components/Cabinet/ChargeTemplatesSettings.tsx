@@ -19,6 +19,17 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 /**
  * Company-Admin org-admin zone: manage the company's per-Incoterm charge templates.
@@ -112,15 +123,35 @@ export function ChargeTemplatesSettings() {
                     : tpl.default_amount}
                 </TableCell>
                 <TableCell className="p-4">
-                  <Button
-                    variant="ghost"
-                    size="icon-xs"
-                    onClick={() => deleteMut.mutate(tpl.id)}
-                    className="text-muted-foreground hover:text-destructive"
-                    title={t('common.delete')}
-                  >
-                    <Trash2 className="size-3" />
-                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        className="text-muted-foreground hover:text-destructive"
+                        title={t('common.delete')}
+                      >
+                        <Trash2 className="size-3" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>{t('chargeTemplates.deleteTitle', 'Удалить шаблон?')}</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {t('chargeTemplates.deleteConfirm', 'Вы уверены, что хотите удалить этот шаблон расхода? Это действие нельзя отменить.')}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => deleteMut.mutate(tpl.id)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          {t('common.delete')}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </TableCell>
               </TableRow>
             ))}

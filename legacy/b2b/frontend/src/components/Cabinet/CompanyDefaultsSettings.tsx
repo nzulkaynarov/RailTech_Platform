@@ -110,6 +110,46 @@ export function CompanyDefaultsSettings() {
   }
 
   const handleSave = () => {
+    const vat = form.default_vat_rate.trim() !== '' ? Number(form.default_vat_rate) : null;
+    const defMargin = form.default_margin_percent.trim() !== '' ? Number(form.default_margin_percent) : null;
+    const minMargin = form.min_margin_percent.trim() !== '' ? Number(form.min_margin_percent) : null;
+    const targetMargin = form.target_margin_percent.trim() !== '' ? Number(form.target_margin_percent) : null;
+    const validityDays = form.default_offer_validity_days.trim() !== '' ? Number(form.default_offer_validity_days) : null;
+
+    if (vat !== null && (vat < 0 || vat > 100 || isNaN(vat))) {
+      toast.error(t('companyDefaults.errors.invalidVat', 'НДС должен быть от 0 до 100%'));
+      return;
+    }
+    if (defMargin !== null && (defMargin < 0 || isNaN(defMargin))) {
+      toast.error(t('companyDefaults.errors.invalidMargin', 'Маржа не может быть отрицательной'));
+      return;
+    }
+    if (minMargin !== null && (minMargin < 0 || isNaN(minMargin))) {
+      toast.error(t('companyDefaults.errors.invalidMargin', 'Маржа не может быть отрицательной'));
+      return;
+    }
+    if (targetMargin !== null && (targetMargin < 0 || isNaN(targetMargin))) {
+      toast.error(t('companyDefaults.errors.invalidMargin', 'Маржа не может быть отрицательной'));
+      return;
+    }
+    if (validityDays !== null && (validityDays < 0 || isNaN(validityDays))) {
+      toast.error(t('companyDefaults.errors.invalidValidity', 'Срок действия не может быть отрицательным'));
+      return;
+    }
+
+    if (minMargin !== null && defMargin !== null && minMargin > defMargin) {
+      toast.error(t('companyDefaults.errors.minMarginGreaterThanDefault', 'Минимальная маржа не может быть больше стандартной'));
+      return;
+    }
+    if (defMargin !== null && targetMargin !== null && defMargin > targetMargin) {
+      toast.error(t('companyDefaults.errors.defaultMarginGreaterThanTarget', 'Стандартная маржа не может быть больше целевой'));
+      return;
+    }
+    if (minMargin !== null && targetMargin !== null && minMargin > targetMargin) {
+      toast.error(t('companyDefaults.errors.minMarginGreaterThanTarget', 'Минимальная маржа не может быть больше целевой'));
+      return;
+    }
+
     saveMut.mutate({
       default_cost_currency: form.default_cost_currency === NONE ? '' : form.default_cost_currency,
       default_delivery_basis: form.default_delivery_basis === NONE ? '' : form.default_delivery_basis,
@@ -120,10 +160,7 @@ export function CompanyDefaultsSettings() {
         form.min_margin_percent.trim() === '' ? null : form.min_margin_percent.trim(),
       target_margin_percent:
         form.target_margin_percent.trim() === '' ? null : form.target_margin_percent.trim(),
-      default_offer_validity_days:
-        form.default_offer_validity_days.trim() === ''
-          ? null
-          : Number(form.default_offer_validity_days),
+      default_offer_validity_days: validityDays,
     });
   };
 

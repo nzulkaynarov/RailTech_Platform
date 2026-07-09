@@ -94,7 +94,7 @@ export function CompanyNumberingSettings() {
           id="cn-prefix"
           value={prefix}
           maxLength={16}
-          onChange={(e) => setPrefix(e.target.value)}
+          onChange={(e) => setPrefix(e.target.value.replace(/[^A-Za-z0-9_-]/g, ''))}
           placeholder={t('companyNumbering.prefixPlaceholder')}
         />
         <p className="text-xs text-muted-foreground">{t('companyNumbering.prefixHelp')}</p>
