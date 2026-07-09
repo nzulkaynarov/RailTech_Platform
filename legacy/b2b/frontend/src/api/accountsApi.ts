@@ -127,6 +127,7 @@ export interface User {
 	role_data?: { code: string; name: string };
 	workspace_role?: string | null;
 	is_platform_admin?: boolean;
+	preferences?: { language?: string; theme?: string };
 	// Platform-operator sub-role (ADR-0004 G1). Only meaningful when
 	// is_platform_admin is true. operator_role is the FK id; operator_role_data
 	// is the denormalized {id, code, name} for display.
@@ -435,25 +436,23 @@ export const accountsApi = {
 
 	// ─── Security & 2FA ───────────────────────────────────────────────
 	getActiveSessions: async () => {
-		// Mock endpoint for now, or actual if backend has it.
-		// For the refactor, we provide the contract.
-		const response = await apiClient.get<Session[]>('auth/sessions/');
-		return response.data;
+		const response = await apiClient.get<{ sessions: Session[] }>('accounts/users/me/sessions/');
+		return response.data.sessions;
 	},
 	revokeAllSessions: async () => {
-		const response = await apiClient.post<{ message: string }>('auth/sessions/revoke-all/');
+		const response = await apiClient.post<{ message: string }>('accounts/users/me/sessions/revoke-all/');
 		return response.data;
 	},
 	setup2FA: async () => {
-		const response = await apiClient.post<{ secret: string; uri: string }>('auth/totp/setup/');
+		const response = await apiClient.post<{ secret: string; uri: string }>('auth/2fa/setup/');
 		return response.data;
 	},
 	verify2FA: async (data: { secret: string; code: string }) => {
-		const response = await apiClient.post<{ message: string }>('auth/totp/verify/', data);
+		const response = await apiClient.post<{ message: string }>('auth/2fa/verify/', data);
 		return response.data;
 	},
 	disable2FA: async (data: { code: string }) => {
-		const response = await apiClient.post<{ message: string }>('auth/totp/disable/', data);
+		const response = await apiClient.post<{ message: string }>('auth/2fa/disable/', data);
 		return response.data;
 	},
 

@@ -30,7 +30,7 @@ export function CompanyTab() {
   const workspaceRole = useAuthStore((s) => s.user?.workspace_role ?? null);
   const isViewerMode = useUserStore((s) => s.isViewerMode);
   // Editing the company profile is an OWNER action (platform admin may also edit).
-  const canEdit = isViewerMode || workspaceRole === 'OWNER';
+  const canEdit = !isViewerMode && workspaceRole === 'OWNER';
   // INN is locked once KYC is verified — it becomes a checked legal identifier.
   const innLocked = company.kycStatus === 'verified';
 
@@ -40,6 +40,7 @@ export function CompanyTab() {
   const [savingCompany, setSavingCompany] = useState(false);
   const [docs, setDocs] = useState<KYCDocument[]>([]);
   const [loadingDocs, setLoadingDocs] = useState(false);
+  const [docType, setDocType] = useState<string>('OTHER');
   const [cForm, setCForm] = useState({
     name: company.name, inn: company.inn, contact_person: '', phone: '', email: '',
     website: '', legal_address: '', bank_account: '', mfo: '',
@@ -113,7 +114,7 @@ export function CompanyTab() {
 
   const handleDocUpload = async (file: File) => {
     if (!companyId) throw new Error('NO_COMPANY');
-    const doc = await accountsApi.uploadDocument(companyId, file, 'OTHER');
+    const doc = await accountsApi.uploadDocument(companyId, file, docType);
     setDocs(prev => [doc, ...prev]);
   };
 
@@ -226,23 +227,41 @@ export function CompanyTab() {
         {companyId && (
           <>
             <Separator />
-            <div>
-              <Label className="text-sm font-medium">{t('profile.companyInfo.kycDocuments')}</Label>
-              <FileUpload
-                className="mt-2"
-                disabled={loadingDocs}
-                files={docs.map(d => ({
-                  id: d.id,
-                  name: d.doc_type_display
-                    ? `${d.doc_type_display} — ${d.original_filename}`
-                    : d.original_filename,
-                  url: d.file ?? null,
-                  uploaded_at: d.uploaded_at,
-                }))}
-                onUpload={handleDocUpload}
-                onRemove={handleDocRemove}
-                description={t('profile.companyInfo.kycDocumentsHelp')}
-              />
+            <div className="space-y-4">
+              <div className="space-y-2 max-w-xs">
+                <Label htmlFor="doc-type-select">{t('company.docTypeLabel')}</Label>
+                <Select value={docType} onValueChange={setDocType}>
+                  <SelectTrigger id="doc-type-select">
+                    <SelectValue placeholder={t('company.docTypes.OTHER')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="CHARTER">{t('company.docTypes.CHARTER')}</SelectItem>
+                    <SelectItem value="LICENSE">{t('company.docTypes.LICENSE')}</SelectItem>
+                    <SelectItem value="PASSPORT">{t('company.docTypes.PASSPORT')}</SelectItem>
+                    <SelectItem value="TAX_CERT">{t('company.docTypes.TAX_CERT')}</SelectItem>
+                    <SelectItem value="BANK_REF">{t('company.docTypes.BANK_REF')}</SelectItem>
+                    <SelectItem value="OTHER">{t('company.docTypes.OTHER')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-sm font-medium">{t('profile.companyInfo.kycDocuments')}</Label>
+                <FileUpload
+                  className="mt-2"
+                  disabled={loadingDocs}
+                  files={docs.map(d => ({
+                    id: d.id,
+                    name: d.doc_type_display
+                      ? `${d.doc_type_display} — ${d.original_filename}`
+                      : d.original_filename,
+                    url: d.file ?? null,
+                    uploaded_at: d.uploaded_at,
+                  }))}
+                  onUpload={handleDocUpload}
+                  onRemove={handleDocRemove}
+                  description={t('profile.companyInfo.kycDocumentsHelp')}
+                />
+              </div>
             </div>
           </>
         )}

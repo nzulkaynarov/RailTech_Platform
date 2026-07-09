@@ -177,16 +177,7 @@ export function CompanyDocumentProfileSettings() {
               id="dp-use-company-defaults"
               checked={form.use_company_defaults}
               onCheckedChange={(v) => {
-                const updates: Partial<ProfileForm> = { use_company_defaults: v };
-                if (v) {
-                  updates.legal_name = '';
-                  updates.inn = '';
-                  updates.legal_address = '';
-                  updates.bank_details = '';
-                  updates.signatory_name = '';
-                  updates.signatory_position = '';
-                }
-                setForm({ ...form, ...updates });
+                setForm({ ...form, use_company_defaults: v });
               }}
             />
           </div>

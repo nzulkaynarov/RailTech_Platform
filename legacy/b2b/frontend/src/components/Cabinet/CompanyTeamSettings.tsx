@@ -242,7 +242,13 @@ function RoleEditorSheet({ open, onOpenChange, editingRole }: RoleSheetProps) {
           </form>
         )}
 
-        {!isSystemRole && (
+        {isSystemRole ? (
+          <SheetFooter className="gap-2 pt-4">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              {t('common.close', 'Закрыть')}
+            </Button>
+          </SheetFooter>
+        ) : (
           <SheetFooter className="gap-2 pt-4">
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
               {t('common.cancel')}

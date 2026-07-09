@@ -33,9 +33,7 @@ export function SettingsPage() {
   // authorizes them for, and (b) stops a dual buyer+seller owner losing the hub in BUYER context.
   // Fallback to isOwner when permission data is absent (old /me payload); backend still enforces.
   const perms = capabilities.permissions;
-  const canEditCompany = perms.length
-    ? perms.includes('settings.edit') || perms.includes('charge_templates.manage')
-    : isOwner;
+  const canEditCompany = isOwner || perms.includes('settings.edit') || perms.includes('charge_templates.manage');
   // Fake rows trimmed — currency/timezone/dateFormat/density/sidebar didn't
   // feed back into any consumer and made the panel feel like a mock. Only
   // Language (i18next) and Theme (themeStore) actually change the UI.
