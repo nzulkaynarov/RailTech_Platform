@@ -98,7 +98,18 @@ class TimelineView(APIView):
             return None, Response({"detail": "DEAL_NOT_FOUND"}, status=404)
         if not user_can_access_deal_chat(request.user, deal):
             return None, Response({"detail": "MEMBER_REQUIRED_FOR_ACTION"}, status=403)
-        return ActivityLog.objects.filter(deal_id=deal_id), None
+        logs = ActivityLog.objects.filter(deal_id=deal_id)
+        # SEC (audit #4): a routed seller sees only ITS OWN lane's events (+ deal-level/legacy
+        # NULL events) — a competitor's КП-sent/accepted history on a shared deal never leaks.
+        from django.db.models import Q
+
+        from accounts.services.permissions import seller_acting_company_ids, seller_visible_deal_ids
+
+        user = request.user
+        if not getattr(user, "is_platform_admin", False) and seller_visible_deal_ids(user, request) is not None:
+            own = seller_acting_company_ids(user, request) or set()
+            logs = logs.filter(Q(seller_company_id__in=own) | Q(seller_company__isnull=True))
+        return logs, None
 
     @staticmethod
     def _company_scope(request, company_id):

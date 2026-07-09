@@ -36,7 +36,7 @@ class MessageViewSet(viewsets.ModelViewSet):
 
     serializer_class = MessageSerializer
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
-    filterset_fields = ["deal", "deal_id", "message_type"]
+    filterset_fields = ["deal", "deal_id", "message_type", "seller_company"]
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
@@ -55,7 +55,14 @@ class MessageViewSet(viewsets.ModelViewSet):
             return queryset
         visible_deal_ids = seller_visible_deal_ids(user, self.request)
         if visible_deal_ids is not None:
-            return queryset.filter(deal_id__in=visible_deal_ids)
+            from accounts.services.permissions import seller_acting_company_ids
+
+            own = seller_acting_company_ids(user, self.request) or set()
+            # SEC (audit #4): a seller reads only ITS OWN lane (+ deal-level/legacy NULL
+            # messages) — never a competing seller's buyer↔seller thread on a shared deal.
+            return queryset.filter(deal_id__in=visible_deal_ids).filter(
+                Q(seller_company_id__in=own) | Q(seller_company__isnull=True)
+            )
 
         # Buyer: only messages on deals owned by a company the user is a member of
         # (plus deals where they are personally the manager/client). No cross-tenant.
@@ -79,10 +86,12 @@ class MessageViewSet(viewsets.ModelViewSet):
                 {"detail": "DEAL_NOT_FOUND"},
                 status=status.HTTP_404_NOT_FOUND,
             )
-        message, error = send_deal_message(request.user, deal, text)
+        message, error = send_deal_message(
+            request.user, deal, text, seller_company_id=request.data.get("seller_company")
+        )
         if error == "NOT_DEAL_MEMBER":
             return Response({"detail": error}, status=status.HTTP_403_FORBIDDEN)
-        if error == "EMPTY_MESSAGE":
+        if error in ("EMPTY_MESSAGE", "MESSAGE_LANE_REQUIRED", "INVALID_MESSAGE_LANE"):
             return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
         if error or message is None:
             return Response(

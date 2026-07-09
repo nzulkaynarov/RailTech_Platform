@@ -319,6 +319,7 @@ export interface Quote {
 export interface Message {
 	id: number;
 	deal: number;
+	seller_company?: number | null;   // the private seller lane (audit #4); null = deal-level
 	sender: number;
 	sender_name: string;
 	text: string;
@@ -622,18 +623,22 @@ export const crmApi = {
 		);
 		return response.data;
 	},
-	getMessages: async (dealId: number) => {
-		const response = await apiClient.get<PaginatedResponse<Message>>(`crm/messages/?deal_id=${dealId}`);
+	// sellerCompany = the private lane (which routed seller's thread). A seller omits it —
+	// the backend scopes to its own lane; a buyer on a multi-seller deal must pass it (audit #4).
+	getMessages: async (dealId: number, sellerCompany?: number | null) => {
+		const laneQ = sellerCompany != null ? `&seller_company=${sellerCompany}` : '';
+		const response = await apiClient.get<PaginatedResponse<Message>>(`crm/messages/?deal_id=${dealId}${laneQ}`);
 		return response.data.results;
 	},
 	getRecentMessages: async () => {
 		const response = await apiClient.get<PaginatedResponse<Message>>('crm/messages/?ordering=-timestamp&page_size=20');
 		return response.data.results;
 	},
-	sendMessage: async (dealId: number, text: string) => {
+	sendMessage: async (dealId: number, text: string, sellerCompany?: number | null) => {
 		const response = await apiClient.post<Message>('crm/messages/', {
 			deal: dealId,
-			text: text
+			text,
+			...(sellerCompany != null ? { seller_company: sellerCompany } : {}),
 		});
 		return response.data;
 	},

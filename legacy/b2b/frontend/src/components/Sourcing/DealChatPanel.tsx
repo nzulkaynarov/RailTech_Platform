@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, FormEvent } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo, FormEvent } from 'react';
 import { authedWsUrl } from '@/lib/ws';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import {
   MessageSquare,
@@ -29,6 +30,9 @@ import { useUserStore } from '@/store/userStore';
 
 interface DealChatPanelProps {
   dealId?: number | null;
+  /** Routed sellers of this deal — used ONLY by the buyer to pick a private lane
+   *  (which seller's thread) on a multi-seller RFQ (audit #4). Sellers ignore it. */
+  sellers?: { id: number; name: string }[];
 }
 
 function formatTime(timestamp: string): string {
@@ -42,11 +46,24 @@ function formatTime(timestamp: string): string {
   }
 }
 
-export function DealChatPanel({ dealId }: DealChatPanelProps = {}): React.ReactNode {
+export function DealChatPanel({ dealId, sellers }: DealChatPanelProps = {}): React.ReactNode {
   const { t } = useTranslation();
   const accessToken = useAuthStore((s) => s.accessToken);
   const currentUserId = useAuthStore((s) => s.user?.id);
   const activeStatus = useUserStore((s) => s.activeStatus);
+
+  // Lane = the private buyer↔seller thread on a multi-seller RFQ (audit #4). A SELLER's lane
+  // is scoped server-side (lane stays null here). A BUYER with >1 routed seller must pick one;
+  // with exactly one it's auto-selected; a seller-viewer never sees the selector.
+  const isBuyer = activeStatus === 'BUYER';
+  const laneOptions = useMemo(() => (isBuyer ? (sellers ?? []) : []), [isBuyer, sellers]);
+  const [lane, setLane] = useState<number | null>(null);
+  useEffect(() => {
+    if (isBuyer && laneOptions.length === 1) setLane(laneOptions[0].id);
+    else if (!isBuyer) setLane(null);
+  }, [isBuyer, laneOptions]);
+  const needsLanePick = isBuyer && laneOptions.length > 1 && lane == null;
+  const laneParam = isBuyer ? lane : null; // seller → backend auto-scopes to own lane
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -67,14 +84,14 @@ export function DealChatPanel({ dealId }: DealChatPanelProps = {}): React.ReactN
   }, []);
 
   useEffect(() => {
-    if (!dealId) {
+    if (!dealId || needsLanePick) {
       setMessages([]);
       return;
     }
     let cancelled = false;
     setIsLoading(true);
     crmApi
-      .getMessages(dealId)
+      .getMessages(dealId, laneParam ?? undefined)
       .then((data) => {
         if (cancelled) return;
         setMessages(data);
@@ -89,10 +106,10 @@ export function DealChatPanel({ dealId }: DealChatPanelProps = {}): React.ReactN
     return () => {
       cancelled = true;
     };
-  }, [dealId, t]);
+  }, [dealId, laneParam, needsLanePick, t]);
 
   useEffect(() => {
-    if (!dealId || !accessToken) {
+    if (!dealId || !accessToken || needsLanePick) {
       setIsConnected(false);
       return;
     }
@@ -115,8 +132,11 @@ export function DealChatPanel({ dealId }: DealChatPanelProps = {}): React.ReactN
       if (cancelled) return;
       let wsUrl: string;
       try {
-        // Fresh single-use ticket per (re)connect — no JWT in the WS URL.
-        wsUrl = await authedWsUrl(`/ws/chat/${dealId}/`);
+        // Fresh single-use ticket per (re)connect — no JWT in the WS URL. Buyer connects to
+        // its selected lane; a seller uses the base route (its lane is derived server-side).
+        wsUrl = await authedWsUrl(
+          laneParam != null ? `/ws/chat/${dealId}/${laneParam}/` : `/ws/chat/${dealId}/`,
+        );
       } catch {
         scheduleReconnect();
         return;
@@ -162,7 +182,7 @@ export function DealChatPanel({ dealId }: DealChatPanelProps = {}): React.ReactN
       socketRef.current?.close();
       socketRef.current = null;
     };
-  }, [dealId, accessToken, currentUserId, appendMessage]);
+  }, [dealId, accessToken, currentUserId, appendMessage, laneParam, needsLanePick]);
 
   useEffect(() => {
     const container = scrollContainerRef.current?.querySelector(
@@ -179,7 +199,7 @@ export function DealChatPanel({ dealId }: DealChatPanelProps = {}): React.ReactN
     if (!text || !dealId || isSending) return;
     setIsSending(true);
     try {
-      const created = await crmApi.sendMessage(dealId, text);
+      const created = await crmApi.sendMessage(dealId, text, laneParam ?? undefined);
       appendMessage({ ...created, is_me: true });
       setInputValue('');
     } catch {
@@ -225,6 +245,23 @@ export function DealChatPanel({ dealId }: DealChatPanelProps = {}): React.ReactN
         </div>
 
         <TabsContent value="chat" className="mt-0 flex flex-1 flex-col overflow-hidden">
+          {/* Buyer lane picker (audit #4): each routed seller is a private thread. */}
+          {isBuyer && laneOptions.length > 1 && (
+            <div className="border-b px-3 py-1.5">
+              <Select value={lane != null ? String(lane) : undefined} onValueChange={(v) => setLane(Number(v))}>
+                <SelectTrigger className="h-7 text-xs">
+                  <SelectValue placeholder={t('dealChat.pickSeller')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {laneOptions.map((s) => (
+                    <SelectItem key={s.id} value={String(s.id)} className="text-xs">
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="flex items-center justify-end gap-1.5 border-b px-3 py-1.5">
             {isConnected ? (
               <>
@@ -250,6 +287,10 @@ export function DealChatPanel({ dealId }: DealChatPanelProps = {}): React.ReactN
                   <p className="text-xs text-muted-foreground">
                     {t('dealAttachments.noDeal')}
                   </p>
+                </div>
+              ) : needsLanePick ? (
+                <div className="flex justify-center py-8">
+                  <p className="text-xs text-muted-foreground">{t('dealChat.pickSellerHint')}</p>
                 </div>
               ) : isLoading ? (
                 <div className="flex justify-center py-8">
@@ -343,9 +384,9 @@ export function DealChatPanel({ dealId }: DealChatPanelProps = {}): React.ReactN
             <Input
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              placeholder={t('dealChat.placeholder')}
+              placeholder={needsLanePick ? t('dealChat.pickSeller') : t('dealChat.placeholder')}
               className="h-7 text-xs"
-              disabled={!dealId || isSending}
+              disabled={!dealId || isSending || needsLanePick}
               maxLength={5000}
             />
             <Button

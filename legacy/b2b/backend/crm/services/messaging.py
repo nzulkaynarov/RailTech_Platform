@@ -95,7 +95,43 @@ def user_can_access_deal_chat(user: CustomUser, deal: Deal) -> bool:
     return False
 
 
-def send_deal_message(user: CustomUser, deal: Deal, text: str) -> Tuple[Optional[Message], Optional[str]]:
+def _resolve_message_lane(user: CustomUser, deal: Deal, seller_company_id) -> Tuple[Optional[int], Optional[str]]:
+    """SEC (audit #4): the private seller lane a message belongs to on a multi-seller RFQ.
+    A routed seller always writes into its OWN lane (any client-supplied value is ignored);
+    a buyer/manager must address a specific routed seller — auto on a single-seller deal,
+    required (MESSAGE_LANE_REQUIRED) on a multi-seller one. NULL lane = deal-level/legacy
+    message visible to all parties. Returns (lane_company_id_or_None, error)."""
+    from accounts.services.permissions import routed_seller_company_id
+
+    own_lane = routed_seller_company_id(user, deal.id)
+    if own_lane is not None:
+        return own_lane, None
+    routed_ids = list(deal.seller_routings.values_list("seller_company_id", flat=True))
+    if not routed_ids:
+        return None, None  # nobody routed yet → deal-level message
+    if seller_company_id:
+        try:
+            requested = int(seller_company_id)
+        except (TypeError, ValueError):
+            return None, "INVALID_MESSAGE_LANE"
+        if requested not in routed_ids:
+            return None, "INVALID_MESSAGE_LANE"
+        return requested, None
+    if len(routed_ids) == 1:
+        return routed_ids[0], None
+    return None, "MESSAGE_LANE_REQUIRED"
+
+
+def message_lane_group_name(deal_id, seller_company_id) -> str:
+    """WS group for a (deal, seller-lane). A NULL lane ('all') carries deal-level/system
+    messages every party receives; a seller-lane group reaches only the buyer + that seller,
+    so a competing seller's socket never gets another lane's live push (audit #4)."""
+    return f"chat_deal_{deal_id}_lane_{seller_company_id or 'all'}"
+
+
+def send_deal_message(
+    user: CustomUser, deal: Deal, text: str, seller_company_id=None
+) -> Tuple[Optional[Message], Optional[str]]:
     """
     Create a chat message for a deal after authorization + validation.
     Broadcast happens via Message post_save signal — do not group_send here.
@@ -112,10 +148,14 @@ def send_deal_message(user: CustomUser, deal: Deal, text: str) -> Tuple[Optional
     clean = (text or "").strip()
     if not clean:
         return None, "EMPTY_MESSAGE"
+    lane_id, lane_err = _resolve_message_lane(user, deal, seller_company_id)
+    if lane_err:
+        return None, lane_err
     message = Message.objects.create(
         deal=deal,
         sender=user,
         text=clean[:MAX_MESSAGE_LENGTH],
+        seller_company_id=lane_id,
     )
 
     # Audit: attach a short entry to the deal timeline so admin sees
@@ -133,5 +173,6 @@ def send_deal_message(user: CustomUser, deal: Deal, text: str) -> Tuple[Optional
         level="INFO",
         deal_id=deal.id,
         company_id=deal.company_id,
+        seller_company_id=lane_id,  # keep the timeline entry in the same private lane (audit #4)
     )
     return message, None

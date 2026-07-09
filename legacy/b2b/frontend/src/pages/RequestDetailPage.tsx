@@ -604,9 +604,9 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
         <DealTimeline dealId={deal.id} />
       </div>
 
-      {/* Chat Panel */}
+      {/* Chat Panel — pass routed sellers so the buyer picks a private lane per seller (audit #4) */}
       <div className="w-80 shrink-0 sticky top-0 self-start hidden lg:flex flex-col">
-        <DealChatPanel dealId={deal.id} />
+        <DealChatPanel dealId={deal.id} sellers={deal.target_sellers_data} />
       </div>
 
       <RejectQuoteDialog
