@@ -18,6 +18,29 @@ from .deals import transition_deal_stage
 logger = logging.getLogger(__name__)
 
 
+def scope_quotes_for_viewer(quotes_qs, user, request):
+    """Restrict a Quote queryset to what the viewer may see — the SINGLE source of the
+    hidden-competition boundary (audit #2). A seller acting in a seller context sees only
+    quotes prepared by their OWN seller companies (or unassigned drafts); a platform admin
+    and a buyer in own-deal context see all. Used by BOTH QuoteViewSet.get_queryset AND the
+    deal-nested `quotes`/`active_quote` prefetch (DealViewSet), so the two surfaces cannot
+    diverge and leak a competitor's КП (prices/totals/margin/PDF) on a multi-seller deal."""
+    from accounts.services.permissions import seller_acting_company_ids, seller_visible_deal_ids
+
+    if getattr(user, "is_platform_admin", False):
+        return quotes_qs
+    if seller_visible_deal_ids(user, request) is not None:
+        seller_ids = seller_acting_company_ids(user, request) or set()
+        return quotes_qs.filter(
+            models.Q(
+                prepared_by__memberships__company_id__in=seller_ids,
+                prepared_by__memberships__is_active=True,
+            )
+            | models.Q(prepared_by__isnull=True)
+        ).distinct()
+    return quotes_qs
+
+
 def _quote_owner_company_id(quote) -> Optional[int]:
     """Company that owns the КП — the seller team that runs the approval chain and whose
     requisites brand the document.

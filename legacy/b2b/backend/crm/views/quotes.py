@@ -173,9 +173,8 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
                 "items__frozen_currency",
             )
         )
-        from django.db.models import Q
-
-        from accounts.services.permissions import seller_acting_company_ids, seller_visible_deal_ids
+        from accounts.services.permissions import seller_visible_deal_ids
+        from crm.services.quotes import scope_quotes_for_viewer
 
         # Seller building КП across buyer заявки sees every quote — but only in a
         # seller context. In BUYER context the same user is scoped to its own deals.
@@ -183,17 +182,9 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
             return queryset
         visible_deal_ids = seller_visible_deal_ids(user, self.request)
         if visible_deal_ids is not None:
-            # Own КП only — on a deal routed to competing sellers, a seller must not read a
-            # competitor's quote (charges/metadata; cost is also redacted) — audit H1.
-            seller_ids = seller_acting_company_ids(user, self.request) or set()
-            return (
-                queryset.filter(deal_id__in=visible_deal_ids)
-                .filter(
-                    Q(prepared_by__memberships__company_id__in=seller_ids, prepared_by__memberships__is_active=True)
-                    | Q(prepared_by__isnull=True)
-                )
-                .distinct()
-            )
+            # Own КП only — a seller must not read a competitor's quote on a shared deal
+            # (audit H1/#2). Shared helper = the same boundary the deal-nested prefetch uses.
+            return scope_quotes_for_viewer(queryset.filter(deal_id__in=visible_deal_ids), user, self.request)
         # Buyer sees only quotes on their own company's deals.
         user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
         return queryset.filter(deal__company_id__in=user_company_ids)

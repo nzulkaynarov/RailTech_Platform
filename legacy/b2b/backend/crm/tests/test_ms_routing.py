@@ -451,3 +451,40 @@ def test_quote_items_filter_scopes_to_requested_deal(world):
     ids = _ids(resp)
     assert item_a.id in ids, "deal-A item missing from its own filter result"
     assert item_b.id not in ids, "filter silently leaked deal-B's item (filter-key drift)"
+
+
+def _quote(deal, seller_user, version, total):
+    return Quote.objects.create(
+        deal=deal,
+        version=version,
+        prepared_by=seller_user,
+        status=QuoteStatus.objects.get(code="DRAFT"),
+        vat_rate=Decimal("12"),
+        subtotal_excl_vat=Decimal(str(total)),
+        vat_amount=Decimal("0"),
+        total_incl_vat=Decimal(str(total)),
+    )
+
+
+@pytest.mark.django_db
+def test_deal_nested_quotes_scoped_per_seller(world):
+    """SEC audit #2: a deal routed to BOTH sellers A and B, each with its own КП. Seller B's
+    GET on the SHARED deal must not surface A's quote via the nested `quotes`/`active_quote`
+    (the deal-nested prefetch previously bypassed QuoteViewSet's per-seller filter)."""
+    draft = DealStage.objects.get(code="DRAFT")
+    deal = Deal.objects.create(title="Shared RFQ", company=world["buyer_co"], stage=draft)
+    DealSellerRouting.objects.create(deal=deal, seller_company=world["sa_co"])
+    DealSellerRouting.objects.create(deal=deal, seller_company=world["sb_co"])
+    quote_a = _quote(deal, world["sa_user"], 1, 111)
+    quote_b = _quote(deal, world["sb_user"], 2, 222)  # higher version, but scoped away from A
+
+    body_b = _api(world["sb_user"]).get(f"/api/v1/crm/deals/{deal.id}/").json()
+    ids_b = {q["id"] for q in body_b.get("quotes", [])}
+    assert quote_a.id not in ids_b, "seller B leaked seller A's quote via the deal detail"
+    assert quote_b.id in ids_b
+    assert body_b.get("active_quote", {}).get("id") == quote_b.id
+
+    body_a = _api(world["sa_user"]).get(f"/api/v1/crm/deals/{deal.id}/").json()
+    ids_a = {q["id"] for q in body_a.get("quotes", [])}
+    assert quote_b.id not in ids_a, "seller A leaked seller B's quote via the deal detail"
+    assert body_a.get("active_quote", {}).get("id") == quote_a.id
