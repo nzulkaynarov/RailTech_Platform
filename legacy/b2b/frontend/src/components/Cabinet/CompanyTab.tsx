@@ -23,7 +23,11 @@ import { toast } from 'sonner';
 import { ImageUpload } from '@/components/Shared/ImageUpload';
 import { FileUpload } from '@/components/Shared/FileUpload';
 
-
+/**
+ * Company section of the Settings Hub (spec PR 3): one form grouped into three cards —
+ * requisites / bank / KYC documents. Logic, gating and API calls are unchanged from the
+ * pre-redesign single-card version; one save action persists requisites + bank (single PATCH).
+ */
 export function CompanyTab() {
   const { t } = useTranslation();
   const { company, activeStatus, updateCompany } = useUserStore();
@@ -125,163 +129,184 @@ export function CompanyTab() {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">{t('profile.companyInfo.title')}</CardTitle>
-        <CardDescription>{t('profile.companyInfo.description')}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {companyId && (
-          <ImageUpload
-            value={company.logoUrl}
-            onUpload={handleLogoUpload}
-            onRemove={handleLogoRemove}
-            fallback={company.name ? company.name.slice(0, 2).toUpperCase() : '—'}
-            label={t('profile.companyInfo.logo')}
-            description={t('profile.companyInfo.logoDescription')}
-          />
-        )}
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t('settings.company.requisitesTitle')}</CardTitle>
+          <CardDescription>{t('settings.company.requisitesDescription')}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {companyId && (
+            <ImageUpload
+              value={company.logoUrl}
+              onUpload={handleLogoUpload}
+              onRemove={handleLogoRemove}
+              fallback={company.name ? company.name.slice(0, 2).toUpperCase() : '—'}
+              label={t('profile.companyInfo.logo')}
+              description={t('profile.companyInfo.logoDescription')}
+            />
+          )}
 
-        <Separator />
+          <Separator />
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label>{t('profile.companyInfo.name')}</Label>
-            <Input value={cForm.name} onChange={(e) => setCForm({ ...cForm, name: e.target.value })} disabled={!canEdit} />
-          </div>
-          <div className="space-y-2">
-            <Label>{t('profile.companyInfo.inn')}</Label>
-            <Input value={cForm.inn} onChange={(e) => setCForm({ ...cForm, inn: e.target.value })} disabled={!canEdit || innLocked} />
-          </div>
-          <div className="space-y-2">
-            <Label>{t('profile.companyInfo.contactPerson')}</Label>
-            <Input value={cForm.contact_person} onChange={(e) => setCForm({ ...cForm, contact_person: e.target.value })} disabled={!canEdit} />
-          </div>
-          <div className="space-y-2">
-            <Label>{t('profile.companyInfo.phone')}</Label>
-            <Input value={cForm.phone} onChange={(e) => setCForm({ ...cForm, phone: e.target.value })} disabled={!canEdit} />
-          </div>
-          <div className="space-y-2">
-            <Label>{t('profile.companyInfo.email')}</Label>
-            <Input type="email" value={cForm.email} onChange={(e) => setCForm({ ...cForm, email: e.target.value })} disabled={!canEdit} />
-          </div>
-          <div className="space-y-2">
-            <Label>{t('profile.companyInfo.website')}</Label>
-            <Input value={cForm.website} onChange={(e) => setCForm({ ...cForm, website: e.target.value })} disabled={!canEdit} />
-          </div>
-          <div className="space-y-2">
-            <Label>{t('profile.companyInfo.country')}</Label>
-            <Select
-              value={cForm.country ? String(cForm.country) : undefined}
-              onValueChange={(v) => setCForm({ ...cForm, country: v })}
-              disabled={!canEdit}
-            >
-              <SelectTrigger><SelectValue placeholder={t('profile.companyInfo.countryPlaceholder')} /></SelectTrigger>
-              <SelectContent>
-                {countries.map((c) => (
-                  <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>{t('profile.companyInfo.bankAccount')}</Label>
-            <Input value={cForm.bank_account} onChange={(e) => setCForm({ ...cForm, bank_account: e.target.value })} disabled={!canEdit} />
-          </div>
-          <div className="space-y-2">
-            <Label>{t('profile.companyInfo.mfo')}</Label>
-            <Input value={cForm.mfo} onChange={(e) => setCForm({ ...cForm, mfo: e.target.value })} disabled={!canEdit} />
-          </div>
-          <div className="space-y-2 sm:col-span-2">
-            <Label>{t('profile.companyInfo.legalAddress')}</Label>
-            <Textarea value={cForm.legal_address} onChange={(e) => setCForm({ ...cForm, legal_address: e.target.value })} disabled={!canEdit} rows={2} />
-          </div>
-          <div className="flex items-center justify-between rounded-lg border p-3 sm:col-span-2">
-            <div className="space-y-0.5">
-              <Label htmlFor="iso9001">{t('profile.companyInfo.iso9001')}</Label>
-              <p className="text-xs text-muted-foreground">{t('profile.companyInfo.iso9001Help')}</p>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>{t('profile.companyInfo.name')}</Label>
+              <Input value={cForm.name} onChange={(e) => setCForm({ ...cForm, name: e.target.value })} disabled={!canEdit} />
             </div>
-            <Switch id="iso9001" checked={cForm.has_iso9001} onCheckedChange={(v) => setCForm({ ...cForm, has_iso9001: v })} disabled={!canEdit} />
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <Label>{t('profile.companyInfo.kycStatus')}:</Label>
-          <Badge variant={kycBadge.variant} className={kycBadge.className}>{kycBadge.label}</Badge>
-        </div>
-
-        <Separator />
-
-        <div className="space-y-2">
-          <Label>{t('profile.companyInfo.platformStatuses')}</Label>
-          <div className="flex flex-wrap gap-2">
-            {company.statusEntries.map((entry) => (
-              <Badge key={entry.status} variant={entry.status === activeStatus ? 'default' : 'outline'}>
-                {t(companyStatusLabels[entry.status])}
-                {entry.verification === 'pending' && ` (${t('profile.companyInfo.pendingVerification')})`}
-              </Badge>
-            ))}
-          </div>
-        </div>
-
-        {companyId && (
-          <>
-            <Separator />
-            <div className="space-y-4">
-              <div className="space-y-2 max-w-xs">
-                <Label htmlFor="doc-type-select">{t('company.docTypeLabel')}</Label>
-                <Select value={docType} onValueChange={setDocType}>
-                  <SelectTrigger id="doc-type-select">
-                    <SelectValue placeholder={t('company.docTypes.OTHER')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="CHARTER">{t('company.docTypes.CHARTER')}</SelectItem>
-                    <SelectItem value="LICENSE">{t('company.docTypes.LICENSE')}</SelectItem>
-                    <SelectItem value="PASSPORT">{t('company.docTypes.PASSPORT')}</SelectItem>
-                    <SelectItem value="TAX_CERT">{t('company.docTypes.TAX_CERT')}</SelectItem>
-                    <SelectItem value="BANK_REF">{t('company.docTypes.BANK_REF')}</SelectItem>
-                    <SelectItem value="OTHER">{t('company.docTypes.OTHER')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-sm font-medium">{t('profile.companyInfo.kycDocuments')}</Label>
-                <FileUpload
-                  className="mt-2"
-                  disabled={loadingDocs}
-                  files={docs.map(d => ({
-                    id: d.id,
-                    name: d.doc_type_display
-                      ? `${d.doc_type_display} — ${d.original_filename}`
-                      : d.original_filename,
-                    url: d.file ?? null,
-                    uploaded_at: d.uploaded_at,
-                  }))}
-                  onUpload={handleDocUpload}
-                  onRemove={handleDocRemove}
-                  description={t('profile.companyInfo.kycDocumentsHelp')}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label>{t('profile.companyInfo.inn')}</Label>
+              <Input value={cForm.inn} onChange={(e) => setCForm({ ...cForm, inn: e.target.value })} disabled={!canEdit || innLocked} />
             </div>
-          </>
-        )}
-
-        {canEdit && (
-          <div className="flex justify-end">
-            <Button onClick={handleSaveCompany} disabled={savingCompany} className="gap-2">
-              <Save className="h-4 w-4" />
-              {savingCompany ? t('common.saving') : t('profile.companyInfo.save')}
-            </Button>
+            <div className="space-y-2">
+              <Label>{t('profile.companyInfo.contactPerson')}</Label>
+              <Input value={cForm.contact_person} onChange={(e) => setCForm({ ...cForm, contact_person: e.target.value })} disabled={!canEdit} />
+            </div>
+            <div className="space-y-2">
+              <Label>{t('profile.companyInfo.phone')}</Label>
+              <Input value={cForm.phone} onChange={(e) => setCForm({ ...cForm, phone: e.target.value })} disabled={!canEdit} />
+            </div>
+            <div className="space-y-2">
+              <Label>{t('profile.companyInfo.email')}</Label>
+              <Input type="email" value={cForm.email} onChange={(e) => setCForm({ ...cForm, email: e.target.value })} disabled={!canEdit} />
+            </div>
+            <div className="space-y-2">
+              <Label>{t('profile.companyInfo.website')}</Label>
+              <Input value={cForm.website} onChange={(e) => setCForm({ ...cForm, website: e.target.value })} disabled={!canEdit} />
+            </div>
+            <div className="space-y-2">
+              <Label>{t('profile.companyInfo.country')}</Label>
+              <Select
+                value={cForm.country ? String(cForm.country) : undefined}
+                onValueChange={(v) => setCForm({ ...cForm, country: v })}
+                disabled={!canEdit}
+              >
+                <SelectTrigger><SelectValue placeholder={t('profile.companyInfo.countryPlaceholder')} /></SelectTrigger>
+                <SelectContent>
+                  {countries.map((c) => (
+                    <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label>{t('profile.companyInfo.legalAddress')}</Label>
+              <Textarea value={cForm.legal_address} onChange={(e) => setCForm({ ...cForm, legal_address: e.target.value })} disabled={!canEdit} rows={2} />
+            </div>
+            <div className="flex items-center justify-between rounded-lg border p-3 sm:col-span-2">
+              <div className="space-y-0.5">
+                <Label htmlFor="iso9001">{t('profile.companyInfo.iso9001')}</Label>
+                <p className="text-xs text-muted-foreground">{t('profile.companyInfo.iso9001Help')}</p>
+              </div>
+              <Switch id="iso9001" checked={cForm.has_iso9001} onCheckedChange={(v) => setCForm({ ...cForm, has_iso9001: v })} disabled={!canEdit} />
+            </div>
           </div>
-        )}
 
-        {!canEdit && (
-          <p className="text-xs text-muted-foreground">
-            {t('profile.companyInfo.contactAdmin')}
-          </p>
-        )}
-      </CardContent>
-    </Card>
+          <Separator />
+
+          <div className="space-y-2">
+            <Label>{t('profile.companyInfo.platformStatuses')}</Label>
+            <div className="flex flex-wrap gap-2">
+              {company.statusEntries.map((entry) => (
+                <Badge key={entry.status} variant={entry.status === activeStatus ? 'default' : 'outline'}>
+                  {t(companyStatusLabels[entry.status])}
+                  {entry.verification === 'pending' && ` (${t('profile.companyInfo.pendingVerification')})`}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t('settings.company.bankTitle')}</CardTitle>
+          <CardDescription>{t('settings.company.bankDescription')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>{t('profile.companyInfo.bankAccount')}</Label>
+              <Input value={cForm.bank_account} onChange={(e) => setCForm({ ...cForm, bank_account: e.target.value })} disabled={!canEdit} />
+            </div>
+            <div className="space-y-2">
+              <Label>{t('profile.companyInfo.mfo')}</Label>
+              <Input value={cForm.mfo} onChange={(e) => setCForm({ ...cForm, mfo: e.target.value })} disabled={!canEdit} />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Single save for the two cards above — same one-PATCH behaviour as before the regrouping. */}
+      {canEdit && (
+        <div className="flex justify-end">
+          <Button onClick={handleSaveCompany} disabled={savingCompany} className="gap-2">
+            <Save className="h-4 w-4" />
+            {savingCompany ? t('common.saving') : t('profile.companyInfo.save')}
+          </Button>
+        </div>
+      )}
+
+      {!canEdit && (
+        <p className="text-xs text-muted-foreground">
+          {t('profile.companyInfo.contactAdmin')}
+        </p>
+      )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t('settings.company.kycTitle')}</CardTitle>
+          <CardDescription>{t('settings.company.kycDescription')}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-3">
+            <Label>{t('profile.companyInfo.kycStatus')}:</Label>
+            <Badge variant={kycBadge.variant} className={kycBadge.className}>{kycBadge.label}</Badge>
+          </div>
+
+          {companyId && (
+            <>
+              <Separator />
+              <div className="space-y-4">
+                <div className="space-y-2 max-w-xs">
+                  <Label htmlFor="doc-type-select">{t('company.docTypeLabel')}</Label>
+                  <Select value={docType} onValueChange={setDocType}>
+                    <SelectTrigger id="doc-type-select">
+                      <SelectValue placeholder={t('company.docTypes.OTHER')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="CHARTER">{t('company.docTypes.CHARTER')}</SelectItem>
+                      <SelectItem value="LICENSE">{t('company.docTypes.LICENSE')}</SelectItem>
+                      <SelectItem value="PASSPORT">{t('company.docTypes.PASSPORT')}</SelectItem>
+                      <SelectItem value="TAX_CERT">{t('company.docTypes.TAX_CERT')}</SelectItem>
+                      <SelectItem value="BANK_REF">{t('company.docTypes.BANK_REF')}</SelectItem>
+                      <SelectItem value="OTHER">{t('company.docTypes.OTHER')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">{t('profile.companyInfo.kycDocuments')}</Label>
+                  <FileUpload
+                    className="mt-2"
+                    disabled={loadingDocs}
+                    files={docs.map(d => ({
+                      id: d.id,
+                      name: d.doc_type_display
+                        ? `${d.doc_type_display} — ${d.original_filename}`
+                        : d.original_filename,
+                      url: d.file ?? null,
+                      uploaded_at: d.uploaded_at,
+                    }))}
+                    onUpload={handleDocUpload}
+                    onRemove={handleDocRemove}
+                    description={t('profile.companyInfo.kycDocumentsHelp')}
+                  />
+                </div>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
-

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { FileText, Loader2, Shield } from 'lucide-react';
+import { FileText, Loader2, Lock, Shield } from 'lucide-react';
 
 import { accountsApi, CompanyDocumentProfile } from '@/api/accountsApi';
 import { useAuthStore } from '@/store/authStore';
@@ -13,7 +13,15 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
+import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { ImageUpload } from '@/components/Shared/ImageUpload';
+
+// Brand-default accent color of the generated КП/contract PDF (mirrors the backend
+// document default). This is a PDF-document brand value, NOT a UI color token —
+// named here so the placeholder and the color-picker fallback stay in sync.
+const PDF_ACCENT_COLOR_DEFAULT = '#15294d';
 
 type ProfileForm = {
   use_company_defaults: boolean;
@@ -60,6 +68,24 @@ function toForm(profile: CompanyDocumentProfile): ProfileForm {
     show_lead_time: profile.show_lead_time ?? true,
     show_fx_note: profile.show_fx_note ?? false,
   };
+}
+
+/**
+ * Lock marker + tooltip next to labels of fields inherited from the company profile
+ * (spec §2.5: disabled inputs + Lock icon + Tooltip instead of opacity/pointer-events).
+ */
+function InheritedLockHint({ hint }: { hint: string }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span tabIndex={0} className="inline-flex text-muted-foreground">
+          <Lock className="h-3.5 w-3.5" aria-hidden="true" />
+          <span className="sr-only">{hint}</span>
+        </span>
+      </TooltipTrigger>
+      <TooltipContent>{hint}</TooltipContent>
+    </Tooltip>
+  );
 }
 
 /**
@@ -149,176 +175,207 @@ export function CompanyDocumentProfileSettings() {
     </div>
   );
 
+  // Fields inherited from the company profile while «use company defaults» is on (§2.5):
+  // disabled + Lock/Tooltip, never opacity/pointer-events hacks.
+  const inherited = form.use_company_defaults;
+  const inheritedHint = t('settings.documents.inheritedFromCompany');
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="flex items-center gap-2 text-xl font-bold text-foreground">
-          <FileText className="h-5 w-5 text-primary" aria-hidden="true" />
-          {t('documentProfile.title')}
-        </h3>
-        <p className="mt-1 text-sm text-muted-foreground">{t('documentProfile.subtitle')}</p>
-      </div>
+    <TooltipProvider>
+      <div className="space-y-6">
+        <div>
+          <h3 className="flex items-center gap-2 text-xl font-bold text-foreground">
+            <FileText className="h-5 w-5 text-primary" aria-hidden="true" />
+            {t('documentProfile.title')}
+          </h3>
+          <p className="mt-1 text-sm text-muted-foreground">{t('documentProfile.subtitle')}</p>
+        </div>
 
-      {/* Form/preview split: the editor is a fixed-width sidebar, the live document preview
-          takes the rest (A4 КП needs the room to render all columns). Capped so it doesn't
-          sprawl on ultra-wide monitors. */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,440px)_1fr]">
-        <div className="space-y-6">
-          <div className="flex items-start justify-between gap-4 rounded-lg border border-border p-3 bg-muted/30">
-            <div className="space-y-0.5">
-              <Label htmlFor="dp-use-company-defaults" className="cursor-pointer">
-                {t('documentProfile.useCompanyDefaults', 'Использовать данные профиля компании')}
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                {t('documentProfile.useCompanyDefaultsHint', 'Автоматически наследовать название, ИНН, адрес и логотип из основного профиля')}
-              </p>
-            </div>
-            <Switch
-              id="dp-use-company-defaults"
-              checked={form.use_company_defaults}
-              onCheckedChange={(v) => {
-                setForm({ ...form, use_company_defaults: v });
-              }}
-            />
-          </div>
-
-          {companyId != null && (
-            <div className={form.use_company_defaults ? 'opacity-50 pointer-events-none' : ''}>
-              <ImageUpload
-                value={profile?.logo_url ?? null}
-                onUpload={handleLogoUpload}
-                fallback={form.legal_name ? form.legal_name.slice(0, 2).toUpperCase() : '—'}
-                label={t('documentProfile.logo')}
-                description={t('documentProfile.logoDescription')}
+        {/* Form and preview side-by-side on desktop (spec PR 3, §2.4): even two-column split;
+            the A4 preview fills its whole column — previews are never width-capped. */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div className="space-y-6">
+            <div className="flex items-start justify-between gap-4 rounded-lg border border-border p-3 bg-muted/30">
+              <div className="space-y-0.5">
+                <Label htmlFor="dp-use-company-defaults" className="cursor-pointer">
+                  {t('documentProfile.useCompanyDefaults')}
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  {t('documentProfile.useCompanyDefaultsHint')}
+                </p>
+              </div>
+              <Switch
+                id="dp-use-company-defaults"
+                checked={form.use_company_defaults}
+                onCheckedChange={(v) => {
+                  setForm({ ...form, use_company_defaults: v });
+                }}
               />
             </div>
-          )}
 
-          <Separator />
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className={`space-y-2 sm:col-span-2 ${form.use_company_defaults ? 'opacity-50 pointer-events-none' : ''}`}>
-          <Label htmlFor="dp-legal-name">{t('documentProfile.legalName')}</Label>
-          <Input
-            id="dp-legal-name"
-            value={form.legal_name}
-            onChange={(e) => setForm({ ...form, legal_name: e.target.value })}
-            placeholder={t('documentProfile.legalNamePlaceholder')}
-            disabled={form.use_company_defaults}
-          />
-        </div>
-        <div className={`space-y-2 ${form.use_company_defaults ? 'opacity-50 pointer-events-none' : ''}`}>
-          <Label htmlFor="dp-inn">{t('documentProfile.inn')}</Label>
-          <Input
-            id="dp-inn"
-            value={form.inn}
-            onChange={(e) => setForm({ ...form, inn: e.target.value })}
-            disabled={form.use_company_defaults}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="dp-accent">{t('documentProfile.accentColor')}</Label>
-          <div className="flex items-center gap-2">
-            <Input
-              id="dp-accent"
-              value={form.accent_color}
-              onChange={(e) => setForm({ ...form, accent_color: e.target.value })}
-              placeholder="#15294d"
-            />
-            <Input
-              type="color"
-              aria-label={t('documentProfile.accentColor')}
-              className="h-9 w-12 shrink-0 p-1"
-              value={/^#[0-9a-fA-F]{6}$/.test(form.accent_color) ? form.accent_color : '#15294d'}
-              onChange={(e) => setForm({ ...form, accent_color: e.target.value })}
-            />
-          </div>
-        </div>
-        <div className={`space-y-2 sm:col-span-2 ${form.use_company_defaults ? 'opacity-50 pointer-events-none' : ''}`}>
-          <Label htmlFor="dp-legal-address">{t('documentProfile.legalAddress')}</Label>
-          <Textarea
-            id="dp-legal-address"
-            rows={2}
-            value={form.legal_address}
-            onChange={(e) => setForm({ ...form, legal_address: e.target.value })}
-            disabled={form.use_company_defaults}
-          />
-        </div>
-        <div className={`space-y-2 sm:col-span-2 ${form.use_company_defaults ? 'opacity-50 pointer-events-none' : ''}`}>
-          <Label htmlFor="dp-bank">{t('documentProfile.bankDetails')}</Label>
-          <Textarea
-            id="dp-bank"
-            rows={3}
-            value={form.bank_details}
-            onChange={(e) => setForm({ ...form, bank_details: e.target.value })}
-            placeholder={t('documentProfile.bankDetailsPlaceholder')}
-            disabled={form.use_company_defaults}
-          />
-        </div>
-        <div className={`space-y-2 ${form.use_company_defaults ? 'opacity-50 pointer-events-none' : ''}`}>
-          <Label htmlFor="dp-signatory-name">{t('documentProfile.signatoryName')}</Label>
-          <Input
-            id="dp-signatory-name"
-            value={form.signatory_name}
-            onChange={(e) => setForm({ ...form, signatory_name: e.target.value })}
-            disabled={form.use_company_defaults}
-          />
-        </div>
-        <div className={`space-y-2 ${form.use_company_defaults ? 'opacity-50 pointer-events-none' : ''}`}>
-          <Label htmlFor="dp-signatory-position">{t('documentProfile.signatoryPosition')}</Label>
-          <Input
-            id="dp-signatory-position"
-            value={form.signatory_position}
-            onChange={(e) => setForm({ ...form, signatory_position: e.target.value })}
-            disabled={form.use_company_defaults}
-          />
-        </div>
-        <div className="space-y-2 sm:col-span-2">
-          <Label htmlFor="dp-footer">{t('documentProfile.footerText')}</Label>
-          <Textarea
-            id="dp-footer"
-            rows={2}
-            value={form.footer_text}
-            onChange={(e) => setForm({ ...form, footer_text: e.target.value })}
-            placeholder={t('documentProfile.footerTextPlaceholder')}
-          />
-          </div>
-          </div>
-
-          <Separator />
-          <div className="space-y-3">
-            <h4 className="text-sm font-semibold text-foreground">{t('documentProfile.toggles')}</h4>
-            {toggleRow('show_logo', 'documentProfile.showLogo', 'documentProfile.showLogoHint')}
-            {toggleRow('show_lead_time', 'documentProfile.showLeadTime', 'documentProfile.showLeadTimeHint')}
-            {toggleRow('show_fx_note', 'documentProfile.showFxNote', 'documentProfile.showFxNoteHint')}
-          </div>
-
-          <Button onClick={() => saveMut.mutate(form)} disabled={saveMut.isPending}>
-            {saveMut.isPending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-            {t('common.save')}
-          </Button>
-        </div>
-
-        <div className="space-y-2 lg:sticky lg:top-4 lg:self-start">
-          <div className="flex items-center justify-between">
-            <h4 className="text-sm font-semibold text-foreground">{t('documentProfile.preview')}</h4>
-            {previewQuery.isFetching && (
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-hidden="true" />
+            {companyId != null && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5">
+                  <Label>{t('documentProfile.logo')}</Label>
+                  {inherited && <InheritedLockHint hint={inheritedHint} />}
+                </div>
+                <ImageUpload
+                  value={profile?.logo_url ?? null}
+                  onUpload={handleLogoUpload}
+                  disabled={inherited}
+                  fallback={form.legal_name ? form.legal_name.slice(0, 2).toUpperCase() : '—'}
+                  description={t('documentProfile.logoDescription')}
+                />
+              </div>
             )}
+
+            <Separator />
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="dp-legal-name" className="gap-1.5">
+                  {t('documentProfile.legalName')}
+                  {inherited && <InheritedLockHint hint={inheritedHint} />}
+                </Label>
+                <Input
+                  id="dp-legal-name"
+                  value={form.legal_name}
+                  onChange={(e) => setForm({ ...form, legal_name: e.target.value })}
+                  placeholder={t('documentProfile.legalNamePlaceholder')}
+                  disabled={inherited}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dp-inn" className="gap-1.5">
+                  {t('documentProfile.inn')}
+                  {inherited && <InheritedLockHint hint={inheritedHint} />}
+                </Label>
+                <Input
+                  id="dp-inn"
+                  value={form.inn}
+                  onChange={(e) => setForm({ ...form, inn: e.target.value })}
+                  disabled={inherited}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dp-accent">{t('documentProfile.accentColor')}</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="dp-accent"
+                    value={form.accent_color}
+                    onChange={(e) => setForm({ ...form, accent_color: e.target.value })}
+                    placeholder={PDF_ACCENT_COLOR_DEFAULT}
+                  />
+                  <Input
+                    type="color"
+                    aria-label={t('documentProfile.accentColor')}
+                    className="h-9 w-12 shrink-0 p-1"
+                    value={/^#[0-9a-fA-F]{6}$/.test(form.accent_color) ? form.accent_color : PDF_ACCENT_COLOR_DEFAULT}
+                    onChange={(e) => setForm({ ...form, accent_color: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="dp-legal-address" className="gap-1.5">
+                  {t('documentProfile.legalAddress')}
+                  {inherited && <InheritedLockHint hint={inheritedHint} />}
+                </Label>
+                <Textarea
+                  id="dp-legal-address"
+                  rows={2}
+                  value={form.legal_address}
+                  onChange={(e) => setForm({ ...form, legal_address: e.target.value })}
+                  disabled={inherited}
+                />
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="dp-bank" className="gap-1.5">
+                  {t('documentProfile.bankDetails')}
+                  {inherited && <InheritedLockHint hint={inheritedHint} />}
+                </Label>
+                <Textarea
+                  id="dp-bank"
+                  rows={3}
+                  value={form.bank_details}
+                  onChange={(e) => setForm({ ...form, bank_details: e.target.value })}
+                  placeholder={t('documentProfile.bankDetailsPlaceholder')}
+                  disabled={inherited}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dp-signatory-name" className="gap-1.5">
+                  {t('documentProfile.signatoryName')}
+                  {inherited && <InheritedLockHint hint={inheritedHint} />}
+                </Label>
+                <Input
+                  id="dp-signatory-name"
+                  value={form.signatory_name}
+                  onChange={(e) => setForm({ ...form, signatory_name: e.target.value })}
+                  disabled={inherited}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dp-signatory-position" className="gap-1.5">
+                  {t('documentProfile.signatoryPosition')}
+                  {inherited && <InheritedLockHint hint={inheritedHint} />}
+                </Label>
+                <Input
+                  id="dp-signatory-position"
+                  value={form.signatory_position}
+                  onChange={(e) => setForm({ ...form, signatory_position: e.target.value })}
+                  disabled={inherited}
+                />
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="dp-footer">{t('documentProfile.footerText')}</Label>
+                <Textarea
+                  id="dp-footer"
+                  rows={2}
+                  value={form.footer_text}
+                  onChange={(e) => setForm({ ...form, footer_text: e.target.value })}
+                  placeholder={t('documentProfile.footerTextPlaceholder')}
+                />
+              </div>
+            </div>
+
+            <Separator />
+            <div className="space-y-3">
+              <h4 className="text-sm font-semibold text-foreground">{t('documentProfile.toggles')}</h4>
+              {toggleRow('show_logo', 'documentProfile.showLogo', 'documentProfile.showLogoHint')}
+              {toggleRow('show_lead_time', 'documentProfile.showLeadTime', 'documentProfile.showLeadTimeHint')}
+              {toggleRow('show_fx_note', 'documentProfile.showFxNote', 'documentProfile.showFxNoteHint')}
+            </div>
+
+            <Button onClick={() => saveMut.mutate(form)} disabled={saveMut.isPending}>
+              {saveMut.isPending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+              {t('common.save')}
+            </Button>
           </div>
-          <p className="text-xs text-muted-foreground">{t('documentProfile.previewHint')}</p>
-          {/* allow-same-origin lets Chrome actually PAINT the srcDoc (an opaque-origin
-              sandbox="" renders blank); scripts stay blocked (no allow-scripts) so any markup
-              a seller injects into their requisites can't execute in the preview. */}
-          <iframe
-            title={t('documentProfile.preview')}
-            srcDoc={previewQuery.data ?? ''}
-            sandbox="allow-same-origin"
-            className="h-[70vh] w-full rounded-lg border border-border bg-white"
-          />
+
+          <div className="space-y-2 lg:sticky lg:top-4 lg:self-start">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-semibold text-foreground">{t('documentProfile.preview')}</h4>
+              {previewQuery.isFetching && (
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-hidden="true" />
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">{t('documentProfile.previewHint')}</p>
+            {/* allow-same-origin lets Chrome actually PAINT the srcDoc (an opaque-origin
+                sandbox="" renders blank); scripts stay blocked (no allow-scripts) so any markup
+                a seller injects into their requisites can't execute in the preview.
+                bg-white is intentional (justified Rule 4 exception): the iframe shows the A4
+                КП document and paper is white in BOTH UI themes — a semantic token would
+                tint the "paper" in dark mode. */}
+            <iframe
+              title={t('documentProfile.preview')}
+              srcDoc={previewQuery.data ?? ''}
+              sandbox="allow-same-origin"
+              className="h-[70vh] w-full rounded-lg border border-border bg-white"
+            />
+          </div>
         </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 }
 
