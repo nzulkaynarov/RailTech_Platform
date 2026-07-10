@@ -2482,10 +2482,6 @@
       "standardMargin": "Standard margin (%)",
       "exchangeRate": "USD→UZS exchange rate",
       "platformName": "Platform name",
-      "maintenance": "Maintenance mode",
-      "maintenanceDesc": "Temporarily disable access for non-admins",
-      "twoFactor": "Require 2FA",
-      "twoFactorDesc": "Two-factor authentication for all users",
       "save": "Save",
       "saved": "Settings saved",
       "saveFailed": "Failed to save"

@@ -19,8 +19,8 @@ _Статус: спецификация к реализации. Дата: 2026-
 2FA (`core/urls.py:192-195`), сессии (`accounts/views/users.py:157-179`), system settings (`core/views/settings.py`), company settings / document profile / charge templates (`accountsApi.ts:293-345`). Моков нет.
 
 ### 1.3 Мёртвый / неработающий функционал (ПОДТВЕРЖДЕНО)
-1. **`maintenance_mode`** — переключатель в PlatformSettings (SettingsPage.tsx:256-262) сохраняется в БД, но **ни одна middleware/код в backend его не читает**. Ничего не делает.
-2. **`is_two_factor_required`** — переключатель (:263-269) сохраняется, но login-flow его **не читает** (только определение поля `core/models.py:68` + serializer/admin). Ничего не делает.
+1. **`maintenance_mode`** — переключатель в PlatformSettings (SettingsPage.tsx:256-262) сохраняется в БД, но **ни одна middleware/код в backend его не читает**. Ничего не делает. **Решено в PR 5 (вариант Б): убран из UI, поле БД `core.SystemSettings.maintenance_mode` зарезервировано.**
+2. **`is_two_factor_required`** — переключатель (:263-269) сохраняется, но login-flow его **не читает** (только определение поля `core/models.py:68` + serializer/admin). Ничего не делает. **Решено в PR 5 (вариант Б): убран из UI, поле БД `core.SystemSettings.is_two_factor_required` зарезервировано.**
 
 ### 1.4 Нарушения дизайн-системы (исправить в ходе редизайна)
 - `TwoFactorAuth.tsx:73` — `text-green-600` / `text-amber-500` → `text-success` / `text-warning`.
