@@ -601,6 +601,7 @@ cryptography==49.0.0 \
     --hash=sha256:fc1e275c2f1d97b1a6450b8b0ea3ebfa6e087a611c2b26cb2404d48588abab7b
     # via
     #   -c requirements.txt
+    #   -r requirements.in
     #   autobahn
     #   pyopenssl
     #   service-identity
