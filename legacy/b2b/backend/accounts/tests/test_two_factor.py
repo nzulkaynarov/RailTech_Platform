@@ -16,6 +16,8 @@ from django.core.cache import cache
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
 
+from accounts.services.two_factor import decrypt_totp_secret, encrypt_totp_secret
+
 # Isolated in-memory cache so throttle/lockout history never leaks across tests.
 LOCMEM = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
 
@@ -39,14 +41,20 @@ def _auth_client(user):
 
 
 def _enable_2fa(user):
-    user.totp_secret = pyotp.random_base32()
+    plain_secret = pyotp.random_base32()
+    user.totp_secret = encrypt_totp_secret(plain_secret)
     user.is_2fa_enabled = True
     user.save(update_fields=["totp_secret", "is_2fa_enabled"])
-    return user.totp_secret
+    return plain_secret
 
 
 def _login(client, email, password=PASSWORD, **extra):
-    return client.post("/api/v1/auth/token/", {"email": email, "password": password}, format="json", **extra)
+    return client.post(
+        "/api/v1/auth/token/",
+        {"email": email, "password": password},
+        format="json",
+        **extra,
+    )
 
 
 @pytest.mark.django_db
@@ -66,14 +74,21 @@ class TestTotpSetup:
         verify = client.post("/api/v1/auth/2fa/verify/", {"secret": secret, "code": code}, format="json")
         assert verify.status_code == 200
         user.refresh_from_db()
-        assert user.is_2fa_enabled and user.totp_secret == secret
+        assert user.is_2fa_enabled
+        # Encrypted at rest: the DB never holds the raw base32 secret.
+        assert user.totp_secret != secret
+        assert decrypt_totp_secret(user.totp_secret) == secret
 
     def test_verify_rejects_wrong_code(self, user_factory):
         user = user_factory()
         client = _auth_client(user)
         secret = pyotp.random_base32()
 
-        resp = client.post("/api/v1/auth/2fa/verify/", {"secret": secret, "code": "000000"}, format="json")
+        resp = client.post(
+            "/api/v1/auth/2fa/verify/",
+            {"secret": secret, "code": "000000"},
+            format="json",
+        )
         assert resp.status_code == 400
         assert resp.data["detail"] == "2FA_INVALID_CODE"
         user.refresh_from_db()
@@ -101,7 +116,11 @@ class TestTotpSetup:
         assert bad.status_code == 400
         assert bad.data["detail"] == "2FA_INVALID_CODE"
 
-        good = client.post("/api/v1/auth/2fa/disable/", {"code": pyotp.TOTP(secret).now()}, format="json")
+        good = client.post(
+            "/api/v1/auth/2fa/disable/",
+            {"code": pyotp.TOTP(secret).now()},
+            format="json",
+        )
         assert good.status_code == 200
         user.refresh_from_db()
         assert not user.is_2fa_enabled and user.totp_secret is None
@@ -144,13 +163,19 @@ class TestTwoStepLogin:
         client = APIClient()
         ticket = _login(client, user.email).data["temp_token"]
 
-        resp = client.post("/api/v1/auth/login/2fa/", {"temp_token": ticket, "code": "000000"}, format="json")
+        resp = client.post(
+            "/api/v1/auth/login/2fa/",
+            {"temp_token": ticket, "code": "000000"},
+            format="json",
+        )
         assert resp.status_code == 400
         assert resp.data["detail"] == "2FA_INVALID_CODE"
 
     def test_garbage_ticket_is_rejected(self):
         resp = APIClient().post(
-            "/api/v1/auth/login/2fa/", {"temp_token": "not-a-ticket", "code": "123456"}, format="json"
+            "/api/v1/auth/login/2fa/",
+            {"temp_token": "not-a-ticket", "code": "123456"},
+            format="json",
         )
         assert resp.status_code == 400
         assert resp.data["detail"] == "2FA_TICKET_INVALID"
@@ -193,3 +218,45 @@ class TestTwoStepLogin:
         resp = _auth_client(user).get("/api/v1/accounts/users/me/")
         assert resp.status_code == 200
         assert resp.data["is_2fa_enabled"] is True
+
+
+@pytest.mark.django_db
+class TestSecretEncryption:
+    def test_legacy_plaintext_secret_still_logs_in(self, user_factory):
+        """A row written before migration 0039 (raw base32) keeps working mid-deploy:
+        decrypt_totp_secret passes an undecryptable value through unchanged."""
+        user = user_factory()
+        plain_secret = pyotp.random_base32()
+        user.totp_secret = plain_secret
+        user.is_2fa_enabled = True
+        user.save(update_fields=["totp_secret", "is_2fa_enabled"])
+
+        client = APIClient()
+        ticket = _login(client, user.email).data["temp_token"]
+        resp = client.post(
+            "/api/v1/auth/login/2fa/",
+            {"temp_token": ticket, "code": pyotp.TOTP(plain_secret).now()},
+            format="json",
+        )
+        assert resp.status_code == 200
+        assert resp.data.get("access")
+
+    def test_disable_works_with_encrypted_secret(self, user_factory):
+        user = user_factory()
+        plain_secret = _enable_2fa(user)
+        resp = _auth_client(user).post(
+            "/api/v1/auth/2fa/disable/",
+            {"code": pyotp.TOTP(plain_secret).now()},
+            format="json",
+        )
+        assert resp.status_code == 200
+        user.refresh_from_db()
+        assert not user.is_2fa_enabled and user.totp_secret is None
+
+    def test_round_trip_and_garbage_pass_through(self):
+        plain_secret = pyotp.random_base32()
+        stored = encrypt_totp_secret(plain_secret)
+        assert stored != plain_secret
+        assert decrypt_totp_secret(stored) == plain_secret
+        # Undecryptable input (legacy plaintext / rotated SECRET_KEY) comes back verbatim.
+        assert decrypt_totp_secret("not-a-fernet-token") == "not-a-fernet-token"

@@ -11,11 +11,19 @@ The ticket is a salted, timestamped signature of the user id — it proves "pass
 already verified" for TICKET_MAX_AGE seconds and nothing else. Brute-forcing the
 6-digit code during that window is blunted by the per-IP `login` throttle plus the
 SEC-06 per-account lockout (both applied by the view, same as password login).
+
+The TOTP secret is encrypted at rest (Fernet, key derived from SECRET_KEY) — a DB
+dump/SQLi read must not be enough to mint valid codes. Rotating SECRET_KEY makes
+stored secrets undecryptable: those users' codes stop matching and they must
+re-enroll (support disables 2FA after identity re-verification).
 """
 
+import base64
 import binascii
+import hashlib
 
 import pyotp
+from cryptography.fernet import Fernet, InvalidToken
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.signing import BadSignature, SignatureExpired, TimestampSigner
@@ -33,6 +41,26 @@ _TICKET_SALT = "accounts.two_factor.login"
 
 def _signer() -> TimestampSigner:
     return TimestampSigner(salt=_TICKET_SALT)
+
+
+def _fernet() -> Fernet:
+    key = base64.urlsafe_b64encode(hashlib.sha256(settings.SECRET_KEY.encode()).digest())
+    return Fernet(key)
+
+
+def encrypt_totp_secret(plain_secret: str) -> str:
+    return _fernet().encrypt(plain_secret.encode()).decode()
+
+
+def decrypt_totp_secret(stored_secret: str) -> str:
+    """Stored → plaintext base32. A value that doesn't decrypt is passed through
+    as-is: it's either a legacy plaintext row (pre-encryption, migration 0039 not
+    yet applied mid-deploy) — which then verifies fine — or garbage after a
+    SECRET_KEY rotation, which pyotp rejects as a failed code, never a 500."""
+    try:
+        return _fernet().decrypt(stored_secret.encode()).decode()
+    except InvalidToken:
+        return stored_secret
 
 
 def _code_matches(secret: str, code: str) -> bool:
@@ -67,7 +95,7 @@ def enable_totp(user, secret: str, code: str) -> str | None:
         return "2FA_CODE_REQUIRED"
     if not _code_matches(secret, code):
         return "2FA_INVALID_CODE"
-    user.totp_secret = secret
+    user.totp_secret = encrypt_totp_secret(secret)
     user.is_2fa_enabled = True
     user.save(update_fields=["totp_secret", "is_2fa_enabled"])
     return None
@@ -79,7 +107,7 @@ def disable_totp(user, code: str) -> str | None:
         return None  # already off — idempotent
     if not code:
         return "2FA_CODE_REQUIRED"
-    if not _code_matches(user.totp_secret, code):
+    if not _code_matches(decrypt_totp_secret(user.totp_secret), code):
         return "2FA_INVALID_CODE"
     user.is_2fa_enabled = False
     user.totp_secret = None
@@ -107,7 +135,7 @@ def redeem_login_ticket(temp_token: str, code: str):
     user = get_user_model().objects.filter(pk=user_id, is_active=True).first()
     if user is None or not user.is_2fa_enabled or not user.totp_secret:
         return None, "2FA_TICKET_INVALID"
-    if not _code_matches(user.totp_secret, code):
+    if not _code_matches(decrypt_totp_secret(user.totp_secret), code):
         return user, "2FA_INVALID_CODE"
     return user, None
 
