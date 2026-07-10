@@ -8,7 +8,6 @@ import { toast } from 'sonner';
 import { ShieldCheck } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,8 +23,6 @@ export function PlatformSettings() {
   const [standardMargin, setStandardMargin] = useState('');
   const [exchangeRate, setExchangeRate] = useState('');
   const [platformName, setPlatformName] = useState('');
-  const [maintenanceMode, setMaintenanceMode] = useState(false);
-  const [twoFactor, setTwoFactor] = useState(false);
 
   useEffect(() => {
     if (data) {
@@ -33,8 +30,6 @@ export function PlatformSettings() {
       setStandardMargin(data.standard_margin ?? '');
       setExchangeRate(data.exchange_rate_usd_uzs ?? '');
       setPlatformName(data.platform_name ?? '');
-      setMaintenanceMode(Boolean(data.maintenance_mode));
-      setTwoFactor(Boolean(data.is_two_factor_required));
     }
   }, [data]);
 
@@ -45,8 +40,6 @@ export function PlatformSettings() {
         standard_margin: standardMargin,
         exchange_rate_usd_uzs: exchangeRate,
         platform_name: platformName,
-        maintenance_mode: maintenanceMode,
-        is_two_factor_required: twoFactor,
       });
       toast.success(t('settings.platform.saved'));
     } catch {
@@ -85,21 +78,6 @@ export function PlatformSettings() {
                 <Label>{t('settings.platform.platformName')}</Label>
                 <Input value={platformName} onChange={(e) => setPlatformName(e.target.value)} />
               </div>
-            </div>
-
-            <div className="flex items-center justify-between rounded-lg border p-3">
-              <div>
-                <p className="text-sm font-medium">{t('settings.platform.maintenance')}</p>
-                <p className="text-xs text-muted-foreground">{t('settings.platform.maintenanceDesc')}</p>
-              </div>
-              <Switch checked={maintenanceMode} onCheckedChange={setMaintenanceMode} />
-            </div>
-            <div className="flex items-center justify-between rounded-lg border p-3">
-              <div>
-                <p className="text-sm font-medium">{t('settings.platform.twoFactor')}</p>
-                <p className="text-xs text-muted-foreground">{t('settings.platform.twoFactorDesc')}</p>
-              </div>
-              <Switch checked={twoFactor} onCheckedChange={setTwoFactor} />
             </div>
 
             <Button onClick={handleSave} disabled={updateMut.isPending}>
