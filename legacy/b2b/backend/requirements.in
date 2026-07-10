@@ -96,6 +96,8 @@ anthropic>=0.111,<1
 pytest>=9.0
 pytest-django>=4.12
 pytest-cov>=4.1
-pyotp
+
+# 2FA (TOTP) — accounts profile security
+pyotp>=2.9
 qrcode
 greenlet
