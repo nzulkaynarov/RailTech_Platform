@@ -8,6 +8,7 @@ import { accountsApi } from '@/api/accountsApi';
 import { useAuthStore } from '@/store/authStore';
 import { useHasCompanyPermission } from '@/hooks/useCapabilities';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
@@ -78,8 +79,9 @@ export function CompanyNumberingSettings() {
     );
   }
 
+  // §2.4 reading-form pattern: section header left, form card right with a width cap.
   return (
-    <div className="space-y-6">
+    <div className="grid items-start gap-6 lg:grid-cols-[240px_1fr]">
       <div>
         <h3 className="flex items-center gap-2 text-xl font-bold text-foreground">
           <Hash className="h-5 w-5 text-primary" aria-hidden="true" />
@@ -88,31 +90,37 @@ export function CompanyNumberingSettings() {
         <p className="mt-1 text-sm text-muted-foreground">{t('companyNumbering.subtitle')}</p>
       </div>
 
-      <div className="max-w-md space-y-2">
-        <Label htmlFor="cn-prefix">{t('companyNumbering.prefix')}</Label>
-        <Input
-          id="cn-prefix"
-          value={prefix}
-          maxLength={16}
-          onChange={(e) => setPrefix(e.target.value.replace(/[^A-Za-z0-9_-]/g, ''))}
-          placeholder={t('companyNumbering.prefixPlaceholder')}
-        />
-        <p className="text-xs text-muted-foreground">{t('companyNumbering.prefixHelp')}</p>
-      </div>
+      <Card className="min-w-0 max-w-2xl">
+        <CardContent className="space-y-6">
+          <div className="max-w-md space-y-2">
+            <Label htmlFor="cn-prefix">{t('companyNumbering.prefix')}</Label>
+            <Input
+              id="cn-prefix"
+              value={prefix}
+              maxLength={16}
+              onChange={(e) => setPrefix(e.target.value.replace(/[^A-Za-z0-9_-]/g, ''))}
+              placeholder={t('companyNumbering.prefixPlaceholder')}
+            />
+            <p className="text-xs text-muted-foreground">{t('companyNumbering.prefixHelp')}</p>
+          </div>
 
-      <div className="rounded-lg border border-border bg-muted/40 p-4">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          {t('companyNumbering.previewLabel')}
-        </p>
-        <p className="mt-1 font-mono text-lg font-semibold text-foreground">
-          {buildPreview(prefix, year)}
-        </p>
-      </div>
+          <div className="rounded-lg border border-border bg-muted/40 p-4">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {t('companyNumbering.previewLabel')}
+            </p>
+            <p className="mt-1 font-mono text-lg font-semibold text-foreground">
+              {buildPreview(prefix, year)}
+            </p>
+          </div>
+        </CardContent>
 
-      <Button onClick={() => saveMut.mutate(prefix.trim().slice(0, 16))} disabled={saveMut.isPending}>
-        {saveMut.isPending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-        {t('common.save')}
-      </Button>
+        <CardFooter>
+          <Button onClick={() => saveMut.mutate(prefix.trim().slice(0, 16))} disabled={saveMut.isPending}>
+            {saveMut.isPending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+            {t('common.save')}
+          </Button>
+        </CardFooter>
+      </Card>
     </div>
   );
 }
