@@ -1,6 +1,9 @@
 /**
- * Секция «Безопасность» Settings Hub — контент перенесён из ProfilePage (таб security)
- * как есть (spec PR 1): смена пароля (Dialog) + 2FA + активные сессии. Редизайн — PR 2.
+ * Секция «Безопасность» Settings Hub — карточный layout (spec §3 PR 2):
+ * двухколоночный паттерн §2.4 (слева заголовок+описание секции), справа карточки
+ * пароля и 2FA с капом ширины; список активных сессий — full width
+ * (memory-стандарт ширины: данные/таблицы заполняют viewport).
+ * Смена пароля и 2FA-флоу (setup→verify→disable) функционально не менялись.
  */
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -50,16 +53,34 @@ function PasswordChangeForm({ onClose }: { onClose: () => void }) {
     <>
       <div className="space-y-4 py-2">
         <div className="space-y-2">
-          <Label>{t('profile.passwordDialog.currentPassword')}</Label>
-          <Input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
+          <Label htmlFor="current-password">{t('profile.passwordDialog.currentPassword')}</Label>
+          <Input
+            id="current-password"
+            type="password"
+            autoComplete="current-password"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+          />
         </div>
         <div className="space-y-2">
-          <Label>{t('profile.passwordDialog.newPassword')}</Label>
-          <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+          <Label htmlFor="new-password">{t('profile.passwordDialog.newPassword')}</Label>
+          <Input
+            id="new-password"
+            type="password"
+            autoComplete="new-password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+          />
         </div>
         <div className="space-y-2">
-          <Label>{t('profile.passwordDialog.confirmPassword')}</Label>
-          <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+          <Label htmlFor="confirm-password">{t('profile.passwordDialog.confirmPassword')}</Label>
+          <Input
+            id="confirm-password"
+            type="password"
+            autoComplete="new-password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+          />
         </div>
       </div>
       <DialogFooter>
@@ -78,28 +99,35 @@ export function SecuritySection() {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">{t('profile.security.title')}</CardTitle>
-          <CardDescription>{t('profile.security.description')}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between rounded-lg border p-4">
-            <div className="flex items-center gap-3">
-              <KeyRound className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="text-sm font-medium">{t('profile.security.password')}</p>
-                <p className="text-xs text-muted-foreground">{t('profile.security.lastChanged')}</p>
-              </div>
-            </div>
-            <Button variant="outline" size="sm" onClick={() => setPasswordDialog(true)}>
-              {t('profile.security.change')}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid gap-6 md:grid-cols-[240px_1fr]">
+        {/* Левая колонка — заголовок и описание секции (§2.4) */}
+        <div className="space-y-1">
+          <h3 className="text-base font-semibold">{t('settings.security.sectionTitle')}</h3>
+          <p className="text-sm text-muted-foreground">{t('settings.security.sectionDescription')}</p>
+        </div>
 
-      <TwoFactorAuth />
+        {/* Правая колонка — карточки пароля и 2FA (кап ширины reading-форм) */}
+        <div className="min-w-0 max-w-2xl space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <KeyRound className="h-5 w-5 text-muted-foreground" />
+                <CardTitle className="text-base">{t('profile.security.password')}</CardTitle>
+              </div>
+              <CardDescription>{t('settings.security.passwordDescription')}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button variant="outline" size="sm" onClick={() => setPasswordDialog(true)}>
+                {t('profile.security.change')}
+              </Button>
+            </CardContent>
+          </Card>
+
+          <TwoFactorAuth />
+        </div>
+      </div>
+
+      {/* Активные сессии — данные, full width (§2.4: без капа ширины) */}
       <ActiveSessions />
 
       {/* Password Dialog */}
