@@ -96,6 +96,11 @@ anthropic>=0.111,<1
 pytest>=9.0
 pytest-django>=4.12
 pytest-cov>=4.1
-pyotp
+
+# 2FA (TOTP) — accounts profile security
+pyotp>=2.9
+# Direct import: TOTP secret encryption at rest (accounts/services/two_factor.py).
+# Was transitive-only (daphne→pyopenssl/autobahn); declare what we import.
+cryptography>=45
 qrcode
 greenlet
