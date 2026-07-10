@@ -2576,7 +2576,13 @@
       "delegationDesc": "Delegate permissions to employees by context",
       "configure": "Configure",
       "companyInfo": "Company Information",
-      "companyInfoDesc": "Name and details"
+      "companyInfoDesc": "Name and details",
+      "requisitesTitle": "Company details",
+      "requisitesDescription": "Logo, contact details and legal information",
+      "bankTitle": "Bank details",
+      "bankDescription": "Settlement account and bank MFO",
+      "kycTitle": "KYC documents",
+      "kycDescription": "Verification status and supporting documents"
     },
     "system": {
       "title": "System Settings",
@@ -2606,6 +2612,9 @@
       "sectionTitle": "Security",
       "sectionDescription": "Password, two-factor authentication and active account sessions",
       "passwordDescription": "Your password is used to sign in with your email. Update it regularly"
+    },
+    "documents": {
+      "inheritedFromCompany": "Inherited from the company profile"
     }
   },
   "sourcingHub": {
