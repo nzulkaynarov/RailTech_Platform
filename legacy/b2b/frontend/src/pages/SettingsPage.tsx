@@ -1,20 +1,26 @@
-import { useState, useEffect } from 'react';
+/**
+ * Settings Hub (spec: Docs/dev/specs/settings-profile-redesign.md, PR 1) — единственный
+ * хаб настроек: плоский список секций (buildSettingsSections, §2.2) в SettingsLayout
+ * вместо «табов над табами». Контент секций монтируется как есть (редизайн — PR 2-4);
+ * активная секция синхронизирована с `?section=` через useUrlState (deep-link + refresh).
+ */
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
-import { Store, Building2, ShieldCheck } from 'lucide-react';
+import { Store, Building2 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-
 
 import { useAuthStore } from '@/store/authStore';
 import { useUserStore, companyStatusLabels } from '@/store/userStore';
-import { useSystemSettings, useUpdateSystemSettings } from '@/hooks/useSystemSettings';
+import { useUrlState } from '@/hooks/useUrlState';
+import {
+  buildSettingsSections, defaultSettingsSection, type SettingsGateInput, type SettingsSectionKey,
+} from '@/config/settingsSections';
+import { SettingsLayout } from '@/components/Settings/SettingsLayout';
+import { ProfileSection } from '@/components/Settings/ProfileSection';
+import { SecuritySection } from '@/components/Settings/SecuritySection';
+import { PlatformSettings } from '@/components/Settings/PlatformSettings';
 import { CompanyTeamSettings } from '@/components/Cabinet/CompanyTeamSettings';
 import { ChargeTemplatesSettings } from '@/components/Cabinet/ChargeTemplatesSettings';
 import { CompanyDocumentProfileSettings } from '@/components/Cabinet/CompanyDocumentProfileSettings';
@@ -24,20 +30,19 @@ import { CompanyTab } from '@/components/Cabinet/CompanyTab';
 
 export function SettingsPage() {
   const { t } = useTranslation();
-  const { role, company, capabilities } = useUserStore();
+  const { role, capabilities } = useUserStore();
   const isOwner = useAuthStore((s) => s.user?.workspace_role === 'OWNER');
   const isAdmin = role === 'ADMIN';
-  // ADR-0005 U2: gate the company-admin hub on the CompanyRole PERMISSION, not WorkspaceRole
-  // OWNER + seller-context. This (a) lets a delegated «Администратор компании» (settings.edit /
-  // charge_templates.manage) without the OWNER WorkspaceRole reach the hub the backend already
-  // authorizes them for, and (b) stops a dual buyer+seller owner losing the hub in BUYER context.
-  // Fallback to isOwner when permission data is absent (old /me payload); backend still enforces.
-  const perms = capabilities.permissions;
-  const canEditCompany = isOwner || perms.includes('settings.edit') || perms.includes('charge_templates.manage');
-  // Fake rows trimmed — currency/timezone/dateFormat/density/sidebar didn't
-  // feed back into any consumer and made the panel feel like a mock. Only
-  // Language (i18next) and Theme (themeStore) actually change the UI.
-  const defaultTab = isAdmin ? 'platform' : (canEditCompany ? 'companyAdmin' : 'team');
+  const gate: SettingsGateInput = { isAdmin, isOwner, capabilities };
+  const sections = buildSettingsSections(gate);
+
+  // `?section=` живёт в search-части URL (useUrlState), hash остаётся `#settings` —
+  // deep-link и refresh сохраняют секцию; невидимая/неизвестная секция → дефолт.
+  const { get, set } = useUrlState();
+  const urlSection = get('section');
+  const activeSection: SettingsSectionKey = sections.some((section) => section.key === urlSection)
+    ? (urlSection as SettingsSectionKey)
+    : defaultSettingsSection(gate);
 
   return (
     <div className="flex flex-col gap-6">
@@ -46,233 +51,85 @@ export function SettingsPage() {
         <p className="text-sm text-muted-foreground mt-1">{t('settings.subtitle')}</p>
       </div>
 
-      <Tabs defaultValue={defaultTab}>
-        <TabsList>
-          {/* Company-Admin hub — company business config (defaults, numbering, templates,
-              document profile). Gated on the settings.edit / charge_templates.manage PERMISSION. */}
-          {!isAdmin && canEditCompany && (
-            <TabsTrigger value="companyAdmin">{t('settings.tabs.companyAdmin')}</TabsTrigger>
-          )}
-          {/* Workspace members manage their team here; the OWNER also gets the
-              invite form (gated inside CompanyTeamSettings). Hidden for Platform Admin. */}
-          {!isAdmin && <TabsTrigger value="team">{t('settings.tabs.team')}</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="company">{t('settings.tabs.company')}</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="platform">{t('settings.tabs.platform')}</TabsTrigger>}
-        </TabsList>
-
-
-        {/* Company-Admin hub — one coherent place for the company's КП defaults, document
-            numbering, charge templates and document profile. Gated on settings.edit /
-            charge_templates.manage (U2), not WorkspaceRole — so a delegated company admin sees it. */}
-        {!isAdmin && canEditCompany && (
-          <TabsContent value="companyAdmin" className="space-y-4">
-            <CompanyAdminHub canSell={capabilities.can_sell} />
-          </TabsContent>
-        )}
-
-        {/* Team — invite/manage company members (OWNER) or view team (members) */}
-        {!isAdmin && (
-          <TabsContent value="team" className="space-y-4">
-            <CompanyTeamSettings />
-          </TabsContent>
-        )}
-
-        {/* Platform (Admin only) — full SystemSettings CRUD */}
-        {isAdmin && (
-          <TabsContent value="platform" className="space-y-4">
-            <PlatformSettings />
-          </TabsContent>
-        )}
-
-        {/* Company context (Admin only) — read-only preview */}
-        {isAdmin && (
-          <TabsContent value="company" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">{t('settings.company.title')}</CardTitle>
-                <CardDescription>{t('settings.company.description')}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between rounded-lg border p-4">
-                  <div className="flex items-center gap-3">
-                    <Building2 className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm font-medium">{t('settings.company.statuses')}</p>
-                      <p className="text-xs text-muted-foreground">{t('settings.company.statusesDesc')}</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-1.5">
-                    {company.statusEntries.length === 0
-                      ? <span className="text-xs text-muted-foreground">—</span>
-                      : company.statusEntries.map((entry) => (
-                          <Badge key={entry.status} variant="secondary" className="text-xs">
-                            {t(companyStatusLabels[entry.status])}
-                            {entry.verification === 'pending' && ` (${t('settings.company.pending')})`}
-                          </Badge>
-                        ))}
-                  </div>
-                </div>
-                <div className="flex items-center justify-between rounded-lg border p-4">
-                  <div className="flex items-center gap-3">
-                    <Store className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm font-medium">{t('settings.company.companyInfo')}</p>
-                      <p className="text-xs text-muted-foreground">{t('settings.company.companyInfoDesc')}</p>
-                    </div>
-                  </div>
-                  <Badge variant="outline" className="text-xs">
-                    {company.name || '—'}
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        )}
-      </Tabs>
+      <SettingsLayout
+        sections={sections.map((section) => ({ key: section.key, label: t(section.labelKey) }))}
+        activeSection={activeSection}
+        onSelectSection={(key) => set({ section: key })}
+      >
+        <SectionContent sectionKey={activeSection} isAdmin={isAdmin} />
+      </SettingsLayout>
     </div>
   );
 }
 
-/**
- * Seller Company-Admin hub — consolidates the company's business config (КП defaults,
- * document numbering, charge templates, document profile) under one tab with a nested
- * sub-navigation. Each sub-section is wired to its own OWNER-gated endpoint.
- */
-function CompanyAdminHub({ canSell }: { canSell: boolean }) {
-  const { t } = useTranslation();
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">{t('settings.companyAdmin.title')}</CardTitle>
-        <CardDescription>{t('settings.companyAdmin.description')}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="flex-wrap">
-            <TabsTrigger value="profile">{t('profile.tabs.company')}</TabsTrigger>
-            {canSell && <TabsTrigger value="documentProfile">{t('settings.tabs.documentProfile')}</TabsTrigger>}
-            {canSell && <TabsTrigger value="defaults">{t('settings.tabs.defaults')}</TabsTrigger>}
-            {canSell && <TabsTrigger value="numbering">{t('settings.tabs.numbering')}</TabsTrigger>}
-            {canSell && <TabsTrigger value="templates">{t('settings.tabs.templates')}</TabsTrigger>}
-          </TabsList>
-
-          <TabsContent value="profile" className="mt-4">
-            <CompanyTab />
-          </TabsContent>
-          {canSell && (
-            <>
-              <TabsContent value="documentProfile" className="mt-4">
-                <CompanyDocumentProfileSettings />
-              </TabsContent>
-              <TabsContent value="defaults" className="mt-4">
-                <CompanyDefaultsSettings />
-              </TabsContent>
-              <TabsContent value="numbering" className="mt-4">
-                <CompanyNumberingSettings />
-              </TabsContent>
-              <TabsContent value="templates" className="mt-4">
-                <ChargeTemplatesSettings />
-              </TabsContent>
-            </>
-          )}
-        </Tabs>
-      </CardContent>
-    </Card>
-  );
+/** Маппинг секция → существующий компонент (монтируется как есть, spec PR 1). */
+function SectionContent({ sectionKey, isAdmin }: { sectionKey: SettingsSectionKey; isAdmin: boolean }): ReactNode {
+  switch (sectionKey) {
+    case 'profile':
+      return <ProfileSection />;
+    case 'security':
+      return <SecuritySection />;
+    case 'company':
+      // ADMIN — read-only превью (прежний admin-таб company); tenant — CompanyTab.
+      return isAdmin ? <AdminCompanyPreview /> : <CompanyTab />;
+    case 'documents':
+      return <CompanyDocumentProfileSettings />;
+    case 'defaults':
+      return <CompanyDefaultsSettings />;
+    case 'numbering':
+      return <CompanyNumberingSettings />;
+    case 'templates':
+      return <ChargeTemplatesSettings />;
+    case 'team':
+      return <CompanyTeamSettings />;
+    case 'platform':
+      return <PlatformSettings />;
+  }
 }
 
-function PlatformSettings() {
+/** Read-only превью компании для Platform Operator — перенесено из прежнего таба company как есть. */
+function AdminCompanyPreview() {
   const { t } = useTranslation();
-  const { data, isLoading } = useSystemSettings();
-  const updateMut = useUpdateSystemSettings();
-
-  const [vatRate, setVatRate] = useState('');
-  const [standardMargin, setStandardMargin] = useState('');
-  const [exchangeRate, setExchangeRate] = useState('');
-  const [platformName, setPlatformName] = useState('');
-  const [maintenanceMode, setMaintenanceMode] = useState(false);
-  const [twoFactor, setTwoFactor] = useState(false);
-
-  useEffect(() => {
-    if (data) {
-      setVatRate(data.vat_rate ?? '');
-      setStandardMargin(data.standard_margin ?? '');
-      setExchangeRate(data.exchange_rate_usd_uzs ?? '');
-      setPlatformName(data.platform_name ?? '');
-      setMaintenanceMode(Boolean(data.maintenance_mode));
-      setTwoFactor(Boolean(data.is_two_factor_required));
-    }
-  }, [data]);
-
-  const handleSave = async () => {
-    try {
-      await updateMut.mutateAsync({
-        vat_rate: vatRate,
-        standard_margin: standardMargin,
-        exchange_rate_usd_uzs: exchangeRate,
-        platform_name: platformName,
-        maintenance_mode: maintenanceMode,
-        is_two_factor_required: twoFactor,
-      });
-      toast.success(t('settings.platform.saved'));
-    } catch {
-      toast.error(t('settings.platform.saveFailed'));
-    }
-  };
+  const company = useUserStore((s) => s.company);
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base flex items-center gap-2">
-          <ShieldCheck className="h-4 w-4" />
-          {t('settings.platform.title')}
-        </CardTitle>
-        <CardDescription>{t('settings.platform.description')}</CardDescription>
+        <CardTitle className="text-base">{t('settings.company.title')}</CardTitle>
+        <CardDescription>{t('settings.company.description')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {isLoading ? (
-          <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
-        ) : (
-          <>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>{t('settings.platform.vatRate')}</Label>
-                <Input type="number" step="0.01" value={vatRate} onChange={(e) => setVatRate(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>{t('settings.platform.standardMargin')}</Label>
-                <Input type="number" step="0.01" value={standardMargin} onChange={(e) => setStandardMargin(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>{t('settings.platform.exchangeRate')}</Label>
-                <Input type="number" step="0.0001" value={exchangeRate} onChange={(e) => setExchangeRate(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>{t('settings.platform.platformName')}</Label>
-                <Input value={platformName} onChange={(e) => setPlatformName(e.target.value)} />
-              </div>
+        <div className="flex items-center justify-between rounded-lg border p-4">
+          <div className="flex items-center gap-3">
+            <Building2 className="h-5 w-5 text-muted-foreground" />
+            <div>
+              <p className="text-sm font-medium">{t('settings.company.statuses')}</p>
+              <p className="text-xs text-muted-foreground">{t('settings.company.statusesDesc')}</p>
             </div>
-
-            <div className="flex items-center justify-between rounded-lg border p-3">
-              <div>
-                <p className="text-sm font-medium">{t('settings.platform.maintenance')}</p>
-                <p className="text-xs text-muted-foreground">{t('settings.platform.maintenanceDesc')}</p>
-              </div>
-              <Switch checked={maintenanceMode} onCheckedChange={setMaintenanceMode} />
+          </div>
+          <div className="flex gap-1.5">
+            {company.statusEntries.length === 0
+              ? <span className="text-xs text-muted-foreground">—</span>
+              : company.statusEntries.map((entry) => (
+                  <Badge key={entry.status} variant="secondary" className="text-xs">
+                    {t(companyStatusLabels[entry.status])}
+                    {entry.verification === 'pending' && ` (${t('settings.company.pending')})`}
+                  </Badge>
+                ))}
+          </div>
+        </div>
+        <div className="flex items-center justify-between rounded-lg border p-4">
+          <div className="flex items-center gap-3">
+            <Store className="h-5 w-5 text-muted-foreground" />
+            <div>
+              <p className="text-sm font-medium">{t('settings.company.companyInfo')}</p>
+              <p className="text-xs text-muted-foreground">{t('settings.company.companyInfoDesc')}</p>
             </div>
-            <div className="flex items-center justify-between rounded-lg border p-3">
-              <div>
-                <p className="text-sm font-medium">{t('settings.platform.twoFactor')}</p>
-                <p className="text-xs text-muted-foreground">{t('settings.platform.twoFactorDesc')}</p>
-              </div>
-              <Switch checked={twoFactor} onCheckedChange={setTwoFactor} />
-            </div>
-
-            <Button onClick={handleSave} disabled={updateMut.isPending}>
-              {t('settings.platform.save')}
-            </Button>
-          </>
-        )}
+          </div>
+          <Badge variant="outline" className="text-xs">
+            {company.name || '—'}
+          </Badge>
+        </div>
       </CardContent>
     </Card>
   );

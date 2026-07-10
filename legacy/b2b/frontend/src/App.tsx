@@ -21,7 +21,8 @@ import { ProfileCompletionForm } from './components/Cabinet/ProfileCompletionFor
 const ProductManagement = lazyWithRetry(() => import('./pages/ProductManagement').then(m => ({ default: m.ProductManagement })));
 const ProductDetail = lazyWithRetry(() => import('./pages/ProductDetail').then(m => ({ default: m.ProductDetail })));
 const Dashboard = lazyWithRetry(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
-const ProfilePage = lazyWithRetry(() => import('./pages/ProfilePage').then(m => ({ default: m.ProfilePage })));
+// ProfilePage слился с SettingsPage в единый Settings Hub (settings-profile-redesign, PR 1);
+// `#profile` остаётся рабочим deep-link'ом — алиас на `#settings?section=profile` (см. MainApp).
 const SettingsPage = lazyWithRetry(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
 // OnboardingPage and PendingVerificationPage removed — real auth flow via LoginPage + KYCRegistrationForm
 // Admin approves users via Django admin panel at /admin/
@@ -513,6 +514,22 @@ function MainApp() {
     };
   }, []);
 
+  // Legacy-алиас (settings-profile-redesign §2.1): `#profile` — рабочий deep-link на
+  // Settings Hub с секцией profile. Нормализуем URL в канонический вид
+  // `?section=profile` + `#settings` (useUrlState читает search-часть, не hash-query),
+  // replaceState — чтобы back/forward не возвращали на промежуточный `#profile`.
+  useEffect(() => {
+    if (page.type !== 'profile') return;
+    const params = new URLSearchParams(window.location.search);
+    params.set('section', 'profile');
+    window.history.replaceState(
+      { page: { type: 'settings' } },
+      '',
+      `${window.location.pathname}?${params.toString()}#settings`,
+    );
+    setPage({ type: 'settings' });
+  }, [page.type]);
+
   const handleProductClick = (productId: string) => {
     navigateTo({ type: 'product_detail', productId });
   };
@@ -602,7 +619,10 @@ function MainApp() {
       content = <ProductManagement onProductClick={handleProductClick} />;
       break;
     case 'profile':
-      content = <ProfilePage />;
+      // Транзитный кадр до срабатывания алиас-эффекта выше (#profile →
+      // #settings?section=profile) — рендерим сразу Settings Hub без мигания.
+      content = <SettingsPage />;
+      activePageId = 'settings';
       break;
     case 'settings':
       content = <SettingsPage />;
