@@ -436,12 +436,15 @@ export const accountsApi = {
 	},
 
 	// ─── Security & 2FA ───────────────────────────────────────────────
+	// Сессии живут под auth/ — HttpOnly refresh-кука ограничена path'ом
+	// /api/v1/auth/, и только там бэкенд видит текущий jti (is_current /
+	// «завершить остальные» щадит текущую сессию).
 	getActiveSessions: async () => {
-		const response = await apiClient.get<{ sessions: Session[] }>('accounts/users/me/sessions/');
+		const response = await apiClient.get<{ sessions: Session[] }>('auth/sessions/');
 		return response.data.sessions;
 	},
 	revokeAllSessions: async () => {
-		const response = await apiClient.post<{ revoked: number }>('accounts/users/me/sessions/revoke-all/');
+		const response = await apiClient.post<{ revoked: number }>('auth/sessions/revoke-all/');
 		return response.data;
 	},
 	setup2FA: async () => {

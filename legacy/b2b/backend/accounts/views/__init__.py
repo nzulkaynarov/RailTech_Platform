@@ -18,6 +18,8 @@ from accounts.views.auth import (  # noqa: F401
     MeView,
     RegisterView,
     ResetPasswordView,
+    SessionListView,
+    SessionsRevokeOthersView,
     SetupPasswordView,
     SubmitProfileView,
     ThrottledTokenObtainPairView,
@@ -61,6 +63,8 @@ __all__ = [
     "TOTPVerifyView",
     "TOTPDisableView",
     "TOTPLoginView",
+    "SessionListView",
+    "SessionsRevokeOthersView",
     # applications & subscriptions
     "SupplierSubscriptionViewSet",
     "CompanyRoleApplicationViewSet",

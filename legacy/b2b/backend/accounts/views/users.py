@@ -11,8 +11,7 @@ from rest_framework.response import Response
 
 from accounts import services
 from accounts.models import Company, CompanyMember, CustomUser
-from accounts.serializers import ActiveSessionSerializer, SelfUpdateSerializer, UserSerializer
-from accounts.services import sessions, two_factor
+from accounts.serializers import SelfUpdateSerializer, UserSerializer
 from core.permissions import OperatorScoped
 
 
@@ -152,41 +151,10 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer.save()
         return Response(serializer.data)
 
-    @extend_schema(
-        summary="Get active sessions",
-        description=(
-            "Live refresh tokens (sessions) for the current user. `is_current` marks "
-            "the session whose refresh token sits in this browser's HttpOnly cookie."
-        ),
-        responses={200: inline_serializer("SessionResponse", fields={"sessions": ActiveSessionSerializer(many=True)})},
-        tags=["Accounts"],
-    )
-    @action(detail=False, methods=["get"], url_path="me/sessions", permission_classes=[permissions.IsAuthenticated])
-    def my_sessions(self, request):
-        tokens = sessions.active_sessions(request.user)
-        serializer = ActiveSessionSerializer(
-            tokens, many=True, context={"current_jti": two_factor.refresh_cookie_jti(request)}
-        )
-        return Response({"sessions": serializer.data})
-
-    @extend_schema(
-        summary="Revoke all other sessions",
-        description=(
-            "Blacklist every live refresh token except the current browser's "
-            '(identified by the HttpOnly cookie), i.e. "log out everywhere else".'
-        ),
-        responses={200: inline_serializer("SessionsRevoked", fields={"revoked": drf_serializers.IntegerField()})},
-        tags=["Accounts"],
-    )
-    @action(
-        detail=False,
-        methods=["post"],
-        url_path="me/sessions/revoke-all",
-        permission_classes=[permissions.IsAuthenticated],
-    )
-    def revoke_all_sessions(self, request):
-        revoked = sessions.revoke_other_sessions(request.user, keep_jti=two_factor.refresh_cookie_jti(request))
-        return Response({"revoked": revoked})
+    # Session endpoints moved to /api/v1/auth/sessions/ (accounts/views/auth.py):
+    # the HttpOnly refresh cookie is path-scoped to REFRESH_COOKIE_PATH, so under
+    # /accounts/... the cookie never arrived — is_current was always false and
+    # revoke-all killed the caller's own session.
 
     @extend_schema(
         summary="Upload user avatar",

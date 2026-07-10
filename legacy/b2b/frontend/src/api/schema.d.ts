@@ -1252,46 +1252,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/accounts/users/me/sessions/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get active sessions
-         * @description Live refresh tokens (sessions) for the current user. `is_current` marks the session whose refresh token sits in this browser's HttpOnly cookie.
-         */
-        get: operations["accounts_users_me_sessions_retrieve"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/accounts/users/me/sessions/revoke-all/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Revoke all other sessions
-         * @description Blacklist every live refresh token except the current browser's (identified by the HttpOnly cookie), i.e. "log out everywhere else".
-         */
-        post: operations["accounts_users_me_sessions_revoke_all_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/accounts/users/update-me/": {
         parameters: {
             query?: never;
@@ -2012,6 +1972,46 @@ export interface paths {
          * @description Complete a password reset using uid + token from the email link.
          */
         post: operations["auth_reset_password_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/sessions/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get active sessions
+         * @description Live refresh tokens (sessions) for the current user. `is_current` marks the session whose refresh token sits in this browser's HttpOnly cookie.
+         */
+        get: operations["auth_sessions_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/sessions/revoke-all/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revoke all other sessions
+         * @description Blacklist every live refresh token except the current browser's (identified by the HttpOnly cookie), i.e. "log out everywhere else".
+         */
+        post: operations["auth_sessions_revoke_all_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -13269,50 +13269,6 @@ export interface operations {
             };
         };
     };
-    accounts_users_me_sessions_retrieve: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SessionResponse"];
-                };
-            };
-        };
-    };
-    accounts_users_me_sessions_revoke_all_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UserRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["UserRequest"];
-                "multipart/form-data": components["schemas"]["UserRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SessionsRevoked"];
-                };
-            };
-        };
-    };
     accounts_users_update_me_partial_update: {
         parameters: {
             query?: never;
@@ -14367,6 +14323,44 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    auth_sessions_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionResponse"];
+                };
+            };
+        };
+    };
+    auth_sessions_revoke_all_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionsRevoked"];
+                };
             };
         };
     };

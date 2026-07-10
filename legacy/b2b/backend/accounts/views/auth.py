@@ -32,6 +32,7 @@ def _clear_refresh_cookie(response) -> None:
 
 
 from accounts.serializers import (  # noqa: E402
+    ActiveSessionSerializer,
     ForgotPasswordSerializer,
     RegisterInterestSerializer,
     ResetPasswordSerializer,
@@ -45,6 +46,7 @@ from accounts.services import (  # noqa: E402
     reset_password,
     revoke_user_refresh_tokens,
     send_password_reset_email,
+    sessions,
     submit_company_profile,
     two_factor,
     verify_and_setup_password,
@@ -484,3 +486,57 @@ class TOTPLoginView(views.APIView):
         response = Response({"access": str(refresh.access_token)})
         _set_refresh_cookie(response, str(refresh))
         return response
+
+
+class SessionListView(views.APIView):
+    """GET /api/v1/auth/sessions/ — live refresh-token sessions of the caller.
+
+    Lives under /auth/ ON PURPOSE: the HttpOnly refresh cookie is path-scoped to
+    settings.REFRESH_COOKIE_PATH (/api/v1/auth/), so only under this prefix does
+    the browser send it and can two_factor.refresh_cookie_jti() resolve the
+    CURRENT session. The first version sat at /accounts/users/me/sessions where
+    the cookie never arrived: `is_current` was always false and revoke-all
+    blacklisted the caller's own session too (DRF's test client ignores cookie
+    paths, so tests never saw it). Pinned by test_active_sessions.py.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    @extend_schema(
+        summary="Get active sessions",
+        description=(
+            "Live refresh tokens (sessions) for the current user. `is_current` marks "
+            "the session whose refresh token sits in this browser's HttpOnly cookie."
+        ),
+        responses={200: inline_serializer("SessionResponse", fields={"sessions": ActiveSessionSerializer(many=True)})},
+        tags=["Auth"],
+    )
+    def get(self, request):
+        tokens = sessions.active_sessions(request.user)
+        serializer = ActiveSessionSerializer(
+            tokens, many=True, context={"current_jti": two_factor.refresh_cookie_jti(request)}
+        )
+        return Response({"sessions": serializer.data})
+
+
+class SessionsRevokeOthersView(views.APIView):
+    """POST /api/v1/auth/sessions/revoke-all/ — "log out everywhere else".
+
+    Same cookie-path constraint as SessionListView: outside /auth/ the current
+    jti is unresolvable and this endpoint would nuke the caller's own session.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    @extend_schema(
+        summary="Revoke all other sessions",
+        description=(
+            "Blacklist every live refresh token except the current browser's "
+            '(identified by the HttpOnly cookie), i.e. "log out everywhere else".'
+        ),
+        responses={200: inline_serializer("SessionsRevoked", fields={"revoked": serializers.IntegerField()})},
+        tags=["Auth"],
+    )
+    def post(self, request):
+        revoked = sessions.revoke_other_sessions(request.user, keep_jti=two_factor.refresh_cookie_jti(request))
+        return Response({"revoked": revoked})

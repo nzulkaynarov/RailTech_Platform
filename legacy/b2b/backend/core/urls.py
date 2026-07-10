@@ -25,6 +25,8 @@ from accounts.views import (
     PermissionCatalogView,
     RegisterView,
     ResetPasswordView,
+    SessionListView,
+    SessionsRevokeOthersView,
     SetupPasswordView,
     SubmitProfileView,
     SupplierSubscriptionViewSet,
@@ -189,6 +191,10 @@ urlpatterns = (
             )(CookieTokenRefreshView).as_view(),
             name="token_refresh",
         ),
+        # Sessions live under /auth/ — the HttpOnly refresh cookie is path-scoped to
+        # REFRESH_COOKIE_PATH and must reach these views (is_current / spare-current).
+        path("api/v1/auth/sessions/", SessionListView.as_view(), name="auth-sessions"),
+        path("api/v1/auth/sessions/revoke-all/", SessionsRevokeOthersView.as_view(), name="auth-sessions-revoke-all"),
         path("api/v1/auth/2fa/setup/", TOTPSetupView.as_view(), name="2fa-setup"),
         path("api/v1/auth/2fa/verify/", TOTPVerifyView.as_view(), name="2fa-verify"),
         path("api/v1/auth/2fa/disable/", TOTPDisableView.as_view(), name="2fa-disable"),
