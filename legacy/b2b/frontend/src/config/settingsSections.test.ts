@@ -26,6 +26,7 @@ function makeGate(overrides: Partial<SettingsGateInput> = {}): SettingsGateInput
     isAdmin: false,
     isOwner: false,
     capabilities: makeCapabilities(),
+    companySells: true,
     ...overrides,
   };
 }
@@ -56,6 +57,17 @@ describe('buildSettingsSections — матрица гейтинга (spec §2.2 
     const gate = makeGate({ isOwner: true, capabilities: makeCapabilities({ can_sell: false }) });
     expect(sectionKeys(gate)).toEqual(['profile', 'security', 'company', 'team']);
     expect(defaultSettingsSection(gate)).toBe('company');
+  });
+
+  it('OWNER CLIENT-only компании с can_sell=true у участника: seller-секции скрыты (§5.2)', () => {
+    // /me.capabilities.can_sell — флаг CompanyMember и не знает тип компании; без
+    // companySells такой OWNER видел documents/defaults/numbering/templates.
+    const gate = makeGate({
+      isOwner: true,
+      companySells: false,
+      capabilities: makeCapabilities({ can_sell: true }),
+    });
+    expect(sectionKeys(gate)).toEqual(['profile', 'security', 'company', 'team']);
   });
 
   it('член команды без прав: только profile/security/team', () => {

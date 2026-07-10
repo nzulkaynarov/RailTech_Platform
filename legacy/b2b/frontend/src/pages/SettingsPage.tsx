@@ -30,10 +30,13 @@ import { CompanyTab } from '@/components/Cabinet/CompanyTab';
 
 export function SettingsPage() {
   const { t } = useTranslation();
-  const { role, capabilities } = useUserStore();
+  const { role, capabilities, company } = useUserStore();
   const isOwner = useAuthStore((s) => s.user?.workspace_role === 'OWNER');
   const isAdmin = role === 'ADMIN';
-  const gate: SettingsGateInput = { isAdmin, isOwner, capabilities };
+  // Компания типизирована как продавец (SUPPLIER/MANUFACTURER → statusEntries !== BUYER).
+  // capabilities.can_sell — флаг участника и НЕ знает тип компании (см. settingsSections).
+  const companySells = company.statusEntries.some((entry) => entry.status !== 'BUYER');
+  const gate: SettingsGateInput = { isAdmin, isOwner, capabilities, companySells };
   const sections = buildSettingsSections(gate);
 
   // `?section=` живёт в search-части URL (useUrlState), hash остаётся `#settings` —

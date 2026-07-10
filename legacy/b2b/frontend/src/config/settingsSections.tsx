@@ -6,7 +6,12 @@
  * дизейблятся. Гейтинг воспроизводит прежний SettingsPage/ProfilePage байт-в-байт:
  *   - isAdmin = SystemRole ADMIN (Platform Operator, ADR-0002);
  *   - canEditCompany = OWNER || settings.edit || charge_templates.manage (ADR-0005 U2);
- *   - seller-секции (documents/defaults/numbering/templates) дополнительно за can_sell.
+ *   - seller-секции (documents/defaults/numbering/templates) за can_sell И companySells:
+ *     /me.capabilities.can_sell — флаг УЧАСТНИКА (CompanyMember.can_sell) и не знает тип
+ *     компании, поэтому один он показывал seller-секции OWNER'у CLIENT-only компании
+ *     (нарушение матрицы §5.2). companySells — компания типизирована как продавец
+ *     (SUPPLIER/MANUFACTURER в statusEntries); мягче nav'а (без требования verified),
+ *     чтобы свежий продавец мог настроить документы до одобрения KYC.
  * UX-гейтинг only — backend enforcement (member_has_permission / KYC / entitlements) независим.
  */
 import type { Capabilities } from '@/store/userStore';
@@ -35,6 +40,8 @@ export interface SettingsGateInput {
   isOwner: boolean;
   /** Consolidated /me capabilities (userStore) — permissions + can_sell drive the gates. */
   capabilities: Capabilities;
+  /** Company is seller-typed (any non-BUYER statusEntry) — see module docstring. */
+  companySells: boolean;
 }
 
 /**
@@ -66,19 +73,23 @@ const SECTION_RULES: SectionRule[] = [
   // Seller-секции — прежние подтабы CompanyAdminHub, гейтинг без изменений.
   {
     def: { key: 'documents', labelKey: 'settings.tabs.documentProfile' },
-    visible: (input) => !input.isAdmin && canEditCompanySettings(input) && input.capabilities.can_sell,
+    visible: (input) =>
+      !input.isAdmin && canEditCompanySettings(input) && input.capabilities.can_sell && input.companySells,
   },
   {
     def: { key: 'defaults', labelKey: 'settings.tabs.defaults' },
-    visible: (input) => !input.isAdmin && canEditCompanySettings(input) && input.capabilities.can_sell,
+    visible: (input) =>
+      !input.isAdmin && canEditCompanySettings(input) && input.capabilities.can_sell && input.companySells,
   },
   {
     def: { key: 'numbering', labelKey: 'settings.tabs.numbering' },
-    visible: (input) => !input.isAdmin && canEditCompanySettings(input) && input.capabilities.can_sell,
+    visible: (input) =>
+      !input.isAdmin && canEditCompanySettings(input) && input.capabilities.can_sell && input.companySells,
   },
   {
     def: { key: 'templates', labelKey: 'settings.tabs.templates' },
-    visible: (input) => !input.isAdmin && canEditCompanySettings(input) && input.capabilities.can_sell,
+    visible: (input) =>
+      !input.isAdmin && canEditCompanySettings(input) && input.capabilities.can_sell && input.companySells,
   },
   // Team — все не-ADMIN (инвайт-форма гейтится внутри CompanyTeamSettings).
   { def: { key: 'team', labelKey: 'settings.tabs.team' }, visible: (input) => !input.isAdmin },
