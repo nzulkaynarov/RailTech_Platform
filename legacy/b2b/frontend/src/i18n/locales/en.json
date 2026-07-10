@@ -2595,6 +2595,17 @@
     "companyAdmin": {
       "title": "Company administration",
       "description": "Your company's document profile, quote defaults, numbering and charge templates"
+    },
+    "profile": {
+      "sectionTitle": "Personal details",
+      "sectionDescription": "Your name, contacts and avatar — how colleagues and counterparties see you",
+      "preferencesTitle": "Interface",
+      "preferencesDescription": "Language and theme apply immediately and are saved with your profile"
+    },
+    "security": {
+      "sectionTitle": "Security",
+      "sectionDescription": "Password, two-factor authentication and active account sessions",
+      "passwordDescription": "Your password is used to sign in with your email. Update it regularly"
     }
   },
   "sourcingHub": {
