@@ -9,16 +9,16 @@ import {
   useDeleteChargeTemplate,
 } from '@/hooks/useCRM';
 import { useDeliveryBases } from '@/hooks/useMasterData';
+import type { ChargeTemplate } from '@/api/crmApi';
+import { ResponsiveDataTable, type ResponsiveColumn } from '@/components/ResponsiveDataTable';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,6 +35,7 @@ import {
  * Company-Admin org-admin zone: manage the company's per-Incoterm charge templates.
  * Selecting a basis on a КП auto-applies these rows; if empty, the platform's global
  * defaults are used as fallback (handled server-side).
+ * §2.4: a data table — full width (ResponsiveDataTable, repo convention), no reading cap.
  */
 export function ChargeTemplatesSettings() {
   const { t } = useTranslation();
@@ -76,6 +77,74 @@ export function ChargeTemplatesSettings() {
     }
   }
 
+  const columns: ResponsiveColumn<ChargeTemplate>[] = [
+    {
+      id: 'basis',
+      header: t('chargeTemplates.basis'),
+      mobileTitle: true,
+      cell: (tpl) => <Badge variant="outline">{tpl.delivery_basis}</Badge>,
+    },
+    {
+      id: 'chargeType',
+      header: t('chargeTemplates.chargeType'),
+      cell: (tpl) => (
+        <span className="text-sm font-medium">
+          {tpl.charge_type_name ?? tpl.charge_type}
+          {tpl.is_deduction ? (
+            <Badge variant="secondary" className="ml-2">{t('quote.charges.discount')}</Badge>
+          ) : null}
+        </span>
+      ),
+    },
+    {
+      id: 'default',
+      header: t('chargeTemplates.default'),
+      cell: (tpl) => (
+        <span className="font-mono text-sm tabular-nums">
+          {tpl.default_rate_percent != null ? `${tpl.default_rate_percent}%` : tpl.default_amount}
+        </span>
+      ),
+    },
+    {
+      id: 'actions',
+      header: '',
+      className: 'w-12',
+      mobileActions: true,
+      cell: (tpl) => (
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              className="text-muted-foreground hover:text-destructive"
+              title={t('common.delete')}
+              aria-label={t('common.delete')}
+            >
+              <Trash2 className="size-3" />
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t('chargeTemplates.deleteTitle')}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {t('chargeTemplates.deleteConfirm')}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => deleteMut.mutate(tpl.id)}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {t('common.delete')}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      ),
+    },
+  ];
+
   if (isLoading) {
     return (
       <div className="flex p-10 justify-center" role="status">
@@ -95,76 +164,21 @@ export function ChargeTemplatesSettings() {
         <p className="mt-1 text-sm text-muted-foreground">{t('chargeTemplates.subtitle')}</p>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow className="border-b border-border bg-muted/50 text-xs">
-              <TableHead className="p-4">{t('chargeTemplates.basis')}</TableHead>
-              <TableHead className="p-4">{t('chargeTemplates.chargeType')}</TableHead>
-              <TableHead className="p-4">{t('chargeTemplates.default')}</TableHead>
-              <TableHead className="p-4 w-12" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {templates.map((tpl) => (
-              <TableRow key={tpl.id} className="transition-colors hover:bg-muted/40">
-                <TableCell className="p-4">
-                  <Badge variant="outline">{tpl.delivery_basis}</Badge>
-                </TableCell>
-                <TableCell className="p-4 text-sm font-medium">
-                  {tpl.charge_type_name ?? tpl.charge_type}
-                  {tpl.is_deduction ? (
-                    <Badge variant="secondary" className="ml-2">{t('quote.charges.discount')}</Badge>
-                  ) : null}
-                </TableCell>
-                <TableCell className="p-4 text-sm font-mono tabular-nums">
-                  {tpl.default_rate_percent != null
-                    ? `${tpl.default_rate_percent}%`
-                    : tpl.default_amount}
-                </TableCell>
-                <TableCell className="p-4">
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon-xs"
-                        className="text-muted-foreground hover:text-destructive"
-                        title={t('common.delete')}
-                      >
-                        <Trash2 className="size-3" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>{t('chargeTemplates.deleteTitle', 'Удалить шаблон?')}</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          {t('chargeTemplates.deleteConfirm', 'Вы уверены, что хотите удалить этот шаблон расхода? Это действие нельзя отменить.')}
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => deleteMut.mutate(tpl.id)}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                          {t('common.delete')}
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </TableCell>
-              </TableRow>
-            ))}
-            {templates.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} className="p-8 text-center text-muted-foreground">
-                  {t('chargeTemplates.empty')}
-                </TableCell>
-              </TableRow>
-            ) : null}
-          </TableBody>
-        </Table>
-      </div>
+      <Card>
+        <CardContent className="p-0">
+          {templates.length === 0 ? (
+            <p className="p-8 text-center text-sm text-muted-foreground">
+              {t('chargeTemplates.empty')}
+            </p>
+          ) : (
+            <ResponsiveDataTable
+              columns={columns}
+              rows={templates}
+              getRowId={(tpl) => tpl.id}
+            />
+          )}
+        </CardContent>
+      </Card>
 
       <div className="rounded-2xl border border-border bg-muted/40 p-6">
         <h4 className="mb-4 flex items-center gap-2 text-base font-bold text-foreground">

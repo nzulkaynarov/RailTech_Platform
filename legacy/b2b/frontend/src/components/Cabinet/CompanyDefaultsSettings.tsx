@@ -9,6 +9,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useHasCompanyPermission } from '@/hooks/useCapabilities';
 import { useCurrencies, useDeliveryBases } from '@/hooks/useMasterData';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -117,36 +118,36 @@ export function CompanyDefaultsSettings() {
     const validityDays = form.default_offer_validity_days.trim() !== '' ? Number(form.default_offer_validity_days) : null;
 
     if (vat !== null && (vat < 0 || vat > 100 || isNaN(vat))) {
-      toast.error(t('companyDefaults.errors.invalidVat', 'НДС должен быть от 0 до 100%'));
+      toast.error(t('companyDefaults.errors.invalidVat'));
       return;
     }
     if (defMargin !== null && (defMargin < 0 || isNaN(defMargin))) {
-      toast.error(t('companyDefaults.errors.invalidMargin', 'Маржа не может быть отрицательной'));
+      toast.error(t('companyDefaults.errors.invalidMargin'));
       return;
     }
     if (minMargin !== null && (minMargin < 0 || isNaN(minMargin))) {
-      toast.error(t('companyDefaults.errors.invalidMargin', 'Маржа не может быть отрицательной'));
+      toast.error(t('companyDefaults.errors.invalidMargin'));
       return;
     }
     if (targetMargin !== null && (targetMargin < 0 || isNaN(targetMargin))) {
-      toast.error(t('companyDefaults.errors.invalidMargin', 'Маржа не может быть отрицательной'));
+      toast.error(t('companyDefaults.errors.invalidMargin'));
       return;
     }
     if (validityDays !== null && (validityDays < 0 || isNaN(validityDays))) {
-      toast.error(t('companyDefaults.errors.invalidValidity', 'Срок действия не может быть отрицательным'));
+      toast.error(t('companyDefaults.errors.invalidValidity'));
       return;
     }
 
     if (minMargin !== null && defMargin !== null && minMargin > defMargin) {
-      toast.error(t('companyDefaults.errors.minMarginGreaterThanDefault', 'Минимальная маржа не может быть больше стандартной'));
+      toast.error(t('companyDefaults.errors.minMarginGreaterThanDefault'));
       return;
     }
     if (defMargin !== null && targetMargin !== null && defMargin > targetMargin) {
-      toast.error(t('companyDefaults.errors.defaultMarginGreaterThanTarget', 'Стандартная маржа не может быть больше целевой'));
+      toast.error(t('companyDefaults.errors.defaultMarginGreaterThanTarget'));
       return;
     }
     if (minMargin !== null && targetMargin !== null && minMargin > targetMargin) {
-      toast.error(t('companyDefaults.errors.minMarginGreaterThanTarget', 'Минимальная маржа не может быть больше целевой'));
+      toast.error(t('companyDefaults.errors.minMarginGreaterThanTarget'));
       return;
     }
 
@@ -164,8 +165,9 @@ export function CompanyDefaultsSettings() {
     });
   };
 
+  // §2.4 reading-form pattern: section header left, form card right with a width cap.
   return (
-    <div className="space-y-6">
+    <div className="grid items-start gap-6 lg:grid-cols-[240px_1fr]">
       <div>
         <h3 className="flex items-center gap-2 text-xl font-bold text-foreground">
           <Sliders className="h-5 w-5 text-primary" aria-hidden="true" />
@@ -174,120 +176,128 @@ export function CompanyDefaultsSettings() {
         <p className="mt-1 text-sm text-muted-foreground">{t('companyDefaults.subtitle')}</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="cd-delivery-basis">{t('companyDefaults.deliveryBasis')}</Label>
-          <Select
-            value={form.default_delivery_basis}
-            onValueChange={(val) => setForm({ ...form, default_delivery_basis: val })}
-          >
-            <SelectTrigger id="cd-delivery-basis">
-              <SelectValue placeholder={t('companyDefaults.notSet')} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={NONE}>{t('companyDefaults.notSet')}</SelectItem>
-              {bases.map((basis) => (
-                <SelectItem key={basis.code} value={basis.code}>
-                  {basis.code} — {basis.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      <Card className="min-w-0 max-w-2xl">
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="cd-delivery-basis">{t('companyDefaults.deliveryBasis')}</Label>
+              <Select
+                value={form.default_delivery_basis}
+                onValueChange={(val) => setForm({ ...form, default_delivery_basis: val })}
+              >
+                <SelectTrigger id="cd-delivery-basis">
+                  <SelectValue placeholder={t('companyDefaults.notSet')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE}>{t('companyDefaults.notSet')}</SelectItem>
+                  {bases.map((basis) => (
+                    <SelectItem key={basis.code} value={basis.code}>
+                      {basis.code} — {basis.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="cd-currency">{t('companyDefaults.costCurrency')}</Label>
-          <Select
-            value={form.default_cost_currency}
-            onValueChange={(val) => setForm({ ...form, default_cost_currency: val })}
-          >
-            <SelectTrigger id="cd-currency">
-              <SelectValue placeholder={t('companyDefaults.notSet')} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={NONE}>{t('companyDefaults.notSet')}</SelectItem>
-              {currencies.map((currency) => (
-                <SelectItem key={currency.code} value={currency.code}>
-                  {currency.code}{currency.name ? ` — ${currency.name}` : ''}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="cd-currency">{t('companyDefaults.costCurrency')}</Label>
+              <Select
+                value={form.default_cost_currency}
+                onValueChange={(val) => setForm({ ...form, default_cost_currency: val })}
+              >
+                <SelectTrigger id="cd-currency">
+                  <SelectValue placeholder={t('companyDefaults.notSet')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE}>{t('companyDefaults.notSet')}</SelectItem>
+                  {currencies.map((currency) => (
+                    <SelectItem key={currency.code} value={currency.code}>
+                      {currency.code}{currency.name ? ` — ${currency.name}` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="cd-vat">{t('companyDefaults.vatRate')}</Label>
-          <Input
-            id="cd-vat"
-            type="number"
-            step="0.01"
-            min="0"
-            value={form.default_vat_rate}
-            onChange={(e) => setForm({ ...form, default_vat_rate: e.target.value })}
-            placeholder="12"
-          />
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="cd-vat">{t('companyDefaults.vatRate')}</Label>
+              <Input
+                id="cd-vat"
+                type="number"
+                step="0.01"
+                min="0"
+                value={form.default_vat_rate}
+                onChange={(e) => setForm({ ...form, default_vat_rate: e.target.value })}
+                placeholder="12"
+              />
+            </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="cd-margin">{t('companyDefaults.marginPercent')}</Label>
-          <Input
-            id="cd-margin"
-            type="number"
-            step="0.01"
-            min="0"
-            value={form.default_margin_percent}
-            onChange={(e) => setForm({ ...form, default_margin_percent: e.target.value })}
-            placeholder="15"
-          />
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="cd-margin">{t('companyDefaults.marginPercent')}</Label>
+              <Input
+                id="cd-margin"
+                type="number"
+                step="0.01"
+                min="0"
+                value={form.default_margin_percent}
+                onChange={(e) => setForm({ ...form, default_margin_percent: e.target.value })}
+                placeholder="15"
+              />
+            </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="cd-min-margin">{t('companyDefaults.minMarginPercent')}</Label>
-          <Input
-            id="cd-min-margin"
-            type="number"
-            step="0.01"
-            min="0"
-            value={form.min_margin_percent}
-            onChange={(e) => setForm({ ...form, min_margin_percent: e.target.value })}
-            placeholder="15"
-          />
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="cd-min-margin">{t('companyDefaults.minMarginPercent')}</Label>
+              <Input
+                id="cd-min-margin"
+                type="number"
+                step="0.01"
+                min="0"
+                value={form.min_margin_percent}
+                onChange={(e) => setForm({ ...form, min_margin_percent: e.target.value })}
+                placeholder="15"
+              />
+            </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="cd-target-margin">{t('companyDefaults.targetMarginPercent')}</Label>
-          <Input
-            id="cd-target-margin"
-            type="number"
-            step="0.01"
-            min="0"
-            value={form.target_margin_percent}
-            onChange={(e) => setForm({ ...form, target_margin_percent: e.target.value })}
-            placeholder="25"
-          />
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="cd-target-margin">{t('companyDefaults.targetMarginPercent')}</Label>
+              <Input
+                id="cd-target-margin"
+                type="number"
+                step="0.01"
+                min="0"
+                value={form.target_margin_percent}
+                onChange={(e) => setForm({ ...form, target_margin_percent: e.target.value })}
+                placeholder="25"
+              />
+            </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="cd-validity">{t('companyDefaults.offerValidityDays')}</Label>
-          <Input
-            id="cd-validity"
-            type="number"
-            step="1"
-            min="0"
-            value={form.default_offer_validity_days}
-            onChange={(e) => setForm({ ...form, default_offer_validity_days: e.target.value })}
-            placeholder="30"
-          />
-        </div>
-      </div>
+            <div className="space-y-2">
+              <Label htmlFor="cd-validity">{t('companyDefaults.offerValidityDays')}</Label>
+              <Input
+                id="cd-validity"
+                type="number"
+                step="1"
+                min="0"
+                value={form.default_offer_validity_days}
+                onChange={(e) => setForm({ ...form, default_offer_validity_days: e.target.value })}
+                placeholder="30"
+              />
+            </div>
+          </div>
 
-      <p className="text-xs text-muted-foreground">{t('companyDefaults.marginHelp')}</p>
-      <p className="text-xs text-muted-foreground">{t('companyDefaults.help')}</p>
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">{t('companyDefaults.marginHelp')}</p>
+            <p className="text-xs text-muted-foreground">{t('companyDefaults.help')}</p>
+          </div>
+        </CardContent>
 
-      <Button onClick={handleSave} disabled={saveMut.isPending}>
-        {saveMut.isPending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-        {t('common.save')}
-      </Button>
+        <CardFooter>
+          <Button onClick={handleSave} disabled={saveMut.isPending}>
+            {saveMut.isPending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+            {t('common.save')}
+          </Button>
+        </CardFooter>
+      </Card>
     </div>
   );
 }
