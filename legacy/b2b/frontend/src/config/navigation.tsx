@@ -141,8 +141,9 @@ export const TENANT_NAV: NavNodeDef[] = [
   { labelKey: 'shell.mySubscription', id: 'my-subscription', icon: <Receipt className="h-4 w-4" />, side: 'sell', requires: { kyc: true } },
 ];
 
+// Профиль слился с Настройками в единый Settings Hub (settings-profile-redesign §2.1):
+// пункт profile убран, `#profile` остаётся алиасом на `#settings?section=profile` (App.tsx).
 export const TENANT_BOTTOM_NAV: NavNodeDef[] = [
-  { labelKey: 'shell.profile', id: 'profile', icon: <Users className="h-4 w-4" /> },
   { labelKey: 'shell.settings', id: 'settings', icon: <Settings className="h-4 w-4" /> },
   { labelKey: 'shell.help', id: 'help', icon: <HelpCircle className="h-4 w-4" /> },
 ];
