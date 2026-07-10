@@ -32,9 +32,7 @@ class Command(BaseCommand):
         )
         parser.add_argument("--id", type=int, default=None, help="Single document id (requires a concrete --type)")
         parser.add_argument("--since", default=None, help="Only documents created on/after this date (YYYY-MM-DD)")
-        parser.add_argument(
-            "--sent-only", action="store_true", help="Quotes only: limit to SENT quotes (skip drafts)"
-        )
+        parser.add_argument("--sent-only", action="store_true", help="Quotes only: limit to SENT quotes (skip drafts)")
         parser.add_argument("--dry-run", action="store_true", help="Report what would be cleared, change nothing")
 
     def handle(self, *args, **options):

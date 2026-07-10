@@ -83,7 +83,22 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, onRegister, on
             onNavigate?.('dashboard');
         } catch (err: unknown) {
             const raw = err instanceof Error ? err.message : '';
-            let msg = raw.startsWith('auth.') ? t(raw) : (raw || t('auth.genericError'));
+            let msg: string;
+            if (raw === '2FA_INVALID_CODE') {
+                msg = t('auth.invalid2faCode');
+            } else if (raw === '2FA_TICKET_INVALID') {
+                // The 5-minute ticket expired (or 2FA state changed) — restart login.
+                msg = t('auth.ticketExpired');
+                setTwoFactorRequired(false);
+                setTempToken(null);
+                setTotpCode('');
+            } else if (raw === 'TOO_MANY_LOGIN_ATTEMPTS' || raw.toLowerCase().includes('throttled')) {
+                msg = t('auth.tooManyAttempts');
+            } else if (raw.startsWith('auth.')) {
+                msg = t(raw);
+            } else {
+                msg = raw || t('auth.genericError');
+            }
             setServerError(msg);
         }
     };

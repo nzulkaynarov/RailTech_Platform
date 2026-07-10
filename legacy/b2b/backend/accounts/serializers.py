@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.core.validators import RegexValidator
 from rest_framework import serializers
+from rest_framework_simplejwt.token_blacklist.models import OutstandingToken
 
 from .models import (
     Company,
@@ -279,13 +280,14 @@ class UserSerializer(serializers.ModelSerializer):
             "operator_role",
             "operator_role_data",
             "is_platform_admin",
+            "is_2fa_enabled",
             "is_active",
             "memberships",
             "primary_company",
             "last_login",
             "date_joined",
         ]
-        read_only_fields = ["id", "role", "operator_role", "last_login", "date_joined"]
+        read_only_fields = ["id", "role", "operator_role", "is_2fa_enabled", "last_login", "date_joined"]
 
     def get_operator_role_data(self, obj):
         op = obj.operator_role
@@ -385,12 +387,13 @@ class MeSerializer(serializers.ModelSerializer):
             "can_buy",
             "seller_subscription_operational",
             "capabilities",
+            "is_2fa_enabled",
             "is_active",
             "primary_company",
             "last_login",
             "date_joined",
         ]
-        read_only_fields = ["id", "role", "last_login", "date_joined"]
+        read_only_fields = ["id", "role", "is_2fa_enabled", "last_login", "date_joined"]
 
     def get_role_data(self, obj):
         if obj.role:
@@ -654,9 +657,17 @@ class CompanyRoleApplicationSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
 
-from rest_framework_simplejwt.token_blacklist.models import OutstandingToken
 
 class ActiveSessionSerializer(serializers.ModelSerializer):
+    """One live refresh token = one session. `is_current` matches the row against
+    the jti of THIS browser's HttpOnly refresh cookie (passed via context)."""
+
+    is_current = serializers.SerializerMethodField()
+
     class Meta:
         model = OutstandingToken
-        fields = ["id", "jti", "created_at", "expires_at"]
+        fields = ["id", "created_at", "expires_at", "is_current"]
+
+    def get_is_current(self, obj) -> bool:
+        current_jti = self.context.get("current_jti")
+        return bool(current_jti) and obj.jti == current_jti

@@ -1,5 +1,4 @@
 from django.db.models import Prefetch
-from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view, inline_serializer
@@ -13,7 +12,7 @@ from rest_framework.response import Response
 from accounts import services
 from accounts.models import Company, CompanyMember, CustomUser
 from accounts.serializers import ActiveSessionSerializer, SelfUpdateSerializer, UserSerializer
-from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
+from accounts.services import sessions, two_factor
 from core.permissions import OperatorScoped
 
 
@@ -155,38 +154,39 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @extend_schema(
         summary="Get active sessions",
-        description="Returns list of active refresh tokens (sessions) for the current user.",
+        description=(
+            "Live refresh tokens (sessions) for the current user. `is_current` marks "
+            "the session whose refresh token sits in this browser's HttpOnly cookie."
+        ),
         responses={200: inline_serializer("SessionResponse", fields={"sessions": ActiveSessionSerializer(many=True)})},
         tags=["Accounts"],
     )
     @action(detail=False, methods=["get"], url_path="me/sessions", permission_classes=[permissions.IsAuthenticated])
     def my_sessions(self, request):
-        now = timezone.now()
-        tokens = OutstandingToken.objects.filter(
-            user=request.user,
-            expires_at__gt=now
-        ).exclude(blacklistedtoken__isnull=False).order_by("-created_at")
-        
-        return Response({"sessions": ActiveSessionSerializer(tokens, many=True).data})
+        tokens = sessions.active_sessions(request.user)
+        serializer = ActiveSessionSerializer(
+            tokens, many=True, context={"current_jti": two_factor.refresh_cookie_jti(request)}
+        )
+        return Response({"sessions": serializer.data})
 
     @extend_schema(
         summary="Revoke all other sessions",
-        description="Blacklists all active refresh tokens for the user.",
-        responses={200: OpenApiResponse(description="Sessions revoked")},
+        description=(
+            "Blacklist every live refresh token except the current browser's "
+            '(identified by the HttpOnly cookie), i.e. "log out everywhere else".'
+        ),
+        responses={200: inline_serializer("SessionsRevoked", fields={"revoked": drf_serializers.IntegerField()})},
         tags=["Accounts"],
     )
-    @action(detail=False, methods=["post"], url_path="me/sessions/revoke-all", permission_classes=[permissions.IsAuthenticated])
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="me/sessions/revoke-all",
+        permission_classes=[permissions.IsAuthenticated],
+    )
     def revoke_all_sessions(self, request):
-        now = timezone.now()
-        tokens = OutstandingToken.objects.filter(
-            user=request.user,
-            expires_at__gt=now
-        ).exclude(blacklistedtoken__isnull=False)
-        
-        blacklisted = [BlacklistedToken(token=t) for t in tokens]
-        BlacklistedToken.objects.bulk_create(blacklisted)
-        
-        return Response({"message": "All other sessions have been revoked."})
+        revoked = sessions.revoke_other_sessions(request.user, keep_jti=two_factor.refresh_cookie_jti(request))
+        return Response({"revoked": revoked})
 
     @extend_schema(
         summary="Upload user avatar",

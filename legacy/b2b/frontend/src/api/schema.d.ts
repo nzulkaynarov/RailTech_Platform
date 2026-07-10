@@ -1252,6 +1252,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/accounts/users/me/sessions/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get active sessions
+         * @description Live refresh tokens (sessions) for the current user. `is_current` marks the session whose refresh token sits in this browser's HttpOnly cookie.
+         */
+        get: operations["accounts_users_me_sessions_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/accounts/users/me/sessions/revoke-all/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revoke all other sessions
+         * @description Blacklist every live refresh token except the current browser's (identified by the HttpOnly cookie), i.e. "log out everywhere else".
+         */
+        post: operations["accounts_users_me_sessions_revoke_all_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/accounts/users/update-me/": {
         parameters: {
             query?: never;
@@ -1812,6 +1852,67 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/2fa/disable/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Disable 2FA
+         * @description POST /api/v1/auth/2fa/disable/ — turn 2FA off (requires a valid code).
+         */
+        post: operations["auth_2fa_disable_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/2fa/setup/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start 2FA setup
+         * @description POST /api/v1/auth/2fa/setup/ — mint a secret + otpauth URI for the QR code.
+         *     Nothing persists until the user confirms a code via /auth/2fa/verify/.
+         */
+        post: operations["auth_2fa_setup_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/2fa/verify/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify and enable 2FA
+         * @description POST /api/v1/auth/2fa/verify/ — confirm the scanned secret and enable 2FA.
+         */
+        post: operations["auth_2fa_verify_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/forgot-password/": {
         parameters: {
             query?: never;
@@ -1826,6 +1927,31 @@ export interface paths {
          * @description Trigger a password-reset email. Always returns 200 to prevent user enumeration -- the caller should show the same outcome regardless of whether the email exists.
          */
         post: operations["auth_forgot_password_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/login/2fa/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Complete login with a 2FA code
+         * @description POST /api/v1/auth/login/2fa/ — second login step: ticket + TOTP code → tokens.
+         *
+         *     Same anti-brute-force layers as the password step: per-IP `login` throttle and
+         *     the SEC-06 per-account lockout (a distributed grind on the 6-digit code counts
+         *     exactly like distributed password failures). Refresh token goes to the HttpOnly
+         *     cookie ONLY — never the body (F2.1).
+         */
+        post: operations["auth_login_2fa_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5364,6 +5490,18 @@ export interface components {
             signed_file?: string | null;
             notes?: string;
         };
+        /**
+         * @description One live refresh token = one session. `is_current` matches the row against
+         *     the jti of THIS browser's HttpOnly refresh cookie (passed via context).
+         */
+        ActiveSession: {
+            readonly id: number;
+            /** Format: date-time */
+            created_at?: string | null;
+            /** Format: date-time */
+            expires_at: string;
+            readonly is_current: boolean;
+        };
         ActivityLog: {
             readonly id: number;
             /**
@@ -5824,6 +5962,11 @@ export interface components {
              * @description HEX-цвет фирменного стиля для шапки документа (напр. #15294d)
              */
             accent_color?: string;
+            /**
+             * Использовать реквизиты компании
+             * @description Автоматически наследовать название, ИНН и адрес из профиля компании
+             */
+            use_company_defaults?: boolean;
             /**
              * Показывать логотип
              * @description Печатать логотип в шапке документов
@@ -7145,6 +7288,11 @@ export interface components {
              */
             deal: number;
             /**
+             * Продавец (lane)
+             * @description Приватный тред покупатель↔продавец на мульти-seller заявке
+             */
+            readonly seller_company: number | null;
+            /**
              * Отправитель
              * @description Автор сообщения
              */
@@ -7903,6 +8051,11 @@ export interface components {
              * @description HEX-цвет фирменного стиля для шапки документа (напр. #15294d)
              */
             accent_color?: string;
+            /**
+             * Использовать реквизиты компании
+             * @description Автоматически наследовать название, ИНН и адрес из профиля компании
+             */
+            use_company_defaults?: boolean;
             /**
              * Показывать логотип
              * @description Печатать логотип в шапке документов
@@ -8787,6 +8940,11 @@ export interface components {
              * @description Фото пользователя для профиля
              */
             avatar?: string | null;
+            /**
+             * Предпочтения
+             * @description Пользовательские настройки (тема, язык, часовой пояс)
+             */
+            preferences?: unknown;
         };
         PatchedSupplierOfferRequest: {
             /**
@@ -9028,6 +9186,11 @@ export interface components {
              * @description Фото пользователя для профиля
              */
             avatar?: string | null;
+            /**
+             * Предпочтения
+             * @description Пользовательские настройки (тема, язык, часовой пояс)
+             */
+            preferences?: unknown;
             /**
              * Активный
              * @description Отметьте, если пользователь должен считаться активным. Уберите эту отметку вместо удаления учётной записи.
@@ -10238,6 +10401,17 @@ export interface components {
              * @description Фото пользователя для профиля
              */
             avatar?: string | null;
+            /**
+             * Предпочтения
+             * @description Пользовательские настройки (тема, язык, часовой пояс)
+             */
+            preferences?: unknown;
+        };
+        SessionResponse: {
+            sessions: components["schemas"]["ActiveSession"][];
+        };
+        SessionsRevoked: {
+            revoked: number;
         };
         SetMemberRoleRequest: {
             member_id: number;
@@ -10726,6 +10900,21 @@ export interface components {
              */
             readonly updated_at: string;
         };
+        TOTPDisableRequest: {
+            code: string;
+        };
+        TOTPLoginRequest: {
+            temp_token: string;
+            code: string;
+        };
+        TOTPSetup: {
+            secret: string;
+            uri: string;
+        };
+        TOTPVerifyRequest: {
+            secret: string;
+            code: string;
+        };
         TimelineEntry: {
             readonly id: number;
             /**
@@ -10846,6 +11035,11 @@ export interface components {
              */
             avatar?: string | null;
             /**
+             * Предпочтения
+             * @description Пользовательские настройки (тема, язык, часовой пояс)
+             */
+            preferences?: unknown;
+            /**
              * Системная роль
              * @description Глобальная роль: определяет права доступа на всей платформе
              */
@@ -10862,6 +11056,11 @@ export interface components {
             readonly operator_role: number | null;
             readonly operator_role_data: string;
             readonly is_platform_admin: boolean;
+            /**
+             * 2FA Включена
+             * @description Включена ли двухфакторная аутентификация
+             */
+            readonly is_2fa_enabled: boolean;
             /**
              * Активный
              * @description Отметьте, если пользователь должен считаться активным. Уберите эту отметку вместо удаления учётной записи.
@@ -10912,6 +11111,11 @@ export interface components {
              * @description Фото пользователя для профиля
              */
             avatar?: string | null;
+            /**
+             * Предпочтения
+             * @description Пользовательские настройки (тема, язык, часовой пояс)
+             */
+            preferences?: unknown;
             /**
              * Активный
              * @description Отметьте, если пользователь должен считаться активным. Уберите эту отметку вместо удаления учётной записи.
@@ -13065,6 +13269,50 @@ export interface operations {
             };
         };
     };
+    accounts_users_me_sessions_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionResponse"];
+                };
+            };
+        };
+    };
+    accounts_users_me_sessions_revoke_all_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["UserRequest"];
+                "multipart/form-data": components["schemas"]["UserRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionsRevoked"];
+                };
+            };
+        };
+    };
     accounts_users_update_me_partial_update: {
         parameters: {
             query?: never;
@@ -13892,6 +14140,94 @@ export interface operations {
             };
         };
     };
+    auth_2fa_disable_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TOTPDisableRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["TOTPDisableRequest"];
+                "multipart/form-data": components["schemas"]["TOTPDisableRequest"];
+            };
+        };
+        responses: {
+            /** @description 2FA disabled (idempotent) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 2FA_CODE_REQUIRED | 2FA_INVALID_CODE */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    auth_2fa_setup_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TOTPSetup"];
+                };
+            };
+            /** @description 2FA_ALREADY_ENABLED */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    auth_2fa_verify_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TOTPVerifyRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["TOTPVerifyRequest"];
+                "multipart/form-data": components["schemas"]["TOTPVerifyRequest"];
+            };
+        };
+        responses: {
+            /** @description 2FA enabled */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 2FA_CODE_REQUIRED | 2FA_INVALID_CODE | 2FA_ALREADY_ENABLED */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     auth_forgot_password_create: {
         parameters: {
             query?: never;
@@ -13909,6 +14245,44 @@ export interface operations {
         responses: {
             /** @description Reset email dispatched if account exists */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    auth_login_2fa_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TOTPLoginRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["TOTPLoginRequest"];
+                "multipart/form-data": components["schemas"]["TOTPLoginRequest"];
+            };
+        };
+        responses: {
+            /** @description Access token in body; refresh in HttpOnly cookie */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 2FA_TICKET_INVALID | 2FA_INVALID_CODE */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description TOO_MANY_LOGIN_ATTEMPTS */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -17236,6 +17610,7 @@ export interface operations {
                 page?: number;
                 /** @description A search term. */
                 search?: string;
+                seller_company?: number;
             };
             header?: never;
             path?: never;

@@ -3,6 +3,7 @@ from typing import Optional, Tuple
 
 from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator
+from django.db.models import Q
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 
@@ -159,8 +160,6 @@ def _admin_floor_q() -> "Q":
     Unifying every never-orphan check on this predicate removes the two-definitions
     divergence window the deprecation ADR called out.
     """
-    from django.db.models import Q
-
     return Q(company_role__is_system=True) | Q(company_role__isnull=True, role__code=WorkspaceRoleCode.OWNER)
 
 
@@ -250,9 +249,9 @@ def toggle_user_active(
     # (no one to manage team/KYC/billing). Block — transfer ownership first. "Admin" is the
     # unified is_system / legacy-OWNER floor (see `_admin_floor_q`), matching every other check.
     if user.is_active:  # about to deactivate
-        admin_memberships = CompanyMember.objects.filter(
-            _admin_floor_q(), user=user, is_active=True
-        ).select_related("company")
+        admin_memberships = CompanyMember.objects.filter(_admin_floor_q(), user=user, is_active=True).select_related(
+            "company"
+        )
         for membership in admin_memberships:
             if not company_active_admins(membership.company).exclude(user=user).exists():
                 return None, "CANNOT_DEACTIVATE_SOLE_COMPANY_ADMIN"

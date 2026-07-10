@@ -1,8 +1,6 @@
 """invalidate_document_pdfs management command — clears cached pdf_file so documents re-render
 with the current template. Idempotent; dry-run changes nothing; filters by type/date/sent-only."""
 
-from datetime import date
-from decimal import Decimal
 from io import StringIO
 
 import pytest

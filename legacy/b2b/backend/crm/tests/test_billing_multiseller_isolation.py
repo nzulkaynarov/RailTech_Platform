@@ -69,8 +69,13 @@ def scenario(db):
 
     # Winner's КП wins → billing materializes on the shared deal, owned by the winner.
     quote = Quote.objects.create(
-        deal=deal, version=1, status=QuoteStatus.objects.get(code="APPROVED"), seller_company=winner,
-        subtotal_excl_vat=Decimal("1000000"), vat_amount=Decimal("120000"), total_incl_vat=Decimal("1120000"),
+        deal=deal,
+        version=1,
+        status=QuoteStatus.objects.get(code="APPROVED"),
+        seller_company=winner,
+        subtotal_excl_vat=Decimal("1000000"),
+        vat_amount=Decimal("120000"),
+        total_incl_vat=Decimal("1120000"),
     )
     contract = Contract.objects.create(
         deal=deal, quote=quote, number="CT-1", total_amount=Decimal("1120000"), status=c_status
@@ -83,15 +88,21 @@ def scenario(db):
     )
     payment = Payment.objects.create(invoice=invoice, amount=Decimal("1120000"), paid_at=timezone.now())
     return {
-        "winner_user": winner_user, "loser_user": loser_user, "buyer_user": buyer_user,
-        "contract": contract, "invoice": invoice, "act": act, "payment": payment,
+        "winner_user": winner_user,
+        "loser_user": loser_user,
+        "buyer_user": buyer_user,
+        "contract": contract,
+        "invoice": invoice,
+        "act": act,
+        "payment": payment,
     }
 
 
 def _visible(model, user, *, deal_path, seller_path):
     return set(
-        model.objects.filter(_billing_visibility_q(user, None, deal_path=deal_path, seller_path=seller_path))
-        .values_list("pk", flat=True)
+        model.objects.filter(
+            _billing_visibility_q(user, None, deal_path=deal_path, seller_path=seller_path)
+        ).values_list("pk", flat=True)
     )
 
 

@@ -191,7 +191,7 @@ def document_brand_context(seller_company, *, is_demo: bool = False) -> dict:
     # otherwise. The layout TOGGLES read from the raw row regardless, so a seller can flip «скрыть
     # колонку срока» without also filling their legal name.
     row = CompanyDocumentProfile.objects.filter(company=seller_company).first() if seller_company else None
-    
+
     if row and getattr(row, "use_company_defaults", False) and seller_company:
         row.legal_name = row.legal_name or seller_company.name
         row.inn = row.inn or seller_company.inn

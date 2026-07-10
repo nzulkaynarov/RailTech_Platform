@@ -41,8 +41,13 @@ def contract_world(db):
     deal = Deal.objects.create(title="D", company=buyer, stage=DealStage.objects.get(code="CONTRACT_SIGNED"))
     DealSellerRouting.objects.create(deal=deal, seller_company=seller)
     quote = Quote.objects.create(
-        deal=deal, version=1, status=QuoteStatus.objects.get(code="APPROVED"), seller_company=seller,
-        subtotal_excl_vat=Decimal("100"), vat_amount=Decimal("12"), total_incl_vat=Decimal("112"),
+        deal=deal,
+        version=1,
+        status=QuoteStatus.objects.get(code="APPROVED"),
+        seller_company=seller,
+        subtotal_excl_vat=Decimal("100"),
+        vat_amount=Decimal("12"),
+        total_incl_vat=Decimal("112"),
     )
     contract = Contract.objects.create(
         deal=deal, quote=quote, number="CT-1", total_amount=Decimal("112"), status=status

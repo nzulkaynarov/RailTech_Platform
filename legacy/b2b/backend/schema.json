@@ -3590,6 +3590,80 @@
                 }
             }
         },
+        "/api/v1/accounts/users/me/sessions/": {
+            "get": {
+                "operationId": "accounts_users_me_sessions_retrieve",
+                "description": "Live refresh tokens (sessions) for the current user. `is_current` marks the session whose refresh token sits in this browser's HttpOnly cookie.",
+                "summary": "Get active sessions",
+                "tags": [
+                    "Accounts"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SessionResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/accounts/users/me/sessions/revoke-all/": {
+            "post": {
+                "operationId": "accounts_users_me_sessions_revoke_all_create",
+                "description": "Blacklist every live refresh token except the current browser's (identified by the HttpOnly cookie), i.e. \"log out everywhere else\".",
+                "summary": "Revoke all other sessions",
+                "tags": [
+                    "Accounts"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UserRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UserRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UserRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SessionsRevoked"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/v1/accounts/users/update-me/": {
             "patch": {
                 "operationId": "accounts_users_update_me_partial_update",
@@ -5009,6 +5083,122 @@
                 }
             }
         },
+        "/api/v1/auth/2fa/disable/": {
+            "post": {
+                "operationId": "auth_2fa_disable_create",
+                "description": "POST /api/v1/auth/2fa/disable/ — turn 2FA off (requires a valid code).",
+                "summary": "Disable 2FA",
+                "tags": [
+                    "Auth"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TOTPDisableRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TOTPDisableRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TOTPDisableRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "2FA disabled (idempotent)"
+                    },
+                    "400": {
+                        "description": "2FA_CODE_REQUIRED | 2FA_INVALID_CODE"
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/2fa/setup/": {
+            "post": {
+                "operationId": "auth_2fa_setup_create",
+                "description": "POST /api/v1/auth/2fa/setup/ — mint a secret + otpauth URI for the QR code.\nNothing persists until the user confirms a code via /auth/2fa/verify/.",
+                "summary": "Start 2FA setup",
+                "tags": [
+                    "Auth"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TOTPSetup"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "2FA_ALREADY_ENABLED"
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/2fa/verify/": {
+            "post": {
+                "operationId": "auth_2fa_verify_create",
+                "description": "POST /api/v1/auth/2fa/verify/ — confirm the scanned secret and enable 2FA.",
+                "summary": "Verify and enable 2FA",
+                "tags": [
+                    "Auth"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TOTPVerifyRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TOTPVerifyRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TOTPVerifyRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "2FA enabled"
+                    },
+                    "400": {
+                        "description": "2FA_CODE_REQUIRED | 2FA_INVALID_CODE | 2FA_ALREADY_ENABLED"
+                    }
+                }
+            }
+        },
         "/api/v1/auth/forgot-password/": {
             "post": {
                 "operationId": "auth_forgot_password_create",
@@ -5046,6 +5236,53 @@
                 "responses": {
                     "200": {
                         "description": "Reset email dispatched if account exists"
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/login/2fa/": {
+            "post": {
+                "operationId": "auth_login_2fa_create",
+                "description": "POST /api/v1/auth/login/2fa/ — second login step: ticket + TOTP code → tokens.\n\nSame anti-brute-force layers as the password step: per-IP `login` throttle and\nthe SEC-06 per-account lockout (a distributed grind on the 6-digit code counts\nexactly like distributed password failures). Refresh token goes to the HttpOnly\ncookie ONLY — never the body (F2.1).",
+                "summary": "Complete login with a 2FA code",
+                "tags": [
+                    "Auth"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TOTPLoginRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TOTPLoginRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TOTPLoginRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Access token in body; refresh in HttpOnly cookie"
+                    },
+                    "400": {
+                        "description": "2FA_TICKET_INVALID | 2FA_INVALID_CODE"
+                    },
+                    "429": {
+                        "description": "TOO_MANY_LOGIN_ATTEMPTS"
                     }
                 }
             }
@@ -10914,6 +11151,13 @@
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    {
+                        "in": "query",
+                        "name": "seller_company",
+                        "schema": {
+                            "type": "integer"
+                        }
                     }
                 ],
                 "tags": [
@@ -16395,6 +16639,34 @@
                     "deal"
                 ]
             },
+            "ActiveSession": {
+                "type": "object",
+                "description": "One live refresh token = one session. `is_current` matches the row against\nthe jti of THIS browser's HttpOnly refresh cookie (passed via context).",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "expires_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "is_current": {
+                        "type": "boolean",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "expires_at",
+                    "id",
+                    "is_current"
+                ]
+            },
             "ActivityLog": {
                 "type": "object",
                 "properties": {
@@ -17175,6 +17447,11 @@
                         "title": "Акцентный цвет",
                         "description": "HEX-цвет фирменного стиля для шапки документа (напр. #15294d)",
                         "maxLength": 20
+                    },
+                    "use_company_defaults": {
+                        "type": "boolean",
+                        "title": "Использовать реквизиты компании",
+                        "description": "Автоматически наследовать название, ИНН и адрес из профиля компании"
                     },
                     "show_logo": {
                         "type": "boolean",
@@ -19754,6 +20031,13 @@
                         "title": "Сделка",
                         "description": "Сделка, к которой относится сообщение"
                     },
+                    "seller_company": {
+                        "type": "integer",
+                        "readOnly": true,
+                        "nullable": true,
+                        "title": "Продавец (lane)",
+                        "description": "Приватный тред покупатель↔продавец на мульти-seller заявке"
+                    },
                     "sender": {
                         "type": "integer",
                         "readOnly": true,
@@ -19793,6 +20077,7 @@
                     "id",
                     "is_me",
                     "message_type",
+                    "seller_company",
                     "sender",
                     "sender_name",
                     "text",
@@ -21203,6 +21488,11 @@
                         "description": "HEX-цвет фирменного стиля для шапки документа (напр. #15294d)",
                         "maxLength": 20
                     },
+                    "use_company_defaults": {
+                        "type": "boolean",
+                        "title": "Использовать реквизиты компании",
+                        "description": "Автоматически наследовать название, ИНН и адрес из профиля компании"
+                    },
                     "show_logo": {
                         "type": "boolean",
                         "title": "Показывать логотип",
@@ -22442,6 +22732,10 @@
                         "nullable": true,
                         "title": "Аватар",
                         "description": "Фото пользователя для профиля"
+                    },
+                    "preferences": {
+                        "title": "Предпочтения",
+                        "description": "Пользовательские настройки (тема, язык, часовой пояс)"
                     }
                 }
             },
@@ -22777,6 +23071,10 @@
                         "nullable": true,
                         "title": "Аватар",
                         "description": "Фото пользователя для профиля"
+                    },
+                    "preferences": {
+                        "title": "Предпочтения",
+                        "description": "Пользовательские настройки (тема, язык, часовой пояс)"
                     },
                     "is_active": {
                         "type": "boolean",
@@ -24878,8 +25176,37 @@
                         "nullable": true,
                         "title": "Аватар",
                         "description": "Фото пользователя для профиля"
+                    },
+                    "preferences": {
+                        "title": "Предпочтения",
+                        "description": "Пользовательские настройки (тема, язык, часовой пояс)"
                     }
                 }
+            },
+            "SessionResponse": {
+                "type": "object",
+                "properties": {
+                    "sessions": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ActiveSession"
+                        }
+                    }
+                },
+                "required": [
+                    "sessions"
+                ]
+            },
+            "SessionsRevoked": {
+                "type": "object",
+                "properties": {
+                    "revoked": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "revoked"
+                ]
             },
             "SetMemberRoleRequest": {
                 "type": "object",
@@ -25721,6 +26048,67 @@
                     "updated_at"
                 ]
             },
+            "TOTPDisableRequest": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string",
+                        "minLength": 1
+                    }
+                },
+                "required": [
+                    "code"
+                ]
+            },
+            "TOTPLoginRequest": {
+                "type": "object",
+                "properties": {
+                    "temp_token": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "code": {
+                        "type": "string",
+                        "minLength": 1
+                    }
+                },
+                "required": [
+                    "code",
+                    "temp_token"
+                ]
+            },
+            "TOTPSetup": {
+                "type": "object",
+                "properties": {
+                    "secret": {
+                        "type": "string"
+                    },
+                    "uri": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "secret",
+                    "uri"
+                ]
+            },
+            "TOTPVerifyRequest": {
+                "type": "object",
+                "properties": {
+                    "secret": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "code": {
+                        "type": "string",
+                        "minLength": 1
+                    }
+                },
+                "required": [
+                    "code",
+                    "secret"
+                ]
+            },
             "TimelineEntry": {
                 "type": "object",
                 "properties": {
@@ -25965,6 +26353,10 @@
                         "title": "Аватар",
                         "description": "Фото пользователя для профиля"
                     },
+                    "preferences": {
+                        "title": "Предпочтения",
+                        "description": "Пользовательские настройки (тема, язык, часовой пояс)"
+                    },
                     "role": {
                         "type": "integer",
                         "readOnly": true,
@@ -26007,6 +26399,12 @@
                         "type": "boolean",
                         "readOnly": true
                     },
+                    "is_2fa_enabled": {
+                        "type": "boolean",
+                        "readOnly": true,
+                        "title": "2FA Включена",
+                        "description": "Включена ли двухфакторная аутентификация"
+                    },
                     "is_active": {
                         "type": "boolean",
                         "title": "Активный",
@@ -26045,6 +26443,7 @@
                     "date_joined",
                     "email",
                     "id",
+                    "is_2fa_enabled",
                     "is_platform_admin",
                     "kyc_status",
                     "last_login",
@@ -26107,6 +26506,10 @@
                         "nullable": true,
                         "title": "Аватар",
                         "description": "Фото пользователя для профиля"
+                    },
+                    "preferences": {
+                        "title": "Предпочтения",
+                        "description": "Пользовательские настройки (тема, язык, часовой пояс)"
                     },
                     "is_active": {
                         "type": "boolean",
