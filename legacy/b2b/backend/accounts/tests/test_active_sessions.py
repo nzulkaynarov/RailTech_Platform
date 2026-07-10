@@ -1,16 +1,22 @@
-"""Active-session management — /accounts/users/me/sessions[/revoke-all].
+"""Active-session management — /auth/sessions[/revoke-all].
 
 Pinned behaviour (2026-07-10 review of the externally-contributed endpoints):
     * a "session" is a live (non-blacklisted, unexpired) refresh token;
     * `is_current` marks the row matching the browser's HttpOnly refresh cookie;
     * revoke-all SPARES the current session — "log out everywhere else" must not
       also log out the browser that clicked it (the original blacklisted
-      everything, silently killing the caller's own session).
+      everything, silently killing the caller's own session);
+    * the endpoints MUST live under REFRESH_COOKIE_PATH: the refresh cookie is
+      path-scoped, so a real browser only sends it below /api/v1/auth/. The
+      first version sat at /accounts/users/me/sessions where the cookie never
+      arrived — is_current was always false and revoke-all nuked the caller's
+      own session. APIClient ignores cookie paths, hence the URL invariant test.
 """
 
 import pytest
 from django.conf import settings as django_settings
 from django.core.cache import cache
+from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -42,7 +48,7 @@ def test_sessions_list_marks_the_current_browser(user_factory):
     client = _login_client(user)
     RefreshToken.for_user(user)  # a second, unrelated session
 
-    resp = client.get("/api/v1/accounts/users/me/sessions/")
+    resp = client.get("/api/v1/auth/sessions/")
     assert resp.status_code == 200
     sessions = resp.data["sessions"]
     assert len(sessions) == 2
@@ -56,11 +62,11 @@ def test_revoke_all_spares_the_current_session(user_factory):
     client = _login_client(user)
     other = RefreshToken.for_user(user)
 
-    resp = client.post("/api/v1/accounts/users/me/sessions/revoke-all/")
+    resp = client.post("/api/v1/auth/sessions/revoke-all/")
     assert resp.status_code == 200
     assert resp.data["revoked"] == 1
 
-    remaining = client.get("/api/v1/accounts/users/me/sessions/").data["sessions"]
+    remaining = client.get("/api/v1/auth/sessions/").data["sessions"]
     assert len(remaining) == 1 and remaining[0]["is_current"]
 
     # The other device's refresh token is dead...
@@ -75,5 +81,15 @@ def test_revoke_all_spares_the_current_session(user_factory):
 
 @pytest.mark.django_db
 def test_sessions_require_authentication():
-    assert APIClient().get("/api/v1/accounts/users/me/sessions/").status_code == 401
-    assert APIClient().post("/api/v1/accounts/users/me/sessions/revoke-all/").status_code == 401
+    assert APIClient().get("/api/v1/auth/sessions/").status_code == 401
+    assert APIClient().post("/api/v1/auth/sessions/revoke-all/").status_code == 401
+
+
+def test_session_endpoints_live_under_the_refresh_cookie_path():
+    """URL invariant that would have caught the original bug: the browser only
+    sends the path-scoped refresh cookie below REFRESH_COOKIE_PATH, so both
+    session endpoints must resolve under it (APIClient can't detect this —
+    it posts cookies regardless of their path)."""
+    for name in ("auth-sessions", "auth-sessions-revoke-all"):
+        url = reverse(name)
+        assert url.startswith(django_settings.REFRESH_COOKIE_PATH), (name, url)
