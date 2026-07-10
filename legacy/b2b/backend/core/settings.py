@@ -566,7 +566,8 @@ REST_FRAMEWORK = {
         "register": "5/hour",  # account/verification-email spam, per IP
         "client_invite": "20/hour",  # seller invites an offline client to register (CRM Phase D), per user
         "password_set": "20/hour",  # setup/reset-password token submission, per IP (brute-force)
-        "login": "10/minute",  # token obtain, per IP (brute-force; lenient enough for typos)
+        "login": "10/minute",  # token obtain + 2FA code step, per IP (brute-force; lenient enough for typos)
+        "two_factor": "10/minute",  # 2FA setup/verify/disable, per user (stolen-session code brute-force)
         "public_quote": "30/minute",  # unauthenticated КП-by-token view; blunts token brute-forcing
         "ai_match": "20/minute",  # AI catalog-match endpoint — each call is a paid Claude request
         "ai_preflight": "20/minute",  # AI заявка pre-flight quality check — each call is a paid Claude request

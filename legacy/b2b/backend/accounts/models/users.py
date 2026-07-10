@@ -48,11 +48,11 @@ class CustomUser(AbstractUser):
         help_text=_("Пользовательские настройки (тема, язык, часовой пояс)"),
     )
     totp_secret = models.CharField(
-        max_length=32,
+        max_length=255,
         blank=True,
         null=True,
         verbose_name=_("TOTP Secret"),
-        help_text=_("Секретный ключ для 2FA (Google Authenticator)"),
+        help_text=_("Секретный ключ для 2FA, зашифрован at rest (accounts/services/two_factor.py)"),
     )
     is_2fa_enabled = models.BooleanField(
         default=False,

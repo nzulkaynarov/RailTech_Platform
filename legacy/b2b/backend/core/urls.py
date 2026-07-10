@@ -29,13 +29,13 @@ from accounts.views import (
     SubmitProfileView,
     SupplierSubscriptionViewSet,
     SystemRoleViewSet,
+    TOTPDisableView,
+    TOTPLoginView,
+    TOTPSetupView,
+    TOTPVerifyView,
     UserViewSet,
     WorkspaceRoleViewSet,
     WsTicketView,
-    TOTPSetupView,
-    TOTPVerifyView,
-    TOTPDisableView,
-    TOTPLoginView,
 )
 from accounts.wizard import WIZARD_FORMS, CompanyWizardView
 from catalog.views import (

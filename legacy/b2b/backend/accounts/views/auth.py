@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
-from rest_framework import permissions, status, views
+from rest_framework import permissions, serializers, status, views
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.generics import RetrieveAPIView
 from rest_framework.response import Response
@@ -46,6 +46,7 @@ from accounts.services import (  # noqa: E402
     revoke_user_refresh_tokens,
     send_password_reset_email,
     submit_company_profile,
+    two_factor,
     verify_and_setup_password,
 )
 from accounts.throttles import PasswordResetEmailThrottle, ScopedRateThrottle  # noqa: E402
@@ -319,25 +320,25 @@ class ThrottledTokenObtainPairView(TokenObtainPairView):
 
 class CookieTokenObtainPairView(ThrottledTokenObtainPairView):
     """Login that returns the access token in the body and the refresh token in an
-    HttpOnly cookie (F2.1) — the refresh token is never exposed to JavaScript."""
+    HttpOnly cookie (F2.1) — the refresh token is never exposed to JavaScript.
+
+    2FA accounts: the password is verified through the SAME simplejwt path (so the
+    per-IP throttle and SEC-06 lockout keep counting, and a wrong password behaves
+    identically whether 2FA is on or not — no enumeration). On success the minted
+    pair is voided and the client gets a short-lived ticket for /auth/login/2fa/."""
 
     def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        if response.status_code != status.HTTP_200_OK:
+            return response
+        refresh = response.data.pop("refresh", None)
         email = (request.data.get("email") or "").strip()
         user = get_user_model().objects.filter(email=email).first()
         if user and user.is_2fa_enabled:
-            # Verify password first without returning tokens
-            from django.contrib.auth import authenticate
-            if authenticate(request, username=email, password=request.data.get("password")):
-                from django.core.signing import TimestampSigner
-                signer = TimestampSigner()
-                temp_token = signer.sign(str(user.id))
-                return Response({"2fa_required": True, "temp_token": temp_token})
-        
-        response = super().post(request, *args, **kwargs)
-        if response.status_code == status.HTTP_200_OK:
-            refresh = response.data.pop("refresh", None)
-            if refresh:
-                _set_refresh_cookie(response, refresh)
+            two_factor.void_refresh_token(refresh)
+            return Response({"2fa_required": True, "temp_token": two_factor.issue_login_ticket(user)})
+        if refresh:
+            _set_refresh_cookie(response, refresh)
         return response
 
 
@@ -368,106 +369,118 @@ class CookieTokenRefreshView(TokenRefreshView):
             _set_refresh_cookie(response, rotated)
         return response
 
-import pyotp
-from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
-from rest_framework import serializers
-
-totp_signer = TimestampSigner()
 
 class TOTPSetupView(views.APIView):
+    """POST /api/v1/auth/2fa/setup/ — mint a secret + otpauth URI for the QR code.
+    Nothing persists until the user confirms a code via /auth/2fa/verify/."""
+
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "two_factor"
 
     @extend_schema(
-        summary="Setup 2FA",
-        responses={200: inline_serializer("TOTPSetup", fields={"secret": serializers.CharField(), "uri": serializers.CharField()})},
-        tags=["Auth"]
+        summary="Start 2FA setup",
+        responses={
+            200: inline_serializer(
+                "TOTPSetup", fields={"secret": serializers.CharField(), "uri": serializers.CharField()}
+            ),
+            400: OpenApiResponse(description="2FA_ALREADY_ENABLED"),
+        },
+        tags=["Auth"],
     )
     def post(self, request):
-        secret = pyotp.random_base32()
-        uri = pyotp.totp.TOTP(secret).provisioning_uri(name=request.user.email, issuer_name="RailTech")
-        return Response({"secret": secret, "uri": uri})
+        if request.user.is_2fa_enabled:
+            return Response({"detail": "2FA_ALREADY_ENABLED"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(two_factor.generate_totp_setup(request.user))
 
 
 class TOTPVerifyView(views.APIView):
+    """POST /api/v1/auth/2fa/verify/ — confirm the scanned secret and enable 2FA."""
+
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "two_factor"
 
     @extend_schema(
         summary="Verify and enable 2FA",
-        request=inline_serializer("TOTPVerify", fields={"secret": serializers.CharField(), "code": serializers.CharField()}),
-        responses={200: OpenApiResponse(description="2FA Enabled"), 400: OpenApiResponse(description="Invalid code")},
-        tags=["Auth"]
+        request=inline_serializer(
+            "TOTPVerify", fields={"secret": serializers.CharField(), "code": serializers.CharField()}
+        ),
+        responses={
+            200: OpenApiResponse(description="2FA enabled"),
+            400: OpenApiResponse(description="2FA_CODE_REQUIRED | 2FA_INVALID_CODE | 2FA_ALREADY_ENABLED"),
+        },
+        tags=["Auth"],
     )
     def post(self, request):
-        secret = request.data.get("secret")
-        code = request.data.get("code")
-        if not secret or not code:
-            return Response({"detail": "Secret and code are required."}, status=status.HTTP_400_BAD_REQUEST)
-        totp = pyotp.TOTP(secret)
-        if totp.verify(code):
-            request.user.totp_secret = secret
-            request.user.is_2fa_enabled = True
-            request.user.save(update_fields=["totp_secret", "is_2fa_enabled"])
-            return Response({"message": "2FA enabled."})
-        return Response({"detail": "Invalid code."}, status=status.HTTP_400_BAD_REQUEST)
+        error = two_factor.enable_totp(request.user, request.data.get("secret"), request.data.get("code"))
+        if error:
+            return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"detail": "2FA_ENABLED"})
 
 
 class TOTPDisableView(views.APIView):
+    """POST /api/v1/auth/2fa/disable/ — turn 2FA off (requires a valid code)."""
+
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "two_factor"
 
     @extend_schema(
         summary="Disable 2FA",
         request=inline_serializer("TOTPDisable", fields={"code": serializers.CharField()}),
-        responses={200: OpenApiResponse(description="2FA Disabled"), 400: OpenApiResponse(description="Invalid code")},
-        tags=["Auth"]
+        responses={
+            200: OpenApiResponse(description="2FA disabled (idempotent)"),
+            400: OpenApiResponse(description="2FA_CODE_REQUIRED | 2FA_INVALID_CODE"),
+        },
+        tags=["Auth"],
     )
     def post(self, request):
-        code = request.data.get("code")
-        if not request.user.is_2fa_enabled or not request.user.totp_secret:
-            return Response({"message": "2FA is already disabled."})
-        totp = pyotp.TOTP(request.user.totp_secret)
-        if totp.verify(code):
-            request.user.is_2fa_enabled = False
-            request.user.totp_secret = None
-            request.user.save(update_fields=["is_2fa_enabled", "totp_secret"])
-            return Response({"message": "2FA disabled."})
-        return Response({"detail": "Invalid code."}, status=status.HTTP_400_BAD_REQUEST)
+        error = two_factor.disable_totp(request.user, request.data.get("code"))
+        if error:
+            return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"detail": "2FA_DISABLED"})
 
 
 class TOTPLoginView(views.APIView):
+    """POST /api/v1/auth/login/2fa/ — second login step: ticket + TOTP code → tokens.
+
+    Same anti-brute-force layers as the password step: per-IP `login` throttle and
+    the SEC-06 per-account lockout (a distributed grind on the 6-digit code counts
+    exactly like distributed password failures). Refresh token goes to the HttpOnly
+    cookie ONLY — never the body (F2.1)."""
+
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "login"
 
     @extend_schema(
-        summary="Login with 2FA code",
-        request=inline_serializer("TOTPLogin", fields={"temp_token": serializers.CharField(), "code": serializers.CharField()}),
-        responses={200: OpenApiResponse(description="Tokens returned"), 400: OpenApiResponse(description="Invalid token or code")},
-        tags=["Auth"]
+        summary="Complete login with a 2FA code",
+        request=inline_serializer(
+            "TOTPLogin", fields={"temp_token": serializers.CharField(), "code": serializers.CharField()}
+        ),
+        responses={
+            200: OpenApiResponse(description="Access token in body; refresh in HttpOnly cookie"),
+            400: OpenApiResponse(description="2FA_TICKET_INVALID | 2FA_INVALID_CODE"),
+            429: OpenApiResponse(description="TOO_MANY_LOGIN_ATTEMPTS"),
+        },
+        tags=["Auth"],
     )
     def post(self, request):
-        temp_token = request.data.get("temp_token")
-        code = request.data.get("code")
-        try:
-            user_id = totp_signer.unsign(temp_token, max_age=300) # 5 minutes
-        except (BadSignature, SignatureExpired, TypeError):
-            return Response({"detail": "Invalid or expired token."}, status=status.HTTP_400_BAD_REQUEST)
-        
-        User = get_user_model()
-        try:
-            user = User.objects.get(id=user_id, is_active=True)
-        except User.DoesNotExist:
-            return Response({"detail": "User not found."}, status=status.HTTP_400_BAD_REQUEST)
-            
-        if not user.is_2fa_enabled or not user.totp_secret:
-            return Response({"detail": "2FA not enabled for user."}, status=status.HTTP_400_BAD_REQUEST)
-            
-        totp = pyotp.TOTP(user.totp_secret)
-        if totp.verify(code):
-            from rest_framework_simplejwt.tokens import RefreshToken
-            refresh = RefreshToken.for_user(user)
-            response = Response({
-                "access": str(refresh.access_token),
-                "refresh": str(refresh)
-            })
-            _set_refresh_cookie(response, str(refresh))
-            return response
-            
-        return Response({"detail": "Invalid code."}, status=status.HTTP_400_BAD_REQUEST)
+        from rest_framework_simplejwt.tokens import RefreshToken
+
+        user, error = two_factor.redeem_login_ticket(request.data.get("temp_token"), request.data.get("code"))
+        if error == "2FA_TICKET_INVALID":
+            return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
+        # The ticket resolved the account — a locked account answers 429 before
+        # anything is revealed about the submitted code (no verification oracle).
+        if login_guard.is_locked(user.email):
+            return login_guard.locked_response()
+        if error:  # 2FA_INVALID_CODE — charge the account's distributed-attack lockout
+            login_guard.record_failure(user.email, BaseThrottle().get_ident(request))
+            return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
+        login_guard.reset(user.email)
+        refresh = RefreshToken.for_user(user)
+        response = Response({"access": str(refresh.access_token)})
+        _set_refresh_cookie(response, str(refresh))
+        return response

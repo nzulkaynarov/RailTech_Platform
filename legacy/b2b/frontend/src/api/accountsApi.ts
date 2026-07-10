@@ -1,11 +1,12 @@
 import { apiClient } from './client';
 import { PaginatedResponse } from './types';
 
+// One live refresh token = one session. The backend stores no ip/user-agent —
+// only timestamps and whether the row matches THIS browser's HttpOnly cookie.
 export interface Session {
 	id: number;
-	ip_address: string;
-	user_agent: string;
 	created_at: string;
+	expires_at: string;
 	is_current: boolean;
 }
 
@@ -440,7 +441,7 @@ export const accountsApi = {
 		return response.data.sessions;
 	},
 	revokeAllSessions: async () => {
-		const response = await apiClient.post<{ message: string }>('accounts/users/me/sessions/revoke-all/');
+		const response = await apiClient.post<{ revoked: number }>('accounts/users/me/sessions/revoke-all/');
 		return response.data;
 	},
 	setup2FA: async () => {
@@ -448,11 +449,11 @@ export const accountsApi = {
 		return response.data;
 	},
 	verify2FA: async (data: { secret: string; code: string }) => {
-		const response = await apiClient.post<{ message: string }>('auth/2fa/verify/', data);
+		const response = await apiClient.post<{ detail: string }>('auth/2fa/verify/', data);
 		return response.data;
 	},
 	disable2FA: async (data: { code: string }) => {
-		const response = await apiClient.post<{ message: string }>('auth/2fa/disable/', data);
+		const response = await apiClient.post<{ detail: string }>('auth/2fa/disable/', data);
 		return response.data;
 	},
 

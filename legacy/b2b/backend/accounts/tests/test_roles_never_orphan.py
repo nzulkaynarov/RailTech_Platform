@@ -50,7 +50,9 @@ def test_legacy_owner_can_be_reassigned_when_another_admin_exists(company):
     user, member = _owner(co, "owner@orphan.test")
     # A second admin via an is_system CompanyRole → the floor is not breached.
     second = CustomUser.objects.create_user(email="admin2@orphan.test", username="admin2@orphan.test", password="pw")
-    CompanyMember.objects.create(user=second, company=co, role=WorkspaceRole.objects.get(code="MEMBER"), company_role=admin_role, is_active=True)
+    CompanyMember.objects.create(
+        user=second, company=co, role=WorkspaceRole.objects.get(code="MEMBER"), company_role=admin_role, is_active=True
+    )
 
     result, error = assign_role_to_member(user, member.pk, plain.pk)
     assert error is None
@@ -64,7 +66,9 @@ def test_sole_is_system_admin_still_cannot_self_demote(company):
     """Regression: the original is_system sole-admin protection is preserved."""
     co, plain, admin_role = company
     user = CustomUser.objects.create_user(email="sys@orphan.test", username="sys@orphan.test", password="pw")
-    member = CompanyMember.objects.create(user=user, company=co, role=WorkspaceRole.objects.get(code="MEMBER"), company_role=admin_role, is_active=True)
+    member = CompanyMember.objects.create(
+        user=user, company=co, role=WorkspaceRole.objects.get(code="MEMBER"), company_role=admin_role, is_active=True
+    )
     result, error = assign_role_to_member(user, member.pk, plain.pk)
     assert result is None
     assert error == "CANNOT_DEMOTE_LAST_COMPANY_ADMIN"

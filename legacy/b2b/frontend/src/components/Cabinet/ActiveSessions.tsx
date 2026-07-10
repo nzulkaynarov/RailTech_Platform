@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Monitor, Smartphone, LogOut } from 'lucide-react';
+import { Monitor, LogOut } from 'lucide-react';
 import { format } from 'date-fns';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -17,21 +17,21 @@ export function ActiveSessions() {
   const [loading, setLoading] = useState(true);
   const [revoking, setRevoking] = useState(false);
 
-  const fetchSessions = async () => {
+  const fetchSessions = useCallback(async () => {
     try {
       setLoading(true);
       const data = await accountsApi.getActiveSessions();
       setSessions(data);
-    } catch (e) {
+    } catch {
       toast.error(t('profile.security.sessionsError'));
     } finally {
       setLoading(false);
     }
-  };
+  }, [t]);
 
   useEffect(() => {
     fetchSessions();
-  }, []);
+  }, [fetchSessions]);
 
   const handleRevokeAll = async () => {
     try {
@@ -39,7 +39,7 @@ export function ActiveSessions() {
       await accountsApi.revokeAllSessions();
       toast.success(t('profile.security.sessionsRevoked'));
       await fetchSessions();
-    } catch (e) {
+    } catch {
       toast.error(t('common.error'));
     } finally {
       setRevoking(false);
@@ -67,39 +67,30 @@ export function ActiveSessions() {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {sessions.map((session, index) => {
-          const isCurrent = session.is_current;
-          const isMobile = session.user_agent?.toLowerCase().includes('mobile');
-          const Icon = isMobile ? Smartphone : Monitor;
-          
-          return (
-            <div key={session.id || index} className="flex items-start justify-between rounded-lg border p-4">
-              <div className="flex items-start gap-4">
-                <div className="p-2 bg-muted rounded-full">
-                  <Icon className="w-5 h-5 text-muted-foreground" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium text-sm">
-                      {session.ip_address || t('common.unknown')}
-                    </p>
-                    {isCurrent && <Badge variant="default" className="text-[10px] uppercase h-5">{t('profile.security.currentSession')}</Badge>}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {session.user_agent ? (
-                      <span className="line-clamp-1">{session.user_agent}</span>
-                    ) : (
-                      t('common.unknownDevice')
-                    )}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
+        {sessions.map((session) => (
+          <div key={session.id} className="flex items-start justify-between rounded-lg border p-4">
+            <div className="flex items-start gap-4">
+              <div className="p-2 bg-muted rounded-full">
+                <Monitor className="w-5 h-5 text-muted-foreground" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <p className="font-medium text-sm">
                     {t('profile.security.signedIn')}: {format(new Date(session.created_at), 'PPP p')}
                   </p>
+                  {session.is_current && (
+                    <Badge variant="default" className="text-xs uppercase h-5">
+                      {t('profile.security.currentSession')}
+                    </Badge>
+                  )}
                 </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {t('profile.security.expires')}: {format(new Date(session.expires_at), 'PPP p')}
+                </p>
               </div>
             </div>
-          );
-        })}
+          </div>
+        ))}
         {sessions.length === 0 && (
           <div className="text-center text-muted-foreground text-sm py-4">
             {t('common.noData')}

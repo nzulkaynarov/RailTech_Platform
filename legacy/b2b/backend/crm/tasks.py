@@ -395,8 +395,6 @@ def send_quote_email(self, quote_id: int) -> dict:
     whether the email lands. The seller-only cost projection never leaves the building:
     the attached PDF is the client projection (no margin/charges).
     """
-    from django.conf import settings
-
     from notifications.emails import send_templated_email
 
     from .models import Quote

@@ -285,8 +285,13 @@ def test_quote_send_null_company_role_non_sales_with_can_sell_denied(lookups, se
     seller = _make_user("send_logist@seller.test")
     ws_logist = WorkspaceRole.objects.get_or_create(code="LOGIST", defaults={"name": "Logist", "sort_order": 30})[0]
     CompanyMember.objects.create(
-        user=seller, company=seller_company, role=ws_logist,
-        is_primary=True, is_active=True, can_sell=True, can_buy=True,
+        user=seller,
+        company=seller_company,
+        role=ws_logist,
+        is_primary=True,
+        is_active=True,
+        can_sell=True,
+        can_buy=True,
     )  # company_role stays NULL — the un-migrated shape the add-membership path used to create
     quote = _ready_to_send_quote(deal, prepared_by=seller)
 
@@ -299,8 +304,13 @@ def test_quote_send_legacy_owner_role_passes(lookups, seller_company, deal):
     seller = _make_user("send_owner@seller.test")
     ws_owner = WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})[0]
     CompanyMember.objects.create(
-        user=seller, company=seller_company, role=ws_owner,
-        is_primary=True, is_active=True, can_sell=True, can_buy=True,
+        user=seller,
+        company=seller_company,
+        role=ws_owner,
+        is_primary=True,
+        is_active=True,
+        can_sell=True,
+        can_buy=True,
     )
     quote = _ready_to_send_quote(deal, prepared_by=seller)
 

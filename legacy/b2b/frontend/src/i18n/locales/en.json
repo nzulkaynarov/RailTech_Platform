@@ -88,7 +88,9 @@
     "period30d": "30 days",
     "period90d": "90 days",
     "id": "ID",
-    "members": "Members"
+    "members": "Members",
+    "disable": "Disable",
+    "verify": "Verify"
   },
   "auth": {
     "loginTitle": "Sign in",
@@ -119,7 +121,8 @@
       "passwordRequired": "Enter your password",
       "totpRequired": "Enter your 2FA verification code",
       "totpLength": "Code must be exactly 6 digits"
-    }
+    },
+    "ticketExpired": "Verification window expired — please sign in again"
   },
   "onboarding": {
     "title": "Getting started",
@@ -1419,7 +1422,9 @@
     "add": "Add a template charge",
     "hint": "A template is tied to an Incoterm basis. Selecting that basis on a КП auto-adds these charges — the seller edits them afterwards.",
     "added": "Template added",
-    "duplicate": "This charge already exists for this basis."
+    "duplicate": "This charge already exists for this basis.",
+    "deleteTitle": "Delete charge template?",
+    "deleteConfirm": "The template will be deleted. This cannot be undone."
   },
   "team": {
     "title": "Company Team",
@@ -1548,7 +1553,8 @@
       "LICENSE": "License",
       "PASSPORT": "Director's Passport",
       "TAX_CERT": "Tax Registration Certificate",
-      "OTHER": "Other document"
+      "OTHER": "Other document",
+      "BANK_REF": "Bank details"
     }
   },
   "profileForm": {
@@ -2407,7 +2413,23 @@
       "activeSessions": "Active sessions",
       "activeDevices": "{{count}} active devices",
       "manage": "Manage",
-      "currentDevice": "Current device"
+      "currentDevice": "Current device",
+      "twoFactorEnabled": "Two-factor authentication enabled",
+      "twoFactorDisabled": "Two-factor authentication disabled",
+      "twoFactorActive": "2FA is active. Enter a code from your authenticator app to disable it.",
+      "invalidCode": "Invalid verification code",
+      "codeRequired": "Enter the code from your authenticator app",
+      "alreadyEnabled": "2FA is already enabled",
+      "enterCodeToDisable": "Code to disable 2FA",
+      "enterCode": "Enter the code from the app",
+      "enableTwoFactor": "Enable 2FA",
+      "sessionsError": "Failed to load active sessions",
+      "sessionsRevoked": "Other sessions have been signed out",
+      "activeSessionsDesc": "Devices currently signed in to your account",
+      "revokeOtherSessions": "Sign out others",
+      "currentSession": "Current",
+      "signedIn": "Signed in",
+      "expires": "Expires"
     },
     "notifications": {
       "title": "Notifications",
@@ -4836,7 +4858,9 @@
     "showFxNote": "CBU FX rate on the КП",
     "showFxNoteHint": "Print the CBU rate on the client КП. Off by default — the client sees the UZS price",
     "preview": "Preview",
-    "previewHint": "A sample КП with your branding and settings. Refreshes after you save."
+    "previewHint": "A sample КП with your branding and settings. Refreshes after you save.",
+    "useCompanyDefaults": "Use company profile data",
+    "useCompanyDefaultsHint": "Name, INN, address and bank details are inherited from the company profile automatically"
   },
   "companyDefaults": {
     "title": "Quote defaults",
@@ -4852,7 +4876,15 @@
     "notSet": "Not set",
     "help": "New quotes inherit these values. You can override them in each individual quote.",
     "saved": "Quote defaults saved",
-    "ownerOnly": "Only the company owner can configure quote defaults"
+    "ownerOnly": "Only the company owner can configure quote defaults",
+    "errors": {
+      "invalidVat": "VAT must be between 0 and 100%",
+      "invalidMargin": "Margin must be between 0 and 100%",
+      "invalidValidity": "Validity must be between 1 and 365 days",
+      "minMarginGreaterThanDefault": "Minimum margin cannot exceed the default margin",
+      "defaultMarginGreaterThanTarget": "Default margin cannot exceed the target margin",
+      "minMarginGreaterThanTarget": "Minimum margin cannot exceed the target margin"
+    }
   },
   "companyNumbering": {
     "title": "Document numbering",

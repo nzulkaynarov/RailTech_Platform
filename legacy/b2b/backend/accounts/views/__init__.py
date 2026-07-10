@@ -21,11 +21,11 @@ from accounts.views.auth import (  # noqa: F401
     SetupPasswordView,
     SubmitProfileView,
     ThrottledTokenObtainPairView,
-    WsTicketView,
-    TOTPSetupView,
-    TOTPVerifyView,
     TOTPDisableView,
     TOTPLoginView,
+    TOTPSetupView,
+    TOTPVerifyView,
+    WsTicketView,
 )
 from accounts.views.clients import ContactViewSet  # noqa: F401
 from accounts.views.company import CompanyViewSet  # noqa: F401

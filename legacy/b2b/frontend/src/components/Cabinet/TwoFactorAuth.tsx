@@ -9,7 +9,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { accountsApi } from '@/api/accountsApi';
+import { getErrorMessage } from '@/api/client';
 import { useUserStore } from '@/store/userStore';
+
+// Backend answers with error CODES ({"detail": "2FA_INVALID_CODE"}) — map to i18n.
+const ERROR_KEYS: Record<string, string> = {
+  '2FA_INVALID_CODE': 'profile.security.invalidCode',
+  '2FA_CODE_REQUIRED': 'profile.security.codeRequired',
+  '2FA_ALREADY_ENABLED': 'profile.security.alreadyEnabled',
+};
 
 export function TwoFactorAuth() {
   const { t } = useTranslation();
@@ -20,13 +28,18 @@ export function TwoFactorAuth() {
 
   const is2faEnabled = profile.is_2fa_enabled;
 
+  const toastApiError = (error: unknown, fallbackKey: string) => {
+    const detail = getErrorMessage(error);
+    toast.error(t(ERROR_KEYS[detail] ?? fallbackKey));
+  };
+
   const handleSetup = async () => {
     try {
       setLoading(true);
       const data = await accountsApi.setup2FA();
       setSetupData(data);
-    } catch (e) {
-      toast.error(t('common.error'));
+    } catch (error) {
+      toastApiError(error, 'common.error');
     } finally {
       setLoading(false);
     }
@@ -41,8 +54,8 @@ export function TwoFactorAuth() {
       updateProfile({ is_2fa_enabled: true });
       setSetupData(null);
       setCode('');
-    } catch (e) {
-      toast.error(t('profile.security.invalidCode'));
+    } catch (error) {
+      toastApiError(error, 'profile.security.invalidCode');
     } finally {
       setLoading(false);
     }
@@ -59,8 +72,8 @@ export function TwoFactorAuth() {
       toast.success(t('profile.security.twoFactorDisabled'));
       updateProfile({ is_2fa_enabled: false });
       setCode('');
-    } catch (e) {
-      toast.error(t('profile.security.invalidCode'));
+    } catch (error) {
+      toastApiError(error, 'profile.security.invalidCode');
     } finally {
       setLoading(false);
     }
@@ -70,7 +83,7 @@ export function TwoFactorAuth() {
     <Card>
       <CardHeader>
         <div className="flex items-center gap-2">
-          {is2faEnabled ? <ShieldCheck className="h-5 w-5 text-green-600" /> : <ShieldAlert className="h-5 w-5 text-amber-500" />}
+          {is2faEnabled ? <ShieldCheck className="h-5 w-5 text-success" /> : <ShieldAlert className="h-5 w-5 text-warning" />}
           <CardTitle className="text-base">{t('profile.security.twoFactor')}</CardTitle>
         </div>
         <CardDescription>{t('profile.security.twoFactorDesc')}</CardDescription>
@@ -91,8 +104,10 @@ export function TwoFactorAuth() {
           </div>
         ) : setupData ? (
           <div className="space-y-4">
-            <div className="p-4 bg-white rounded-lg inline-block">
-              <QRCodeSVG value={setupData.uri} size={200} />
+            {/* Authenticator scanners need a light quiet zone even in dark mode —
+                marginSize renders it INSIDE the SVG instead of a hardcoded bg. */}
+            <div className="inline-block overflow-hidden rounded-lg border">
+              <QRCodeSVG value={setupData.uri} size={200} marginSize={3} />
             </div>
             <div className="space-y-2 max-w-sm">
               <Label>{t('profile.security.enterCode')}</Label>
