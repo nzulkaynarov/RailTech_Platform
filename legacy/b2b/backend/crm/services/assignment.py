@@ -56,6 +56,8 @@ def claim_deal(deal_id: int, actor: CustomUser) -> Tuple[Optional[Deal], Optiona
         "Заявка взята в работу",
         f"{actor.email} взял заявку #{deal_id}",
         company_id=routing.deal.company_id,
+        event_code="deal.claimed",
+        event_params={"actor_email": actor.email, "deal_id": deal_id},
     )
     return routing.deal, None
 
@@ -98,6 +100,8 @@ def release_deal(deal_id: int, actor: CustomUser) -> Tuple[Optional[Deal], Optio
         "Заявка возвращена в очередь",
         f"{actor.email} освободил заявку #{deal_id}",
         company_id=target.deal.company_id,
+        event_code="deal.released",
+        event_params={"actor_email": actor.email, "deal_id": deal_id},
     )
     return target.deal, None
 
@@ -137,6 +141,8 @@ def assign_deal(deal_id: int, actor: CustomUser, assignee_id: int) -> Tuple[Opti
         "Заявка назначена",
         f"{actor.email} назначил заявку #{deal_id} → {assignee.email}",
         company_id=target.deal.company_id,
+        event_code="deal.assigned",
+        event_params={"actor_email": actor.email, "deal_id": deal_id, "assignee_email": assignee.email},
     )
     return target.deal, None
 
@@ -159,12 +165,22 @@ def _notify_assignee(deal: Deal, assignee: CustomUser) -> None:
     transaction.on_commit(lambda: push_notification_ws(notif))
 
 
-def _log(deal_id: int, actor: CustomUser, action: str, detail: str, company_id: Optional[int] = None) -> None:
+def _log(
+    deal_id: int,
+    actor: CustomUser,
+    action: str,
+    detail: str,
+    company_id: Optional[int] = None,
+    event_code: str = "",
+    event_params: Optional[dict] = None,
+) -> None:
     from ..models import ActivityLog
 
     ActivityLog.objects.create(
         action=action,
         detail=detail,
+        event_code=event_code,
+        event_params=event_params or {},
         user=actor,
         level="INFO",
         entity_type="deal",

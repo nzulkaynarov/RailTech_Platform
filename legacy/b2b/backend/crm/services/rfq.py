@@ -127,6 +127,8 @@ def buyer_add_request_item(
     ActivityLog.objects.create(
         action="Добавлена позиция заявки",
         detail=f"Deal #{deal.id}: «{clean_name}» × {item.quantity}",
+        event_code="deal.item_added",
+        event_params={"deal_id": deal.id, "name": clean_name, "quantity": item.quantity},
         user=user,
         level="INFO",
         entity_type="deal",
@@ -199,6 +201,8 @@ def buyer_add_request_items(user: CustomUser, deal: Deal, rows: list) -> list:
         ActivityLog.objects.create(
             action="Добавлены позиции заявки (корзина)",
             detail=f"Deal #{deal.id}: {len(to_create)} {item_word}",
+            event_code="deal.items_added_bulk",
+            event_params={"deal_id": deal.id, "count": len(to_create)},
             user=user,
             level="INFO",
             entity_type="deal",
@@ -262,11 +266,16 @@ def buyer_remove_request_item(user: CustomUser, item: QuoteItem) -> None:
     deal = item.quote.deal
     _assert_request_editable(deal, user)
     quote = item.quote
+    # Capture the id for the structured event before delete() nulls the pk (the legacy
+    # detail string below intentionally keeps its historical `item.id` rendering).
+    removed_item_id = item.id
     item.delete()
     quote.recalculate_totals()
     ActivityLog.objects.create(
         action="Удалена позиция заявки",
         detail=f"Deal #{deal.id}: QuoteItem #{item.id}",
+        event_code="deal.item_removed",
+        event_params={"deal_id": deal.id, "item_id": removed_item_id},
         user=user,
         level="INFO",
         entity_type="deal",
@@ -381,6 +390,8 @@ def route_request_to_sellers(user: CustomUser, deal: Deal, seller_company_ids: l
     ActivityLog.objects.create(
         action="Заявка адресована продавцам (RFQ routing)",
         detail=f"Deal #{deal.id}: {len(valid_ids)} {seller_word}",
+        event_code="deal.routed",
+        event_params={"deal_id": deal.id, "count": len(valid_ids)},
         user=user,
         level="INFO",
         entity_type="deal",
@@ -443,6 +454,8 @@ def submit_request(user: CustomUser, deal: Deal) -> Deal:
     ActivityLog.objects.create(
         action="Заявка отправлена поставщику (RFQ)",
         detail=f"Deal #{deal.id}: {len(items)} {item_word}",
+        event_code="deal.submitted",
+        event_params={"deal_id": deal.id, "count": len(items)},
         user=user,
         level="INFO",
         entity_type="deal",

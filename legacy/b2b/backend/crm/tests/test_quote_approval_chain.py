@@ -23,7 +23,7 @@ from accounts.models import (
     VerificationStatus,
     WorkspaceRole,
 )
-from crm.models import Deal, DealStage, Quote, QuoteStatus
+from crm.models import ActivityLog, Deal, DealStage, Quote, QuoteStatus
 from crm.models.approvals import StepParticipation, StepStatus
 from crm.services.approvals import act_on_step, recall_quote
 from crm.services.quotes import QuoteLifecycleService as QLS
@@ -214,6 +214,55 @@ def test_send_to_client_blocked_until_ready(seller, deal):
     quote = _quote(deal, prepared_by=seller["sales"])
     with pytest.raises(ValueError):
         QLS.send_to_client(quote.id, seller["sales"])
+
+
+# ─── structured event logging (E1 i18n timeline) ────────────────────────────
+def _last_event(quote, event_code):
+    return (
+        ActivityLog.objects.filter(entity_type="quote", entity_id=quote.id, event_code=event_code)
+        .order_by("-id")
+        .first()
+    )
+
+
+def test_event_log_step_approved_and_complete(seller, deal):
+    quote = _quote(deal, prepared_by=seller["sales"])
+    QLS.submit_for_review(quote.id, seller["sales"])
+    head_step = quote.approval_steps.get(participation=StepParticipation.HEAD)
+    act_on_step(head_step.id, seller["head"], "APPROVE")
+
+    approved = _last_event(quote, "quote.approval_step_approved")
+    assert approved is not None
+    assert approved.action == "Шаг согласования пройден"  # human-readable RU, not a raw key
+    assert "participation" in approved.event_params
+
+    complete = _last_event(quote, "quote.approval_complete")
+    assert complete is not None
+    assert complete.action == "Согласование КП завершено"
+    assert complete.event_params == {}
+
+
+def test_event_log_step_rejected(seller, deal):
+    quote = _quote(deal, prepared_by=seller["sales"])
+    QLS.submit_for_review(quote.id, seller["sales"])
+    head_step = quote.approval_steps.get(participation=StepParticipation.HEAD)
+    act_on_step(head_step.id, seller["head"], "REJECT", comment="дорого")
+
+    rejected = _last_event(quote, "quote.approval_step_rejected")
+    assert rejected is not None
+    assert rejected.action == "Согласование отклонено"
+    assert rejected.event_params == {"comment": "дорого"}
+
+
+def test_event_log_recalled(seller, deal):
+    quote = _quote(deal, prepared_by=seller["sales"])
+    QLS.submit_for_review(quote.id, seller["sales"])
+    recall_quote(quote.id, seller["sales"])
+
+    recalled = _last_event(quote, "quote.approval_recalled")
+    assert recalled is not None
+    assert recalled.action == "КП отозван из согласования"
+    assert recalled.event_params == {}
 
 
 # ─── DRF endpoint tests ─────────────────────────────────────────────────────

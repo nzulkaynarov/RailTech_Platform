@@ -82,6 +82,10 @@ class AdminActivityView(APIView):
                 "id": log.id,
                 "action": log.action,
                 "detail": log.detail,
+                # Structured event (E1) — the admin timeline localizes activity.<event_code>
+                # client-side; action/detail stay the RU fallback for legacy rows.
+                "event_code": log.event_code,
+                "event_params": log.event_params,
                 "level": log.level,
                 "reason": log.reason,
                 "before_data": log.before_data,

@@ -44,6 +44,12 @@ interface QuoteBuilderGridProps {
 	onSave?: () => void;
 }
 
+// E2: sanity upper caps on line quantity/price — mirror backend settings.QUOTE_ITEM_MAX_*
+// (санитарный потолок против fat-finger/вставки; backend re-validates and is the hard guard).
+const QUOTE_ITEM_MAX_QUANTITY = 1000000;
+const QUOTE_ITEM_MAX_UNIT_PRICE = 10000000000;
+const PRICE_FIELDS: (keyof QuoteItem)[] = ['frozen_base_price', 'logistics_cost', 'customs_duty'];
+
 // Margin health → semantic color, shared by the КП-level rail and the per-line chip.
 const marginToneClass = (belowCostOrFloor: boolean, marginPct: number, target: number): string =>
 	belowCostOrFloor ? 'text-destructive' : marginPct >= target ? 'text-success' : 'text-warning';
@@ -135,13 +141,19 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	}, [localItems, quoteItems]);
 
 	const updateItemLocally = (id: number, field: keyof QuoteItem, value: string) => {
-		setLocalItems(prev => prev.map(item => {
-			if (item.id === id) {
-				const cleanValue = value === '' ? "0" : value;
-				return { ...item, [field]: cleanValue };
-			}
-			return item;
-		}));
+		let cleanValue = value === '' ? "0" : value;
+		const numeric = Number(cleanValue);
+		// Clamp sanity caps client-side with a localized toast; backend re-validates.
+		if (field === 'quantity' && numeric > QUOTE_ITEM_MAX_QUANTITY) {
+			cleanValue = String(QUOTE_ITEM_MAX_QUANTITY);
+			toast.warning(t('quote.validation.qtyTooLarge', { max: QUOTE_ITEM_MAX_QUANTITY }));
+		} else if (PRICE_FIELDS.includes(field) && numeric > QUOTE_ITEM_MAX_UNIT_PRICE) {
+			cleanValue = String(QUOTE_ITEM_MAX_UNIT_PRICE);
+			toast.warning(t('quote.validation.priceTooLarge', { max: QUOTE_ITEM_MAX_UNIT_PRICE }));
+		}
+		setLocalItems(prev => prev.map(item =>
+			item.id === id ? { ...item, [field]: cleanValue } : item
+		));
 	};
 
 	// The line's COST currency is a code (not a numeric field) — set it verbatim.
@@ -678,7 +690,9 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 													<TableCell className="p-0">
 														<Input
 															type="number"
-															aria-label={t('catalog.table.unit')}
+															min={1}
+															max={QUOTE_ITEM_MAX_QUANTITY}
+															aria-label={t('quote.quantity')}
 															className="h-8 border-none shadow-none rounded-none text-xs font-semibold text-center focus-visible:ring-1"
 															value={item.quantity}
 															onChange={(e) => updateItemLocally(item.id, 'quantity', e.target.value)}
@@ -691,6 +705,8 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 																	<TooltipTrigger asChild>
 																		<Input
 																			type="number"
+																			min={0}
+																			max={QUOTE_ITEM_MAX_UNIT_PRICE}
 																			aria-label={t('quote.basePrice')}
 																			className="h-8 border-none shadow-none rounded-none text-xs font-mono text-right pr-2 focus-visible:ring-1"
 																			value={item.frozen_base_price}

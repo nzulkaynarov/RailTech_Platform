@@ -395,6 +395,9 @@ class PlatformDashboardView(APIView):
                 "id": log.id,
                 "action": log.action,
                 "detail": log.detail,
+                # Structured event (E1) — dashboard localizes activity.<event_code> client-side.
+                "event_code": log.event_code,
+                "event_params": log.event_params,
                 "level": log.level,
                 "user_email": log.user.email if log.user else None,
                 "timestamp": log.timestamp.isoformat(),

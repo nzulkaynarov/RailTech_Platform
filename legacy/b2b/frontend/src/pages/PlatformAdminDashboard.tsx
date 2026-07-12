@@ -25,6 +25,7 @@ import { useVerifyCompany } from '@/hooks/useAccounts';
 import type { AdminQueueItem, AdminQueueSeverity, AdminPulseDay } from '@/api/adminApi';
 import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
 import { cn } from '@/lib/utils';
+import { activityTitle, activityDetail } from '@/lib/activityText';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -225,7 +226,7 @@ function QueueRow({ item, onOpen, onApprove, onReject }: QueueRowProps) {
 }
 
 export default function PlatformAdminDashboard({ onNavigate }: PlatformAdminDashboardProps): React.ReactNode {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const [period, setPeriod] = useState<PulsePeriod>('30d');
   const [queueFilter, setQueueFilter] = useState<string>('');
@@ -528,10 +529,10 @@ export default function PlatformAdminDashboard({ onNavigate }: PlatformAdminDash
                         >
                           {entry.level}
                         </Badge>
-                        <span className="font-medium">{entry.action}</span>
+                        <span className="font-medium">{activityTitle(t, i18n, entry)}</span>
                       </div>
-                      {entry.detail ? (
-                        <div className="mt-0.5 truncate text-muted-foreground">{entry.detail}</div>
+                      {activityDetail(t, i18n, entry) ? (
+                        <div className="mt-0.5 truncate text-muted-foreground">{activityDetail(t, i18n, entry)}</div>
                       ) : null}
                       {entry.user_email ? (
                         <div className="mt-0.5 text-muted-foreground">{entry.user_email}</div>

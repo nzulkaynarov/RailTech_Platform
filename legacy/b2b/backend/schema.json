@@ -16665,6 +16665,16 @@
                         "title": "Детали",
                         "description": "Подробная информация о событии"
                     },
+                    "event_code": {
+                        "type": "string",
+                        "title": "Код события",
+                        "description": "Машинный код события для локализуемого таймлайна (deal.created, quote.sent, ...)",
+                        "maxLength": 64
+                    },
+                    "event_params": {
+                        "title": "Параметры события",
+                        "description": "Параметры интерполяции для перевода события на клиенте"
+                    },
                     "user_name": {
                         "type": "string",
                         "readOnly": true
@@ -26116,6 +26126,16 @@
                         "type": "string",
                         "title": "Детали",
                         "description": "Подробная информация о событии"
+                    },
+                    "event_code": {
+                        "type": "string",
+                        "title": "Код события",
+                        "description": "Машинный код события для локализуемого таймлайна (deal.created, quote.sent, ...)",
+                        "maxLength": 64
+                    },
+                    "event_params": {
+                        "title": "Параметры события",
+                        "description": "Параметры интерполяции для перевода события на клиенте"
                     },
                     "level": {
                         "allOf": [

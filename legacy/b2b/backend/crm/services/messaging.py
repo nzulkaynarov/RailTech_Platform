@@ -169,6 +169,8 @@ def send_deal_message(
         entity_id=deal.id,
         action="Сообщение в чате сделки",
         detail=preview,
+        event_code="deal.chat_message",
+        event_params={"deal_id": deal.id, "preview": preview},
         actor=user,
         level="INFO",
         deal_id=deal.id,

@@ -184,7 +184,15 @@ def _notify_quote_outcome(quote, *, type_code: str, title: str, message: str) ->
         push_notification_ws(notif)
 
 
-def _log_quote(quote, actor, action: str, detail: str = "") -> None:
+def _log_quote(
+    quote,
+    actor,
+    action: str,
+    detail: str = "",
+    *,
+    event_code: str = "",
+    event_params: Optional[dict] = None,
+) -> None:
     ActivityLog.objects.create(
         action=action,
         detail=detail,
@@ -194,6 +202,8 @@ def _log_quote(quote, actor, action: str, detail: str = "") -> None:
         entity_id=quote.id,
         deal_id=quote.deal_id,
         company_id=quote.deal.company_id if quote.deal_id else None,
+        event_code=event_code,
+        event_params=event_params or {},
     )
 
 
@@ -792,7 +802,14 @@ class QuoteLifecycleService:
 
         # Counterparty timeline (Phase A): the send was only visible as a stage flip before —
         # record it as a first-class event on the client's history.
-        _log_quote(quote, sent_by_user, "КП отправлено клиенту", f"КП v{quote.version} ({quote.number})")
+        _log_quote(
+            quote,
+            sent_by_user,
+            "КП отправлено клиенту",
+            f"КП v{quote.version} ({quote.number})",
+            event_code="quote.sent",
+            event_params={"version": quote.version, "number": quote.number},
+        )
 
         # Email the КП off the request thread, after commit (F1.6 — no render inside the
         # atomic block, no orphan on rollback). The task renders the PDF if needed, then
@@ -897,7 +914,14 @@ class QuoteLifecycleService:
 
         # Counterparty timeline (Phase A): the acceptance itself was only visible as a stage
         # flip before — record it as a first-class event on the client's history.
-        _log_quote(quote, approved_by_user, "КП принято клиентом", f"КП v{quote.version} ({quote.number or '—'})")
+        _log_quote(
+            quote,
+            approved_by_user,
+            "КП принято клиентом",
+            f"КП v{quote.version} ({quote.number or '—'})",
+            event_code="quote.accepted",
+            event_params={"version": quote.version, "number": quote.number or "—"},
+        )
 
         return quote
 
@@ -989,7 +1013,14 @@ class QuoteLifecycleService:
         first_order = _active_order(quote)
         if first_order is not None:
             _notify_order(quote, first_order)
-        _log_quote(quote, actor, "quote.submit_for_review", f"КП v{quote.version} на согласование (цепочка построена)")
+        _log_quote(
+            quote,
+            actor,
+            "КП отправлен на согласование",
+            f"КП v{quote.version} на согласование (цепочка построена)",
+            event_code="quote.submitted_for_review",
+            event_params={"version": quote.version},
+        )
         return quote, None
 
     @staticmethod
@@ -1039,6 +1070,8 @@ class QuoteLifecycleService:
             entity_id=quote_id,
             action="[FORCE_ADMIN] КП одобрено платформенным админом",
             detail=f"КП #{quote_id} ({old_code} → APPROVED).",
+            event_code="quote.approved_force",
+            event_params={"quote_id": quote_id, "from_status": old_code},
             actor=admin_user,
             reason=reason,
             before={"status": old_code},
@@ -1086,7 +1119,14 @@ class QuoteLifecycleService:
 
         # Counterparty timeline (Phase A): first-class rejection event (the reason already
         # lives on the stage-transition audit row; keep the client-PDF leak fix intact).
-        _log_quote(quote, rejected_by_user, "КП отклонено клиентом", f"КП v{quote.version}")
+        _log_quote(
+            quote,
+            rejected_by_user,
+            "КП отклонено клиентом",
+            f"КП v{quote.version}",
+            event_code="quote.rejected",
+            event_params={"version": quote.version},
+        )
 
         return quote
 
@@ -1143,5 +1183,7 @@ def reassign_quote_item_product(
         entity_id=item.quote_id,
         deal_id=item.quote.deal_id,
         company_id=item.quote.deal.company_id if item.quote.deal_id else None,
+        event_code="quote.item_rematched",
+        event_params={"item_id": item.id, "product_id": product_id},
     )
     return item, None

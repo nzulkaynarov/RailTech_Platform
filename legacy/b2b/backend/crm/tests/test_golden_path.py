@@ -279,3 +279,63 @@ def test_golden_path_rfq_to_closed_won(deal, buyer, manager):
     assert err is None, f"update_fulfillment_status failed: {err}"
     deal.refresh_from_db()
     assert deal.stage.code == "CLOSED_WON"
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_contract_and_billing_events_are_structured(deal, buyer, manager):
+    """E1: contracts.py / billing.py producers write machine event_code + params so the
+    timeline can be localized on the client (RU action/detail preserved as fallback)."""
+    from crm.models import ActivityLog
+
+    buyer_user, _ = buyer
+
+    for target in ["SOURCING", "CALCULATING"]:
+        _, err = crm_services.transition_deal_stage(deal, target, actor=manager)
+        assert err is None
+    quote = _build_quote_with_items(deal, manager)
+    QuoteCalculationService.recalculate_quote(quote.id)
+    quote.status = QuoteStatus.objects.get(code="READY_TO_SEND")
+    quote.save(update_fields=["status"])
+    quote = QuoteLifecycleService.send_to_client(quote.id, manager)
+    quote = QuoteLifecycleService.approve_quote(quote.id, buyer_user)
+
+    # contracts.py — contract.created + both signature sides.
+    contract, err = crm_services.generate_contract_from_quote(quote.id, actor=manager)
+    assert err is None
+    # approve_quote auto-materializes a contract (Move 0), so this may log twice — take the latest.
+    created = ActivityLog.objects.filter(event_code="contract.created", deal=deal).order_by("-id").first()
+    assert created.event_params == {"number": contract.number, "deal_id": deal.id}
+
+    contract, err = crm_services.sign_contract_by_client(contract.id, buyer_user)
+    assert err is None
+    signed_client = ActivityLog.objects.filter(event_code="contract.signed_client", deal=deal).order_by("-id").first()
+    assert signed_client.event_params == {"number": contract.number, "deal_id": deal.id, "manual": True}
+
+    contract, err = crm_services.sign_contract_by_manager(contract.id, manager)
+    assert err is None
+    signed_manager = ActivityLog.objects.filter(event_code="contract.signed_manager", deal=deal).order_by("-id").first()
+    assert signed_manager.event_params == {"number": contract.number, "deal_id": deal.id, "manual": True}
+
+    # billing.py — invoice.issued + payment.recorded (money as str, manual flag).
+    invoice, err = crm_services.generate_invoice_from_contract(contract.id, actor=manager)
+    assert err is None
+    issued = ActivityLog.objects.filter(event_code="invoice.issued", deal=deal).order_by("-id").first()
+    assert issued.event_params == {"number": invoice.number, "deal_id": deal.id}
+
+    _, err = crm_services.record_payment(
+        invoice.id, manager, amount=invoice.total_incl_vat, paid_at=timezone.now().date(), manual=True
+    )
+    assert err is None
+    invoice.refresh_from_db()
+    paid = ActivityLog.objects.filter(event_code="payment.recorded", deal=deal).order_by("-id").first()
+    assert paid.event_params == {
+        "number": invoice.number,
+        "amount": str(invoice.total_incl_vat),
+        "paid": str(invoice.amount_paid),
+        "total": str(invoice.total_incl_vat),
+        "manual": True,
+    }
+    # act.signed (billing.py) is the same additive shape but is unreachable to exercise here: sign_act's
+    # pre-existing `select_for_update().select_related("status")` raises on PG (FOR UPDATE on a nullable
+    # outer join), independent of this change — see the handoff note.

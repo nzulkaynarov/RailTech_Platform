@@ -69,6 +69,8 @@ export interface PlatformDashboard {
     id: number;
     action: string;
     detail: string;
+    event_code?: string;
+    event_params?: Record<string, unknown>;
     level: 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR';
     user_email: string | null;
     timestamp: string;

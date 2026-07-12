@@ -107,6 +107,8 @@ def generate_contract_from_quote(
     ActivityLog.objects.create(
         action="Создан контракт",
         detail=f"Контракт {contract.number} по сделке #{quote.deal_id}",
+        event_code="contract.created",
+        event_params={"number": contract.number, "deal_id": quote.deal_id},
         user=actor,
         level="INFO",
         deal=quote.deal,
@@ -245,6 +247,8 @@ def sign_contract_by_client(
     ActivityLog.objects.create(
         action="[MANUAL_MODE] Подписан контракт (сторона клиента)",
         detail=f"Контракт {contract.number} / сделка #{contract.deal_id}",
+        event_code="contract.signed_client",
+        event_params={"number": contract.number, "deal_id": contract.deal_id, "manual": True},
         user=client_user,
         level="INFO",
         deal=contract.deal,
@@ -297,6 +301,8 @@ def sign_contract_by_manager(
     ActivityLog.objects.create(
         action="[MANUAL_MODE] Подписан контракт (сторона RailTech)",
         detail=f"Контракт {contract.number} / сделка #{contract.deal_id}",
+        event_code="contract.signed_manager",
+        event_params={"number": contract.number, "deal_id": contract.deal_id, "manual": True},
         user=manager_user,
         level="INFO",
         deal=contract.deal,
@@ -333,6 +339,8 @@ def _finalize_if_signed(contract) -> None:
         ActivityLog.objects.create(
             action="Авто-переход в CLOSED_WON не выполнен",
             detail=f"Контракт {contract.number} / сделка #{contract.deal_id}: {err}",
+            event_code="contract.auto_close_failed",
+            event_params={"number": contract.number, "deal_id": contract.deal_id, "error": err},
             level="WARNING",
             deal=contract.deal,
             company_id=contract.deal.company_id,
@@ -416,6 +424,8 @@ def force_cancel_contract(
         entity_id=contract_id,
         action="[FORCE_ADMIN] Контракт отменён платформенным админом",
         detail=f"Контракт #{contract_id} ({old_status} → CANCELLED).",
+        event_code="contract.cancelled_force",
+        event_params={"contract_id": contract_id, "from_status": old_status},
         actor=admin_user,
         reason=reason,
         before={"status": old_status},

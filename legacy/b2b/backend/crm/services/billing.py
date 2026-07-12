@@ -112,6 +112,8 @@ def generate_invoice_from_contract(
     ActivityLog.objects.create(
         action="Инвойс выставлен",
         detail=f"Инвойс {invoice.number} по сделке #{invoice.deal_id}",
+        event_code="invoice.issued",
+        event_params={"number": invoice.number, "deal_id": invoice.deal_id},
         user=actor,
         level="INFO",
         deal=invoice.deal,
@@ -258,6 +260,16 @@ def record_payment(
     ActivityLog.objects.create(
         action=f"{marker}Зафиксирован платёж",
         detail=f"Инвойс {invoice.number}: получено {amount_d} (итого {invoice.amount_paid}/{invoice.total_incl_vat})",
+        event_code="payment.recorded",
+        # Decimals serialized as str (JSONField default encoder can't emit Decimal) — keeps the
+        # exact value; the client formats currency by locale.
+        event_params={
+            "number": invoice.number,
+            "amount": str(amount_d),
+            "paid": str(invoice.amount_paid),
+            "total": str(invoice.total_incl_vat),
+            "manual": manual,
+        },
         user=actor,
         level="SUCCESS",
         deal=invoice.deal,
@@ -378,6 +390,8 @@ def sign_act(act_id: int, actor: CustomUser, signed_file=None) -> Tuple[Optional
     ActivityLog.objects.create(
         action="[MANUAL_MODE] Подписан акт",
         detail=f"Акт {act.number} по сделке #{act.deal_id}",
+        event_code="act.signed",
+        event_params={"number": act.number, "deal_id": act.deal_id, "manual": True},
         user=actor,
         level="SUCCESS",
         deal=act.deal,
