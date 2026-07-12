@@ -192,14 +192,19 @@ function App() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
   const initAuth = useAuthStore((s) => s.initAuth);
-  const isLoading = useAuthStore((s) => s.isLoading);
   const loadFromAuth = useUserStore((s) => s.loadFromAuth);
   const { route, navigate } = useAuthRoute();
   const [profileCompleted, setProfileCompleted] = useState(false);
+  // Full-page skeleton is for the INITIAL cold-load session check ONLY. It must NOT
+  // key off the store's `isLoading`, which also spikes during an interactive login()/
+  // login2FA() call — that would unmount LoginPage mid-login and wipe its local state
+  // (twoFactorRequired/tempToken/serverError), so a 2FA-enabled user could never reach
+  // the code-entry step. The login button has its own spinner (reads store.isLoading).
+  const [initializing, setInitializing] = useState(true);
 
   // Initialize auth on app startup — validates persisted token and prefetches exchange rate in parallel
   useEffect(() => {
-    initAuth();
+    initAuth().finally(() => setInitializing(false));
     // Fire currency rate load in parallel — doesn't block UI
     import('./store/currencyStore').then(({ useCurrencyStore }) => {
       useCurrencyStore.getState().loadRate();
@@ -238,7 +243,7 @@ function App() {
     return () => observer.disconnect();
   }, []);
 
-  if (isLoading) return <LoadingSkeleton />;
+  if (initializing) return <LoadingSkeleton />;
 
   // Password setup page — accessible without auth (from email link)
   if (route.view === 'setup-password') {
