@@ -69,6 +69,90 @@ def test_update_me_writes_profile_but_not_identity(user_factory):
     assert user.is_active is True
 
 
+def test_update_me_accepts_valid_preferences(user_factory):
+    user = user_factory(email="prefs-ok@example.com", username="prefs-ok")
+
+    resp = _client_for(user).patch(
+        UPDATE_ME_URL,
+        {"preferences": {"language": "en", "theme": "dark"}},
+        format="json",
+    )
+
+    assert resp.status_code == 200
+    user.refresh_from_db()
+    assert user.preferences == {"language": "en", "theme": "dark"}
+
+
+def test_update_me_rejects_unknown_preference_key(user_factory):
+    user = user_factory(email="prefs-key@example.com", username="prefs-key")
+
+    resp = _client_for(user).patch(
+        UPDATE_ME_URL,
+        {"preferences": {"language": "en", "is_admin": True}},
+        format="json",
+    )
+
+    assert resp.status_code == 400
+    assert "PREFERENCES_UNKNOWN_KEY" in str(resp.data["preferences"])
+    user.refresh_from_db()
+    assert user.preferences == {}
+
+
+def test_update_me_rejects_invalid_preference_value(user_factory):
+    user = user_factory(email="prefs-val@example.com", username="prefs-val")
+
+    resp = _client_for(user).patch(
+        UPDATE_ME_URL,
+        {"preferences": {"language": "fr"}},
+        format="json",
+    )
+
+    assert resp.status_code == 400
+    assert "PREFERENCES_INVALID_LANGUAGE" in str(resp.data["preferences"])
+
+
+def test_update_me_rejects_invalid_theme(user_factory):
+    user = user_factory(email="prefs-theme@example.com", username="prefs-theme")
+
+    resp = _client_for(user).patch(
+        UPDATE_ME_URL,
+        {"preferences": {"theme": "neon"}},
+        format="json",
+    )
+
+    assert resp.status_code == 400
+    assert "PREFERENCES_INVALID_THEME" in str(resp.data["preferences"])
+
+
+def test_update_me_rejects_oversized_preferences(user_factory):
+    user = user_factory(email="prefs-big@example.com", username="prefs-big")
+
+    resp = _client_for(user).patch(
+        UPDATE_ME_URL,
+        {"preferences": {"timezone": "A" * 5000}},
+        format="json",
+    )
+
+    assert resp.status_code == 400
+    # Size cap trips before the per-key length check.
+    assert "PREFERENCES_TOO_LARGE" in str(resp.data["preferences"])
+    user.refresh_from_db()
+    assert user.preferences == {}
+
+
+def test_update_me_rejects_non_object_preferences(user_factory):
+    user = user_factory(email="prefs-list@example.com", username="prefs-list")
+
+    resp = _client_for(user).patch(
+        UPDATE_ME_URL,
+        {"preferences": ["language", "en"]},
+        format="json",
+    )
+
+    assert resp.status_code == 400
+    assert "PREFERENCES_INVALID" in str(resp.data["preferences"])
+
+
 def test_company_detail_hides_kyc_notes(user_factory, company_factory, workspace_role_factory):
     company = company_factory(kyc_notes="internal manager note — do not show")
     user = user_factory(email="owner@example.com", username="owner")

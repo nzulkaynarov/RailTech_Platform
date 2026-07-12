@@ -37,6 +37,7 @@ describe('SecuritySection', () => {
     vi.mocked(accountsApi.changePassword).mockReset();
     vi.mocked(accountsApi.setup2FA).mockReset();
     vi.mocked(accountsApi.verify2FA).mockReset();
+    vi.mocked(accountsApi.disable2FA).mockReset();
     vi.mocked(accountsApi.getActiveSessions).mockReset().mockResolvedValue([...SESSIONS]);
     vi.mocked(toast.success).mockReset();
     vi.mocked(toast.error).mockReset();
@@ -105,20 +106,40 @@ describe('SecuritySection', () => {
     });
   });
 
-  it('2FA setup→verify: показывает QR и подтверждает код', async () => {
+  it('2FA setup→verify: показывает QR и подтверждает код + пароль (step-up)', async () => {
     vi.mocked(accountsApi.setup2FA).mockResolvedValue({ secret: 'SECRET123', uri: 'otpauth://totp/test' });
     vi.mocked(accountsApi.verify2FA).mockResolvedValue({ detail: 'OK' });
     renderWithProviders(<SecuritySection />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Включить 2FA' }));
-    // После setup — поле кода (QR рендерится рядом) и кнопка подтверждения.
+    // После setup — поле пароля (step-up) + поле кода (QR рендерится рядом) и кнопка подтверждения.
     const codeInput = await screen.findByPlaceholderText('000000');
+    fireEvent.change(screen.getByLabelText('Подтвердите текущим паролем'), { target: { value: 'my-pass' } });
     fireEvent.change(codeInput, { target: { value: '123456' } });
     fireEvent.click(screen.getByRole('button', { name: 'Подтвердить' }));
 
     await waitFor(() => {
-      expect(accountsApi.verify2FA).toHaveBeenCalledWith({ secret: 'SECRET123', code: '123456' });
+      expect(accountsApi.verify2FA).toHaveBeenCalledWith({
+        secret: 'SECRET123',
+        code: '123456',
+        current_password: 'my-pass',
+      });
     });
     expect(useUserStore.getState().profile.is_2fa_enabled).toBe(true);
+  });
+
+  it('2FA disable: требует пароль и код (step-up)', async () => {
+    vi.mocked(accountsApi.disable2FA).mockResolvedValue({ detail: 'OK' });
+    useUserStore.setState((state) => ({ profile: { ...state.profile, is_2fa_enabled: true } }));
+    renderWithProviders(<SecuritySection />);
+
+    fireEvent.change(screen.getByLabelText('Подтвердите текущим паролем'), { target: { value: 'my-pass' } });
+    fireEvent.change(screen.getByPlaceholderText('000000'), { target: { value: '654321' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Отключить' }));
+
+    await waitFor(() => {
+      expect(accountsApi.disable2FA).toHaveBeenCalledWith({ code: '654321', current_password: 'my-pass' });
+    });
+    expect(useUserStore.getState().profile.is_2fa_enabled).toBe(false);
   });
 });

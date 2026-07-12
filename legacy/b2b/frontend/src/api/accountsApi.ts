@@ -451,11 +451,11 @@ export const accountsApi = {
 		const response = await apiClient.post<{ secret: string; uri: string }>('auth/2fa/setup/');
 		return response.data;
 	},
-	verify2FA: async (data: { secret: string; code: string }) => {
+	verify2FA: async (data: { secret: string; code: string; current_password: string }) => {
 		const response = await apiClient.post<{ detail: string }>('auth/2fa/verify/', data);
 		return response.data;
 	},
-	disable2FA: async (data: { code: string }) => {
+	disable2FA: async (data: { code: string; current_password: string }) => {
 		const response = await apiClient.post<{ detail: string }>('auth/2fa/disable/', data);
 		return response.data;
 	},

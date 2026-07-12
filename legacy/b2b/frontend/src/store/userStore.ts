@@ -281,6 +281,10 @@ export const useUserStore = create<UserState>((set, get) => ({
           position: position || '',
           avatarInitials: initials || '??',
           avatarUrl: avatar ?? null,
+          // Persist the backend 2FA flag so SecuritySection/TwoFactorAuth renders the
+          // disable panel (not "Enable 2FA") after any reload/relogin — without it the
+          // field is undefined and a user with 2FA on can never turn it off.
+          is_2fa_enabled: authState.user.is_2fa_enabled ?? false,
         },
         company: company ? {
           id: company.id ?? null,

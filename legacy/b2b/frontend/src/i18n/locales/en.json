@@ -122,7 +122,8 @@
       "totpRequired": "Enter your 2FA verification code",
       "totpLength": "Code must be exactly 6 digits"
     },
-    "ticketExpired": "Verification window expired — please sign in again"
+    "ticketExpired": "Verification window expired — please sign in again",
+    "invalidResponse": "Invalid server response. Please try signing in again."
   },
   "onboarding": {
     "title": "Getting started",
@@ -2422,6 +2423,9 @@
       "alreadyEnabled": "2FA is already enabled",
       "enterCodeToDisable": "Code to disable 2FA",
       "enterCode": "Enter the code from the app",
+      "confirmPassword": "Confirm with your current password",
+      "passwordRequired": "Enter your current password",
+      "invalidPassword": "Incorrect password",
       "enableTwoFactor": "Enable 2FA",
       "sessionsError": "Failed to load active sessions",
       "sessionsRevoked": "Other sessions have been signed out",

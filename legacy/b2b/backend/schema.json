@@ -5047,7 +5047,7 @@
                         "description": "2FA disabled (idempotent)"
                     },
                     "400": {
-                        "description": "2FA_CODE_REQUIRED | 2FA_INVALID_CODE"
+                        "description": "PASSWORD_REQUIRED | INVALID_PASSWORD | 2FA_CODE_REQUIRED | 2FA_INVALID_CODE"
                     }
                 }
             }
@@ -5120,7 +5120,7 @@
                         "description": "2FA enabled"
                     },
                     "400": {
-                        "description": "2FA_CODE_REQUIRED | 2FA_INVALID_CODE | 2FA_ALREADY_ENABLED"
+                        "description": "PASSWORD_REQUIRED | INVALID_PASSWORD | 2FA_CODE_REQUIRED | 2FA_INVALID_CODE | 2FA_ALREADY_ENABLED"
                     }
                 }
             }
@@ -26034,10 +26034,15 @@
                     "code": {
                         "type": "string",
                         "minLength": 1
+                    },
+                    "current_password": {
+                        "type": "string",
+                        "minLength": 1
                     }
                 },
                 "required": [
-                    "code"
+                    "code",
+                    "current_password"
                 ]
             },
             "TOTPLoginRequest": {
@@ -26082,10 +26087,15 @@
                     "code": {
                         "type": "string",
                         "minLength": 1
+                    },
+                    "current_password": {
+                        "type": "string",
+                        "minLength": 1
                     }
                 },
                 "required": [
                     "code",
+                    "current_password",
                     "secret"
                 ]
             },

@@ -8,6 +8,24 @@ from accounts.models import Company, SystemRole, VerificationStatus, WorkspaceRo
 User = get_user_model()
 
 
+@pytest.fixture(autouse=True)
+def _clear_default_cache():
+    """Hermetic tests: flush the default cache before every test.
+
+    The default cache is real Redis (DB0), shared with the DRF throttle
+    scopes, the SEC-06 login lockout, and the 2FA replay guards (used-ticket /
+    used-code markers). Without this, throttle counters and replay markers
+    persist across tests AND across local runs (their TTLs outlive a run),
+    so re-running the suite locally spuriously trips the register/login
+    throttle. CI uses ephemeral Redis and never saw it; this makes local
+    runs match CI.
+    """
+    from django.core.cache import cache
+
+    cache.clear()
+    yield
+
+
 @pytest.fixture
 def api_client():
     """REST API client for making requests."""

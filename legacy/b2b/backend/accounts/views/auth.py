@@ -406,16 +406,29 @@ class TOTPVerifyView(views.APIView):
     @extend_schema(
         summary="Verify and enable 2FA",
         request=inline_serializer(
-            "TOTPVerify", fields={"secret": serializers.CharField(), "code": serializers.CharField()}
+            "TOTPVerify",
+            fields={
+                "secret": serializers.CharField(),
+                "code": serializers.CharField(),
+                "current_password": serializers.CharField(),
+            },
         ),
         responses={
             200: OpenApiResponse(description="2FA enabled"),
-            400: OpenApiResponse(description="2FA_CODE_REQUIRED | 2FA_INVALID_CODE | 2FA_ALREADY_ENABLED"),
+            400: OpenApiResponse(
+                description="PASSWORD_REQUIRED | INVALID_PASSWORD | 2FA_CODE_REQUIRED | "
+                "2FA_INVALID_CODE | 2FA_ALREADY_ENABLED"
+            ),
         },
         tags=["Auth"],
     )
     def post(self, request):
-        error = two_factor.enable_totp(request.user, request.data.get("secret"), request.data.get("code"))
+        error = two_factor.enable_totp(
+            request.user,
+            request.data.get("secret"),
+            request.data.get("code"),
+            request.data.get("current_password"),
+        )
         if error:
             return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"detail": "2FA_ENABLED"})
@@ -430,15 +443,24 @@ class TOTPDisableView(views.APIView):
 
     @extend_schema(
         summary="Disable 2FA",
-        request=inline_serializer("TOTPDisable", fields={"code": serializers.CharField()}),
+        request=inline_serializer(
+            "TOTPDisable",
+            fields={"code": serializers.CharField(), "current_password": serializers.CharField()},
+        ),
         responses={
             200: OpenApiResponse(description="2FA disabled (idempotent)"),
-            400: OpenApiResponse(description="2FA_CODE_REQUIRED | 2FA_INVALID_CODE"),
+            400: OpenApiResponse(
+                description="PASSWORD_REQUIRED | INVALID_PASSWORD | 2FA_CODE_REQUIRED | 2FA_INVALID_CODE"
+            ),
         },
         tags=["Auth"],
     )
     def post(self, request):
-        error = two_factor.disable_totp(request.user, request.data.get("code"))
+        error = two_factor.disable_totp(
+            request.user,
+            request.data.get("code"),
+            request.data.get("current_password"),
+        )
         if error:
             return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"detail": "2FA_DISABLED"})
