@@ -49,6 +49,34 @@ def public_quote_url(quote) -> Optional[str]:
     return f"{settings.FRONTEND_URL}/api/v1/public/quotes/{token}/"
 
 
+def public_quote_qr(quote) -> Optional[str]:
+    """SVG QR data-URI for the public «Принять онлайн» link (F-09), or None before send.
+
+    Reuses public_quote_url so ONE place owns the URL pattern (Rule 8). SVG (not PNG) so the
+    code stays crisp at any print size with no PIL rasterization, and it is embedded as a
+    base64 `data:` URI because WeasyPrint fetches no network/CSP-blocked resources — it reads
+    only inline/`data:` sources. Any failure degrades to None (the text-link CTA still renders),
+    never a 500 in the off-thread PDF task.
+    """
+    url = public_quote_url(quote)
+    if not url:
+        return None
+    try:
+        import base64
+        import io
+
+        import qrcode
+        import qrcode.image.svg as qrsvg
+
+        image = qrcode.make(url, image_factory=qrsvg.SvgPathImage, box_size=11, border=2)
+        buffer = io.BytesIO()
+        image.save(buffer)
+        encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
+        return f"data:image/svg+xml;base64,{encoded}"
+    except (ValueError, OSError, ImportError):
+        return None
+
+
 def seller_logo_url(seller_profile) -> Optional[str]:
     """The seller's logo URL, or None when unset / the storage backend can't resolve it."""
     if not seller_profile or not seller_profile.logo:
