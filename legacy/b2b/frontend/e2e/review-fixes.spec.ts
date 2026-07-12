@@ -11,8 +11,10 @@ import { test, expect, Page } from '@playwright/test';
  * Creds come from the local test accounts (Test1234!).
  */
 
-const BUYER = { email: 'buyer.local@railtech.uz', password: 'Test1234!' };
-const SELLER = { email: 'seller.local@railtech.uz', password: 'Test1234!' };
+// Seed default is Demo1234! (core_seed DEFAULT_SEED_PASSWORD; override with E2E_SEED_PASSWORD).
+const SEED_PW = process.env.E2E_SEED_PASSWORD || 'Demo1234!';
+const BUYER = { email: 'buyer.local@railtech.uz', password: SEED_PW };
+const SELLER = { email: 'seller.local@railtech.uz', password: SEED_PW };
 
 // These specs log in with the SEEDED local test users — they only exist on a local/staging
 // stack, never on prod. e2e.yml defaults E2E_BASE_URL to prod, where the logins (and thus the
