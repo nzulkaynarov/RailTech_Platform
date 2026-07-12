@@ -1,3 +1,5 @@
+import json
+
 from django.conf import settings
 from django.core.validators import RegexValidator
 from rest_framework import serializers
@@ -325,9 +327,48 @@ class SelfUpdateSerializer(serializers.ModelSerializer):
     self-service must not.
     """
 
+    # Allow-list for the free-form `preferences` JSONField: keys, allowed
+    # values, and a size cap so an authenticated user cannot persist arbitrary
+    # or oversized JSON on their own record (LOW #7). The frontend only ever
+    # writes {language, theme}; `timezone` is reserved (see model help_text).
+    PREFERENCES_ALLOWED_KEYS = frozenset({"language", "theme", "timezone"})
+    PREFERENCES_THEME_VALUES = frozenset({"light", "dark", "system"})
+    PREFERENCES_TIMEZONE_MAX_LEN = 64
+    PREFERENCES_MAX_BYTES = 2048
+
     class Meta:
         model = CustomUser
         fields = ["first_name", "last_name", "phone", "position", "avatar", "preferences"]
+
+    def validate_preferences(self, value):
+        if value in (None, ""):
+            return {}
+        if not isinstance(value, dict):
+            raise serializers.ValidationError("PREFERENCES_INVALID")
+        if len(json.dumps(value).encode("utf-8")) > self.PREFERENCES_MAX_BYTES:
+            raise serializers.ValidationError("PREFERENCES_TOO_LARGE")
+
+        unknown = set(value) - self.PREFERENCES_ALLOWED_KEYS
+        if unknown:
+            raise serializers.ValidationError("PREFERENCES_UNKNOWN_KEY")
+
+        language = value.get("language")
+        if language is not None:
+            allowed_languages = {code for code, _label in settings.LANGUAGES}
+            if language not in allowed_languages:
+                raise serializers.ValidationError("PREFERENCES_INVALID_LANGUAGE")
+
+        theme = value.get("theme")
+        if theme is not None and theme not in self.PREFERENCES_THEME_VALUES:
+            raise serializers.ValidationError("PREFERENCES_INVALID_THEME")
+
+        timezone_value = value.get("timezone")
+        if timezone_value is not None and (
+            not isinstance(timezone_value, str) or len(timezone_value) > self.PREFERENCES_TIMEZONE_MAX_LEN
+        ):
+            raise serializers.ValidationError("PREFERENCES_INVALID_TIMEZONE")
+
+        return value
 
 
 class MeSerializer(serializers.ModelSerializer):

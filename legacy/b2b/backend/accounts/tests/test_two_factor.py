@@ -71,7 +71,11 @@ class TestTotpSetup:
         assert not user.is_2fa_enabled  # nothing persists until the code is confirmed
 
         code = pyotp.TOTP(secret).now()
-        verify = client.post("/api/v1/auth/2fa/verify/", {"secret": secret, "code": code}, format="json")
+        verify = client.post(
+            "/api/v1/auth/2fa/verify/",
+            {"secret": secret, "code": code, "current_password": PASSWORD},
+            format="json",
+        )
         assert verify.status_code == 200
         user.refresh_from_db()
         assert user.is_2fa_enabled
@@ -86,7 +90,7 @@ class TestTotpSetup:
 
         resp = client.post(
             "/api/v1/auth/2fa/verify/",
-            {"secret": secret, "code": "000000"},
+            {"secret": secret, "code": "000000", "current_password": PASSWORD},
             format="json",
         )
         assert resp.status_code == 400
@@ -96,9 +100,35 @@ class TestTotpSetup:
 
     def test_verify_requires_secret_and_code(self, user_factory):
         client = _auth_client(user_factory())
-        resp = client.post("/api/v1/auth/2fa/verify/", {}, format="json")
+        resp = client.post("/api/v1/auth/2fa/verify/", {"current_password": PASSWORD}, format="json")
         assert resp.status_code == 400
         assert resp.data["detail"] == "2FA_CODE_REQUIRED"
+
+    def test_verify_requires_current_password(self, user_factory):
+        """Step-up: enabling 2FA needs the current password IN ADDITION to the code."""
+        client = _auth_client(user_factory())
+        secret = pyotp.random_base32()
+        resp = client.post(
+            "/api/v1/auth/2fa/verify/",
+            {"secret": secret, "code": pyotp.TOTP(secret).now()},
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert resp.data["detail"] == "PASSWORD_REQUIRED"
+
+    def test_verify_rejects_wrong_password(self, user_factory):
+        user = user_factory()
+        client = _auth_client(user)
+        secret = pyotp.random_base32()
+        resp = client.post(
+            "/api/v1/auth/2fa/verify/",
+            {"secret": secret, "code": pyotp.TOTP(secret).now(), "current_password": "wrong-password"},
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert resp.data["detail"] == "INVALID_PASSWORD"
+        user.refresh_from_db()
+        assert not user.is_2fa_enabled
 
     def test_setup_blocked_when_already_enabled(self, user_factory):
         user = user_factory()
@@ -112,18 +142,53 @@ class TestTotpSetup:
         secret = _enable_2fa(user)
         client = _auth_client(user)
 
-        bad = client.post("/api/v1/auth/2fa/disable/", {"code": "000000"}, format="json")
+        bad = client.post(
+            "/api/v1/auth/2fa/disable/",
+            {"code": "000000", "current_password": PASSWORD},
+            format="json",
+        )
         assert bad.status_code == 400
         assert bad.data["detail"] == "2FA_INVALID_CODE"
 
         good = client.post(
             "/api/v1/auth/2fa/disable/",
-            {"code": pyotp.TOTP(secret).now()},
+            {"code": pyotp.TOTP(secret).now(), "current_password": PASSWORD},
             format="json",
         )
         assert good.status_code == 200
         user.refresh_from_db()
         assert not user.is_2fa_enabled and user.totp_secret is None
+
+    def test_disable_requires_current_password(self, user_factory):
+        """Step-up: turning 2FA off needs the current password IN ADDITION to the code."""
+        user = user_factory()
+        secret = _enable_2fa(user)
+        client = _auth_client(user)
+
+        resp = client.post(
+            "/api/v1/auth/2fa/disable/",
+            {"code": pyotp.TOTP(secret).now()},
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert resp.data["detail"] == "PASSWORD_REQUIRED"
+        user.refresh_from_db()
+        assert user.is_2fa_enabled  # still on — step-up blocked it
+
+    def test_disable_rejects_wrong_password(self, user_factory):
+        user = user_factory()
+        secret = _enable_2fa(user)
+        client = _auth_client(user)
+
+        resp = client.post(
+            "/api/v1/auth/2fa/disable/",
+            {"code": pyotp.TOTP(secret).now(), "current_password": "wrong-password"},
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert resp.data["detail"] == "INVALID_PASSWORD"
+        user.refresh_from_db()
+        assert user.is_2fa_enabled
 
 
 @pytest.mark.django_db
@@ -212,6 +277,53 @@ class TestTwoStepLogin:
         assert locked.status_code == 429
         assert locked.data["detail"] == "TOO_MANY_LOGIN_ATTEMPTS"
 
+    def test_ticket_is_single_use(self, user_factory):
+        """A redeemed ticket cannot be replayed — a leaked ticket (proxy logs) is
+        useless once its one login has happened (SEC-06 replay hardening)."""
+        user = user_factory()
+        secret = _enable_2fa(user)
+        client = APIClient()
+        ticket = _login(client, user.email).data["temp_token"]
+
+        first = client.post(
+            "/api/v1/auth/login/2fa/",
+            {"temp_token": ticket, "code": pyotp.TOTP(secret).now()},
+            format="json",
+        )
+        assert first.status_code == 200
+
+        replay = client.post(
+            "/api/v1/auth/login/2fa/",
+            {"temp_token": ticket, "code": pyotp.TOTP(secret).now()},
+            format="json",
+        )
+        assert replay.status_code == 400
+        assert replay.data["detail"] == "2FA_TICKET_INVALID"
+
+    def test_used_code_cannot_be_replayed_with_a_fresh_ticket(self, user_factory):
+        """The same TOTP code is rejected the second time even via a different
+        ticket — pyotp.verify has no memory, so we track accepted codes."""
+        user = user_factory()
+        secret = _enable_2fa(user)
+        code = pyotp.TOTP(secret).now()
+
+        first_ticket = _login(APIClient(), user.email).data["temp_token"]
+        first = APIClient().post(
+            "/api/v1/auth/login/2fa/",
+            {"temp_token": first_ticket, "code": code},
+            format="json",
+        )
+        assert first.status_code == 200
+
+        second_ticket = _login(APIClient(), user.email).data["temp_token"]
+        replay = APIClient().post(
+            "/api/v1/auth/login/2fa/",
+            {"temp_token": second_ticket, "code": code},
+            format="json",
+        )
+        assert replay.status_code == 400
+        assert replay.data["detail"] == "2FA_INVALID_CODE"
+
     def test_me_exposes_the_2fa_flag(self, user_factory):
         user = user_factory()
         _enable_2fa(user)
@@ -246,7 +358,7 @@ class TestSecretEncryption:
         plain_secret = _enable_2fa(user)
         resp = _auth_client(user).post(
             "/api/v1/auth/2fa/disable/",
-            {"code": pyotp.TOTP(plain_secret).now()},
+            {"code": pyotp.TOTP(plain_secret).now(), "current_password": PASSWORD},
             format="json",
         )
         assert resp.status_code == 200

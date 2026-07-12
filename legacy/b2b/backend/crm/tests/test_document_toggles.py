@@ -120,8 +120,14 @@ def test_brand_context_safe_defaults_without_profile():
 @pytest.mark.django_db
 def test_preview_html_reflects_profile_branding_and_toggles():
     seller = Company.objects.create(name="Seller LLC", inn="3000000002")
+    # use_company_defaults=False → the hand-entered legal_name is honored (with defaults ON the live
+    # Company name would authoritatively override it — see the single-source-of-truth tests below).
     CompanyDocumentProfile.objects.create(
-        company=seller, legal_name="ООО «Превью Тест»", show_lead_time=False, show_fx_note=True
+        company=seller,
+        use_company_defaults=False,
+        legal_name="ООО «Превью Тест»",
+        show_lead_time=False,
+        show_fx_note=True,
     )
     html = render_document_profile_preview_html(seller)
     assert "ООО «Превью Тест»" in html  # branding applied
@@ -131,6 +137,66 @@ def test_preview_html_reflects_profile_branding_and_toggles():
     # CONFIDENTIALITY: even with show_fx_note=True on the profile, the client КП never prints the
     # CBU/FX rate — the toggle no longer leaks the seller's foreign-currency cost basis.
     assert "Курс ЦБ" not in html
+
+
+# ── single source of truth (#287): use_company_defaults ──────────────
+@pytest.mark.django_db
+def test_company_defaults_override_stale_profile_name():
+    """With use_company_defaults=True the live Company is authoritative: a STALE name/ИНН sitting
+    in the profile row must NOT shadow the company's current data (that regressed the #287 single
+    source of truth). The rendered branding reflects the Company, not the stale profile fields."""
+    seller = Company.objects.create(
+        name="ООО «Актуальное Имя»",
+        inn="3000000010",
+        legal_address="г. Ташкент, ул. Новая, 5",
+        contact_person="Иванов И.И.",
+    )
+    CompanyDocumentProfile.objects.create(
+        company=seller,
+        use_company_defaults=True,
+        legal_name="ООО «Старое Имя»",
+        inn="9999999999",
+        legal_address="г. Ташкент, ул. Старая, 1",
+        signatory_name="Петров П.П.",
+    )
+    ctx = document_brand_context(seller)
+    profile = ctx["seller_profile"]
+    assert profile is not None
+    assert profile.legal_name == "ООО «Актуальное Имя»"
+    assert profile.inn == "3000000010"
+    assert profile.legal_address == "г. Ташкент, ул. Новая, 5"
+    assert profile.signatory_name == "Иванов И.И."
+
+
+@pytest.mark.django_db
+def test_company_defaults_fall_back_to_profile_when_company_blank():
+    """use_company_defaults=True but the Company field is blank → keep the profile's manual value
+    (never wipe a manual entry with an empty company field)."""
+    seller = Company.objects.create(name="ООО «Компания»", inn="3000000011", legal_address="")
+    CompanyDocumentProfile.objects.create(
+        company=seller,
+        use_company_defaults=True,
+        legal_address="г. Ташкент, ручной адрес",
+    )
+    ctx = document_brand_context(seller)
+    assert ctx["seller_profile"].legal_address == "г. Ташкент, ручной адрес"
+
+
+@pytest.mark.django_db
+def test_manual_profile_values_kept_when_defaults_off():
+    """use_company_defaults=False → the seller's hand-entered profile values are preserved verbatim
+    and the Company data does NOT override them."""
+    seller = Company.objects.create(name="ООО «Компания»", inn="3000000012")
+    CompanyDocumentProfile.objects.create(
+        company=seller,
+        use_company_defaults=False,
+        legal_name="ООО «Ручное Имя»",
+        inn="1234567890",
+    )
+    ctx = document_brand_context(seller)
+    profile = ctx["seller_profile"]
+    assert profile.legal_name == "ООО «Ручное Имя»"
+    assert profile.inn == "1234567890"
 
 
 @pytest.mark.django_db

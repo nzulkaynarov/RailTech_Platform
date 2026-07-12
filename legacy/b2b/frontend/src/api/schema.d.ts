@@ -10902,6 +10902,7 @@ export interface components {
         };
         TOTPDisableRequest: {
             code: string;
+            current_password: string;
         };
         TOTPLoginRequest: {
             temp_token: string;
@@ -10914,6 +10915,7 @@ export interface components {
         TOTPVerifyRequest: {
             secret: string;
             code: string;
+            current_password: string;
         };
         TimelineEntry: {
             readonly id: number;
@@ -14118,7 +14120,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description 2FA_CODE_REQUIRED | 2FA_INVALID_CODE */
+            /** @description PASSWORD_REQUIRED | INVALID_PASSWORD | 2FA_CODE_REQUIRED | 2FA_INVALID_CODE */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -14175,7 +14177,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description 2FA_CODE_REQUIRED | 2FA_INVALID_CODE | 2FA_ALREADY_ENABLED */
+            /** @description PASSWORD_REQUIRED | INVALID_PASSWORD | 2FA_CODE_REQUIRED | 2FA_INVALID_CODE | 2FA_ALREADY_ENABLED */
             400: {
                 headers: {
                     [name: string]: unknown;

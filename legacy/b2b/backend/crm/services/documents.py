@@ -193,19 +193,24 @@ def document_brand_context(seller_company, *, is_demo: bool = False) -> dict:
     row = CompanyDocumentProfile.objects.filter(company=seller_company).first() if seller_company else None
 
     if row and getattr(row, "use_company_defaults", False) and seller_company:
-        row.legal_name = row.legal_name or seller_company.name
-        row.inn = row.inn or seller_company.inn
-        row.legal_address = row.legal_address or seller_company.legal_address
-        if not row.logo and seller_company.logo:
+        # Single source of truth (#287): with use_company_defaults ON the Company is authoritative
+        # — its values OVERRIDE the profile row so a stale name/ИНН in the profile can never shadow
+        # the live company data. Fall back to the profile value only where the Company field is
+        # blank (so we never wipe a manual entry with an empty company field). This block mutates
+        # the in-memory row only (never .save()) — it just feeds the render.
+        row.legal_name = seller_company.name or row.legal_name
+        row.inn = seller_company.inn or row.inn
+        row.legal_address = seller_company.legal_address or row.legal_address
+        if seller_company.logo:
             row.logo = seller_company.logo
-        if not row.bank_details:
-            bank_parts = []
-            if seller_company.bank_account:
-                bank_parts.append(f"р/с: {seller_company.bank_account}")
-            if seller_company.mfo:
-                bank_parts.append(f"МФО: {seller_company.mfo}")
-            row.bank_details = ", ".join(bank_parts) if bank_parts else ""
-        if not row.signatory_name and seller_company.contact_person:
+        bank_parts = []
+        if seller_company.bank_account:
+            bank_parts.append(f"р/с: {seller_company.bank_account}")
+        if seller_company.mfo:
+            bank_parts.append(f"МФО: {seller_company.mfo}")
+        if bank_parts:
+            row.bank_details = ", ".join(bank_parts)
+        if seller_company.contact_person:
             row.signatory_name = seller_company.contact_person
 
     branded = row if _profile_has_branding(row) else None

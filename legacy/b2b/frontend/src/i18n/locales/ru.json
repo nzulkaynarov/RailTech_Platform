@@ -122,7 +122,8 @@
       "totpRequired": "Введите код подтверждения 2FA",
       "totpLength": "Код должен состоять ровно из 6 цифр"
     },
-    "ticketExpired": "Время подтверждения истекло — войдите заново"
+    "ticketExpired": "Время подтверждения истекло — войдите заново",
+    "invalidResponse": "Некорректный ответ сервера. Попробуйте войти ещё раз."
   },
   "onboarding": {
     "title": "Начало работы",
@@ -2591,6 +2592,9 @@
       "alreadyEnabled": "2FA уже включена",
       "enterCodeToDisable": "Код для отключения 2FA",
       "enterCode": "Введите код из приложения",
+      "confirmPassword": "Подтвердите текущим паролем",
+      "passwordRequired": "Введите текущий пароль",
+      "invalidPassword": "Неверный пароль",
       "enableTwoFactor": "Включить 2FA",
       "sessionsError": "Не удалось загрузить активные сессии",
       "sessionsRevoked": "Остальные сессии завершены",

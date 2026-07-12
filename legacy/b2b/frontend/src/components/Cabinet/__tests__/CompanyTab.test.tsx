@@ -28,6 +28,7 @@ type MockUserState = {
   activeStatus: 'BUYER' | 'SELLER';
   updateCompany: ReturnType<typeof vi.fn>;
   isViewerMode: boolean;
+  capabilities: { permissions: string[] };
 };
 const userStoreRef = vi.hoisted(() => ({ state: null as unknown as MockUserState }));
 const authStoreRef = vi.hoisted(() => ({ workspaceRole: 'OWNER' as string | null }));
@@ -61,7 +62,10 @@ vi.mock('@/api/accountsApi', () => ({
   },
 }));
 
-function makeUserState(overrides: Partial<MockUserState['company']> = {}): MockUserState {
+function makeUserState(
+  overrides: Partial<MockUserState['company']> = {},
+  permissions: string[] = [],
+): MockUserState {
   return {
     company: {
       id: 7,
@@ -75,6 +79,7 @@ function makeUserState(overrides: Partial<MockUserState['company']> = {}): MockU
     activeStatus: 'SELLER',
     updateCompany: vi.fn(),
     isViewerMode: false,
+    capabilities: { permissions },
   };
 }
 
@@ -146,7 +151,7 @@ describe('CompanyTab (settings hub PR 3 grouping)', () => {
     expect(payload).not.toHaveProperty('inn');
   });
 
-  it('renders read-only for a non-OWNER member (no save, inputs disabled, hint shown)', async () => {
+  it('renders read-only for a plain non-OWNER member (no save, inputs disabled, hint shown)', async () => {
     authStoreRef.workspaceRole = 'SALES_MANAGER';
     renderWithProviders(<CompanyTab />);
 
@@ -159,5 +164,28 @@ describe('CompanyTab (settings hub PR 3 grouping)', () => {
     expect(
       screen.getByText('Для изменения данных компании обратитесь к администратору'),
     ).toBeInTheDocument();
+  });
+
+  // ADR-0005 U2 — a delegated «Администратор компании» (non-OWNER WorkspaceRole holding the
+  // CompanyRole settings.edit permission) passed the section gate; the form must be editable,
+  // not a dead read-only shell. Mirrors the backend member_has_permission('settings.edit') grant.
+  it('lets a delegated admin (non-OWNER with settings.edit) edit and save', async () => {
+    authStoreRef.workspaceRole = 'SALES_MANAGER';
+    userStoreRef.state = makeUserState({}, ['settings.edit']);
+    renderWithProviders(<CompanyTab />);
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('ООО Рельсы')).toBeInTheDocument();
+    });
+    expect(screen.getByDisplayValue('ООО Рельсы')).toBeEnabled();
+    expect(screen.getByDisplayValue('20208000900000000001')).toBeEnabled();
+    expect(
+      screen.queryByText('Для изменения данных компании обратитесь к администратору'),
+    ).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /Сохранить данные/ }));
+    await waitFor(() => {
+      expect(accountsApi.updateCompany).toHaveBeenCalledTimes(1);
+    });
   });
 });

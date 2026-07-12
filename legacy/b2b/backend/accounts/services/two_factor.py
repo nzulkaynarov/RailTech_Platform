@@ -21,11 +21,13 @@ re-enroll (support disables 2FA after identity re-verification).
 import base64
 import binascii
 import hashlib
+import secrets
 
 import pyotp
 from cryptography.fernet import Fernet, InvalidToken
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.core.signing import BadSignature, SignatureExpired, TimestampSigner
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -36,7 +38,18 @@ TICKET_MAX_AGE = 300
 # TOTP tolerance: accept the previous/next 30s step — standard clock-drift allowance.
 TOTP_VALID_WINDOW = 1
 
+# A used TOTP code is remembered just long enough to cover the accepted step plus
+# the ±1 clock-drift window (3 × 30s), so the same code can never be replayed while
+# it is still arithmetically valid.
+USED_CODE_TTL = 90
+
 _TICKET_SALT = "accounts.two_factor.login"
+
+# Redis cache keys (SEC-06 replay hardening). Both share the `default` cache with the
+# login lockout / throttles — a Redis outage already fails login closed system-wide
+# (login_guard.is_locked reads the same store), so there is no fail-open replay path.
+_TICKET_USED_PREFIX = "2fa_ticket_used:"
+_USED_CODE_PREFIX = "2fa_used_code:"
 
 
 def _signer() -> TimestampSigner:
@@ -84,13 +97,19 @@ def generate_totp_setup(user) -> dict:
     return {"secret": secret, "uri": uri}
 
 
-def enable_totp(user, secret: str, code: str) -> str | None:
+def enable_totp(user, secret: str, code: str, current_password: str) -> str | None:
     """Activate 2FA once the user proves the device generates valid codes.
 
+    Step-up (GitHub sudo-mode): the current password is required IN ADDITION to the
+    TOTP code, so a stolen access token alone cannot flip a security setting.
     Returns an error CODE or None on success.
     """
     if user.is_2fa_enabled:
         return "2FA_ALREADY_ENABLED"
+    if not current_password:
+        return "PASSWORD_REQUIRED"
+    if not user.check_password(current_password):
+        return "INVALID_PASSWORD"
     if not secret or not code:
         return "2FA_CODE_REQUIRED"
     if not _code_matches(secret, code):
@@ -101,10 +120,15 @@ def enable_totp(user, secret: str, code: str) -> str | None:
     return None
 
 
-def disable_totp(user, code: str) -> str | None:
-    """Turn 2FA off; requires a currently valid code (proof of device possession)."""
+def disable_totp(user, code: str, current_password: str) -> str | None:
+    """Turn 2FA off; requires the current password AND a currently valid code
+    (step-up — a stolen access token alone must not be able to strip 2FA off)."""
     if not user.is_2fa_enabled or not user.totp_secret:
         return None  # already off — idempotent
+    if not current_password:
+        return "PASSWORD_REQUIRED"
+    if not user.check_password(current_password):
+        return "INVALID_PASSWORD"
     if not code:
         return "2FA_CODE_REQUIRED"
     if not _code_matches(decrypt_totp_secret(user.totp_secret), code):
@@ -116,27 +140,52 @@ def disable_totp(user, code: str) -> str | None:
 
 
 def issue_login_ticket(user) -> str:
-    """Signed "password verified, awaiting TOTP" ticket for the 2FA login step."""
-    return _signer().sign(str(user.pk))
+    """Signed "password verified, awaiting TOTP" ticket for the 2FA login step.
+
+    A random nonce (jti) is embedded so the ticket can be marked single-use in Redis
+    on successful redemption — a leaked ticket (proxy/access logs) cannot mint a
+    second session even inside its TICKET_MAX_AGE window (SEC-06 replay hardening).
+    """
+    jti = secrets.token_urlsafe(16)
+    return _signer().sign(f"{user.pk}:{jti}")
 
 
 def redeem_login_ticket(temp_token: str, code: str):
     """Exchange ticket + TOTP code for the user. Returns (user, error_code).
 
     Every ticket problem (bad signature, expired, unknown/inactive user, 2FA turned
-    off meanwhile) collapses into one 2FA_TICKET_INVALID with user=None. A wrong
-    code returns ("2FA_INVALID_CODE") WITH the resolved user, so the caller can
-    charge the failure against that account's SEC-06 lockout.
+    off meanwhile, ticket already spent) collapses into one 2FA_TICKET_INVALID with
+    user=None. A wrong OR already-used code returns ("2FA_INVALID_CODE") WITH the
+    resolved user, so the caller can charge the failure against that account's
+    SEC-06 lockout.
+
+    Replay hardening (SEC-06): the signed ticket is single-use (its nonce is marked
+    spent in Redis on success) and every accepted TOTP code is remembered for
+    USED_CODE_TTL so it cannot be replayed while still arithmetically valid. Both
+    checks read the `default` cache, the same store login_guard.is_locked() already
+    depends on — so a Redis outage fails login closed rather than opening a replay
+    hole.
     """
     try:
-        user_id = _signer().unsign(temp_token or "", max_age=TICKET_MAX_AGE)
+        payload = _signer().unsign(temp_token or "", max_age=TICKET_MAX_AGE)
     except (BadSignature, SignatureExpired):
+        return None, "2FA_TICKET_INVALID"
+    user_id, _, jti = payload.partition(":")
+    if not jti or cache.get(_TICKET_USED_PREFIX + jti) is not None:
+        # No nonce (legacy/tampered) or the ticket was already redeemed → invalid.
         return None, "2FA_TICKET_INVALID"
     user = get_user_model().objects.filter(pk=user_id, is_active=True).first()
     if user is None or not user.is_2fa_enabled or not user.totp_secret:
         return None, "2FA_TICKET_INVALID"
     if not _code_matches(decrypt_totp_secret(user.totp_secret), code):
         return user, "2FA_INVALID_CODE"
+    # Correct code, but reject it if this exact code was already accepted for this
+    # user inside its validity window (pyotp.verify has no memory of used codes).
+    used_code_key = f"{_USED_CODE_PREFIX}{user.pk}:{code}"
+    if cache.get(used_code_key) is not None:
+        return user, "2FA_INVALID_CODE"
+    cache.set(used_code_key, 1, timeout=USED_CODE_TTL)
+    cache.set(_TICKET_USED_PREFIX + jti, 1, timeout=TICKET_MAX_AGE)
     return user, None
 
 
