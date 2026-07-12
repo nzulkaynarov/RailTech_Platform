@@ -372,4 +372,15 @@ def sign_act(act_id: int, actor: CustomUser, signed_file=None) -> Tuple[Optional
     if signed_file is not None:
         act.signed_file = signed_file
     act.save(update_fields=["status", "signed_at", "signed_file", "updated_at"])
+    # [MANUAL_MODE]: a button-click / uploaded scan is NOT a qualified e-signature — tag it so
+    # these records can be told apart from real E-IMZO signatures once that lands (tech debt,
+    # see memory tech_debt_payment_esign). Mirrors the contract-sign logs in contracts.py.
+    ActivityLog.objects.create(
+        action="[MANUAL_MODE] Подписан акт",
+        detail=f"Акт {act.number} по сделке #{act.deal_id}",
+        user=actor,
+        level="SUCCESS",
+        deal=act.deal,
+        company_id=act.deal.company_id,
+    )
     return act, None

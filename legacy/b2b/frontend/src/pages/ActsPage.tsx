@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { translateApiError } from '@/lib/apiError';
 import { ScrollText, PenLine } from 'lucide-react';
 import { DocumentActions } from '@/components/Shared/DocumentActions';
+import { ManualModeBanner } from '@/components/Shared/ManualModeBanner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -58,6 +59,7 @@ export function ActsPage() {
       icon={<ScrollText className="h-5 w-5" />}
       stats={stats}
     >
+      <ManualModeBanner kind="esign" />
       <Toolbar
         searchValue={listParams.searchInput}
         onSearchChange={listParams.setSearchInput}
