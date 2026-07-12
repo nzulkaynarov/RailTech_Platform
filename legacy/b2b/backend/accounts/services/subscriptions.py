@@ -83,6 +83,14 @@ def record_subscription_payment(
             f"Подписка компании {subscription.company.name}: "
             f"+{months} мес, сумма {amount}. Действует до {subscription.valid_until}."
         ),
+        event_code="subscription.paid",
+        event_params={
+            "company_name": subscription.company.name,
+            "months": months,
+            "amount": str(amount),
+            "valid_until": str(subscription.valid_until),
+            "manual": manual,
+        },
         user=actor,
         level="SUCCESS",
         company=subscription.company,

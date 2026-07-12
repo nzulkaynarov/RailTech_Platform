@@ -78,6 +78,12 @@ def verify_company_kyc(
         entity_id=company.id,
         action="KYC: понижение уровня" if is_downgrade else "KYC: подтверждение",
         detail=f"{company.name}: {before_name or before_code} → {target_status.name}",
+        event_code="company.kyc_downgraded" if is_downgrade else "company.kyc_verified",
+        event_params={
+            "company_name": company.name,
+            "from_status": before_name or before_code,
+            "to_status": target_status.name,
+        },
         actor=approver,
         reason=reason,
         before={"verification_status": before_code},

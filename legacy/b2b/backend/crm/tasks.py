@@ -311,6 +311,13 @@ def expire_stale_quotes(self) -> dict:
             level="WARNING",
             deal_id=q.deal_id,
             company_id=q.deal.company_id,
+            event_code="quote.expired",
+            event_params={
+                "quote_id": q.id,
+                "version": q.version,
+                "deal_id": q.deal_id,
+                "valid_until": str(q.valid_until),
+            },
         )
         if q.prepared_by and warn_type:
             notif = Notification.objects.create(

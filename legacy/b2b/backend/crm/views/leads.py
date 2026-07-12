@@ -47,6 +47,8 @@ class LeadCreateView(APIView):
                 action="Новый лид с сайта",
                 detail=(f"Получен запрос от {lead.name} ({lead.email}) " f"через лендинг."),
                 level="SUCCESS",
+                event_code="lead.received",
+                event_params={"name": lead.name, "email": lead.email},
             )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

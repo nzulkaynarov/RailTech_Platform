@@ -810,7 +810,11 @@
     "lineCurrency": "Line cost currency",
     "costInPresentation": "Landed cost: {{value}}",
     "fxRateAt": "Rate {{from}}→{{to}}: {{rate}}",
-    "marginQuoteLevelHint": "Markup is set for the whole КП — change it in «Настройки КП»"
+    "marginQuoteLevelHint": "Markup is set for the whole КП — change it in «Настройки КП»",
+    "validation": {
+      "qtyTooLarge": "Quantity cannot exceed {{max}}",
+      "priceTooLarge": "Price cannot exceed {{max}}"
+    }
   },
   "admin": {
     "dashboard": {
@@ -5023,5 +5027,181 @@
     "moderation_force_override": "Force-override (deals / quotes / contracts)",
     "platform_settings": "System settings & master data",
     "operators_manage": "Manage operator roles"
+  },
+  "activity": {
+    "deal": {
+      "created": {
+        "title": "Deal created",
+        "detail": "User {{actor_email}} started a new deal #{{deal_id}} for {{company_name}}"
+      },
+      "stage_changed": {
+        "title": "Stage changed",
+        "detail": "Deal #{{deal_id}}: {{from_stage}} → {{to_stage}}"
+      },
+      "stage_changed_force": {
+        "title": "Force: stage changed",
+        "detail": "Deal #{{deal_id}}: {{from_stage}} → {{to_stage}}"
+      },
+      "chat_message": {
+        "title": "Deal chat message",
+        "detail": "{{preview}}"
+      },
+      "claimed": {
+        "title": "Request claimed",
+        "detail": "{{actor_email}} claimed request #{{deal_id}}"
+      },
+      "released": {
+        "title": "Request returned to queue",
+        "detail": "{{actor_email}} released request #{{deal_id}}"
+      },
+      "assigned": {
+        "title": "Request assigned",
+        "detail": "{{actor_email}} assigned request #{{deal_id}} → {{assignee_email}}"
+      },
+      "item_added": {
+        "title": "Request line added",
+        "detail": "Deal #{{deal_id}}: «{{name}}» × {{quantity}}"
+      },
+      "items_added_bulk": {
+        "title": "Request lines added (cart)",
+        "detail": "Deal #{{deal_id}}: {{count}} line(s)"
+      },
+      "item_removed": {
+        "title": "Request line removed",
+        "detail": "Deal #{{deal_id}}: QuoteItem #{{item_id}}"
+      },
+      "routed": {
+        "title": "Request routed to sellers (RFQ routing)",
+        "detail": "Deal #{{deal_id}}: {{count}} seller(s)"
+      },
+      "submitted": {
+        "title": "Request submitted to supplier (RFQ)",
+        "detail": "Deal #{{deal_id}}: {{count}} line(s)"
+      }
+    },
+    "quote": {
+      "sent": {
+        "title": "Quote sent to client",
+        "detail": "Quote v{{version}} ({{number}})"
+      },
+      "accepted": {
+        "title": "Quote accepted by client",
+        "detail": "Quote v{{version}} ({{number}})"
+      },
+      "submitted_for_review": {
+        "title": "Quote submitted for approval",
+        "detail": "Quote v{{version}} submitted for approval (chain built)"
+      },
+      "rejected": {
+        "title": "Quote rejected by client",
+        "detail": "Quote v{{version}}"
+      },
+      "item_rematched": {
+        "title": "Product re-matched on quote line",
+        "detail": "QuoteItem #{{item_id}} → Product #{{product_id}}"
+      },
+      "approval_step_rejected": {
+        "title": "Approval step rejected",
+        "detail": "Step rejected: {{comment}}"
+      },
+      "approval_step_approved": {
+        "title": "Approval step approved",
+        "detail": "Step approved ({{participation}})"
+      },
+      "approval_complete": {
+        "title": "Quote approval complete",
+        "detail": "All approvals received → READY_TO_SEND"
+      },
+      "approval_recalled": {
+        "title": "Quote recalled from approval",
+        "detail": "Quote recalled from approval for revision"
+      },
+      "expired": {
+        "title": "Quote expired",
+        "detail": "Quote #{{quote_id}} v{{version}} (deal #{{deal_id}}) — valid_until={{valid_until}}"
+      },
+      "approved_force": {
+        "title": "[FORCE_ADMIN] Quote approved by platform admin",
+        "detail": "Quote #{{quote_id}} ({{from_status}} → APPROVED)"
+      }
+    },
+    "lead": {
+      "converted": {
+        "title": "Lead converted to deal",
+        "detail": "Lead #{{lead_id}} → Deal #{{deal_id}}"
+      },
+      "received": {
+        "title": "New lead from website",
+        "detail": "Received a request from {{name}} ({{email}}) via the landing page."
+      }
+    },
+    "contract": {
+      "created": {
+        "title": "Contract created",
+        "detail": "Contract {{number}} for deal #{{deal_id}}"
+      },
+      "signed_client": {
+        "title": "[MANUAL_MODE] Contract signed (client side)",
+        "detail": "Contract {{number}} / deal #{{deal_id}}"
+      },
+      "signed_manager": {
+        "title": "[MANUAL_MODE] Contract signed (RailTech/seller side)",
+        "detail": "Contract {{number}} / deal #{{deal_id}}"
+      },
+      "auto_close_failed": {
+        "title": "Auto-transition to CLOSED_WON failed",
+        "detail": "Contract {{number}} / deal #{{deal_id}}: {{error}}"
+      },
+      "cancelled_force": {
+        "title": "[FORCE_ADMIN] Contract cancelled by platform admin",
+        "detail": "Contract #{{contract_id}} ({{from_status}} → CANCELLED)"
+      }
+    },
+    "invoice": {
+      "issued": {
+        "title": "Invoice issued",
+        "detail": "Invoice {{number}} for deal #{{deal_id}}"
+      }
+    },
+    "payment": {
+      "recorded": {
+        "title": "Payment recorded",
+        "detail": "Invoice {{number}}: received {{amount}} (total {{paid}}/{{total}})"
+      }
+    },
+    "act": {
+      "signed": {
+        "title": "[MANUAL_MODE] Act signed",
+        "detail": "Act {{number}} for deal #{{deal_id}}"
+      }
+    },
+    "subscription": {
+      "paid": {
+        "title": "Subscription paid",
+        "detail": "Subscription for {{company_name}}: +{{months}} mo, amount {{amount}}. Valid until {{valid_until}}."
+      }
+    },
+    "company": {
+      "kyc_verified": {
+        "title": "KYC: verified",
+        "detail": "{{company_name}}: {{from_status}} → {{to_status}}"
+      },
+      "kyc_downgraded": {
+        "title": "KYC: level downgraded",
+        "detail": "{{company_name}}: {{from_status}} → {{to_status}}"
+      },
+      "merged": {
+        "title": "Duplicate company merged",
+        "detail": "Duplicate #{{duplicate_id}} “{{duplicate_name}}” merged into “{{survivor_name}}”"
+      },
+      "role_application_approved": {
+        "title": "Role application approved",
+        "detail": "{{company_name}} → {{role_name}}"
+      },
+      "role_added": {
+        "title": "Role added: {{role_code}}",
+        "detail": "Application #{{application_id}} approved"
+      }
+    }
   }
 }

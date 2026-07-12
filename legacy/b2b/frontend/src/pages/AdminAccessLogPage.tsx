@@ -12,6 +12,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useAccessLog } from '@/hooks/useAdmin';
+import { activityTitle } from '@/lib/activityText';
 import { PageShell, ErrorState } from './shared/PageShell';
 
 /**
@@ -20,7 +21,7 @@ import { PageShell, ErrorState } from './shared/PageShell';
  * Read-only; gated server-side + in the nav on `moderation.force_override`.
  */
 export function AdminAccessLogPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { data, isLoading, isError, refetch } = useAccessLog(200);
   const items = data?.items ?? [];
 
@@ -74,7 +75,7 @@ export function AdminAccessLogPage() {
                       ) : (
                         <ShieldAlert className="h-4 w-4 text-destructive" aria-hidden="true" />
                       )}
-                      <span className="text-sm font-medium text-foreground">{entry.action}</span>
+                      <span className="text-sm font-medium text-foreground">{activityTitle(t, i18n, entry)}</span>
                     </div>
                   </TableCell>
                   <TableCell className="p-4">

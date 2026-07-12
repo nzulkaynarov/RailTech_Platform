@@ -225,6 +225,59 @@ def test_record_subscription_payment_extends_and_activates(supplier, manager):
     assert sub.status == "ACTIVE"
     assert sub.valid_until > initial_until
 
+    # E1: structured event written for the localizable timeline.
+    from crm.models import ActivityLog
+
+    log = ActivityLog.objects.filter(event_code="subscription.paid").latest("timestamp")
+    assert log.event_params["company_name"] == company.name
+    assert log.event_params["months"] == 2
+    assert log.event_params["amount"] == "100.00"
+    assert log.event_params["manual"] is True
+    assert log.event_params["valid_until"] == str(sub.valid_until)
+
+
+@pytest.mark.django_db
+def test_log_admin_action_threads_structured_event():
+    """core.audit.log_admin_action carries event_code/event_params through to
+    the ActivityLog row (E1); free-form callers leave them empty."""
+    from core.audit import log_admin_action
+    from crm.models import ActivityLog
+
+    structured = log_admin_action(
+        entity_type="deal",
+        entity_id=1,
+        action="Стадия изменена",
+        detail="Deal #1: DRAFT → SOURCING",
+        event_code="deal.stage_changed",
+        event_params={"deal_id": 1, "from_stage": "DRAFT", "to_stage": "SOURCING", "force": False},
+    )
+    assert structured.event_code == "deal.stage_changed"
+    assert structured.event_params["to_stage"] == "SOURCING"
+    assert structured.event_params["force"] is False
+
+    # Free-form admin action: no event_code → renders from RU `action` fallback.
+    freeform = log_admin_action(entity_type="company", entity_id=2, action="KYC approved to L2")
+    assert freeform.event_code == ""
+    assert freeform.event_params == {}
+    assert ActivityLog.objects.filter(event_code="deal.stage_changed").exists()
+
+
+@pytest.mark.django_db
+def test_transition_deal_stage_writes_structured_event(deal, manager):
+    """The REAL producer path: transition_deal_stage itself must emit
+    deal.stage_changed with interpolation params — the most frequent timeline
+    event (incl. Move 0 auto-transitions) must localize on EN-UI instead of
+    falling back to the RU action string."""
+    from crm.models import ActivityLog
+
+    d, err = crm_services.transition_deal_stage(deal, "SOURCING", actor=manager)
+    assert err is None
+
+    log = ActivityLog.objects.filter(deal_id=deal.id, event_code="deal.stage_changed").latest("timestamp")
+    assert log.event_params["deal_id"] == deal.id
+    assert log.event_params["from_stage"]  # human stage names interpolated
+    assert log.event_params["to_stage"]
+
 
 # ─── FSM transitions + Contract gate ──────────────────────────────────────
 

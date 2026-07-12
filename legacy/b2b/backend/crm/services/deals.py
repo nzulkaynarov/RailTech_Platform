@@ -65,6 +65,12 @@ def register_new_deal(deal: Deal, actor: CustomUser) -> Deal:
         deal=deal,
         company=deal.company,
         contact=deal.contact,
+        event_code="deal.created",
+        event_params={
+            "actor_email": actor.email,
+            "deal_id": deal.id,
+            "company_name": deal.company.name if deal.company else "N/A",
+        },
     )
 
     # Counterparty book (Phase B): a deal opened FOR an offline contact is a seller acting on
@@ -174,6 +180,8 @@ def transition_deal_stage(
         entity_id=deal.id,
         action="Стадия изменена" if validate_fsm else "Force: стадия изменена",
         detail=f"Сделка #{deal.id}: {old_stage_name} → {target_stage.name}",
+        event_code="deal.stage_changed" if validate_fsm else "deal.stage_changed_force",
+        event_params={"deal_id": deal.id, "from_stage": old_stage_name, "to_stage": target_stage.name},
         actor=actor,
         reason=reason,
         before={"stage_code": old_stage_code, "stage_name": old_stage_name},
@@ -308,5 +316,7 @@ def convert_lead_to_deal(
         level="SUCCESS",
         deal=deal,
         company=company,
+        event_code="lead.converted",
+        event_params={"lead_id": lead.id, "deal_id": deal.id},
     )
     return deal, None

@@ -5514,6 +5514,16 @@ export interface components {
              * @description Подробная информация о событии
              */
             detail?: string;
+            /**
+             * Код события
+             * @description Машинный код события для локализуемого таймлайна (deal.created, quote.sent, ...)
+             */
+            event_code?: string;
+            /**
+             * Параметры события
+             * @description Параметры интерполяции для перевода события на клиенте
+             */
+            event_params?: unknown;
             readonly user_name: string;
             /**
              * Уровень
@@ -10929,6 +10939,16 @@ export interface components {
              * @description Подробная информация о событии
              */
             detail?: string;
+            /**
+             * Код события
+             * @description Машинный код события для локализуемого таймлайна (deal.created, quote.sent, ...)
+             */
+            event_code?: string;
+            /**
+             * Параметры события
+             * @description Параметры интерполяции для перевода события на клиенте
+             */
+            event_params?: unknown;
             /**
              * Уровень
              * @description Уровень важности события

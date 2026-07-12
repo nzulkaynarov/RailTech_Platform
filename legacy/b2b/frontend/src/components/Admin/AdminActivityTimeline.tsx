@@ -5,11 +5,14 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { activityTitle, activityDetail } from '@/lib/activityText';
 
 export interface ActivityEntry {
   id: number;
   action: string;
   detail: string;
+  event_code?: string;
+  event_params?: Record<string, unknown>;
   level: 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR';
   reason: string;
   before_data: Record<string, unknown> | null;
@@ -68,7 +71,7 @@ export function AdminActivityTimeline({
   entityId,
   limit = 100,
 }: AdminActivityTimelineProps): React.ReactNode {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { data, isLoading } = useQuery({
     queryKey: ['admin-activity', entityType, entityId, limit],
     queryFn: async () => {
@@ -117,13 +120,13 @@ export function AdminActivityTimeline({
               >
                 {entry.level}
               </Badge>
-              <span className="text-xs font-medium">{entry.action}</span>
+              <span className="text-xs font-medium">{activityTitle(t, i18n, entry)}</span>
               <span className="ml-auto text-xs text-muted-foreground">
                 {formatTimestamp(entry.timestamp)}
               </span>
             </div>
-            {entry.detail ? (
-              <div className="text-xs text-muted-foreground">{entry.detail}</div>
+            {activityDetail(t, i18n, entry) ? (
+              <div className="text-xs text-muted-foreground">{activityDetail(t, i18n, entry)}</div>
             ) : null}
             {entry.user_email ? (
               <div className="text-xs text-muted-foreground">

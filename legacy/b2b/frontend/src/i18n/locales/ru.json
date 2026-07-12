@@ -812,7 +812,11 @@
     "lineCurrency": "Валюта себестоимости позиции",
     "costInPresentation": "Себестоимость: {{value}}",
     "fxRateAt": "Курс {{from}}→{{to}}: {{rate}}",
-    "marginQuoteLevelHint": "Наценка задаётся на весь КП — измените её в «Настройки КП»"
+    "marginQuoteLevelHint": "Наценка задаётся на весь КП — измените её в «Настройки КП»",
+    "validation": {
+      "qtyTooLarge": "Количество не может превышать {{max}}",
+      "priceTooLarge": "Цена не может превышать {{max}}"
+    }
   },
   "admin": {
     "dashboard": {
@@ -5027,5 +5031,181 @@
     "moderation_force_override": "Force-override (сделки, КП, контракты)",
     "platform_settings": "Системные настройки и справочники",
     "operators_manage": "Управлять ролями операторов"
+  },
+  "activity": {
+    "deal": {
+      "created": {
+        "title": "Сделка создана",
+        "detail": "Пользователь {{actor_email}} инициировал новую сделку #{{deal_id}} для компании {{company_name}}"
+      },
+      "stage_changed": {
+        "title": "Стадия изменена",
+        "detail": "Сделка #{{deal_id}}: {{from_stage}} → {{to_stage}}"
+      },
+      "stage_changed_force": {
+        "title": "Force: стадия изменена",
+        "detail": "Сделка #{{deal_id}}: {{from_stage}} → {{to_stage}}"
+      },
+      "chat_message": {
+        "title": "Сообщение в чате сделки",
+        "detail": "{{preview}}"
+      },
+      "claimed": {
+        "title": "Заявка взята в работу",
+        "detail": "{{actor_email}} взял заявку #{{deal_id}}"
+      },
+      "released": {
+        "title": "Заявка возвращена в очередь",
+        "detail": "{{actor_email}} освободил заявку #{{deal_id}}"
+      },
+      "assigned": {
+        "title": "Заявка назначена",
+        "detail": "{{actor_email}} назначил заявку #{{deal_id}} → {{assignee_email}}"
+      },
+      "item_added": {
+        "title": "Добавлена позиция заявки",
+        "detail": "Deal #{{deal_id}}: «{{name}}» × {{quantity}}"
+      },
+      "items_added_bulk": {
+        "title": "Добавлены позиции заявки (корзина)",
+        "detail": "Deal #{{deal_id}}: {{count}} позиц."
+      },
+      "item_removed": {
+        "title": "Удалена позиция заявки",
+        "detail": "Deal #{{deal_id}}: QuoteItem #{{item_id}}"
+      },
+      "routed": {
+        "title": "Заявка адресована продавцам (RFQ routing)",
+        "detail": "Deal #{{deal_id}}: {{count}} продавц."
+      },
+      "submitted": {
+        "title": "Заявка отправлена поставщику (RFQ)",
+        "detail": "Deal #{{deal_id}}: {{count}} позиц."
+      }
+    },
+    "quote": {
+      "sent": {
+        "title": "КП отправлено клиенту",
+        "detail": "КП v{{version}} ({{number}})"
+      },
+      "accepted": {
+        "title": "КП принято клиентом",
+        "detail": "КП v{{version}} ({{number}})"
+      },
+      "submitted_for_review": {
+        "title": "КП отправлен на согласование",
+        "detail": "КП v{{version}} на согласование (цепочка построена)"
+      },
+      "rejected": {
+        "title": "КП отклонено клиентом",
+        "detail": "КП v{{version}}"
+      },
+      "item_rematched": {
+        "title": "Переназначен продукт в позиции КП",
+        "detail": "QuoteItem #{{item_id}} → Product #{{product_id}}"
+      },
+      "approval_step_rejected": {
+        "title": "Согласование отклонено",
+        "detail": "Шаг отклонён: {{comment}}"
+      },
+      "approval_step_approved": {
+        "title": "Шаг согласования пройден",
+        "detail": "Шаг согласован ({{participation}})"
+      },
+      "approval_complete": {
+        "title": "Согласование КП завершено",
+        "detail": "Все согласования получены → READY_TO_SEND"
+      },
+      "approval_recalled": {
+        "title": "КП отозван из согласования",
+        "detail": "КП отозван из согласования на доработку"
+      },
+      "expired": {
+        "title": "КП просрочено",
+        "detail": "Quote #{{quote_id}} v{{version}} (deal #{{deal_id}}) — valid_until={{valid_until}}"
+      },
+      "approved_force": {
+        "title": "[FORCE_ADMIN] КП одобрено платформенным админом",
+        "detail": "КП #{{quote_id}} ({{from_status}} → APPROVED)"
+      }
+    },
+    "lead": {
+      "converted": {
+        "title": "Lead конвертирован в сделку",
+        "detail": "Lead #{{lead_id}} → Deal #{{deal_id}}"
+      },
+      "received": {
+        "title": "Новый лид с сайта",
+        "detail": "Получен запрос от {{name}} ({{email}}) через лендинг."
+      }
+    },
+    "contract": {
+      "created": {
+        "title": "Создан контракт",
+        "detail": "Контракт {{number}} по сделке #{{deal_id}}"
+      },
+      "signed_client": {
+        "title": "[MANUAL_MODE] Подписан контракт (сторона клиента)",
+        "detail": "Контракт {{number}} / сделка #{{deal_id}}"
+      },
+      "signed_manager": {
+        "title": "[MANUAL_MODE] Подписан контракт (сторона RailTech)",
+        "detail": "Контракт {{number}} / сделка #{{deal_id}}"
+      },
+      "auto_close_failed": {
+        "title": "Авто-переход в CLOSED_WON не выполнен",
+        "detail": "Контракт {{number}} / сделка #{{deal_id}}: {{error}}"
+      },
+      "cancelled_force": {
+        "title": "[FORCE_ADMIN] Контракт отменён платформенным админом",
+        "detail": "Контракт #{{contract_id}} ({{from_status}} → CANCELLED)"
+      }
+    },
+    "invoice": {
+      "issued": {
+        "title": "Инвойс выставлен",
+        "detail": "Инвойс {{number}} по сделке #{{deal_id}}"
+      }
+    },
+    "payment": {
+      "recorded": {
+        "title": "Зафиксирован платёж",
+        "detail": "Инвойс {{number}}: получено {{amount}} (итого {{paid}}/{{total}})"
+      }
+    },
+    "act": {
+      "signed": {
+        "title": "[MANUAL_MODE] Подписан акт",
+        "detail": "Акт {{number}} по сделке #{{deal_id}}"
+      }
+    },
+    "subscription": {
+      "paid": {
+        "title": "Оплата подписки",
+        "detail": "Подписка компании {{company_name}}: +{{months}} мес, сумма {{amount}}. Действует до {{valid_until}}."
+      }
+    },
+    "company": {
+      "kyc_verified": {
+        "title": "KYC: подтверждение",
+        "detail": "{{company_name}}: {{from_status}} → {{to_status}}"
+      },
+      "kyc_downgraded": {
+        "title": "KYC: понижение уровня",
+        "detail": "{{company_name}}: {{from_status}} → {{to_status}}"
+      },
+      "merged": {
+        "title": "Слияние дубля компании",
+        "detail": "Дубль #{{duplicate_id}} «{{duplicate_name}}» влит в «{{survivor_name}}»"
+      },
+      "role_application_approved": {
+        "title": "Заявка на роль одобрена",
+        "detail": "{{company_name}} → {{role_name}}"
+      },
+      "role_added": {
+        "title": "Добавлена роль: {{role_code}}",
+        "detail": "Одобрена заявка #{{application_id}}"
+      }
+    }
   }
 }

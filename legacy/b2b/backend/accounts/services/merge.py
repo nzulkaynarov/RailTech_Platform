@@ -148,6 +148,8 @@ def merge_companies(
         entity_id=survivor.id,
         action="Слияние дубля компании",
         detail=f"Дубль #{dup_id} «{dup_name}» влит в «{survivor.name}»",
+        event_code="company.merged",
+        event_params={"duplicate_id": dup_id, "duplicate_name": dup_name, "survivor_name": survivor.name},
         actor=actor,
         reason=reason,
         after={"merged_from_id": dup_id, "merged_from_name": dup_name},

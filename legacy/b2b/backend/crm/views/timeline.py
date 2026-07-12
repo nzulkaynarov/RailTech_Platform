@@ -26,6 +26,10 @@ class TimelineEntrySerializer(serializers.ModelSerializer):
             "id",
             "action",
             "detail",
+            # Structured event (E1): the client localizes activity.<event_code> with
+            # event_params by viewer locale; action/detail stay the RU legacy fallback.
+            "event_code",
+            "event_params",
             "level",
             "timestamp",
             "user_name",

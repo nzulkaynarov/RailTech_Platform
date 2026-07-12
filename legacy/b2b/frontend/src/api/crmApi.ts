@@ -375,6 +375,8 @@ export interface ActivityLog {
 	id: number;
 	action: string;
 	detail: string;
+	event_code?: string;
+	event_params?: Record<string, unknown>;
 	user_name: string;
 	level: 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR';
 	timestamp: string;
@@ -385,6 +387,9 @@ export interface TimelineEntry {
 	id: number;
 	action: string;
 	detail: string;
+	// Structured event (spec-timeline-i18n): localized on the client from these when present.
+	event_code?: string;
+	event_params?: Record<string, unknown>;
 	level: 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR';
 	timestamp: string;
 	user_name: string;

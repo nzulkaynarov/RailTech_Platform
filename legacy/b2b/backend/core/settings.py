@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 import os
 from datetime import timedelta
+from decimal import Decimal
 from pathlib import Path
 from urllib.parse import parse_qsl, urlparse
 
@@ -730,6 +731,14 @@ AI_MAX_RETRIES = int((os.environ.get("AI_MAX_RETRIES") or "2").strip() or "2")
 # as one base64 request, so an oversized file means a 413 + wasted spend — reject it
 # early. Default 10 MB (the upload endpoint already caps the raw file at 20 MB).
 AI_IMPORT_MAX_BYTES = int(os.environ.get("AI_IMPORT_MAX_BYTES", str(10 * 1024 * 1024)))
+
+# ── КП: санитарные потолки ввода строки ─────────────────────────────────────
+# Верхние границы на количество/цену строки КП. Это НЕ бизнес-лимиты, а защита
+# от fat-finger / вставки в чужое поле: заявка с qty=1 500 000 или ценой в 10¹²
+# искажает экономику КП и расчёт кредитов. Нижняя граница (0/1) уже на модели
+# (MinValueValidator — KP-04); здесь только верхний санитарный потолок.
+QUOTE_ITEM_MAX_QUANTITY = int(os.getenv("QUOTE_ITEM_MAX_QUANTITY", "1000000"))
+QUOTE_ITEM_MAX_UNIT_PRICE = Decimal(os.getenv("QUOTE_ITEM_MAX_UNIT_PRICE", "10000000000"))
 
 # Removed duplicate declarations (now at the top)
 

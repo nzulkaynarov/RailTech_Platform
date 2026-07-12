@@ -80,6 +80,8 @@ export interface AdminAccessLogEntry {
   id: number;
   action: string;
   detail: string;
+  event_code?: string;
+  event_params?: Record<string, unknown>;
   level: 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR';
   reason: string;
   entity_type: string;

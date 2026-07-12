@@ -26,6 +26,7 @@ import { CreateOfflineClientDialog } from '@/components/CRM/CreateOfflineClientD
 import type {
   Relationship, RelationshipDirection, RelationshipStage, TimelineEntry,
 } from '@/api/crmApi';
+import { activityTitle, activityDetail } from '@/lib/activityText';
 
 /* ─── CRM Phase B — «Книга контрагентов» ─────────────────────────────────────
  * ONE page for both directions of the relationship book: direction=CLIENT is
@@ -80,18 +81,20 @@ function CompanyTimeline({ companyId }: { companyId: number }) {
       <ol className="relative border-s border-border ms-2 space-y-4">
         {entries.map((entry) => {
           const Icon = LEVEL_ICON[entry.level] ?? Info;
+          const title = activityTitle(t, i18n, entry);
+          const detail = activityDetail(t, i18n, entry);
           return (
             <li key={entry.id} className="ms-4">
               <span className="absolute -start-2 mt-1 flex h-4 w-4 items-center justify-center rounded-full bg-background">
                 <Icon className={`h-3.5 w-3.5 ${LEVEL_CLASS[entry.level] ?? LEVEL_CLASS.INFO}`} />
               </span>
               <div className="flex flex-wrap items-baseline gap-x-2">
-                <p className="text-sm font-medium text-foreground">{entry.action}</p>
+                <p className="text-sm font-medium text-foreground">{title}</p>
                 <time className="text-xs text-muted-foreground">
                   {formatDistanceToNow(new Date(entry.timestamp), { addSuffix: true, locale: dateLocale })}
                 </time>
               </div>
-              {entry.detail && <p className="text-xs text-muted-foreground mt-0.5">{entry.detail}</p>}
+              {detail && <p className="text-xs text-muted-foreground mt-0.5">{detail}</p>}
               {entry.user_name && <p className="text-xs text-muted-foreground/70 mt-0.5">{entry.user_name}</p>}
             </li>
           );

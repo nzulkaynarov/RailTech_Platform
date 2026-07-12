@@ -1,5 +1,6 @@
 from decimal import Decimal, InvalidOperation
 
+from django.conf import settings
 from rest_framework import serializers
 
 from master_data.models import Currency, DeliveryBasis
@@ -129,6 +130,28 @@ class QuoteItemSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True,
     )
+
+    # E2: sanity upper caps on line quantity/price. The lower bound (0/1) is already
+    # enforced by the model's MinValueValidator (KP-04), auto-mapped onto these fields.
+    # Codes travel by value (compared on the frontend); see settings.QUOTE_ITEM_MAX_*.
+    def validate_quantity(self, value):
+        if value is not None and value > settings.QUOTE_ITEM_MAX_QUANTITY:
+            raise serializers.ValidationError("QUOTE_ITEM_QTY_TOO_LARGE")
+        return value
+
+    def _validate_price_cap(self, value):
+        if value is not None and value > settings.QUOTE_ITEM_MAX_UNIT_PRICE:
+            raise serializers.ValidationError("QUOTE_ITEM_PRICE_TOO_LARGE")
+        return value
+
+    def validate_frozen_base_price(self, value):
+        return self._validate_price_cap(value)
+
+    def validate_logistics_cost(self, value):
+        return self._validate_price_cap(value)
+
+    def validate_customs_duty(self, value):
+        return self._validate_price_cap(value)
 
     class Meta:
         model = QuoteItem
@@ -672,7 +695,7 @@ class ActivityLogSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ActivityLog
-        fields = ["id", "action", "detail", "user_name", "level", "timestamp"]
+        fields = ["id", "action", "detail", "event_code", "event_params", "user_name", "level", "timestamp"]
 
 
 # ──────────────────────────────────────────────────────────────────────────

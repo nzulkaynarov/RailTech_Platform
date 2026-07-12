@@ -68,7 +68,15 @@ def _set_status(quote: Quote, code: str) -> None:
     quote.save(update_fields=["status", "updated_at"])
 
 
-def _log(quote: Quote, actor, action: str, detail: str = "") -> None:
+def _log(
+    quote: Quote,
+    actor,
+    action: str,
+    detail: str = "",
+    *,
+    event_code: str = "",
+    event_params: Optional[dict] = None,
+) -> None:
     ActivityLog.objects.create(
         action=action,
         detail=detail,
@@ -78,6 +86,8 @@ def _log(quote: Quote, actor, action: str, detail: str = "") -> None:
         entity_id=quote.id,
         deal_id=quote.deal_id,
         company_id=quote.deal.company_id,
+        event_code=event_code,
+        event_params=event_params or {},
     )
 
 
@@ -215,7 +225,14 @@ def act_on_step(step_id: int, actor, decision: str, comment: str = "") -> Tuple[
             status=StepStatus.RECALLED
         )
         _set_status(quote, QuoteStatusCode.DRAFT)
-        _log(quote, actor, "quote.approval_reject", f"Шаг отклонён: {comment}".strip())
+        _log(
+            quote,
+            actor,
+            "Согласование отклонено",
+            f"Шаг отклонён: {comment}".strip(),
+            event_code="quote.approval_step_rejected",
+            event_params={"comment": comment},
+        )
         _notify_user(
             quote.prepared_by_id,
             "КП возвращён на доработку",
@@ -231,7 +248,14 @@ def act_on_step(step_id: int, actor, decision: str, comment: str = "") -> Tuple[
     step.decided_at = timezone.now()
     step.comment = comment
     step.save(update_fields=["status", "acted_by", "decided_at", "comment"])
-    _log(quote, actor, "quote.approval_approve", f"Шаг согласован ({step.get_participation_display()})")
+    _log(
+        quote,
+        actor,
+        "Шаг согласования пройден",
+        f"Шаг согласован ({step.get_participation_display()})",
+        event_code="quote.approval_step_approved",
+        event_params={"participation": step.get_participation_display()},
+    )
 
     next_order = _active_order(quote)
     if next_order is None:
@@ -242,7 +266,13 @@ def act_on_step(step_id: int, actor, decision: str, comment: str = "") -> Tuple[
         if econ["fx_missing"] or econ["below_cost"]:
             return None, "FX_RATE_MISSING" if econ["fx_missing"] else "QUOTE_BELOW_COST"
         _set_status(quote, QuoteStatusCode.READY_TO_SEND)
-        _log(quote, actor, "quote.approval_complete", "Все согласования получены → READY_TO_SEND")
+        _log(
+            quote,
+            actor,
+            "Согласование КП завершено",
+            "Все согласования получены → READY_TO_SEND",
+            event_code="quote.approval_complete",
+        )
         _notify_user(
             quote.prepared_by_id,
             "КП согласован",
@@ -276,5 +306,11 @@ def recall_quote(quote_id: int, actor) -> Tuple[Optional[Quote], Optional[str]]:
         status=StepStatus.RECALLED
     )
     _set_status(quote, QuoteStatusCode.DRAFT)
-    _log(quote, actor, "quote.approval_recall", "КП отозван из согласования на доработку")
+    _log(
+        quote,
+        actor,
+        "КП отозван из согласования",
+        "КП отозван из согласования на доработку",
+        event_code="quote.approval_recalled",
+    )
     return quote, None

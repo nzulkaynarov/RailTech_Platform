@@ -39,6 +39,8 @@ def log_admin_action(
     contact_id: Optional[int] = None,
     deal_id: Optional[int] = None,
     seller_company_id: Optional[int] = None,
+    event_code: str = "",
+    event_params: Optional[dict[str, Any]] = None,
 ):
     """
     Create an ActivityLog entry scoped to a single entity.
@@ -48,6 +50,13 @@ def log_admin_action(
     company_id/contact_id/deal_id link the entry into the CRM counterparty
     timeline (Phase A, spec-remaining-2026-07-07 §2.1) — call sites pass
     whatever counterparty scope they have in context.
+
+    event_code/event_params carry a structured (localizable) event for the
+    timeline (E1): callers that emit a known event (e.g. transition_deal_stage
+    → "deal.stage_changed") pass a machine code + interpolation params; the
+    human-readable text is assembled client-side by viewer locale. Free-form
+    admin actions leave event_code empty and render from the RU `action`
+    fallback exactly as before.
     """
     from crm.models import ActivityLog
 
@@ -63,6 +72,8 @@ def log_admin_action(
     return ActivityLog.objects.create(
         action=action[:255],
         detail=detail,
+        event_code=event_code[:64],
+        event_params=event_params or {},
         user=actor,
         level=level,
         entity_type=entity_type[:40],

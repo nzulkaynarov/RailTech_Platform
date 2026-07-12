@@ -360,6 +360,23 @@ class ActivityLog(models.Model):
         verbose_name=_("Действие"),
         help_text=_("Краткое описание совершённого действия"),
     )
+    # Машинный код события для локализуемого таймлайна (structured events):
+    # текст собирается на клиенте по локали зрителя. `action`/`detail` остаются
+    # RU-fallback для legacy-строк и Unfold-админки.
+    event_code = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        db_index=True,
+        verbose_name=_("Код события"),
+        help_text=_("Машинный код события для локализуемого таймлайна (deal.created, quote.sent, ...)"),
+    )
+    event_params = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name=_("Параметры события"),
+        help_text=_("Параметры интерполяции для перевода события на клиенте"),
+    )
     detail = models.TextField(
         blank=True,
         verbose_name=_("Детали"),
