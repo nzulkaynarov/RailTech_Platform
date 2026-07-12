@@ -1,6 +1,6 @@
 # RailTech B2B SaaS — Claude Code Context
 
-_Last full refresh: 2026-07-06 (HEAD c6cb04f, post PR #229). Verify against code when in doubt — Rule 6._
+_Last full refresh: 2026-07-06 (HEAD c6cb04f, post PR #229); partial touch-up 2026-07-12 (migration heads, 2FA/sessions, Settings Hub, WorkspaceRole-deprecation status). Verify against code when in doubt — Rule 6._
 
 ## Project Overview
 
@@ -15,7 +15,7 @@ B2B marketplace for railway equipment (Uzbekistan). Monorepo: Django backend + R
 - **Frontend:** React 18, TypeScript 5.6, Vite 7, Tailwind CSS 4, shadcn/ui, Zustand 5, React Query 5, i18next (RU/EN)
 - **Infra:** Docker Compose (dev), **Caddy (prod edge on the app-VPS — owns TLS, CSP headers, XFF)**, nginx only *inside* the frontend container serving the SPA, GitHub Actions CI + self-hosted deploy runner, Sentry (backend + SPA)
 - **Storage:** Django FileSystemStorage by default (== prod); MinIO is **opt-in** via compose profile `with-minio` (prod VPS CPU lacks x86-64-v2)
-- **Auth:** JWT (simplejwt) — access 30min, refresh 7d in HttpOnly cookie, rotation enabled; per-account login lockout (`accounts/services/login_guard.py`)
+- **Auth:** JWT (simplejwt) — access 30min, refresh 7d in HttpOnly cookie, rotation enabled; per-account login lockout (`accounts/services/login_guard.py`); optional **2FA (TOTP)** — secret Fernet-encrypted at rest (key derived from `SECRET_KEY`), single-use login ticket + replay-tracked codes, step-up password to enable/disable (`accounts/services/two_factor.py`); **active sessions** list + revoke (`accounts/services/sessions.py`, endpoints under `/auth/`)
 - **AI:** Anthropic API, model `claude-opus-4-8` (see AI Layer below)
 - **PDF:** WeasyPrint (off-thread via Celery for the public КП path)
 - **Excel:** pandas + openpyxl
@@ -54,9 +54,13 @@ frontend/                   # React app
   src/pages/                # ~40 pages incl. 16 Admin* pages (Entitlements, OperatorRoles, AccessLog,
                             #   EmailTemplates, KYC, ...) + PlatformAdminDashboard, Dashboard (Operations
                             #   Inbox), DealQuotePage, RequestDetailPage, Contracts/Fulfillments/
-                            #   Invoices/Acts/Payments
+                            #   Invoices/Acts/Payments, SettingsPage (unified Settings Hub — profile,
+                            #   security/2FA, company, documents, defaults, numbering, templates, team;
+                            #   ProfilePage removed, `#profile` aliases `#settings?section=profile`)
+  src/config/settingsSections.tsx # buildSettingsSections(gate) — capability-gated Settings Hub sections
   src/components/           # ui (shadcn), Admin, Auth, Billing, CRM, Cabinet, Dashboard, DataTable,
-                            #   Sourcing, Shared (OnboardingTour), ResponsiveDataTable.tsx (root),
+                            #   Settings (Settings Hub sections + team/ package), Sourcing,
+                            #   Shared (OnboardingTour), ResponsiveDataTable.tsx (root),
                             #   Layout (ChatDrawer, CommandPalette, NotificationCenter, SupportButton,
                             #   ErrorBoundary — NOT shells)
   src/hooks/                # useAccounts, useAdmin, useBilling, useCRM, useCapabilities, useCatalog,
@@ -64,7 +68,7 @@ frontend/                   # React app
                             #   useViewerMode, use-mobile (exports useMediaQuery)
   src/i18n/locales/         # ru.json, en.json
 deploy/caddy/               # Caddy edge config FRAGMENT (prod applies it manually — see Production)
-nginx/                      # LEGACY, unreferenced by any compose file (dead-config candidate)
+# (root nginx/ removed 2026-07-12 — was dead; the SPA's nginx.conf lives in frontend/)
 Docs/                       # Docs by audience (reorg 2026-07-07 — map: Docs/README.md):
   dev/                      #   adr/ (0001–0006), architecture/ (MSD, techspec, diagrams, schema.json,
                             #   websocket), ops/ (RUNBOOK, deploy/observability/staging/smoke/e2e…,
@@ -101,7 +105,7 @@ ADR index (`Docs/dev/adr/`): **0001** admin separation · **0002** role responsi
 - **Local dev:** a local **Postgres container** is added via `docker-compose.override.yml` (gitignored, auto-loaded by `make up`; prod/staging use explicit `-f ...prod.yml` so never load it). Backend reaches it as `db:5432`; `.env` → `DATABASE_URL=postgresql://railtech:railtech@db:5432/railtech?sslmode=disable`.
 - **Connection:** `DATABASE_URL` env var parsed via `urlparse` (query params → DB `OPTIONS`, `sslmode` defaults to `require`), fallback to individual `POSTGRES_*` vars
 - **Auth user:** `accounts.CustomUser` (email login)
-- **Migration heads (2026-07-06):** `accounts/0033`, `crm/0053`
+- **Migration heads (2026-07-12):** `accounts/0039`, `crm/0057`
 
 ## API Surface (prefix: `/api/v1/`)
 
@@ -346,7 +350,7 @@ Canonical sources: `Docs/dev/adr/0002-role-responsibilities.md` (layers), `0003`
 - **SystemRole** on `CustomUser.role` — only `ADMIN` (Platform Operator, no memberships) and `USER`
 - **OperatorRole** on `CustomUser.operator_role` (ADR-0004 G1) — granular operator sub-roles: `SUPPORT`, `KYC_OFFICER`, `BILLING_OPERATOR`, `MODERATOR`, `SUPER_OPERATOR`; permissions like `users.manage`, `kyc.verify`, `moderation.force_override` (catalog in `accounts/constants.py`); audited break-glass endpoint for escalation
 - **CompanyRole** (per-tenant custom roles, ADR-0004 G4) — permission codes drive КП access: `quote.build`, `quote.send`, `quote.view_cost_margin`, `quote.edit_pricing`, `quote.review`, `quote.approve_final` (internal chain) vs `quote.approve` (buyer accept). Company-admin hub is gated by permission, not by WorkspaceRole
-- **WorkspaceRole** on `CompanyMember.role` — `OWNER` (displayed as «Администратор компании»), SALES_MANAGER, LOGIST, etc. Never-orphan invariant: ≥1 active OWNER per company (`CANNOT_REMOVE_LAST_COMPANY_ADMIN`)
+- **WorkspaceRole** on `CompanyMember.role` — `OWNER` (displayed as «Администратор компании»), SALES_MANAGER, LOGIST, etc. Never-orphan invariant: ≥1 active OWNER per company (`CANNOT_REMOVE_LAST_COMPANY_ADMIN`). **ADR-0005 Phase E U3 deprecation COMPLETE (PR #255):** WorkspaceRole is now a label/derivation layer only — no business authz branches on `has_workspace_role`/`WorkspaceRoleCode` (all gating is `member_has_permission` on CompanyRole; never-orphan checks on `is_system`)
 - **Per-member capabilities** `CompanyMember.can_sell`/`can_buy` — distributed by OWNER
 
 | Layer | Tool | Owns | Does NOT |
