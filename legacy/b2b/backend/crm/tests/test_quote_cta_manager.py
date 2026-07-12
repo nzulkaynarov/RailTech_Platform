@@ -11,7 +11,7 @@ import pytest
 from django.template.loader import render_to_string
 
 from accounts.models import Company
-from crm.services.documents import public_quote_url, render_document_profile_preview_html
+from crm.services.documents import public_quote_qr, public_quote_url, render_document_profile_preview_html
 
 
 def _ctx(**over):
@@ -88,6 +88,41 @@ def test_cta_renders_when_public_url_present():
 def test_cta_absent_without_public_url():
     html = render_to_string("crm/quote_pdf.html", _ctx())
     assert "Онлайн-версия предложения" not in html
+
+
+# ── online-accept QR (F-09) ──────────────────────────────────────────
+def test_cta_qr_img_renders_when_qr_present():
+    url = "https://b2b.railtech.uz/api/v1/public/quotes/tok123/"
+    qr = "data:image/svg+xml;base64,PHN2Zz48L3N2Zz4="
+    html = render_to_string("crm/quote_pdf.html", _ctx(public_quote_url=url, public_quote_qr=qr))
+    assert 'class="cta-qr"' in html
+    assert qr in html
+    assert "Отсканируйте QR" in html
+
+
+def test_cta_qr_img_absent_when_no_qr_but_link_stays():
+    url = "https://b2b.railtech.uz/api/v1/public/quotes/tok123/"
+    html = render_to_string("crm/quote_pdf.html", _ctx(public_quote_url=url))
+    assert 'class="cta-qr"' not in html
+    assert url in html  # the text-link CTA still renders without the QR
+
+
+# ── public_quote_qr helper ───────────────────────────────────────────
+def test_public_quote_qr_none_without_token():
+    assert public_quote_qr(SimpleNamespace(public_access_token="")) is None
+    assert public_quote_qr(SimpleNamespace(public_access_token=None)) is None
+
+
+def test_public_quote_qr_returns_svg_data_uri(settings):
+    settings.FRONTEND_URL = "https://b2b.railtech.uz"
+    uri = public_quote_qr(SimpleNamespace(public_access_token="abc123"))
+    assert uri is not None
+    assert uri.startswith("data:image/svg+xml;base64,")
+    # decodes to real SVG markup (not empty / not a stray error)
+    import base64
+
+    decoded = base64.b64decode(uri.split(",", 1)[1]).decode("utf-8")
+    assert "<svg" in decoded and "path" in decoded
 
 
 def test_template_comment_does_not_leak_into_output():

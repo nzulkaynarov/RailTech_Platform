@@ -671,7 +671,7 @@ class QuoteLifecycleService:
         # + subscribed seller gets a clean, sendable document.
         from accounts.services.entitlements import quote_send_entitled
 
-        from .documents import client_projection_items, document_brand_context, public_quote_url
+        from .documents import client_projection_items, document_brand_context, public_quote_qr, public_quote_url
 
         html_string = render_to_string(
             "crm/quote_pdf.html",
@@ -681,9 +681,10 @@ class QuoteLifecycleService:
                 # goods-vs-charges breakout — confidentiality). Lines sum to quote.total_excl_vat.
                 "items": client_projection_items(quote),
                 "company": quote.deal.company,
-                # Public «Принять онлайн» link — present only after send (token minted), so the
+                # Public «Принять онлайн» link + QR — present only after send (token minted), so the
                 # seller-facing draft PDF has no CTA while the sent/public КП does (F-09).
                 "public_quote_url": public_quote_url(quote),
+                "public_quote_qr": public_quote_qr(quote),
                 **document_brand_context(seller_company, is_demo=not quote_send_entitled(seller_company.id)),
             },
         )

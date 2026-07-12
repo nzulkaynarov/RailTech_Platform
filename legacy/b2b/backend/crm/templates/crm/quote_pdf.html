@@ -96,9 +96,17 @@
 
   {% if public_quote_url %}
   <div class="cta-box">
-    <span class="cta-title">Онлайн-версия предложения.</span>
-    Актуальная версия КП доступна по ссылке; для подтверждения свяжитесь с вашим менеджером:
-    <span class="cta-link">{{ public_quote_url }}</span>
+    {% comment %} Table layout (not flex/grid) — WeasyPrint-safe. QR is an inline SVG data-URI. {% endcomment %}
+    <table class="cta-table"><tr>
+      <td class="cta-text">
+        <span class="cta-title">Онлайн-версия предложения.</span>
+        {% if public_quote_qr %}Отсканируйте QR или откройте ссылку, чтобы посмотреть актуальную версию КП;{% else %}Актуальная версия КП доступна по ссылке;{% endif %} для подтверждения свяжитесь с вашим менеджером:
+        <span class="cta-link">{{ public_quote_url }}</span>
+      </td>
+      {% if public_quote_qr %}
+      <td class="cta-qr-cell"><img class="cta-qr" src="{{ public_quote_qr }}" alt="QR — онлайн-версия КП"></td>
+      {% endif %}
+    </tr></table>
   </div>
   {% endif %}
 
