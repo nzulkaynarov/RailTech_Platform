@@ -674,7 +674,15 @@
     },
     "deleteItem": "Delete item?",
     "addItemPlaceholder": "Item name...",
-    "builder": "Quote Builder",
+    "builder": {
+      "title": "Quote Builder",
+      "itemsTab": "Items",
+      "chargesTab": "Charges & discounts",
+      "positionsCount": "Items: {{count}}",
+      "fullscreenEnter": "Fullscreen",
+      "fullscreenExit": "Exit fullscreen",
+      "openApproval": "Open approval panel"
+    },
     "subtotalExclVAT": "Subtotal excl. VAT",
     "vatPercent": "VAT 12%",
     "totalInclVAT": "Total incl. VAT",
@@ -695,6 +703,7 @@
     "lineTotal": "Line total",
     "approvalChain": {
       "title": "Quote approval",
+      "stepProgress": "step {{current}}/{{total}}",
       "stepDraft": "Draft",
       "stepTradeReview": "Trade review",
       "stepApproval": "Approval",

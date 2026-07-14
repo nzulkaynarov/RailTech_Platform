@@ -191,6 +191,12 @@ interface AppShellProps {
   activePage: string;
   onNavigate: (target: string) => void;
   onStartTour?: () => void;
+  /**
+   * Full-bleed content mode: drops the `p-6` padding, the page-scroll and the subscription
+   * banner so a workspace page (e.g. the КП builder) can own the whole content viewport and
+   * manage its own single scroll. Default false — every other page keeps the standard chrome.
+   */
+  fullBleed?: boolean;
 }
 
 export function AppShell(props: AppShellProps) {
@@ -201,7 +207,7 @@ export function AppShell(props: AppShellProps) {
   );
 }
 
-function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShellProps) {
+function AppShellInner({ children, activePage, onNavigate, onStartTour, fullBleed = false }: AppShellProps) {
   const { t } = useTranslation();
   const { role, profile, company, capabilities } = useUserStore();
   const cartCount = useCartCount();
@@ -417,10 +423,12 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour }: AppShe
               <NotificationCenter onNavigate={onNavigate} />
             </div>
           </header>
-          <main className="flex-1 overflow-y-auto p-6">
-            <div className="mb-4 space-y-2">
-              <SubscriptionStatusBanner onNavigate={onNavigate} />
-            </div>
+          <main className={cn('flex-1 min-h-0', fullBleed ? 'overflow-hidden' : 'overflow-y-auto p-6')}>
+            {!fullBleed && (
+              <div className="mb-4 space-y-2">
+                <SubscriptionStatusBanner onNavigate={onNavigate} />
+              </div>
+            )}
             {children}
           </main>
       </SidebarInset>

@@ -760,6 +760,9 @@ function MainApp() {
 
   const breadcrumbs = getBreadcrumbs();
   const isPlatformAdmin = useUserStore((s) => s.role === 'ADMIN');
+  // Workspace pages own the whole content viewport (no p-6 chrome, no page scroll, no
+  // breadcrumb) so their internal layout can manage a single scroll — currently the КП builder.
+  const fullBleed = page.type === 'deal-quote';
 
   if (isPlatformAdmin) {
     return (
@@ -775,9 +778,9 @@ function MainApp() {
   }
 
   return (
-    <AppShell activePage={activePageId} onNavigate={handleNavigate} onStartTour={() => setShowTour(true)}>
+    <AppShell activePage={activePageId} onNavigate={handleNavigate} onStartTour={() => setShowTour(true)} fullBleed={fullBleed}>
       <Suspense fallback={<LoadingSkeleton />}>
-        {breadcrumbs.length > 0 && (
+        {!fullBleed && breadcrumbs.length > 0 && (
           <PageBreadcrumb segments={breadcrumbs} onNavigate={handleNavigate} />
         )}
         {content}

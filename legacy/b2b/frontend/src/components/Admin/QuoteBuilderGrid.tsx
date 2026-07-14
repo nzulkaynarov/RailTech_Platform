@@ -5,8 +5,8 @@ import { toast } from 'sonner';
 import { QuoteItem, QuoteEconomics, crmApi } from '@/api/crmApi';
 import { translateApiError } from '@/lib/apiError';
 import {
-	Loader2, Save, AlertTriangle, Plus, Trash2, Sparkles, FileText, Settings, Tag,
-	ChevronRight, ChevronDown, PanelRightClose, PanelRightOpen, Link2,
+	Loader2, AlertTriangle, Plus, Trash2, Sparkles, FileText, Settings, Tag,
+	ChevronRight, ChevronDown, PanelRightClose, PanelRightOpen, Link2, Maximize2, Minimize2,
 } from 'lucide-react';
 import { useQuoteItems, useUpdateQuoteItem, useCreateQuoteItem, useDeleteQuoteItem, useDeal, useSetQuoteDeliveryBasis } from '@/hooks/useCRM';
 import { useCurrencies } from '@/hooks/useMasterData';
@@ -22,9 +22,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
 	Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
@@ -32,7 +32,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { QuoteApprovalChain } from '@/components/CRM/QuoteApprovalChain';
+import { StickyTotalsBar } from '@/components/QuoteBuilder/StickyTotalsBar';
 import { AICatalogMatchDialog } from '@/components/Admin/AICatalogMatchDialog';
 import { GenerateQuoteDialog } from '@/components/CRM/GenerateQuoteDialog';
 import { QuoteSettingsDialog } from '@/components/CRM/QuoteSettingsDialog';
@@ -128,7 +128,26 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	// line grid stays readable; economics stay reachable in each row's expanded detail (see below).
 	const isCompact = useMediaQuery('(max-width: 1199px)');
 
+	// Workspace view state (UI-only, kept OUT of localItems so it never trips hasUnsavedChanges):
+	// which document tab is active + focus (fullscreen) mode for the whole grid.
+	const [activeTab, setActiveTab] = useState<'items' | 'charges'>('items');
+	const [fullscreen, setFullscreen] = useState(false);
+
 	const toggleRow = (id: number) => setExpandedRowId((current) => (current === id ? null : id));
+
+	// Esc exits focus mode (mirrors the ⛶ toggle) — standard editor-workspace affordance.
+	useEffect(() => {
+		if (!fullscreen) return;
+		const onKey = (event: KeyboardEvent) => {
+			if (event.key !== 'Escape') return;
+			// A layered surface (Dialog/AlertDialog/Sheet/Popover — all Radix role="dialog")
+			// owns this Escape: it closes itself, focus mode must survive the keystroke.
+			if (event.defaultPrevented || document.querySelector('[role="dialog"], [role="alertdialog"]')) return;
+			setFullscreen(false);
+		};
+		window.addEventListener('keydown', onKey);
+		return () => window.removeEventListener('keydown', onKey);
+	}, [fullscreen]);
 
 	useEffect(() => {
 		if (quoteItems) {
@@ -389,14 +408,8 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 		);
 	};
 
-	// ── Right rail: «Экономика и итоги» — settings summary + economics + billing + actions ──
-	const saveButton = (
-		<Button variant="outline" size="sm" onClick={handleSave} disabled={updateMutation.isPending}>
-			{updateMutation.isPending ? <Loader2 className="size-3 animate-spin" /> : <Save className="size-3" />}
-			{t('common.save')}
-		</Button>
-	);
-
+	// ── Right rail: «Экономика и итоги» — settings summary + economics + billing + export ──
+	// (Save + the unsaved-changes indicator now live in the sticky footer, not the rail.)
 	const railRow = (label: string, value: React.ReactNode, opts?: { strong?: boolean; tone?: string }) => (
 		<div className="flex items-center justify-between gap-3">
 			<span className="text-xs text-muted-foreground">{label}</span>
@@ -488,9 +501,8 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 					{railRow(t('quote.total'), formatMoney(activeQuote?.total_incl_vat, presentationCurrency), { strong: true, tone: 'text-primary' })}
 				</div>
 
-				{/* Действия */}
+				{/* Экспорт документа (Save lives in the sticky footer) */}
 				<div className="mt-auto flex flex-col gap-2 pt-2">
-					{saveButton}
 					<DocumentActions
 						request={(format) => ({ path: `crm/quotes/${activeQuote.id}/export/`, params: { format } })}
 						filenameBase={`RailTech_Quote_${activeQuote.id}`}
@@ -549,59 +561,99 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 				</TooltipTrigger>
 				<TooltipContent side="left">{t('quote.total')}: {formatMoney(activeQuote?.total_incl_vat, presentationCurrency)}</TooltipContent>
 			</Tooltip>
-			<Button variant="ghost" size="icon-xs" onClick={handleSave} disabled={updateMutation.isPending} title={t('common.save')}>
-				{updateMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-			</Button>
 		</div>
 	);
 
 	return (
-		<div className="flex flex-col h-full gap-3">
-			{/* КП internal approval chain (документооборот) — spans both panes */}
-			{activeQuote && <QuoteApprovalChain quote={activeQuote} />}
-
-			{/* Unsaved changes warning */}
-			{hasUnsavedChanges && (
-				<Alert>
-					<AlertTriangle className="size-4" />
-					<AlertTitle>{t('quote.unsavedChanges')}</AlertTitle>
-					<AlertDescription>{t('quote.unsavedChangesDesc')}</AlertDescription>
-				</Alert>
-			)}
-
-			{/* Working area: line table (left) + collapsible economics rail (right) */}
-			<div className="flex flex-1 min-h-0 gap-3">
-				<div className="flex flex-col flex-1 min-w-0 gap-3">
-					{/* Slim toolbar — table actions only; КП params + Save/Export live in the rail */}
-					<div className="flex items-center justify-between">
-						<h2 className="text-sm font-bold">{t('quote.title')}</h2>
-						<div className="flex gap-1.5">
-							{localItems.some(item => !item.product) && (
-								<Button variant="outline" size="sm" onClick={() => setShowAiMatch(true)}>
-									<Sparkles className="size-3" />
-									{t('aiMatch.button')}
+		<TooltipProvider>
+		<div className={cn(
+			'flex flex-col min-h-0 gap-2',
+			// Focus (fullscreen) mode: the grid takes over the whole viewport; Esc / ⛶ exits.
+			fullscreen ? 'fixed inset-0 z-50 bg-background p-3' : 'h-full',
+		)}>
+			{/* Document toolbar: row actions (left) + view controls (right) */}
+			<div className="flex flex-wrap items-center justify-between gap-2">
+				<div className="flex flex-wrap gap-1.5">
+					<Button variant="outline" size="sm" onClick={() => setShowAddRow(!showAddRow)}>
+						<Plus className="size-3" />
+						{t('common.add')}
+					</Button>
+					{localItems.some(item => !item.product) && (
+						<Button variant="outline" size="sm" onClick={() => setShowAiMatch(true)}>
+							<Sparkles className="size-3" />
+							{t('aiMatch.button')}
+						</Button>
+					)}
+					{!activeQuote.frozen_at && localItems.some(item => item.product) && (
+						<Button variant="outline" size="sm" onClick={handlePricingAssist} disabled={pricingBusy}>
+							{pricingBusy ? <Loader2 className="size-3 animate-spin" /> : <Tag className="size-3" />}
+							{t('pricingAssist.button')}
+						</Button>
+					)}
+				</div>
+				<div className="flex items-center gap-1.5">
+					{/* Single settings entry point (⚙) — editable while the КП is not frozen. */}
+					{!activeQuote.frozen_at && (
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<Button variant="outline" size="sm" onClick={() => setShowSettings(true)}>
+									<Settings className="size-3" />
+									<span className="hidden sm:inline">{t('quote.settings.title')}</span>
 								</Button>
-							)}
-							{!activeQuote.frozen_at && localItems.some(item => item.product) && (
-								<Button variant="outline" size="sm" onClick={handlePricingAssist} disabled={pricingBusy}>
-									{pricingBusy ? <Loader2 className="size-3 animate-spin" /> : <Tag className="size-3" />}
-									{t('pricingAssist.button')}
-								</Button>
-							)}
-							<Button variant="outline" size="sm" onClick={() => setShowAddRow(!showAddRow)}>
-								<Plus className="size-3" />
-								{t('common.add')}
+							</TooltipTrigger>
+							<TooltipContent>{t('quote.settings.title')}</TooltipContent>
+						</Tooltip>
+					)}
+					{/* Rail toggle — opens the slide-over below xl, collapses the inline rail ≥xl. */}
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<Button
+								variant="outline"
+								size="icon-xs"
+								className="size-8"
+								onClick={() => (railAsSheet ? setRailSheetOpen(true) : toggleRail())}
+								aria-label={!railAsSheet && railOpen ? t('quote.rail.collapse') : t('quote.rail.expand')}
+							>
+								{!railAsSheet && railOpen ? <PanelRightClose className="size-4" /> : <PanelRightOpen className="size-4" />}
 							</Button>
-							{/* Below xl the rail is a slide-over — this opens it (no inline rail to click). */}
-							{railAsSheet && (
-								<Button variant="outline" size="sm" onClick={() => setRailSheetOpen(true)}>
-									<PanelRightOpen className="size-3" />
-									{t('quote.rail.expand')}
-								</Button>
-							)}
-						</div>
-					</div>
+						</TooltipTrigger>
+						<TooltipContent>{!railAsSheet && railOpen ? t('quote.rail.collapse') : t('quote.rail.expand')}</TooltipContent>
+					</Tooltip>
+					{/* Focus mode ⛶ */}
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<Button
+								variant="outline"
+								size="icon-xs"
+								className="size-8"
+								onClick={() => setFullscreen((v) => !v)}
+								aria-label={fullscreen ? t('quote.builder.fullscreenExit') : t('quote.builder.fullscreenEnter')}
+							>
+								{fullscreen ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+							</Button>
+						</TooltipTrigger>
+						<TooltipContent>{fullscreen ? t('quote.builder.fullscreenExit') : t('quote.builder.fullscreenEnter')}</TooltipContent>
+					</Tooltip>
+				</div>
+			</div>
 
+			{/* Working area: tabs (line table + charges) on the left, economics rail on the right */}
+			<div className="flex flex-1 min-h-0 gap-3">
+				<div className="flex flex-col flex-1 min-w-0 min-h-0">
+					<Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'items' | 'charges')} className="flex flex-1 flex-col min-h-0 gap-2">
+						<TabsList className="self-start">
+							<TabsTrigger value="items">{t('quote.builder.itemsTab')}</TabsTrigger>
+							<TabsTrigger value="charges" className="gap-1.5">
+								{t('quote.builder.chargesTab')}
+								{(activeQuote.charges?.length ?? 0) > 0 && (
+									<Badge variant="secondary" className="h-4 min-w-4 justify-center px-1 text-xs tabular-nums">
+										{activeQuote.charges?.length}
+									</Badge>
+								)}
+							</TabsTrigger>
+						</TabsList>
+
+						<TabsContent value="items" className="flex flex-1 flex-col min-h-0 mt-0 overflow-hidden">
 					{/* Data grid */}
 					<div className="flex-1 overflow-auto rounded-md border">
 						<TooltipProvider>
@@ -854,8 +906,14 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 						</TooltipProvider>
 					</div>
 
-					{/* КП-level expense items / discounts (seller-only) — full width under the table */}
-					{activeQuote && <QuoteChargesSection quoteId={activeQuote.id} currency={presentationCurrency} />}
+					</TabsContent>
+
+						{/* КП-level expense items / discounts (seller-only) — its own tab so it never
+						    steals vertical budget from the line table (audit: «скролл в скролле»). */}
+						<TabsContent value="charges" className="flex-1 min-h-0 overflow-auto mt-0">
+							{activeQuote && <QuoteChargesSection quoteId={activeQuote.id} currency={presentationCurrency} />}
+						</TabsContent>
+					</Tabs>
 				</div>
 
 				{/* «Экономика и итоги»: inline collapsible rail ≥xl, slide-over Sheet below xl */}
@@ -876,6 +934,21 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 					</TooltipProvider>
 				)}
 			</div>
+
+			{/* Sticky totals footer — always in view (fixes «итоги за кнопкой» on ≤768px laptops) */}
+			<StickyTotalsBar
+				positionsCount={localItems.length}
+				canViewCost={canViewCost}
+				marginPercent={econ ? Number(econ.gross_margin_percent) : undefined}
+				marginTone={econ
+					? marginToneClass(econ.below_cost || econ.below_floor, Number(econ.gross_margin_percent), Number(econ.target_margin_percent))
+					: undefined}
+				totalInclVat={activeQuote?.total_incl_vat}
+				currency={presentationCurrency}
+				hasUnsavedChanges={hasUnsavedChanges}
+				saving={updateMutation.isPending}
+				onSave={handleSave}
+			/>
 
 			<AICatalogMatchDialog open={showAiMatch} onOpenChange={setShowAiMatch} items={localItems} />
 			<QuoteSettingsDialog quote={activeQuote} open={showSettings} onOpenChange={setShowSettings} />
@@ -900,5 +973,6 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 				</AlertDialogContent>
 			</AlertDialog>
 		</div>
+		</TooltipProvider>
 	);
 };

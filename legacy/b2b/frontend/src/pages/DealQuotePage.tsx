@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, FileText, Send, FileSignature, AlertTriangle, MessageSquare } from 'lucide-react';
+import { ArrowLeft, FileText, Send, FileSignature, AlertTriangle, MessageSquare, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { StatusBadge, getDealStageVariant } from '@/components/ui/StatusBadge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { useCurrencyStore } from '@/store/currencyStore';
 import { useDeal, useSendQuoteToClient } from '@/hooks/useCRM';
 import { translateApiError } from '@/lib/apiError';
 import { QuoteBuilderGrid } from '@/components/Admin/QuoteBuilderGrid';
+import { QuoteApprovalChain } from '@/components/CRM/QuoteApprovalChain';
 import { DealChatPanel } from '@/components/Sourcing/DealChatPanel';
 import { GenerateContractDialog } from '@/components/CRM/GenerateContractDialog';
 import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
@@ -28,19 +29,19 @@ interface DealQuotePageProps {
  */
 export function DealQuotePage({ dealId, onBack }: DealQuotePageProps) {
   const { t } = useTranslation();
-  const formatCurrency = useCurrencyStore((s) => s.format);
   const { data: deal, isLoading, isError, refetch } = useDeal(dealId);
   const sendQuote = useSendQuoteToClient();
   const [contractOpen, setContractOpen] = useState(false);
   const [sendConfirmOpen, setSendConfirmOpen] = useState(false);
   // Single Deal-workspace (#3b): the buyer's request context lives ON the builder
   // screen, so a seller prices the КП without bouncing back to the deal page. The
-  // ask (deal.notes) is always visible; the full thread opens in a slide-over.
+  // ask (deal.notes) collapses to one line by default; the full thread opens in a slide-over.
   const [chatOpen, setChatOpen] = useState(false);
+  const [noteExpanded, setNoteExpanded] = useState(false);
 
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-6 p-6">
         <LoadingRows rows={6} />
       </div>
     );
@@ -95,84 +96,90 @@ export function DealQuotePage({ dealId, onBack }: DealQuotePageProps) {
     toast.success(t('pages.deals.detail.quoteSentToast'));
   };
 
+  const hasNote = (deal.notes ?? '').trim().length > 0;
+
   return (
-    <div className="flex flex-col gap-6">
-      {/* Header: back + deal context + seller lifecycle actions */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={onBack} aria-label={t('common.back')}>
+    <div className="flex h-full flex-col">
+      {/* Single workspace toolbar (~48px): back + compact context + approval pill (left),
+          seller lifecycle actions (right). Replaces the old two-storey page header. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b px-4 py-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <Button variant="ghost" size="icon" className="size-8 shrink-0" onClick={onBack} aria-label={t('common.back')}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <FileText className="h-5 w-5" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">{t('pages.dealQuote.title')}</h1>
-            <p className="text-sm text-muted-foreground">
-              {deal.title || `${t('pages.deals.deal')} #${deal.id}`}
-              {(deal.client_name || deal.company_name)
-                ? ` · ${deal.client_name || deal.company_name}`
-                : ''}
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+          <FileText className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+          <h1 className="min-w-0 truncate text-sm font-semibold" title={deal.title || undefined}>
+            <span className="text-muted-foreground">{t('pages.dealQuote.title')}</span>
+            {' · '}
+            {deal.title || `${t('pages.deals.deal')} #${deal.id}`}
+            {(deal.client_name || deal.company_name)
+              ? <span className="font-normal text-muted-foreground">{` · ${deal.client_name || deal.company_name}`}</span>
+              : ''}
+          </h1>
           <StatusBadge
+            className="shrink-0"
             label={deal.stage_code && DEAL_STAGE_LABEL_KEY[deal.stage_code]
               ? t(DEAL_STAGE_LABEL_KEY[deal.stage_code])
               : (deal.stage_name ?? '')}
             variant={getDealStageVariant(deal.stage_code ?? '')}
           />
-          {deal.total_value ? (
-            <span className="text-sm font-semibold tabular-nums">
-              {formatCurrency(Number(deal.total_value))}
-            </span>
-          ) : null}
+          {/* КП internal approval chain (документооборот) — compact pill + Popover. */}
+          {quote && <QuoteApprovalChain quote={quote} variant="compact" />}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => setChatOpen(true)}>
             <MessageSquare className="mr-2 h-4 w-4" />
             {t('pages.dealQuote.openChat')}
           </Button>
-          {canSend && (
-            <Button size="sm" disabled={sendQuote.isPending} onClick={() => setSendConfirmOpen(true)}>
-              <Send className="mr-2 h-4 w-4" />
-              {t('requestDetailActions.sendQuote')}
-            </Button>
-          )}
           {canContract && (
             <Button size="sm" variant="outline" onClick={() => setContractOpen(true)}>
               <FileSignature className="mr-2 h-4 w-4" />
               {t('contractGenerateDialog.generate')}
             </Button>
           )}
+          {canSend && (
+            <Button size="sm" disabled={sendQuote.isPending} onClick={() => setSendConfirmOpen(true)}>
+              <Send className="mr-2 h-4 w-4" />
+              {t('requestDetailActions.sendQuote')}
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* Buyer's ask, always in view while pricing (single Deal-workspace #3b). */}
-      {(deal.notes ?? '').trim() && (
-        <div className="flex gap-3 rounded-lg border border-border bg-muted/40 px-4 py-3">
-          <MessageSquare className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-          <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              {t('pages.dealQuote.buyerNote')}
-            </p>
-            <p className="mt-1 whitespace-pre-line text-sm text-foreground">{deal.notes}</p>
-          </div>
-        </div>
+      {/* Buyer's ask — one-line collapsible (single Deal-workspace #3b): collapsed by default
+          so it costs ~1 line, expands in place. */}
+      {hasNote && (
+        <button
+          type="button"
+          onClick={() => setNoteExpanded((v) => !v)}
+          aria-expanded={noteExpanded}
+          className="flex w-full items-start gap-2 border-b bg-muted/40 px-4 py-1.5 text-left hover:bg-muted/60"
+        >
+          <MessageSquare className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground shrink-0">
+            {t('pages.dealQuote.buyerNote')}:
+          </span>
+          <span className={cn('min-w-0 flex-1 whitespace-pre-line text-xs text-foreground', noteExpanded ? '' : 'line-clamp-1')}>
+            {deal.notes}
+          </span>
+          <ChevronDown className={cn('mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform', noteExpanded && 'rotate-180')} aria-hidden="true" />
+        </button>
       )}
 
-      {/* Builder — full width/height. QuoteBuilderGrid renders its own approval
-          chain bar + toolbar + summary footer; it only needs a tall container. */}
+      {/* Builder — fills the remaining viewport height; it owns the single vertical scroll. */}
       {quote ? (
-        <div className="h-[calc(100vh-14rem)] min-h-[520px]">
+        <div className="min-h-0 flex-1 p-3">
           <QuoteBuilderGrid dealId={dealId} />
         </div>
       ) : (
-        <EmptyState
-          icon={<FileText className="h-5 w-5" />}
-          message={t('pages.dealQuote.noQuote')}
-          hint={t('pages.dealQuote.noQuoteHint')}
-          action={{ label: t('common.back'), onClick: onBack }}
-        />
+        <div className="p-6">
+          <EmptyState
+            icon={<FileText className="h-5 w-5" />}
+            message={t('pages.dealQuote.noQuote')}
+            hint={t('pages.dealQuote.noQuoteHint')}
+            action={{ label: t('common.back'), onClick: onBack }}
+          />
+        </div>
       )}
 
       {/* Buyer thread — slide-over so the seller never leaves the builder to reply. */}
