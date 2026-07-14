@@ -99,6 +99,10 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
   // create the КП once the deal is in work, or open the focused builder if it exists.
   const canBuildQuote = isSellerSide && (isSourcing || isCalculating) && !deal.active_quote;
   const hasQuote = isSellerSide && !!deal.active_quote;
+  // Buyer rejected the КП → the seller was stuck (no build button while an
+  // active_quote exists). Offer a primary "new version" action: perform_create
+  // auto-increments version, so this simply starts v2 of the КП.
+  const canBuildNewVersion = isSellerSide && deal.active_quote?.status_code === QuoteStatus.REJECTED;
   // Third in-funnel path to «взять в работу» (Kanban + deals list are the others).
   // Seller-only pull from the routed queue; `assigned_to` (the id, derived from the
   // viewer's OWN routing row) == null means this seller's copy is unclaimed. Reuses
@@ -250,7 +254,7 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
             / send quote) only show for SELLER / MANUFACTURER. Buyer only sees
             approve / reject once the quote is sent. */}
         {(() => {
-          const sellerActions = isSellerSide && (isDraft || isSourcing || isCalculating || hasQuote);
+          const sellerActions = isSellerSide && (isDraft || isSourcing || isCalculating || hasQuote || canBuildNewVersion);
           const buyerActions = isBuyerSide && isQuoteSent && quote;
           const showActionBar = sellerActions || buyerActions || isWon || canClaim;
           if (!showActionBar) {
@@ -315,6 +319,20 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
                   >
                     <FileText className="h-4 w-4 mr-2" />
                     {t('generateQuote.submit')}
+                  </Button>
+                )}
+                {/* КП rejected by the buyer — primary path out of the тупик:
+                    start a fresh version (backend auto-increments), then open
+                    the builder for it (GenerateQuoteDialog.onGenerated). */}
+                {canBuildNewVersion && (
+                  <Button
+                    variant="default"
+                    onClick={() => setGenerateQuoteOpen(true)}
+                    disabled={isViewer}
+                    title={isViewer ? viewerTip : undefined}
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    {t('requestDetailActions.newQuoteVersion')}
                   </Button>
                 )}
                 {hasQuote && (
