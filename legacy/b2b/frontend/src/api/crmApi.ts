@@ -598,8 +598,11 @@ export const crmApi = {
 			if (params.product_is_null) query.append('product__isnull', 'true');
 			if (query.toString()) url += `?${query.toString()}`;
 		}
-		const response = await apiClient.get<PaginatedResponse<QuoteItem>>(url);
-		return response.data.results;
+		// QuoteItemViewSet sets pagination_class=None — the КП grid needs every line
+		// (economics are computed over all of them), so DRF returns a bare array, not
+		// a paginated {count,results} envelope.
+		const response = await apiClient.get<QuoteItem[]>(url);
+		return response.data;
 	},
 	updateQuoteItem: async (id: number, data: Partial<QuoteItem>) => {
 		const response = await apiClient.patch<QuoteItem>(`crm/quote-items/${id}/`, data);

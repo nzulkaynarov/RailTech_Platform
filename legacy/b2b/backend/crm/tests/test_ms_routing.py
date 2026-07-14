@@ -298,7 +298,9 @@ def test_seller_a_cannot_see_seller_b_quote_costs_on_corouted_deal(world):
     )
     resp = _api(world["sa_user"]).get(f"/api/v1/crm/quote-items/?quote__deal_id={deal.id}")
     assert resp.status_code == 200
-    rows = resp.json().get("results", resp.json())
+    # quote-items is unpaginated (PR #310) — the list endpoint returns a bare array.
+    body = resp.json()
+    rows = body["results"] if isinstance(body, dict) and "results" in body else body
     for row in rows:
         assert "margin_percent" not in row, "C1 leak: B's margin visible to A"
         assert "frozen_base_price" not in row, "C1 leak: B's cost visible to A"
