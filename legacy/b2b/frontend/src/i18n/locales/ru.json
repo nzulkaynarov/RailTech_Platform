@@ -676,7 +676,15 @@
     },
     "deleteItem": "Удалить позицию?",
     "addItemPlaceholder": "Наименование позиции...",
-    "builder": "Конструктор коммерческого предложения",
+    "builder": {
+      "title": "Конструктор коммерческого предложения",
+      "itemsTab": "Позиции",
+      "chargesTab": "Расходы и скидки",
+      "positionsCount": "Позиций: {{count}}",
+      "fullscreenEnter": "Во весь экран",
+      "fullscreenExit": "Выйти из полноэкранного режима",
+      "openApproval": "Открыть панель согласования"
+    },
     "subtotalExclVAT": "Итого без НДС",
     "vatPercent": "НДС 12%",
     "totalInclVAT": "Итого с НДС",
@@ -697,6 +705,7 @@
     "lineTotal": "Сумма",
     "approvalChain": {
       "title": "Согласование КП",
+      "stepProgress": "шаг {{current}}/{{total}}",
       "stepDraft": "Черновик",
       "stepTradeReview": "Проверка ВЭД",
       "stepApproval": "Утверждение",

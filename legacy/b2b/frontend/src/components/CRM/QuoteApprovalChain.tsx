@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Check, Clock, Loader2, Lock, SendHorizontal, Undo2, X, Mail } from 'lucide-react';
+import { Check, ChevronDown, Clock, Loader2, Lock, SendHorizontal, Undo2, X, Mail } from 'lucide-react';
 import type { Quote, QuoteApprovalStep } from '@/api/crmApi';
 import { translateApiError } from '@/lib/apiError';
 import { useSubmitQuoteForReview, useActOnApprovalStep, useRecallQuote } from '@/hooks/useCRM';
@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -16,6 +17,11 @@ import {
 
 interface QuoteApprovalChainProps {
   quote: Quote;
+  /**
+   * `full` (default) — the inline document-flow bar. `compact` — a status pill + Popover for
+   * the workspace top toolbar, so the always-open chain no longer costs ~100px of vertical budget.
+   */
+  variant?: 'full' | 'compact';
 }
 
 const CHAIN_STATUSES = new Set(['DRAFT', 'PENDING_APPROVAL', 'READY_TO_SEND']);
@@ -34,7 +40,7 @@ const STATUS_ICON: Record<string, React.ReactNode> = {
  * submit (DRAFT), per-step approve/reject for whoever may act now, and recall. Backend
  * re-checks every permission, so this only drives what's shown.
  */
-export const QuoteApprovalChain: React.FC<QuoteApprovalChainProps> = ({ quote }) => {
+export const QuoteApprovalChain: React.FC<QuoteApprovalChainProps> = ({ quote, variant = 'full' }) => {
   const { t } = useTranslation();
   const submit = useSubmitQuoteForReview();
   const act = useActOnApprovalStep();
@@ -48,6 +54,9 @@ export const QuoteApprovalChain: React.FC<QuoteApprovalChainProps> = ({ quote })
 
   const steps = quote.approval_steps ?? [];
   const busy = submit.isPending || act.isPending || recall.isPending;
+  // Decided/total for the compact «шаг k/n» progress hint (PENDING is the only undecided state).
+  const decidedCount = steps.filter((s) => s.status !== 'PENDING').length;
+  const actionableStep = steps.find((s) => s.can_act) ?? null;
 
   const run = async (fn: () => Promise<unknown>, successKey: string) => {
     try {
@@ -60,6 +69,8 @@ export const QuoteApprovalChain: React.FC<QuoteApprovalChainProps> = ({ quote })
 
   const approve = (step: QuoteApprovalStep) =>
     run(() => act.mutateAsync({ id: quote.id, stepId: step.id, decision: 'APPROVE' }), 'quote.approvalChain.approved');
+
+  const submitForReview = () => run(() => submit.mutateAsync(quote.id), 'quote.approvalChain.submitted');
 
   const confirmReject = async () => {
     if (!rejectStep) return;
@@ -106,31 +117,28 @@ export const QuoteApprovalChain: React.FC<QuoteApprovalChainProps> = ({ quote })
     </div>
   );
 
-  return (
-    <div className="flex flex-col gap-2 rounded-md border bg-muted/40 px-3 py-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-semibold text-muted-foreground">{t('quote.approvalChain.title')}</span>
-        <Badge variant={status === 'READY_TO_SEND' ? 'secondary' : 'default'} className="text-xs">
-          {t(`quote.approvalChain.status.${status}`)}
-        </Badge>
-        <div className="ml-auto flex items-center gap-1.5">
-          {status === 'DRAFT' && (
-            <Button size="sm" disabled={busy}
-              onClick={() => run(() => submit.mutateAsync(quote.id), 'quote.approvalChain.submitted')}>
-              {submit.isPending ? <Loader2 className="size-3 animate-spin" /> : <SendHorizontal className="size-3" />}
-              {t('quote.approvalChain.submit')}
-            </Button>
-          )}
-          {status === 'PENDING_APPROVAL' && (
-            <Button variant="outline" size="sm" disabled={busy}
-              onClick={() => run(() => recall.mutateAsync(quote.id), 'quote.approvalChain.recalled')}>
-              <Undo2 className="size-3" />
-              {t('quote.approvalChain.recall')}
-            </Button>
-          )}
-        </div>
-      </div>
+  // The top action row (submit on DRAFT / recall on PENDING) — shared by full + compact bodies.
+  const primaryAction = (
+    <>
+      {status === 'DRAFT' && (
+        <Button size="sm" disabled={busy} onClick={submitForReview}>
+          {submit.isPending ? <Loader2 className="size-3 animate-spin" /> : <SendHorizontal className="size-3" />}
+          {t('quote.approvalChain.submit')}
+        </Button>
+      )}
+      {status === 'PENDING_APPROVAL' && (
+        <Button variant="outline" size="sm" disabled={busy}
+          onClick={() => run(() => recall.mutateAsync(quote.id), 'quote.approvalChain.recalled')}>
+          <Undo2 className="size-3" />
+          {t('quote.approvalChain.recall')}
+        </Button>
+      )}
+    </>
+  );
 
+  // The step list / status body — identical in the inline bar and the compact popover.
+  const chainBody = (
+    <>
       {status === 'PENDING_APPROVAL' && steps.length > 0 && (
         <div className="flex flex-col gap-2">
           <p className="text-xs text-muted-foreground">{t('quote.approvalChain.pendingApprovalHelper')}</p>
@@ -148,27 +156,87 @@ export const QuoteApprovalChain: React.FC<QuoteApprovalChainProps> = ({ quote })
       {status === 'READY_TO_SEND' && (
         <span className="text-xs text-muted-foreground">{t('quote.approvalChain.readyHint')}</span>
       )}
+    </>
+  );
 
-      <AlertDialog open={!!rejectStep} onOpenChange={(o) => { if (!o) { setRejectStep(null); setReason(''); } }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('quote.approvalChain.rejectTitle')}</AlertDialogTitle>
-            <AlertDialogDescription>{t('quote.approvalChain.rejectDesc')}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor="reject-reason">{t('quote.approvalChain.comment')}</Label>
-            <Textarea id="reject-reason" value={reason} onChange={(e) => setReason(e.target.value)}
-              placeholder={t('quote.approvalChain.rejectReasonPlaceholder')} rows={3} />
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={act.isPending}>{t('common.cancel')}</AlertDialogCancel>
-            <Button variant="destructive" onClick={confirmReject} disabled={act.isPending}>
-              {act.isPending && <Loader2 className="size-3 animate-spin" />}
-              {t('quote.approvalChain.reject')}
+  const rejectDialog = (
+    <AlertDialog open={!!rejectStep} onOpenChange={(o) => { if (!o) { setRejectStep(null); setReason(''); } }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{t('quote.approvalChain.rejectTitle')}</AlertDialogTitle>
+          <AlertDialogDescription>{t('quote.approvalChain.rejectDesc')}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <div className="space-y-2">
+          <Label htmlFor="reject-reason">{t('quote.approvalChain.comment')}</Label>
+          <Textarea id="reject-reason" value={reason} onChange={(e) => setReason(e.target.value)}
+            placeholder={t('quote.approvalChain.rejectReasonPlaceholder')} rows={3} />
+        </div>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={act.isPending}>{t('common.cancel')}</AlertDialogCancel>
+          <Button variant="destructive" onClick={confirmReject} disabled={act.isPending}>
+            {act.isPending && <Loader2 className="size-3 animate-spin" />}
+            {t('quote.approvalChain.reject')}
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+
+  const statusBadge = (
+    <Badge variant={status === 'READY_TO_SEND' ? 'secondary' : 'default'} className="text-xs">
+      {t(`quote.approvalChain.status.${status}`)}
+    </Badge>
+  );
+
+  // ── Compact: a status pill + Popover for the workspace top toolbar ──────────────
+  if (variant === 'compact') {
+    return (
+      <div className="flex items-center gap-1.5">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className="h-8 gap-1.5" aria-label={t('quote.builder.openApproval')}>
+              {statusBadge}
+              {steps.length > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  {t('quote.approvalChain.stepProgress', { current: decidedCount, total: steps.length })}
+                </span>
+              )}
+              <ChevronDown className="size-3.5 text-muted-foreground" aria-hidden="true" />
             </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-96 max-w-[92vw]">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-muted-foreground">{t('quote.approvalChain.title')}</span>
+                <div className="flex items-center gap-1.5">{primaryAction}</div>
+              </div>
+              {chainBody}
+            </div>
+          </PopoverContent>
+        </Popover>
+        {/* Duplicate the current user's actionable step next to the pill — one-click approve
+            without opening the popover (reject still routes through the popover). */}
+        {actionableStep && (
+          <Button size="sm" className="h-8" disabled={busy} onClick={() => approve(actionableStep)}>
+            {act.isPending ? <Loader2 className="size-3 animate-spin" /> : <Check className="size-3" />}
+            {t('quote.approvalChain.approve')}
+          </Button>
+        )}
+        {rejectDialog}
+      </div>
+    );
+  }
+
+  // ── Full: the inline document-flow bar ─────────────────────────────────────────
+  return (
+    <div className="flex flex-col gap-2 rounded-md border bg-muted/40 px-3 py-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-semibold text-muted-foreground">{t('quote.approvalChain.title')}</span>
+        {statusBadge}
+        <div className="ml-auto flex items-center gap-1.5">{primaryAction}</div>
+      </div>
+      {chainBody}
+      {rejectDialog}
     </div>
   );
 };
