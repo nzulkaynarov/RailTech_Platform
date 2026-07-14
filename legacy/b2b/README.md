@@ -15,7 +15,7 @@ Django 6.0 + React 18 + TypeScript, полностью в Docker.
 - Ничего внешнего для БД не нужно — локальная PostgreSQL поднимается в Docker
 
 > **Локальная разработка:** контейнер `db` (postgres:17) описан в `docker-compose.override.yml` — файл **gitignored**, на свежем клоне его нет, создаётся из шаблона (шаг 3 ниже). Backend ходит в него как `db:5432`.
-> **Продакшн:** PostgreSQL 17 на отдельном DB-VPS (приватная сеть WireGuard, `sslmode=require`); прод-`DATABASE_URL` хранится только в GitHub Actions secret. Neon Cloud выведен из эксплуатации (2026-06-19).
+> **Продакшн:** PostgreSQL 17 на отдельном DB-VPS (приватная сеть хостера, интерфейс `ens8`; `sslmode=require`); прод-`DATABASE_URL` хранится только в GitHub Actions secret. Neon Cloud выведен из эксплуатации (2026-06-19).
 
 ---
 
@@ -236,7 +236,7 @@ make collectstatic       # Собрать статику Django
 - **Compose:** `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build` (override-файл не участвует)
 - **Edge:** host **Caddy** (TLS, CSP, rate-независимый XFF). Конфиг применяется вручную: фрагмент `deploy/caddy/b2b.railtech.uz.caddy` → `/etc/caddy/conf.d/b2b.caddy` → `caddy validate` → `systemctl reload caddy`
 - **SPA** раздаётся Caddy из `/var/www/railtech-b2b`
-- **БД** — DB-VPS через WireGuard; ежедневный `pg_dump` на DB-VPS (cron, 14 дней)
+- **БД** — DB-VPS через приватную сеть хостера (`ens8`); ежедневный `pg_dump` на DB-VPS (cron, 14 дней)
 - **Мониторинг** — Sentry (backend `SENTRY_DSN` + SPA `VITE_SENTRY_DSN`)
 - **Staging пока нет** — ветка → зелёный CI → merge в main → прод
 
@@ -256,7 +256,7 @@ docker compose logs backend --tail 50
 
 Частые причины:
 - **Connection refused (локально)** — контейнер `db` ещё не готов (`docker compose ps db`) или нет `docker-compose.override.yml` (шаг 3 первого запуска)
-- **Connection refused / no pg_hba entry (прод)** — DB-VPS недоступен: проверить WireGuard, Postgres на DB-VPS, `pg_hba.conf`. После — `docker compose restart backend celery-worker celery-beat`
+- **Connection refused / no pg_hba entry (прод)** — DB-VPS недоступен: проверить приватную сеть (`ens8`, `ip route get 10.0.0.2`), Postgres на DB-VPS, `pg_hba.conf`. После — `docker compose restart backend celery-worker celery-beat`
 - **OperationalError: connection pool** — пул закэшировал мёртвые соединения: `docker compose restart backend`
 
 ### Сборка падает с `cannot allocate memory`
