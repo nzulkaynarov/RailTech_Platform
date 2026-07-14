@@ -740,6 +740,11 @@ AI_IMPORT_MAX_BYTES = int(os.environ.get("AI_IMPORT_MAX_BYTES", str(10 * 1024 * 
 QUOTE_ITEM_MAX_QUANTITY = int(os.getenv("QUOTE_ITEM_MAX_QUANTITY", "1000000"))
 QUOTE_ITEM_MAX_UNIT_PRICE = Decimal(os.getenv("QUOTE_ITEM_MAX_UNIT_PRICE", "10000000000"))
 
+# Max line rows accepted in ONE transactional bulk-update of КП items (P0-4). A КП is a
+# bounded document, so a batch far above the largest real КП is a malformed/abusive payload
+# — reject it with QUOTE_ITEMS_BULK_TOO_LARGE rather than lock the quote row for a huge write.
+QUOTE_ITEMS_BULK_MAX_ROWS = int(os.getenv("QUOTE_ITEMS_BULK_MAX_ROWS", "500"))
+
 # Removed duplicate declarations (now at the top)
 
 # Logging

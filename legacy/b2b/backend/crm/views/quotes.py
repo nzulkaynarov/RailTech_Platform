@@ -871,6 +871,51 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
             return Response({"detail": err}, status=400)
         return Response(QuoteItemSerializer(updated).data)
 
+    @extend_schema(
+        summary="Bulk-update КП line items in one transaction",
+        description=(
+            "Save many edited КП lines atomically (P0-4). ALL-OR-NOTHING: if any line is "
+            "invalid, nothing is saved and per-row errors are returned; on success the cascade "
+            "and totals are recalculated ONCE and the updated lines are returned. Same guards / "
+            "field validation as the single-item PATCH. Seller action."
+        ),
+        request=inline_serializer(
+            "BulkUpdateQuoteItemsRequest",
+            fields={
+                "quote": drf_serializers.IntegerField(),
+                "items": drf_serializers.ListField(child=drf_serializers.DictField()),
+            },
+        ),
+        responses={
+            200: QuoteItemSerializer(many=True),
+            400: OpenApiResponse(
+                description="QUOTE_ITEMS_BULK_INVALID (with per-row `rows`) / QUOTE_ITEMS_BULK_EMPTY / "
+                "QUOTE_ITEMS_BULK_TOO_LARGE / QUOTE_FROZEN"
+            ),
+            403: OpenApiResponse(description="ADMIN_VIEWER_CANNOT_ACT / ONLY_SELLER_CAN_BUILD_QUOTE"),
+            404: OpenApiResponse(description="QUOTE_NOT_FOUND"),
+        },
+        tags=["CRM"],
+    )
+    @action(detail=False, methods=["post"], url_path="bulk-update", permission_classes=[IsAuthenticated])
+    def bulk_update(self, request):
+        """Thin wrapper (Rule 8) — all logic in crm.services.quotes.bulk_update_quote_items."""
+        from crm.services.quotes import bulk_update_quote_items
+
+        items, error, rows = bulk_update_quote_items(
+            request.user, request.data.get("quote"), request.data.get("items"), request
+        )
+        if error == "QUOTE_ITEMS_BULK_INVALID":
+            return Response({"detail": error, "rows": rows}, status=status.HTTP_400_BAD_REQUEST)
+        if error:
+            http_status = {
+                "ADMIN_VIEWER_CANNOT_ACT": status.HTTP_403_FORBIDDEN,
+                "ONLY_SELLER_CAN_BUILD_QUOTE": status.HTTP_403_FORBIDDEN,
+                "QUOTE_NOT_FOUND": status.HTTP_404_NOT_FOUND,
+            }.get(error, status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": error}, status=http_status)
+        return Response(self.get_serializer(items, many=True).data)
+
     @extend_schema(summary="Get top-N smart-match candidates for this item", tags=["CRM"])
     @action(detail=True, methods=["get"], url_path="match-candidates", permission_classes=[IsAuthenticated])
     def match_candidates(self, request, pk=None):

@@ -12305,6 +12305,97 @@
                 }
             }
         },
+        "/api/v1/crm/quote-items/bulk-update/": {
+            "post": {
+                "operationId": "crm_quote_items_bulk_update_create",
+                "description": "Save many edited КП lines atomically (P0-4). ALL-OR-NOTHING: if any line is invalid, nothing is saved and per-row errors are returned; on success the cascade and totals are recalculated ONCE and the updated lines are returned. Same guards / field validation as the single-item PATCH. Seller action.",
+                "summary": "Bulk-update КП line items in one transaction",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "product",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "product__isnull",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "quote__deal_id",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "A search term.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BulkUpdateQuoteItemsRequestRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BulkUpdateQuoteItemsRequestRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BulkUpdateQuoteItemsRequestRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/QuoteItem"
+                                    }
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "QUOTE_ITEMS_BULK_INVALID (with per-row `rows`) / QUOTE_ITEMS_BULK_EMPTY / QUOTE_ITEMS_BULK_TOO_LARGE / QUOTE_FROZEN"
+                    },
+                    "403": {
+                        "description": "ADMIN_VIEWER_CANNOT_ACT / ONLY_SELLER_CAN_BUILD_QUOTE"
+                    },
+                    "404": {
+                        "description": "QUOTE_NOT_FOUND"
+                    }
+                }
+            }
+        },
         "/api/v1/crm/quote-statuses/": {
             "get": {
                 "operationId": "crm_quote_statuses_retrieve",
@@ -16907,6 +16998,25 @@
                 },
                 "required": [
                     "file"
+                ]
+            },
+            "BulkUpdateQuoteItemsRequestRequest": {
+                "type": "object",
+                "properties": {
+                    "quote": {
+                        "type": "integer"
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        }
+                    }
+                },
+                "required": [
+                    "items",
+                    "quote"
                 ]
             },
             "Category": {
@@ -22458,11 +22568,7 @@
                         "maxLength": 500
                     },
                     "quantity": {
-                        "type": "integer",
-                        "maximum": 2147483647,
-                        "minimum": 1,
-                        "title": "Количество",
-                        "description": "Количество единиц товара"
+                        "type": "integer"
                     },
                     "unit": {
                         "type": "string",
@@ -22509,9 +22615,7 @@
                     "frozen_base_price": {
                         "type": "string",
                         "format": "decimal",
-                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$",
-                        "title": "Базовая цена (заморожена)",
-                        "description": "Цена поставщика, зафиксированная в момент создания КП"
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$"
                     },
                     "frozen_currency": {
                         "type": "string",
@@ -22523,37 +22627,25 @@
                     "logistics_cost": {
                         "type": "string",
                         "format": "decimal",
-                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$",
-                        "title": "Логистика",
-                        "description": "Стоимость доставки за единицу"
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$"
                     },
                     "customs_duty": {
                         "type": "string",
                         "format": "decimal",
-                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$",
-                        "title": "Таможенная пошлина",
-                        "description": "Таможенная пошлина за единицу"
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$"
                     },
                     "margin_percent": {
                         "type": "string",
                         "format": "decimal",
-                        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
-                        "title": "Наценка (%)",
-                        "description": "Процент наценки RailTech (0–500%)"
+                        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$"
                     },
                     "discount_percent": {
                         "type": "string",
                         "format": "decimal",
-                        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
-                        "title": "Скидка (%)",
-                        "description": "Процент скидки на позицию (0–100%)"
+                        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$"
                     },
                     "lead_time_days": {
-                        "type": "integer",
-                        "maximum": 2147483647,
-                        "minimum": 0,
-                        "title": "Срок поставки (дней)",
-                        "description": "Срок поставки позиции в днях от заказа/предоплаты"
+                        "type": "integer"
                     }
                 }
             },
@@ -24453,11 +24545,7 @@
                         "maxLength": 500
                     },
                     "quantity": {
-                        "type": "integer",
-                        "maximum": 2147483647,
-                        "minimum": 1,
-                        "title": "Количество",
-                        "description": "Количество единиц товара"
+                        "type": "integer"
                     },
                     "unit": {
                         "type": "string",
@@ -24508,9 +24596,7 @@
                     "frozen_base_price": {
                         "type": "string",
                         "format": "decimal",
-                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$",
-                        "title": "Базовая цена (заморожена)",
-                        "description": "Цена поставщика, зафиксированная в момент создания КП"
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$"
                     },
                     "frozen_currency": {
                         "type": "string",
@@ -24521,37 +24607,25 @@
                     "logistics_cost": {
                         "type": "string",
                         "format": "decimal",
-                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$",
-                        "title": "Логистика",
-                        "description": "Стоимость доставки за единицу"
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$"
                     },
                     "customs_duty": {
                         "type": "string",
                         "format": "decimal",
-                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$",
-                        "title": "Таможенная пошлина",
-                        "description": "Таможенная пошлина за единицу"
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$"
                     },
                     "margin_percent": {
                         "type": "string",
                         "format": "decimal",
-                        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
-                        "title": "Наценка (%)",
-                        "description": "Процент наценки RailTech (0–500%)"
+                        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$"
                     },
                     "discount_percent": {
                         "type": "string",
                         "format": "decimal",
-                        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
-                        "title": "Скидка (%)",
-                        "description": "Процент скидки на позицию (0–100%)"
+                        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$"
                     },
                     "lead_time_days": {
-                        "type": "integer",
-                        "maximum": 2147483647,
-                        "minimum": 0,
-                        "title": "Срок поставки (дней)",
-                        "description": "Срок поставки позиции в днях от заказа/предоплаты"
+                        "type": "integer"
                     },
                     "landed_cost": {
                         "type": "string",
@@ -24618,11 +24692,7 @@
                         "maxLength": 500
                     },
                     "quantity": {
-                        "type": "integer",
-                        "maximum": 2147483647,
-                        "minimum": 1,
-                        "title": "Количество",
-                        "description": "Количество единиц товара"
+                        "type": "integer"
                     },
                     "unit": {
                         "type": "string",
@@ -24669,9 +24739,7 @@
                     "frozen_base_price": {
                         "type": "string",
                         "format": "decimal",
-                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$",
-                        "title": "Базовая цена (заморожена)",
-                        "description": "Цена поставщика, зафиксированная в момент создания КП"
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$"
                     },
                     "frozen_currency": {
                         "type": "string",
@@ -24683,37 +24751,25 @@
                     "logistics_cost": {
                         "type": "string",
                         "format": "decimal",
-                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$",
-                        "title": "Логистика",
-                        "description": "Стоимость доставки за единицу"
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$"
                     },
                     "customs_duty": {
                         "type": "string",
                         "format": "decimal",
-                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$",
-                        "title": "Таможенная пошлина",
-                        "description": "Таможенная пошлина за единицу"
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$"
                     },
                     "margin_percent": {
                         "type": "string",
                         "format": "decimal",
-                        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
-                        "title": "Наценка (%)",
-                        "description": "Процент наценки RailTech (0–500%)"
+                        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$"
                     },
                     "discount_percent": {
                         "type": "string",
                         "format": "decimal",
-                        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
-                        "title": "Скидка (%)",
-                        "description": "Процент скидки на позицию (0–100%)"
+                        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$"
                     },
                     "lead_time_days": {
-                        "type": "integer",
-                        "maximum": 2147483647,
-                        "minimum": 0,
-                        "title": "Срок поставки (дней)",
-                        "description": "Срок поставки позиции в днях от заказа/предоплаты"
+                        "type": "integer"
                     }
                 },
                 "required": [

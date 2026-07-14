@@ -6,24 +6,9 @@ from rest_framework import serializers
 from master_data.models import Currency, DeliveryBasis
 from master_data.serializers import DeliveryBasisSerializer
 
-from .models import (
-    Act,
-    ActivityLog,
-    ChargeTemplate,
-    ChargeType,
-    Contract,
-    Deal,
-    Fulfillment,
-    Invoice,
-    InvoiceItem,
-    Lead,
-    Message,
-    Payment,
-    Quote,
-    QuoteApprovalStep,
-    QuoteCharge,
-    QuoteItem,
-)
+from .models import (Act, ActivityLog, ChargeTemplate, ChargeType, Contract,
+                     Deal, Fulfillment, Invoice, InvoiceItem, Lead, Message,
+                     Payment, Quote, QuoteApprovalStep, QuoteCharge, QuoteItem)
 
 
 class QuoteApprovalStepSerializer(serializers.ModelSerializer):
@@ -67,7 +52,11 @@ class QuoteApprovalStepSerializer(serializers.ModelSerializer):
 
     def get_acted_by_name(self, obj) -> str:
         user = obj.acted_by
-        return (f"{user.first_name} {user.last_name}".strip() or user.email) if user else ""
+        return (
+            (f"{user.first_name} {user.last_name}".strip() or user.email)
+            if user
+            else ""
+        )
 
     def get_can_act(self, obj) -> bool:
         from accounts.services.permissions import member_has_permission
@@ -81,27 +70,37 @@ class QuoteApprovalStepSerializer(serializers.ModelSerializer):
         if obj.status != "PENDING" or obj.participation == "INFORMED":
             return False
         quote = obj.quote
-        if not getattr(quote, "status", None) or quote.status.code != "PENDING_APPROVAL":
+        if (
+            not getattr(quote, "status", None)
+            or quote.status.code != "PENDING_APPROVAL"
+        ):
             return False
         if obj.order != _active_order(quote):
             return False
         company_id = _quote_owner_company_id(quote)
         return bool(
             company_id
-            and (getattr(user, "is_superuser", False) or member_has_permission(user, company_id, _step_permission(obj)))
+            and (
+                getattr(user, "is_superuser", False)
+                or member_has_permission(user, company_id, _step_permission(obj))
+            )
         )
 
 
 class QuoteItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source="product.name", read_only=True)
-    product_domain = serializers.CharField(source="product.domain_type.code", read_only=True)
+    product_domain = serializers.CharField(
+        source="product.domain_type.code", read_only=True
+    )
     product_sku = serializers.CharField(source="product.sku", read_only=True)
     product_gost = serializers.CharField(source="product.gost_drawing", read_only=True)
     # Fallbacks so the buyer's review grid can show a catalog line's identity from the linked
     # Product when the denormalised copy is blank (audit M12) — single source of truth.
     product_mpn = serializers.SerializerMethodField()
     product_uom = serializers.SerializerMethodField()
-    offer_supplier_name = serializers.CharField(source="offer.supplier.name", read_only=True)
+    offer_supplier_name = serializers.CharField(
+        source="offer.supplier.name", read_only=True
+    )
 
     def get_product_mpn(self, obj) -> str:
         return obj.product.manufacturer_part_number if obj.product_id else ""
@@ -129,17 +128,45 @@ class QuoteItemSerializer(serializers.ModelSerializer):
         queryset=Currency.objects.all(),
         required=False,
         allow_null=True,
+        error_messages={
+            "does_not_exist": "CURRENCY_NOT_FOUND",
+            "invalid": "CURRENCY_NOT_FOUND",
+        },
     )
 
-    # E2: sanity upper caps on line quantity/price. The lower bound (0/1) is already
-    # enforced by the model's MinValueValidator (KP-04), auto-mapped onto these fields.
-    # Codes travel by value (compared on the frontend); see settings.QUOTE_ITEM_MAX_*.
+    # E2 + bulk-update: EVERY bounds violation must surface as a machine code — the
+    # bulk endpoint returns rows[].errors verbatim and the frontend matches codes by
+    # value (Rule 2/7). Explicit field declarations bypass the auto-mapped model
+    # validators (whose messages are DRF prose); validate_<field> re-enforces the
+    # same model bounds (KP-04 MinValue / MaxValue) with codes. Caps: settings.QUOTE_ITEM_MAX_*.
+    quantity = serializers.IntegerField(required=False)
+    frozen_base_price = serializers.DecimalField(
+        max_digits=14, decimal_places=2, required=False
+    )
+    logistics_cost = serializers.DecimalField(
+        max_digits=14, decimal_places=2, required=False
+    )
+    customs_duty = serializers.DecimalField(
+        max_digits=14, decimal_places=2, required=False
+    )
+    margin_percent = serializers.DecimalField(
+        max_digits=5, decimal_places=2, required=False
+    )
+    discount_percent = serializers.DecimalField(
+        max_digits=5, decimal_places=2, required=False
+    )
+    lead_time_days = serializers.IntegerField(required=False)
+
     def validate_quantity(self, value):
+        if value is not None and value < 1:
+            raise serializers.ValidationError("QUOTE_ITEM_QTY_INVALID")
         if value is not None and value > settings.QUOTE_ITEM_MAX_QUANTITY:
             raise serializers.ValidationError("QUOTE_ITEM_QTY_TOO_LARGE")
         return value
 
     def _validate_price_cap(self, value):
+        if value is not None and value < 0:
+            raise serializers.ValidationError("QUOTE_ITEM_PRICE_INVALID")
         if value is not None and value > settings.QUOTE_ITEM_MAX_UNIT_PRICE:
             raise serializers.ValidationError("QUOTE_ITEM_PRICE_TOO_LARGE")
         return value
@@ -152,6 +179,23 @@ class QuoteItemSerializer(serializers.ModelSerializer):
 
     def validate_customs_duty(self, value):
         return self._validate_price_cap(value)
+
+    def validate_margin_percent(self, value):
+        # Mirrors the model bound MaxValueValidator(500) / MinValueValidator(0).
+        if value is not None and not (0 <= value <= 500):
+            raise serializers.ValidationError("QUOTE_ITEM_MARGIN_INVALID")
+        return value
+
+    def validate_discount_percent(self, value):
+        # Mirrors the model bound MaxValueValidator(100) / MinValueValidator(0).
+        if value is not None and not (0 <= value <= 100):
+            raise serializers.ValidationError("QUOTE_ITEM_DISCOUNT_INVALID")
+        return value
+
+    def validate_lead_time_days(self, value):
+        if value is not None and value < 0:
+            raise serializers.ValidationError("QUOTE_ITEM_LEAD_TIME_INVALID")
+        return value
 
     class Meta:
         model = QuoteItem
@@ -214,7 +258,9 @@ class QuoteItemSerializer(serializers.ModelSerializer):
             user = getattr(self.context.get("request"), "user", None)
             from accounts.services.permissions import can_view_quote_costs_for
 
-            cache[qid] = bool(user and quote is not None and can_view_quote_costs_for(user, quote))
+            cache[qid] = bool(
+                user and quote is not None and can_view_quote_costs_for(user, quote)
+            )
         return cache[qid]
 
     def to_representation(self, instance):
@@ -241,9 +287,15 @@ class ChargeTemplateSerializer(serializers.ModelSerializer):
     from the request body — so a Company Admin can only manage their own templates.
     """
 
-    delivery_basis = serializers.SlugRelatedField(slug_field="code", queryset=DeliveryBasis.objects.all())
-    delivery_basis_name = serializers.CharField(source="delivery_basis.name", read_only=True)
-    charge_type = serializers.SlugRelatedField(slug_field="code", queryset=ChargeType.objects.all())
+    delivery_basis = serializers.SlugRelatedField(
+        slug_field="code", queryset=DeliveryBasis.objects.all()
+    )
+    delivery_basis_name = serializers.CharField(
+        source="delivery_basis.name", read_only=True
+    )
+    charge_type = serializers.SlugRelatedField(
+        slug_field="code", queryset=ChargeType.objects.all()
+    )
     charge_type_name = serializers.CharField(source="charge_type.name", read_only=True)
 
     class Meta:
@@ -265,7 +317,9 @@ class ChargeTemplateSerializer(serializers.ModelSerializer):
 class QuoteChargeSerializer(serializers.ModelSerializer):
     """КП-level expense item / discount (UBL document AllowanceCharge)."""
 
-    charge_type = serializers.SlugRelatedField(slug_field="code", queryset=ChargeType.objects.all())
+    charge_type = serializers.SlugRelatedField(
+        slug_field="code", queryset=ChargeType.objects.all()
+    )
     charge_type_name = serializers.CharField(source="charge_type.name", read_only=True)
 
     class Meta:
@@ -303,7 +357,13 @@ class QuoteChargeSerializer(serializers.ModelSerializer):
     # quote.view_cost_margin on the КП (a restricted Наблюдатель/logist could otherwise back out
     # the margin). cost_amount is the seller's REAL cost; resolved_* + the per-charge amount/% are
     # the breakdown the client PDF deliberately collapses into one aggregated line.
-    _COST_FIELDS = ("cost_amount", "resolved_base", "resolved_amount", "amount", "rate_percent")
+    _COST_FIELDS = (
+        "cost_amount",
+        "resolved_base",
+        "resolved_amount",
+        "amount",
+        "rate_percent",
+    )
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -323,14 +383,22 @@ class QuoteSerializer(serializers.ModelSerializer):
     status_code = serializers.CharField(source="status.code", read_only=True)
     # Presentation currency as code ("UZS") in both directions, like frozen_currency on items.
     quote_currency = serializers.SlugRelatedField(
-        slug_field="code", queryset=Currency.objects.all(), required=False, allow_null=True
+        slug_field="code",
+        queryset=Currency.objects.all(),
+        required=False,
+        allow_null=True,
     )
     # Default COST currency new lines inherit (UI convenience) — code in both directions.
     cost_currency_default = serializers.SlugRelatedField(
-        slug_field="code", queryset=Currency.objects.all(), required=False, allow_null=True
+        slug_field="code",
+        queryset=Currency.objects.all(),
+        required=False,
+        allow_null=True,
     )
     # Incoterm responsibility flags drive cost-row visibility in the КП builder.
-    delivery_basis_data = DeliveryBasisSerializer(source="delivery_basis", read_only=True)
+    delivery_basis_data = DeliveryBasisSerializer(
+        source="delivery_basis", read_only=True
+    )
     # Internal cost breakdown — gated to seller/admin in to_representation().
     charges = QuoteChargeSerializer(many=True, read_only=True)
     # Effective КП delivery term = override (delivery_lead_time_days) or max(line lead times).
@@ -350,7 +418,9 @@ class QuoteSerializer(serializers.ModelSerializer):
     def get_approval_steps(self, obj):
         if not self.context.get("include_economics"):
             return []
-        steps = obj.approval_steps.select_related("approver__user", "approver_role", "acted_by").all()
+        steps = obj.approval_steps.select_related(
+            "approver__user", "approver_role", "acted_by"
+        ).all()
         return QuoteApprovalStepSerializer(steps, many=True, context=self.context).data
 
     def validate_fx_manual(self, value):
@@ -382,7 +452,10 @@ class QuoteSerializer(serializers.ModelSerializer):
             return None
         from crm.services.quotes import compute_quote_economics
 
-        return {k: (str(v) if isinstance(v, Decimal) else v) for k, v in compute_quote_economics(obj).items()}
+        return {
+            k: (str(v) if isinstance(v, Decimal) else v)
+            for k, v in compute_quote_economics(obj).items()
+        }
 
     class Meta:
         model = Quote
@@ -451,7 +524,13 @@ class QuoteSerializer(serializers.ModelSerializer):
     # final_price + discount the buyer could otherwise back out the seller's landed cost
     # (the exact datum item-level redaction + the FX-stripped PDF, PR #269, hide). The
     # item serializer already redacts item margin_percent; the quote level lagged behind.
-    _SELLER_ONLY_FIELDS = ("charges", "charges_total", "margin_percent", "fx_snapshot", "fx_manual")
+    _SELLER_ONLY_FIELDS = (
+        "charges",
+        "charges_total",
+        "margin_percent",
+        "fx_snapshot",
+        "fx_manual",
+    )
 
     def _can_see_costs(self, quote) -> bool:
         # Per-quote (C1): cost/margin only on a quote the viewer's own company prepared —
@@ -465,7 +544,9 @@ class QuoteSerializer(serializers.ModelSerializer):
             user = getattr(self.context.get("request"), "user", None)
             from accounts.services.permissions import can_view_quote_costs_for
 
-            cache[qid] = bool(user and quote is not None and can_view_quote_costs_for(user, quote))
+            cache[qid] = bool(
+                user and quote is not None and can_view_quote_costs_for(user, quote)
+            )
         return cache[qid]
 
     def to_representation(self, instance):
@@ -485,10 +566,15 @@ def _viewer_routing(obj, request):
     user = getattr(request, "user", None)
     if user is None or not getattr(user, "is_authenticated", False):
         return None
-    company_ids = set(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
+    company_ids = set(
+        user.memberships.filter(is_active=True).values_list("company_id", flat=True)
+    )
     if not company_ids:
         return None
-    return next((r for r in obj.seller_routings.all() if r.seller_company_id in company_ids), None)
+    return next(
+        (r for r in obj.seller_routings.all() if r.seller_company_id in company_ids),
+        None,
+    )
 
 
 def _assigned_to_id(obj, request):
@@ -498,7 +584,8 @@ def _assigned_to_id(obj, request):
 
 def _assigned_to_display(obj, request):
     """Owner display name for the viewer's OWN company routing (their colleague), falling back to
-    email since invited members often have a blank full name. None if unclaimed / not the viewer's."""
+    email since invited members often have a blank full name. None if unclaimed / not the viewer's.
+    """
     routing = _viewer_routing(obj, request)
     if routing is None or not routing.assigned_to_id:
         return None
@@ -523,7 +610,9 @@ def _target_sellers_for_viewer(obj, request):
     as_dicts = [{"id": s.id, "name": s.name} for s in sellers]
     if getattr(user, "is_platform_admin", False):
         return as_dicts
-    company_ids = set(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
+    company_ids = set(
+        user.memberships.filter(is_active=True).values_list("company_id", flat=True)
+    )
     # Buyer owns the RFQ → sees everyone it fanned out to; a seller sees only itself.
     if obj.company_id in company_ids:
         return as_dicts
@@ -686,7 +775,16 @@ class MessageSerializer(serializers.ModelSerializer):
 class LeadSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lead
-        fields = ["id", "name", "company", "phone", "email", "message", "is_processed", "created_at"]
+        fields = [
+            "id",
+            "name",
+            "company",
+            "phone",
+            "email",
+            "message",
+            "is_processed",
+            "created_at",
+        ]
         read_only_fields = ["created_at", "is_processed"]
 
 
@@ -695,7 +793,16 @@ class ActivityLogSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ActivityLog
-        fields = ["id", "action", "detail", "event_code", "event_params", "user_name", "level", "timestamp"]
+        fields = [
+            "id",
+            "action",
+            "detail",
+            "event_code",
+            "event_params",
+            "user_name",
+            "level",
+            "timestamp",
+        ]
 
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -704,8 +811,12 @@ class ActivityLogSerializer(serializers.ModelSerializer):
 
 
 class ContractSerializer(serializers.ModelSerializer):
-    client_signer_name = serializers.CharField(source="client_signer.get_full_name", read_only=True, default=None)
-    manager_signer_name = serializers.CharField(source="manager_signer.get_full_name", read_only=True, default=None)
+    client_signer_name = serializers.CharField(
+        source="client_signer.get_full_name", read_only=True, default=None
+    )
+    manager_signer_name = serializers.CharField(
+        source="manager_signer.get_full_name", read_only=True, default=None
+    )
     # status is a FK lookup now (F5.4); keep emitting the code string under `status`
     # so the frontend contract is unchanged, plus the display name under status_name.
     status = serializers.CharField(source="status.code", read_only=True)
@@ -781,7 +892,14 @@ class ContractSerializer(serializers.ModelSerializer):
 class InvoiceItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = InvoiceItem
-        fields = ["id", "description", "quantity", "unit_price_excl_vat", "line_total_excl_vat", "source_quote_item"]
+        fields = [
+            "id",
+            "description",
+            "quantity",
+            "unit_price_excl_vat",
+            "line_total_excl_vat",
+            "source_quote_item",
+        ]
 
 
 class PaymentSerializer(serializers.ModelSerializer):
@@ -810,7 +928,9 @@ class PaymentSerializer(serializers.ModelSerializer):
 class InvoiceSerializer(serializers.ModelSerializer):
     items = InvoiceItemSerializer(many=True, read_only=True)
     payments = PaymentSerializer(many=True, read_only=True)
-    balance_due = serializers.DecimalField(read_only=True, max_digits=14, decimal_places=2)
+    balance_due = serializers.DecimalField(
+        read_only=True, max_digits=14, decimal_places=2
+    )
     # status is a FK lookup now (F5.4); keep the code string under `status` (+ name).
     status = serializers.CharField(source="status.code", read_only=True)
     status_name = serializers.CharField(source="status.name", read_only=True)
@@ -841,7 +961,13 @@ class InvoiceSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["number", "amount_paid", "pdf_file", "created_at", "updated_at"]
+        read_only_fields = [
+            "number",
+            "amount_paid",
+            "pdf_file",
+            "created_at",
+            "updated_at",
+        ]
 
     def get_pdf_url(self, obj):
         return obj.pdf_file.url if obj.pdf_file else None
