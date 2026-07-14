@@ -35,6 +35,13 @@ export function useQuoteDraft(serverItems: QuoteItem[]): UseQuoteDraftResult {
 	// preserving local values on rows that are still dirty. Runs on every server
 	// refetch — but never overwrites a row the user is actively editing.
 	useEffect(() => {
+		// A row deleted server-side (own trash action or a teammate) must also leave
+		// the dirty set, or hasUnsavedChanges sticks forever with nothing to save.
+		const serverIds = new Set(serverItems.map((item) => item.id));
+		setDirtyIds((previous) => {
+			const next = new Set([...previous].filter((id) => serverIds.has(id)));
+			return next.size === previous.size ? previous : next;
+		});
 		setDraftItems((previousDraft) => {
 			const previousById = new Map(previousDraft.map((item) => [item.id, item]));
 			return serverItems.map((serverItem) => {

@@ -106,4 +106,19 @@ describe('useQuoteDraft', () => {
 		rerender({ items: [mkItem(2)] });
 		expect(result.current.draftItems.map((item) => item.id)).toEqual([2]);
 	});
+
+	it('prunes a dirty row from dirtyIds when the server list drops it (delete must not stick the guard)', () => {
+		const { result, rerender } = renderHook(({ items }) => useQuoteDraft(items), {
+			initialProps: { items: [mkItem(1), mkItem(2)] },
+		});
+
+		act(() => result.current.setField(1, 'frozen_base_price', '999'));
+		expect(result.current.hasUnsavedChanges).toBe(true);
+
+		// Row 1 deleted (own trash action or a teammate) → refetch returns only row 2.
+		rerender({ items: [mkItem(2)] });
+
+		expect(result.current.dirtyIds.has(1)).toBe(false);
+		expect(result.current.hasUnsavedChanges).toBe(false);
+	});
 });
