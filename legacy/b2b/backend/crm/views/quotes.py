@@ -728,6 +728,11 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
 
     serializer_class = QuoteItemSerializer
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
+    # The КП builder grid renders EVERY line of a quote and recomputes economics over
+    # all of them; the global DRF PAGE_SIZE=20 silently truncated the grid to the first
+    # 20 rows while totals still reflected the full set — data loss for the seller.
+    # A quote is a bounded document (line items per КП), so returning the full list is safe.
+    pagination_class = None
     filterset_fields = {
         "quote__deal_id": ["exact"],
         "product": ["isnull", "exact"],

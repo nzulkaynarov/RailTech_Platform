@@ -18069,8 +18069,6 @@ export interface operations {
     crm_quote_items_list: {
         parameters: {
             query?: {
-                /** @description A page number within the paginated result set. */
-                page?: number;
                 product?: number;
                 product__isnull?: boolean;
                 quote__deal_id?: number;
@@ -18088,7 +18086,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PaginatedQuoteItemList"];
+                    "application/json": components["schemas"]["QuoteItem"][];
                 };
             };
         };

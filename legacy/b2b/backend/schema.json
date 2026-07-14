@@ -11931,15 +11931,6 @@
                 "summary": "List quote items",
                 "parameters": [
                     {
-                        "name": "page",
-                        "required": false,
-                        "in": "query",
-                        "description": "A page number within the paginated result set.",
-                        "schema": {
-                            "type": "integer"
-                        }
-                    },
-                    {
                         "in": "query",
                         "name": "product",
                         "schema": {
@@ -11983,7 +11974,10 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/PaginatedQuoteItemList"
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/QuoteItem"
+                                    }
                                 }
                             }
                         },
