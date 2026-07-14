@@ -187,6 +187,31 @@ describe('QuoteBuilderGrid — «add & continue» row', () => {
 		});
 	});
 
+	it('submits the just-typed qty and price on Enter (no stale-closure loss)', async () => {
+		// Adversarial-review MAJOR: NumericCell committed on blur, so Enter-submit read
+		// stale qty/price and the line was created with defaults 1 / 0. The add-row now
+		// uses plain controlled inputs; Enter must carry exactly what was typed.
+		createMutateAsync.mockResolvedValue(makeItem(2));
+		const user = userEvent.setup();
+		renderWithProviders(<QuoteBuilderGrid dealId={42} />);
+
+		await user.click(screen.getByRole('button', { name: 'Добавить' }));
+		await user.type(screen.getByRole('textbox', { name: 'Наименование' }), 'Автосцепка СА-3');
+		// The grid row renders its own qty/price cells — the add-row inputs are the LAST ones.
+		const qtyInput = screen.getAllByRole('textbox', { name: 'Кол-во' }).at(-1)!;
+		await user.clear(qtyInput);
+		await user.type(qtyInput, '50');
+		const priceInput = screen.getAllByRole('textbox', { name: /Базовая цена/ }).at(-1)!;
+		await user.clear(priceInput);
+		await user.type(priceInput, '777,50');
+		await user.keyboard('{Enter}'); // Enter прямо в поле цены — без blur
+
+		await waitFor(() => expect(createMutateAsync).toHaveBeenCalledTimes(1));
+		expect(createMutateAsync.mock.calls[0][0]).toMatchObject({
+			quote: 100, imported_raw_name: 'Автосцепка СА-3', quantity: 50, frozen_base_price: '777.5',
+		});
+	});
+
 	it('closes the add-row on Escape', async () => {
 		const user = userEvent.setup();
 		renderWithProviders(<QuoteBuilderGrid dealId={42} />);

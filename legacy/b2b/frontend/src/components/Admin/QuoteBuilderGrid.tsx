@@ -278,14 +278,23 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	// «Добавить и продолжить» (spec §5 п.7): add the row, KEEP the add-row open, reset the
 	// fields, refocus the name input, and scroll the new row into view — so the seller can
 	// enter a whole list without re-opening the add-row each time. Enter also submits.
+	// Add-row inputs are PLAIN controlled inputs (state per keystroke), not NumericCell:
+	// NumericCell commits on blur, so Enter-submit read stale qty/price from the closure
+	// (adversarial-review MAJOR — the typed values were silently dropped). Normalization
+	// (comma decimal, spaces) and clamping to the caps happen here at submit instead.
+	const parseAddRowNumber = (raw: string): number =>
+		Number(String(raw).replace(/[\s ]+/g, '').replace(',', '.'));
+
 	const handleAddItem = async () => {
 		if (!newItemName.trim() || !deal?.active_quote) return;
+		const qty = Math.min(QUOTE_ITEM_MAX_QUANTITY, Math.max(1, Math.trunc(parseAddRowNumber(newItemQty) || 1)));
+		const price = Math.min(QUOTE_ITEM_MAX_UNIT_PRICE, Math.max(0, parseAddRowNumber(newItemPrice) || 0));
 		try {
 			await createItemMutation.mutateAsync({
 				quote: deal.active_quote.id,
 				imported_raw_name: newItemName.trim(),
-				quantity: Math.max(1, Math.trunc(Number(newItemQty) || 1)),
-				frozen_base_price: String(Math.max(0, Number(newItemPrice) || 0)),
+				quantity: qty,
+				frozen_base_price: String(price),
 				// New lines inherit the КП's default cost currency (fallback UZS).
 				frozen_currency: deal.active_quote.cost_currency_default || 'UZS',
 			});
@@ -1037,24 +1046,21 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 														className="h-7 min-w-[200px] flex-1 text-sm"
 														autoFocus
 													/>
-													<NumericCell
-														min={1}
-														max={QUOTE_ITEM_MAX_QUANTITY}
-														maxToastKey="quote.validation.qtyTooLarge"
-														maxFractionDigits={0}
-														ariaLabel={t('quote.quantity')}
-														className="h-7 w-20 text-sm text-center"
+													<Input
+														type="text"
+														inputMode="numeric"
 														value={newItemQty}
-														onCommit={setNewItemQty}
+														onChange={e => setNewItemQty(e.target.value)}
+														aria-label={t('quote.quantity')}
+														className="h-7 w-20 text-sm text-center"
 													/>
-													<NumericCell
-														min={0}
-														max={QUOTE_ITEM_MAX_UNIT_PRICE}
-														maxToastKey="quote.validation.priceTooLarge"
-														ariaLabel={t('quote.basePrice')}
-														className="h-7 w-32 text-sm font-mono text-right"
+													<Input
+														type="text"
+														inputMode="decimal"
 														value={newItemPrice}
-														onCommit={setNewItemPrice}
+														onChange={e => setNewItemPrice(e.target.value)}
+														aria-label={t('quote.basePrice')}
+														className="h-7 w-32 text-sm font-mono text-right"
 													/>
 													<Button size="sm" onClick={handleAddItem} disabled={!newItemName.trim() || createItemMutation.isPending}>
 														{t('common.add')}
