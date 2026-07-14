@@ -38,6 +38,21 @@ export const useUpdateQuoteItem = () => {
   });
 };
 
+// Transactional bulk save of the edited КП lines (P0-4). ONE request, ONE recalc, ONE set
+// of invalidations — replaces the old per-row `for … await updateQuoteItem` loop. The caller
+// handles the QUOTE_ITEMS_BULK_INVALID per-row errors (nothing is written on rejection).
+export const useBulkUpdateQuoteItems = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ quoteId, items }: { quoteId: number; items: Array<Partial<QuoteItem> & { id: number }> }) =>
+      crmApi.bulkUpdateQuoteItems(quoteId, items),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['quote-items'] });
+      queryClient.invalidateQueries({ queryKey: ['deals'] });
+    },
+  });
+};
+
 export const useCreateDeal = () => {
   const queryClient = useQueryClient();
   return useMutation({

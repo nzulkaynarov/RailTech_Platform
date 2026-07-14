@@ -608,6 +608,16 @@ export const crmApi = {
 		const response = await apiClient.patch<QuoteItem>(`crm/quote-items/${id}/`, data);
 		return response.data;
 	},
+	// Transactional bulk save of the edited КП lines (P0-4): ONE request, ONE recalc.
+	// All-or-nothing — a rejected batch returns 400 {detail:'QUOTE_ITEMS_BULK_INVALID', rows:[…]}
+	// with per-row machine codes and writes nothing (parseBulkItemErrors flattens `rows`).
+	bulkUpdateQuoteItems: async (quoteId: number, items: Array<Partial<QuoteItem> & { id: number }>) => {
+		const response = await apiClient.post<QuoteItem[]>('crm/quote-items/bulk-update/', {
+			quote: quoteId,
+			items,
+		});
+		return response.data;
+	},
 	getProducts: async (search?: string) => {
 		let url = 'catalog/products/';
 		if (search) {

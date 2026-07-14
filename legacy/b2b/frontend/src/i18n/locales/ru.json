@@ -825,9 +825,23 @@
     "costInPresentation": "Себестоимость: {{value}}",
     "fxRateAt": "Курс {{from}}→{{to}}: {{rate}}",
     "marginQuoteLevelHint": "Наценка задаётся на весь КП — измените её в «Настройки КП»",
+    "draftPreview": "черновик",
+    "draftRecalcOnSave": "пересчёт после сохранения",
+    "save": {
+      "success": "КП сохранён",
+      "rowsWithErrors": "Строк с ошибками: {{count}} — исправьте выделенные"
+    },
     "validation": {
       "qtyTooLarge": "Количество не может превышать {{max}}",
-      "priceTooLarge": "Цена не может превышать {{max}}"
+      "priceTooLarge": "Цена не может превышать {{max}}",
+      "QUOTE_ITEM_QTY_INVALID": "Количество должно быть не меньше 1",
+      "QUOTE_ITEM_QTY_TOO_LARGE": "Количество слишком большое",
+      "QUOTE_ITEM_PRICE_INVALID": "Цена не может быть отрицательной",
+      "QUOTE_ITEM_PRICE_TOO_LARGE": "Цена слишком большая",
+      "QUOTE_ITEM_MARGIN_INVALID": "Наценка должна быть в диапазоне 0–500%",
+      "QUOTE_ITEM_DISCOUNT_INVALID": "Скидка должна быть в диапазоне 0–100%",
+      "QUOTE_ITEM_LEAD_TIME_INVALID": "Некорректный срок поставки",
+      "CURRENCY_NOT_FOUND": "Валюта не найдена"
     }
   },
   "admin": {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -8,11 +8,11 @@ import {
 	Loader2, AlertTriangle, Plus, Trash2, Sparkles, FileText, Settings, Tag,
 	ChevronRight, ChevronDown, PanelRightClose, PanelRightOpen, Link2, Maximize2, Minimize2,
 } from 'lucide-react';
-import { useQuoteItems, useUpdateQuoteItem, useCreateQuoteItem, useDeleteQuoteItem, useDeal, useSetQuoteDeliveryBasis } from '@/hooks/useCRM';
+import { useQuoteItems, useUpdateQuoteItem, useCreateQuoteItem, useDeleteQuoteItem, useDeal, useSetQuoteDeliveryBasis, useBulkUpdateQuoteItems } from '@/hooks/useCRM';
 import { useCurrencies } from '@/hooks/useMasterData';
 import { useMediaQuery } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
-import { formatMoney, calculateLineTotal, toDecimal } from '@/utils/decimal';
+import { formatMoney, toDecimal } from '@/utils/decimal';
 import { DeliveryBasisSelect } from '@/components/CRM/DeliveryBasisSelect';
 import { QuoteChargesSection } from '@/components/CRM/QuoteChargesSection';
 import { Button } from '@/components/ui/button';
@@ -35,6 +35,8 @@ import {
 import { StickyTotalsBar } from '@/components/QuoteBuilder/StickyTotalsBar';
 import { NumericCell } from '@/components/QuoteBuilder/NumericCell';
 import { useQuoteDraft } from '@/components/QuoteBuilder/useQuoteDraft';
+import { usePricingMirror } from '@/components/QuoteBuilder/usePricingMirror';
+import { parseBulkItemErrors, extractBulkErrorRows, cellErrorKey } from '@/components/QuoteBuilder/bulkErrors';
 import { AICatalogMatchDialog } from '@/components/Admin/AICatalogMatchDialog';
 import { GenerateQuoteDialog } from '@/components/CRM/GenerateQuoteDialog';
 import { QuoteSettingsDialog } from '@/components/CRM/QuoteSettingsDialog';
@@ -70,6 +72,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	const { data: deal, isLoading: dealLoading } = useDeal(dealId);
 	const { data: currencies = [] } = useCurrencies();
 	const updateMutation = useUpdateQuoteItem();
+	const bulkUpdateMutation = useBulkUpdateQuoteItems();
 	const createItemMutation = useCreateQuoteItem();
 	const deleteItemMutation = useDeleteQuoteItem();
 	const setBasisMutation = useSetQuoteDeliveryBasis();
@@ -77,8 +80,67 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	// Draft state machine (WP-D): server data merges into non-dirty rows only, so a refetch
 	// triggered by settings/charges/basis mutations no longer wipes in-progress line edits.
 	const { draftItems, dirtyIds, hasUnsavedChanges, setField, clearDirtyAfterSave } = useQuoteDraft(quoteItems);
+	// Per-cell rejection codes from the LAST bulk save (P0-4), keyed `${id}:${field}` → CODE.
+	// The batch is transactional, so on rejection nothing is written and dirty state survives;
+	// these drive aria-invalid + the localized cell tooltip until the seller re-edits the cell.
+	const [cellErrors, setCellErrors] = useState<Record<string, string>>({});
 	const [newItemName, setNewItemName] = useState('');
+	const [newItemQty, setNewItemQty] = useState<string>('1');
+	const [newItemPrice, setNewItemPrice] = useState<string>('0');
 	const [showAddRow, setShowAddRow] = useState(false);
+	// «Добавить и продолжить»: refocus the name field + keep the row's new position in view.
+	const addNameRef = useRef<HTMLInputElement>(null);
+	const addRowRef = useRef<HTMLTableRowElement>(null);
+
+	// Edit a line AND drop any stale bulk-save error on that exact cell (so the red ring / tooltip
+	// clears the moment the seller starts fixing it). Wraps the draft-machine setField.
+	const handleFieldChange = (id: number, field: keyof QuoteItem, value: string | number) => {
+		setField(id, field, value);
+		const key = cellErrorKey(id, field as string);
+		if (cellErrors[key]) {
+			setCellErrors((previous) => {
+				const next = { ...previous };
+				delete next[key];
+				return next;
+			});
+		}
+	};
+
+	// Localized message for a rejected cell (or undefined when the cell is clean).
+	const cellError = (id: number, field: string): string | undefined => {
+		const code = cellErrors[cellErrorKey(id, field)];
+		if (!code) return undefined;
+		const key = `quote.validation.${code}`;
+		const label = t(key);
+		return label === key ? code : label; // unlocalized new code → show the raw code
+	};
+
+	// Live local pricing mirror (P0-2): for DIRTY rows, re-derive landed_cost / «Сумма» / margin
+	// on decimal.js EXACTLY as the backend engine, so an edited price/qty/discount moves the line
+	// total and the КП totals immediately — before the save. Clean rows report server values.
+	// Called unconditionally (Rules of Hooks) with null-safe inputs off deal?.active_quote — the
+	// early returns below (loading / no active quote) must not sit between this and the render.
+	const mirrorQuote = deal?.active_quote ?? null;
+	const mirrorEcon = mirrorQuote?.economics ?? null;
+	const pricingMirror = usePricingMirror({
+		draftItems,
+		dirtyIds,
+		marginPercent: mirrorQuote?.margin_percent,
+		vatRate: mirrorQuote?.vat_rate || '12',
+		fxSnapshot: mirrorQuote?.fx_snapshot ?? {},
+		fxManual: mirrorQuote?.fx_manual ?? {},
+		charges: mirrorQuote?.charges ?? [],
+		canViewCost: !!mirrorEcon,
+		minMarginPercent: mirrorEcon ? Number(mirrorEcon.min_margin_percent) : null,
+		serverTotals: {
+			subtotalExclVat: mirrorQuote?.subtotal_excl_vat,
+			chargesTotal: mirrorQuote?.charges_total,
+			vatAmount: mirrorQuote?.vat_amount,
+			totalInclVat: mirrorQuote?.total_incl_vat,
+			grossMarginPercent: mirrorEcon ? Number(mirrorEcon.gross_margin_percent) : null,
+		},
+	});
+	const mirrorTotals = pricingMirror.totals;
 	const [showAiMatch, setShowAiMatch] = useState(false);
 	const [showGenerateQuote, setShowGenerateQuote] = useState(false);
 	const [showSettings, setShowSettings] = useState(false);
@@ -171,45 +233,79 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	}, [hasUnsavedChanges]);
 
 	const handleSave = async () => {
+		// Only push rows the seller actually edited; the server refetch re-merges the rest.
+		const editedItems = draftItems.filter((item) => dirtyIds.has(item.id));
+		if (editedItems.length === 0) return;
+		const quoteId = deal?.active_quote?.id;
+		if (!quoteId) return;
 		try {
-			// Only push rows the seller actually edited; the server refetch re-merges the rest.
-			const editedItems = draftItems.filter((item) => dirtyIds.has(item.id));
-			for (const item of editedItems) {
-				await updateMutation.mutateAsync({
+			// P0-4: ONE transactional request (all-or-nothing) instead of the old per-row
+			// `for … await updateQuoteItem` loop that could half-save then blow up mid-way.
+			await bulkUpdateMutation.mutateAsync({
+				quoteId,
+				items: editedItems.map((item) => ({
 					id: item.id,
-					data: {
-						quantity: item.quantity,
-						frozen_base_price: item.frozen_base_price,
-						frozen_currency: item.frozen_currency,
-						logistics_cost: item.logistics_cost,
-						customs_duty: item.customs_duty,
-						margin_percent: item.margin_percent,
-						discount_percent: item.discount_percent,
-						lead_time_days: item.lead_time_days,
-						hs_code: item.hs_code,
-					},
-				});
-			}
+					quantity: item.quantity,
+					frozen_base_price: item.frozen_base_price,
+					frozen_currency: item.frozen_currency,
+					logistics_cost: item.logistics_cost,
+					customs_duty: item.customs_duty,
+					margin_percent: item.margin_percent,
+					discount_percent: item.discount_percent,
+					lead_time_days: item.lead_time_days,
+					hs_code: item.hs_code,
+				})),
+			});
+			setCellErrors({});
 			clearDirtyAfterSave(editedItems.map((item) => item.id));
+			toast.success(t('quote.save.success'));
 			if (onSave) onSave();
-		} catch {
-			toast.error(t('errors.operationFailed'));
+		} catch (error) {
+			// Transactional rejection → NOTHING was written; keep the dirty rows and highlight the
+			// offending cells by id+field with the machine code (per-row errors from the endpoint).
+			const rows = extractBulkErrorRows(error);
+			if (rows !== null) {
+				const parsed = parseBulkItemErrors(rows);
+				setCellErrors(parsed);
+				const rowCount = new Set(Object.keys(parsed).map((key) => key.split(':')[0])).size;
+				toast.error(t('quote.save.rowsWithErrors', { count: rowCount }));
+			} else {
+				toast.error(translateApiError(error));
+			}
 		}
 	};
 
+	// «Добавить и продолжить» (spec §5 п.7): add the row, KEEP the add-row open, reset the
+	// fields, refocus the name input, and scroll the new row into view — so the seller can
+	// enter a whole list without re-opening the add-row each time. Enter also submits.
+	// Add-row inputs are PLAIN controlled inputs (state per keystroke), not NumericCell:
+	// NumericCell commits on blur, so Enter-submit read stale qty/price from the closure
+	// (adversarial-review MAJOR — the typed values were silently dropped). Normalization
+	// (comma decimal, spaces) and clamping to the caps happen here at submit instead.
+	const parseAddRowNumber = (raw: string): number =>
+		Number(String(raw).replace(/[\s\u00A0\u202F]+/g, '').replace(',', '.'));
+
 	const handleAddItem = async () => {
 		if (!newItemName.trim() || !deal?.active_quote) return;
+		const qty = Math.min(QUOTE_ITEM_MAX_QUANTITY, Math.max(1, Math.trunc(parseAddRowNumber(newItemQty) || 1)));
+		const price = Math.min(QUOTE_ITEM_MAX_UNIT_PRICE, Math.max(0, parseAddRowNumber(newItemPrice) || 0));
 		try {
 			await createItemMutation.mutateAsync({
 				quote: deal.active_quote.id,
 				imported_raw_name: newItemName.trim(),
-				quantity: 1,
-				frozen_base_price: '0',
+				quantity: qty,
+				frozen_base_price: String(price),
 				// New lines inherit the КП's default cost currency (fallback UZS).
 				frozen_currency: deal.active_quote.cost_currency_default || 'UZS',
 			});
 			setNewItemName('');
-			setShowAddRow(false);
+			setNewItemQty('1');
+			setNewItemPrice('0');
+			// Keep the add-row open and put the cursor back in the name field for the next line.
+			requestAnimationFrame(() => {
+				addNameRef.current?.focus();
+				addRowRef.current?.scrollIntoView?.({ block: 'nearest' });
+			});
 		} catch {
 			toast.error(t('errors.operationFailed'));
 		}
@@ -340,18 +436,17 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 		const native = toDecimal(item.frozen_base_price).plus(toDecimal(item.customs_duty));
 		return native.mul(toDecimal(fxRateFor(item.frozen_currency))).toString();
 	};
-	// Per-line economics derived from stored values (no backend call). The authoritative
-	// loss/floor signal stays КП-level (rail); this chip is advisory per-line triage.
+
+	// Per-line economics (advisory chip) — now sourced from the live mirror so a dirty row's
+	// margin/loss triage tracks the in-progress edit. Returns null when cost is hidden/unknown.
 	const lineSignal = (item: QuoteItem) => {
-		const price = toDecimal(item.final_price_excl_vat).mul(item.quantity || 0);
-		const cost = toDecimal(item.landed_cost).mul(item.quantity || 0);
-		if (price.lte(0)) return null;
-		const marginPct = price.minus(cost).div(price).mul(100).toNumber();
+		const line = pricingMirror.lineFor(item);
+		if (line.marginPct == null || line.profit == null) return null;
 		return {
-			marginPct,
-			profit: price.minus(cost).toString(),
-			belowCost: price.lt(cost),
-			belowFloor: !!econ && marginPct < Number(econ.min_margin_percent),
+			marginPct: line.marginPct,
+			profit: line.profit,
+			belowCost: line.belowCost,
+			belowFloor: line.belowFloor,
 		};
 	};
 	// КП срок поставки (до N дн.) — backend-computed effective value.
@@ -385,7 +480,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 				</TooltipTrigger>
 				<TooltipContent>
 					<div className="flex flex-col gap-0.5">
-						<span>{t('quote.economics.landedCost')}: {formatMoney(item.landed_cost, presentationCurrency)}</span>
+						<span>{t('quote.economics.landedCost')}: {formatMoney(pricingMirror.lineFor(item).landedCost ?? item.landed_cost, presentationCurrency)}</span>
 						<span>{t('quote.lineProfit')}: {formatMoney(sig.profit, presentationCurrency)}</span>
 						{/* F6: the per-line margin is derived, not editable — markup is one value for the
 						    whole КП. Point the seller at «Настройки КП» instead of clicking the cell. */}
@@ -478,15 +573,23 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 					</div>
 				)}
 
-				{/* Итоги — биллинговая проекция (что платит покупатель) */}
+				{/* Итоги — биллинговая проекция (что платит покупатель). Живой пересчёт (P0-2): пока
+				    есть несохранённые правки строк, показываем предпросмотр итогов из зеркала. */}
 				<div className="flex flex-col gap-2 rounded-md border p-3">
-					<span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('quote.rail.totals')}</span>
-					{railRow(t('quote.subtotal'), formatMoney(activeQuote?.subtotal_excl_vat, presentationCurrency))}
+					<div className="flex items-center justify-between">
+						<span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('quote.rail.totals')}</span>
+						{mirrorTotals.isDraft && (
+							<span className="text-xs font-medium italic text-warning">
+								{mirrorTotals.computable ? t('quote.draftPreview') : t('quote.draftRecalcOnSave')}
+							</span>
+						)}
+					</div>
+					{railRow(t('quote.subtotal'), formatMoney(mirrorTotals.subtotalExclVat, presentationCurrency))}
 					{activeQuote?.charges_total != null && (activeQuote.charges?.length ?? 0) > 0 &&
-						railRow(t('quote.charges.title'), formatMoney(activeQuote.charges_total, presentationCurrency))}
-					{railRow(t('quote.vat'), formatMoney(activeQuote?.vat_amount, presentationCurrency))}
+						railRow(t('quote.charges.title'), formatMoney(mirrorTotals.chargesTotal, presentationCurrency))}
+					{railRow(t('quote.vat'), formatMoney(mirrorTotals.vatAmount, presentationCurrency))}
 					<Separator />
-					{railRow(t('quote.total'), formatMoney(activeQuote?.total_incl_vat, presentationCurrency), { strong: true, tone: 'text-primary' })}
+					{railRow(t('quote.total'), formatMoney(mirrorTotals.totalInclVat, presentationCurrency), { strong: true, tone: 'text-primary' })}
 				</div>
 
 				{/* Экспорт документа (Save lives in the sticky footer) */}
@@ -545,9 +648,9 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 			)}
 			<Tooltip>
 				<TooltipTrigger asChild>
-					<span className="cursor-help text-xs font-bold tabular-nums">{compactNumber(activeQuote?.total_incl_vat, i18n.language)}</span>
+					<span className="cursor-help text-xs font-bold tabular-nums">{compactNumber(mirrorTotals.totalInclVat, i18n.language)}</span>
 				</TooltipTrigger>
-				<TooltipContent side="left">{t('quote.total')}: {formatMoney(activeQuote?.total_incl_vat, presentationCurrency)}</TooltipContent>
+				<TooltipContent side="left">{t('quote.total')}: {formatMoney(mirrorTotals.totalInclVat, presentationCurrency)}</TooltipContent>
 			</Tooltip>
 		</div>
 	);
@@ -736,7 +839,9 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 															ariaLabel={t('quote.quantity')}
 															className="h-8 border-none shadow-none rounded-none text-xs font-semibold text-center focus-visible:ring-1"
 															value={item.quantity}
-															onCommit={(value) => setField(item.id, 'quantity', value)}
+															invalid={!!cellError(item.id, 'quantity')}
+															errorMessage={cellError(item.id, 'quantity')}
+															onCommit={(value) => handleFieldChange(item.id, 'quantity', value)}
 														/>
 													</TableCell>
 													{showCostColumns && (
@@ -752,7 +857,9 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 																				ariaLabel={t('quote.basePrice')}
 																				className="h-8 w-full border-none shadow-none rounded-none text-xs font-mono text-right pr-2 focus-visible:ring-1"
 																				value={item.frozen_base_price}
-																				onCommit={(value) => setField(item.id, 'frozen_base_price', value)}
+																				invalid={!!cellError(item.id, 'frozen_base_price')}
+																				errorMessage={cellError(item.id, 'frozen_base_price')}
+																				onCommit={(value) => handleFieldChange(item.id, 'frozen_base_price', value)}
 																			/>
 																		</span>
 																	</TooltipTrigger>
@@ -767,8 +874,13 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 																		</div>
 																	</TooltipContent>
 																</Tooltip>
-																<Select value={item.frozen_currency || 'UZS'} onValueChange={(code) => setField(item.id, 'frozen_currency', code)}>
-																	<SelectTrigger aria-label={t('quote.lineCurrency')} className="h-8 w-20 shrink-0 border-none shadow-none rounded-none text-xs focus:ring-1">
+																<Select value={item.frozen_currency || 'UZS'} onValueChange={(code) => handleFieldChange(item.id, 'frozen_currency', code)}>
+																	<SelectTrigger
+																		aria-label={t('quote.lineCurrency')}
+																		aria-invalid={!!cellError(item.id, 'frozen_currency') || undefined}
+																		title={cellError(item.id, 'frozen_currency')}
+																		className={cn('h-8 w-20 shrink-0 border-none shadow-none rounded-none text-xs focus:ring-1', cellError(item.id, 'frozen_currency') && 'border-destructive ring-1 ring-destructive')}
+																	>
 																		<SelectValue />
 																	</SelectTrigger>
 																	<SelectContent>
@@ -782,9 +894,31 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 														<TableCell className="px-2 py-1.5 text-center">{marginCell(item)}</TableCell>
 													)}
 													<TableCell className="px-2 py-1.5 text-right pr-4">
-														<span className="text-sm font-bold tabular-nums">
-															{formatMoney(calculateLineTotal(item.final_price_excl_vat, item.quantity), presentationCurrency)}
-														</span>
+														{(() => {
+															// Live «Сумма» from the mirror: for a dirty row this is the preview
+															// (marked «черновик» in italics); a needsServerRecalc row shows the
+															// server total with a «пересчёт после сохранения» hint (honest, not faked).
+															const line = pricingMirror.lineFor(item);
+															const money = formatMoney(line.lineTotal, presentationCurrency);
+															if (line.needsServerRecalc) {
+																return (
+																	<Tooltip>
+																		<TooltipTrigger asChild>
+																			<span className="cursor-help text-sm font-bold italic tabular-nums text-muted-foreground">{money} ~</span>
+																		</TooltipTrigger>
+																		<TooltipContent>{t('quote.draftRecalcOnSave')}</TooltipContent>
+																	</Tooltip>
+																);
+															}
+															return (
+																<span
+																	className={cn('text-sm font-bold tabular-nums', line.isDraft && 'italic text-primary')}
+																	title={line.isDraft ? t('quote.draftPreview') : undefined}
+																>
+																	{line.isDraft ? '≈ ' : ''}{money}
+																</span>
+															);
+														})()}
 													</TableCell>
 													<TableCell className="px-1 py-0.5">
 														<Button variant="ghost" size="icon-xs" onClick={() => handleDeleteItem(item.id)} className="text-muted-foreground hover:text-destructive" title={t('common.delete')}>
@@ -803,9 +937,11 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 																		<Input
 																			type="text"
 																			placeholder={t('quote.hsCode')}
-																			className="h-8 w-40 text-xs font-mono"
+																			aria-invalid={!!cellError(item.id, 'hs_code') || undefined}
+																			title={cellError(item.id, 'hs_code')}
+																			className={cn('h-8 w-40 text-xs font-mono', cellError(item.id, 'hs_code') && 'border-destructive ring-1 ring-destructive')}
 																			value={item.hs_code || ''}
-																			onChange={(e) => setField(item.id, 'hs_code', e.target.value)}
+																			onChange={(e) => handleFieldChange(item.id, 'hs_code', e.target.value)}
 																		/>
 																	</label>
 																	{canViewCost && (
@@ -818,7 +954,9 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 																				ariaLabel={t('quote.customsDuty')}
 																				className="h-8 w-32 text-xs font-mono text-right"
 																				value={item.customs_duty}
-																				onCommit={(value) => setField(item.id, 'customs_duty', value)}
+																				invalid={!!cellError(item.id, 'customs_duty')}
+																				errorMessage={cellError(item.id, 'customs_duty')}
+																				onCommit={(value) => handleFieldChange(item.id, 'customs_duty', value)}
 																			/>
 																		</label>
 																	)}
@@ -830,7 +968,9 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 																			ariaLabel={t('quote.leadTime')}
 																			className="h-8 w-24 text-xs text-center"
 																			value={item.lead_time_days ?? 0}
-																			onCommit={(value) => setField(item.id, 'lead_time_days', value)}
+																			invalid={!!cellError(item.id, 'lead_time_days')}
+																			errorMessage={cellError(item.id, 'lead_time_days')}
+																			onCommit={(value) => handleFieldChange(item.id, 'lead_time_days', value)}
 																		/>
 																	</label>
 																	{canViewCost && (
@@ -842,7 +982,9 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 																				ariaLabel={t('quote.discountPercent')}
 																				className="h-8 w-24 text-xs text-center"
 																				value={item.discount_percent ?? 0}
-																				onCommit={(value) => setField(item.id, 'discount_percent', value)}
+																				invalid={!!cellError(item.id, 'discount_percent')}
+																				errorMessage={cellError(item.id, 'discount_percent')}
+																				onCommit={(value) => handleFieldChange(item.id, 'discount_percent', value)}
 																			/>
 																		</label>
 																	)}
@@ -850,7 +992,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 																{canViewCost && (
 																	<div className="flex flex-wrap gap-6 border-t pt-2 text-xs">
 																		<span className="text-muted-foreground">
-																			{t('quote.economics.landedCost')}: <span className="font-semibold tabular-nums text-foreground">{formatMoney(item.landed_cost, presentationCurrency)}</span>
+																			{t('quote.economics.landedCost')}: <span className="font-semibold tabular-nums text-foreground">{formatMoney(pricingMirror.lineFor(item).landedCost ?? item.landed_cost, presentationCurrency)}</span>
 																		</span>
 																		{(() => {
 																			const sig = lineSignal(item);
@@ -876,18 +1018,49 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 										);
 									})}
 									{showAddRow && (
-										<TableRow className="bg-primary/5">
+										<TableRow ref={addRowRef} className="bg-primary/5">
 											<TableCell className="px-2 py-1.5 text-center text-xs text-muted-foreground">+</TableCell>
 											<TableCell className="p-1" colSpan={mainColCount - 1}>
-												<div className="flex items-center gap-2">
+												{/* Быстрый ввод (spec §5 п.7): наименование + кол-во + базовая цена. Enter =
+												    «добавить и продолжить» (строка остаётся, фокус возвращается в наименование);
+												    Escape закрывает строку добавления. */}
+												<div
+													className="flex flex-wrap items-center gap-2"
+													onKeyDown={(event) => {
+														if (event.key === 'Enter') {
+															event.preventDefault();
+															handleAddItem();
+														} else if (event.key === 'Escape') {
+															event.preventDefault();
+															setShowAddRow(false);
+														}
+													}}
+												>
 													<Input
+														ref={addNameRef}
 														type="text"
 														value={newItemName}
 														onChange={e => setNewItemName(e.target.value)}
-														onKeyDown={e => e.key === 'Enter' && handleAddItem()}
 														placeholder={t('quote.addItemPlaceholder')}
-														className="h-7 flex-1 text-sm"
+														aria-label={t('catalog.table.name')}
+														className="h-7 min-w-[200px] flex-1 text-sm"
 														autoFocus
+													/>
+													<Input
+														type="text"
+														inputMode="numeric"
+														value={newItemQty}
+														onChange={e => setNewItemQty(e.target.value)}
+														aria-label={t('quote.quantity')}
+														className="h-7 w-20 text-sm text-center"
+													/>
+													<Input
+														type="text"
+														inputMode="decimal"
+														value={newItemPrice}
+														onChange={e => setNewItemPrice(e.target.value)}
+														aria-label={t('quote.basePrice')}
+														className="h-7 w-32 text-sm font-mono text-right"
 													/>
 													<Button size="sm" onClick={handleAddItem} disabled={!newItemName.trim() || createItemMutation.isPending}>
 														{t('common.add')}
@@ -930,18 +1103,23 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 				)}
 			</div>
 
-			{/* Sticky totals footer — always in view (fixes «итоги за кнопкой» on ≤768px laptops) */}
+			{/* Sticky totals footer — always in view (fixes «итоги за кнопкой» on ≤768px laptops).
+			    Total + margin come from the live mirror so they track unsaved line edits (P0-2). */}
 			<StickyTotalsBar
 				positionsCount={draftItems.length}
 				canViewCost={canViewCost}
-				marginPercent={econ ? Number(econ.gross_margin_percent) : undefined}
+				marginPercent={mirrorTotals.grossMarginPercent ?? (econ ? Number(econ.gross_margin_percent) : undefined)}
 				marginTone={econ
-					? marginToneClass(econ.below_cost || econ.below_floor, Number(econ.gross_margin_percent), Number(econ.target_margin_percent))
+					? marginToneClass(
+						econ.below_cost || econ.below_floor,
+						mirrorTotals.grossMarginPercent ?? Number(econ.gross_margin_percent),
+						Number(econ.target_margin_percent),
+					)
 					: undefined}
-				totalInclVat={activeQuote?.total_incl_vat}
+				totalInclVat={mirrorTotals.totalInclVat}
 				currency={presentationCurrency}
 				hasUnsavedChanges={hasUnsavedChanges}
-				saving={updateMutation.isPending}
+				saving={bulkUpdateMutation.isPending}
 				onSave={handleSave}
 			/>
 
