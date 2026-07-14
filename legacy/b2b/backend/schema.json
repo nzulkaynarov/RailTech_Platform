@@ -22568,11 +22568,7 @@
                         "maxLength": 500
                     },
                     "quantity": {
-                        "type": "integer",
-                        "maximum": 2147483647,
-                        "minimum": 1,
-                        "title": "Количество",
-                        "description": "Количество единиц товара"
+                        "type": "integer"
                     },
                     "unit": {
                         "type": "string",
@@ -22619,9 +22615,7 @@
                     "frozen_base_price": {
                         "type": "string",
                         "format": "decimal",
-                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$",
-                        "title": "Базовая цена (заморожена)",
-                        "description": "Цена поставщика, зафиксированная в момент создания КП"
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$"
                     },
                     "frozen_currency": {
                         "type": "string",
@@ -22633,37 +22627,25 @@
                     "logistics_cost": {
                         "type": "string",
                         "format": "decimal",
-                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$",
-                        "title": "Логистика",
-                        "description": "Стоимость доставки за единицу"
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$"
                     },
                     "customs_duty": {
                         "type": "string",
                         "format": "decimal",
-                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$",
-                        "title": "Таможенная пошлина",
-                        "description": "Таможенная пошлина за единицу"
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$"
                     },
                     "margin_percent": {
                         "type": "string",
                         "format": "decimal",
-                        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
-                        "title": "Наценка (%)",
-                        "description": "Процент наценки RailTech (0–500%)"
+                        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$"
                     },
                     "discount_percent": {
                         "type": "string",
                         "format": "decimal",
-                        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
-                        "title": "Скидка (%)",
-                        "description": "Процент скидки на позицию (0–100%)"
+                        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$"
                     },
                     "lead_time_days": {
-                        "type": "integer",
-                        "maximum": 2147483647,
-                        "minimum": 0,
-                        "title": "Срок поставки (дней)",
-                        "description": "Срок поставки позиции в днях от заказа/предоплаты"
+                        "type": "integer"
                     }
                 }
             },
@@ -24563,11 +24545,7 @@
                         "maxLength": 500
                     },
                     "quantity": {
-                        "type": "integer",
-                        "maximum": 2147483647,
-                        "minimum": 1,
-                        "title": "Количество",
-                        "description": "Количество единиц товара"
+                        "type": "integer"
                     },
                     "unit": {
                         "type": "string",
@@ -24618,9 +24596,7 @@
                     "frozen_base_price": {
                         "type": "string",
                         "format": "decimal",
-                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$",
-                        "title": "Базовая цена (заморожена)",
-                        "description": "Цена поставщика, зафиксированная в момент создания КП"
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$"
                     },
                     "frozen_currency": {
                         "type": "string",
@@ -24631,37 +24607,25 @@
                     "logistics_cost": {
                         "type": "string",
                         "format": "decimal",
-                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$",
-                        "title": "Логистика",
-                        "description": "Стоимость доставки за единицу"
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$"
                     },
                     "customs_duty": {
                         "type": "string",
                         "format": "decimal",
-                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$",
-                        "title": "Таможенная пошлина",
-                        "description": "Таможенная пошлина за единицу"
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$"
                     },
                     "margin_percent": {
                         "type": "string",
                         "format": "decimal",
-                        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
-                        "title": "Наценка (%)",
-                        "description": "Процент наценки RailTech (0–500%)"
+                        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$"
                     },
                     "discount_percent": {
                         "type": "string",
                         "format": "decimal",
-                        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
-                        "title": "Скидка (%)",
-                        "description": "Процент скидки на позицию (0–100%)"
+                        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$"
                     },
                     "lead_time_days": {
-                        "type": "integer",
-                        "maximum": 2147483647,
-                        "minimum": 0,
-                        "title": "Срок поставки (дней)",
-                        "description": "Срок поставки позиции в днях от заказа/предоплаты"
+                        "type": "integer"
                     },
                     "landed_cost": {
                         "type": "string",
@@ -24728,11 +24692,7 @@
                         "maxLength": 500
                     },
                     "quantity": {
-                        "type": "integer",
-                        "maximum": 2147483647,
-                        "minimum": 1,
-                        "title": "Количество",
-                        "description": "Количество единиц товара"
+                        "type": "integer"
                     },
                     "unit": {
                         "type": "string",
@@ -24779,9 +24739,7 @@
                     "frozen_base_price": {
                         "type": "string",
                         "format": "decimal",
-                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$",
-                        "title": "Базовая цена (заморожена)",
-                        "description": "Цена поставщика, зафиксированная в момент создания КП"
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$"
                     },
                     "frozen_currency": {
                         "type": "string",
@@ -24793,37 +24751,25 @@
                     "logistics_cost": {
                         "type": "string",
                         "format": "decimal",
-                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$",
-                        "title": "Логистика",
-                        "description": "Стоимость доставки за единицу"
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$"
                     },
                     "customs_duty": {
                         "type": "string",
                         "format": "decimal",
-                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$",
-                        "title": "Таможенная пошлина",
-                        "description": "Таможенная пошлина за единицу"
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$"
                     },
                     "margin_percent": {
                         "type": "string",
                         "format": "decimal",
-                        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
-                        "title": "Наценка (%)",
-                        "description": "Процент наценки RailTech (0–500%)"
+                        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$"
                     },
                     "discount_percent": {
                         "type": "string",
                         "format": "decimal",
-                        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
-                        "title": "Скидка (%)",
-                        "description": "Процент скидки на позицию (0–100%)"
+                        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$"
                     },
                     "lead_time_days": {
-                        "type": "integer",
-                        "maximum": 2147483647,
-                        "minimum": 0,
-                        "title": "Срок поставки (дней)",
-                        "description": "Срок поставки позиции в днях от заказа/предоплаты"
+                        "type": "integer"
                     }
                 },
                 "required": [

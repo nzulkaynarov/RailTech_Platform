@@ -16,20 +16,34 @@ from django.test import override_settings
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
-from crm.models import Deal, DealSellerRouting, DealStage, Quote, QuoteItem, QuoteItemHistory, QuoteStatus
+from accounts.models import (Company, CompanyMember, CompanyType, CustomUser,
+                             SystemRole, WorkspaceRole)
+from crm.models import (Deal, DealSellerRouting, DealStage, Quote, QuoteItem,
+                        QuoteItemHistory, QuoteStatus)
 
 BULK_URL = "/api/v1/crm/quote-items/bulk-update/"
 
 
 @pytest.fixture
 def lookups(db):
-    WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
-    CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
-    CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
-    DealStage.objects.get_or_create(code="DRAFT", defaults={"name": "Draft", "sort_order": 10})
-    QuoteStatus.objects.get_or_create(code="DRAFT", defaults={"name": "Draft", "sort_order": 10})
-    SystemRole.objects.get_or_create(code="ADMIN", defaults={"name": "Admin", "sort_order": 10})
+    WorkspaceRole.objects.get_or_create(
+        code="OWNER", defaults={"name": "Owner", "sort_order": 10}
+    )
+    CompanyType.objects.get_or_create(
+        code="CLIENT", defaults={"name": "Client", "sort_order": 10}
+    )
+    CompanyType.objects.get_or_create(
+        code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20}
+    )
+    DealStage.objects.get_or_create(
+        code="DRAFT", defaults={"name": "Draft", "sort_order": 10}
+    )
+    QuoteStatus.objects.get_or_create(
+        code="DRAFT", defaults={"name": "Draft", "sort_order": 10}
+    )
+    SystemRole.objects.get_or_create(
+        code="ADMIN", defaults={"name": "Admin", "sort_order": 10}
+    )
 
 
 def _seller(name, inn, email):
@@ -60,7 +74,9 @@ def _api(user, ctx="SELLER"):
 
 def _quote_with_items(buyer_co, seller_co, base_prices):
     """A buyer deal routed to `seller_co` with one line per entry in `base_prices` (qty=1)."""
-    deal = Deal.objects.create(title="КП", company=buyer_co, stage=DealStage.objects.get(code="DRAFT"))
+    deal = Deal.objects.create(
+        title="КП", company=buyer_co, stage=DealStage.objects.get(code="DRAFT")
+    )
     DealSellerRouting.objects.create(deal=deal, seller_company=seller_co)
     quote = Quote.objects.create(
         deal=deal,
@@ -95,7 +111,9 @@ def world(lookups):
 @pytest.mark.django_db
 def test_bulk_update_success_single_recalc(world):
     """3 lines update in one call; the cascade recalculates EXACTLY once; totals reflect the batch."""
-    _deal, quote, items = _quote_with_items(world["buyer_co"], world["seller_co"], [100, 100, 100])
+    _deal, quote, items = _quote_with_items(
+        world["buyer_co"], world["seller_co"], [100, 100, 100]
+    )
     payload = {
         "quote": quote.id,
         "items": [
@@ -115,7 +133,9 @@ def test_bulk_update_success_single_recalc(world):
         resp = _api(world["seller_user"]).post(BULK_URL, payload, format="json")
 
     assert resp.status_code == 200, resp.content
-    assert spy.call_count == 1, "cascade must recalculate ONCE for the whole batch, not per row"
+    assert (
+        spy.call_count == 1
+    ), "cascade must recalculate ONCE for the whole batch, not per row"
 
     body = resp.json()
     assert isinstance(body, list) and len(body) == 3
@@ -131,10 +151,15 @@ def test_bulk_update_success_single_recalc(world):
 @pytest.mark.django_db
 def test_bulk_update_writes_history_like_single_patch(world):
     """recalculate_quote snapshots QuoteItemHistory — the bulk path leaves the same audit trail."""
-    _deal, quote, items = _quote_with_items(world["buyer_co"], world["seller_co"], [100, 100])
+    _deal, quote, items = _quote_with_items(
+        world["buyer_co"], world["seller_co"], [100, 100]
+    )
     before = QuoteItemHistory.objects.filter(quote_item__quote=quote).count()
 
-    payload = {"quote": quote.id, "items": [{"id": items[0].id, "frozen_base_price": "300"}]}
+    payload = {
+        "quote": quote.id,
+        "items": [{"id": items[0].id, "frozen_base_price": "300"}],
+    }
     resp = _api(world["seller_user"]).post(BULK_URL, payload, format="json")
 
     assert resp.status_code == 200, resp.content
@@ -145,12 +170,17 @@ def test_bulk_update_writes_history_like_single_patch(world):
 @pytest.mark.django_db
 def test_bulk_update_one_bad_row_rolls_back_all(world):
     """A single over-cap qty fails the WHOLE batch: 400 + per-row errors, nothing persisted."""
-    _deal, quote, items = _quote_with_items(world["buyer_co"], world["seller_co"], [100, 100])
+    _deal, quote, items = _quote_with_items(
+        world["buyer_co"], world["seller_co"], [100, 100]
+    )
     over_cap = 10**9  # > QUOTE_ITEM_MAX_QUANTITY (1_000_000)
     payload = {
         "quote": quote.id,
         "items": [
-            {"id": items[0].id, "frozen_base_price": "500"},  # valid — must NOT be saved
+            {
+                "id": items[0].id,
+                "frozen_base_price": "500",
+            },  # valid — must NOT be saved
             {"id": items[1].id, "quantity": over_cap},  # invalid
         ],
     }
@@ -174,8 +204,12 @@ def test_bulk_update_one_bad_row_rolls_back_all(world):
 @pytest.mark.django_db
 def test_bulk_update_rejects_item_from_another_quote(world):
     """Every row must belong to the ONE addressed quote — a foreign line is a per-row error."""
-    _deal_a, quote_a, items_a = _quote_with_items(world["buyer_co"], world["seller_co"], [100])
-    _deal_b, _quote_b, items_b = _quote_with_items(world["buyer_co"], world["seller_co"], [100])
+    _deal_a, quote_a, items_a = _quote_with_items(
+        world["buyer_co"], world["seller_co"], [100]
+    )
+    _deal_b, _quote_b, items_b = _quote_with_items(
+        world["buyer_co"], world["seller_co"], [100]
+    )
 
     payload = {
         "quote": quote_a.id,
@@ -199,10 +233,15 @@ def test_bulk_update_rejects_item_from_another_quote(world):
 @pytest.mark.django_db
 def test_bulk_update_foreign_seller_gets_404(world):
     """A seller NOT routed to the deal cannot reach its КП — 404 like the single PATCH."""
-    _deal, quote, items = _quote_with_items(world["buyer_co"], world["seller_co"], [100])
+    _deal, quote, items = _quote_with_items(
+        world["buyer_co"], world["seller_co"], [100]
+    )
     other_user, _other_co = _seller("Seller B", "B200", "sb@t.test")
 
-    payload = {"quote": quote.id, "items": [{"id": items[0].id, "frozen_base_price": "150"}]}
+    payload = {
+        "quote": quote.id,
+        "items": [{"id": items[0].id, "frozen_base_price": "150"}],
+    }
     resp = _api(other_user).post(BULK_URL, payload, format="json")
 
     assert resp.status_code == 404
@@ -216,11 +255,16 @@ def test_bulk_update_frozen_quote_rejected(world):
     """A sent/frozen КП is locked — QUOTE_FROZEN, same lock as charges/settings edits."""
     from django.utils import timezone
 
-    _deal, quote, items = _quote_with_items(world["buyer_co"], world["seller_co"], [100])
+    _deal, quote, items = _quote_with_items(
+        world["buyer_co"], world["seller_co"], [100]
+    )
     quote.frozen_at = timezone.now()
     quote.save(update_fields=["frozen_at"])
 
-    payload = {"quote": quote.id, "items": [{"id": items[0].id, "frozen_base_price": "150"}]}
+    payload = {
+        "quote": quote.id,
+        "items": [{"id": items[0].id, "frozen_base_price": "150"}],
+    }
     resp = _api(world["seller_user"]).post(BULK_URL, payload, format="json")
 
     assert resp.status_code == 400
@@ -230,12 +274,19 @@ def test_bulk_update_frozen_quote_rejected(world):
 @pytest.mark.django_db
 def test_bulk_update_platform_admin_viewer_cannot_act(world):
     """Platform-admin viewer never acts on behalf of a company — ADMIN_VIEWER_CANNOT_ACT."""
-    admin = CustomUser.objects.create_user(email="op@t.test", username="op@t.test", password="x")
+    admin = CustomUser.objects.create_user(
+        email="op@t.test", username="op@t.test", password="x"
+    )
     admin.role = SystemRole.objects.get(code="ADMIN")
     admin.save(update_fields=["role"])
-    _deal, quote, items = _quote_with_items(world["buyer_co"], world["seller_co"], [100])
+    _deal, quote, items = _quote_with_items(
+        world["buyer_co"], world["seller_co"], [100]
+    )
 
-    payload = {"quote": quote.id, "items": [{"id": items[0].id, "frozen_base_price": "150"}]}
+    payload = {
+        "quote": quote.id,
+        "items": [{"id": items[0].id, "frozen_base_price": "150"}],
+    }
     resp = _api(admin, ctx="").post(BULK_URL, payload, format="json")
 
     assert resp.status_code == 403
@@ -246,10 +297,14 @@ def test_bulk_update_platform_admin_viewer_cannot_act(world):
 @override_settings(QUOTE_ITEMS_BULK_MAX_ROWS=2)
 def test_bulk_update_batch_over_limit_rejected(world):
     """A batch above the configured cap is refused wholesale (QUOTE_ITEMS_BULK_TOO_LARGE)."""
-    _deal, quote, items = _quote_with_items(world["buyer_co"], world["seller_co"], [100, 100, 100])
+    _deal, quote, items = _quote_with_items(
+        world["buyer_co"], world["seller_co"], [100, 100, 100]
+    )
     payload = {
         "quote": quote.id,
-        "items": [{"id": item.id, "frozen_base_price": "150"} for item in items],  # 3 > cap 2
+        "items": [
+            {"id": item.id, "frozen_base_price": "150"} for item in items
+        ],  # 3 > cap 2
     }
     resp = _api(world["seller_user"]).post(BULK_URL, payload, format="json")
 
@@ -260,8 +315,41 @@ def test_bulk_update_batch_over_limit_rejected(world):
 @pytest.mark.django_db
 def test_bulk_update_empty_batch_rejected(world):
     """An empty items list is a malformed request (QUOTE_ITEMS_BULK_EMPTY)."""
-    _deal, quote, _items = _quote_with_items(world["buyer_co"], world["seller_co"], [100])
-    resp = _api(world["seller_user"]).post(BULK_URL, {"quote": quote.id, "items": []}, format="json")
+    _deal, quote, _items = _quote_with_items(
+        world["buyer_co"], world["seller_co"], [100]
+    )
+    resp = _api(world["seller_user"]).post(
+        BULK_URL, {"quote": quote.id, "items": []}, format="json"
+    )
 
     assert resp.status_code == 400
     assert resp.json()["detail"] == "QUOTE_ITEMS_BULK_EMPTY"
+
+
+@pytest.mark.django_db
+def test_bulk_update_bounds_violations_return_machine_codes(world):
+    """Model-bound violations (not only the caps) must surface as machine CODES in
+    rows[].errors — the frontend highlights cells by code, never by prose (Rule 2/7)."""
+    _deal, quote, items = _quote_with_items(
+        world["buyer_co"], world["seller_co"], [100, 100, 100]
+    )
+    payload = {
+        "quote": quote.id,
+        "items": [
+            {"id": items[0].id, "quantity": 0},
+            {"id": items[1].id, "discount_percent": "150"},
+            {"id": items[2].id, "frozen_currency": "NO_SUCH_CCY"},
+        ],
+    }
+
+    resp = _api(world["seller_user"]).post(BULK_URL, payload, format="json")
+
+    assert resp.status_code == 400
+    body = resp.json()
+    assert body["detail"] == "QUOTE_ITEMS_BULK_INVALID"
+    errors_by_id = {row["id"]: row["errors"] for row in body["rows"]}
+    assert "QUOTE_ITEM_QTY_INVALID" in str(errors_by_id[items[0].id]["quantity"])
+    assert "QUOTE_ITEM_DISCOUNT_INVALID" in str(
+        errors_by_id[items[1].id]["discount_percent"]
+    )
+    assert "CURRENCY_NOT_FOUND" in str(errors_by_id[items[2].id]["frozen_currency"])

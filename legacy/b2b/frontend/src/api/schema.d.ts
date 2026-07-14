@@ -8768,10 +8768,6 @@ export interface components {
              * @description Нормализованное русское наименование из AI-импорта (для поиска по каталогу)
              */
             name_canonical?: string;
-            /**
-             * Количество
-             * @description Количество единиц товара
-             */
             quantity?: number;
             /**
              * Единица измерения
@@ -8809,45 +8805,21 @@ export interface components {
              * @description Когда менеджер привязал товар/оффер к этой строке
              */
             assigned_at?: string | null;
-            /**
-             * Базовая цена (заморожена)
-             * Format: decimal
-             * @description Цена поставщика, зафиксированная в момент создания КП
-             */
+            /** Format: decimal */
             frozen_base_price?: string;
             /**
              * Код
              * @description Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')
              */
             frozen_currency?: string | null;
-            /**
-             * Логистика
-             * Format: decimal
-             * @description Стоимость доставки за единицу
-             */
+            /** Format: decimal */
             logistics_cost?: string;
-            /**
-             * Таможенная пошлина
-             * Format: decimal
-             * @description Таможенная пошлина за единицу
-             */
+            /** Format: decimal */
             customs_duty?: string;
-            /**
-             * Наценка (%)
-             * Format: decimal
-             * @description Процент наценки RailTech (0–500%)
-             */
+            /** Format: decimal */
             margin_percent?: string;
-            /**
-             * Скидка (%)
-             * Format: decimal
-             * @description Процент скидки на позицию (0–100%)
-             */
+            /** Format: decimal */
             discount_percent?: string;
-            /**
-             * Срок поставки (дней)
-             * @description Срок поставки позиции в днях от заказа/предоплаты
-             */
             lead_time_days?: number;
         };
         PatchedQuoteRequest: {
@@ -10016,10 +9988,6 @@ export interface components {
              * @description Нормализованное русское наименование из AI-импорта (для поиска по каталогу)
              */
             name_canonical?: string;
-            /**
-             * Количество
-             * @description Количество единиц товара
-             */
             quantity?: number;
             /**
              * Единица измерения
@@ -10058,45 +10026,21 @@ export interface components {
              * @description Когда менеджер привязал товар/оффер к этой строке
              */
             assigned_at?: string | null;
-            /**
-             * Базовая цена (заморожена)
-             * Format: decimal
-             * @description Цена поставщика, зафиксированная в момент создания КП
-             */
+            /** Format: decimal */
             frozen_base_price?: string;
             /**
              * Код
              * @description Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')
              */
             frozen_currency?: string | null;
-            /**
-             * Логистика
-             * Format: decimal
-             * @description Стоимость доставки за единицу
-             */
+            /** Format: decimal */
             logistics_cost?: string;
-            /**
-             * Таможенная пошлина
-             * Format: decimal
-             * @description Таможенная пошлина за единицу
-             */
+            /** Format: decimal */
             customs_duty?: string;
-            /**
-             * Наценка (%)
-             * Format: decimal
-             * @description Процент наценки RailTech (0–500%)
-             */
+            /** Format: decimal */
             margin_percent?: string;
-            /**
-             * Скидка (%)
-             * Format: decimal
-             * @description Процент скидки на позицию (0–100%)
-             */
+            /** Format: decimal */
             discount_percent?: string;
-            /**
-             * Срок поставки (дней)
-             * @description Срок поставки позиции в днях от заказа/предоплаты
-             */
             lead_time_days?: number;
             /**
              * Себестоимость
@@ -10137,10 +10081,6 @@ export interface components {
              * @description Нормализованное русское наименование из AI-импорта (для поиска по каталогу)
              */
             name_canonical?: string;
-            /**
-             * Количество
-             * @description Количество единиц товара
-             */
             quantity?: number;
             /**
              * Единица измерения
@@ -10178,45 +10118,21 @@ export interface components {
              * @description Когда менеджер привязал товар/оффер к этой строке
              */
             assigned_at?: string | null;
-            /**
-             * Базовая цена (заморожена)
-             * Format: decimal
-             * @description Цена поставщика, зафиксированная в момент создания КП
-             */
+            /** Format: decimal */
             frozen_base_price?: string;
             /**
              * Код
              * @description Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')
              */
             frozen_currency?: string | null;
-            /**
-             * Логистика
-             * Format: decimal
-             * @description Стоимость доставки за единицу
-             */
+            /** Format: decimal */
             logistics_cost?: string;
-            /**
-             * Таможенная пошлина
-             * Format: decimal
-             * @description Таможенная пошлина за единицу
-             */
+            /** Format: decimal */
             customs_duty?: string;
-            /**
-             * Наценка (%)
-             * Format: decimal
-             * @description Процент наценки RailTech (0–500%)
-             */
+            /** Format: decimal */
             margin_percent?: string;
-            /**
-             * Скидка (%)
-             * Format: decimal
-             * @description Процент скидки на позицию (0–100%)
-             */
+            /** Format: decimal */
             discount_percent?: string;
-            /**
-             * Срок поставки (дней)
-             * @description Срок поставки позиции в днях от заказа/предоплаты
-             */
             lead_time_days?: number;
         };
         QuoteRequest: {
