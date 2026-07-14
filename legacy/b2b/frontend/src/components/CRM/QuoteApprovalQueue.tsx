@@ -5,11 +5,6 @@ import { useMyApprovalQueue } from '@/hooks/useCRM';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 
-interface QuoteApprovalQueueProps {
-  /** Navigate to the deals surface so the reviewer can open the КП. */
-  onNavigate: (page: string) => void;
-}
-
 /** Map a КП chain status to a StatusBadge variant. */
 const STATUS_VARIANT: Record<string, 'warning' | 'info' | 'success'> = {
   DRAFT: 'info',
@@ -24,7 +19,7 @@ const STATUS_VARIANT: Record<string, 'warning' | 'info' | 'success'> = {
  * Renders nothing when the queue is empty so it stays out of the way for members
  * with no approval duties.
  */
-export const QuoteApprovalQueue: React.FC<QuoteApprovalQueueProps> = ({ onNavigate }) => {
+export const QuoteApprovalQueue: React.FC = () => {
   const { t } = useTranslation();
   const { data: queue = [], isLoading } = useMyApprovalQueue();
 
@@ -44,7 +39,11 @@ export const QuoteApprovalQueue: React.FC<QuoteApprovalQueueProps> = ({ onNaviga
           <button
             key={quote.id}
             type="button"
-            onClick={() => onNavigate('crm-deals')}
+            // Deep-link straight to THIS deal's КП builder, not the generic deals
+            // list — the reviewer lands on the exact quote awaiting their step.
+            // `deal-quote/{id}` is an id-route (not in handleNavigate's allowlist),
+            // so drive it via the hash directly like RecentRequestsCard / DealsPage.
+            onClick={() => { window.location.hash = `deal-quote/${quote.deal}`; }}
             className="flex items-center justify-between rounded-md border px-3 py-2 text-left transition-colors hover:bg-muted/50"
           >
             <div className="flex flex-col leading-tight">

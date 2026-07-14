@@ -376,7 +376,7 @@ function SellerDashboard({ period: _period, stats, onNavigate }: { period: strin
   return (
     <div className="flex flex-col gap-6">
       <SellerAttentionStrip onNavigate={onNavigate} />
-      <QuoteApprovalQueue onNavigate={onNavigate} />
+      <QuoteApprovalQueue />
       <TimeToFirstQuoteCard />
       <PipelineFunnel onNavigate={onNavigate} />
       <MetricStrip stats={stats} role="seller" />
