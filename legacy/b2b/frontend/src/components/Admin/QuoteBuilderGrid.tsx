@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -33,6 +33,8 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { StickyTotalsBar } from '@/components/QuoteBuilder/StickyTotalsBar';
+import { NumericCell } from '@/components/QuoteBuilder/NumericCell';
+import { useQuoteDraft } from '@/components/QuoteBuilder/useQuoteDraft';
 import { AICatalogMatchDialog } from '@/components/Admin/AICatalogMatchDialog';
 import { GenerateQuoteDialog } from '@/components/CRM/GenerateQuoteDialog';
 import { QuoteSettingsDialog } from '@/components/CRM/QuoteSettingsDialog';
@@ -42,13 +44,14 @@ import { DocumentActions } from '@/components/Shared/DocumentActions';
 interface QuoteBuilderGridProps {
 	dealId?: number;
 	onSave?: () => void;
+	/** Lifted so the host page (DealQuotePage) can guard in-app navigation away from unsaved edits. */
+	onDirtyChange?: (hasUnsavedChanges: boolean) => void;
 }
 
 // E2: sanity upper caps on line quantity/price — mirror backend settings.QUOTE_ITEM_MAX_*
 // (санитарный потолок против fat-finger/вставки; backend re-validates and is the hard guard).
 const QUOTE_ITEM_MAX_QUANTITY = 1000000;
 const QUOTE_ITEM_MAX_UNIT_PRICE = 10000000000;
-const PRICE_FIELDS: (keyof QuoteItem)[] = ['frozen_base_price', 'logistics_cost', 'customs_duty'];
 
 // Margin health → semantic color, shared by the КП-level rail and the per-line chip.
 const marginToneClass = (belowCostOrFloor: boolean, marginPct: number, target: number): string =>
@@ -59,7 +62,7 @@ const marginToneClass = (belowCostOrFloor: boolean, marginPct: number, target: n
 const compactNumber = (value: string | number | null | undefined, locale: string): string =>
 	new Intl.NumberFormat(locale, { notation: 'compact', maximumFractionDigits: 1 }).format(Number(value || 0));
 
-export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: propDealId, onSave }) => {
+export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: propDealId, onSave, onDirtyChange }) => {
 	const { t, i18n } = useTranslation();
 	const dealId = propDealId || 0;
 
@@ -71,7 +74,9 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	const deleteItemMutation = useDeleteQuoteItem();
 	const setBasisMutation = useSetQuoteDeliveryBasis();
 
-	const [localItems, setLocalItems] = useState<QuoteItem[]>([]);
+	// Draft state machine (WP-D): server data merges into non-dirty rows only, so a refetch
+	// triggered by settings/charges/basis mutations no longer wipes in-progress line edits.
+	const { draftItems, dirtyIds, hasUnsavedChanges, setField, clearDirtyAfterSave } = useQuoteDraft(quoteItems);
 	const [newItemName, setNewItemName] = useState('');
 	const [showAddRow, setShowAddRow] = useState(false);
 	const [showAiMatch, setShowAiMatch] = useState(false);
@@ -99,7 +104,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 			setDraftBusy(false);
 		}
 	};
-	// UI-only state — deliberately kept OUT of localItems so it never trips hasUnsavedChanges.
+	// UI-only state — deliberately kept OUT of draftItems so it never trips hasUnsavedChanges.
 	const [expandedRowId, setExpandedRowId] = useState<number | null>(null);
 	const [railOpen, setRailOpen] = useState<boolean>(() => {
 		try {
@@ -128,7 +133,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	// line grid stays readable; economics stay reachable in each row's expanded detail (see below).
 	const isCompact = useMediaQuery('(max-width: 1199px)');
 
-	// Workspace view state (UI-only, kept OUT of localItems so it never trips hasUnsavedChanges):
+	// Workspace view state (UI-only, kept OUT of draftItems so it never trips hasUnsavedChanges):
 	// which document tab is active + focus (fullscreen) mode for the whole grid.
 	const [activeTab, setActiveTab] = useState<'items' | 'charges'>('items');
 	const [fullscreen, setFullscreen] = useState(false);
@@ -149,60 +154,43 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 		return () => window.removeEventListener('keydown', onKey);
 	}, [fullscreen]);
 
+	// Lift the unsaved-changes signal so the host page can guard in-app navigation (Back button).
 	useEffect(() => {
-		if (quoteItems) {
-			setLocalItems(quoteItems);
-		}
-	}, [quoteItems]);
+		onDirtyChange?.(hasUnsavedChanges);
+	}, [hasUnsavedChanges, onDirtyChange]);
 
-	const hasUnsavedChanges = useMemo(() => {
-		return JSON.stringify(localItems) !== JSON.stringify(quoteItems);
-	}, [localItems, quoteItems]);
-
-	const updateItemLocally = (id: number, field: keyof QuoteItem, value: string) => {
-		let cleanValue = value === '' ? "0" : value;
-		const numeric = Number(cleanValue);
-		// Clamp sanity caps client-side with a localized toast; backend re-validates.
-		if (field === 'quantity' && numeric > QUOTE_ITEM_MAX_QUANTITY) {
-			cleanValue = String(QUOTE_ITEM_MAX_QUANTITY);
-			toast.warning(t('quote.validation.qtyTooLarge', { max: QUOTE_ITEM_MAX_QUANTITY }));
-		} else if (PRICE_FIELDS.includes(field) && numeric > QUOTE_ITEM_MAX_UNIT_PRICE) {
-			cleanValue = String(QUOTE_ITEM_MAX_UNIT_PRICE);
-			toast.warning(t('quote.validation.priceTooLarge', { max: QUOTE_ITEM_MAX_UNIT_PRICE }));
-		}
-		setLocalItems(prev => prev.map(item =>
-			item.id === id ? { ...item, [field]: cleanValue } : item
-		));
-	};
-
-	// The line's COST currency is a code (not a numeric field) — set it verbatim.
-	const updateItemCurrency = (id: number, code: string) => {
-		setLocalItems(prev => prev.map(item =>
-			item.id === id ? { ...item, frozen_currency: code } : item
-		));
-	};
+	// Browser-level guard: warn before a tab close / reload while there are unsaved edits.
+	useEffect(() => {
+		if (!hasUnsavedChanges) return;
+		const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+			event.preventDefault();
+			event.returnValue = '';
+		};
+		window.addEventListener('beforeunload', handleBeforeUnload);
+		return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+	}, [hasUnsavedChanges]);
 
 	const handleSave = async () => {
 		try {
-			for (const item of localItems) {
-				const original = quoteItems.find(oi => oi.id === item.id);
-				if (JSON.stringify(item) !== JSON.stringify(original)) {
-					await updateMutation.mutateAsync({
-						id: item.id,
-						data: {
-							quantity: item.quantity,
-							frozen_base_price: item.frozen_base_price,
-							frozen_currency: item.frozen_currency,
-							logistics_cost: item.logistics_cost,
-							customs_duty: item.customs_duty,
-							margin_percent: item.margin_percent,
-							discount_percent: item.discount_percent,
-							lead_time_days: item.lead_time_days,
-							hs_code: item.hs_code,
-						}
-					});
-				}
+			// Only push rows the seller actually edited; the server refetch re-merges the rest.
+			const editedItems = draftItems.filter((item) => dirtyIds.has(item.id));
+			for (const item of editedItems) {
+				await updateMutation.mutateAsync({
+					id: item.id,
+					data: {
+						quantity: item.quantity,
+						frozen_base_price: item.frozen_base_price,
+						frozen_currency: item.frozen_currency,
+						logistics_cost: item.logistics_cost,
+						customs_duty: item.customs_duty,
+						margin_percent: item.margin_percent,
+						discount_percent: item.discount_percent,
+						lead_time_days: item.lead_time_days,
+						hs_code: item.hs_code,
+					},
+				});
 			}
+			clearDirtyAfterSave(editedItems.map((item) => item.id));
 			if (onSave) onSave();
 		} catch {
 			toast.error(t('errors.operationFailed'));
@@ -578,13 +566,13 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 						<Plus className="size-3" />
 						{t('common.add')}
 					</Button>
-					{localItems.some(item => !item.product) && (
+					{draftItems.some(item => !item.product) && (
 						<Button variant="outline" size="sm" onClick={() => setShowAiMatch(true)}>
 							<Sparkles className="size-3" />
 							{t('aiMatch.button')}
 						</Button>
 					)}
-					{!activeQuote.frozen_at && localItems.some(item => item.product) && (
+					{!activeQuote.frozen_at && draftItems.some(item => item.product) && (
 						<Button variant="outline" size="sm" onClick={handlePricingAssist} disabled={pricingBusy}>
 							{pricingBusy ? <Loader2 className="size-3 animate-spin" /> : <Tag className="size-3" />}
 							{t('pricingAssist.button')}
@@ -690,7 +678,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 									</TableRow>
 								</TableHeader>
 								<TableBody className="divide-y">
-									{localItems.map((item, idx) => {
+									{draftItems.map((item, idx) => {
 										const isExpanded = expandedRowId === item.id;
 										return (
 											<React.Fragment key={item.id}>
@@ -740,14 +728,15 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 														</div>
 													</TableCell>
 													<TableCell className="p-0">
-														<Input
-															type="number"
+														<NumericCell
 															min={1}
 															max={QUOTE_ITEM_MAX_QUANTITY}
-															aria-label={t('quote.quantity')}
+															maxToastKey="quote.validation.qtyTooLarge"
+															maxFractionDigits={0}
+															ariaLabel={t('quote.quantity')}
 															className="h-8 border-none shadow-none rounded-none text-xs font-semibold text-center focus-visible:ring-1"
 															value={item.quantity}
-															onChange={(e) => updateItemLocally(item.id, 'quantity', e.target.value)}
+															onCommit={(value) => setField(item.id, 'quantity', value)}
 														/>
 													</TableCell>
 													{showCostColumns && (
@@ -755,15 +744,17 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 															<div className="flex items-center">
 																<Tooltip>
 																	<TooltipTrigger asChild>
-																		<Input
-																			type="number"
-																			min={0}
-																			max={QUOTE_ITEM_MAX_UNIT_PRICE}
-																			aria-label={t('quote.basePrice')}
-																			className="h-8 border-none shadow-none rounded-none text-xs font-mono text-right pr-2 focus-visible:ring-1"
-																			value={item.frozen_base_price}
-																			onChange={(e) => updateItemLocally(item.id, 'frozen_base_price', e.target.value)}
-																		/>
+																		<span className="flex-1">
+																			<NumericCell
+																				min={0}
+																				max={QUOTE_ITEM_MAX_UNIT_PRICE}
+																				maxToastKey="quote.validation.priceTooLarge"
+																				ariaLabel={t('quote.basePrice')}
+																				className="h-8 w-full border-none shadow-none rounded-none text-xs font-mono text-right pr-2 focus-visible:ring-1"
+																				value={item.frozen_base_price}
+																				onCommit={(value) => setField(item.id, 'frozen_base_price', value)}
+																			/>
+																		</span>
 																	</TooltipTrigger>
 																	<TooltipContent>
 																		<div className="flex flex-col gap-0.5">
@@ -776,7 +767,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 																		</div>
 																	</TooltipContent>
 																</Tooltip>
-																<Select value={item.frozen_currency || 'UZS'} onValueChange={(code) => updateItemCurrency(item.id, code)}>
+																<Select value={item.frozen_currency || 'UZS'} onValueChange={(code) => setField(item.id, 'frozen_currency', code)}>
 																	<SelectTrigger aria-label={t('quote.lineCurrency')} className="h-8 w-20 shrink-0 border-none shadow-none rounded-none text-xs focus:ring-1">
 																		<SelectValue />
 																	</SelectTrigger>
@@ -814,40 +805,44 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 																			placeholder={t('quote.hsCode')}
 																			className="h-8 w-40 text-xs font-mono"
 																			value={item.hs_code || ''}
-																			onChange={(e) => updateItemLocally(item.id, 'hs_code', e.target.value)}
+																			onChange={(e) => setField(item.id, 'hs_code', e.target.value)}
 																		/>
 																	</label>
 																	{canViewCost && (
 																		<label className="flex flex-col gap-1">
 																			<span className="text-xs text-muted-foreground">{t('quote.customsDuty')}</span>
-																			<Input
-																				type="number"
+																			<NumericCell
+																				min={0}
+																				max={QUOTE_ITEM_MAX_UNIT_PRICE}
+																				maxToastKey="quote.validation.priceTooLarge"
+																				ariaLabel={t('quote.customsDuty')}
 																				className="h-8 w-32 text-xs font-mono text-right"
 																				value={item.customs_duty}
-																				onChange={(e) => updateItemLocally(item.id, 'customs_duty', e.target.value)}
+																				onCommit={(value) => setField(item.id, 'customs_duty', value)}
 																			/>
 																		</label>
 																	)}
 																	<label className="flex flex-col gap-1">
 																		<span className="text-xs text-muted-foreground">{t('quote.leadTime')}</span>
-																		<Input
-																			type="number"
+																		<NumericCell
 																			min={0}
+																			maxFractionDigits={0}
+																			ariaLabel={t('quote.leadTime')}
 																			className="h-8 w-24 text-xs text-center"
 																			value={item.lead_time_days ?? 0}
-																			onChange={(e) => updateItemLocally(item.id, 'lead_time_days', e.target.value)}
+																			onCommit={(value) => setField(item.id, 'lead_time_days', value)}
 																		/>
 																	</label>
 																	{canViewCost && (
 																		<label className="flex flex-col gap-1">
 																			<span className="text-xs text-muted-foreground">{t('quote.discountPercent')}</span>
-																			<Input
-																				type="number"
+																			<NumericCell
 																				min={0}
 																				max={100}
+																				ariaLabel={t('quote.discountPercent')}
 																				className="h-8 w-24 text-xs text-center"
 																				value={item.discount_percent ?? 0}
-																				onChange={(e) => updateItemLocally(item.id, 'discount_percent', e.target.value)}
+																				onCommit={(value) => setField(item.id, 'discount_percent', value)}
 																			/>
 																		</label>
 																	)}
@@ -937,7 +932,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 
 			{/* Sticky totals footer — always in view (fixes «итоги за кнопкой» on ≤768px laptops) */}
 			<StickyTotalsBar
-				positionsCount={localItems.length}
+				positionsCount={draftItems.length}
 				canViewCost={canViewCost}
 				marginPercent={econ ? Number(econ.gross_margin_percent) : undefined}
 				marginTone={econ
@@ -950,7 +945,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 				onSave={handleSave}
 			/>
 
-			<AICatalogMatchDialog open={showAiMatch} onOpenChange={setShowAiMatch} items={localItems} />
+			<AICatalogMatchDialog open={showAiMatch} onOpenChange={setShowAiMatch} items={draftItems} />
 			<QuoteSettingsDialog quote={activeQuote} open={showSettings} onOpenChange={setShowSettings} />
 			<ReassignProductDialog
 				quoteItemId={reassignItemId}

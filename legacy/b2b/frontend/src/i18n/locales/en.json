@@ -681,7 +681,10 @@
       "positionsCount": "Items: {{count}}",
       "fullscreenEnter": "Fullscreen",
       "fullscreenExit": "Exit fullscreen",
-      "openApproval": "Open approval panel"
+      "openApproval": "Open approval panel",
+      "leaveTitle": "You have unsaved changes",
+      "leaveDescription": "Your КП line-item edits are not saved. If you leave, they will be lost. Leave anyway?",
+      "leaveConfirm": "Leave without saving"
     },
     "subtotalExclVAT": "Subtotal excl. VAT",
     "vatPercent": "VAT 12%",

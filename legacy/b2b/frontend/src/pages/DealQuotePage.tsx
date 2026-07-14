@@ -6,6 +6,10 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { StatusBadge, getDealStageVariant } from '@/components/ui/StatusBadge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useDeal, useSendQuoteToClient } from '@/hooks/useCRM';
 import { translateApiError } from '@/lib/apiError';
 import { QuoteBuilderGrid } from '@/components/Admin/QuoteBuilderGrid';
@@ -38,6 +42,18 @@ export function DealQuotePage({ dealId, onBack }: DealQuotePageProps) {
   // ask (deal.notes) collapses to one line by default; the full thread opens in a slide-over.
   const [chatOpen, setChatOpen] = useState(false);
   const [noteExpanded, setNoteExpanded] = useState(false);
+  // WP-D navigation guard: the builder reports unsaved line edits up here so leaving the
+  // workspace (the Back button) prompts a confirm instead of silently dropping the changes.
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
+
+  const handleBack = () => {
+    if (hasUnsavedChanges) {
+      setLeaveConfirmOpen(true);
+      return;
+    }
+    onBack();
+  };
 
   if (isLoading) {
     return (
@@ -104,7 +120,7 @@ export function DealQuotePage({ dealId, onBack }: DealQuotePageProps) {
           seller lifecycle actions (right). Replaces the old two-storey page header. */}
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b px-4 py-2">
         <div className="flex min-w-0 flex-1 items-center gap-2">
-          <Button variant="ghost" size="icon" className="size-8 shrink-0" onClick={onBack} aria-label={t('common.back')}>
+          <Button variant="ghost" size="icon" className="size-8 shrink-0" onClick={handleBack} aria-label={t('common.back')}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <FileText className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
@@ -169,7 +185,7 @@ export function DealQuotePage({ dealId, onBack }: DealQuotePageProps) {
       {/* Builder — fills the remaining viewport height; it owns the single vertical scroll. */}
       {quote ? (
         <div className="min-h-0 flex-1 p-3">
-          <QuoteBuilderGrid dealId={dealId} />
+          <QuoteBuilderGrid dealId={dealId} onDirtyChange={setHasUnsavedChanges} />
         </div>
       ) : (
         <div className="p-6">
@@ -210,6 +226,22 @@ export function DealQuotePage({ dealId, onBack }: DealQuotePageProps) {
         onConfirm={confirmSend}
         translateError={(code) => translateApiError(code)}
       />
+
+      {/* Unsaved-changes guard for in-app navigation away from the builder (WP-D). */}
+      <AlertDialog open={leaveConfirmOpen} onOpenChange={setLeaveConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('quote.builder.leaveTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('quote.builder.leaveDescription')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setLeaveConfirmOpen(false); onBack(); }}>
+              {t('quote.builder.leaveConfirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
