@@ -8,7 +8,7 @@
 
 ## Где проект сейчас
 
-Продакшн живёт на `b2b.railtech.uz` (app-VPS + Caddy edge, БД на отдельном DB-VPS через WireGuard; Neon выведен 2026-06-19). Деплой — self-hosted runner (`deploy-b2b.yml`), Sentry на бэке и SPA, CI c жёсткими security-гейтами (pip-audit + npm audit, SHA-pinned Actions). Архитектурный канон — ADR-0001…0006 (`Docs/dev/adr/`).
+Продакшн живёт на `b2b.railtech.uz` (app-VPS + Caddy edge, БД на отдельном DB-VPS через приватную сеть хостера; Neon выведен 2026-06-19). Деплой — self-hosted runner (`deploy-b2b.yml`), Sentry на бэке и SPA, CI c жёсткими security-гейтами (pip-audit + npm audit, SHA-pinned Actions). Архитектурный канон — ADR-0001…0006 (`Docs/dev/adr/`).
 
 Ядро продукта (ADR-0006 «клин»): **заявка → КП → контракт** с AI-ускорением как монетизируемым преимуществом. Реализованы: multi-seller routing (DealSellerRouting, скрытая конкуренция), entitlement-слой (FeatureKey: `quote.send`/`quote.export`/`ai.*`/`roles.custom`, DEMO-водяной знак), KYC-пол (без L2 — только просмотр и черновики), AI-разбор заявок + автопривязка каталога в черновике КП, публичная ссылка на КП (202+Celery PDF), дашборд «Operations Inbox».
 

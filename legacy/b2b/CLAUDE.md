@@ -101,7 +101,7 @@ ADR index (`Docs/dev/adr/`): **0001** admin separation · **0002** role responsi
 
 ## Database
 
-- **Prod:** self-hosted **PostgreSQL 17** on a dedicated **DB-VPS** (private `10.0.0.2`, reached from the app-VPS `10.0.0.3` over a WireGuard private network; `sslmode=require`). Native apt/PGDG install, NOT Docker. **Neon Cloud retired (2026-06-19).** Two DBs: `railtech` (prod) and `railtech_test` (testing). Prod `DATABASE_URL` lives ONLY in the GitHub Actions production secret. Daily `pg_dump` backups via cron on the DB-VPS → `/var/backups/railtech-db/` (14-day retention). See [[reference-vps-b2b]] memory.
+- **Prod:** self-hosted **PostgreSQL 17** on a dedicated **DB-VPS** (private `10.0.0.2`, reached from the app-VPS `10.0.0.3` over the hoster's private LAN — interface `ens8`, NOT WireGuard; the box's `wg0` is an unrelated dead tunnel; `sslmode=require`). Native apt/PGDG install, NOT Docker. **Neon Cloud retired (2026-06-19).** Two DBs: `railtech` (prod) and `railtech_test` (testing). Prod `DATABASE_URL` lives ONLY in the GitHub Actions production secret. Daily `pg_dump` backups via cron on the DB-VPS → `/var/backups/railtech-db/` (14-day retention). See [[reference-vps-b2b]] memory.
 - **Local dev:** a local **Postgres container** is added via `docker-compose.override.yml` (gitignored, auto-loaded by `make up`; prod/staging use explicit `-f ...prod.yml` so never load it). Backend reaches it as `db:5432`; `.env` → `DATABASE_URL=postgresql://railtech:railtech@db:5432/railtech?sslmode=disable`.
 - **Connection:** `DATABASE_URL` env var parsed via `urlparse` (query params → DB `OPTIONS`, `sslmode` defaults to `require`), fallback to individual `POSTGRES_*` vars
 - **Auth user:** `accounts.CustomUser` (email login)
@@ -415,7 +415,7 @@ Transformation happens in: `userStore.loadFromAuth()` and DRF serializers.
 - `DATABASE_URL` query params (like `sslmode=require`) are passed as DB OPTIONS
 - **api-contract CI gate**: model `verbose_name`/label edits change the OpenAPI schema — regenerate spectacular schema + `gen:api-types` in the same PR
 - **Request-path AI**: never add retries or unbounded timeouts to HTTP-handler AI calls (`max_retries=0` convention); heavy AI work → Celery
-- **DB-VPS connectivity** (prod) — WireGuard down / `pg_hba.conf` / Postgres offline are the usual suspects; `dj-db-conn-pool` caches dead connections — restart backend + celery containers to reset the pool
+- **DB-VPS connectivity** (prod) — private LAN (`ens8`, `ip route get 10.0.0.2`) down / `pg_hba.conf` / Postgres offline are the usual suspects; `dj-db-conn-pool` caches dead connections — restart backend + celery containers to reset the pool
 - **Superadmin is NOT auto-created** — run `init_superadmin` manually; credentials from `.env`, never hardcode
 - **No demo/simulation shortcuts** — no hardcoded test flows, no backend bypass. Test via real registration or `init_superadmin`
 - **Don't assume code structure** — read files before editing; the codebase moves fast and docs (including this file) lag
