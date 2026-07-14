@@ -823,9 +823,23 @@
     "costInPresentation": "Landed cost: {{value}}",
     "fxRateAt": "Rate {{from}}→{{to}}: {{rate}}",
     "marginQuoteLevelHint": "Markup is set for the whole КП — change it in «Настройки КП»",
+    "draftPreview": "draft",
+    "draftRecalcOnSave": "recalculated on save",
+    "save": {
+      "success": "КП saved",
+      "rowsWithErrors": "Rows with errors: {{count}} — fix the highlighted cells"
+    },
     "validation": {
       "qtyTooLarge": "Quantity cannot exceed {{max}}",
-      "priceTooLarge": "Price cannot exceed {{max}}"
+      "priceTooLarge": "Price cannot exceed {{max}}",
+      "QUOTE_ITEM_QTY_INVALID": "Quantity must be at least 1",
+      "QUOTE_ITEM_QTY_TOO_LARGE": "Quantity is too large",
+      "QUOTE_ITEM_PRICE_INVALID": "Price cannot be negative",
+      "QUOTE_ITEM_PRICE_TOO_LARGE": "Price is too large",
+      "QUOTE_ITEM_MARGIN_INVALID": "Markup must be within 0–500%",
+      "QUOTE_ITEM_DISCOUNT_INVALID": "Discount must be within 0–100%",
+      "QUOTE_ITEM_LEAD_TIME_INVALID": "Invalid lead time",
+      "CURRENCY_NOT_FOUND": "Currency not found"
     }
   },
   "admin": {

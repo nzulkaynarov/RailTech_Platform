@@ -20,6 +20,10 @@ interface NumericCellProps {
 	ariaLabel?: string;
 	className?: string;
 	disabled?: boolean;
+	/** Mark the cell as rejected by the last bulk save → aria-invalid + destructive ring. */
+	invalid?: boolean;
+	/** Localized message for the rejection (shown as the native cell tooltip). */
+	errorMessage?: string;
 }
 
 /**
@@ -49,6 +53,8 @@ export const NumericCell: React.FC<NumericCellProps> = ({
 	ariaLabel,
 	className,
 	disabled,
+	invalid,
+	errorMessage,
 }) => {
 	const { t, i18n } = useTranslation();
 	// Non-null only WHILE the cell is focused (holds the raw, ungrouped edit buffer).
@@ -86,8 +92,10 @@ export const NumericCell: React.FC<NumericCellProps> = ({
 			type="text"
 			inputMode="decimal"
 			aria-label={ariaLabel}
+			aria-invalid={invalid || undefined}
+			title={invalid ? errorMessage : undefined}
 			disabled={disabled}
-			className={cn(className)}
+			className={cn(className, invalid && 'border-destructive ring-1 ring-destructive')}
 			value={displayValue}
 			onFocus={() => setEditBuffer(value == null ? '' : String(value))}
 			onChange={(event) => setEditBuffer(event.target.value)}
