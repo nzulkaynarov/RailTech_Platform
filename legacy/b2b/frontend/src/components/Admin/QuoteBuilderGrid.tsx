@@ -138,7 +138,13 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	// Esc exits focus mode (mirrors the ⛶ toggle) — standard editor-workspace affordance.
 	useEffect(() => {
 		if (!fullscreen) return;
-		const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setFullscreen(false); };
+		const onKey = (event: KeyboardEvent) => {
+			if (event.key !== 'Escape') return;
+			// A layered surface (Dialog/AlertDialog/Sheet/Popover — all Radix role="dialog")
+			// owns this Escape: it closes itself, focus mode must survive the keystroke.
+			if (event.defaultPrevented || document.querySelector('[role="dialog"], [role="alertdialog"]')) return;
+			setFullscreen(false);
+		};
 		window.addEventListener('keydown', onKey);
 		return () => window.removeEventListener('keydown', onKey);
 	}, [fullscreen]);
