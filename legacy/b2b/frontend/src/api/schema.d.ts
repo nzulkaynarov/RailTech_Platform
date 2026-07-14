@@ -4063,6 +4063,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/crm/quote-items/bulk-update/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bulk-update КП line items in one transaction
+         * @description Save many edited КП lines atomically (P0-4). ALL-OR-NOTHING: if any line is invalid, nothing is saved and per-row errors are returned; on success the cascade and totals are recalculated ONCE and the updated lines are returned. Same guards / field validation as the single-item PATCH. Seller action.
+         */
+        post: operations["crm_quote_items_bulk_update_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/quote-statuses/": {
         parameters: {
             query?: never;
@@ -5656,6 +5676,12 @@ export interface components {
              * @description Привязка к компании
              */
             company?: number | null;
+        };
+        BulkUpdateQuoteItemsRequestRequest: {
+            quote: number;
+            items: {
+                [key: string]: unknown;
+            }[];
         };
         Category: {
             readonly id: number;
@@ -18262,6 +18288,58 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["QuoteItem"];
                 };
+            };
+        };
+    };
+    crm_quote_items_bulk_update_create: {
+        parameters: {
+            query?: {
+                product?: number;
+                product__isnull?: boolean;
+                quote__deal_id?: number;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkUpdateQuoteItemsRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["BulkUpdateQuoteItemsRequestRequest"];
+                "multipart/form-data": components["schemas"]["BulkUpdateQuoteItemsRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuoteItem"][];
+                };
+            };
+            /** @description QUOTE_ITEMS_BULK_INVALID (with per-row `rows`) / QUOTE_ITEMS_BULK_EMPTY / QUOTE_ITEMS_BULK_TOO_LARGE / QUOTE_FROZEN */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description ADMIN_VIEWER_CANNOT_ACT / ONLY_SELLER_CAN_BUILD_QUOTE */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description QUOTE_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

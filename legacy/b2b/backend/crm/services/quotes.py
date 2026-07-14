@@ -1132,6 +1132,142 @@ class QuoteLifecycleService:
 
 
 # ──────────────────────────────────────────────────────────────────────────
+# Bulk update of КП line items (P0-4) — one transaction, one recalc, per-row errors
+# ──────────────────────────────────────────────────────────────────────────
+
+# Fields the КП builder grid may write per line (the exact set the single-item PATCH accepts
+# from handleSave). id/quote address the row; everything else is a pricing/identity input the
+# QuoteItemSerializer validates (caps, currency-by-code). Anything outside this set is ignored.
+_BULK_ITEM_WRITABLE_FIELDS = frozenset(
+    {
+        "quantity",
+        "frozen_base_price",
+        "frozen_currency",
+        "logistics_cost",
+        "customs_duty",
+        "margin_percent",
+        "discount_percent",
+        "lead_time_days",
+        "hs_code",
+    }
+)
+
+
+def _validate_bulk_item_rows(quote, items_payload, request):
+    """Validate every payload row against the quote's OWN items (partial serializer).
+
+    Returns (validated, rows): `validated` is a list of (item, validated_data) pairs when
+    ALL rows are valid; `rows` is the per-row error list (empty ⇒ success). A row whose id
+    is missing / not an item of THIS quote is itself an error — so the all-or-nothing policy
+    also rejects a batch that mixes in a competitor's / phantom line."""
+    from crm.serializers import QuoteItemSerializer
+
+    existing = {item.id: item for item in quote.items.all()}
+    validated: list = []
+    rows: list = []
+    for index, raw in enumerate(items_payload):
+        item_id = raw.get("id") if isinstance(raw, dict) else None
+        try:
+            item_id = int(item_id)
+        except (TypeError, ValueError):
+            rows.append(
+                {
+                    "id": raw.get("id") if isinstance(raw, dict) else None,
+                    "index": index,
+                    "errors": {"id": ["QUOTE_ITEM_ID_REQUIRED"]},
+                }
+            )
+            continue
+        item = existing.get(item_id)
+        if item is None:
+            rows.append({"id": item_id, "index": index, "errors": {"id": ["QUOTE_ITEM_NOT_IN_QUOTE"]}})
+            continue
+        fields = {key: value for key, value in raw.items() if key in _BULK_ITEM_WRITABLE_FIELDS}
+        serializer = QuoteItemSerializer(instance=item, data=fields, partial=True, context={"request": request})
+        if not serializer.is_valid():
+            rows.append({"id": item_id, "index": index, "errors": serializer.errors})
+            continue
+        validated.append((item, serializer.validated_data))
+    return validated, rows
+
+
+@transaction.atomic
+def bulk_update_quote_items(user, quote_id, items_payload, request):
+    """Transactional bulk update of a КП's line items (P0-4). ALL-OR-NOTHING.
+
+    Mirrors the single-item PATCH guards EXACTLY (is_platform_admin_viewer / seller pricing
+    capability / seller-routed-to-deal), validates every row with the same QuoteItemSerializer
+    (caps included), and — on full success — writes once and recalculates the cascade ONCE
+    (recalculate_quote also snapshots QuoteItemHistory, so the audit trail matches the single
+    PATCH). Any invalid row rolls the whole batch back with per-row errors.
+
+    Returns (items, error, rows):
+      • success        → (list[QuoteItem], None, None)
+      • guard/global   → (None, "<CODE>", None)
+      • per-row invalid→ (None, "QUOTE_ITEMS_BULK_INVALID", [ {id,index,errors}, … ])
+    """
+    from accounts.services.permissions import (
+        can_edit_quote_pricing,
+        is_platform_admin_viewer,
+        seller_can_access_deal,
+    )
+
+    # Guards — IN THE SAME ORDER as QuoteItemViewSet._assert_seller.
+    if is_platform_admin_viewer(user):
+        return None, "ADMIN_VIEWER_CANNOT_ACT", None
+    is_superuser = getattr(user, "is_superuser", False)
+    if not (is_superuser or can_edit_quote_pricing(user)):
+        return None, "ONLY_SELLER_CAN_BUILD_QUOTE", None
+
+    if not isinstance(items_payload, list) or not items_payload:
+        return None, "QUOTE_ITEMS_BULK_EMPTY", None
+    from django.conf import settings
+
+    if len(items_payload) > settings.QUOTE_ITEMS_BULK_MAX_ROWS:
+        return None, "QUOTE_ITEMS_BULK_TOO_LARGE", None
+
+    try:
+        quote_pk = int(quote_id)
+    except (TypeError, ValueError):
+        return None, "QUOTE_NOT_FOUND", None
+    # Lock only the quote row (nullable FKs can't be FOR UPDATE'd via join — mirror recalc).
+    quote = Quote.objects.select_for_update(of=("self",)).filter(pk=quote_pk).first()
+    if quote is None:
+        return None, "QUOTE_NOT_FOUND", None
+    # Deal-routing binding (mirror _assert_seller_owns_quote_deal): a foreign КП is 404 like the
+    # single PATCH, whose scoped get_queryset would never surface a competitor's item.
+    if not (is_superuser or seller_can_access_deal(user, request, quote.deal_id)):
+        return None, "QUOTE_NOT_FOUND", None
+    if quote.frozen_at:
+        return None, "QUOTE_FROZEN", None
+
+    validated, rows = _validate_bulk_item_rows(quote, items_payload, request)
+    if rows:
+        # transaction.atomic + returning here rolls back nothing was written — all-or-nothing.
+        return None, "QUOTE_ITEMS_BULK_INVALID", rows
+
+    updated_ids = []
+    for item, validated_data in validated:
+        for attr, value in validated_data.items():
+            setattr(item, attr, value)
+        # Defer per-row recalc — one full cascade recompute follows for the whole КП.
+        item.save(skip_recalculate=True)
+        updated_ids.append(item.id)
+
+    # ONE recalculation of the whole КП: refreshes each line's landed/final price with the FX
+    # map, re-aggregates subtotal/charges/VAT/total, and snapshots QuoteItemHistory for every
+    # line — the same audit the single-item PATCH produces, but once instead of N times.
+    QuoteCalculationService.recalculate_quote(quote_pk)
+
+    items = list(
+        QuoteItem.objects.filter(quote_id=quote_pk, id__in=updated_ids).select_related(
+            "product", "product__domain_type", "quote", "offer", "offer__supplier", "frozen_currency"
+        )
+    )
+    return items, None, None
+
+
+# ──────────────────────────────────────────────────────────────────────────
 # Re-match (manual reassign QuoteItem.product)
 # ──────────────────────────────────────────────────────────────────────────
 
