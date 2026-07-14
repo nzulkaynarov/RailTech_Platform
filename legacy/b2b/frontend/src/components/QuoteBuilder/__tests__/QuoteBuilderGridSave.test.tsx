@@ -198,10 +198,12 @@ describe('QuoteBuilderGrid — «add & continue» row', () => {
 		await user.click(screen.getByRole('button', { name: 'Добавить' }));
 		await user.type(screen.getByRole('textbox', { name: 'Наименование' }), 'Автосцепка СА-3');
 		// The grid row renders its own qty/price cells — the add-row inputs are the LAST ones.
-		const qtyInput = screen.getAllByRole('textbox', { name: 'Кол-во' }).at(-1)!;
+		const qtyInputs = screen.getAllByRole('textbox', { name: 'Кол-во' });
+		const qtyInput = qtyInputs[qtyInputs.length - 1];
 		await user.clear(qtyInput);
 		await user.type(qtyInput, '50');
-		const priceInput = screen.getAllByRole('textbox', { name: /Базовая цена/ }).at(-1)!;
+		const priceInputs = screen.getAllByRole('textbox', { name: /Базовая цена/ });
+		const priceInput = priceInputs[priceInputs.length - 1];
 		await user.clear(priceInput);
 		await user.type(priceInput, '777,50');
 		await user.keyboard('{Enter}'); // Enter прямо в поле цены — без blur

@@ -283,7 +283,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	// (adversarial-review MAJOR — the typed values were silently dropped). Normalization
 	// (comma decimal, spaces) and clamping to the caps happen here at submit instead.
 	const parseAddRowNumber = (raw: string): number =>
-		Number(String(raw).replace(/[\s ]+/g, '').replace(',', '.'));
+		Number(String(raw).replace(/[\s\u00A0\u202F]+/g, '').replace(',', '.'));
 
 	const handleAddItem = async () => {
 		if (!newItemName.trim() || !deal?.active_quote) return;
