@@ -24144,6 +24144,12 @@
                         "title": "Ручные курсы КП (FX override)",
                         "description": "Договорные курсы валют к UZS, заданные вручную {код: курс} — побеждают снимок"
                     },
+                    "fx_market": {
+                        "type": "object",
+                        "additionalProperties": {},
+                        "description": "Current market rate_to_uzs for every ACTIVE currency, as a {code: \"rate\"} map (UZS = 1).\n\nLets `usePricingMirror` recompute a line whose cost currency is NOT yet in the КП's\nfx_snapshot/fx_manual — instead of showing «пересчёт после сохранения». This is the PUBLIC\nreference rate, NOT the seller's chosen/frozen rate (those stay in fx_snapshot/fx_manual). A\ncurrency with no known rate is OMITTED so the mirror keeps its honest «no rate» marker.\n\nRates come from get_rate_to_uzs, which reads the LOCAL ExchangeRate table only (the CBU\nfetch is a Celery job) — no network call runs in the request path. Currencies are a small\nlookup, so the per-currency read is bounded (Performance Conventions).",
+                        "readOnly": true
+                    },
                     "tax_country": {
                         "type": "integer",
                         "nullable": true,
@@ -24301,6 +24307,7 @@
                     "delivery_basis_data",
                     "economics",
                     "effective_delivery_lead_time_days",
+                    "fx_market",
                     "fx_snapshot",
                     "id",
                     "items",
