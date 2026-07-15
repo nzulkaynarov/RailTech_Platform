@@ -38,6 +38,13 @@ export interface Capabilities {
   can_buy: boolean;
   can_sell: boolean;
   subscription_active: boolean;
+  /** WP-H: the seller may SEND a КП right now — folds all send preconditions (KYC L2+, the
+   * quote.send entitlement, NOT a DEMO grant). Mirrors send_to_client; lets the КП builder warn
+   * about blockers up-front instead of at send. UI-gating only; the backend stays authoritative. */
+  can_send_quotes: boolean;
+  /** WP-H: the seller holds quote.send in DEMO access — output is watermarked and send is gated.
+   * Drives the distinct "DEMO watermark" builder message (vs a plain "subscription required"). */
+  quote_send_is_demo: boolean;
   permissions: string[];
   is_platform_admin: boolean;
   operator_permissions: string[] | null;
@@ -147,6 +154,7 @@ export const useUserStore = create<UserState>((set, get) => ({
   operatorPermissions: null,
   capabilities: {
     kyc_level: null, can_buy: true, can_sell: true, subscription_active: false,
+    can_send_quotes: false, quote_send_is_demo: false,
     permissions: [], is_platform_admin: false, operator_permissions: null,
   },
   profile: {
@@ -252,6 +260,11 @@ export const useUserStore = create<UserState>((set, get) => ({
         can_buy: canBuy,
         can_sell: canSell,
         subscription_active: sellerSubscriptionOperational === true,
+        // Best-effort derivation for a legacy payload that predates these fields: an operational
+        // subscription approximates the quote.send entitlement (DEMO can't be inferred → false).
+        // The next /me refresh replaces this with the authoritative backend projection.
+        can_send_quotes: sellerSubscriptionOperational === true,
+        quote_send_is_demo: false,
         permissions: [],
         is_platform_admin: isPlatformAdmin,
         operator_permissions: operatorPermissions,

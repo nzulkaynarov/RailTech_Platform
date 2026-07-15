@@ -11,18 +11,23 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useDeal, useSendQuoteToClient } from '@/hooks/useCRM';
+import { useQuoteSendGate } from '@/hooks/useQuoteSendGate';
 import { translateApiError } from '@/lib/apiError';
 import { QuoteBuilderGrid } from '@/components/Admin/QuoteBuilderGrid';
 import { QuoteApprovalChain } from '@/components/CRM/QuoteApprovalChain';
+import { QuoteSendGateBanner } from '@/components/CRM/QuoteSendGateBanner';
 import { DealChatPanel } from '@/components/Sourcing/DealChatPanel';
 import { GenerateContractDialog } from '@/components/CRM/GenerateContractDialog';
 import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { QuoteStatus, DEAL_STAGE_LABEL_KEY } from '@/lib/codes';
 import { LoadingRows, EmptyState } from './shared/PageShell';
 
 interface DealQuotePageProps {
   dealId: number;
   onBack: () => void;
+  /** App-level hash navigation, for the send-gate banner CTA (KYC / subscription). */
+  onNavigate?: (target: string) => void;
 }
 
 /**
@@ -31,10 +36,12 @@ interface DealQuotePageProps {
  * side panel. Reached via the `deal-quote/<dealId>` hash route from DealsPage.
  * State is React Query throughout (useDeal / useCRM) — no flowStore.
  */
-export function DealQuotePage({ dealId, onBack }: DealQuotePageProps) {
+export function DealQuotePage({ dealId, onBack, onNavigate }: DealQuotePageProps) {
   const { t } = useTranslation();
   const { data: deal, isLoading, isError, refetch } = useDeal(dealId);
   const sendQuote = useSendQuoteToClient();
+  // WP-H: proactive KYC/entitlement send-gate — banner up-front + disabled Send with the reason.
+  const sendGate = useQuoteSendGate();
   const [contractOpen, setContractOpen] = useState(false);
   const [sendConfirmOpen, setSendConfirmOpen] = useState(false);
   // Single Deal-workspace (#3b): the buyer's request context lives ON the builder
@@ -154,10 +161,31 @@ export function DealQuotePage({ dealId, onBack }: DealQuotePageProps) {
             </Button>
           )}
           {canSend && (
-            <Button size="sm" disabled={sendQuote.isPending} onClick={() => setSendConfirmOpen(true)}>
-              <Send className="mr-2 h-4 w-4" />
-              {t('requestDetailActions.sendQuote')}
-            </Button>
+            sendGate.blocked ? (
+              // A known blocker (KYC / subscription / demo) → disable Send and explain why via a
+              // tooltip, using the SAME apiErrors.* copy the backend would return. A disabled button
+              // swallows pointer events, so the wrapping span carries the tooltip trigger.
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span tabIndex={0} className="inline-flex">
+                      <Button size="sm" disabled aria-disabled>
+                        <Send className="mr-2 h-4 w-4" />
+                        {t('requestDetailActions.sendQuote')}
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    {translateApiError(sendGate.errorCode ?? '')}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : (
+              <Button size="sm" disabled={sendQuote.isPending} onClick={() => setSendConfirmOpen(true)}>
+                <Send className="mr-2 h-4 w-4" />
+                {t('requestDetailActions.sendQuote')}
+              </Button>
+            )
           )}
         </div>
       </div>
@@ -181,6 +209,10 @@ export function DealQuotePage({ dealId, onBack }: DealQuotePageProps) {
           <ChevronDown className={cn('mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform', noteExpanded && 'rotate-180')} aria-hidden="true" />
         </button>
       )}
+
+      {/* WP-H: proactive send-gate banner — surfaces a KYC/subscription/demo blocker BEFORE the
+          seller finishes pricing, instead of a late surprise at «Отправить». Seller-side only. */}
+      <QuoteSendGateBanner onNavigate={onNavigate} />
 
       {/* Builder — fills the remaining viewport height; it owns the single vertical scroll. */}
       {quote ? (

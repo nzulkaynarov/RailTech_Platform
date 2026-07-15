@@ -653,7 +653,7 @@ function MainApp() {
     case 'deal-quote':
       // Same access surface as crm-deals (a seller working a КП). The backend
       // enforces seller-only writes on the quote/quote-item endpoints.
-      content = <DealQuotePage dealId={page.dealId} onBack={() => navigateTo({ type: 'request-detail', dealId: page.dealId })} />;
+      content = <DealQuotePage dealId={page.dealId} onBack={() => navigateTo({ type: 'request-detail', dealId: page.dealId })} onNavigate={handleNavigate} />;
       activePageId = 'crm-deals';
       break;
     case 'crm-quotes':
