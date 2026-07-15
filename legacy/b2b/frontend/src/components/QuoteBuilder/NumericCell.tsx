@@ -24,6 +24,10 @@ interface NumericCellProps {
 	invalid?: boolean;
 	/** Localized message for the rejection (shown as the native cell tooltip). */
 	errorMessage?: string;
+	/** Row id — registers the cell for grid keyboard navigation (useGridKeyboard, WP-G). */
+	dataCellRow?: number;
+	/** Column key (e.g. «quantity») — pairs with dataCellRow for arrow/Enter cell navigation. */
+	dataCellCol?: string;
 }
 
 /**
@@ -55,6 +59,8 @@ export const NumericCell: React.FC<NumericCellProps> = ({
 	disabled,
 	invalid,
 	errorMessage,
+	dataCellRow,
+	dataCellCol,
 }) => {
 	const { t, i18n } = useTranslation();
 	// Non-null only WHILE the cell is focused (holds the raw, ungrouped edit buffer).
@@ -93,6 +99,8 @@ export const NumericCell: React.FC<NumericCellProps> = ({
 			inputMode="decimal"
 			aria-label={ariaLabel}
 			aria-invalid={invalid || undefined}
+			data-cell-row={dataCellRow}
+			data-cell-col={dataCellCol}
 			title={invalid ? errorMessage : undefined}
 			disabled={disabled}
 			className={cn(className, invalid && 'border-destructive ring-1 ring-destructive')}
@@ -114,7 +122,12 @@ export const NumericCell: React.FC<NumericCellProps> = ({
 				} else if (event.key === 'Escape') {
 					event.preventDefault();
 					skipCommitRef.current = true;
-					event.currentTarget.blur(); // → onBlur reverts
+					const input = event.currentTarget;
+					input.blur(); // → onBlur reverts (skipCommitRef path)
+					// Excel-style: Escape cancels the edit but the cell KEEPS focus (grid
+					// navigation must not dump the seller back to <body>). Refocus re-enters
+					// edit mode on the reverted server value.
+					input.focus();
 				}
 			}}
 			// Guard against the mouse wheel silently changing a focused value.

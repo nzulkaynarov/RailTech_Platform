@@ -35,6 +35,7 @@ import {
 import { StickyTotalsBar } from '@/components/QuoteBuilder/StickyTotalsBar';
 import { NumericCell } from '@/components/QuoteBuilder/NumericCell';
 import { useQuoteDraft } from '@/components/QuoteBuilder/useQuoteDraft';
+import { useGridKeyboard } from '@/components/QuoteBuilder/useGridKeyboard';
 import { usePricingMirror } from '@/components/QuoteBuilder/usePricingMirror';
 import { parseBulkItemErrors, extractBulkErrorRows, cellErrorKey } from '@/components/QuoteBuilder/bulkErrors';
 import { AICatalogMatchDialog } from '@/components/Admin/AICatalogMatchDialog';
@@ -80,6 +81,9 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	// Draft state machine (WP-D): server data merges into non-dirty rows only, so a refetch
 	// triggered by settings/charges/basis mutations no longer wipes in-progress line edits.
 	const { draftItems, dirtyIds, hasUnsavedChanges, setField, clearDirtyAfterSave } = useQuoteDraft(quoteItems);
+	// Excel-style keyboard navigation (WP-G): one delegated handler on the grid container moves
+	// focus between the same column of adjacent rows on ArrowUp/ArrowDown/Enter.
+	const gridKeyboard = useGridKeyboard();
 	// Per-cell rejection codes from the LAST bulk save (P0-4), keyed `${id}:${field}` → CODE.
 	// The batch is transactional, so on rejection nothing is written and dirty state survives;
 	// these drive aria-invalid + the localized cell tooltip until the seller re-edits the cell.
@@ -746,7 +750,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 
 						<TabsContent value="items" className="flex flex-1 flex-col min-h-0 mt-0 overflow-hidden">
 					{/* Data grid */}
-					<div className="flex-1 overflow-auto rounded-md border">
+					<div className="flex-1 overflow-auto rounded-md border" onKeyDown={gridKeyboard.onKeyDown}>
 						<TooltipProvider>
 							<Table className="w-full text-left text-sm">
 								<TableHeader className="sticky top-0 z-20 border-b bg-muted">
@@ -785,8 +789,8 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 										const isExpanded = expandedRowId === item.id;
 										return (
 											<React.Fragment key={item.id}>
-												<TableRow className="hover:bg-muted/50 transition-colors group">
-													<TableCell className="w-8 px-1 py-1.5 text-center sticky left-0 z-10 bg-background group-hover:bg-muted/50">
+												<TableRow className="hover:bg-muted/50 focus-within:bg-muted/40 transition-colors group">
+													<TableCell className="w-8 px-1 py-1.5 text-center sticky left-0 z-10 bg-background group-hover:bg-muted/50 group-focus-within:bg-muted/40">
 														<button
 															type="button"
 															onClick={(e) => { e.stopPropagation(); toggleRow(item.id); }}
@@ -798,7 +802,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 															{isExpanded ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
 														</button>
 													</TableCell>
-													<TableCell className="px-2 py-1.5 sticky left-8 z-10 bg-background group-hover:bg-muted/50">
+													<TableCell className="px-2 py-1.5 sticky left-8 z-10 bg-background group-hover:bg-muted/50 group-focus-within:bg-muted/40">
 														<div className="flex flex-col leading-tight pr-4">
 															<div className="flex items-center gap-2">
 																{!item.product && (
@@ -837,7 +841,9 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 															maxToastKey="quote.validation.qtyTooLarge"
 															maxFractionDigits={0}
 															ariaLabel={t('quote.quantity')}
-															className="h-8 border-none shadow-none rounded-none text-xs font-semibold text-center focus-visible:ring-1"
+															className="h-8 border-none shadow-none rounded-none text-xs font-semibold text-center focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+															dataCellRow={item.id}
+															dataCellCol="quantity"
 															value={item.quantity}
 															invalid={!!cellError(item.id, 'quantity')}
 															errorMessage={cellError(item.id, 'quantity')}
@@ -855,7 +861,9 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 																				max={QUOTE_ITEM_MAX_UNIT_PRICE}
 																				maxToastKey="quote.validation.priceTooLarge"
 																				ariaLabel={t('quote.basePrice')}
-																				className="h-8 w-full border-none shadow-none rounded-none text-xs font-mono text-right pr-2 focus-visible:ring-1"
+																				className="h-8 w-full border-none shadow-none rounded-none text-xs font-mono text-right pr-2 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+																					dataCellRow={item.id}
+																					dataCellCol="frozen_base_price"
 																				value={item.frozen_base_price}
 																				invalid={!!cellError(item.id, 'frozen_base_price')}
 																				errorMessage={cellError(item.id, 'frozen_base_price')}
