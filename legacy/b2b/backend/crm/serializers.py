@@ -6,9 +6,24 @@ from rest_framework import serializers
 from master_data.models import Currency, DeliveryBasis
 from master_data.serializers import DeliveryBasisSerializer
 
-from .models import (Act, ActivityLog, ChargeTemplate, ChargeType, Contract,
-                     Deal, Fulfillment, Invoice, InvoiceItem, Lead, Message,
-                     Payment, Quote, QuoteApprovalStep, QuoteCharge, QuoteItem)
+from .models import (
+    Act,
+    ActivityLog,
+    ChargeTemplate,
+    ChargeType,
+    Contract,
+    Deal,
+    Fulfillment,
+    Invoice,
+    InvoiceItem,
+    Lead,
+    Message,
+    Payment,
+    Quote,
+    QuoteApprovalStep,
+    QuoteCharge,
+    QuoteItem,
+)
 
 
 class QuoteApprovalStepSerializer(serializers.ModelSerializer):
@@ -52,11 +67,7 @@ class QuoteApprovalStepSerializer(serializers.ModelSerializer):
 
     def get_acted_by_name(self, obj) -> str:
         user = obj.acted_by
-        return (
-            (f"{user.first_name} {user.last_name}".strip() or user.email)
-            if user
-            else ""
-        )
+        return (f"{user.first_name} {user.last_name}".strip() or user.email) if user else ""
 
     def get_can_act(self, obj) -> bool:
         from accounts.services.permissions import member_has_permission
@@ -70,37 +81,27 @@ class QuoteApprovalStepSerializer(serializers.ModelSerializer):
         if obj.status != "PENDING" or obj.participation == "INFORMED":
             return False
         quote = obj.quote
-        if (
-            not getattr(quote, "status", None)
-            or quote.status.code != "PENDING_APPROVAL"
-        ):
+        if not getattr(quote, "status", None) or quote.status.code != "PENDING_APPROVAL":
             return False
         if obj.order != _active_order(quote):
             return False
         company_id = _quote_owner_company_id(quote)
         return bool(
             company_id
-            and (
-                getattr(user, "is_superuser", False)
-                or member_has_permission(user, company_id, _step_permission(obj))
-            )
+            and (getattr(user, "is_superuser", False) or member_has_permission(user, company_id, _step_permission(obj)))
         )
 
 
 class QuoteItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source="product.name", read_only=True)
-    product_domain = serializers.CharField(
-        source="product.domain_type.code", read_only=True
-    )
+    product_domain = serializers.CharField(source="product.domain_type.code", read_only=True)
     product_sku = serializers.CharField(source="product.sku", read_only=True)
     product_gost = serializers.CharField(source="product.gost_drawing", read_only=True)
     # Fallbacks so the buyer's review grid can show a catalog line's identity from the linked
     # Product when the denormalised copy is blank (audit M12) — single source of truth.
     product_mpn = serializers.SerializerMethodField()
     product_uom = serializers.SerializerMethodField()
-    offer_supplier_name = serializers.CharField(
-        source="offer.supplier.name", read_only=True
-    )
+    offer_supplier_name = serializers.CharField(source="offer.supplier.name", read_only=True)
 
     def get_product_mpn(self, obj) -> str:
         return obj.product.manufacturer_part_number if obj.product_id else ""
@@ -140,21 +141,11 @@ class QuoteItemSerializer(serializers.ModelSerializer):
     # validators (whose messages are DRF prose); validate_<field> re-enforces the
     # same model bounds (KP-04 MinValue / MaxValue) with codes. Caps: settings.QUOTE_ITEM_MAX_*.
     quantity = serializers.IntegerField(required=False)
-    frozen_base_price = serializers.DecimalField(
-        max_digits=14, decimal_places=2, required=False
-    )
-    logistics_cost = serializers.DecimalField(
-        max_digits=14, decimal_places=2, required=False
-    )
-    customs_duty = serializers.DecimalField(
-        max_digits=14, decimal_places=2, required=False
-    )
-    margin_percent = serializers.DecimalField(
-        max_digits=5, decimal_places=2, required=False
-    )
-    discount_percent = serializers.DecimalField(
-        max_digits=5, decimal_places=2, required=False
-    )
+    frozen_base_price = serializers.DecimalField(max_digits=14, decimal_places=2, required=False)
+    logistics_cost = serializers.DecimalField(max_digits=14, decimal_places=2, required=False)
+    customs_duty = serializers.DecimalField(max_digits=14, decimal_places=2, required=False)
+    margin_percent = serializers.DecimalField(max_digits=5, decimal_places=2, required=False)
+    discount_percent = serializers.DecimalField(max_digits=5, decimal_places=2, required=False)
     lead_time_days = serializers.IntegerField(required=False)
 
     def validate_quantity(self, value):
@@ -258,9 +249,7 @@ class QuoteItemSerializer(serializers.ModelSerializer):
             user = getattr(self.context.get("request"), "user", None)
             from accounts.services.permissions import can_view_quote_costs_for
 
-            cache[qid] = bool(
-                user and quote is not None and can_view_quote_costs_for(user, quote)
-            )
+            cache[qid] = bool(user and quote is not None and can_view_quote_costs_for(user, quote))
         return cache[qid]
 
     def to_representation(self, instance):
@@ -287,15 +276,9 @@ class ChargeTemplateSerializer(serializers.ModelSerializer):
     from the request body — so a Company Admin can only manage their own templates.
     """
 
-    delivery_basis = serializers.SlugRelatedField(
-        slug_field="code", queryset=DeliveryBasis.objects.all()
-    )
-    delivery_basis_name = serializers.CharField(
-        source="delivery_basis.name", read_only=True
-    )
-    charge_type = serializers.SlugRelatedField(
-        slug_field="code", queryset=ChargeType.objects.all()
-    )
+    delivery_basis = serializers.SlugRelatedField(slug_field="code", queryset=DeliveryBasis.objects.all())
+    delivery_basis_name = serializers.CharField(source="delivery_basis.name", read_only=True)
+    charge_type = serializers.SlugRelatedField(slug_field="code", queryset=ChargeType.objects.all())
     charge_type_name = serializers.CharField(source="charge_type.name", read_only=True)
 
     class Meta:
@@ -317,9 +300,7 @@ class ChargeTemplateSerializer(serializers.ModelSerializer):
 class QuoteChargeSerializer(serializers.ModelSerializer):
     """КП-level expense item / discount (UBL document AllowanceCharge)."""
 
-    charge_type = serializers.SlugRelatedField(
-        slug_field="code", queryset=ChargeType.objects.all()
-    )
+    charge_type = serializers.SlugRelatedField(slug_field="code", queryset=ChargeType.objects.all())
     charge_type_name = serializers.CharField(source="charge_type.name", read_only=True)
 
     class Meta:
@@ -396,9 +377,7 @@ class QuoteSerializer(serializers.ModelSerializer):
         allow_null=True,
     )
     # Incoterm responsibility flags drive cost-row visibility in the КП builder.
-    delivery_basis_data = DeliveryBasisSerializer(
-        source="delivery_basis", read_only=True
-    )
+    delivery_basis_data = DeliveryBasisSerializer(source="delivery_basis", read_only=True)
     # Internal cost breakdown — gated to seller/admin in to_representation().
     charges = QuoteChargeSerializer(many=True, read_only=True)
     # Effective КП delivery term = override (delivery_lead_time_days) or max(line lead times).
@@ -409,6 +388,37 @@ class QuoteSerializer(serializers.ModelSerializer):
     economics = serializers.SerializerMethodField()
     # Internal approval chain (only on the single-quote/deal detail, same gate as economics).
     approval_steps = serializers.SerializerMethodField()
+    # Current market FX rates ({code: "rate"}) for the frontend pricing mirror — a preview of the
+    # rate a line's cost currency WOULD get before it is frozen into fx_snapshot / fx_manual.
+    fx_market = serializers.SerializerMethodField()
+
+    def get_fx_market(self, obj) -> dict:
+        """Current market rate_to_uzs for every ACTIVE currency, as a {code: "rate"} map (UZS = 1).
+
+        Lets `usePricingMirror` recompute a line whose cost currency is NOT yet in the КП's
+        fx_snapshot/fx_manual — instead of showing «пересчёт после сохранения». This is the PUBLIC
+        reference rate, NOT the seller's chosen/frozen rate (those stay in fx_snapshot/fx_manual). A
+        currency with no known rate is OMITTED so the mirror keeps its honest «no rate» marker.
+
+        Rates come from get_rate_to_uzs, which reads the LOCAL ExchangeRate table only (the CBU
+        fetch is a Celery job) — no network call runs in the request path. Currencies are a small
+        lookup, so the per-currency read is bounded (Performance Conventions)."""
+        # Same include_economics gate as economics/approval_steps: the mirror lives only on the
+        # КП builder (detail view). Without this, every deal row in a LIST endpoint would pay
+        # ~(1 + N_currencies) ExchangeRate queries — the exact N+1 the gate exists to prevent.
+        if not self.context.get("include_economics"):
+            return {}
+        from master_data.fx import get_rate_to_uzs
+
+        rates: dict = {}
+        for code in Currency.objects.filter(is_active=True).values_list("code", flat=True):
+            normalized = (code or "").upper()
+            if not normalized:
+                continue
+            rate = get_rate_to_uzs(normalized)
+            if rate is not None:
+                rates[normalized] = str(rate)
+        return rates
 
     def get_effective_delivery_lead_time_days(self, obj) -> int:
         from crm.services import effective_quote_lead_time
@@ -418,9 +428,7 @@ class QuoteSerializer(serializers.ModelSerializer):
     def get_approval_steps(self, obj):
         if not self.context.get("include_economics"):
             return []
-        steps = obj.approval_steps.select_related(
-            "approver__user", "approver_role", "acted_by"
-        ).all()
+        steps = obj.approval_steps.select_related("approver__user", "approver_role", "acted_by").all()
         return QuoteApprovalStepSerializer(steps, many=True, context=self.context).data
 
     def validate_fx_manual(self, value):
@@ -452,10 +460,7 @@ class QuoteSerializer(serializers.ModelSerializer):
             return None
         from crm.services.quotes import compute_quote_economics
 
-        return {
-            k: (str(v) if isinstance(v, Decimal) else v)
-            for k, v in compute_quote_economics(obj).items()
-        }
+        return {k: (str(v) if isinstance(v, Decimal) else v) for k, v in compute_quote_economics(obj).items()}
 
     class Meta:
         model = Quote
@@ -474,6 +479,7 @@ class QuoteSerializer(serializers.ModelSerializer):
             "cost_currency_default",
             "fx_snapshot",
             "fx_manual",
+            "fx_market",
             "tax_country",
             "vat_rate",
             "margin_percent",
@@ -544,9 +550,7 @@ class QuoteSerializer(serializers.ModelSerializer):
             user = getattr(self.context.get("request"), "user", None)
             from accounts.services.permissions import can_view_quote_costs_for
 
-            cache[qid] = bool(
-                user and quote is not None and can_view_quote_costs_for(user, quote)
-            )
+            cache[qid] = bool(user and quote is not None and can_view_quote_costs_for(user, quote))
         return cache[qid]
 
     def to_representation(self, instance):
@@ -566,9 +570,7 @@ def _viewer_routing(obj, request):
     user = getattr(request, "user", None)
     if user is None or not getattr(user, "is_authenticated", False):
         return None
-    company_ids = set(
-        user.memberships.filter(is_active=True).values_list("company_id", flat=True)
-    )
+    company_ids = set(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
     if not company_ids:
         return None
     return next(
@@ -610,9 +612,7 @@ def _target_sellers_for_viewer(obj, request):
     as_dicts = [{"id": s.id, "name": s.name} for s in sellers]
     if getattr(user, "is_platform_admin", False):
         return as_dicts
-    company_ids = set(
-        user.memberships.filter(is_active=True).values_list("company_id", flat=True)
-    )
+    company_ids = set(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
     # Buyer owns the RFQ → sees everyone it fanned out to; a seller sees only itself.
     if obj.company_id in company_ids:
         return as_dicts
@@ -811,12 +811,8 @@ class ActivityLogSerializer(serializers.ModelSerializer):
 
 
 class ContractSerializer(serializers.ModelSerializer):
-    client_signer_name = serializers.CharField(
-        source="client_signer.get_full_name", read_only=True, default=None
-    )
-    manager_signer_name = serializers.CharField(
-        source="manager_signer.get_full_name", read_only=True, default=None
-    )
+    client_signer_name = serializers.CharField(source="client_signer.get_full_name", read_only=True, default=None)
+    manager_signer_name = serializers.CharField(source="manager_signer.get_full_name", read_only=True, default=None)
     # status is a FK lookup now (F5.4); keep emitting the code string under `status`
     # so the frontend contract is unchanged, plus the display name under status_name.
     status = serializers.CharField(source="status.code", read_only=True)
@@ -928,9 +924,7 @@ class PaymentSerializer(serializers.ModelSerializer):
 class InvoiceSerializer(serializers.ModelSerializer):
     items = InvoiceItemSerializer(many=True, read_only=True)
     payments = PaymentSerializer(many=True, read_only=True)
-    balance_due = serializers.DecimalField(
-        read_only=True, max_digits=14, decimal_places=2
-    )
+    balance_due = serializers.DecimalField(read_only=True, max_digits=14, decimal_places=2)
     # status is a FK lookup now (F5.4); keep the code string under `status` (+ name).
     status = serializers.CharField(source="status.code", read_only=True)
     status_name = serializers.CharField(source="status.name", read_only=True)

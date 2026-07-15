@@ -9766,6 +9766,21 @@ export interface components {
              */
             fx_manual?: unknown;
             /**
+             * @description Current market rate_to_uzs for every ACTIVE currency, as a {code: "rate"} map (UZS = 1).
+             *
+             *     Lets `usePricingMirror` recompute a line whose cost currency is NOT yet in the КП's
+             *     fx_snapshot/fx_manual — instead of showing «пересчёт после сохранения». This is the PUBLIC
+             *     reference rate, NOT the seller's chosen/frozen rate (those stay in fx_snapshot/fx_manual). A
+             *     currency with no known rate is OMITTED so the mirror keeps its honest «no rate» marker.
+             *
+             *     Rates come from get_rate_to_uzs, which reads the LOCAL ExchangeRate table only (the CBU
+             *     fetch is a Celery job) — no network call runs in the request path. Currencies are a small
+             *     lookup, so the per-currency read is bounded (Performance Conventions).
+             */
+            readonly fx_market: {
+                [key: string]: unknown;
+            };
+            /**
              * Страна налогообложения
              * @description Определяет ставку НДС для расчёта
              */
