@@ -686,6 +686,14 @@
       "leaveDescription": "Your КП line-item edits are not saved. If you leave, they will be lost. Leave anyway?",
       "leaveConfirm": "Leave without saving"
     },
+    "sendGate": {
+      "kyc": "Complete company verification (KYC L2) to send a quote to the client.",
+      "kycCta": "Get verified",
+      "subscription": "Sending a quote to the client requires an active subscription.",
+      "subscriptionCta": "Subscribe",
+      "demo": "Demo mode: sending a quote is unavailable — documents carry a DEMO watermark.",
+      "demoCta": "Subscribe"
+    },
     "subtotalExclVAT": "Subtotal excl. VAT",
     "vatPercent": "VAT 12%",
     "totalInclVAT": "Total incl. VAT",

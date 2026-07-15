@@ -500,18 +500,29 @@ class MeSerializer(serializers.ModelSerializer):
         effective CompanyRole permission codes — is_system role → ALL_PERMISSIONS (mirrors
         CompanyRole.has_perm's short-circuit, so a perm added later isn't wrongly missing for an
         existing company admin). Drives the unified nav's per-item `requires` gates."""
-        from .constants import ALL_PERMISSIONS
+        from accounts.services import is_demo, primary_seller_company_id, quote_send_entitled
+
+        from .constants import ALL_PERMISSIONS, FeatureKey
 
         membership = self._primary_membership(obj)
         permissions = []
         if membership and getattr(membership, "company_role", None):
             role = membership.company_role
             permissions = list(ALL_PERMISSIONS) if role.is_system else list(role.permissions or [])
+        # WP-H early-gate signals: surface the seller's quote.send eligibility to the КП builder so
+        # blockers show BEFORE an hour of data entry, mirroring send_to_client's KYC→entitlement gate
+        # order (SELLER_KYC_REQUIRED then QUOTE_SEND_NOT_ENTITLED). `can_send_quotes` folds all three
+        # send preconditions (KYC L2+, quote.send entitlement, NOT demo); `quote_send_is_demo` lets the
+        # UI show the distinct "output watermarked" message. UI-gating only — send_to_client stays
+        # authoritative. None seller company → both False (no seller context to gate).
+        seller_company_id = primary_seller_company_id(obj)
         return {
             "kyc_level": self.get_kyc_status(obj),
             "can_buy": self.get_can_buy(obj),
             "can_sell": self.get_can_sell(obj),
             "subscription_active": bool(self.get_seller_subscription_operational(obj)),
+            "can_send_quotes": bool(seller_company_id and quote_send_entitled(seller_company_id)),
+            "quote_send_is_demo": bool(seller_company_id and is_demo(seller_company_id, FeatureKey.QUOTE_SEND)),
             "permissions": permissions,
             "is_platform_admin": bool(getattr(obj, "is_platform_admin", False)),
             "operator_permissions": self.get_operator_permissions(obj),
