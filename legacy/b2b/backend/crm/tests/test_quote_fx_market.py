@@ -43,18 +43,21 @@ def _currency(code, *, is_active):
     return currency
 
 
-def _serialize(quote):
-    """Serialize with an authenticated request in context (fx_market is user-independent)."""
+def _serialize(quote, *, include_economics=True):
+    """Serialize with an authenticated request in context (fx_market is user-independent).
+
+    fx_market shares the include_economics gate with economics/approval_steps: it is only
+    computed on the КП detail (builder) context, never on list endpoints (N+1 guard)."""
     from rest_framework.test import APIRequestFactory
 
     request = APIRequestFactory().get("/")
     request.user = CustomUser.objects.create_user(email="v@t.test", username="v@t.test", password="x")
-    return QuoteSerializer(quote, context={"request": request}).data
+    return QuoteSerializer(quote, context={"request": request, "include_economics": include_economics}).data
 
 
 @pytest.mark.django_db
 def test_fx_market_present_with_uzs_one(quote):
-    """fx_market is always emitted; the national currency UZS is anchored at 1."""
+    """fx_market is emitted on the detail (include_economics) context; UZS is anchored at 1."""
     _currency("UZS", is_active=True)
 
     data = _serialize(quote)
@@ -112,3 +115,23 @@ def test_fx_market_excludes_inactive_currency(quote):
     data = _serialize(quote)
 
     assert "GBP" not in data["fx_market"]
+
+
+@pytest.mark.django_db
+def test_fx_market_gated_off_without_include_economics(quote):
+    """Without include_economics (LIST endpoints — deals list nests active_quote) fx_market is {}
+    and costs ZERO ExchangeRate queries: adversarial-review MAJOR — 5 queries × every deal row."""
+    from django.db import connection
+    from django.test.utils import CaptureQueriesContext
+
+    _currency("UZS", is_active=True)
+    usd = _currency("USD", is_active=True)
+    ExchangeRate.objects.create(
+        currency=usd, rate_date=datetime.date(2026, 7, 1), rate_to_uzs=Decimal("12500.75"), source="TEST"
+    )
+
+    with CaptureQueriesContext(connection) as captured:
+        data = _serialize(quote, include_economics=False)
+
+    assert data["fx_market"] == {}
+    assert not any("exchangerate" in query["sql"].lower() for query in captured.captured_queries)

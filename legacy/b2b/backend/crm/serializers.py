@@ -403,6 +403,11 @@ class QuoteSerializer(serializers.ModelSerializer):
         Rates come from get_rate_to_uzs, which reads the LOCAL ExchangeRate table only (the CBU
         fetch is a Celery job) — no network call runs in the request path. Currencies are a small
         lookup, so the per-currency read is bounded (Performance Conventions)."""
+        # Same include_economics gate as economics/approval_steps: the mirror lives only on the
+        # КП builder (detail view). Without this, every deal row in a LIST endpoint would pay
+        # ~(1 + N_currencies) ExchangeRate queries — the exact N+1 the gate exists to prevent.
+        if not self.context.get("include_economics"):
+            return {}
         from master_data.fx import get_rate_to_uzs
 
         rates: dict = {}
