@@ -19,7 +19,14 @@ from core.optimistic_locking import OptimisticLockingMixin
 from core.permissions import IsCompanyMemberOrPlatformAdmin, OperatorScoped
 from crm import services as crm_services
 from crm.constants import QuoteStatusCode
-from crm.models import ChargeTemplate, ChargeType, Quote, QuoteCharge, QuoteItem, QuoteStatus
+from crm.models import (
+    ChargeTemplate,
+    ChargeType,
+    Quote,
+    QuoteCharge,
+    QuoteItem,
+    QuoteStatus,
+)
 from crm.serializers import (
     ChargeTemplateSerializer,
     ChargeTypeSerializer,
@@ -195,7 +202,10 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
         (anchoring the КП-owning company + approval chain). Auto-increments version."""
         from rest_framework.exceptions import PermissionDenied
 
-        from accounts.services.permissions import can_edit_quote_pricing, is_platform_admin_viewer
+        from accounts.services.permissions import (
+            can_edit_quote_pricing,
+            is_platform_admin_viewer,
+        )
 
         user = self.request.user
         if is_platform_admin_viewer(user):
@@ -244,7 +254,10 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
         tax_country (by pk); changing vat_rate moves the VAT total, so recalc afterwards."""
         from rest_framework.exceptions import PermissionDenied
 
-        from accounts.services.permissions import can_edit_quote_pricing, is_platform_admin_viewer
+        from accounts.services.permissions import (
+            can_edit_quote_pricing,
+            is_platform_admin_viewer,
+        )
 
         user = self.request.user
         if is_platform_admin_viewer(user):
@@ -752,7 +765,10 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
         visible_deal_ids = seller_visible_deal_ids(user, self.request)
         if visible_deal_ids is not None:
             from accounts.models import CompanyMember
-            from accounts.services.permissions import SELLER_COMPANY_TYPES, seller_acting_company_ids
+            from accounts.services.permissions import (
+                SELLER_COMPANY_TYPES,
+                seller_acting_company_ids,
+            )
 
             # The seller sees items/charges on deals routed to them. Audit H1 (no cross-seller
             # leak): hide a quote ONLY when it was prepared by a COMPETING seller company. The
@@ -789,7 +805,10 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
         """Building/editing КП line items is a seller action. Raise 403 otherwise."""
         from rest_framework.exceptions import PermissionDenied
 
-        from accounts.services.permissions import can_edit_quote_pricing, is_platform_admin_viewer
+        from accounts.services.permissions import (
+            can_edit_quote_pricing,
+            is_platform_admin_viewer,
+        )
 
         user = self.request.user
         if is_platform_admin_viewer(user):
@@ -916,6 +935,52 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
             return Response({"detail": error}, status=http_status)
         return Response(self.get_serializer(items, many=True).data)
 
+    @extend_schema(
+        summary="Bulk-create КП line items in one transaction",
+        description=(
+            "Insert many new КП lines atomically (Excel-paste). ALL-OR-NOTHING: if any row is "
+            "invalid, nothing is saved and per-row errors are returned; on success the cascade "
+            "and totals are recalculated ONCE and the created lines are returned (201). Same "
+            "field validation as the single-item create; every row needs a non-empty "
+            "imported_raw_name. Seller action."
+        ),
+        request=inline_serializer(
+            "BulkCreateQuoteItemsRequest",
+            fields={
+                "quote": drf_serializers.IntegerField(),
+                "items": drf_serializers.ListField(child=drf_serializers.DictField()),
+            },
+        ),
+        responses={
+            201: QuoteItemSerializer(many=True),
+            400: OpenApiResponse(
+                description="QUOTE_ITEMS_BULK_INVALID (with per-row `rows`) / QUOTE_ITEMS_BULK_EMPTY / "
+                "QUOTE_ITEMS_BULK_TOO_LARGE / QUOTE_FROZEN"
+            ),
+            403: OpenApiResponse(description="ADMIN_VIEWER_CANNOT_ACT / ONLY_SELLER_CAN_BUILD_QUOTE"),
+            404: OpenApiResponse(description="QUOTE_NOT_FOUND"),
+        },
+        tags=["CRM"],
+    )
+    @action(detail=False, methods=["post"], url_path="bulk-create", permission_classes=[IsAuthenticated])
+    def bulk_create(self, request):
+        """Thin wrapper (Rule 8) — all logic in crm.services.quotes.bulk_create_quote_items."""
+        from crm.services.quotes import bulk_create_quote_items
+
+        items, error, rows = bulk_create_quote_items(
+            request.user, request.data.get("quote"), request.data.get("items"), request
+        )
+        if error == "QUOTE_ITEMS_BULK_INVALID":
+            return Response({"detail": error, "rows": rows}, status=status.HTTP_400_BAD_REQUEST)
+        if error:
+            http_status = {
+                "ADMIN_VIEWER_CANNOT_ACT": status.HTTP_403_FORBIDDEN,
+                "ONLY_SELLER_CAN_BUILD_QUOTE": status.HTTP_403_FORBIDDEN,
+                "QUOTE_NOT_FOUND": status.HTTP_404_NOT_FOUND,
+            }.get(error, status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": error}, status=http_status)
+        return Response(self.get_serializer(items, many=True).data, status=status.HTTP_201_CREATED)
+
     @extend_schema(summary="Get top-N smart-match candidates for this item", tags=["CRM"])
     @action(detail=True, methods=["get"], url_path="match-candidates", permission_classes=[IsAuthenticated])
     def match_candidates(self, request, pk=None):
@@ -957,7 +1022,10 @@ class QuoteChargeViewSet(viewsets.ModelViewSet):
         visible_deal_ids = seller_visible_deal_ids(user, self.request)
         if visible_deal_ids is not None:
             from accounts.models import CompanyMember
-            from accounts.services.permissions import SELLER_COMPANY_TYPES, seller_acting_company_ids
+            from accounts.services.permissions import (
+                SELLER_COMPANY_TYPES,
+                seller_acting_company_ids,
+            )
 
             # The seller sees items/charges on deals routed to them. Audit H1 (no cross-seller
             # leak): hide a quote ONLY when it was prepared by a COMPETING seller company. The
@@ -992,7 +1060,10 @@ class QuoteChargeViewSet(viewsets.ModelViewSet):
     def _assert_seller(self):
         from rest_framework.exceptions import PermissionDenied
 
-        from accounts.services.permissions import can_edit_quote_pricing, is_platform_admin_viewer
+        from accounts.services.permissions import (
+            can_edit_quote_pricing,
+            is_platform_admin_viewer,
+        )
 
         user = self.request.user
         if is_platform_admin_viewer(user):
