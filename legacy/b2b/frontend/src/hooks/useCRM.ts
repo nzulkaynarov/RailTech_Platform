@@ -184,6 +184,37 @@ export const useDeleteQuoteItem = () => {
   });
 };
 
+// Bulk delete of КП lines (WP-J). Fires the per-row deletes in parallel (there is no
+// bulk-delete endpoint) but invalidates the caches ONCE at the end — N per-call invalidations
+// would thrash the grid. Single-line delete (useDeleteQuoteItem) is left untouched.
+export const useBulkDeleteQuoteItems = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: number[]) => Promise.all(ids.map((id) => crmApi.deleteQuoteItem(id))),
+    // onSettled, NOT onSuccess: a partial failure (3 of 5 deleted, 2 rejected) still
+    // changed server state — without invalidation the deleted rows stay visible as
+    // phantoms and the next Save sends their ids (adversarial-review MAJOR).
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['quote-items'] });
+      queryClient.invalidateQueries({ queryKey: ['deals'] });
+    },
+  });
+};
+
+// Bulk create of new КП lines (WP-J duplicate). ONE transactional request, ONE recalc; same
+// invalidations as the single-item create so the grid + economics refresh once.
+export const useBulkCreateQuoteItems = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ quoteId, items }: { quoteId: number; items: Array<Record<string, unknown>> }) =>
+      crmApi.bulkCreateQuoteItems(quoteId, items),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['quote-items'] });
+      queryClient.invalidateQueries({ queryKey: ['deals'] });
+    },
+  });
+};
+
 // Buyer-only: append a row to their own request. Backend creates the DRAFT
 // quote on first add and rejects once the seller has engaged (can_edit_request).
 export const useAddRequestItem = () => {

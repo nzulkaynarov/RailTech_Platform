@@ -6,8 +6,8 @@ import { renderWithProviders } from '@/test/renderWithProviders';
 import type { Deal, QuoteItem } from '@/api/crmApi';
 import { QuoteBuilderGrid } from '@/components/Admin/QuoteBuilderGrid';
 import {
-	useDeal, useQuoteItems, useUpdateQuoteItem, useBulkUpdateQuoteItems, useCreateQuoteItem,
-	useDeleteQuoteItem, useSetQuoteDeliveryBasis,
+	useDeal, useQuoteItems, useUpdateQuoteItem, useBulkUpdateQuoteItems, useBulkCreateQuoteItems,
+	useBulkDeleteQuoteItems, useCreateQuoteItem, useDeleteQuoteItem, useSetQuoteDeliveryBasis,
 } from '@/hooks/useCRM';
 
 /**
@@ -20,6 +20,8 @@ vi.mock('@/hooks/useCRM', () => ({
 	useQuoteItems: vi.fn(),
 	useUpdateQuoteItem: vi.fn(),
 	useBulkUpdateQuoteItems: vi.fn(),
+	useBulkCreateQuoteItems: vi.fn(),
+	useBulkDeleteQuoteItems: vi.fn(),
 	useCreateQuoteItem: vi.fn(),
 	useDeleteQuoteItem: vi.fn(),
 	useSetQuoteDeliveryBasis: vi.fn(),
@@ -86,7 +88,8 @@ describe('QuoteBuilderGrid — document tabs', () => {
 		vi.clearAllMocks();
 		setHook(useDeal, { data: gridDeal, isLoading: false });
 		setHook(useQuoteItems, { data: [gridItem], isLoading: false });
-		[useUpdateQuoteItem, useBulkUpdateQuoteItems, useCreateQuoteItem, useDeleteQuoteItem, useSetQuoteDeliveryBasis]
+		[useUpdateQuoteItem, useBulkUpdateQuoteItems, useBulkCreateQuoteItems, useBulkDeleteQuoteItems,
+			useCreateQuoteItem, useDeleteQuoteItem, useSetQuoteDeliveryBasis]
 			.forEach((hook) => setHook(hook, mkMutation()));
 	});
 

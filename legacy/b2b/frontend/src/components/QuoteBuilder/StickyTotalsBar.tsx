@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Loader2, Save } from 'lucide-react';
+import { Loader2, Save, Undo2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatMoney } from '@/utils/decimal';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,10 @@ interface StickyTotalsBarProps {
 	hasUnsavedChanges: boolean;
 	saving: boolean;
 	onSave: () => void;
+	/** Revert the last local draft edit (WP-J undo); omit to hide the Undo button. */
+	onUndo?: () => void;
+	/** Whether there is a draft edit to undo — disables the Undo button when false. */
+	canUndo?: boolean;
 }
 
 /**
@@ -36,6 +40,8 @@ export const StickyTotalsBar: React.FC<StickyTotalsBarProps> = ({
 	hasUnsavedChanges,
 	saving,
 	onSave,
+	onUndo,
+	canUndo,
 }) => {
 	const { t } = useTranslation();
 
@@ -61,6 +67,12 @@ export const StickyTotalsBar: React.FC<StickyTotalsBarProps> = ({
 			<div className="flex items-center gap-3">
 				{hasUnsavedChanges && (
 					<span className="text-xs font-medium text-warning">{t('quote.unsavedChanges')}</span>
+				)}
+				{onUndo && (
+					<Button variant="outline" size="sm" onClick={onUndo} disabled={!canUndo}>
+						<Undo2 className="size-4" />
+						{t('quote.undo')}
+					</Button>
 				)}
 				<Button size="sm" onClick={onSave} disabled={saving}>
 					{saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}

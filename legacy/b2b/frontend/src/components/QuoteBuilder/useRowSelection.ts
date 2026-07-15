@@ -1,0 +1,103 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
+export interface UseRowSelectionResult {
+	/** The currently selected row ids. */
+	selectedIds: Set<number>;
+	/** Number of selected rows (convenience for the toolbar «Выбрано: N»). */
+	count: number;
+	/** Is this row selected? */
+	isSelected: (id: number) => boolean;
+	/** Toggle one row; with `shiftKey` selects the range from the last-clicked row to this one. */
+	toggle: (id: number, shiftKey?: boolean) => void;
+	/** Header checkbox: select all when not all are selected, else clear. */
+	toggleAll: () => void;
+	/** Every row selected (and there is ≥1 row). */
+	allSelected: boolean;
+	/** Some — but not all — rows selected (header checkbox → indeterminate). */
+	someSelected: boolean;
+	/** Clear the whole selection (after a successful bulk action). */
+	clear: () => void;
+}
+
+/**
+ * Row multi-select for the КП line grid (WP-J / spec §5 волна 2 п.11).
+ *
+ * Holds a `Set<id>` of selected rows plus a "last clicked" anchor for Shift+range.
+ * Selection PERSISTS across tab switches and focus-mode (it lives above the grid),
+ * is pruned automatically when a row leaves the server set (delete / duplicate refetch),
+ * and is cleared explicitly by the caller after a successful bulk action.
+ *
+ * `orderedIds` is the visible row order (draftItems order) — it drives Shift-range,
+ * all/none, and the prune. It is read through a ref so the callbacks stay stable.
+ */
+export function useRowSelection(orderedIds: number[]): UseRowSelectionResult {
+	const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set());
+	const lastSelectedIdRef = useRef<number | null>(null);
+
+	// Stable access to the latest row order inside the callbacks (orderedIds is a fresh array
+	// every render — a new draftItems.map — so we never want it in a callback dep list).
+	const orderedIdsRef = useRef(orderedIds);
+	orderedIdsRef.current = orderedIds;
+
+	// Prune ids that left the server row set (a deleted / replaced row must not stay selected).
+	// Keyed on the joined id list so it only runs when the actual set of rows changes.
+	const idsKey = orderedIds.join(',');
+	useEffect(() => {
+		const present = new Set(orderedIdsRef.current);
+		setSelectedIds((previous) => {
+			const next = new Set([...previous].filter((id) => present.has(id)));
+			return next.size === previous.size ? previous : next;
+		});
+	}, [idsKey]);
+
+	const toggle = useCallback((id: number, shiftKey = false) => {
+		const ordered = orderedIdsRef.current;
+		setSelectedIds((previous) => {
+			const next = new Set(previous);
+			const anchor = lastSelectedIdRef.current;
+			if (shiftKey && anchor != null) {
+				const from = ordered.indexOf(anchor);
+				const to = ordered.indexOf(id);
+				if (from !== -1 && to !== -1) {
+					const [lo, hi] = from <= to ? [from, to] : [to, from];
+					for (let index = lo; index <= hi; index += 1) next.add(ordered[index]);
+					lastSelectedIdRef.current = id;
+					return next;
+				}
+			}
+			if (next.has(id)) next.delete(id);
+			else next.add(id);
+			lastSelectedIdRef.current = id;
+			return next;
+		});
+	}, []);
+
+	const allSelected = orderedIds.length > 0 && selectedIds.size === orderedIds.length;
+	const someSelected = selectedIds.size > 0 && !allSelected;
+
+	const toggleAll = useCallback(() => {
+		const ordered = orderedIdsRef.current;
+		setSelectedIds((previous) => (previous.size === ordered.length ? new Set() : new Set(ordered)));
+	}, []);
+
+	const clear = useCallback(() => {
+		setSelectedIds((previous) => (previous.size === 0 ? previous : new Set()));
+		lastSelectedIdRef.current = null;
+	}, []);
+
+	const isSelected = useCallback((id: number) => selectedIds.has(id), [selectedIds]);
+
+	return useMemo(
+		() => ({
+			selectedIds,
+			count: selectedIds.size,
+			isSelected,
+			toggle,
+			toggleAll,
+			allSelected,
+			someSelected,
+			clear,
+		}),
+		[selectedIds, isSelected, toggle, toggleAll, allSelected, someSelected, clear],
+	);
+}
