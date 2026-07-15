@@ -5,10 +5,10 @@ import { toast } from 'sonner';
 import { QuoteItem, QuoteEconomics, crmApi } from '@/api/crmApi';
 import { translateApiError } from '@/lib/apiError';
 import {
-	Loader2, AlertTriangle, Plus, Trash2, Sparkles, FileText, Settings, Tag,
+	Loader2, AlertTriangle, AlertCircle, Plus, Trash2, Sparkles, FileText, Settings, Tag,
 	ChevronRight, ChevronDown, PanelRightClose, PanelRightOpen, Link2, Maximize2, Minimize2,
 } from 'lucide-react';
-import { useQuoteItems, useUpdateQuoteItem, useCreateQuoteItem, useDeleteQuoteItem, useDeal, useSetQuoteDeliveryBasis, useBulkUpdateQuoteItems } from '@/hooks/useCRM';
+import { useQuoteItems, useUpdateQuoteItem, useCreateQuoteItem, useDeleteQuoteItem, useDeal, useSetQuoteDeliveryBasis, useBulkUpdateQuoteItems, useBulkCreateQuoteItems, useBulkDeleteQuoteItems } from '@/hooks/useCRM';
 import { useCurrencies } from '@/hooks/useMasterData';
 import { useMediaQuery } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
@@ -22,6 +22,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -37,7 +38,10 @@ import { NumericCell } from '@/components/QuoteBuilder/NumericCell';
 import { useQuoteDraft } from '@/components/QuoteBuilder/useQuoteDraft';
 import { useGridKeyboard } from '@/components/QuoteBuilder/useGridKeyboard';
 import { usePricingMirror } from '@/components/QuoteBuilder/usePricingMirror';
-import { parseBulkItemErrors, extractBulkErrorRows, cellErrorKey } from '@/components/QuoteBuilder/bulkErrors';
+import { parseBulkItemErrors, extractBulkErrorRows, cellErrorKey, hiddenErrorFields } from '@/components/QuoteBuilder/bulkErrors';
+import { useRowSelection } from '@/components/QuoteBuilder/useRowSelection';
+import { SelectionToolbar } from '@/components/QuoteBuilder/SelectionToolbar';
+import { buildDuplicatePayload } from '@/components/QuoteBuilder/duplicatePayload';
 import { AICatalogMatchDialog } from '@/components/Admin/AICatalogMatchDialog';
 import { GenerateQuoteDialog } from '@/components/CRM/GenerateQuoteDialog';
 import { QuoteSettingsDialog } from '@/components/CRM/QuoteSettingsDialog';
@@ -74,13 +78,19 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	const { data: currencies = [] } = useCurrencies();
 	const updateMutation = useUpdateQuoteItem();
 	const bulkUpdateMutation = useBulkUpdateQuoteItems();
+	const bulkCreateMutation = useBulkCreateQuoteItems();
+	const bulkDeleteMutation = useBulkDeleteQuoteItems();
 	const createItemMutation = useCreateQuoteItem();
 	const deleteItemMutation = useDeleteQuoteItem();
 	const setBasisMutation = useSetQuoteDeliveryBasis();
 
 	// Draft state machine (WP-D): server data merges into non-dirty rows only, so a refetch
 	// triggered by settings/charges/basis mutations no longer wipes in-progress line edits.
-	const { draftItems, dirtyIds, hasUnsavedChanges, setField, clearDirtyAfterSave } = useQuoteDraft(quoteItems);
+	// WP-J adds applyBulk (bulk price/discount, one undo step) + a local undo stack.
+	const { draftItems, dirtyIds, hasUnsavedChanges, setField, applyBulk, clearDirtyAfterSave, undo, canUndo } = useQuoteDraft(quoteItems);
+	// Row multi-select (WP-J): a Set of row ids driving the bulk-action strip. `draftItems` order
+	// is the visible order, so it feeds Shift-range, all/none and the prune-on-delete.
+	const selection = useRowSelection(draftItems.map((item) => item.id));
 	// Excel-style keyboard navigation (WP-G): one delegated handler on the grid container moves
 	// focus between the same column of adjacent rows on ArrowUp/ArrowDown/Enter.
 	const gridKeyboard = useGridKeyboard();
@@ -95,6 +105,9 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	// «Добавить и продолжить»: refocus the name field + keep the row's new position in view.
 	const addNameRef = useRef<HTMLInputElement>(null);
 	const addRowRef = useRef<HTMLTableRowElement>(null);
+	// Per-row element refs so a bulk-reject can auto-expand + scroll the first offending row
+	// into view (WP-J row-marker, fast-follow ревью #317).
+	const rowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map());
 
 	// Edit a line AND drop any stale bulk-save error on that exact cell (so the red ring / tooltip
 	// clears the moment the seller starts fixing it). Wraps the draft-machine setField.
@@ -273,6 +286,19 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 				setCellErrors(parsed);
 				const rowCount = new Set(Object.keys(parsed).map((key) => key.split(':')[0])).size;
 				toast.error(t('quote.save.rowsWithErrors', { count: rowCount }));
+				// Fast-follow (ревью #317): if the first offending cell lives in a COLLAPSED detail
+				// sub-row (or a cost column hidden on a narrow screen), auto-expand that row and
+				// scroll it into view so the seller can see + fix the otherwise-invisible error.
+				const showCost = !!deal?.active_quote?.economics && !isCompact;
+				const firstHiddenErrorId = draftItems.find(
+					(item) => hiddenErrorFields(parsed, item.id, showCost).length > 0,
+				)?.id;
+				if (firstHiddenErrorId != null) {
+					setExpandedRowId(firstHiddenErrorId);
+					requestAnimationFrame(() =>
+						rowRefs.current.get(firstHiddenErrorId)?.scrollIntoView?.({ block: 'center' }),
+					);
+				}
 			} else {
 				toast.error(translateApiError(error));
 			}
@@ -332,6 +358,76 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 		} catch {
 			toast.error(t('errors.operationFailed'));
 			setDeleteTarget(null);
+		}
+	};
+
+	// ── WP-J bulk actions over the selected rows ──────────────────────────────────────────
+	// Delete: fire all per-row deletes in parallel with ONE cache invalidation (useBulkDelete),
+	// then drop any stale cell errors on the removed rows and clear the selection.
+	const handleBulkDelete = async () => {
+		const ids = [...selection.selectedIds];
+		if (ids.length === 0) return;
+		try {
+			await bulkDeleteMutation.mutateAsync(ids);
+			setCellErrors((previous) => {
+				const next = { ...previous };
+				for (const key of Object.keys(next)) {
+					if (ids.includes(Number(key.split(':')[0]))) delete next[key];
+				}
+				return next;
+			});
+			selection.clear();
+			toast.success(t('quote.bulk.deleted', { count: ids.length }));
+		} catch {
+			toast.error(t('errors.operationFailed'));
+		}
+	};
+
+	// Discount / price change: PURE local draft edits (one undo step each) — the live mirror shows
+	// the effect immediately, the seller saves with the existing Save (bulk-update). No network call.
+	const handleBulkDiscount = (percent: number) => {
+		const edits = [...selection.selectedIds].map((id) => ({
+			id, field: 'discount_percent' as const, value: String(percent),
+		}));
+		if (edits.length === 0) return;
+		applyBulk(edits);
+		toast.success(t('quote.bulk.discountApplied', { count: edits.length }));
+		selection.clear();
+	};
+
+	const handleBulkPriceChange = (percent: number) => {
+		const factor = 1 + percent / 100;
+		const edits = [...selection.selectedIds].map((id) => {
+			const item = draftItems.find((row) => row.id === id);
+			let next = toDecimal(item?.frozen_base_price).mul(factor);
+			if (next.lessThan(0)) next = toDecimal(0);
+			if (next.greaterThan(QUOTE_ITEM_MAX_UNIT_PRICE)) next = toDecimal(QUOTE_ITEM_MAX_UNIT_PRICE);
+			return { id, field: 'frozen_base_price' as const, value: next.toDecimalPlaces(2).toString() };
+		});
+		if (edits.length === 0) return;
+		applyBulk(edits);
+		toast.success(t('quote.bulk.priceApplied', { count: edits.length }));
+		selection.clear();
+	};
+
+	// Duplicate: build a bulk-create payload from the CURRENT draft values of the selected rows
+	// (imported_raw_name + «(копия)»), in visible order. New lines are appended to the КП.
+	const handleBulkDuplicate = async () => {
+		const quoteId = deal?.active_quote?.id;
+		if (!quoteId) return;
+		const selectedInOrder = draftItems.filter((item) => selection.selectedIds.has(item.id));
+		if (selectedInOrder.length === 0) return;
+		// The endpoint takes a loose row bag (bulk-create validates each row server-side); widen the
+		// typed payload to the request shape without losing the field-level type-safety of the builder.
+		const items = selectedInOrder.map(
+			(item) => buildDuplicatePayload(item, t('quote.bulk.copySuffix')) as unknown as Record<string, unknown>,
+		);
+		try {
+			await bulkCreateMutation.mutateAsync({ quoteId, items });
+			toast.success(t('quote.bulk.duplicated', { count: items.length }));
+			selection.clear();
+		} catch (error) {
+			toast.error(translateApiError(error));
 		}
 	};
 
@@ -461,10 +557,25 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 		setBasisMutation.mutate({ id: activeQuote.id, deliveryBasis: basisId });
 	};
 
-	// Visible main-row columns (for the detail row colSpan): chevron, name, qty, [base], [margin], sum, delete.
-	// Gated on showCostColumns (not canViewCost) so colSpan tracks the two cost columns that the
-	// <1200px viewport gate hides — a table can't drop columns via Tailwind `hidden` without drift.
-	const mainColCount = showCostColumns ? 7 : 5;
+	// Visible main-row columns (for the detail row colSpan): select, chevron, name, qty, [base],
+	// [margin], sum, delete. Gated on showCostColumns (not canViewCost) so colSpan tracks the two
+	// cost columns that the <1200px viewport gate hides — a table can't drop columns via Tailwind
+	// `hidden` without drift.
+	const mainColCount = showCostColumns ? 8 : 6;
+
+	// Human label for a КП-line field code — used by the row error marker's tooltip to name the
+	// hidden field(s) that were rejected by the last bulk save.
+	const fieldLabel = (field: string): string => {
+		const labels: Record<string, string> = {
+			customs_duty: t('quote.customsDuty'),
+			discount_percent: t('quote.discountPercent'),
+			lead_time_days: t('quote.leadTime'),
+			hs_code: t('quote.hsCode'),
+			frozen_base_price: t('quote.basePrice'),
+			frozen_currency: t('quote.lineCurrency'),
+		};
+		return labels[field] ?? field;
+	};
 
 	// F6/WP-7: the per-line margin is DERIVED and READ-ONLY — the markup is a single value for
 	// the whole КП (quote.margin_percent), never edited per line. Render it muted with NO edit
@@ -659,13 +770,29 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 		</div>
 	);
 
+	// Ctrl/Cmd+Z reverts the last local draft edit (WP-J undo) — but ONLY when focus is on a
+	// non-text element inside the grid. Inside a text input we leave the browser's native undo
+	// alone (it owns the in-progress edit buffer), so we bail on INPUT/TEXTAREA/SELECT/editable.
+	const handleWorkspaceKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+		if (!(event.ctrlKey || event.metaKey) || event.shiftKey) return;
+		if (event.key !== 'z' && event.key !== 'Z') return;
+		const target = event.target as HTMLElement;
+		if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable) return;
+		if (!canUndo) return;
+		event.preventDefault();
+		undo();
+	};
+
 	return (
 		<TooltipProvider>
-		<div className={cn(
-			'flex flex-col min-h-0 gap-2',
-			// Focus (fullscreen) mode: the grid takes over the whole viewport; Esc / ⛶ exits.
-			fullscreen ? 'fixed inset-0 z-50 bg-background p-3' : 'h-full',
-		)}>
+		<div
+			className={cn(
+				'flex flex-col min-h-0 gap-2',
+				// Focus (fullscreen) mode: the grid takes over the whole viewport; Esc / ⛶ exits.
+				fullscreen ? 'fixed inset-0 z-50 bg-background p-3' : 'h-full',
+			)}
+			onKeyDown={handleWorkspaceKeyDown}
+		>
 			{/* Document toolbar: row actions (left) + view controls (right) */}
 			<div className="flex flex-wrap items-center justify-between gap-2">
 				<div className="flex flex-wrap gap-1.5">
@@ -732,6 +859,20 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 				</div>
 			</div>
 
+			{/* Bulk-action strip — appears above the working area while ≥1 line is selected (WP-J). */}
+			{selection.count > 0 && (
+				<SelectionToolbar
+					count={selection.count}
+					onDelete={handleBulkDelete}
+					onApplyDiscount={handleBulkDiscount}
+					onApplyPriceChange={handleBulkPriceChange}
+					onDuplicate={handleBulkDuplicate}
+					onClear={selection.clear}
+					deleting={bulkDeleteMutation.isPending}
+					duplicating={bulkCreateMutation.isPending}
+				/>
+			)}
+
 			{/* Working area: tabs (line table + charges) on the left, economics rail on the right */}
 			<div className="flex flex-1 min-h-0 gap-3">
 				<div className="flex flex-col flex-1 min-w-0 min-h-0">
@@ -755,8 +896,15 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 							<Table className="w-full text-left text-sm">
 								<TableHeader className="sticky top-0 z-20 border-b bg-muted">
 									<TableRow>
-										<TableHead className="w-8 px-1 py-2 sticky left-0 z-30 bg-muted" />
-										<TableHead className="px-2 py-2 text-xs font-semibold text-muted-foreground min-w-[200px] sticky left-8 z-30 bg-muted">
+										<TableHead className="w-8 px-1 py-2 text-center sticky left-0 z-30 bg-muted">
+											<Checkbox
+												checked={selection.allSelected ? true : selection.someSelected ? 'indeterminate' : false}
+												onClick={() => selection.toggleAll()}
+												aria-label={t('quote.bulk.selectAll')}
+											/>
+										</TableHead>
+										<TableHead className="w-8 px-1 py-2 sticky left-8 z-30 bg-muted" />
+										<TableHead className="px-2 py-2 text-xs font-semibold text-muted-foreground min-w-[200px] sticky left-16 z-30 bg-muted">
 											{t('catalog.table.name')}
 										</TableHead>
 										<TableHead className="px-2 py-2 text-center text-xs font-semibold text-muted-foreground w-20">
@@ -787,22 +935,69 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 								<TableBody className="divide-y">
 									{draftItems.map((item, idx) => {
 										const isExpanded = expandedRowId === item.id;
+										const isRowSelected = selection.isSelected(item.id);
+										const rowHiddenErrors = hiddenErrorFields(cellErrors, item.id, showCostColumns);
+										// Sticky-cell background: selection tint overrides the plain surface; hover/focus win.
+										const stickyBg = cn(
+											isRowSelected ? 'bg-primary/10' : 'bg-background',
+											'group-hover:bg-muted/50 group-focus-within:bg-muted/40',
+										);
 										return (
 											<React.Fragment key={item.id}>
-												<TableRow className="hover:bg-muted/50 focus-within:bg-muted/40 transition-colors group">
-													<TableCell className="w-8 px-1 py-1.5 text-center sticky left-0 z-10 bg-background group-hover:bg-muted/50 group-focus-within:bg-muted/40">
-														<button
-															type="button"
-															onClick={(e) => { e.stopPropagation(); toggleRow(item.id); }}
-															aria-expanded={isExpanded}
-															aria-controls={`kp-line-detail-${item.id}`}
-															aria-label={t('quote.lineDetails')}
-															className="flex size-5 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
-														>
-															{isExpanded ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
-														</button>
+												<TableRow
+													ref={(element) => {
+														if (element) rowRefs.current.set(item.id, element);
+														else rowRefs.current.delete(item.id);
+													}}
+													data-row-id={item.id}
+													className={cn('hover:bg-muted/50 focus-within:bg-muted/40 transition-colors group', isRowSelected && 'bg-primary/5')}
+												>
+													<TableCell className={cn('w-8 px-1 py-1.5 text-center sticky left-0 z-10', stickyBg)}>
+														<Checkbox
+															checked={isRowSelected}
+															onClick={(event) => selection.toggle(item.id, (event as React.MouseEvent).shiftKey)}
+															aria-label={t('quote.bulk.selectRow', { index: idx + 1 })}
+														/>
 													</TableCell>
-													<TableCell className="px-2 py-1.5 sticky left-8 z-10 bg-background group-hover:bg-muted/50 group-focus-within:bg-muted/40">
+													<TableCell className={cn('w-8 px-1 py-1.5 text-center sticky left-8 z-10', stickyBg)}>
+														<div className="flex items-center justify-center gap-0.5">
+															<button
+																type="button"
+																onClick={(e) => { e.stopPropagation(); toggleRow(item.id); }}
+																aria-expanded={isExpanded}
+																aria-controls={`kp-line-detail-${item.id}`}
+																aria-label={t('quote.lineDetails')}
+																className="flex size-5 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+															>
+																{isExpanded ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
+															</button>
+															{/* Row error marker: an error on a field hidden in the collapsed detail (or a
+															    cost column dropped on a narrow screen). Click → expand the detail. */}
+															{rowHiddenErrors.length > 0 && (
+																<Tooltip>
+																	<TooltipTrigger asChild>
+																		<button
+																			type="button"
+																			onClick={(e) => { e.stopPropagation(); setExpandedRowId(item.id); }}
+																			aria-label={t('quote.rowError.marker')}
+																			className="flex size-4 items-center justify-center rounded text-destructive hover:bg-destructive/10"
+																		>
+																			<AlertCircle className="size-3.5" />
+																		</button>
+																	</TooltipTrigger>
+																	<TooltipContent>
+																		<div className="flex flex-col gap-0.5">
+																			<span className="font-medium">{t('quote.rowError.marker')}</span>
+																			<span className="text-muted-foreground">
+																				{t('quote.rowError.fields')} {rowHiddenErrors.map(fieldLabel).join(', ')}
+																			</span>
+																		</div>
+																	</TooltipContent>
+																</Tooltip>
+															)}
+														</div>
+													</TableCell>
+													<TableCell className={cn('px-2 py-1.5 sticky left-16 z-10', stickyBg)}>
 														<div className="flex flex-col leading-tight pr-4">
 															<div className="flex items-center gap-2">
 																{!item.product && (
@@ -1129,6 +1324,8 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 				hasUnsavedChanges={hasUnsavedChanges}
 				saving={bulkUpdateMutation.isPending}
 				onSave={handleSave}
+				onUndo={undo}
+				canUndo={canUndo}
 			/>
 
 			<AICatalogMatchDialog open={showAiMatch} onOpenChange={setShowAiMatch} items={draftItems} />

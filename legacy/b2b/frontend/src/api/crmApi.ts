@@ -618,6 +618,16 @@ export const crmApi = {
 		});
 		return response.data;
 	},
+	// Transactional bulk create of new КП lines (WP-J duplicate / Excel-paste): ONE request, ONE
+	// recalc. All-or-nothing — a rejected batch returns 400 {detail:'QUOTE_ITEMS_BULK_INVALID',
+	// rows:[…]} keyed by index (new rows carry no id yet) and writes nothing.
+	bulkCreateQuoteItems: async (quoteId: number, items: Array<Record<string, unknown>>) => {
+		const response = await apiClient.post<QuoteItem[]>('crm/quote-items/bulk-create/', {
+			quote: quoteId,
+			items,
+		});
+		return response.data;
+	},
 	getProducts: async (search?: string) => {
 		let url = 'catalog/products/';
 		if (search) {

@@ -51,3 +51,40 @@ export function extractBulkErrorRows(err: unknown): unknown | null {
 	if (data?.detail !== 'QUOTE_ITEMS_BULK_INVALID') return null;
 	return data.rows ?? [];
 }
+
+/**
+ * Fields that live ONLY in the collapsed per-line detail sub-row — an error on one of
+ * them is invisible while the row is collapsed (WP-J row-marker, fast-follow ревью #317).
+ */
+export const DETAIL_ONLY_ERROR_FIELDS = ['customs_duty', 'discount_percent', 'lead_time_days', 'hs_code'] as const;
+
+/**
+ * Fields that live in the two cost columns, which the <1200px viewport gate drops out of the
+ * main table (see `showCostColumns`). An error on one of these is only visible when the row
+ * detail is expanded, so it also warrants the row-level marker on a narrow screen.
+ */
+export const COST_COLUMN_ERROR_FIELDS = ['frozen_base_price', 'frozen_currency'] as const;
+
+/**
+ * The offending fields of one row whose cell is currently NOT visible (collapsed detail, or a
+ * cost column hidden on a narrow screen). Drives the row-level error marker + auto-expand: the
+ * seller sees a red dot on the row and clicks it (or it auto-opens) to reach the hidden cell.
+ */
+export function hiddenErrorFields(
+	cellErrors: Record<string, string>,
+	id: number,
+	showCostColumns: boolean,
+): string[] {
+	const prefix = `${id}:`;
+	const detailFields = new Set<string>(DETAIL_ONLY_ERROR_FIELDS);
+	const costFields = new Set<string>(COST_COLUMN_ERROR_FIELDS);
+	const hidden: string[] = [];
+	for (const key of Object.keys(cellErrors)) {
+		if (!key.startsWith(prefix)) continue;
+		const field = key.slice(prefix.length);
+		if (detailFields.has(field) || (!showCostColumns && costFields.has(field))) {
+			hidden.push(field);
+		}
+	}
+	return hidden;
+}

@@ -686,6 +686,33 @@
       "leaveDescription": "Your КП line-item edits are not saved. If you leave, they will be lost. Leave anyway?",
       "leaveConfirm": "Leave without saving"
     },
+    "undo": "Undo",
+    "bulk": {
+      "selected": "Selected: {{count}}",
+      "delete": "Delete selected",
+      "deleteConfirmTitle": "Delete the selected items?",
+      "deleteConfirmDescription": "{{count}} item(s) will be deleted. This cannot be undone.",
+      "discount": "Discount selected",
+      "discountLabel": "Discount, %",
+      "priceChange": "Change price",
+      "priceChangeLabel": "Price change, %",
+      "priceChangeHint": "e.g. −10",
+      "priceChangeHelp": "A positive value raises the price, a negative one lowers it.",
+      "duplicate": "Duplicate",
+      "apply": "Apply",
+      "clearSelection": "Clear selection",
+      "selectRow": "Select item {{index}}",
+      "selectAll": "Select all items",
+      "copySuffix": " (copy)",
+      "duplicated": "{{count}} item(s) duplicated",
+      "deleted": "{{count}} item(s) deleted",
+      "discountApplied": "Discount applied to {{count}} item(s)",
+      "priceApplied": "Price changed for {{count}} item(s)"
+    },
+    "rowError": {
+      "marker": "Errors in collapsed fields",
+      "fields": "Check fields:"
+    },
     "sendGate": {
       "kyc": "Complete company verification (KYC L2) to send a quote to the client.",
       "kycCta": "Get verified",
