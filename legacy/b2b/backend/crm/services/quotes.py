@@ -25,7 +25,10 @@ def scope_quotes_for_viewer(quotes_qs, user, request):
     and a buyer in own-deal context see all. Used by BOTH QuoteViewSet.get_queryset AND the
     deal-nested `quotes`/`active_quote` prefetch (DealViewSet), so the two surfaces cannot
     diverge and leak a competitor's КП (prices/totals/margin/PDF) on a multi-seller deal."""
-    from accounts.services.permissions import seller_acting_company_ids, seller_visible_deal_ids
+    from accounts.services.permissions import (
+        seller_acting_company_ids,
+        seller_visible_deal_ids,
+    )
 
     if getattr(user, "is_platform_admin", False):
         return quotes_qs
@@ -681,7 +684,12 @@ class QuoteLifecycleService:
         # + subscribed seller gets a clean, sendable document.
         from accounts.services.entitlements import quote_send_entitled
 
-        from .documents import client_projection_items, document_brand_context, public_quote_qr, public_quote_url
+        from .documents import (
+            client_projection_items,
+            document_brand_context,
+            public_quote_qr,
+            public_quote_url,
+        )
 
         html_string = render_to_string(
             "crm/quote_pdf.html",
@@ -1263,6 +1271,151 @@ def bulk_update_quote_items(user, quote_id, items_payload, request):
         QuoteItem.objects.filter(quote_id=quote_pk, id__in=updated_ids).select_related(
             "product", "product__domain_type", "quote", "offer", "offer__supplier", "frozen_currency"
         )
+    )
+    return items, None, None
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Bulk create of КП line items — one transaction, one recalc, per-row errors
+# ──────────────────────────────────────────────────────────────────────────
+
+# Fields an Excel-paste may provide per NEW line: the line's identity (name + code columns)
+# plus the same pricing inputs bulk-update accepts. Read-only/derived columns (landed_cost,
+# final_price) are ignored. The line ALWAYS carries a non-empty imported_raw_name — the paste's
+# first column — enforced below before the serializer runs.
+_BULK_CREATE_WRITABLE_FIELDS = frozenset(
+    {
+        "imported_raw_name",
+        "name_canonical",
+        "quantity",
+        "unit",
+        "unit_code",
+        "mpn",
+        "gost_drawing",
+        "hs_code",
+        "note",
+        "frozen_base_price",
+        "frozen_currency",
+        "logistics_cost",
+        "customs_duty",
+        "margin_percent",
+        "discount_percent",
+        "lead_time_days",
+    }
+)
+
+
+def _validate_bulk_create_rows(quote, items_payload, request):
+    """Validate every payload row as a NEW КП line (QuoteItemSerializer, create mode).
+
+    Returns (validated, rows): `validated` is a list of validated_data dicts when ALL rows are
+    valid; `rows` is the per-row error list (empty ⇒ success). Each row MUST carry a non-empty
+    imported_raw_name (QUOTE_ITEM_NAME_REQUIRED) — a blank paste cell is a per-row error, not a
+    phantom line. The line cost currency defaults to the КП's cost_currency_default when the row
+    omits it (mirrors the builder's «Добавить строку» default). Rows have NO id yet, so per-row
+    errors are keyed by index only — never a (non-existent) row id."""
+    from crm.serializers import QuoteItemSerializer
+
+    default_currency = quote.cost_currency_default.code if quote.cost_currency_default_id else None
+    validated: list = []
+    rows: list = []
+    for index, raw in enumerate(items_payload):
+        name = raw.get("imported_raw_name") if isinstance(raw, dict) else None
+        if not isinstance(name, str) or not name.strip():
+            rows.append({"index": index, "errors": {"imported_raw_name": ["QUOTE_ITEM_NAME_REQUIRED"]}})
+            continue
+        fields = {key: value for key, value in raw.items() if key in _BULK_CREATE_WRITABLE_FIELDS}
+        # A new line inherits the КП's default cost currency unless the row itself picks one —
+        # same default the single-item «Add line» applies (frozen_currency = cost_currency_default).
+        if not fields.get("frozen_currency") and default_currency:
+            fields["frozen_currency"] = default_currency
+        # Bind the target quote SERVER-side (from the addressed КП), never a per-row body value.
+        fields["quote"] = quote.id
+        serializer = QuoteItemSerializer(data=fields, context={"request": request})
+        if not serializer.is_valid():
+            rows.append({"index": index, "errors": serializer.errors})
+            continue
+        validated.append(serializer.validated_data)
+    return validated, rows
+
+
+@transaction.atomic
+def bulk_create_quote_items(user, quote_id, items_payload, request):
+    """Transactional bulk create of КП line items (Excel-paste). ALL-OR-NOTHING.
+
+    Mirrors bulk_update_quote_items EXACTLY on guards (is_platform_admin_viewer / seller pricing
+    capability / seller-routed-to-deal 404 / frozen КП) and recalc discipline (write every line
+    with skip_recalculate, then recalculate_quote ONCE — one cascade, one QuoteItemHistory
+    snapshot pass). Every row is validated with the same QuoteItemSerializer as the single-item
+    create (caps, currency-by-code); a non-empty imported_raw_name is required per row, the qty /
+    price defaults come from the model (qty=1, base 0) and the cost currency defaults to the КП's
+    cost_currency_default. Any invalid row rolls the whole batch back with per-row errors.
+
+    Returns (items, error, rows):
+      • success        → (list[QuoteItem], None, None)
+      • guard/global   → (None, "<CODE>", None)
+      • per-row invalid→ (None, "QUOTE_ITEMS_BULK_INVALID", [ {index,errors}, … ])
+    """
+    from accounts.services.permissions import (
+        can_edit_quote_pricing,
+        is_platform_admin_viewer,
+        seller_can_access_deal,
+    )
+
+    # Guards — IN THE SAME ORDER as QuoteItemViewSet._assert_seller / bulk_update_quote_items.
+    if is_platform_admin_viewer(user):
+        return None, "ADMIN_VIEWER_CANNOT_ACT", None
+    is_superuser = getattr(user, "is_superuser", False)
+    if not (is_superuser or can_edit_quote_pricing(user)):
+        return None, "ONLY_SELLER_CAN_BUILD_QUOTE", None
+
+    if not isinstance(items_payload, list) or not items_payload:
+        return None, "QUOTE_ITEMS_BULK_EMPTY", None
+    from django.conf import settings
+
+    if len(items_payload) > settings.QUOTE_ITEMS_BULK_MAX_ROWS:
+        return None, "QUOTE_ITEMS_BULK_TOO_LARGE", None
+
+    try:
+        quote_pk = int(quote_id)
+    except (TypeError, ValueError):
+        return None, "QUOTE_NOT_FOUND", None
+    # Lock only the quote row (nullable FKs can't be FOR UPDATE'd via join — mirror recalc).
+    quote = (
+        Quote.objects.select_for_update(of=("self",))
+        .select_related("cost_currency_default")
+        .filter(pk=quote_pk)
+        .first()
+    )
+    if quote is None:
+        return None, "QUOTE_NOT_FOUND", None
+    # Deal-routing binding (mirror _assert_seller_owns_quote_deal): a foreign КП is 404 like the
+    # single POST, whose scoped get_queryset would never surface a competitor's quote.
+    if not (is_superuser or seller_can_access_deal(user, request, quote.deal_id)):
+        return None, "QUOTE_NOT_FOUND", None
+    if quote.frozen_at:
+        return None, "QUOTE_FROZEN", None
+
+    validated, rows = _validate_bulk_create_rows(quote, items_payload, request)
+    if rows:
+        # transaction.atomic + returning here writes nothing — all-or-nothing.
+        return None, "QUOTE_ITEMS_BULK_INVALID", rows
+
+    created_ids = []
+    for validated_data in validated:
+        item = QuoteItem(**validated_data)
+        # Defer per-row recalc — one full cascade recompute follows for the whole КП.
+        item.save(skip_recalculate=True)
+        created_ids.append(item.id)
+
+    # ONE recalculation of the whole КП: prices each new line with the FX map, re-aggregates
+    # subtotal/charges/VAT/total and snapshots QuoteItemHistory — once, not per row.
+    QuoteCalculationService.recalculate_quote(quote_pk)
+
+    items = list(
+        QuoteItem.objects.filter(quote_id=quote_pk, id__in=created_ids)
+        .select_related("product", "product__domain_type", "quote", "offer", "offer__supplier", "frozen_currency")
+        .order_by("id")
     )
     return items, None, None
 
