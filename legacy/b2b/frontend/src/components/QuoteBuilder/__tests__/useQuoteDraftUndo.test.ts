@@ -113,4 +113,25 @@ describe('useQuoteDraft — undo + applyBulk (WP-J)', () => {
 		rerender({ items: [mkItem(1, { quantity: 9 }), mkItem(2), mkItem(3)] });
 		expect(result.current.canUndo).toBe(false);
 	});
+
+	it('undo restores only dirty rows — clean rows keep CURRENT server values after a refetch', () => {
+		// Adversarial-review MAJOR: replaying the whole snapshot rolled clean rows back to
+		// pre-refetch values (stale money display). Undo must rebuild clean rows from the
+		// live server list and restore ONLY the snapshot's dirty rows.
+		const { result, rerender } = renderHook(({ items }) => useQuoteDraft(items), {
+			initialProps: { items: [mkItem(1), mkItem(2)] },
+		});
+
+		act(() => result.current.setField(1, 'frozen_base_price', '500'));
+		act(() => result.current.setField(1, 'frozen_base_price', '700'));
+
+		// Field-only refetch: same row ids, row 2 (clean) got a NEW server value.
+		rerender({ items: [mkItem(1), mkItem(2, { frozen_base_price: '999' })] });
+
+		act(() => result.current.undo());
+
+		const rowById = new Map(result.current.draftItems.map((item) => [item.id, item]));
+		expect(rowById.get(1)?.frozen_base_price).toBe('500'); // dirty row rolled back one step
+		expect(rowById.get(2)?.frozen_base_price).toBe('999'); // clean row keeps server truth
+	});
 });

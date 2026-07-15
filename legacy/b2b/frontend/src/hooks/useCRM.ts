@@ -191,7 +191,10 @@ export const useBulkDeleteQuoteItems = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (ids: number[]) => Promise.all(ids.map((id) => crmApi.deleteQuoteItem(id))),
-    onSuccess: () => {
+    // onSettled, NOT onSuccess: a partial failure (3 of 5 deleted, 2 rejected) still
+    // changed server state — without invalidation the deleted rows stay visible as
+    // phantoms and the next Save sends their ids (adversarial-review MAJOR).
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['quote-items'] });
       queryClient.invalidateQueries({ queryKey: ['deals'] });
     },

@@ -67,6 +67,8 @@ export function useQuoteDraft(serverItems: QuoteItem[]): UseQuoteDraftResult {
 	dirtyIdsRef.current = dirtyIds;
 	const undoStackRef = useRef(undoStack);
 	undoStackRef.current = undoStack;
+	const serverItemsRef = useRef(serverItems);
+	serverItemsRef.current = serverItems;
 
 	// Push the CURRENT draft state onto the undo stack (bounded to UNDO_DEPTH) before an edit.
 	const pushUndoSnapshot = useCallback(() => {
@@ -188,7 +190,18 @@ export function useQuoteDraft(serverItems: QuoteItem[]): UseQuoteDraftResult {
 		const stack = undoStackRef.current;
 		if (stack.length === 0) return;
 		const snapshot = stack[stack.length - 1];
-		setDraftItems(snapshot.items);
+		// Restore ONLY the snapshot's dirty rows; clean rows must stay on CURRENT server
+		// truth. Replaying snapshot.items wholesale would silently roll clean rows back
+		// to pre-refetch values (adversarial-review MAJOR) — the exact stale-display bug
+		// the draft machine exists to prevent.
+		const snapshotById = new Map(snapshot.items.map((item) => [item.id, item]));
+		setDraftItems(
+			serverItemsRef.current.map((serverItem) =>
+				snapshot.dirty.has(serverItem.id)
+					? (snapshotById.get(serverItem.id) ?? serverItem)
+					: serverItem,
+			),
+		);
 		setDirtyIds(snapshot.dirty);
 		setUndoStack(stack.slice(0, -1));
 	}, []);
