@@ -873,6 +873,8 @@ if SENTRY_DSN:
     from sentry_sdk.integrations.celery import CeleryIntegration
     from sentry_sdk.integrations.django import DjangoIntegration
 
+    from core.sentry_scrub import scrub_event
+
     sentry_sdk.init(
         dsn=SENTRY_DSN,
         environment=os.environ.get("SENTRY_ENVIRONMENT", "production"),
@@ -880,4 +882,7 @@ if SENTRY_DSN:
         # Performance tracing is opt-in and off by default (0.0) to control cost.
         traces_sample_rate=float(os.environ.get("SENTRY_TRACES_SAMPLE_RATE", "0.0")),
         send_default_pii=False,
+        # send_default_pii only stops Sentry's OWN auto-PII; domain PII we put into an
+        # event (ИНН/phone in request.data, extra, breadcrumbs) is masked here (SEC-tail).
+        before_send=scrub_event,
     )
