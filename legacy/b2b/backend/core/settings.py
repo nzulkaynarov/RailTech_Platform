@@ -734,6 +734,11 @@ AI_MAX_RETRIES = int((os.environ.get("AI_MAX_RETRIES") or "2").strip() or "2")
 # enqueue choke-point. Counted per company per calendar day (settings.TIME_ZONE) from the
 # persistent AIJob rows. 0 or negative disables the cap entirely (opt-out).
 AI_DAILY_JOB_CAP_PER_COMPANY = int((os.environ.get("AI_DAILY_JOB_CAP_PER_COMPANY") or "300").strip() or "300")
+# P1 two-tier cap: the tighter daily ceiling for a company WITHOUT an operational subscription.
+# The free floor (ai.match / ai.preflight) and the ungated wedge features (extract / compose) are
+# usable by unsubscribed tenants, so a free company still needs a runaway-bill fuse — just a lower
+# one than a paying tenant. 0 or negative disables the free-tier cap entirely (opt-out).
+AI_DAILY_JOB_CAP_FREE = int((os.environ.get("AI_DAILY_JOB_CAP_FREE") or "30").strip() or "30")
 # Hard byte cap before a file is sent to the model. Vision payloads (PDF/image) go
 # as one base64 request, so an oversized file means a 413 + wasted spend — reject it
 # early. Default 10 MB (the upload endpoint already caps the raw file at 20 MB).

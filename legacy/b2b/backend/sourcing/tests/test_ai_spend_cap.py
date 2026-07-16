@@ -60,7 +60,8 @@ def _seed_jobs(owner, count, *, days_ago=0):
 
 @pytest.mark.django_db
 def test_below_cap_enqueues(settings, stub_apply_async):
-    settings.AI_DAILY_JOB_CAP_PER_COMPANY = 3
+    # Unsubscribed company → the FREE tier applies (P1 two-tier cap).
+    settings.AI_DAILY_JOB_CAP_FREE = 3
     company = Company.objects.create(name="Under Cap Co", inn="111000111")
     user = _member("under-cap@x.test", company)
     _seed_jobs(user, 2)  # N-1 of 3 already used today
@@ -78,7 +79,7 @@ def test_below_cap_enqueues(settings, stub_apply_async):
 
 @pytest.mark.django_db
 def test_at_cap_returns_429_and_does_not_enqueue(settings, stub_apply_async):
-    settings.AI_DAILY_JOB_CAP_PER_COMPANY = 3
+    settings.AI_DAILY_JOB_CAP_FREE = 3
     company = Company.objects.create(name="At Cap Co", inn="222000222")
     user = _member("at-cap@x.test", company)
     _seed_jobs(user, 3)  # cap reached
@@ -96,7 +97,7 @@ def test_at_cap_returns_429_and_does_not_enqueue(settings, stub_apply_async):
 
 @pytest.mark.django_db
 def test_cap_is_shared_across_company_members(settings, stub_apply_async):
-    settings.AI_DAILY_JOB_CAP_PER_COMPANY = 3
+    settings.AI_DAILY_JOB_CAP_FREE = 3
     company = Company.objects.create(name="Team Cap Co", inn="333000333")
     colleague = _member("teammate@x.test", company)
     user = _member("late-caller@x.test", company)
@@ -113,6 +114,8 @@ def test_cap_is_shared_across_company_members(settings, stub_apply_async):
 
 @pytest.mark.django_db
 def test_cap_zero_disables_limit(settings, stub_apply_async):
+    # Both tiers disabled → unlimited for any company (opt-out).
+    settings.AI_DAILY_JOB_CAP_FREE = 0
     settings.AI_DAILY_JOB_CAP_PER_COMPANY = 0
     company = Company.objects.create(name="No Cap Co", inn="444000444")
     user = _member("no-cap@x.test", company)
@@ -129,7 +132,7 @@ def test_cap_zero_disables_limit(settings, stub_apply_async):
 
 @pytest.mark.django_db
 def test_yesterday_jobs_do_not_count_today(settings, stub_apply_async):
-    settings.AI_DAILY_JOB_CAP_PER_COMPANY = 3
+    settings.AI_DAILY_JOB_CAP_FREE = 3
     company = Company.objects.create(name="Rollover Co", inn="555000555")
     user = _member("rollover@x.test", company)
     _seed_jobs(user, 5, days_ago=1)  # yesterday — outside today's calendar day
@@ -145,7 +148,7 @@ def test_yesterday_jobs_do_not_count_today(settings, stub_apply_async):
 
 @pytest.mark.django_db
 def test_companies_are_independent(settings, stub_apply_async):
-    settings.AI_DAILY_JOB_CAP_PER_COMPANY = 3
+    settings.AI_DAILY_JOB_CAP_FREE = 3
     capped = Company.objects.create(name="Capped Co", inn="666000666")
     fresh = Company.objects.create(name="Fresh Co", inn="777000777")
     capped_user = _member("capped-co@x.test", capped)

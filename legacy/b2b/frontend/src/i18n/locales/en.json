@@ -4759,6 +4759,7 @@
     "NO_QUOTE_COMPANY": "The quote has no owning company — assign a preparer first",
     "UNKNOWN": "Unknown error",
     "AI_DAILY_CAP_REACHED": "Your company has reached its daily AI limit. It resets tomorrow.",
+    "AI_FEATURE_NOT_ENTITLED": "This AI feature requires a subscription.",
     "AI_DISABLED": "The AI check is currently unavailable.",
     "AI_EXTRACT_FAILED": "Could not read the document. Try again or upload a clearer file.",
     "AI_JOB_FAILED": "The AI task failed. Please try again.",

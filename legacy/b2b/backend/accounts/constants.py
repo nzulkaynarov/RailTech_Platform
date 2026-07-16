@@ -262,6 +262,7 @@ class FeatureKey(models.TextChoices):
     AI_MATCH = "ai.match", "AI-подбор каталога"
     AI_DRAFT = "ai.draft", "AI-черновик КП"
     AI_PREFLIGHT = "ai.preflight", "AI-проверка заявки"
+    AI_ENRICH = "ai.enrich", "AI-обогащение карточки товара (PIM)"
     ROLES_CUSTOM = "roles.custom", "Кастомные роли компании"
 
 
@@ -284,6 +285,10 @@ SUBSCRIPTION_BASELINE_FEATURES = frozenset(
         FeatureKey.QUOTE_SEND.value,
         FeatureKey.QUOTE_EXPORT.value,
         FeatureKey.AI_DRAFT.value,
+        # AI PIM enrichment is a SELLER premium (like ai.draft): it accelerates the seller's
+        # catalog build, which only matters once they're subscribed to actually sell. NOT part
+        # of the free floor — enrich is gated on this baseline / an explicit grant.
+        FeatureKey.AI_ENRICH.value,
         FeatureKey.ROLES_CUSTOM.value,
     }
 )

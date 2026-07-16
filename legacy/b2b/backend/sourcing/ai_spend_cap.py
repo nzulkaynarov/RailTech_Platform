@@ -8,14 +8,18 @@ enqueue choke-point can refuse with a 429 BEFORE queuing the task or spending a
 credit.
 
 Design notes (deliberately kept boring — it is a safety fuse, not policy):
-- The ceiling (``settings.AI_DAILY_JOB_CAP_PER_COMPANY``) is GENEROUS; legitimate
-  teams never reach it. It introduces NO new subscription tier / KYC requirement.
+- TWO-TIER ceiling: a company with an operational SupplierSubscription gets the
+  generous ``settings.AI_DAILY_JOB_CAP_PER_COMPANY`` (paying tenants never reach it);
+  an unsubscribed / free company gets the tighter ``settings.AI_DAILY_JOB_CAP_FREE``
+  so a free tenant can't run an unbounded Anthropic bill on the always-free features
+  (ai.match / ai.preflight / extract / compose). Which tier applies is decided by the
+  subscription alone — NOT by any single feature entitlement.
 - The count comes straight from the persistent ``AIJob`` rows (no new Redis/DB
   state, no extra infra to keep consistent). One indexed COUNT per enqueue.
 - Scope is the CALENDAR DAY in ``settings.TIME_ZONE`` and the requesting user's
   active company (the whole team shares one bucket — the bill is per company).
-- Exempt (never capped): the cap disabled (<= 0), platform admins (they don't act
-  on behalf of a tenant), and users with no active company membership.
+- Exempt (never capped): the applicable tier disabled (<= 0), platform admins (they
+  don't act on behalf of a tenant), and users with no active company membership.
 """
 
 from __future__ import annotations
@@ -28,17 +32,31 @@ from django.utils import timezone
 logger = logging.getLogger(__name__)
 
 
+def _daily_cap_for_companies(company_ids) -> int:
+    """Pick the applicable daily ceiling for the requesting user's companies.
+
+    A company with an operational (ACTIVE/TRIAL, in-validity) SupplierSubscription is a
+    paying tenant → the generous ``AI_DAILY_JOB_CAP_PER_COMPANY``. Otherwise → the tighter
+    ``AI_DAILY_JOB_CAP_FREE``. A user in several companies gets the higher ceiling if ANY of
+    them is subscribed (the shared job bucket already spans all their memberships). Logic
+    lives here (Rule 8), not in the view.
+    """
+    from accounts.services import company_has_operational_subscription
+
+    subscribed = any(company_has_operational_subscription(company_id) for company_id in company_ids)
+    if subscribed:
+        return getattr(settings, "AI_DAILY_JOB_CAP_PER_COMPANY", 0)
+    return getattr(settings, "AI_DAILY_JOB_CAP_FREE", 0)
+
+
 def is_ai_daily_cap_reached(user) -> bool:
     """True when the requesting user's company has hit the daily AI-job ceiling.
 
-    Counts today's ``AIJob`` rows owned by any active member of the user's active
-    companies and compares against ``settings.AI_DAILY_JOB_CAP_PER_COMPANY``.
-    Returns False (never capped) for a disabled cap, platform admins, and users
-    with no active company membership. Called at the enqueue choke-point.
+    Counts today's ``AIJob`` rows owned by any active member of the user's active companies
+    and compares against the applicable two-tier ceiling (subscribed → ``AI_DAILY_JOB_CAP_PER_COMPANY``,
+    free → ``AI_DAILY_JOB_CAP_FREE``). Returns False (never capped) for a disabled tier, platform
+    admins, and users with no active company membership. Called at the enqueue choke-point.
     """
-    cap = getattr(settings, "AI_DAILY_JOB_CAP_PER_COMPANY", 0)
-    if cap <= 0:
-        return False
     if getattr(user, "is_platform_admin", False):
         return False
 
@@ -50,6 +68,11 @@ def is_ai_daily_cap_reached(user) -> bool:
     company_ids = list(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
     if not company_ids:
         # No tenant to bill against — a lone / platform user is not an abuse vector here.
+        return False
+
+    cap = _daily_cap_for_companies(company_ids)
+    if cap <= 0:
+        # The applicable tier is disabled (opt-out) — never capped.
         return False
 
     # The bill is per company: the whole team shares one daily bucket, so count every
