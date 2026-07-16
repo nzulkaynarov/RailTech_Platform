@@ -1476,3 +1476,38 @@ def reassign_quote_item_product(
         event_params={"item_id": item.id, "product_id": product_id},
     )
     return item, None
+
+
+# EXPIRED is a seeded QuoteStatus row (see the seed migration) but not a QuoteStatusCode
+# workflow member — the expire_stale_quotes beat task keys on the same string literal.
+_EXPIRED_STATUS_CODE = "EXPIRED"
+
+
+def public_quote_gate(quote) -> Optional[str]:
+    """Decide whether a КП is reachable via its PUBLIC (no-login) token link.
+
+    Audit #17: the emailed public link had no TTL/revoke — it lived forever and ignored
+    the КП's own validity. This is the single reachability gate the PublicQuoteView calls.
+    Returns an error CODE (mapped to 404/410 by the view) or None when the link is live.
+
+    Order matters: an unknown / not-yet-sent token is indistinguishable (404 NOT_FOUND, no
+    info leak); a revoked or lapsed link is a definite 410 GONE.
+    """
+    from django.utils import timezone
+
+    # Only a real, already-sent (frozen) КП was ever given a token. DRAFTs have none.
+    if quote is None or quote.frozen_at is None:
+        return "NOT_FOUND"
+    if quote.public_token_revoked:
+        return "QUOTE_LINK_REVOKED"
+    # КП explicitly moved to EXPIRED (by the daily expire_stale_quotes task) → link is dead.
+    if quote.status and quote.status.code == _EXPIRED_STATUS_CODE:
+        return "QUOTE_LINK_EXPIRED"
+    now = timezone.now()
+    # valid_until is the КП's own validity date; a passed date closes the public link too.
+    if quote.valid_until and quote.valid_until < now.date():
+        return "QUOTE_LINK_EXPIRED"
+    # Optional token-specific TTL (independent of valid_until); NULL = no separate TTL.
+    if quote.public_token_expires_at and quote.public_token_expires_at < now:
+        return "QUOTE_LINK_EXPIRED"
+    return None

@@ -70,14 +70,23 @@ class PublicQuoteView(APIView):
             (200, "application/pdf"): OpenApiResponse(description="КП PDF (client projection)"),
             202: OpenApiResponse(description="PDF still rendering off-thread — retry after Retry-After seconds"),
             404: OpenApiResponse(description="Unknown or not-yet-sent token"),
+            410: OpenApiResponse(
+                description="Public link revoked or expired (QUOTE_LINK_REVOKED / QUOTE_LINK_EXPIRED)"
+            ),
         },
         tags=["CRM"],
     )
     def get(self, request, token):
-        quote = Quote.objects.select_related("deal").filter(public_access_token=token).first()
-        # Must be a real, already-sent КП (frozen_at set on send). DRAFTs never have a token.
-        if quote is None or quote.frozen_at is None:
-            return Response({"detail": "NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)
+        from crm.services.quotes import public_quote_gate
+
+        quote = Quote.objects.select_related("deal", "status").filter(public_access_token=token).first()
+        # Reachability gate (Rule 8): unknown/not-yet-sent → 404 (no info leak); revoked or
+        # lapsed (EXPIRED / valid_until / token TTL, audit #17) → 410 GONE. Live → fall through.
+        gate_error = public_quote_gate(quote)
+        if gate_error == "NOT_FOUND":
+            return Response({"detail": gate_error}, status=status.HTTP_404_NOT_FOUND)
+        if gate_error is not None:
+            return Response({"detail": gate_error}, status=status.HTTP_410_GONE)
         if not quote.pdf_file:
             # ARCH-03: NEVER run a synchronous WeasyPrint render in this AllowAny/anonymous
             # request thread — a full sync render here is a DoS-amplification surface. The КП PDF

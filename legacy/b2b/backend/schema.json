@@ -15228,6 +15228,9 @@
                     },
                     "404": {
                         "description": "Unknown or not-yet-sent token"
+                    },
+                    "410": {
+                        "description": "Public link revoked or expired (QUOTE_LINK_REVOKED / QUOTE_LINK_EXPIRED)"
                     }
                 }
             }

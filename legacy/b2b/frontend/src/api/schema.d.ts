@@ -19973,6 +19973,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Public link revoked or expired (QUOTE_LINK_REVOKED / QUOTE_LINK_EXPIRED) */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     sourcing_ai_status_retrieve: {
