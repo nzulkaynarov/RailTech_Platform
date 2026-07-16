@@ -15,9 +15,13 @@ import { toDecimal } from '@/utils/decimal';
  *
  * Server formulas mirrored (backend/crm/services/quotes.py + models/charges.py):
  *   • landed_cost (UZS)   = (frozen_base_price + customs_duty) × fx_rate        → q2
- *     fx_rate: quote.fx_manual[ccy] || quote.fx_snapshot[ccy] (positive only); UZS = 1.
- *     A non-UZS line whose rate is on NEITHER map is unknown on the client (the server
- *     also consults live market rates) → that row is flagged needsServerRecalc, never faked.
+ *     fx_rate: quote.fx_manual[ccy] → quote.fx_snapshot[ccy] → quote.fx_market[ccy]
+ *     (first positive wins); UZS = 1. fx_market is the PUBLIC reference rate for currencies
+ *     not yet frozen into the КП — a live preview so a brand-new line currency stops showing
+ *     «пересчёт после сохранения». It is PRELIMINARY (the server freezes its own rate on save),
+ *     so a row priced off fx_market is flagged `usedMarketFx` for a «~ рыночный курс» hint.
+ *     A non-UZS line whose rate is on NONE of the three maps is unknown on the client → that
+ *     row is flagged needsServerRecalc, never faked.
  *   • final_price_excl_vat = landed_cost × (1 + margin%/100) × (1 − discount%/100) → q2
  *     margin% is the QUOTE-level markup (quote.margin_percent), applied to every line.
  *   • Сумма (line total)  = final_price_excl_vat × quantity
@@ -34,20 +38,37 @@ import { toDecimal } from '@/utils/decimal';
 // Backend quantizes money to 2 dp with ROUND_HALF_UP at every step — mirror it exactly.
 const q2 = (value: Decimal): Decimal => value.toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
 
+/** Which FX map a resolved rate came from — `null` for the implicit UZS=1 identity. */
+type FxSource = 'manual' | 'snapshot' | 'market' | null;
+
+/** Positive FX rate + its source for a line cost currency, or null when unknown on the client.
+ *  Mirrors `_positive_fx_rate` (a stray 0/negative is ignored, not used): manual → snapshot →
+ *  market, first positive wins. UZS → 1. `market` is the preliminary public reference rate. */
+function resolveFxWithSource(
+	code: string | null | undefined,
+	fxManual: Record<string, string>,
+	fxSnapshot: Record<string, string>,
+	fxMarket: Record<string, string>,
+): { rate: Decimal; source: FxSource } | null {
+	const ccy = (code || 'UZS').toUpperCase();
+	if (ccy === 'UZS' || ccy === '') return { rate: new Decimal(1), source: null };
+	if (fxManual[ccy] != null && Number(fxManual[ccy]) > 0) return { rate: new Decimal(fxManual[ccy]), source: 'manual' };
+	if (fxSnapshot[ccy] != null && Number(fxSnapshot[ccy]) > 0) return { rate: new Decimal(fxSnapshot[ccy]), source: 'snapshot' };
+	if (fxMarket[ccy] != null && Number(fxMarket[ccy]) > 0) return { rate: new Decimal(fxMarket[ccy]), source: 'market' };
+	return null;
+}
+
 /** Positive FX rate for a line cost currency, or null when unknown on the client.
- *  Mirrors `_positive_fx_rate` (a stray 0/negative is ignored, not used). UZS → 1. */
+ *  manual → snapshot → market (first positive wins); UZS → 1. `fxMarket` is optional so the
+ *  legacy two-map call sites keep working (they simply have no preliminary market rate). */
 export function resolveClientFxRate(
 	code: string | null | undefined,
 	fxManual: Record<string, string>,
 	fxSnapshot: Record<string, string>,
+	fxMarket: Record<string, string> = {},
 ): Decimal | null {
-	const ccy = (code || 'UZS').toUpperCase();
-	if (ccy === 'UZS' || ccy === '') return new Decimal(1);
-	const manual = Number(fxManual[ccy]);
-	if (fxManual[ccy] != null && manual > 0) return new Decimal(fxManual[ccy]);
-	const snapshot = Number(fxSnapshot[ccy]);
-	if (fxSnapshot[ccy] != null && snapshot > 0) return new Decimal(fxSnapshot[ccy]);
-	return null;
+	const resolved = resolveFxWithSource(code, fxManual, fxSnapshot, fxMarket);
+	return resolved ? resolved.rate : null;
 }
 
 export interface LineMirror {
@@ -55,6 +76,9 @@ export interface LineMirror {
 	isDraft: boolean;
 	/** A non-UZS line currency has no client-known FX rate → preview cost/margin withheld. */
 	needsServerRecalc: boolean;
+	/** Preview was priced off the PRELIMINARY public market rate (fx_market), not a frozen/manual
+	 *  rate → drives a «~ рыночный курс, уточнится при сохранении» hint. Never true for a clean row. */
+	usedMarketFx: boolean;
 	/** Себестоимость preview (UZS); null when not cost-viewable or FX unknown. */
 	landedCost: string | null;
 	/** Client-facing price per unit excl VAT (always resolvable — falls back to server). */
@@ -97,6 +121,8 @@ export interface PricingMirrorInput {
 	vatRate: string | number | null | undefined;
 	fxSnapshot: Record<string, string>;
 	fxManual: Record<string, string>;
+	/** Preliminary public reference rates for currencies not yet in the snapshot (Quote.fx_market). */
+	fxMarket: Record<string, string>;
 	charges: QuoteCharge[];
 	/** Cost-viewer gate — false hides cost inputs, so only qty edits move «Сумма». */
 	canViewCost: boolean;
@@ -126,6 +152,7 @@ function previewDirtyLine(
 		return {
 			isDraft: true,
 			needsServerRecalc: false,
+			usedMarketFx: false,
 			landedCost: null,
 			finalPriceExclVat: serverFinal.toString(),
 			lineTotal: serverFinal.mul(quantity).toString(),
@@ -136,13 +163,14 @@ function previewDirtyLine(
 		};
 	}
 
-	const fxRate = resolveClientFxRate(item.frozen_currency, input.fxManual, input.fxSnapshot);
-	if (fxRate === null) {
-		// Honest marker: we don't know this currency's rate (the server may hit a live market
-		// rate) — show the server line total so the column isn't blank, but withhold cost/margin.
+	const fx = resolveFxWithSource(item.frozen_currency, input.fxManual, input.fxSnapshot, input.fxMarket);
+	if (fx === null) {
+		// Honest marker: we don't know this currency's rate on ANY map — show the server line
+		// total so the column isn't blank, but withhold cost/margin (never fabricate a rate).
 		return {
 			isDraft: true,
 			needsServerRecalc: true,
+			usedMarketFx: false,
 			landedCost: null,
 			finalPriceExclVat: serverFinal.toString(),
 			lineTotal: serverFinal.mul(quantity).toString(),
@@ -153,6 +181,7 @@ function previewDirtyLine(
 		};
 	}
 
+	const fxRate = fx.rate;
 	const landed = q2(toDecimal(item.frozen_base_price).plus(toDecimal(item.customs_duty)).mul(fxRate));
 	const marginMult = new Decimal(1).plus(toDecimal(input.marginPercent).div(100));
 	const discountMult = new Decimal(1).minus(toDecimal(item.discount_percent).div(100));
@@ -165,6 +194,7 @@ function previewDirtyLine(
 	return {
 		isDraft: true,
 		needsServerRecalc: false,
+		usedMarketFx: fx.source === 'market',
 		landedCost: landed.toString(),
 		finalPriceExclVat: final.toString(),
 		lineTotal: priceTotal.toString(),
@@ -190,6 +220,7 @@ function serverLine(item: QuoteItem, input: PricingMirrorInput): LineMirror {
 	return {
 		isDraft: false,
 		needsServerRecalc: false,
+		usedMarketFx: false,
 		landedCost: canSignal ? landed.toString() : null,
 		finalPriceExclVat: final.toString(),
 		lineTotal: priceTotal.toString(),
@@ -289,7 +320,7 @@ export function usePricingMirror(input: PricingMirrorInput): PricingMirrorResult
 		};
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [draftItems, dirtyIds, charges, vatRate, canViewCost,
-		input.marginPercent, input.minMarginPercent, input.fxManual, input.fxSnapshot,
+		input.marginPercent, input.minMarginPercent, input.fxManual, input.fxSnapshot, input.fxMarket,
 		serverTotals.subtotalExclVat, serverTotals.chargesTotal, serverTotals.vatAmount,
 		serverTotals.totalInclVat, serverTotals.grossMarginPercent]);
 }

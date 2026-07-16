@@ -890,6 +890,7 @@
     "marginQuoteLevelHint": "Markup is set for the whole КП — change it in «Настройки КП»",
     "draftPreview": "draft",
     "draftRecalcOnSave": "recalculated on save",
+    "marketFxPreview": "≈ market rate, finalized on save",
     "save": {
       "success": "КП saved",
       "rowsWithErrors": "Rows with errors: {{count}} — fix the highlighted cells"
@@ -897,6 +898,8 @@
     "validation": {
       "qtyTooLarge": "Quantity cannot exceed {{max}}",
       "priceTooLarge": "Price cannot exceed {{max}}",
+      "discountClamped": "Discount is limited to the 0–100% range",
+      "valueClamped": "Some values were adjusted to the allowed limits",
       "QUOTE_ITEM_NAME_REQUIRED": "Enter an item name",
       "QUOTE_ITEM_QTY_INVALID": "Quantity must be at least 1",
       "QUOTE_ITEM_QTY_TOO_LARGE": "Quantity is too large",

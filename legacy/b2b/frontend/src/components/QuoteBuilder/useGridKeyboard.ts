@@ -48,9 +48,18 @@ export function useGridKeyboard() {
 		const delta = key === 'ArrowUp' ? -1 : 1; // Enter behaves like ArrowDown
 		const nextCell = columnCells[index + delta];
 		if (!nextCell) {
-			// Grid boundary → keep focus in place. For arrows, swallow the key so the caret does
-			// not jump; Enter already committed via NumericCell, so nothing else to do.
-			if (key !== 'Enter') event.preventDefault();
+			// Grid boundary → keep focus in the source cell, consistent for arrows AND Enter.
+			// Arrows: swallow the key so the caret does not jump (focus never left the cell).
+			if (key !== 'Enter') {
+				event.preventDefault();
+				return;
+			}
+			// Enter: NumericCell already committed + blurred to <body>. Refocus the source cell so
+			// the seller stays in the grid — but on a MICROTASK, after React has re-rendered the cell
+			// with the just-committed value. A synchronous refocus would re-enter edit mode holding
+			// the STALE pre-commit value (the prop hasn't updated yet), silently reverting the edit
+			// on the next blur. By the microtask the committed value is live, so it re-enters cleanly.
+			queueMicrotask(() => cell.focus());
 			return;
 		}
 

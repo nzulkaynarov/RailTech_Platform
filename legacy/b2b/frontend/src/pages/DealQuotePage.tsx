@@ -147,7 +147,7 @@ export function DealQuotePage({ dealId, onBack, onNavigate }: DealQuotePageProps
             variant={getDealStageVariant(deal.stage_code ?? '')}
           />
           {/* КП internal approval chain (документооборот) — compact pill + Popover. */}
-          {quote && <QuoteApprovalChain quote={quote} variant="compact" />}
+          {quote && <QuoteApprovalChain quote={quote} />}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => setChatOpen(true)}>

@@ -139,6 +139,24 @@ describe('QuoteBuilderGrid — keyboard navigation', () => {
 		expect(document.activeElement).toBe(lastQty);
 	});
 
+	it('Enter in the last row commits but keeps focus in the cell (no jump to body)', async () => {
+		const user = userEvent.setup();
+		renderWithProviders(<QuoteBuilderGrid dealId={42} />);
+
+		const priceCells = screen.getAllByRole('textbox', { name: /Базовая цена/ });
+		const lastPrice = priceCells[priceCells.length - 1];
+		await user.click(lastPrice);
+		await user.clear(lastPrice);
+		await user.type(lastPrice, '777');
+		await user.keyboard('{Enter}');
+
+		// Focus stayed in the source cell (refocused after commit), NOT dumped to <body>.
+		expect(document.activeElement).toBe(lastPrice);
+		// …and the edit still committed on the Enter blur.
+		expect((lastPrice as HTMLInputElement).value).toBe('777');
+		await waitFor(() => expect(screen.getByText(DIRTY_LABEL)).toBeInTheDocument());
+	});
+
 	it('Escape reverts the cell but keeps focus in it (no jump to body)', async () => {
 		const user = userEvent.setup();
 		renderWithProviders(<QuoteBuilderGrid dealId={42} />);

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { Copy, Percent, Tag, Trash2, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -61,7 +62,11 @@ export const SelectionToolbar: React.FC<SelectionToolbarProps> = ({
 	const applyDiscount = () => {
 		const percent = parsePercent(discountValue);
 		if (percent == null) return;
-		onApplyDiscount(Math.min(100, Math.max(0, percent)));
+		const clamped = Math.min(100, Math.max(0, percent));
+		// Discount is bounded to 0..100 — warn (not silently) when the entry was corrected, so the
+		// seller sees that a «150» became «100». The clamped (safe) value is still applied.
+		if (clamped !== percent) toast.warning(t('quote.validation.discountClamped'));
+		onApplyDiscount(clamped);
 		setDiscountValue('');
 		setDiscountOpen(false);
 	};
