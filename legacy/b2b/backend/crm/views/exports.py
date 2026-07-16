@@ -15,7 +15,7 @@ from crm.services import export_quote
 
 
 def handle_quote_export(request, quote):
-    """Resolve ?format=pdf|xlsx|csv and stream the rendered КП.
+    """Resolve ?export_format=pdf|xlsx|csv and stream the rendered КП.
 
     - PDF is always the CLIENT projection (no cost/margin) — same rule as the
       public link / email, enforced inside the export service via quote_pdf.html.
@@ -28,7 +28,11 @@ def handle_quote_export(request, quote):
     """
     from accounts.services.permissions import can_view_quote_costs_for
 
-    export_format = (request.query_params.get("format") or "pdf").lower()
+    # NOTE: the query key is `export_format`, NOT `format`. DRF's URL_FORMAT_OVERRIDE
+    # ('format') hijacks `?format=pdf` during content-negotiation and raises Http404
+    # (no renderer for format='pdf') BEFORE this view runs — so `?format=…` 404s the
+    # whole export. `export_format` sidesteps DRF's reserved parameter entirely.
+    export_format = (request.query_params.get("export_format") or "pdf").lower()
     include_costs = export_format in ("xlsx", "csv") and can_view_quote_costs_for(request.user, quote)
     # MONETIZATION GATE (ADR-0006 Move 4): the SELLER's data export (xlsx/csv with cost/margin) is a
     # paid feature — gate it on quote.export. The client PDF and a buyer's client-safe export stay free

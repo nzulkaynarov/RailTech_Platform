@@ -129,7 +129,7 @@ export const EconomicsRail: React.FC = () => {
 				{/* Экспорт документа (Save lives in the sticky footer) */}
 				<div className="mt-auto flex flex-col gap-2 pt-2">
 					<DocumentActions
-						request={(format) => ({ path: `crm/quotes/${activeQuote.id}/export/`, params: { format } })}
+						request={(format) => ({ path: `crm/quotes/${activeQuote.id}/export/`, params: { export_format: format } })}
 						filenameBase={`RailTech_Quote_${activeQuote.id}`}
 						formats={['pdf', 'xlsx', 'csv']}
 						variant="default"

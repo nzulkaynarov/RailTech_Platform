@@ -1,4 +1,4 @@
-"""ARCH-03 tail — КП export (?format=pdf) never renders WeasyPrint inline.
+"""ARCH-03 tail — КП export (?export_format=pdf) never renders WeasyPrint inline.
 
 `handle_quote_export` (behind `GET /api/v1/crm/quotes/<id>/export/`) now mirrors the
 download-pdf action for the PDF branch: stream the persisted PDF when present, else run
@@ -7,10 +7,10 @@ render → 202 + Retry-After. XLSX/CSV are light seller sheets and stay synchron
 they must NOT enqueue a render.
 
 These tests drive `handle_quote_export` directly (as test_quote_export.py drives the
-export service). NOTE: the HTTP action cannot be exercised with `?format=pdf` because
-DRF's URL_FORMAT_OVERRIDE consumes the `format` query param and 404s before the view
-runs (pre-existing, reported separately) — so the branch logic is tested at the
-function boundary the view delegates to.
+export service). The query key is `export_format`, NOT `format` — the latter collides
+with DRF's URL_FORMAT_OVERRIDE, which 404s `?format=pdf` before the view runs. The full
+HTTP-dispatch regression (that `?export_format=…` no longer 404s) lives in
+test_quote_export_http_route.py.
 """
 
 from decimal import Decimal
@@ -33,7 +33,7 @@ _factory = APIRequestFactory()
 
 def _request(user, fmt=None):
     """A DRF Request (has `.query_params`) — handle_quote_export reads query_params + user."""
-    params = {"format": fmt} if fmt is not None else {}
+    params = {"export_format": fmt} if fmt is not None else {}
     request = Request(_factory.get("/api/v1/crm/quotes/1/export/", params))
     request.user = user
     return request

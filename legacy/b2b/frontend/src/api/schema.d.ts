@@ -4293,7 +4293,7 @@ export interface paths {
         };
         /**
          * Export quote in a chosen format (pdf | xlsx | csv)
-         * @description On-demand, user-chosen export of the КП. ?format=pdf returns the CLIENT projection (no seller cost/margin); ?format=xlsx|csv returns the seller line table, including cost/margin columns only when the requester may view КП costs.
+         * @description On-demand, user-chosen export of the КП. ?export_format=pdf returns the CLIENT projection (no seller cost/margin); ?export_format=xlsx|csv returns the seller line table, including cost/margin columns only when the requester may view КП costs. The key is export_format (NOT format) — DRF reserves ?format for content-negotiation.
          */
         get: operations["crm_quotes_export_retrieve"];
         put?: never;
@@ -18614,7 +18614,7 @@ export interface operations {
         parameters: {
             query?: {
                 /** @description Export format: pdf (default), xlsx, or csv. */
-                format?: "csv" | "pdf" | "xlsx";
+                export_format?: "csv" | "pdf" | "xlsx";
             };
             header?: never;
             path: {
