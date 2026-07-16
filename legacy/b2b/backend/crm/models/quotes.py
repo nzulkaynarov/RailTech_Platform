@@ -254,6 +254,20 @@ class Quote(models.Model):
         verbose_name=_("Публичный токен доступа"),
         help_text=_("Секретный токен для просмотра/скачивания КП клиентом без входа"),
     )
+    # Public-link lifecycle (audit #17: an emailed КП link used to live forever, ignoring
+    # valid_until / EXPIRED). Both default to the back-compatible "no restriction" so every
+    # link minted before this migration keeps working: revoked=False, expires_at=NULL.
+    public_token_revoked = models.BooleanField(
+        default=False,
+        verbose_name=_("Публичная ссылка отозвана"),
+        help_text=_("Если включено — публичная ссылка на КП больше не открывается (410)"),
+    )
+    public_token_expires_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Публичная ссылка истекает"),
+        help_text=_("Явный TTL публичной ссылки. NULL — без отдельного TTL (действует срок valid_until)"),
+    )
     approved_at = models.DateTimeField(
         null=True,
         blank=True,

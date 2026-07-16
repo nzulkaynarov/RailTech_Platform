@@ -70,14 +70,23 @@ class PublicQuoteView(APIView):
             (200, "application/pdf"): OpenApiResponse(description="КП PDF (client projection)"),
             202: OpenApiResponse(description="PDF still rendering off-thread — retry after Retry-After seconds"),
             404: OpenApiResponse(description="Unknown or not-yet-sent token"),
+            410: OpenApiResponse(
+                description="Public link revoked or expired (QUOTE_LINK_REVOKED / QUOTE_LINK_EXPIRED)"
+            ),
         },
         tags=["CRM"],
     )
     def get(self, request, token):
-        quote = Quote.objects.select_related("deal").filter(public_access_token=token).first()
-        # Must be a real, already-sent КП (frozen_at set on send). DRAFTs never have a token.
-        if quote is None or quote.frozen_at is None:
-            return Response({"detail": "NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)
+        from crm.services.quotes import public_quote_gate
+
+        quote = Quote.objects.select_related("deal", "status").filter(public_access_token=token).first()
+        # Reachability gate (Rule 8): unknown/not-yet-sent → 404 (no info leak); revoked or
+        # lapsed (EXPIRED / valid_until / token TTL, audit #17) → 410 GONE. Live → fall through.
+        gate_error = public_quote_gate(quote)
+        if gate_error == "NOT_FOUND":
+            return self._unavailable_response(request, gate_error, status.HTTP_404_NOT_FOUND)
+        if gate_error is not None:
+            return self._unavailable_response(request, gate_error, status.HTTP_410_GONE)
         if not quote.pdf_file:
             # ARCH-03: NEVER run a synchronous WeasyPrint render in this AllowAny/anonymous
             # request thread — a full sync render here is a DoS-amplification surface. The КП PDF
@@ -90,6 +99,44 @@ class PublicQuoteView(APIView):
             render_document_pdf.delay("quote", quote.pk)
             return self._pdf_generating_response(request)
         return stream_file_field(quote.pdf_file)
+
+    # Human-facing copy for each unavailable-link reason. The public link opens directly in a
+    # browser (no SPA in front), and EVERY legit КП link eventually expires — so this is a routine
+    # client-facing state, not a rare error. Keep the code in the JSON body for API callers.
+    _UNAVAILABLE_COPY = {
+        "QUOTE_LINK_REVOKED": (
+            "Ссылка отозвана",
+            "Эта ссылка на коммерческое предложение больше недействительна. "
+            "Запросите у поставщика актуальную ссылку.",
+        ),
+        "QUOTE_LINK_EXPIRED": (
+            "Срок ссылки истёк",
+            "Срок действия этого коммерческого предложения истёк. " "Запросите у поставщика обновлённое предложение.",
+        ),
+        "NOT_FOUND": (
+            "Ссылка не найдена",
+            "Коммерческое предложение по этой ссылке не найдено. " "Проверьте ссылку или запросите новую у поставщика.",
+        ),
+    }
+
+    @classmethod
+    def _unavailable_response(cls, request, code, http_status):
+        """Content-negotiated 404/410 for an unreachable public link.
+
+        A browser (Accept: text/html) opening a revoked/expired/unknown link gets a small
+        friendly Russian page (never the raw DRF/JSON error); an API/JSON client gets the
+        machine code in `{"detail": CODE}`. Mirrors `_pdf_generating_response`."""
+        from django.shortcuts import render
+
+        if "text/html" in request.META.get("HTTP_ACCEPT", ""):
+            title, message = cls._UNAVAILABLE_COPY.get(code, cls._UNAVAILABLE_COPY["NOT_FOUND"])
+            return render(
+                request,
+                "public/quote_unavailable.html",
+                {"title": title, "message": message},
+                status=http_status,
+            )
+        return Response({"detail": code}, status=http_status)
 
     @staticmethod
     def _pdf_generating_response(request):
