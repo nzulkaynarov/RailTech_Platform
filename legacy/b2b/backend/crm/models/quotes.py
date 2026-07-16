@@ -542,6 +542,17 @@ class QuoteItem(models.Model):
         help_text=_("= себестоимость × (1 + наценка%) (авто-расчёт)"),
     )
 
+    # Optimistic-concurrency revision counter (волна 3). Bumped on EVERY user-facing save of the
+    # row (single PATCH + bulk-update). Two managers editing the same КП can no longer silently
+    # clobber each other: a save carrying a stale version is rejected (QUOTE_ITEM_STALE) instead
+    # of overwriting the colleague's committed edit. Default 0 keeps every pre-migration row
+    # backward-compatible (they read as version 0 and increment from the first edit onward).
+    version = models.IntegerField(
+        default=0,
+        verbose_name=_("Версия строки"),
+        help_text=_("Счётчик оптимистичной блокировки — растёт при каждом сохранении позиции"),
+    )
+
     class Meta:
         verbose_name = _("Позиция КП")
         verbose_name_plural = _("Позиции КП")

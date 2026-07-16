@@ -1190,6 +1190,22 @@ def _validate_bulk_item_rows(quote, items_payload, request):
         if item is None:
             rows.append({"id": item_id, "index": index, "errors": {"id": ["QUOTE_ITEM_NOT_IN_QUOTE"]}})
             continue
+        # Optimistic-concurrency check (волна 3): if the row carries the version the frontend last
+        # read, it MUST match the DB — otherwise a colleague saved this line in the meantime and
+        # applying our stale edit would silently clobber theirs. A mismatch is a per-row error in
+        # the SAME rows[].errors shape as a validation error (version → QUOTE_ITEM_STALE), so the
+        # all-or-nothing policy rolls the whole batch back (nothing partially applied on conflict).
+        # `version` is OPTIONAL for backward compatibility — a payload that omits it skips the
+        # check entirely (last-write-wins, pre-волна-3 behaviour).
+        payload_version = raw.get("version")
+        if payload_version is not None:
+            try:
+                payload_version = int(payload_version)
+            except (TypeError, ValueError):
+                payload_version = None
+            if payload_version is None or payload_version != item.version:
+                rows.append({"id": item_id, "index": index, "errors": {"version": ["QUOTE_ITEM_STALE"]}})
+                continue
         fields = {key: value for key, value in raw.items() if key in _BULK_ITEM_WRITABLE_FIELDS}
         serializer = QuoteItemSerializer(instance=item, data=fields, partial=True, context={"request": request})
         if not serializer.is_valid():
@@ -1258,6 +1274,11 @@ def bulk_update_quote_items(user, quote_id, items_payload, request):
     for item, validated_data in validated:
         for attr, value in validated_data.items():
             setattr(item, attr, value)
+        # Bump the optimistic-concurrency counter on the successful save (волна 3). The next
+        # save from another manager who read version N is now rejected as stale. The full save
+        # (no update_fields) persists version alongside the recomputed price fields; the ONE
+        # cascade below re-aggregates the КП but never touches version (bulk_update, not save).
+        item.version = (item.version or 0) + 1
         # Defer per-row recalc — one full cascade recompute follows for the whole КП.
         item.save(skip_recalculate=True)
         updated_ids.append(item.id)

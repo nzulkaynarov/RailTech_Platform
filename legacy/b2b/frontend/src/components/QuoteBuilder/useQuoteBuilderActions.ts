@@ -11,6 +11,7 @@ import { translateApiError } from '@/lib/apiError';
 import { toDecimal } from '@/utils/decimal';
 import {
 	parseBulkItemErrors, parseBulkCreateItemErrors, extractBulkErrorRows, hiddenErrorFields,
+	extractStaleConflictIds, isStaleConflictError,
 } from './bulkErrors';
 import { shouldInterceptClipboardPaste, type BulkCreateRow } from './parseClipboardTable';
 import { buildDuplicatePayload } from './duplicatePayload';
@@ -53,6 +54,9 @@ export interface QuoteBuilderActionsParams {
 	setDeleteTarget: Dispatch<SetStateAction<number | null>>;
 	setPricingBusy: Dispatch<SetStateAction<boolean>>;
 	setDraftBusy: Dispatch<SetStateAction<boolean>>;
+	// Optimistic-lock conflict dialog (волна 3) — a stale save opens it instead of a cell highlight.
+	setConflictIds: Dispatch<SetStateAction<number[]>>;
+	setConflictOpen: Dispatch<SetStateAction<boolean>>;
 	// Refs.
 	addNameRef: RefObject<HTMLInputElement>;
 	addRowRef: RefObject<HTMLTableRowElement>;
@@ -76,6 +80,7 @@ export function useQuoteBuilderActions(params: QuoteBuilderActionsParams) {
 		newItemName, newItemQty, newItemPrice, deleteTarget,
 		setCellErrors, setExpandedRowId, setNewItemName, setNewItemQty, setNewItemPrice,
 		setPasteText, setPasteRowErrors, setPasteOpen, setDeleteTarget, setPricingBusy, setDraftBusy,
+		setConflictIds, setConflictOpen,
 		addNameRef, addRowRef, rowRefs, onSave,
 	} = params;
 
@@ -107,6 +112,9 @@ export function useQuoteBuilderActions(params: QuoteBuilderActionsParams) {
 				quoteId,
 				items: editedItems.map((item) => ({
 					id: item.id,
+					// Optimistic-lock token (волна 3): the row revision the grid last read. A stale
+					// value → the server rejects the whole batch with QUOTE_ITEM_STALE (no clobber).
+					version: item.version,
 					quantity: item.quantity,
 					frozen_base_price: item.frozen_base_price,
 					frozen_currency: item.frozen_currency,
@@ -126,6 +134,15 @@ export function useQuoteBuilderActions(params: QuoteBuilderActionsParams) {
 			// Transactional rejection → NOTHING was written; keep the dirty rows and highlight cells.
 			const rows = extractBulkErrorRows(error);
 			if (rows !== null) {
+				// Concurrency conflict (волна 3): one or more rows were saved by a colleague since we
+				// read them. This isn't a fixable input error — open the refresh dialog for those rows
+				// instead of highlighting cells, so the seller consciously reloads the fresh values.
+				const staleIds = extractStaleConflictIds(rows);
+				if (staleIds.length > 0) {
+					setConflictIds(staleIds);
+					setConflictOpen(true);
+					return;
+				}
 				const parsed = parseBulkItemErrors(rows);
 				setCellErrors(parsed);
 				const rowCount = new Set(Object.keys(parsed).map((key) => key.split(':')[0])).size;
@@ -326,7 +343,14 @@ export function useQuoteBuilderActions(params: QuoteBuilderActionsParams) {
 				});
 			}
 			toast.success(t('pricingAssist.applied', { count: suggestions.length }));
-		} catch {
+		} catch (error) {
+			// A single-line 409 conflict is handled like the bulk path: open the refresh dialog
+			// (empty ids ⇒ reload the whole grid) rather than a generic error toast.
+			if (isStaleConflictError(error)) {
+				setConflictIds([]);
+				setConflictOpen(true);
+				return;
+			}
 			toast.error(t('pricingAssist.error'));
 		} finally {
 			setPricingBusy(false);

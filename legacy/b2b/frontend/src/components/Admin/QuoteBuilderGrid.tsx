@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Loader2, Sparkles, FileText } from 'lucide-react';
 import { QuoteItem, QuoteEconomics } from '@/api/crmApi';
@@ -197,6 +199,31 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	// Manual product attach/re-match for a КП line (human counterpart to AI-подбор).
 	const [reassignItemId, setReassignItemId] = useState<number | null>(null);
 
+	// Optimistic-lock conflict dialog (волна 3): a save that lost a race to a colleague opens this
+	// instead of writing. `conflictIds` are the stale rows (empty ⇒ a single-line 409 → reload all).
+	const queryClient = useQueryClient();
+	const [conflictOpen, setConflictOpen] = useState(false);
+	const [conflictIds, setConflictIds] = useState<number[]>([]);
+	// «Обновить»: consciously drop the local edits on the conflicting rows (or all, on a bare 409),
+	// then refetch quote-items so the fresh server values re-merge. The seller's stale edits to the
+	// conflicting lines are replaced by the colleague's committed values (spec §5.3).
+	const handleConflictRefresh = () => {
+		const idsToReset = conflictIds.length > 0 ? conflictIds : draftItems.map((item) => item.id);
+		clearDirtyAfterSave(idsToReset);
+		setCellErrors((previous) => {
+			const next = { ...previous };
+			for (const key of Object.keys(next)) {
+				if (idsToReset.includes(Number(key.split(':')[0]))) delete next[key];
+			}
+			return next;
+		});
+		queryClient.invalidateQueries({ queryKey: ['quote-items'] });
+		queryClient.invalidateQueries({ queryKey: ['deals'] });
+		setConflictOpen(false);
+		setConflictIds([]);
+		toast.info(t('quote.conflict.refreshed'));
+	};
+
 	const toggleRow = (id: number) => setExpandedRowId((current) => (current === id ? null : id));
 
 	// All mutation-driven actions (save · add · paste · delete · bulk · pricing · AI draft).
@@ -207,6 +234,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 		newItemName, newItemQty, newItemPrice, deleteTarget,
 		setCellErrors, setExpandedRowId, setNewItemName, setNewItemQty, setNewItemPrice,
 		setPasteText, setPasteRowErrors, setPasteOpen, setDeleteTarget, setPricingBusy, setDraftBusy,
+		setConflictIds, setConflictOpen,
 		addNameRef, addRowRef, rowRefs, onSave,
 	});
 
@@ -468,6 +496,22 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 								<AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
 								<AlertDialogAction onClick={actions.confirmDeleteItem} disabled={deleteItemMutation.isPending}>
 									{t('common.delete')}
+								</AlertDialogAction>
+							</AlertDialogFooter>
+						</AlertDialogContent>
+					</AlertDialog>
+
+					{/* Optimistic-lock conflict (волна 3): a colleague saved these lines first. This isn't a
+					    fixable input error — the seller reloads the fresh values, replacing their stale edits. */}
+					<AlertDialog open={conflictOpen} onOpenChange={(o) => !o && setConflictOpen(false)}>
+						<AlertDialogContent>
+							<AlertDialogHeader>
+								<AlertDialogTitle>{t('quote.conflict.title')}</AlertDialogTitle>
+								<AlertDialogDescription>{t('quote.conflict.description')}</AlertDialogDescription>
+							</AlertDialogHeader>
+							<AlertDialogFooter>
+								<AlertDialogAction onClick={handleConflictRefresh}>
+									{t('quote.conflict.refresh')}
 								</AlertDialogAction>
 							</AlertDialogFooter>
 						</AlertDialogContent>
