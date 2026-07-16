@@ -6,7 +6,7 @@ import { QuoteItem, QuoteEconomics, crmApi } from '@/api/crmApi';
 import { translateApiError } from '@/lib/apiError';
 import {
 	Loader2, AlertTriangle, AlertCircle, Plus, Trash2, Sparkles, FileText, Settings, Tag,
-	ChevronRight, ChevronDown, PanelRightClose, PanelRightOpen, Link2, Maximize2, Minimize2, ClipboardPaste,
+	ChevronRight, ChevronDown, PanelRightClose, PanelRightOpen, Maximize2, Minimize2, ClipboardPaste,
 } from 'lucide-react';
 import { useQuoteItems, useUpdateQuoteItem, useCreateQuoteItem, useDeleteQuoteItem, useDeal, useSetQuoteDeliveryBasis, useBulkUpdateQuoteItems, useBulkCreateQuoteItems, useBulkDeleteQuoteItems } from '@/hooks/useCRM';
 import { useCurrencies } from '@/hooks/useMasterData';
@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { StickyTotalsBar } from '@/components/QuoteBuilder/StickyTotalsBar';
 import { NumericCell } from '@/components/QuoteBuilder/NumericCell';
+import { ProductNameCell } from '@/components/QuoteBuilder/ProductNameCell';
 import { useQuoteDraft } from '@/components/QuoteBuilder/useQuoteDraft';
 import { useGridKeyboard } from '@/components/QuoteBuilder/useGridKeyboard';
 import { usePricingMirror } from '@/components/QuoteBuilder/usePricingMirror';
@@ -1065,36 +1066,11 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 														</div>
 													</TableCell>
 													<TableCell className={cn('px-2 py-1.5 sticky left-16 z-10', stickyBg)}>
-														<div className="flex flex-col leading-tight pr-4">
-															<div className="flex items-center gap-2">
-																{!item.product && (
-																	<AlertTriangle className="size-3 text-warning shrink-0" aria-label={t('sourcing.noMatch')} />
-																)}
-																<span className="text-xs font-mono text-muted-foreground tabular-nums">{idx + 1}.</span>
-																<span className="text-sm font-semibold truncate max-w-[260px]" title={item.product_name || item.imported_raw_name || undefined}>
-																	{item.product_name || item.imported_raw_name}
-																</span>
-																{item.product_domain && (
-																	<Badge variant="outline" className="text-xs px-1.5 py-0">{item.product_domain}</Badge>
-																)}
-															</div>
-															{item.product ? (
-																// Product IS bound: show the supplier (if an offer exists) or the SKU —
-																// never «Совпадение не найдено», which contradicts a matched line.
-																<span className="text-xs text-muted-foreground mt-0.5 truncate">
-																	{item.offer_supplier_name || item.product_sku || '—'}
-																</span>
-															) : (
-																<button
-																	type="button"
-																	onClick={() => setReassignItemId(item.id)}
-																	className="mt-0.5 flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-																>
-																	<Link2 className="size-3 shrink-0" />
-																	{t('quote.attachProduct')}
-																</button>
-															)}
-														</div>
+														<ProductNameCell
+															item={item}
+															index={idx + 1}
+															onBrowseCandidates={setReassignItemId}
+														/>
 													</TableCell>
 													<TableCell className="p-0">
 														<NumericCell

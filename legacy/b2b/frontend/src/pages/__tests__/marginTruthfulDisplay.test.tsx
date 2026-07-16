@@ -52,6 +52,7 @@ vi.mock('@/hooks/useCRM', () => ({
   useCreateQuoteItem: vi.fn(),
   useDeleteQuoteItem: vi.fn(),
   useSetQuoteDeliveryBasis: vi.fn(),
+  useReassignProduct: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useClaimDeal: vi.fn(),
 }));
 

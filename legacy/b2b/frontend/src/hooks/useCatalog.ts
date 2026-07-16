@@ -22,6 +22,22 @@ export const useProducts = (params?: Parameters<typeof catalogApi.getProducts>[0
   placeholderData: (prev) => prev, // показываем предыдущие данные пока грузятся новые (нет мигания)
 });
 
+/**
+ * Catalog product typeahead search (КП grid name-cell combobox, spec §5 п.13). Reuses the
+ * SAME `catalog/products/?search=` endpoint the catalog list uses — no new API. Gated on a
+ * ≥2-char (trimmed) term so a single keystroke never fires a request; the caller debounces.
+ */
+export const useProductSearch = (term: string) => {
+  const trimmed = term.trim();
+  return useQuery({
+    queryKey: ['product-search', trimmed],
+    queryFn: () => catalogApi.getProducts({ search: trimmed }),
+    enabled: trimmed.length >= 2,
+    staleTime: 60_000,
+    placeholderData: (prev) => prev, // keep prior matches visible while the next term loads
+  });
+};
+
 export const useProductsCount = (params?: Parameters<typeof catalogApi.getProductsCount>[0]) => useQuery({
   queryKey: ['products-count', params],
   queryFn: () => catalogApi.getProductsCount(params),
