@@ -670,7 +670,15 @@
       "inCurrency": "Charge amounts are in the КП currency: {{currency}} (line costs may be USD/EUR)",
       "ofBase": "{{rate}}% of {{base}}",
       "moveUp": "Move up",
-      "moveDown": "Move down"
+      "moveDown": "Move down",
+      "cascade": {
+        "title": "Price cascade",
+        "subtotal": "Subtotal (lines)",
+        "taxBase": "Tax base",
+        "vat": "VAT ({{rate}}%)",
+        "total": "Total incl. VAT",
+        "belowFloor": "below min. margin"
+      }
     },
     "deleteItem": "Delete item?",
     "addItemPlaceholder": "Item name...",

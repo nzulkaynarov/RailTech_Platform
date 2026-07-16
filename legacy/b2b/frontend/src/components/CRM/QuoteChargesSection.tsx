@@ -3,11 +3,13 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Plus, Trash2, Loader2, Pencil, Check, X, ArrowUp, ArrowDown } from 'lucide-react';
 import {
+	useQuote,
 	useQuoteCharges, useChargeTypes, useCreateQuoteCharge, useUpdateQuoteCharge, useDeleteQuoteCharge,
 	useReorderQuoteCharges,
 } from '@/hooks/useCRM';
 import type { QuoteCharge } from '@/api/crmApi';
 import { formatMoney } from '@/utils/decimal';
+import { ChargeCascadeTable } from './ChargeCascadeTable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -38,6 +40,7 @@ type Kind = 'charge' | 'discount';
  */
 export const QuoteChargesSection: React.FC<QuoteChargesSectionProps> = ({ quoteId, currency }) => {
 	const { t } = useTranslation();
+	const { data: quote } = useQuote(quoteId);
 	const { data: charges = [] } = useQuoteCharges(quoteId);
 	const { data: chargeTypes = [] } = useChargeTypes();
 	const createMutation = useCreateQuoteCharge();
@@ -318,6 +321,19 @@ export const QuoteChargesSection: React.FC<QuoteChargesSectionProps> = ({ quoteI
 					</Button>
 				</div>
 				<p className="text-xs text-muted-foreground">{t('quote.charges.inCurrency', { currency: ccyLabel })}</p>
+
+				{/* Transparent price cascade: subtotal → charges (running) → tax base → +VAT → total.
+				    Mirrors recalculate_quote to the копейка; presentation prices only (buyer-safe),
+				    margin badge withheld unless the viewer may see cost/margin (economics present). */}
+				{quote && (
+					<ChargeCascadeTable
+						subtotal={quote.subtotal_excl_vat}
+						charges={charges}
+						vatRate={quote.vat_rate}
+						currency={ccyLabel}
+						economics={quote.economics}
+					/>
+				)}
 			</CardContent>
 		</Card>
 	);

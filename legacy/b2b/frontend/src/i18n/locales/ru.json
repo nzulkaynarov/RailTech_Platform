@@ -672,7 +672,15 @@
       "inCurrency": "Суммы статей — в валюте КП: {{currency}} (себестоимость позиций может быть в USD/EUR)",
       "ofBase": "{{rate}}% от {{base}}",
       "moveUp": "Выше",
-      "moveDown": "Ниже"
+      "moveDown": "Ниже",
+      "cascade": {
+        "title": "Каскад расчёта",
+        "subtotal": "Подытог (позиции)",
+        "taxBase": "Налоговая база",
+        "vat": "НДС ({{rate}}%)",
+        "total": "Итого с НДС",
+        "belowFloor": "ниже мин. маржи"
+      }
     },
     "deleteItem": "Удалить позицию?",
     "addItemPlaceholder": "Наименование позиции...",
