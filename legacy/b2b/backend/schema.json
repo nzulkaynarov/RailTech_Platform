@@ -5236,7 +5236,7 @@
         "/api/v1/auth/register/": {
             "post": {
                 "operationId": "auth_register_create",
-                "description": "Register a new user by email. Creates an inactive user and sends a verification email with a password setup link.",
+                "description": "Register a new user by email. Always returns 201 with the same neutral body so the response never reveals whether the email already has an account (anti-enumeration, P2): a free email gets a setup link, an existing active account gets a sign-in/recover email, a pending one gets the setup link re-sent — all indistinguishable in status, body, and timing.",
                 "summary": "Register new user",
                 "tags": [
                     "Auth"
@@ -5269,10 +5269,10 @@
                 ],
                 "responses": {
                     "201": {
-                        "description": "Verification email sent"
+                        "description": "Verification email sent (neutral — see description)"
                     },
                     "400": {
-                        "description": "Email already exists or validation error"
+                        "description": "Validation error (malformed request only)"
                     }
                 }
             }
