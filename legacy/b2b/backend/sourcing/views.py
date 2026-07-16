@@ -428,49 +428,6 @@ class CatalogTemplateView(APIView):
         tags=["Sourcing"],
     ),
 )
-class SourcingRequestViewSet(viewsets.ReadOnlyModelViewSet):
-    """
-    ViewSet for retrieving sourcing requests (Deals in SOURCING stage).
-    GET /api/v1/sourcing/requests/ - List all sourcing requests
-    GET /api/v1/sourcing/requests/{id}/ - Get details of a specific request
-    """
-
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        from crm.models import Deal
-
-        if getattr(self, "swagger_fake_view", False):
-            return Deal.objects.none()
-        user = self.request.user
-        queryset = (
-            Deal.objects.filter(stage__code="SOURCING")
-            .select_related("company", "client", "manager", "stage")
-            .prefetch_related("quotes", "quotes__items")
-        )
-
-        # B2B Filter: platform admin sees all; a routed seller sees their routed deals
-        # (review 2026-06-25 #5 — sourcing was left on the buyer-company model); buyer sees
-        # its own company's deals.
-        if not user.is_platform_admin:
-            from accounts.services.permissions import seller_visible_deal_ids
-
-            visible = seller_visible_deal_ids(user, self.request)
-            if visible is not None:
-                queryset = queryset.filter(id__in=visible)
-            else:
-                user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
-                queryset = queryset.filter(company_id__in=user_company_ids)
-
-        return queryset
-
-    def get_serializer_class(self):
-        # Use DealListSerializer for consistency with existing CRM endpoints
-        from crm.serializers import DealListSerializer
-
-        return DealListSerializer
-
-
 class AttachmentViewSet(viewsets.ModelViewSet):
     """
     Uploads/lists/deletes private attachments tied to exactly one parent

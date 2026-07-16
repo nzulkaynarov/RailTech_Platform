@@ -76,7 +76,6 @@ from crm.views import (
     LeadViewSet,
     MessageViewSet,
     PaymentViewSet,
-    Phase2StatusChoicesView,
     PublicQuoteView,
     QuoteChargeViewSet,
     QuoteItemViewSet,
@@ -100,7 +99,6 @@ from sourcing.views import (  # noqa: F811
     ImportStatusView,
     MatchCatalogView,
     PreflightCheckView,
-    SourcingRequestViewSet,
 )
 from sourcing.views_ai_conversational import ComposeRequestView  # noqa: E402,F811
 
@@ -158,7 +156,6 @@ router.register(r"master-data/units", UnitOfMeasureViewSet)
 router.register(r"master-data/delivery-basis", DeliveryBasisViewSet)
 
 # Sourcing
-router.register(r"sourcing/requests", SourcingRequestViewSet, basename="sourcing-request")
 router.register(r"sourcing/attachments", AttachmentViewSet, basename="attachment")
 
 urlpatterns = (
@@ -231,7 +228,6 @@ urlpatterns = (
         path("api/v1/admin/break-glass/", BreakGlassView.as_view(), name="admin-break-glass"),
         path("api/v1/admin/access-log/", AdminAccessLogView.as_view(), name="admin-access-log"),
         path("api/v1/crm/leads/", LeadCreateView.as_view(), name="lead-create"),
-        path("api/v1/crm/status-choices/", Phase2StatusChoicesView.as_view(), name="phase2-status-choices"),
         # Public, unauthenticated КП view/download by secret token (client base CB-public-link).
         path("api/v1/public/quotes/<str:token>/", PublicQuoteView.as_view(), name="public-quote"),
         path("api/v1/system-settings/", SystemSettingsView.as_view(), name="system-settings"),

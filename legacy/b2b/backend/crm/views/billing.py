@@ -6,7 +6,6 @@ from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
 from accounts.services.permissions import seller_company_ids, seller_visible_deal_ids
 from core.file_streaming import stream_file_field
@@ -15,13 +14,9 @@ from core.permissions import IsCompanyMemberOrPlatformAdmin, OperatorScoped
 from crm import services as crm_services
 from crm.models import (
     Act,
-    ActStatus,
     Contract,
-    ContractStatus,
     Fulfillment,
-    FulfillmentStatus,
     Invoice,
-    InvoiceStatus,
     Payment,
 )
 from crm.serializers import (
@@ -81,34 +76,6 @@ def _billing_visibility_q(user, request, *, deal_path, seller_path):
     routed_deal_ids = seller_visible_deal_ids(user, request, force=True) or set()
     unresolved_q = Q(**{f"{seller_path}__isnull": True}) & Q(**{f"{deal_path}_id__in": routed_deal_ids})
     return buyer_q | owned_q | unresolved_q
-
-
-class Phase2StatusChoicesView(APIView):
-    """Expose TextChoices-style status sets of the Phase 2 business models
-    so the frontend doesn't hardcode them (IRON RULE 2).
-    GET /api/v1/crm/status-choices/
-    Response: {contract: [{code, label}], invoice: [...], ...}
-    """
-
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        def to_list(choices):
-            return [{"code": c[0], "label": str(c[1])} for c in choices]
-
-        return Response(
-            {
-                # post-sale statuses moved to FK lookups (F5.4) — read from the tables.
-                "contract": [{"code": s.code, "label": s.name} for s in ContractStatus.objects.filter(is_active=True)],
-                "invoice": [{"code": s.code, "label": s.name} for s in InvoiceStatus.objects.filter(is_active=True)],
-                "act": [{"code": s.code, "label": s.name} for s in ActStatus.objects.filter(is_active=True)],
-                # fulfillment status moved to a FK lookup (F5.4) — read from the table.
-                "fulfillment": [
-                    {"code": s.code, "label": s.name} for s in FulfillmentStatus.objects.filter(is_active=True)
-                ],
-                "payment_method": to_list(Payment.METHOD_CHOICES),
-            }
-        )
 
 
 class ContractViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):

@@ -13884,25 +13884,6 @@
                 }
             }
         },
-        "/api/v1/crm/status-choices/": {
-            "get": {
-                "operationId": "crm_status_choices_retrieve",
-                "description": "Expose TextChoices-style status sets of the Phase 2 business models\nso the frontend doesn't hardcode them (IRON RULE 2).\nGET /api/v1/crm/status-choices/\nResponse: {contract: [{code, label}], invoice: [...], ...}",
-                "tags": [
-                    "crm"
-                ],
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "No response body"
-                    }
-                }
-            }
-        },
         "/api/v1/crm/timeline/": {
             "get": {
                 "operationId": "crm_timeline_list",
@@ -15271,7 +15252,8 @@
         "/api/v1/sourcing/attachments/": {
             "get": {
                 "operationId": "sourcing_attachments_list",
-                "description": "Uploads/lists/deletes private attachments tied to exactly one parent\n(deal, message, quote, company, or product).\n\n- list: filter by deal/message/quote/company/product query params.\n- create: requires ONE of deal/message/quote/company/product, plus `file`.\n- destroy: only uploader or platform admin.\n\nAccess to the attached entity is checked via the deal's company membership\n(or the product's manufacturer, or the company directly).",
+                "description": "Returns deals in SOURCING stage. B2B filtered: users see only their company's deals.",
+                "summary": "List sourcing requests",
                 "parameters": [
                     {
                         "name": "page",
@@ -15293,7 +15275,7 @@
                     }
                 ],
                 "tags": [
-                    "sourcing"
+                    "Sourcing"
                 ],
                 "security": [
                     {
@@ -15351,7 +15333,8 @@
         "/api/v1/sourcing/attachments/{id}/": {
             "get": {
                 "operationId": "sourcing_attachments_retrieve",
-                "description": "Uploads/lists/deletes private attachments tied to exactly one parent\n(deal, message, quote, company, or product).\n\n- list: filter by deal/message/quote/company/product query params.\n- create: requires ONE of deal/message/quote/company/product, plus `file`.\n- destroy: only uploader or platform admin.\n\nAccess to the attached entity is checked via the deal's company membership\n(or the product's manufacturer, or the company directly).",
+                "description": "Returns details of a specific sourcing request (deal in SOURCING stage).",
+                "summary": "Get sourcing request details",
                 "parameters": [
                     {
                         "in": "path",
@@ -15364,7 +15347,7 @@
                     }
                 ],
                 "tags": [
-                    "sourcing"
+                    "Sourcing"
                 ],
                 "security": [
                     {
@@ -15833,91 +15816,6 @@
                     },
                     "503": {
                         "description": "AI pre-flight disabled"
-                    }
-                }
-            }
-        },
-        "/api/v1/sourcing/requests/": {
-            "get": {
-                "operationId": "sourcing_requests_list",
-                "description": "Returns deals in SOURCING stage. B2B filtered: users see only their company's deals.",
-                "summary": "List sourcing requests",
-                "parameters": [
-                    {
-                        "name": "page",
-                        "required": false,
-                        "in": "query",
-                        "description": "A page number within the paginated result set.",
-                        "schema": {
-                            "type": "integer"
-                        }
-                    },
-                    {
-                        "name": "search",
-                        "required": false,
-                        "in": "query",
-                        "description": "A search term.",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "tags": [
-                    "Sourcing"
-                ],
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/PaginatedDealListList"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            }
-        },
-        "/api/v1/sourcing/requests/{id}/": {
-            "get": {
-                "operationId": "sourcing_requests_retrieve",
-                "description": "Returns details of a specific sourcing request (deal in SOURCING stage).",
-                "summary": "Get sourcing request details",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Сделка.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "Sourcing"
-                ],
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/DealList"
-                                }
-                            }
-                        },
-                        "description": ""
                     }
                 }
             }
