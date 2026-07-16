@@ -6589,6 +6589,9 @@
                     "400": {
                         "description": "Missing or too-long name"
                     },
+                    "403": {
+                        "description": "Company not entitled to AI enrichment (AI_FEATURE_NOT_ENTITLED)"
+                    },
                     "503": {
                         "description": "AI enrichment disabled"
                     }

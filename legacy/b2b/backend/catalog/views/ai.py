@@ -28,6 +28,7 @@ from rest_framework.views import APIView
     responses={
         202: OpenApiResponse(description="AI job queued, task_id returned"),
         400: OpenApiResponse(description="Missing or too-long name"),
+        403: OpenApiResponse(description="Company not entitled to AI enrichment (AI_FEATURE_NOT_ENTITLED)"),
         503: OpenApiResponse(description="AI enrichment disabled"),
     },
     tags=["Catalog"],
@@ -55,6 +56,19 @@ class ProductEnrichView(APIView):
         domain_code = str(request.data.get("domain_code") or "").strip() or None
         mpn = str(request.data.get("mpn") or "").strip()[:120] or None
         gost = str(request.data.get("gost") or "").strip()[:120] or None
+
+        # MONETIZATION GATE (P1, audit #13): PIM enrichment is a SELLER premium — gate it on the
+        # ai.enrich entitlement (an operational subscription grants it by baseline; an explicit
+        # CompanyEntitlement row overrides — promo grant / DISABLED downgrade). extract & compose
+        # are DELIBERATELY left ungated: they feed the buyer-acquisition wedge funnel and a paywall
+        # there would kill top-of-funnel adoption. Superuser = DBA escalation, bypasses.
+        if not getattr(request.user, "is_superuser", False):
+            from accounts.constants import FeatureKey
+            from accounts.services import has_entitlement, primary_seller_company_id
+
+            seller_company_id = primary_seller_company_id(request.user)
+            if not has_entitlement(seller_company_id, FeatureKey.AI_ENRICH):
+                return Response({"detail": "AI_FEATURE_NOT_ENTITLED"}, status=status.HTTP_403_FORBIDDEN)
 
         from sourcing.ai_jobs import enqueue_ai_job
 

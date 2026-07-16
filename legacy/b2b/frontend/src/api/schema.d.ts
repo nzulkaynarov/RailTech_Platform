@@ -15058,6 +15058,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Company not entitled to AI enrichment (AI_FEATURE_NOT_ENTITLED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description AI enrichment disabled */
             503: {
                 headers: {

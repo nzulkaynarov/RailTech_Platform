@@ -9,6 +9,7 @@ import {
 } from '@/hooks/useCatalog';
 import { useUnits, useCurrencies, useDeliveryBases } from '@/hooks/useMasterData';
 import type { Product } from '@/api/catalogApi';
+import { translateApiError } from '@/lib/apiError';
 import { emptyDraft, type Draft, type OfferDraft } from './types';
 
 export function useProductForm({
@@ -120,6 +121,9 @@ export function useProductForm({
       // AI off → backend 503 {AI_DISABLED}; show the neutral "empty" toast, not a hard error (#8).
       const status = (err as { response?: { status?: number } })?.response?.status;
       if (status === 503) toast.info(t('adminCatalog.aiEnrich.empty'));
+      // Business gates carry a stable {detail: CODE} — surface the localised message
+      // (403 AI_FEATURE_NOT_ENTITLED = needs subscription; 429 AI_DAILY_CAP_REACHED).
+      else if (status === 403 || status === 429) toast.error(translateApiError(err));
       else toast.error(t('adminCatalog.aiEnrich.failed'));
     }
   };
