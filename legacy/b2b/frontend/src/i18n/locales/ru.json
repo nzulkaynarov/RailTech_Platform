@@ -892,6 +892,7 @@
     "marginQuoteLevelHint": "Наценка задаётся на весь КП — измените её в «Настройки КП»",
     "draftPreview": "черновик",
     "draftRecalcOnSave": "пересчёт после сохранения",
+    "marketFxPreview": "≈ рыночный курс, уточнится при сохранении",
     "save": {
       "success": "КП сохранён",
       "rowsWithErrors": "Строк с ошибками: {{count}} — исправьте выделенные"
@@ -899,6 +900,8 @@
     "validation": {
       "qtyTooLarge": "Количество не может превышать {{max}}",
       "priceTooLarge": "Цена не может превышать {{max}}",
+      "discountClamped": "Скидка ограничена диапазоном 0–100%",
+      "valueClamped": "Некоторые значения скорректированы до допустимых границ",
       "QUOTE_ITEM_NAME_REQUIRED": "Укажите наименование позиции",
       "QUOTE_ITEM_QTY_INVALID": "Количество должно быть не меньше 1",
       "QUOTE_ITEM_QTY_TOO_LARGE": "Количество слишком большое",

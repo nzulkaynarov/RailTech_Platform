@@ -158,6 +158,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 		vatRate: mirrorQuote?.vat_rate || '12',
 		fxSnapshot: mirrorQuote?.fx_snapshot ?? {},
 		fxManual: mirrorQuote?.fx_manual ?? {},
+		fxMarket: mirrorQuote?.fx_market ?? {},
 		charges: mirrorQuote?.charges ?? [],
 		canViewCost: !!mirrorEcon,
 		minMarginPercent: mirrorEcon ? Number(mirrorEcon.min_margin_percent) : null,
@@ -459,15 +460,21 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 
 	const handleBulkPriceChange = (percent: number) => {
 		const factor = 1 + percent / 100;
+		let clampedAny = false;
 		const edits = [...selection.selectedIds].map((id) => {
 			const item = draftItems.find((row) => row.id === id);
-			let next = toDecimal(item?.frozen_base_price).mul(factor);
+			const raw = toDecimal(item?.frozen_base_price).mul(factor);
+			let next = raw;
 			if (next.lessThan(0)) next = toDecimal(0);
 			if (next.greaterThan(QUOTE_ITEM_MAX_UNIT_PRICE)) next = toDecimal(QUOTE_ITEM_MAX_UNIT_PRICE);
+			if (!next.equals(raw)) clampedAny = true;
 			return { id, field: 'frozen_base_price' as const, value: next.toDecimalPlaces(2).toString() };
 		});
 		if (edits.length === 0) return;
 		applyBulk(edits);
+		// Warn (not silently) when any row's computed price hit the 0..cap bounds — the safe clamped
+		// value is still applied, but the seller sees the input was adjusted.
+		if (clampedAny) toast.warning(t('quote.validation.valueClamped'));
 		toast.success(t('quote.bulk.priceApplied', { count: edits.length }));
 		selection.clear();
 	};
@@ -588,10 +595,13 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	// the frozen snapshot; UZS is always 1. Strings → Decimal for display math.
 	const fxSnapshot = activeQuote?.fx_snapshot ?? {};
 	const fxManual = activeQuote?.fx_manual ?? {};
+	// Preliminary public market rates back-fill currencies not yet frozen into the snapshot, so the
+	// cost tooltip mirrors the same manual → snapshot → market chain as the pricing mirror.
+	const fxMarket = activeQuote?.fx_market ?? {};
 	const fxRateFor = (code?: string): string => {
 		const ccy = (code || 'UZS').toUpperCase();
 		if (ccy === 'UZS') return '1';
-		return fxManual[ccy] || fxSnapshot[ccy] || '1';
+		return fxManual[ccy] || fxSnapshot[ccy] || fxMarket[ccy] || '1';
 	};
 	// The line's COST shown in the presentation (UZS) currency, for the tooltip.
 	const lineCostInPresentation = (item: QuoteItem): string => {
@@ -1153,6 +1163,19 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 																			<span className="cursor-help text-sm font-bold italic tabular-nums text-muted-foreground">{money} ~</span>
 																		</TooltipTrigger>
 																		<TooltipContent>{t('quote.draftRecalcOnSave')}</TooltipContent>
+																	</Tooltip>
+																);
+															}
+															if (line.usedMarketFx) {
+																// Priced off the PRELIMINARY public market rate — a live preview, but the
+																// server freezes its own rate on save. Flag it so we never pass the market
+																// rate off as the frozen one.
+																return (
+																	<Tooltip>
+																		<TooltipTrigger asChild>
+																			<span className="cursor-help text-sm font-bold italic tabular-nums text-primary">≈ {money} ~</span>
+																		</TooltipTrigger>
+																		<TooltipContent>{t('quote.marketFxPreview')}</TooltipContent>
 																	</Tooltip>
 																);
 															}

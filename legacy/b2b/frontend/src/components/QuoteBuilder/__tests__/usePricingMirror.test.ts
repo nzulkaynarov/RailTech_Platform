@@ -41,6 +41,7 @@ const baseInput = (overrides: Partial<PricingMirrorInput> = {}): PricingMirrorIn
 	vatRate: '12',
 	fxSnapshot: {},
 	fxManual: {},
+	fxMarket: {},
 	charges: [],
 	canViewCost: true,
 	minMarginPercent: null,
@@ -63,6 +64,16 @@ describe('resolveClientFxRate', () => {
 		// A stray non-positive override is ignored (mirrors _positive_fx_rate); no snapshot → null.
 		expect(resolveClientFxRate('USD', { USD: '0' }, {})).toBeNull();
 		expect(resolveClientFxRate('EUR', {}, {})).toBeNull();
+	});
+
+	it('falls back to the preliminary market rate only when neither manual nor snapshot has it', () => {
+		// market fills a currency absent from both maps…
+		expect(resolveClientFxRate('GBP', {}, {}, { GBP: '15000' })!.toString()).toBe('15000');
+		// …but snapshot (and manual) still win over market.
+		expect(resolveClientFxRate('USD', {}, { USD: '12000' }, { USD: '15000' })!.toString()).toBe('12000');
+		expect(resolveClientFxRate('USD', { USD: '12800' }, {}, { USD: '15000' })!.toString()).toBe('12800');
+		// a non-positive market rate is ignored, like the other maps.
+		expect(resolveClientFxRate('GBP', {}, {}, { GBP: '0' })).toBeNull();
 	});
 });
 
@@ -109,6 +120,38 @@ describe('usePricingMirror', () => {
 		expect(line.lineTotal).toBe('3000000');
 	});
 
+	it('previews a market-only currency off fx_market and flags it usedMarketFx (preliminary)', () => {
+		// base 100 GBP × 15000 = 1,500,000 landed; ×1.20 markup = 1,800,000 final; Сумма ×1 = 1,800,000.
+		// GBP is on NEITHER snapshot nor manual — only the preliminary public market map.
+		const item = mkItem(4, { frozen_base_price: '100', frozen_currency: 'GBP', quantity: 1 });
+		const { result } = renderHook(() =>
+			usePricingMirror(baseInput({
+				draftItems: [item], dirtyIds: new Set([4]), marginPercent: '20',
+				fxMarket: { GBP: '15000' },
+			})),
+		);
+		const line = result.current.lineFor(item);
+		expect(line.needsServerRecalc).toBe(false);
+		expect(line.usedMarketFx).toBe(true);
+		expect(line.landedCost).toBe('1500000');
+		expect(line.finalPriceExclVat).toBe('1800000');
+		expect(line.lineTotal).toBe('1800000');
+	});
+
+	it('does NOT flag usedMarketFx when the snapshot already covers the currency', () => {
+		// USD is in the snapshot → the frozen rate wins over the market rate; no «market» hint.
+		const item = mkItem(5, { frozen_base_price: '100', frozen_currency: 'USD', quantity: 1 });
+		const { result } = renderHook(() =>
+			usePricingMirror(baseInput({
+				draftItems: [item], dirtyIds: new Set([5]), marginPercent: '20',
+				fxSnapshot: { USD: '12500' }, fxMarket: { USD: '15000' },
+			})),
+		);
+		const line = result.current.lineFor(item);
+		expect(line.usedMarketFx).toBe(false);
+		expect(line.landedCost).toBe('1250000'); // 100 × 12500, not the 15000 market rate
+	});
+
 	it('flags a non-UZS row with NO client-known rate as needsServerRecalc (never faked)', () => {
 		const item = mkItem(3, { frozen_base_price: '100', frozen_currency: 'EUR', quantity: 1, final_price_excl_vat: '999' });
 		const { result } = renderHook(() =>
@@ -116,6 +159,7 @@ describe('usePricingMirror', () => {
 		);
 		const line = result.current.lineFor(item);
 		expect(line.needsServerRecalc).toBe(true);
+		expect(line.usedMarketFx).toBe(false);
 		expect(line.landedCost).toBeNull();
 		// «Сумма» still shows the server value so the column isn't blank.
 		expect(line.lineTotal).toBe('999');

@@ -24,7 +24,7 @@ const pendingQuote = {
 	],
 } as unknown as Quote;
 
-describe('QuoteApprovalChain — compact variant', () => {
+describe('QuoteApprovalChain', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		(useSubmitQuoteForReview as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mkMutation());
@@ -33,7 +33,7 @@ describe('QuoteApprovalChain — compact variant', () => {
 	});
 
 	it('renders a status pill with the step progress and opens the Popover on click', async () => {
-		renderWithProviders(<QuoteApprovalChain quote={pendingQuote} variant="compact" />);
+		renderWithProviders(<QuoteApprovalChain quote={pendingQuote} />);
 
 		// Pill: status label + «шаг 1/2» (one of two steps decided).
 		expect(screen.getByText('На согласовании')).toBeInTheDocument();
@@ -50,7 +50,7 @@ describe('QuoteApprovalChain — compact variant', () => {
 	});
 
 	it('duplicates the actionable approve button next to the pill', () => {
-		renderWithProviders(<QuoteApprovalChain quote={pendingQuote} variant="compact" />);
+		renderWithProviders(<QuoteApprovalChain quote={pendingQuote} />);
 
 		// The current user can act on step 2 → an approve button is surfaced beside the pill.
 		expect(screen.getByRole('button', { name: /Согласовать/ })).toBeInTheDocument();
@@ -58,7 +58,7 @@ describe('QuoteApprovalChain — compact variant', () => {
 
 	it('renders nothing once the КП leaves the approval chain (e.g. SENT)', () => {
 		const sent = { ...pendingQuote, status_code: 'SENT' } as unknown as Quote;
-		const { container } = renderWithProviders(<QuoteApprovalChain quote={sent} variant="compact" />);
+		const { container } = renderWithProviders(<QuoteApprovalChain quote={sent} />);
 		expect(container).toBeEmptyDOMElement();
 	});
 });

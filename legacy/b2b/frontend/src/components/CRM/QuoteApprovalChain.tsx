@@ -17,11 +17,6 @@ import {
 
 interface QuoteApprovalChainProps {
   quote: Quote;
-  /**
-   * `full` (default) — the inline document-flow bar. `compact` — a status pill + Popover for
-   * the workspace top toolbar, so the always-open chain no longer costs ~100px of vertical budget.
-   */
-  variant?: 'full' | 'compact';
 }
 
 const CHAIN_STATUSES = new Set(['DRAFT', 'PENDING_APPROVAL', 'READY_TO_SEND']);
@@ -39,8 +34,11 @@ const STATUS_ICON: Record<string, React.ReactNode> = {
  * intermediate approvers + a mandatory head, optionally an «informed» CC group. Renders
  * submit (DRAFT), per-step approve/reject for whoever may act now, and recall. Backend
  * re-checks every permission, so this only drives what's shown.
+ *
+ * Rendered as a compact status pill + Popover for the workspace top toolbar (the only live
+ * call site) — so the always-open chain never costs ~100px of vertical budget.
  */
-export const QuoteApprovalChain: React.FC<QuoteApprovalChainProps> = ({ quote, variant = 'full' }) => {
+export const QuoteApprovalChain: React.FC<QuoteApprovalChainProps> = ({ quote }) => {
   const { t } = useTranslation();
   const submit = useSubmitQuoteForReview();
   const act = useActOnApprovalStep();
@@ -188,54 +186,39 @@ export const QuoteApprovalChain: React.FC<QuoteApprovalChainProps> = ({ quote, v
     </Badge>
   );
 
-  // ── Compact: a status pill + Popover for the workspace top toolbar ──────────────
-  if (variant === 'compact') {
-    return (
-      <div className="flex items-center gap-1.5">
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8 gap-1.5" aria-label={t('quote.builder.openApproval')}>
-              {statusBadge}
-              {steps.length > 0 && (
-                <span className="text-xs text-muted-foreground">
-                  {t('quote.approvalChain.stepProgress', { current: decidedCount, total: steps.length })}
-                </span>
-              )}
-              <ChevronDown className="size-3.5 text-muted-foreground" aria-hidden="true" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent align="start" className="w-96 max-w-[92vw]">
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-semibold text-muted-foreground">{t('quote.approvalChain.title')}</span>
-                <div className="flex items-center gap-1.5">{primaryAction}</div>
-              </div>
-              {chainBody}
-            </div>
-          </PopoverContent>
-        </Popover>
-        {/* Duplicate the current user's actionable step next to the pill — one-click approve
-            without opening the popover (reject still routes through the popover). */}
-        {actionableStep && (
-          <Button size="sm" className="h-8" disabled={busy} onClick={() => approve(actionableStep)}>
-            {act.isPending ? <Loader2 className="size-3 animate-spin" /> : <Check className="size-3" />}
-            {t('quote.approvalChain.approve')}
-          </Button>
-        )}
-        {rejectDialog}
-      </div>
-    );
-  }
-
-  // ── Full: the inline document-flow bar ─────────────────────────────────────────
+  // A status pill + Popover for the workspace top toolbar.
   return (
-    <div className="flex flex-col gap-2 rounded-md border bg-muted/40 px-3 py-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-semibold text-muted-foreground">{t('quote.approvalChain.title')}</span>
-        {statusBadge}
-        <div className="ml-auto flex items-center gap-1.5">{primaryAction}</div>
-      </div>
-      {chainBody}
+    <div className="flex items-center gap-1.5">
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="outline" size="sm" className="h-8 gap-1.5" aria-label={t('quote.builder.openApproval')}>
+            {statusBadge}
+            {steps.length > 0 && (
+              <span className="text-xs text-muted-foreground">
+                {t('quote.approvalChain.stepProgress', { current: decidedCount, total: steps.length })}
+              </span>
+            )}
+            <ChevronDown className="size-3.5 text-muted-foreground" aria-hidden="true" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="w-96 max-w-[92vw]">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold text-muted-foreground">{t('quote.approvalChain.title')}</span>
+              <div className="flex items-center gap-1.5">{primaryAction}</div>
+            </div>
+            {chainBody}
+          </div>
+        </PopoverContent>
+      </Popover>
+      {/* Duplicate the current user's actionable step next to the pill — one-click approve
+          without opening the popover (reject still routes through the popover). */}
+      {actionableStep && (
+        <Button size="sm" className="h-8" disabled={busy} onClick={() => approve(actionableStep)}>
+          {act.isPending ? <Loader2 className="size-3 animate-spin" /> : <Check className="size-3" />}
+          {t('quote.approvalChain.approve')}
+        </Button>
+      )}
       {rejectDialog}
     </div>
   );

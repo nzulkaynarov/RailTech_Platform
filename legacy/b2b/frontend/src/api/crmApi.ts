@@ -287,6 +287,10 @@ export interface Quote {
 	fx_snapshot?: Record<string, string>;
 	// КП-level manual FX override (read+WRITE) — wins over snapshot & market.
 	fx_manual?: Record<string, string>;
+	// READ-ONLY preliminary PUBLIC market rates { currencyCode: "rateToUzs" } for currencies not
+	// yet frozen into fx_snapshot — lets the pricing mirror preview a new-currency line instead of
+	// «пересчёт после сохранения». The server freezes its own rate on save (detail context only).
+	fx_market?: Record<string, string>;
 	// КП-level срок поставки OVERRIDE in days (null ⇒ use derived max over lines).
 	delivery_lead_time_days?: number | null;
 	// READ-ONLY computed срок = override if set else max(items[].lead_time_days) (0 if none).
