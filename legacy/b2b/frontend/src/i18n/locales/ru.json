@@ -711,6 +711,28 @@
       "discountApplied": "Скидка применена к позициям: {{count}}",
       "priceApplied": "Цена изменена у позиций: {{count}}"
     },
+    "paste": {
+      "button": "Вставить из Excel",
+      "title": "Вставка позиций из буфера",
+      "description": "Вставьте таблицу из Excel или Google Sheets. Проверьте назначение колонок и подтвердите добавление.",
+      "sourceLabel": "Данные из буфера",
+      "sourcePlaceholder": "Вставьте сюда строки из Excel (Ctrl+V)…",
+      "columnRole": "Роль колонки {{index}}",
+      "role": {
+        "name": "Наименование",
+        "quantity": "Количество",
+        "price": "Цена",
+        "ignore": "Игнорировать"
+      },
+      "rowsRecognized": "Распознано строк: {{count}}",
+      "empty": "Нет распознанных строк. Вставьте табличные данные из Excel или Google Sheets.",
+      "noNameColumn": "Назначьте колонку «Наименование», чтобы продолжить.",
+      "truncated": "Будут добавлены первые {{max}} из {{total}} строк — остальные отброшены (лимит {{max}}).",
+      "hasErrors": "Исправьте отмеченные строки и повторите.",
+      "rowNumber": "№",
+      "confirm": "Добавить позиций: {{count}}",
+      "added": "Добавлено позиций: {{count}}"
+    },
     "rowError": {
       "marker": "Ошибки в свёрнутых полях",
       "fields": "Проверьте поля:"
@@ -869,6 +891,7 @@
     "validation": {
       "qtyTooLarge": "Количество не может превышать {{max}}",
       "priceTooLarge": "Цена не может превышать {{max}}",
+      "QUOTE_ITEM_NAME_REQUIRED": "Укажите наименование позиции",
       "QUOTE_ITEM_QTY_INVALID": "Количество должно быть не меньше 1",
       "QUOTE_ITEM_QTY_TOO_LARGE": "Количество слишком большое",
       "QUOTE_ITEM_PRICE_INVALID": "Цена не может быть отрицательной",

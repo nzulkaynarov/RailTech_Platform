@@ -709,6 +709,28 @@
       "discountApplied": "Discount applied to {{count}} item(s)",
       "priceApplied": "Price changed for {{count}} item(s)"
     },
+    "paste": {
+      "button": "Paste from Excel",
+      "title": "Paste items from clipboard",
+      "description": "Paste a table from Excel or Google Sheets. Review the column mapping and confirm.",
+      "sourceLabel": "Clipboard data",
+      "sourcePlaceholder": "Paste rows from Excel here (Ctrl+V)…",
+      "columnRole": "Role of column {{index}}",
+      "role": {
+        "name": "Name",
+        "quantity": "Quantity",
+        "price": "Price",
+        "ignore": "Ignore"
+      },
+      "rowsRecognized": "Rows recognized: {{count}}",
+      "empty": "No rows recognized. Paste tabular data from Excel or Google Sheets.",
+      "noNameColumn": "Assign a «Name» column to continue.",
+      "truncated": "The first {{max}} of {{total}} rows will be added — the rest are dropped (limit {{max}}).",
+      "hasErrors": "Fix the highlighted rows and try again.",
+      "rowNumber": "#",
+      "confirm": "Add {{count}} item(s)",
+      "added": "Added {{count}} item(s)"
+    },
     "rowError": {
       "marker": "Errors in collapsed fields",
       "fields": "Check fields:"
@@ -867,6 +889,7 @@
     "validation": {
       "qtyTooLarge": "Quantity cannot exceed {{max}}",
       "priceTooLarge": "Price cannot exceed {{max}}",
+      "QUOTE_ITEM_NAME_REQUIRED": "Enter an item name",
       "QUOTE_ITEM_QTY_INVALID": "Quantity must be at least 1",
       "QUOTE_ITEM_QTY_TOO_LARGE": "Quantity is too large",
       "QUOTE_ITEM_PRICE_INVALID": "Price cannot be negative",

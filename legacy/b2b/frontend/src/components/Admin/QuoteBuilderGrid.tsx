@@ -6,7 +6,7 @@ import { QuoteItem, QuoteEconomics, crmApi } from '@/api/crmApi';
 import { translateApiError } from '@/lib/apiError';
 import {
 	Loader2, AlertTriangle, AlertCircle, Plus, Trash2, Sparkles, FileText, Settings, Tag,
-	ChevronRight, ChevronDown, PanelRightClose, PanelRightOpen, Link2, Maximize2, Minimize2,
+	ChevronRight, ChevronDown, PanelRightClose, PanelRightOpen, Link2, Maximize2, Minimize2, ClipboardPaste,
 } from 'lucide-react';
 import { useQuoteItems, useUpdateQuoteItem, useCreateQuoteItem, useDeleteQuoteItem, useDeal, useSetQuoteDeliveryBasis, useBulkUpdateQuoteItems, useBulkCreateQuoteItems, useBulkDeleteQuoteItems } from '@/hooks/useCRM';
 import { useCurrencies } from '@/hooks/useMasterData';
@@ -38,7 +38,9 @@ import { NumericCell } from '@/components/QuoteBuilder/NumericCell';
 import { useQuoteDraft } from '@/components/QuoteBuilder/useQuoteDraft';
 import { useGridKeyboard } from '@/components/QuoteBuilder/useGridKeyboard';
 import { usePricingMirror } from '@/components/QuoteBuilder/usePricingMirror';
-import { parseBulkItemErrors, extractBulkErrorRows, cellErrorKey, hiddenErrorFields } from '@/components/QuoteBuilder/bulkErrors';
+import { parseBulkItemErrors, parseBulkCreateItemErrors, extractBulkErrorRows, cellErrorKey, hiddenErrorFields } from '@/components/QuoteBuilder/bulkErrors';
+import { ExcelPasteDialog } from '@/components/QuoteBuilder/ExcelPasteDialog';
+import { shouldInterceptClipboardPaste, type BulkCreateRow } from '@/components/QuoteBuilder/parseClipboardTable';
 import { useRowSelection } from '@/components/QuoteBuilder/useRowSelection';
 import { SelectionToolbar } from '@/components/QuoteBuilder/SelectionToolbar';
 import { buildDuplicatePayload } from '@/components/QuoteBuilder/duplicatePayload';
@@ -59,6 +61,9 @@ interface QuoteBuilderGridProps {
 // (санитарный потолок против fat-finger/вставки; backend re-validates and is the hard guard).
 const QUOTE_ITEM_MAX_QUANTITY = 1000000;
 const QUOTE_ITEM_MAX_UNIT_PRICE = 10000000000;
+// Max lines one Excel-paste batch may create — mirrors backend settings.QUOTE_ITEMS_BULK_MAX_ROWS.
+// The client truncates the preview to this cap; the server is the hard guard (QUOTE_ITEMS_BULK_TOO_LARGE).
+const QUOTE_ITEMS_BULK_MAX_ROWS = 500;
 
 // Margin health → semantic color, shared by the КП-level rail and the per-line chip.
 const marginToneClass = (belowCostOrFloor: boolean, marginPct: number, target: number): string =>
@@ -102,6 +107,12 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	const [newItemQty, setNewItemQty] = useState<string>('1');
 	const [newItemPrice, setNewItemPrice] = useState<string>('0');
 	const [showAddRow, setShowAddRow] = useState(false);
+	// Excel-paste (WP-12): the preview dialog's open state, its captured raw clipboard text, and the
+	// per-row rejection codes from the last bulk-create attempt (index → field → CODE) that keep the
+	// dialog open and highlight the offending preview rows.
+	const [pasteOpen, setPasteOpen] = useState(false);
+	const [pasteText, setPasteText] = useState('');
+	const [pasteRowErrors, setPasteRowErrors] = useState<Record<number, Record<string, string>>>({});
 	// «Добавить и продолжить»: refocus the name field + keep the row's new position in view.
 	const addNameRef = useRef<HTMLInputElement>(null);
 	const addRowRef = useRef<HTMLTableRowElement>(null);
@@ -338,6 +349,56 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 			});
 		} catch {
 			toast.error(t('errors.operationFailed'));
+		}
+	};
+
+	// Excel-paste entry (a): the toolbar button pre-fills the dialog from the clipboard when the
+	// browser grants read access, otherwise opens empty so the seller pastes into the dialog textarea.
+	const openPasteDialog = async () => {
+		let clipboard = '';
+		try {
+			clipboard = await navigator.clipboard.readText();
+		} catch {
+			// No clipboard-read permission — the dialog textarea accepts a manual paste instead.
+		}
+		setPasteText(clipboard);
+		setPasteRowErrors({});
+		setPasteOpen(true);
+	};
+
+	// Excel-paste entry (b): a native paste on the grid. A single-cell paste into an editable input
+	// falls through to the browser (normal in-cell editing); multi-line/tab-separated tabular text is
+	// hijacked into the preview dialog. A frozen КП is read-only, so paste is ignored there.
+	const handleGridPaste = (event: React.ClipboardEvent<HTMLDivElement>) => {
+		if (deal?.active_quote?.frozen_at) return;
+		const text = event.clipboardData.getData('text/plain');
+		const target = event.target as HTMLElement | null;
+		const targetIsEditable = !!target
+			&& (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target.isContentEditable);
+		if (!shouldInterceptClipboardPaste(text, targetIsEditable)) return;
+		event.preventDefault();
+		setPasteText(text);
+		setPasteRowErrors({});
+		setPasteOpen(true);
+	};
+
+	// Confirm: ONE transactional bulk-create. A rejected batch (per-row codes) keeps the dialog open
+	// and highlights the offending rows; a guard/global error surfaces as a toast.
+	const handlePasteConfirm = async (rows: BulkCreateRow[]) => {
+		const quoteId = deal?.active_quote?.id;
+		if (!quoteId || rows.length === 0) return;
+		try {
+			await bulkCreateMutation.mutateAsync({ quoteId, items: rows as unknown as Array<Record<string, unknown>> });
+			toast.success(t('quote.paste.added', { count: rows.length }));
+			setPasteOpen(false);
+			setPasteRowErrors({});
+		} catch (error) {
+			const errorRows = extractBulkErrorRows(error);
+			if (errorRows) {
+				setPasteRowErrors(parseBulkCreateItemErrors(errorRows));
+			} else {
+				toast.error(translateApiError(error));
+			}
 		}
 	};
 
@@ -800,6 +861,12 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 						<Plus className="size-3" />
 						{t('common.add')}
 					</Button>
+					{!activeQuote.frozen_at && (
+						<Button variant="outline" size="sm" onClick={openPasteDialog}>
+							<ClipboardPaste className="size-3" />
+							{t('quote.paste.button')}
+						</Button>
+					)}
 					{draftItems.some(item => !item.product) && (
 						<Button variant="outline" size="sm" onClick={() => setShowAiMatch(true)}>
 							<Sparkles className="size-3" />
@@ -891,7 +958,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 
 						<TabsContent value="items" className="flex flex-1 flex-col min-h-0 mt-0 overflow-hidden">
 					{/* Data grid */}
-					<div className="flex-1 overflow-auto rounded-md border" onKeyDown={gridKeyboard.onKeyDown}>
+					<div className="flex-1 overflow-auto rounded-md border" onKeyDown={gridKeyboard.onKeyDown} onPaste={handleGridPaste}>
 						<TooltipProvider>
 							<Table className="w-full text-left text-sm">
 								<TableHeader className="sticky top-0 z-20 border-b bg-muted">
@@ -1328,6 +1395,18 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 				canUndo={canUndo}
 			/>
 
+			<ExcelPasteDialog
+				open={pasteOpen}
+				onOpenChange={(open) => {
+					setPasteOpen(open);
+					if (!open) setPasteRowErrors({});
+				}}
+				initialText={pasteText}
+				maxRows={QUOTE_ITEMS_BULK_MAX_ROWS}
+				submitting={bulkCreateMutation.isPending}
+				rowErrors={pasteRowErrors}
+				onConfirm={handlePasteConfirm}
+			/>
 			<AICatalogMatchDialog open={showAiMatch} onOpenChange={setShowAiMatch} items={draftItems} />
 			<QuoteSettingsDialog quote={activeQuote} open={showSettings} onOpenChange={setShowSettings} />
 			<ReassignProductDialog
