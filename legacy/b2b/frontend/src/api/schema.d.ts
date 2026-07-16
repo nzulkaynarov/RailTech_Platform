@@ -1949,7 +1949,7 @@ export interface paths {
         put?: never;
         /**
          * Register new user
-         * @description Register a new user by email. Creates an inactive user and sends a verification email with a password setup link.
+         * @description Register a new user by email. Always returns 201 with the same neutral body so the response never reveals whether the email already has an account (anti-enumeration, P2): a free email gets a setup link, an existing active account gets a sign-in/recover email, a pending one gets the setup link re-sent — all indistinguishable in status, body, and timing.
          */
         post: operations["auth_register_create"];
         delete?: never;
@@ -14208,14 +14208,14 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Verification email sent */
+            /** @description Verification email sent (neutral — see description) */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Email already exists or validation error */
+            /** @description Validation error (malformed request only) */
             400: {
                 headers: {
                     [name: string]: unknown;
