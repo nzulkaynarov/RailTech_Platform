@@ -44,6 +44,29 @@ export function parseBulkItemErrors(rows: unknown): Record<string, string> {
 	return map;
 }
 
+/**
+ * Flatten the bulk-CREATE endpoint's `rows` into `index` → (`field` → CODE). New lines carry no
+ * id yet, so bulk-create keys its per-row errors by `index` only (Excel-paste, spec §5 п.12).
+ * The Excel-paste dialog reads this to highlight the offending preview rows/cells without closing.
+ */
+export function parseBulkCreateItemErrors(rows: unknown): Record<number, Record<string, string>> {
+	const map: Record<number, Record<string, string>> = {};
+	if (!Array.isArray(rows)) return map;
+	for (const row of rows as BulkErrorRow[]) {
+		const index = row?.index;
+		if (typeof index !== 'number' || !Number.isFinite(index)) continue;
+		const errors = row?.errors;
+		if (!errors || typeof errors !== 'object') continue;
+		const fieldMap: Record<string, string> = {};
+		for (const [field, value] of Object.entries(errors)) {
+			const code = Array.isArray(value) ? value[0] : value;
+			if (typeof code === 'string') fieldMap[field] = code;
+		}
+		if (Object.keys(fieldMap).length > 0) map[index] = fieldMap;
+	}
+	return map;
+}
+
 /** Extract `rows` from an Axios-style bulk error, or null if it isn't the bulk shape. */
 export function extractBulkErrorRows(err: unknown): unknown | null {
 	if (!err || typeof err !== 'object') return null;
