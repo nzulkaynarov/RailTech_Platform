@@ -30,6 +30,7 @@ vi.mock('@/hooks/useCRM', () => ({
 	useCreateQuoteItem: () => ({ mutateAsync: createMutateAsync, isPending: false }),
 	useDeleteQuoteItem: () => ({ mutateAsync: vi.fn(), isPending: false }),
 	useSetQuoteDeliveryBasis: () => ({ mutate: vi.fn(), isPending: false }),
+	useReassignProduct: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
 vi.mock('@/hooks/useMasterData', () => ({

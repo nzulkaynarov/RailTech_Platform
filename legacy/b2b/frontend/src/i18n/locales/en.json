@@ -869,6 +869,14 @@
     },
     "lineDetails": "Line details",
     "attachProduct": "Attach product",
+    "typeahead": {
+      "placeholder": "Name or search the catalog…",
+      "ariaLabel": "Line name — search catalog products",
+      "searching": "Searching…",
+      "noResults": "No catalog products found",
+      "linked": "Linked to catalog",
+      "listLabel": "Catalog products"
+    },
     "discountPercent": "Line discount (%)",
     "lineProfit": "Line profit",
     "leadTime": "Lead time",

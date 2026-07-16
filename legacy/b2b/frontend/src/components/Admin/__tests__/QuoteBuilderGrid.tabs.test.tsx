@@ -25,6 +25,7 @@ vi.mock('@/hooks/useCRM', () => ({
 	useCreateQuoteItem: vi.fn(),
 	useDeleteQuoteItem: vi.fn(),
 	useSetQuoteDeliveryBasis: vi.fn(),
+	useReassignProduct: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 vi.mock('@/hooks/useMasterData', () => ({ useCurrencies: () => ({ data: [{ id: 1, code: 'UZS' }] }) }));
 vi.mock('@/hooks/use-mobile', () => ({ useMediaQuery: () => false }));
@@ -105,8 +106,9 @@ describe('QuoteBuilderGrid — document tabs', () => {
 	it('defaults to «Позиции» (line table visible, charges surface not mounted)', () => {
 		renderWithProviders(<QuoteBuilderGrid dealId={7} />);
 
-		// The line name renders in the table; the charges surface is on the inactive tab.
-		expect(screen.getByText('Рельс Р65')).toBeInTheDocument();
+		// The line name renders in the table (now a typeahead input — assert its value);
+		// the charges surface is on the inactive tab.
+		expect(screen.getByDisplayValue('Рельс Р65')).toBeInTheDocument();
 		expect(screen.queryByTestId('charges-surface')).toBeNull();
 	});
 
@@ -120,6 +122,6 @@ describe('QuoteBuilderGrid — document tabs', () => {
 			expect(screen.getByTestId('charges-surface')).toBeInTheDocument();
 		});
 		// The line table is no longer mounted on the charges tab.
-		expect(screen.queryByText('Рельс Р65')).toBeNull();
+		expect(screen.queryByDisplayValue('Рельс Р65')).toBeNull();
 	});
 });
