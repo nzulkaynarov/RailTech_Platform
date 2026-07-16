@@ -4561,28 +4561,6 @@ export interface paths {
         patch: operations["crm_relationships_partial_update"];
         trace?: never;
     };
-    "/api/v1/crm/status-choices/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * @description Expose TextChoices-style status sets of the Phase 2 business models
-         *     so the frontend doesn't hardcode them (IRON RULE 2).
-         *     GET /api/v1/crm/status-choices/
-         *     Response: {contract: [{code, label}], invoice: [...], ...}
-         */
-        get: operations["crm_status_choices_retrieve"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/crm/timeline/": {
         parameters: {
             query?: never;
@@ -4960,15 +4938,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description Uploads/lists/deletes private attachments tied to exactly one parent
-         *     (deal, message, quote, company, or product).
-         *
-         *     - list: filter by deal/message/quote/company/product query params.
-         *     - create: requires ONE of deal/message/quote/company/product, plus `file`.
-         *     - destroy: only uploader or platform admin.
-         *
-         *     Access to the attached entity is checked via the deal's company membership
-         *     (or the product's manufacturer, or the company directly).
+         * List sourcing requests
+         * @description Returns deals in SOURCING stage. B2B filtered: users see only their company's deals.
          */
         get: operations["sourcing_attachments_list"];
         put?: never;
@@ -4998,15 +4969,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * @description Uploads/lists/deletes private attachments tied to exactly one parent
-         *     (deal, message, quote, company, or product).
-         *
-         *     - list: filter by deal/message/quote/company/product query params.
-         *     - create: requires ONE of deal/message/quote/company/product, plus `file`.
-         *     - destroy: only uploader or platform admin.
-         *
-         *     Access to the attached entity is checked via the deal's company membership
-         *     (or the product's manufacturer, or the company directly).
+         * Get sourcing request details
+         * @description Returns details of a specific sourcing request (deal in SOURCING stage).
          */
         get: operations["sourcing_attachments_retrieve"];
         /**
@@ -5231,46 +5195,6 @@ export interface paths {
          * @description Runs an ADVISORY quality pass over draft request lines before the buyer submits the RFQ. Claude flags vague descriptions, missing/implausible qty or units, likely-duplicate lines and missing key specs. Returns warnings only — never a hard block (line_index always references a GIVEN line; out-of-range indices are dropped). Capped at 50 lines per call. ARCH-01: the LLM call runs on Celery — returns 202 + task_id; poll sourcing/ai-status/<task_id>/ for {findings: []}.
          */
         post: operations["sourcing_preflight_check_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/sourcing/requests/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List sourcing requests
-         * @description Returns deals in SOURCING stage. B2B filtered: users see only their company's deals.
-         */
-        get: operations["sourcing_requests_list"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/sourcing/requests/{id}/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get sourcing request details
-         * @description Returns details of a specific sourcing request (deal in SOURCING stage).
-         */
-        get: operations["sourcing_requests_retrieve"];
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -19198,24 +19122,6 @@ export interface operations {
             };
         };
     };
-    crm_status_choices_retrieve: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No response body */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     crm_timeline_list: {
         parameters: {
             query?: {
@@ -20457,52 +20363,6 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
-            };
-        };
-    };
-    sourcing_requests_list: {
-        parameters: {
-            query?: {
-                /** @description A page number within the paginated result set. */
-                page?: number;
-                /** @description A search term. */
-                search?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PaginatedDealListList"];
-                };
-            };
-        };
-    };
-    sourcing_requests_retrieve: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Сделка. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DealList"];
-                };
             };
         };
     };

@@ -14,7 +14,6 @@ from crm.views.billing import (  # noqa: F401
     FulfillmentViewSet,
     InvoiceViewSet,
     PaymentViewSet,
-    Phase2StatusChoicesView,
 )
 from crm.views.deals import DealStageViewSet, DealViewSet  # noqa: F401
 from crm.views.leads import LeadCreateView, LeadViewSet  # noqa: F401
@@ -55,7 +54,6 @@ __all__ = [
     "PaymentViewSet",
     "ActViewSet",
     "FulfillmentViewSet",
-    "Phase2StatusChoicesView",
     # leads
     "LeadCreateView",
     "LeadViewSet",
