@@ -13069,8 +13069,14 @@
                     "200": {
                         "description": "Rendered file (PDF / XLSX / CSV)"
                     },
+                    "202": {
+                        "description": "PDF rendering off-thread (ARCH-03) — retry after Retry-After seconds"
+                    },
                     "400": {
                         "description": "Unsupported format"
+                    },
+                    "409": {
+                        "description": "QUOTE_NOT_CLAIMED / FX_RATE_MISSING / QUOTE_BELOW_COST"
                     }
                 }
             }

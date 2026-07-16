@@ -18632,8 +18632,22 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description PDF rendering off-thread (ARCH-03) — retry after Retry-After seconds */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Unsupported format */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description QUOTE_NOT_CLAIMED / FX_RATE_MISSING / QUOTE_BELOW_COST */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

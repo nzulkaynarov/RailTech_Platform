@@ -738,7 +738,9 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
         ],
         responses={
             200: OpenApiResponse(description="Rendered file (PDF / XLSX / CSV)"),
+            202: OpenApiResponse(description="PDF rendering off-thread (ARCH-03) — retry after Retry-After seconds"),
             400: OpenApiResponse(description="Unsupported format"),
+            409: OpenApiResponse(description="QUOTE_NOT_CLAIMED / FX_RATE_MISSING / QUOTE_BELOW_COST"),
         },
         tags=["CRM"],
     )
