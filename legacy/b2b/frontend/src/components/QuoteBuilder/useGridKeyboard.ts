@@ -1,4 +1,17 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
+
+/**
+ * Virtualization bridge (волна 3). When the line table is windowed, the next column-cell may be
+ * outside the rendered DOM, so `columnCells` cannot see it. The grid passes the FULL visible row
+ * order plus a scroll-then-focus callback; the handler resolves the target from the model, and only
+ * treats a step as a true grid boundary when the target index is genuinely off the ends of the list.
+ */
+export interface GridKeyboardVirtualization {
+	/** Full row ids in visible (draftItems) order — the source of truth for "is there a next row?". */
+	rowIds: number[];
+	/** Scroll the row at `rowIndex` into the window, then focus that row's `column` cell. */
+	focusCellAtRow: (rowIndex: number, column: string) => void;
+}
 
 /**
  * Excel-style keyboard navigation for the КП line grid (WP-G / spec §5 волна 2 п.10).
@@ -21,7 +34,12 @@ import { useCallback } from 'react';
  * and Enter fall through to their own handlers / native caret behaviour untouched. Tab and
  * Shift+Tab are never intercepted — the browser's native focus order still owns them.
  */
-export function useGridKeyboard() {
+export function useGridKeyboard(virtualization?: GridKeyboardVirtualization) {
+	// Held through a ref so the handler stays referentially stable (deps `[]`, as before) while
+	// always reading the latest window model — the config is a fresh object on every render.
+	const virtualizationRef = useRef(virtualization);
+	virtualizationRef.current = virtualization;
+
 	const onKeyDown = useCallback((event: React.KeyboardEvent<HTMLElement>) => {
 		const { key } = event;
 		if (key !== 'ArrowUp' && key !== 'ArrowDown' && key !== 'Enter') return;
@@ -47,25 +65,43 @@ export function useGridKeyboard() {
 
 		const delta = key === 'ArrowUp' ? -1 : 1; // Enter behaves like ArrowDown
 		const nextCell = columnCells[index + delta];
-		if (!nextCell) {
-			// Grid boundary → keep focus in the source cell, consistent for arrows AND Enter.
-			// Arrows: swallow the key so the caret does not jump (focus never left the cell).
-			if (key !== 'Enter') {
-				event.preventDefault();
-				return;
-			}
-			// Enter: NumericCell already committed + blurred to <body>. Refocus the source cell so
-			// the seller stays in the grid — but on a MICROTASK, after React has re-rendered the cell
-			// with the just-committed value. A synchronous refocus would re-enter edit mode holding
-			// the STALE pre-commit value (the prop hasn't updated yet), silently reverting the edit
-			// on the next blur. By the microtask the committed value is live, so it re-enters cleanly.
-			queueMicrotask(() => cell.focus());
+		if (nextCell) {
+			event.preventDefault();
+			// Focus move blurs the current cell → NumericCell commits its edit on blur.
+			nextCell.focus();
 			return;
 		}
 
-		event.preventDefault();
-		// Focus move blurs the current cell → NumericCell commits its edit on blur.
-		nextCell.focus();
+		// No next cell IN THE DOM. When the grid is windowed, that may just mean the target row is
+		// scrolled out — resolve it from the full model and scroll-then-focus rather than treating
+		// it as a boundary. `data-cell-row` on the source input carries its row id.
+		const virtualizationConfig = virtualizationRef.current;
+		if (virtualizationConfig) {
+			const rowIdAttr = cell.getAttribute('data-cell-row');
+			const currentRowId = rowIdAttr != null ? Number(rowIdAttr) : Number.NaN;
+			const currentModelIndex = virtualizationConfig.rowIds.indexOf(currentRowId);
+			if (currentModelIndex !== -1) {
+				const targetModelIndex = currentModelIndex + delta;
+				if (targetModelIndex >= 0 && targetModelIndex < virtualizationConfig.rowIds.length) {
+					event.preventDefault();
+					virtualizationConfig.focusCellAtRow(targetModelIndex, column);
+					return;
+				}
+			}
+		}
+
+		// True grid boundary → keep focus in the source cell, consistent for arrows AND Enter.
+		// Arrows: swallow the key so the caret does not jump (focus never left the cell).
+		if (key !== 'Enter') {
+			event.preventDefault();
+			return;
+		}
+		// Enter: NumericCell already committed + blurred to <body>. Refocus the source cell so
+		// the seller stays in the grid — but on a MICROTASK, after React has re-rendered the cell
+		// with the just-committed value. A synchronous refocus would re-enter edit mode holding
+		// the STALE pre-commit value (the prop hasn't updated yet), silently reverting the edit
+		// on the next blur. By the microtask the committed value is live, so it re-enters cleanly.
+		queueMicrotask(() => cell.focus());
 	}, []);
 
 	return { onKeyDown };
