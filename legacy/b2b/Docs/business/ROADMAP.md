@@ -1,8 +1,8 @@
 # RailTech B2B — Roadmap
 
-**Последняя актуализация:** 2026-07-07 (HEAD `937b3a4`, после PR #237)
+**Последняя актуализация:** 2026-07-16 (треки-статусы сверены с кодом; закрыты CRM-книга контрагентов, деприкация WorkspaceRole, чистка мёртвого кода)
 
-> **Живой канон планирования** — актуальное ТЗ `Docs/dev/specs/spec-remaining-2026-07-07.md`, последний хендофф `Docs/dev/ops/session-handoff-2026-07-07-audit-closeout.md`, `Docs/dev/ops/stability-program.md`. Историческое (роадмапы, session-handoff'ы, аудиты) — в `Docs/old/`. Этот файл — верхнеуровневый индекс: что сделано по периодам и какие треки открыты. Полная карта документации — `Docs/README.md`.
+> **Живой канон планирования** — актуальное ТЗ `Docs/dev/specs/spec-remaining-2026-07-07.md`, последний хендофф `Docs/dev/ops/session-handoff-2026-07-15-quote-builder-wave2.md`, `Docs/dev/ops/stability-program.md`. Историческое (роадмапы, session-handoff'ы, аудиты) — в `Docs/old/`. Этот файл — верхнеуровневый индекс: что сделано по периодам и какие треки открыты. Полная карта документации — `Docs/README.md`.
 
 ---
 
@@ -47,18 +47,18 @@
 - [ ] Staging-окружение (DNS + GitHub environment + Caddy block) → активировать deploy-staging.yml; тогда nightly e2e перестанет ходить в прод
 
 ### Продукт
-- [ ] **CRM-слой «книга контрагентов с историей»** (главная продуктовая ценность, ~2–3 недели, фазами A→D — см. spec §2): Activity Timeline (расширить `ActivityLog`) → `CounterpartyRelationship`-ребро + книга «Контрагенты» (симметрично клиенты/поставщики) → идентичность по ИНН + слияние + CB-auto-populate → CB-invite (петля привлечения). CB-send/public-link/deal-for-offline уже готовы.
+- [x] **CRM-слой «книга контрагентов с историей»** (главная продуктовая ценность) — **ПОСТРОЕН**: `CounterpartyRelationship`-ребро (`crm/models/relationships.py`, миграция `crm/0056`) + `RelationshipViewSet` (`crm/views/relationships.py`) + книга «Контрагенты» на фронте (`CounterpartiesPage.tsx`, nav Клиенты/Поставщики); идентичность по ИНН + слияние + CB-auto-populate (`accounts/services/merge.py`: `merge_companies`, `auto_populate_history`); rollup-пересчёт (`recompute_relationship_rollups` cmd). Хвост: калибровка invite-петли на реальных данных.
 - [ ] AI: калибровка `AI_DRAFT_MATCH_CONFIDENCE` на реальных данных (все 8 F6-фич уже реализованы — см. spec)
-- [ ] ADR-0006 амендмент: Leads = **KEEP** (верх воронки CRM, решено 2026-07-07), убрать orphan `CRMAnalyticsView`
-- [ ] ADR-0005 Phase E U3: CompanyRole как единственный источник прав, деприкация WorkspaceRole (крупный рискованный рефактор); ADR-0004 G5/G6
+- [x] ADR-0006 амендмент: Leads = **KEEP** — `AdminLeadsPage` жив (`#admin-leads`, `useLeads`); orphan `CRMAnalyticsView` удалён (grep пусто)
+- [x] ADR-0005 Phase E U3: деприкация WorkspaceRole **ЗАКРЫТА** (PR #255) — authz ветвится только на `member_has_permission` (CompanyRole), в коде не осталось ветвлений на `has_workspace_role`/`WorkspaceRoleCode`. Остаётся: ADR-0004 G5/G6
 - [ ] post-deploy-todos: join-existing-company (COMPANY_INN_TAKEN тупик), строгая INN-валидация, внешний S3, owner-UI для can_sell/can_buy, DMARC p=none→quarantine
-- [ ] Решения владельца: orphan-эндпоинты `crm/status-choices/` + `sourcing/requests/` (removal pass), supportApi.deleteTicket (не подключён)
+- [ ] Решения владельца: orphan-эндпоинты `crm/status-choices/` + `sourcing/requests/` (removal pass — за владельцем)
 
 ### Качество / хвост
 - [ ] Follow-up ARCH-03: `quotes export?format=pdf` ещё рендерит синхронно — нужен дизайн инвалидации устаревшего PDF
 - [ ] Backend coverage держится ~78% (гейт 30%) — поднять гейт после стабилизации
 - [ ] F4.x структурный долг: onNavigate prop-drilling, userStore↔authStore
-- [ ] Docs hygiene: master-system-document.md частично устарел, судьба неиспользуемого nginx/nginx.conf, unused react-router-dom
+- [ ] Docs hygiene: master-system-document.md частично устарел. (Сделано: dead-config `nginx/nginx.conf` удалён — остался только placeholder `nginx/.gitkeep`; unused `react-router-dom` убран из `frontend/package.json`; мёртвые методы `supportApi.deleteTicket` / `accountsApi.getCompanyTypes` удалены — все без call-sites.)
 
 ### P0 коммерческие блокеры (сознательно отложены владельцем — master-scope §2)
 - [ ] Платёжный провайдер (Click/Payme) + идемпотентность платежей (UniqueConstraint(invoice, reference))

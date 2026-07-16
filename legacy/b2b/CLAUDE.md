@@ -83,7 +83,7 @@ Docs/                       # Docs by audience (reorg 2026-07-07 — map: Docs/R
 
 ADR index (`Docs/dev/adr/`): **0001** admin separation · **0002** role responsibilities · **0003** multi-tenant admin planes · **0004** three admin planes core (G1–G6) · **0005** unified capability-driven navigation · **0006** wedge loop + entitlements (Moves 0–4, KYC floor).
 
-- **Hybrid routing** — auth routes (`/`, `/register`, `/setup-password`) via `useAuthRoute()` in App.tsx; everything else is hash-based SPA navigation in App.tsx (`#dashboard`, `#deal-quote/{id}`, `#admin-*` for the operator plane; shells receive `activePage`/`onNavigate` as props). NO React Router anywhere — `react-router-dom` in package.json is an unused dependency
+- **Hybrid routing** — auth routes (`/`, `/register`, `/setup-password`) via `useAuthRoute()` in App.tsx; everything else is hash-based SPA navigation in App.tsx (`#dashboard`, `#deal-quote/{id}`, `#admin-*` for the operator plane; shells receive `activePage`/`onNavigate` as props). NO React Router anywhere — the unused `react-router-dom` dependency was removed from package.json (2026-07-16)
 - **2 shells only** — `AppShell` (all company users; buyer/seller context is **page-derived**, the manual context switcher was retired in ADR-0005 Phase C) and `PlatformAdminShell` (Platform Operators). Both use shadcn `<Sidebar>` `collapsible="icon"`, `p-6` content, `h-14` header
 - **Unified navigation (ADR-0005)** — single `buildNavigation(capabilities)` in `frontend/src/config/navigation.tsx`; `/me` returns a `capabilities` object (kyc_level, can_buy/can_sell, subscription, CompanyRole permissions, operator_permissions). Tiers: T0 (pre-KYC: Dashboard+Catalog only) / T1 (KYC L2) / T2 (subscription). Items are HIDDEN, not disabled. Default context: BUYER; React-Query cache invalidated on context flip
 - **B2B Multi-tenancy** — via `CompanyMember` join table, not schema/DB isolation
@@ -368,6 +368,7 @@ Canonical sources: `Docs/dev/adr/0002-role-responsibilities.md` (layers), `0003`
 - `Payment`, `Invoice`, `InvoiceItem`, `Act` models (`crm/models/billing.py`) + Payments/Invoices/Acts pages. (Real payment-provider integration — Click/Payme — is NOT implemented; these are ledger records)
 - `POST /api/v1/accounts/users/{id}/toggle-active/` (POST, not PUT); `GET /api/v1/catalog/products/export-template/`; `GET /api/v1/crm/deals/{id}/export-pdf/`
 - `CompanyEntitlement`, `OperatorRole`, `CompanyRole`, `DealSellerRouting`, `Contact` (offline clients, `Deal.contact`), `CompanyDocumentProfile` models
+- **Leads page IS live** — `AdminLeadsPage` (`#admin-leads`, operator plane, `useLeads` → `crm/views/leads.py`); **Clients/Suppliers pages ARE live** — `CounterpartiesPage` (buyer/seller counterparty book, ADR CRM relationship layer). The `crm/analytics/dashboard/` endpoint (incl. time-to-first-quote, `crm/views/analytics.py`) feeds the Operations Dashboard via `dashboardApi` — there is no *standalone* Analytics page, analytics render inside `Dashboard.tsx`
 
 ### Things that DON'T exist
 - NO `SupplierBid` model / bids flow — replaced by multi-seller routing + quotes (only historic migrations mention it); no `bids.py` in crm/views or crm/services
@@ -375,7 +376,7 @@ Canonical sources: `Docs/dev/adr/0002-role-responsibilities.md` (layers), `0003`
 - NO session auth on `/api/v1/` — pure JWT. (`django.contrib.sessions` IS installed and `django_session` exists, but serves only the Unfold `/admin/` login)
 - NO separate `roles` table — `SystemRole` lives in accounts
 - NO `POST /api/v1/catalog/products/import_excel/` — use `sourcing/import-catalog/`
-- NO frontend Leads/Analytics/Clients pages (cut in ADR-0006 Move 1; backend `crm/views/leads.py` + `analytics.py` still exist)
+- NO *standalone* frontend Analytics page — analytics render inside the Operations Dashboard (`Dashboard.tsx` via `dashboardApi` → `crm/analytics/dashboard/`). (Leads and Clients/Suppliers pages DO exist — see the "DO exist" list above.)
 - NO `SourcingImportPage` — deleted; import lives inline in the request dialog
 - `users` table has NO `username` login field (email is USERNAME_FIELD); `deals` has NO `discount` field; `products` has NO `price` field (prices in `SupplierOffer`)
 - NO `data/products.ts` — deleted entirely; products come only from `catalogApi.getProducts()`

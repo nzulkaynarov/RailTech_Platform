@@ -508,12 +508,6 @@ export const accountsApi = {
 		return response.data;
 	},
 
-	// ─── Company Types (authenticated lookup) ──────────────────────────
-	getCompanyTypes: async () => {
-		const response = await apiClient.get<{ id: number; code: string; name: string }[]>('accounts/company-types/');
-		return response.data;
-	},
-
 	// ─── Workspace Roles ───────────────────────────────────────────────
 	updateMemberCapabilities: async (
 		companyId: number,
