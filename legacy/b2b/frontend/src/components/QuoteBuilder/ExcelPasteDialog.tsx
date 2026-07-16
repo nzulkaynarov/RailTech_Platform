@@ -11,7 +11,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import {
-	parseClipboardTable, toBulkCreateRows, type ColumnRole, type BulkCreateRow,
+	parseClipboardTable, toBulkCreateRows, normalizeNumericString, type ColumnRole, type BulkCreateRow,
 } from '@/components/QuoteBuilder/parseClipboardTable';
 
 interface ExcelPasteDialogProps {
@@ -185,8 +185,14 @@ export const ExcelPasteDialog: React.FC<ExcelPasteDialogProps> = ({
 													{rowIndex + 1}
 												</TableCell>
 												{cells.map((cell, columnIndex) => {
-													const field = roleToField[roles[columnIndex] ?? 'ignore'];
+													const role = roles[columnIndex] ?? 'ignore';
+													const field = roleToField[role];
 													const code = field ? errorFields?.[field] : undefined;
+													// For numeric columns show the value AS IT WILL BE SENT (comma→dot,
+													// thousands stripped) so the seller verifies the actual price/qty
+													// before creating, not the raw ambiguous clipboard text.
+													const normalized =
+														(role === 'price' || role === 'quantity') ? normalizeNumericString(cell) : null;
 													return (
 														<TableCell
 															key={columnIndex}
@@ -194,11 +200,12 @@ export const ExcelPasteDialog: React.FC<ExcelPasteDialogProps> = ({
 															title={code ? codeLabel(code) : undefined}
 															className={cn(
 																'px-2 py-1 text-sm',
-																roles[columnIndex] === 'ignore' && 'text-muted-foreground',
+																role === 'ignore' && 'text-muted-foreground',
+																(role === 'price' || role === 'quantity') && 'tabular-nums',
 																code && 'font-medium text-destructive',
 															)}
 														>
-															{cell || <span className="text-muted-foreground">—</span>}
+															{normalized ?? (cell || <span className="text-muted-foreground">—</span>)}
 															{code && (
 																<span className="block text-xs font-normal text-destructive">
 																	{codeLabel(code)}
