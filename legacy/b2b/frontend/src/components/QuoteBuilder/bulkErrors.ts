@@ -76,6 +76,41 @@ export function extractBulkErrorRows(err: unknown): unknown | null {
 }
 
 /**
+ * Optimistic-lock conflict code (волна 3): a save carried a STALE `version` — a colleague saved
+ * that line since it was read. Unlike a validation error, this isn't a bad input the seller can
+ * fix inline: their data is behind the server, so the UI opens a refresh dialog rather than a
+ * cell highlight (crm/services/quotes + QuoteItemViewSet emit this same code).
+ */
+export const QUOTE_ITEM_STALE = 'QUOTE_ITEM_STALE';
+
+/**
+ * The row ids in a bulk `rows` payload whose error is a version conflict (QUOTE_ITEM_STALE).
+ * A non-empty result means the batch was a CONCURRENCY conflict, not a validation failure — the
+ * grid opens the conflict dialog for exactly these rows instead of highlighting cells.
+ */
+export function extractStaleConflictIds(rows: unknown): number[] {
+	const ids: number[] = [];
+	if (!Array.isArray(rows)) return ids;
+	for (const row of rows as BulkErrorRow[]) {
+		const versionError = row?.errors?.version;
+		const code = Array.isArray(versionError) ? versionError[0] : versionError;
+		if (code !== QUOTE_ITEM_STALE) continue;
+		const rawId = row?.id;
+		if (rawId == null || rawId === '') continue;
+		const id = typeof rawId === 'number' ? rawId : Number(rawId);
+		if (Number.isFinite(id)) ids.push(id);
+	}
+	return ids;
+}
+
+/** True when an Axios-style error is a single-PATCH 409 optimistic-lock conflict (QUOTE_ITEM_STALE). */
+export function isStaleConflictError(err: unknown): boolean {
+	if (!err || typeof err !== 'object') return false;
+	const response = (err as { response?: { status?: number; data?: { detail?: unknown } } }).response;
+	return response?.status === 409 && response?.data?.detail === QUOTE_ITEM_STALE;
+}
+
+/**
  * Fields that live ONLY in the collapsed per-line detail sub-row — an error on one of
  * them is invisible while the row is collapsed (WP-J row-marker, fast-follow ревью #317).
  */

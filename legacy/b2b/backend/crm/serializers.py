@@ -222,8 +222,14 @@ class QuoteItemSerializer(serializers.ModelSerializer):
             "lead_time_days",
             "landed_cost",
             "final_price_excl_vat",
+            "version",
         ]
-        read_only_fields = ["landed_cost", "final_price_excl_vat"]
+        # `version` is READ-ONLY on the serializer (it appears in every read so the client knows
+        # the row's current revision) but is NEVER persisted from client input — the optimistic
+        # concurrency check + increment live in the service (bulk) and viewset (single PATCH),
+        # which read the client's known version straight off the request body. This mirrors how
+        # the bulk endpoint already handles it and makes the counter impossible to spoof.
+        read_only_fields = ["landed_cost", "final_price_excl_vat", "version"]
 
     # Cost-structure fields that reveal the seller's markup. Visible to the
     # seller team / platform admin / superuser only — NEVER to the buyer, who

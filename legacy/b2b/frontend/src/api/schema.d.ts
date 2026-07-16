@@ -4005,7 +4005,14 @@ export interface paths {
         get: operations["crm_quote_items_retrieve"];
         /**
          * Update quote item
-         * @description CRUD for quote line items (products, quantities, pricing).
+         * @description Optimistic-concurrency gate for a single-line PATCH (волна 3).
+         *
+         *     DRF routes partial_update → update(partial=True), so this covers PATCH. When a SELLER
+         *     write carries a `version` (the row revision the frontend last read) and it no longer
+         *     matches the DB, a colleague saved this line in between — applying our edit would silently
+         *     clobber theirs, so reject with 409 QUOTE_ITEM_STALE (same code the bulk path emits per
+         *     row). `version` is OPTIONAL: a PATCH without it keeps the pre-волна-3 last-write-wins
+         *     behaviour, so buyer request edits and version-less seller writes are untouched.
          */
         put: operations["crm_quote_items_update"];
         post?: never;
@@ -10019,6 +10026,11 @@ export interface components {
              * @description = себестоимость × (1 + наценка%) (авто-расчёт)
              */
             readonly final_price_excl_vat: string;
+            /**
+             * Версия строки
+             * @description Счётчик оптимистичной блокировки — растёт при каждом сохранении позиции
+             */
+            readonly version: number;
         };
         QuoteItemRequest: {
             /**

@@ -880,9 +880,35 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
         _assert_seller_owns_quote_deal(self.request, serializer.validated_data.get("quote"))
         serializer.save()
 
+    def update(self, request, *args, **kwargs):
+        """Optimistic-concurrency gate for a single-line PATCH (волна 3).
+
+        DRF routes partial_update → update(partial=True), so this covers PATCH. When a SELLER
+        write carries a `version` (the row revision the frontend last read) and it no longer
+        matches the DB, a colleague saved this line in between — applying our edit would silently
+        clobber theirs, so reject with 409 QUOTE_ITEM_STALE (same code the bulk path emits per
+        row). `version` is OPTIONAL: a PATCH without it keeps the pre-волна-3 last-write-wins
+        behaviour, so buyer request edits and version-less seller writes are untouched.
+        """
+        if self._is_seller_write():
+            client_version = request.data.get("version")
+            if client_version is not None:
+                try:
+                    client_version = int(client_version)
+                except (TypeError, ValueError):
+                    client_version = None
+                instance = self.get_object()
+                if client_version is None or client_version != instance.version:
+                    return Response({"detail": "QUOTE_ITEM_STALE"}, status=status.HTTP_409_CONFLICT)
+        return super().update(request, *args, **kwargs)
+
     def perform_update(self, serializer):
         if self._is_seller_write():
             self._assert_seller()
+            # Bump the optimistic-concurrency counter on a successful seller save (волна 3), so the
+            # next stale-version save from a colleague is rejected. `version` is read-only on the
+            # serializer, so set it on the instance before save; the full model save persists it.
+            serializer.instance.version = (serializer.instance.version or 0) + 1
             serializer.save()
             return
         # Buyer editing their own still-open request — name + quantity only,

@@ -41,6 +41,10 @@ export interface QuoteItem {
 	landed_cost: string;
 	final_price_excl_vat: string;
 	assigned_at?: string | null;
+	// Optimistic-concurrency counter (волна 3). READ-ONLY: the server bumps it on every save.
+	// The grid echoes the last-read value back in the bulk/single save payload so the backend can
+	// reject a stale write (QUOTE_ITEM_STALE) instead of clobbering a colleague's committed edit.
+	version?: number;
 }
 
 export type DealItem = QuoteItem;
