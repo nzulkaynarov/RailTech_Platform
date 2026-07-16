@@ -59,13 +59,14 @@ export const KYCRegistrationForm: React.FC = () => {
 		setError('');
 		try {
 			await accountsApi.registerInterest(data);
+			// Anti-enumeration (P2): the backend ALWAYS returns 201 with the same neutral
+			// body — a free email, an existing active account, and a pending one are
+			// indistinguishable. There is no "email already exists" branch to surface;
+			// we always land on the neutral "check your inbox" success screen. A caught
+			// error here means a genuine transport/rate-limit failure, never account state.
 			setStep(2);
-		} catch (err: unknown) {
-			const axiosErr = err as { response?: { data?: { error?: string; detail?: string; email?: string[] } } };
-			const serverMsg = axiosErr.response?.data?.detail
-				|| axiosErr.response?.data?.error
-				|| axiosErr.response?.data?.email?.[0];
-			setError(serverMsg || t('registration.genericError'));
+		} catch {
+			setError(t('registration.genericError'));
 		}
 	};
 
