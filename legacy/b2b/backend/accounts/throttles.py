@@ -4,6 +4,8 @@ The global AnonRateThrottle (20/min) is far too loose to stop targeted abuse lik
 password-reset email bombing. These add tight, purpose-built limits.
 """
 
+import hashlib
+
 from rest_framework.throttling import ScopedRateThrottle, SimpleRateThrottle
 
 
@@ -21,7 +23,11 @@ class PasswordResetEmailThrottle(SimpleRateThrottle):
         email = (request.data.get("email") or "").strip().lower()
         if not email:
             return None  # nothing to key on → fall through to the IP-scoped throttle
-        return self.cache_format % {"scope": self.scope, "ident": email}
+        # SEC-tail: hash the email before using it as the cache ident so no plaintext
+        # address (PII) is ever written to Redis. sha256 is deterministic → the same
+        # address maps to the same key, so throttling still works exactly as before.
+        ident = hashlib.sha256(email.encode("utf-8")).hexdigest()
+        return self.cache_format % {"scope": self.scope, "ident": ident}
 
 
 # IP-scoped throttle whose rate is taken from the view's `throttle_scope`
