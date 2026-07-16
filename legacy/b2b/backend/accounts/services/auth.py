@@ -48,17 +48,79 @@ def revoke_user_refresh_tokens(user: CustomUser) -> int:
     return revoked
 
 
+def _enqueue_setup_email(user: CustomUser) -> None:
+    """Enqueue the password-setup link for a pending (never-activated) user.
+
+    Off-thread send (SEC-tail): never block the ASGI worker on SMTP in the request
+    path. The Celery task retries with backoff — strictly more robust than the old
+    inline single-attempt, which deleted the user on the first transport hiccup.
+    """
+    token = default_token_generator.make_token(user)
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    setup_url = f"{settings.FRONTEND_URL}/setup-password?uid={uid}&token={token}"
+    send_transactional_email.delay(
+        "setup_password",
+        {"first_name": user.first_name or "", "setup_url": setup_url},
+        [user.email],
+        channel="transactional",
+        user_id=user.pk,
+    )
+
+
+def _enqueue_existing_account_email(user: CustomUser) -> None:
+    """Notify the REAL owner that a (re-)registration hit an already-active email.
+
+    Anti-enumeration (P2): registration must not reveal that this email is taken.
+    Instead of a 400 to the requester, the genuine account holder gets a neutral
+    "your account already exists — sign in or recover your password" email with
+    login / forgot-password links. Enqueued (never inline) so both the free-email
+    and taken-email paths return in constant time — the same timing-channel close
+    as the neutral-200 forgot-password flow.
+    """
+    base_url = settings.FRONTEND_URL
+    send_transactional_email.delay(
+        "register_existing_account",
+        {
+            "first_name": user.first_name or "",
+            "login_url": f"{base_url}/",
+            "forgot_url": f"{base_url}/forgot-password",
+        },
+        [user.email],
+        channel="transactional",
+        user_id=user.pk,
+    )
+
+
 def create_pending_user(
     email: str, first_name: str, last_name: str, phone: str = ""
 ) -> Tuple[Optional[CustomUser], Optional[str]]:
-    """
-    Step 1: Create a user in a pending state and send verification email.
+    """Register by email WITHOUT leaking whether the address already has an account.
+
+    Anti-enumeration (P2, industry standard — GitHub/Google): the endpoint returns
+    the SAME neutral success regardless of which of three branches runs, and the
+    two "occupied" branches ONLY enqueue an email (constant-time), so neither the
+    status/body nor the timing distinguishes them:
+
+    * email free            → create the pending user + send the setup-link;
+    * email = ACTIVE account → send `register_existing_account` (sign-in / recover);
+                               do NOT create a second user;
+    * email = PENDING account → re-send the setup-link (idempotent re-registration —
+                               fixes the dead-end where a lost first email left the
+                               user unable to finish signing up).
+
+    Only a genuinely malformed request (missing fields — normally caught by the
+    serializer) returns an error code; the caller maps that to 400.
     """
     if not email or not first_name or not last_name:
         return None, "REGISTRATION_FIELDS_REQUIRED"
 
-    if CustomUser.objects.filter(email=email).exists():
-        return None, "USER_EMAIL_ALREADY_EXISTS"
+    existing = CustomUser.objects.filter(email__iexact=email).first()
+    if existing is not None:
+        if existing.is_active:
+            _enqueue_existing_account_email(existing)
+        else:
+            _enqueue_setup_email(existing)
+        return existing, None
 
     # Default system role at registration: USER.
     user_role = SystemRole.objects.filter(code="USER").first()
@@ -75,21 +137,7 @@ def create_pending_user(
     user.set_unusable_password()
     user.save()
 
-    token = default_token_generator.make_token(user)
-    uid = urlsafe_base64_encode(force_bytes(user.pk))
-    base_url = settings.FRONTEND_URL
-    setup_url = f"{base_url}/setup-password?uid={uid}&token={token}"
-
-    # Off-thread send (SEC-tail): never block the ASGI worker on SMTP in the request
-    # path. The Celery task retries with backoff — strictly more robust than the old
-    # inline single-attempt, which deleted the user on the first transport hiccup.
-    send_transactional_email.delay(
-        "setup_password",
-        {"first_name": first_name, "setup_url": setup_url},
-        [email],
-        channel="transactional",
-        user_id=user.pk,
-    )
+    _enqueue_setup_email(user)
 
     return user, None
 

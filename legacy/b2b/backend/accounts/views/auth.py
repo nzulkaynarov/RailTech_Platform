@@ -57,13 +57,16 @@ from accounts.throttles import PasswordResetEmailThrottle, ScopedRateThrottle  #
 @extend_schema(
     summary="Register new user",
     description=(
-        "Register a new user by email. Creates an inactive user and sends "
-        "a verification email with a password setup link."
+        "Register a new user by email. Always returns 201 with the same neutral body "
+        "so the response never reveals whether the email already has an account "
+        "(anti-enumeration, P2): a free email gets a setup link, an existing active "
+        "account gets a sign-in/recover email, a pending one gets the setup link "
+        "re-sent — all indistinguishable in status, body, and timing."
     ),
     request=RegisterInterestSerializer,
     responses={
-        201: OpenApiResponse(description="Verification email sent"),
-        400: OpenApiResponse(description="Email already exists or validation error"),
+        201: OpenApiResponse(description="Verification email sent (neutral — see description)"),
+        400: OpenApiResponse(description="Validation error (malformed request only)"),
     },
     tags=["Auth"],
 )
@@ -75,15 +78,18 @@ class RegisterView(views.APIView):
     def post(self, request):
         serializer = RegisterInterestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user, error = create_pending_user(
-            email=serializer.validated_data["email"],
+        email = serializer.validated_data["email"]
+        _user, error = create_pending_user(
+            email=email,
             first_name=serializer.validated_data["first_name"],
             last_name=serializer.validated_data["last_name"],
             phone=serializer.validated_data["phone"],
         )
         if error:
             return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
-        return Response({"message": "Verification email sent.", "email": user.email}, status=status.HTTP_201_CREATED)
+        # Neutral body echoing the SUBMITTED email (which the client already knows) —
+        # never anything derived from account existence.
+        return Response({"message": "Verification email sent.", "email": email}, status=status.HTTP_201_CREATED)
 
 
 @extend_schema(

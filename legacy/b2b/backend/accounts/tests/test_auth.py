@@ -100,7 +100,9 @@ class TestRegisterEndpoint:
         assert response.status_code in [status.HTTP_201_CREATED, status.HTTP_200_OK]
 
     def test_register_duplicate_email(self, client, user_factory):
-        """Test registration with duplicate email."""
+        """Anti-enumeration (P2): a duplicate email must NOT 400 — it returns the same
+        neutral 201 as a fresh registration. Detailed branch behaviour (which email is
+        sent, no second user) is pinned in test_register_anti_enumeration.py."""
         user_factory(email="existing@example.com")
 
         url = "/api/v1/auth/register/"
@@ -112,8 +114,7 @@ class TestRegisterEndpoint:
         }
         response = client.post(url, data, format="json")
 
-        # Should fail due to duplicate email
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.status_code == status.HTTP_201_CREATED
 
     def test_register_missing_required_fields(self, client):
         """Test registration with missing required fields."""
