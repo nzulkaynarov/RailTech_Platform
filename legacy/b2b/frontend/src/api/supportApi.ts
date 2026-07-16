@@ -77,9 +77,6 @@ export const supportApi = {
         const response = await apiClient.post<SupportTicket>(RESOURCE, payload);
         return response.data;
     },
-    deleteTicket: async (id: number) => {
-        await apiClient.delete(`${RESOURCE}${id}/`);
-    },
     listMessages: async (ticketId: number) => {
         const response = await apiClient.get<SupportTicketMessage[]>(
             `${RESOURCE}${ticketId}/messages/`,
