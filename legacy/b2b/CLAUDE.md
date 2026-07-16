@@ -105,7 +105,7 @@ ADR index (`Docs/dev/adr/`): **0001** admin separation · **0002** role responsi
 - **Local dev:** a local **Postgres container** is added via `docker-compose.override.yml` (gitignored, auto-loaded by `make up`; prod/staging use explicit `-f ...prod.yml` so never load it). Backend reaches it as `db:5432`; `.env` → `DATABASE_URL=postgresql://railtech:railtech@db:5432/railtech?sslmode=disable`.
 - **Connection:** `DATABASE_URL` env var parsed via `urlparse` (query params → DB `OPTIONS`, `sslmode` defaults to `require`), fallback to individual `POSTGRES_*` vars
 - **Auth user:** `accounts.CustomUser` (email login)
-- **Migration heads (2026-07-12):** `accounts/0039`, `crm/0057`
+- **Migration heads (2026-07-16):** `accounts/0039`, `crm/0060` (0060 = public КП token TTL/revoke, PR #330)
 
 ## API Surface (prefix: `/api/v1/`)
 
