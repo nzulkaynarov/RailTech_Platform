@@ -18,6 +18,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from .ai_spend_cap import is_ai_daily_cap_reached
 from .models import AIJob
 from .tasks_ai import run_ai_job
 
@@ -31,7 +32,14 @@ def enqueue_ai_job(feature: str, payload: dict, user) -> Response:
     the task is published under that id — so a failed row insert means nothing was queued
     (no orphaned paid LLM call / credit spend the user could never poll). If the publish
     itself fails, the dangling row is removed before returning 500.
+
+    Security audit #13: a per-company daily safety cap is enforced HERE — the single choke
+    every interactive AI feature passes through — BEFORE any row is written or task queued,
+    so a runaway/abusive tenant hits a 429 instead of an unbounded Anthropic bill. The cap
+    is generous; legitimate use never reaches it (see sourcing/ai_spend_cap.py).
     """
+    if is_ai_daily_cap_reached(user):
+        return Response({"detail": "AI_DAILY_CAP_REACHED"}, status=status.HTTP_429_TOO_MANY_REQUESTS)
     task_id = str(uuid4())
     try:
         AIJob.objects.create(celery_task_id=task_id, owner=user, feature=feature)

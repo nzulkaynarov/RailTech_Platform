@@ -727,6 +727,13 @@ AI_DRAFT_MATCH_CONFIDENCE = float((os.environ.get("AI_DRAFT_MATCH_CONFIDENCE") o
 # (Celery: sourcing.tasks.process_excel_import), so the cap is safe there too.
 AI_REQUEST_TIMEOUT = float((os.environ.get("AI_REQUEST_TIMEOUT") or "60").strip() or "60")
 AI_MAX_RETRIES = int((os.environ.get("AI_MAX_RETRIES") or "2").strip() or "2")
+# Security audit #13: per-company daily safety cap on interactive AI jobs (a runaway
+# script / abuse would otherwise run an unbounded Anthropic bill). This is a spend
+# CIRCUIT-BREAKER, not a policy/tier limit — the ceiling is deliberately GENEROUS so a
+# legitimate team never reaches it; enforced blanket across all 8 AI features at the one
+# enqueue choke-point. Counted per company per calendar day (settings.TIME_ZONE) from the
+# persistent AIJob rows. 0 or negative disables the cap entirely (opt-out).
+AI_DAILY_JOB_CAP_PER_COMPANY = int((os.environ.get("AI_DAILY_JOB_CAP_PER_COMPANY") or "300").strip() or "300")
 # Hard byte cap before a file is sent to the model. Vision payloads (PDF/image) go
 # as one base64 request, so an oversized file means a 413 + wasted spend — reject it
 # early. Default 10 MB (the upload endpoint already caps the raw file at 20 MB).
