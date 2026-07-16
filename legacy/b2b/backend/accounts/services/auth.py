@@ -1,4 +1,3 @@
-import logging
 from typing import Optional, Tuple
 
 from django.conf import settings
@@ -8,11 +7,9 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 
-from notifications.emails import EmailDeliveryError, send_templated_email
+from notifications.tasks import send_transactional_email
 
 from ..models import CustomUser, SystemRole
-
-logger = logging.getLogger(__name__)
 
 
 def _password_error(password: str, user: Optional[CustomUser] = None) -> Optional[str]:
@@ -83,18 +80,16 @@ def create_pending_user(
     base_url = settings.FRONTEND_URL
     setup_url = f"{base_url}/setup-password?uid={uid}&token={token}"
 
-    try:
-        send_templated_email(
-            "setup_password",
-            {"first_name": first_name, "setup_url": setup_url},
-            to=[email],
-            channel="transactional",
-            user=user,
-        )
-    except EmailDeliveryError:
-        # Email failed — clean up the orphaned user so they can retry
-        user.delete()
-        return None, "EMAIL_SEND_FAILED"
+    # Off-thread send (SEC-tail): never block the ASGI worker on SMTP in the request
+    # path. The Celery task retries with backoff — strictly more robust than the old
+    # inline single-attempt, which deleted the user on the first transport hiccup.
+    send_transactional_email.delay(
+        "setup_password",
+        {"first_name": first_name, "setup_url": setup_url},
+        [email],
+        channel="transactional",
+        user_id=user.pk,
+    )
 
     return user, None
 
@@ -123,17 +118,17 @@ def send_password_reset_email(email: str) -> Tuple[bool, Optional[str]]:
     base_url = settings.FRONTEND_URL
     reset_url = f"{base_url}/reset-password?uid={uid}&token={token}"
 
-    try:
-        send_templated_email(
-            "reset_password",
-            {"first_name": user.first_name or "", "reset_url": reset_url},
-            to=[user.email],
-            channel="transactional",
-            user=user,
-        )
-    except EmailDeliveryError:
-        logger.exception("Failed to send password reset email to %s", user.email)
-        return False, "EMAIL_SEND_FAILED"
+    # Off-thread send (SEC-tail): the synchronous SMTP round-trip here was the timing
+    # side-channel that defeated the neutral-200 response — a KNOWN email did the slow
+    # send while an UNKNOWN one returned instantly. Enqueuing makes both paths return
+    # in constant time, and the request no longer blocks the ASGI worker on SMTP.
+    send_transactional_email.delay(
+        "reset_password",
+        {"first_name": user.first_name or "", "reset_url": reset_url},
+        [user.email],
+        channel="transactional",
+        user_id=user.pk,
+    )
     return True, None
 
 
