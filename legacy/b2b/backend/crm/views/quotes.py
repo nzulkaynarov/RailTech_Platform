@@ -723,13 +723,14 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
     @extend_schema(
         summary="Export quote in a chosen format (pdf | xlsx | csv)",
         description=(
-            "On-demand, user-chosen export of the КП. ?format=pdf returns the CLIENT "
-            "projection (no seller cost/margin); ?format=xlsx|csv returns the seller line "
-            "table, including cost/margin columns only when the requester may view КП costs."
+            "On-demand, user-chosen export of the КП. ?export_format=pdf returns the CLIENT "
+            "projection (no seller cost/margin); ?export_format=xlsx|csv returns the seller line "
+            "table, including cost/margin columns only when the requester may view КП costs. "
+            "The key is export_format (NOT format) — DRF reserves ?format for content-negotiation."
         ),
         parameters=[
             OpenApiParameter(
-                name="format",
+                name="export_format",
                 description="Export format: pdf (default), xlsx, or csv.",
                 required=False,
                 type=str,
