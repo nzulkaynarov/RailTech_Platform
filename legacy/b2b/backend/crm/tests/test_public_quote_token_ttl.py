@@ -96,3 +96,40 @@ def test_unknown_token_still_404():
     resp = APIClient().get("/api/v1/public/quotes/nope-nonexistent/", SERVER_NAME="localhost")
     assert resp.status_code == 404
     assert resp.data == {"detail": "NOT_FOUND"}
+
+
+@pytest.mark.django_db
+def test_browser_gets_friendly_html_not_raw_json_on_expired():
+    """A browser (Accept: text/html) opening an expired link must see a human page, not the raw
+    DRF/JSON error — the emailed link opens THIS endpoint directly (no SPA in front)."""
+    quote = _make_quote(valid_until=timezone.now() - timedelta(days=1))
+    resp = APIClient().get(
+        f"/api/v1/public/quotes/{quote.public_access_token}/",
+        HTTP_ACCEPT="text/html",
+        SERVER_NAME="localhost",
+    )
+    assert resp.status_code == 410
+    assert resp["Content-Type"].startswith("text/html")
+    body = resp.content.decode()
+    assert "Срок ссылки истёк" in body
+    assert "QUOTE_LINK_EXPIRED" not in body  # machine code stays out of the human page
+
+
+@pytest.mark.django_db
+def test_browser_gets_friendly_html_on_revoked_and_unknown():
+    """Revoked (410) and unknown-token (404) also render the friendly HTML for browsers."""
+    quote = _make_quote(public_token_revoked=True)
+    revoked = APIClient().get(
+        f"/api/v1/public/quotes/{quote.public_access_token}/",
+        HTTP_ACCEPT="text/html",
+        SERVER_NAME="localhost",
+    )
+    assert revoked.status_code == 410
+    assert "Ссылка отозвана" in revoked.content.decode()
+
+    unknown = APIClient().get(
+        "/api/v1/public/quotes/nope-nonexistent/", HTTP_ACCEPT="text/html", SERVER_NAME="localhost"
+    )
+    assert unknown.status_code == 404
+    assert unknown["Content-Type"].startswith("text/html")
+    assert "Ссылка не найдена" in unknown.content.decode()
