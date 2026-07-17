@@ -73,7 +73,6 @@ export interface QuoteBuilderGridContextValue {
 	railSheetOpen: boolean;
 	setRailSheetOpen: Dispatch<SetStateAction<boolean>>;
 	toggleRail: () => void;
-	handleBasisChange: (basisId: number) => void;
 
 	// ── Grid table (scroll container + windowing) ─────────────────────────────────────────────
 	scrollContainerRef: RefObject<HTMLDivElement>;

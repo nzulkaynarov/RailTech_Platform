@@ -8,7 +8,6 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { DeliveryBasisSelect } from '@/components/CRM/DeliveryBasisSelect';
 import { DocumentActions } from '@/components/Shared/DocumentActions';
 import { marginToneClass, compactNumber } from './gridConstants';
 import { useQuoteBuilderGrid } from './QuoteBuilderGridContext';
@@ -23,9 +22,14 @@ export const EconomicsRail: React.FC = () => {
 	const { t, i18n } = useTranslation();
 	const {
 		activeQuote, econ, presentationCurrency, vatRate, effectiveLeadTime, mirrorTotals,
-		handleBasisChange, setShowSettings, toggleRail, railAsSheet, railOpen, railSheetOpen,
+		setShowSettings, toggleRail, railAsSheet, railOpen, railSheetOpen,
 		setRailSheetOpen,
 	} = useQuoteBuilderGrid();
+
+	// Базис поставки живёт в «Настройки КП» (секция «Поставка», S2). Здесь — только read-only
+	// chip текущего Incoterm; клик открывает настройки, где базис и правится.
+	const basisCode = activeQuote.delivery_basis_data?.code;
+	const basisName = activeQuote.delivery_basis_data?.name;
 
 	const railRow = (label: string, value: React.ReactNode, opts?: { strong?: boolean; tone?: string }) => (
 		<div className="flex items-center justify-between gap-3">
@@ -48,7 +52,32 @@ export const EconomicsRail: React.FC = () => {
 				{/* Параметры КП */}
 				<div className="flex flex-col gap-2">
 					<span className="text-xs font-semibold text-muted-foreground">{t('quote.rail.params')}</span>
-					<DeliveryBasisSelect value={activeQuote?.delivery_basis} onChange={handleBasisChange} />
+					{/* Базис поставки — read-only chip; клик открывает «Настройки КП» (S2). Для замороженного
+					    КП базис менять нельзя, поэтому chip не кликабелен. */}
+					{activeQuote.frozen_at ? (
+						<Badge variant="outline" className="w-fit">
+							{basisCode ?? t('quote.rail.basisNotSet')}
+						</Badge>
+					) : (
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<button
+									type="button"
+									onClick={() => setShowSettings(true)}
+									aria-label={t('quote.rail.editBasis')}
+									className="w-fit rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+								>
+									<Badge variant="outline" className="cursor-pointer gap-1 hover:bg-muted">
+										{basisCode ?? t('quote.rail.basisNotSet')}
+										<Settings className="size-3 opacity-60" aria-hidden="true" />
+									</Badge>
+								</button>
+							</TooltipTrigger>
+							<TooltipContent side="left">
+								{basisName ? `${basisName} · ${t('quote.rail.editBasis')}` : t('quote.rail.editBasis')}
+							</TooltipContent>
+						</Tooltip>
+					)}
 					<div className="flex flex-wrap gap-1.5">
 						<Badge variant="outline">{t('quote.vat')} {vatRate}%</Badge>
 						<Badge variant="secondary">{presentationCurrency}</Badge>
