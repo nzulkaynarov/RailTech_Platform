@@ -97,6 +97,7 @@ class QuoteLifecycleService:
         # + subscribed seller gets a clean, sendable document.
         from accounts.services.entitlements import quote_send_entitled
         from crm.services.documents import (
+            client_optional_items,
             client_projection_items,
             document_brand_context,
             public_quote_qr,
@@ -109,7 +110,10 @@ class QuoteLifecycleService:
                 "quote": quote,
                 # Client projection: charges distributed into per-line delivered prices (no
                 # goods-vs-charges breakout — confidentiality). Lines sum to quote.total_excl_vat.
+                # Includes SECTION/NOTE rows (display_type) in position order; optional lines are
+                # rendered separately below the totals via `optional_items` (off-total offer).
                 "items": client_projection_items(quote),
+                "optional_items": client_optional_items(quote),
                 "company": quote.deal.company,
                 # Public «Принять онлайн» link + QR — present only after send (token minted), so the
                 # seller-facing draft PDF has no CTA while the sent/public КП does (F-09).

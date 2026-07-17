@@ -19179,6 +19179,15 @@
                 "type": "string",
                 "description": "* `CLIENT` - Клиент (они покупают у нас)\n* `SUPPLIER` - Поставщик (мы покупаем у них)"
             },
+            "DisplayTypeEnum": {
+                "enum": [
+                    "ITEM",
+                    "SECTION",
+                    "NOTE"
+                ],
+                "type": "string",
+                "description": "* `ITEM` - Позиция\n* `SECTION` - Раздел\n* `NOTE` - Заметка"
+            },
             "DomainType": {
                 "type": "object",
                 "properties": {
@@ -22563,6 +22572,27 @@
                         "title": "КП",
                         "description": "Коммерческое предложение, к которому относится позиция"
                     },
+                    "display_type": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/DisplayTypeEnum"
+                            }
+                        ],
+                        "title": "Тип строки",
+                        "description": "ITEM — позиция с ценой; SECTION — заголовок раздела; NOTE — заметка\n\n* `ITEM` - Позиция\n* `SECTION` - Раздел\n* `NOTE` - Заметка"
+                    },
+                    "is_optional": {
+                        "type": "boolean",
+                        "title": "Опциональная позиция",
+                        "description": "Показывается с ценой, но не входит в итоги КП (доп. предложение)"
+                    },
+                    "position": {
+                        "type": "integer",
+                        "maximum": 2147483647,
+                        "minimum": -2147483648,
+                        "title": "Порядок строки",
+                        "description": "Явный порядок строки внутри КП (для сортировки и перемещения)"
+                    },
                     "product": {
                         "type": "integer",
                         "nullable": true,
@@ -24519,6 +24549,27 @@
                         "title": "КП",
                         "description": "Коммерческое предложение, к которому относится позиция"
                     },
+                    "display_type": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/DisplayTypeEnum"
+                            }
+                        ],
+                        "title": "Тип строки",
+                        "description": "ITEM — позиция с ценой; SECTION — заголовок раздела; NOTE — заметка\n\n* `ITEM` - Позиция\n* `SECTION` - Раздел\n* `NOTE` - Заметка"
+                    },
+                    "is_optional": {
+                        "type": "boolean",
+                        "title": "Опциональная позиция",
+                        "description": "Показывается с ценой, но не входит в итоги КП (доп. предложение)"
+                    },
+                    "position": {
+                        "type": "integer",
+                        "maximum": 2147483647,
+                        "minimum": -2147483648,
+                        "title": "Порядок строки",
+                        "description": "Явный порядок строки внутри КП (для сортировки и перемещения)"
+                    },
                     "product": {
                         "type": "integer",
                         "nullable": true,
@@ -24700,6 +24751,27 @@
                         "type": "integer",
                         "title": "КП",
                         "description": "Коммерческое предложение, к которому относится позиция"
+                    },
+                    "display_type": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/DisplayTypeEnum"
+                            }
+                        ],
+                        "title": "Тип строки",
+                        "description": "ITEM — позиция с ценой; SECTION — заголовок раздела; NOTE — заметка\n\n* `ITEM` - Позиция\n* `SECTION` - Раздел\n* `NOTE` - Заметка"
+                    },
+                    "is_optional": {
+                        "type": "boolean",
+                        "title": "Опциональная позиция",
+                        "description": "Показывается с ценой, но не входит в итоги КП (доп. предложение)"
+                    },
+                    "position": {
+                        "type": "integer",
+                        "maximum": 2147483647,
+                        "minimum": -2147483648,
+                        "title": "Порядок строки",
+                        "description": "Явный порядок строки внутри КП (для сортировки и перемещения)"
                     },
                     "product": {
                         "type": "integer",

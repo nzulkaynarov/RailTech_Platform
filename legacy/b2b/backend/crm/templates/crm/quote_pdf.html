@@ -22,6 +22,21 @@
 
 {% block doc_title %}Коммерческое предложение{% endblock %}
 
+{% block extra_head %}
+  <style>
+    /* S1 — Odoo-style display_type rows inside the client КП table. */
+    table.lines tbody tr.section-row { background: var(--panel); break-inside: avoid; }
+    table.lines tbody tr.section-row td { border-top: 0.75pt solid var(--accent); border-bottom: 0.75pt solid var(--line); padding-top: 7pt; padding-bottom: 7pt; }
+    table.lines tbody tr.section-row .section-name { font-weight: 700; text-transform: uppercase; letter-spacing: 0.3pt; color: var(--accent); font-size: 9pt; }
+    table.lines tbody tr.section-row .section-sub { font-weight: 700; color: var(--ink); }
+    table.lines tbody tr.note-row td { font-style: italic; color: var(--ink-soft); font-size: 8.6pt; background: transparent; }
+    /* Optional block: quoted with prices but NOT part of the totals (доп. предложение). */
+    .optional-block { margin-top: 14pt; break-inside: avoid; }
+    .optional-block h3 { margin: 0 0 4pt 0; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.6pt; color: var(--accent); font-weight: 700; }
+    .optional-block .optional-hint { font-size: 8pt; color: var(--muted); margin: 0 0 5pt 0; }
+  </style>
+{% endblock %}
+
 {% block content %}
   {% with pres_ccy=quote.quote_currency.code|default:"UZS" %}
   <!-- ── Line items (client projection — NO cost/margin) ── -->
@@ -38,8 +53,20 @@
     </thead>
     <tbody>
       {% for item in items %}
+      {% if item.display_type == "SECTION" %}
+      {# Group header spanning the whole width, with the section subtotal (Σ of its ITEM lines). #}
+      <tr class="section-row">
+        <td colspan="{% if show_lead_time %}5{% else %}4{% endif %}" class="section-name">{{ item.imported_raw_name|default:"—" }}</td>
+        <td class="num section-sub">{{ item.section_subtotal|money }}</td>
+      </tr>
+      {% elif item.display_type == "NOTE" %}
+      {# Free-text note spanning the whole width, italic, no prices. #}
+      <tr class="note-row">
+        <td colspan="{% if show_lead_time %}6{% else %}5{% endif %}" class="note-text">{{ item.imported_raw_name }}</td>
+      </tr>
+      {% else %}
       <tr>
-        <td class="num">{{ forloop.counter }}</td>
+        <td class="num">{{ item.line_no }}</td>
         <td>
           <div class="item-name">{{ item.product.name|default:item.imported_raw_name|default:"—" }}</div>
           {% if item.mpn or item.gost_drawing %}
@@ -55,6 +82,7 @@
         <td class="num">{{ item.final_price_excl_vat|money }}</td>
         <td class="num">{{ item.line_total|money }}</td>
       </tr>
+      {% endif %}
       {% endfor %}
     </tbody>
   </table>
@@ -83,6 +111,47 @@
     </tr>
   </table>
   <div class="amount-words"><span class="k">Сумма прописью:</span> {{ quote.total_incl_vat|money_words:pres_ccy }}</div>
+
+  {% if optional_items %}
+  <!-- ── Optional lines: quoted WITH prices but NOT included in the totals above (доп. предложение). ── -->
+  <div class="optional-block">
+    <h3>Опционально (не входит в итог)</h3>
+    <p class="optional-hint">Позиции ниже предлагаются дополнительно и не включены в сумму «ИТОГО к оплате».</p>
+    <table class="lines">
+      <thead>
+        <tr>
+          <th style="width:5%">№</th>
+          <th style="width:{% if show_lead_time %}43{% else %}55{% endif %}%">Наименование</th>
+          <th style="width:10%" class="center">Кол-во</th>
+          {% if show_lead_time %}<th style="width:12%" class="center">Срок</th>{% endif %}
+          <th style="width:15%" class="num">Цена за ед., {{ pres_ccy }}</th>
+          <th style="width:15%" class="num">Сумма, {{ pres_ccy }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in optional_items %}
+        <tr>
+          <td class="num">{{ forloop.counter }}</td>
+          <td>
+            <div class="item-name">{{ item.product.name|default:item.imported_raw_name|default:"—" }}</div>
+            {% if item.mpn or item.gost_drawing %}
+            <div class="item-sub">
+              {% if item.mpn %}Арт.: {{ item.mpn }}{% endif %}
+              {% if item.mpn and item.gost_drawing %} · {% endif %}
+              {% if item.gost_drawing %}{{ item.gost_drawing }}{% endif %}
+            </div>
+            {% endif %}
+          </td>
+          <td class="center">{{ item.quantity|qty:item.unit }}</td>
+          {% if show_lead_time %}<td class="center">{% if item.lead_time_days %}до {{ item.lead_time_days }} дн.{% else %}&mdash;{% endif %}</td>{% endif %}
+          <td class="num">{{ item.final_price_excl_vat|money }}</td>
+          <td class="num">{{ item.line_total|money }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
 
   {% comment %}
     Manager contact + online-accept CTA — seller-side contact only (no confidentiality impact);
