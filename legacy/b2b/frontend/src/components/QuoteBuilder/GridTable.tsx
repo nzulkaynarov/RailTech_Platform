@@ -76,7 +76,9 @@ export const GridTable: React.FC = () => {
 						{shouldVirtualize ? (
 							<>
 								{paddingTop > 0 && (
-									<tr aria-hidden="true">
+									// `border-t-0!` (important) drops the faint line `divide-y` would draw on this
+									// windowing spacer — its selector out-specifies a plain class, so !important wins.
+									<tr aria-hidden="true" className="border-t-0!">
 										<td colSpan={mainColCount} style={{ height: paddingTop }} />
 									</tr>
 								)}
@@ -93,7 +95,7 @@ export const GridTable: React.FC = () => {
 									);
 								})}
 								{paddingBottom > 0 && (
-									<tr aria-hidden="true">
+									<tr aria-hidden="true" className="border-t-0!">
 										<td colSpan={mainColCount} style={{ height: paddingBottom }} />
 									</tr>
 								)}

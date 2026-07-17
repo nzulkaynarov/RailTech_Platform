@@ -90,6 +90,16 @@ export const GridRow: React.FC<GridRowProps> = ({ item, index, virtualIndex, mea
 		measureElement?.(element);
 	};
 
+	// Measure the expanded detail sub-row too (WP-review): the virtualizer keys a ResizeObserver by
+	// `data-index`, and in a real `<table>` a row-group is two sibling `<tr>`s that can't share one
+	// wrapper — so the detail row carries the SAME data-index and re-registers with `measureElement`.
+	// It's a fresh closure per render (unlike the stable `measureElement`) so it re-runs AFTER the main
+	// row on every re-render and stays the observed node while expanded — otherwise the taller detail
+	// height would be dropped from getTotalSize() and a >50-line КП would scroll-drift on expand.
+	const setDetailRef = (element: HTMLTableRowElement | null) => {
+		measureElement?.(element);
+	};
+
 	return (
 		<React.Fragment>
 			<TableRow
@@ -106,7 +116,9 @@ export const GridRow: React.FC<GridRowProps> = ({ item, index, virtualIndex, mea
 					/>
 				</TableCell>
 				<TableCell className={cn('w-8 px-1 py-1.5 text-center sticky left-8 z-10', stickyBg)}>
-					<div className="flex items-center justify-center gap-0.5">
+					{/* Stack vertically: the chevron (20px) + the bulk-error marker (16px) would overflow the
+					    32px `w-8` cell side-by-side; column layout keeps both centred and inside the cell. */}
+					<div className="flex flex-col items-center justify-center gap-0.5">
 						<button
 							type="button"
 							onClick={(e) => { e.stopPropagation(); toggleRow(item.id); }}
@@ -264,7 +276,7 @@ export const GridRow: React.FC<GridRowProps> = ({ item, index, virtualIndex, mea
 				</TableCell>
 			</TableRow>
 			{isExpanded && (
-				<TableRow className="bg-muted/30">
+				<TableRow ref={setDetailRef} data-index={virtualIndex} className="bg-muted/30">
 					<TableCell colSpan={mainColCount} className="p-0">
 						<div id={`kp-line-detail-${item.id}`} className="sticky left-0 flex max-w-full flex-col gap-3 px-4 py-3">
 							<span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('quote.lineDetails')}</span>

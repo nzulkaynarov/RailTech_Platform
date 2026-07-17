@@ -199,15 +199,17 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	const [reassignItemId, setReassignItemId] = useState<number | null>(null);
 
 	// Optimistic-lock conflict dialog (волна 3): a save that lost a race to a colleague opens this
-	// instead of writing. `conflictIds` are the stale rows (empty ⇒ a single-line 409 → reload all).
+	// instead of writing. `conflictIds` are the stale rows — only the versioned bulk save opens the
+	// dialog, and it always passes a non-empty set (pricing-assist carries no version, so it can't
+	// 409). No empty-ids "reset all" case exists.
 	const queryClient = useQueryClient();
 	const [conflictOpen, setConflictOpen] = useState(false);
 	const [conflictIds, setConflictIds] = useState<number[]>([]);
-	// «Обновить»: consciously drop the local edits on the conflicting rows (or all, on a bare 409),
-	// then refetch quote-items so the fresh server values re-merge. The seller's stale edits to the
-	// conflicting lines are replaced by the colleague's committed values (spec §5.3).
+	// «Обновить»: consciously drop the local edits on the conflicting rows, then refetch quote-items
+	// so the fresh server values re-merge. The seller's stale edits to the conflicting lines are
+	// replaced by the colleague's committed values (spec §5.3).
 	const handleConflictRefresh = () => {
-		const idsToReset = conflictIds.length > 0 ? conflictIds : draftItems.map((item) => item.id);
+		const idsToReset = conflictIds;
 		clearDirtyAfterSave(idsToReset);
 		setCellErrors((previous) => {
 			const next = { ...previous };
