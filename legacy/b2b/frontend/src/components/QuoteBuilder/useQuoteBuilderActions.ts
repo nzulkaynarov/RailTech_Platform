@@ -11,7 +11,7 @@ import { translateApiError } from '@/lib/apiError';
 import { toDecimal } from '@/utils/decimal';
 import {
 	parseBulkItemErrors, parseBulkCreateItemErrors, extractBulkErrorRows, hiddenErrorFields,
-	extractStaleConflictIds, isStaleConflictError,
+	extractStaleConflictIds,
 } from './bulkErrors';
 import { shouldInterceptClipboardPaste, type BulkCreateRow } from './parseClipboardTable';
 import { buildDuplicatePayload } from './duplicatePayload';
@@ -343,14 +343,10 @@ export function useQuoteBuilderActions(params: QuoteBuilderActionsParams) {
 				});
 			}
 			toast.success(t('pricingAssist.applied', { count: suggestions.length }));
-		} catch (error) {
-			// A single-line 409 conflict is handled like the bulk path: open the refresh dialog
-			// (empty ids ⇒ reload the whole grid) rather than a generic error toast.
-			if (isStaleConflictError(error)) {
-				setConflictIds([]);
-				setConflictOpen(true);
-				return;
-			}
+		} catch {
+			// pricing-assist PATCHes carry NO `version` token, so the backend takes the last-write-wins
+			// path and can never answer 409 QUOTE_ITEM_STALE here — there is no conflict branch to
+			// handle (unlike the versioned bulk save). Any failure is a plain error toast.
 			toast.error(t('pricingAssist.error'));
 		} finally {
 			setPricingBusy(false);
