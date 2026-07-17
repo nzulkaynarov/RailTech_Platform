@@ -49,7 +49,7 @@ describe('GenerateQuoteDialog', () => {
     vi.mocked(toast.error).mockReset();
   });
 
-  it('renders localized title, fields and next steps with a +14 day default validity', () => {
+  it('renders localized title + notes and no longer exposes the valid-until field (S2)', () => {
     renderWithProviders(
       <GenerateQuoteDialog dealId={42} open onOpenChange={vi.fn()} />,
     );
@@ -59,11 +59,11 @@ describe('GenerateQuoteDialog', () => {
     expect(screen.getByText('Что дальше')).toBeInTheDocument();
     expect(screen.getByLabelText('Комментарий')).toBeInTheDocument();
 
-    const validUntil = screen.getByLabelText('Действительно до');
-    expect(validUntil).toHaveValue(isoDatePlusDays(14));
+    // valid_until moved to «Настройки КП» (S2) — the creation dialog no longer shows it.
+    expect(screen.queryByLabelText('Действительно до')).not.toBeInTheDocument();
   });
 
-  it('creates a quote with the trimmed notes and chosen validity, then closes', async () => {
+  it('creates a quote with the trimmed notes and the silent +14-day validity, then closes', async () => {
     vi.mocked(crmApi.createQuote).mockResolvedValue(makeQuote(101));
     const onOpenChange = vi.fn();
     const onGenerated = vi.fn();
@@ -74,16 +74,14 @@ describe('GenerateQuoteDialog', () => {
     fireEvent.change(screen.getByLabelText('Комментарий'), {
       target: { value: '  Условия поставки — EXW.  ' },
     });
-    fireEvent.change(screen.getByLabelText('Действительно до'), {
-      target: { value: '2026-08-01' },
-    });
     fireEvent.click(screen.getByRole('button', { name: 'Создать КП' }));
 
+    // valid_until is pre-filled silently to +14 days (edited later in settings, S2).
     await waitFor(() =>
       expect(crmApi.createQuote).toHaveBeenCalledWith({
         deal: 42,
         notes: 'Условия поставки — EXW.',
-        valid_until: '2026-08-01',
+        valid_until: isoDatePlusDays(14),
       }),
     );
     await waitFor(() => expect(onGenerated).toHaveBeenCalledWith(101));

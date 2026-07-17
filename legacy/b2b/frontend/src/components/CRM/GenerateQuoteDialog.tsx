@@ -11,7 +11,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useCreateQuote } from '@/hooks/useCRM';
@@ -33,7 +32,10 @@ interface GenerateQuoteDialogProps {
 export function GenerateQuoteDialog({ dealId, open, onOpenChange, onGenerated }: GenerateQuoteDialogProps) {
   const { t } = useTranslation();
   const [notes, setNotes] = useState('');
-  const [validUntil, setValidUntil] = useState<string>(() => {
+  // valid_until is no longer edited here (S2: it lives only in «Настройки КП»). Creation still
+  // pre-fills a silent +14-day default so the КП is born with a validity; the seller adjusts it
+  // later in settings.
+  const [validUntil] = useState<string>(() => {
     const defaultDate = new Date();
     defaultDate.setDate(defaultDate.getDate() + 14);
     return defaultDate.toISOString().slice(0, 10);
@@ -77,21 +79,6 @@ export function GenerateQuoteDialog({ dealId, open, onOpenChange, onGenerated }:
             <DialogDescription>{t('generateQuote.description')}</DialogDescription>
           </DialogHeader>
           <div className="mt-3 space-y-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="generate-quote-valid-until">
-                {t('generateQuote.fields.validUntil')}
-              </Label>
-              <Input
-                id="generate-quote-valid-until"
-                type="date"
-                value={validUntil}
-                min={new Date().toISOString().slice(0, 10)}
-                onChange={(e) => setValidUntil(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                {t('generateQuote.fields.validUntilHint')}
-              </p>
-            </div>
             <div className="space-y-1.5">
               <Label htmlFor="generate-quote-notes">
                 {t('generateQuote.fields.notes')}

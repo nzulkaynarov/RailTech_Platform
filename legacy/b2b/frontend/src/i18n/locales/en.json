@@ -213,8 +213,6 @@
     "sendOption": "Send to the client immediately",
     "sendOptionHint": "Generates the PDF, freezes prices and moves the deal to QUOTE_SENT.",
     "fields": {
-      "validUntil": "Valid until",
-      "validUntilHint": "Date the quote stays valid through. Defaults to +14 days.",
       "notes": "Notes",
       "notesPlaceholder": "Terms, caveats, cover note…"
     },
@@ -833,6 +831,8 @@
       "title": "Quote settings",
       "description": "Quote-level parameters: VAT rate, tax country, validity and currency.",
       "saved": "Quote settings saved",
+      "deliverySection": "Delivery",
+      "deliveryBasisHelp": "The delivery basis (Incoterm) drives which cost rows the builder shows. Applies immediately on change.",
       "vatRate": "VAT rate (%)",
       "vatRateOutOfRange": "VAT rate must be between {{min}} and {{max}}%",
       "taxCountry": "Tax country",
@@ -873,7 +873,9 @@
       "params": "Quote parameters",
       "totals": "Amount due",
       "collapse": "Collapse panel",
-      "expand": "Expand panel"
+      "expand": "Expand panel",
+      "basisNotSet": "No delivery basis",
+      "editBasis": "Change delivery basis"
     },
     "lineDetails": "Line details",
     "attachProduct": "Attach product",

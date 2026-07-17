@@ -13,7 +13,7 @@ vi.mock('@/api/crmApi', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/crmApi')>();
   return {
     ...actual,
-    crmApi: { ...actual.crmApi, updateQuoteSettings: vi.fn() },
+    crmApi: { ...actual.crmApi, updateQuoteSettings: vi.fn(), setQuoteDeliveryBasis: vi.fn() },
   };
 });
 
@@ -22,6 +22,30 @@ vi.mock('@/api/crmApi', async (importOriginal) => {
 vi.mock('@/hooks/useMasterData', () => ({
   useCountries: () => ({ data: [] }),
   useCurrencies: () => ({ data: [] }),
+}));
+
+// Stub the delivery-basis picker (S2: relocated into this dialog) with a trivial button so
+// the test can assert its onChange wiring without driving a Radix Select in jsdom.
+vi.mock('../DeliveryBasisSelect', () => ({
+  DeliveryBasisSelect: ({
+    value,
+    onChange,
+    disabled,
+  }: {
+    value?: number | null;
+    onChange: (id: number) => void;
+    disabled?: boolean;
+  }) => (
+    <button
+      type="button"
+      data-testid="delivery-basis-select"
+      data-value={value ?? ''}
+      disabled={disabled}
+      onClick={() => onChange(5)}
+    >
+      basis
+    </button>
+  ),
 }));
 
 vi.mock('sonner', () => ({
@@ -62,6 +86,7 @@ const SAVE_LABEL = 'Сохранить';
 describe('QuoteSettingsDialog', () => {
   beforeEach(() => {
     vi.mocked(crmApi.updateQuoteSettings).mockReset();
+    vi.mocked(crmApi.setQuoteDeliveryBasis).mockReset();
     vi.mocked(toast.success).mockReset();
     vi.mocked(toast.error).mockReset();
   });
@@ -121,6 +146,33 @@ describe('QuoteSettingsDialog', () => {
     );
 
     expect(screen.getByLabelText(MARGIN_LABEL)).toHaveValue(25);
+  });
+
+  it('renders the «Поставка» section with the delivery-basis picker seeded from the КП (S2)', () => {
+    vi.mocked(crmApi.setQuoteDeliveryBasis).mockResolvedValue(makeQuote({ id: 7 }));
+    renderWithProviders(
+      <QuoteSettingsDialog quote={makeQuote({ id: 7, delivery_basis: 3 })} open onOpenChange={vi.fn()} />,
+    );
+
+    // Section heading + the relocated basis picker, seeded with the КП's current basis.
+    expect(screen.getByText('Поставка')).toBeInTheDocument();
+    expect(screen.getByTestId('delivery-basis-select')).toHaveAttribute('data-value', '3');
+  });
+
+  it('applies a delivery-basis change immediately via its own endpoint (not the Save button)', async () => {
+    vi.mocked(crmApi.setQuoteDeliveryBasis).mockResolvedValue(makeQuote({ id: 7 }));
+    renderWithProviders(
+      <QuoteSettingsDialog quote={makeQuote({ id: 7 })} open onOpenChange={vi.fn()} />,
+    );
+
+    fireEvent.click(screen.getByTestId('delivery-basis-select'));
+
+    // The basis PATCH fires on change (id, basisId) — the Incoterm endpoint, separate from Save.
+    await waitFor(() =>
+      expect(crmApi.setQuoteDeliveryBasis).toHaveBeenCalledWith(7, 5),
+    );
+    // Changing the basis must NOT trigger the settings save.
+    expect(crmApi.updateQuoteSettings).not.toHaveBeenCalled();
   });
 
   it('re-seeds the form when the dialog is opened for a different КП', () => {

@@ -7,7 +7,7 @@ import { Loader2, Sparkles, FileText } from 'lucide-react';
 import { QuoteItem, QuoteEconomics } from '@/api/crmApi';
 import {
 	useQuoteItems, useUpdateQuoteItem, useCreateQuoteItem, useDeleteQuoteItem, useDeal,
-	useSetQuoteDeliveryBasis, useBulkUpdateQuoteItems, useBulkCreateQuoteItems, useBulkDeleteQuoteItems,
+	useBulkUpdateQuoteItems, useBulkCreateQuoteItems, useBulkDeleteQuoteItems,
 } from '@/hooks/useCRM';
 import { useCurrencies } from '@/hooks/useMasterData';
 import { useMediaQuery } from '@/hooks/use-mobile';
@@ -70,7 +70,6 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	const bulkDeleteMutation = useBulkDeleteQuoteItems();
 	const createItemMutation = useCreateQuoteItem();
 	const deleteItemMutation = useDeleteQuoteItem();
-	const setBasisMutation = useSetQuoteDeliveryBasis();
 
 	// Draft state machine (WP-D) + local undo stack (WP-J).
 	const { draftItems, dirtyIds, hasUnsavedChanges, setField, applyBulk, clearDirtyAfterSave, undo, canUndo } = useQuoteDraft(quoteItems);
@@ -350,11 +349,6 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	// КП срок поставки (до N дн.) — backend-computed effective value.
 	const effectiveLeadTime = activeQuote?.effective_delivery_lead_time_days ?? 0;
 
-	const handleBasisChange = (basisId: number) => {
-		if (!activeQuote) return;
-		setBasisMutation.mutate({ id: activeQuote.id, deliveryBasis: basisId });
-	};
-
 	// Visible main-row columns (for the detail row + spacer colSpan): select, chevron, name, qty,
 	// [base], [margin], sum, delete. Tracks the two cost columns the <1200px gate hides.
 	const mainColCount = showCostColumns ? 8 : 6;
@@ -381,7 +375,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 		handleDeleteItem: actions.handleDeleteItem, setReassignItemId, rowRefs,
 		showAddRow, setShowAddRow, openPasteDialog: actions.openPasteDialog, setShowAiMatch,
 		handlePricingAssist: actions.handlePricingAssist, pricingBusy, fullscreen, setFullscreen, setShowSettings,
-		railAsSheet, railOpen, railSheetOpen, setRailSheetOpen, toggleRail, handleBasisChange,
+		railAsSheet, railOpen, railSheetOpen, setRailSheetOpen, toggleRail,
 		scrollContainerRef, gridKeyboardOnKeyDown: gridKeyboard.onKeyDown, handleGridPaste: actions.handleGridPaste,
 		virtualizer, shouldVirtualize,
 		newItemName, setNewItemName, newItemQty, setNewItemQty, newItemPrice, setNewItemPrice,

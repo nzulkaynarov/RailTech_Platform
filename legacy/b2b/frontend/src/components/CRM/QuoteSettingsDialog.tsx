@@ -3,8 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { Quote } from '@/api/crmApi';
-import { useUpdateQuoteSettings } from '@/hooks/useCRM';
+import { useUpdateQuoteSettings, useSetQuoteDeliveryBasis } from '@/hooks/useCRM';
 import { useCountries, useCurrencies } from '@/hooks/useMasterData';
+import { DeliveryBasisSelect } from './DeliveryBasisSelect';
 import {
 	Dialog,
 	DialogContent,
@@ -44,6 +45,10 @@ export function QuoteSettingsDialog({ quote, open, onOpenChange }: QuoteSettings
 	const { data: countries = [] } = useCountries();
 	const { data: currencies = [] } = useCurrencies();
 	const updateSettings = useUpdateQuoteSettings();
+	// Delivery basis (Incoterm) has its OWN endpoint (auto-applies the charge template), so it
+	// applies immediately on change rather than waiting for Save — same behaviour as the old rail
+	// select, just relocated here (S2 consolidation).
+	const setBasis = useSetQuoteDeliveryBasis();
 
 	const [marginPercent, setMarginPercent] = useState('');
 	const [vatRate, setVatRate] = useState('');
@@ -137,6 +142,20 @@ export function QuoteSettingsDialog({ quote, open, onOpenChange }: QuoteSettings
 					</DialogHeader>
 
 					<div className="mt-4 flex flex-col gap-4">
+						{/* Поставка (S2): базис поставки (Incoterm) переехал сюда из правой панели грида.
+						    Применяется сразу при выборе — движок пересчитывает статьи затрат по базису. */}
+						<div className="flex flex-col gap-1.5">
+							<span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+								{t('quote.settings.deliverySection')}
+							</span>
+							<DeliveryBasisSelect
+								value={quote.delivery_basis}
+								onChange={(basisId) => setBasis.mutate({ id: quote.id, deliveryBasis: basisId })}
+								disabled={!!quote.frozen_at || setBasis.isPending}
+							/>
+							<p className="text-xs text-muted-foreground">{t('quote.settings.deliveryBasisHelp')}</p>
+						</div>
+
 						<div className="flex flex-col gap-1.5">
 							<Label htmlFor="quote-margin">{t('quote.settings.margin')}</Label>
 							<Input
