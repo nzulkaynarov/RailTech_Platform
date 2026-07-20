@@ -49,7 +49,7 @@ def generate_contract_from_quote(
     # Paid-seller gate: a seller without an operational subscription cannot transact.
     if actor is not None and (sub_err := assert_seller_can_operate(actor)):
         return None, sub_err
-    quote = Quote.objects.select_related("deal__company", "status").get(pk=quote_id)
+    quote = Quote.objects.select_related("deal__company", "status", "quote_currency").get(pk=quote_id)
 
     # SEC (audit #1): bind the actor to THIS deal's routing before reading/creating the
     # contract — like sign_contract_by_manager. Without this any subscribed seller could
@@ -79,16 +79,18 @@ def generate_contract_from_quote(
         from .quotes import _quote_seller_company
 
         seller_company = _quote_seller_company(quote)
-        # Currency from a real priced line, not just the first row — the first row can be a SECTION
-        # header (no frozen_currency). billable() = non-optional ITEM only.
-        first_billable = quote.items.billable().select_related("frozen_currency").first()
         contract = Contract(
             deal=quote.deal,
             quote=quote,
             number=_next_contract_number(seller_company),
             status=_cstatus(ContractStatusCode.DRAFT),
             total_amount=quote.total_incl_vat,
-            currency=first_billable.frozen_currency if first_billable else None,
+            # B1: total_amount mirrors quote.total_incl_vat, which the engine computes and stores in
+            # the PRESENTATION currency (Quote.quote_currency, UZS by business rule) — NOT in the
+            # per-line COST currency (frozen_currency, often USD/EUR on imported equipment). The old
+            # first-billable-line probe made the contract PDF print a UZS amount labelled "USD".
+            # Nullable by design: the template falls back to UZS, the engine's canonical currency.
+            currency=quote.quote_currency,
             created_by=actor,
             notes=notes,
         )

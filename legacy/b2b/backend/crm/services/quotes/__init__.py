@@ -23,6 +23,7 @@ from ._shared import (
     _quote_seller_company,
     _seller_document_profile,
     _set_quote_status,
+    resolve_quote_recipient,
 )
 from .access import (
     _EXPIRED_STATUS_CODE,
@@ -59,6 +60,7 @@ __all__ = [
     "_set_quote_status",
     "_notify_quote_outcome",
     "_log_quote",
+    "resolve_quote_recipient",
     # pricing
     "QuoteCalculationService",
     "compute_quote_economics",

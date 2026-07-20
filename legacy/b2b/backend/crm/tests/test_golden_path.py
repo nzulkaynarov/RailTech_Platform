@@ -355,6 +355,14 @@ def _ready_priced_quote(deal, manager):
     return quote
 
 
+def _stage_ready_to_send(deal):
+    """Park the deal in CALCULATING — the only stage send_to_client can legally advance from
+    directly (RFQ_OPEN/SOURCING route through it first). The guardrail tests below assert the
+    SEND, not the FSM, so the stage is set up front rather than driven through the whole path."""
+    deal.stage = DealStage.objects.get(code="CALCULATING")
+    deal.save(update_fields=["stage"])
+
+
 # Force the margin-governance verdict deterministically — the economics engine itself is tested
 # elsewhere; here we isolate the GUARDRAIL (below_floor ⇒ justification required).
 _BELOW_FLOOR_ECON = {
@@ -397,3 +405,84 @@ def test_send_below_floor_justification_too_long(deal, buyer, manager):
     with patch("crm.services.quotes.lifecycle.compute_quote_economics", return_value=dict(_BELOW_FLOOR_ECON)):
         with pytest.raises(ValueError, match="JUSTIFICATION_TOO_LONG"):
             QuoteLifecycleService.send_to_client(quote.id, manager, justification="x" * 501)
+
+
+@pytest.mark.django_db
+def test_send_below_floor_writes_audit_event_with_justification(deal, buyer, manager):
+    """T3: a below-floor send is ALLOWED with a justification — and must leave a first-class
+    `quote.sent_below_floor` ActivityLog row carrying the justification and both margin numbers.
+    Without this the guardrail would be unauditable: the send goes through and nothing records
+    WHY the company accepted a sub-floor margin (S7a, PR #355)."""
+    from unittest.mock import patch
+
+    from crm.models import ActivityLog
+
+    quote = _ready_priced_quote(deal, manager)
+    _stage_ready_to_send(deal)
+
+    with patch("crm.services.quotes.lifecycle.compute_quote_economics", return_value=dict(_BELOW_FLOOR_ECON)):
+        QuoteLifecycleService.send_to_client(quote.id, manager, justification="Стратегический клиент, вход в тендер")
+
+    quote.refresh_from_db()
+    assert quote.status.code == "SENT"
+
+    event = ActivityLog.objects.get(event_code="quote.sent_below_floor", entity_type="quote", entity_id=quote.id)
+    assert event.detail == "Стратегический клиент, вход в тендер"
+    assert event.event_params["justification"] == "Стратегический клиент, вход в тендер"
+    assert event.event_params["margin_percent"] == "4.8"
+    assert event.event_params["floor_percent"] == "15"
+    assert event.event_params["version"] == quote.version
+    assert event.user_id == manager.id
+    assert event.deal_id == deal.id
+
+
+@pytest.mark.django_db
+def test_above_floor_send_writes_no_below_floor_event(deal, buyer, manager):
+    """The audit event is specific to the guardrail — a normal send must not emit it (otherwise
+    the below-floor signal would be noise on every КП)."""
+    from crm.models import ActivityLog
+
+    quote = _ready_priced_quote(deal, manager)
+    _stage_ready_to_send(deal)
+    QuoteLifecycleService.send_to_client(quote.id, manager)
+
+    assert not ActivityLog.objects.filter(event_code="quote.sent_below_floor", entity_id=quote.id).exists()
+
+
+@pytest.mark.django_db
+def test_send_without_any_recipient_is_blocked_before_status_change(deal, buyer, manager):
+    """B5: the КП must not be marked SENT when there is nobody to send it to. The email task used
+    to log `no_recipient` and return while the quote was already frozen + SENT and the deal had
+    moved to QUOTE_SENT — «отправлено в никуда», with no signal to the seller. The gate is
+    synchronous and fires BEFORE any state change."""
+    quote = _ready_priced_quote(deal, manager)
+    deal.client = None  # no registered buyer and no offline contact → unreachable
+    deal.save(update_fields=["client"])
+
+    with pytest.raises(ValueError, match="RECIPIENT_REQUIRED"):
+        QuoteLifecycleService.send_to_client(quote.id, manager)
+
+    quote.refresh_from_db()
+    deal.refresh_from_db()
+    assert quote.status.code == "READY_TO_SEND"
+    assert quote.frozen_at is None
+    assert deal.stage.code != "QUOTE_SENT"
+
+
+@pytest.mark.django_db
+def test_send_to_offline_contact_without_registered_client_is_allowed(deal, buyer, manager):
+    """The gate mirrors the email task EXACTLY: an offline contact with an email IS a valid
+    recipient (the unified-send path), so a contact-only deal must still send."""
+    from accounts.models import Contact
+
+    _buyer_user, buyer_co = buyer
+    quote = _ready_priced_quote(deal, manager)
+    deal.client = None
+    deal.contact = Contact.objects.create(company=buyer_co, name="Оффлайн Клиент", email="offline@example.com")
+    deal.save(update_fields=["client", "contact"])
+    _stage_ready_to_send(deal)
+
+    QuoteLifecycleService.send_to_client(quote.id, manager)
+
+    quote.refresh_from_db()
+    assert quote.status.code == "SENT"

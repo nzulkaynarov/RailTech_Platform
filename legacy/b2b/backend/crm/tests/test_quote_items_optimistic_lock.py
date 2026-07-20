@@ -230,3 +230,43 @@ def test_bulk_create_new_rows_not_version_gated(world):
     assert body[0]["imported_raw_name"] == "Новая строка"
     # A freshly-created row starts at version 0.
     assert body[0]["version"] == 0
+
+
+# ── B4: the single PATCH must be a real critical section, not a read-then-write race ──
+@pytest.mark.django_db
+def test_single_patch_locks_the_row_before_reading_version(world):
+    """TOCTOU: the version read and the increment must happen under a row lock, in one
+    transaction — otherwise two concurrent PATCHes both read version N, both pass the check and
+    the later save silently clobbers the earlier one (the bulk path always did this; the single
+    path read with a plain SELECT and wrote outside any transaction).
+
+    Asserted on the emitted SQL because a thread-race test would be non-deterministic: a
+    `SELECT ... FOR UPDATE` on the line must precede the `UPDATE`, so a racing request blocks
+    until our increment is committed and then sees the bumped version (→ 409, covered above)."""
+    from django.db import connection
+    from django.test.utils import CaptureQueriesContext
+
+    _deal, _quote, items = _quote_with_items(world["buyer_co"], world["seller_co"], [100])
+
+    with CaptureQueriesContext(connection) as captured:
+        resp = _api(world["seller_user"]).patch(
+            f"/api/v1/crm/quote-items/{items[0].id}/",
+            {"version": 0, "frozen_base_price": "150"},
+            format="json",
+        )
+
+    assert resp.status_code == 200, resp.content
+    statements = [query["sql"].lower() for query in captured.captured_queries]
+    lock_at = next(
+        (i for i, sql in enumerate(statements) if "crm_quoteitem" in sql and "for update" in sql),
+        None,
+    )
+    write_at = next(
+        (i for i, sql in enumerate(statements) if sql.startswith("update") and "crm_quoteitem" in sql),
+        None,
+    )
+    assert lock_at is not None, "single PATCH did not lock the line — the TOCTOU race is open"
+    assert write_at is not None
+    assert lock_at < write_at, "the row lock must be taken BEFORE the version read and the write"
+    items[0].refresh_from_db()
+    assert items[0].version == 1

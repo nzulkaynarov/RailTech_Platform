@@ -622,7 +622,11 @@ def test_send_kp_from_rfq_open_advances_deal_not_stuck(lookups, buyer_company, s
     _op_subscription(seller_company)
 
     deal.stage = DealStage.objects.get(code="RFQ_OPEN")  # real post-submit_request state
-    deal.save(update_fields=["stage"])
+    # A deal that reached RFQ_OPEN through submit_request ALWAYS has a buyer behind it; the bare
+    # fixture omitted one, which the B5 RECIPIENT_REQUIRED gate now rejects (a КП must not be
+    # marked SENT with nobody to send it to). Complete the fixture to the real post-submit shape.
+    deal.client = _make_user("send_rfq_buyer@b.test")
+    deal.save(update_fields=["stage", "client"])
 
     quote = _ready_to_send_quote(deal, prepared_by=seller)
     quote.number = "TEST-KP-001"  # pre-set → skip the document-number minting dependency

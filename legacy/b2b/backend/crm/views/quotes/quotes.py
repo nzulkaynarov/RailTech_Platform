@@ -227,7 +227,9 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
             "at current values. Allowed for the КП-owning company's SALES_MANAGER / OWNER, "
             "or a platform admin. When the КП is below the company margin floor (S7a) a "
             "non-empty `justification` is required (does not block the send, but is audited); "
-            "otherwise the endpoint returns 400 BELOW_FLOOR_JUSTIFICATION_REQUIRED."
+            "otherwise the endpoint returns 400 BELOW_FLOOR_JUSTIFICATION_REQUIRED. The deal must "
+            "have a reachable recipient (registered client or offline contact with an email), "
+            "otherwise the endpoint returns 400 RECIPIENT_REQUIRED and nothing is sent."
         ),
         request=inline_serializer(
             name="QuoteSendToClientRequest",
@@ -245,7 +247,8 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
             200: QuoteSerializer,
             400: OpenApiResponse(
                 description="Quote not in READY_TO_SEND status, or below-floor send without "
-                "justification (BELOW_FLOOR_JUSTIFICATION_REQUIRED), or JUSTIFICATION_TOO_LONG."
+                "justification (BELOW_FLOOR_JUSTIFICATION_REQUIRED), or JUSTIFICATION_TOO_LONG, "
+                "or no reachable recipient (RECIPIENT_REQUIRED)."
             ),
             403: OpenApiResponse(description="Role not permitted"),
         },
@@ -292,6 +295,7 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
                     "SELLER_KYC_REQUIRED",
                     "BELOW_FLOOR_JUSTIFICATION_REQUIRED",
                     "JUSTIFICATION_TOO_LONG",
+                    "RECIPIENT_REQUIRED",
                 )
                 else "INVALID_STATUS"
             )
