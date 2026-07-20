@@ -233,7 +233,7 @@ class TestZeroPricingChangeOnMigration:
 
     @staticmethod
     def _migration_data_step():
-        module = importlib.import_module("crm.migrations.0063_per_line_margin_override")
+        module = importlib.import_module("crm.migrations.0064_per_line_margin_override")
         return module.null_out_never_applied_margins
 
     def _legacy_quote_with_rows(self):
@@ -315,7 +315,7 @@ class TestZeroPricingChangeOnMigration:
         assert without_migration != expected, "без data-миграции цены обязаны разъехаться"
 
     def test_migration_is_reversible_back_to_zero(self):
-        module = importlib.import_module("crm.migrations.0063_per_line_margin_override")
+        module = importlib.import_module("crm.migrations.0064_per_line_margin_override")
         quote, items = self._legacy_quote_with_rows()
         module.null_out_never_applied_margins(global_apps, None)
 
