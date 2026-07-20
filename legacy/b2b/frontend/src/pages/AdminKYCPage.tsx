@@ -25,6 +25,7 @@ import { AdminActivityTimeline } from '@/components/Admin/AdminActivityTimeline'
 import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
 import { DetailKPIGrid } from '@/components/Admin/DetailKPIGrid';
 import { PageShell, ErrorState } from './shared/PageShell';
+import { kycDocTypeLabelKey } from '@/lib/codes';
 import type { Company } from '@/api/accountsApi';
 
 type KYCCode = 'L1_UNVERIFIED' | 'PROFILE_SUBMITTED' | 'L2_VERIFIED' | 'L3_CONTRACTED';
@@ -67,6 +68,12 @@ function DetailSheet({
   onOpenChange: (open: boolean) => void;
 }) {
   const { t } = useTranslation();
+  // `doc_type_display` is the Russian-only lookup name — fallback for an unknown code
+  // (operators can add KYCDocType rows via Unfold).
+  const docTypeLabel = (code?: string | null, fallback?: string | null): string => {
+    const key = kycDocTypeLabelKey(code);
+    return key ? t(key) : fallback || '';
+  };
   const verifyMutation = useVerifyCompany();
   const uploadMutation = useUploadDocument();
   const deleteMutation = useDeleteDocument();
@@ -206,7 +213,7 @@ function DetailSheet({
               <div className="min-w-0 flex-1">
                 <div className="truncate font-medium">{doc.original_filename}</div>
                 <div className="text-muted-foreground">
-                  {doc.doc_type_display}
+                  {docTypeLabel(doc.doc_type_code, doc.doc_type_display)}
                   {doc.uploaded_at ? ` · ${new Date(doc.uploaded_at).toLocaleDateString()}` : ''}
                 </div>
               </div>

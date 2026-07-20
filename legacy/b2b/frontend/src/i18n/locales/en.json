@@ -5345,5 +5345,42 @@
         "detail": "Application #{{application_id}} approved"
       }
     }
+  },
+  "companyTypes": {
+    "client": "Buyer",
+    "supplier": "Supplier",
+    "manufacturer": "Manufacturer"
+  },
+  "subscriptionPlans": {
+    "basic": "Basic",
+    "standard": "Standard",
+    "premium": "Premium"
+  },
+  "subscriptionStatuses": {
+    "trial": "Trial",
+    "active": "Active",
+    "pastDue": "Past due",
+    "suspended": "Suspended",
+    "cancelled": "Cancelled"
+  },
+  "entitlementAccess": {
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "demo": "Demo"
+  },
+  "roleApplicationStatuses": {
+    "pending": "Pending review",
+    "documentsRequired": "Documents required",
+    "paymentRequired": "Awaiting payment",
+    "approved": "Approved",
+    "rejected": "Rejected"
+  },
+  "kycDocTypes": {
+    "charter": "Charter",
+    "license": "License",
+    "passport": "Director's passport",
+    "taxCert": "Tax registration certificate",
+    "bankRef": "Bank reference",
+    "other": "Other"
   }
 }

@@ -13,6 +13,9 @@ export interface Session {
 export interface KYCDocument {
 	id: number;
 	doc_type: number;
+	/** Stable lookup CODE (CHARTER / LICENSE / ...) — map to a localized label. */
+	doc_type_code: string;
+	/** Russian-only lookup `.name` — presentation fallback for an unknown code. */
 	doc_type_display: string;
 	file?: string | null;
 	original_filename: string;

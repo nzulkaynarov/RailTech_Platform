@@ -32,6 +32,7 @@ import { useCurrencies } from '@/hooks/useMasterData';
 import { PageShell, ErrorState } from './shared/PageShell';
 import { translateApiError } from '@/lib/apiError';
 import { SubscriptionPayDialog } from '@/components/Admin/SubscriptionPayDialog';
+import { subscriptionPlanLabelKey, subscriptionStatusLabelKey } from '@/lib/codes';
 import type { Subscription } from '@/api/accountsApi';
 
 const statusVariant = (status: string) => {
@@ -54,6 +55,25 @@ const planVariant = (plan: string) => {
 const PLAN_OPTIONS = ['BASIC', 'STANDARD', 'PREMIUM'] as const;
 const STATUS_OPTIONS = ['ACTIVE', 'TRIAL', 'SUSPENDED', 'PAST_DUE', 'CANCELLED'] as const;
 
+/**
+ * Localized labels for the subscription plan/status CODEs. The backend `plan_display` /
+ * `status_display` fields are `get_FOO_display()` output — Russian-only at the source —
+ * so they are kept only as a fallback for a code this map does not know.
+ */
+function useSubscriptionLabels() {
+  const { t } = useTranslation();
+  return {
+    planLabel: (code?: string | null, fallback?: string | null): string => {
+      const key = subscriptionPlanLabelKey(code);
+      return key ? t(key) : fallback || code || '';
+    },
+    statusLabel: (code?: string | null, fallback?: string | null): string => {
+      const key = subscriptionStatusLabelKey(code);
+      return key ? t(key) : fallback || code || '';
+    },
+  };
+}
+
 /* ─── Form Sheet (create & edit) ───────────────────────────────────── */
 
 type Draft = Partial<Subscription>;
@@ -66,6 +86,7 @@ function FormSheet({
   onOpenChange: (o: boolean) => void;
 }) {
   const { t } = useTranslation();
+  const { planLabel, statusLabel } = useSubscriptionLabels();
   const { data: companies } = useCompanies();
   const { data: currencies } = useCurrencies();
   const createMut = useCreateSubscription();
@@ -140,11 +161,11 @@ function FormSheet({
               items={[
                 {
                   label: t('admin.subscriptions.table.plan'),
-                  value: sub.plan_display,
+                  value: planLabel(sub.plan, sub.plan_display),
                 },
                 {
                   label: t('admin.subscriptions.table.status'),
-                  value: sub.status_display,
+                  value: statusLabel(sub.status, sub.status_display),
                   tone:
                     sub.status === 'ACTIVE'
                       ? 'success'
@@ -193,8 +214,8 @@ function FormSheet({
               <Select value={draft.plan ?? undefined} onValueChange={(v) => update({ plan: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {PLAN_OPTIONS.map((p) => (
-                    <SelectItem key={p} value={p}>{p}</SelectItem>
+                  {PLAN_OPTIONS.map((planCode) => (
+                    <SelectItem key={planCode} value={planCode}>{planLabel(planCode)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -204,8 +225,8 @@ function FormSheet({
               <Select value={draft.status ?? undefined} onValueChange={(v) => update({ status: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {STATUS_OPTIONS.map((s) => (
-                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                  {STATUS_OPTIONS.map((statusCode) => (
+                    <SelectItem key={statusCode} value={statusCode}>{statusLabel(statusCode)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -269,6 +290,7 @@ const STORAGE_KEY = 'adminSubscriptions';
 
 export function AdminSubscriptionsPage() {
   const { t } = useTranslation();
+  const { planLabel, statusLabel } = useSubscriptionLabels();
   const activateMutation = useActivateSubscription();
   const suspendMutation = useSuspendSubscription();
   const deleteMut = useDeleteSubscription();
@@ -390,11 +412,11 @@ export function AdminSubscriptionsPage() {
           { id: 'all', label: t('common.all'), count: counts.all },
           { id: 'status:ACTIVE', label: t('admin.subscriptions.stats.active'), count: counts.active },
           { id: 'status:TRIAL', label: t('admin.subscriptions.stats.trial'), count: counts.trial },
-          { id: 'status:PAST_DUE', label: 'PAST_DUE', count: counts.pastDue },
+          { id: 'status:PAST_DUE', label: statusLabel('PAST_DUE'), count: counts.pastDue },
           { id: 'status:SUSPENDED', label: t('admin.subscriptions.stats.suspended'), count: counts.suspended },
-          { id: 'plan:BASIC', label: 'BASIC' },
-          { id: 'plan:STANDARD', label: 'STANDARD' },
-          { id: 'plan:PREMIUM', label: 'PREMIUM' },
+          { id: 'plan:BASIC', label: planLabel('BASIC') },
+          { id: 'plan:STANDARD', label: planLabel('STANDARD') },
+          { id: 'plan:PREMIUM', label: planLabel('PREMIUM') },
         ]}
         columns={[
           {
@@ -411,12 +433,12 @@ export function AdminSubscriptionsPage() {
           {
             id: 'plan',
             header: t('admin.subscriptions.table.plan'),
-            cell: (s) => <Badge variant={planVariant(s.plan)}>{s.plan_display}</Badge>,
+            cell: (s) => <Badge variant={planVariant(s.plan)}>{planLabel(s.plan, s.plan_display)}</Badge>,
           },
           {
             id: 'status',
             header: t('admin.subscriptions.table.status'),
-            cell: (s) => <Badge variant={statusVariant(s.status)}>{s.status_display}</Badge>,
+            cell: (s) => <Badge variant={statusVariant(s.status)}>{statusLabel(s.status, s.status_display)}</Badge>,
           },
           {
             id: 'rate',

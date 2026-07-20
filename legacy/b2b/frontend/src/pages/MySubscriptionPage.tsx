@@ -19,6 +19,7 @@ import { PageShell } from './shared/PageShell';
 import { DetailKPIGrid } from '@/components/Admin/DetailKPIGrid';
 import { SubscriptionPayDialog } from '@/components/Admin/SubscriptionPayDialog';
 import { useMySubscription } from '@/hooks/useAccounts';
+import { subscriptionPlanLabelKey, subscriptionStatusLabelKey } from '@/lib/codes';
 
 function statusTone(status?: string | null): 'success' | 'warning' | 'destructive' | 'info' | 'default' {
   switch (status) {
@@ -47,6 +48,17 @@ export function MySubscriptionPage() {
   const { t } = useTranslation();
   const { data: sub, isLoading, isError, refetch } = useMySubscription();
   const [payOpen, setPayOpen] = useState(false);
+
+  // `plan_display` / `status_display` are Russian-only `get_FOO_display()` output — keep
+  // them only as a fallback when the CODE is not in the localized map.
+  const planLabel = (code?: string | null, fallback?: string | null): string => {
+    const key = subscriptionPlanLabelKey(code);
+    return key ? t(key) : fallback || code || '';
+  };
+  const statusLabel = (code?: string | null, fallback?: string | null): string => {
+    const key = subscriptionStatusLabelKey(code);
+    return key ? t(key) : fallback || code || '';
+  };
 
   const remainingDays = useMemo(() => daysUntil(sub?.valid_until), [sub]);
   const isExpiringSoon = remainingDays !== null && remainingDays <= 7 && remainingDays >= 0;
@@ -134,12 +146,12 @@ export function MySubscriptionPage() {
             items={[
               {
                 label: t('mySubscription.kpi.plan'),
-                value: sub.plan_display ?? sub.plan,
+                value: planLabel(sub.plan, sub.plan_display),
                 icon: <CreditCard className="h-3.5 w-3.5" aria-hidden="true" />,
               },
               {
                 label: t('mySubscription.kpi.status'),
-                value: sub.status_display ?? sub.status,
+                value: statusLabel(sub.status, sub.status_display),
                 icon:
                   sub.status === 'ACTIVE'
                     ? <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />

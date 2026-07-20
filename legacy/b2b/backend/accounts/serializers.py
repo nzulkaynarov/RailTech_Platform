@@ -137,12 +137,15 @@ class OperatorRoleSerializer(serializers.ModelSerializer):
 
 
 class KYCDocumentSerializer(serializers.ModelSerializer):
+    # `doc_type_display` is the Russian-only lookup NAME — presentation fallback only.
+    # `doc_type_code` is the stable lookup CODE the SPA maps to a localized label (IRON RULE 2).
     doc_type_display = serializers.CharField(source="doc_type.name", read_only=True)
+    doc_type_code = serializers.CharField(source="doc_type.code", read_only=True)
 
     class Meta:
         model = KYCDocument
-        fields = ["id", "doc_type", "doc_type_display", "file", "original_filename", "uploaded_at"]
-        read_only_fields = ["id", "uploaded_at", "original_filename", "doc_type_display"]
+        fields = ["id", "doc_type", "doc_type_code", "doc_type_display", "file", "original_filename", "uploaded_at"]
+        read_only_fields = ["id", "uploaded_at", "original_filename", "doc_type_code", "doc_type_display"]
 
 
 class CompanyMemberSerializer(serializers.ModelSerializer):

@@ -22,6 +22,7 @@ import {
 } from '@/hooks/useAdmin';
 import { translateApiError } from '@/lib/apiError';
 import { PageShell, ErrorState } from './shared/PageShell';
+import { entitlementAccessLabelKey } from '@/lib/codes';
 import type { CompanyEntitlement, CompanyEntitlementDraft } from '@/api/adminApi';
 
 const ALL = '__all__';
@@ -33,6 +34,19 @@ function accessVariant(access: string): 'default' | 'secondary' | 'outline' {
   return 'outline'; // DISABLED / anything else
 }
 
+/**
+ * Localized label for an access-state CODE. The backend `access_display` field and the
+ * `access_states[].label` choices are `get_access_display()` output — Russian-only at the
+ * source — so they are kept only as a fallback for a code the localized map does not know.
+ */
+function useAccessLabel() {
+  const { t } = useTranslation();
+  return (code?: string | null, fallback?: string | null): string => {
+    const key = entitlementAccessLabelKey(code);
+    return key ? t(key) : fallback || code || '';
+  };
+}
+
 /* ─── Grant / edit form ──────────────────────────────────────────────────── */
 function EntitlementForm({
   entitlement, open, onOpenChange,
@@ -42,6 +56,7 @@ function EntitlementForm({
   onOpenChange: (o: boolean) => void;
 }) {
   const { t } = useTranslation();
+  const accessLabel = useAccessLabel();
   const { data: companiesRaw } = useCompanies();
   const { data: choices } = useEntitlementChoices();
   const createMut = useCreateEntitlement();
@@ -129,7 +144,11 @@ function EntitlementForm({
             <Select value={draft.access} onValueChange={(v) => patch({ access: v })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {(choices?.access_states ?? []).map((a) => <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>)}
+                {(choices?.access_states ?? []).map((accessState) => (
+                  <SelectItem key={accessState.value} value={accessState.value}>
+                    {accessLabel(accessState.value, accessState.label)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">{t('adminEntitlements.accessHint')}</p>
@@ -169,6 +188,7 @@ function EntitlementForm({
 /* ─── Page ────────────────────────────────────────────────────────────────── */
 export function AdminEntitlementsPage() {
   const { t } = useTranslation();
+  const accessLabel = useAccessLabel();
   const [companyFilter, setCompanyFilter] = useState<string>(ALL);
   const params = companyFilter !== ALL ? { company: Number(companyFilter) } : undefined;
   const { data: rows = [], isError, refetch } = useEntitlements(params);
@@ -226,7 +246,7 @@ export function AdminEntitlementsPage() {
               <TableRow key={e.id}>
                 <TableCell className="text-sm font-medium">{e.company_name}</TableCell>
                 <TableCell className="font-mono text-xs">{e.feature_key}</TableCell>
-                <TableCell><Badge variant={accessVariant(e.access)}>{e.access_display}</Badge></TableCell>
+                <TableCell><Badge variant={accessVariant(e.access)}>{accessLabel(e.access, e.access_display)}</Badge></TableCell>
                 <TableCell className="text-right text-sm tabular-nums">{e.credits ?? '—'}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">{e.expires_at ? e.expires_at.slice(0, 10) : '—'}</TableCell>
                 <TableCell className="text-center">

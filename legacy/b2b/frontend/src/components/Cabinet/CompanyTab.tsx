@@ -19,6 +19,7 @@ import { useUserStore, companyStatusLabels } from '@/store/userStore';
 import { useHasCompanyPermission } from '@/hooks/useCapabilities';
 import { useCountries } from '@/hooks/useMasterData';
 import { accountsApi, type KYCDocument, type Company } from '@/api/accountsApi';
+import { kycDocTypeLabelKey } from '@/lib/codes';
 import { toast } from 'sonner';
 import { ImageUpload } from '@/components/Shared/ImageUpload';
 import { FileUpload } from '@/components/Shared/FileUpload';
@@ -30,6 +31,11 @@ import { FileUpload } from '@/components/Shared/FileUpload';
  */
 export function CompanyTab() {
   const { t } = useTranslation();
+  // `doc_type_display` is the Russian-only lookup name — fallback for an unknown code.
+  const docTypeLabel = (doc: KYCDocument): string => {
+    const key = kycDocTypeLabelKey(doc.doc_type_code);
+    return key ? t(key) : doc.doc_type_display || '';
+  };
   const { company, activeStatus, updateCompany } = useUserStore();
   const isViewerMode = useUserStore((s) => s.isViewerMode);
   // ADR-0005 U2: editing the company profile is gated on the CompanyRole `settings.edit`
@@ -295,8 +301,8 @@ export function CompanyTab() {
                     disabled={loadingDocs}
                     files={docs.map(d => ({
                       id: d.id,
-                      name: d.doc_type_display
-                        ? `${d.doc_type_display} — ${d.original_filename}`
+                      name: docTypeLabel(d)
+                        ? `${docTypeLabel(d)} — ${d.original_filename}`
                         : d.original_filename,
                       url: d.file ?? null,
                       uploaded_at: d.uploaded_at,

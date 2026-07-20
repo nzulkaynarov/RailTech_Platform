@@ -7323,6 +7323,7 @@ export interface components {
              * @description Вид документа из справочника (устав, лицензия, паспорт)
              */
             doc_type: number;
+            readonly doc_type_code: string;
             readonly doc_type_display: string;
             /**
              * Файл
