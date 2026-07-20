@@ -79,13 +79,16 @@ def generate_contract_from_quote(
         from .quotes import _quote_seller_company
 
         seller_company = _quote_seller_company(quote)
+        # Currency from a real priced line, not just the first row — the first row can be a SECTION
+        # header (no frozen_currency). billable() = non-optional ITEM only.
+        first_billable = quote.items.billable().select_related("frozen_currency").first()
         contract = Contract(
             deal=quote.deal,
             quote=quote,
             number=_next_contract_number(seller_company),
             status=_cstatus(ContractStatusCode.DRAFT),
             total_amount=quote.total_incl_vat,
-            currency=quote.items.first().frozen_currency if quote.items.exists() else None,
+            currency=first_billable.frozen_currency if first_billable else None,
             created_by=actor,
             notes=notes,
         )
@@ -167,7 +170,11 @@ def _render_contract_pdf(contract) -> None:
             "deal": contract.deal,
             "company": contract.deal.company,
             "quote": contract.quote,
-            "items": contract.quote.items.select_related("product", "frozen_currency").all(),
+            # A signed contract's specification (Приложение № 1) is the LEGALLY agreed goods:
+            # only billable lines (non-optional ITEM). SECTION/NOTE are not payable line items and
+            # optional lines were quoted outside the offer — printing them here as numbered priced
+            # rows would misstate what the buyer contracted to pay. billable() = the single filter.
+            "items": contract.quote.items.billable().select_related("product", "frozen_currency"),
             **document_brand_context(supplier),
         },
     )

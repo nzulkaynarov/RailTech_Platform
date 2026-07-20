@@ -30,6 +30,10 @@ _BULK_ITEM_WRITABLE_FIELDS = frozenset(
         "discount_percent",
         "lead_time_days",
         "hs_code",
+        # S1: display_type / optionality / explicit row order (reorder + section grouping).
+        "display_type",
+        "is_optional",
+        "position",
     }
 )
 
@@ -191,6 +195,11 @@ _BULK_CREATE_WRITABLE_FIELDS = frozenset(
         "margin_percent",
         "discount_percent",
         "lead_time_days",
+        # S1: a pasted row is an ITEM by default; sections/notes/optionality + explicit order
+        # come from the grid builder (Excel-paste never sets them → plain ITEM lines).
+        "display_type",
+        "is_optional",
+        "position",
     }
 )
 
@@ -291,8 +300,17 @@ def bulk_create_quote_items(user, quote_id, items_payload, request):
         # transaction.atomic + returning here writes nothing — all-or-nothing.
         return None, "QUOTE_ITEMS_BULK_INVALID", rows
 
+    # New lines land at the END of the КП: start after the current max position and hand each
+    # row (that didn't pick its own position) the next slot, preserving paste order. Default
+    # position=0 would otherwise collide with the backfilled first row and interleave the paste.
+    from django.db.models import Max
+
+    next_position = (quote.items.aggregate(mx=Max("position"))["mx"] or 0) + 1
     created_ids = []
     for validated_data in validated:
+        if validated_data.get("position") is None:
+            validated_data["position"] = next_position
+            next_position += 1
         item = QuoteItem(**validated_data)
         # Defer per-row recalc — one full cascade recompute follows for the whole КП.
         item.save(skip_recalculate=True)
@@ -305,7 +323,7 @@ def bulk_create_quote_items(user, quote_id, items_payload, request):
     items = list(
         QuoteItem.objects.filter(quote_id=quote_pk, id__in=created_ids)
         .select_related("product", "product__domain_type", "quote", "offer", "offer__supplier", "frozen_currency")
-        .order_by("id")
+        .order_by("position", "id")
     )
     return items, None, None
 

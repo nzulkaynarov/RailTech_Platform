@@ -108,11 +108,44 @@ class QuoteItemSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("QUOTE_ITEM_LEAD_TIME_INVALID")
         return value
 
+    # Odoo-style display_type: pricing/quantity fields that SECTION/NOTE rows must never carry —
+    # a group header / free-text note has no price. If a client sends any of these non-zero on a
+    # non-ITEM row we reject with SECTION_NOTE_NO_PRICING rather than silently zero it, so the grid
+    # never ships a section with a stray price and the buyer projection can trust the type.
+    _PRICING_FIELDS = (
+        "frozen_base_price",
+        "logistics_cost",
+        "customs_duty",
+        "margin_percent",
+        "discount_percent",
+    )
+
+    def validate(self, attrs):
+        from decimal import Decimal
+
+        # Effective display_type: the payload's value on write, else the existing row's (partial
+        # PATCH may omit it). Only ITEM rows may carry pricing / be marked optional.
+        display_type = attrs.get("display_type")
+        if display_type is None and self.instance is not None:
+            display_type = self.instance.display_type
+        if display_type and display_type != QuoteItem.DisplayType.ITEM:
+            for field_name in self._PRICING_FIELDS:
+                value = attrs.get(field_name)
+                if value is not None and Decimal(str(value)) != Decimal("0"):
+                    raise serializers.ValidationError({field_name: ["SECTION_NOTE_NO_PRICING"]})
+            # A SECTION/NOTE is never an "optional priced line" — it is not a line at all.
+            if attrs.get("is_optional"):
+                raise serializers.ValidationError({"is_optional": ["SECTION_NOTE_NO_PRICING"]})
+        return attrs
+
     class Meta:
         model = QuoteItem
         fields = [
             "id",
             "quote",
+            "display_type",
+            "is_optional",
+            "position",
             "product",
             "product_name",
             "product_domain",

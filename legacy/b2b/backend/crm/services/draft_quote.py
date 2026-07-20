@@ -249,8 +249,12 @@ def generate_draft_quote(deal_id: int, actor: CustomUser) -> Tuple[Optional[Quot
         prefilled = 0
         auto_matched = 0
         item_by_src_pk = {}
-        for src in request_items:
+        for line_index, src in enumerate(request_items):
             data = {field: getattr(src, field) for field in _LINE_FIELDS}
+            # Explicit row order on the new КП grid, following the buyer's request order (request
+            # lines default position=0 — copying that would pile every line at the top once the
+            # seller starts reordering). One deterministic pass = stable grid on first open.
+            data["position"] = line_index
             if not data["product_id"]:
                 resolved_pid = resolved_matches.get(src.pk)
                 if resolved_pid:

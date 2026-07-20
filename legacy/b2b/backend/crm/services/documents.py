@@ -100,6 +100,8 @@ def render_document_profile_preview_html(company) -> str:
 
     sample_items = [
         {
+            "display_type": "ITEM",
+            "line_no": 1,
             "product": None,
             "imported_raw_name": "Подшипник буксовый ЦКБ тип 2726",
             "mpn": "2726",
@@ -111,6 +113,8 @@ def render_document_profile_preview_html(company) -> str:
             "line_total": Decimal("15000000.00"),
         },
         {
+            "display_type": "ITEM",
+            "line_no": 2,
             "product": None,
             "imported_raw_name": "Колодка тормозная композиционная",
             "mpn": "",
@@ -152,6 +156,7 @@ def render_document_profile_preview_html(company) -> str:
     context = {
         "quote": sample_quote,
         "items": sample_items,
+        "optional_items": [],
         "company": sample_buyer,
         **document_brand_context(company, is_demo=False),
     }
@@ -159,25 +164,37 @@ def render_document_profile_preview_html(company) -> str:
 
 
 def client_projection_items(quote) -> list:
-    """Client-facing КП lines with document-level charges distributed proportionally into each
-    line's delivered price.
+    """Client-facing КП rows (Odoo `display_type`) in explicit `position` order, with document-level
+    charges distributed proportionally into each priced line's delivered price.
 
-    Confidentiality: the buyer sees ONE all-in price per line, never a separate «Доп. расходы»
-    line — breaking goods vs charges apart lets the buyer decompose the seller's cost/charge
-    structure on a competitive offer. The charges (freight/handling/…) are spread across the lines
-    in proportion to line value; the rounding remainder lands on the LAST line so the lines sum
-    EXACTLY to quote.total_excl_vat (= subtotal + charges), the pre-VAT base the document taxes.
+    The list mixes three row kinds (each dict carries `display_type`):
+      • ITEM    — a priced line: ONE all-in delivered price (charges spread in). NEVER a separate
+                  «Доп. расходы» line — the goods-vs-charges breakout would let the buyer decompose
+                  the seller's cost/charge structure (confidentiality).
+      • SECTION — a group header (`section_subtotal` = Σ of that section's ITEM line totals, up to
+                  the next SECTION). `line_total` is 0 so Σ line_total stays penny-exact.
+      • NOTE    — a free-text note (`line_total` 0, no price).
+    OPTIONAL lines are excluded here (they are quoted outside the totals — see
+    `client_optional_items`). The charge remainder lands on the LAST priced line so the ITEM rows
+    sum EXACTLY to quote.total_excl_vat (= subtotal + charges), the pre-VAT base the document taxes.
     """
     from decimal import ROUND_HALF_UP, Decimal
 
+    from crm.models import QuoteItem
+
     penny = Decimal("0.01")
-    items = list(quote.items.select_related("product", "frozen_currency").all())
+    items = list(quote.items.select_related("product", "frozen_currency").all())  # position order
     subtotal = quote.subtotal_excl_vat or Decimal("0")
     charges = quote.charges_total or Decimal("0")
-    projected = []
+
+    # Priced lines the charges distribute across = non-optional ITEM rows only. Sections/notes and
+    # optional lines carry no share (sections/notes have no price; optional lines are off-total).
+    priced = [it for it in items if it.display_type == QuoteItem.DisplayType.ITEM and not it.is_optional]
+    projected_line_total: dict = {}
+    projected_unit: dict = {}
     allocated = Decimal("0")
-    last = len(items) - 1
-    for idx, item in enumerate(items):
+    last = len(priced) - 1
+    for idx, item in enumerate(priced):
         base = item.line_total or Decimal("0")
         if charges and subtotal:
             if idx < last:
@@ -189,21 +206,83 @@ def client_projection_items(quote) -> list:
             share = Decimal("0")
         line_total = base + share
         qty = item.quantity or Decimal("1")
-        unit = (line_total / qty).quantize(penny, rounding=ROUND_HALF_UP) if qty else line_total
-        projected.append(
-            {
-                "product": item.product,
-                "imported_raw_name": item.imported_raw_name,
-                "mpn": item.mpn,
-                "gost_drawing": item.gost_drawing,
-                "quantity": item.quantity,
-                "unit": item.unit,
-                "lead_time_days": item.lead_time_days,
-                "final_price_excl_vat": unit,
-                "line_total": line_total,
-            }
-        )
-    return projected
+        projected_line_total[item.id] = line_total
+        projected_unit[item.id] = (line_total / qty).quantize(penny, rounding=ROUND_HALF_UP) if qty else line_total
+
+    rows: list = []
+    line_no = 0  # 1-based sequence over PRICED rows only — sections/notes are not numbered.
+    for item in items:
+        # Optional priced lines are rendered in their own block, not in the main list.
+        if item.display_type == QuoteItem.DisplayType.ITEM and item.is_optional:
+            continue
+        if item.display_type == QuoteItem.DisplayType.SECTION:
+            rows.append(
+                {
+                    "display_type": "SECTION",
+                    "imported_raw_name": item.imported_raw_name,
+                    "line_total": Decimal("0"),
+                    "section_subtotal": Decimal("0"),
+                }
+            )
+        elif item.display_type == QuoteItem.DisplayType.NOTE:
+            rows.append(
+                {
+                    "display_type": "NOTE",
+                    "imported_raw_name": item.imported_raw_name,
+                    "line_total": Decimal("0"),
+                }
+            )
+        else:
+            line_no += 1
+            rows.append(
+                {
+                    "display_type": "ITEM",
+                    "line_no": line_no,
+                    "product": item.product,
+                    "imported_raw_name": item.imported_raw_name,
+                    "mpn": item.mpn,
+                    "gost_drawing": item.gost_drawing,
+                    "quantity": item.quantity,
+                    "unit": item.unit,
+                    "lead_time_days": item.lead_time_days,
+                    "final_price_excl_vat": projected_unit.get(item.id, Decimal("0")),
+                    "line_total": projected_line_total.get(item.id, Decimal("0")),
+                }
+            )
+
+    # Second pass: each SECTION's subtotal = Σ line_total of the ITEM rows below it until the next
+    # SECTION (its group). Ungrouped ITEM rows above the first SECTION are simply not summed.
+    current_section = None
+    for row in rows:
+        if row["display_type"] == "SECTION":
+            current_section = row
+        elif row["display_type"] == "ITEM" and current_section is not None:
+            current_section["section_subtotal"] += row["line_total"]
+    return rows
+
+
+def client_optional_items(quote) -> list:
+    """Optional КП lines (is_optional ITEM rows) in `position` order — shown to the buyer with a
+    price in a SEPARATE «Опционально» block, but NEVER folded into subtotal/НДС/total. No document
+    charges are distributed into them (they are outside the priced offer); the raw per-line price
+    and line total are shown as computed by the engine."""
+    from crm.models import QuoteItem
+
+    return [
+        {
+            "product": item.product,
+            "imported_raw_name": item.imported_raw_name,
+            "mpn": item.mpn,
+            "gost_drawing": item.gost_drawing,
+            "quantity": item.quantity,
+            "unit": item.unit,
+            "lead_time_days": item.lead_time_days,
+            "final_price_excl_vat": item.final_price_excl_vat,
+            "line_total": item.line_total,
+        }
+        for item in quote.items.select_related("product", "frozen_currency").all()
+        if item.display_type == QuoteItem.DisplayType.ITEM and item.is_optional
+    ]
 
 
 def document_brand_context(seller_company, *, is_demo: bool = False) -> dict:

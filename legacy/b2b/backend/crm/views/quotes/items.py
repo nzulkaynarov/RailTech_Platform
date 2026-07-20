@@ -147,8 +147,16 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
         # rows through POST /crm/deals/{id}/add-request-item/ instead (it
         # get-or-creates the DRAFT quote and restricts fields to name + qty).
         self._assert_seller()
-        _assert_seller_owns_quote_deal(self.request, serializer.validated_data.get("quote"))
-        serializer.save()
+        quote = serializer.validated_data.get("quote")
+        _assert_seller_owns_quote_deal(self.request, quote)
+        # A new single line (add-line / add-section) lands at the END unless the caller pinned a
+        # position — default position=0 would otherwise sort it above the backfilled existing rows.
+        save_kwargs = {}
+        if quote is not None and serializer.validated_data.get("position") is None:
+            from django.db.models import Max
+
+            save_kwargs["position"] = (quote.items.aggregate(mx=Max("position"))["mx"] or 0) + 1
+        serializer.save(**save_kwargs)
 
     def update(self, request, *args, **kwargs):
         """Optimistic-concurrency gate for a single-line PATCH (волна 3).

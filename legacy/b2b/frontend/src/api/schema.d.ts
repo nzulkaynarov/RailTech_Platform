@@ -6826,6 +6826,13 @@ export interface components {
          * @enum {string}
          */
         DirectionEnum: "CLIENT" | "SUPPLIER";
+        /**
+         * @description * `ITEM` - Позиция
+         *     * `SECTION` - Раздел
+         *     * `NOTE` - Заметка
+         * @enum {string}
+         */
+        DisplayTypeEnum: "ITEM" | "SECTION" | "NOTE";
         DomainType: {
             readonly id: number;
             /**
@@ -8706,6 +8713,25 @@ export interface components {
              */
             quote?: number;
             /**
+             * Тип строки
+             * @description ITEM — позиция с ценой; SECTION — заголовок раздела; NOTE — заметка
+             *
+             *     * `ITEM` - Позиция
+             *     * `SECTION` - Раздел
+             *     * `NOTE` - Заметка
+             */
+            display_type?: components["schemas"]["DisplayTypeEnum"];
+            /**
+             * Опциональная позиция
+             * @description Показывается с ценой, но не входит в итоги КП (доп. предложение)
+             */
+            is_optional?: boolean;
+            /**
+             * Порядок строки
+             * @description Явный порядок строки внутри КП (для сортировки и перемещения)
+             */
+            position?: number;
+            /**
              * Товар
              * @description Эталонный товар из каталога (после Smart Match)
              */
@@ -9934,6 +9960,25 @@ export interface components {
              */
             quote: number;
             /**
+             * Тип строки
+             * @description ITEM — позиция с ценой; SECTION — заголовок раздела; NOTE — заметка
+             *
+             *     * `ITEM` - Позиция
+             *     * `SECTION` - Раздел
+             *     * `NOTE` - Заметка
+             */
+            display_type?: components["schemas"]["DisplayTypeEnum"];
+            /**
+             * Опциональная позиция
+             * @description Показывается с ценой, но не входит в итоги КП (доп. предложение)
+             */
+            is_optional?: boolean;
+            /**
+             * Порядок строки
+             * @description Явный порядок строки внутри КП (для сортировки и перемещения)
+             */
+            position?: number;
+            /**
              * Товар
              * @description Эталонный товар из каталога (после Smart Match)
              */
@@ -10038,6 +10083,25 @@ export interface components {
              * @description Коммерческое предложение, к которому относится позиция
              */
             quote: number;
+            /**
+             * Тип строки
+             * @description ITEM — позиция с ценой; SECTION — заголовок раздела; NOTE — заметка
+             *
+             *     * `ITEM` - Позиция
+             *     * `SECTION` - Раздел
+             *     * `NOTE` - Заметка
+             */
+            display_type?: components["schemas"]["DisplayTypeEnum"];
+            /**
+             * Опциональная позиция
+             * @description Показывается с ценой, но не входит в итоги КП (доп. предложение)
+             */
+            is_optional?: boolean;
+            /**
+             * Порядок строки
+             * @description Явный порядок строки внутри КП (для сортировки и перемещения)
+             */
+            position?: number;
             /**
              * Товар
              * @description Эталонный товар из каталога (после Smart Match)

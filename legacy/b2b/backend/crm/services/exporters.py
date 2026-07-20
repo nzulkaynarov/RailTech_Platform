@@ -46,24 +46,44 @@ def _line_name(item) -> str:
     return item.product.name if item.product_id and item.product else (item.imported_raw_name or "")
 
 
+def _is_priced(item) -> bool:
+    """A row that actually carries a price (an ITEM — whether billable or optional). SECTION/NOTE
+    are presentation rows and their (zeroed) price/cost cells must render blank, never «0.00»."""
+    from ..models import QuoteItem
+
+    return item.display_type == QuoteItem.DisplayType.ITEM
+
+
+def _priced_money(row, attr) -> str:
+    """Money cell for a line-level amount — blank on SECTION/NOTE (they have no price)."""
+    return _money(getattr(row["item"], attr)) if _is_priced(row["item"]) else ""
+
+
 def _client_columns(pres_ccy: str):
     """The buyer-safe column set — mirrors the PDF table. No cost / margin / landed."""
     return [
+        # № numbers ONLY billable ITEM rows; SECTION/NOTE render as separators (no №) and optional
+        # ITEMs are marked «опц.» — never a plain payable position number (see _spreadsheet_rows).
         ("pos", "№", lambda row: row["pos"]),
+        ("row_type", "Тип", lambda row: row["type_label"]),
         ("name", "Наименование", lambda row: _line_name(row["item"])),
         ("mpn", "Артикул", lambda row: row["item"].mpn or ""),
-        ("quantity", "Кол-во", lambda row: row["item"].quantity),
+        ("quantity", "Кол-во", lambda row: row["item"].quantity if _is_priced(row["item"]) else ""),
         ("unit", "Ед. изм.", lambda row: row["item"].unit or ""),
-        ("lead_time", "Срок, дн.", lambda row: row["item"].lead_time_days or ""),
+        (
+            "lead_time",
+            "Срок, дн.",
+            lambda row: (row["item"].lead_time_days or "") if _is_priced(row["item"]) else "",
+        ),
         (
             "unit_price",
             f"Цена за ед., без НДС ({pres_ccy})",
-            lambda row: _money(row["item"].final_price_excl_vat),
+            lambda row: _priced_money(row, "final_price_excl_vat"),
         ),
         (
             "line_total",
             f"Сумма, без НДС ({pres_ccy})",
-            lambda row: _money(row["item"].line_total),
+            lambda row: _priced_money(row, "line_total"),
         ),
     ]
 
@@ -78,29 +98,60 @@ def _cost_columns(pres_ccy: str):
         (
             "base_price",
             "Себестоимость (база)",
-            lambda row: _money(row["item"].frozen_base_price),
+            lambda row: _priced_money(row, "frozen_base_price"),
         ),
         (
             "base_ccy",
             "Валюта себест.",
-            lambda row: (row["item"].frozen_currency.code if row["item"].frozen_currency_id else "UZS"),
+            lambda row: (
+                (row["item"].frozen_currency.code if row["item"].frozen_currency_id else "UZS")
+                if _is_priced(row["item"])
+                else ""
+            ),
         ),
-        ("customs_duty", "Пошлина", lambda row: _money(row["item"].customs_duty)),
+        ("customs_duty", "Пошлина", lambda row: _priced_money(row, "customs_duty")),
         (
             "landed_cost",
             f"Landed cost ({pres_ccy})",
-            lambda row: _money(row["item"].landed_cost),
+            lambda row: _priced_money(row, "landed_cost"),
         ),
-        ("margin_percent", "Маржа КП, %", lambda row: _money(row["quote"].margin_percent)),
-        ("discount_percent", "Скидка, %", lambda row: _money(row["item"].discount_percent)),
+        # Margin is a КП-level %, meaningful only against a priced line — blank on section/note.
+        (
+            "margin_percent",
+            "Маржа КП, %",
+            lambda row: _money(row["quote"].margin_percent) if _is_priced(row["item"]) else "",
+        ),
+        ("discount_percent", "Скидка, %", lambda row: _priced_money(row, "discount_percent")),
     ]
 
 
 def _spreadsheet_rows(quote: Quote):
-    """Pre-fetched line rows, wrapped with positional index + back-reference to the КП
-    so the column getters can read both the item and КП-level fields (margin)."""
+    """Pre-fetched line rows in `position` order, wrapped with a back-reference to the КП (for the
+    margin getter) plus a display-type-aware № and «Тип» label so the seller sheet never presents a
+    SECTION/NOTE or an optional line as a plain numbered payable position (review MAJOR):
+
+      • billable ITEM (non-optional) → sequential № (1,2,3…), type «Позиция»
+      • optional ITEM               → no № («опц.» marker), type «Опционально» — priced but off-total
+      • SECTION                     → no №, type «Раздел» (a grouping separator)
+      • NOTE                        → no №, type «Заметка»
+    """
+    from ..models import QuoteItem
+
     items = quote.items.select_related("product", "frozen_currency").all()
-    return [{"pos": idx, "item": item, "quote": quote} for idx, item in enumerate(items, start=1)]
+    rows = []
+    pos = 0
+    for item in items:
+        if item.display_type == QuoteItem.DisplayType.SECTION:
+            pos_label, type_label = "", "Раздел"
+        elif item.display_type == QuoteItem.DisplayType.NOTE:
+            pos_label, type_label = "", "Заметка"
+        elif item.is_optional:
+            pos_label, type_label = "опц.", "Опционально"
+        else:
+            pos += 1
+            pos_label, type_label = pos, "Позиция"
+        rows.append({"pos": pos_label, "type_label": type_label, "item": item, "quote": quote})
+    return rows
 
 
 def _export_spreadsheet(quote: Quote, fmt: str, *, include_costs: bool) -> HttpResponse:

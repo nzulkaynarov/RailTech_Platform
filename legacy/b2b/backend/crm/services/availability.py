@@ -145,6 +145,11 @@ def _clone_tranche(source, tranche: Tranche):
         quote_id=source.quote_id,
         product_id=source.product_id,
         offer_id=source.offer_id,
+        # Inherit the source line's row order so tranche clones stay grouped with it (default 0
+        # would otherwise float every clone to the top of a positioned КП).
+        position=source.position,
+        display_type=source.display_type,
+        is_optional=source.is_optional,
         imported_raw_name=source.imported_raw_name,
         name_canonical=source.name_canonical,
         unit=source.unit,

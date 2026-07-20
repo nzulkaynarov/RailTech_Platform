@@ -79,6 +79,12 @@ def generate_invoice_from_contract(
     from .quotes import _quote_seller_company
 
     seller_company = _quote_seller_company(quote)
+    # ONLY billable lines become InvoiceItems: SECTION/NOTE carry no price and optional ITEMs are
+    # quoted OUTSIDE the КП totals. Billing every row (the old .items.all()) put optional/section/
+    # note lines on the invoice so Σ(InvoiceItem.line_total) overshot Invoice.total (which mirrors
+    # the header total that already excludes them) — the invoice stopped adding up. One query,
+    # reused for the currency probe and the line loop.
+    billable_items = list(quote.items.billable().select_related("product", "frozen_currency"))
     invoice = Invoice.objects.create(
         deal=contract.deal,
         contract=contract,
@@ -89,11 +95,11 @@ def generate_invoice_from_contract(
         subtotal_excl_vat=quote.subtotal_excl_vat,
         vat_amount=quote.vat_amount,
         total_incl_vat=quote.total_incl_vat,
-        currency=quote.items.first().frozen_currency if quote.items.exists() else None,
+        currency=billable_items[0].frozen_currency if billable_items else None,
         created_by=actor,
     )
 
-    for qi in quote.items.select_related("product").all():
+    for qi in billable_items:
         InvoiceItem.objects.create(
             invoice=invoice,
             description=(qi.product.name if qi.product else qi.imported_raw_name) or "Позиция",

@@ -322,8 +322,16 @@ class Quote(models.Model):
         """
         if self.delivery_lead_time_days is not None:
             return self.delivery_lead_time_days
-        # max() по позициям; 0, если позиций нет или у всех срок 0.
-        return max((item.lead_time_days for item in self.items.all()), default=0)
+        # max() по включённым позициям (ITEM, не optional); SECTION/NOTE и опциональные строки
+        # не влияют на срок. 0, если таких позиций нет или у всех срок 0.
+        return max(
+            (
+                item.lead_time_days
+                for item in self.items.all()
+                if item.display_type == QuoteItem.DisplayType.ITEM and not item.is_optional
+            ),
+            default=0,
+        )
 
     def recalculate_totals(self):
         """
@@ -332,6 +340,22 @@ class Quote(models.Model):
         from ..services import QuoteCalculationService
 
         return QuoteCalculationService.recalculate_quote(self.pk)
+
+
+class QuoteItemQuerySet(models.QuerySet):
+    """QuoteItem querysets with the ONE «counts as money» filter (Rule 8 — single source)."""
+
+    def billable(self):
+        """Real, payable lines only — priced ITEM rows that are NOT optional.
+
+        SECTION/NOTE are presentation (group header / free-text, no price); an optional ITEM is
+        shown to the client WITH a price but sits OUTSIDE the totals (доп. предложение). This is THE
+        single source of the invariant the КП header total already enforces (see
+        QuoteCalculationService.recalculate_quote). EVERY downstream document that materialises КП
+        lines — инвойс (InvoiceItem), договор-спецификация, seller-экспорт — MUST filter through
+        here, or it bills/prints rows the header total excludes and the financial document stops
+        adding up (Σ строк ≠ ИТОГО)."""
+        return self.filter(display_type=self.model.DisplayType.ITEM, is_optional=False)
 
 
 @pghistory.track(
@@ -350,12 +374,53 @@ class QuoteItem(models.Model):
     Для услуг (domain=SERVICES): logistics и customs = 0, прямая наценка.
     """
 
+    class DisplayType(models.TextChoices):
+        ITEM = "ITEM", _("Позиция")
+        SECTION = "SECTION", _("Раздел")
+        NOTE = "NOTE", _("Заметка")
+
     quote = models.ForeignKey(
         "crm.Quote",
         on_delete=models.CASCADE,
         related_name="items",
         verbose_name=_("КП"),
         help_text=_("Коммерческое предложение, к которому относится позиция"),
+    )
+
+    # Default manager carries .billable() so `quote.items.billable()` works everywhere (the reverse
+    # related manager subclasses the model's default manager). use_in_migrations stays False → no
+    # schema/migration churn (this is a pure query helper, not a model-state change).
+    objects = QuoteItemQuerySet.as_manager()
+
+    # Odoo-style `display_type`: ONE model represents priced lines, group headers and free-text
+    # notes — no separate table. ITEM = обычная позиция (с ценой, входит в итоги); SECTION =
+    # заголовок группы (жирный, с подытогом, БЕЗ цен); NOTE = заметка (курсив, БЕЗ цен). Only
+    # ITEM rows carry pricing and feed subtotal/каскад/НДС/маржу; SECTION/NOTE are presentation.
+    display_type = models.CharField(
+        max_length=10,
+        choices=DisplayType.choices,
+        default=DisplayType.ITEM,
+        db_index=True,
+        verbose_name=_("Тип строки"),
+        help_text=_("ITEM — позиция с ценой; SECTION — заголовок раздела; NOTE — заметка"),
+    )
+    # Опциональная позиция: показывается клиенту с ценой, но НЕ входит в итоги КП
+    # (subtotal/каскад/НДС) и НЕ учитывается в марже/себестоимости. Отдельный блок
+    # «Опционально» в PDF. Применяется только к ITEM (SECTION/NOTE и так вне итогов).
+    is_optional = models.BooleanField(
+        default=False,
+        db_index=True,
+        verbose_name=_("Опциональная позиция"),
+        help_text=_("Показывается с ценой, но не входит в итоги КП (доп. предложение)"),
+    )
+    # Явный порядок строк внутри КП (для перемещения ↑/↓ и группировки под разделами).
+    # Все querysets QuoteItem сортируются по position, затем id. Backfill в миграции 0062
+    # проставил существующим строкам порядковый номер в текущем порядке (по id).
+    position = models.IntegerField(
+        default=0,
+        db_index=True,
+        verbose_name=_("Порядок строки"),
+        help_text=_("Явный порядок строки внутри КП (для сортировки и перемещения)"),
     )
 
     # Привязка к каталогу
@@ -556,7 +621,8 @@ class QuoteItem(models.Model):
     class Meta:
         verbose_name = _("Позиция КП")
         verbose_name_plural = _("Позиции КП")
-        ordering = ["id"]
+        # position first (explicit row order for grouping/move), id as stable tie-break.
+        ordering = ["position", "id"]
 
     @property
     def line_total(self):

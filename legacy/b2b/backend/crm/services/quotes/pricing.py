@@ -24,7 +24,12 @@ def effective_quote_lead_time(quote, items=None) -> int:
     if quote.delivery_lead_time_days is not None:
         return quote.delivery_lead_time_days
     rows = items if items is not None else quote.items.all()
-    return max((row.lead_time_days for row in rows), default=0)
+    # Only real, included priced lines drive the КП delivery time — SECTION/NOTE rows have no
+    # срок, and an optional line is quoted outside the offer, so it must not stretch the term.
+    return max(
+        (row.lead_time_days for row in rows if row.display_type == QuoteItem.DisplayType.ITEM and not row.is_optional),
+        default=0,
+    )
 
 
 def _positive_fx_rate(value):
@@ -69,6 +74,18 @@ class QuoteCalculationService:
         Incoterm basis instead drives which document charges auto-apply (the per-basis global
         ChargeTemplate seed → apply_charge_template_to_quote).
         """
+        # SECTION/NOTE are presentation rows (group header / free-text), not priced lines — they
+        # carry no cost inputs and never contribute to any total. Zero their price fields and skip
+        # the whole pipeline so a stray frozen_base_price on such a row can never leak into a sum.
+        if item.display_type != QuoteItem.DisplayType.ITEM:
+            item.logistics_cost = Decimal("0")
+            item.customs_duty = Decimal("0")
+            item.landed_cost = Decimal("0")
+            item.final_price_excl_vat = Decimal("0")
+            if commit:
+                item.save(update_fields=["landed_cost", "final_price_excl_vat", "logistics_cost", "customs_duty"])
+            return item
+
         is_service = item.product and item.product.domain_type and item.product.domain_type.code == "SERVICES"
 
         # F3.8 (owner directive): the per-line cost is ONLY себестоимость (base) + customs
@@ -204,7 +221,13 @@ class QuoteCalculationService:
         # 3. Aggregation for Quote totals (use QuerySet, not list).
         # UBL 2.1: LineExtensionAmount (Σ позиций) + document-level AllowanceCharge
         # (Σ статей расхода со знаком) = TaxExclusiveAmount → +НДС → TaxInclusiveAmount.
-        totals = quote.items.aggregate(subtotal=models.Sum(models.F("final_price_excl_vat") * models.F("quantity")))
+        # ONLY real priced lines feed the subtotal: display_type=ITEM AND NOT optional. SECTION/
+        # NOTE are presentation rows; optional ITEMs are shown with a price but quoted OUTSIDE the
+        # totals (доп. предложение). Same filter drives economics/margin below — optional never
+        # distorts the seller's margin governance.
+        totals = quote.items.billable().aggregate(
+            subtotal=models.Sum(models.F("final_price_excl_vat") * models.F("quantity"))
+        )
         subtotal = totals["subtotal"] or Decimal("0")
 
         # Ставка НДС берётся из КП (заморожена из БД), не хардкодится в коде.
@@ -258,7 +281,10 @@ def compute_quote_economics(quote) -> dict:
     cost_amount, default = billed), so a КП billed below its true cost shows the loss.
     `below_cost` is the hard-stop flag; `below_floor` drives the warn+approval path.
     Returns Decimals (the serializer/JSON layer stringifies)."""
-    items = list(quote.items.select_related("frozen_currency").all())
+    # Economics mirror the subtotal filter: only the priced, non-optional ITEM lines count toward
+    # COGS / margin / the FX-missing guard. SECTION/NOTE carry no cost; an optional line is quoted
+    # outside the totals, so its (real) cost must not drag the seller's margin governance.
+    items = list(quote.items.select_related("frozen_currency").billable())
     total_landed_cost = sum((it.landed_cost * it.quantity for it in items), Decimal("0")).quantize(
         Decimal("0.01"), rounding=ROUND_HALF_UP
     )
