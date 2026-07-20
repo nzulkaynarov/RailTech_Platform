@@ -46,7 +46,7 @@ def restore_zero_margins(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("crm", "0062_alter_quoteitem_options_and_more"),
+        ("crm", "0063_fix_document_currency_from_quote"),
     ]
 
     operations = [
