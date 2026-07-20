@@ -25089,8 +25089,11 @@
                         "readOnly": true
                     },
                     "economics": {
-                        "type": "object",
-                        "additionalProperties": {},
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/QuoteEconomics"
+                            }
+                        ],
                         "nullable": true,
                         "readOnly": true
                     },
@@ -25301,6 +25304,72 @@
                 "required": [
                     "charge_type",
                     "quote"
+                ]
+            },
+            "QuoteEconomics": {
+                "type": "object",
+                "description": "Documentation-only shape of ``compute_quote_economics()`` as it lands in the API.\n\nNOT used for (de)serialization — ``QuoteSerializer.get_economics`` builds the dict by hand\nand stringifies every ``Decimal``. This class exists so drf-spectacular emits a real object\nschema (and therefore a real TypeScript type) instead of an opaque ``{[key]: unknown}``,\nwhich let the backend and the SPA drift silently — the below-floor gate reads\n``below_floor`` / ``below_cost`` / ``min_margin_percent`` off a hand-written local type.\n\nThe service has exactly ONE unconditional ``return`` with these 11 keys, so every field is\nalways present — none is ``required=False``. The OBJECT itself is nullable: the serializer\nreturns ``None`` when the view did not ask for economics (``include_economics``) or when the\nviewer lacks ``quote.view_cost_margin`` (``_can_see_costs``). Keep this in sync with\n``crm/services/quotes/pricing.py::compute_quote_economics`` —\n``crm/tests/test_quote_economics_schema.py`` fails if they diverge.",
+                "properties": {
+                    "total_landed_cost": {
+                        "type": "string",
+                        "description": "Себестоимость (landed cost × qty) по billable-строкам."
+                    },
+                    "gross_profit": {
+                        "type": "string",
+                        "description": "Валовая прибыль = subtotal − total_landed_cost."
+                    },
+                    "gross_margin_percent": {
+                        "type": "string",
+                        "description": "Валовая маржа НА ЦЕНЕ (прибыль/цена), 1 знак."
+                    },
+                    "markup_percent": {
+                        "type": "string",
+                        "description": "Наценка на себестоимость (справочно), 1 знак."
+                    },
+                    "charge_cost_total": {
+                        "type": "string",
+                        "description": "Реальная себестоимость статей затрат для продавца."
+                    },
+                    "operating_profit": {
+                        "type": "string",
+                        "description": "tax_exclusive − total_landed_cost − charge_cost_total (реальный операционный результат)."
+                    },
+                    "below_cost": {
+                        "type": "boolean",
+                        "description": "Жёсткий стоп: цена не покрывает себестоимость + статьи."
+                    },
+                    "below_floor": {
+                        "type": "boolean",
+                        "description": "Маржа ниже порога компании → путь предупреждение+согласование."
+                    },
+                    "min_margin_percent": {
+                        "type": "string",
+                        "description": "Порог маржи компании (CompanySettings), %."
+                    },
+                    "target_margin_percent": {
+                        "type": "string",
+                        "description": "Целевая маржа компании (CompanySettings), %."
+                    },
+                    "fx_missing": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Коды валют без разрешимого курса — блокируют submit/send (KP-01)."
+                    }
+                },
+                "required": [
+                    "below_cost",
+                    "below_floor",
+                    "charge_cost_total",
+                    "fx_missing",
+                    "gross_margin_percent",
+                    "gross_profit",
+                    "markup_percent",
+                    "min_margin_percent",
+                    "operating_profit",
+                    "target_margin_percent",
+                    "total_landed_cost"
                 ]
             },
             "QuoteItem": {

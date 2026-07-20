@@ -7,6 +7,7 @@ seller-only redaction of the КП-level cost breakdown (charges, margin, FX).
 
 from decimal import Decimal, InvalidOperation
 
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from crm.models import Quote, QuoteApprovalStep
@@ -15,6 +16,42 @@ from master_data.serializers import DeliveryBasisSerializer
 
 from .charge import QuoteChargeSerializer
 from .item import QuoteItemSerializer
+
+
+class QuoteEconomicsSerializer(serializers.Serializer):
+    """Documentation-only shape of ``compute_quote_economics()`` as it lands in the API.
+
+    NOT used for (de)serialization — ``QuoteSerializer.get_economics`` builds the dict by hand
+    and stringifies every ``Decimal``. This class exists so drf-spectacular emits a real object
+    schema (and therefore a real TypeScript type) instead of an opaque ``{[key]: unknown}``,
+    which let the backend and the SPA drift silently — the below-floor gate reads
+    ``below_floor`` / ``below_cost`` / ``min_margin_percent`` off a hand-written local type.
+
+    The service has exactly ONE unconditional ``return`` with these 11 keys, so every field is
+    always present — none is ``required=False``. The OBJECT itself is nullable: the serializer
+    returns ``None`` when the view did not ask for economics (``include_economics``) or when the
+    viewer lacks ``quote.view_cost_margin`` (``_can_see_costs``). Keep this in sync with
+    ``crm/services/quotes/pricing.py::compute_quote_economics`` —
+    ``crm/tests/test_quote_economics_schema.py`` fails if they diverge.
+    """
+
+    # Decimals are stringified by get_economics() → strings on the wire, not numbers.
+    total_landed_cost = serializers.CharField(help_text="Себестоимость (landed cost × qty) по billable-строкам.")
+    gross_profit = serializers.CharField(help_text="Валовая прибыль = subtotal − total_landed_cost.")
+    gross_margin_percent = serializers.CharField(help_text="Валовая маржа НА ЦЕНЕ (прибыль/цена), 1 знак.")
+    markup_percent = serializers.CharField(help_text="Наценка на себестоимость (справочно), 1 знак.")
+    charge_cost_total = serializers.CharField(help_text="Реальная себестоимость статей затрат для продавца.")
+    operating_profit = serializers.CharField(
+        help_text="tax_exclusive − total_landed_cost − charge_cost_total (реальный операционный результат)."
+    )
+    below_cost = serializers.BooleanField(help_text="Жёсткий стоп: цена не покрывает себестоимость + статьи.")
+    below_floor = serializers.BooleanField(help_text="Маржа ниже порога компании → путь предупреждение+согласование.")
+    min_margin_percent = serializers.CharField(help_text="Порог маржи компании (CompanySettings), %.")
+    target_margin_percent = serializers.CharField(help_text="Целевая маржа компании (CompanySettings), %.")
+    fx_missing = serializers.ListField(
+        child=serializers.CharField(),
+        help_text="Коды валют без разрешимого курса — блокируют submit/send (KP-01).",
+    )
 
 
 class QuoteApprovalStepSerializer(serializers.ModelSerializer):
@@ -178,6 +215,7 @@ class QuoteSerializer(serializers.ModelSerializer):
             cleaned[str(code).upper()] = str(parsed)
         return cleaned
 
+    @extend_schema_field(QuoteEconomicsSerializer(allow_null=True))
     def get_economics(self, obj) -> dict | None:
         if not self.context.get("include_economics"):
             return None
