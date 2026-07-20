@@ -1,9 +1,32 @@
 from drf_spectacular.utils import extend_schema, extend_schema_view
-from rest_framework import permissions, viewsets
+from rest_framework import permissions, serializers, viewsets
 from rest_framework.response import Response
 
 from accounts.models import SystemRole, WorkspaceRole
 from core.permissions import OperatorScoped
+
+
+class CompanyTypeLookupSerializer(serializers.Serializer):
+    """Response shape for the CompanyType lookup feed ({id, code, name})."""
+
+    id = serializers.IntegerField()
+    code = serializers.CharField()
+    name = serializers.CharField()
+
+
+class SystemRoleLookupSerializer(serializers.Serializer):
+    """Response shape for the SystemRole lookup feed ({code, name})."""
+
+    code = serializers.CharField()
+    name = serializers.CharField()
+
+
+class WorkspaceRoleLookupSerializer(serializers.Serializer):
+    """Response shape for the WorkspaceRole lookup feed ({code, name, applicable_to_types})."""
+
+    code = serializers.CharField()
+    name = serializers.CharField()
+    applicable_to_types = serializers.ListField(child=serializers.CharField())
 
 
 @extend_schema_view(
@@ -15,6 +38,7 @@ class CompanyTypeViewSet(viewsets.ReadOnlyModelViewSet):
     from accounts.models import CompanyType
 
     queryset = CompanyType.objects.filter(is_active=True).order_by("sort_order", "name")
+    serializer_class = CompanyTypeLookupSerializer
     permission_classes = [permissions.IsAuthenticated]
     pagination_class = None
 
@@ -29,6 +53,7 @@ class CompanyTypeViewSet(viewsets.ReadOnlyModelViewSet):
 )
 class SystemRoleViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = SystemRole.objects.all().order_by("sort_order", "name")
+    serializer_class = SystemRoleLookupSerializer
     permission_classes = [permissions.IsAuthenticated, OperatorScoped]
     operator_permission = "users.view"  # read-only lookup for the admin Users page
     pagination_class = None
@@ -56,6 +81,7 @@ class WorkspaceRoleViewSet(viewsets.ReadOnlyModelViewSet):
         .prefetch_related("applicable_to_types")
         .order_by("sort_order", "name")
     )
+    serializer_class = WorkspaceRoleLookupSerializer
     permission_classes = [permissions.IsAuthenticated]
     pagination_class = None
 

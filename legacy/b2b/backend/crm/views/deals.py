@@ -568,11 +568,19 @@ class DealViewSet(viewsets.ModelViewSet):
         )
 
 
+class DealStageLookupSerializer(drf_serializers.Serializer):
+    """Response shape for the DealStage lookup feed ({code, name})."""
+
+    code = drf_serializers.CharField()
+    name = drf_serializers.CharField()
+
+
 @extend_schema_view(
     list=extend_schema(summary="List deal stages", tags=["CRM"]),
 )
 class DealStageViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = DealStage.objects.all().order_by("sort_order", "name")
+    serializer_class = DealStageLookupSerializer
     permission_classes = [IsAuthenticated]
     pagination_class = None
 

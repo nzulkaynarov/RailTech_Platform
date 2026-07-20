@@ -16,7 +16,8 @@ from __future__ import annotations
 from datetime import timedelta
 
 from django.utils import timezone
-from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema, inline_serializer
+from rest_framework import serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -53,6 +54,15 @@ def record_break_glass(operator, *, entity_type: str, entity_id: int, reason: st
     summary="Open a break-glass access grant (audited, time-boxed)",
     description="Records a reason-required, entity-scoped BREAK_GLASS log so an operator's "
     "access to a tenant's private deal/quote/contract is attributable and expires.",
+    request=inline_serializer(
+        "BreakGlassRequest",
+        fields={
+            "entity_type": serializers.CharField(),
+            "entity_id": serializers.IntegerField(),
+            "reason": serializers.CharField(),
+            "minutes": serializers.IntegerField(required=False),
+        },
+    ),
     responses={201: OpenApiResponse(description="Break-glass grant recorded")},
     tags=["Admin"],
 )

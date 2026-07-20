@@ -539,7 +539,7 @@ export interface paths {
          * List company types
          * @description Lightweight public lookup for CompanyType (CLIENT / SUPPLIER / MANUFACTURER / ...).
          */
-        get: operations["accounts_company_types_retrieve"];
+        get: operations["accounts_company_types_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -556,7 +556,7 @@ export interface paths {
             cookie?: never;
         };
         /** @description Lightweight public lookup for CompanyType (CLIENT / SUPPLIER / MANUFACTURER / ...). */
-        get: operations["accounts_company_types_retrieve_2"];
+        get: operations["accounts_company_types_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -966,7 +966,7 @@ export interface paths {
             cookie?: never;
         };
         /** List system roles */
-        get: operations["accounts_system_roles_retrieve"];
+        get: operations["accounts_system_roles_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -983,7 +983,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get system role */
-        get: operations["accounts_system_roles_retrieve_2"];
+        get: operations["accounts_system_roles_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1307,7 +1307,7 @@ export interface paths {
          *       ?company_type=CLIENT -- return only roles applicable to CLIENT companies
          *                              (plus universal roles without type restriction).
          */
-        get: operations["accounts_workspace_roles_retrieve"];
+        get: operations["accounts_workspace_roles_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1331,7 +1331,7 @@ export interface paths {
          *       ?company_type=CLIENT -- return only roles applicable to CLIENT companies
          *                              (plus universal roles without type restriction).
          */
-        get: operations["accounts_workspace_roles_retrieve_2"];
+        get: operations["accounts_workspace_roles_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3180,7 +3180,7 @@ export interface paths {
             cookie?: never;
         };
         /** List deal stages */
-        get: operations["crm_deal_stages_retrieve"];
+        get: operations["crm_deal_stages_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3196,7 +3196,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["crm_deal_stages_retrieve_2"];
+        get: operations["crm_deal_stages_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4118,7 +4118,7 @@ export interface paths {
             cookie?: never;
         };
         /** List quote statuses */
-        get: operations["crm_quote_statuses_retrieve"];
+        get: operations["crm_quote_statuses_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4134,7 +4134,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["crm_quote_statuses_retrieve_2"];
+        get: operations["crm_quote_statuses_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5438,10 +5438,10 @@ export interface components {
             total_amount?: string;
             /** Format: uri */
             readonly pdf_file: string | null;
-            readonly pdf_url: string;
+            readonly pdf_url: string | null;
             /** Format: uri */
             signed_file?: string | null;
-            readonly signed_file_url: string;
+            readonly signed_file_url: string | null;
             notes?: string;
             /** Format: date-time */
             readonly created_at: string;
@@ -5628,6 +5628,12 @@ export interface components {
              */
             company?: number | null;
         };
+        BreakGlassRequestRequest: {
+            entity_type: string;
+            entity_id: number;
+            reason: string;
+            minutes?: number;
+        };
         BulkCreateQuoteItemsRequestRequest: {
             quote: number;
             items: {
@@ -5639,6 +5645,91 @@ export interface components {
             items: {
                 [key: string]: unknown;
             }[];
+        };
+        CatalogCurrency: {
+            readonly id: number;
+            /**
+             * Код
+             * @description Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')
+             */
+            code: string;
+            /**
+             * Символ
+             * @description Символ валюты (₽, $, €, сўм)
+             */
+            symbol?: string;
+        };
+        CatalogCurrencyRequest: {
+            /**
+             * Код
+             * @description Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')
+             */
+            code: string;
+            /**
+             * Символ
+             * @description Символ валюты (₽, $, €, сўм)
+             */
+            symbol?: string;
+        };
+        CatalogDeliveryBasis: {
+            readonly id: number;
+            /**
+             * Код
+             * @description Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')
+             */
+            code: string;
+            /**
+             * Название
+             * @description Отображаемое название
+             */
+            name: string;
+            /**
+             * Описание
+             * @description Описание условий поставки по Incoterms
+             */
+            description?: string;
+        };
+        CatalogDeliveryBasisRequest: {
+            /**
+             * Код
+             * @description Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')
+             */
+            code: string;
+            /**
+             * Название
+             * @description Отображаемое название
+             */
+            name: string;
+            /**
+             * Описание
+             * @description Описание условий поставки по Incoterms
+             */
+            description?: string;
+        };
+        CatalogUnitOfMeasure: {
+            readonly id: number;
+            /**
+             * Код
+             * @description Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')
+             */
+            code: string;
+            /**
+             * Название
+             * @description Отображаемое название
+             */
+            name: string;
+        };
+        CatalogUnitOfMeasureRequest: {
+            /**
+             * Код
+             * @description Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')
+             */
+            code: string;
+            /**
+             * Название
+             * @description Отображаемое название
+             */
+            name: string;
         };
         Category: {
             readonly id: number;
@@ -5891,8 +5982,8 @@ export interface components {
              */
             readonly created_at: string;
             readonly kyc_documents: components["schemas"]["KYCDocument"][];
-            readonly user_count: string;
-            readonly company_types: string;
+            readonly user_count: number;
+            readonly company_types: unknown[];
         };
         /**
          * @description The branded requisites a company prints on its own КП / contract documents.
@@ -5914,7 +6005,7 @@ export interface components {
              * @description Логотип, печатаемый в шапке КП / договора
              */
             readonly logo: string | null;
-            readonly logo_url: string;
+            readonly logo_url: string | null;
             /**
              * Полное юридическое наименование
              * @description Наименование организации для документов (напр. ООО «РемПуть»)
@@ -6188,6 +6279,11 @@ export interface components {
              */
             can_buy?: boolean;
         };
+        CompanyPermissionCatalog: {
+            groups: {
+                [key: string]: unknown;
+            }[];
+        };
         CompanyRequest: {
             /**
              * Название
@@ -6268,7 +6364,7 @@ export interface components {
              * @description Полноправная роль администратора компании — нельзя удалить/урезать
              */
             readonly is_system: boolean;
-            readonly member_count: string;
+            readonly member_count: number | null;
             /** Format: date-time */
             readonly created_at: string;
             /** Format: date-time */
@@ -6460,6 +6556,12 @@ export interface components {
              */
             readonly updated_at: string;
         };
+        /** @description Response shape for the CompanyType lookup feed ({id, code, name}). */
+        CompanyTypeLookup: {
+            id: number;
+            code: string;
+            name: string;
+        };
         Contact: {
             readonly id: number;
             /**
@@ -6507,13 +6609,13 @@ export interface components {
              * Format: uri
              */
             readonly pdf_file: string | null;
-            readonly pdf_url: string;
+            readonly pdf_url: string | null;
             /**
              * Подписанный скан/скан-копия
              * Format: uri
              */
             signed_file?: string | null;
-            readonly signed_file_url: string;
+            readonly signed_file_url: string | null;
             /** Подписал со стороны клиента */
             readonly client_signer: number | null;
             readonly client_signer_name: string;
@@ -6524,8 +6626,8 @@ export interface components {
             readonly manager_signer_name: string;
             /** Format: date-time */
             readonly manager_signed_at: string | null;
-            readonly viewer_can_sign_client: string;
-            readonly viewer_can_sign_manager: string;
+            readonly viewer_can_sign_client: boolean;
+            readonly viewer_can_sign_manager: boolean;
             /** Format: date */
             valid_from?: string | null;
             /** Format: date */
@@ -6632,6 +6734,21 @@ export interface components {
              */
             code: string;
             /**
+             * Название
+             * @description Отображаемое название
+             */
+            name: string;
+            /**
+             * Порядок сортировки
+             * @description Порядок отображения в интерфейсе
+             */
+            sort_order?: number;
+            /**
+             * Активен
+             * @description Неактивные записи скрыты в формах выбора
+             */
+            is_active?: boolean;
+            /**
              * Символ
              * @description Символ валюты (₽, $, €, сўм)
              */
@@ -6643,6 +6760,21 @@ export interface components {
              * @description Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')
              */
             code: string;
+            /**
+             * Название
+             * @description Отображаемое название
+             */
+            name: string;
+            /**
+             * Порядок сортировки
+             * @description Порядок отображения в интерфейсе
+             */
+            sort_order?: number;
+            /**
+             * Активен
+             * @description Неактивные записи скрыты в формах выбора
+             */
+            is_active?: boolean;
             /**
              * Символ
              * @description Символ валюты (₽, $, €, сўм)
@@ -6670,9 +6802,10 @@ export interface components {
              */
             manager?: number | null;
             readonly manager_name: string;
-            readonly assigned_to: string;
-            readonly assigned_to_name: string;
-            readonly assigned_at: string;
+            readonly assigned_to: number | null;
+            readonly assigned_to_name: string | null;
+            /** Format: date-time */
+            readonly assigned_at: string | null;
             /**
              * Этап воронки
              * @description Текущий этап сделки в воронке продаж
@@ -6761,15 +6894,17 @@ export interface components {
             stage?: number | null;
             readonly stage_code: string;
             readonly stage_name: string;
-            readonly total_value: string;
+            /** Format: double */
+            readonly total_value: number;
             /**
              * Менеджер
              * @description Ответственный менеджер RailTech
              */
             manager?: number | null;
-            readonly assigned_to: string;
-            readonly assigned_to_name: string;
-            readonly assigned_at: string;
+            readonly assigned_to: number | null;
+            readonly assigned_to_name: string | null;
+            /** Format: date-time */
+            readonly assigned_at: string | null;
             readonly active_quote: components["schemas"]["Quote"];
             /** @description Seller companies this RFQ is routed to (multi-seller routing). */
             readonly target_sellers_data: unknown[];
@@ -6778,6 +6913,11 @@ export interface components {
              * Format: date-time
              */
             readonly created_at: string;
+        };
+        /** @description Response shape for the DealStage lookup feed ({code, name}). */
+        DealStageLookup: {
+            code: string;
+            name: string;
         };
         /**
          * @description * `APPROVE` - APPROVE
@@ -6798,10 +6938,40 @@ export interface components {
              */
             name: string;
             /**
+             * Порядок сортировки
+             * @description Порядок отображения в интерфейсе
+             */
+            sort_order?: number;
+            /**
+             * Активен
+             * @description Неактивные записи скрыты в формах выбора
+             */
+            is_active?: boolean;
+            /**
              * Описание
              * @description Описание условий поставки по Incoterms
              */
             description?: string;
+            /**
+             * Продавец оплачивает фрахт
+             * @description Основная перевозка лежит на продавце (C- и D-термы)
+             */
+            seller_pays_freight?: boolean;
+            /**
+             * Продавец оплачивает страхование
+             * @description Продавец несёт транзитный риск/страхование груза (CIF, CIP, D-термы)
+             */
+            seller_pays_insurance?: boolean;
+            /**
+             * Продавец оплачивает импортную растаможку
+             * @description Импортная пошлина/оформление/НДС на стороне продавца (только DDP)
+             */
+            seller_pays_import?: boolean;
+            /**
+             * Продавец оплачивает доставку до места
+             * @description Доставка до названного места назначения (D-термы)
+             */
+            seller_pays_delivery?: boolean;
         };
         DeliveryBasisRequest: {
             /**
@@ -6815,10 +6985,40 @@ export interface components {
              */
             name: string;
             /**
+             * Порядок сортировки
+             * @description Порядок отображения в интерфейсе
+             */
+            sort_order?: number;
+            /**
+             * Активен
+             * @description Неактивные записи скрыты в формах выбора
+             */
+            is_active?: boolean;
+            /**
              * Описание
              * @description Описание условий поставки по Incoterms
              */
             description?: string;
+            /**
+             * Продавец оплачивает фрахт
+             * @description Основная перевозка лежит на продавце (C- и D-термы)
+             */
+            seller_pays_freight?: boolean;
+            /**
+             * Продавец оплачивает страхование
+             * @description Продавец несёт транзитный риск/страхование груза (CIF, CIP, D-термы)
+             */
+            seller_pays_insurance?: boolean;
+            /**
+             * Продавец оплачивает импортную растаможку
+             * @description Импортная пошлина/оформление/НДС на стороне продавца (только DDP)
+             */
+            seller_pays_import?: boolean;
+            /**
+             * Продавец оплачивает доставку до места
+             * @description Доставка до названного места назначения (D-термы)
+             */
+            seller_pays_delivery?: boolean;
         };
         /**
          * @description * `CLIENT` - Клиент (они покупают у нас)
@@ -7064,7 +7264,7 @@ export interface components {
             currency?: number | null;
             /** Format: uri */
             readonly pdf_file: string | null;
-            readonly pdf_url: string;
+            readonly pdf_url: string | null;
             notes?: string;
             readonly items: components["schemas"]["InvoiceItem"][];
             readonly payments: components["schemas"]["Payment"][];
@@ -7240,6 +7440,10 @@ export interface components {
          * @enum {string}
          */
         LevelEnum: "INFO" | "SUCCESS" | "WARNING" | "ERROR";
+        LogoutRequestRequest: {
+            all?: boolean;
+            refresh?: string;
+        };
         /**
          * @description OEM brand lookup (catalog.Manufacturer) — the canonical `Product.brand` source.
          *
@@ -7275,6 +7479,13 @@ export interface components {
              */
             is_active?: boolean;
         };
+        MatchCatalogRequestRequest: {
+            lines: {
+                [key: string]: unknown;
+            }[];
+            domain_code?: string;
+            top_k?: number;
+        };
         MemberCapabilitiesRequest: {
             member_id: number;
             can_sell?: boolean;
@@ -7307,7 +7518,7 @@ export interface components {
              * Format: date-time
              */
             readonly timestamp: string;
-            readonly is_me: string;
+            readonly is_me: boolean;
         };
         MessageRequest: {
             /**
@@ -7390,6 +7601,11 @@ export interface components {
             /** @default  */
             position: string;
         };
+        OperatorPermissionCatalog: {
+            groups: {
+                [key: string]: unknown;
+            }[];
+        };
         /** @description A platform-operator sub-role with its capability set (ADR-0004 G1). */
         OperatorRole: {
             readonly id: number;
@@ -7412,7 +7628,7 @@ export interface components {
             readonly is_system: boolean;
             /** Описание */
             description?: string;
-            readonly operator_count: string;
+            readonly operator_count: number | null;
             /** Format: date-time */
             readonly created_at: string;
             /** Format: date-time */
@@ -9207,7 +9423,7 @@ export interface components {
              * Format: uri
              */
             proof_file?: string | null;
-            readonly proof_url: string;
+            readonly proof_url: string | null;
             readonly recorded_by: number | null;
             /** Format: date-time */
             readonly created_at: string;
@@ -9238,6 +9454,12 @@ export interface components {
          * @enum {string}
          */
         PlanEnum: "BASIC" | "STANDARD" | "PREMIUM";
+        PreflightCheckRequestRequest: {
+            lines: {
+                [key: string]: unknown;
+            }[];
+            domain_code?: string;
+        };
         /**
          * @description Lightweight company serializer for embedding into UserSerializer.primary_company.
          *     Avoids nested kyc_documents/members/types — saves 4-5 SQL queries per request.
@@ -9277,7 +9499,7 @@ export interface components {
              * @description Логотип компании для отображения на платформе
              */
             logo?: string | null;
-            readonly company_types: string;
+            readonly company_types: unknown[];
         };
         /**
          * @description Lightweight company serializer for embedding into UserSerializer.primary_company.
@@ -9352,15 +9574,15 @@ export interface components {
              * @description Статус жизненного цикла: черновик, опубликован, архив
              */
             status?: number | null;
-            readonly status_name: string;
-            readonly status_code: string;
+            readonly status_name: string | null;
+            readonly status_code: string | null;
             /**
              * Тип домена
              * @description Домен каталога: ж/д техника, общие товары или услуги
              */
             domain_type?: number | null;
-            readonly domain_type_name: string;
-            readonly domain_type_code: string;
+            readonly domain_type_name: string | null;
+            readonly domain_type_code: string | null;
             /**
              * Категория
              * @description Категория товара в иерархии каталога
@@ -9378,8 +9600,8 @@ export interface components {
              * @description Бренд/производитель из справочника (OEM). Канонический для PIM.
              */
             brand?: number | null;
-            readonly brand_name: string;
-            readonly brand_country: string;
+            readonly brand_name: string | null;
+            readonly brand_country: string | null;
             /**
              * Артикул производителя (MPN)
              * @description Заводской артикул. Ключ дедупликации PIM: бренд + артикул.
@@ -9390,7 +9612,7 @@ export interface components {
              * @description Базовая единица измерения (шт, кг, м)
              */
             uom?: number | null;
-            readonly uom_data: components["schemas"]["UnitOfMeasure"];
+            readonly uom_data: components["schemas"]["CatalogUnitOfMeasure"];
             /**
              * ГОСТ / Чертёж
              * @description Номер ГОСТ или чертежа
@@ -9410,9 +9632,9 @@ export interface components {
             readonly offers: components["schemas"]["SupplierOffer"][];
             readonly images: components["schemas"]["ProductImage"][];
             readonly documents: components["schemas"]["ProductDocument"][];
-            readonly main_image_url: string;
-            readonly main_document_url: string;
-            readonly stock_status: string;
+            readonly main_image_url: string | null;
+            readonly main_document_url: string | null;
+            readonly stock_status: string | null;
             readonly base_price: string;
             /**
              * Дата создания
@@ -9466,6 +9688,12 @@ export interface components {
              * @description Напр: Паспорт изделия, Сертификат ГОСТ
              */
             name: string;
+        };
+        ProductEnrichRequestRequest: {
+            name: string;
+            domain_code?: string;
+            mpn?: string;
+            gost?: string;
         };
         ProductImage: {
             readonly id: number;
@@ -9532,15 +9760,15 @@ export interface components {
              * @description Статус жизненного цикла: черновик, опубликован, архив
              */
             status?: number | null;
-            readonly status_name: string;
-            readonly status_code: string;
+            readonly status_name: string | null;
+            readonly status_code: string | null;
             /**
              * Тип домена
              * @description Домен каталога: ж/д техника, общие товары или услуги
              */
             domain_type?: number | null;
-            readonly domain_type_name: string;
-            readonly domain_type_code: string;
+            readonly domain_type_name: string | null;
+            readonly domain_type_code: string | null;
             /**
              * Категория
              * @description Категория товара в иерархии каталога
@@ -9558,8 +9786,8 @@ export interface components {
              * @description Бренд/производитель из справочника (OEM). Канонический для PIM.
              */
             brand?: number | null;
-            readonly brand_name: string;
-            readonly brand_country: string;
+            readonly brand_name: string | null;
+            readonly brand_country: string | null;
             /**
              * Артикул производителя (MPN)
              * @description Заводской артикул. Ключ дедупликации PIM: бренд + артикул.
@@ -9570,14 +9798,14 @@ export interface components {
              * @description Базовая единица измерения (шт, кг, м)
              */
             uom?: number | null;
-            readonly uom_data: components["schemas"]["UnitOfMeasure"];
+            readonly uom_data: components["schemas"]["CatalogUnitOfMeasure"];
             /**
              * ГОСТ / Чертёж
              * @description Номер ГОСТ или чертежа
              */
             gost_drawing?: string;
-            readonly main_image_url: string;
-            readonly stock_status: string;
+            readonly main_image_url: string | null;
+            readonly stock_status: string | null;
             readonly base_price: string;
             /**
              * Дата создания
@@ -9825,8 +10053,10 @@ export interface components {
             readonly approved_at: string | null;
             readonly items: components["schemas"]["QuoteItem"][];
             readonly charges: components["schemas"]["QuoteCharge"][];
-            readonly economics: string;
-            readonly approval_steps: string;
+            readonly economics: {
+                [key: string]: unknown;
+            } | null;
+            readonly approval_steps: unknown[];
             /**
              * Дата создания
              * Format: date-time
@@ -10264,6 +10494,11 @@ export interface components {
              */
             frozen_at?: string | null;
         };
+        /** @description Response shape for the QuoteStatus lookup feed ({code, name}). */
+        QuoteStatusLookup: {
+            code: string;
+            name: string;
+        };
         ReassignProductRequest: {
             product_id: number | null;
         };
@@ -10346,7 +10581,11 @@ export interface components {
             readonly inn: string | null;
             readonly stated_inn: string;
             readonly is_registered: boolean;
-            readonly primary_contact_id: string;
+            /**
+             * @description The counterparty's primary contact — the target for a CB-invite (Phase D). Only
+             *     meaningful for an offline company; a registered one has real members instead.
+             */
+            readonly primary_contact_id: number | null;
         };
         RelationshipRequest: {
             /** Стадия отношения */
@@ -10480,13 +10719,13 @@ export interface components {
              * @description Валюта базовой цены
              */
             currency?: number | null;
-            readonly currency_data: components["schemas"]["Currency"];
+            readonly currency_data: components["schemas"]["CatalogCurrency"];
             /**
              * Базис поставки
              * @description Условия поставки по Incoterms (FCA, DAP, EXW)
              */
             delivery_basis?: number | null;
-            readonly delivery_basis_data: components["schemas"]["DeliveryBasis"];
+            readonly delivery_basis_data: components["schemas"]["CatalogDeliveryBasis"];
             /**
              * Статус наличия
              * @description Текущий статус наличия у поставщика
@@ -10856,6 +11095,11 @@ export interface components {
          * @enum {string}
          */
         SupportTicketStatusEnum: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+        /** @description Response shape for the SystemRole lookup feed ({code, name}). */
+        SystemRoleLookup: {
+            code: string;
+            name: string;
+        };
         SystemSetting: {
             /**
              * Ставка НДС (%)
@@ -10993,6 +11237,16 @@ export interface components {
              * @description Отображаемое название
              */
             name: string;
+            /**
+             * Порядок сортировки
+             * @description Порядок отображения в интерфейсе
+             */
+            sort_order?: number;
+            /**
+             * Активен
+             * @description Неактивные записи скрыты в формах выбора
+             */
+            is_active?: boolean;
         };
         UnitOfMeasureRequest: {
             /**
@@ -11005,6 +11259,16 @@ export interface components {
              * @description Отображаемое название
              */
             name: string;
+            /**
+             * Порядок сортировки
+             * @description Порядок отображения в интерфейсе
+             */
+            sort_order?: number;
+            /**
+             * Активен
+             * @description Неактивные записи скрыты в формах выбора
+             */
+            is_active?: boolean;
         };
         User: {
             readonly id: number;
@@ -11051,15 +11315,19 @@ export interface components {
             readonly role: number | null;
             readonly role_code: string;
             readonly role_name: string;
-            readonly role_data: string;
-            readonly workspace_role: string;
-            readonly kyc_status: string;
+            readonly role_data: {
+                [key: string]: unknown;
+            } | null;
+            readonly workspace_role: string | null;
+            readonly kyc_status: string | null;
             /**
              * Роль оператора
              * @description Гранулярная под-роль платформенного оператора (ADR-0004 G1). Имеет смысл только для SystemRole=ADMIN; пусто = полный доступ (Супероператор).
              */
             readonly operator_role: number | null;
-            readonly operator_role_data: string;
+            readonly operator_role_data: {
+                [key: string]: unknown;
+            } | null;
             readonly is_platform_admin: boolean;
             /**
              * 2FA Включена
@@ -11126,6 +11394,16 @@ export interface components {
              * @description Отметьте, если пользователь должен считаться активным. Уберите эту отметку вместо удаления учётной записи.
              */
             is_active?: boolean;
+        };
+        /** @description Response shape for the WorkspaceRole lookup feed ({code, name, applicable_to_types}). */
+        WorkspaceRoleLookup: {
+            code: string;
+            name: string;
+            applicable_to_types: string[];
+        };
+        WsTicket: {
+            ticket: string;
+            expires_in: number;
         };
     };
     responses: never;
@@ -12087,25 +12365,29 @@ export interface operations {
             };
         };
     };
-    accounts_company_types_retrieve: {
+    accounts_company_types_list: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description A search term. */
+                search?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CompanyTypeLookup"][];
+                };
             };
         };
     };
-    accounts_company_types_retrieve_2: {
+    accounts_company_types_retrieve: {
         parameters: {
             query?: never;
             header?: never;
@@ -12117,12 +12399,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CompanyTypeLookup"];
+                };
             };
         };
     };
@@ -12180,7 +12463,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: string;
+                /** @description A unique integer value identifying this Контакт. */
+                id: number;
             };
             cookie?: never;
         };
@@ -12201,7 +12485,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: string;
+                /** @description A unique integer value identifying this Контакт. */
+                id: number;
             };
             cookie?: never;
         };
@@ -12228,7 +12513,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: string;
+                /** @description A unique integer value identifying this Контакт. */
+                id: number;
             };
             cookie?: never;
         };
@@ -12278,22 +12564,35 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CompanyPermissionCatalog"];
+                };
             };
         };
     };
     accounts_role_applications_list: {
         parameters: {
             query?: {
+                company?: number;
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                requested_type?: number;
                 /** @description A search term. */
                 search?: string;
+                /**
+                 * @description Текущий статус рассмотрения заявки
+                 *
+                 *     * `PENDING` - На рассмотрении
+                 *     * `DOCUMENTS_REQUIRED` - Требуются документы
+                 *     * `PAYMENT_REQUIRED` - Ожидание оплаты
+                 *     * `APPROVED` - Одобрено
+                 *     * `REJECTED` - Отклонено
+                 */
+                status?: "APPROVED" | "DOCUMENTS_REQUIRED" | "PAYMENT_REQUIRED" | "PENDING" | "REJECTED";
             };
             header?: never;
             path?: never;
@@ -12340,7 +12639,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: string;
+                /** @description A unique integer value identifying this Заявка на роль компании. */
+                id: number;
             };
             cookie?: never;
         };
@@ -12361,7 +12661,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: string;
+                /** @description A unique integer value identifying this Заявка на роль компании. */
+                id: number;
             };
             cookie?: never;
         };
@@ -12387,7 +12688,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: string;
+                /** @description A unique integer value identifying this Заявка на роль компании. */
+                id: number;
             };
             cookie?: never;
         };
@@ -12407,7 +12709,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: string;
+                /** @description A unique integer value identifying this Заявка на роль компании. */
+                id: number;
             };
             cookie?: never;
         };
@@ -12433,7 +12736,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: string;
+                /** @description A unique integer value identifying this Заявка на роль компании. */
+                id: number;
             };
             cookie?: never;
         };
@@ -12466,7 +12770,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: string;
+                /** @description A unique integer value identifying this Заявка на роль компании. */
+                id: number;
             };
             cookie?: never;
         };
@@ -12824,25 +13129,29 @@ export interface operations {
             };
         };
     };
-    accounts_system_roles_retrieve: {
+    accounts_system_roles_list: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description A search term. */
+                search?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["SystemRoleLookup"][];
+                };
             };
         };
     };
-    accounts_system_roles_retrieve_2: {
+    accounts_system_roles_retrieve: {
         parameters: {
             query?: never;
             header?: never;
@@ -12854,12 +13163,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["SystemRoleLookup"];
+                };
             };
         };
     };
@@ -13325,25 +13635,29 @@ export interface operations {
             };
         };
     };
-    accounts_workspace_roles_retrieve: {
+    accounts_workspace_roles_list: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description A search term. */
+                search?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["WorkspaceRoleLookup"][];
+                };
             };
         };
     };
-    accounts_workspace_roles_retrieve_2: {
+    accounts_workspace_roles_retrieve: {
         parameters: {
             query?: never;
             header?: never;
@@ -13355,12 +13669,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["WorkspaceRoleLookup"];
+                };
             };
         };
     };
@@ -13419,7 +13734,13 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BreakGlassRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["BreakGlassRequestRequest"];
+                "multipart/form-data": components["schemas"]["BreakGlassRequestRequest"];
+            };
+        };
         responses: {
             /** @description Break-glass grant recorded */
             201: {
@@ -13816,12 +14137,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["OperatorPermissionCatalog"];
+                };
             };
         };
     };
@@ -14258,10 +14580,16 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["LogoutRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["LogoutRequestRequest"];
+                "multipart/form-data": components["schemas"]["LogoutRequestRequest"];
+            };
+        };
         responses: {
-            /** @description No response body */
-            200: {
+            /** @description Logged out (idempotent) */
+            205: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -14490,12 +14818,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["WsTicket"];
+                };
             };
         };
     };
@@ -15042,7 +15371,13 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProductEnrichRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ProductEnrichRequestRequest"];
+                "multipart/form-data": components["schemas"]["ProductEnrichRequestRequest"];
+            };
+        };
         responses: {
             /** @description AI job queued, task_id returned */
             202: {
@@ -15533,7 +15868,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: string;
+                /** @description A unique integer value identifying this Запись активности. */
+                id: number;
             };
             cookie?: never;
         };
@@ -16362,25 +16698,29 @@ export interface operations {
             };
         };
     };
-    crm_deal_stages_retrieve: {
+    crm_deal_stages_list: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description A search term. */
+                search?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["DealStageLookup"][];
+                };
             };
         };
     };
-    crm_deal_stages_retrieve_2: {
+    crm_deal_stages_retrieve: {
         parameters: {
             query?: never;
             header?: never;
@@ -16392,12 +16732,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["DealStageLookup"];
+                };
             };
         };
     };
@@ -18359,25 +18700,29 @@ export interface operations {
             };
         };
     };
-    crm_quote_statuses_retrieve: {
+    crm_quote_statuses_list: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description A search term. */
+                search?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["QuoteStatusLookup"][];
+                };
             };
         };
     };
-    crm_quote_statuses_retrieve_2: {
+    crm_quote_statuses_retrieve: {
         parameters: {
             query?: never;
             header?: never;
@@ -18389,12 +18734,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["QuoteStatusLookup"];
+                };
             };
         };
     };
@@ -19143,7 +19489,8 @@ export interface operations {
             };
             header?: never;
             path: {
-                id: string;
+                /** @description A unique integer value identifying this Отношение с контрагентом. */
+                id: number;
             };
             cookie?: never;
         };
@@ -19167,7 +19514,8 @@ export interface operations {
             };
             header?: never;
             path: {
-                id: string;
+                /** @description A unique integer value identifying this Отношение с контрагентом. */
+                id: number;
             };
             cookie?: never;
         };
@@ -19197,7 +19545,8 @@ export interface operations {
             };
             header?: never;
             path: {
-                id: string;
+                /** @description A unique integer value identifying this Отношение с контрагентом. */
+                id: number;
             };
             cookie?: never;
         };
@@ -20406,7 +20755,13 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MatchCatalogRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["MatchCatalogRequestRequest"];
+                "multipart/form-data": components["schemas"]["MatchCatalogRequestRequest"];
+            };
+        };
         responses: {
             /** @description AI job queued, task_id returned */
             202: {
@@ -20438,7 +20793,13 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreflightCheckRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PreflightCheckRequestRequest"];
+                "multipart/form-data": components["schemas"]["PreflightCheckRequestRequest"];
+            };
+        };
         responses: {
             /** @description AI job queued, task_id returned */
             202: {

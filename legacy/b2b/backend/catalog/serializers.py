@@ -1,3 +1,4 @@
+from drf_spectacular.utils import extend_schema_serializer
 from rest_framework import serializers
 
 from accounts.models import Company
@@ -65,18 +66,21 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = ["id", "name", "parent", "domain_type", "icon"]
 
 
+@extend_schema_serializer(component_name="CatalogUnitOfMeasure")
 class UnitOfMeasureSerializer(serializers.ModelSerializer):
     class Meta:
         model = UnitOfMeasure
         fields = ["id", "code", "name"]
 
 
+@extend_schema_serializer(component_name="CatalogCurrency")
 class CurrencySerializer(serializers.ModelSerializer):
     class Meta:
         model = Currency
         fields = ["id", "code", "symbol"]
 
 
+@extend_schema_serializer(component_name="CatalogDeliveryBasis")
 class DeliveryBasisSerializer(serializers.ModelSerializer):
     class Meta:
         model = DeliveryBasis
@@ -84,6 +88,8 @@ class DeliveryBasisSerializer(serializers.ModelSerializer):
 
 
 class EquipmentGroupSerializer(serializers.ModelSerializer):
+    full_path = serializers.CharField(read_only=True)
+
     class Meta:
         model = EquipmentGroup
         fields = ["id", "name", "full_path"]
@@ -276,22 +282,22 @@ class ProductSerializer(_CostGateMixin, serializers.ModelSerializer):
             )
         return attrs
 
-    def get_status_name(self, obj):
+    def get_status_name(self, obj) -> str | None:
         return obj.status.name if obj.status else None
 
-    def get_status_code(self, obj):
+    def get_status_code(self, obj) -> str | None:
         return obj.status.code if obj.status else None
 
-    def get_domain_type_name(self, obj):
+    def get_domain_type_name(self, obj) -> str | None:
         return obj.domain_type.name if obj.domain_type else None
 
-    def get_domain_type_code(self, obj):
+    def get_domain_type_code(self, obj) -> str | None:
         return obj.domain_type.code if obj.domain_type else None
 
-    def get_brand_name(self, obj):
+    def get_brand_name(self, obj) -> str | None:
         return obj.brand.name if obj.brand else None
 
-    def get_brand_country(self, obj):
+    def get_brand_country(self, obj) -> str | None:
         return obj.brand.country.name if obj.brand and obj.brand.country else None
 
     def _first_offer(self, obj):
@@ -300,19 +306,19 @@ class ProductSerializer(_CostGateMixin, serializers.ModelSerializer):
         active = next((o for o in offers if o.is_active), None)
         return active or next(iter(offers), None)
 
-    def get_stock_status(self, obj):
+    def get_stock_status(self, obj) -> str | None:
         offer = self._first_offer(obj)
         if offer and offer.stock_status:
             return offer.stock_status.code
         return None
 
-    def get_base_price(self, obj):
+    def get_base_price(self, obj) -> str:
         offer = self._first_offer(obj)
         if offer:
             return str(offer.base_price)
         return "0"
 
-    def get_main_image_url(self, obj):
+    def get_main_image_url(self, obj) -> str | None:
         images = obj.images.all()
         main_img = next((i for i in images if i.is_main), None) or next(iter(images), None)
         if main_img:
@@ -324,7 +330,7 @@ class ProductSerializer(_CostGateMixin, serializers.ModelSerializer):
                 return url
         return None
 
-    def get_main_document_url(self, obj):
+    def get_main_document_url(self, obj) -> str | None:
         docs = obj.documents.all()
         doc = next(iter(docs), None)
         if doc:
@@ -386,22 +392,22 @@ class ProductListSerializer(_CostGateMixin, serializers.ModelSerializer):
             "updated_at",
         ]
 
-    def get_status_name(self, obj):
+    def get_status_name(self, obj) -> str | None:
         return obj.status.name if obj.status else None
 
-    def get_status_code(self, obj):
+    def get_status_code(self, obj) -> str | None:
         return obj.status.code if obj.status else None
 
-    def get_domain_type_name(self, obj):
+    def get_domain_type_name(self, obj) -> str | None:
         return obj.domain_type.name if obj.domain_type else None
 
-    def get_domain_type_code(self, obj):
+    def get_domain_type_code(self, obj) -> str | None:
         return obj.domain_type.code if obj.domain_type else None
 
-    def get_brand_name(self, obj):
+    def get_brand_name(self, obj) -> str | None:
         return obj.brand.name if obj.brand else None
 
-    def get_brand_country(self, obj):
+    def get_brand_country(self, obj) -> str | None:
         return obj.brand.country.name if obj.brand and obj.brand.country else None
 
     def _first_offer(self, obj):
@@ -409,15 +415,15 @@ class ProductListSerializer(_CostGateMixin, serializers.ModelSerializer):
         active = next((o for o in offers if o.is_active), None)
         return active or next(iter(offers), None)
 
-    def get_stock_status(self, obj):
+    def get_stock_status(self, obj) -> str | None:
         offer = self._first_offer(obj)
         return offer.stock_status.code if offer and offer.stock_status else None
 
-    def get_base_price(self, obj):
+    def get_base_price(self, obj) -> str:
         offer = self._first_offer(obj)
         return str(offer.base_price) if offer else "0"
 
-    def get_main_image_url(self, obj):
+    def get_main_image_url(self, obj) -> str | None:
         images = obj.images.all()
         main_img = next((i for i in images if i.is_main), None) or next(iter(images), None)
         if main_img:

@@ -150,7 +150,7 @@ class QuoteSerializer(serializers.ModelSerializer):
 
         return effective_quote_lead_time(obj)
 
-    def get_approval_steps(self, obj):
+    def get_approval_steps(self, obj) -> list:
         if not self.context.get("include_economics"):
             return []
         steps = obj.approval_steps.select_related("approver__user", "approver_role", "acted_by").all()
@@ -178,7 +178,7 @@ class QuoteSerializer(serializers.ModelSerializer):
             cleaned[str(code).upper()] = str(parsed)
         return cleaned
 
-    def get_economics(self, obj):
+    def get_economics(self, obj) -> dict | None:
         if not self.context.get("include_economics"):
             return None
         if not self._can_see_costs(obj):

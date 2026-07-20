@@ -1595,9 +1595,20 @@
         },
         "/api/v1/accounts/company-types/": {
             "get": {
-                "operationId": "accounts_company_types_retrieve",
+                "operationId": "accounts_company_types_list",
                 "description": "Lightweight public lookup for CompanyType (CLIENT / SUPPLIER / MANUFACTURER / ...).",
                 "summary": "List company types",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "A search term.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
                 "tags": [
                     "Accounts"
                 ],
@@ -1608,14 +1619,24 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "No response body"
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/CompanyTypeLookup"
+                                    }
+                                }
+                            }
+                        },
+                        "description": ""
                     }
                 }
             }
         },
         "/api/v1/accounts/company-types/{id}/": {
             "get": {
-                "operationId": "accounts_company_types_retrieve_2",
+                "operationId": "accounts_company_types_retrieve",
                 "description": "Lightweight public lookup for CompanyType (CLIENT / SUPPLIER / MANUFACTURER / ...).",
                 "parameters": [
                     {
@@ -1638,7 +1659,14 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "No response body"
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CompanyTypeLookup"
+                                }
+                            }
+                        },
+                        "description": ""
                     }
                 }
             }
@@ -1742,8 +1770,9 @@
                         "in": "path",
                         "name": "id",
                         "schema": {
-                            "type": "string"
+                            "type": "integer"
                         },
+                        "description": "A unique integer value identifying this Контакт.",
                         "required": true
                     }
                 ],
@@ -1776,8 +1805,9 @@
                         "in": "path",
                         "name": "id",
                         "schema": {
-                            "type": "string"
+                            "type": "integer"
                         },
+                        "description": "A unique integer value identifying this Контакт.",
                         "required": true
                     }
                 ],
@@ -1832,8 +1862,9 @@
                         "in": "path",
                         "name": "id",
                         "schema": {
-                            "type": "string"
+                            "type": "integer"
                         },
+                        "description": "A unique integer value identifying this Контакт.",
                         "required": true
                     }
                 ],
@@ -1897,7 +1928,14 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "No response body"
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CompanyPermissionCatalog"
+                                }
+                            }
+                        },
+                        "description": ""
                     }
                 }
             }
@@ -1909,10 +1947,24 @@
                 "summary": "List role applications",
                 "parameters": [
                     {
+                        "in": "query",
+                        "name": "company",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
                         "name": "page",
                         "required": false,
                         "in": "query",
                         "description": "A page number within the paginated result set.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "requested_type",
                         "schema": {
                             "type": "integer"
                         }
@@ -1925,6 +1977,22 @@
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    {
+                        "in": "query",
+                        "name": "status",
+                        "schema": {
+                            "type": "string",
+                            "title": "Статус",
+                            "enum": [
+                                "APPROVED",
+                                "DOCUMENTS_REQUIRED",
+                                "PAYMENT_REQUIRED",
+                                "PENDING",
+                                "REJECTED"
+                            ]
+                        },
+                        "description": "Текущий статус рассмотрения заявки\n\n* `PENDING` - На рассмотрении\n* `DOCUMENTS_REQUIRED` - Требуются документы\n* `PAYMENT_REQUIRED` - Ожидание оплаты\n* `APPROVED` - Одобрено\n* `REJECTED` - Отклонено"
                     }
                 ],
                 "tags": [
@@ -1999,8 +2067,9 @@
                         "in": "path",
                         "name": "id",
                         "schema": {
-                            "type": "string"
+                            "type": "integer"
                         },
+                        "description": "A unique integer value identifying this Заявка на роль компании.",
                         "required": true
                     }
                 ],
@@ -2034,8 +2103,9 @@
                         "in": "path",
                         "name": "id",
                         "schema": {
-                            "type": "string"
+                            "type": "integer"
                         },
+                        "description": "A unique integer value identifying this Заявка на роль компании.",
                         "required": true
                     }
                 ],
@@ -2084,8 +2154,9 @@
                         "in": "path",
                         "name": "id",
                         "schema": {
-                            "type": "string"
+                            "type": "integer"
                         },
+                        "description": "A unique integer value identifying this Заявка на роль компании.",
                         "required": true
                     }
                 ],
@@ -2133,8 +2204,9 @@
                         "in": "path",
                         "name": "id",
                         "schema": {
-                            "type": "string"
+                            "type": "integer"
                         },
+                        "description": "A unique integer value identifying this Заявка на роль компании.",
                         "required": true
                     }
                 ],
@@ -2163,8 +2235,9 @@
                         "in": "path",
                         "name": "id",
                         "schema": {
-                            "type": "string"
+                            "type": "integer"
                         },
+                        "description": "A unique integer value identifying this Заявка на роль компании.",
                         "required": true
                     }
                 ],
@@ -2218,8 +2291,9 @@
                         "in": "path",
                         "name": "id",
                         "schema": {
-                            "type": "string"
+                            "type": "integer"
                         },
+                        "description": "A unique integer value identifying this Заявка на роль компании.",
                         "required": true
                     }
                 ],
@@ -2856,8 +2930,19 @@
         },
         "/api/v1/accounts/system-roles/": {
             "get": {
-                "operationId": "accounts_system_roles_retrieve",
+                "operationId": "accounts_system_roles_list",
                 "summary": "List system roles",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "A search term.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
                 "tags": [
                     "Accounts"
                 ],
@@ -2868,14 +2953,24 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "No response body"
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/SystemRoleLookup"
+                                    }
+                                }
+                            }
+                        },
+                        "description": ""
                     }
                 }
             }
         },
         "/api/v1/accounts/system-roles/{id}/": {
             "get": {
-                "operationId": "accounts_system_roles_retrieve_2",
+                "operationId": "accounts_system_roles_retrieve",
                 "summary": "Get system role",
                 "parameters": [
                     {
@@ -2898,7 +2993,14 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "No response body"
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SystemRoleLookup"
+                                }
+                            }
+                        },
+                        "description": ""
                     }
                 }
             }
@@ -3680,9 +3782,20 @@
         },
         "/api/v1/accounts/workspace-roles/": {
             "get": {
-                "operationId": "accounts_workspace_roles_retrieve",
+                "operationId": "accounts_workspace_roles_list",
                 "description": "Workspace roles with company type binding.\n\nQuery:\n  ?company_type=CLIENT -- return only roles applicable to CLIENT companies\n                         (plus universal roles without type restriction).",
                 "summary": "List workspace roles",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "A search term.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
                 "tags": [
                     "Accounts"
                 ],
@@ -3693,14 +3806,24 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "No response body"
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/WorkspaceRoleLookup"
+                                    }
+                                }
+                            }
+                        },
+                        "description": ""
                     }
                 }
             }
         },
         "/api/v1/accounts/workspace-roles/{id}/": {
             "get": {
-                "operationId": "accounts_workspace_roles_retrieve_2",
+                "operationId": "accounts_workspace_roles_retrieve",
                 "description": "Workspace roles with company type binding.\n\nQuery:\n  ?company_type=CLIENT -- return only roles applicable to CLIENT companies\n                         (plus universal roles without type restriction).",
                 "summary": "Get workspace role",
                 "parameters": [
@@ -3724,7 +3847,14 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "No response body"
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/WorkspaceRoleLookup"
+                                }
+                            }
+                        },
+                        "description": ""
                     }
                 }
             }
@@ -3823,6 +3953,26 @@
                 "tags": [
                     "Admin"
                 ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BreakGlassRequestRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BreakGlassRequestRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BreakGlassRequestRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
                 "security": [
                     {
                         "jwtAuth": []
@@ -4546,7 +4696,14 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "No response body"
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OperatorPermissionCatalog"
+                                }
+                            }
+                        },
+                        "description": ""
                     }
                 }
             }
@@ -5221,14 +5378,33 @@
                 "tags": [
                     "Auth"
                 ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LogoutRequestRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LogoutRequestRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LogoutRequestRequest"
+                            }
+                        }
+                    }
+                },
                 "security": [
                     {
                         "jwtAuth": []
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "No response body"
+                    "205": {
+                        "description": "Logged out (idempotent)"
                     }
                 }
             }
@@ -5561,7 +5737,14 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "No response body"
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/WsTicket"
+                                }
+                            }
+                        },
+                        "description": ""
                     }
                 }
             }
@@ -6577,6 +6760,26 @@
                 "tags": [
                     "Catalog"
                 ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ProductEnrichRequestRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ProductEnrichRequestRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ProductEnrichRequestRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
                 "security": [
                     {
                         "jwtAuth": []
@@ -7410,8 +7613,9 @@
                         "in": "path",
                         "name": "id",
                         "schema": {
-                            "type": "string"
+                            "type": "integer"
                         },
+                        "description": "A unique integer value identifying this Запись активности.",
                         "required": true
                     }
                 ],
@@ -8895,8 +9099,19 @@
         },
         "/api/v1/crm/deal-stages/": {
             "get": {
-                "operationId": "crm_deal_stages_retrieve",
+                "operationId": "crm_deal_stages_list",
                 "summary": "List deal stages",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "A search term.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
                 "tags": [
                     "CRM"
                 ],
@@ -8907,14 +9122,24 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "No response body"
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/DealStageLookup"
+                                    }
+                                }
+                            }
+                        },
+                        "description": ""
                     }
                 }
             }
         },
         "/api/v1/crm/deal-stages/{id}/": {
             "get": {
-                "operationId": "crm_deal_stages_retrieve_2",
+                "operationId": "crm_deal_stages_retrieve",
                 "parameters": [
                     {
                         "in": "path",
@@ -8936,7 +9161,14 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "No response body"
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DealStageLookup"
+                                }
+                            }
+                        },
+                        "description": ""
                     }
                 }
             }
@@ -12492,8 +12724,19 @@
         },
         "/api/v1/crm/quote-statuses/": {
             "get": {
-                "operationId": "crm_quote_statuses_retrieve",
+                "operationId": "crm_quote_statuses_list",
                 "summary": "List quote statuses",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "A search term.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
                 "tags": [
                     "CRM"
                 ],
@@ -12504,14 +12747,24 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "No response body"
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/QuoteStatusLookup"
+                                    }
+                                }
+                            }
+                        },
+                        "description": ""
                     }
                 }
             }
         },
         "/api/v1/crm/quote-statuses/{id}/": {
             "get": {
-                "operationId": "crm_quote_statuses_retrieve_2",
+                "operationId": "crm_quote_statuses_retrieve",
                 "parameters": [
                     {
                         "in": "path",
@@ -12533,7 +12786,14 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "No response body"
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/QuoteStatusLookup"
+                                }
+                            }
+                        },
+                        "description": ""
                     }
                 }
             }
@@ -13736,8 +13996,9 @@
                         "in": "path",
                         "name": "id",
                         "schema": {
-                            "type": "string"
+                            "type": "integer"
                         },
+                        "description": "A unique integer value identifying this Отношение с контрагентом.",
                         "required": true
                     }
                 ],
@@ -13782,8 +14043,9 @@
                         "in": "path",
                         "name": "id",
                         "schema": {
-                            "type": "string"
+                            "type": "integer"
                         },
+                        "description": "A unique integer value identifying this Отношение с контрагентом.",
                         "required": true
                     }
                 ],
@@ -13847,8 +14109,9 @@
                         "in": "path",
                         "name": "id",
                         "schema": {
-                            "type": "string"
+                            "type": "integer"
                         },
+                        "description": "A unique integer value identifying this Отношение с контрагентом.",
                         "required": true
                     }
                 ],
@@ -15785,6 +16048,26 @@
                 "tags": [
                     "Sourcing"
                 ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MatchCatalogRequestRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MatchCatalogRequestRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MatchCatalogRequestRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
                 "security": [
                     {
                         "jwtAuth": []
@@ -15811,6 +16094,26 @@
                 "tags": [
                     "Sourcing"
                 ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PreflightCheckRequestRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PreflightCheckRequestRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PreflightCheckRequestRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
                 "security": [
                     {
                         "jwtAuth": []
@@ -16628,6 +16931,7 @@
                     },
                     "pdf_url": {
                         "type": "string",
+                        "nullable": true,
                         "readOnly": true
                     },
                     "signed_file": {
@@ -16637,6 +16941,7 @@
                     },
                     "signed_file_url": {
                         "type": "string",
+                        "nullable": true,
                         "readOnly": true
                     },
                     "notes": {
@@ -17001,6 +17306,30 @@
                     "file"
                 ]
             },
+            "BreakGlassRequestRequest": {
+                "type": "object",
+                "properties": {
+                    "entity_type": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "entity_id": {
+                        "type": "integer"
+                    },
+                    "reason": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "minutes": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "entity_id",
+                    "entity_type",
+                    "reason"
+                ]
+            },
             "BulkCreateQuoteItemsRequestRequest": {
                 "type": "object",
                 "properties": {
@@ -17037,6 +17366,160 @@
                 "required": [
                     "items",
                     "quote"
+                ]
+            },
+            "CatalogCurrency": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "code": {
+                        "type": "string",
+                        "title": "Код",
+                        "description": "Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')",
+                        "maxLength": 50
+                    },
+                    "symbol": {
+                        "type": "string",
+                        "title": "Символ",
+                        "description": "Символ валюты (₽, $, €, сўм)",
+                        "maxLength": 5
+                    }
+                },
+                "required": [
+                    "code",
+                    "id"
+                ]
+            },
+            "CatalogCurrencyRequest": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string",
+                        "minLength": 1,
+                        "title": "Код",
+                        "description": "Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')",
+                        "maxLength": 50
+                    },
+                    "symbol": {
+                        "type": "string",
+                        "title": "Символ",
+                        "description": "Символ валюты (₽, $, €, сўм)",
+                        "maxLength": 5
+                    }
+                },
+                "required": [
+                    "code"
+                ]
+            },
+            "CatalogDeliveryBasis": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "code": {
+                        "type": "string",
+                        "title": "Код",
+                        "description": "Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')",
+                        "maxLength": 50
+                    },
+                    "name": {
+                        "type": "string",
+                        "title": "Название",
+                        "description": "Отображаемое название",
+                        "maxLength": 255
+                    },
+                    "description": {
+                        "type": "string",
+                        "title": "Описание",
+                        "description": "Описание условий поставки по Incoterms"
+                    }
+                },
+                "required": [
+                    "code",
+                    "id",
+                    "name"
+                ]
+            },
+            "CatalogDeliveryBasisRequest": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string",
+                        "minLength": 1,
+                        "title": "Код",
+                        "description": "Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')",
+                        "maxLength": 50
+                    },
+                    "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "title": "Название",
+                        "description": "Отображаемое название",
+                        "maxLength": 255
+                    },
+                    "description": {
+                        "type": "string",
+                        "title": "Описание",
+                        "description": "Описание условий поставки по Incoterms"
+                    }
+                },
+                "required": [
+                    "code",
+                    "name"
+                ]
+            },
+            "CatalogUnitOfMeasure": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "code": {
+                        "type": "string",
+                        "title": "Код",
+                        "description": "Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')",
+                        "maxLength": 50
+                    },
+                    "name": {
+                        "type": "string",
+                        "title": "Название",
+                        "description": "Отображаемое название",
+                        "maxLength": 255
+                    }
+                },
+                "required": [
+                    "code",
+                    "id",
+                    "name"
+                ]
+            },
+            "CatalogUnitOfMeasureRequest": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string",
+                        "minLength": 1,
+                        "title": "Код",
+                        "description": "Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')",
+                        "maxLength": 50
+                    },
+                    "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "title": "Название",
+                        "description": "Отображаемое название",
+                        "maxLength": 255
+                    }
+                },
+                "required": [
+                    "code",
+                    "name"
                 ]
             },
             "Category": {
@@ -17469,11 +17952,12 @@
                         "readOnly": true
                     },
                     "user_count": {
-                        "type": "string",
+                        "type": "integer",
                         "readOnly": true
                     },
                     "company_types": {
-                        "type": "string",
+                        "type": "array",
+                        "items": {},
                         "readOnly": true
                     }
                 },
@@ -17515,6 +17999,7 @@
                     },
                     "logo_url": {
                         "type": "string",
+                        "nullable": true,
                         "readOnly": true
                     },
                     "legal_name": {
@@ -17974,6 +18459,21 @@
                     "user"
                 ]
             },
+            "CompanyPermissionCatalog": {
+                "type": "object",
+                "properties": {
+                    "groups": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        }
+                    }
+                },
+                "required": [
+                    "groups"
+                ]
+            },
             "CompanyRequest": {
                 "type": "object",
                 "properties": {
@@ -18111,7 +18611,8 @@
                         "description": "Полноправная роль администратора компании — нельзя удалить/урезать"
                     },
                     "member_count": {
-                        "type": "string",
+                        "type": "integer",
+                        "nullable": true,
                         "readOnly": true
                     },
                     "created_at": {
@@ -18426,6 +18927,26 @@
                     "updated_at"
                 ]
             },
+            "CompanyTypeLookup": {
+                "type": "object",
+                "description": "Response shape for the CompanyType lookup feed ({id, code, name}).",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "code": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "code",
+                    "id",
+                    "name"
+                ]
+            },
             "Contact": {
                 "type": "object",
                 "properties": {
@@ -18545,6 +19066,7 @@
                     },
                     "pdf_url": {
                         "type": "string",
+                        "nullable": true,
                         "readOnly": true
                     },
                     "signed_file": {
@@ -18555,6 +19077,7 @@
                     },
                     "signed_file_url": {
                         "type": "string",
+                        "nullable": true,
                         "readOnly": true
                     },
                     "client_signer": {
@@ -18590,11 +19113,11 @@
                         "nullable": true
                     },
                     "viewer_can_sign_client": {
-                        "type": "string",
+                        "type": "boolean",
                         "readOnly": true
                     },
                     "viewer_can_sign_manager": {
-                        "type": "string",
+                        "type": "boolean",
                         "readOnly": true
                     },
                     "valid_from": {
@@ -18805,6 +19328,24 @@
                         "description": "Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')",
                         "maxLength": 50
                     },
+                    "name": {
+                        "type": "string",
+                        "title": "Название",
+                        "description": "Отображаемое название",
+                        "maxLength": 255
+                    },
+                    "sort_order": {
+                        "type": "integer",
+                        "maximum": 2147483647,
+                        "minimum": 0,
+                        "title": "Порядок сортировки",
+                        "description": "Порядок отображения в интерфейсе"
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "title": "Активен",
+                        "description": "Неактивные записи скрыты в формах выбора"
+                    },
                     "symbol": {
                         "type": "string",
                         "title": "Символ",
@@ -18814,7 +19355,8 @@
                 },
                 "required": [
                     "code",
-                    "id"
+                    "id",
+                    "name"
                 ]
             },
             "CurrencyRequest": {
@@ -18827,6 +19369,25 @@
                         "description": "Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')",
                         "maxLength": 50
                     },
+                    "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "title": "Название",
+                        "description": "Отображаемое название",
+                        "maxLength": 255
+                    },
+                    "sort_order": {
+                        "type": "integer",
+                        "maximum": 2147483647,
+                        "minimum": 0,
+                        "title": "Порядок сортировки",
+                        "description": "Порядок отображения в интерфейсе"
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "title": "Активен",
+                        "description": "Неактивные записи скрыты в формах выбора"
+                    },
                     "symbol": {
                         "type": "string",
                         "title": "Символ",
@@ -18835,7 +19396,8 @@
                     }
                 },
                 "required": [
-                    "code"
+                    "code",
+                    "name"
                 ]
             },
             "DealDetail": {
@@ -18876,15 +19438,19 @@
                         "readOnly": true
                     },
                     "assigned_to": {
-                        "type": "string",
+                        "type": "integer",
+                        "nullable": true,
                         "readOnly": true
                     },
                     "assigned_to_name": {
                         "type": "string",
+                        "nullable": true,
                         "readOnly": true
                     },
                     "assigned_at": {
                         "type": "string",
+                        "format": "date-time",
+                        "nullable": true,
                         "readOnly": true
                     },
                     "stage": {
@@ -19047,7 +19613,8 @@
                         "readOnly": true
                     },
                     "total_value": {
-                        "type": "string",
+                        "type": "number",
+                        "format": "double",
                         "readOnly": true
                     },
                     "manager": {
@@ -19057,15 +19624,19 @@
                         "description": "Ответственный менеджер RailTech"
                     },
                     "assigned_to": {
-                        "type": "string",
+                        "type": "integer",
+                        "nullable": true,
                         "readOnly": true
                     },
                     "assigned_to_name": {
                         "type": "string",
+                        "nullable": true,
                         "readOnly": true
                     },
                     "assigned_at": {
                         "type": "string",
+                        "format": "date-time",
+                        "nullable": true,
                         "readOnly": true
                     },
                     "active_quote": {
@@ -19104,6 +19675,22 @@
                     "total_value"
                 ]
             },
+            "DealStageLookup": {
+                "type": "object",
+                "description": "Response shape for the DealStage lookup feed ({code, name}).",
+                "properties": {
+                    "code": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "code",
+                    "name"
+                ]
+            },
             "DecisionEnum": {
                 "enum": [
                     "APPROVE",
@@ -19131,10 +19718,42 @@
                         "description": "Отображаемое название",
                         "maxLength": 255
                     },
+                    "sort_order": {
+                        "type": "integer",
+                        "maximum": 2147483647,
+                        "minimum": 0,
+                        "title": "Порядок сортировки",
+                        "description": "Порядок отображения в интерфейсе"
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "title": "Активен",
+                        "description": "Неактивные записи скрыты в формах выбора"
+                    },
                     "description": {
                         "type": "string",
                         "title": "Описание",
                         "description": "Описание условий поставки по Incoterms"
+                    },
+                    "seller_pays_freight": {
+                        "type": "boolean",
+                        "title": "Продавец оплачивает фрахт",
+                        "description": "Основная перевозка лежит на продавце (C- и D-термы)"
+                    },
+                    "seller_pays_insurance": {
+                        "type": "boolean",
+                        "title": "Продавец оплачивает страхование",
+                        "description": "Продавец несёт транзитный риск/страхование груза (CIF, CIP, D-термы)"
+                    },
+                    "seller_pays_import": {
+                        "type": "boolean",
+                        "title": "Продавец оплачивает импортную растаможку",
+                        "description": "Импортная пошлина/оформление/НДС на стороне продавца (только DDP)"
+                    },
+                    "seller_pays_delivery": {
+                        "type": "boolean",
+                        "title": "Продавец оплачивает доставку до места",
+                        "description": "Доставка до названного места назначения (D-термы)"
                     }
                 },
                 "required": [
@@ -19160,10 +19779,42 @@
                         "description": "Отображаемое название",
                         "maxLength": 255
                     },
+                    "sort_order": {
+                        "type": "integer",
+                        "maximum": 2147483647,
+                        "minimum": 0,
+                        "title": "Порядок сортировки",
+                        "description": "Порядок отображения в интерфейсе"
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "title": "Активен",
+                        "description": "Неактивные записи скрыты в формах выбора"
+                    },
                     "description": {
                         "type": "string",
                         "title": "Описание",
                         "description": "Описание условий поставки по Incoterms"
+                    },
+                    "seller_pays_freight": {
+                        "type": "boolean",
+                        "title": "Продавец оплачивает фрахт",
+                        "description": "Основная перевозка лежит на продавце (C- и D-термы)"
+                    },
+                    "seller_pays_insurance": {
+                        "type": "boolean",
+                        "title": "Продавец оплачивает страхование",
+                        "description": "Продавец несёт транзитный риск/страхование груза (CIF, CIP, D-термы)"
+                    },
+                    "seller_pays_import": {
+                        "type": "boolean",
+                        "title": "Продавец оплачивает импортную растаможку",
+                        "description": "Импортная пошлина/оформление/НДС на стороне продавца (только DDP)"
+                    },
+                    "seller_pays_delivery": {
+                        "type": "boolean",
+                        "title": "Продавец оплачивает доставку до места",
+                        "description": "Доставка до названного места назначения (D-термы)"
                     }
                 },
                 "required": [
@@ -19703,6 +20354,7 @@
                     },
                     "pdf_url": {
                         "type": "string",
+                        "nullable": true,
                         "readOnly": true
                     },
                     "notes": {
@@ -20068,6 +20720,18 @@
                 "type": "string",
                 "description": "* `INFO` - Информация\n* `SUCCESS` - Успех\n* `WARNING` - Предупреждение\n* `ERROR` - Ошибка"
             },
+            "LogoutRequestRequest": {
+                "type": "object",
+                "properties": {
+                    "all": {
+                        "type": "boolean"
+                    },
+                    "refresh": {
+                        "type": "string",
+                        "minLength": 1
+                    }
+                }
+            },
             "Manufacturer": {
                 "type": "object",
                 "description": "OEM brand lookup (catalog.Manufacturer) — the canonical `Product.brand` source.\n\nNOT a platform participant (that's the seller/owner). A brand needn't have an\naccount; `company` optionally links it to one if the OEM is registered.",
@@ -20123,6 +20787,28 @@
                     "country_name",
                     "id",
                     "name"
+                ]
+            },
+            "MatchCatalogRequestRequest": {
+                "type": "object",
+                "properties": {
+                    "lines": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        }
+                    },
+                    "domain_code": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "top_k": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "lines"
                 ]
             },
             "MemberCapabilitiesRequest": {
@@ -20191,7 +20877,7 @@
                         "title": "Время отправки"
                     },
                     "is_me": {
-                        "type": "string",
+                        "type": "boolean",
                         "readOnly": true
                     }
                 },
@@ -20364,6 +21050,21 @@
                     "contact_name"
                 ]
             },
+            "OperatorPermissionCatalog": {
+                "type": "object",
+                "properties": {
+                    "groups": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        }
+                    }
+                },
+                "required": [
+                    "groups"
+                ]
+            },
             "OperatorRole": {
                 "type": "object",
                 "description": "A platform-operator sub-role with its capability set (ADR-0004 G1).",
@@ -20399,7 +21100,8 @@
                         "title": "Описание"
                     },
                     "operator_count": {
-                        "type": "string",
+                        "type": "integer",
+                        "nullable": true,
                         "readOnly": true
                     },
                     "created_at": {
@@ -23246,6 +23948,7 @@
                     },
                     "proof_url": {
                         "type": "string",
+                        "nullable": true,
                         "readOnly": true
                     },
                     "recorded_by": {
@@ -23318,6 +24021,25 @@
                 "type": "string",
                 "description": "* `BASIC` - Базовый\n* `STANDARD` - Стандартный\n* `PREMIUM` - Премиум"
             },
+            "PreflightCheckRequestRequest": {
+                "type": "object",
+                "properties": {
+                    "lines": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        }
+                    },
+                    "domain_code": {
+                        "type": "string",
+                        "minLength": 1
+                    }
+                },
+                "required": [
+                    "lines"
+                ]
+            },
             "PrimaryCompanyLight": {
                 "type": "object",
                 "description": "Lightweight company serializer for embedding into UserSerializer.primary_company.\nAvoids nested kyc_documents/members/types — saves 4-5 SQL queries per request.",
@@ -23381,7 +24103,8 @@
                         "description": "Логотип компании для отображения на платформе"
                     },
                     "company_types": {
-                        "type": "string",
+                        "type": "array",
+                        "items": {},
                         "readOnly": true
                     }
                 },
@@ -23492,10 +24215,12 @@
                     },
                     "status_name": {
                         "type": "string",
+                        "nullable": true,
                         "readOnly": true
                     },
                     "status_code": {
                         "type": "string",
+                        "nullable": true,
                         "readOnly": true
                     },
                     "domain_type": {
@@ -23506,10 +24231,12 @@
                     },
                     "domain_type_name": {
                         "type": "string",
+                        "nullable": true,
                         "readOnly": true
                     },
                     "domain_type_code": {
                         "type": "string",
+                        "nullable": true,
                         "readOnly": true
                     },
                     "category": {
@@ -23549,10 +24276,12 @@
                     },
                     "brand_name": {
                         "type": "string",
+                        "nullable": true,
                         "readOnly": true
                     },
                     "brand_country": {
                         "type": "string",
+                        "nullable": true,
                         "readOnly": true
                     },
                     "manufacturer_part_number": {
@@ -23570,7 +24299,7 @@
                     "uom_data": {
                         "allOf": [
                             {
-                                "$ref": "#/components/schemas/UnitOfMeasure"
+                                "$ref": "#/components/schemas/CatalogUnitOfMeasure"
                             }
                         ],
                         "readOnly": true
@@ -23624,14 +24353,17 @@
                     },
                     "main_image_url": {
                         "type": "string",
+                        "nullable": true,
                         "readOnly": true
                     },
                     "main_document_url": {
                         "type": "string",
+                        "nullable": true,
                         "readOnly": true
                     },
                     "stock_status": {
                         "type": "string",
+                        "nullable": true,
                         "readOnly": true
                     },
                     "base_price": {
@@ -23764,6 +24496,30 @@
                     "name"
                 ]
             },
+            "ProductEnrichRequestRequest": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "domain_code": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "mpn": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "gost": {
+                        "type": "string",
+                        "minLength": 1
+                    }
+                },
+                "required": [
+                    "name"
+                ]
+            },
             "ProductImage": {
                 "type": "object",
                 "properties": {
@@ -23877,10 +24633,12 @@
                     },
                     "status_name": {
                         "type": "string",
+                        "nullable": true,
                         "readOnly": true
                     },
                     "status_code": {
                         "type": "string",
+                        "nullable": true,
                         "readOnly": true
                     },
                     "domain_type": {
@@ -23891,10 +24649,12 @@
                     },
                     "domain_type_name": {
                         "type": "string",
+                        "nullable": true,
                         "readOnly": true
                     },
                     "domain_type_code": {
                         "type": "string",
+                        "nullable": true,
                         "readOnly": true
                     },
                     "category": {
@@ -23933,10 +24693,12 @@
                     },
                     "brand_name": {
                         "type": "string",
+                        "nullable": true,
                         "readOnly": true
                     },
                     "brand_country": {
                         "type": "string",
+                        "nullable": true,
                         "readOnly": true
                     },
                     "manufacturer_part_number": {
@@ -23954,7 +24716,7 @@
                     "uom_data": {
                         "allOf": [
                             {
-                                "$ref": "#/components/schemas/UnitOfMeasure"
+                                "$ref": "#/components/schemas/CatalogUnitOfMeasure"
                             }
                         ],
                         "readOnly": true
@@ -23967,10 +24729,12 @@
                     },
                     "main_image_url": {
                         "type": "string",
+                        "nullable": true,
                         "readOnly": true
                     },
                     "stock_status": {
                         "type": "string",
+                        "nullable": true,
                         "readOnly": true
                     },
                     "base_price": {
@@ -24326,11 +25090,14 @@
                         "readOnly": true
                     },
                     "economics": {
-                        "type": "string",
+                        "type": "object",
+                        "additionalProperties": {},
+                        "nullable": true,
                         "readOnly": true
                     },
                     "approval_steps": {
-                        "type": "string",
+                        "type": "array",
+                        "items": {},
                         "readOnly": true
                     },
                     "created_at": {
@@ -24993,6 +25760,22 @@
                     "deal"
                 ]
             },
+            "QuoteStatusLookup": {
+                "type": "object",
+                "description": "Response shape for the QuoteStatus lookup feed ({code, name}).",
+                "properties": {
+                    "code": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "code",
+                    "name"
+                ]
+            },
             "ReassignProductRequest": {
                 "type": "object",
                 "properties": {
@@ -25222,7 +26005,9 @@
                         "readOnly": true
                     },
                     "primary_contact_id": {
-                        "type": "string",
+                        "type": "integer",
+                        "nullable": true,
+                        "description": "The counterparty's primary contact — the target for a CB-invite (Phase D). Only\nmeaningful for an offline company; a registered one has real members instead.",
                         "readOnly": true
                     }
                 },
@@ -25509,7 +26294,7 @@
                     "currency_data": {
                         "allOf": [
                             {
-                                "$ref": "#/components/schemas/Currency"
+                                "$ref": "#/components/schemas/CatalogCurrency"
                             }
                         ],
                         "readOnly": true
@@ -25523,7 +26308,7 @@
                     "delivery_basis_data": {
                         "allOf": [
                             {
-                                "$ref": "#/components/schemas/DeliveryBasis"
+                                "$ref": "#/components/schemas/CatalogDeliveryBasis"
                             }
                         ],
                         "readOnly": true
@@ -26144,6 +26929,22 @@
                 "type": "string",
                 "description": "* `OPEN` - Открыт\n* `IN_PROGRESS` - В работе\n* `RESOLVED` - Решён\n* `CLOSED` - Закрыт"
             },
+            "SystemRoleLookup": {
+                "type": "object",
+                "description": "Response shape for the SystemRole lookup feed ({code, name}).",
+                "properties": {
+                    "code": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "code",
+                    "name"
+                ]
+            },
             "SystemSetting": {
                 "type": "object",
                 "properties": {
@@ -26438,6 +27239,18 @@
                         "title": "Название",
                         "description": "Отображаемое название",
                         "maxLength": 255
+                    },
+                    "sort_order": {
+                        "type": "integer",
+                        "maximum": 2147483647,
+                        "minimum": 0,
+                        "title": "Порядок сортировки",
+                        "description": "Порядок отображения в интерфейсе"
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "title": "Активен",
+                        "description": "Неактивные записи скрыты в формах выбора"
                     }
                 },
                 "required": [
@@ -26462,6 +27275,18 @@
                         "title": "Название",
                         "description": "Отображаемое название",
                         "maxLength": 255
+                    },
+                    "sort_order": {
+                        "type": "integer",
+                        "maximum": 2147483647,
+                        "minimum": 0,
+                        "title": "Порядок сортировки",
+                        "description": "Порядок отображения в интерфейсе"
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "title": "Активен",
+                        "description": "Неактивные записи скрыты в формах выбора"
                     }
                 },
                 "required": [
@@ -26539,15 +27364,19 @@
                         "readOnly": true
                     },
                     "role_data": {
-                        "type": "string",
+                        "type": "object",
+                        "additionalProperties": {},
+                        "nullable": true,
                         "readOnly": true
                     },
                     "workspace_role": {
                         "type": "string",
+                        "nullable": true,
                         "readOnly": true
                     },
                     "kyc_status": {
                         "type": "string",
+                        "nullable": true,
                         "readOnly": true
                     },
                     "operator_role": {
@@ -26558,7 +27387,9 @@
                         "description": "Гранулярная под-роль платформенного оператора (ADR-0004 G1). Имеет смысл только для SystemRole=ADMIN; пусто = полный доступ (Супероператор)."
                     },
                     "operator_role_data": {
-                        "type": "string",
+                        "type": "object",
+                        "additionalProperties": {},
+                        "nullable": true,
                         "readOnly": true
                     },
                     "is_platform_admin": {
@@ -26686,6 +27517,44 @@
                 "required": [
                     "email",
                     "username"
+                ]
+            },
+            "WorkspaceRoleLookup": {
+                "type": "object",
+                "description": "Response shape for the WorkspaceRole lookup feed ({code, name, applicable_to_types}).",
+                "properties": {
+                    "code": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "applicable_to_types": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "applicable_to_types",
+                    "code",
+                    "name"
+                ]
+            },
+            "WsTicket": {
+                "type": "object",
+                "properties": {
+                    "ticket": {
+                        "type": "string"
+                    },
+                    "expires_in": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "expires_in",
+                    "ticket"
                 ]
             }
         },

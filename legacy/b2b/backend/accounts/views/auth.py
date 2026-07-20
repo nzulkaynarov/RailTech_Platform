@@ -236,6 +236,14 @@ class MeView(RetrieveAPIView):
         "current user (log out of all devices). Always succeeds (idempotent) — a "
         "missing/already-invalid token still returns 205."
     ),
+    request=inline_serializer(
+        "LogoutRequest",
+        fields={
+            "all": serializers.BooleanField(required=False),
+            "refresh": serializers.CharField(required=False),
+        },
+    ),
+    responses={205: OpenApiResponse(description="Logged out (idempotent)")},
     tags=["Auth"],
 )
 class LogoutView(views.APIView):
@@ -280,6 +288,13 @@ WS_TICKET_TTL = 30
         "WS URL query string (which proxies/CDNs log). The ticket is consumed on "
         "first use and expires in 30s."
     ),
+    request=None,
+    responses={
+        200: inline_serializer(
+            "WsTicket",
+            fields={"ticket": serializers.CharField(), "expires_in": serializers.IntegerField()},
+        )
+    },
     tags=["Auth"],
 )
 class WsTicketView(views.APIView):
@@ -388,6 +403,7 @@ class TOTPSetupView(views.APIView):
 
     @extend_schema(
         summary="Start 2FA setup",
+        request=None,
         responses={
             200: inline_serializer(
                 "TOTPSetup", fields={"secret": serializers.CharField(), "uri": serializers.CharField()}
@@ -562,6 +578,7 @@ class SessionsRevokeOthersView(views.APIView):
             "Blacklist every live refresh token except the current browser's "
             '(identified by the HttpOnly cookie), i.e. "log out everywhere else".'
         ),
+        request=None,
         responses={200: inline_serializer("SessionsRevoked", fields={"revoked": serializers.IntegerField()})},
         tags=["Auth"],
     )

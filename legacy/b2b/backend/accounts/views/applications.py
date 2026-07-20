@@ -258,6 +258,8 @@ class CompanyRoleApplicationViewSet(viewsets.ModelViewSet):
         return [permissions.IsAuthenticated()]
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return CompanyRoleApplication.objects.none()
         qs = CompanyRoleApplication.objects.select_related(
             "company", "requested_type", "submitted_by", "reviewed_by"
         ).order_by("-created_at")

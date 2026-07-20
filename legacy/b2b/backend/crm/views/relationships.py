@@ -22,7 +22,7 @@ class RelationshipCounterpartySerializer(serializers.Serializer):
     is_registered = serializers.BooleanField(read_only=True)
     primary_contact_id = serializers.SerializerMethodField()
 
-    def get_primary_contact_id(self, company):
+    def get_primary_contact_id(self, company) -> int | None:
         """The counterparty's primary contact — the target for a CB-invite (Phase D). Only
         meaningful for an offline company; a registered one has real members instead."""
         contact = company.contacts.order_by("-is_primary", "id").first()
@@ -86,6 +86,8 @@ class RelationshipViewSet(
     def get_queryset(self):
         from django.db.models import Count
 
+        if getattr(self, "swagger_fake_view", False):
+            return CounterpartyRelationship.objects.none()
         user = self.request.user
         queryset = (
             CounterpartyRelationship.objects.select_related("counterparty_company", "owner_member__user")

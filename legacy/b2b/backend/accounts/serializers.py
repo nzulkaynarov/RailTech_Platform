@@ -90,7 +90,7 @@ class CompanyDocumentProfileSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "company", "logo", "created_at", "updated_at"]
 
-    def get_logo_url(self, obj):
+    def get_logo_url(self, obj) -> str | None:
         if not obj.logo:
             return None
         request = self.context.get("request")
@@ -108,7 +108,7 @@ class CompanyRoleSerializer(serializers.ModelSerializer):
         fields = ["id", "company", "name", "permissions", "is_system", "member_count", "created_at", "updated_at"]
         read_only_fields = ["company", "is_system", "created_at", "updated_at"]
 
-    def get_member_count(self, obj):
+    def get_member_count(self, obj) -> int | None:
         return getattr(obj, "member_count", None) if hasattr(obj, "member_count") else obj.members.count()
 
 
@@ -132,7 +132,7 @@ class OperatorRoleSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "code", "is_system", "created_at", "updated_at"]
 
-    def get_operator_count(self, obj):
+    def get_operator_count(self, obj) -> int | None:
         return getattr(obj, "operator_count", None) if hasattr(obj, "operator_count") else obj.operators.count()
 
 
@@ -211,14 +211,14 @@ class CompanySerializer(serializers.ModelSerializer):
         # Trust signals are platform verdicts: a company must not self-set them.
         read_only_fields = ["verification_status", "is_verified", "trust_score", "created_at"]
 
-    def get_user_count(self, obj):
+    def get_user_count(self, obj) -> int:
         # Use len() to leverage prefetched members cache instead of extra COUNT query
         try:
             return len(obj.members.all())
         except AttributeError:
             return 0
 
-    def get_company_types(self, obj):
+    def get_company_types(self, obj) -> list:
         # Use Python list comprehension to leverage prefetched types cache
         return [t.code for t in obj.types.all()]
 
@@ -246,7 +246,7 @@ class PrimaryCompanyLightSerializer(serializers.ModelSerializer):
             "company_types",
         ]
 
-    def get_company_types(self, obj):
+    def get_company_types(self, obj) -> list:
         return [t.code for t in obj.types.all()]
 
 
@@ -291,13 +291,13 @@ class UserSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "role", "operator_role", "is_2fa_enabled", "last_login", "date_joined"]
 
-    def get_operator_role_data(self, obj):
+    def get_operator_role_data(self, obj) -> dict | None:
         op = obj.operator_role
         if op:
             return {"id": op.id, "code": op.code, "name": op.name}
         return None
 
-    def get_role_data(self, obj):
+    def get_role_data(self, obj) -> dict | None:
         if obj.role:
             return {
                 "code": obj.role.code,
@@ -305,14 +305,14 @@ class UserSerializer(serializers.ModelSerializer):
             }
         return None
 
-    def get_workspace_role(self, obj):
+    def get_workspace_role(self, obj) -> str | None:
         # Leverage prefetched memberships — no extra SQL
         for m in obj.memberships.all():
             if m.is_primary and m.is_active and m.role:
                 return m.role.code
         return None
 
-    def get_kyc_status(self, obj):
+    def get_kyc_status(self, obj) -> str | None:
         if obj.primary_company and obj.primary_company.verification_status:
             return obj.primary_company.verification_status.code
         return None
@@ -436,7 +436,7 @@ class MeSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "role", "is_2fa_enabled", "last_login", "date_joined"]
 
-    def get_role_data(self, obj):
+    def get_role_data(self, obj) -> dict | None:
         if obj.role:
             return {
                 "code": obj.role.code,
@@ -450,7 +450,7 @@ class MeSerializer(serializers.ModelSerializer):
                 return m
         return None
 
-    def get_workspace_role(self, obj):
+    def get_workspace_role(self, obj) -> str | None:
         membership = self._primary_membership(obj)
         return membership.role.code if (membership and membership.role) else None
 
@@ -464,7 +464,7 @@ class MeSerializer(serializers.ModelSerializer):
         # default to True so UI isn't accidentally locked down.
         return bool(membership.can_buy) if membership else True
 
-    def get_kyc_status(self, obj):
+    def get_kyc_status(self, obj) -> str | None:
         if obj.primary_company and obj.primary_company.verification_status:
             return obj.primary_company.verification_status.code
         return None

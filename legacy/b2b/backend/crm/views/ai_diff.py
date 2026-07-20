@@ -32,6 +32,7 @@ from crm.services import user_can_view_quote_diff
         "deterministic coverage facts are always returned; the AI part is purely additive. "
         "Result is ASSISTIVE and never blocks. Scoped to the deal's buyer or routed seller."
     ),
+    request=None,
     responses={
         202: OpenApiResponse(
             description=(

@@ -25,6 +25,7 @@ from rest_framework.views import APIView
         "draft when the user cannot access this deal's chat, when there is no conversation "
         "yet, or when AI is off."
     ),
+    request=None,
     responses={
         202: OpenApiResponse(
             description="AI job queued, task_id returned (poll sourcing/ai-status/<task_id>/ for {'draft': str})"

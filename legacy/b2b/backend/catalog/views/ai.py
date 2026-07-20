@@ -7,8 +7,8 @@ function (`catalog.ai_enrich.enrich_product`) and returns the suggestion. The se
 reviews/edits the draft in the product form before saving; nothing is auto-written.
 """
 
-from drf_spectacular.utils import OpenApiResponse, extend_schema
-from rest_framework import status
+from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
+from rest_framework import serializers, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
@@ -24,6 +24,15 @@ from rest_framework.views import APIView
         "The category is a free-text hint, never a resolved id (Rule 1). 503 when AI is off. "
         "ARCH-01: the LLM call runs on Celery — returns 202 + task_id; poll "
         "sourcing/ai-status/<task_id>/ for {suggestion: {}}."
+    ),
+    request=inline_serializer(
+        "ProductEnrichRequest",
+        fields={
+            "name": serializers.CharField(),
+            "domain_code": serializers.CharField(required=False),
+            "mpn": serializers.CharField(required=False),
+            "gost": serializers.CharField(required=False),
+        },
     ),
     responses={
         202: OpenApiResponse(description="AI job queued, task_id returned"),
