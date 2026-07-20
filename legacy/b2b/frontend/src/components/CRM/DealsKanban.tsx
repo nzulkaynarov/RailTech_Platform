@@ -57,11 +57,15 @@ export function DealsKanban({ deals, stages, onOpen }: DealsKanbanProps) {
     return stageOrder.length
       ? stageOrder.map((code) => ({
           code,
-          name: stages?.find((s) => s.code === code)?.name ?? code,
+          // Column header by CODE (RU-only `stage.name` would leak into the EN UI);
+          // the DB name is the fallback only for a stage code this build predates.
+          name: DEAL_STAGE_LABEL_KEY[code]
+            ? t(DEAL_STAGE_LABEL_KEY[code])
+            : (stages?.find((s) => s.code === code)?.name ?? code),
           deals: map[code] ?? [],
         }))
       : Object.entries(map).map(([code, list]) => ({ code, name: code, deals: list }));
-  }, [deals, stages]);
+  }, [deals, stages, t]);
 
   return (
     <ScrollArea className="w-full">

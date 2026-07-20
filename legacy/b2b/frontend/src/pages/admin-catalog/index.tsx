@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { getDomainLabelKey } from '@/config/domainConfig';
 import { toast } from 'sonner';
 import { Package } from 'lucide-react';
 import { Toolbar, useListParams } from '@/components/DataTable';
@@ -84,7 +85,12 @@ export function AdminCatalogPage() {
             value: listParams.filters.domain,
             onChange: (v) => listParams.setFilter('domain', v),
             allLabel: t('adminCatalog.allDomains'),
-            options: (domainTypes ?? []).map((d) => ({ value: d.code, label: d.name })),
+            // Localize by CODE like the status filter below; `d.name` is the i18next
+            // defaultValue, used only when the domain code has no configured key.
+            options: (domainTypes ?? []).map((d) => ({
+              value: d.code,
+              label: t(getDomainLabelKey(d.code), d.name),
+            })),
           },
           {
             key: 'status',

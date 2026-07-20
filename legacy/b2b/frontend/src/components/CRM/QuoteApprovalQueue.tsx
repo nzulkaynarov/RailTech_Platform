@@ -4,6 +4,7 @@ import { ClipboardCheck, ChevronRight } from 'lucide-react';
 import { useMyApprovalQueue } from '@/hooks/useCRM';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/StatusBadge';
+import { quoteStatusLabelKey } from '@/lib/codes';
 
 /** Map a КП chain status to a StatusBadge variant. */
 const STATUS_VARIANT: Record<string, 'warning' | 'info' | 'success'> = {
@@ -56,7 +57,14 @@ export const QuoteApprovalQueue: React.FC = () => {
             </div>
             <div className="flex items-center gap-2">
               <StatusBadge
-                label={quote.status_name || quote.status_code}
+                label={
+                  quoteStatusLabelKey(quote.status_code)
+                    ? t(quoteStatusLabelKey(quote.status_code))
+                    : // Fallback ONLY for a status code this build does not know yet
+                      // (backend added a row before the frontend map caught up). A known
+                      // code must never reach here, otherwise the RU-only DB name leaks.
+                      quote.status_name || quote.status_code
+                }
                 variant={STATUS_VARIANT[quote.status_code] ?? 'neutral'}
               />
               <ChevronRight className="h-4 w-4 text-muted-foreground" />

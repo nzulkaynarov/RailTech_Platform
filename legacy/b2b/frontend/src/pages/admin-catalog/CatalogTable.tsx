@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { SortableHead, Pager, applyListParams, type useListParams } from '@/components/DataTable';
 import { LoadingRows, EmptyState, ErrorState } from '../shared/PageShell';
 import { productStatusLabelKey } from '@/lib/codes';
+import { getDomainLabelKey } from '@/config/domainConfig';
 import type { Product } from '@/api/catalogApi';
 
 type ListParams = ReturnType<typeof useListParams>;
@@ -71,7 +72,9 @@ export function CatalogTable({
                   <TableRow key={p.id}>
                     <TableCell className="font-mono text-xs">{p.sku ?? '—'}</TableCell>
                     <TableCell>{p.name}</TableCell>
-                    <TableCell className="text-muted-foreground text-xs">{p.domain_type_name || '—'}</TableCell>
+                    <TableCell className="text-muted-foreground text-xs">
+                      {p.domain_type_code ? t(getDomainLabelKey(p.domain_type_code), p.domain_type_name) : '—'}
+                    </TableCell>
                     <TableCell><Badge variant="outline">{productStatusLabelKey(p.status_code) ? t(productStatusLabelKey(p.status_code)) : (p.status_name || '—')}</Badge></TableCell>
                     <TableCell className="text-muted-foreground text-xs">{p.brand_name ?? '—'}</TableCell>
                     <TableCell>

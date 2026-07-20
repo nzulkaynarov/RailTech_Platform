@@ -187,11 +187,14 @@ describe('BuyerAttentionStrip', () => {
 
 describe('PipelineFunnel', () => {
   it('renders stages in backend order, omits empty stages, and drills into deals', async () => {
+    // DT5: the DB `name` is translated-at-rest (RU-only), so the funnel must label by
+    // CODE via DEAL_STAGE_LABEL_KEY. Sentinel names below deliberately differ from the
+    // real ru.json labels — if one of them renders, the raw-name bug is back.
     vi.mocked(crmApi.getDealStages).mockResolvedValue([
-      { code: 'RFQ_OPEN', name: 'Заявка открыта' },
-      { code: 'SOURCING', name: 'Проработка' },
-      { code: 'CALCULATING', name: 'Расчёт' },
-      { code: 'QUOTE_SENT', name: 'КП отправлено' },
+      { code: 'RFQ_OPEN', name: 'DB-NAME-RFQ' },
+      { code: 'SOURCING', name: 'DB-NAME-SOURCING' },
+      { code: 'CALCULATING', name: 'DB-NAME-CALCULATING' },
+      { code: 'QUOTE_SENT', name: 'DB-NAME-QUOTE-SENT' },
     ]);
     vi.mocked(crmApi.getDeals).mockResolvedValue([
       makeDeal(1, 'RFQ_OPEN'),
@@ -204,12 +207,14 @@ describe('PipelineFunnel', () => {
     const { container } = renderWithProviders(<PipelineFunnel onNavigate={onNavigate} />);
 
     expect(await screen.findByText('Воронка сделок')).toBeInTheDocument();
-    // Zero-count stage is filtered out entirely.
+    // Zero-count stage is filtered out entirely (CALCULATING has no deals).
     expect(screen.queryByText('Расчёт')).not.toBeInTheDocument();
-    // Server (sort_order) ordering is preserved.
     const text = container.textContent ?? '';
-    expect(text.indexOf('Заявка открыта')).toBeLessThan(text.indexOf('Проработка'));
-    expect(text.indexOf('Проработка')).toBeLessThan(text.indexOf('КП отправлено'));
+    // DT5: labels come from ru.json by code — the RU-only DB names never reach the DOM.
+    expect(text).not.toMatch(/DB-NAME-/);
+    // Server (sort_order) ordering is preserved.
+    expect(text.indexOf('Заявка открыта')).toBeLessThan(text.indexOf('Закупка'));
+    expect(text.indexOf('Закупка')).toBeLessThan(text.indexOf('КП отправлено'));
 
     const legendEntry = screen.getByText('Заявка открыта').closest('button');
     if (!legendEntry) throw new Error('no legend button');
