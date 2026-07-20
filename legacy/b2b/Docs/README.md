@@ -9,7 +9,7 @@
 | Папка | Что внутри |
 |---|---|
 | `dev/adr/` | Архитектурные решения (ADR 0001–0006) — **действующий канон**: разделение админок, ролевая модель, три админ-плоскости, единая навигация, wedge-loop + entitlements |
-| `dev/architecture/` | Системный чертёж (`master-system-document.md`), техспека, диаграммы (`architecture-diagrams.md` + `diagrams/*.drawio`), WebSocket-словарь, `schema.json` (OpenAPI) |
+| `dev/architecture/` | Карта системы (`master-system-document.md` — v7 living-doc, сверять с ADR), техспека, диаграммы (`architecture-diagrams.md` + `diagrams/*.drawio`), WebSocket-словарь, `schema.json` (OpenAPI) |
 | `dev/ops/` | Эксплуатация: `RUNBOOK-b2b-vps.md`, деплой-уроки, observability (Sentry), email-setup, staging, smoke-checklist, stability-program, VPS-ограничения, post-deploy-todos, e2e, api-types, docker-* , **последний** session-handoff |
 | `dev/specs/` | Актуальные ТЗ и дизайны: `spec-remaining-2026-07-07.md` (оставшаяся работа), `client-base-design`, `rbac-roles-design` |
 
