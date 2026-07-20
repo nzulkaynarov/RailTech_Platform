@@ -5,6 +5,7 @@ import type { Quote, QuoteItem, QuoteEconomics } from '@/api/crmApi';
 import type { Currency } from '@/api/masterDataApi';
 import type { PricingMirrorResult, TotalsMirror } from './usePricingMirror';
 import type { UseRowSelectionResult } from './useRowSelection';
+import type { DraftFieldValue } from './useQuoteDraft';
 
 /**
  * The shared surface the КП builder grid's presentational children read (волна 3 split).
@@ -53,7 +54,11 @@ export interface QuoteBuilderGridContextValue {
 	selection: UseRowSelectionResult;
 
 	// ── Per-cell editing + errors ─────────────────────────────────────────────────────────────
-	handleFieldChange: (id: number, field: keyof QuoteItem, value: string | number | boolean) => void;
+	/**
+	 * DT1: `null` is a real value here, not "no change" — `margin_percent: null` means «наследовать
+	 * маржу КП», distinct from `'0'` («по себестоимости»). See `DraftFieldValue`.
+	 */
+	handleFieldChange: (id: number, field: keyof QuoteItem, value: DraftFieldValue) => void;
 	cellError: (id: number, field: string) => string | undefined;
 	cellErrors: Record<string, string>;
 	hiddenErrorFields: (errors: Record<string, string>, id: number, showCost: boolean) => string[];

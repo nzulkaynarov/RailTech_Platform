@@ -11,6 +11,12 @@
 export const QUOTE_ITEM_MAX_QUANTITY = 1000000;
 export const QUOTE_ITEM_MAX_UNIT_PRICE = 10000000000;
 
+// DT1 — per-line margin override cap. Mirrors the backend field validators on
+// `QuoteItem.margin_percent` (MinValueValidator(0) / MaxValueValidator(500), max_digits=5,
+// decimal_places=2 ⇒ 0–500 %). The backend re-validates and is the hard guard; this is the
+// KP-04-style input cap so a fat-finger clamps in the cell instead of round-tripping a 400.
+export const QUOTE_ITEM_MAX_MARGIN_PERCENT = 500;
+
 // Max lines one Excel-paste batch may create — mirrors backend settings.QUOTE_ITEMS_BULK_MAX_ROWS.
 // The client truncates the preview to this cap; the server is the hard guard (QUOTE_ITEMS_BULK_TOO_LARGE).
 export const QUOTE_ITEMS_BULK_MAX_ROWS = 500;

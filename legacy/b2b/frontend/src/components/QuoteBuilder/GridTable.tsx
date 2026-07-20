@@ -94,8 +94,14 @@ export const GridTable: React.FC = () => {
 								</TableHead>
 							)}
 							{showCostColumns && (
-								<TableHead className="px-2 py-2 text-center text-xs font-semibold text-muted-foreground w-16">
-									{t('quote.marginApplied')}
+								// DT1: was `w-16` for a read-only chip; the cell is now an input plus a
+								// conditional revert button, so it needs the extra 32px. The name column is
+								// the `w-full` elastic absorber, so this comes out of slack, not out of it.
+								<TableHead className="px-2 py-2 text-center text-xs font-semibold text-muted-foreground w-24">
+									<Tooltip>
+										<TooltipTrigger asChild><span className="cursor-help">{t('quote.marginOverride.header')}</span></TooltipTrigger>
+										<TooltipContent>{t('quote.marginOverride.headerHelp')}</TooltipContent>
+									</Tooltip>
 								</TableHead>
 							)}
 							<TableHead className="px-2 py-2 text-right text-xs font-semibold text-muted-foreground w-32 pr-4">

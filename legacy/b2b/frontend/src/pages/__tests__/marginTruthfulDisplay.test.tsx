@@ -30,8 +30,10 @@ import {
  *  1. RequestDetailPage never renders a FALSE «0.0%» for a per-line margin that the
  *     deal-detail endpoint does not carry (QuoteItem.margin_percent is a dead model
  *     default of 0 — the КП markup is applied at quote level). It must read «—».
- *  2. QuoteBuilderGrid's marginCell is READ-ONLY — the per-line margin can never be
- *     mistaken for an editable input; the hint points at «Настройки КП».
+ *  2. (SUPERSEDED BY DT1 — see the second describe block.) QuoteBuilderGrid's marginCell
+ *     used to be READ-ONLY, because the per-line column was a dead NOT NULL default the
+ *     engine ignored. DT1 made it a real nullable override, so the cell is now editable and
+ *     the guarantee it must uphold instead is «inherit ≠ 0».
  */
 
 // Data hooks are mocked so the components render deterministically off fixtures.
@@ -234,30 +236,56 @@ describe('WP-7 truthful margin display', () => {
     });
   });
 
-  describe('QuoteBuilderGrid — marginCell is read-only', () => {
+  /**
+   * DT1 SUPERSEDES the former «marginCell is read-only» guarantee (#2 in the header note).
+   *
+   * That guarantee existed because `QuoteItem.margin_percent` was a dead NOT NULL column the engine
+   * ignored — so an editable-looking cell would have been a lie, and the cell correctly pointed at
+   * «Настройки КП» instead. The backend now honours a nullable per-line override, so the cell is
+   * editable BY DESIGN and the old assertions would enforce a bug (a shipped-dark feature).
+   *
+   * What replaces it is the property that actually matters now: the cell must never CONFLATE
+   * «inherit» with «0». An inheriting line renders an EMPTY field showing the quote rate as a
+   * placeholder — not a literal «0», which would read as «продаём по себестоимости».
+   */
+  describe('QuoteBuilderGrid — marginCell distinguishes inherit from 0 (DT1)', () => {
     beforeEach(() => {
       setHook(useDeal, { data: gridDeal, isLoading: false });
-      setHook(useQuoteItems, { data: [gridItem], isLoading: false });
+      setHook(useQuoteItems, { data: [{ ...gridItem, margin_percent: null }], isLoading: false });
     });
 
-    it('renders the per-line margin as read-only text (a span with a hint icon), never an input', () => {
+    it('renders an INHERITING line as an empty input carrying the quote rate as placeholder', () => {
       renderWithProviders(<QuoteBuilderGrid dealId={7} />);
 
-      const marginEl = screen.getByText('17%');
-      // Read-only affordance: a <span>, not an editable field, and not wrapped in one.
-      expect(marginEl.tagName).toBe('SPAN');
-      expect(marginEl.closest('input')).toBeNull();
-      // The «Настройки КП» hint icon lives inside the cell (icon-подсказка).
-      expect(marginEl.querySelector('svg')).not.toBeNull();
+      const marginInput = screen.getByRole('textbox', { name: 'Наценка позиции 1' });
+      // Empty value — NOT «0». The two mean different things after DT1.
+      expect(marginInput).toHaveValue('');
+      // …and the inherited КП markup (20%) shows through as the ghost value, so the seller still
+      // sees the effective number rather than a blank cell (Odoo/CPQ convention).
+      expect(marginInput).toHaveAttribute('placeholder', '20');
     });
 
-    it('does not accept input for the margin while editable fields (quantity) remain inputs', () => {
+    it('offers no revert control while the line merely inherits (nothing to revert)', () => {
       renderWithProviders(<QuoteBuilderGrid dealId={7} />);
 
-      // No input element holds the margin value — it is purely derived/displayed…
-      expect(screen.queryByDisplayValue('17')).toBeNull();
-      // …while genuinely editable fields (quantity) are still rendered as inputs.
-      expect(screen.getByDisplayValue('1')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Вернуть наценку КП для позиции 1' })).toBeNull();
+    });
+
+    it('renders an OVERRIDDEN line with its own value plus the revert affordance', () => {
+      setHook(useQuoteItems, { data: [{ ...gridItem, margin_percent: '35' }], isLoading: false });
+      renderWithProviders(<QuoteBuilderGrid dealId={7} />);
+
+      expect(screen.getByRole('textbox', { name: 'Наценка позиции 1' })).toHaveValue('35');
+      expect(screen.getByRole('button', { name: 'Вернуть наценку КП для позиции 1' })).toBeInTheDocument();
+    });
+
+    it('renders an explicit ZERO override as «0» — a real value, visually distinct from inherit', () => {
+      setHook(useQuoteItems, { data: [{ ...gridItem, margin_percent: '0' }], isLoading: false });
+      renderWithProviders(<QuoteBuilderGrid dealId={7} />);
+
+      // «продать по себестоимости» is a deliberate choice and must READ as one, not as a blank.
+      expect(screen.getByRole('textbox', { name: 'Наценка позиции 1' })).toHaveValue('0');
+      expect(screen.getByRole('button', { name: 'Вернуть наценку КП для позиции 1' })).toBeInTheDocument();
     });
   });
 });

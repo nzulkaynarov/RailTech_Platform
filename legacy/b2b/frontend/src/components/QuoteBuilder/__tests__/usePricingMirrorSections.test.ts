@@ -23,7 +23,9 @@ const mkItem = (id: number, overrides: Partial<QuoteItem> = {}): QuoteItem =>
 		frozen_currency: 'UZS',
 		logistics_cost: '0',
 		customs_duty: '0',
-		margin_percent: '0',
+		// DT1: `null` = no per-line override → the line inherits the КП markup (see the note on the
+		// same fixture in usePricingMirror.test.ts). A literal '0' would now mean «по себестоимости».
+		margin_percent: null,
 		discount_percent: '0',
 		lead_time_days: 0,
 		landed_cost: '0',

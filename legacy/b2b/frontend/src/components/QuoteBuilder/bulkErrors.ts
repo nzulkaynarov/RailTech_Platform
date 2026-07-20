@@ -121,7 +121,10 @@ export const DETAIL_ONLY_ERROR_FIELDS = ['customs_duty', 'discount_percent', 'le
  * main table (see `showCostColumns`). An error on one of these is only visible when the row
  * detail is expanded, so it also warrants the row-level marker on a narrow screen.
  */
-export const COST_COLUMN_ERROR_FIELDS = ['frozen_base_price', 'frozen_currency'] as const;
+// DT1: `margin_percent` joined this group — the per-line margin override is edited in the margin
+// column, which the same <1200px gate drops out of the main table. Without it a rejected margin on
+// a narrow screen would have no visible cell AND no row marker pointing at it.
+export const COST_COLUMN_ERROR_FIELDS = ['frozen_base_price', 'frozen_currency', 'margin_percent'] as const;
 
 /**
  * The offending fields of one row whose cell is currently NOT visible (collapsed detail, or a

@@ -1,11 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { QuoteItem } from '@/api/crmApi';
 
-/** A single field edit — the unit `applyBulk` applies across many rows in one undoable step. */
+/**
+ * A single field edit — the unit `applyBulk` applies across many rows in one undoable step.
+ *
+ * DT1: `null` is a FIRST-CLASS value here, not an "unset". `margin_percent = null` means «нет
+ * позиционного переопределения, наследовать маржу КП», which is semantically different from `'0'`
+ * («продать по себестоимости»). The draft machine must therefore be able to hold and replay a
+ * null — writing it as `''`/`0` would silently reprice the line.
+ */
+export type DraftFieldValue = string | number | boolean | null;
+
 export interface BulkFieldEdit {
 	id: number;
 	field: keyof QuoteItem;
-	value: string | number | boolean;
+	value: DraftFieldValue;
 }
 
 export interface UseQuoteDraftResult {
@@ -16,7 +25,7 @@ export interface UseQuoteDraftResult {
 	/** Derived from `dirtyIds` — replaces the old JSON.stringify(localItems) diff. */
 	hasUnsavedChanges: boolean;
 	/** Apply a single field edit to one row and mark it dirty (one undo step). */
-	setField: (id: number, field: keyof QuoteItem, value: string | number | boolean) => void;
+	setField: (id: number, field: keyof QuoteItem, value: DraftFieldValue) => void;
 	/** Apply many field edits across rows as ONE dirty-making, ONE-undo-step op (bulk price/discount). */
 	applyBulk: (edits: BulkFieldEdit[]) => void;
 	/** Discard a row's local edits — restore its last server value. */
@@ -115,7 +124,7 @@ export function useQuoteDraft(serverItems: QuoteItem[]): UseQuoteDraftResult {
 	}, [serverIdsKey]);
 
 	const setField = useCallback(
-		(id: number, field: keyof QuoteItem, value: string | number | boolean) => {
+		(id: number, field: keyof QuoteItem, value: DraftFieldValue) => {
 			pushUndoSnapshot();
 			setDraftItems((previousDraft) =>
 				previousDraft.map((item) => (item.id === id ? { ...item, [field]: value } : item)),
@@ -138,7 +147,7 @@ export function useQuoteDraft(serverItems: QuoteItem[]): UseQuoteDraftResult {
 			const editsById = new Map<number, Partial<QuoteItem>>();
 			for (const edit of edits) {
 				const patch = editsById.get(edit.id) ?? {};
-				(patch as Record<string, string | number | boolean>)[edit.field as string] = edit.value;
+				(patch as Record<string, DraftFieldValue>)[edit.field as string] = edit.value;
 				editsById.set(edit.id, patch);
 			}
 			setDraftItems((previousDraft) =>

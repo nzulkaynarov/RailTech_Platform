@@ -120,6 +120,12 @@ export function useQuoteBuilderActions(params: QuoteBuilderActionsParams) {
 					frozen_currency: item.frozen_currency,
 					logistics_cost: item.logistics_cost,
 					customs_duty: item.customs_duty,
+					// DT1 — sent VERBATIM, including an explicit `null`. `null` = «наследовать маржу
+					// КП» (no per-line override); a number = an override that beats the КП margin,
+					// and `0` is a REAL override meaning «продать по себестоимости». Coercing the
+					// null to 0 anywhere on this path would silently reprice the line to cost, so
+					// the draft machine carries null end-to-end (see `DraftFieldValue`) and JSON
+					// serializes it as `null` — which the serializer accepts (allow_null=True).
 					margin_percent: item.margin_percent,
 					discount_percent: item.discount_percent,
 					lead_time_days: item.lead_time_days,
