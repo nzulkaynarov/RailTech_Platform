@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useLayoutEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronRight, ChevronDown, AlertCircle, Settings, Trash2 } from 'lucide-react';
 import type { QuoteItem } from '@/api/crmApi';
@@ -13,8 +13,10 @@ import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { NumericCell } from './NumericCell';
 import { ProductNameCell } from './ProductNameCell';
+import { RowSelectCheckbox } from './RowSelectCheckbox';
 import { QUOTE_ITEM_MAX_QUANTITY, QUOTE_ITEM_MAX_UNIT_PRICE, marginToneClass } from './gridConstants';
 import { useQuoteBuilderGrid } from './QuoteBuilderGridContext';
+import { lineSignalOf, type LineSignal } from './lineSignal';
 
 interface GridRowProps {
 	item: QuoteItem;
@@ -24,15 +26,57 @@ interface GridRowProps {
 	virtualIndex?: number;
 	/** Virtualizer's dynamic-height measure callback (windowed rendering only). */
 	measureElement?: (node: Element | null) => void;
+	/** Virtualizer's explicit size setter — reports main-row + detail-row height as ONE index (B3). */
+	resizeItem?: (index: number, size: number) => void;
+}
+
+interface MarginCellProps {
+	signal: LineSignal | null;
+	landedCost: string | null;
+	presentationCurrency: string;
 }
 
 /**
- * One КП line: the main row (checkbox · expander · name · qty · [cost/margin] · sum · delete) plus
- * its collapsible detail sub-row (HS-code, customs, lead time, discount, line economics). Extracted
- * verbatim from the former monolithic grid — every data-cell attribute, sticky offset and class is
- * unchanged, so keyboard navigation, sticky columns and the row-error marker behave exactly as before.
+ * F6/WP-7: the per-line margin is DERIVED and READ-ONLY — the markup is a single value for the
+ * whole КП. Rendered muted with a «Настройки КП» hint icon so it can't be mistaken for an input.
+ * Hoisted to a memoized module-level component (DT4) so a facade re-render that leaves the row's
+ * numbers untouched no longer re-renders every visible margin chip.
  */
-export const GridRow: React.FC<GridRowProps> = ({ item, index, virtualIndex, measureElement }) => {
+const MarginCell: React.FC<MarginCellProps> = React.memo(({ signal, landedCost, presentationCurrency }) => {
+	const { t } = useTranslation();
+	if (!signal) return <span className="text-xs text-muted-foreground">—</span>;
+	return (
+		<Tooltip>
+			<TooltipTrigger asChild>
+				<span className="inline-flex cursor-help select-none items-center justify-center gap-1 text-xs tabular-nums text-muted-foreground">
+					{signal.marginPct.toFixed(0)}%
+					<Settings className="size-3 opacity-60" aria-hidden="true" />
+				</span>
+			</TooltipTrigger>
+			<TooltipContent>
+				<div className="flex flex-col gap-0.5">
+					<span>{t('quote.economics.landedCost')}: {formatMoney(landedCost, presentationCurrency)}</span>
+					<span>{t('quote.lineProfit')}: {formatMoney(signal.profit, presentationCurrency)}</span>
+					<span className="mt-0.5 font-medium text-foreground">{t('quote.marginQuoteLevelHint')}</span>
+				</div>
+			</TooltipContent>
+		</Tooltip>
+	);
+});
+MarginCell.displayName = 'MarginCell';
+
+/**
+ * One КП line: the main row (checkbox · expander · name · qty · [cost/margin] · sum · delete) plus
+ * its collapsible detail sub-row (HS-code, customs, lead time, discount, line economics). Every
+ * data-cell attribute and sticky offset is preserved, so keyboard navigation, sticky columns and the
+ * row-error marker behave exactly as before.
+ *
+ * Virtualization contract (B3): EXACTLY ONE measured node per virtual index. The main row carries
+ * `data-index` and the (stable) `measureElement` ref; the detail sub-row carries NEITHER — instead a
+ * layout effect reports `main + detail` height through `resizeItem`, so `getTotalSize()` stays honest
+ * while a row is expanded and the window never drifts.
+ */
+const GridRowComponent: React.FC<GridRowProps> = ({ item, index, virtualIndex, measureElement, resizeItem }) => {
 	const { t } = useTranslation();
 	const {
 		econ, canViewCost, showCostColumns, presentationCurrency, currencies,
@@ -41,38 +85,8 @@ export const GridRow: React.FC<GridRowProps> = ({ item, index, virtualIndex, mea
 		handleDeleteItem, setReassignItemId, rowRefs, mainColCount,
 	} = useQuoteBuilderGrid();
 
-	// Per-line economics (advisory chip) — sourced from the live mirror so a dirty row's margin/loss
-	// triage tracks the in-progress edit. Returns null when cost is hidden/unknown.
-	const lineSignal = (row: QuoteItem) => {
-		const line = pricingMirror.lineFor(row);
-		if (line.marginPct == null || line.profit == null) return null;
-		return { marginPct: line.marginPct, profit: line.profit, belowCost: line.belowCost, belowFloor: line.belowFloor };
-	};
-
-	// F6/WP-7: the per-line margin is DERIVED and READ-ONLY — the markup is a single value for the
-	// whole КП. Render it muted with a «Настройки КП» hint icon so it can't be mistaken for an input.
-	const marginCell = (row: QuoteItem) => {
-		if (!canViewCost || !econ) return <span className="text-xs text-muted-foreground">—</span>;
-		const sig = lineSignal(row);
-		if (!sig) return <span className="text-xs text-muted-foreground">—</span>;
-		return (
-			<Tooltip>
-				<TooltipTrigger asChild>
-					<span className="inline-flex cursor-help select-none items-center justify-center gap-1 text-xs tabular-nums text-muted-foreground">
-						{sig.marginPct.toFixed(0)}%
-						<Settings className="size-3 opacity-60" aria-hidden="true" />
-					</span>
-				</TooltipTrigger>
-				<TooltipContent>
-					<div className="flex flex-col gap-0.5">
-						<span>{t('quote.economics.landedCost')}: {formatMoney(pricingMirror.lineFor(row).landedCost ?? row.landed_cost, presentationCurrency)}</span>
-						<span>{t('quote.lineProfit')}: {formatMoney(sig.profit, presentationCurrency)}</span>
-						<span className="mt-0.5 font-medium text-foreground">{t('quote.marginQuoteLevelHint')}</span>
-					</div>
-				</TooltipContent>
-			</Tooltip>
-		);
-	};
+	const mirrorLine = pricingMirror.lineFor(item);
+	const signal = canViewCost && econ ? lineSignalOf(mirrorLine) : null;
 
 	const isExpanded = expandedRowId === item.id;
 	const isRowSelected = selection.isSelected(item.id);
@@ -86,23 +100,37 @@ export const GridRow: React.FC<GridRowProps> = ({ item, index, virtualIndex, mea
 		'group-hover:bg-muted/50 group-focus-within:bg-muted/40',
 	);
 
+	const mainRowRef = useRef<HTMLTableRowElement | null>(null);
+	const detailRowRef = useRef<HTMLTableRowElement | null>(null);
+
 	// Combined row ref: keeps the parent's per-id map (bulk-reject scroll-into-view) AND feeds the
 	// virtualizer's dynamic-height measurement when the table is windowed.
-	const setRowRef = (element: HTMLTableRowElement | null) => {
+	//
+	// B3 (1): this MUST be referentially stable. A fresh arrow per render makes React detach/re-attach
+	// the ref on every re-render of the facade, which unobserves + re-observes the node in the
+	// virtualizer's ResizeObserver — the churn re-enters the measurement path mid-scroll and snaps the
+	// window back to the top. `item.id`, `measureElement` (virtualizer instance method) and `rowRefs`
+	// (a ref object) are all stable, so this callback is created once per row.
+	const setRowRef = useCallback((element: HTMLTableRowElement | null) => {
+		mainRowRef.current = element;
 		if (element) rowRefs.current.set(item.id, element);
 		else rowRefs.current.delete(item.id);
 		measureElement?.(element);
-	};
+	}, [item.id, measureElement, rowRefs]);
 
-	// Measure the expanded detail sub-row too (WP-review): the virtualizer keys a ResizeObserver by
-	// `data-index`, and in a real `<table>` a row-group is two sibling `<tr>`s that can't share one
-	// wrapper — so the detail row carries the SAME data-index and re-registers with `measureElement`.
-	// It's a fresh closure per render (unlike the stable `measureElement`) so it re-runs AFTER the main
-	// row on every re-render and stays the observed node while expanded — otherwise the taller detail
-	// height would be dropped from getTotalSize() and a >50-line КП would scroll-drift on expand.
-	const setDetailRef = (element: HTMLTableRowElement | null) => {
-		measureElement?.(element);
-	};
+	// B3 (2): the detail sub-row is deliberately NOT measured and carries NO `data-index` — a real
+	// `<table>` row-group is two sibling `<tr>`s that cannot share a wrapper, and letting both claim
+	// the same index meant only the detail landed in the height cache (the main row's height was
+	// dropped from getTotalSize(), so a long КП drifted as soon as a row was expanded). Instead the
+	// effect below reports the COMBINED height for the one index that owns this line.
+	useLayoutEffect(() => {
+		if (virtualIndex == null || !resizeItem) return;
+		const main = mainRowRef.current;
+		if (!main) return;
+		const detailHeight = detailRowRef.current?.getBoundingClientRect().height ?? 0;
+		resizeItem(virtualIndex, main.getBoundingClientRect().height + detailHeight);
+		// `isExpanded` is what changes the pair's height; re-report on mount and on every toggle.
+	}, [virtualIndex, resizeItem, isExpanded]);
 
 	return (
 		<React.Fragment>
@@ -118,15 +146,16 @@ export const GridRow: React.FC<GridRowProps> = ({ item, index, virtualIndex, mea
 				)}
 			>
 				<TableCell className={cn('w-8 px-1 py-1.5 text-center sticky left-0 z-10', stickyBg)}>
-					<Checkbox
+					<RowSelectCheckbox
 						checked={isRowSelected}
-						onClick={(event) => selection.toggle(item.id, (event as React.MouseEvent).shiftKey)}
-						aria-label={t('quote.bulk.selectRow', { index: index + 1 })}
+						onToggle={(shiftKey) => selection.toggle(item.id, shiftKey)}
+						ariaLabel={t('quote.bulk.selectRow', { index: index + 1 })}
 					/>
 				</TableCell>
-				<TableCell className={cn('w-8 px-1 py-1.5 text-center sticky left-8 z-10', stickyBg)}>
+				<TableCell className={cn('w-10 px-1 py-1.5 text-center sticky left-8 z-10', stickyBg)}>
 					{/* Stack vertically: the chevron (20px) + the bulk-error marker (16px) would overflow the
-					    32px `w-8` cell side-by-side; column layout keeps both centred and inside the cell. */}
+					    cell side-by-side; column layout keeps both centred and inside the cell. DT9: the
+					    column is `w-10` (40px) so the stacked pair is no longer cramped on narrow screens. */}
 					<div className="flex flex-col items-center justify-center gap-0.5">
 						<button
 							type="button"
@@ -164,8 +193,13 @@ export const GridRow: React.FC<GridRowProps> = ({ item, index, virtualIndex, mea
 						)}
 					</div>
 				</TableCell>
-				<TableCell className={cn('px-2 py-1.5 sticky left-16 z-10', stickyBg)}>
-					<div className="flex items-center gap-2">
+				{/* B2: `w-full` makes the name the ELASTIC absorber column — every other column is fixed
+				    (`w-20`/`w-52`/`w-16`/`w-32`/`w-8`), so the table hands all remaining width here instead
+				    of truncating early and leaving dead space on the right. `min-w-0` on the flex wrapper
+				    lets the inner input actually shrink below its content width (default `min-width:auto`
+				    would otherwise block the chain). */}
+				<TableCell className={cn('w-full px-2 py-1.5 sticky left-18 z-10', stickyBg)}>
+					<div className="flex min-w-0 w-full items-center gap-2">
 						{isOptional && (
 							<Badge variant="outline" className="shrink-0 text-xs font-normal text-muted-foreground">
 								{t('quote.optional.badge')}
@@ -243,14 +277,20 @@ export const GridRow: React.FC<GridRowProps> = ({ item, index, virtualIndex, mea
 					</TableCell>
 				)}
 				{showCostColumns && (
-					<TableCell className="px-2 py-1.5 text-center">{marginCell(item)}</TableCell>
+					<TableCell className="px-2 py-1.5 text-center">
+						<MarginCell
+							signal={signal}
+							landedCost={mirrorLine.landedCost ?? item.landed_cost ?? null}
+							presentationCurrency={presentationCurrency}
+						/>
+					</TableCell>
 				)}
 				<TableCell className="px-2 py-1.5 text-right pr-4">
 					{(() => {
 						// Live «Сумма» from the mirror: for a dirty row this is the preview
 						// (marked «черновик» in italics); a needsServerRecalc row shows the
 						// server total with a «пересчёт после сохранения» hint (honest, not faked).
-						const line = pricingMirror.lineFor(item);
+						const line = mirrorLine;
 						const money = formatMoney(line.lineTotal, presentationCurrency);
 						if (line.needsServerRecalc) {
 							return (
@@ -302,14 +342,25 @@ export const GridRow: React.FC<GridRowProps> = ({ item, index, virtualIndex, mea
 							</TooltipTrigger>
 							<TooltipContent>{t('quote.optional.toggle')}</TooltipContent>
 						</Tooltip>
-						<Button variant="ghost" size="icon-xs" onClick={() => handleDeleteItem(item.id)} className="text-muted-foreground hover:text-destructive" title={t('common.delete')}>
+						{/* DT7: an icon-only control needs an accessible NAME, not just a hover `title`.
+						    The row number disambiguates it in the a11y tree across ~60 identical rows. */}
+						<Button
+							variant="ghost"
+							size="icon-xs"
+							onClick={() => handleDeleteItem(item.id)}
+							className="text-muted-foreground hover:text-destructive"
+							title={t('common.delete')}
+							aria-label={t('quote.row.deleteAria', { index: index + 1 })}
+						>
 							<Trash2 className="size-3" />
 						</Button>
 					</div>
 				</TableCell>
 			</TableRow>
 			{isExpanded && (
-				<TableRow ref={setDetailRef} data-index={virtualIndex} className="bg-muted/30">
+				// NO `data-index` and NO `measureElement` here — see the B3 note above: exactly one
+				// measured node per virtual index. The layout effect reports main+detail height instead.
+				<TableRow ref={detailRowRef} className="bg-muted/30">
 					<TableCell colSpan={mainColCount} className="p-0">
 						<div id={`kp-line-detail-${item.id}`} className="sticky left-0 flex max-w-full flex-col gap-3 px-4 py-3">
 							<span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('quote.lineDetails')}</span>
@@ -374,10 +425,10 @@ export const GridRow: React.FC<GridRowProps> = ({ item, index, virtualIndex, mea
 							{canViewCost && (
 								<div className="flex flex-wrap gap-6 border-t pt-2 text-xs">
 									<span className="text-muted-foreground">
-										{t('quote.economics.landedCost')}: <span className="font-semibold tabular-nums text-foreground">{formatMoney(pricingMirror.lineFor(item).landedCost ?? item.landed_cost, presentationCurrency)}</span>
+										{t('quote.economics.landedCost')}: <span className="font-semibold tabular-nums text-foreground">{formatMoney(mirrorLine.landedCost ?? item.landed_cost, presentationCurrency)}</span>
 									</span>
 									{(() => {
-										const sig = lineSignal(item);
+										const sig = signal;
 										if (!sig) return null;
 										return (
 											<>
@@ -399,3 +450,14 @@ export const GridRow: React.FC<GridRowProps> = ({ item, index, virtualIndex, mea
 		</React.Fragment>
 	);
 };
+GridRowComponent.displayName = 'GridRow';
+
+/**
+ * DT4: memoized so a virtualizer-driven re-render of `GridTable` (which fires on every scroll frame)
+ * no longer re-renders all ~20 visible rows. All five props are stable across such a render —
+ * `measureElement`/`resizeItem` are virtualizer instance methods and `item` keeps its identity while
+ * the row is untouched. NOTE: `GridRow` also consumes the grid CONTEXT, and a context-value change
+ * still re-renders every row regardless of this memo — the win here is the scroll path, not a
+ * facade state change.
+ */
+export const GridRow = React.memo(GridRowComponent);

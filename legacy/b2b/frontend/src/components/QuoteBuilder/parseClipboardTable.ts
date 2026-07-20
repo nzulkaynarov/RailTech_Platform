@@ -18,12 +18,14 @@ export interface ParsedTable {
 	roles: ColumnRole[];
 }
 
-/** A single bulk-create payload row — mirrors `crm.services.quotes._BULK_CREATE_WRITABLE_FIELDS`. */
-export interface BulkCreateRow {
+/** A single bulk-create payload row — mirrors `crm.services.quotes._BULK_CREATE_WRITABLE_FIELDS`.
+ *  A type ALIAS, not an `interface`, so it is structurally assignable to the bulk-create endpoint's
+ *  `Record<string, unknown>` row contract and the call site needs no cast (DT6). */
+export type BulkCreateRow = {
 	imported_raw_name: string;
 	quantity?: number;
 	frozen_base_price?: string;
-}
+};
 
 /**
  * Normalise a locale-formatted numeric cell to a plain machine string, or `null` when the cell

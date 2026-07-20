@@ -724,7 +724,8 @@
     "row": {
       "moveUp": "Move up",
       "moveDown": "Move down",
-      "saveBeforeMove": "Save the row's changes before moving it"
+      "saveBeforeMove": "Save the row's changes before moving it",
+      "deleteAria": "Delete line {{index}}"
     },
     "builder": {
       "title": "Quote Builder",

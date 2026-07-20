@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronUp, ChevronDown, Trash2 } from 'lucide-react';
 import type { QuoteItem } from '@/api/crmApi';
@@ -6,8 +6,8 @@ import { cn } from '@/lib/utils';
 import { formatMoney } from '@/utils/decimal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
 import { TableRow, TableCell } from '@/components/ui/table';
+import { RowSelectCheckbox } from './RowSelectCheckbox';
 import { useQuoteBuilderGrid } from './QuoteBuilderGridContext';
 
 interface SectionNoteRowProps {
@@ -49,11 +49,13 @@ export const SectionNoteRow: React.FC<SectionNoteRowProps> = ({ item, index, vir
 
 	// Combined ref: keep the parent's per-id map (bulk-reject scroll-into-view) AND feed the
 	// virtualizer's dynamic-height measurement (a section heading can wrap to two lines).
-	const setRowRef = (element: HTMLTableRowElement | null) => {
+	// B3: stable (useCallback) — a fresh arrow per render re-attaches the ref, which unobserves and
+	// re-observes the node in the virtualizer's ResizeObserver and snaps the scroll window to the top.
+	const setRowRef = useCallback((element: HTMLTableRowElement | null) => {
 		if (element) rowRefs.current.set(item.id, element);
 		else rowRefs.current.delete(item.id);
 		measureElement?.(element);
-	};
+	}, [item.id, measureElement, rowRefs]);
 
 	// Commit the rename on blur — only when non-empty AND changed; a blank heading is reverted, never
 	// persisted (bulk-update can't write the name, so this goes through the single-item PATCH).
@@ -82,10 +84,10 @@ export const SectionNoteRow: React.FC<SectionNoteRowProps> = ({ item, index, vir
 			)}
 		>
 			<TableCell className={cn('w-8 px-1 py-1.5 text-center sticky left-0 z-10', stickyBg)}>
-				<Checkbox
+				<RowSelectCheckbox
 					checked={isRowSelected}
-					onClick={(event) => selection.toggle(item.id, (event as React.MouseEvent).shiftKey)}
-					aria-label={t('quote.bulk.selectRow', { index: index + 1 })}
+					onToggle={(shiftKey) => selection.toggle(item.id, shiftKey)}
+					ariaLabel={t('quote.bulk.selectRow', { index: index + 1 })}
 				/>
 			</TableCell>
 			<TableCell colSpan={mainColCount - 1} className="px-2 py-1.5">
