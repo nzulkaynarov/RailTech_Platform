@@ -231,12 +231,15 @@ export function DealQuotePage({ dealId, onBack, onNavigate }: DealQuotePageProps
       )}
 
       {/* WP-H: proactive send-gate banner — surfaces a KYC/subscription/demo blocker BEFORE the
-          seller finishes pricing, instead of a late surprise at «Отправить». Seller-side only. */}
-      <QuoteSendGateBanner onNavigate={onNavigate} />
+          seller finishes pricing, instead of a late surprise at «Отправить». Seller-side only.
+          U2: dismissible here — folding it away returns its row to the line grid on a 14" screen,
+          and the disabled «Отправить» button still explains the blocker at the point of action. */}
+      <QuoteSendGateBanner onNavigate={onNavigate} dismissible />
 
       {/* Builder — fills the remaining viewport height; it owns the single vertical scroll. */}
       {quote ? (
-        <div className="min-h-0 flex-1 p-3">
+        // U2: `p-2` (was `p-3`) — 8px of the reclaimed chrome goes straight back to visible lines.
+        <div className="min-h-0 flex-1 p-2">
           <QuoteBuilderGrid dealId={dealId} onDirtyChange={setHasUnsavedChanges} />
         </div>
       ) : (

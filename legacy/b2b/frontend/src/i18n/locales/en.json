@@ -701,7 +701,11 @@
       "moveUp": "Move up",
       "moveDown": "Move down",
       "saveBeforeMove": "Save the row's changes before moving it",
-      "deleteAria": "Delete line {{index}}"
+      "deleteAria": "Delete line {{index}}",
+      "moveUpAria": "Move line {{index}} up",
+      "moveDownAria": "Move line {{index}} down",
+      "reorderFilterHint": "Lines cannot be reordered while a filter is active — clear the search first",
+      "saveBeforeRename": "Save the row's changes before renaming it"
     },
     "builder": {
       "title": "Quote Builder",
@@ -949,6 +953,13 @@
       "QUOTE_ITEM_LEAD_TIME_INVALID": "Invalid lead time",
       "CURRENCY_NOT_FOUND": "Currency not found",
       "QUOTE_ITEM_STALE": "Row changed by another user"
+    },
+    "filter": {
+      "placeholder": "Find in quote",
+      "ariaLabel": "Find a line in this quote",
+      "clear": "Clear search",
+      "matchCount": "Found: {{count}} of {{total}}",
+      "noMatches": "No matches. Quote lines are hidden by the filter — clear the search to see them all."
     }
   },
   "admin": {

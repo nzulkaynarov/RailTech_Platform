@@ -2,67 +2,159 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
 	Loader2, Plus, Sparkles, Settings, Tag, PanelRightClose, PanelRightOpen, Maximize2, Minimize2, ClipboardPaste,
-	Heading, StickyNote,
+	Heading, StickyNote, Search, X, type LucideIcon,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { useQuoteBuilderGrid } from './QuoteBuilderGridContext';
 
+interface ToolbarActionProps {
+	icon: LucideIcon;
+	iconClassName?: string;
+	label: string;
+	onClick: () => void;
+	disabled?: boolean;
+	/** Keep the text label at every width (the primary «Добавить» action). */
+	keepLabel?: boolean;
+}
+
 /**
- * The КП builder's document toolbar: row actions on the left (add · Excel-paste · AI-подбор ·
- * pricing-assist) and view controls on the right (settings · rail toggle · focus mode). Extracted
- * verbatim from the former monolithic grid — same gates (frozen КП, unmatched/matched lines), same
- * rail toggle semantics (slide-over below xl, inline collapse ≥xl).
+ * U2 — a toolbar action whose TEXT collapses below `2xl`, leaving an icon-only button with the
+ * label as its tooltip + accessible name.
+ *
+ * Measured, not guessed: with the economics rail open on a 1440px screen the labelled buttons plus
+ * the tabs and the filter overflowed and the toolbar WRAPPED to two lines (74px) — which cost more
+ * height than the separate tabs row that merging them was supposed to save. Collapsing the
+ * secondary labels keeps the whole toolbar on ONE line at 1440 while a wide monitor still shows
+ * full words. Same responsive trick the «Настройки КП» button already used.
  */
-export const BuilderToolbar: React.FC = () => {
+const ToolbarAction: React.FC<ToolbarActionProps> = ({ icon: Icon, iconClassName, label, onClick, disabled, keepLabel }) => (
+	<Tooltip>
+		<TooltipTrigger asChild>
+			<Button variant="outline" size="sm" onClick={onClick} disabled={disabled} aria-label={label}>
+				<Icon className={cn('size-3', iconClassName)} />
+				<span className={keepLabel ? undefined : 'hidden 2xl:inline'}>{label}</span>
+			</Button>
+		</TooltipTrigger>
+		<TooltipContent>{label}</TooltipContent>
+	</Tooltip>
+);
+
+interface BuilderToolbarProps {
+	/**
+	 * U2: while ≥1 line is selected the bulk-action strip takes over the LEFT half of this single
+	 * toolbar row instead of stacking a second full-width strip above the grid (the Gmail/Airtable
+	 * pattern). The tabs and the view controls stay put, so nothing a seller needs mid-quote moves.
+	 */
+	selectionSlot?: React.ReactNode;
+}
+
+/**
+ * The КП builder's single document toolbar row (U2). Left→right: the Позиции/Расходы tabs, the row
+ * actions (add · section · note · Excel-paste · AI-подбор · pricing-assist) — or, while rows are
+ * selected, the bulk-action strip — then «найти в КП» and the view controls (settings · rail toggle ·
+ * focus mode).
+ *
+ * U2: the `TabsList` used to sit on its own line below this toolbar; hosting it here reclaims a full
+ * row (~44px incl. the flex gap) of vertical space for actual КП lines. It still renders inside the
+ * facade's `<Tabs>` provider, so tab switching is unchanged.
+ */
+export const BuilderToolbar: React.FC<BuilderToolbarProps> = ({ selectionSlot }) => {
 	const { t } = useTranslation();
 	const {
-		activeQuote, draftItems, showAddRow, setShowAddRow, handleAddSection, handleAddNote,
-		openPasteDialog, setShowAiMatch,
+		activeQuote, draftItems, visibleItems, showAddRow, setShowAddRow, handleAddSection, handleAddNote,
+		openPasteDialog, setShowAiMatch, filterQuery, setFilterQuery, isFiltered,
 		handlePricingAssist, pricingBusy, setShowSettings, railAsSheet, railOpen, setRailSheetOpen,
 		toggleRail, fullscreen, setFullscreen,
 	} = useQuoteBuilderGrid();
 
+	const chargesCount = activeQuote.charges?.length ?? 0;
+
 	return (
-		<div className="flex flex-wrap items-center justify-between gap-2">
-			<div className="flex flex-wrap gap-1.5">
-				<Button variant="outline" size="sm" onClick={() => setShowAddRow(!showAddRow)}>
-					<Plus className="size-3" />
-					{t('common.add')}
-				</Button>
-				{/* S1: секции/заметки — только пока КП не заморожен (как и все правки позиций). */}
-				{!activeQuote.frozen_at && (
-					<Button variant="outline" size="sm" onClick={handleAddSection}>
-						<Heading className="size-3" />
-						{t('quote.section.add')}
-					</Button>
-				)}
-				{!activeQuote.frozen_at && (
-					<Button variant="outline" size="sm" onClick={handleAddNote}>
-						<StickyNote className="size-3" />
-						{t('quote.note.add')}
-					</Button>
-				)}
-				{!activeQuote.frozen_at && (
-					<Button variant="outline" size="sm" onClick={openPasteDialog}>
-						<ClipboardPaste className="size-3" />
-						{t('quote.paste.button')}
-					</Button>
-				)}
-				{draftItems.some(item => !item.product) && (
-					<Button variant="outline" size="sm" onClick={() => setShowAiMatch(true)}>
-						<Sparkles className="size-3" />
-						{t('aiMatch.button')}
-					</Button>
-				)}
-				{!activeQuote.frozen_at && draftItems.some(item => item.product) && (
-					<Button variant="outline" size="sm" onClick={handlePricingAssist} disabled={pricingBusy}>
-						{pricingBusy ? <Loader2 className="size-3 animate-spin" /> : <Tag className="size-3" />}
-						{t('pricingAssist.button')}
-					</Button>
+		<div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
+			<div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5">
+				{/* U2: tabs live in the toolbar row now — one less full-width strip above the grid. */}
+				<TabsList className="shrink-0">
+					<TabsTrigger value="items">{t('quote.builder.itemsTab')}</TabsTrigger>
+					<TabsTrigger value="charges" className="gap-1.5">
+						{t('quote.builder.chargesTab')}
+						{chargesCount > 0 && (
+							<Badge variant="secondary" className="h-4 min-w-4 justify-center px-1 text-xs tabular-nums">
+								{chargesCount}
+							</Badge>
+						)}
+					</TabsTrigger>
+				</TabsList>
+
+				{selectionSlot ?? (
+					<div className="flex flex-wrap gap-1.5">
+						<ToolbarAction icon={Plus} label={t('common.add')} onClick={() => setShowAddRow(!showAddRow)} keepLabel />
+						{/* S1: секции/заметки — только пока КП не заморожен (как и все правки позиций). */}
+						{!activeQuote.frozen_at && (
+							<ToolbarAction icon={Heading} label={t('quote.section.add')} onClick={handleAddSection} />
+						)}
+						{!activeQuote.frozen_at && (
+							<ToolbarAction icon={StickyNote} label={t('quote.note.add')} onClick={handleAddNote} />
+						)}
+						{!activeQuote.frozen_at && (
+							<ToolbarAction icon={ClipboardPaste} label={t('quote.paste.button')} onClick={openPasteDialog} />
+						)}
+						{draftItems.some(item => !item.product) && (
+							<ToolbarAction icon={Sparkles} label={t('aiMatch.button')} onClick={() => setShowAiMatch(true)} />
+						)}
+						{!activeQuote.frozen_at && draftItems.some(item => item.product) && (
+							<ToolbarAction
+								icon={pricingBusy ? Loader2 : Tag}
+								iconClassName={pricingBusy ? 'animate-spin' : undefined}
+								label={t('pricingAssist.button')}
+								onClick={handlePricingAssist}
+								disabled={pricingBusy}
+							/>
+						)}
+					</div>
 				)}
 			</div>
 			<div className="flex items-center gap-1.5">
+				{/* U4: «найти в КП» — narrows the line table without touching totals, margin or Save. */}
+				<div className="relative">
+					<Search className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+					<Input
+						type="search"
+						value={filterQuery}
+						onChange={(event) => setFilterQuery(event.target.value)}
+						onKeyDown={(event) => {
+							// Escape clears the filter without leaving the field — Excel/Notion muscle memory.
+							if (event.key === 'Escape' && filterQuery) {
+								event.preventDefault();
+								event.stopPropagation();
+								setFilterQuery('');
+							}
+						}}
+						placeholder={t('quote.filter.placeholder')}
+						aria-label={t('quote.filter.ariaLabel')}
+						className="h-8 w-36 pl-7 pr-7 text-sm sm:w-48"
+					/>
+					{isFiltered && (
+						<Button
+							variant="ghost"
+							size="icon-xs"
+							onClick={() => setFilterQuery('')}
+							aria-label={t('quote.filter.clear')}
+							className="absolute right-1 top-1/2 size-5 -translate-y-1/2 text-muted-foreground"
+						>
+							<X className="size-3" />
+						</Button>
+					)}
+				</div>
+				{isFiltered && (
+					<span className="whitespace-nowrap text-xs text-muted-foreground tabular-nums">
+						{t('quote.filter.matchCount', { count: visibleItems.length, total: draftItems.length })}
+					</span>
+				)}
 				{/* Single settings entry point (⚙) — editable while the КП is not frozen. */}
 				{!activeQuote.frozen_at && (
 					<Tooltip>

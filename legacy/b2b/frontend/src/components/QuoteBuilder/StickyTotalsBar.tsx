@@ -45,8 +45,10 @@ export const StickyTotalsBar: React.FC<StickyTotalsBarProps> = ({
 }) => {
 	const { t } = useTranslation();
 
+	// U2: `py-1.5` (was `py-2`) — the bar's own controls are h-8, so the extra padding bought
+	// nothing but cost the line grid 4px.
 	return (
-		<div className="flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-md border bg-card px-3 py-2">
+		<div className="flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-md border bg-card px-3 py-1.5">
 			<div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
 				<span className="text-muted-foreground">
 					{t('quote.builder.positionsCount', { count: positionsCount })}

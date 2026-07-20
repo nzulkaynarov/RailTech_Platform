@@ -201,7 +201,17 @@ interface AppShellProps {
 
 export function AppShell(props: AppShellProps) {
   return (
-    <SidebarProvider>
+    // U2 (root cause of «видно 3 строки»): shadcn's sidebar wrapper is `flex min-h-svh` — a MIN
+    // height, which is NOT a definite height. Every `flex-1 min-h-0` below it therefore resolved
+    // against CONTENT, so the КП builder's scroll container (`flex-1 overflow-auto` in GridTable)
+    // grew to fit all 61 lines (clientHeight === scrollHeight, `scrollable: false`) instead of
+    // clipping: the whole PAGE scrolled, the sticky header/totals had nothing to stick inside, and
+    // @tanstack/react-virtual — which windows by that element's scroll — never engaged at all in the
+    // default view (it only worked in fullscreen, whose `fixed inset-0` supplies its own definite
+    // height). `h-svh` gives the wrapper that definite height, so the existing min-h-0 chain finally
+    // resolves. Scoped to fullBleed workspace pages, so the standard `overflow-y-auto p-6` page
+    // scroll everywhere else is untouched.
+    <SidebarProvider className={props.fullBleed ? 'h-svh' : undefined}>
       <AppShellInner {...props} />
     </SidebarProvider>
   );

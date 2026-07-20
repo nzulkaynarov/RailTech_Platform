@@ -1,6 +1,6 @@
 import React, { useCallback, useLayoutEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronRight, ChevronDown, AlertCircle, Settings, Trash2 } from 'lucide-react';
+import { ChevronRight, ChevronDown, ChevronUp, AlertCircle, Settings, Trash2 } from 'lucide-react';
 import type { QuoteItem } from '@/api/crmApi';
 import { cn } from '@/lib/utils';
 import { formatMoney } from '@/utils/decimal';
@@ -83,7 +83,15 @@ const GridRowComponent: React.FC<GridRowProps> = ({ item, index, virtualIndex, m
 		pricingMirror, selection, handleFieldChange, cellError, cellErrors, hiddenErrorFields,
 		fieldLabel, expandedRowId, toggleRow, setExpandedRowId, fxRateFor, lineCostInPresentation,
 		handleDeleteItem, setReassignItemId, rowRefs, mainColCount,
+		draftItems, handleMoveRow, handleRenameRow, reorderDisabled,
 	} = useQuoteBuilderGrid();
+
+	// U1: ITEM rows reorder with the SAME ↑/↓ swap SECTION/NOTE rows already use (position swap via
+	// the transactional bulk-update, incl. its save-before-move guard for rows with unsaved edits).
+	// `index` is the row's place in the FULL document, so the first/last guard stays correct while a
+	// filter hides neighbours — and under a filter the buttons disable outright (`reorderDisabled`).
+	const isFirstRow = index === 0;
+	const isLastRow = index === draftItems.length - 1;
 
 	const mirrorLine = pricingMirror.lineFor(item);
 	const signal = canViewCost && econ ? lineSignalOf(mirrorLine) : null;
@@ -205,10 +213,15 @@ const GridRowComponent: React.FC<GridRowProps> = ({ item, index, virtualIndex, m
 								{t('quote.optional.badge')}
 							</Badge>
 						)}
+						{/* U3: a name typed WITHOUT picking a catalog match is persisted as the line's own
+						    `imported_raw_name` through the same single-item PATCH the SECTION/NOTE inline
+						    rename already uses — a КП must be able to carry a line that is not a catalog
+						    product. */}
 						<ProductNameCell
 							item={item}
 							index={index + 1}
 							onBrowseCandidates={setReassignItemId}
+							onCommitFreeText={handleRenameRow}
 						/>
 					</div>
 				</TableCell>
@@ -326,8 +339,10 @@ const GridRowComponent: React.FC<GridRowProps> = ({ item, index, virtualIndex, m
 					})()}
 				</TableCell>
 				<TableCell className="px-1 py-0.5">
-					{/* Stack the «опция» toggle above delete — two icon-sized controls won't fit side by
-					    side in the narrow w-8 actions cell (mirrors the chevron/error-marker column). */}
+					{/* U1: two icon COLUMNS — «опция»/удалить on the left, reorder ↑/↓ on the right. Two
+					    columns of two keep the row exactly as tall as before (it was already a 2-row
+					    stack), so adding reorder costs no vertical space — which U2 is fighting for. */}
+					<div className="flex items-center justify-center gap-0.5">
 					<div className="flex flex-col items-center gap-1">
 						<Tooltip>
 							<TooltipTrigger asChild>
@@ -354,6 +369,35 @@ const GridRowComponent: React.FC<GridRowProps> = ({ item, index, virtualIndex, m
 						>
 							<Trash2 className="size-3" />
 						</Button>
+					</div>
+					{/* U1: reorder an ITEM line. The `title` sits on the WRAPPER because a disabled button
+					    swallows pointer events and would never show its own tooltip — under an active
+					    filter (`reorderDisabled`) that wrapper explains WHY the arrows are dead. */}
+					<div
+						className="flex flex-col items-center"
+						title={reorderDisabled ? t('quote.row.reorderFilterHint') : undefined}
+					>
+						<Button
+							variant="ghost"
+							size="icon-xs"
+							disabled={isFirstRow || reorderDisabled}
+							onClick={() => handleMoveRow(item.id, 'up')}
+							title={reorderDisabled ? undefined : t('quote.row.moveUp')}
+							aria-label={t('quote.row.moveUpAria', { index: index + 1 })}
+						>
+							<ChevronUp className="size-3.5" />
+						</Button>
+						<Button
+							variant="ghost"
+							size="icon-xs"
+							disabled={isLastRow || reorderDisabled}
+							onClick={() => handleMoveRow(item.id, 'down')}
+							title={reorderDisabled ? undefined : t('quote.row.moveDown')}
+							aria-label={t('quote.row.moveDownAria', { index: index + 1 })}
+						>
+							<ChevronDown className="size-3.5" />
+						</Button>
+					</div>
 					</div>
 				</TableCell>
 			</TableRow>
