@@ -20,7 +20,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
-import { translateApiError } from '@/lib/apiError';
+import { translateApiError, extractApiErrorCode } from '@/lib/apiError';
 import { useUserStore } from '@/store/userStore';
 import { QuoteStatus, quoteStatusLabelKey } from '@/lib/codes';
 import { useCurrencyStore } from '@/store/currencyStore';
@@ -51,6 +51,11 @@ export function QuotesPage() {
   // Send-to-client is irreversible + client-visible — confirm before firing.
   // One dialog for the whole list; track which row's КП is being sent.
   const [sendConfirmId, setSendConfirmId] = useState<number | null>(null);
+  // S7a: reactive below-floor justification prompt (sender without cost visibility).
+  const [sendJustificationRequired, setSendJustificationRequired] = useState(false);
+  // Proactive (sender WITH cost/margin rights) OR reactive (backend demanded it) → prompt.
+  const sendTargetQuote = quotesList.find((q) => q.id === sendConfirmId);
+  const sendBelowFloor = sendJustificationRequired || !!sendTargetQuote?.economics?.below_floor;
 
   const title = isBuyer ? t('pages.quotes.buyerTitle') : t('pages.quotes.sellerTitle');
   const description = isBuyer ? t('pages.quotes.buyerDescription') : t('pages.quotes.sellerDescription');
@@ -279,16 +284,30 @@ export function QuotesPage() {
 
       <ConfirmActionDialog
         open={sendConfirmId != null}
-        onOpenChange={(o) => { if (!o) setSendConfirmId(null); }}
+        onOpenChange={(o) => { if (!o) { setSendConfirmId(null); setSendJustificationRequired(false); } }}
         title={t('confirmActions.sendQuote.title')}
-        description={t('confirmActions.sendQuote.description')}
-        variant="primary"
+        description={sendBelowFloor
+          ? t('confirmActions.sendQuote.belowFloorDescription')
+          : t('confirmActions.sendQuote.description')}
+        variant={sendBelowFloor ? 'warning' : 'primary'}
         confirmLabel={t('pages.quotes.actions.sendToClient')}
-        onConfirm={async () => {
+        showReason={sendBelowFloor}
+        requireReason={sendBelowFloor}
+        reasonLabel={t('confirmActions.sendQuote.justificationLabel')}
+        reasonMaxLength={500}
+        onConfirm={async ({ reason }) => {
           if (sendConfirmId == null) return;
           const id = sendConfirmId;
-          await sendToClient.mutateAsync(id);
-          toast.success(t('pages.quotes.toast.sentSuccess', { id }));
+          try {
+            await sendToClient.mutateAsync({ id, justification: reason || undefined });
+            toast.success(t('pages.quotes.toast.sentSuccess', { id }));
+            setSendJustificationRequired(false);
+          } catch (err) {
+            if (extractApiErrorCode(err) === 'BELOW_FLOOR_JUSTIFICATION_REQUIRED') {
+              setSendJustificationRequired(true);
+            }
+            throw err;
+          }
         }}
         translateError={(code) => translateApiError(code)}
       />

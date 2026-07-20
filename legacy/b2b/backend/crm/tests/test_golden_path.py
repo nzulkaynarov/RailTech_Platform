@@ -339,3 +339,61 @@ def test_contract_and_billing_events_are_structured(deal, buyer, manager):
     # act.signed (billing.py) is the same additive shape but is unreachable to exercise here: sign_act's
     # pre-existing `select_for_update().select_related("status")` raises on PG (FOR UPDATE on a nullable
     # outer join), independent of this change — see the handoff note.
+
+
+# ─── S7a: below-margin-floor justification guardrail ──────────────────────────
+
+
+def _ready_priced_quote(deal, manager):
+    """A properly-priced КП in READY_TO_SEND — same setup the golden path sends successfully,
+    so all the OTHER send guards (routing/entitlement/KYC/priced-lines) are satisfied."""
+    quote = _build_quote_with_items(deal, manager)
+    QuoteCalculationService.recalculate_quote(quote.id)
+    quote.refresh_from_db()
+    quote.status = QuoteStatus.objects.get(code="READY_TO_SEND")
+    quote.save(update_fields=["status"])
+    return quote
+
+
+# Force the margin-governance verdict deterministically — the economics engine itself is tested
+# elsewhere; here we isolate the GUARDRAIL (below_floor ⇒ justification required).
+_BELOW_FLOOR_ECON = {
+    "total_landed_cost": Decimal("1000.00"),
+    "gross_profit": Decimal("50.00"),
+    "gross_margin_percent": Decimal("4.8"),
+    "markup_percent": Decimal("5.0"),
+    "charge_cost_total": Decimal("0.00"),
+    "operating_profit": Decimal("50.00"),
+    "fx_missing": False,
+    "below_cost": False,
+    "below_floor": True,
+    "min_margin_percent": Decimal("15"),
+    "target_margin_percent": Decimal("25"),
+}
+
+
+@pytest.mark.django_db
+def test_send_below_floor_requires_justification(deal, buyer, manager):
+    """Sending a КП under the company margin FLOOR without a justification is blocked with the
+    specific code — the guard fires BEFORE the status change, so nothing is sent. (The happy
+    send + audit event ride the golden path; here we pin the guardrail's block.)"""
+    from unittest.mock import patch
+
+    quote = _ready_priced_quote(deal, manager)
+
+    with patch("crm.services.quotes.lifecycle.compute_quote_economics", return_value=dict(_BELOW_FLOOR_ECON)):
+        with pytest.raises(ValueError, match="BELOW_FLOOR_JUSTIFICATION_REQUIRED"):
+            QuoteLifecycleService.send_to_client(quote.id, manager)
+    quote.refresh_from_db()
+    assert quote.status.code == "READY_TO_SEND"  # not sent — the guard rejected before any state change
+
+
+@pytest.mark.django_db
+def test_send_below_floor_justification_too_long(deal, buyer, manager):
+    """The justification is length-capped (can't be abused as a free-text dump)."""
+    from unittest.mock import patch
+
+    quote = _ready_priced_quote(deal, manager)
+    with patch("crm.services.quotes.lifecycle.compute_quote_economics", return_value=dict(_BELOW_FLOOR_ECON)):
+        with pytest.raises(ValueError, match="JUSTIFICATION_TOO_LONG"):
+            QuoteLifecycleService.send_to_client(quote.id, manager, justification="x" * 501)

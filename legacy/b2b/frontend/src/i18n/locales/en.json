@@ -4505,7 +4505,9 @@
   "confirmActions": {
     "sendQuote": {
       "title": "Send quote to the client?",
-      "description": "The client will immediately see the priced offer and the prices will be frozen. This cannot be undone."
+      "description": "The client will immediately see the priced offer and the prices will be frozen. This cannot be undone.",
+      "belowFloorDescription": "This КП is below the company margin floor. Provide a justification for sending — it is recorded in the deal timeline.",
+      "justificationLabel": "Justification for sending below the margin floor"
     },
     "approveQuote": {
       "title": "Approve this quote?",
@@ -4808,7 +4810,9 @@
     "AI_JOB_TIMEOUT": "The AI task is taking too long. Please try again later.",
     "NOT_AUTHORIZED": "You are not allowed to perform this action",
     "QUOTE_NOT_FOUND": "Quote not found",
-    "QUOTE_ITEM_STALE": "Row changed by another user — refresh the data"
+    "QUOTE_ITEM_STALE": "Row changed by another user — refresh the data",
+    "BELOW_FLOOR_JUSTIFICATION_REQUIRED": "The КП is below the margin floor — a justification is required to send.",
+    "JUSTIFICATION_TOO_LONG": "The justification is too long (max 500 characters)."
   },
   "fileUpload": {
     "upload": "Upload",

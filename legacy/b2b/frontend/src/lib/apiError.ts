@@ -26,6 +26,15 @@ export function translateApiError(err: unknown): string {
   return translated;
 }
 
+/**
+ * Extract the stable UPPER_SNAKE backend error code from an unknown thrown value
+ * (Axios error / plain string), or null. Exposed so callers can branch on a specific
+ * code (e.g. re-prompt on BELOW_FLOOR_JUSTIFICATION_REQUIRED) without re-parsing Axios.
+ */
+export function extractApiErrorCode(err: unknown): string | null {
+  return extractCode(err);
+}
+
 function extractCode(err: unknown): string | null {
   if (typeof err === 'string') return err;
   if (!err || typeof err !== 'object') return null;

@@ -4422,7 +4422,7 @@ export interface paths {
         put?: never;
         /**
          * Send quote to client
-         * @description Send an internally-approved (READY_TO_SEND) КП to the client. Freezes prices at current values. Allowed for the КП-owning company's SALES_MANAGER / OWNER, or a platform admin.
+         * @description Send an internally-approved (READY_TO_SEND) КП to the client. Freezes prices at current values. Allowed for the КП-owning company's SALES_MANAGER / OWNER, or a platform admin. When the КП is below the company margin floor (S7a) a non-empty `justification` is required (does not block the send, but is audited); otherwise the endpoint returns 400 BELOW_FLOOR_JUSTIFICATION_REQUIRED.
          */
         post: operations["crm_quotes_send_to_client_create"];
         delete?: never;
@@ -10493,6 +10493,10 @@ export interface components {
              * @description Момент фиксации цен при отправке клиенту
              */
             frozen_at?: string | null;
+        };
+        QuoteSendToClientRequestRequest: {
+            /** @description Обоснование отправки ниже минимальной маржи (S7a). Required only when the КП is below the margin floor; ignored otherwise. */
+            justification?: string;
         };
         /** @description Response shape for the QuoteStatus lookup feed ({code, name}). */
         QuoteStatusLookup: {
@@ -19261,11 +19265,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
+        requestBody?: {
             content: {
-                "application/json": components["schemas"]["QuoteRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["QuoteRequest"];
-                "multipart/form-data": components["schemas"]["QuoteRequest"];
+                "application/json": components["schemas"]["QuoteSendToClientRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["QuoteSendToClientRequestRequest"];
+                "multipart/form-data": components["schemas"]["QuoteSendToClientRequestRequest"];
             };
         };
         responses: {
@@ -19277,7 +19281,7 @@ export interface operations {
                     "application/json": components["schemas"]["Quote"];
                 };
             };
-            /** @description Quote not in READY_TO_SEND status */
+            /** @description Quote not in READY_TO_SEND status, or below-floor send without justification (BELOW_FLOOR_JUSTIFICATION_REQUIRED), or JUSTIFICATION_TOO_LONG. */
             400: {
                 headers: {
                     [name: string]: unknown;

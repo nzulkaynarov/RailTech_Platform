@@ -823,8 +823,11 @@ export const crmApi = {
 		);
 		return response.data;
 	},
-	sendQuoteToClient: async (id: number) => {
-		const response = await apiClient.post<Quote>(`crm/quotes/${id}/send-to-client/`);
+	sendQuoteToClient: async (id: number, justification?: string) => {
+		// S7a: `justification` is required only when the КП is below the margin floor (the backend
+		// gate returns BELOW_FLOOR_JUSTIFICATION_REQUIRED otherwise); it is ignored above the floor.
+		const body = justification && justification.trim() ? { justification: justification.trim() } : {};
+		const response = await apiClient.post<Quote>(`crm/quotes/${id}/send-to-client/`, body);
 		return response.data;
 	},
 	approveQuote: async (id: number) => {

@@ -450,7 +450,9 @@ export const useReorderQuoteCharges = () => {
 export const useSendQuoteToClient = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: (id: number) => crmApi.sendQuoteToClient(id),
+        // S7a: pass an optional justification (required by the backend when below the margin floor).
+        mutationFn: ({ id, justification }: { id: number; justification?: string }) =>
+            crmApi.sendQuoteToClient(id, justification),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['quotes'] });
             queryClient.invalidateQueries({ queryKey: ['deals'] });

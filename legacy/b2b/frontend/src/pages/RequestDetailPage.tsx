@@ -347,7 +347,7 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
                 {isSellerSide && quote?.status_code === QuoteStatus.READY_TO_SEND && (
                   <Button
                     variant="default"
-                    onClick={() => run(() => sendQuote.mutateAsync(quote.id))}
+                    onClick={() => run(() => sendQuote.mutateAsync({ id: quote.id }))}
                     disabled={isViewer || sendQuote.isPending}
                     title={isViewer ? viewerTip : undefined}
                   >

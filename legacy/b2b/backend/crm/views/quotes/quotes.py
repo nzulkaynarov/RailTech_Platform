@@ -225,11 +225,28 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
         description=(
             "Send an internally-approved (READY_TO_SEND) КП to the client. Freezes prices "
             "at current values. Allowed for the КП-owning company's SALES_MANAGER / OWNER, "
-            "or a platform admin."
+            "or a platform admin. When the КП is below the company margin floor (S7a) a "
+            "non-empty `justification` is required (does not block the send, but is audited); "
+            "otherwise the endpoint returns 400 BELOW_FLOOR_JUSTIFICATION_REQUIRED."
+        ),
+        request=inline_serializer(
+            name="QuoteSendToClientRequest",
+            fields={
+                "justification": drf_serializers.CharField(
+                    required=False,
+                    allow_blank=True,
+                    max_length=500,
+                    help_text="Обоснование отправки ниже минимальной маржи (S7a). Required only "
+                    "when the КП is below the margin floor; ignored otherwise.",
+                ),
+            },
         ),
         responses={
             200: QuoteSerializer,
-            400: OpenApiResponse(description="Quote not in READY_TO_SEND status"),
+            400: OpenApiResponse(
+                description="Quote not in READY_TO_SEND status, or below-floor send without "
+                "justification (BELOW_FLOOR_JUSTIFICATION_REQUIRED), or JUSTIFICATION_TOO_LONG."
+            ),
             403: OpenApiResponse(description="Role not permitted"),
         },
         tags=["CRM"],
@@ -254,11 +271,15 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
         # Paid-seller gate: sending the КП to the client is the monetised seller action.
         if sub_err := assert_seller_can_operate(request.user):
             return _chain_error_response(sub_err)
+        # S7a below-floor justification (free text; length is validated in the service).
+        justification = request.data.get("justification", "")
+        if not isinstance(justification, str):
+            justification = str(justification or "")
         try:
-            quote = QuoteLifecycleService.send_to_client(int(pk), request.user)
+            quote = QuoteLifecycleService.send_to_client(int(pk), request.user, justification=justification)
         except ValueError as exc:
             code = str(exc)
-            # Surface the specific loss-prevention / claim errors instead of a generic status.
+            # Surface the specific loss-prevention / claim / below-floor errors instead of a generic status.
             return _chain_error_response(
                 code
                 if code
@@ -269,6 +290,8 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
                     "QUOTE_HAS_UNPRICED_LINES",
                     "QUOTE_SEND_NOT_ENTITLED",
                     "SELLER_KYC_REQUIRED",
+                    "BELOW_FLOOR_JUSTIFICATION_REQUIRED",
+                    "JUSTIFICATION_TOO_LONG",
                 )
                 else "INVALID_STATUS"
             )

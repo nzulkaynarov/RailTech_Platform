@@ -13617,7 +13617,7 @@
         "/api/v1/crm/quotes/{id}/send-to-client/": {
             "post": {
                 "operationId": "crm_quotes_send_to_client_create",
-                "description": "Send an internally-approved (READY_TO_SEND) КП to the client. Freezes prices at current values. Allowed for the КП-owning company's SALES_MANAGER / OWNER, or a platform admin.",
+                "description": "Send an internally-approved (READY_TO_SEND) КП to the client. Freezes prices at current values. Allowed for the КП-owning company's SALES_MANAGER / OWNER, or a platform admin. When the КП is below the company margin floor (S7a) a non-empty `justification` is required (does not block the send, but is audited); otherwise the endpoint returns 400 BELOW_FLOOR_JUSTIFICATION_REQUIRED.",
                 "summary": "Send quote to client",
                 "parameters": [
                     {
@@ -13637,21 +13637,20 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/QuoteRequest"
+                                "$ref": "#/components/schemas/QuoteSendToClientRequestRequest"
                             }
                         },
                         "application/x-www-form-urlencoded": {
                             "schema": {
-                                "$ref": "#/components/schemas/QuoteRequest"
+                                "$ref": "#/components/schemas/QuoteSendToClientRequestRequest"
                             }
                         },
                         "multipart/form-data": {
                             "schema": {
-                                "$ref": "#/components/schemas/QuoteRequest"
+                                "$ref": "#/components/schemas/QuoteSendToClientRequestRequest"
                             }
                         }
-                    },
-                    "required": true
+                    }
                 },
                 "security": [
                     {
@@ -13670,7 +13669,7 @@
                         "description": ""
                     },
                     "400": {
-                        "description": "Quote not in READY_TO_SEND status"
+                        "description": "Quote not in READY_TO_SEND status, or below-floor send without justification (BELOW_FLOOR_JUSTIFICATION_REQUIRED), or JUSTIFICATION_TOO_LONG."
                     },
                     "403": {
                         "description": "Role not permitted"
@@ -25759,6 +25758,16 @@
                 "required": [
                     "deal"
                 ]
+            },
+            "QuoteSendToClientRequestRequest": {
+                "type": "object",
+                "properties": {
+                    "justification": {
+                        "type": "string",
+                        "description": "Обоснование отправки ниже минимальной маржи (S7a). Required only when the КП is below the margin floor; ignored otherwise.",
+                        "maxLength": 500
+                    }
+                }
             },
             "QuoteStatusLookup": {
                 "type": "object",

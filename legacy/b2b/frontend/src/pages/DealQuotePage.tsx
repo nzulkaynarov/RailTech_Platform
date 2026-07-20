@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useDeal, useSendQuoteToClient } from '@/hooks/useCRM';
 import { useQuoteSendGate } from '@/hooks/useQuoteSendGate';
-import { translateApiError } from '@/lib/apiError';
+import { translateApiError, extractApiErrorCode } from '@/lib/apiError';
 import { QuoteBuilderGrid } from '@/components/Admin/QuoteBuilderGrid';
 import { QuoteApprovalChain } from '@/components/CRM/QuoteApprovalChain';
 import { QuoteSendGateBanner } from '@/components/CRM/QuoteSendGateBanner';
@@ -44,6 +44,9 @@ export function DealQuotePage({ dealId, onBack, onNavigate }: DealQuotePageProps
   const sendGate = useQuoteSendGate();
   const [contractOpen, setContractOpen] = useState(false);
   const [sendConfirmOpen, setSendConfirmOpen] = useState(false);
+  // S7a: the backend demanded a below-floor justification for a sender WITHOUT cost visibility
+  // (who never saw below_floor). Flip to true reactively so the confirm dialog re-prompts.
+  const [justificationRequired, setJustificationRequired] = useState(false);
   // Single Deal-workspace (#3b): the buyer's request context lives ON the builder
   // screen, so a seller prices the КП without bouncing back to the deal page. The
   // ask (deal.notes) collapses to one line by default; the full thread opens in a slide-over.
@@ -109,14 +112,31 @@ export function DealQuotePage({ dealId, onBack, onNavigate }: DealQuotePageProps
   const canContract = !!quote
     && ([QuoteStatus.APPROVED, QuoteStatus.SENT] as string[]).includes(quoteStatus);
 
+  // S7a: below the margin floor a written justification is required to send. Two cost-visibility
+  // cases: (a) sender WITH cost/margin rights sees economics.below_floor → prompt proactively;
+  // (b) sender WITHOUT rights has economics === null → prompt reactively once the backend returns
+  // BELOW_FLOOR_JUSTIFICATION_REQUIRED. The reason textarea is shown/required in either case.
+  const belowFloorVisible = !!quote?.economics?.below_floor;
+  const needJustification = justificationRequired || belowFloorVisible;
+
   // Sending the КП is irreversible and client-visible (the buyer immediately
   // sees the priced offer + frozen prices) → gate behind a confirm dialog.
-  const confirmSend = async () => {
+  const confirmSend = async ({ reason }: { reason: string }) => {
     if (!quote) return;
-    // Errors (e.g. QUOTE_SEND_NOT_ENTITLED) propagate to the ConfirmActionDialog's translateError,
-    // which renders the friendly apiErrors.* message — don't swallow them here.
-    await sendQuote.mutateAsync(quote.id);
-    toast.success(t('pages.deals.detail.quoteSentToast'));
+    try {
+      // Errors (e.g. QUOTE_SEND_NOT_ENTITLED) propagate to the ConfirmActionDialog's translateError,
+      // which renders the friendly apiErrors.* message — don't swallow them here.
+      await sendQuote.mutateAsync({ id: quote.id, justification: reason || undefined });
+      toast.success(t('pages.deals.detail.quoteSentToast'));
+      setJustificationRequired(false);
+    } catch (err) {
+      // Reactive path (b): the sender couldn't see below_floor — surface the justification field
+      // and let them retry with text. Re-throw so the dialog shows the translated toast + stays open.
+      if (extractApiErrorCode(err) === 'BELOW_FLOOR_JUSTIFICATION_REQUIRED') {
+        setJustificationRequired(true);
+      }
+      throw err;
+    }
   };
 
   const hasNote = (deal.notes ?? '').trim().length > 0;
@@ -252,9 +272,15 @@ export function DealQuotePage({ dealId, onBack, onNavigate }: DealQuotePageProps
         open={sendConfirmOpen}
         onOpenChange={setSendConfirmOpen}
         title={t('confirmActions.sendQuote.title')}
-        description={t('confirmActions.sendQuote.description')}
-        variant="primary"
+        description={needJustification
+          ? t('confirmActions.sendQuote.belowFloorDescription')
+          : t('confirmActions.sendQuote.description')}
+        variant={needJustification ? 'warning' : 'primary'}
         confirmLabel={t('requestDetailActions.sendQuote')}
+        showReason={needJustification}
+        requireReason={needJustification}
+        reasonLabel={t('confirmActions.sendQuote.justificationLabel')}
+        reasonMaxLength={500}
         onConfirm={confirmSend}
         translateError={(code) => translateApiError(code)}
       />

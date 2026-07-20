@@ -33,6 +33,10 @@ from .pricing import compute_quote_economics
 
 logger = logging.getLogger(__name__)
 
+# S7a (DealHub margin-floor guardrail): the free-text justification required when a КП is
+# sent BELOW the company margin floor. Capped so it can't be abused as a free-text dump.
+BELOW_FLOOR_JUSTIFICATION_MAX_LEN = 500
+
 
 class QuoteLifecycleService:
     """Manages Quote state transitions: generate PDF, send, approve, reject."""
@@ -133,7 +137,7 @@ class QuoteLifecycleService:
 
     @staticmethod
     @transaction.atomic
-    def send_to_client(quote_id: int, sent_by_user) -> Quote:
+    def send_to_client(quote_id: int, sent_by_user, justification: str = "") -> Quote:
         """
         Send quote to client:
         1. Guard: only READY_TO_SEND (internally approved) quotes can be sent
@@ -142,6 +146,12 @@ class QuoteLifecycleService:
         4. Change status to SENT
         5. Change deal stage to QUOTE_SENT via FSM
         6. Create notification for client
+
+        S7a below-floor guardrail: when the КП's gross margin is below the company
+        margin FLOOR (economics.below_floor), a non-empty ``justification`` is REQUIRED
+        (does NOT block the send — self-approve stays, DealHub standard) and is recorded
+        on the counterparty timeline as a ``quote.sent_below_floor`` audit event. Above the
+        floor no justification is required and no special event is logged.
         """
         from django.utils import timezone
 
@@ -195,6 +205,19 @@ class QuoteLifecycleService:
         if _econ["below_cost"]:
             raise ValueError("QUOTE_BELOW_COST")
 
+        # BELOW-FLOOR GUARDRAIL (S7a, DealHub standard): sending a КП under the company margin
+        # FLOOR is allowed (self-approve — NOT approval-routing, unlike the hard below_cost block)
+        # but must carry a written justification that lands in the audit trail. Length-capped so it
+        # can't be abused. Above-floor sends require nothing and log no special event. The gate is
+        # server-authoritative: it fires even for a sender WITHOUT cost visibility (who never saw
+        # below_floor on the client), so the SPA re-prompts on the error code.
+        justification = (justification or "").strip()
+        if len(justification) > BELOW_FLOOR_JUSTIFICATION_MAX_LEN:
+            raise ValueError("JUSTIFICATION_TOO_LONG")
+        below_floor = bool(_econ["below_floor"])
+        if below_floor and not justification:
+            raise ValueError("BELOW_FLOOR_JUSTIFICATION_REQUIRED")
+
         # Mint the public no-login access token once (idempotent across re-sends of the
         # same КП version). Lets an offline/registered client open the client projection
         # without an account; rotate only by issuing a new version.
@@ -234,6 +257,24 @@ class QuoteLifecycleService:
             event_code="quote.sent",
             event_params={"version": quote.version, "number": quote.number},
         )
+
+        # S7a: separate, first-class audit event when the offer went out below the margin floor —
+        # captures the seller's written justification so the below-floor decision is traceable.
+        if below_floor:
+            _log_quote(
+                quote,
+                sent_by_user,
+                "КП отправлено ниже минимальной маржи",
+                justification,
+                event_code="quote.sent_below_floor",
+                event_params={
+                    "version": quote.version,
+                    "number": quote.number,
+                    "margin_percent": str(_econ["gross_margin_percent"]),
+                    "floor_percent": str(_econ["min_margin_percent"]),
+                    "justification": justification,
+                },
+            )
 
         # Email the КП off the request thread, after commit (F1.6 — no render inside the
         # atomic block, no orphan on rollback). The task renders the PDF if needed, then

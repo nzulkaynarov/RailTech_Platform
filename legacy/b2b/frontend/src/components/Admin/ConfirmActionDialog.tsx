@@ -47,6 +47,8 @@ export interface ConfirmActionDialogProps {
   /** Pre-canned reason templates available from a dropdown. */
   reasonTemplates?: string[];
   reasonLabel?: string;
+  /** Max length of the reason textarea (defaults to 5000). */
+  reasonMaxLength?: number;
   /** When set, the user must type this string exactly to enable Confirm. */
   typeToConfirm?: string;
   /** Extra fields under the reason textarea (e.g. target-level selector). */
@@ -72,6 +74,7 @@ export function ConfirmActionDialog(props: ConfirmActionDialogProps): React.Reac
     showReason = false,
     reasonTemplates,
     reasonLabel,
+    reasonMaxLength = 5000,
     typeToConfirm,
     extraFields,
     onConfirm,
@@ -183,7 +186,7 @@ export function ConfirmActionDialog(props: ConfirmActionDialogProps): React.Reac
                 placeholder={t('confirmDialog.reasonPlaceholder')}
                 rows={3}
                 className="text-xs"
-                maxLength={5000}
+                maxLength={reasonMaxLength}
               />
             </div>
           ) : null}
