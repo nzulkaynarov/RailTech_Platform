@@ -241,7 +241,7 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
                     </TableCell>
                     <TableCell className="font-mono text-xs text-primary">{product.sku || ''}</TableCell>
                     <TableCell>
-                      <Badge variant="secondary" className="text-xs">{product.domain_type_name}</Badge>
+                      <Badge variant="secondary" className="text-xs">{t(getDomainLabelKey(product.domain_type_code ?? ''), product.domain_type_name)}</Badge>
                     </TableCell>
                     <TableCell className="text-sm">{product.category_data?.name || ''}</TableCell>
                     <TableCell className="text-sm">{product.uom_data?.name || ''}</TableCell>
@@ -317,7 +317,7 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
                         <p className="text-xs text-muted-foreground font-mono">{product.sku}</p>
                       )}
                       <div className="flex items-center gap-1 flex-wrap mt-auto">
-                        <Badge variant="secondary" className="text-xs">{product.domain_type_name}</Badge>
+                        <Badge variant="secondary" className="text-xs">{t(getDomainLabelKey(product.domain_type_code ?? ''), product.domain_type_name)}</Badge>
                         {/* Fallback — если у товара нет stock_status, показываем «Под заказ»
                             вместо пустого места: покупатель должен понимать, можно ли запрашивать. */}
                         <StatusBadge

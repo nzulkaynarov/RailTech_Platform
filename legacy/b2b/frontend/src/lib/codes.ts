@@ -39,6 +39,12 @@ export const DEAL_STAGE_LABEL_KEY: Record<string, string> = {
   CLOSED_LOST: 'dealStages.closedLost',
 };
 
+/** Resolve a deal-stage label key from a code, with a graceful fallback to the raw DB
+ *  name when the code is unknown (returns `''` so callers can `|| stage_name`). Same
+ *  shape as `quoteStatusLabelKey` — use it instead of re-declaring a local `stageLabel`. */
+export const dealStageLabelKey = (code: string | undefined | null): string =>
+  code && DEAL_STAGE_LABEL_KEY[code] ? DEAL_STAGE_LABEL_KEY[code] : '';
+
 /** i18n key for a SystemRole CODE (`roles.ADMIN` / `roles.USER`). */
 export const systemRoleLabelKey = (code: string | undefined | null): string =>
   code ? `roles.${code}` : 'roles.USER';

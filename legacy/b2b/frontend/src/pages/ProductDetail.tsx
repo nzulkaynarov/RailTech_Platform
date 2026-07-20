@@ -128,7 +128,9 @@ export function ProductDetail({ productId, onBack }: ProductDetailProps) {
                 {product.stock_status && (
                   <StatusBadge label={t(`productStatuses.${stockStatusKey}`)} variant={getStockVariant(product.stock_status)} />
                 )}
-                <Badge variant="secondary" className="text-xs">{product.domain_type_name}</Badge>
+                <Badge variant="secondary" className="text-xs">
+                  {t(getDomainLabelKey(product.domain_type_code ?? ''), product.domain_type_name)}
+                </Badge>
                 {product.category_data?.name && (
                   <Badge variant="outline" className="text-xs">{product.category_data.name}</Badge>
                 )}

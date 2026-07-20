@@ -574,7 +574,9 @@ function CreateUserSheet({
               <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
               <SelectContent>
                 {(roles ?? []).map((r) => (
-                  <SelectItem key={r.code} value={r.code}>{r.name}</SelectItem>
+                  // Localize the SystemRole by CODE, matching how the same roles are
+                  // rendered in the table (lines ~340 / ~705) — the DB `name` is RU-only.
+                  <SelectItem key={r.code} value={r.code}>{t(systemRoleLabelKey(r.code))}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

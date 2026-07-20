@@ -112,6 +112,17 @@ export function QuotesPage() {
     }
   };
 
+  /**
+   * Localized display label for a КП status. Resolves by CODE; the RU-only DB
+   * `status_name` is a deliberate fallback for a code this build's map does not
+   * know yet (backend seeded a new status ahead of the frontend). For every seeded
+   * code the map hits, so a Russian label in an EN UI means the map is stale.
+   */
+  const statusLabel = (quote: { status_code: string; status_name?: string | null }): string =>
+    quoteStatusLabelKey(quote.status_code)
+      ? t(quoteStatusLabelKey(quote.status_code))
+      : (quote.status_name ?? quote.status_code);
+
   /** Compare by status code, not by translated name (Iron Rule #2) */
   const getStatusBadgeVariant = (statusCode: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
     switch (statusCode) {
@@ -144,7 +155,7 @@ export function QuotesPage() {
       id: 'status', sortKey: 'status', header: t('pages.quotes.table.status'),
       cell: (q) => (
         <Badge variant={getStatusBadgeVariant(q.status_code)}>
-          {quoteStatusLabelKey(q.status_code) ? t(quoteStatusLabelKey(q.status_code)) : q.status_name}
+          {statusLabel(q)}
         </Badge>
       ),
     },
@@ -223,7 +234,12 @@ export function QuotesPage() {
             value: listParams.filters.status,
             onChange: (v) => listParams.setFilter('status', v),
             allLabel: t('pages.quotes.allStatuses'),
-            options: (statuses ?? []).map((s) => ({ value: s.code, label: s.name })),
+            options: (statuses ?? []).map((s) => ({
+              value: s.code,
+              // Localize by CODE; the RU-only DB `name` is a fallback for codes this
+              // build does not know yet, never for the seeded statuses.
+              label: quoteStatusLabelKey(s.code) ? t(quoteStatusLabelKey(s.code)) : s.name,
+            })),
           },
         ]}
       />
@@ -231,14 +247,17 @@ export function QuotesPage() {
         <CardContent className="p-0">
           {(() => {
             const { items: pageItems, total } = applyListParams(quotesList, listParams, {
-              searchFields: (q) => [String(q.id), String(q.deal), q.status_name],
+              // Search and sort on the LOCALIZED status label so both match what the
+              // user actually sees (an EN user typing "sent" must not have to guess
+              // the RU DB name). Raw `status_name` stays only as the unknown-code fallback.
+              searchFields: (q) => [String(q.id), String(q.deal), statusLabel(q)],
               filterPredicates: {
                 status: (q, v) => q.status_code === v,
               },
               sortAccessors: {
                 id: (q) => q.id,
                 amount: (q) => Number(q.total_incl_vat) || 0,
-                status: (q) => q.status_name ?? '',
+                status: (q) => statusLabel(q),
                 created_at: (q) => q.created_at ?? '',
               },
             });

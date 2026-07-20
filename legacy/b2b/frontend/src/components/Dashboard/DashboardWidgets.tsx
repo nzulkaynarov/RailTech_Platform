@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useDeals, useQuotes, useMyApprovalQueue, useDealStages } from '@/hooks/useCRM';
 import { useContracts } from '@/hooks/useBilling';
 import { useCurrencyStore } from '@/store/currencyStore';
+import { dealStageLabelKey } from '@/lib/codes';
 import type { DashboardStats } from '@/api/dashboardApi';
 
 // ── Urgency signals are derived from real data and compared BY CODE (FSM canon),
@@ -132,9 +133,15 @@ export function PipelineFunnel({ onNavigate }: { onNavigate: (p: string) => void
     // `stages` arrives already ordered by the DealStage lookup's sort_order (AbstractLookup
     // default ordering), so we keep the server order rather than re-sorting client-side.
     return (stages ?? [])
-      .map((s) => ({ code: s.code, name: s.name, count: counts.get(s.code) ?? 0 }))
+      // Localize the funnel label by CODE; the RU-only DB `name` is the fallback only
+      // for a stage code this build's map does not know yet.
+      .map((s) => ({
+        code: s.code,
+        name: dealStageLabelKey(s.code) ? t(dealStageLabelKey(s.code)) : s.name,
+        count: counts.get(s.code) ?? 0,
+      }))
       .filter((s) => s.count > 0);
-  }, [deals, stages]);
+  }, [deals, stages, t]);
 
   const total = segments.reduce((sum, s) => sum + s.count, 0);
   if (total === 0) return null;
