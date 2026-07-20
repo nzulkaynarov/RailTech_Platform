@@ -9016,7 +9016,7 @@ export interface components {
             /** Format: decimal */
             customs_duty?: string;
             /** Format: decimal */
-            margin_percent?: string;
+            margin_percent?: string | null;
             /** Format: decimal */
             discount_percent?: string;
             lead_time_days?: number;
@@ -10285,7 +10285,7 @@ export interface components {
             /** Format: decimal */
             customs_duty?: string;
             /** Format: decimal */
-            margin_percent?: string;
+            margin_percent?: string | null;
             /** Format: decimal */
             discount_percent?: string;
             lead_time_days?: number;
@@ -10401,7 +10401,7 @@ export interface components {
             /** Format: decimal */
             customs_duty?: string;
             /** Format: decimal */
-            margin_percent?: string;
+            margin_percent?: string | null;
             /** Format: decimal */
             discount_percent?: string;
             lead_time_days?: number;

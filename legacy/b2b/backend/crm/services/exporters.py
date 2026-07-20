@@ -25,6 +25,7 @@ from django.http import HttpResponse
 from core.exporters import export_queryset_csv, export_queryset_xlsx
 
 from ..models import Quote
+from .quotes.pricing import resolve_effective_margin
 
 # Formats this service can render. Anything else → ValueError("UNSUPPORTED_FORMAT").
 EXPORT_FORMATS = ("pdf", "xlsx", "csv")
@@ -115,11 +116,16 @@ def _cost_columns(pres_ccy: str):
             f"Landed cost ({pres_ccy})",
             lambda row: _priced_money(row, "landed_cost"),
         ),
-        # Margin is a КП-level %, meaningful only against a priced line — blank on section/note.
+        # DT1: эффективная маржа строки — позиционное переопределение, если задано, иначе
+        # унаследованная маржа КП. Ровно тот процент, что применил движок. Пусто на section/note.
         (
             "margin_percent",
-            "Маржа КП, %",
-            lambda row: _money(row["quote"].margin_percent) if _is_priced(row["item"]) else "",
+            "Маржа, %",
+            lambda row: (
+                _money(resolve_effective_margin(row["item"], row["quote"].margin_percent))
+                if _is_priced(row["item"])
+                else ""
+            ),
         ),
         ("discount_percent", "Скидка, %", lambda row: _priced_money(row, "discount_percent")),
     ]
