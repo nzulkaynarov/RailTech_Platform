@@ -412,16 +412,17 @@ def send_quote_email(self, quote_id: int) -> dict:
         _render_pdf_for("quote", quote_id)
         quote.refresh_from_db()
 
-    # Recipient: registered user first, else the offline contact.
-    if quote.deal.client and quote.deal.client.email:
-        to_email = quote.deal.client.email
-        to_name = quote.deal.client.get_full_name() or quote.deal.client.email
-    elif quote.deal.contact and quote.deal.contact.email:
-        to_email = quote.deal.contact.email
-        to_name = quote.deal.contact.name
-    else:
+    # Recipient: registered user first, else the offline contact. Resolved by the SHARED service
+    # helper that also backs the synchronous RECIPIENT_REQUIRED gate in send_to_client (B5) — the
+    # two must never disagree, or a КП gets marked SENT with no email going out. Reaching the
+    # `None` branch now means the recipient was removed between the send and this task running.
+    from crm.services.quotes import resolve_quote_recipient
+
+    recipient = resolve_quote_recipient(quote)
+    if recipient is None:
         logger.warning("Quote %s: no recipient email (client/contact) — email skipped", quote_id)
         return {"quote_id": quote_id, "status": "no_recipient"}
+    to_email, to_name = recipient
 
     attachments = []
     if quote.pdf_file:

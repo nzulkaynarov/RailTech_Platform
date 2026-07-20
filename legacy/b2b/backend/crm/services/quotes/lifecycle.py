@@ -28,6 +28,7 @@ from ._shared import (
     _quote_owner_company_id,
     _quote_seller_company,
     _set_quote_status,
+    resolve_quote_recipient,
 )
 from .pricing import compute_quote_economics
 
@@ -157,7 +158,9 @@ class QuoteLifecycleService:
 
         from notifications.models import Notification, NotificationType
 
-        quote = Quote.objects.select_related("deal__company", "deal__client", "deal__stage", "status").get(pk=quote_id)
+        quote = Quote.objects.select_related(
+            "deal__company", "deal__client", "deal__contact", "deal__stage", "status"
+        ).get(pk=quote_id)
 
         # Status guard: only an internally-approved КП (READY_TO_SEND — it passed
         # the sales → ВЭД → director chain) may go out to the client.
@@ -167,6 +170,14 @@ class QuoteLifecycleService:
                 f"Cannot send quote in status '{current}'. "
                 "Only READY_TO_SEND quotes (internally approved) can be sent to the client."
             )
+
+        # RECIPIENT GATE (B5): a КП with nobody to send it to must not be marked SENT. The async
+        # email task used to log a warning and return `no_recipient` while the КП was already
+        # frozen + SENT and the deal moved to QUOTE_SENT — «отправлено в никуда», invisible to the
+        # seller. Synchronous and BEFORE any state change, using the SAME resolver the task uses,
+        # so the two can never disagree about what "has a recipient" means.
+        if resolve_quote_recipient(quote) is None:
+            raise ValueError("RECIPIENT_REQUIRED")
 
         # An unclaimed КП has no issuing seller (e.g. the preparer's membership was deactivated
         # after the КП was claimed) — refuse to send rather than freeze it under the PLATFORM

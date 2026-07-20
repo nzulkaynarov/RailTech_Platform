@@ -7,7 +7,7 @@ circular import. Kept private (leading underscore) except where re-exported by t
 package ``__init__`` for the historical public import surface.
 """
 
-from typing import Optional
+from typing import Optional, Tuple
 
 from accounts.models import Company, CompanyMember
 from crm.models import ActivityLog, QuoteStatus
@@ -119,3 +119,24 @@ def _log_quote(
         event_code=event_code,
         event_params=event_params or {},
     )
+
+
+def resolve_quote_recipient(quote) -> Optional[Tuple[str, str]]:
+    """The КП's outgoing email recipient as ``(email, display_name)``, or ``None``.
+
+    SINGLE source of truth for "does this КП have someone to send to", shared by the
+    synchronous RECIPIENT_REQUIRED gate in ``send_to_client`` and the async
+    ``crm.tasks.send_quote_email`` task (B5). They MUST agree: when they drifted, the task
+    silently skipped the email while the КП was already marked SENT — «отправлено в никуда».
+
+    Registered buyer (``deal.client``) wins over the offline contact (``deal.contact``),
+    matching the unified-send rule: one action, channel adapts to who the recipient is.
+    """
+    deal = quote.deal
+    client = getattr(deal, "client", None)
+    if client and client.email:
+        return client.email, (client.get_full_name() or client.email)
+    contact = getattr(deal, "contact", None)
+    if contact and contact.email:
+        return contact.email, contact.name
+    return None

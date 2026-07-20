@@ -63,7 +63,7 @@ def generate_invoice_from_contract(
     # Paid-seller gate (skipped for the actor=None automation path).
     if actor is not None and (sub_err := assert_seller_can_operate(actor)):
         return None, sub_err
-    contract = Contract.objects.select_related("quote__deal").get(pk=contract_id)
+    contract = Contract.objects.select_related("quote__deal", "quote__quote_currency").get(pk=contract_id)
 
     if contract.status_code != ContractStatusCode.SIGNED:
         return None, "INVOICE_REQUIRES_SIGNED_CONTRACT"
@@ -82,9 +82,8 @@ def generate_invoice_from_contract(
     # ONLY billable lines become InvoiceItems: SECTION/NOTE carry no price and optional ITEMs are
     # quoted OUTSIDE the КП totals. Billing every row (the old .items.all()) put optional/section/
     # note lines on the invoice so Σ(InvoiceItem.line_total) overshot Invoice.total (which mirrors
-    # the header total that already excludes them) — the invoice stopped adding up. One query,
-    # reused for the currency probe and the line loop.
-    billable_items = list(quote.items.billable().select_related("product", "frozen_currency"))
+    # the header total that already excludes them) — the invoice stopped adding up.
+    billable_items = list(quote.items.billable().select_related("product"))
     invoice = Invoice.objects.create(
         deal=contract.deal,
         contract=contract,
@@ -95,7 +94,13 @@ def generate_invoice_from_contract(
         subtotal_excl_vat=quote.subtotal_excl_vat,
         vat_amount=quote.vat_amount,
         total_incl_vat=quote.total_incl_vat,
-        currency=billable_items[0].frozen_currency if billable_items else None,
+        # B1: the amounts above are copied verbatim from the quote header, which the calculation
+        # engine computes and stores in the PRESENTATION currency (Quote.quote_currency, UZS by
+        # business rule). The old probe took the first billable line's frozen_currency — that is
+        # the COST currency (supplier price, often USD/EUR for imported rail equipment), so an
+        # invoice for 13 349 617.98 UZS printed "13 349 617.98 USD". Nullable by design: the PDF
+        # template falls back to UZS, matching the engine's canonical currency.
+        currency=quote.quote_currency,
         created_by=actor,
     )
 

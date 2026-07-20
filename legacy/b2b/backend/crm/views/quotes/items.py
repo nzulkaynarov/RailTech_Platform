@@ -5,6 +5,7 @@ unchanged. Seller writes (create/update/destroy/reassign/bulk) are gated to the 
 routed seller; buyer edits fall through to the request-item services.
 """
 
+from django.db import transaction
 from drf_spectacular.utils import (
     OpenApiResponse,
     extend_schema,
@@ -168,7 +169,21 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
         row). `version` is OPTIONAL: a PATCH without it keeps the pre-волна-3 last-write-wins
         behaviour, so buyer request edits and version-less seller writes are untouched.
         """
-        if self._is_seller_write():
+        # B4 (TOCTOU) — implementation note, deliberately OUT of the docstring so it stays out of
+        # the public OpenAPI description: the check and the increment run inside ONE transaction
+        # holding a row lock (select_for_update) on the line. The bulk path always did this; the
+        # single path read `version` with a plain SELECT and incremented outside any transaction,
+        # so two concurrent PATCHes both saw version N, both passed the check, and the later write
+        # silently clobbered the earlier one. The lock serialises them: the loser re-reads the
+        # bumped version and is rejected with the same 409 as before.
+        if not self._is_seller_write():
+            return super().update(request, *args, **kwargs)
+        with transaction.atomic():
+            # Lock FIRST, via a plain pk query: get_queryset() carries select_related joins that
+            # Postgres refuses to lock without `of=`, and the lock must precede the version read.
+            # Held until commit, so a racing PATCH blocks here and only proceeds once our
+            # increment is committed and visible to it.
+            QuoteItem.objects.select_for_update().filter(pk=self.kwargs.get(self.lookup_field)).first()
             client_version = request.data.get("version")
             if client_version is not None:
                 try:
@@ -178,7 +193,7 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
                 instance = self.get_object()
                 if client_version is None or client_version != instance.version:
                     return Response({"detail": "QUOTE_ITEM_STALE"}, status=status.HTTP_409_CONFLICT)
-        return super().update(request, *args, **kwargs)
+            return super().update(request, *args, **kwargs)
 
     def perform_update(self, serializer):
         if self._is_seller_write():
