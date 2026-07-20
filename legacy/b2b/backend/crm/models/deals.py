@@ -148,7 +148,7 @@ class Deal(models.Model):
         return quotes.order_by("-version").first()
 
     @property
-    def total_value(self):
+    def total_value(self) -> Decimal:
         quote = self.active_quote
         return quote.total_incl_vat if quote else Decimal("0")
 

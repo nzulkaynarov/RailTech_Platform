@@ -5,9 +5,9 @@ import uuid
 from celery.result import AsyncResult
 from django.db import DatabaseError
 from django.http import HttpResponse
-from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
+from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view, inline_serializer
 from kombu.exceptions import OperationalError
-from rest_framework import status, viewsets
+from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import IsAuthenticated
@@ -595,6 +595,14 @@ class AttachmentViewSet(viewsets.ModelViewSet):
         "(human-in-loop). Capped at 50 lines per call. ARCH-01: the LLM call runs on Celery — "
         "returns 202 + task_id; poll sourcing/ai-status/<task_id>/ for {matches: []}."
     ),
+    request=inline_serializer(
+        "MatchCatalogRequest",
+        fields={
+            "lines": serializers.ListField(child=serializers.DictField()),
+            "domain_code": serializers.CharField(required=False),
+            "top_k": serializers.IntegerField(required=False),
+        },
+    ),
     responses={
         202: OpenApiResponse(description="AI job queued, task_id returned"),
         400: OpenApiResponse(description="Missing lines"),
@@ -638,6 +646,13 @@ class MatchCatalogView(APIView):
         "never a hard block (line_index always references a GIVEN line; out-of-range "
         "indices are dropped). Capped at 50 lines per call. ARCH-01: the LLM call runs on "
         "Celery — returns 202 + task_id; poll sourcing/ai-status/<task_id>/ for {findings: []}."
+    ),
+    request=inline_serializer(
+        "PreflightCheckRequest",
+        fields={
+            "lines": serializers.ListField(child=serializers.DictField()),
+            "domain_code": serializers.CharField(required=False),
+        },
     ),
     responses={
         202: OpenApiResponse(description="AI job queued, task_id returned"),

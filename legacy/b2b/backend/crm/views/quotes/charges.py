@@ -6,7 +6,7 @@ templates are scoped to the requester's own seller company.
 """
 
 from drf_spectacular.utils import extend_schema, extend_schema_view
-from rest_framework import viewsets
+from rest_framework import serializers, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -119,11 +119,19 @@ class QuoteChargeViewSet(viewsets.ModelViewSet):
         quote.recalculate_totals()
 
 
+class QuoteStatusLookupSerializer(serializers.Serializer):
+    """Response shape for the QuoteStatus lookup feed ({code, name})."""
+
+    code = serializers.CharField()
+    name = serializers.CharField()
+
+
 @extend_schema_view(
     list=extend_schema(summary="List quote statuses", tags=["CRM"]),
 )
 class QuoteStatusViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = QuoteStatus.objects.all().order_by("sort_order", "name")
+    serializer_class = QuoteStatusLookupSerializer
     permission_classes = [IsAuthenticated]
     pagination_class = None
 

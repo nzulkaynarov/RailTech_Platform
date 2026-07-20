@@ -1,7 +1,7 @@
 """Platform Operator sub-role API (ADR-0004 G1) — thin wrappers over accounts.services.operators."""
 
-from drf_spectacular.utils import extend_schema
-from rest_framework import status, viewsets
+from drf_spectacular.utils import extend_schema, inline_serializer
+from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -123,7 +123,16 @@ class OperatorPermissionCatalogView(APIView):
 
     permission_classes = [IsAuthenticated, OperatorScoped]
 
-    @extend_schema(summary="Operator permission catalog", tags=["Accounts"])
+    @extend_schema(
+        summary="Operator permission catalog",
+        responses={
+            200: inline_serializer(
+                "OperatorPermissionCatalog",
+                fields={"groups": serializers.ListField(child=serializers.DictField())},
+            )
+        },
+        tags=["Accounts"],
+    )
     def get(self, request):
         groups = []
         for key, perms in OPERATOR_PERMISSION_GROUPS.items():

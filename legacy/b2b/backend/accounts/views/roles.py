@@ -1,7 +1,7 @@
 """Company roles API (Role+Permission-set) — thin wrappers over accounts.services.roles."""
 
-from drf_spectacular.utils import extend_schema
-from rest_framework import status, viewsets
+from drf_spectacular.utils import extend_schema, inline_serializer
+from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -111,7 +111,16 @@ class PermissionCatalogView(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    @extend_schema(summary="Company permission catalog", tags=["Accounts"])
+    @extend_schema(
+        summary="Company permission catalog",
+        responses={
+            200: inline_serializer(
+                "CompanyPermissionCatalog",
+                fields={"groups": serializers.ListField(child=serializers.DictField())},
+            )
+        },
+        tags=["Accounts"],
+    )
     def get(self, request):
         groups = []
         for key, perms in PERMISSION_GROUPS.items():

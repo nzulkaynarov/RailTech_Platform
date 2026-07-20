@@ -65,19 +65,19 @@ class ContractSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
 
-    def get_pdf_url(self, obj):
+    def get_pdf_url(self, obj) -> str | None:
         return obj.pdf_file.url if obj.pdf_file else None
 
-    def get_signed_file_url(self, obj):
+    def get_signed_file_url(self, obj) -> str | None:
         return obj.signed_file.url if obj.signed_file else None
 
-    def get_viewer_can_sign_client(self, obj):
+    def get_viewer_can_sign_client(self, obj) -> bool:
         from crm.services.contracts import viewer_can_sign_client
 
         request = self.context.get("request")
         return bool(request and viewer_can_sign_client(request.user, obj))
 
-    def get_viewer_can_sign_manager(self, obj):
+    def get_viewer_can_sign_manager(self, obj) -> bool:
         from crm.services.contracts import viewer_can_sign_manager
 
         request = self.context.get("request")
@@ -116,7 +116,7 @@ class PaymentSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["recorded_by", "created_at"]
 
-    def get_proof_url(self, obj):
+    def get_proof_url(self, obj) -> str | None:
         return obj.proof_file.url if obj.proof_file else None
 
 
@@ -162,7 +162,7 @@ class InvoiceSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
 
-    def get_pdf_url(self, obj):
+    def get_pdf_url(self, obj) -> str | None:
         return obj.pdf_file.url if obj.pdf_file else None
 
 
@@ -196,10 +196,10 @@ class ActSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["number", "pdf_file", "signed_at"]
 
-    def get_pdf_url(self, obj):
+    def get_pdf_url(self, obj) -> str | None:
         return obj.pdf_file.url if obj.pdf_file else None
 
-    def get_signed_file_url(self, obj):
+    def get_signed_file_url(self, obj) -> str | None:
         return obj.signed_file.url if obj.signed_file else None
 
 

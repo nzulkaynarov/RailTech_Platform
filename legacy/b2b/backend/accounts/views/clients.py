@@ -59,6 +59,8 @@ class ContactViewSet(viewsets.ModelViewSet):
     http_method_names = ["get", "post", "patch", "head", "options"]
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return Contact.objects.none()
         user = self.request.user
         queryset = Contact.objects.select_related("company")
         if getattr(user, "is_platform_admin", False) or getattr(user, "is_superuser", False):

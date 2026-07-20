@@ -30,14 +30,14 @@ class MessageSerializer(serializers.ModelSerializer):
         # / the buyer's selected counterparty — read-only here, never client-forgeable (audit #4).
         read_only_fields = ["sender", "timestamp", "message_type", "seller_company"]
 
-    def get_sender_name(self, obj):
+    def get_sender_name(self, obj) -> str:
         sender = obj.sender
         if not sender:
             return ""
         full = sender.get_full_name()
         return full or sender.email
 
-    def get_is_me(self, obj):
+    def get_is_me(self, obj) -> bool:
         request = self.context.get("request")
         if request and request.user.is_authenticated:
             return obj.sender_id == request.user.id

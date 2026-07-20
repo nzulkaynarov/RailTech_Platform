@@ -5,6 +5,8 @@ unchanged. The routing helpers enforce per-seller ownership visibility (a seller
 only its own claim / itself among the routed sellers — hidden competition).
 """
 
+from datetime import datetime
+
 from rest_framework import serializers
 
 from crm.models import Deal
@@ -82,13 +84,13 @@ class DealListSerializer(serializers.ModelSerializer):
     assigned_to_name = serializers.SerializerMethodField()
     assigned_at = serializers.SerializerMethodField()
 
-    def get_assigned_to(self, obj):
+    def get_assigned_to(self, obj) -> int | None:
         return _assigned_to_id(obj, self.context.get("request"))
 
-    def get_assigned_to_name(self, obj):
+    def get_assigned_to_name(self, obj) -> str | None:
         return _assigned_to_display(obj, self.context.get("request"))
 
-    def get_assigned_at(self, obj):
+    def get_assigned_at(self, obj) -> datetime | None:
         return _assigned_at(obj, self.context.get("request"))
 
     def get_target_sellers_data(self, obj) -> list:
@@ -133,13 +135,13 @@ class DealDetailSerializer(serializers.ModelSerializer):
     can_edit_request = serializers.SerializerMethodField()
     target_sellers_data = serializers.SerializerMethodField()
 
-    def get_assigned_to(self, obj):
+    def get_assigned_to(self, obj) -> int | None:
         return _assigned_to_id(obj, self.context.get("request"))
 
-    def get_assigned_to_name(self, obj):
+    def get_assigned_to_name(self, obj) -> str | None:
         return _assigned_to_display(obj, self.context.get("request"))
 
-    def get_assigned_at(self, obj):
+    def get_assigned_at(self, obj) -> datetime | None:
         return _assigned_at(obj, self.context.get("request"))
 
     def get_target_sellers_data(self, obj) -> list:

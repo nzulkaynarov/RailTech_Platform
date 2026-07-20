@@ -122,7 +122,7 @@ jobs:
           cd backend
           # --create-db: build the test schema from current models on the fresh
           # ephemeral Postgres (we run --nomigrations, and addopts sets --reuse-db).
-          pytest --create-db --cov=. --cov-report=xml --cov-report=html --cov-fail-under=30
+          pytest --create-db --cov=. --cov-report=xml --cov-report=html --cov-fail-under=70
 
   # The test job above runs with --nomigrations (pyproject addopts), so it builds
   # the schema from models and never exercises the migration graph. This job does:
