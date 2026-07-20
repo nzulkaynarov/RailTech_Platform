@@ -5,7 +5,7 @@ import type { QuoteItem } from '@/api/crmApi';
 export interface BulkFieldEdit {
 	id: number;
 	field: keyof QuoteItem;
-	value: string | number;
+	value: string | number | boolean;
 }
 
 export interface UseQuoteDraftResult {
@@ -16,7 +16,7 @@ export interface UseQuoteDraftResult {
 	/** Derived from `dirtyIds` — replaces the old JSON.stringify(localItems) diff. */
 	hasUnsavedChanges: boolean;
 	/** Apply a single field edit to one row and mark it dirty (one undo step). */
-	setField: (id: number, field: keyof QuoteItem, value: string | number) => void;
+	setField: (id: number, field: keyof QuoteItem, value: string | number | boolean) => void;
 	/** Apply many field edits across rows as ONE dirty-making, ONE-undo-step op (bulk price/discount). */
 	applyBulk: (edits: BulkFieldEdit[]) => void;
 	/** Discard a row's local edits — restore its last server value. */
@@ -115,7 +115,7 @@ export function useQuoteDraft(serverItems: QuoteItem[]): UseQuoteDraftResult {
 	}, [serverIdsKey]);
 
 	const setField = useCallback(
-		(id: number, field: keyof QuoteItem, value: string | number) => {
+		(id: number, field: keyof QuoteItem, value: string | number | boolean) => {
 			pushUndoSnapshot();
 			setDraftItems((previousDraft) =>
 				previousDraft.map((item) => (item.id === id ? { ...item, [field]: value } : item)),
@@ -138,7 +138,7 @@ export function useQuoteDraft(serverItems: QuoteItem[]): UseQuoteDraftResult {
 			const editsById = new Map<number, Partial<QuoteItem>>();
 			for (const edit of edits) {
 				const patch = editsById.get(edit.id) ?? {};
-				(patch as Record<string, string | number>)[edit.field as string] = edit.value;
+				(patch as Record<string, string | number | boolean>)[edit.field as string] = edit.value;
 				editsById.set(edit.id, patch);
 			}
 			setDraftItems((previousDraft) =>

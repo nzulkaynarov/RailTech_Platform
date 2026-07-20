@@ -680,6 +680,28 @@
     },
     "deleteItem": "Delete item?",
     "addItemPlaceholder": "Item name...",
+    "section": {
+      "add": "Section",
+      "newTitle": "New section",
+      "placeholder": "Section title",
+      "aria": "Section title",
+      "subtotal": "Subtotal"
+    },
+    "note": {
+      "add": "Note",
+      "newText": "Note",
+      "placeholder": "Note text",
+      "aria": "Note text"
+    },
+    "optional": {
+      "badge": "opt.",
+      "toggle": "Optional item (excluded from totals)"
+    },
+    "row": {
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "saveBeforeMove": "Save the row's changes before moving it"
+    },
     "builder": {
       "title": "Quote Builder",
       "itemsTab": "Items",

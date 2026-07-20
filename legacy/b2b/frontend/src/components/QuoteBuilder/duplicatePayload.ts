@@ -1,4 +1,4 @@
-import type { QuoteItem } from '@/api/crmApi';
+import type { QuoteItem, QuoteItemDisplayType } from '@/api/crmApi';
 
 /**
  * The КП-line fields the bulk-create endpoint accepts as writable (mirror of
@@ -16,6 +16,11 @@ export interface DuplicateItemPayload {
 	customs_duty: string;
 	discount_percent: string;
 	lead_time_days: number;
+	// S1: preserve the row TYPE + optionality so a duplicated section stays a section and an optional
+	// line stays optional. A SECTION/NOTE copy still carries the (zero) pricing fields — the backend
+	// SECTION_NOTE_NO_PRICING guard only rejects NON-zero pricing, so zeros pass through cleanly.
+	display_type: QuoteItemDisplayType;
+	is_optional: boolean;
 	hs_code?: string;
 	mpn?: string;
 	gost_drawing?: string;
@@ -35,6 +40,8 @@ export function buildDuplicatePayload(item: QuoteItem, copySuffix: string): Dupl
 		customs_duty: item.customs_duty,
 		discount_percent: item.discount_percent,
 		lead_time_days: item.lead_time_days ?? 0,
+		display_type: item.display_type ?? 'ITEM',
+		is_optional: !!item.is_optional,
 	};
 	// Optional text fields — only forward when present, so the payload stays lean.
 	if (item.hs_code) payload.hs_code = item.hs_code;

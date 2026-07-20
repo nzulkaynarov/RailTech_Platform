@@ -36,7 +36,7 @@ export interface QuoteBuilderGridContextValue {
 	selection: UseRowSelectionResult;
 
 	// ── Per-cell editing + errors ─────────────────────────────────────────────────────────────
-	handleFieldChange: (id: number, field: keyof QuoteItem, value: string | number) => void;
+	handleFieldChange: (id: number, field: keyof QuoteItem, value: string | number | boolean) => void;
 	cellError: (id: number, field: string) => string | undefined;
 	cellErrors: Record<string, string>;
 	hiddenErrorFields: (errors: Record<string, string>, id: number, showCost: boolean) => string[];
@@ -55,10 +55,16 @@ export interface QuoteBuilderGridContextValue {
 	handleDeleteItem: (id: number) => void;
 	setReassignItemId: Dispatch<SetStateAction<number | null>>;
 	rowRefs: MutableRefObject<Map<number, HTMLTableRowElement>>;
+	// S1: перемещение строки ↑/↓ (swap position) + инлайн-переименование заголовка SECTION / текста NOTE.
+	handleMoveRow: (id: number, direction: 'up' | 'down') => void;
+	handleRenameRow: (id: number, value: string) => void;
 
 	// ── Toolbar ───────────────────────────────────────────────────────────────────────────────
 	showAddRow: boolean;
 	setShowAddRow: Dispatch<SetStateAction<boolean>>;
+	// S1: «+ Секция» / «+ Заметка» — добавить строку-заголовок / заметку в конец КП.
+	handleAddSection: () => void;
+	handleAddNote: () => void;
 	openPasteDialog: () => void;
 	setShowAiMatch: Dispatch<SetStateAction<boolean>>;
 	handlePricingAssist: () => void;

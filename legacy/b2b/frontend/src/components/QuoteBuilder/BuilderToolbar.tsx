@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
 	Loader2, Plus, Sparkles, Settings, Tag, PanelRightClose, PanelRightOpen, Maximize2, Minimize2, ClipboardPaste,
+	Heading, StickyNote,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
@@ -16,7 +17,8 @@ import { useQuoteBuilderGrid } from './QuoteBuilderGridContext';
 export const BuilderToolbar: React.FC = () => {
 	const { t } = useTranslation();
 	const {
-		activeQuote, draftItems, showAddRow, setShowAddRow, openPasteDialog, setShowAiMatch,
+		activeQuote, draftItems, showAddRow, setShowAddRow, handleAddSection, handleAddNote,
+		openPasteDialog, setShowAiMatch,
 		handlePricingAssist, pricingBusy, setShowSettings, railAsSheet, railOpen, setRailSheetOpen,
 		toggleRail, fullscreen, setFullscreen,
 	} = useQuoteBuilderGrid();
@@ -28,6 +30,19 @@ export const BuilderToolbar: React.FC = () => {
 					<Plus className="size-3" />
 					{t('common.add')}
 				</Button>
+				{/* S1: секции/заметки — только пока КП не заморожен (как и все правки позиций). */}
+				{!activeQuote.frozen_at && (
+					<Button variant="outline" size="sm" onClick={handleAddSection}>
+						<Heading className="size-3" />
+						{t('quote.section.add')}
+					</Button>
+				)}
+				{!activeQuote.frozen_at && (
+					<Button variant="outline" size="sm" onClick={handleAddNote}>
+						<StickyNote className="size-3" />
+						{t('quote.note.add')}
+					</Button>
+				)}
 				{!activeQuote.frozen_at && (
 					<Button variant="outline" size="sm" onClick={openPasteDialog}>
 						<ClipboardPaste className="size-3" />
