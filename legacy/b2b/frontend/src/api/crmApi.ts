@@ -5,9 +5,20 @@ import { PaginatedResponse } from './types';
 
 export type Product = CatalogProduct;
 
+// Odoo-style строковый тип позиции КП (mirror backend QuoteItem.DisplayType):
+//   ITEM — обычная позиция с ценой (входит в итоги); SECTION — заголовок раздела
+//   (жирный, с подытогом, без цен); NOTE — заметка (курсив, без цен).
+export type QuoteItemDisplayType = 'ITEM' | 'SECTION' | 'NOTE';
+
 export interface QuoteItem {
 	id: number;
 	quote: number;
+	// S1 (спека §5 п.19): тип строки. undefined трактуется как ITEM (обратная совместимость).
+	display_type?: QuoteItemDisplayType;
+	// Опциональная позиция — показывается клиенту с ценой, но НЕ входит в итоги/маржу КП.
+	is_optional?: boolean;
+	// Явный порядок строки внутри КП (перемещение ↑/↓, группировка под разделами).
+	position?: number;
 	product?: number | null;
 	product_name?: string;
 	product_domain?: string;
@@ -496,7 +507,7 @@ export const crmApi = {
 		const response = await apiClient.patch<Deal>(`crm/deals/${id}/`, data);
 		return response.data;
 	},
-	createQuoteItem: async (data: { quote: number; imported_raw_name: string; quantity: number; frozen_base_price?: string; frozen_currency?: string; lead_time_days?: number }) => {
+	createQuoteItem: async (data: { quote: number; imported_raw_name: string; quantity?: number; frozen_base_price?: string; frozen_currency?: string; lead_time_days?: number; display_type?: QuoteItemDisplayType; is_optional?: boolean }) => {
 		const response = await apiClient.post<QuoteItem>('crm/quote-items/', data);
 		return response.data;
 	},

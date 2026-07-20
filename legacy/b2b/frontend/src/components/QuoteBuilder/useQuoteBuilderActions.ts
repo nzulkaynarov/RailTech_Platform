@@ -124,6 +124,8 @@ export function useQuoteBuilderActions(params: QuoteBuilderActionsParams) {
 					discount_percent: item.discount_percent,
 					lead_time_days: item.lead_time_days,
 					hs_code: item.hs_code,
+					// S1: persist the optional flag toggled in the grid (draft edit → this batch).
+					is_optional: item.is_optional,
 				})),
 			});
 			setCellErrors({});
@@ -275,11 +277,13 @@ export function useQuoteBuilderActions(params: QuoteBuilderActionsParams) {
 		}
 	};
 
-	// Discount / price change: PURE local draft edits (one undo step each) — no network call.
+	// Discount / price change: PURE local draft edits (one undo step each) — no network call. S1:
+	// only ITEM rows carry pricing, so a selected SECTION/NOTE is skipped (a priced group header
+	// would fail the backend SECTION_NOTE_NO_PRICING guard on save).
 	const handleBulkDiscount = (percent: number) => {
-		const edits = [...selection.selectedIds].map((id) => ({
-			id, field: 'discount_percent' as const, value: String(percent),
-		}));
+		const edits = draftItems
+			.filter((row) => selection.selectedIds.has(row.id) && (row.display_type ?? 'ITEM') === 'ITEM')
+			.map((row) => ({ id: row.id, field: 'discount_percent' as const, value: String(percent) }));
 		if (edits.length === 0) return;
 		applyBulk(edits);
 		toast.success(t('quote.bulk.discountApplied', { count: edits.length }));
@@ -289,15 +293,17 @@ export function useQuoteBuilderActions(params: QuoteBuilderActionsParams) {
 	const handleBulkPriceChange = (percent: number) => {
 		const factor = 1 + percent / 100;
 		let clampedAny = false;
-		const edits = [...selection.selectedIds].map((id) => {
-			const item = draftItems.find((row) => row.id === id);
-			const raw = toDecimal(item?.frozen_base_price).mul(factor);
-			let next = raw;
-			if (next.lessThan(0)) next = toDecimal(0);
-			if (next.greaterThan(QUOTE_ITEM_MAX_UNIT_PRICE)) next = toDecimal(QUOTE_ITEM_MAX_UNIT_PRICE);
-			if (!next.equals(raw)) clampedAny = true;
-			return { id, field: 'frozen_base_price' as const, value: next.toDecimalPlaces(2).toString() };
-		});
+		// S1: only ITEM rows carry a base price — a selected SECTION/NOTE is skipped.
+		const edits = draftItems
+			.filter((row) => selection.selectedIds.has(row.id) && (row.display_type ?? 'ITEM') === 'ITEM')
+			.map((item) => {
+				const raw = toDecimal(item.frozen_base_price).mul(factor);
+				let next = raw;
+				if (next.lessThan(0)) next = toDecimal(0);
+				if (next.greaterThan(QUOTE_ITEM_MAX_UNIT_PRICE)) next = toDecimal(QUOTE_ITEM_MAX_UNIT_PRICE);
+				if (!next.equals(raw)) clampedAny = true;
+				return { id: item.id, field: 'frozen_base_price' as const, value: next.toDecimalPlaces(2).toString() };
+			});
 		if (edits.length === 0) return;
 		applyBulk(edits);
 		// Warn (not silently) when any row's computed price hit the 0..cap bounds.
@@ -320,6 +326,83 @@ export function useQuoteBuilderActions(params: QuoteBuilderActionsParams) {
 			toast.success(t('quote.bulk.duplicated', { count: items.length }));
 			selection.clear();
 		} catch (error) {
+			toast.error(translateApiError(error));
+		}
+	};
+
+	// ── S1: секции / заметки / перемещение (спека §5 п.19) ────────────────────────────────
+	// «+ Секция» / «+ Заметка»: create a SECTION/NOTE row via the single-item create endpoint.
+	// imported_raw_name is the heading/text (editable inline afterwards); NO pricing is sent (the
+	// backend validate() rejects a priced SECTION/NOTE — SECTION_NOTE_NO_PRICING). The row lands at
+	// the END of the КП (perform_create backfills position = max+1).
+	const handleAddSectionOrNote = async (displayType: 'SECTION' | 'NOTE') => {
+		const quote = deal?.active_quote;
+		if (!quote) return;
+		try {
+			await createItemMutation.mutateAsync({
+				quote: quote.id,
+				imported_raw_name: displayType === 'SECTION' ? t('quote.section.newTitle') : t('quote.note.newText'),
+				display_type: displayType,
+			});
+		} catch {
+			toast.error(t('errors.operationFailed'));
+		}
+	};
+	const handleAddSection = () => handleAddSectionOrNote('SECTION');
+	const handleAddNote = () => handleAddSectionOrNote('NOTE');
+
+	// Rename a SECTION/NOTE inline (its heading / free-text). bulk-update can NOT write
+	// imported_raw_name, so a name edit goes through the single-item PATCH (full serializer). Empty
+	// title → ignored (keep the previous, never persist a blank heading). Fires on blur.
+	const handleRenameRow = async (id: number, value: string) => {
+		const trimmed = value.trim();
+		if (!trimmed) return;
+		try {
+			await updateMutation.mutateAsync({ id, data: { imported_raw_name: trimmed } });
+		} catch {
+			toast.error(t('errors.operationFailed'));
+		}
+	};
+
+	// Move a row one slot ↑/↓ by SWAPPING its `position` with the adjacent row via the transactional
+	// bulk-update (both rows in one payload) — NOT drag (which fights the virtualizer + sticky
+	// columns). draftItems is already position-sorted (server ordering), so the neighbour is the
+	// adjacent index. Positions are distinct after the backfill/bulk-create sequential assignment; a
+	// legacy collision falls back to the visible indices so the swap always yields two different
+	// positions. A stale row (colleague reordered first) opens the same conflict dialog as Save.
+	const handleMoveRow = async (id: number, direction: 'up' | 'down') => {
+		const quoteId = deal?.active_quote?.id;
+		if (!quoteId) return;
+		const index = draftItems.findIndex((row) => row.id === id);
+		if (index === -1) return;
+		const swapIndex = direction === 'up' ? index - 1 : index + 1;
+		if (swapIndex < 0 || swapIndex >= draftItems.length) return;
+		const moving = draftItems[index];
+		const neighbour = draftItems[swapIndex];
+		let movingPosition = neighbour.position;
+		let neighbourPosition = moving.position;
+		if (moving.position == null || neighbour.position == null || moving.position === neighbour.position) {
+			movingPosition = swapIndex;
+			neighbourPosition = index;
+		}
+		try {
+			await bulkUpdateMutation.mutateAsync({
+				quoteId,
+				items: [
+					{ id: moving.id, position: movingPosition, version: moving.version },
+					{ id: neighbour.id, position: neighbourPosition, version: neighbour.version },
+				],
+			});
+		} catch (error) {
+			const rows = extractBulkErrorRows(error);
+			if (rows !== null) {
+				const staleIds = extractStaleConflictIds(rows);
+				if (staleIds.length > 0) {
+					setConflictIds(staleIds);
+					setConflictOpen(true);
+					return;
+				}
+			}
 			toast.error(translateApiError(error));
 		}
 	};
@@ -362,6 +445,10 @@ export function useQuoteBuilderActions(params: QuoteBuilderActionsParams) {
 		handlePasteConfirm,
 		handleDeleteItem,
 		confirmDeleteItem,
+		handleAddSection,
+		handleAddNote,
+		handleRenameRow,
+		handleMoveRow,
 		handleBulkDelete,
 		handleBulkDiscount,
 		handleBulkPriceChange,

@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { formatMoney } from '@/utils/decimal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { TableRow, TableCell } from '@/components/ui/table';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
@@ -75,6 +76,9 @@ export const GridRow: React.FC<GridRowProps> = ({ item, index, virtualIndex, mea
 
 	const isExpanded = expandedRowId === item.id;
 	const isRowSelected = selection.isSelected(item.id);
+	// S1: опциональная позиция — показывается с ценой, но её сумма НЕ входит в итоги/маржу КП.
+	// Визуально: бейдж «опц.» у наименования + приглушённая строка (управление остаётся кликабельным).
+	const isOptional = !!item.is_optional;
 	const rowHiddenErrors = hiddenErrorFields(cellErrors, item.id, showCostColumns);
 	// Sticky-cell background: selection tint overrides the plain surface; hover/focus win.
 	const stickyBg = cn(
@@ -106,7 +110,12 @@ export const GridRow: React.FC<GridRowProps> = ({ item, index, virtualIndex, mea
 				ref={setRowRef}
 				data-row-id={item.id}
 				data-index={virtualIndex}
-				className={cn('hover:bg-muted/50 focus-within:bg-muted/40 transition-colors group', isRowSelected && 'bg-primary/5')}
+				data-display-type={item.display_type ?? 'ITEM'}
+				className={cn(
+					'hover:bg-muted/50 focus-within:bg-muted/40 transition-colors group',
+					isRowSelected && 'bg-primary/5',
+					isOptional && 'opacity-60',
+				)}
 			>
 				<TableCell className={cn('w-8 px-1 py-1.5 text-center sticky left-0 z-10', stickyBg)}>
 					<Checkbox
@@ -156,11 +165,18 @@ export const GridRow: React.FC<GridRowProps> = ({ item, index, virtualIndex, mea
 					</div>
 				</TableCell>
 				<TableCell className={cn('px-2 py-1.5 sticky left-16 z-10', stickyBg)}>
-					<ProductNameCell
-						item={item}
-						index={index + 1}
-						onBrowseCandidates={setReassignItemId}
-					/>
+					<div className="flex items-center gap-2">
+						{isOptional && (
+							<Badge variant="outline" className="shrink-0 text-xs font-normal text-muted-foreground">
+								{t('quote.optional.badge')}
+							</Badge>
+						)}
+						<ProductNameCell
+							item={item}
+							index={index + 1}
+							onBrowseCandidates={setReassignItemId}
+						/>
+					</div>
 				</TableCell>
 				<TableCell className="p-0">
 					<NumericCell
@@ -270,9 +286,26 @@ export const GridRow: React.FC<GridRowProps> = ({ item, index, virtualIndex, mea
 					})()}
 				</TableCell>
 				<TableCell className="px-1 py-0.5">
-					<Button variant="ghost" size="icon-xs" onClick={() => handleDeleteItem(item.id)} className="text-muted-foreground hover:text-destructive" title={t('common.delete')}>
-						<Trash2 className="size-3" />
-					</Button>
+					{/* Stack the «опция» toggle above delete — two icon-sized controls won't fit side by
+					    side in the narrow w-8 actions cell (mirrors the chevron/error-marker column). */}
+					<div className="flex flex-col items-center gap-1">
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<span className="flex items-center justify-center">
+									<Checkbox
+										checked={isOptional}
+										onCheckedChange={(checked) => handleFieldChange(item.id, 'is_optional', checked === true)}
+										aria-label={t('quote.optional.toggle')}
+										className="size-3.5"
+									/>
+								</span>
+							</TooltipTrigger>
+							<TooltipContent>{t('quote.optional.toggle')}</TooltipContent>
+						</Tooltip>
+						<Button variant="ghost" size="icon-xs" onClick={() => handleDeleteItem(item.id)} className="text-muted-foreground hover:text-destructive" title={t('common.delete')}>
+							<Trash2 className="size-3" />
+						</Button>
+					</div>
 				</TableCell>
 			</TableRow>
 			{isExpanded && (

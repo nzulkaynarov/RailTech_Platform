@@ -38,6 +38,19 @@ import { toDecimal } from '@/utils/decimal';
 // Backend quantizes money to 2 dp with ROUND_HALF_UP at every step — mirror it exactly.
 const q2 = (value: Decimal): Decimal => value.toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
 
+/**
+ * S1 (спека §5 п.19) — «counts as money» exactly as the backend `QuoteItem.objects.billable()`
+ * filter (crm/models/quotes.py): only a priced ITEM row that is NOT optional feeds subtotal /
+ * каскад / НДС / маржу. SECTION and NOTE are presentation (group header / free-text, no price);
+ * an optional ITEM is shown to the client WITH a price but sits OUTSIDE the totals (доп.
+ * предложение). `display_type` may be undefined on legacy rows → treated as ITEM. This is THE
+ * single source of the exclusion invariant on the client — the mirror must agree with the server
+ * total to the kopeck (Rule 8 — one source).
+ */
+export function isBillableItem(item: Pick<QuoteItem, 'display_type' | 'is_optional'>): boolean {
+	return (item.display_type ?? 'ITEM') === 'ITEM' && !item.is_optional;
+}
+
 /** Which FX map a resolved rate came from — `null` for the implicit UZS=1 identity. */
 type FxSource = 'manual' | 'snapshot' | 'market' | null;
 
@@ -111,6 +124,10 @@ export interface PricingMirrorResult {
 	lineFor: (item: QuoteItem) => LineMirror;
 	/** КП totals with the dirty rows' previews folded in (or the server fallback). */
 	totals: TotalsMirror;
+	/** Live подытог per SECTION row id — Σ «Сумма» of the billable (non-optional ITEM) rows that
+	 *  follow that SECTION up to the next SECTION. Tracks dirty-row previews. `null` for a section
+	 *  with no billable rows under it. Keyed by the SECTION QuoteItem id. */
+	sectionSubtotalFor: (sectionId: number) => string | null;
 }
 
 export interface PricingMirrorInput {
@@ -247,10 +264,32 @@ export function usePricingMirror(input: PricingMirrorInput): PricingMirrorResult
 		const lineFor = (item: QuoteItem): LineMirror =>
 			lineMap.get(item.id) ?? serverLine(item, input);
 
-		// Totals: recompute only when there IS a dirty edit and every dirty row is computable;
-		// otherwise report the server figures (honest fallback — never a fabricated number).
+		// S1: живой подытог каждого SECTION — Σ «Сумма» биллинговых (non-optional ITEM) строк ПОСЛЕ
+		// него до следующего SECTION. Считается через lineFor, поэтому dirty-строки в подытоге тоже
+		// живые. Строки до первого SECTION ни к какому разделу не относятся. Пустой раздел → отсутствует
+		// в карте → sectionSubtotalFor вернёт null. Считается ВСЕГДА (не зависит от computable итогов).
+		const sectionSums = new Map<number, Decimal>();
+		let currentSectionId: number | null = null;
+		for (const item of draftItems) {
+			if ((item.display_type ?? 'ITEM') === 'SECTION') {
+				currentSectionId = item.id;
+			} else if (currentSectionId != null && isBillableItem(item)) {
+				const line = lineMap.get(item.id) ?? serverLine(item, input);
+				const quantity = Number(item.quantity) || 0;
+				const previous = sectionSums.get(currentSectionId) ?? new Decimal(0);
+				sectionSums.set(currentSectionId, previous.plus(toDecimal(line.finalPriceExclVat).mul(quantity)));
+			}
+		}
+		const sectionSubtotalFor = (sectionId: number): string | null => {
+			const sum = sectionSums.get(sectionId);
+			return sum == null ? null : q2(sum).toString();
+		};
+
+		// Totals: recompute only when there IS a dirty edit and every dirty BILLABLE row is
+		// computable; otherwise report the server figures (honest fallback — never a fabricated
+		// number). A dirty SECTION/NOTE/optional row never blocks the totals (it isn't in them).
 		const anyUnknown = draftItems.some(
-			(item) => dirtyIds.has(item.id) && (lineMap.get(item.id)?.needsServerRecalc ?? false),
+			(item) => dirtyIds.has(item.id) && isBillableItem(item) && (lineMap.get(item.id)?.needsServerRecalc ?? false),
 		);
 		const isDraft = dirtyIds.size > 0;
 
@@ -265,13 +304,16 @@ export function usePricingMirror(input: PricingMirrorInput): PricingMirrorResult
 		};
 
 		if (!isDraft || anyUnknown) {
-			return { lineFor, totals: { ...serverFallback, computable: !isDraft } };
+			return { lineFor, sectionSubtotalFor, totals: { ...serverFallback, computable: !isDraft } };
 		}
 
-		// subtotal = Σ final × qty across ALL rows (clean=server final, dirty=preview final).
+		// subtotal = Σ final × qty across the BILLABLE rows only (non-optional ITEM) — mirrors the
+		// backend `.billable()` aggregation. SECTION/NOTE carry no price; an optional ITEM is shown
+		// with a price but excluded from subtotal/НДС/итого/маржа (доп. предложение). (P0-2/S1).
 		let subtotal = new Decimal(0);
 		let totalLandedCost = new Decimal(0);
 		for (const item of draftItems) {
+			if (!isBillableItem(item)) continue;
 			const line = lineMap.get(item.id)!;
 			const quantity = Number(item.quantity) || 0;
 			subtotal = subtotal.plus(toDecimal(line.finalPriceExclVat).mul(quantity));
@@ -308,6 +350,7 @@ export function usePricingMirror(input: PricingMirrorInput): PricingMirrorResult
 
 		return {
 			lineFor,
+			sectionSubtotalFor,
 			totals: {
 				computable: true,
 				isDraft,

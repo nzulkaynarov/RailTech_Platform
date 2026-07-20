@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  crmApi, QuoteItem, QuoteCharge, MatchCatalogPayload, PreflightPayload, DocCheckPayload,
+  crmApi, QuoteItem, QuoteItemDisplayType, QuoteCharge, MatchCatalogPayload, PreflightPayload, DocCheckPayload,
   RelationshipDirection, RelationshipStage, OfflineClientPayload,
 } from '../api/crmApi';
 import { aiApi, type ComposeRequestPayload } from '../api/aiApi';
@@ -165,7 +165,7 @@ export const useUpdateDeal = () => {
 export const useCreateQuoteItem = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: { quote: number; imported_raw_name: string; quantity: number; frozen_base_price?: string; frozen_currency?: string }) => crmApi.createQuoteItem(data),
+    mutationFn: (data: { quote: number; imported_raw_name: string; quantity?: number; frozen_base_price?: string; frozen_currency?: string; display_type?: QuoteItemDisplayType; is_optional?: boolean }) => crmApi.createQuoteItem(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quote-items'] });
       queryClient.invalidateQueries({ queryKey: ['deals'] });

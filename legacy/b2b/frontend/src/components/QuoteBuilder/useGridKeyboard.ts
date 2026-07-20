@@ -11,6 +11,10 @@ export interface GridKeyboardVirtualization {
 	rowIds: number[];
 	/** Scroll the row at `rowIndex` into the window, then focus that row's `column` cell. */
 	focusCellAtRow: (rowIndex: number, column: string) => void;
+	/** S1: does this row have navigable cells? SECTION/NOTE rows carry no `data-cell-col` input, so a
+	 *  windowed ArrowUp/Down that lands on one must keep stepping PAST it to the next ITEM row (in the
+	 *  non-windowed path they are already skipped — they contribute no cells to the column query). */
+	isNavigable?: (rowId: number) => boolean;
 }
 
 /**
@@ -81,8 +85,18 @@ export function useGridKeyboard(virtualization?: GridKeyboardVirtualization) {
 			const currentRowId = rowIdAttr != null ? Number(rowIdAttr) : Number.NaN;
 			const currentModelIndex = virtualizationConfig.rowIds.indexOf(currentRowId);
 			if (currentModelIndex !== -1) {
-				const targetModelIndex = currentModelIndex + delta;
-				if (targetModelIndex >= 0 && targetModelIndex < virtualizationConfig.rowIds.length) {
+				const { rowIds, isNavigable } = virtualizationConfig;
+				// Step in the arrow direction, skipping non-navigable (SECTION/NOTE) rows so focus lands
+				// on the next real ITEM cell — mirroring the non-windowed path where those rows have no
+				// column cell at all.
+				let targetModelIndex = currentModelIndex + delta;
+				while (
+					targetModelIndex >= 0 && targetModelIndex < rowIds.length
+					&& isNavigable && !isNavigable(rowIds[targetModelIndex])
+				) {
+					targetModelIndex += delta;
+				}
+				if (targetModelIndex >= 0 && targetModelIndex < rowIds.length) {
 					event.preventDefault();
 					virtualizationConfig.focusCellAtRow(targetModelIndex, column);
 					return;

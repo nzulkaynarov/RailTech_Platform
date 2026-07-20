@@ -97,9 +97,16 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 			getContainer: () => scrollContainerRef.current,
 		});
 	};
-	// Excel-style keyboard navigation (WP-G) — virtualization-aware only while windowed.
+	// Excel-style keyboard navigation (WP-G) — virtualization-aware only while windowed. S1: a
+	// windowed ArrowUp/Down skips SECTION/NOTE rows (no navigable cell) via `isNavigable`.
 	const gridKeyboard = useGridKeyboard(
-		shouldVirtualize ? { rowIds: draftItems.map((item) => item.id), focusCellAtRow } : undefined,
+		shouldVirtualize
+			? {
+				rowIds: draftItems.map((item) => item.id),
+				focusCellAtRow,
+				isNavigable: (rowId) => (draftItems.find((item) => item.id === rowId)?.display_type ?? 'ITEM') === 'ITEM',
+			}
+			: undefined,
 	);
 
 	// Per-cell rejection codes from the LAST bulk save (P0-4), keyed `${id}:${field}` → CODE.
@@ -116,7 +123,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	const rowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map());
 
 	// Edit a line AND drop any stale bulk-save error on that exact cell.
-	const handleFieldChange = (id: number, field: keyof QuoteItem, value: string | number) => {
+	const handleFieldChange = (id: number, field: keyof QuoteItem, value: string | number | boolean) => {
 		setField(id, field, value);
 		const key = cellErrorKey(id, field as string);
 		if (cellErrors[key]) {
@@ -375,7 +382,9 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 		expandedRowId, toggleRow, setExpandedRowId,
 		fxRateFor, lineCostInPresentation,
 		handleDeleteItem: actions.handleDeleteItem, setReassignItemId, rowRefs,
-		showAddRow, setShowAddRow, openPasteDialog: actions.openPasteDialog, setShowAiMatch,
+		handleMoveRow: actions.handleMoveRow, handleRenameRow: actions.handleRenameRow,
+		showAddRow, setShowAddRow, handleAddSection: actions.handleAddSection, handleAddNote: actions.handleAddNote,
+		openPasteDialog: actions.openPasteDialog, setShowAiMatch,
 		handlePricingAssist: actions.handlePricingAssist, pricingBusy, fullscreen, setFullscreen, setShowSettings,
 		railAsSheet, railOpen, railSheetOpen, setRailSheetOpen, toggleRail,
 		scrollContainerRef, gridKeyboardOnKeyDown: gridKeyboard.onKeyDown, handleGridPaste: actions.handleGridPaste,

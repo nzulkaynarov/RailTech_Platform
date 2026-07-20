@@ -5,8 +5,26 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
+import type { QuoteItem } from '@/api/crmApi';
 import { GridRow } from './GridRow';
+import { SectionNoteRow } from './SectionNoteRow';
 import { useQuoteBuilderGrid } from './QuoteBuilderGridContext';
+
+/** Route a КП line to its renderer by display_type: SECTION/NOTE → full-width SectionNoteRow,
+ *  everything else (ITEM / legacy undefined) → the priced GridRow. */
+const renderGridRow = (
+	item: QuoteItem,
+	index: number,
+	windowed: boolean,
+	measureElement: (node: Element | null) => void,
+) => {
+	const commonProps = windowed
+		? { index, virtualIndex: index, measureElement }
+		: { index };
+	return (item.display_type ?? 'ITEM') === 'ITEM'
+		? <GridRow key={item.id} item={item} {...commonProps} />
+		: <SectionNoteRow key={item.id} item={item} {...commonProps} />;
+};
 
 /**
  * The КП line table: sticky header, the (optionally windowed) body of `GridRow`s, and the
@@ -84,15 +102,7 @@ export const GridTable: React.FC = () => {
 								)}
 								{virtualItems.map((virtualRow) => {
 									const item = draftItems[virtualRow.index];
-									return (
-										<GridRow
-											key={item.id}
-											item={item}
-											index={virtualRow.index}
-											virtualIndex={virtualRow.index}
-											measureElement={virtualizer.measureElement}
-										/>
-									);
+									return renderGridRow(item, virtualRow.index, true, virtualizer.measureElement);
 								})}
 								{paddingBottom > 0 && (
 									<tr aria-hidden="true" className="border-t-0!">
@@ -101,7 +111,7 @@ export const GridTable: React.FC = () => {
 								)}
 							</>
 						) : (
-							draftItems.map((item, idx) => <GridRow key={item.id} item={item} index={idx} />)
+							draftItems.map((item, idx) => renderGridRow(item, idx, false, () => {}))
 						)}
 						{showAddRow && (
 							<TableRow ref={addRowRef} className="bg-primary/5">
