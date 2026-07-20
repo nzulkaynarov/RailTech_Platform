@@ -135,10 +135,13 @@ export function ProductNameCell({ item, index, onBrowseCandidates }: ProductName
 	};
 
 	return (
-		<div className="flex flex-col leading-tight pr-4">
+		// B2: `w-full min-w-0` propagates the elastic name column's width down the flex chain. Without
+		// `min-w-0` a flex item's `min-width:auto` refuses to shrink below its content, which is what
+		// pinned the input at its intrinsic width and truncated the name while space sat unused.
+		<div className="flex w-full min-w-0 flex-col leading-tight pr-4">
 			<Popover open={open} onOpenChange={(next) => { if (!next) closeDropdown(); }}>
 				<PopoverAnchor asChild>
-					<div className="flex items-center gap-2">
+					<div className="flex w-full min-w-0 items-center gap-2">
 						{!isBound ? (
 							<AlertTriangle className="size-3 shrink-0 text-warning" aria-label={t('sourcing.noMatch')} />
 						) : (
@@ -161,7 +164,7 @@ export function ProductNameCell({ item, index, onBrowseCandidates }: ProductName
 							placeholder={t('quote.typeahead.placeholder')}
 							data-cell-row={item.id}
 							data-cell-col="name"
-							className="h-7 flex-1 truncate border-none bg-transparent px-1 text-sm font-semibold shadow-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-inset"
+							className="h-7 min-w-0 flex-1 truncate border-none bg-transparent px-1 text-sm font-semibold shadow-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-inset"
 							title={displayName || undefined}
 							value={inputValue}
 							onFocus={() => { setEditing(true); setDraft(displayName); }}

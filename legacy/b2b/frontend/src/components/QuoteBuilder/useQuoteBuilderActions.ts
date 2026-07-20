@@ -186,6 +186,11 @@ export function useQuoteBuilderActions(params: QuoteBuilderActionsParams) {
 			setNewItemQty('1');
 			setNewItemPrice('0');
 			// Keep the add-row open and put the cursor back in the name field for the next line.
+			// DT9: focus SYNCHRONOUSLY first. The await above resolves after the mutation's cache
+			// invalidation, so React re-renders the whole grid; by the time the rAF callback ran, focus
+			// had already been dropped to <body> and Enter on the last add-row felt like it "lost" the
+			// cursor. The rAF pass stays as the belt-and-braces re-focus after that re-render commits.
+			addNameRef.current?.focus();
 			requestAnimationFrame(() => {
 				addNameRef.current?.focus();
 				addRowRef.current?.scrollIntoView?.({ block: 'nearest' });
@@ -228,7 +233,9 @@ export function useQuoteBuilderActions(params: QuoteBuilderActionsParams) {
 		const quoteId = deal?.active_quote?.id;
 		if (!quoteId || rows.length === 0) return;
 		try {
-			await bulkCreateMutation.mutateAsync({ quoteId, items: rows as unknown as Array<Record<string, unknown>> });
+			// DT6: `BulkCreateRow` is a type ALIAS (not an interface), so it is structurally assignable to
+			// `Record<string, unknown>` — no `as unknown as` escape hatch, the payload stays type-checked.
+			await bulkCreateMutation.mutateAsync({ quoteId, items: rows });
 			toast.success(t('quote.paste.added', { count: rows.length }));
 			setPasteOpen(false);
 			setPasteRowErrors({});
@@ -318,9 +325,9 @@ export function useQuoteBuilderActions(params: QuoteBuilderActionsParams) {
 		if (!quoteId) return;
 		const selectedInOrder = draftItems.filter((item) => selection.selectedIds.has(item.id));
 		if (selectedInOrder.length === 0) return;
-		const items = selectedInOrder.map(
-			(item) => buildDuplicatePayload(item, t('quote.bulk.copySuffix')) as unknown as Record<string, unknown>,
-		);
+		// DT6: same as the paste path — `DuplicateItemPayload` is a type alias, so it satisfies the
+		// bulk-create row contract structurally. No cast.
+		const items = selectedInOrder.map((item) => buildDuplicatePayload(item, t('quote.bulk.copySuffix')));
 		try {
 			await bulkCreateMutation.mutateAsync({ quoteId, items });
 			toast.success(t('quote.bulk.duplicated', { count: items.length }));
@@ -426,18 +433,25 @@ export function useQuoteBuilderActions(params: QuoteBuilderActionsParams) {
 				toast.info(t('pricingAssist.none'));
 				return;
 			}
-			for (const suggestion of suggestions) {
-				await updateMutation.mutateAsync({
+			// DT4: ONE transactional bulk-update instead of N sequential PATCHes. The old loop fired N
+			// requests, each invalidating quote-items + deals — so the grid refetched and flickered N
+			// times, and a mid-loop failure left the КП half-applied. `version` is deliberately OMITTED
+			// (it is optional on the bulk endpoint, crm/services/quotes/bulk.py), which keeps the exact
+			// last-write-wins semantics the per-row PATCHes had: pricing-assist can still never answer
+			// 409 QUOTE_ITEM_STALE, so there is no conflict branch to handle here.
+			await bulkUpdateMutation.mutateAsync({
+				quoteId: activeQuote.id,
+				items: suggestions.map((suggestion) => ({
 					id: suggestion.item_id,
+					frozen_base_price: suggestion.base_price,
 					// suggestion.currency is string|null; coerce null→undefined to skip overriding the line currency.
-					data: { frozen_base_price: suggestion.base_price, frozen_currency: suggestion.currency ?? undefined, lead_time_days: suggestion.lead_time_days },
-				});
-			}
+					frozen_currency: suggestion.currency ?? undefined,
+					lead_time_days: suggestion.lead_time_days,
+				})),
+			});
 			toast.success(t('pricingAssist.applied', { count: suggestions.length }));
 		} catch {
-			// pricing-assist PATCHes carry NO `version` token, so the backend takes the last-write-wins
-			// path and can never answer 409 QUOTE_ITEM_STALE here — there is no conflict branch to
-			// handle (unlike the versioned bulk save). Any failure is a plain error toast.
+			// Transactional: a rejected batch wrote NOTHING, so there is no partial state to unwind.
 			toast.error(t('pricingAssist.error'));
 		} finally {
 			setPricingBusy(false);

@@ -143,18 +143,28 @@ describe('QuoteBuilderGrid — virtualization threshold', () => {
 		expect(rendered).toBeLessThan(rowCount);
 	});
 
-	it('tags the expanded detail sub-row with the same data-index so the virtualizer measures it', () => {
+	// B3 (2): the virtualizer resolves an element's index from `data-index`, and keys its height
+	// cache by it. Two nodes claiming ONE index meant only the last one registered (the detail
+	// sub-row) landed in the cache — the main row's height was dropped from getTotalSize(), and a
+	// long КП drifted as soon as a row was expanded. The invariant is now: exactly ONE measured node
+	// per index; the expanded detail is reported through `resizeItem` instead.
+	it('keeps exactly one data-index node per line when a row is expanded', () => {
 		serverItems = makeItems(VIRTUALIZE_THRESHOLD + 70); // virtualized path
 		renderWithProviders(<QuoteBuilderGrid dealId={42} />);
 
 		// Expand the first windowed line (index 0, id 1).
 		fireEvent.click(screen.getAllByLabelText('Детализация позиции')[0]);
 
-		// Both the main row AND its detail sub-row carry data-index=0 — so the virtualizer's
-		// ResizeObserver measures the taller expanded group, not just the 44px main row.
+		// The MAIN row owns the index…
 		const mainRow = document.querySelector('[data-row-id="1"]');
 		expect(mainRow).toHaveAttribute('data-index', '0');
+
+		// …and the detail sub-row claims NO index at all.
 		const detailRow = document.getElementById('kp-line-detail-1')?.closest('tr');
-		expect(detailRow).toHaveAttribute('data-index', '0');
+		expect(detailRow).not.toBeNull();
+		expect(detailRow).not.toHaveAttribute('data-index');
+
+		// Belt and braces: index 0 is claimed exactly once across the whole rendered table.
+		expect(document.querySelectorAll('[data-index="0"]')).toHaveLength(1);
 	});
 });

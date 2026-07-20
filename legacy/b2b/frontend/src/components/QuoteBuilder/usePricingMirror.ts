@@ -51,6 +51,19 @@ export function isBillableItem(item: Pick<QuoteItem, 'display_type' | 'is_option
 	return (item.display_type ?? 'ITEM') === 'ITEM' && !item.is_optional;
 }
 
+/**
+ * DT9 — a SERVICE line carries NO customs duty. `QuotePricingService.calculate_item_prices`
+ * (backend/crm/services/quotes/pricing.py) zeroes `customs_duty` when the bound product's
+ * `domain_type.code == "SERVICES"`, so a client preview that still added whatever sat in the field
+ * overstated `landed_cost` (and therefore the margin chip and «Сумма») until the seller saved and
+ * the server wrote the zero back. Mirror the server rule instead.
+ * `product_domain` is the serializer's read-only `product.domain_type.code`; an unbound line has
+ * none and is never a service.
+ */
+export function isServiceLine(item: Pick<QuoteItem, 'product_domain'>): boolean {
+	return item.product_domain === 'SERVICES';
+}
+
 /** Which FX map a resolved rate came from — `null` for the implicit UZS=1 identity. */
 type FxSource = 'manual' | 'snapshot' | 'market' | null;
 
@@ -199,7 +212,10 @@ function previewDirtyLine(
 	}
 
 	const fxRate = fx.rate;
-	const landed = q2(toDecimal(item.frozen_base_price).plus(toDecimal(item.customs_duty)).mul(fxRate));
+	// DT9: a SERVICES line has customs zeroed server-side — exclude it here too, or the preview
+	// overstates landed_cost / margin until the save round-trips.
+	const customs = isServiceLine(item) ? new Decimal(0) : toDecimal(item.customs_duty);
+	const landed = q2(toDecimal(item.frozen_base_price).plus(customs).mul(fxRate));
 	const marginMult = new Decimal(1).plus(toDecimal(input.marginPercent).div(100));
 	const discountMult = new Decimal(1).minus(toDecimal(item.discount_percent).div(100));
 	const final = q2(landed.mul(marginMult).mul(discountMult));
@@ -250,19 +266,44 @@ function serverLine(item: QuoteItem, input: PricingMirrorInput): LineMirror {
 }
 
 export function usePricingMirror(input: PricingMirrorInput): PricingMirrorResult {
+	// DT6: destructure EVERY field the memo body reads (directly or through the helpers) so the
+	// dependency array can be verified by `react-hooks/exhaustive-deps` instead of suppressed. The
+	// old code closed over the whole `input` object, which the lint rule cannot see through — the
+	// hand-written dep list happened to be complete, but nothing guarded it against a future field
+	// being read without being added, which is exactly how a stale money preview would appear.
+	// The dep set is unchanged, so behaviour is identical; only the verification is now automatic.
 	const {
 		draftItems, dirtyIds, charges, vatRate, canViewCost, serverTotals,
+		marginPercent, minMarginPercent, fxManual, fxSnapshot, fxMarket,
 	} = input;
+	const {
+		subtotalExclVat: serverSubtotal, chargesTotal: serverChargesTotal, vatAmount: serverVatAmount,
+		totalInclVat: serverTotalInclVat, grossMarginPercent: serverGrossMarginPercent,
+	} = serverTotals;
 
 	return useMemo(() => {
+		// Re-assembled from the destructured values — identical content, but every input is now an
+		// explicit dependency below.
+		const mirrorInput: PricingMirrorInput = {
+			draftItems, dirtyIds, charges, vatRate, canViewCost,
+			marginPercent, minMarginPercent, fxManual, fxSnapshot, fxMarket,
+			serverTotals: {
+				subtotalExclVat: serverSubtotal,
+				chargesTotal: serverChargesTotal,
+				vatAmount: serverVatAmount,
+				totalInclVat: serverTotalInclVat,
+				grossMarginPercent: serverGrossMarginPercent,
+			},
+		};
+
 		// Per-row map: dirty → preview, clean → server.
 		const lineMap = new Map<number, LineMirror>();
 		for (const item of draftItems) {
-			lineMap.set(item.id, dirtyIds.has(item.id) ? previewDirtyLine(item, input) : serverLine(item, input));
+			lineMap.set(item.id, dirtyIds.has(item.id) ? previewDirtyLine(item, mirrorInput) : serverLine(item, mirrorInput));
 		}
 
 		const lineFor = (item: QuoteItem): LineMirror =>
-			lineMap.get(item.id) ?? serverLine(item, input);
+			lineMap.get(item.id) ?? serverLine(item, mirrorInput);
 
 		// S1: живой подытог каждого SECTION — Σ «Сумма» биллинговых (non-optional ITEM) строк ПОСЛЕ
 		// него до следующего SECTION. Считается через lineFor, поэтому dirty-строки в подытоге тоже
@@ -274,7 +315,7 @@ export function usePricingMirror(input: PricingMirrorInput): PricingMirrorResult
 			if ((item.display_type ?? 'ITEM') === 'SECTION') {
 				currentSectionId = item.id;
 			} else if (currentSectionId != null && isBillableItem(item)) {
-				const line = lineMap.get(item.id) ?? serverLine(item, input);
+				const line = lineMap.get(item.id) ?? serverLine(item, mirrorInput);
 				const quantity = Number(item.quantity) || 0;
 				const previous = sectionSums.get(currentSectionId) ?? new Decimal(0);
 				sectionSums.set(currentSectionId, previous.plus(toDecimal(line.finalPriceExclVat).mul(quantity)));
@@ -296,11 +337,11 @@ export function usePricingMirror(input: PricingMirrorInput): PricingMirrorResult
 		const serverFallback: TotalsMirror = {
 			computable: false,
 			isDraft,
-			subtotalExclVat: toDecimal(serverTotals.subtotalExclVat).toString(),
-			chargesTotal: toDecimal(serverTotals.chargesTotal).toString(),
-			vatAmount: toDecimal(serverTotals.vatAmount).toString(),
-			totalInclVat: toDecimal(serverTotals.totalInclVat).toString(),
-			grossMarginPercent: serverTotals.grossMarginPercent,
+			subtotalExclVat: toDecimal(serverSubtotal).toString(),
+			chargesTotal: toDecimal(serverChargesTotal).toString(),
+			vatAmount: toDecimal(serverVatAmount).toString(),
+			totalInclVat: toDecimal(serverTotalInclVat).toString(),
+			grossMarginPercent: serverGrossMarginPercent,
 		};
 
 		if (!isDraft || anyUnknown) {
@@ -361,9 +402,7 @@ export function usePricingMirror(input: PricingMirrorInput): PricingMirrorResult
 				grossMarginPercent,
 			},
 		};
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [draftItems, dirtyIds, charges, vatRate, canViewCost,
-		input.marginPercent, input.minMarginPercent, input.fxManual, input.fxSnapshot, input.fxMarket,
-		serverTotals.subtotalExclVat, serverTotals.chargesTotal, serverTotals.vatAmount,
-		serverTotals.totalInclVat, serverTotals.grossMarginPercent]);
+		marginPercent, minMarginPercent, fxManual, fxSnapshot, fxMarket,
+		serverSubtotal, serverChargesTotal, serverVatAmount, serverTotalInclVat, serverGrossMarginPercent]);
 }

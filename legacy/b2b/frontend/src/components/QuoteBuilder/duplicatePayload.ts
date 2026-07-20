@@ -7,7 +7,11 @@ import type { QuoteItem, QuoteItemDisplayType } from '@/api/crmApi';
  * final_price_excl_vat, product binding, id). `imported_raw_name` gets a «(копия)»
  * suffix so the new line is visibly a copy; the target `quote` is bound server-side.
  */
-export interface DuplicateItemPayload {
+// A type ALIAS, deliberately not an `interface`: only an alias carries an implicit index signature,
+// so it is structurally assignable to the bulk-create endpoint's `Record<string, unknown>` row
+// contract. That removes the `as unknown as Record<string, unknown>` cast at the call site (DT6)
+// while keeping every field name/type checked.
+export type DuplicateItemPayload = {
 	imported_raw_name: string;
 	quantity: number;
 	frozen_base_price: string;
@@ -27,7 +31,7 @@ export interface DuplicateItemPayload {
 	unit?: string;
 	unit_code?: string;
 	note?: string;
-}
+};
 
 /** Build the bulk-create payload row for a duplicate of `item`. `copySuffix` is i18n-provided. */
 export function buildDuplicatePayload(item: QuoteItem, copySuffix: string): DuplicateItemPayload {
