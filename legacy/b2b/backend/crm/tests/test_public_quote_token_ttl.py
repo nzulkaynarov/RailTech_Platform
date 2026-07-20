@@ -102,7 +102,10 @@ def test_unknown_token_still_404():
 def test_browser_gets_friendly_html_not_raw_json_on_expired():
     """A browser (Accept: text/html) opening an expired link must see a human page, not the raw
     DRF/JSON error — the emailed link opens THIS endpoint directly (no SPA in front)."""
-    quote = _make_quote(valid_until=timezone.now() - timedelta(days=1))
+    # valid_until is a DateField — pass a date, not a datetime. A tz-aware datetime near the
+    # UTC/local day boundary rounds to a DIFFERENT local date on save (flaky ~410↔200 by
+    # wall-clock hour); the sibling test_expired_valid_until_returns_410 already uses .date().
+    quote = _make_quote(valid_until=(timezone.now() - timedelta(days=1)).date())
     resp = APIClient().get(
         f"/api/v1/public/quotes/{quote.public_access_token}/",
         HTTP_ACCEPT="text/html",
