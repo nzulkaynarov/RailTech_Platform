@@ -28,6 +28,20 @@ interface NumericCellProps {
 	dataCellRow?: number;
 	/** Column key (e.g. «quantity») — pairs with dataCellRow for arrow/Enter cell navigation. */
 	dataCellCol?: string;
+	/**
+	 * DT1 — makes the cell NULLABLE: "empty" becomes a real, distinct value instead of a no-op.
+	 *
+	 * Opt-in. When provided: a `null`/`''` value renders as a genuinely EMPTY field (so
+	 * `placeholder` shows through instead of a fabricated «0»), and committing an empty buffer calls
+	 * `onClear()` INSTEAD of the default revert. Every other numeric cell in the grid keeps the
+	 * original behaviour — empty reverts and «0» is never committed by accident.
+	 *
+	 * This is the mechanism behind «пустая ячейка наценки = наследовать маржу КП»: clearing must
+	 * write `null`, and `null` is NOT `0` (which would mean «продать по себестоимости»).
+	 */
+	onClear?: () => void;
+	/** Shown when the field is empty — used to render the INHERITED value as muted ghost text. */
+	placeholder?: string;
 }
 
 /**
@@ -61,6 +75,8 @@ export const NumericCell: React.FC<NumericCellProps> = ({
 	errorMessage,
 	dataCellRow,
 	dataCellCol,
+	onClear,
+	placeholder,
 }) => {
 	const { t, i18n } = useTranslation();
 	// Non-null only WHILE the cell is focused (holds the raw, ungrouped edit buffer).
@@ -70,14 +86,34 @@ export const NumericCell: React.FC<NumericCellProps> = ({
 
 	const isEditing = editBuffer !== null;
 
-	const groupedDisplay = new Intl.NumberFormat(i18n.language, {
-		maximumFractionDigits: maxFractionDigits,
-	}).format(Number(value ?? 0));
+	// DT1: a nullable cell with no value renders EMPTY, not «0» — the two mean different things and
+	// the placeholder (the inherited value) has to be visible through it.
+	const isNullable = onClear !== undefined;
+	const isEmptyValue = value === null || value === undefined || value === '';
+	const groupedDisplay = isNullable && isEmptyValue
+		? ''
+		: new Intl.NumberFormat(i18n.language, {
+			maximumFractionDigits: maxFractionDigits,
+		}).format(Number(value ?? 0));
 
 	const displayValue = isEditing ? editBuffer : groupedDisplay;
 
 	const commit = () => {
 		const normalized = normalizeNumeric(editBuffer ?? '');
+		// DT1: on a NULLABLE cell an emptied field is a deliberate «сбросить в наследование» —
+		// report it as a clear (the caller writes null) rather than silently reverting. Checked
+		// BEFORE the revert branch below, and only for a truly empty buffer: unparseable junk still
+		// reverts, so a fat-fingered «12x» can never be read as "clear the override".
+		//
+		// `!isEmptyValue` makes the clear a NO-OP when the cell was already empty. Without it,
+		// merely tabbing THROUGH an inheriting margin cell would write null-over-null, marking the
+		// row dirty and shipping it in the next Save payload — a phantom edit on a line the seller
+		// never touched (and, with optimistic locking, a pointless 409 surface).
+		if (isNullable && normalized === '') {
+			if (!isEmptyValue) onClear();
+			setEditBuffer(null);
+			return;
+		}
 		// Empty or unparseable → revert to the last committed value (never commit «0»).
 		if (normalized === '' || Number.isNaN(Number(normalized))) {
 			setEditBuffer(null);
@@ -98,6 +134,7 @@ export const NumericCell: React.FC<NumericCellProps> = ({
 			type="text"
 			inputMode="decimal"
 			aria-label={ariaLabel}
+			placeholder={placeholder}
 			aria-invalid={invalid || undefined}
 			data-cell-row={dataCellRow}
 			data-cell-col={dataCellCol}

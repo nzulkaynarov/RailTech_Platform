@@ -883,6 +883,15 @@
       "currencyHelp": "The КП is denominated in the national currency (UZS) — all amounts are computed in UZS. Per-line cost currency can differ (below)."
     },
     "marginApplied": "Margin",
+    "marginOverride": {
+      "header": "Markup",
+      "headerHelp": "Markup over the line cost. An empty cell means the line inherits the quote markup (shown greyed out). Enter a value to override it for this line only; «0» means selling at cost.",
+      "ariaLabel": "Line {{index}} markup",
+      "inheritedHint": "Inherits the quote markup: {{percent}}%. Clear the cell to go back to inheriting.",
+      "overriddenHint": "Markup overridden for this line: {{percent}}% (quote markup is {{quotePercent}}%)",
+      "revert": "Restore the quote markup",
+      "revertAria": "Restore the quote markup for line {{index}}"
+    },
     "economics": {
       "title": "Deal economics",
       "landedCost": "Landed cost",
@@ -952,7 +961,8 @@
       "QUOTE_ITEM_DISCOUNT_INVALID": "Discount must be within 0–100%",
       "QUOTE_ITEM_LEAD_TIME_INVALID": "Invalid lead time",
       "CURRENCY_NOT_FOUND": "Currency not found",
-      "QUOTE_ITEM_STALE": "Row changed by another user"
+      "QUOTE_ITEM_STALE": "Row changed by another user",
+      "marginTooLarge": "Markup cannot exceed {{max}}%"
     },
     "filter": {
       "placeholder": "Find in quote",

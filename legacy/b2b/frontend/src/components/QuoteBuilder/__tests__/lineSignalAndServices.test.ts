@@ -9,6 +9,8 @@ import type { QuoteItem } from '@/api/crmApi';
 function makeMirrorLine(overrides: Partial<LineMirror> = {}): LineMirror {
 	return {
 		isDraft: false, needsServerRecalc: false, usedMarketFx: false,
+		// DT1: default fixture = a line that INHERITS the КП margin (no per-line override).
+		effectiveMarginPercent: '25', isMarginOverridden: false,
 		landedCost: '800', finalPriceExclVat: '1000', lineTotal: '1000',
 		marginPct: 20, profit: '200', belowCost: false, belowFloor: false,
 		...overrides,

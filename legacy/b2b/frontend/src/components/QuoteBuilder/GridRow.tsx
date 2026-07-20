@@ -1,6 +1,6 @@
 import React, { useCallback, useLayoutEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronRight, ChevronDown, ChevronUp, AlertCircle, Settings, Trash2 } from 'lucide-react';
+import { ChevronRight, ChevronDown, ChevronUp, AlertCircle, RotateCcw, Trash2 } from 'lucide-react';
 import type { QuoteItem } from '@/api/crmApi';
 import { cn } from '@/lib/utils';
 import { formatMoney } from '@/utils/decimal';
@@ -14,9 +14,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { NumericCell } from './NumericCell';
 import { ProductNameCell } from './ProductNameCell';
 import { RowSelectCheckbox } from './RowSelectCheckbox';
-import { QUOTE_ITEM_MAX_QUANTITY, QUOTE_ITEM_MAX_UNIT_PRICE, marginToneClass } from './gridConstants';
+import {
+	QUOTE_ITEM_MAX_QUANTITY, QUOTE_ITEM_MAX_UNIT_PRICE, QUOTE_ITEM_MAX_MARGIN_PERCENT, marginToneClass,
+} from './gridConstants';
 import { useQuoteBuilderGrid } from './QuoteBuilderGridContext';
 import { lineSignalOf, type LineSignal } from './lineSignal';
+import type { LineMirror } from './usePricingMirror';
 
 interface GridRowProps {
 	item: QuoteItem;
@@ -31,36 +34,124 @@ interface GridRowProps {
 }
 
 interface MarginCellProps {
+	/** 1-based document position — disambiguates the cell's accessible name across ~60 rows. */
+	index: number;
+	/** Live markup actually applied to this line + whether it is an explicit override (DT1). */
+	line: LineMirror;
+	/** The КП-level markup this line falls back to — rendered as the inherit placeholder. */
+	quoteMarginPercent: string | number | null | undefined;
 	signal: LineSignal | null;
 	landedCost: string | null;
 	presentationCurrency: string;
+	invalid: boolean;
+	errorMessage?: string;
+	/** Write an explicit per-line override (a numeric string). */
+	onCommit: (value: string) => void;
+	/** Drop the override → the line inherits the КП margin again. MUST write null, never «0». */
+	onRevert: () => void;
 }
 
 /**
- * F6/WP-7: the per-line margin is DERIVED and READ-ONLY — the markup is a single value for the
- * whole КП. Rendered muted with a «Настройки КП» hint icon so it can't be mistaken for an input.
- * Hoisted to a memoized module-level component (DT4) so a facade re-render that leaves the row's
- * numbers untouched no longer re-renders every visible margin chip.
+ * DT1 — the per-line margin OVERRIDE cell (Salesforce CPQ / Odoo semantics).
+ *
+ * It used to be a read-only chip: the markup was a single КП-wide value, so the cell showed the
+ * derived gross margin with a «Настройки КП» hint. The backend now stores a nullable per-line
+ * `margin_percent` where NULL means «наследовать маржу КП» and any non-null value overrides it —
+ * including an explicit `0`, which genuinely means «продать по себестоимости». That distinction is
+ * the whole point of the feature, and it drives every decision here:
+ *
+ *   • INHERITING line → the field is EMPTY and the КП rate shows through as a muted placeholder
+ *     (Odoo/CPQ convention). The seller always sees the effective number, never a blank cell, but
+ *     the ghost styling says «это не моё значение, оно унаследовано».
+ *   • OVERRIDDEN line → the value renders in solid, semibold text and a revert control appears.
+ *     The weight contrast IS the at-a-glance «overridden» marker across a 60-line КП (a separate
+ *     badge would cost row height, which wave D spent real effort reclaiming); the revert button
+ *     doubles as the explicit marker and the one-click way back to inheritance.
+ *
+ * Clearing the field commits `null` via `onRevert` (see `NumericCell.onClear`) — committing `0`
+ * instead would silently reprice the line to cost, which is the single most dangerous confusion in
+ * this feature. Both the ✕-clear and the revert button route through the SAME `onRevert`.
+ *
+ * The gross-margin-on-price figure the old chip displayed is not lost: it stays in the row's detail
+ * economics strip and in this cell's tooltip, alongside landed cost and line profit.
+ *
+ * Memoized (DT4) so a facade re-render that leaves the row's numbers untouched does not re-render
+ * every visible margin cell.
  */
-const MarginCell: React.FC<MarginCellProps> = React.memo(({ signal, landedCost, presentationCurrency }) => {
+const MarginCell: React.FC<MarginCellProps> = React.memo(({
+	index, line, quoteMarginPercent, signal, landedCost, presentationCurrency,
+	invalid, errorMessage, onCommit, onRevert,
+}) => {
 	const { t } = useTranslation();
-	if (!signal) return <span className="text-xs text-muted-foreground">—</span>;
+	const isOverridden = line.isMarginOverridden;
+	// The placeholder is the number the line actually prices at while it inherits — resolved by the
+	// pricing mirror, so it can never drift from the rate the «Сумма» column was computed with.
+	const inheritedPercent = Number(quoteMarginPercent ?? 0).toFixed(0);
+
 	return (
-		<Tooltip>
-			<TooltipTrigger asChild>
-				<span className="inline-flex cursor-help select-none items-center justify-center gap-1 text-xs tabular-nums text-muted-foreground">
-					{signal.marginPct.toFixed(0)}%
-					<Settings className="size-3 opacity-60" aria-hidden="true" />
-				</span>
-			</TooltipTrigger>
-			<TooltipContent>
-				<div className="flex flex-col gap-0.5">
-					<span>{t('quote.economics.landedCost')}: {formatMoney(landedCost, presentationCurrency)}</span>
-					<span>{t('quote.lineProfit')}: {formatMoney(signal.profit, presentationCurrency)}</span>
-					<span className="mt-0.5 font-medium text-foreground">{t('quote.marginQuoteLevelHint')}</span>
-				</div>
-			</TooltipContent>
-		</Tooltip>
+		<div className="flex items-center gap-0.5">
+			<Tooltip>
+				<TooltipTrigger asChild>
+					<span className="min-w-0 flex-1">
+						<NumericCell
+							min={0}
+							max={QUOTE_ITEM_MAX_MARGIN_PERCENT}
+							maxToastKey="quote.validation.marginTooLarge"
+							ariaLabel={t('quote.marginOverride.ariaLabel', { index })}
+							placeholder={inheritedPercent}
+							className={cn(
+								'h-8 w-full rounded-none border-none text-xs tabular-nums shadow-none text-center focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
+								isOverridden ? 'font-semibold text-foreground' : 'text-muted-foreground',
+							)}
+							dataCellRow={index}
+							dataCellCol="margin_percent"
+							value={line.isMarginOverridden ? line.effectiveMarginPercent : null}
+							invalid={invalid}
+							errorMessage={errorMessage}
+							onCommit={onCommit}
+							onClear={onRevert}
+						/>
+					</span>
+				</TooltipTrigger>
+				<TooltipContent>
+					<div className="flex flex-col gap-0.5">
+						{signal && (
+							<>
+								<span>{t('quote.economics.landedCost')}: {formatMoney(landedCost, presentationCurrency)}</span>
+								<span>{t('quote.lineProfit')}: {formatMoney(signal.profit, presentationCurrency)}</span>
+								<span>{t('quote.economics.grossMargin')}: {signal.marginPct.toFixed(1)}%</span>
+							</>
+						)}
+						<span className="mt-0.5 font-medium text-foreground">
+							{isOverridden
+								? t('quote.marginOverride.overriddenHint', {
+									percent: line.effectiveMarginPercent,
+									quotePercent: inheritedPercent,
+								})
+								: t('quote.marginOverride.inheritedHint', { percent: inheritedPercent })}
+						</span>
+					</div>
+				</TooltipContent>
+			</Tooltip>
+			{/* One-click «вернуть наценку КП». Rendered ONLY on an overridden line, so its presence is
+			    itself the override marker — and its absence keeps an inheriting cell visually quiet. */}
+			{isOverridden && (
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<Button
+							variant="ghost"
+							size="icon-xs"
+							onClick={onRevert}
+							className="shrink-0 text-muted-foreground hover:text-foreground"
+							aria-label={t('quote.marginOverride.revertAria', { index })}
+						>
+							<RotateCcw className="size-3" />
+						</Button>
+					</TooltipTrigger>
+					<TooltipContent>{t('quote.marginOverride.revert')}</TooltipContent>
+				</Tooltip>
+			)}
+		</div>
 	);
 });
 MarginCell.displayName = 'MarginCell';
@@ -79,7 +170,7 @@ MarginCell.displayName = 'MarginCell';
 const GridRowComponent: React.FC<GridRowProps> = ({ item, index, virtualIndex, measureElement, resizeItem }) => {
 	const { t } = useTranslation();
 	const {
-		econ, canViewCost, showCostColumns, presentationCurrency, currencies,
+		activeQuote, econ, canViewCost, showCostColumns, presentationCurrency, currencies,
 		pricingMirror, selection, handleFieldChange, cellError, cellErrors, hiddenErrorFields,
 		fieldLabel, expandedRowId, toggleRow, setExpandedRowId, fxRateFor, lineCostInPresentation,
 		handleDeleteItem, setReassignItemId, rowRefs, mainColCount,
@@ -290,11 +381,21 @@ const GridRowComponent: React.FC<GridRowProps> = ({ item, index, virtualIndex, m
 					</TableCell>
 				)}
 				{showCostColumns && (
-					<TableCell className="px-2 py-1.5 text-center">
+					<TableCell className="p-0">
 						<MarginCell
+							index={index + 1}
+							line={mirrorLine}
+							quoteMarginPercent={activeQuote?.margin_percent}
 							signal={signal}
 							landedCost={mirrorLine.landedCost ?? item.landed_cost ?? null}
 							presentationCurrency={presentationCurrency}
+							invalid={!!cellError(item.id, 'margin_percent')}
+							errorMessage={cellError(item.id, 'margin_percent')}
+							onCommit={(value) => handleFieldChange(item.id, 'margin_percent', value)}
+							// DT1 — THE critical write: reverting to inheritance sends `null`, NOT `0`.
+							// `0` is a legitimate override meaning «продать по себестоимости», so writing it
+							// here would silently reprice the line to cost on the next save.
+							onRevert={() => handleFieldChange(item.id, 'margin_percent', null)}
 						/>
 					</TableCell>
 				)}

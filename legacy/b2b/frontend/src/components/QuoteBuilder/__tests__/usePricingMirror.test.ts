@@ -26,7 +26,11 @@ const mkItem = (id: number, overrides: Partial<QuoteItem> = {}): QuoteItem =>
 		frozen_currency: 'UZS',
 		logistics_cost: '0',
 		customs_duty: '0',
-		margin_percent: '0',
+		// DT1: `null` = no per-line override → the line INHERITS `input.marginPercent`, which is what
+		// every case below is asserting. (It used to be '0' back when the column was NOT NULL and the
+		// engine ignored it; under DT1 a literal '0' is an explicit «продать по себестоимости»
+		// override that would legitimately zero out the quote-level markup in these expectations.)
+		margin_percent: null,
 		discount_percent: '0',
 		lead_time_days: 0,
 		landed_cost: '0',

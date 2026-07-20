@@ -43,7 +43,12 @@ export interface QuoteItem {
 	logistics_cost: string;
 	// customs_duty is entered in the SAME line currency as frozen_base_price.
 	customs_duty: string;
-	margin_percent: string;
+	// DT1 — ПОЗИЦИОННОЕ переопределение наценки (семантика Salesforce CPQ / Odoo).
+	// `null` = переопределения НЕТ, позиция наследует КП-маржу (`Quote.margin_percent`) — это
+	// дефолт. Любое НЕ-null значение побеждает КП-маржу, ВКЛЮЧАЯ явный «0» = «продать по
+	// себестоимости». Поэтому очистка ячейки обязана слать именно `null`, а не «0»: раньше
+	// колонка была NOT NULL с default=0 и эти два состояния были неразличимы.
+	margin_percent: string | null;
 	discount_percent: string;
 	// Per-line срок поставки (days). КП-level effective срок = max over lines.
 	lead_time_days: number;

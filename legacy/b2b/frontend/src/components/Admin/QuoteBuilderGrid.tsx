@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { QuoteChargesSection } from '@/components/CRM/QuoteChargesSection';
 import { StickyTotalsBar } from '@/components/QuoteBuilder/StickyTotalsBar';
-import { useQuoteDraft } from '@/components/QuoteBuilder/useQuoteDraft';
+import { useQuoteDraft, type DraftFieldValue } from '@/components/QuoteBuilder/useQuoteDraft';
 import { useGridKeyboard } from '@/components/QuoteBuilder/useGridKeyboard';
 import { usePricingMirror } from '@/components/QuoteBuilder/usePricingMirror';
 import { cellErrorKey, hiddenErrorFields } from '@/components/QuoteBuilder/bulkErrors';
@@ -145,7 +145,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	const rowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map());
 
 	// Edit a line AND drop any stale bulk-save error on that exact cell.
-	const handleFieldChange = (id: number, field: keyof QuoteItem, value: string | number | boolean) => {
+	const handleFieldChange = (id: number, field: keyof QuoteItem, value: DraftFieldValue) => {
 		setField(id, field, value);
 		const key = cellErrorKey(id, field as string);
 		if (cellErrors[key]) {
@@ -393,6 +393,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 			hs_code: t('quote.hsCode'),
 			frozen_base_price: t('quote.basePrice'),
 			frozen_currency: t('quote.lineCurrency'),
+			margin_percent: t('quote.marginOverride.header'),
 		};
 		return labels[field] ?? field;
 	};

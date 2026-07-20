@@ -23,7 +23,12 @@ import { toDecimal } from '@/utils/decimal';
  *     A non-UZS line whose rate is on NONE of the three maps is unknown on the client → that
  *     row is flagged needsServerRecalc, never faked.
  *   • final_price_excl_vat = landed_cost × (1 + margin%/100) × (1 − discount%/100) → q2
- *     margin% is the QUOTE-level markup (quote.margin_percent), applied to every line.
+ *     margin% is the EFFECTIVE margin for that line — see `resolveEffectiveMarginPercent`, which
+ *     mirrors the backend's `resolve_effective_margin` (crm/services/quotes/pricing.py) exactly:
+ *     a per-line override (`item.margin_percent` NOT null) wins, otherwise the line inherits the
+ *     КП-level markup (`quote.margin_percent`), otherwise 0. Before DT1 this hook hardcoded the
+ *     quote-level value for every line, so an overridden line previewed the WRONG price until the
+ *     save round-tripped — in a surface that has to agree with the server to the kopeck.
  *   • Сумма (line total)  = final_price_excl_vat × quantity
  *   • subtotal_excl_vat   = Σ (final_price_excl_vat × quantity)                  → q2
  *   • charges cascade      = SAP-style running total; each charge signed & q2'd, clamped ≥ 0
@@ -62,6 +67,47 @@ export function isBillableItem(item: Pick<QuoteItem, 'display_type' | 'is_option
  */
 export function isServiceLine(item: Pick<QuoteItem, 'product_domain'>): boolean {
 	return item.product_domain === 'SERVICES';
+}
+
+/**
+ * DT1 — «какая наценка реально применяется к этой позиции». THE single client-side mirror of the
+ * backend `resolve_effective_margin(item, quote_margin_percent)` (crm/services/quotes/pricing.py),
+ * precedence identical and in the same order:
+ *
+ *   1. `itemMarginPercent` NOT null/'' → explicit per-line OVERRIDE, beats the КП margin. An
+ *      explicit `0` is a real value here («продаём по себестоимости»), NOT an absent override —
+ *      which is exactly why `null` and `0` must never be conflated on the write path either.
+ *   2. otherwise → the КП-level markup (`quote.margin_percent`).
+ *   3. otherwise → 0.
+ *
+ * An empty string is treated as "no override": it is what a cleared numeric input would produce if
+ * it ever leaked through, and the backend's nullable Decimal has no '' state to mean anything else.
+ * A non-numeric value falls through to the next level rather than poisoning the preview — note this
+ * canNOT go through `toDecimal`, which maps garbage to 0 and would therefore turn an unparseable
+ * value into a silent «по себестоимости» override. Parse strictly, fall through on failure.
+ */
+function parseMarginLevel(value: string | number | null | undefined): Decimal | null {
+	if (value === null || value === undefined || value === '') return null;
+	try {
+		const parsed = new Decimal(value);
+		return parsed.isNaN() ? null : parsed;
+	} catch {
+		return null;
+	}
+}
+
+export function resolveEffectiveMarginPercent(
+	itemMarginPercent: string | number | null | undefined,
+	quoteMarginPercent: string | number | null | undefined,
+): Decimal {
+	return parseMarginLevel(itemMarginPercent)
+		?? parseMarginLevel(quoteMarginPercent)
+		?? new Decimal(0);
+}
+
+/** DT1 — does this line carry an explicit per-line override (vs inheriting the КП margin)? */
+export function hasMarginOverride(item: Pick<QuoteItem, 'margin_percent'>): boolean {
+	return item.margin_percent !== null && item.margin_percent !== undefined && item.margin_percent !== '';
 }
 
 /** Which FX map a resolved rate came from — `null` for the implicit UZS=1 identity. */
@@ -111,6 +157,16 @@ export interface LineMirror {
 	finalPriceExclVat: string;
 	/** «Сумма» = final × quantity (always resolvable). */
 	lineTotal: string;
+	/**
+	 * DT1 — the MARKUP % actually applied to this line: its own `margin_percent` when it overrides,
+	 * otherwise the inherited КП-level rate. Resolved here so the margin cell renders the effective
+	 * number (and its inherit placeholder) from the SAME precedence the price was computed with,
+	 * instead of re-implementing it in the view. NOT the same quantity as `marginPct` below —
+	 * this is markup ON COST, `marginPct` is gross margin ON PRICE.
+	 */
+	effectiveMarginPercent: string;
+	/** DT1 — the line carries an explicit per-line override (vs inheriting the КП margin). */
+	isMarginOverridden: boolean;
 	/** Gross margin % on price for the per-line chip; null when cost is hidden/unknown. */
 	marginPct: number | null;
 	/** Line profit (price − cost) over the quantity; null when cost is hidden/unknown. */
@@ -146,7 +202,10 @@ export interface PricingMirrorResult {
 export interface PricingMirrorInput {
 	draftItems: QuoteItem[];
 	dirtyIds: Set<number>;
-	/** Quote-level markup applied to every line (quote.margin_percent). */
+	/**
+	 * Quote-level markup — the BASE every line inherits (quote.margin_percent). DT1: a line whose
+	 * own `margin_percent` is non-null overrides it; see `resolveEffectiveMarginPercent`.
+	 */
 	marginPercent: string | number | null | undefined;
 	vatRate: string | number | null | undefined;
 	fxSnapshot: Record<string, string>;
@@ -175,11 +234,20 @@ function previewDirtyLine(
 ): LineMirror {
 	const quantity = Number(item.quantity) || 0;
 	const serverFinal = toDecimal(item.final_price_excl_vat);
+	// DT1: WHICH markup this line uses is independent of FX and of cost visibility, so resolve it
+	// once up front and report it on EVERY return path — the margin cell must still show the
+	// effective/inherited rate on a row whose price preview is withheld.
+	const effectiveMargin = resolveEffectiveMarginPercent(item.margin_percent, input.marginPercent);
+	const marginFields = {
+		effectiveMarginPercent: effectiveMargin.toString(),
+		isMarginOverridden: hasMarginOverride(item),
+	};
 
 	// Without cost visibility only quantity can have changed — the price is unchanged,
 	// so «Сумма» = server final × the (possibly edited) quantity. No cost/margin preview.
 	if (!input.canViewCost) {
 		return {
+			...marginFields,
 			isDraft: true,
 			needsServerRecalc: false,
 			usedMarketFx: false,
@@ -198,6 +266,7 @@ function previewDirtyLine(
 		// Honest marker: we don't know this currency's rate on ANY map — show the server line
 		// total so the column isn't blank, but withhold cost/margin (never fabricate a rate).
 		return {
+			...marginFields,
 			isDraft: true,
 			needsServerRecalc: true,
 			usedMarketFx: false,
@@ -216,7 +285,10 @@ function previewDirtyLine(
 	// overstates landed_cost / margin until the save round-trips.
 	const customs = isServiceLine(item) ? new Decimal(0) : toDecimal(item.customs_duty);
 	const landed = q2(toDecimal(item.frozen_base_price).plus(customs).mul(fxRate));
-	const marginMult = new Decimal(1).plus(toDecimal(input.marginPercent).div(100));
+	// DT1: price off the EFFECTIVE margin resolved above. Reading `input.marginPercent`
+	// unconditionally (the pre-DT1 behaviour) previewed every overridden line at the quote rate —
+	// a wrong number in the «деньги до копейки» column until the server replied.
+	const marginMult = new Decimal(1).plus(effectiveMargin.div(100));
 	const discountMult = new Decimal(1).minus(toDecimal(item.discount_percent).div(100));
 	const final = q2(landed.mul(marginMult).mul(discountMult));
 	const priceTotal = final.mul(quantity);
@@ -225,6 +297,7 @@ function previewDirtyLine(
 		? priceTotal.minus(costTotal).div(priceTotal).mul(100).toNumber()
 		: null;
 	return {
+		...marginFields,
 		isDraft: true,
 		needsServerRecalc: false,
 		usedMarketFx: fx.source === 'market',
@@ -251,6 +324,10 @@ function serverLine(item: QuoteItem, input: PricingMirrorInput): LineMirror {
 		? priceTotal.minus(costTotal).div(priceTotal).mul(100).toNumber()
 		: null;
 	return {
+		// DT1: a CLEAN row's price already came from the server, but the margin cell still has to
+		// render which rate produced it (and whether it was an override) — same precedence.
+		effectiveMarginPercent: resolveEffectiveMarginPercent(item.margin_percent, input.marginPercent).toString(),
+		isMarginOverridden: hasMarginOverride(item),
 		isDraft: false,
 		needsServerRecalc: false,
 		usedMarketFx: false,
