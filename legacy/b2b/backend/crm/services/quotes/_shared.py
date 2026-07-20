@@ -45,6 +45,29 @@ def _quote_seller_company(quote):
     return Company.objects.filter(pk=company_id).first()
 
 
+def _quote_client_display_name(quote) -> str:
+    """Human label for the КП's CLIENT side, safe when `deal.company` is NULL.
+
+    Wave E F3 made `Deal.company` nullable (company-less «калькулятор» draft), so
+    `quote.deal.company.name` is no longer safe in notification/audit strings. Degrades:
+    client company → offline contact name → registered client's name → a generic label.
+    Never raises, never returns an empty string.
+    """
+    deal = quote.deal
+    company = getattr(deal, "company", None)
+    if company is not None and (company.name or "").strip():
+        return company.name.strip()
+    contact = getattr(deal, "contact", None)
+    if contact is not None and (contact.name or "").strip():
+        return contact.name.strip()
+    client = getattr(deal, "client", None)
+    if client is not None:
+        label = (client.get_full_name() or client.email or "").strip()
+        if label:
+            return label
+    return "Клиент"
+
+
 def _seller_document_profile(seller_company):
     """The selling company's branded document requisites for the КП header — or None.
 

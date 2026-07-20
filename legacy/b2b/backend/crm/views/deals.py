@@ -146,8 +146,22 @@ class DealViewSet(viewsets.ModelViewSet):
 
         user = self.request.user
         contact_id = self.request.data.get("contact_id")
+        without_client = str(self.request.data.get("without_client", "")).lower() in ("true", "1")
 
-        if contact_id:
+        if without_client and not contact_id:
+            # Wave E F3 — «калькулятор»: a seller prices something BEFORE there is a client
+            # (Deal.company NULL). Seller-only: the deal is made reachable solely by the
+            # creator's DealSellerRouting row (register_new_deal → ensure_creator_seller_routing),
+            # so a non-seller would create an orphan nobody — not even themselves — can see.
+            # It can never be SENT until a recipient exists (RECIPIENT_REQUIRED).
+            from accounts.services.permissions import is_platform_admin_viewer, primary_seller_company_id
+
+            if is_platform_admin_viewer(user):
+                raise PermissionDenied("ADMIN_VIEWER_CANNOT_ACT")
+            if not primary_seller_company_id(user):
+                raise PermissionDenied("ONLY_SELLER_CAN_CREATE_CALCULATOR_DRAFT")
+            save_kwargs = dict(company=None, contact=None, client=None)
+        elif contact_id:
             # Seller opens a deal for an OFFLINE client from their own book (client base).
             # company = the client's company, client = None, contact = the offline contact.
             from accounts.models import Contact

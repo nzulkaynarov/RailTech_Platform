@@ -69,6 +69,13 @@ def submit_company_profile(
             company.types.add(client_type)
         invite.accepted_at = timezone.now()
         invite.save(update_fields=["accepted_at"])
+        # Wave E F4: hand the newly-registered person their own history — the deals the
+        # seller already ran against this offline contact (incl. КП sent earlier) get
+        # `client` filled in, so the buyer cabinet is not empty on first login.
+        if invite.contact_id:
+            from crm.services.deals import link_registered_client_to_contact_deals
+
+            link_registered_client_to_contact_deals(invite.contact_id, user)
     else:
         company = Company.objects.create(name=company_name, verification_status=submitted_status)
         if client_type:

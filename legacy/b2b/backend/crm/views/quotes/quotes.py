@@ -228,8 +228,9 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
             "or a platform admin. When the КП is below the company margin floor (S7a) a "
             "non-empty `justification` is required (does not block the send, but is audited); "
             "otherwise the endpoint returns 400 BELOW_FLOOR_JUSTIFICATION_REQUIRED. The deal must "
-            "have a reachable recipient (registered client or offline contact with an email), "
-            "otherwise the endpoint returns 400 RECIPIENT_REQUIRED and nothing is sent."
+            "have a reachable recipient (registered client or offline contact with an email) — a "
+            "company-less calculator draft has no addressee — otherwise the endpoint returns 400 "
+            "RECIPIENT_REQUIRED and nothing is sent."
         ),
         request=inline_serializer(
             name="QuoteSendToClientRequest",
@@ -295,6 +296,7 @@ class QuoteViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
                     "SELLER_KYC_REQUIRED",
                     "BELOW_FLOOR_JUSTIFICATION_REQUIRED",
                     "JUSTIFICATION_TOO_LONG",
+                    # Wave E F3: company-less calculator draft has no addressee yet.
                     "RECIPIENT_REQUIRED",
                 )
                 else "INVALID_STATUS"

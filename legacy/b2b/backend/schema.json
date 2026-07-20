@@ -13617,7 +13617,7 @@
         "/api/v1/crm/quotes/{id}/send-to-client/": {
             "post": {
                 "operationId": "crm_quotes_send_to_client_create",
-                "description": "Send an internally-approved (READY_TO_SEND) КП to the client. Freezes prices at current values. Allowed for the КП-owning company's SALES_MANAGER / OWNER, or a platform admin. When the КП is below the company margin floor (S7a) a non-empty `justification` is required (does not block the send, but is audited); otherwise the endpoint returns 400 BELOW_FLOOR_JUSTIFICATION_REQUIRED. The deal must have a reachable recipient (registered client or offline contact with an email), otherwise the endpoint returns 400 RECIPIENT_REQUIRED and nothing is sent.",
+                "description": "Send an internally-approved (READY_TO_SEND) КП to the client. Freezes prices at current values. Allowed for the КП-owning company's SALES_MANAGER / OWNER, or a platform admin. When the КП is below the company margin floor (S7a) a non-empty `justification` is required (does not block the send, but is audited); otherwise the endpoint returns 400 BELOW_FLOOR_JUSTIFICATION_REQUIRED. A draft with no recipient (no client company / contact) is refused with 400 RECIPIENT_REQUIRED.",
                 "summary": "Send quote to client",
                 "parameters": [
                     {
@@ -13669,7 +13669,7 @@
                         "description": ""
                     },
                     "400": {
-                        "description": "Quote not in READY_TO_SEND status, or below-floor send without justification (BELOW_FLOOR_JUSTIFICATION_REQUIRED), or JUSTIFICATION_TOO_LONG, or no reachable recipient (RECIPIENT_REQUIRED)."
+                        "description": "Quote not in READY_TO_SEND status, or below-floor send without justification (BELOW_FLOOR_JUSTIFICATION_REQUIRED), or JUSTIFICATION_TOO_LONG."
                     },
                     "403": {
                         "description": "Role not permitted"
@@ -19409,12 +19409,14 @@
                     },
                     "company": {
                         "type": "integer",
+                        "nullable": true,
                         "title": "Компания",
-                        "description": "Компания-клиент, с которой ведётся сделка"
+                        "description": "Компания-клиент, с которой ведётся сделка. Пусто — черновик-калькулятор без клиента."
                     },
                     "company_name": {
                         "type": "string",
-                        "readOnly": true
+                        "readOnly": true,
+                        "nullable": true
                     },
                     "client": {
                         "type": "integer",
@@ -19540,8 +19542,9 @@
                 "properties": {
                     "company": {
                         "type": "integer",
+                        "nullable": true,
                         "title": "Компания",
-                        "description": "Компания-клиент, с которой ведётся сделка"
+                        "description": "Компания-клиент, с которой ведётся сделка. Пусто — черновик-калькулятор без клиента."
                     },
                     "client": {
                         "type": "integer",
@@ -19590,12 +19593,14 @@
                     },
                     "company": {
                         "type": "integer",
+                        "nullable": true,
                         "title": "Компания",
-                        "description": "Компания-клиент, с которой ведётся сделка"
+                        "description": "Компания-клиент, с которой ведётся сделка. Пусто — черновик-калькулятор без клиента."
                     },
                     "company_name": {
                         "type": "string",
-                        "readOnly": true
+                        "readOnly": true,
+                        "nullable": true
                     },
                     "stage": {
                         "type": "integer",
@@ -19664,7 +19669,6 @@
                     "assigned_at",
                     "assigned_to",
                     "assigned_to_name",
-                    "company",
                     "company_name",
                     "created_at",
                     "id",
@@ -22752,8 +22756,9 @@
                 "properties": {
                     "company": {
                         "type": "integer",
+                        "nullable": true,
                         "title": "Компания",
-                        "description": "Компания-клиент, с которой ведётся сделка"
+                        "description": "Компания-клиент, с которой ведётся сделка. Пусто — черновик-калькулятор без клиента."
                     },
                     "client": {
                         "type": "integer",
@@ -23388,8 +23393,7 @@
                     "margin_percent": {
                         "type": "string",
                         "format": "decimal",
-                        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
-                        "nullable": true
+                        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$"
                     },
                     "discount_percent": {
                         "type": "string",
@@ -25462,8 +25466,7 @@
                     "margin_percent": {
                         "type": "string",
                         "format": "decimal",
-                        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
-                        "nullable": true
+                        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$"
                     },
                     "discount_percent": {
                         "type": "string",
@@ -25635,8 +25638,7 @@
                     "margin_percent": {
                         "type": "string",
                         "format": "decimal",
-                        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
-                        "nullable": true
+                        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$"
                     },
                     "discount_percent": {
                         "type": "string",

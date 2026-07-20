@@ -499,7 +499,10 @@ export const crmApi = {
 		const response = await apiClient.get<Deal>(`crm/deals/${id}/`);
 		return response.data;
 	},
-	createDeal: async (data: { title?: string; notes?: string }) => {
+	// `contact_id` opens the deal FOR an offline client from the seller's own book
+	// (Wave E F2); `without_client` opens a company-less «калькулятор» draft (F3).
+	// Both are seller-side; omitting them keeps the buyer-initiated behaviour.
+	createDeal: async (data: { title?: string; notes?: string; contact_id?: number; without_client?: boolean }) => {
 		const response = await apiClient.post<Deal>('crm/deals/', data);
 		return response.data;
 	},

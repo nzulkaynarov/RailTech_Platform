@@ -76,7 +76,7 @@ class DealListSerializer(serializers.ModelSerializer):
 
     stage_name = serializers.CharField(source="stage.name", read_only=True)
     stage_code = serializers.CharField(source="stage.code", read_only=True)
-    company_name = serializers.CharField(source="company.name", read_only=True)
+    company_name = serializers.CharField(source="company.name", read_only=True, allow_null=True)
     active_quote = QuoteSerializer(read_only=True)
     target_sellers_data = serializers.SerializerMethodField()
     # Per-seller ownership (ADR-0006 Move 2): these reflect the VIEWER's own company routing.
@@ -125,7 +125,7 @@ class DealDetailSerializer(serializers.ModelSerializer):
     active_quote = QuoteSerializer(read_only=True)
     stage_name = serializers.CharField(source="stage.name", read_only=True)
     stage_code = serializers.CharField(source="stage.code", read_only=True)
-    company_name = serializers.CharField(source="company.name", read_only=True)
+    company_name = serializers.CharField(source="company.name", read_only=True, allow_null=True)
     client_name = serializers.CharField(source="client.get_full_name", read_only=True)
     manager_name = serializers.CharField(source="manager.get_full_name", read_only=True)
     # Per-seller ownership (ADR-0006 Move 2): these reflect the VIEWER's own company routing.

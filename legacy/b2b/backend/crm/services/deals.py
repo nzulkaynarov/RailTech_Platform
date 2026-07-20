@@ -73,6 +73,17 @@ def register_new_deal(deal: Deal, actor: CustomUser) -> Deal:
         },
     )
 
+    # Wave E F1 — SELLER-OWNED deal keystone. A deal opened by a seller for an offline
+    # contact, or a company-less calculator draft (F3), is not routed by any buyer, so
+    # without a DealSellerRouting row it is INVISIBLE to its own creator (seller visibility
+    # is routing-only). Write the creator's routing row so the seller can see / claim /
+    # build / send it. Buyer-initiated deals (client + own company) keep their existing
+    # path — they get routing rows at submit/route time.
+    if deal.contact_id or deal.company_id is None:
+        from .assignment import ensure_creator_seller_routing
+
+        ensure_creator_seller_routing(deal, actor)
+
     # Counterparty book (Phase B): a deal opened FOR an offline contact is a seller acting on
     # their own client — touch the CLIENT edge (creates it for pre-Phase-B books). Buyer-opened
     # RFQs get their edges at routing time instead (both sides at once).
@@ -91,6 +102,24 @@ def register_new_deal(deal: Deal, actor: CustomUser) -> Deal:
                 source=RelationshipSource.OFFLINE_CREATED,
             )
     return deal
+
+
+def link_registered_client_to_contact_deals(contact_id: int, user: CustomUser) -> int:
+    """Wave E F4 — promote-invite backfill.
+
+    A seller works an offline client for months (deals carry `contact`, `client` is NULL
+    because the person had no account). When that contact accepts the invite and registers,
+    every КП the seller already sent them would stay orphaned: the buyer cabinet lists deals
+    by `client`/company membership, so the new user would log in to an empty history.
+
+    Point the historical deals of THAT contact at the freshly-registered user. Scoped by
+    contact id and only fills NULLs — it never re-points a deal that already has a client,
+    and the caller has just proven ownership of the contact by consuming a signed invite.
+    Returns the number of deals updated.
+    """
+    if not contact_id or user is None or not user.pk:
+        return 0
+    return Deal.objects.filter(contact_id=contact_id, client__isnull=True).update(client=user)
 
 
 def assert_user_may_change_stage(deal: Deal, actor: Optional[CustomUser], target_stage_code: str) -> Optional[str]:

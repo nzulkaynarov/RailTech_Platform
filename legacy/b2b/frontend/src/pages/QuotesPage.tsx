@@ -20,6 +20,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
+import { NewQuoteDialog } from '@/components/CRM/NewQuoteDialog';
 import { translateApiError, extractApiErrorCode } from '@/lib/apiError';
 import { useUserStore } from '@/store/userStore';
 import { QuoteStatus, quoteStatusLabelKey } from '@/lib/codes';
@@ -53,6 +54,8 @@ export function QuotesPage() {
   const [sendConfirmId, setSendConfirmId] = useState<number | null>(null);
   // S7a: reactive below-floor justification prompt (sender without cost visibility).
   const [sendJustificationRequired, setSendJustificationRequired] = useState(false);
+  // Wave E F2 — the seller-side «Новый КП» entry (offer-first, no buyer заявка needed).
+  const [newQuoteOpen, setNewQuoteOpen] = useState(false);
   // Proactive (sender WITH cost/margin rights) OR reactive (backend demanded it) → prompt.
   const sendTargetQuote = quotesList.find((q) => q.id === sendConfirmId);
   const sendBelowFloor = sendJustificationRequired || !!sendTargetQuote?.economics?.below_floor;
@@ -204,6 +207,11 @@ export function QuotesPage() {
       description={description}
       icon={<Calculator className="h-5 w-5" />}
       stats={stats}
+      actions={
+        isBuyer
+          ? undefined
+          : [{ label: t('newQuote.action'), onClick: () => setNewQuoteOpen(true) }]
+      }
     >
       <Toolbar
         searchValue={listParams.searchInput}
@@ -310,6 +318,11 @@ export function QuotesPage() {
           }
         }}
         translateError={(code) => translateApiError(code)}
+      />
+      <NewQuoteDialog
+        open={newQuoteOpen}
+        onOpenChange={setNewQuoteOpen}
+        onCreated={(dealId) => { window.location.hash = `deal-quote/${dealId}`; }}
       />
     </PageShell>
   );
