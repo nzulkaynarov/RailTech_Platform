@@ -58,7 +58,7 @@
 - [ ] Follow-up ARCH-03: `quotes export?format=pdf` ещё рендерит синхронно — нужен дизайн инвалидации устаревшего PDF
 - [ ] Backend coverage держится ~78% (гейт 30%) — поднять гейт после стабилизации
 - [ ] F4.x структурный долг: onNavigate prop-drilling, userStore↔authStore
-- [ ] Docs hygiene: master-system-document.md частично устарел. (Сделано: dead-config `nginx/nginx.conf` удалён — остался только placeholder `nginx/.gitkeep`; unused `react-router-dom` убран из `frontend/package.json`; мёртвые методы `supportApi.deleteTicket` / `accountsApi.getCompanyTypes` удалены — все без call-sites.)
+- [x] Docs hygiene: master-system-document переписан в v7.0 «карта системы» (living-doc, 2026-07-20; старый v6.0 → `Docs/old/architecture/`). (Ранее сделано: dead-config `nginx/nginx.conf` удалён — остался только placeholder `nginx/.gitkeep`; unused `react-router-dom` убран из `frontend/package.json`; мёртвые методы `supportApi.deleteTicket` / `accountsApi.getCompanyTypes` удалены — все без call-sites.)
 
 ### P0 коммерческие блокеры (сознательно отложены владельцем — master-scope §2)
 - [ ] Платёжный провайдер (Click/Payme) + идемпотентность платежей (UniqueConstraint(invoice, reference))
@@ -89,6 +89,6 @@ Production (staging пока НЕТ)
 
 - `../dev/specs/spec-remaining-2026-07-07.md` — актуальное ТЗ на оставшуюся работу
 - `../dev/adr/0001…0006` — действующие архитектурные решения
-- `../dev/architecture/master-system-document.md` — архитектура (частично устарел — сверяйтесь с ADR)
+- `../dev/architecture/master-system-document.md` — карта системы (v7 living-doc, 2026-07-20; сверяйтесь с ADR при расхождении)
 - `../old/audits/` — закрытые аудиты (статусы находок); `../old/handoffs/` — session-handoff'ы; `../old/roadmaps/` — прежние роадмапы
 - `../README.md` — полная карта документации
