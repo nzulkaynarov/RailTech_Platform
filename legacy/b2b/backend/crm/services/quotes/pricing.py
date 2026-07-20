@@ -106,6 +106,17 @@ class QuoteCalculationService:
         # себестоимость → +наценка (маржа на ВЕСЬ КП) → −скидка позиции. Маржа приходит из
         # quote.margin_percent; прямые вызовы без неё падают на позиционное значение (задел).
         effective_margin = item.margin_percent if margin_percent is None else margin_percent
+        # DEPLOY-1 TRANSITIONAL None-guard (expand/contract for DT1). The upcoming DT1 schema
+        # migration makes QuoteItem.margin_percent NULLABLE and NULLs every existing row. This
+        # (pre-DT1) code keeps serving during that migration's deploy window, and a NULL here
+        # would crash `None / 100`. NULL means «inherit the КП-level margin», so fall back to
+        # quote.margin_percent — NEVER honour a per-line override yet (that ships with the DT1
+        # code in Deploy 2). On today's NOT-NULL data this branch is DEAD, so prices are
+        # byte-identical to current prod: pure forward-compatibility, no behaviour change.
+        if effective_margin is None:
+            effective_margin = (
+                item.quote.margin_percent if item.quote_id and item.quote.margin_percent is not None else Decimal("0")
+            )
         margin_mult = Decimal("1") + (effective_margin / Decimal("100"))
         discount_mult = Decimal("1") - (item.discount_percent / Decimal("100"))
         item.final_price_excl_vat = (item.landed_cost * margin_mult * discount_mult).quantize(
