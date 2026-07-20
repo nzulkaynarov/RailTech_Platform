@@ -10054,9 +10054,7 @@ export interface components {
             readonly approved_at: string | null;
             readonly items: components["schemas"]["QuoteItem"][];
             readonly charges: components["schemas"]["QuoteCharge"][];
-            readonly economics: {
-                [key: string]: unknown;
-            } | null;
+            readonly economics: components["schemas"]["QuoteEconomics"] | null;
             readonly approval_steps: unknown[];
             /**
              * Дата создания
@@ -10182,6 +10180,46 @@ export interface components {
              * @description Если включено — сумма вычитается из базы до НДС (UBL allowance)
              */
             is_deduction?: boolean;
+        };
+        /**
+         * @description Documentation-only shape of ``compute_quote_economics()`` as it lands in the API.
+         *
+         *     NOT used for (de)serialization — ``QuoteSerializer.get_economics`` builds the dict by hand
+         *     and stringifies every ``Decimal``. This class exists so drf-spectacular emits a real object
+         *     schema (and therefore a real TypeScript type) instead of an opaque ``{[key]: unknown}``,
+         *     which let the backend and the SPA drift silently — the below-floor gate reads
+         *     ``below_floor`` / ``below_cost`` / ``min_margin_percent`` off a hand-written local type.
+         *
+         *     The service has exactly ONE unconditional ``return`` with these 11 keys, so every field is
+         *     always present — none is ``required=False``. The OBJECT itself is nullable: the serializer
+         *     returns ``None`` when the view did not ask for economics (``include_economics``) or when the
+         *     viewer lacks ``quote.view_cost_margin`` (``_can_see_costs``). Keep this in sync with
+         *     ``crm/services/quotes/pricing.py::compute_quote_economics`` —
+         *     ``crm/tests/test_quote_economics_schema.py`` fails if they diverge.
+         */
+        QuoteEconomics: {
+            /** @description Себестоимость (landed cost × qty) по billable-строкам. */
+            total_landed_cost: string;
+            /** @description Валовая прибыль = subtotal − total_landed_cost. */
+            gross_profit: string;
+            /** @description Валовая маржа НА ЦЕНЕ (прибыль/цена), 1 знак. */
+            gross_margin_percent: string;
+            /** @description Наценка на себестоимость (справочно), 1 знак. */
+            markup_percent: string;
+            /** @description Реальная себестоимость статей затрат для продавца. */
+            charge_cost_total: string;
+            /** @description tax_exclusive − total_landed_cost − charge_cost_total (реальный операционный результат). */
+            operating_profit: string;
+            /** @description Жёсткий стоп: цена не покрывает себестоимость + статьи. */
+            below_cost: boolean;
+            /** @description Маржа ниже порога компании → путь предупреждение+согласование. */
+            below_floor: boolean;
+            /** @description Порог маржи компании (CompanySettings), %. */
+            min_margin_percent: string;
+            /** @description Целевая маржа компании (CompanySettings), %. */
+            target_margin_percent: string;
+            /** @description Коды валют без разрешимого курса — блокируют submit/send (KP-01). */
+            fx_missing: string[];
         };
         QuoteItem: {
             readonly id: number;
