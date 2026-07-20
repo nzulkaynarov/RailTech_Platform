@@ -4422,7 +4422,7 @@ export interface paths {
         put?: never;
         /**
          * Send quote to client
-         * @description Send an internally-approved (READY_TO_SEND) КП to the client. Freezes prices at current values. Allowed for the КП-owning company's SALES_MANAGER / OWNER, or a platform admin. When the КП is below the company margin floor (S7a) a non-empty `justification` is required (does not block the send, but is audited); otherwise the endpoint returns 400 BELOW_FLOOR_JUSTIFICATION_REQUIRED.
+         * @description Send an internally-approved (READY_TO_SEND) КП to the client. Freezes prices at current values. Allowed for the КП-owning company's SALES_MANAGER / OWNER, or a platform admin. When the КП is below the company margin floor (S7a) a non-empty `justification` is required (does not block the send, but is audited); otherwise the endpoint returns 400 BELOW_FLOOR_JUSTIFICATION_REQUIRED. The deal must have a reachable recipient (registered client or offline contact with an email), otherwise the endpoint returns 400 RECIPIENT_REQUIRED and nothing is sent.
          */
         post: operations["crm_quotes_send_to_client_create"];
         delete?: never;
@@ -19281,7 +19281,7 @@ export interface operations {
                     "application/json": components["schemas"]["Quote"];
                 };
             };
-            /** @description Quote not in READY_TO_SEND status, or below-floor send without justification (BELOW_FLOOR_JUSTIFICATION_REQUIRED), or JUSTIFICATION_TOO_LONG. */
+            /** @description Quote not in READY_TO_SEND status, or below-floor send without justification (BELOW_FLOOR_JUSTIFICATION_REQUIRED), or JUSTIFICATION_TOO_LONG, or no reachable recipient (RECIPIENT_REQUIRED). */
             400: {
                 headers: {
                     [name: string]: unknown;
