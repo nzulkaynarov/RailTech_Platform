@@ -30,9 +30,18 @@ export interface UseRowSelectionResult {
  * `orderedIds` is the visible row order (draftItems order) — it drives Shift-range,
  * all/none, and the prune. It is read through a ref so the callbacks stay stable.
  */
-export function useRowSelection(orderedIds: number[]): UseRowSelectionResult {
+export function useRowSelection(orderedIds: number[], selectableIds?: number[]): UseRowSelectionResult {
 	const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set());
 	const lastSelectedIdRef = useRef<number | null>(null);
+
+	// U4: the currently VISIBLE subset (filter applied), in the same order. It drives Shift+range,
+	// «выбрать все» and the header checkbox state, so a «select all» under an active filter selects
+	// exactly the rows the seller can see — never a hidden line a later bulk delete would take with
+	// it. The PRUNE deliberately stays on `orderedIds` (below), so merely hiding a row by filtering
+	// does not drop its selection. Omitted ⇒ byte-identical to the pre-filter behaviour.
+	const visibleIds = selectableIds ?? orderedIds;
+	const visibleIdsRef = useRef(visibleIds);
+	visibleIdsRef.current = visibleIds;
 
 	// Stable access to the latest row order inside the callbacks (orderedIds is a fresh array
 	// every render — a new draftItems.map — so we never want it in a callback dep list).
@@ -51,7 +60,9 @@ export function useRowSelection(orderedIds: number[]): UseRowSelectionResult {
 	}, [idsKey]);
 
 	const toggle = useCallback((id: number, shiftKey = false) => {
-		const ordered = orderedIdsRef.current;
+		// Shift-range walks the VISIBLE order: under a filter the range is what sits between the two
+		// clicked rows on screen, not the hidden lines the unfiltered document has between them.
+		const ordered = visibleIdsRef.current;
 		setSelectedIds((previous) => {
 			const next = new Set(previous);
 			const anchor = lastSelectedIdRef.current;
@@ -72,12 +83,20 @@ export function useRowSelection(orderedIds: number[]): UseRowSelectionResult {
 		});
 	}, []);
 
-	const allSelected = orderedIds.length > 0 && selectedIds.size === orderedIds.length;
+	// "All" means all VISIBLE rows (== all rows when no filter is active).
+	const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
 	const someSelected = selectedIds.size > 0 && !allSelected;
 
 	const toggleAll = useCallback(() => {
-		const ordered = orderedIdsRef.current;
-		setSelectedIds((previous) => (previous.size === ordered.length ? new Set() : new Set(ordered)));
+		const visible = visibleIdsRef.current;
+		setSelectedIds((previous) => {
+			const everyVisibleSelected = visible.length > 0 && visible.every((id) => previous.has(id));
+			const next = new Set(previous);
+			// Toggling OFF only clears the visible rows — a selection made before filtering survives.
+			if (everyVisibleSelected) visible.forEach((id) => next.delete(id));
+			else visible.forEach((id) => next.add(id));
+			return next;
+		});
 	}, []);
 
 	const clear = useCallback(() => {

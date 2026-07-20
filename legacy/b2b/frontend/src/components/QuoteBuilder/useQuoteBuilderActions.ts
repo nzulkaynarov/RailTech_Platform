@@ -358,12 +358,22 @@ export function useQuoteBuilderActions(params: QuoteBuilderActionsParams) {
 	const handleAddSection = () => handleAddSectionOrNote('SECTION');
 	const handleAddNote = () => handleAddSectionOrNote('NOTE');
 
-	// Rename a SECTION/NOTE inline (its heading / free-text). bulk-update can NOT write
-	// imported_raw_name, so a name edit goes through the single-item PATCH (full serializer). Empty
-	// title → ignored (keep the previous, never persist a blank heading). Fires on blur.
+	// Rename a row inline: a SECTION heading / NOTE text, or (U3) an ITEM's free-typed name.
+	// bulk-update can NOT write imported_raw_name, so this goes through the single-item PATCH (full
+	// serializer). Empty title → ignored (keep the previous, never persist a blank name). Fires on blur.
 	const handleRenameRow = async (id: number, value: string) => {
 		const trimmed = value.trim();
 		if (!trimmed) return;
+		// U3 + the handleMoveRow guard, same root cause: `perform_update` BUMPS the row's server
+		// version, but a dirty row keeps its local draft (with the OLD version) across the refetch —
+		// so renaming a row that has unsaved field edits would make the next Save false-409
+		// (QUOTE_ITEM_STALE) and the conflict reload would throw those edits away. SECTION/NOTE rows
+		// carry no editable pricing fields and are never dirty, so this only ever fires for U3's
+		// ITEM-name path. Ask to save first rather than silently losing work.
+		if (dirtyIds.has(id)) {
+			toast.warning(t('quote.row.saveBeforeRename'));
+			return;
+		}
 		try {
 			await updateMutation.mutateAsync({ id, data: { imported_raw_name: trimmed } });
 		} catch {

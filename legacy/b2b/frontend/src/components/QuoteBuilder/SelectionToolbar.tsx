@@ -79,8 +79,11 @@ export const SelectionToolbar: React.FC<SelectionToolbarProps> = ({
 		setPriceOpen(false);
 	};
 
+	// U2: rendered INLINE in the single builder toolbar row (it used to be its own full-width strip
+	// above the grid, costing ~48px of line space). Tighter padding + no `ml-auto` on the clear
+	// button so it reads as one compact tinted group next to the tabs.
 	return (
-		<div className="flex flex-wrap items-center gap-2 rounded-md border border-primary/40 bg-primary/5 px-3 py-1.5">
+		<div className="flex flex-wrap items-center gap-1.5 rounded-md border border-primary/40 bg-primary/5 px-2 py-1">
 			<span className="text-sm font-medium text-foreground">{t('quote.bulk.selected', { count })}</span>
 
 			{/* Delete selected — one confirm for the whole batch. */}
@@ -174,7 +177,7 @@ export const SelectionToolbar: React.FC<SelectionToolbarProps> = ({
 				{t('quote.bulk.duplicate')}
 			</Button>
 
-			<Button variant="ghost" size="sm" onClick={onClear} className="ml-auto text-muted-foreground">
+			<Button variant="ghost" size="sm" onClick={onClear} className="text-muted-foreground">
 				<X className="size-3" />
 				{t('quote.bulk.clearSelection')}
 			</Button>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -14,11 +14,10 @@ import { useMediaQuery } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { toDecimal } from '@/utils/decimal';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 import {
 	AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
 	AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -40,6 +39,7 @@ import { QUOTE_ITEMS_BULK_MAX_ROWS, VIRTUALIZE_THRESHOLD, marginToneClass } from
 import { scrollToRowAndFocusCell } from '@/components/QuoteBuilder/gridScrollFocus';
 import { QuoteBuilderGridProvider, type QuoteBuilderGridContextValue } from '@/components/QuoteBuilder/QuoteBuilderGridContext';
 import { useQuoteBuilderActions } from '@/components/QuoteBuilder/useQuoteBuilderActions';
+import { filterQuoteItems, normalizeFilterQuery } from '@/components/QuoteBuilder/filterItems';
 import { BuilderToolbar } from '@/components/QuoteBuilder/BuilderToolbar';
 import { GridTable } from '@/components/QuoteBuilder/GridTable';
 import { EconomicsRail } from '@/components/QuoteBuilder/EconomicsRail';
@@ -73,24 +73,46 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 
 	// Draft state machine (WP-D) + local undo stack (WP-J).
 	const { draftItems, dirtyIds, hasUnsavedChanges, setField, applyBulk, clearDirtyAfterSave, undo, canUndo } = useQuoteDraft(quoteItems);
-	// Row multi-select (WP-J) — `draftItems` order is the visible order.
-	const selection = useRowSelection(draftItems.map((item) => item.id));
+
+	// U4 — «найти в КП». `visibleItems` is what the TABLE renders (and what the virtualizer windows
+	// and the keyboard navigates). Everything money-bearing — usePricingMirror, the totals bar, the
+	// save payload, section subtotals — keeps reading the FULL `draftItems`, so narrowing the view
+	// can never change what the КП is worth or silently drop an edited row from a save.
+	const [filterQuery, setFilterQuery] = useState('');
+	const isFiltered = normalizeFilterQuery(filterQuery).length > 0;
+	const visibleItems = useMemo(() => filterQuoteItems(draftItems, filterQuery), [draftItems, filterQuery]);
+	// Original 1-based document position per row id — the grid keeps numbering lines by their place
+	// in the КП, so a filtered view shows «12.» not «1.» (and delete/select aria-labels stay true).
+	const documentIndexById = useMemo(() => {
+		const map = new Map<number, number>();
+		draftItems.forEach((item, position) => map.set(item.id, position));
+		return map;
+	}, [draftItems]);
+
+	// Row multi-select (WP-J): pruning follows the FULL row set (a filtered-out row keeps its
+	// selection), while «выбрать все» / Shift-range act on the VISIBLE subset only (U4).
+	const selection = useRowSelection(
+		draftItems.map((item) => item.id),
+		visibleItems.map((item) => item.id),
+	);
 
 	// Windowed (virtualized) line rendering above the threshold (волна 3). The virtualizer always runs
 	// (Rules of Hooks) but only drives layout when `shouldVirtualize` — small КП render every row.
+	// U4: it counts the VISIBLE rows, so a filtered set windows correctly instead of reserving space
+	// for rows that are not in the DOM.
 	const scrollContainerRef = useRef<HTMLDivElement>(null);
-	const shouldVirtualize = draftItems.length > VIRTUALIZE_THRESHOLD;
+	const shouldVirtualize = visibleItems.length > VIRTUALIZE_THRESHOLD;
 	const virtualizer = useVirtualizer({
-		count: draftItems.length,
+		count: visibleItems.length,
 		getScrollElement: () => scrollContainerRef.current,
 		estimateSize: () => 44,
 		overscan: 8,
-		getItemKey: (index) => draftItems[index]?.id ?? index,
+		getItemKey: (index) => visibleItems[index]?.id ?? index,
 	});
 
 	// Keyboard nav across the window edge: scroll the target row in, then focus its cell (волна 3).
 	const focusCellAtRow = (rowIndex: number, column: string) => {
-		const targetId = draftItems[rowIndex]?.id;
+		const targetId = visibleItems[rowIndex]?.id;
 		if (targetId == null) return;
 		scrollToRowAndFocusCell(rowIndex, targetId, column, {
 			scrollToIndex: (index) => virtualizer.scrollToIndex(index, { align: 'auto' }),
@@ -102,9 +124,9 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	const gridKeyboard = useGridKeyboard(
 		shouldVirtualize
 			? {
-				rowIds: draftItems.map((item) => item.id),
+				rowIds: visibleItems.map((item) => item.id),
 				focusCellAtRow,
-				isNavigable: (rowId) => (draftItems.find((item) => item.id === rowId)?.display_type ?? 'ITEM') === 'ITEM',
+				isNavigable: (rowId) => (visibleItems.find((item) => item.id === rowId)?.display_type ?? 'ITEM') === 'ITEM',
 			}
 			: undefined,
 	);
@@ -378,11 +400,15 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	const contextValue: QuoteBuilderGridContextValue = {
 		activeQuote, econ, canViewCost, showCostColumns, presentationCurrency, vatRate, effectiveLeadTime,
 		currencies, mainColCount, draftItems, pricingMirror, mirrorTotals, selection,
+		visibleItems, documentIndexById, filterQuery, setFilterQuery, isFiltered,
 		handleFieldChange, cellError, cellErrors, hiddenErrorFields, fieldLabel,
 		expandedRowId, toggleRow, setExpandedRowId,
 		fxRateFor, lineCostInPresentation,
 		handleDeleteItem: actions.handleDeleteItem, setReassignItemId, rowRefs,
 		handleMoveRow: actions.handleMoveRow, handleRenameRow: actions.handleRenameRow,
+		// U1/U4: ↑/↓ swap positions with the adjacent row of the FULL document — meaningless (and
+		// surprising) while the visible set is filtered, so the controls disable with a tooltip.
+		reorderDisabled: isFiltered,
 		showAddRow, setShowAddRow, handleAddSection: actions.handleAddSection, handleAddNote: actions.handleAddNote,
 		openPasteDialog: actions.openPasteDialog, setShowAiMatch,
 		handlePricingAssist: actions.handlePricingAssist, pricingBusy, fullscreen, setFullscreen, setShowSettings,
@@ -398,44 +424,36 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 			<QuoteBuilderGridProvider value={contextValue}>
 				<div
 					className={cn(
-						'flex flex-col min-h-0 gap-2',
+						'flex flex-col min-h-0 gap-1.5',
 						// Focus (fullscreen) mode: the grid takes over the whole viewport; Esc / ⛶ exits.
 						fullscreen ? 'fixed inset-0 z-50 bg-background p-3' : 'h-full',
 					)}
 					onKeyDown={handleWorkspaceKeyDown}
 				>
-					<BuilderToolbar />
-
-					{/* Bulk-action strip — appears above the working area while ≥1 line is selected (WP-J). */}
-					{selection.count > 0 && (
-						<SelectionToolbar
-							count={selection.count}
-							onDelete={actions.handleBulkDelete}
-							onApplyDiscount={actions.handleBulkDiscount}
-							onApplyPriceChange={actions.handleBulkPriceChange}
-							onDuplicate={actions.handleBulkDuplicate}
-							onClear={selection.clear}
-							deleting={bulkDeleteMutation.isPending}
-							duplicating={bulkCreateMutation.isPending}
+					{/* U2: ONE toolbar row owns the tabs, the row actions (or the bulk-action strip while
+					    rows are selected), the «найти в КП» filter and the view controls. The tabs used to
+					    sit on their own line and the selection strip stacked a second full-width strip —
+					    together ~90px of chrome that now costs 0. `<Tabs>` wraps the toolbar so `TabsList`
+					    can live inside it while `TabsContent` stays below. */}
+					<Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'items' | 'charges')} className="flex flex-1 flex-col min-h-0 gap-1.5">
+						<BuilderToolbar
+							selectionSlot={selection.count > 0 ? (
+								<SelectionToolbar
+									count={selection.count}
+									onDelete={actions.handleBulkDelete}
+									onApplyDiscount={actions.handleBulkDiscount}
+									onApplyPriceChange={actions.handleBulkPriceChange}
+									onDuplicate={actions.handleBulkDuplicate}
+									onClear={selection.clear}
+									deleting={bulkDeleteMutation.isPending}
+									duplicating={bulkCreateMutation.isPending}
+								/>
+							) : undefined}
 						/>
-					)}
 
-					{/* Working area: tabs (line table + charges) on the left, economics rail on the right */}
-					<div className="flex flex-1 min-h-0 gap-3">
-						<div className="flex flex-col flex-1 min-w-0 min-h-0">
-							<Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'items' | 'charges')} className="flex flex-1 flex-col min-h-0 gap-2">
-								<TabsList className="self-start">
-									<TabsTrigger value="items">{t('quote.builder.itemsTab')}</TabsTrigger>
-									<TabsTrigger value="charges" className="gap-1.5">
-										{t('quote.builder.chargesTab')}
-										{(activeQuote.charges?.length ?? 0) > 0 && (
-											<Badge variant="secondary" className="h-4 min-w-4 justify-center px-1 text-xs tabular-nums">
-												{activeQuote.charges?.length}
-											</Badge>
-										)}
-									</TabsTrigger>
-								</TabsList>
-
+						{/* Working area: the active tab's panel on the left, economics rail on the right */}
+						<div className="flex flex-1 min-h-0 gap-3">
+							<div className="flex flex-col flex-1 min-w-0 min-h-0">
 								<TabsContent value="items" className="flex flex-1 flex-col min-h-0 mt-0 overflow-hidden">
 									<GridTable />
 								</TabsContent>
@@ -444,11 +462,11 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 								<TabsContent value="charges" className="flex-1 min-h-0 overflow-auto mt-0">
 									{activeQuote && <QuoteChargesSection quoteId={activeQuote.id} currency={presentationCurrency} />}
 								</TabsContent>
-							</Tabs>
-						</div>
+							</div>
 
-						<EconomicsRail />
-					</div>
+							<EconomicsRail />
+						</div>
+					</Tabs>
 
 					{/* Sticky totals footer — always in view. Total + margin come from the live mirror. */}
 					<StickyTotalsBar

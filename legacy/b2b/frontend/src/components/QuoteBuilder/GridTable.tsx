@@ -14,15 +14,21 @@ import { useQuoteBuilderGrid } from './QuoteBuilderGridContext';
  *  everything else (ITEM / legacy undefined) → the priced GridRow. */
 const renderGridRow = (
 	item: QuoteItem,
-	index: number,
-	windowed: boolean,
+	/** 0-based index in the FULL document — the row number, the ↑/↓ first/last guard, aria-labels. */
+	documentIndex: number,
+	/**
+	 * U4: 0-based index in the VISIBLE (filtered) list — what the virtualizer windows by. Equal to
+	 * `documentIndex` when no filter is active; `undefined` when the table is not windowed.
+	 */
+	windowIndex: number | undefined,
 	measureElement: (node: Element | null) => void,
 	resizeItem: (index: number, size: number) => void,
 ) => {
-	const windowProps = windowed ? { virtualIndex: index, measureElement } : {};
+	const windowed = windowIndex !== undefined;
+	const windowProps = windowed ? { virtualIndex: windowIndex, measureElement } : {};
 	return (item.display_type ?? 'ITEM') === 'ITEM'
-		? <GridRow key={item.id} item={item} index={index} {...windowProps} resizeItem={windowed ? resizeItem : undefined} />
-		: <SectionNoteRow key={item.id} item={item} index={index} {...windowProps} />;
+		? <GridRow key={item.id} item={item} index={documentIndex} {...windowProps} resizeItem={windowed ? resizeItem : undefined} />
+		: <SectionNoteRow key={item.id} item={item} index={documentIndex} {...windowProps} />;
 };
 
 /**
@@ -36,10 +42,14 @@ export const GridTable: React.FC = () => {
 	const { t } = useTranslation();
 	const {
 		scrollContainerRef, gridKeyboardOnKeyDown, handleGridPaste, selection, showCostColumns,
-		draftItems, virtualizer, shouldVirtualize, mainColCount,
+		visibleItems, documentIndexById, isFiltered, virtualizer, shouldVirtualize, mainColCount,
 		showAddRow, newItemName, setNewItemName, newItemQty, setNewItemQty, newItemPrice,
 		setNewItemPrice, handleAddItem, setShowAddRow, addNameRef, addRowRef, createItemPending,
 	} = useQuoteBuilderGrid();
+
+	// U4: the body renders the (possibly filtered) VISIBLE rows, but each row keeps its real place in
+	// the document for its number and aria-labels — a filtered line is still «позиция 12».
+	const rowIndexOf = (item: QuoteItem, fallback: number) => documentIndexById.get(item.id) ?? fallback;
 
 	const virtualItems = shouldVirtualize ? virtualizer.getVirtualItems() : [];
 	const paddingTop = virtualItems.length > 0 ? virtualItems[0].start : 0;
@@ -91,7 +101,8 @@ export const GridTable: React.FC = () => {
 							<TableHead className="px-2 py-2 text-right text-xs font-semibold text-muted-foreground w-32 pr-4">
 								{t('quote.lineTotal')}
 							</TableHead>
-							<TableHead className="px-2 py-2 w-8" />
+							{/* U1: the actions column now carries TWO icon columns (опция/удалить + ↑/↓). */}
+							<TableHead className="px-2 py-2 w-14" />
 						</TableRow>
 					</TableHeader>
 					<TableBody className="divide-y">
@@ -105,8 +116,14 @@ export const GridTable: React.FC = () => {
 									</tr>
 								)}
 								{virtualItems.map((virtualRow) => {
-									const item = draftItems[virtualRow.index];
-									return renderGridRow(item, virtualRow.index, true, virtualizer.measureElement, virtualizer.resizeItem);
+									const item = visibleItems[virtualRow.index];
+									return renderGridRow(
+										item,
+										rowIndexOf(item, virtualRow.index),
+										virtualRow.index,
+										virtualizer.measureElement,
+										virtualizer.resizeItem,
+									);
 								})}
 								{paddingBottom > 0 && (
 									<tr aria-hidden="true" className="border-t-0!">
@@ -115,7 +132,16 @@ export const GridTable: React.FC = () => {
 								)}
 							</>
 						) : (
-							draftItems.map((item, idx) => renderGridRow(item, idx, false, () => {}, () => {}))
+							visibleItems.map((item, idx) => renderGridRow(item, rowIndexOf(item, idx), undefined, () => {}, () => {}))
+						)}
+						{/* U4: an active filter that matches nothing must SAY so — an empty table would read
+						    as «в КП нет позиций», which is a lie about a document that still has lines. */}
+						{isFiltered && visibleItems.length === 0 && (
+							<TableRow>
+								<TableCell colSpan={mainColCount} className="px-4 py-6 text-center text-sm text-muted-foreground">
+									{t('quote.filter.noMatches')}
+								</TableCell>
+							</TableRow>
 						)}
 						{showAddRow && (
 							<TableRow ref={addRowRef} className="bg-primary/5">

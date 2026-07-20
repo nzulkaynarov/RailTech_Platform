@@ -31,6 +31,23 @@ export interface QuoteBuilderGridContextValue {
 
 	// ── Rows + live pricing ───────────────────────────────────────────────────────────────────
 	draftItems: QuoteItem[];
+	/**
+	 * U4: the rows the TABLE renders — `draftItems` with the in-document filter applied (identical
+	 * reference when no filter is active). Only rendering, windowing and keyboard navigation read
+	 * this; the pricing mirror, the totals and the save payload keep reading the FULL `draftItems`,
+	 * so a filtered view never changes what the КП is worth or what gets saved.
+	 */
+	visibleItems: QuoteItem[];
+	/**
+	 * U4: row id → its 0-based index in the FULL document. Rows keep their real КП number (and true
+	 * «удалить строку N» / «выбрать строку N» labels) while a filter hides their neighbours.
+	 */
+	documentIndexById: Map<number, number>;
+	/** U4: current «найти в КП» query (raw input value). */
+	filterQuery: string;
+	setFilterQuery: Dispatch<SetStateAction<string>>;
+	/** U4: a filter is narrowing the table right now (query non-empty). */
+	isFiltered: boolean;
 	pricingMirror: PricingMirrorResult;
 	mirrorTotals: TotalsMirror;
 	selection: UseRowSelectionResult;
@@ -58,6 +75,12 @@ export interface QuoteBuilderGridContextValue {
 	// S1: перемещение строки ↑/↓ (swap position) + инлайн-переименование заголовка SECTION / текста NOTE.
 	handleMoveRow: (id: number, direction: 'up' | 'down') => void;
 	handleRenameRow: (id: number, value: string) => void;
+	/**
+	 * U1/U4: reordering is suppressed while the table is filtered. ↑/↓ swap POSITIONS with the
+	 * adjacent row in the FULL document, which under a filter is a row the seller cannot see — so the
+	 * buttons render disabled with an explanatory tooltip instead of silently moving a hidden line.
+	 */
+	reorderDisabled: boolean;
 
 	// ── Toolbar ───────────────────────────────────────────────────────────────────────────────
 	showAddRow: boolean;

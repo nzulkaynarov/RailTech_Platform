@@ -98,3 +98,79 @@ describe('useRowSelection', () => {
 		expect(result.current.count).toBe(0);
 	});
 });
+
+/**
+ * U4 — with the «найти в КП» filter active the hook receives a second argument: the VISIBLE subset.
+ * The split matters for safety: pruning must follow the FULL row set (hiding a row is not deleting
+ * it, so its selection survives), while «выбрать все» and Shift-range must follow the VISIBLE subset
+ * (a select-all under a filter followed by a bulk delete must never take a row off-screen with it).
+ */
+describe('useRowSelection — filtered (visible) subset', () => {
+	it('toggleAll selects only the VISIBLE rows', () => {
+		const { result } = renderHook(() => useRowSelection([1, 2, 3, 4], [2, 4]));
+
+		act(() => result.current.toggleAll());
+
+		expect([...result.current.selectedIds].sort()).toEqual([2, 4]);
+		expect(result.current.allSelected).toBe(true); // "all" == all visible
+	});
+
+	it('toggleAll a second time clears ONLY the visible rows, keeping a pre-filter selection', () => {
+		const { result, rerender } = renderHook(
+			({ all, visible }) => useRowSelection(all, visible),
+			{ initialProps: { all: [1, 2, 3, 4], visible: [1, 2, 3, 4] } },
+		);
+
+		act(() => result.current.toggle(1)); // selected before filtering
+		rerender({ all: [1, 2, 3, 4], visible: [2, 4] });
+
+		act(() => result.current.toggleAll()); // adds 2 + 4
+		expect([...result.current.selectedIds].sort()).toEqual([1, 2, 4]);
+
+		act(() => result.current.toggleAll()); // removes 2 + 4 only
+		expect([...result.current.selectedIds]).toEqual([1]);
+	});
+
+	it('a row merely HIDDEN by the filter keeps its selection (prune follows the full set)', () => {
+		const { result, rerender } = renderHook(
+			({ all, visible }) => useRowSelection(all, visible),
+			{ initialProps: { all: [1, 2, 3], visible: [1, 2, 3] } },
+		);
+
+		act(() => result.current.toggle(2));
+		rerender({ all: [1, 2, 3], visible: [1, 3] }); // #2 filtered out, still on the server
+
+		expect(result.current.isSelected(2)).toBe(true);
+	});
+
+	it('a row DELETED server-side is still pruned while a filter is active', () => {
+		const { result, rerender } = renderHook(
+			({ all, visible }) => useRowSelection(all, visible),
+			{ initialProps: { all: [1, 2, 3], visible: [1, 2, 3] } },
+		);
+
+		act(() => result.current.toggle(2));
+		rerender({ all: [1, 3], visible: [1, 3] });
+
+		expect(result.current.isSelected(2)).toBe(false);
+	});
+
+	it('Shift-range walks the VISIBLE order, not the hidden rows between the two clicks', () => {
+		// Document 1..5, filter leaves 1, 3, 5. Shift-clicking 1 then 5 selects the three VISIBLE
+		// rows — never the hidden 2 and 4.
+		const { result } = renderHook(() => useRowSelection([1, 2, 3, 4, 5], [1, 3, 5]));
+
+		act(() => result.current.toggle(1));
+		act(() => result.current.toggle(5, true));
+
+		expect([...result.current.selectedIds].sort()).toEqual([1, 3, 5]);
+	});
+
+	it('omitting the visible subset is identical to the pre-filter behaviour', () => {
+		const { result } = renderHook(() => useRowSelection([1, 2, 3]));
+
+		act(() => result.current.toggleAll());
+		expect([...result.current.selectedIds].sort()).toEqual([1, 2, 3]);
+		expect(result.current.allSelected).toBe(true);
+	});
+});

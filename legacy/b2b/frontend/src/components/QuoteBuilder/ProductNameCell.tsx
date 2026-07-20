@@ -1,4 +1,4 @@
-import React, { useId, useState } from 'react';
+import React, { useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { AlertTriangle, Link2, Loader2 } from 'lucide-react';
@@ -22,6 +22,12 @@ interface ProductNameCellProps {
 	index: number;
 	/** Opens ReassignProductDialog (AI candidates / clear) for the unbound-line fallback. */
 	onBrowseCandidates: (itemId: number) => void;
+	/**
+	 * U3: commit a FREE-TYPED name (no catalog pick) as the line's own `imported_raw_name`. Wired by
+	 * GridRow to the grid's rename action (single-item PATCH). Omitted ⇒ the pre-U3 behaviour — the
+	 * field simply reverts on blur.
+	 */
+	onCommitFreeText?: (itemId: number, value: string) => void;
 }
 
 /** Один различающий подзаголовок кандидата: артикул · ГОСТ · MPN (пустые опускаются). */
@@ -38,17 +44,20 @@ function candidateSubtitle(product: Product): string {
  * Печать ≥2 символов → дебаунс-поиск каталога (`useProductSearch`, тот же
  * `catalog/products/?search=` эндпоинт) → выпадающий список; выбор привязывает товар
  * через СУЩЕСТВУЮЩУЮ мутацию `useReassignProduct` (эндпоинт reassign-product, тот же, что
- * у ReassignProductDialog). Свободный ввод без выбора НЕ сохраняется как новое имя —
- * imported_raw_name не редактируется inline в текущей модели, поэтому на blur поле
- * возвращается к каноническому имени (create-on-the-fly = позиция просто остаётся вне
- * каталога с прежним именем). Save-семантика сохранена.
+ * у ReassignProductDialog).
+ *
+ * U3: свободный ввод БЕЗ выбора из списка теперь СОХРАНЯЕТСЯ — на blur (и на Enter, который уводит
+ * фокус вниз) текст коммитится в собственное `imported_raw_name` строки через тот же одиночный
+ * PATCH, что и переименование SECTION/NOTE. Escape отменяет правку. Исключение — строка,
+ * ПРИВЯЗАННАЯ к товару каталога: её отображаемое имя берётся из `product.name` (и в гриде, и в
+ * PDF), поэтому там ввод по-прежнему откатывается — см. `commitFreeText`.
  *
  * Клавиатура: пока список ЗАКРЫТ, стрелки/Enter всплывают в делегированный
  * useGridKeyboard (инпут несёт data-cell-col="name") — навигация по колонке имени
  * работает. Когда список ОТКРЫТ, стрелки/Enter/Escape перехватываются здесь
  * (preventDefault + stopPropagation), поэтому grid-навигация их не видит.
  */
-export function ProductNameCell({ item, index, onBrowseCandidates }: ProductNameCellProps) {
+export function ProductNameCell({ item, index, onBrowseCandidates, onCommitFreeText }: ProductNameCellProps) {
 	const { t } = useTranslation();
 	const reassign = useReassignProduct();
 	const displayName = item.product_name || item.imported_raw_name || '';
@@ -58,6 +67,9 @@ export function ProductNameCell({ item, index, onBrowseCandidates }: ProductName
 	const [open, setOpen] = useState(false);
 	const [highlight, setHighlight] = useState(0);
 	const listboxId = useId();
+	// U3: set for the blur that FOLLOWS an Escape / a catalog pick, so that blur discards the draft
+	// instead of persisting it. Cleared on every fresh focus.
+	const skipCommitRef = useRef(false);
 
 	const debounced = useDebouncedValue(draft, 250);
 	const { data: rawResults = [], isFetching } = useProductSearch(open ? debounced : '');
@@ -73,6 +85,9 @@ export function ProductNameCell({ item, index, onBrowseCandidates }: ProductName
 	};
 
 	const commitSelection = (product: Product) => {
+		// A catalog pick REPLACES the typed text — the following blur must not also persist the draft
+		// as a free-text name (that would fight the reassign mutation over the same field).
+		skipCommitRef.current = true;
 		closeDropdown();
 		setEditing(false);
 		setDraft('');
@@ -90,16 +105,19 @@ export function ProductNameCell({ item, index, onBrowseCandidates }: ProductName
 	};
 
 	const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-		// Список ЗАКРЫТ → не трогаем стрелки/Enter: пусть всплывают в grid-навигацию.
-		// Единственное исключение — Escape при открытом (обрабатывается ниже).
-		if (!open || results.length === 0) {
-			if (event.key === 'Escape' && open) {
-				event.preventDefault();
-				event.stopPropagation();
-				closeDropdown();
-			}
+		// U3: Escape ALWAYS abandons the edit (open list or not) — the escape hatch a free-text field
+		// needs now that blur persists. It reverts to the canonical name and leaves the cell.
+		if (event.key === 'Escape') {
+			event.preventDefault();
+			event.stopPropagation();
+			skipCommitRef.current = true;
+			closeDropdown();
+			event.currentTarget.blur();
 			return;
 		}
+		// Список ЗАКРЫТ → не трогаем стрелки/Enter: пусть всплывают в grid-навигацию (Enter уводит
+		// фокус вниз, blur по пути коммитит свободный ввод — U3).
+		if (!open || results.length === 0) return;
 		switch (event.key) {
 			case 'ArrowDown':
 				event.preventDefault();
@@ -118,17 +136,37 @@ export function ProductNameCell({ item, index, onBrowseCandidates }: ProductName
 				if (picked) commitSelection(picked);
 				break;
 			}
-			case 'Escape':
-				event.preventDefault();
-				event.stopPropagation();
-				closeDropdown();
-				break;
+			// Escape is handled above (it now also abandons the free-text edit).
 			default:
 				break;
 		}
 	};
 
+	/**
+	 * U3 — persist a free-typed name.
+	 *
+	 * A line editor must accept a description that is not a catalog product; before this, typing a
+	 * name without picking from the typeahead silently reverted on blur. The typed text is now
+	 * committed to the line's OWN `imported_raw_name` (single-item PATCH, the same route the
+	 * SECTION/NOTE inline rename uses).
+	 *
+	 * A line BOUND to a catalog product is deliberately excluded: its displayed name comes from
+	 * `product.name` (in the grid AND in the КП PDF), so writing `imported_raw_name` there would
+	 * persist a value the seller never sees again — a worse lie than reverting. On a bound line the
+	 * field reverts and points at «привязать товар» (detach/re-match) instead.
+	 */
+	const commitFreeText = () => {
+		if (!onCommitFreeText || isBound) return;
+		const trimmed = draft.trim();
+		// Blank is never persisted (matches the SECTION/NOTE rename): an empty КП line name would
+		// make the row `is_incomplete` on the backend for no reason the seller asked for.
+		if (!trimmed || trimmed === displayName.trim()) return;
+		onCommitFreeText(item.id, trimmed);
+	};
+
 	const handleBlur = () => {
+		if (!skipCommitRef.current && editing) commitFreeText();
+		skipCommitRef.current = false;
 		setEditing(false);
 		setDraft('');
 		closeDropdown();
@@ -167,7 +205,7 @@ export function ProductNameCell({ item, index, onBrowseCandidates }: ProductName
 							className="h-7 min-w-0 flex-1 truncate border-none bg-transparent px-1 text-sm font-semibold shadow-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-inset"
 							title={displayName || undefined}
 							value={inputValue}
-							onFocus={() => { setEditing(true); setDraft(displayName); }}
+							onFocus={() => { skipCommitRef.current = false; setEditing(true); setDraft(displayName); }}
 							onChange={(event) => handleChange(event.target.value)}
 							onKeyDown={handleKeyDown}
 							onBlur={handleBlur}
