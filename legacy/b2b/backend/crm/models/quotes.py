@@ -154,9 +154,9 @@ class Quote(models.Model):
         verbose_name=_("Ставка НДС (%)"),
         help_text=_("Зафиксированная ставка НДС на момент создания КП"),
     )
-    # Маржа на ВЕСЬ КП (наценка на себестоимость, едина для всех позиций). Бизнес-реальность:
-    # маржа ставится на КП, а не на позицию. QuoteItem.margin_percent оставлен как задел под
-    # будущее позиционное переопределение, но движок применяет именно этот КП-уровневый процент.
+    # Маржа на ВЕСЬ КП (наценка на себестоимость) — БАЗА, которую наследует каждая позиция.
+    # DT1: позиция может переопределить её своим QuoteItem.margin_percent (NOT NULL ⇒ побеждает);
+    # NULL на позиции = «наследовать этот КП-уровневый процент». См. _resolve_effective_margin.
     margin_percent = models.DecimalField(
         max_digits=6,
         decimal_places=2,
@@ -563,13 +563,20 @@ class QuoteItem(models.Model):
         verbose_name=_("Таможенная пошлина"),
         help_text=_("Таможенная пошлина за единицу"),
     )
+    # DT1 (per-line margin override, семантика Salesforce CPQ / Odoo). NULL — «наследовать
+    # маржу КП» (Quote.margin_percent), это ДЕФОЛТ; любое НЕ-NULL значение — явное позиционное
+    # переопределение, которое ПОБЕЖДАЕТ маржу КП (в т.ч. явный 0 = «продать по себестоимости»).
+    # Колонка сделана nullable именно затем, чтобы отличить «нет переопределения» от «0 %»:
+    # раньше default=0 не давал их различить, и движок позиционное значение просто игнорировал.
     margin_percent = models.DecimalField(
         max_digits=5,
         decimal_places=2,
-        default=0,
+        null=True,
+        blank=True,
+        default=None,
         validators=[MinValueValidator(0), MaxValueValidator(500)],
-        verbose_name=_("Наценка (%)"),
-        help_text=_("Процент наценки RailTech (0–500%)"),
+        verbose_name=_("Наценка позиции (%)"),
+        help_text=_("Позиционное переопределение наценки (0–500%); пусто — наследовать маржу КП"),
     )
     # Скидка на позицию (UBL line-level allowance, %). Применяется к цене продажи
     # строки: final_price_excl_vat = себестоимость × (1 + наценка%) × (1 − скидка%).

@@ -23388,7 +23388,8 @@
                     "margin_percent": {
                         "type": "string",
                         "format": "decimal",
-                        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$"
+                        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
+                        "nullable": true
                     },
                     "discount_percent": {
                         "type": "string",
@@ -25461,7 +25462,8 @@
                     "margin_percent": {
                         "type": "string",
                         "format": "decimal",
-                        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$"
+                        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
+                        "nullable": true
                     },
                     "discount_percent": {
                         "type": "string",
@@ -25633,7 +25635,8 @@
                     "margin_percent": {
                         "type": "string",
                         "format": "decimal",
-                        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$"
+                        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
+                        "nullable": true
                     },
                     "discount_percent": {
                         "type": "string",

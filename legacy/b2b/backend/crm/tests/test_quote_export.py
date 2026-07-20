@@ -73,7 +73,9 @@ def test_csv_export_with_costs_includes_seller_columns(quote_with_items):
     response = export_quote(quote_with_items, "csv", include_costs=True)
     body = response.content.decode("utf-8")
     assert "Себестоимость" in body
-    assert "Маржа КП, %" in body
+    # DT1: колонка теперь несёт ЭФФЕКТИВНУЮ маржу строки (позиционная либо унаследованная от КП),
+    # поэтому заголовок больше не «Маржа КП».
+    assert "Маржа, %" in body
     assert "Landed cost" in body
 
 

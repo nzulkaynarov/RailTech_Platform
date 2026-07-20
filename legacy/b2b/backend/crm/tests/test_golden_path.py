@@ -192,7 +192,9 @@ def _build_quote_with_items(deal, manager):
         quantity=10,
         frozen_base_price=Decimal("100.00"),
         frozen_currency=usd,
-        margin_percent=Decimal("20.00"),
+        # DT1: margin_percent НЕ задаётся ⇒ NULL ⇒ строка наследует маржу КП (20%). Раньше здесь
+        # стояли позиционные 20/10, которые движок игнорировал; теперь позиционное значение
+        # реально побеждает, поэтому «унаследовать» выражается его ОТСУТСТВИЕМ.
         final_price_excl_vat=Decimal("0"),
     )
     QuoteItem.objects.create(
@@ -201,10 +203,9 @@ def _build_quote_with_items(deal, manager):
         quantity=4,
         frozen_base_price=Decimal("50.00"),
         frozen_currency=usd,
-        margin_percent=Decimal("10.00"),
         final_price_excl_vat=Decimal("0"),
     )
-    # F3.8: margin is set ONCE on the whole КП (per-line margins above are now ignored by the engine).
+    # Маржа ставится ОДИН раз на весь КП; обе строки выше её наследуют (их margin_percent = NULL).
     quote.margin_percent = Decimal("20.00")
     quote.save(update_fields=["margin_percent"])
     return quote

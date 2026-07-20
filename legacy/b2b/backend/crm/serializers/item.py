@@ -64,7 +64,9 @@ class QuoteItemSerializer(serializers.ModelSerializer):
     frozen_base_price = serializers.DecimalField(max_digits=14, decimal_places=2, required=False)
     logistics_cost = serializers.DecimalField(max_digits=14, decimal_places=2, required=False)
     customs_duty = serializers.DecimalField(max_digits=14, decimal_places=2, required=False)
-    margin_percent = serializers.DecimalField(max_digits=5, decimal_places=2, required=False)
+    # DT1: null — «нет позиционного переопределения, наследовать маржу КП» (дефолт); любое
+    # число — переопределение, которое побеждает КП-маржу (в т.ч. явный 0 = «по себестоимости»).
+    margin_percent = serializers.DecimalField(max_digits=5, decimal_places=2, required=False, allow_null=True)
     discount_percent = serializers.DecimalField(max_digits=5, decimal_places=2, required=False)
     lead_time_days = serializers.IntegerField(required=False)
 

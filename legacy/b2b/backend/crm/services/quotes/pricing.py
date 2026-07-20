@@ -32,6 +32,30 @@ def effective_quote_lead_time(quote, items=None) -> int:
     )
 
 
+def resolve_effective_margin(item, quote_margin_percent=None) -> Decimal:
+    """DT1 — единая точка истины «какая маржа реально применяется к позиции».
+
+    Семантика Salesforce CPQ / Odoo:
+      * ``item.margin_percent`` NOT NULL → явное позиционное переопределение, ПОБЕЖДАЕТ маржу КП
+        (в том числе явный ``0`` — «продаём по себестоимости», это осмысленное значение);
+      * ``item.margin_percent`` IS NULL → переопределения нет, наследуем маржу КП.
+
+    ``quote_margin_percent`` — КП-уровневый процент, который передаёт вызывающий (recalculate_quote
+    резолвит его один раз и отдаёт сюда, чтобы не было N+1). Если он НЕ передан (легаси-путь в
+    памяти — ``QuoteItem.save`` без карты КП), маржа читается с связанного КП: обычно объект уже
+    закеширован в FK-поле инстанса, так что лишнего запроса не возникает. Возвращается ВСЕГДА
+    Decimal — вызывающий может делить на 100 без None-guard.
+    """
+    if item.margin_percent is not None:
+        return item.margin_percent
+    if quote_margin_percent is not None:
+        return quote_margin_percent
+    if item.quote_id:
+        return item.quote.margin_percent or Decimal("0")
+    # Позиция ещё не привязана к КП и КП-маржа не передана — наследовать нечего.
+    return Decimal("0")
+
+
 def _positive_fx_rate(value):
     """Parse a stored FX rate; return Decimal ONLY if strictly positive, else None.
     A stray 0 / negative / non-numeric (e.g. a hand-edited fx_manual) is ignored rather than
@@ -103,9 +127,10 @@ class QuoteCalculationService:
             Decimal("0.01"), rounding=ROUND_HALF_UP
         )
 
-        # себестоимость → +наценка (маржа на ВЕСЬ КП) → −скидка позиции. Маржа приходит из
-        # quote.margin_percent; прямые вызовы без неё падают на позиционное значение (задел).
-        effective_margin = item.margin_percent if margin_percent is None else margin_percent
+        # себестоимость → +наценка → −скидка позиции. DT1: позиционная наценка (NOT NULL) бьёт
+        # КП-уровневую, NULL — наследует переданную `margin_percent` (маржу КП). Резолвер общий
+        # с аудит-историей, поэтому в историю пишется РЕАЛЬНО применённый процент, а не игнор.
+        effective_margin = resolve_effective_margin(item, margin_percent)
         margin_mult = Decimal("1") + (effective_margin / Decimal("100"))
         discount_mult = Decimal("1") - (item.discount_percent / Decimal("100"))
         item.final_price_excl_vat = (item.landed_cost * margin_mult * discount_mult).quantize(
@@ -199,14 +224,18 @@ class QuoteCalculationService:
         # 2. Bulk update items to minimize DB hits
         QuoteItem.objects.bulk_update(items, ["landed_cost", "final_price_excl_vat", "logistics_cost", "customs_duty"])
 
-        # 2b. Record audit trail snapshots for changed items
+        # 2b. Record audit trail snapshots for changed items.
+        #     DT1: пишем ЭФФЕКТИВНУЮ маржу — тот процент, который движок реально применил к
+        #     строке (позиционное переопределение либо унаследованная маржа КП). Раньше сюда
+        #     попадал сырой item.margin_percent, который расчёт игнорировал: аудит-след
+        #     противоречил цене. История — NOT NULL, резолвер всегда отдаёт Decimal.
         history_records = [
             QuoteItemHistory(
                 quote_item=item,
                 frozen_base_price=item.frozen_base_price,
                 logistics_cost=item.logistics_cost,
                 customs_duty=item.customs_duty,
-                margin_percent=item.margin_percent,
+                margin_percent=resolve_effective_margin(item, quote.margin_percent),
                 discount_percent=item.discount_percent,
                 landed_cost=item.landed_cost,
                 final_price_excl_vat=item.final_price_excl_vat,
