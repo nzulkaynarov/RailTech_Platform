@@ -264,7 +264,10 @@ def quote_vs_request_diff(quote: Quote) -> dict:
     quote's items in their natural order, so the frontend can resolve it back to the
     requested/quoted names for display. NEVER raises for an empty/odd quote.
     """
-    items = list(quote.items.select_related("product").order_by("id"))
+    # position, then id — consistent with the grid / PDF / every other КП line ordering (S1). The
+    # `line` index in findings is the 0-based offset into THIS order, so the frontend resolves it
+    # back to the same row the seller sees.
+    items = list(quote.items.select_related("product").order_by("position", "id"))
     if not items:
         return {"ai_enabled": bool(getattr(settings, "AI_IMPORT_ENABLED", False)), "findings": []}
 

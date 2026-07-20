@@ -342,6 +342,22 @@ class Quote(models.Model):
         return QuoteCalculationService.recalculate_quote(self.pk)
 
 
+class QuoteItemQuerySet(models.QuerySet):
+    """QuoteItem querysets with the ONE «counts as money» filter (Rule 8 — single source)."""
+
+    def billable(self):
+        """Real, payable lines only — priced ITEM rows that are NOT optional.
+
+        SECTION/NOTE are presentation (group header / free-text, no price); an optional ITEM is
+        shown to the client WITH a price but sits OUTSIDE the totals (доп. предложение). This is THE
+        single source of the invariant the КП header total already enforces (see
+        QuoteCalculationService.recalculate_quote). EVERY downstream document that materialises КП
+        lines — инвойс (InvoiceItem), договор-спецификация, seller-экспорт — MUST filter through
+        here, or it bills/prints rows the header total excludes and the financial document stops
+        adding up (Σ строк ≠ ИТОГО)."""
+        return self.filter(display_type=self.model.DisplayType.ITEM, is_optional=False)
+
+
 @pghistory.track(
     pghistory.RowEvent("quote_item.snapshot", row=pghistory.New, operation=pgtrigger.Insert | pgtrigger.Update),
     pghistory.RowEvent("quote_item.before_update", row=pghistory.Old, operation=pgtrigger.Update),
@@ -370,6 +386,11 @@ class QuoteItem(models.Model):
         verbose_name=_("КП"),
         help_text=_("Коммерческое предложение, к которому относится позиция"),
     )
+
+    # Default manager carries .billable() so `quote.items.billable()` works everywhere (the reverse
+    # related manager subclasses the model's default manager). use_in_migrations stays False → no
+    # schema/migration churn (this is a pure query helper, not a model-state change).
+    objects = QuoteItemQuerySet.as_manager()
 
     # Odoo-style `display_type`: ONE model represents priced lines, group headers and free-text
     # notes — no separate table. ITEM = обычная позиция (с ценой, входит в итоги); SECTION =

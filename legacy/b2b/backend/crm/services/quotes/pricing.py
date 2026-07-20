@@ -79,10 +79,11 @@ class QuoteCalculationService:
         # the whole pipeline so a stray frozen_base_price on such a row can never leak into a sum.
         if item.display_type != QuoteItem.DisplayType.ITEM:
             item.logistics_cost = Decimal("0")
+            item.customs_duty = Decimal("0")
             item.landed_cost = Decimal("0")
             item.final_price_excl_vat = Decimal("0")
             if commit:
-                item.save(update_fields=["landed_cost", "final_price_excl_vat", "logistics_cost"])
+                item.save(update_fields=["landed_cost", "final_price_excl_vat", "logistics_cost", "customs_duty"])
             return item
 
         is_service = item.product and item.product.domain_type and item.product.domain_type.code == "SERVICES"
@@ -224,7 +225,7 @@ class QuoteCalculationService:
         # NOTE are presentation rows; optional ITEMs are shown with a price but quoted OUTSIDE the
         # totals (доп. предложение). Same filter drives economics/margin below — optional never
         # distorts the seller's margin governance.
-        totals = quote.items.filter(display_type=QuoteItem.DisplayType.ITEM, is_optional=False).aggregate(
+        totals = quote.items.billable().aggregate(
             subtotal=models.Sum(models.F("final_price_excl_vat") * models.F("quantity"))
         )
         subtotal = totals["subtotal"] or Decimal("0")
@@ -283,9 +284,7 @@ def compute_quote_economics(quote) -> dict:
     # Economics mirror the subtotal filter: only the priced, non-optional ITEM lines count toward
     # COGS / margin / the FX-missing guard. SECTION/NOTE carry no cost; an optional line is quoted
     # outside the totals, so its (real) cost must not drag the seller's margin governance.
-    items = list(
-        quote.items.select_related("frozen_currency").filter(display_type=QuoteItem.DisplayType.ITEM, is_optional=False)
-    )
+    items = list(quote.items.select_related("frozen_currency").billable())
     total_landed_cost = sum((it.landed_cost * it.quantity for it in items), Decimal("0")).quantize(
         Decimal("0.01"), rounding=ROUND_HALF_UP
     )

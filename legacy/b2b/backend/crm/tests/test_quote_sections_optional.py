@@ -303,3 +303,46 @@ def test_new_line_defaults_to_item(world):
     item = QuoteItem.objects.create(quote=quote, imported_raw_name="обычная", frozen_base_price=Decimal("10"))
     assert item.display_type == "ITEM"
     assert item.is_optional is False
+
+
+# ── 8. downstream reconciliation: invoice bills ONLY billable lines (review BLOCKER) ────
+@pytest.mark.django_db
+def test_invoice_excludes_optional_section_and_reconciles(world):
+    """The materialised invoice must bill ONLY billable lines: an optional ITEM and a SECTION must
+    NOT become InvoiceItems, and Σ(InvoiceItem.line_total_excl_vat) must equal the header
+    subtotal (which already excludes them) — a fiscal document has to add up (Σ строк == ИТОГО)."""
+    from crm.models import Contract, ContractStatus, InvoiceItem
+    from crm.services.billing import generate_invoice_from_contract
+
+    quote = _quote(world)
+    QuoteItem.objects.create(
+        quote=quote, imported_raw_name="A", quantity=1, frozen_base_price=Decimal("300"), position=0
+    )
+    QuoteItem.objects.create(
+        quote=quote,
+        imported_raw_name="Опция",
+        quantity=1,
+        frozen_base_price=Decimal("500"),
+        is_optional=True,
+        position=1,
+    )
+    QuoteItem.objects.create(quote=quote, display_type="SECTION", imported_raw_name="Раздел", position=2)
+    QuoteCalculationService.recalculate_quote(quote.pk)
+    quote.refresh_from_db()
+
+    contract = Contract.objects.create(
+        deal=quote.deal,
+        quote=quote,
+        number="CT-RECON-1",
+        notes="",
+        status=ContractStatus.objects.get(code="SIGNED"),
+    )
+    invoice, err = generate_invoice_from_contract(contract.pk, actor=None)
+    assert err is None
+
+    items = list(InvoiceItem.objects.filter(invoice=invoice))
+    assert len(items) == 1  # only the billable ITEM; optional + SECTION excluded
+    descriptions = {it.description for it in items}
+    assert "Опция" not in descriptions and "Раздел" not in descriptions
+    line_sum = sum((it.line_total_excl_vat for it in items), Decimal("0"))
+    assert line_sum == invoice.subtotal_excl_vat == Decimal("300.00")  # reconciles
