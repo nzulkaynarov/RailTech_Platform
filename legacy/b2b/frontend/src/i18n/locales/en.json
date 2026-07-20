@@ -699,7 +699,8 @@
     },
     "row": {
       "moveUp": "Move up",
-      "moveDown": "Move down"
+      "moveDown": "Move down",
+      "saveBeforeMove": "Save the row's changes before moving it"
     },
     "builder": {
       "title": "Quote Builder",

@@ -154,6 +154,29 @@ describe('QuoteBuilderGrid — sections / notes / optional (S1)', () => {
 		);
 	});
 
+	it('blocks a move whose swap neighbour has unsaved edits (no false stale-conflict, no lost work)', async () => {
+		// Review MAJOR: the swap bulk-update bumps both rows' version; moving next to a DIRTY row
+		// would false-409 its next Save and the reload would drop the edit. Guarded with a toast.
+		serverItems = [
+			makeItem(1, { position: 1 }),
+			makeItem(2, { display_type: 'SECTION', imported_raw_name: 'Механика', position: 2 }),
+			makeItem(3, { position: 3 }),
+		];
+		(toast.warning as ReturnType<typeof vi.fn>).mockClear();
+		const user = userEvent.setup();
+		renderWithProviders(<QuoteBuilderGrid dealId={42} />);
+
+		// Dirty item #3 (the section's down-swap neighbour) by toggling its optional flag.
+		const optionalToggles = screen.getAllByRole('checkbox', { name: /Опциональная позиция/ });
+		await user.click(optionalToggles[1]);
+		await waitFor(() => expect(screen.getByText('Есть несохранённые изменения')).toBeInTheDocument());
+
+		await user.click(screen.getByRole('button', { name: 'Переместить вниз' }));
+
+		expect(toast.warning).toHaveBeenCalledTimes(1);
+		expect(bulkMutateAsync).not.toHaveBeenCalled(); // move suppressed — no version bump on the dirty row
+	});
+
 	it('the «опция» toggle marks the row dirty and the save payload carries is_optional', async () => {
 		const user = userEvent.setup();
 		renderWithProviders(<QuoteBuilderGrid dealId={42} />);

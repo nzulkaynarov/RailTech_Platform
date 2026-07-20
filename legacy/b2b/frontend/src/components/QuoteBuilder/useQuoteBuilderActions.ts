@@ -379,6 +379,14 @@ export function useQuoteBuilderActions(params: QuoteBuilderActionsParams) {
 		if (swapIndex < 0 || swapIndex >= draftItems.length) return;
 		const moving = draftItems[index];
 		const neighbour = draftItems[swapIndex];
+		// The swap bulk-update bumps BOTH rows' server version. If a moved row has unsaved field
+		// edits, its draft keeps the old version → the next Save would false-409 (QUOTE_ITEM_STALE)
+		// and the reload would discard the edit. Only the two rows in THIS swap matter, so a targeted
+		// guard (not a blanket hasUnsavedChanges block) — ask to save just those first.
+		if (dirtyIds.has(moving.id) || dirtyIds.has(neighbour.id)) {
+			toast.warning(t('quote.row.saveBeforeMove'));
+			return;
+		}
 		let movingPosition = neighbour.position;
 		let neighbourPosition = moving.position;
 		if (moving.position == null || neighbour.position == null || moving.position === neighbour.position) {
