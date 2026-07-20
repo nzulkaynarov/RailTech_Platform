@@ -26,13 +26,21 @@ class Deal(models.Model):
     Может содержать несколько версий КП (Quote).
     """
 
+    # Wave E F3 (owner decision 2026-07-20): NULLABLE — a seller may open a «калькулятор»
+    # draft with NO client yet (price something first, pick the recipient later). NULL means
+    # "no counterparty on this deal yet", NOT "any company": every buyer-side ORM scope
+    # filters `company_id__in=<my companies>`, which NULL never matches, so a company-less
+    # draft is invisible to every buyer. Seller visibility comes from the creator's
+    # DealSellerRouting row (F1). Sending such a draft is blocked by RECIPIENT_REQUIRED.
     company = models.ForeignKey(
         "accounts.Company",
         on_delete=models.CASCADE,
         related_name="deals",
+        null=True,
+        blank=True,
         db_index=True,
         verbose_name=_("Компания"),
-        help_text=_("Компания-клиент, с которой ведётся сделка"),
+        help_text=_("Компания-клиент, с которой ведётся сделка. Пусто — черновик-калькулятор без клиента."),
     )
     client = models.ForeignKey(
         "accounts.CustomUser",

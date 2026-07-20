@@ -24,6 +24,36 @@ def _actor_seller_company_ids(actor: CustomUser) -> set:
     return set(actor.memberships.filter(is_active=True, can_sell=True).values_list("company_id", flat=True))
 
 
+def ensure_creator_seller_routing(deal: Deal, actor: CustomUser) -> Optional[DealSellerRouting]:
+    """Wave E F1 — the keystone of the SELLER-OWNED deal (offline contact / company-less
+    calculator draft).
+
+    Seller visibility is ROUTING-ONLY (`seller_visible_deal_ids`): without a
+    DealSellerRouting row a deal the seller just created for their own offline client is
+    invisible to its own creator — they cannot claim it, build a КП, or send it. The buyer
+    path gets its routing rows from `submit_request` / `route_request_to_sellers`; the
+    seller-initiated path had none. This writes the missing row.
+
+    Scoped, never widening: the row is created for the ACTOR'S OWN primary seller company
+    only, so no other tenant gains visibility. Idempotent (the unique constraint on
+    deal+seller_company is the real guard). The creator is also the owner from the start —
+    a deal you opened for your own client is already «taken in work» — so `claim_deal`
+    degenerates to a no-op success for them and a teammate can still `release`/`assign` it.
+    Returns None when the actor has no seller company (buyer-initiated deals are unaffected).
+    """
+    from accounts.services.permissions import primary_seller_company_id
+
+    seller_company_id = primary_seller_company_id(actor)
+    if not seller_company_id:
+        return None
+    routing, _created = DealSellerRouting.objects.get_or_create(
+        deal=deal,
+        seller_company_id=seller_company_id,
+        defaults={"assigned_to": actor, "assigned_at": timezone.now()},
+    )
+    return routing
+
+
 @transaction.atomic
 def claim_deal(deal_id: int, actor: CustomUser) -> Tuple[Optional[Deal], Optional[str]]:
     """A routed seller-team member claims THEIR company's copy of the заявка (pull from the queue).

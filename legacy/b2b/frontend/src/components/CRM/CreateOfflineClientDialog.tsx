@@ -14,11 +14,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useCreateOfflineClient } from '@/hooks/useCRM';
+import type { Contact } from '@/api/crmApi';
 import { translateApiError } from '@/lib/apiError';
 
 interface CreateOfflineClientDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Wave E F2 — the created contact, so a caller (e.g. «Новый КП») can immediately
+   *  open a deal for it. Optional: the counterparties page ignores it. */
+  onCreated?: (contact: Contact) => void;
 }
 
 /**
@@ -26,7 +30,7 @@ interface CreateOfflineClientDialogProps {
  * (company + primary contact in one step). The backend de-dups by name/INN and
  * requires reachability (email OR phone) — mirrored here as a soft pre-check.
  */
-export function CreateOfflineClientDialog({ open, onOpenChange }: CreateOfflineClientDialogProps) {
+export function CreateOfflineClientDialog({ open, onOpenChange, onCreated }: CreateOfflineClientDialogProps) {
   const { t } = useTranslation();
   const [companyName, setCompanyName] = useState('');
   const [contactName, setContactName] = useState('');
@@ -53,7 +57,7 @@ export function CreateOfflineClientDialog({ open, onOpenChange }: CreateOfflineC
     e.preventDefault();
     if (!canSubmit) return;
     try {
-      await createMut.mutateAsync({
+      const contact = await createMut.mutateAsync({
         company_name: companyName.trim(),
         contact_name: contactName.trim(),
         inn: inn.trim() || undefined,
@@ -64,6 +68,7 @@ export function CreateOfflineClientDialog({ open, onOpenChange }: CreateOfflineC
       toast.success(t('counterparties.dialog.created'));
       onOpenChange(false);
       resetForm();
+      onCreated?.(contact);
     } catch (err) {
       toast.error(translateApiError(err));
     }

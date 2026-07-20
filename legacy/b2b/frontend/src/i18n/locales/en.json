@@ -343,6 +343,30 @@
       "noSellers": "No sellers found"
     }
   },
+  "newQuote": {
+    "action": "New quote",
+    "title": "New quote",
+    "description": "Build a commercial offer without waiting for a client request.",
+    "defaultTitle": "New quote",
+    "created": "Draft created — opening the builder",
+    "submit": "Create and open",
+    "submitNewClient": "Next: client details",
+    "fields": {
+      "title": "Title",
+      "titlePlaceholder": "e.g. Track machinery supply",
+      "recipient": "Quote recipient",
+      "pickContactPlaceholder": "Pick a counterparty",
+      "contactSearchPlaceholder": "Search the counterparty book",
+      "noContacts": "Your counterparty book is still empty"
+    },
+    "modes": {
+      "book": "From the counterparty book",
+      "new": "New client",
+      "newHint": "We will record the company and contact, then open the builder.",
+      "none": "No client (calculator)",
+      "noneHint": "Price it now, pick the recipient before sending."
+    }
+  },
   "forgotPassword": {
     "title": "Reset password",
     "step": "Step 1 of 2",
@@ -3734,7 +3758,9 @@
       "notFound": "Deal not found",
       "buyerNote": "What the buyer asked for",
       "openChat": "Chat with buyer",
-      "contextTitle": "Request & chat"
+      "contextTitle": "Request & chat",
+      "calculatorDraft": "Draft with no client",
+      "calculatorDraftHint": "Pick the recipient later — sending the КП will ask you to choose a client first."
     }
   },
   "dealSplit": {
@@ -4812,7 +4838,9 @@
     "QUOTE_NOT_FOUND": "Quote not found",
     "QUOTE_ITEM_STALE": "Row changed by another user — refresh the data",
     "BELOW_FLOOR_JUSTIFICATION_REQUIRED": "The КП is below the margin floor — a justification is required to send.",
-    "JUSTIFICATION_TOO_LONG": "The justification is too long (max 500 characters)."
+    "JUSTIFICATION_TOO_LONG": "The justification is too long (max 500 characters).",
+    "RECIPIENT_REQUIRED": "This draft has no recipient — pick or create a client before sending.",
+    "ONLY_SELLER_CAN_CREATE_CALCULATOR_DRAFT": "Only a seller can create a calculator draft"
   },
   "fileUpload": {
     "upload": "Upload",

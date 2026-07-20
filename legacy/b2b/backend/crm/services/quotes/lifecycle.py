@@ -25,6 +25,7 @@ from crm.services.deals import transition_deal_stage
 from ._shared import (
     _log_quote,
     _notify_quote_outcome,
+    _quote_client_display_name,
     _quote_owner_company_id,
     _quote_seller_company,
     _set_quote_status,
@@ -130,7 +131,12 @@ class QuoteLifecycleService:
         pdf_file = BytesIO()
         HTML(string=html_string).write_pdf(pdf_file)
 
-        filename = f"KP_{quote.deal.company.inn}_{quote.deal_id}_v{quote.version}.pdf"
+        # Wave E F3: `deal.company` is nullable (company-less «калькулятор» draft) — the
+        # filename must degrade, not raise. `inn` is also blank for offline (pre-KYC) client
+        # companies, so fall back to the deal id in both cases and keep the name unique.
+        buyer_company = quote.deal.company
+        client_ref = (getattr(buyer_company, "inn", "") or "").strip() or f"deal{quote.deal_id}"
+        filename = f"KP_{client_ref}_{quote.deal_id}_v{quote.version}.pdf"
         quote.pdf_file.save(filename, ContentFile(pdf_file.getvalue()), save=True)
 
         return quote
@@ -177,6 +183,18 @@ class QuoteLifecycleService:
         seller_company = _quote_seller_company(quote)
         if seller_company is None and not getattr(sent_by_user, "is_superuser", False):
             raise ValueError("QUOTE_NOT_CLAIMED")
+
+        # Wave E F3 / B5 — RECIPIENT GATE. A company-less «калькулятор» draft (Deal.company
+        # NULL, no contact, no registered client) has NOBODY to send to: the email task would
+        # log "no recipient" and skip, yet the КП would be frozen, numbered and marked SENT —
+        # "sent into the void". Refuse SYNCHRONOUSLY so the seller is prompted to pick or
+        # create a recipient first. NOTE: a parallel lane (fix/wave-a-money-path) introduces
+        # `resolve_quote_recipient` in `_shared.py` raising this SAME code from this same
+        # guard slot; on merge, keep that richer resolver and drop this block — the contract
+        # ({"detail": "RECIPIENT_REQUIRED"}) is identical either way.
+        deal_for_send = quote.deal
+        if not (deal_for_send.company_id or deal_for_send.contact_id or deal_for_send.client_id):
+            raise ValueError("RECIPIENT_REQUIRED")
 
         # SELLER FLOOR (ADR-0006 Phase E): «без KYC только демо». A seller must be KYC-verified (L2+)
         # to send a real КП — checked first so an unverified seller gets a clear "do KYC" message
@@ -374,7 +392,7 @@ class QuoteLifecycleService:
             quote,
             type_code="SUCCESS",
             title="КП одобрено клиентом",
-            message=f"{quote.deal.company.name} одобрил КП v{quote.version}",
+            message=f"{_quote_client_display_name(quote)} одобрил КП v{quote.version}",
         )
 
         # Counterparty timeline (Phase A): the acceptance itself was only visible as a stage
@@ -579,7 +597,7 @@ class QuoteLifecycleService:
             quote,
             type_code="WARNING",
             title="КП отклонено клиентом",
-            message=f"{quote.deal.company.name} отклонил КП v{quote.version}. {reason}".strip(),
+            message=f"{_quote_client_display_name(quote)} отклонил КП v{quote.version}. {reason}".strip(),
         )
 
         # Counterparty timeline (Phase A): first-class rejection event (the reason already

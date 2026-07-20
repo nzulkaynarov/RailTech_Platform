@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, FileText, Send, FileSignature, AlertTriangle, MessageSquare, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Calculator, FileText, Send, FileSignature, AlertTriangle, MessageSquare, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -228,6 +228,21 @@ export function DealQuotePage({ dealId, onBack, onNavigate }: DealQuotePageProps
           </span>
           <ChevronDown className={cn('mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform', noteExpanded && 'rotate-180')} aria-hidden="true" />
         </button>
+      )}
+
+      {/* Wave E F3: «калькулятор» draft — no client yet. One compact line so the seller knows
+          why the header shows no counterparty and that «Отправить» will ask for a recipient
+          (backend answers RECIPIENT_REQUIRED). Shown only while the deal has no client at all. */}
+      {!deal.company_name && !deal.client_name && (
+        <div className="flex items-start gap-2 border-b bg-muted/40 px-4 py-1.5">
+          <Calculator className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground shrink-0">
+            {t('pages.dealQuote.calculatorDraft')}:
+          </span>
+          <span className="min-w-0 flex-1 text-xs text-muted-foreground">
+            {t('pages.dealQuote.calculatorDraftHint')}
+          </span>
+        </div>
       )}
 
       {/* WP-H: proactive send-gate banner — surfaces a KYC/subscription/demo blocker BEFORE the

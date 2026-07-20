@@ -4422,7 +4422,7 @@ export interface paths {
         put?: never;
         /**
          * Send quote to client
-         * @description Send an internally-approved (READY_TO_SEND) КП to the client. Freezes prices at current values. Allowed for the КП-owning company's SALES_MANAGER / OWNER, or a platform admin. When the КП is below the company margin floor (S7a) a non-empty `justification` is required (does not block the send, but is audited); otherwise the endpoint returns 400 BELOW_FLOOR_JUSTIFICATION_REQUIRED.
+         * @description Send an internally-approved (READY_TO_SEND) КП to the client. Freezes prices at current values. Allowed for the КП-owning company's SALES_MANAGER / OWNER, or a platform admin. When the КП is below the company margin floor (S7a) a non-empty `justification` is required (does not block the send, but is audited); otherwise the endpoint returns 400 BELOW_FLOOR_JUSTIFICATION_REQUIRED. A draft with no recipient (no client company / contact) is refused with 400 RECIPIENT_REQUIRED.
          */
         post: operations["crm_quotes_send_to_client_create"];
         delete?: never;
@@ -6786,10 +6786,10 @@ export interface components {
             readonly id: number;
             /**
              * Компания
-             * @description Компания-клиент, с которой ведётся сделка
+             * @description Компания-клиент, с которой ведётся сделка. Пусто — черновик-калькулятор без клиента.
              */
-            company?: number;
-            readonly company_name: string;
+            company?: number | null;
+            readonly company_name: string | null;
             /**
              * Контактное лицо
              * @description Представитель клиента в данной сделке
@@ -6844,9 +6844,9 @@ export interface components {
         DealDetailRequest: {
             /**
              * Компания
-             * @description Компания-клиент, с которой ведётся сделка
+             * @description Компания-клиент, с которой ведётся сделка. Пусто — черновик-калькулятор без клиента.
              */
-            company?: number;
+            company?: number | null;
             /**
              * Контактное лицо
              * @description Представитель клиента в данной сделке
@@ -6883,10 +6883,10 @@ export interface components {
             title?: string;
             /**
              * Компания
-             * @description Компания-клиент, с которой ведётся сделка
+             * @description Компания-клиент, с которой ведётся сделка. Пусто — черновик-калькулятор без клиента.
              */
-            company: number;
-            readonly company_name: string;
+            company?: number | null;
+            readonly company_name: string | null;
             /**
              * Этап воронки
              * @description Текущий этап сделки в воронке продаж
@@ -8557,9 +8557,9 @@ export interface components {
         PatchedDealDetailRequest: {
             /**
              * Компания
-             * @description Компания-клиент, с которой ведётся сделка
+             * @description Компания-клиент, с которой ведётся сделка. Пусто — черновик-калькулятор без клиента.
              */
-            company?: number;
+            company?: number | null;
             /**
              * Контактное лицо
              * @description Представитель клиента в данной сделке

@@ -56,7 +56,8 @@ export const useBulkUpdateQuoteItems = () => {
 export const useCreateDeal = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: { title?: string; notes?: string }) => crmApi.createDeal(data),
+    mutationFn: (data: { title?: string; notes?: string; contact_id?: number; without_client?: boolean }) =>
+      crmApi.createDeal(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['deals'] });
     },
@@ -292,6 +293,13 @@ export const useUpdateRelationship = () => {
         },
     });
 };
+
+// Contacts of the team's OWN client book — the «Новый КП» recipient picker (Wave E F2).
+export const useContacts = () => useQuery({
+    queryKey: ['contacts'],
+    queryFn: crmApi.getContacts,
+    staleTime: 60_000,
+});
 
 // «Завести оффлайн-клиента» — creates a client company edge + primary contact,
 // so both the book and the contacts list refresh.

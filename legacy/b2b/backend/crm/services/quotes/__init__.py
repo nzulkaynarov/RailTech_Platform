@@ -19,6 +19,7 @@ from ._shared import (
     _log_quote,
     _notify_quote_outcome,
     _profile_has_branding,
+    _quote_client_display_name,
     _quote_owner_company_id,
     _quote_seller_company,
     _seller_document_profile,
@@ -54,6 +55,7 @@ __all__ = [
     # _shared
     "_quote_owner_company_id",
     "_quote_seller_company",
+    "_quote_client_display_name",
     "_seller_document_profile",
     "_profile_has_branding",
     "_set_quote_status",
