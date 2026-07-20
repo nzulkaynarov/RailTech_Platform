@@ -42,6 +42,7 @@ import {
 } from '@/hooks/useAccounts';
 import { accountsApi } from '@/api/accountsApi';
 import { useQuery } from '@tanstack/react-query';
+import { kycDocTypeLabelKey } from '@/lib/codes';
 import type { Company } from '@/api/accountsApi';
 import { ImageUpload } from '@/components/Shared/ImageUpload';
 import { FileUpload } from '@/components/Shared/FileUpload';
@@ -149,10 +150,16 @@ function CompanyFilesPanel({ companyId }: { companyId: number }) {
     await refetch();
   };
 
+  // `doc_type_display` is the Russian-only lookup name — fallback for an unknown code.
+  const docTypeLabel = (doc: { doc_type_code?: string | null; doc_type_display?: string | null }): string => {
+    const key = kycDocTypeLabelKey(doc.doc_type_code);
+    return key ? t(key) : doc.doc_type_display || '';
+  };
+
   const docs = (company?.kyc_documents ?? []).map(d => ({
     id: d.id,
-    name: d.doc_type_display
-      ? `${d.doc_type_display} — ${d.original_filename}`
+    name: docTypeLabel(d)
+      ? `${docTypeLabel(d)} — ${d.original_filename}`
       : d.original_filename,
     url: d.file ?? null,
     uploaded_at: d.uploaded_at,

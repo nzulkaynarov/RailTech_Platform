@@ -20535,6 +20535,10 @@
                         "title": "Тип документа",
                         "description": "Вид документа из справочника (устав, лицензия, паспорт)"
                     },
+                    "doc_type_code": {
+                        "type": "string",
+                        "readOnly": true
+                    },
                     "doc_type_display": {
                         "type": "string",
                         "readOnly": true
@@ -20560,6 +20564,7 @@
                 },
                 "required": [
                     "doc_type",
+                    "doc_type_code",
                     "doc_type_display",
                     "file",
                     "id",

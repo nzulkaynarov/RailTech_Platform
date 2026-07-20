@@ -121,6 +121,21 @@ export const CompanyType = {
   MANUFACTURER: 'MANUFACTURER',
 } as const;
 
+/**
+ * i18n key for a CompanyType CODE. Render `t(companyTypeLabelKey(code))` instead of the
+ * DB `requested_type_name` (Russian-only). Mirrors `companyTypes.*` in ru.json / en.json.
+ */
+export const COMPANY_TYPE_LABEL_KEY: Record<string, string> = {
+  CLIENT: 'companyTypes.client',
+  SUPPLIER: 'companyTypes.supplier',
+  MANUFACTURER: 'companyTypes.manufacturer',
+};
+
+/** Resolve a CompanyType label key from a code, returning `''` when unknown so callers
+ *  can fall back to the raw DB name (`|| requested_type_name`). */
+export const companyTypeLabelKey = (code: string | undefined | null): string =>
+  code && COMPANY_TYPE_LABEL_KEY[code] ? COMPANY_TYPE_LABEL_KEY[code] : '';
+
 export const VerificationStatus = {
   L1_UNVERIFIED: 'L1_UNVERIFIED',
   PROFILE_SUBMITTED: 'PROFILE_SUBMITTED',
@@ -151,3 +166,123 @@ export const PRODUCT_STATUS_LABEL_KEY: Record<string, string> = {
  *  unknown so callers can fall back to the raw DB name (`|| status_name`). */
 export const productStatusLabelKey = (code: string | undefined | null): string =>
   code && PRODUCT_STATUS_LABEL_KEY[code] ? PRODUCT_STATUS_LABEL_KEY[code] : '';
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Django `choices` CODEs (rendered by the backend as `*_display` strings that are
+ * baked in Russian at the source). Render `t(<x>LabelKey(code))` instead of the
+ * `*_display` field so the label follows the UI language. Logic compares by code.
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+/** `SupplierSubscription.plan` CODEs (accounts.models.subscriptions PLAN_CHOICES). */
+export const SubscriptionPlan = {
+  BASIC: 'BASIC',
+  STANDARD: 'STANDARD',
+  PREMIUM: 'PREMIUM',
+} as const;
+export type SubscriptionPlanCode = (typeof SubscriptionPlan)[keyof typeof SubscriptionPlan];
+
+/** Mirrors the `subscriptionPlans.*` keys in ru.json / en.json. */
+export const SUBSCRIPTION_PLAN_LABEL_KEY: Record<string, string> = {
+  BASIC: 'subscriptionPlans.basic',
+  STANDARD: 'subscriptionPlans.standard',
+  PREMIUM: 'subscriptionPlans.premium',
+};
+
+/** Resolve a subscription-plan label key from a code, returning `''` when unknown so
+ *  callers can fall back to the raw DB display (`|| plan_display`). */
+export const subscriptionPlanLabelKey = (code: string | undefined | null): string =>
+  code && SUBSCRIPTION_PLAN_LABEL_KEY[code] ? SUBSCRIPTION_PLAN_LABEL_KEY[code] : '';
+
+/** `SupplierSubscription.status` CODEs (accounts.models.subscriptions STATUS_CHOICES). */
+export const SubscriptionStatus = {
+  TRIAL: 'TRIAL',
+  ACTIVE: 'ACTIVE',
+  PAST_DUE: 'PAST_DUE',
+  SUSPENDED: 'SUSPENDED',
+  CANCELLED: 'CANCELLED',
+} as const;
+export type SubscriptionStatusCode = (typeof SubscriptionStatus)[keyof typeof SubscriptionStatus];
+
+/** Mirrors the `subscriptionStatuses.*` keys in ru.json / en.json. */
+export const SUBSCRIPTION_STATUS_LABEL_KEY: Record<string, string> = {
+  TRIAL: 'subscriptionStatuses.trial',
+  ACTIVE: 'subscriptionStatuses.active',
+  PAST_DUE: 'subscriptionStatuses.pastDue',
+  SUSPENDED: 'subscriptionStatuses.suspended',
+  CANCELLED: 'subscriptionStatuses.cancelled',
+};
+
+/** Resolve a subscription-status label key from a code, returning `''` when unknown so
+ *  callers can fall back to the raw DB display (`|| status_display`). */
+export const subscriptionStatusLabelKey = (code: string | undefined | null): string =>
+  code && SUBSCRIPTION_STATUS_LABEL_KEY[code] ? SUBSCRIPTION_STATUS_LABEL_KEY[code] : '';
+
+/** `CompanyEntitlement.access` CODEs (accounts.models.subscriptions ACCESS_CHOICES). */
+export const EntitlementAccess = {
+  ENABLED: 'ENABLED',
+  DISABLED: 'DISABLED',
+  DEMO: 'DEMO',
+} as const;
+export type EntitlementAccessCode = (typeof EntitlementAccess)[keyof typeof EntitlementAccess];
+
+/** Mirrors the `entitlementAccess.*` keys in ru.json / en.json. */
+export const ENTITLEMENT_ACCESS_LABEL_KEY: Record<string, string> = {
+  ENABLED: 'entitlementAccess.enabled',
+  DISABLED: 'entitlementAccess.disabled',
+  DEMO: 'entitlementAccess.demo',
+};
+
+/** Resolve an entitlement-access label key from a code, returning `''` when unknown so
+ *  callers can fall back to the raw DB display (`|| access_display`). */
+export const entitlementAccessLabelKey = (code: string | undefined | null): string =>
+  code && ENTITLEMENT_ACCESS_LABEL_KEY[code] ? ENTITLEMENT_ACCESS_LABEL_KEY[code] : '';
+
+/** `CompanyRoleApplication.status` CODEs (accounts.models.applications STATUS_CHOICES). */
+export const RoleApplicationStatus = {
+  PENDING: 'PENDING',
+  DOCUMENTS_REQUIRED: 'DOCUMENTS_REQUIRED',
+  PAYMENT_REQUIRED: 'PAYMENT_REQUIRED',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED',
+} as const;
+export type RoleApplicationStatusCode = (typeof RoleApplicationStatus)[keyof typeof RoleApplicationStatus];
+
+/** Mirrors the `roleApplicationStatuses.*` keys in ru.json / en.json. */
+export const ROLE_APPLICATION_STATUS_LABEL_KEY: Record<string, string> = {
+  PENDING: 'roleApplicationStatuses.pending',
+  DOCUMENTS_REQUIRED: 'roleApplicationStatuses.documentsRequired',
+  PAYMENT_REQUIRED: 'roleApplicationStatuses.paymentRequired',
+  APPROVED: 'roleApplicationStatuses.approved',
+  REJECTED: 'roleApplicationStatuses.rejected',
+};
+
+/** Resolve a role-application-status label key from a code, returning `''` when unknown
+ *  so callers can fall back to the raw DB display (`|| status_display`). */
+export const roleApplicationStatusLabelKey = (code: string | undefined | null): string =>
+  code && ROLE_APPLICATION_STATUS_LABEL_KEY[code] ? ROLE_APPLICATION_STATUS_LABEL_KEY[code] : '';
+
+/** `KYCDocType` lookup CODEs (seeded in core/migrations/0002_seed_enterprise_lookups). */
+export const KycDocType = {
+  CHARTER: 'CHARTER',
+  LICENSE: 'LICENSE',
+  PASSPORT: 'PASSPORT',
+  TAX_CERT: 'TAX_CERT',
+  BANK_REF: 'BANK_REF',
+  OTHER: 'OTHER',
+} as const;
+export type KycDocTypeCode = (typeof KycDocType)[keyof typeof KycDocType];
+
+/** Mirrors the `kycDocTypes.*` keys in ru.json / en.json. */
+export const KYC_DOC_TYPE_LABEL_KEY: Record<string, string> = {
+  CHARTER: 'kycDocTypes.charter',
+  LICENSE: 'kycDocTypes.license',
+  PASSPORT: 'kycDocTypes.passport',
+  TAX_CERT: 'kycDocTypes.taxCert',
+  BANK_REF: 'kycDocTypes.bankRef',
+  OTHER: 'kycDocTypes.other',
+};
+
+/** Resolve a KYC doc-type label key from a code, returning `''` when unknown (operators
+ *  may add lookup rows via Unfold) so callers can fall back to `|| doc_type_display`. */
+export const kycDocTypeLabelKey = (code: string | undefined | null): string =>
+  code && KYC_DOC_TYPE_LABEL_KEY[code] ? KYC_DOC_TYPE_LABEL_KEY[code] : '';

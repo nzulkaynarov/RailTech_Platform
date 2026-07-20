@@ -5399,5 +5399,42 @@
         "detail": "Одобрена заявка #{{application_id}}"
       }
     }
+  },
+  "companyTypes": {
+    "client": "Покупатель",
+    "supplier": "Поставщик",
+    "manufacturer": "Производитель"
+  },
+  "subscriptionPlans": {
+    "basic": "Базовый",
+    "standard": "Стандартный",
+    "premium": "Премиум"
+  },
+  "subscriptionStatuses": {
+    "trial": "Пробный период",
+    "active": "Активна",
+    "pastDue": "Просрочена",
+    "suspended": "Приостановлена",
+    "cancelled": "Отменена"
+  },
+  "entitlementAccess": {
+    "enabled": "Включено",
+    "disabled": "Выключено",
+    "demo": "Демо"
+  },
+  "roleApplicationStatuses": {
+    "pending": "На рассмотрении",
+    "documentsRequired": "Требуются документы",
+    "paymentRequired": "Ожидание оплаты",
+    "approved": "Одобрено",
+    "rejected": "Отклонено"
+  },
+  "kycDocTypes": {
+    "charter": "Устав",
+    "license": "Лицензия",
+    "passport": "Паспорт директора",
+    "taxCert": "Свидетельство о налоговом учёте",
+    "bankRef": "Банковская справка",
+    "other": "Другое"
   }
 }

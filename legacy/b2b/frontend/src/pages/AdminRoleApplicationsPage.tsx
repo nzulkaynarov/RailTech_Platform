@@ -17,9 +17,29 @@ import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
 import { DetailKPIGrid } from '@/components/Admin/DetailKPIGrid';
 import { PageShell, ErrorState } from './shared/PageShell';
 import { translateApiError } from '@/lib/apiError';
+import { companyTypeLabelKey, roleApplicationStatusLabelKey } from '@/lib/codes';
 import type { RoleApplication } from '@/api/accountsApi';
 
 const STORAGE_KEY = 'adminRoleApps';
+
+/**
+ * Localized labels for the application-status and requested-role CODEs. `status_display`
+ * (`get_status_display()`) and `requested_type_name` (a lookup `.name` column) are both
+ * Russian-only at the source, so they are kept only as a fallback for unknown codes.
+ */
+function useRoleAppLabels() {
+  const { t } = useTranslation();
+  return {
+    statusLabel: (code?: string | null, fallback?: string | null): string => {
+      const key = roleApplicationStatusLabelKey(code);
+      return key ? t(key) : fallback || code || '';
+    },
+    requestedTypeLabel: (code?: string | null, fallback?: string | null): string => {
+      const key = companyTypeLabelKey(code);
+      return key ? t(key) : fallback || code || '';
+    },
+  };
+}
 
 const statusVariant = (status: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
   switch (status) {
@@ -69,6 +89,7 @@ function DetailSheet({
   onOpenChange: (open: boolean) => void;
 }) {
   const { t } = useTranslation();
+  const { statusLabel, requestedTypeLabel } = useRoleAppLabels();
   if (!app) return null;
 
   const docCount = [app.contract_file, app.nda_file, app.partnership_agreement].filter(Boolean).length;
@@ -79,7 +100,7 @@ function DetailSheet({
         items={[
           {
             label: t('admin.roleApps.detail.currentStatus'),
-            value: app.status_display,
+            value: statusLabel(app.status, app.status_display),
             tone:
               app.status === 'APPROVED'
                 ? 'success'
@@ -89,7 +110,7 @@ function DetailSheet({
           },
           {
             label: t('admin.roleApps.detail.requestedRole'),
-            value: app.requested_type_name,
+            value: requestedTypeLabel(app.requested_type_code, app.requested_type_name),
           },
           {
             label: t('admin.roleApps.detail.documents'),
@@ -112,13 +133,13 @@ function DetailSheet({
         <div className="flex items-start justify-between gap-2">
           <dt className="text-muted-foreground">{t('admin.roleApps.detail.requestedRole')}</dt>
           <dd className="text-right">
-            <Badge variant="outline">{app.requested_type_name}</Badge>
+            <Badge variant="outline">{requestedTypeLabel(app.requested_type_code, app.requested_type_name)}</Badge>
           </dd>
         </div>
         <div className="flex items-start justify-between gap-2">
           <dt className="text-muted-foreground">{t('admin.roleApps.detail.currentStatus')}</dt>
           <dd className="text-right">
-            <Badge variant={statusVariant(app.status)}>{app.status_display}</Badge>
+            <Badge variant={statusVariant(app.status)}>{statusLabel(app.status, app.status_display)}</Badge>
           </dd>
         </div>
         <div className="flex items-start justify-between gap-2">
@@ -185,13 +206,13 @@ function DetailSheet({
         <div className="p-4 md:p-5">
           <AdminDetailLayout
             title={app.company_name}
-            subtitle={app.requested_type_name}
+            subtitle={requestedTypeLabel(app.requested_type_code, app.requested_type_name)}
             leading={
               <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">
                 <ClipboardCheck className="h-5 w-5" />
               </div>
             }
-            badges={[{ label: app.status_display, variant: statusVariant(app.status) }]}
+            badges={[{ label: statusLabel(app.status, app.status_display), variant: statusVariant(app.status) }]}
             tabs={[
               { id: 'overview', label: t('admin.roleApps.detail.title'), content: overview },
               { id: 'documents', label: t('admin.roleApps.detail.documents'), content: documents },
@@ -214,6 +235,7 @@ function DetailSheet({
 
 export function AdminRoleApplicationsPage() {
   const { t } = useTranslation();
+  const { statusLabel, requestedTypeLabel } = useRoleAppLabels();
   const approveMutation = useApproveRoleApplication();
   const rejectMutation = useRejectRoleApplication();
 
@@ -315,12 +337,14 @@ export function AdminRoleApplicationsPage() {
           {
             id: 'requestedType',
             header: t('admin.roleApps.table.requestedType'),
-            cell: (a) => <Badge variant="outline">{a.requested_type_name}</Badge>,
+            cell: (a) => (
+              <Badge variant="outline">{requestedTypeLabel(a.requested_type_code, a.requested_type_name)}</Badge>
+            ),
           },
           {
             id: 'status',
             header: t('admin.roleApps.table.status'),
-            cell: (a) => <Badge variant={statusVariant(a.status)}>{a.status_display}</Badge>,
+            cell: (a) => <Badge variant={statusVariant(a.status)}>{statusLabel(a.status, a.status_display)}</Badge>,
           },
           {
             id: 'submittedBy',
@@ -379,15 +403,22 @@ export function AdminRoleApplicationsPage() {
           confirm?.kind === 'approve'
             ? t('admin.roleApps.confirmApproveDescription', {
                 company: confirm.app.company_name,
-                role: confirm.app.requested_type_name,
+                role: requestedTypeLabel(confirm.app.requested_type_code, confirm.app.requested_type_name),
               })
             : ''
         }
         diff={
           confirm?.kind === 'approve'
             ? [
-                { label: t('admin.roleApps.detail.currentStatus'), before: confirm.app.status, after: 'APPROVED' },
-                { label: t('admin.roleApps.detail.requestedRole'), after: confirm.app.requested_type_name },
+                {
+                  label: t('admin.roleApps.detail.currentStatus'),
+                  before: statusLabel(confirm.app.status, confirm.app.status_display),
+                  after: statusLabel('APPROVED'),
+                },
+                {
+                  label: t('admin.roleApps.detail.requestedRole'),
+                  after: requestedTypeLabel(confirm.app.requested_type_code, confirm.app.requested_type_name),
+                },
               ]
             : undefined
         }
