@@ -4750,7 +4750,15 @@
     "backToRequests": "Back to my requests",
     "routedTo": "Routed to",
     "charges": "Charges / allowances",
-    "openContract": "Open contract"
+    "openContract": "Open contract",
+    "accepted": {
+      "title": "Offer accepted",
+      "readyToSign": "Contract No. {{number}} is ready for your signature",
+      "contractReady": "Contract No. {{number}} has been created",
+      "contractPending": "The contract is being prepared — open the Contracts section",
+      "resolving": "Loading contract…",
+      "goToContract": "Go to contract"
+    }
   },
   "createQuoteDialog": {
     "title": "Create quote",
