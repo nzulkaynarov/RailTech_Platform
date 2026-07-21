@@ -10,7 +10,7 @@ import type { Deal, Quote } from '@/api/crmApi';
  *
  * `send_to_client` demands a written justification when the КП sits under the company
  * margin floor. The frontend has TWO distinct cost-visibility paths into the same
- * ConfirmActionDialog, and only the first one is obvious:
+ * SendQuoteDialog, and only the first one is obvious:
  *
  *   (a) sender WITH cost/margin rights — `quote.economics.below_floor` is visible, so the
  *       justification field is shown PROACTIVELY and an empty/whitespace reason must block
@@ -31,6 +31,8 @@ let serverDeal: Deal | undefined;
 vi.mock('@/hooks/useCRM', () => ({
 	useDeal: () => ({ data: serverDeal, isLoading: false, isError: false, refetch: vi.fn() }),
 	useSendQuoteToClient: () => ({ mutateAsync: sendMutateAsync, isPending: false }),
+	// Wave B2 — the send composer lets the seller adjust the КП validity; not exercised here.
+	useUpdateQuoteSettings: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 // Seller is fully entitled — the send-gate is not what this spec covers.
@@ -53,7 +55,7 @@ vi.mock('sonner', () => ({
 // Import AFTER the mocks are registered.
 import { DealQuotePage } from '@/pages/DealQuotePage';
 
-/** Axios-shaped rejection — ConfirmActionDialog and extractApiErrorCode both read
+/** Axios-shaped rejection — SendQuoteDialog and extractApiErrorCode both read
  *  `response.data.detail`, which is the project's canonical error shape. */
 function apiError(code: string) {
 	return { response: { status: 400, data: { detail: code } } };
@@ -118,10 +120,8 @@ describe('DealQuotePage — S7a below-floor justification (path a: sender WITH c
 		renderWithProviders(<DealQuotePage dealId={42} onBack={vi.fn()} />);
 		const dialog = await openSendDialog(user);
 
-		// below_floor is visible → the warning copy and a REQUIRED reason field are up front.
-		expect(
-			within(dialog).getByText(/Этот КП ниже минимальной маржи компании/i),
-		).toBeInTheDocument();
+		// below_floor is visible → the margin-below-floor warning line and a REQUIRED reason field.
+		expect(within(dialog).getByText(/ниже порога/i)).toBeInTheDocument();
 		const reason = within(dialog).getByLabelText(/Обоснование отправки ниже минимальной маржи/i);
 		expect(reason).toBeInTheDocument();
 
@@ -159,13 +159,12 @@ describe('DealQuotePage — S7a below-floor justification (path b: sender WITHOU
 		renderWithProviders(<DealQuotePage dealId={42} onBack={vi.fn()} />);
 		const dialog = await openSendDialog(user);
 
-		// First render: no below_floor signal, so NO justification field and Confirm is live.
+		// First render: no cost visibility (economics null) → margin hidden, NO justification
+		// field, and the send button is live.
 		expect(
 			within(dialog).queryByLabelText(/Обоснование отправки ниже минимальной маржи/i),
 		).not.toBeInTheDocument();
-		expect(
-			within(dialog).queryByText(/Этот КП ниже минимальной маржи компании/i),
-		).not.toBeInTheDocument();
+		expect(within(dialog).getByText(/Маржа скрыта/i)).toBeInTheDocument();
 
 		const confirm = within(dialog).getByRole('button', { name: /Отправить КП/i });
 		expect(confirm).toBeEnabled();
@@ -178,9 +177,6 @@ describe('DealQuotePage — S7a below-floor justification (path b: sender WITHOU
 		// The dialog STAYS OPEN (the error was re-thrown) and now shows the field — this is
 		// the whole point of path (b): the seller is not left stuck, they can retry with text.
 		const reason = await within(dialog).findByLabelText(/Обоснование отправки ниже минимальной маржи/i);
-		expect(
-			within(dialog).getByText(/Этот КП ниже минимальной маржи компании/i),
-		).toBeInTheDocument();
 
 		// And it is now REQUIRED — the retry cannot go out bare a second time.
 		const retryConfirm = within(dialog).getByRole('button', { name: /Отправить КП/i });

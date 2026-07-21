@@ -6,6 +6,7 @@ import { QuoteStatus, DealStage, DEAL_STAGE_LABEL_KEY, quoteStatusLabelKey } fro
 import { useUserStore } from '@/store/userStore';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useIsViewerMode } from '@/hooks/useViewerMode';
+import { useIsSoloSeller } from '@/hooks/useCapabilities';
 import { useDeal, useChangeDealStage, useApproveQuote, useRejectQuote, useSendQuoteToClient, useUpdateRequestMeta, usePreflightCheck, useQuoteRequestDiff, useClaimDeal } from '@/hooks/useCRM';
 import { crmApi } from '@/api/crmApi';
 import type { PreflightFinding, PreflightLine, QuoteDiffFinding } from '@/api/crmApi';
@@ -64,6 +65,7 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
   const sendQuote = useSendQuoteToClient();
   const updateMeta = useUpdateRequestMeta();
   const claimMut = useClaimDeal();
+  const isSoloSeller = useIsSoloSeller();
 
   // Gate seller-side actions (start sourcing / calculation / send quote) to
   // sellers. A buyer would only hit backend guards — and the buttons are
@@ -108,7 +110,8 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
   // Seller-only pull from the routed queue; `assigned_to` (the id, derived from the
   // viewer's OWN routing row) == null means this seller's copy is unclaimed. Reuses
   // useClaimDeal + the `dealsKanban.claim`/`.claimed` keys.
-  const canClaim = isSellerSide && deal.assigned_to == null;
+  // Wave B2 (auto-claim): a solo seller has no queue to route, so hide «Взять в работу» entirely.
+  const canClaim = isSellerSide && deal.assigned_to == null && !isSoloSeller;
   const openQuoteBuilder = () => { window.location.hash = `deal-quote/${deal.id}`; };
   // Buyer may build/edit their own request (name + qty) until the seller engages.
   // The backend is the source of truth (can_edit_request); the UI only reflects it.

@@ -5338,6 +5338,10 @@
       "approved_force": {
         "title": "[FORCE_ADMIN] КП одобрено платформенным админом",
         "detail": "КП #{{quote_id}} ({{from_status}} → APPROVED)"
+      },
+      "viewed": {
+        "title": "КП просмотрено клиентом",
+        "detail": "КП v{{version}} ({{number}})"
       }
     },
     "lead": {
@@ -5514,5 +5518,44 @@
     "xpk": "упак.",
     "hur": "час",
     "day": "сутки"
+  },
+  "sendDialog": {
+    "title": "Отправить КП клиенту",
+    "description": "Проверьте сводку перед отправкой — клиент увидит цены, и они будут зафиксированы.",
+    "recipient": "Кому",
+    "recipientMissing": "Получатель не указан — добавьте клиента или контакт",
+    "validUntil": "Срок действия",
+    "validUntilUnset": "не задан",
+    "margin": "Маржа",
+    "marginOk": "Маржа {{margin}} ≥ порога {{floor}}",
+    "marginBelow": "Маржа {{margin}} ниже порога {{floor}}",
+    "marginHidden": "Маржа скрыта",
+    "approval": "Согласование",
+    "approvalAuto": "не требуется — согласовано автоматически",
+    "approvalApproved": "согласовано",
+    "approvalApprovedBy": "согласовано: {{names}}",
+    "approvalPending": "ожидает согласования",
+    "approvalPendingBy": "ожидает согласования: {{names}}",
+    "previewPdf": "Предпросмотр PDF",
+    "justificationRequired": "Укажите обоснование отправки"
+  },
+  "sentPanel": {
+    "sent": "Отправлено",
+    "viewed": "Просмотрено",
+    "decision": "Решение",
+    "pending": "—",
+    "yes": "Да",
+    "decisionAccepted": "Принято",
+    "decisionRejected": "Отклонено",
+    "copyLink": "Копировать ссылку",
+    "revokeLink": "Отозвать ссылку",
+    "linkRevokedNote": "Ссылка отозвана",
+    "linkRevoked": "Публичная ссылка отозвана",
+    "newVersion": "Создать новую версию",
+    "newVersionCreated": "Создана новая версия КП",
+    "revokeTitle": "Отозвать публичную ссылку?",
+    "revokeDescription": "Клиент по этой ссылке больше не сможет открыть КП.",
+    "newVersionTitle": "Создать новую версию КП?",
+    "newVersionDescription": "Будет создан черновик следующей версии этого КП для правок и повторной отправки."
   }
 }
