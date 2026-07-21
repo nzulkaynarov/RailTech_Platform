@@ -11,7 +11,7 @@ import { crmApi } from '@/api/crmApi';
 import type { PreflightFinding, PreflightLine, QuoteDiffFinding } from '@/api/crmApi';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { translateApiError } from '@/lib/apiError';
+import { translateApiError, extractApiErrorCode } from '@/lib/apiError';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -124,6 +124,23 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
     try {
       await fn();
     } catch (e) {
+      toast.error(translateApiError(e));
+    }
+  };
+
+  // Sending a below-floor КП needs a written justification, and that confirm-with-reason flow
+  // lives only in the canonical builder (DealQuotePage, S7a). Rather than dead-end the seller on a
+  // BELOW_FLOOR_JUSTIFICATION_REQUIRED toast here, route them to the builder to finish the send.
+  const handleSendQuote = async () => {
+    if (!quote) return;
+    try {
+      await sendQuote.mutateAsync({ id: quote.id });
+    } catch (e) {
+      if (extractApiErrorCode(e) === 'BELOW_FLOOR_JUSTIFICATION_REQUIRED') {
+        toast.error(t('requestDetailActions.belowFloorSendInBuilder'));
+        openQuoteBuilder();
+        return;
+      }
       toast.error(translateApiError(e));
     }
   };
@@ -347,7 +364,7 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
                 {isSellerSide && quote?.status_code === QuoteStatus.READY_TO_SEND && (
                   <Button
                     variant="default"
-                    onClick={() => run(() => sendQuote.mutateAsync({ id: quote.id }))}
+                    onClick={handleSendQuote}
                     disabled={isViewer || sendQuote.isPending}
                     title={isViewer ? viewerTip : undefined}
                   >

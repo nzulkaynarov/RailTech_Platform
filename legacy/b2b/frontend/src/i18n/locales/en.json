@@ -4706,6 +4706,7 @@
     "startCalculation": "Start calculation",
     "newQuoteVersion": "Create new version",
     "sendQuote": "Send quote",
+    "belowFloorSendInBuilder": "This quote is below the margin floor — sending it needs a written justification. Opening the quote builder.",
     "approveQuote": "Approve",
     "rejectQuote": "Reject",
     "dealAccepted": "Deal accepted",

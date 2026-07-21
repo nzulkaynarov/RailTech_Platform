@@ -4710,6 +4710,7 @@
     "startCalculation": "Начать расчёт",
     "newQuoteVersion": "Создать новую версию",
     "sendQuote": "Отправить КП",
+    "belowFloorSendInBuilder": "КП ниже нижнего порога маржи — для отправки требуется письменное обоснование. Открываем конструктор КП.",
     "approveQuote": "Одобрить",
     "rejectQuote": "Отклонить",
     "dealAccepted": "Сделка принята",
