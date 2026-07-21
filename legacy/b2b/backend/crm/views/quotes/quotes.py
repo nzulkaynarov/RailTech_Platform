@@ -296,6 +296,26 @@ class QuoteViewSet(QuoteApprovalMixin, OptimisticLockingMixin, viewsets.ModelVie
         return Response(self.get_serializer(quote).data)
 
     @extend_schema(
+        summary="Revoke the public no-login link of a sent КП",
+        description="Seller pulls the shared client link (post-send panel). Idempotent; further "
+        "opens return 410 QUOTE_LINK_REVOKED. Same authorization as send-to-client.",
+        tags=["CRM"],
+    )
+    @action(detail=True, methods=["post"], url_path="revoke-public-link", permission_classes=[IsAuthenticated])
+    def revoke_public_link(self, request, pk=None):
+        """Revoke the КП's public link — anchored to the КП-owning company, like send-to-client."""
+        from crm.services import QuoteLifecycleService
+        from crm.services.quotes import can_send_quote_to_client
+
+        quote = Quote.objects.select_related("status", "prepared_by", "deal").filter(pk=pk).first()
+        if quote is None:
+            return Response({"detail": "QUOTE_NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)
+        if not can_send_quote_to_client(request.user, quote):
+            return _chain_error_response("ROLE_NOT_PERMITTED")
+        quote = QuoteLifecycleService.revoke_public_link(int(pk), request.user)
+        return Response(self.get_serializer(quote).data)
+
+    @extend_schema(
         summary="Set delivery basis (Incoterm) and auto-apply its charge template",
         tags=["CRM"],
     )

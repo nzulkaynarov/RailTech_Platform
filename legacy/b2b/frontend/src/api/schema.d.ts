@@ -4439,6 +4439,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/crm/quotes/{id}/revoke-public-link/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revoke the public no-login link of a sent КП
+         * @description Seller pulls the shared client link (post-send panel). Idempotent; further opens return 410 QUOTE_LINK_REVOKED. Same authorization as send-to-client.
+         */
+        post: operations["crm_quotes_revoke_public_link_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/quotes/{id}/send-to-client/": {
         parameters: {
             query?: never;
@@ -10146,6 +10166,22 @@ export interface components {
              * @description Момент фиксации цен при отправке клиенту
              */
             frozen_at?: string | null;
+            /**
+             * Впервые просмотрено клиентом
+             * Format: date-time
+             * @description Момент первого реального открытия публичной страницы КП клиентом (маркер, не статус)
+             */
+            readonly first_viewed_at: string | null;
+            /**
+             * Публичная ссылка отозвана
+             * @description Если включено — публичная ссылка на КП больше не открывается (410)
+             */
+            readonly public_token_revoked: boolean;
+            /**
+             * Публичный токен доступа
+             * @description Секретный токен для просмотра/скачивания КП клиентом без входа
+             */
+            readonly public_access_token: string | null;
             /**
              * Одобрил
              * @description Кто одобрил коммерческое предложение
@@ -19431,6 +19467,34 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    crm_quotes_revoke_public_link_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Коммерческое предложение. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuoteRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["QuoteRequest"];
+                "multipart/form-data": components["schemas"]["QuoteRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Quote"];
+                };
             };
         };
     };

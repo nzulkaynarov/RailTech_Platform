@@ -269,6 +269,31 @@ class QuoteLifecycleService:
             quote_id, approved_by_user=None, contact_email=contact_email, request_ip=request_ip
         )
 
+    @staticmethod
+    def revoke_public_link(quote_id: int, actor: CustomUser) -> Quote:
+        """Seller revokes the public no-login link (Wave B post-send panel).
+
+        Idempotent: sets ``public_token_revoked=True`` so ``public_quote_gate`` returns
+        QUOTE_LINK_REVOKED (410) on any further open. The 256-bit token itself is NOT rotated
+        (re-sending the same КП version keeps its citable number/link); a fresh link is minted by
+        issuing a new version. Records a timeline event so the audit shows who pulled the link.
+        """
+        from ._shared import _log_quote
+
+        quote = Quote.objects.select_related("deal", "status").get(pk=quote_id)
+        if not quote.public_token_revoked:
+            quote.public_token_revoked = True
+            quote.save(update_fields=["public_token_revoked", "updated_at"])
+            _log_quote(
+                quote,
+                actor,
+                "Публичная ссылка отозвана",
+                f"КП v{quote.version} ({quote.number or '—'})",
+                event_code="quote.link_revoked",
+                event_params={"version": quote.version},
+            )
+        return quote
+
     # ── Internal approval chain (документооборот) ──────────────────────────
     # DRAFT → PENDING_TRADE_REVIEW → PENDING_APPROVAL → READY_TO_SEND → (send).
     # Each step is gated by the actor's WorkspaceRole in the company that owns the
