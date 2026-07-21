@@ -8,6 +8,7 @@ import {
 	useReorderQuoteCharges,
 } from '@/hooks/useCRM';
 import type { QuoteCharge } from '@/api/crmApi';
+import { chargeTypeLabelKey } from '@/lib/codes';
 import { formatMoney } from '@/utils/decimal';
 import { ChargeCascadeTable } from './ChargeCascadeTable';
 import { Button } from '@/components/ui/button';
@@ -153,7 +154,7 @@ export const QuoteChargesSection: React.FC<QuoteChargesSectionProps> = ({ quoteI
 							editingId === charge.id ? (
 								<div key={charge.id} className="flex flex-col gap-2 bg-muted/30 px-3 py-2">
 									<div className="flex flex-wrap items-center gap-2">
-										<span className="text-sm font-medium">{charge.charge_type_name || charge.charge_type}</span>
+										<span className="text-sm font-medium">{chargeTypeLabelKey(charge.charge_type) ? t(chargeTypeLabelKey(charge.charge_type)) : (charge.charge_type_name || charge.charge_type)}</span>
 										<ToggleGroup type="single" value={editKind} onValueChange={(v) => v && setEditKind(v as Kind)} variant="outline" size="sm">
 											<ToggleGroupItem value="charge">{t('quote.charges.charge')}</ToggleGroupItem>
 											<ToggleGroupItem value="discount">{t('quote.charges.discount')}</ToggleGroupItem>
@@ -206,7 +207,7 @@ export const QuoteChargesSection: React.FC<QuoteChargesSectionProps> = ({ quoteI
 										<Badge variant={charge.is_deduction ? 'secondary' : 'outline'} className="shrink-0">
 											{charge.is_deduction ? t('quote.charges.discount') : t('quote.charges.charge')}
 										</Badge>
-										<span className="text-sm font-medium truncate">{charge.charge_type_name || charge.charge_type}</span>
+										<span className="text-sm font-medium truncate">{chargeTypeLabelKey(charge.charge_type) ? t(chargeTypeLabelKey(charge.charge_type)) : (charge.charge_type_name || charge.charge_type)}</span>
 										{charge.description && (
 											<span className="text-xs text-muted-foreground truncate">— {charge.description}</span>
 										)}
@@ -279,7 +280,7 @@ export const QuoteChargesSection: React.FC<QuoteChargesSectionProps> = ({ quoteI
 							{chargeTypes
 								.filter((ct) => !PER_LINE_CHARGE_CODES.includes(ct.code))
 								.map((ct) => (
-									<SelectItem key={ct.id} value={ct.code}>{ct.name}</SelectItem>
+									<SelectItem key={ct.id} value={ct.code}>{chargeTypeLabelKey(ct.code) ? t(chargeTypeLabelKey(ct.code)) : ct.name}</SelectItem>
 								))}
 						</SelectContent>
 					</Select>

@@ -10,6 +10,7 @@ import {
 } from '@/hooks/useCRM';
 import { useDeliveryBases } from '@/hooks/useMasterData';
 import type { ChargeTemplate } from '@/api/crmApi';
+import { chargeTypeLabelKey } from '@/lib/codes';
 import { ResponsiveDataTable, type ResponsiveColumn } from '@/components/ResponsiveDataTable';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -89,7 +90,7 @@ export function ChargeTemplatesSettings() {
       header: t('chargeTemplates.chargeType'),
       cell: (tpl) => (
         <span className="text-sm font-medium">
-          {tpl.charge_type_name ?? tpl.charge_type}
+          {chargeTypeLabelKey(tpl.charge_type) ? t(chargeTypeLabelKey(tpl.charge_type)) : (tpl.charge_type_name ?? tpl.charge_type)}
           {tpl.is_deduction ? (
             <Badge variant="secondary" className="ml-2">{t('quote.charges.discount')}</Badge>
           ) : null}
@@ -202,7 +203,7 @@ export function ChargeTemplatesSettings() {
             </SelectTrigger>
             <SelectContent>
               {chargeTypes.map((ct) => (
-                <SelectItem key={ct.id} value={ct.code}>{ct.name}</SelectItem>
+                <SelectItem key={ct.id} value={ct.code}>{chargeTypeLabelKey(ct.code) ? t(chargeTypeLabelKey(ct.code)) : ct.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>

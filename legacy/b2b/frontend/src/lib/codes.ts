@@ -286,3 +286,78 @@ export const KYC_DOC_TYPE_LABEL_KEY: Record<string, string> = {
  *  may add lookup rows via Unfold) so callers can fall back to `|| doc_type_display`. */
 export const kycDocTypeLabelKey = (code: string | undefined | null): string =>
   code && KYC_DOC_TYPE_LABEL_KEY[code] ? KYC_DOC_TYPE_LABEL_KEY[code] : '';
+
+/** `ChargeType` lookup CODEs — the КП document-level expense articles (crm charge engine,
+ *  seeded in crm/0036_seed_charge_engine; RENT/PAYROLL/COMMISSION deactivated in 0046 but
+ *  kept for history so historic КП still resolve). */
+export const ChargeType = {
+  FREIGHT: 'FREIGHT',
+  INSURANCE: 'INSURANCE',
+  CUSTOMS: 'CUSTOMS',
+  CERTIFICATION: 'CERTIFICATION',
+  RENT: 'RENT',
+  PAYROLL: 'PAYROLL',
+  COMMISSION: 'COMMISSION',
+  DISCOUNT: 'DISCOUNT',
+  OTHER: 'OTHER',
+} as const;
+export type ChargeTypeCode = (typeof ChargeType)[keyof typeof ChargeType];
+
+/** i18n key for a charge-type CODE. Render `t(chargeTypeLabelKey(code))` instead of the DB
+ *  `charge_type_name` (Russian-only). Mirrors the `chargeTypes.*` keys in ru.json / en.json. */
+export const CHARGE_TYPE_LABEL_KEY: Record<string, string> = {
+  FREIGHT: 'chargeTypes.freight',
+  INSURANCE: 'chargeTypes.insurance',
+  CUSTOMS: 'chargeTypes.customs',
+  CERTIFICATION: 'chargeTypes.certification',
+  RENT: 'chargeTypes.rent',
+  PAYROLL: 'chargeTypes.payroll',
+  COMMISSION: 'chargeTypes.commission',
+  DISCOUNT: 'chargeTypes.discount',
+  OTHER: 'chargeTypes.other',
+};
+
+/** Resolve a charge-type label key from a code, returning `''` when unknown (operators may
+ *  add lookup rows via Unfold) so callers can fall back to the raw DB name (`|| charge_type_name`). */
+export const chargeTypeLabelKey = (code: string | undefined | null): string =>
+  code && CHARGE_TYPE_LABEL_KEY[code] ? CHARGE_TYPE_LABEL_KEY[code] : '';
+
+/** `DeliveryBasis` lookup CODEs — Incoterms 2020 (master_data, seeded in
+ *  master_data/0008_seed_delivery_basis_incoterms). The `code` (EXW/FOB/…) is the
+ *  language-neutral international identifier; only the descriptive `name` needs localizing. */
+export const DeliveryBasis = {
+  EXW: 'EXW',
+  FCA: 'FCA',
+  FAS: 'FAS',
+  FOB: 'FOB',
+  CFR: 'CFR',
+  CIF: 'CIF',
+  CPT: 'CPT',
+  CIP: 'CIP',
+  DAP: 'DAP',
+  DPU: 'DPU',
+  DDP: 'DDP',
+} as const;
+export type DeliveryBasisCode = (typeof DeliveryBasis)[keyof typeof DeliveryBasis];
+
+/** i18n key for a delivery-basis (Incoterm) CODE. Render `t(deliveryBasisLabelKey(code))`
+ *  instead of the DB `name` (Russian-only). Mirrors the `deliveryBases.*` keys in
+ *  ru.json / en.json. */
+export const DELIVERY_BASIS_LABEL_KEY: Record<string, string> = {
+  EXW: 'deliveryBases.exw',
+  FCA: 'deliveryBases.fca',
+  FAS: 'deliveryBases.fas',
+  FOB: 'deliveryBases.fob',
+  CFR: 'deliveryBases.cfr',
+  CIF: 'deliveryBases.cif',
+  CPT: 'deliveryBases.cpt',
+  CIP: 'deliveryBases.cip',
+  DAP: 'deliveryBases.dap',
+  DPU: 'deliveryBases.dpu',
+  DDP: 'deliveryBases.ddp',
+};
+
+/** Resolve a delivery-basis label key from a code, returning `''` when unknown (operators
+ *  may add lookup rows via Unfold) so callers can fall back to the raw DB name (`|| basis.name`). */
+export const deliveryBasisLabelKey = (code: string | undefined | null): string =>
+  code && DELIVERY_BASIS_LABEL_KEY[code] ? DELIVERY_BASIS_LABEL_KEY[code] : '';

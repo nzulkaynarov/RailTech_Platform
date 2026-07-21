@@ -9,6 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { DocumentActions } from '@/components/Shared/DocumentActions';
+import { deliveryBasisLabelKey } from '@/lib/codes';
 import { marginToneClass, compactNumber } from './gridConstants';
 import { useQuoteBuilderGrid } from './QuoteBuilderGridContext';
 
@@ -29,7 +30,11 @@ export const EconomicsRail: React.FC = () => {
 	// Базис поставки живёт в «Настройки КП» (секция «Поставка», S2). Здесь — только read-only
 	// chip текущего Incoterm; клик открывает настройки, где базис и правится.
 	const basisCode = activeQuote.delivery_basis_data?.code;
-	const basisName = activeQuote.delivery_basis_data?.name;
+	const rawBasisName = activeQuote.delivery_basis_data?.name;
+	// Localize the Incoterm description by code; fall back to the RU-only DB name for a
+	// basis code this build does not yet know (operator-added lookup row).
+	const basisLabelKey = deliveryBasisLabelKey(basisCode);
+	const basisName = basisLabelKey ? t(basisLabelKey) : rawBasisName;
 
 	const railRow = (label: string, value: React.ReactNode, opts?: { strong?: boolean; tone?: string }) => (
 		<div className="flex items-center justify-between gap-3">

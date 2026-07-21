@@ -69,7 +69,9 @@ describe('ChargeTemplatesSettings', () => {
   it('renders the template rows with basis, type and default value', async () => {
     renderWithProviders(<ChargeTemplatesSettings />);
     expect((await screen.findAllByText('DAP')).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('Фрахт').length).toBeGreaterThanOrEqual(1);
+    // FREIGHT is a known charge-type code → the localized label replaces the RU-only
+    // DB `charge_type_name`. (An unknown code — PACKAGING below — falls back to the raw name.)
+    expect(screen.getAllByText('Фрахт / логистика').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('5.00%').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('150000').length).toBeGreaterThanOrEqual(1);
     // The deduction row is flagged «Скидка».

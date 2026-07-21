@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDeliveryBases } from '@/hooks/useMasterData';
+import { deliveryBasisLabelKey } from '@/lib/codes';
 import {
 	Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
@@ -32,7 +33,7 @@ export const DeliveryBasisSelect: React.FC<DeliveryBasisSelectProps> = ({ value,
 			<SelectContent>
 				{bases.map((basis) => (
 					<SelectItem key={basis.id} value={String(basis.id)}>
-						{basis.code} — {basis.name}
+						{basis.code} — {deliveryBasisLabelKey(basis.code) ? t(deliveryBasisLabelKey(basis.code)) : basis.name}
 					</SelectItem>
 				))}
 			</SelectContent>

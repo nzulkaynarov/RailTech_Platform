@@ -5433,5 +5433,29 @@
     "taxCert": "Tax registration certificate",
     "bankRef": "Bank reference",
     "other": "Other"
+  },
+  "chargeTypes": {
+    "freight": "Freight / logistics",
+    "insurance": "Cargo insurance",
+    "customs": "Customs clearance",
+    "certification": "Certification",
+    "rent": "Rent (warehouse/site)",
+    "payroll": "Project team payroll",
+    "commission": "Commission payments",
+    "discount": "Customer discount",
+    "other": "Other expenses"
+  },
+  "deliveryBases": {
+    "exw": "Ex Works",
+    "fca": "Free Carrier",
+    "fas": "Free Alongside Ship",
+    "fob": "Free On Board",
+    "cfr": "Cost and Freight",
+    "cif": "Cost, Insurance and Freight",
+    "cpt": "Carriage Paid To",
+    "cip": "Carriage and Insurance Paid To",
+    "dap": "Delivered At Place",
+    "dpu": "Delivered At Place Unloaded",
+    "ddp": "Delivered Duty Paid"
   }
 }
