@@ -251,14 +251,29 @@ def client_projection_items(quote) -> list:
             )
 
     # Second pass: each SECTION's subtotal = Σ line_total of the ITEM rows below it until the next
-    # SECTION (its group). Ungrouped ITEM rows above the first SECTION are simply not summed.
+    # SECTION (its group), plus a count of grouped ITEM rows so an EMPTY section can be dropped.
+    # Ungrouped ITEM rows above the first SECTION are simply not summed.
     current_section = None
     for row in rows:
         if row["display_type"] == "SECTION":
             current_section = row
+            row["_item_count"] = 0
         elif row["display_type"] == "ITEM" and current_section is not None:
             current_section["section_subtotal"] += row["line_total"]
-    return rows
+            current_section["_item_count"] += 1
+
+    # Wave C polish: a document should never show an EMPTY structural row. Drop a SECTION that
+    # groups no ITEM lines (the «НОВЫЙ РАЗДЕЛ — 0,00» artifact) and a NOTE with no text — both
+    # read as a rendering bug to the client. Count-based, NOT subtotal-based: a section whose real
+    # lines sum to 0 (all free/included) still groups items and MUST render.
+    def _keep(row) -> bool:
+        if row["display_type"] == "SECTION":
+            return row.get("_item_count", 0) > 0
+        if row["display_type"] == "NOTE":
+            return bool((row.get("imported_raw_name") or "").strip())
+        return True
+
+    return [row for row in rows if _keep(row)]
 
 
 def client_optional_items(quote) -> list:

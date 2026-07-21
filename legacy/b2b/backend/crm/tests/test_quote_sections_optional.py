@@ -270,6 +270,48 @@ def test_pdf_renders_sections_notes_and_optional_block(world):
     assert quote.total_incl_vat == Decimal("224.00")
 
 
+@pytest.mark.django_db
+def test_empty_section_and_blank_note_are_dropped_from_projection(world):
+    """Wave C polish: a document must never show an empty structural row. A SECTION grouping no
+    ITEM lines («НОВЫЙ РАЗДЕЛ — 0,00») and a blank NOTE are filtered out of the client projection;
+    a section with real (even zero-priced) lines and a non-blank note survive."""
+    quote = _quote(world)
+    QuoteItem.objects.create(quote=quote, display_type="SECTION", imported_raw_name="ПУСТОЙ РАЗДЕЛ", position=0)
+    QuoteItem.objects.create(quote=quote, display_type="NOTE", imported_raw_name="   ", position=1)  # blank
+    QuoteItem.objects.create(quote=quote, display_type="SECTION", imported_raw_name="РАБОЧИЙ РАЗДЕЛ", position=2)
+    QuoteItem.objects.create(
+        quote=quote, imported_raw_name="Позиция", quantity=2, frozen_base_price=Decimal("100"), position=3
+    )
+    QuoteItem.objects.create(quote=quote, display_type="NOTE", imported_raw_name="Реальная заметка", position=4)
+    QuoteCalculationService.recalculate_quote(quote.pk)
+    quote.refresh_from_db()
+
+    rows = client_projection_items(quote)
+    names = [(r["display_type"], (r.get("imported_raw_name") or "").strip()) for r in rows]
+    assert ("SECTION", "ПУСТОЙ РАЗДЕЛ") not in names  # empty section dropped
+    assert not any(r["display_type"] == "NOTE" and not (r.get("imported_raw_name") or "").strip() for r in rows)
+    assert ("SECTION", "РАБОЧИЙ РАЗДЕЛ") in names  # section with a line survives
+    assert ("NOTE", "Реальная заметка") in names  # real note survives
+    # The empty row must not leak into the rendered document either.
+    html = render_to_string(
+        "crm/quote_pdf.html",
+        {
+            "quote": quote,
+            "items": rows,
+            "optional_items": client_optional_items(quote),
+            "company": world["buyer_co"],
+            "seller": world["seller_co"],
+            "seller_profile": None,
+            "seller_logo_url": None,
+            "is_demo": False,
+            "show_lead_time": True,
+            "accent": "#15294d",
+            "accent_contrast": "#ffffff",
+        },
+    )
+    assert "ПУСТОЙ РАЗДЕЛ" not in html
+
+
 # ── 6. bulk-create HTTP round-trips display_type / is_optional (full dispatch) ─────────
 @pytest.mark.django_db
 def test_bulk_create_http_display_type_and_optional(world):
