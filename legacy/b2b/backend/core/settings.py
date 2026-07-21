@@ -570,6 +570,9 @@ REST_FRAMEWORK = {
         "login": "10/minute",  # token obtain + 2FA code step, per IP (brute-force; lenient enough for typos)
         "two_factor": "10/minute",  # 2FA setup/verify/disable, per user (stolen-session code brute-force)
         "public_quote": "30/minute",  # unauthenticated КП-by-token view; blunts token brute-forcing
+        "public_quote_view": "60/minute",  # Wave A: КП page «viewed» beacon (deduped server-side)
+        "public_quote_code": "5/hour",  # Wave A: request КП acceptance code, per IP — blunts email bombing
+        "public_quote_accept": "10/minute",  # Wave A: verify code / reject, per IP — blunts code brute-force
         "ai_match": "20/minute",  # AI catalog-match endpoint — each call is a paid Claude request
         "ai_preflight": "20/minute",  # AI заявка pre-flight quality check — each call is a paid Claude request
         "ai_enrich": "20/minute",  # AI PIM product enrichment — each call is a paid Claude request

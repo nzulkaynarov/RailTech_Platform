@@ -268,6 +268,17 @@ class Quote(models.Model):
         verbose_name=_("Публичная ссылка истекает"),
         help_text=_("Явный TTL публичной ссылки. NULL — без отдельного TTL (действует срок valid_until)"),
     )
+    # Wave A: «Просмотрено» as a first-class marker (NOT a QuoteStatus). A SENT КП opened by the
+    # client stays SENT (still acceptable / rejectable / expirable) — «viewed» is orthogonal
+    # telemetry, so it is a timestamp marker rather than an FSM state that would collide with the
+    # SENT→APPROVED/REJECTED/EXPIRED workflow. Set once, on the first GENUINE (browser-beacon)
+    # open; the seller panel/status derives «Просмотрено {date}» from it. NULL = never opened.
+    first_viewed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Впервые просмотрено клиентом"),
+        help_text=_("Момент первого реального открытия публичной страницы КП клиентом (маркер, не статус)"),
+    )
     approved_at = models.DateTimeField(
         null=True,
         blank=True,
