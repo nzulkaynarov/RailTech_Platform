@@ -48,6 +48,12 @@ export interface Capabilities {
   permissions: string[];
   is_platform_admin: boolean;
   operator_permissions: string[] | null;
+  /** Wave B2 (auto-claim) — true when the seller company effectively has ONE member with claim
+   * rights, so «Взять в работу» is noise (there is no one to route work between). OPTIONAL: the
+   * parallel backend (B1) lane adds it to /me.capabilities; until then it is undefined and the
+   * claim button keeps its prior behaviour. UI-gating only — claim/assignment stays authoritative
+   * server-side. See useIsSoloSeller. */
+  is_solo_seller?: boolean;
 }
 
 /* ─── System Role (Platform-level) ─────────────────────────────────────

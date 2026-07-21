@@ -468,6 +468,19 @@ export const useSendQuoteToClient = () => {
     });
 };
 
+// Wave B2 — revoke the КП public share link from the post-send panel. Refresh quotes + deals
+// so the panel reflects the new public_token_revoked state (copy/revoke controls update).
+export const useRevokePublicLink = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (id: number) => crmApi.revokePublicLink(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['quotes'] });
+            queryClient.invalidateQueries({ queryKey: ['deals'] });
+        },
+    });
+};
+
 export const useApproveQuote = () => {
     const queryClient = useQueryClient();
     return useMutation({

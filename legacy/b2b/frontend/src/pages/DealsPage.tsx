@@ -10,6 +10,7 @@ import { Toolbar, Pager, useListParams, applyListParams } from '@/components/Dat
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useUserStore } from '@/store/userStore';
 import { useDeals, useDealStages, useClaimDeal } from '@/hooks/useCRM';
+import { useIsSoloSeller } from '@/hooks/useCapabilities';
 import { DEAL_STAGE_LABEL_KEY } from '@/lib/codes';
 import { translateApiError } from '@/lib/apiError';
 import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
@@ -33,6 +34,9 @@ export function DealsPage() {
   const formatCurrency = useCurrencyStore((s) => s.format);
   const activeStatus = useUserStore((s) => s.activeStatus);
   const claimMut = useClaimDeal();
+  // Wave B2 (auto-claim): a solo seller has no one to route work between, so «Взять в работу» is
+  // noise — hide it. Multi-member companies keep claim (it still routes the queue). UI-only.
+  const isSoloSeller = useIsSoloSeller();
 
   // Second in-funnel path to «взять в работу» (Kanban is the first). Claim is a
   // seller-only pull from the routed queue — hidden in the BUYER context and for
@@ -44,7 +48,7 @@ export function DealsPage() {
   const stageLabel = (code: string | undefined, fallback: string | undefined) =>
     code && DEAL_STAGE_LABEL_KEY[code] ? t(DEAL_STAGE_LABEL_KEY[code]) : (fallback ?? '');
 
-  const canClaim = (deal: Deal) => activeStatus === 'SELLER' && deal.assigned_to == null;
+  const canClaim = (deal: Deal) => activeStatus === 'SELLER' && deal.assigned_to == null && !isSoloSeller;
   const handleClaim = (dealId: number) => {
     claimMut.mutate(dealId, {
       onSuccess: () => toast.success(t('dealsKanban.claimed')),

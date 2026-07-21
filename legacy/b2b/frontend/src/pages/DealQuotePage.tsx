@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Calculator, FileText, Send, FileSignature, AlertTriangle, MessageSquare, ChevronDown } from 'lucide-react';
-import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { StatusBadge, getDealStageVariant } from '@/components/ui/StatusBadge';
@@ -10,15 +9,16 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useDeal, useSendQuoteToClient } from '@/hooks/useCRM';
+import { useDeal } from '@/hooks/useCRM';
 import { useQuoteSendGate } from '@/hooks/useQuoteSendGate';
-import { translateApiError, extractApiErrorCode } from '@/lib/apiError';
+import { translateApiError } from '@/lib/apiError';
 import { QuoteBuilderGrid } from '@/components/Admin/QuoteBuilderGrid';
 import { QuoteApprovalChain } from '@/components/CRM/QuoteApprovalChain';
 import { QuoteSendGateBanner } from '@/components/CRM/QuoteSendGateBanner';
+import { SendQuoteDialog } from '@/components/CRM/SendQuoteDialog';
+import { QuoteSentPanel } from '@/components/CRM/QuoteSentPanel';
 import { DealChatPanel } from '@/components/Sourcing/DealChatPanel';
 import { GenerateContractDialog } from '@/components/CRM/GenerateContractDialog';
-import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { QuoteStatus, DEAL_STAGE_LABEL_KEY } from '@/lib/codes';
 import { LoadingRows, EmptyState } from './shared/PageShell';
@@ -39,14 +39,12 @@ interface DealQuotePageProps {
 export function DealQuotePage({ dealId, onBack, onNavigate }: DealQuotePageProps) {
   const { t } = useTranslation();
   const { data: deal, isLoading, isError, refetch } = useDeal(dealId);
-  const sendQuote = useSendQuoteToClient();
   // WP-H: proactive KYC/entitlement send-gate — banner up-front + disabled Send with the reason.
   const sendGate = useQuoteSendGate();
   const [contractOpen, setContractOpen] = useState(false);
-  const [sendConfirmOpen, setSendConfirmOpen] = useState(false);
-  // S7a: the backend demanded a below-floor justification for a sender WITHOUT cost visibility
-  // (who never saw below_floor). Flip to true reactively so the confirm dialog re-prompts.
-  const [justificationRequired, setJustificationRequired] = useState(false);
+  // Wave B2: the single «Отправить клиенту» composer (recipient · validity · margin · approval).
+  // The below-floor justification + reactive re-prompt now live INSIDE SendQuoteDialog.
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
   // Single Deal-workspace (#3b): the buyer's request context lives ON the builder
   // screen, so a seller prices the КП without bouncing back to the deal page. The
   // ask (deal.notes) collapses to one line by default; the full thread opens in a slide-over.
@@ -111,33 +109,10 @@ export function DealQuotePage({ dealId, onBack, onNavigate }: DealQuotePageProps
   const canSend = quoteStatus === QuoteStatus.READY_TO_SEND;
   const canContract = !!quote
     && ([QuoteStatus.APPROVED, QuoteStatus.SENT] as string[]).includes(quoteStatus);
-
-  // S7a: below the margin floor a written justification is required to send. Two cost-visibility
-  // cases: (a) sender WITH cost/margin rights sees economics.below_floor → prompt proactively;
-  // (b) sender WITHOUT rights has economics === null → prompt reactively once the backend returns
-  // BELOW_FLOOR_JUSTIFICATION_REQUIRED. The reason textarea is shown/required in either case.
-  const belowFloorVisible = !!quote?.economics?.below_floor;
-  const needJustification = justificationRequired || belowFloorVisible;
-
-  // Sending the КП is irreversible and client-visible (the buyer immediately
-  // sees the priced offer + frozen prices) → gate behind a confirm dialog.
-  const confirmSend = async ({ reason }: { reason: string }) => {
-    if (!quote) return;
-    try {
-      // Errors (e.g. QUOTE_SEND_NOT_ENTITLED) propagate to the ConfirmActionDialog's translateError,
-      // which renders the friendly apiErrors.* message — don't swallow them here.
-      await sendQuote.mutateAsync({ id: quote.id, justification: reason || undefined });
-      toast.success(t('pages.deals.detail.quoteSentToast'));
-      setJustificationRequired(false);
-    } catch (err) {
-      // Reactive path (b): the sender couldn't see below_floor — surface the justification field
-      // and let them retry with text. Re-throw so the dialog shows the translated toast + stays open.
-      if (extractApiErrorCode(err) === 'BELOW_FLOOR_JUSTIFICATION_REQUIRED') {
-        setJustificationRequired(true);
-      }
-      throw err;
-    }
-  };
+  // Wave B2: once the КП has been pushed to the buyer, the silent «КП отправлено» state is
+  // replaced by the post-send tracking panel (Отправлено → Просмотрено → Решение).
+  const quoteSentToBuyer = ([QuoteStatus.SENT, QuoteStatus.APPROVED, QuoteStatus.REJECTED] as string[])
+    .includes(quoteStatus);
 
   const hasNote = (deal.notes ?? '').trim().length > 0;
 
@@ -201,7 +176,7 @@ export function DealQuotePage({ dealId, onBack, onNavigate }: DealQuotePageProps
                 </Tooltip>
               </TooltipProvider>
             ) : (
-              <Button size="sm" disabled={sendQuote.isPending} onClick={() => setSendConfirmOpen(true)}>
+              <Button size="sm" onClick={() => setSendDialogOpen(true)}>
                 <Send className="mr-2 h-4 w-4" />
                 {t('requestDetailActions.sendQuote')}
               </Button>
@@ -251,6 +226,14 @@ export function DealQuotePage({ dealId, onBack, onNavigate }: DealQuotePageProps
           and the disabled «Отправить» button still explains the blocker at the point of action. */}
       <QuoteSendGateBanner onNavigate={onNavigate} dismissible />
 
+      {/* Wave B2 post-send tracking (PandaDoc pattern): the moment the КП is SENT, replace the
+          silent builder with a live status line + link/version actions above the (now frozen) grid. */}
+      {quote && quoteSentToBuyer && (
+        <div className="px-2 pt-2">
+          <QuoteSentPanel deal={deal} quote={quote} />
+        </div>
+      )}
+
       {/* Builder — fills the remaining viewport height; it owns the single vertical scroll. */}
       {quote ? (
         // U2: `p-2` (was `p-3`) — 8px of the reclaimed chrome goes straight back to visible lines.
@@ -286,22 +269,15 @@ export function DealQuotePage({ dealId, onBack, onNavigate }: DealQuotePageProps
         onOpenChange={setContractOpen}
       />
 
-      <ConfirmActionDialog
-        open={sendConfirmOpen}
-        onOpenChange={setSendConfirmOpen}
-        title={t('confirmActions.sendQuote.title')}
-        description={needJustification
-          ? t('confirmActions.sendQuote.belowFloorDescription')
-          : t('confirmActions.sendQuote.description')}
-        variant={needJustification ? 'warning' : 'primary'}
-        confirmLabel={t('requestDetailActions.sendQuote')}
-        showReason={needJustification}
-        requireReason={needJustification}
-        reasonLabel={t('confirmActions.sendQuote.justificationLabel')}
-        reasonMaxLength={500}
-        onConfirm={confirmSend}
-        translateError={(code) => translateApiError(code)}
-      />
+      {/* Wave B2 — unified send composer (recipient · validity · margin vs floor · approval). */}
+      {quote && (
+        <SendQuoteDialog
+          deal={deal}
+          quote={quote}
+          open={sendDialogOpen}
+          onOpenChange={setSendDialogOpen}
+        />
+      )}
 
       {/* Unsaved-changes guard for in-app navigation away from the builder (WP-D). */}
       <AlertDialog open={leaveConfirmOpen} onOpenChange={setLeaveConfirmOpen}>

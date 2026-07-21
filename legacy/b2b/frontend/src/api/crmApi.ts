@@ -330,6 +330,15 @@ export interface Quote {
 	notes?: string;
 	pdf_file?: string | null;
 	frozen_at?: string | null;
+	// ── Wave B2 post-send tracking (PandaDoc pattern). All OPTIONAL: the seller-facing
+	// QuoteSerializer only exposes these once the parallel backend (B1) lane adds them, so the
+	// post-send panel degrades gracefully (hides the affected control) when a field is absent.
+	// first_viewed_at — first genuine client open of the public КП page (Wave A model field,
+	// «Просмотрено {date}»). public_access_token — the no-login share token (public URL built
+	// client-side). public_token_revoked — whether the seller revoked the share link.
+	first_viewed_at?: string | null;
+	public_access_token?: string | null;
+	public_token_revoked?: boolean;
 	approved_by?: number | null;
 	approved_at?: string | null;
 	// Seller unit economics — present only on the single-quote/deal detail for a cost-viewer.
@@ -840,6 +849,14 @@ export const crmApi = {
 	},
 	approveQuote: async (id: number) => {
 		const response = await apiClient.post<Quote>(`crm/quotes/${id}/approve/`);
+		return response.data;
+	},
+	// Wave B2 — revoke the КП's public no-login link (PandaDoc «отозвать ссылку»). Sets
+	// public_token_revoked so the shared page starts answering 410 GONE. The backend gate
+	// mirrors send-to-client (own SENT КП only). Endpoint added by the parallel B1 lane; the
+	// post-send panel only renders this action once a share token is actually exposed.
+	revokePublicLink: async (id: number) => {
+		const response = await apiClient.post<Quote>(`crm/quotes/${id}/revoke-public-link/`);
 		return response.data;
 	},
 	rejectQuote: async (id: number, reason = '') => {
