@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronUp, ChevronDown, Trash2 } from 'lucide-react';
+import { ChevronUp, ChevronDown, ChevronRight, Trash2 } from 'lucide-react';
 import type { QuoteItem } from '@/api/crmApi';
 import { cn } from '@/lib/utils';
 import { formatMoney } from '@/utils/decimal';
@@ -34,9 +34,15 @@ export const SectionNoteRow: React.FC<SectionNoteRowProps> = ({ item, index, vir
 	const {
 		selection, mainColCount, draftItems, presentationCurrency, pricingMirror,
 		handleMoveRow, handleRenameRow, handleDeleteItem, rowRefs,
+		isSectionCollapsed, toggleSectionCollapse, itemsUnderSection, rowPaddingY,
 	} = useQuoteBuilderGrid();
 
 	const isSection = (item.display_type ?? 'ITEM') === 'SECTION';
+	// U5: a collapsed SECTION hides its children from the visible list (they leave the virtualizer +
+	// keyboard nav entirely) and surfaces their Σ on the heading itself. A NOTE that belongs to a
+	// section is left-indented to read as part of the group (same cue as its ITEM siblings).
+	const isCollapsed = isSection && isSectionCollapsed(item.id);
+	const isNoteUnderSection = !isSection && itemsUnderSection.has(item.id);
 
 	// Local editing buffer so typing doesn't fire a network PATCH per keystroke — commit on blur.
 	const [text, setText] = useState(item.imported_raw_name ?? '');
@@ -83,15 +89,26 @@ export const SectionNoteRow: React.FC<SectionNoteRowProps> = ({ item, index, vir
 				isRowSelected && 'bg-primary/5',
 			)}
 		>
-			<TableCell className={cn('w-8 px-1 py-1.5 text-center sticky left-0 z-10', stickyBg)}>
+			<TableCell className={cn('w-8 px-1 text-center sticky left-0 z-10', rowPaddingY, stickyBg)}>
 				<RowSelectCheckbox
 					checked={isRowSelected}
 					onToggle={(shiftKey) => selection.toggle(item.id, shiftKey)}
 					ariaLabel={t('quote.bulk.selectRow', { index: index + 1 })}
 				/>
 			</TableCell>
-			<TableCell colSpan={mainColCount - 1} className="px-2 py-1.5">
-				<div className="flex items-center gap-2">
+			<TableCell colSpan={mainColCount - 1} className={cn('px-2', rowPaddingY)}>
+				<div className={cn('flex items-center gap-2', isNoteUnderSection && 'ml-1 border-l-2 border-border/60 pl-3')}>
+					{isSection && (
+						<button
+							type="button"
+							onClick={() => toggleSectionCollapse(item.id)}
+							aria-expanded={!isCollapsed}
+							aria-label={isCollapsed ? t('quote.section.expand') : t('quote.section.collapse')}
+							className="flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+						>
+							{isCollapsed ? <ChevronRight className="size-3.5" /> : <ChevronDown className="size-3.5" />}
+						</button>
+					)}
 					<Input
 						value={text}
 						onChange={(event) => setText(event.target.value)}

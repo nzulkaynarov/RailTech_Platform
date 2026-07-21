@@ -20,21 +20,25 @@ import { QuoteChargesSection } from '@/components/CRM/QuoteChargesSection';
 import { StickyTotalsBar } from '@/components/QuoteBuilder/StickyTotalsBar';
 import { useQuoteDraft, type DraftFieldValue } from '@/components/QuoteBuilder/useQuoteDraft';
 import { useGridKeyboard } from '@/components/QuoteBuilder/useGridKeyboard';
+import { useGridWorkspaceKeys } from '@/components/QuoteBuilder/useGridWorkspaceKeys';
 import { usePricingMirror } from '@/components/QuoteBuilder/usePricingMirror';
 import { cellErrorKey, hiddenErrorFields } from '@/components/QuoteBuilder/bulkErrors';
 import { useRowSelection } from '@/components/QuoteBuilder/useRowSelection';
 import { SelectionToolbar } from '@/components/QuoteBuilder/SelectionToolbar';
 import { GenerateQuoteDialog } from '@/components/CRM/GenerateQuoteDialog';
-import { VIRTUALIZE_THRESHOLD, marginToneClass } from '@/components/QuoteBuilder/gridConstants';
+import { VIRTUALIZE_THRESHOLD, GRID_DENSITY_ROW_HEIGHT, GRID_DENSITY_ROW_PADDING, marginToneClass } from '@/components/QuoteBuilder/gridConstants';
 import { scrollToRowAndFocusCell } from '@/components/QuoteBuilder/gridScrollFocus';
 import { QuoteBuilderGridProvider, type QuoteBuilderGridContextValue } from '@/components/QuoteBuilder/QuoteBuilderGridContext';
 import { useQuoteBuilderActions } from '@/components/QuoteBuilder/useQuoteBuilderActions';
 import { filterQuoteItems, normalizeFilterQuery } from '@/components/QuoteBuilder/filterItems';
+import { collapseHiddenItems, itemsUnderSection } from '@/components/QuoteBuilder/sectionGrouping';
+import { useSectionCollapse } from '@/components/QuoteBuilder/useSectionCollapse';
 import { BuilderToolbar } from '@/components/QuoteBuilder/BuilderToolbar';
 import { GridTable } from '@/components/QuoteBuilder/GridTable';
 import { EconomicsRail } from '@/components/QuoteBuilder/EconomicsRail';
 import { GridDialogs } from '@/components/QuoteBuilder/GridDialogs';
 import { useRailState } from '@/components/QuoteBuilder/useRailState';
+import { useGridDensity } from '@/components/QuoteBuilder/useGridDensity';
 
 interface QuoteBuilderGridProps {
 	dealId?: number;
@@ -63,8 +67,8 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	const createItemMutation = useCreateQuoteItem();
 	const deleteItemMutation = useDeleteQuoteItem();
 
-	// Draft state machine (WP-D) + local undo stack (WP-J).
-	const { draftItems, dirtyIds, hasUnsavedChanges, setField, applyBulk, clearDirtyAfterSave, undo, canUndo } = useQuoteDraft(quoteItems);
+	// Draft state machine (WP-D) + local undo/redo stack (WP-J / U6).
+	const { draftItems, dirtyIds, hasUnsavedChanges, setField, applyBulk, clearDirtyAfterSave, undo, canUndo, redo, canRedo } = useQuoteDraft(quoteItems);
 
 	// U4 — «найти в КП». `visibleItems` is what the TABLE renders (and what the virtualizer windows
 	// and the keyboard navigates). Everything money-bearing — usePricingMirror, the totals bar, the
@@ -72,7 +76,16 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	// can never change what the КП is worth or silently drop an edited row from a save.
 	const [filterQuery, setFilterQuery] = useState('');
 	const isFiltered = normalizeFilterQuery(filterQuery).length > 0;
-	const visibleItems = useMemo(() => filterQuoteItems(draftItems, filterQuery), [draftItems, filterQuery]);
+	// U5 — collapsible sections. `visibleItems` is the U4-filtered list with each COLLAPSED section's
+	// children dropped (serverItems → U4 filter → collapse filter → visibleItems). Collapse state is
+	// client-only + persisted; it never touches draftItems, the totals or the save payload.
+	const { collapsedSections, isSectionCollapsed, toggleSectionCollapse } = useSectionCollapse();
+	const visibleItems = useMemo(
+		() => collapseHiddenItems(filterQuoteItems(draftItems, filterQuery), collapsedSections),
+		[draftItems, filterQuery, collapsedSections],
+	);
+	// U5 — non-SECTION rows that belong to a SECTION (full-document membership) → left-indent cue.
+	const underSectionIds = useMemo(() => itemsUnderSection(draftItems), [draftItems]);
 	// Original 1-based document position per row id — the grid keeps numbering lines by their place
 	// in the КП, so a filtered view shows «12.» not «1.» (and delete/select aria-labels stay true).
 	const documentIndexById = useMemo(() => {
@@ -94,13 +107,23 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	// for rows that are not in the DOM.
 	const scrollContainerRef = useRef<HTMLDivElement>(null);
 	const shouldVirtualize = visibleItems.length > VIRTUALIZE_THRESHOLD;
+	// U7 — row density (comfortable/compact). The estimateSize below MUST track it, so the virtualizer
+	// seeds off-screen rows with the height they will actually render at in the current density.
+	const { gridDensity, toggleGridDensity } = useGridDensity();
+	const rowPaddingY = GRID_DENSITY_ROW_PADDING[gridDensity];
+	const rowEstimateSize = GRID_DENSITY_ROW_HEIGHT[gridDensity];
 	const virtualizer = useVirtualizer({
 		count: visibleItems.length,
 		getScrollElement: () => scrollContainerRef.current,
-		estimateSize: () => 44,
+		estimateSize: () => rowEstimateSize,
 		overscan: 8,
 		getItemKey: (index) => visibleItems[index]?.id ?? index,
 	});
+	// Flipping density changes every row's real height; re-measure so the cached measurements (and the
+	// scrollbar) recompute off the new estimate instead of holding the old per-row heights.
+	useEffect(() => {
+		virtualizer.measure();
+	}, [gridDensity, virtualizer]);
 
 	// Keyboard nav across the window edge: scroll the target row in, then focus its cell (волна 3).
 	const focusCellAtRow = (rowIndex: number, column: string) => {
@@ -250,16 +273,10 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 		return () => window.removeEventListener('beforeunload', handleBeforeUnload);
 	}, [hasUnsavedChanges]);
 
-	// Ctrl/Cmd+Z reverts the last local draft edit (WP-J undo) — but not inside a text input.
-	const handleWorkspaceKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-		if (!(event.ctrlKey || event.metaKey) || event.shiftKey) return;
-		if (event.key !== 'z' && event.key !== 'Z') return;
-		const target = event.target as HTMLElement;
-		if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable) return;
-		if (!canUndo) return;
-		event.preventDefault();
-		undo();
-	};
+	// U6 working-area keyboard shortcuts (copy-out TSV + local draft undo/redo) — extracted hook.
+	const { handleWorkspaceKeyDown } = useGridWorkspaceKeys({
+		draftItems, selection, undo, redo, canUndo, canRedo,
+	});
 
 	if (itemsLoading || dealLoading) {
 		return (
@@ -358,6 +375,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 		visibleItems, documentIndexById, filterQuery, setFilterQuery, isFiltered,
 		handleFieldChange, cellError, cellErrors, hiddenErrorFields, fieldLabel,
 		expandedRowId, toggleRow, setExpandedRowId,
+		isSectionCollapsed, toggleSectionCollapse, itemsUnderSection: underSectionIds,
 		fxRateFor, lineCostInPresentation,
 		handleDeleteItem: actions.handleDeleteItem, setReassignItemId, rowRefs,
 		handleMoveRow: actions.handleMoveRow, handleRenameRow: actions.handleRenameRow,
@@ -370,6 +388,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 		railAsSheet, railOpen, railSheetOpen, setRailSheetOpen, toggleRail,
 		scrollContainerRef, gridKeyboardOnKeyDown: gridKeyboard.onKeyDown, handleGridPaste: actions.handleGridPaste,
 		virtualizer, shouldVirtualize,
+		gridDensity, toggleGridDensity, rowPaddingY,
 		newItemName, setNewItemName, newItemQty, setNewItemQty, newItemPrice, setNewItemPrice,
 		handleAddItem: actions.handleAddItem, addNameRef, addRowRef, createItemPending: createItemMutation.isPending,
 	};
@@ -442,6 +461,8 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 						onSave={actions.handleSave}
 						onUndo={undo}
 						canUndo={canUndo}
+						onRedo={redo}
+						canRedo={canRedo}
 					/>
 
 					<GridDialogs

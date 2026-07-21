@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
 	Loader2, Plus, Sparkles, Settings, Tag, PanelRightClose, PanelRightOpen, Maximize2, Minimize2, ClipboardPaste,
-	Heading, StickyNote, Search, X, type LucideIcon,
+	Heading, StickyNote, Search, X, Rows2, Rows3, type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -69,8 +69,13 @@ export const BuilderToolbar: React.FC<BuilderToolbarProps> = ({ selectionSlot })
 		activeQuote, draftItems, visibleItems, showAddRow, setShowAddRow, handleAddSection, handleAddNote,
 		openPasteDialog, setShowAiMatch, filterQuery, setFilterQuery, isFiltered,
 		handlePricingAssist, pricingBusy, setShowSettings, railAsSheet, railOpen, setRailSheetOpen,
-		toggleRail, fullscreen, setFullscreen,
+		toggleRail, fullscreen, setFullscreen, gridDensity, toggleGridDensity,
 	} = useQuoteBuilderGrid();
+
+	// U7: the button shows the density it will switch TO (the standard toggle-to-other-state pattern
+	// this toolbar's rail/focus buttons already use), so its icon + label describe the action.
+	const isCompact = gridDensity === 'compact';
+	const densityLabel = isCompact ? t('quote.density.comfortable') : t('quote.density.compact');
 
 	const chargesCount = activeQuote.charges?.length ?? 0;
 
@@ -167,6 +172,22 @@ export const BuilderToolbar: React.FC<BuilderToolbarProps> = ({ selectionSlot })
 						<TooltipContent>{t('quote.settings.title')}</TooltipContent>
 					</Tooltip>
 				)}
+				{/* U7: density toggle — trims the row padding so more КП lines fit (comfortable ↔ compact). */}
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<Button
+							variant="outline"
+							size="icon-xs"
+							className="size-8"
+							onClick={toggleGridDensity}
+							aria-label={densityLabel}
+							aria-pressed={isCompact}
+						>
+							{isCompact ? <Rows3 className="size-4" /> : <Rows2 className="size-4" />}
+						</Button>
+					</TooltipTrigger>
+					<TooltipContent>{densityLabel}</TooltipContent>
+				</Tooltip>
 				{/* Rail toggle — opens the slide-over below xl, collapses the inline rail ≥xl. */}
 				<Tooltip>
 					<TooltipTrigger asChild>

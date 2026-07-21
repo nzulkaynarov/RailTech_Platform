@@ -1,6 +1,7 @@
 import { createContext, useContext } from 'react';
 import type { Dispatch, SetStateAction, RefObject, MutableRefObject, ClipboardEvent, KeyboardEvent } from 'react';
 import type { Virtualizer } from '@tanstack/react-virtual';
+import type { GridDensity } from './gridConstants';
 import type { Quote, QuoteItem, QuoteEconomics } from '@/api/crmApi';
 import type { Currency } from '@/api/masterDataApi';
 import type { PricingMirrorResult, TotalsMirror } from './usePricingMirror';
@@ -64,10 +65,18 @@ export interface QuoteBuilderGridContextValue {
 	hiddenErrorFields: (errors: Record<string, string>, id: number, showCost: boolean) => string[];
 	fieldLabel: (field: string) => string;
 
-	// ── Row expand/collapse ───────────────────────────────────────────────────────────────────
+	// ── Row expand/collapse (per-line detail sub-row) ─────────────────────────────────────────
 	expandedRowId: number | null;
 	toggleRow: (id: number) => void;
 	setExpandedRowId: Dispatch<SetStateAction<number | null>>;
+
+	// ── Section collapse (U5) — group ITEM/NOTE rows under a SECTION heading, hide when collapsed.
+	/** Is this SECTION heading currently collapsed (its children removed from `visibleItems`)? */
+	isSectionCollapsed: (sectionId: number) => boolean;
+	/** Collapse ↔ expand a SECTION (client-only, persisted to localStorage). */
+	toggleSectionCollapse: (sectionId: number) => void;
+	/** Row ids of non-SECTION lines that belong to a SECTION — drives the left-indent grouping cue. */
+	itemsUnderSection: Set<number>;
 
 	// ── FX + cost display helpers ─────────────────────────────────────────────────────────────
 	fxRateFor: (code?: string) => string;
@@ -115,6 +124,17 @@ export interface QuoteBuilderGridContextValue {
 	virtualizer: Virtualizer<HTMLDivElement, Element>;
 	/** Windowed rendering is active only above VIRTUALIZE_THRESHOLD rows. */
 	shouldVirtualize: boolean;
+
+	// ── Row density (U7) ──────────────────────────────────────────────────────────────────────
+	/** Current grid row density — `comfortable` (default) or `compact`. */
+	gridDensity: GridDensity;
+	/** Flip comfortable ↔ compact (persisted). Drives BOTH the row padding class + estimateSize. */
+	toggleGridDensity: () => void;
+	/**
+	 * Vertical-padding utility class for a body row's padded cells, derived from `gridDensity`
+	 * (`py-1.5` comfortable / `py-0.5` compact). Kept in lockstep with the virtualizer estimateSize.
+	 */
+	rowPaddingY: string;
 
 	// ── Add-row («добавить и продолжить») ─────────────────────────────────────────────────────
 	newItemName: string;

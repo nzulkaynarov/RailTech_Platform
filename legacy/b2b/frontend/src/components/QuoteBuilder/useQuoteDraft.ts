@@ -36,6 +36,10 @@ export interface UseQuoteDraftResult {
 	undo: () => void;
 	/** True when there is at least one draft edit to undo. */
 	canUndo: boolean;
+	/** Re-apply the last undone edit (symmetric with undo). No-op when the redo stack is empty. */
+	redo: () => void;
+	/** True when there is at least one undone edit to re-apply. */
+	canRedo: boolean;
 }
 
 // Excel-like undo depth for local cell edits — enough to unwind a run of fat-finger fixes
@@ -66,6 +70,9 @@ export function useQuoteDraft(serverItems: QuoteItem[]): UseQuoteDraftResult {
 	const [draftItems, setDraftItems] = useState<QuoteItem[]>(serverItems);
 	const [dirtyIds, setDirtyIds] = useState<Set<number>>(() => new Set());
 	const [undoStack, setUndoStack] = useState<DraftSnapshot[]>([]);
+	// Redo holds states the seller has UNDONE, so redo() can walk forward again. A fresh edit discards
+	// this future (standard editor semantics — see pushUndoSnapshot).
+	const [redoStack, setRedoStack] = useState<DraftSnapshot[]>([]);
 
 	// Live mirrors so the state updaters can snapshot the pre-edit state without re-creating
 	// callbacks on every render. draftItems/dirtyIds are replaced (never mutated) on each edit,
@@ -76,16 +83,34 @@ export function useQuoteDraft(serverItems: QuoteItem[]): UseQuoteDraftResult {
 	dirtyIdsRef.current = dirtyIds;
 	const undoStackRef = useRef(undoStack);
 	undoStackRef.current = undoStack;
+	const redoStackRef = useRef(redoStack);
+	redoStackRef.current = redoStack;
 	const serverItemsRef = useRef(serverItems);
 	serverItemsRef.current = serverItems;
 
-	// Push the CURRENT draft state onto the undo stack (bounded to UNDO_DEPTH) before an edit.
+	// A snapshot captures a row set + dirty flags; restoring it rebuilds CLEAN rows from CURRENT
+	// server truth and overlays ONLY the snapshot's dirty rows. Replaying snapshot.items wholesale
+	// would silently roll clean rows back to pre-refetch values (adversarial-review MAJOR) — the exact
+	// stale-display bug the draft machine exists to prevent. Shared by undo and redo so both are safe.
+	const restoreSnapshot = useCallback((snapshot: DraftSnapshot) => {
+		const snapshotById = new Map(snapshot.items.map((item) => [item.id, item]));
+		setDraftItems(
+			serverItemsRef.current.map((serverItem) =>
+				snapshot.dirty.has(serverItem.id) ? (snapshotById.get(serverItem.id) ?? serverItem) : serverItem,
+			),
+		);
+		setDirtyIds(snapshot.dirty);
+	}, []);
+
+	// Push the CURRENT draft state onto the undo stack (bounded to UNDO_DEPTH) before an edit. A fresh
+	// edit also invalidates the redo future — you cannot redo past a branch you just diverged from.
 	const pushUndoSnapshot = useCallback(() => {
 		setUndoStack((previous) => {
 			const next = [...previous, { items: draftItemsRef.current, dirty: dirtyIdsRef.current }];
 			if (next.length > UNDO_DEPTH) next.shift();
 			return next;
 		});
+		setRedoStack([]);
 	}, []);
 
 	// Re-derive the draft from the authoritative server list whenever it changes,
@@ -119,6 +144,7 @@ export function useQuoteDraft(serverItems: QuoteItem[]): UseQuoteDraftResult {
 	useEffect(() => {
 		if (previousServerIdsKeyRef.current !== null && previousServerIdsKeyRef.current !== serverIdsKey) {
 			setUndoStack([]);
+			setRedoStack([]);
 		}
 		previousServerIdsKeyRef.current = serverIdsKey;
 	}, [serverIdsKey]);
@@ -193,30 +219,32 @@ export function useQuoteDraft(serverItems: QuoteItem[]): UseQuoteDraftResult {
 		// The saved values are now the server baseline — old snapshots would restore pre-save
 		// draft values, which is confusing after a successful save. Drop the local history.
 		setUndoStack([]);
+		setRedoStack([]);
 	}, []);
 
 	const undo = useCallback(() => {
 		const stack = undoStackRef.current;
 		if (stack.length === 0) return;
 		const snapshot = stack[stack.length - 1];
-		// Restore ONLY the snapshot's dirty rows; clean rows must stay on CURRENT server
-		// truth. Replaying snapshot.items wholesale would silently roll clean rows back
-		// to pre-refetch values (adversarial-review MAJOR) — the exact stale-display bug
-		// the draft machine exists to prevent.
-		const snapshotById = new Map(snapshot.items.map((item) => [item.id, item]));
-		setDraftItems(
-			serverItemsRef.current.map((serverItem) =>
-				snapshot.dirty.has(serverItem.id)
-					? (snapshotById.get(serverItem.id) ?? serverItem)
-					: serverItem,
-			),
-		);
-		setDirtyIds(snapshot.dirty);
+		// Bank the CURRENT state onto the redo stack so redo() can walk forward again, then restore.
+		setRedoStack((previous) => [...previous, { items: draftItemsRef.current, dirty: dirtyIdsRef.current }]);
+		restoreSnapshot(snapshot);
 		setUndoStack(stack.slice(0, -1));
-	}, []);
+	}, [restoreSnapshot]);
+
+	const redo = useCallback(() => {
+		const stack = redoStackRef.current;
+		if (stack.length === 0) return;
+		const snapshot = stack[stack.length - 1];
+		// Symmetric with undo: bank the current state back onto the undo stack, then re-apply.
+		setUndoStack((previous) => [...previous, { items: draftItemsRef.current, dirty: dirtyIdsRef.current }]);
+		restoreSnapshot(snapshot);
+		setRedoStack(stack.slice(0, -1));
+	}, [restoreSnapshot]);
 
 	const hasUnsavedChanges = dirtyIds.size > 0;
 	const canUndo = undoStack.length > 0;
+	const canRedo = redoStack.length > 0;
 
 	return useMemo(
 		() => ({
@@ -229,7 +257,9 @@ export function useQuoteDraft(serverItems: QuoteItem[]): UseQuoteDraftResult {
 			clearDirtyAfterSave,
 			undo,
 			canUndo,
+			redo,
+			canRedo,
 		}),
-		[draftItems, dirtyIds, hasUnsavedChanges, setField, applyBulk, resetRow, clearDirtyAfterSave, undo, canUndo],
+		[draftItems, dirtyIds, hasUnsavedChanges, setField, applyBulk, resetRow, clearDirtyAfterSave, undo, canUndo, redo, canRedo],
 	);
 }

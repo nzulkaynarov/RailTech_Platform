@@ -36,6 +36,9 @@ interface GridRowProps {
 interface MarginCellProps {
 	/** 1-based document position — disambiguates the cell's accessible name across ~60 rows. */
 	index: number;
+	/** Row id — feeds `data-cell-row` so keyboard nav (↑/↓/Tab across the window) resolves this cell
+	 *  by the SAME id every other column uses; the position `index` is display-only. */
+	rowId: number;
 	/** Live markup actually applied to this line + whether it is an explicit override (DT1). */
 	line: LineMirror;
 	/** The КП-level markup this line falls back to — rendered as the inherit placeholder. */
@@ -79,7 +82,7 @@ interface MarginCellProps {
  * every visible margin cell.
  */
 const MarginCell: React.FC<MarginCellProps> = React.memo(({
-	index, line, quoteMarginPercent, signal, landedCost, presentationCurrency,
+	index, rowId, line, quoteMarginPercent, signal, landedCost, presentationCurrency,
 	invalid, errorMessage, onCommit, onRevert,
 }) => {
 	const { t } = useTranslation();
@@ -103,7 +106,7 @@ const MarginCell: React.FC<MarginCellProps> = React.memo(({
 								'h-8 w-full rounded-none border-none text-xs tabular-nums shadow-none text-center focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
 								isOverridden ? 'font-semibold text-foreground' : 'text-muted-foreground',
 							)}
-							dataCellRow={index}
+							dataCellRow={rowId}
 							dataCellCol="margin_percent"
 							value={line.isMarginOverridden ? line.effectiveMarginPercent : null}
 							invalid={invalid}
@@ -174,8 +177,11 @@ const GridRowComponent: React.FC<GridRowProps> = ({ item, index, virtualIndex, m
 		pricingMirror, selection, handleFieldChange, cellError, cellErrors, hiddenErrorFields,
 		fieldLabel, expandedRowId, toggleRow, setExpandedRowId, fxRateFor, lineCostInPresentation,
 		handleDeleteItem, setReassignItemId, rowRefs, mainColCount,
-		draftItems, handleMoveRow, handleRenameRow, reorderDisabled,
+		draftItems, handleMoveRow, handleRenameRow, reorderDisabled, itemsUnderSection, rowPaddingY,
 	} = useQuoteBuilderGrid();
+
+	// U5: this ITEM belongs to a SECTION → a light left rule groups it under its heading.
+	const isUnderSection = itemsUnderSection.has(item.id);
 
 	// U1: ITEM rows reorder with the SAME ↑/↓ swap SECTION/NOTE rows already use (position swap via
 	// the transactional bulk-update, incl. its save-before-move guard for rows with unsaved edits).
@@ -244,14 +250,14 @@ const GridRowComponent: React.FC<GridRowProps> = ({ item, index, virtualIndex, m
 					isOptional && 'opacity-60',
 				)}
 			>
-				<TableCell className={cn('w-8 px-1 py-1.5 text-center sticky left-0 z-10', stickyBg)}>
+				<TableCell className={cn('w-8 px-1 text-center sticky left-0 z-10', rowPaddingY, stickyBg)}>
 					<RowSelectCheckbox
 						checked={isRowSelected}
 						onToggle={(shiftKey) => selection.toggle(item.id, shiftKey)}
 						ariaLabel={t('quote.bulk.selectRow', { index: index + 1 })}
 					/>
 				</TableCell>
-				<TableCell className={cn('w-10 px-1 py-1.5 text-center sticky left-8 z-10', stickyBg)}>
+				<TableCell className={cn('w-10 px-1 text-center sticky left-8 z-10', rowPaddingY, stickyBg)}>
 					{/* Stack vertically: the chevron (20px) + the bulk-error marker (16px) would overflow the
 					    cell side-by-side; column layout keeps both centred and inside the cell. DT9: the
 					    column is `w-10` (40px) so the stacked pair is no longer cramped on narrow screens. */}
@@ -297,8 +303,8 @@ const GridRowComponent: React.FC<GridRowProps> = ({ item, index, virtualIndex, m
 				    of truncating early and leaving dead space on the right. `min-w-0` on the flex wrapper
 				    lets the inner input actually shrink below its content width (default `min-width:auto`
 				    would otherwise block the chain). */}
-				<TableCell className={cn('w-full px-2 py-1.5 sticky left-18 z-10', stickyBg)}>
-					<div className="flex min-w-0 w-full items-center gap-2">
+				<TableCell className={cn('w-full px-2 sticky left-18 z-10', rowPaddingY, stickyBg)}>
+					<div className={cn('flex min-w-0 w-full items-center gap-2', isUnderSection && 'ml-1 border-l-2 border-border/60 pl-3')}>
 						{isOptional && (
 							<Badge variant="outline" className="shrink-0 text-xs font-normal text-muted-foreground">
 								{t('quote.optional.badge')}
@@ -384,6 +390,7 @@ const GridRowComponent: React.FC<GridRowProps> = ({ item, index, virtualIndex, m
 					<TableCell className="p-0">
 						<MarginCell
 							index={index + 1}
+							rowId={item.id}
 							line={mirrorLine}
 							quoteMarginPercent={activeQuote?.margin_percent}
 							signal={signal}
@@ -399,7 +406,7 @@ const GridRowComponent: React.FC<GridRowProps> = ({ item, index, virtualIndex, m
 						/>
 					</TableCell>
 				)}
-				<TableCell className="px-2 py-1.5 text-right pr-4">
+				<TableCell className={cn('px-2 text-right pr-4', rowPaddingY)}>
 					{(() => {
 						// Live «Сумма» from the mirror: for a dirty row this is the preview
 						// (marked «черновик» in italics); a needsServerRecalc row shows the

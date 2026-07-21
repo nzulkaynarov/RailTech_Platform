@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Loader2, Save, Undo2 } from 'lucide-react';
+import { Loader2, Redo2, Save, Undo2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatMoney } from '@/utils/decimal';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,10 @@ interface StickyTotalsBarProps {
 	onUndo?: () => void;
 	/** Whether there is a draft edit to undo — disables the Undo button when false. */
 	canUndo?: boolean;
+	/** Re-apply the last undone edit (U6 redo); omit to hide the Redo button. */
+	onRedo?: () => void;
+	/** Whether there is an undone edit to re-apply — disables the Redo button when false. */
+	canRedo?: boolean;
 }
 
 /**
@@ -42,6 +46,8 @@ export const StickyTotalsBar: React.FC<StickyTotalsBarProps> = ({
 	onSave,
 	onUndo,
 	canUndo,
+	onRedo,
+	canRedo,
 }) => {
 	const { t } = useTranslation();
 
@@ -74,6 +80,12 @@ export const StickyTotalsBar: React.FC<StickyTotalsBarProps> = ({
 					<Button variant="outline" size="sm" onClick={onUndo} disabled={!canUndo}>
 						<Undo2 className="size-4" />
 						{t('quote.undo')}
+					</Button>
+				)}
+				{onRedo && (
+					<Button variant="outline" size="sm" onClick={onRedo} disabled={!canRedo}>
+						<Redo2 className="size-4" />
+						{t('quote.redo')}
 					</Button>
 				)}
 				<Button size="sm" onClick={onSave} disabled={saving}>

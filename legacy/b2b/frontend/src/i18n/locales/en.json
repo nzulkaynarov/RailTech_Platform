@@ -709,7 +709,9 @@
       "newTitle": "New section",
       "placeholder": "Section title",
       "aria": "Section title",
-      "subtotal": "Subtotal"
+      "subtotal": "Subtotal",
+      "collapse": "Collapse section",
+      "expand": "Expand section"
     },
     "note": {
       "add": "Note",
@@ -744,6 +746,11 @@
       "leaveConfirm": "Leave without saving"
     },
     "undo": "Undo",
+    "redo": "Redo",
+    "copy": {
+      "copied": "Copied rows: {{count}}",
+      "failed": "Could not copy to clipboard"
+    },
     "bulk": {
       "selected": "Selected: {{count}}",
       "delete": "Delete selected",
@@ -936,6 +943,10 @@
       "expand": "Expand panel",
       "basisNotSet": "No delivery basis",
       "editBasis": "Change delivery basis"
+    },
+    "density": {
+      "comfortable": "Comfortable rows",
+      "compact": "Compact rows"
     },
     "lineDetails": "Line details",
     "attachProduct": "Attach product",
