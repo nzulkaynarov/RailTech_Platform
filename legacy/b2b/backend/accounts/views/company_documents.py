@@ -1,0 +1,250 @@
+"""KYC document, logo, document-profile and КП-settings actions for ``CompanyViewSet``.
+
+Split out of the monolithic ``accounts/views/company.py`` (file-length refactor,
+500-line rule) as a mixin — behaviour, ``url_path``/``url_name``, parsers and
+permissions are unchanged. Mixed into ``CompanyViewSet``, which supplies
+``get_object`` and the ``_assert_member_or_admin`` helper; this class only adds
+``@action`` methods. Upload validators (``core/validators.py``, magic-byte checks)
+are preserved verbatim.
+"""
+
+from drf_spectacular.utils import OpenApiResponse, extend_schema
+from rest_framework import status
+from rest_framework.decorators import action
+from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.response import Response
+
+from accounts import services
+from accounts.serializers import (
+    CompanyDocumentProfileSerializer,
+    CompanySerializer,
+    CompanySettingsSerializer,
+    KYCDocumentSerializer,
+)
+
+
+class CompanyDocumentsMixin:
+    """KYC-document, logo, document-profile and КП-settings ``@action`` endpoints."""
+
+    @extend_schema(
+        summary="Upload KYC document",
+        description="Upload a KYC document for company verification. Supports multipart file upload.",
+        request={
+            "multipart/form-data": {
+                "type": "object",
+                "properties": {
+                    "file": {"type": "string", "format": "binary"},
+                    "doc_type": {"type": "string", "default": "OTHER"},
+                },
+            }
+        },
+        responses={201: KYCDocumentSerializer},
+        tags=["Accounts"],
+    )
+    @action(detail=True, methods=["post"], url_path="upload-document", parser_classes=[MultiPartParser, FormParser])
+    def upload_document(self, request, pk=None):
+        company = self.get_object()
+        self._assert_member_or_admin(company)
+        file_obj = request.FILES.get("file")
+        if not file_obj:
+            return Response({"detail": "NO_FILE_PROVIDED"}, status=status.HTTP_400_BAD_REQUEST)
+
+        doc_type_code = request.data.get("doc_type", "OTHER")
+        doc, error = services.upload_kyc_document(company, file_obj, doc_type_code)
+        if error:
+            return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(KYCDocumentSerializer(doc).data, status=status.HTTP_201_CREATED)
+
+    @extend_schema(
+        summary="Delete KYC document",
+        description="Delete a specific KYC document by its ID from a company.",
+        responses={204: None, 404: OpenApiResponse(description="Document not found")},
+        tags=["Accounts"],
+    )
+    @action(detail=True, methods=["delete"], url_path="delete-document/(?P<doc_id>[0-9]+)", url_name="delete-document")
+    def delete_document(self, request, pk=None, doc_id=None):
+        company = self.get_object()
+        self._assert_member_or_admin(company)
+        success, error = services.delete_kyc_document(company, int(doc_id))
+        if error:
+            return Response({"detail": error}, status=status.HTTP_404_NOT_FOUND)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @extend_schema(
+        summary="Download a KYC document",
+        description="Stream a KYC document for review. Works with both MinIO and local storage "
+        "(prod has no MinIO, so the raw /media URL 404s — this authenticated stream is the only path).",
+        responses={200: OpenApiResponse(description="File stream"), 404: OpenApiResponse(description="Not found")},
+        tags=["Accounts"],
+    )
+    @action(detail=True, methods=["get"], url_path="download-document/(?P<doc_id>[0-9]+)", url_name="download-document")
+    def download_document(self, request, pk=None, doc_id=None):
+        from core.file_streaming import stream_file_field
+
+        company = self.get_object()
+        self._assert_member_or_admin(company)
+        doc = company.kyc_documents.filter(id=int(doc_id)).first()
+        if not doc:
+            return Response({"detail": "DOCUMENT_NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)
+        return stream_file_field(doc.file, content_type="application/octet-stream")
+
+    @extend_schema(
+        summary="Upload company logo",
+        description="Upload or replace a company's logo (multipart/form-data).",
+        request={
+            "multipart/form-data": {
+                "type": "object",
+                "properties": {
+                    "logo": {"type": "string", "format": "binary"},
+                },
+            }
+        },
+        responses={200: CompanySerializer},
+        tags=["Accounts"],
+    )
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="upload-logo",
+        parser_classes=[MultiPartParser, FormParser],
+    )
+    def upload_logo(self, request, pk=None):
+        company = self.get_object()
+        self._assert_member_or_admin(company)
+        logo_file = request.FILES.get("logo")
+        if not logo_file:
+            return Response({"detail": "NO_FILE_PROVIDED"}, status=status.HTTP_400_BAD_REQUEST)
+
+        from django.core.exceptions import ValidationError
+
+        from core.validators import validate_image_upload
+
+        try:
+            validate_image_upload(logo_file)
+        except ValidationError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        if company.logo:
+            company.logo.delete(save=False)
+        company.logo = logo_file
+        company.save(update_fields=["logo"])
+        return Response(CompanySerializer(company, context={"request": request}).data)
+
+    @extend_schema(
+        summary="Delete company logo",
+        responses={204: None},
+        tags=["Accounts"],
+    )
+    @action(detail=True, methods=["delete"], url_path="delete-logo")
+    def delete_logo(self, request, pk=None):
+        company = self.get_object()
+        self._assert_member_or_admin(company)
+        if company.logo:
+            company.logo.delete(save=False)
+            company.logo = None
+            company.save(update_fields=["logo"])
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @extend_schema(
+        summary="Read / update company document profile",
+        description=(
+            "The branded requisites a company prints on its own КП / contract documents "
+            "(legal name, ИНН, юр.адрес, банк, подписант, колонтитул, акцентный цвет). "
+            "GET returns the profile (auto-created); PATCH updates it. OWNER of THIS company "
+            "(or platform admin) only — never another tenant. Logo is uploaded separately."
+        ),
+        request=CompanyDocumentProfileSerializer,
+        responses={
+            200: CompanyDocumentProfileSerializer,
+            403: OpenApiResponse(description="Only the company OWNER may read/update the profile"),
+        },
+        tags=["Accounts"],
+    )
+    @action(detail=True, methods=["get", "patch"], url_path="document-profile")
+    def document_profile(self, request, pk=None):
+        company = self.get_object()
+        if not services.is_company_owner(request.user, company):
+            return Response({"detail": "NOT_COMPANY_OWNER"}, status=status.HTTP_403_FORBIDDEN)
+        if request.method == "PATCH":
+            profile, error = services.update_document_profile(request.user, company, request.data)
+            if error:
+                http_status = status.HTTP_403_FORBIDDEN if error == "NOT_COMPANY_OWNER" else status.HTTP_400_BAD_REQUEST
+                return Response({"detail": error}, status=http_status)
+        else:
+            profile = services.get_document_profile(company)
+        return Response(CompanyDocumentProfileSerializer(profile, context={"request": request}).data)
+
+    @extend_schema(
+        summary="Live preview of a sample КП with the company's document profile",
+        description="Renders a SAMPLE КП as HTML using the company's CURRENT document profile "
+        "(branding + layout toggles) — the live preview behind the document-settings panel. "
+        "OWNER only. Returns text/html (no WeasyPrint in the request thread, ARCH-03).",
+        responses={200: OpenApiResponse(description="Sample КП HTML")},
+        tags=["Accounts"],
+    )
+    @action(detail=True, methods=["get"], url_path="document-profile/preview")
+    def document_profile_preview(self, request, pk=None):
+        from django.http import HttpResponse
+
+        from crm.services.documents import render_document_profile_preview_html
+
+        company = self.get_object()
+        if not services.is_company_owner(request.user, company):
+            return Response({"detail": "NOT_COMPANY_OWNER"}, status=status.HTTP_403_FORBIDDEN)
+        html = render_document_profile_preview_html(company)
+        return HttpResponse(html, content_type="text/html; charset=utf-8")
+
+    @extend_schema(
+        summary="Upload company document-profile logo",
+        description="Upload or replace the logo printed in the КП / contract header (multipart/form-data). OWNER only.",
+        request={
+            "multipart/form-data": {
+                "type": "object",
+                "properties": {"logo": {"type": "string", "format": "binary"}},
+            }
+        },
+        responses={200: CompanyDocumentProfileSerializer},
+        tags=["Accounts"],
+    )
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="document-profile/upload-logo",
+        parser_classes=[MultiPartParser, FormParser],
+    )
+    def upload_document_profile_logo(self, request, pk=None):
+        company = self.get_object()
+        profile, error = services.upload_document_profile_logo(request.user, company, request.FILES.get("logo"))
+        if error:
+            http_status = status.HTTP_403_FORBIDDEN if error == "NOT_COMPANY_OWNER" else status.HTTP_400_BAD_REQUEST
+            return Response({"detail": error}, status=http_status)
+        return Response(CompanyDocumentProfileSerializer(profile, context={"request": request}).data)
+
+    @extend_schema(
+        summary="Read / update company КП defaults + numbering",
+        description=(
+            "The selling company's КП defaults (Incoterm, валюта себестоимости, ставка НДС, "
+            "маржа, срок действия) and its document-numbering prefix. GET returns the settings "
+            "(auto-created); PATCH updates them. delivery_basis / cost_currency are sent as "
+            "master-data CODES (e.g. 'USD', 'FCA'). OWNER of THIS company (or platform admin) only."
+        ),
+        request=CompanySettingsSerializer,
+        responses={
+            200: CompanySettingsSerializer,
+            403: OpenApiResponse(description="Only the company OWNER may read/update the settings"),
+        },
+        tags=["Accounts"],
+    )
+    @action(detail=True, methods=["get", "patch"], url_path="settings")
+    def company_settings(self, request, pk=None):
+        company = self.get_object()
+        if not services.is_company_owner(request.user, company):
+            return Response({"detail": "NOT_COMPANY_OWNER"}, status=status.HTTP_403_FORBIDDEN)
+        if request.method == "PATCH":
+            settings_row, error = services.update_company_settings(request.user, company, request.data)
+            if error:
+                http_status = status.HTTP_403_FORBIDDEN if error == "NOT_COMPANY_OWNER" else status.HTTP_400_BAD_REQUEST
+                return Response({"detail": error}, status=http_status)
+        else:
+            settings_row = services.get_company_settings(company)
+        return Response(CompanySettingsSerializer(settings_row, context={"request": request}).data)
