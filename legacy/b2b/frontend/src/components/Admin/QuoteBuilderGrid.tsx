@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Loader2, Sparkles, FileText } from 'lucide-react';
 import { QuoteItem, QuoteEconomics } from '@/api/crmApi';
@@ -18,24 +16,16 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
-import {
-	AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-	AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { QuoteChargesSection } from '@/components/CRM/QuoteChargesSection';
 import { StickyTotalsBar } from '@/components/QuoteBuilder/StickyTotalsBar';
 import { useQuoteDraft, type DraftFieldValue } from '@/components/QuoteBuilder/useQuoteDraft';
 import { useGridKeyboard } from '@/components/QuoteBuilder/useGridKeyboard';
 import { usePricingMirror } from '@/components/QuoteBuilder/usePricingMirror';
 import { cellErrorKey, hiddenErrorFields } from '@/components/QuoteBuilder/bulkErrors';
-import { ExcelPasteDialog } from '@/components/QuoteBuilder/ExcelPasteDialog';
 import { useRowSelection } from '@/components/QuoteBuilder/useRowSelection';
 import { SelectionToolbar } from '@/components/QuoteBuilder/SelectionToolbar';
-import { AICatalogMatchDialog } from '@/components/Admin/AICatalogMatchDialog';
 import { GenerateQuoteDialog } from '@/components/CRM/GenerateQuoteDialog';
-import { QuoteSettingsDialog } from '@/components/CRM/QuoteSettingsDialog';
-import { ReassignProductDialog } from '@/components/CRM/ReassignProductDialog';
-import { QUOTE_ITEMS_BULK_MAX_ROWS, VIRTUALIZE_THRESHOLD, marginToneClass } from '@/components/QuoteBuilder/gridConstants';
+import { VIRTUALIZE_THRESHOLD, marginToneClass } from '@/components/QuoteBuilder/gridConstants';
 import { scrollToRowAndFocusCell } from '@/components/QuoteBuilder/gridScrollFocus';
 import { QuoteBuilderGridProvider, type QuoteBuilderGridContextValue } from '@/components/QuoteBuilder/QuoteBuilderGridContext';
 import { useQuoteBuilderActions } from '@/components/QuoteBuilder/useQuoteBuilderActions';
@@ -43,6 +33,8 @@ import { filterQuoteItems, normalizeFilterQuery } from '@/components/QuoteBuilde
 import { BuilderToolbar } from '@/components/QuoteBuilder/BuilderToolbar';
 import { GridTable } from '@/components/QuoteBuilder/GridTable';
 import { EconomicsRail } from '@/components/QuoteBuilder/EconomicsRail';
+import { GridDialogs } from '@/components/QuoteBuilder/GridDialogs';
+import { useRailState } from '@/components/QuoteBuilder/useRailState';
 
 interface QuoteBuilderGridProps {
 	dealId?: number;
@@ -198,26 +190,8 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 
 	// UI-only state — deliberately kept OUT of draftItems so it never trips hasUnsavedChanges.
 	const [expandedRowId, setExpandedRowId] = useState<number | null>(null);
-	const [railOpen, setRailOpen] = useState<boolean>(() => {
-		try {
-			const saved = localStorage.getItem('kp.rail.open');
-			if (saved !== null) return saved !== 'false'; // an explicit user toggle always wins
-			// Default: open on wide screens, COLLAPSED on laptops (≤~1400px) so the fixed 320px rail
-			// doesn't squeeze the line table into truncation/overflow (audit A1).
-			return typeof window === 'undefined' || window.innerWidth >= 1400;
-		} catch { return true; }
-	});
-	const toggleRail = () => {
-		setRailOpen((open) => {
-			const next = !open;
-			try { localStorage.setItem('kp.rail.open', String(next)); } catch { /* private mode */ }
-			return next;
-		});
-	};
-
-	// Below xl the rail becomes a slide-over Sheet; ≥xl it stays the inline collapsible <aside>.
-	const railAsSheet = useMediaQuery('(max-width: 1279px)');
-	const [railSheetOpen, setRailSheetOpen] = useState(false);
+	// Economics-rail view state (open/collapsed persisted, inline-aside-vs-slide-over Sheet).
+	const { railAsSheet, railOpen, railSheetOpen, setRailSheetOpen, toggleRail } = useRailState();
 	// Below 1200px the cost columns drop out of the main table (economics stay in the row detail).
 	const isCompact = useMediaQuery('(max-width: 1199px)');
 
@@ -230,29 +204,9 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	// Optimistic-lock conflict dialog (волна 3): a save that lost a race to a colleague opens this
 	// instead of writing. `conflictIds` are the stale rows — only the versioned bulk save opens the
 	// dialog, and it always passes a non-empty set (pricing-assist carries no version, so it can't
-	// 409). No empty-ids "reset all" case exists.
-	const queryClient = useQueryClient();
+	// 409). No empty-ids "reset all" case exists. The «Обновить» refresh handler lives in GridDialogs.
 	const [conflictOpen, setConflictOpen] = useState(false);
 	const [conflictIds, setConflictIds] = useState<number[]>([]);
-	// «Обновить»: consciously drop the local edits on the conflicting rows, then refetch quote-items
-	// so the fresh server values re-merge. The seller's stale edits to the conflicting lines are
-	// replaced by the colleague's committed values (spec §5.3).
-	const handleConflictRefresh = () => {
-		const idsToReset = conflictIds;
-		clearDirtyAfterSave(idsToReset);
-		setCellErrors((previous) => {
-			const next = { ...previous };
-			for (const key of Object.keys(next)) {
-				if (idsToReset.includes(Number(key.split(':')[0]))) delete next[key];
-			}
-			return next;
-		});
-		queryClient.invalidateQueries({ queryKey: ['quote-items'] });
-		queryClient.invalidateQueries({ queryKey: ['deals'] });
-		setConflictOpen(false);
-		setConflictIds([]);
-		toast.info(t('quote.conflict.refreshed'));
-	};
 
 	const toggleRow = (id: number) => setExpandedRowId((current) => (current === id ? null : id));
 
@@ -490,56 +444,33 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 						canUndo={canUndo}
 					/>
 
-					<ExcelPasteDialog
-						open={pasteOpen}
-						onOpenChange={(open) => {
-							setPasteOpen(open);
-							if (!open) setPasteRowErrors({});
-						}}
-						initialText={pasteText}
-						maxRows={QUOTE_ITEMS_BULK_MAX_ROWS}
-						submitting={bulkCreateMutation.isPending}
-						rowErrors={pasteRowErrors}
-						onConfirm={actions.handlePasteConfirm}
+					<GridDialogs
+						pasteOpen={pasteOpen}
+						setPasteOpen={setPasteOpen}
+						pasteText={pasteText}
+						pasteRowErrors={pasteRowErrors}
+						setPasteRowErrors={setPasteRowErrors}
+						pasteSubmitting={bulkCreateMutation.isPending}
+						onPasteConfirm={actions.handlePasteConfirm}
+						showAiMatch={showAiMatch}
+						setShowAiMatch={setShowAiMatch}
+						draftItems={draftItems}
+						activeQuote={activeQuote}
+						showSettings={showSettings}
+						setShowSettings={setShowSettings}
+						reassignItemId={reassignItemId}
+						setReassignItemId={setReassignItemId}
+						deleteTarget={deleteTarget}
+						setDeleteTarget={setDeleteTarget}
+						onConfirmDelete={actions.confirmDeleteItem}
+						deletePending={deleteItemMutation.isPending}
+						conflictOpen={conflictOpen}
+						setConflictOpen={setConflictOpen}
+						conflictIds={conflictIds}
+						setConflictIds={setConflictIds}
+						clearDirtyAfterSave={clearDirtyAfterSave}
+						setCellErrors={setCellErrors}
 					/>
-					<AICatalogMatchDialog open={showAiMatch} onOpenChange={setShowAiMatch} items={draftItems} />
-					<QuoteSettingsDialog quote={activeQuote} open={showSettings} onOpenChange={setShowSettings} />
-					<ReassignProductDialog
-						quoteItemId={reassignItemId}
-						open={reassignItemId != null}
-						onOpenChange={(o) => !o && setReassignItemId(null)}
-					/>
-
-					<AlertDialog open={deleteTarget != null} onOpenChange={(o) => !o && setDeleteTarget(null)}>
-						<AlertDialogContent>
-							<AlertDialogHeader>
-								<AlertDialogTitle>{t('quote.deleteItem')}</AlertDialogTitle>
-								<AlertDialogDescription>{t('deleteConfirmations.quoteItemDescription')}</AlertDialogDescription>
-							</AlertDialogHeader>
-							<AlertDialogFooter>
-								<AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-								<AlertDialogAction onClick={actions.confirmDeleteItem} disabled={deleteItemMutation.isPending}>
-									{t('common.delete')}
-								</AlertDialogAction>
-							</AlertDialogFooter>
-						</AlertDialogContent>
-					</AlertDialog>
-
-					{/* Optimistic-lock conflict (волна 3): a colleague saved these lines first. This isn't a
-					    fixable input error — the seller reloads the fresh values, replacing their stale edits. */}
-					<AlertDialog open={conflictOpen} onOpenChange={(o) => !o && setConflictOpen(false)}>
-						<AlertDialogContent>
-							<AlertDialogHeader>
-								<AlertDialogTitle>{t('quote.conflict.title')}</AlertDialogTitle>
-								<AlertDialogDescription>{t('quote.conflict.description')}</AlertDialogDescription>
-							</AlertDialogHeader>
-							<AlertDialogFooter>
-								<AlertDialogAction onClick={handleConflictRefresh}>
-									{t('quote.conflict.refresh')}
-								</AlertDialogAction>
-							</AlertDialogFooter>
-						</AlertDialogContent>
-					</AlertDialog>
 				</div>
 			</QuoteBuilderGridProvider>
 		</TooltipProvider>
