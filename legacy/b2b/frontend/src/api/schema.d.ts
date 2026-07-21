@@ -4162,6 +4162,8 @@ export interface paths {
          *
          *     Quote lifecycle: DRAFT -> SENT -> APPROVED / REJECTED.
          *     Includes PDF generation, send-to-client, approve, and reject actions.
+         *     (The approve/reject/force-approve and approval-chain actions come from
+         *     ``QuoteApprovalMixin`` — the ``operator_permissions`` map lives there too.)
          */
         post: operations["crm_quotes_create"];
         delete?: never;
@@ -4188,6 +4190,8 @@ export interface paths {
          *
          *     Quote lifecycle: DRAFT -> SENT -> APPROVED / REJECTED.
          *     Includes PDF generation, send-to-client, approve, and reject actions.
+         *     (The approve/reject/force-approve and approval-chain actions come from
+         *     ``QuoteApprovalMixin`` — the ``operator_permissions`` map lives there too.)
          */
         put: operations["crm_quotes_update"];
         post?: never;
@@ -4197,6 +4201,8 @@ export interface paths {
          *
          *     Quote lifecycle: DRAFT -> SENT -> APPROVED / REJECTED.
          *     Includes PDF generation, send-to-client, approve, and reject actions.
+         *     (The approve/reject/force-approve and approval-chain actions come from
+         *     ``QuoteApprovalMixin`` — the ``operator_permissions`` map lives there too.)
          */
         delete: operations["crm_quotes_destroy"];
         options?: never;
@@ -4207,6 +4213,8 @@ export interface paths {
          *
          *     Quote lifecycle: DRAFT -> SENT -> APPROVED / REJECTED.
          *     Includes PDF generation, send-to-client, approve, and reject actions.
+         *     (The approve/reject/force-approve and approval-chain actions come from
+         *     ``QuoteApprovalMixin`` — the ``operator_permissions`` map lives there too.)
          */
         patch: operations["crm_quotes_partial_update"];
         trace?: never;
@@ -4468,6 +4476,8 @@ export interface paths {
          *
          *     Quote lifecycle: DRAFT -> SENT -> APPROVED / REJECTED.
          *     Includes PDF generation, send-to-client, approve, and reject actions.
+         *     (The approve/reject/force-approve and approval-chain actions come from
+         *     ``QuoteApprovalMixin`` — the ``operator_permissions`` map lives there too.)
          */
         post: operations["crm_quotes_submit_for_review_create"];
         delete?: never;
@@ -4900,17 +4910,92 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Public КП view/download by token
-         * @description Unauthenticated КП view/download by secret token (client base, CB-public-link).
-         *
-         *     Lets an offline or registered client open the КП the seller emailed them WITHOUT a
-         *     login. Streams the CLIENT projection PDF only (quote_pdf.html exposes no margin/cost/
-         *     charges). Only a SENT (frozen) КП with a token is reachable; an unknown token 404s.
-         *     Rate-limited to blunt token brute-forcing despite the 256-bit space.
+         * Public КП page (HTML) or PDF by token
+         * @description Content-negotiated public КП: HTML page for browsers, client-projection PDF for downloads.
          */
         get: operations["public_quotes_retrieve"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/quotes/{token}/accept/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept КП with email code
+         * @description Verify the one-time code and accept the КП as the offline contact (коммерческий акцепт).
+         */
+        post: operations["public_quotes_accept_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/quotes/{token}/reject/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject КП with reason
+         * @description Reject the КП from the public page — required reason (recoverable, link-gated only).
+         */
+        post: operations["public_quotes_reject_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/quotes/{token}/request-code/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request КП acceptance code
+         * @description Email a one-time acceptance code to the recipient resolved from the QUOTE'S deal.
+         */
+        post: operations["public_quotes_request_code_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/quotes/{token}/viewed/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark public КП as viewed (beacon)
+         * @description Browser BEACON marking a genuine open (fired by page JS, NOT the bare GET).
+         */
+        post: operations["public_quotes_viewed_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -20347,7 +20432,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description КП PDF (client projection) */
+            /** @description Client КП page (browser HTML) or client-projection PDF (?export=pdf) */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -20368,8 +20453,88 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Public link revoked or expired (QUOTE_LINK_REVOKED / QUOTE_LINK_EXPIRED) */
+            /** @description Public link revoked or expired */
             410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    public_quotes_accept_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    public_quotes_reject_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    public_quotes_request_code_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    public_quotes_viewed_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };

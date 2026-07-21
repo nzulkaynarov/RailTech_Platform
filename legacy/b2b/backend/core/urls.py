@@ -76,7 +76,12 @@ from crm.views import (
     LeadViewSet,
     MessageViewSet,
     PaymentViewSet,
+    PublicQuoteAcceptView,
+    PublicQuotePageScriptView,
+    PublicQuoteRejectView,
+    PublicQuoteRequestCodeView,
     PublicQuoteView,
+    PublicQuoteViewedView,
     QuoteChargeViewSet,
     QuoteItemViewSet,
     QuoteRequestDiffView,
@@ -228,7 +233,19 @@ urlpatterns = (
         path("api/v1/admin/break-glass/", BreakGlassView.as_view(), name="admin-break-glass"),
         path("api/v1/admin/access-log/", AdminAccessLogView.as_view(), name="admin-access-log"),
         path("api/v1/crm/leads/", LeadCreateView.as_view(), name="lead-create"),
-        # Public, unauthenticated КП view/download by secret token (client base CB-public-link).
+        # Public, unauthenticated КП surface by secret token (Wave A: page + offline acceptance).
+        # The bare path content-negotiates (browser → HTML page, ?export=pdf → PDF); the action
+        # endpoints (viewed beacon / request-code / accept / reject) are POST-only, JSON.
+        # Tokenless, quote-agnostic page JS (served same-origin for CSP script-src 'self').
+        path("api/v1/public/quote-page.js", PublicQuotePageScriptView.as_view(), name="public-quote-page-js"),
+        path("api/v1/public/quotes/<str:token>/viewed/", PublicQuoteViewedView.as_view(), name="public-quote-viewed"),
+        path(
+            "api/v1/public/quotes/<str:token>/request-code/",
+            PublicQuoteRequestCodeView.as_view(),
+            name="public-quote-request-code",
+        ),
+        path("api/v1/public/quotes/<str:token>/accept/", PublicQuoteAcceptView.as_view(), name="public-quote-accept"),
+        path("api/v1/public/quotes/<str:token>/reject/", PublicQuoteRejectView.as_view(), name="public-quote-reject"),
         path("api/v1/public/quotes/<str:token>/", PublicQuoteView.as_view(), name="public-quote"),
         path("api/v1/system-settings/", SystemSettingsView.as_view(), name="system-settings"),
         path("api/v1/accounts/me/", MeView.as_view(), name="current-user"),

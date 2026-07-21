@@ -285,6 +285,33 @@ def client_optional_items(quote) -> list:
     ]
 
 
+def public_quote_page_context(quote) -> dict:
+    """Full render context for the public КП HTML page (Wave A) — the SAME client projection the
+    PDF renders: `client_projection_items` / `client_optional_items` (charges distributed into
+    per-line delivered prices, NO cost/margin/charges breakout) + the seller branding bundle.
+
+    The page is the browser-facing twin of ``crm/quote_pdf.html``; keeping it on these shared
+    helpers is what guarantees the two documents never diverge and the confidentiality invariant
+    (no landed_cost / margin / FX / goods-vs-charges) holds identically on both surfaces.
+    """
+    from accounts.services.entitlements import quote_send_entitled
+    from crm.services.quotes._shared import _quote_seller_company
+
+    seller_company = _quote_seller_company(quote)
+    context = {
+        "quote": quote,
+        "items": client_projection_items(quote),
+        "optional_items": client_optional_items(quote),
+        "company": quote.deal.company,
+        "public_quote_url": public_quote_url(quote),
+        **document_brand_context(
+            seller_company,
+            is_demo=bool(seller_company) and not quote_send_entitled(seller_company.id),
+        ),
+    }
+    return context
+
+
 def document_brand_context(seller_company, *, is_demo: bool = False) -> dict:
     """The branding bundle every concrete document template feeds the base with. Resolves the
     seller's CompanyDocumentProfile + logo. Safe when `seller_company` is None (renders the

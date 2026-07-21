@@ -70,13 +70,14 @@ def test_public_view_pdf_absent_returns_202_and_enqueues_render(sent_quote):
 
 
 @pytest.mark.django_db
-def test_public_view_pdf_absent_browser_gets_html_interstitial(sent_quote):
-    # A browser (Accept: text/html) opening the emailed link during the race gets a graceful,
-    # self-refreshing «PDF готовится» page (202) rather than raw JSON or a hang.
+def test_public_pdf_export_absent_browser_gets_html_interstitial(sent_quote):
+    # Wave A: a bare browser GET now opens the КП PAGE; the «PDF готовится» interstitial belongs to
+    # the DOWNLOAD path (?export=pdf). A browser hitting ?export=pdf during the render race gets the
+    # graceful, self-refreshing 202 page rather than raw JSON or a hang.
     sent_quote.pdf_file.delete(save=True)
     with mock.patch("crm.tasks.render_document_pdf.delay") as render_delay:
         resp = APIClient().get(
-            f"/api/v1/public/quotes/{sent_quote.public_access_token}/",
+            f"/api/v1/public/quotes/{sent_quote.public_access_token}/?export=pdf",
             SERVER_NAME="localhost",
             HTTP_ACCEPT="text/html,application/xhtml+xml",
         )

@@ -1,0 +1,341 @@
+<!doctype html>
+{% load document_format %}
+{% comment %}
+  Wave A — public КП page (client-facing, CLIENT PROJECTION, no login).
+
+  Server-rendered standalone page (NO SPA, NO login). Opened directly in a browser from the
+  emailed link / QR. CONFIDENTIALITY: renders ONLY the client projection (client_projection_items)
+  — never landed_cost / margin / logistics / customs / FX / goods-vs-charges breakout. Context is
+  built by crm.services.documents.public_quote_page_context — the SAME helpers the PDF uses.
+
+  LEGAL HONESTY: «Принять предложение» / «акцепт» is a commercial acceptance with an audit trail,
+  NOT a qualified e-signature (E-IMZO not implemented). The contract is signed later via MANUAL_MODE.
+
+  CSP: script-src 'self' → page JS is an EXTERNAL static file (page_js_url); no inline <script>,
+  no inline event handlers. style-src allows 'unsafe-inline', so the <style> block is fine.
+{% endcomment %}
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>КП {% if quote.number %}№ {{ quote.number }}{% else %}{{ quote.deal_id }}-{{ quote.version }}{% endif %}</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --accent: {{ accent|default:"#15294d" }};
+      --accent-contrast: {{ accent_contrast|default:"#ffffff" }};
+      --ink: #20242b; --ink-soft: #3c424c; --muted: #7a828f;
+      --line: #e6e9ef; --panel: #f7f9fc; --bg: #eef1f5; --card: #ffffff;
+      --success: #15803d; --danger: #b91c1c;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --ink: #e8eaee; --ink-soft: #c2c7cf; --muted: #9aa0a6;
+        --line: #2a2f38; --panel: #1a1f27; --bg: #0b0f19; --card: #111827; }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 15px; line-height: 1.5; -webkit-text-size-adjust: 100%; }
+    .wrap { max-width: 860px; margin: 0 auto; padding: 16px; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+      padding: 20px; margin-bottom: 16px; }
+    .brandbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start;
+      justify-content: space-between; }
+    .brand-name { font-size: 22px; font-weight: 700; color: var(--accent); }
+    .brand-meta { font-size: 13px; color: var(--muted); margin-top: 2px; }
+    .brand-logo { max-height: 46px; max-width: 140px; }
+    .doc-id { text-align: right; font-size: 13px; color: var(--ink-soft); }
+    .doc-id .doc-no { font-size: 18px; font-weight: 700; color: var(--accent); }
+    .rule { height: 3px; background: var(--accent); border-radius: 3px; margin: 14px 0 18px; }
+    h1.doc-title { font-size: 18px; color: var(--accent); margin: 0 0 14px; }
+    .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 640px) { .parties { grid-template-columns: 1fr; } }
+    .party { border: 1px solid var(--line); border-radius: 8px; padding: 12px; background: var(--panel); }
+    .party h3 { margin: 0 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .5px;
+      color: var(--muted); font-weight: 700; }
+    .party .pname { font-weight: 700; }
+    .party p { margin: 2px 0; font-size: 13px; color: var(--ink-soft); }
+    .table-scroll { overflow-x: auto; }
+    table.lines { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 520px; }
+    table.lines thead th { background: var(--accent); color: var(--accent-contrast);
+      padding: 9px 8px; text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .3px; }
+    table.lines tbody td { padding: 9px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .center { text-align: center; white-space: nowrap; }
+    tr.section-row td { background: var(--panel); border-top: 2px solid var(--accent);
+      font-weight: 700; color: var(--accent); text-transform: uppercase; font-size: 12px; letter-spacing: .3px; }
+    tr.section-row td.section-sub { color: var(--ink); text-transform: none; }
+    tr.note-row td { font-style: italic; color: var(--ink-soft); font-size: 13px; }
+    .item-name { font-weight: 600; }
+    .item-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .totals { margin: 16px 0 0 auto; width: 100%; max-width: 340px; }
+    .totals .row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
+    .totals .row.sep { border-top: 1px solid var(--line); }
+    .totals .row.grand { background: var(--accent); color: var(--accent-contrast);
+      font-weight: 700; padding: 10px 12px; border-radius: 8px; margin-top: 6px; font-size: 16px; }
+    .amount-words { margin-top: 10px; font-size: 13px; color: var(--ink-soft); }
+    .amount-words .k { font-weight: 700; color: var(--ink); }
+    .optional-block { margin-top: 18px; }
+    .optional-block h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .5px;
+      color: var(--accent); margin: 0 0 4px; }
+    .optional-hint { font-size: 12px; color: var(--muted); margin: 0 0 8px; }
+    .manager-box { font-size: 14px; color: var(--ink-soft); }
+    .manager-box .k { font-weight: 700; color: var(--ink); }
+    .terms { margin-top: 14px; }
+    .term-box { border-left: 3px solid var(--accent); background: var(--panel);
+      padding: 8px 12px; margin-bottom: 8px; font-size: 13px; color: var(--ink-soft); }
+    .term-box .k { font-weight: 700; color: var(--ink); }
+    .cta-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 12px 18px; font-size: 15px; font-weight: 600; border-radius: 8px; border: 1px solid var(--line);
+      background: var(--card); color: var(--ink); text-decoration: none; cursor: pointer; }
+    .btn:disabled { opacity: .5; cursor: default; }
+    .btn-primary { background: var(--accent); color: var(--accent-contrast); border-color: var(--accent); }
+    .btn-danger { color: var(--danger); border-color: var(--danger); }
+    .panel { margin-top: 14px; border: 1px solid var(--line); border-radius: 8px; padding: 14px; background: var(--panel); }
+    .panel[hidden] { display: none; }
+    label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+    input[type=text], textarea { width: 100%; padding: 10px 12px; font-size: 15px;
+      border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink); }
+    .code-input { letter-spacing: 6px; font-size: 22px; text-align: center; font-variant-numeric: tabular-nums; }
+    .msg { margin-top: 10px; font-size: 14px; }
+    .msg.error { color: var(--danger); }
+    .msg.ok { color: var(--success); }
+    .status-box { padding: 16px; border-radius: 10px; text-align: center; }
+    .status-box.ok { background: color-mix(in srgb, var(--success) 12%, transparent); }
+    .status-box.info { background: var(--panel); }
+    .status-box h2 { margin: 0 0 6px; font-size: 18px; }
+    .legal-note { font-size: 12px; color: var(--muted); margin-top: 10px; }
+    .footer { text-align: center; font-size: 12px; color: var(--muted); padding: 8px 0 24px; }
+    .demo-banner { background: color-mix(in srgb, var(--danger) 14%, transparent);
+      color: var(--danger); text-align: center; padding: 8px; border-radius: 8px; font-weight: 600;
+      font-size: 13px; margin-bottom: 12px; }
+  </style>
+</head>
+<body
+  data-token="{{ token }}"
+  data-api-base="/api/v1/public/quotes/{{ token }}/"
+  data-recipient-hint="{{ recipient_hint }}">
+  {% with pres_ccy=quote.quote_currency.code|default:"UZS" %}
+  <div class="wrap">
+
+    {% if is_demo %}<div class="demo-banner">ДЕМО — не для коммерческого использования</div>{% endif %}
+
+    <!-- ── Header ── -->
+    <div class="card">
+      <div class="brandbar">
+        <div>
+          {% if seller_logo_url and show_logo %}<img class="brand-logo" src="{{ seller_logo_url }}" alt="logo"><br>{% endif %}
+          <div class="brand-name">{% firstof seller_profile.legal_name seller.name "RailTech B2B" %}</div>
+          <div class="brand-meta">
+            {% if seller_profile.inn %}ИНН {{ seller_profile.inn }}{% elif seller.inn %}ИНН {{ seller.inn }}{% endif %}
+            {% if seller.phone %} · тел. {{ seller.phone }}{% endif %}
+            {% if seller.email %} · {{ seller.email }}{% endif %}
+          </div>
+        </div>
+        <div class="doc-id">
+          <div class="doc-no">КП {% if quote.number %}№ {{ quote.number }}{% else %}{{ quote.deal_id }}-{{ quote.version }}{% endif %}</div>
+          <div>от {{ quote.created_at|date:"d.m.Y" }}</div>
+          {% if quote.valid_until %}<div>Действительно до: {{ quote.valid_until|date:"d.m.Y" }}</div>{% endif %}
+        </div>
+      </div>
+      <div class="rule"></div>
+      <h1 class="doc-title">Коммерческое предложение</h1>
+
+      <div class="parties">
+        <div class="party">
+          <h3>Поставщик</h3>
+          {% if seller_profile %}
+            <div class="pname">{{ seller_profile.legal_name|default:seller.name }}</div>
+            {% if seller_profile.inn %}<p>ИНН: {{ seller_profile.inn }}</p>{% elif seller.inn %}<p>ИНН: {{ seller.inn }}</p>{% endif %}
+            {% if seller_profile.legal_address %}<p>{{ seller_profile.legal_address }}</p>{% elif seller.legal_address %}<p>{{ seller.legal_address }}</p>{% endif %}
+          {% elif seller %}
+            <div class="pname">{{ seller.name }}</div>
+            {% if seller.inn %}<p>ИНН: {{ seller.inn }}</p>{% endif %}
+            {% if seller.legal_address %}<p>{{ seller.legal_address }}</p>{% endif %}
+          {% else %}
+            <div class="pname">RailTech B2B</div>
+            <p>Платформа b2b.railtech.uz</p>
+          {% endif %}
+        </div>
+        <div class="party">
+          <h3>Покупатель</h3>
+          <div class="pname">{{ company.name|default:"—" }}</div>
+          {% if company.inn %}<p>ИНН: {{ company.inn }}</p>{% endif %}
+          {% if company.legal_address %}<p>{{ company.legal_address }}</p>{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Line items (client projection — NO cost/margin) ── -->
+    <div class="card">
+      <div class="table-scroll">
+        <table class="lines">
+          <thead>
+            <tr>
+              <th style="width:6%">№</th>
+              <th>Наименование</th>
+              <th class="center" style="width:12%">Кол-во</th>
+              {% if show_lead_time %}<th class="center" style="width:12%">Срок</th>{% endif %}
+              <th class="num" style="width:16%">Цена, {{ pres_ccy }}</th>
+              <th class="num" style="width:16%">Сумма, {{ pres_ccy }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in items %}
+              {% if item.display_type == "SECTION" %}
+              <tr class="section-row">
+                <td colspan="{% if show_lead_time %}5{% else %}4{% endif %}">{{ item.imported_raw_name|default:"—" }}</td>
+                <td class="num section-sub">{{ item.section_subtotal|money }}</td>
+              </tr>
+              {% elif item.display_type == "NOTE" %}
+              <tr class="note-row">
+                <td colspan="{% if show_lead_time %}6{% else %}5{% endif %}">{{ item.imported_raw_name }}</td>
+              </tr>
+              {% else %}
+              <tr>
+                <td class="num">{{ item.line_no }}</td>
+                <td>
+                  <div class="item-name">{{ item.product.name|default:item.imported_raw_name|default:"—" }}</div>
+                  {% if item.mpn or item.gost_drawing %}
+                  <div class="item-sub">
+                    {% if item.mpn %}Арт.: {{ item.mpn }}{% endif %}
+                    {% if item.mpn and item.gost_drawing %} · {% endif %}
+                    {% if item.gost_drawing %}{{ item.gost_drawing }}{% endif %}
+                  </div>
+                  {% endif %}
+                </td>
+                <td class="center">{{ item.quantity|qty:item.unit }}</td>
+                {% if show_lead_time %}<td class="center">{% if item.lead_time_days %}до {{ item.lead_time_days }} дн.{% else %}&mdash;{% endif %}</td>{% endif %}
+                <td class="num">{{ item.final_price_excl_vat|money }}</td>
+                <td class="num">{{ item.line_total|money }}</td>
+              </tr>
+              {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="totals">
+        <div class="row sep"><span>Итого без НДС:</span><span>{{ quote.total_excl_vat|money:pres_ccy }}</span></div>
+        <div class="row"><span>НДС {{ quote.vat_rate|floatformat:0 }}%:</span><span>{{ quote.vat_amount|money:pres_ccy }}</span></div>
+        <div class="row grand"><span>ИТОГО к оплате:</span><span>{{ quote.total_incl_vat|money:pres_ccy }}</span></div>
+      </div>
+      <div class="amount-words"><span class="k">Сумма прописью:</span> {{ quote.total_incl_vat|money_words:pres_ccy }}</div>
+
+      {% if optional_items %}
+      <div class="optional-block">
+        <h3>Опционально (не входит в итог)</h3>
+        <p class="optional-hint">Позиции ниже предлагаются дополнительно и не включены в сумму «ИТОГО к оплате».</p>
+        <div class="table-scroll">
+          <table class="lines">
+            <thead><tr><th style="width:6%">№</th><th>Наименование</th><th class="center" style="width:12%">Кол-во</th><th class="num" style="width:16%">Цена, {{ pres_ccy }}</th><th class="num" style="width:16%">Сумма, {{ pres_ccy }}</th></tr></thead>
+            <tbody>
+              {% for item in optional_items %}
+              <tr>
+                <td class="num">{{ forloop.counter }}</td>
+                <td><div class="item-name">{{ item.product.name|default:item.imported_raw_name|default:"—" }}</div></td>
+                <td class="center">{{ item.quantity|qty:item.unit }}</td>
+                <td class="num">{{ item.final_price_excl_vat|money }}</td>
+                <td class="num">{{ item.line_total|money }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="terms">
+        <div class="term-box">
+          <span class="k">Срок поставки:</span>
+          {% if quote.effective_delivery_lead_time_days %}до {{ quote.effective_delivery_lead_time_days }} дн.{% else %}по согласованию{% endif %}
+          {% if quote.delivery_basis %} · <span class="k">Базис:</span> {{ quote.delivery_basis.code }}{% if quote.delivery_basis.name %} ({{ quote.delivery_basis.name }}){% endif %}{% endif %}
+        </div>
+        {% if quote.notes %}<div class="term-box"><span class="k">Примечания:</span> {{ quote.notes|linebreaksbr }}</div>{% endif %}
+      </div>
+    </div>
+
+    <!-- ── Manager + CTA ── -->
+    <div class="card">
+      {% if quote.prepared_by %}
+      <div class="manager-box">
+        <span class="k">Ваш менеджер:</span> {% firstof quote.prepared_by.get_full_name quote.prepared_by.email %}{% if quote.prepared_by.email %} · {{ quote.prepared_by.email }}{% endif %}{% if quote.prepared_by.phone %} · тел. {{ quote.prepared_by.phone }}{% endif %}
+      </div>
+      {% endif %}
+
+      <div id="already-decided" class="panel" {% if is_open %}hidden{% endif %}>
+        <div class="status-box {% if is_approved %}ok{% else %}info{% endif %}">
+          {% if is_approved %}
+            <h2>Предложение принято</h2>
+            <p>Спасибо! Коммерческое предложение принято{% if quote.approved_at %} {{ quote.approved_at|date:"d.m.Y H:i" }}{% endif %}. Договор готовится к подписанию — с вами свяжется менеджер.</p>
+          {% elif is_rejected %}
+            <h2>Предложение отклонено</h2>
+            <p>Это предложение было отклонено. Свяжитесь с менеджером, если это ошибка.</p>
+          {% else %}
+            <h2>Действие недоступно</h2>
+            <p>Это предложение сейчас нельзя принять или отклонить онлайн. Свяжитесь с менеджером.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if is_open %}
+      <div id="cta" class="cta-row" style="margin-top:14px">
+        <button type="button" class="btn btn-primary" id="btn-accept">Принять предложение</button>
+        <button type="button" class="btn btn-danger" id="btn-reject">Отклонить…</button>
+        <a class="btn" href="?export=pdf">Скачать PDF</a>
+        {% if quote.prepared_by.email %}<a class="btn" href="mailto:{{ quote.prepared_by.email }}?subject=Вопрос по КП {{ quote.number }}">Задать вопрос</a>{% endif %}
+      </div>
+
+      <!-- Accept: step-up email code -->
+      <div id="accept-panel" class="panel" hidden>
+        <p>Чтобы принять предложение, подтвердите, что вы получатель: мы отправим код на
+          <strong id="recipient-hint">{{ recipient_hint }}</strong>.</p>
+        <button type="button" class="btn btn-primary" id="btn-send-code">Отправить код</button>
+        <div id="code-entry" hidden style="margin-top:12px">
+          <label for="code">Код из письма</label>
+          <input type="text" id="code" class="code-input" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000">
+          <div class="cta-row" style="margin-top:12px">
+            <button type="button" class="btn btn-primary" id="btn-confirm-accept">Принять предложение</button>
+            <button type="button" class="btn" id="btn-resend-code">Отправить код повторно</button>
+          </div>
+        </div>
+        <div class="msg" id="accept-msg" role="status"></div>
+        <p class="legal-note">«Принять предложение» — коммерческий акцепт оферты с фиксацией в журнале.
+          Это не электронная подпись; договор подписывается отдельно.</p>
+      </div>
+
+      <!-- Reject: required reason -->
+      <div id="reject-panel" class="panel" hidden>
+        <label for="reason">Причина отклонения</label>
+        <textarea id="reason" rows="3" placeholder="Укажите причину…"></textarea>
+        <div class="cta-row" style="margin-top:12px">
+          <button type="button" class="btn btn-danger" id="btn-confirm-reject">Отклонить предложение</button>
+          <button type="button" class="btn" id="btn-cancel-reject">Отмена</button>
+        </div>
+        <div class="msg" id="reject-msg" role="status"></div>
+      </div>
+
+      <!-- Success states (revealed by JS) -->
+      <div id="accepted-state" class="panel" hidden>
+        <div class="status-box ok">
+          <h2>Предложение принято</h2>
+          <p id="accepted-detail">Спасибо! Договор готовится к подписанию — с вами свяжется менеджер.</p>
+          <a class="btn" href="?export=pdf" style="margin-top:10px">Скачать PDF</a>
+        </div>
+      </div>
+      <div id="rejected-state" class="panel" hidden>
+        <div class="status-box info">
+          <h2>Предложение отклонено</h2>
+          <p>Мы передали ваш ответ поставщику. Спасибо.</p>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="footer">Документ сформирован в RailTech B2B</div>
+  </div>
+  {% endwith %}
+  <script src="{{ page_js_url }}" defer></script>
+</body>
+</html>
