@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { translateApiError } from '@/lib/apiError';
@@ -52,6 +52,17 @@ export function ContractsPage() {
   const listParams = useListParams(['status'] as const, { defaultOrdering: '-created_at' });
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [cancelTarget, setCancelTarget] = useState<Contract | null>(null);
+
+  // Deep-link support: `#contracts?open=<id>` (used by the buyer's post-accept panel,
+  // Wave A2) auto-opens that contract's detail sheet. Parsed from the hash query — the
+  // SPA is hash-routed, so window.location.search is not where our params live.
+  useEffect(() => {
+    const query = window.location.hash.split('?')[1];
+    if (!query) return;
+    const openId = Number(new URLSearchParams(query).get('open'));
+    if (Number.isFinite(openId) && openId > 0) setSelectedId(openId);
+  }, []);
+
   const [cancelReason, setCancelReason] = useState('');
   const [forceCancelTarget, setForceCancelTarget] = useState<Contract | null>(null);
   const [forceCancelReason, setForceCancelReason] = useState('');

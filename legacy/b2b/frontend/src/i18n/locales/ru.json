@@ -4754,7 +4754,15 @@
     "backToRequests": "К моим заявкам",
     "routedTo": "Направлено",
     "charges": "Надбавки / скидки",
-    "openContract": "Перейти к контракту"
+    "openContract": "Перейти к контракту",
+    "accepted": {
+      "title": "Предложение принято",
+      "readyToSign": "Договор № {{number}} готов к подписанию",
+      "contractReady": "Договор № {{number}} сформирован",
+      "contractPending": "Договор формируется — откройте раздел «Договоры»",
+      "resolving": "Загружаем договор…",
+      "goToContract": "Перейти к договору"
+    }
   },
   "createQuoteDialog": {
     "title": "Создать КП",
