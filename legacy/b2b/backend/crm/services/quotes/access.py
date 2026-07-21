@@ -104,6 +104,28 @@ def apply_company_quote_defaults(quote: Quote, company: Optional[Company]) -> Qu
     return quote
 
 
+def compute_default_valid_until(company: Optional[Company]):
+    """The КП validity date derived from the company's ``default_offer_validity_days`` (Odoo
+    Default Validity), or ``None`` when the company left it unconfigured. PURE — no writes.
+
+    Used on SEND to populate a still-empty ``valid_until`` so every sent КП carries an expiry
+    (the create-time pre-fill in ``apply_company_quote_defaults`` may not have run, or the
+    setting was added after the КП was created). No hardcoded fallback: an unconfigured company
+    yields ``None`` and the КП stays open-ended (today's public-link behaviour)."""
+    if company is None:
+        return None
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from accounts.models import CompanySettings
+
+    settings_row = CompanySettings.objects.filter(company=company).first()
+    if settings_row is None or settings_row.default_offer_validity_days is None:
+        return None
+    return timezone.now().date() + timedelta(days=settings_row.default_offer_validity_days)
+
+
 def _has_legacy_send_role(actor, company_id: int) -> bool:
     """Transitional bridge (ADR-0005 Phase E U3): a member NOT yet migrated to a CompanyRole
     (company_role IS NULL) keeps send iff their legacy WorkspaceRole was OWNER or SALES_MANAGER —
