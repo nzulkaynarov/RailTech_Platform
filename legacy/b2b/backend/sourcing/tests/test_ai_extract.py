@@ -192,7 +192,7 @@ def test_extract_endpoint_enqueues_202(settings, monkeypatch):
     client.force_authenticate(user)
 
     # The visibility-scoped record of truth is resolved in the view BEFORE enqueue.
-    monkeypatch.setattr("sourcing.views._resolve_expected", lambda *a: (Decimal("1000000.00"), "UZS", "quote"))
+    monkeypatch.setattr("sourcing.views_ai._resolve_expected", lambda *a: (Decimal("1000000.00"), "UZS", "quote"))
     captured = {}
 
     def _apply_async(args=None, task_id=None, **kwargs):
