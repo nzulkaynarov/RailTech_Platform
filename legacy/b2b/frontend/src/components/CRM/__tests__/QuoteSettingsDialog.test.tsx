@@ -80,7 +80,7 @@ function makeQuote(overrides: Partial<Quote> = {}): Quote {
   };
 }
 
-const MARGIN_LABEL = 'Маржа КП (%)';
+const MARGIN_LABEL = 'Наценка КП (%)';
 const SAVE_LABEL = 'Сохранить';
 
 describe('QuoteSettingsDialog', () => {

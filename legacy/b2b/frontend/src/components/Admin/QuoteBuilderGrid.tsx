@@ -388,6 +388,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 		railAsSheet, railOpen, railSheetOpen, setRailSheetOpen, toggleRail,
 		scrollContainerRef, gridKeyboardOnKeyDown: gridKeyboard.onKeyDown, handleGridPaste: actions.handleGridPaste,
 		virtualizer, shouldVirtualize,
+		activeTab,
 		gridDensity, toggleGridDensity, rowPaddingY,
 		newItemName, setNewItemName, newItemQty, setNewItemQty, newItemPrice, setNewItemPrice,
 		handleAddItem: actions.handleAddItem, addNameRef, addRowRef, createItemPending: createItemMutation.isPending,

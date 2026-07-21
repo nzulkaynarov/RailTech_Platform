@@ -224,18 +224,14 @@ export function QuoteSettingsDialog({ quote, open, onOpenChange }: QuoteSettings
 							    amounts (the builder + PDF print quote_currency's code). Restrict to UZS
 							    until the engine can target a non-UZS presentation currency. Per-line COST
 							    currency stays multi-currency below. */}
-							<Select value={currency} onValueChange={setCurrency}>
-								<SelectTrigger id="quote-currency">
-									<SelectValue placeholder={t('quote.settings.currencyPlaceholder')} />
-								</SelectTrigger>
-								<SelectContent>
-									{currencies.filter((item) => item.code === 'UZS').map((item) => (
-										<SelectItem key={item.id} value={item.code}>
-											{item.code} — {currencyLabelKey(item.code) ? t(currencyLabelKey(item.code)) : item.name}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
+							{/* КП currency is locked to UZS (see note above) — show it as a read-only value
+							    instead of a one-option Select that reads like an open choice. */}
+							<div
+								id="quote-currency"
+								className="flex h-9 w-full items-center rounded-md border border-input bg-muted px-3 text-sm text-muted-foreground"
+							>
+								{currencyLabelKey('UZS') ? `UZS — ${t(currencyLabelKey('UZS'))}` : 'UZS'}
+							</div>
 							<p className="text-xs text-muted-foreground">{t('quote.settings.currencyHelp')}</p>
 						</div>
 

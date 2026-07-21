@@ -66,7 +66,7 @@ interface BuilderToolbarProps {
 export const BuilderToolbar: React.FC<BuilderToolbarProps> = ({ selectionSlot }) => {
 	const { t } = useTranslation();
 	const {
-		activeQuote, draftItems, visibleItems, showAddRow, setShowAddRow, handleAddSection, handleAddNote,
+		activeTab, activeQuote, draftItems, visibleItems, showAddRow, setShowAddRow, handleAddSection, handleAddNote,
 		openPasteDialog, setShowAiMatch, filterQuery, setFilterQuery, isFiltered,
 		handlePricingAssist, pricingBusy, setShowSettings, railAsSheet, railOpen, setRailSheetOpen,
 		toggleRail, fullscreen, setFullscreen, gridDensity, toggleGridDensity,
@@ -95,7 +95,9 @@ export const BuilderToolbar: React.FC<BuilderToolbarProps> = ({ selectionSlot })
 					</TabsTrigger>
 				</TabsList>
 
-				{selectionSlot ?? (
+				{/* Item-level actions are meaningless on the Расходы tab (the line list is hidden there),
+				    so hide the whole group — and the bulk strip — unless the Позиции tab is active. */}
+				{activeTab === 'items' && (selectionSlot ?? (
 					<div className="flex flex-wrap gap-1.5">
 						<ToolbarAction icon={Plus} label={t('common.add')} onClick={() => setShowAddRow(!showAddRow)} keepLabel />
 						{/* S1: секции/заметки — только пока КП не заморожен (как и все правки позиций). */}
@@ -121,7 +123,7 @@ export const BuilderToolbar: React.FC<BuilderToolbarProps> = ({ selectionSlot })
 							/>
 						)}
 					</div>
-				)}
+				))}
 			</div>
 			<div className="flex items-center gap-1.5">
 				{/* U4: «найти в КП» — narrows the line table without touching totals, margin or Save. */}

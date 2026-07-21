@@ -127,6 +127,9 @@ export interface QuoteBuilderGridContextValue {
 
 	// ── Row density (U7) ──────────────────────────────────────────────────────────────────────
 	/** Current grid row density — `comfortable` (default) or `compact`. */
+	/** Active builder tab — item-level toolbar actions are hidden on the charges tab (they'd act on
+	 *  the hidden line list). */
+	activeTab: 'items' | 'charges';
 	gridDensity: GridDensity;
 	/** Flip comfortable ↔ compact (persisted). Drives BOTH the row padding class + estimateSize. */
 	toggleGridDensity: () => void;

@@ -76,7 +76,11 @@ export const GridTable: React.FC = () => {
 							<TableHead className="w-10 px-1 py-2 sticky left-8 z-30 bg-muted" />
 							{/* B2: `w-full` on the name header makes it the elastic absorber — the table gives it
 							    every pixel the fixed numeric columns don't claim, instead of truncating early. */}
-							<TableHead className="w-full px-2 py-2 text-xs font-semibold text-muted-foreground min-w-[200px] sticky left-18 z-30 bg-muted">
+							{/* B1: the name column is `w-full` (elastic absorber) but NOT horizontally sticky.
+							    A `position:sticky` cell with `width:100%` overflows its own column box by ~44px
+							    and, being z-30 + opaque, painted over the left of the «Кол-во» header (→ «л-во»).
+							    The frozen identity anchor stays the checkbox + chevron; the name scrolls. */}
+							<TableHead className="w-full px-2 py-2 text-xs font-semibold text-muted-foreground min-w-[200px] bg-muted">
 								{t('catalog.table.name')}
 							</TableHead>
 							<TableHead className="px-2 py-2 text-center text-xs font-semibold text-muted-foreground w-20">

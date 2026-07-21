@@ -1,7 +1,7 @@
 import React, { useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { AlertTriangle, Link2, Loader2 } from 'lucide-react';
+import { Link2Off, Link2, Loader2 } from 'lucide-react';
 import type { QuoteItem } from '@/api/crmApi';
 import type { Product } from '@/api/catalogApi';
 import { translateApiError } from '@/lib/apiError';
@@ -181,7 +181,7 @@ export function ProductNameCell({ item, index, onBrowseCandidates, onCommitFreeT
 				<PopoverAnchor asChild>
 					<div className="flex w-full min-w-0 items-center gap-2">
 						{!isBound ? (
-							<AlertTriangle className="size-3 shrink-0 text-warning" aria-label={t('sourcing.noMatch')} />
+							<Link2Off className="size-3 shrink-0 text-muted-foreground" aria-label={t('sourcing.noMatch')} />
 						) : (
 							<Tooltip>
 								<TooltipTrigger asChild>

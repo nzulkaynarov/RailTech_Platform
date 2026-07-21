@@ -154,17 +154,17 @@ describe('QuoteBuilderGrid — row error marker for a hidden field', () => {
 		const marker = await screen.findByRole('button', { name: 'Ошибки в свёрнутых полях' });
 		expect(marker).toBeInTheDocument();
 		// …and the detail auto-expanded, so the customs_duty cell is on screen and invalid.
-		const customsCell = await screen.findByRole('textbox', { name: 'Таможня' });
+		const customsCell = await screen.findByRole('textbox', { name: 'Тамож. платёж, за ед.' });
 		expect(customsCell).toHaveAttribute('aria-invalid', 'true');
 
 		// Collapse the row via the chevron → the detail (and its customs cell) disappears.
 		await user.click(screen.getAllByRole('button', { name: 'Детализация позиции' })[0]);
 		await waitFor(() =>
-			expect(screen.queryByRole('textbox', { name: 'Таможня' })).not.toBeInTheDocument(),
+			expect(screen.queryByRole('textbox', { name: 'Тамож. платёж, за ед.' })).not.toBeInTheDocument(),
 		);
 
 		// Clicking the marker re-expands the detail.
 		await user.click(screen.getByRole('button', { name: 'Ошибки в свёрнутых полях' }));
-		expect(await screen.findByRole('textbox', { name: 'Таможня' })).toBeInTheDocument();
+		expect(await screen.findByRole('textbox', { name: 'Тамож. платёж, за ед.' })).toBeInTheDocument();
 	});
 });

@@ -116,7 +116,7 @@ describe('QuoteBuilderGrid — keyboard navigation', () => {
 		const user = userEvent.setup();
 		renderWithProviders(<QuoteBuilderGrid dealId={42} />);
 
-		const [price1, price2] = screen.getAllByRole('textbox', { name: /Базовая цена/ });
+		const [price1, price2] = screen.getAllByRole('textbox', { name: /Себестоимость/ });
 		await user.click(price1);
 		await user.clear(price1);
 		await user.type(price1, '555');
@@ -143,7 +143,7 @@ describe('QuoteBuilderGrid — keyboard navigation', () => {
 		const user = userEvent.setup();
 		renderWithProviders(<QuoteBuilderGrid dealId={42} />);
 
-		const priceCells = screen.getAllByRole('textbox', { name: /Базовая цена/ });
+		const priceCells = screen.getAllByRole('textbox', { name: /Себестоимость/ });
 		const lastPrice = priceCells[priceCells.length - 1];
 		await user.click(lastPrice);
 		await user.clear(lastPrice);

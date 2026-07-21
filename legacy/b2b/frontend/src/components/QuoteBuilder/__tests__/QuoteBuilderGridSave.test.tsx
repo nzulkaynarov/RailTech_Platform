@@ -205,7 +205,7 @@ describe('QuoteBuilderGrid — «add & continue» row', () => {
 		const qtyInput = qtyInputs[qtyInputs.length - 1];
 		await user.clear(qtyInput);
 		await user.type(qtyInput, '50');
-		const priceInputs = screen.getAllByRole('textbox', { name: /Базовая цена/ });
+		const priceInputs = screen.getAllByRole('textbox', { name: /Себестоимость/ });
 		const priceInput = priceInputs[priceInputs.length - 1];
 		await user.clear(priceInput);
 		await user.type(priceInput, '777,50');

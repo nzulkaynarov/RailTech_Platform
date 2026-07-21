@@ -303,7 +303,7 @@ const GridRowComponent: React.FC<GridRowProps> = ({ item, index, virtualIndex, m
 				    of truncating early and leaving dead space on the right. `min-w-0` on the flex wrapper
 				    lets the inner input actually shrink below its content width (default `min-width:auto`
 				    would otherwise block the chain). */}
-				<TableCell className={cn('w-full px-2 sticky left-18 z-10', rowPaddingY, stickyBg)}>
+				<TableCell className={cn('w-full px-2', rowPaddingY, stickyBg)}>
 					<div className={cn('flex min-w-0 w-full items-center gap-2', isUnderSection && 'ml-1 border-l-2 border-border/60 pl-3')}>
 						{isOptional && (
 							<Badge variant="outline" className="shrink-0 text-xs font-normal text-muted-foreground">
@@ -518,10 +518,15 @@ const GridRowComponent: React.FC<GridRowProps> = ({ item, index, virtualIndex, m
 							<span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('quote.lineDetails')}</span>
 							<div className="flex flex-wrap gap-4">
 								<label className="flex flex-col gap-1">
-									<span className="text-xs text-muted-foreground">{t('quote.hsCode')}</span>
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<span className="w-fit cursor-help text-xs text-muted-foreground">{t('quote.hsCode')}</span>
+										</TooltipTrigger>
+										<TooltipContent>{t('quote.hsCodeHelp')}</TooltipContent>
+									</Tooltip>
 									<Input
 										type="text"
-										placeholder={t('quote.hsCode')}
+										placeholder={t('quote.hsCodePlaceholder')}
 										aria-invalid={!!cellError(item.id, 'hs_code') || undefined}
 										title={cellError(item.id, 'hs_code')}
 										className={cn('h-8 w-40 text-xs font-mono', cellError(item.id, 'hs_code') && 'border-destructive ring-1 ring-destructive')}
@@ -531,7 +536,12 @@ const GridRowComponent: React.FC<GridRowProps> = ({ item, index, virtualIndex, m
 								</label>
 								{canViewCost && (
 									<label className="flex flex-col gap-1">
-										<span className="text-xs text-muted-foreground">{t('quote.customsDuty')}</span>
+										<Tooltip>
+											<TooltipTrigger asChild>
+												<span className="w-fit cursor-help text-xs text-muted-foreground">{t('quote.customsDuty')}</span>
+											</TooltipTrigger>
+											<TooltipContent>{t('quote.customsDutyHelp')}</TooltipContent>
+										</Tooltip>
 										<NumericCell
 											min={0}
 											max={QUOTE_ITEM_MAX_UNIT_PRICE}
@@ -546,7 +556,12 @@ const GridRowComponent: React.FC<GridRowProps> = ({ item, index, virtualIndex, m
 									</label>
 								)}
 								<label className="flex flex-col gap-1">
-									<span className="text-xs text-muted-foreground">{t('quote.leadTime')}</span>
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<span className="w-fit cursor-help text-xs text-muted-foreground">{t('quote.leadTime')}</span>
+										</TooltipTrigger>
+										<TooltipContent>{t('quote.leadTimeHelp')}</TooltipContent>
+									</Tooltip>
 									<NumericCell
 										min={0}
 										maxFractionDigits={0}
@@ -560,7 +575,12 @@ const GridRowComponent: React.FC<GridRowProps> = ({ item, index, virtualIndex, m
 								</label>
 								{canViewCost && (
 									<label className="flex flex-col gap-1">
-										<span className="text-xs text-muted-foreground">{t('quote.discountPercent')}</span>
+										<Tooltip>
+											<TooltipTrigger asChild>
+												<span className="w-fit cursor-help text-xs text-muted-foreground">{t('quote.discountPercent')}</span>
+											</TooltipTrigger>
+											<TooltipContent>{t('quote.discountHelp')}</TooltipContent>
+										</Tooltip>
 										<NumericCell
 											min={0}
 											max={100}
