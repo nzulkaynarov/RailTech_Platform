@@ -13132,6 +13132,43 @@
                 }
             }
         },
+        "/api/v1/crm/quotes/{id}/approval-preview/": {
+            "get": {
+                "operationId": "crm_quotes_approval_preview_retrieve",
+                "description": "Read-only Salesforce-style Approval Preview: the would-be reviewers + mandatory head (names / roles), and whether the КП would auto-approve because the only approver is the submitter. Builds and persists NOTHING (no side effects). Seller-side only — the same quote.build gate as submit-for-review; feeds the «кто должен согласовать» preview in the send dialog.",
+                "summary": "Preview the КП approval chain (who would approve if submitted now)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Коммерческое предложение.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{would_auto_approve, below_floor, steps:[{...}]}"
+                    },
+                    "403": {
+                        "description": "Not permitted"
+                    },
+                    "404": {
+                        "description": "Quote not found"
+                    }
+                }
+            }
+        },
         "/api/v1/crm/quotes/{id}/approve/": {
             "post": {
                 "operationId": "crm_quotes_approve_create",
@@ -13610,6 +13647,64 @@
                     },
                     "403": {
                         "description": "Not authorized"
+                    }
+                }
+            }
+        },
+        "/api/v1/crm/quotes/{id}/revoke-public-link/": {
+            "post": {
+                "operationId": "crm_quotes_revoke_public_link_create",
+                "description": "Seller pulls the shared client link (post-send panel). Idempotent; further opens return 410 QUOTE_LINK_REVOKED. Same authorization as send-to-client.",
+                "summary": "Revoke the public no-login link of a sent КП",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Коммерческое предложение.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/QuoteRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/QuoteRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/QuoteRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Quote"
+                                }
+                            }
+                        },
+                        "description": ""
                     }
                 }
             }
@@ -25179,6 +25274,27 @@
                         "title": "Дата заморозки цен",
                         "description": "Момент фиксации цен при отправке клиенту"
                     },
+                    "first_viewed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true,
+                        "title": "Впервые просмотрено клиентом",
+                        "description": "Момент первого реального открытия публичной страницы КП клиентом (маркер, не статус)"
+                    },
+                    "public_token_revoked": {
+                        "type": "boolean",
+                        "readOnly": true,
+                        "title": "Публичная ссылка отозвана",
+                        "description": "Если включено — публичная ссылка на КП больше не открывается (410)"
+                    },
+                    "public_access_token": {
+                        "type": "string",
+                        "readOnly": true,
+                        "nullable": true,
+                        "title": "Публичный токен доступа",
+                        "description": "Секретный токен для просмотра/скачивания КП клиентом без входа"
+                    },
                     "approved_by": {
                         "type": "integer",
                         "readOnly": true,
@@ -25246,12 +25362,15 @@
                     "delivery_basis_data",
                     "economics",
                     "effective_delivery_lead_time_days",
+                    "first_viewed_at",
                     "fx_market",
                     "fx_snapshot",
                     "id",
                     "items",
                     "number",
                     "prepared_by",
+                    "public_access_token",
+                    "public_token_revoked",
                     "status_code",
                     "status_name",
                     "subtotal_excl_vat",

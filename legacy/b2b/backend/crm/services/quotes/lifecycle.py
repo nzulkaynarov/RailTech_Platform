@@ -176,11 +176,27 @@ class QuoteLifecycleService:
 
             quote.number = next_document_number("KP", "КП", seller_company)
 
+        # Default offer validity (Odoo Default Validity): a sent КП should carry an expiry. If
+        # valid_until is still unset and the ISSUING company configured default_offer_validity_days,
+        # populate it now — the create-time pre-fill may not have run, or the setting was added
+        # later. Left None when the company hasn't configured a default (open-ended, today's public
+        # link behaviour). seller_company is None on a superuser/platform send → no validity.
+        from crm.services.quotes.access import compute_default_valid_until
+
+        validity_fields = []
+        if quote.valid_until is None:
+            default_valid_until = compute_default_valid_until(seller_company)
+            if default_valid_until is not None:
+                quote.valid_until = default_valid_until
+                validity_fields.append("valid_until")
+
         # Freeze prices
         sent_status = QuoteStatus.objects.filter(code=QuoteStatusCode.SENT).first()
         quote.status = sent_status
         quote.frozen_at = timezone.now()
-        quote.save(update_fields=["status", "number", "frozen_at", "public_access_token", "updated_at"])
+        quote.save(
+            update_fields=["status", "number", "frozen_at", "public_access_token", *validity_fields, "updated_at"]
+        )
 
         # AI-калибровка: the sent КП is the ground truth for the draft's AI match candidates.
         from crm.services.ai_telemetry import finalize_outcomes_on_send
@@ -253,6 +269,31 @@ class QuoteLifecycleService:
             quote_id, approved_by_user=None, contact_email=contact_email, request_ip=request_ip
         )
 
+    @staticmethod
+    def revoke_public_link(quote_id: int, actor: CustomUser) -> Quote:
+        """Seller revokes the public no-login link (Wave B post-send panel).
+
+        Idempotent: sets ``public_token_revoked=True`` so ``public_quote_gate`` returns
+        QUOTE_LINK_REVOKED (410) on any further open. The 256-bit token itself is NOT rotated
+        (re-sending the same КП version keeps its citable number/link); a fresh link is minted by
+        issuing a new version. Records a timeline event so the audit shows who pulled the link.
+        """
+        from ._shared import _log_quote
+
+        quote = Quote.objects.select_related("deal", "status").get(pk=quote_id)
+        if not quote.public_token_revoked:
+            quote.public_token_revoked = True
+            quote.save(update_fields=["public_token_revoked", "updated_at"])
+            _log_quote(
+                quote,
+                actor,
+                "Публичная ссылка отозвана",
+                f"КП v{quote.version} ({quote.number or '—'})",
+                event_code="quote.link_revoked",
+                event_params={"version": quote.version},
+            )
+        return quote
+
     # ── Internal approval chain (документооборот) ──────────────────────────
     # DRAFT → PENDING_TRADE_REVIEW → PENDING_APPROVAL → READY_TO_SEND → (send).
     # Each step is gated by the actor's WorkspaceRole in the company that owns the
@@ -304,10 +345,27 @@ class QuoteLifecycleService:
         # Unified approval workflow: build the permission-driven step list (mandatory head +
         # optional reviewer(s) + risk-aware reason), then route. Source of truth = the steps,
         # not a granular status — the КП goes to a single «На согласовании» (PENDING_APPROVAL).
-        from crm.services.approvals import _active_order, _notify_order, build_approval_chain
+        from crm.services.approvals import (
+            _active_order,
+            _notify_order,
+            auto_approve_solo_chain,
+            build_approval_chain,
+        )
 
         build_approval_chain(quote, company_id, economics=economics)
         _set_quote_status(quote, QuoteStatusCode.PENDING_APPROVAL)
+
+        # Salesforce «no approval rule triggered / only approver is the submitter» pattern: when
+        # every step of the freshly-built chain is assigned to the submitter themselves (a solo
+        # company, or the company admin submitting their own КП), auto-approve instantly →
+        # READY_TO_SEND, with an audited «согласовано автоматически» journal event. A genuine
+        # cross-person chain (a different head, a ВЭД reviewer, a below-floor escalation to
+        # someone else) is untouched and routes exactly as today. Removes ritual, not control —
+        # the below-floor justification gate still fires at send.
+        if auto_approve_solo_chain(quote, actor):
+            quote.refresh_from_db()
+            return quote, None
+
         first_order = _active_order(quote)
         if first_order is not None:
             _notify_order(quote, first_order)

@@ -4239,6 +4239,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/crm/quotes/{id}/approval-preview/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Preview the КП approval chain (who would approve if submitted now)
+         * @description Read-only Salesforce-style Approval Preview: the would-be reviewers + mandatory head (names / roles), and whether the КП would auto-approve because the only approver is the submitter. Builds and persists NOTHING (no side effects). Seller-side only — the same quote.build gate as submit-for-review; feeds the «кто должен согласовать» preview in the send dialog.
+         */
+        get: operations["crm_quotes_approval_preview_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/quotes/{id}/approve/": {
         parameters: {
             query?: never;
@@ -4413,6 +4433,26 @@ export interface paths {
          * @description Client rejects the quote with an optional reason.
          */
         post: operations["crm_quotes_reject_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/quotes/{id}/revoke-public-link/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revoke the public no-login link of a sent КП
+         * @description Seller pulls the shared client link (post-send panel). Idempotent; further opens return 410 QUOTE_LINK_REVOKED. Same authorization as send-to-client.
+         */
+        post: operations["crm_quotes_revoke_public_link_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -10126,6 +10166,22 @@ export interface components {
              * @description Момент фиксации цен при отправке клиенту
              */
             frozen_at?: string | null;
+            /**
+             * Впервые просмотрено клиентом
+             * Format: date-time
+             * @description Момент первого реального открытия публичной страницы КП клиентом (маркер, не статус)
+             */
+            readonly first_viewed_at: string | null;
+            /**
+             * Публичная ссылка отозвана
+             * @description Если включено — публичная ссылка на КП больше не открывается (410)
+             */
+            readonly public_token_revoked: boolean;
+            /**
+             * Публичный токен доступа
+             * @description Секретный токен для просмотра/скачивания КП клиентом без входа
+             */
+            readonly public_access_token: string | null;
             /**
              * Одобрил
              * @description Кто одобрил коммерческое предложение
@@ -19062,6 +19118,41 @@ export interface operations {
             };
         };
     };
+    crm_quotes_approval_preview_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Коммерческое предложение. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description {would_auto_approve, below_floor, steps:[{...}]} */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not permitted */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Quote not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     crm_quotes_approve_create: {
         parameters: {
             query?: never;
@@ -19376,6 +19467,34 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    crm_quotes_revoke_public_link_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Коммерческое предложение. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuoteRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["QuoteRequest"];
+                "multipart/form-data": components["schemas"]["QuoteRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Quote"];
+                };
             };
         };
     };
