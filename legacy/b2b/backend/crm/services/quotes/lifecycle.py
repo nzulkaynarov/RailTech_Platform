@@ -1,12 +1,18 @@
 """КП lifecycle state machine — render/send/approve/reject/submit/force-approve.
 
 Split out of the monolithic ``crm/services/quotes.py`` (ARCH refactor) — behaviour
-unchanged. NOTE (file-length exception): ``QuoteLifecycleService`` is a single cohesive
-transactional state-machine class (~500 lines). Per the project's file-split rule, a
-single class that is physically >500 lines may stay intact when splitting it across
-modules would harm readability — that applies here (the methods share the same guard
-vocabulary and FSM invariants), so the class is kept whole rather than fractured into
-render/approval mixins. Depends on the leaf ``_shared`` helpers and ``pricing`` only.
+unchanged. ``QuoteLifecycleService`` is a single cohesive transactional state-machine
+class; its methods share the same guard vocabulary and FSM invariants, so the class is
+kept whole here rather than fractured into render/approval mixins. Under the project's
+500-line file limit (DT3), the leaf, side-effect-free helpers are split into siblings:
+
+  * ``lifecycle_gates`` — the pure render / send / submit precondition checks
+    (KYC-floor / entitlement / loss-prevention / below-floor policy in ONE place).
+  * ``lifecycle_audit`` — the timeline events + client notification emitted on send.
+
+The class methods orchestrate: fetch → gate → mutate → side-effect. ``compute_quote_economics``
+is imported HERE (not re-derived in the gates) so the below-floor send tests can patch
+``crm.services.quotes.lifecycle.compute_quote_economics``.
 """
 
 import logging
@@ -16,56 +22,32 @@ from django.db import transaction
 
 from accounts.constants import SystemRoleCode
 from accounts.models import CustomUser
-from accounts.services.permissions import routed_seller_company_id
 from core.audit import log_admin_action
 from crm.constants import DealStageCode, QuoteStatusCode
 from crm.models import Quote, QuoteStatus
 from crm.services.deals import transition_deal_stage
 
+from . import lifecycle_audit
 from ._shared import (
     _log_quote,
     _notify_quote_outcome,
     _quote_client_display_name,
-    _quote_owner_company_id,
-    _quote_seller_company,
     _set_quote_status,
-    resolve_quote_recipient,
+)
+from .lifecycle_gates import (
+    assert_renderable,
+    assert_send_economics,
+    assert_sendable,
+    assert_submittable,
+    resolve_submit_company,
 )
 from .pricing import compute_quote_economics
 
 logger = logging.getLogger(__name__)
 
-# S7a (DealHub margin-floor guardrail): the free-text justification required when a КП is
-# sent BELOW the company margin floor. Capped so it can't be abused as a free-text dump.
-BELOW_FLOOR_JUSTIFICATION_MAX_LEN = 500
-
 
 class QuoteLifecycleService:
     """Manages Quote state transitions: generate PDF, send, approve, reject."""
-
-    @staticmethod
-    def _assert_renderable(quote: Quote):
-        """КП render guards; returns the issuing seller company.
-
-        - An unclaimed buyer-request КП (prepared_by NULL) has NO issuing seller, so
-          rendering it would brand a "коммерческое предложение" with the platform
-          identity ("RailTech B2B") — misrepresenting the supplier on a commercial
-          document (audit F1) → QUOTE_NOT_CLAIMED.
-        - HOLE 2 (loss-prevention): the render/export surface was the gate bypass — a
-          seller could generate a КП PDF on a DRAFT at the placeholder rate 1 (or below
-          cost) and hand it to the client out-of-band, never touching submit/send.
-          Refuse a client document whose numbers are wrong (no FX rate) or loss-making —
-          the same gate as send_to_client.
-        """
-        seller_company = _quote_seller_company(quote)
-        if seller_company is None:
-            raise ValueError("QUOTE_NOT_CLAIMED")
-        economics = compute_quote_economics(quote)
-        if economics["fx_missing"]:
-            raise ValueError("FX_RATE_MISSING")
-        if economics["below_cost"]:
-            raise ValueError("QUOTE_BELOW_COST")
-        return seller_company
 
     @staticmethod
     def assert_pdf_renderable(quote_id: int) -> None:
@@ -75,7 +57,7 @@ class QuoteLifecycleService:
         WeasyPrint render itself happens off-thread in crm.tasks.render_document_pdf.
         """
         quote = Quote.objects.select_related("deal__company", "prepared_by").prefetch_related("items").get(pk=quote_id)
-        QuoteLifecycleService._assert_renderable(quote)
+        assert_renderable(quote)
 
     @staticmethod
     @transaction.atomic
@@ -95,7 +77,7 @@ class QuoteLifecycleService:
             .get(pk=quote_id)
         )
 
-        seller_company = QuoteLifecycleService._assert_renderable(quote)
+        seller_company = assert_renderable(quote)
         # Shared branding bundle (issuing company + its document profile + logo) — the same
         # shape every document feeds the base template. Watermark «ДЕМО» whenever the seller
         # cannot commercially SEND this КП (explicit DEMO grant, no operational subscription,
@@ -162,90 +144,21 @@ class QuoteLifecycleService:
         """
         from django.utils import timezone
 
-        from notifications.models import Notification, NotificationType
-
         quote = Quote.objects.select_related(
             "deal__company", "deal__client", "deal__contact", "deal__stage", "status"
         ).get(pk=quote_id)
 
-        # Status guard: only an internally-approved КП (READY_TO_SEND — it passed
-        # the sales → ВЭД → director chain) may go out to the client.
-        current = quote.status.code if quote.status else "None"
-        if current != QuoteStatusCode.READY_TO_SEND:
-            raise ValueError(
-                f"Cannot send quote in status '{current}'. "
-                "Only READY_TO_SEND quotes (internally approved) can be sent to the client."
-            )
+        # Send preconditions (status / recipient / claim / KYC-floor / entitlement) — the
+        # full guard rationale lives in lifecycle_gates.assert_sendable. Returns the issuing
+        # seller company (used for КП-number minting below).
+        seller_company = assert_sendable(quote, sent_by_user)
 
-        # RECIPIENT GATE (B5): a КП with nobody to send it to must not be marked SENT. The async
-        # email task used to log a warning and return `no_recipient` while the КП was already
-        # frozen + SENT and the deal moved to QUOTE_SENT — «отправлено в никуда», invisible to the
-        # seller. Synchronous and BEFORE any state change, using the SAME resolver the task uses,
-        # so the two can never disagree about what "has a recipient" means.
-        if resolve_quote_recipient(quote) is None:
-            raise ValueError("RECIPIENT_REQUIRED")
-
-        # An unclaimed КП has no issuing seller (e.g. the preparer's membership was deactivated
-        # after the КП was claimed) — refuse to send rather than freeze it under the PLATFORM
-        # identity, mint a platform-branded number, and then have the async PDF render fail
-        # (audit M2). Mirrors the generate_pdf QUOTE_NOT_CLAIMED guard so the failure surfaces
-        # synchronously to the sender. A superuser send is the platform-escalation/orchestrator
-        # path (no company membership by design) and is allowed through with platform branding.
-        seller_company = _quote_seller_company(quote)
-        if seller_company is None and not getattr(sent_by_user, "is_superuser", False):
-            raise ValueError("QUOTE_NOT_CLAIMED")
-
-        # Wave E F3 / B5 — RECIPIENT GATE. A company-less «калькулятор» draft (Deal.company
-        # NULL, no contact, no registered client) has NOBODY to send to: the email task would
-        # log "no recipient" and skip, yet the КП would be frozen, numbered and marked SENT —
-        # "sent into the void". Refuse SYNCHRONOUSLY so the seller is prompted to pick or
-        # create a recipient first. NOTE: a parallel lane (fix/wave-a-money-path) introduces
-        # `resolve_quote_recipient` in `_shared.py` raising this SAME code from this same
-        # guard slot; on merge, keep that richer resolver and drop this block — the contract
-        # ({"detail": "RECIPIENT_REQUIRED"}) is identical either way.
-        deal_for_send = quote.deal
-        if not (deal_for_send.company_id or deal_for_send.contact_id or deal_for_send.client_id):
-            raise ValueError("RECIPIENT_REQUIRED")
-
-        # SELLER FLOOR (ADR-0006 Phase E): «без KYC только демо». A seller must be KYC-verified (L2+)
-        # to send a real КП — checked first so an unverified seller gets a clear "do KYC" message
-        # rather than a generic billing error. Then the MONETIZATION GATE (Move 4): sending is a PAID
-        # action needing the quote.send entitlement (an operational subscription grants it). A
-        # demo/unsubscribed seller can build the КП but not send it. Superuser = platform escalation.
-        if seller_company is not None and not getattr(sent_by_user, "is_superuser", False):
-            from accounts.services import quote_send_entitled
-            from accounts.services.kyc import company_kyc_verified
-
-            if not company_kyc_verified(seller_company.id):
-                raise ValueError("SELLER_KYC_REQUIRED")
-            if not quote_send_entitled(seller_company.id):
-                raise ValueError("QUOTE_SEND_NOT_ENTITLED")
-
-        # LOSS PREVENTION (authoritative server gate): never send a КП priced below its landed
-        # cost — even if items/charges were edited after the internal approval. Mirrors the
-        # live G1 guardrail in the builder; can't be bypassed via the API.
-        # A value-less КП (no priced lines) must not go to the client even if it carries charges
-        # (HOLE 4 — submit had this guard, send did not; items can change after READY_TO_SEND).
-        if (quote.subtotal_excl_vat or 0) <= 0:
-            raise ValueError("QUOTE_HAS_UNPRICED_LINES")
-        _econ = compute_quote_economics(quote)
-        if _econ["fx_missing"]:
-            raise ValueError("FX_RATE_MISSING")
-        if _econ["below_cost"]:
-            raise ValueError("QUOTE_BELOW_COST")
-
-        # BELOW-FLOOR GUARDRAIL (S7a, DealHub standard): sending a КП under the company margin
-        # FLOOR is allowed (self-approve — NOT approval-routing, unlike the hard below_cost block)
-        # but must carry a written justification that lands in the audit trail. Length-capped so it
-        # can't be abused. Above-floor sends require nothing and log no special event. The gate is
-        # server-authoritative: it fires even for a sender WITHOUT cost visibility (who never saw
-        # below_floor on the client), so the SPA re-prompts on the error code.
+        # Economics + below-floor guardrail. compute_quote_economics is resolved via THIS
+        # module's global so the below-floor send tests can patch it.
         justification = (justification or "").strip()
-        if len(justification) > BELOW_FLOOR_JUSTIFICATION_MAX_LEN:
-            raise ValueError("JUSTIFICATION_TOO_LONG")
-        below_floor = bool(_econ["below_floor"])
-        if below_floor and not justification:
-            raise ValueError("BELOW_FLOOR_JUSTIFICATION_REQUIRED")
+        economics = compute_quote_economics(quote)
+        assert_send_economics(quote, economics, justification)
+        below_floor = bool(economics["below_floor"])
 
         # Mint the public no-login access token once (idempotent across re-sends of the
         # same КП version). Lets an offline/registered client open the client projection
@@ -276,34 +189,11 @@ class QuoteLifecycleService:
 
         finalize_outcomes_on_send(quote)
 
-        # Counterparty timeline (Phase A): the send was only visible as a stage flip before —
-        # record it as a first-class event on the client's history.
-        _log_quote(
-            quote,
-            sent_by_user,
-            "КП отправлено клиенту",
-            f"КП v{quote.version} ({quote.number})",
-            event_code="quote.sent",
-            event_params={"version": quote.version, "number": quote.number},
-        )
-
-        # S7a: separate, first-class audit event when the offer went out below the margin floor —
-        # captures the seller's written justification so the below-floor decision is traceable.
+        # Counterparty timeline events (see lifecycle_audit): the plain send, plus a separate
+        # first-class below-floor event carrying the seller's written justification.
+        lifecycle_audit.log_quote_sent(quote, sent_by_user)
         if below_floor:
-            _log_quote(
-                quote,
-                sent_by_user,
-                "КП отправлено ниже минимальной маржи",
-                justification,
-                event_code="quote.sent_below_floor",
-                event_params={
-                    "version": quote.version,
-                    "number": quote.number,
-                    "margin_percent": str(_econ["gross_margin_percent"]),
-                    "floor_percent": str(_econ["min_margin_percent"]),
-                    "justification": justification,
-                },
-            )
+            lifecycle_audit.log_below_floor_send(quote, sent_by_user, justification, economics)
 
         # Email the КП off the request thread, after commit (F1.6 — no render inside the
         # atomic block, no orphan on rollback). The task renders the PDF if needed, then
@@ -334,22 +224,8 @@ class QuoteLifecycleService:
         if stage_err:
             raise ValueError(stage_err)
 
-        # Create notification for client contact
-        if quote.deal.client:
-            info_type = NotificationType.objects.filter(code="INFO").first()
-            # N2: name the SENDER + deal + the next action, so the client sees WHAT arrived, from
-            # WHOM, and what to do — not a status line with no context.
-            seller_name = getattr(quote.seller_company, "name", None) or "Поставщик"
-            deal_ref = quote.deal.title or f"#{quote.deal_id}"
-            Notification.objects.create(
-                user=quote.deal.client,
-                type=info_type,
-                title="Новое КП от поставщика",
-                message=f"«{seller_name}» отправил вам КП v{quote.version} по сделке «{deal_ref}» — "
-                f"откройте, чтобы принять или отклонить.",
-                link="/cabinet/deals",
-                deal=quote.deal,
-            )
+        # Create notification for the client contact (see lifecycle_audit).
+        lifecycle_audit.notify_client_new_quote(quote)
 
         return quote
 
@@ -431,52 +307,22 @@ class QuoteLifecycleService:
         """Sales submits a built КП into the chain. DRAFT → PENDING_TRADE_REVIEW,
         or straight to PENDING_APPROVAL if the company has no ВЭД member."""
         quote = Quote.objects.select_related("status", "prepared_by", "deal").get(pk=quote_id)
-        # Resolve the КП-owning company WITHOUT mutating anything first (audit F0):
-        #   • already-claimed КП → the preparer's company;
-        #   • unclaimed buyer-request КП → the submitter MAY claim it, but ONLY if they are
-        #     a can_sell seller routed to THIS deal. Anchoring prepared_by before this check
-        #     let any authenticated user (even a buyer) hijack the КП + drive its approval
-        #     chain cross-tenant, and the write committed even on a rejected call.
-        if quote.prepared_by_id:
-            company_id = _quote_owner_company_id(quote)
-            if not company_id:
-                return None, "NO_QUOTE_COMPANY"
-        else:
-            company_id = routed_seller_company_id(actor, quote.deal_id)
-            if not company_id:
-                return None, "ROLE_NOT_PERMITTED"
-        # ADR-0005 Phase E U3 Step 2: gate the approval-chain ENTRY on the quote.build CompanyRole
-        # permission instead of the SALES_MANAGER WorkspaceRole — the ADR intent is "gate on the
-        # capability, not the role title". Effective policy shift (intended, within-tenant only):
-        #   • member WITH a CompanyRole → passes iff that role grants quote.build (an OWNER/SALES_MANAGER
-        #     WorkspaceRole no longer overrides a restrictive CompanyRole — CompanyRole is authoritative);
-        #   • company_role-less member → fallback: quote.build ∈ _SELL_PERMS → grants ANY can_sell member
-        #     of the owning company (broader than the old SALES_MANAGER/OWNER-only gate, but same-tenant
-        #     and capability-based; it collapses to precise once tenants are fully on CompanyRoles).
-        # No buyer/cross-tenant leak (member_has_permission scopes to company_id; a can_sell=False buyer
-        # is denied). Dev data-check: 0 of 13 active SALES_MANAGER/OWNER members lose submit. can_send
-        # (the only NARROWING site) stays on WorkspaceRole until the Step-4 coverage migration.
-        from accounts.services.permissions import member_has_permission
 
-        if not member_has_permission(actor, company_id, "quote.build"):
-            return None, "ROLE_NOT_PERMITTED"
-        if not quote.status or quote.status.code != QuoteStatusCode.DRAFT:
-            return None, "INVALID_STATUS"
-        # A commercial offer cannot enter the approval chain with NO value: reject a КП whose
-        # total is zero/negative (the "half-priced / unpriced КП" gap — it could otherwise be
-        # approved and sent to the client at 0,00). Keyed on the КП TOTAL (not per-line) so a
-        # deliberately-free line (included item, sample, 100% promo discount) among priced lines
-        # is still allowed — only a genuinely value-less offer is blocked (audit M6).
-        if (quote.subtotal_excl_vat or 0) <= 0:
-            return None, "QUOTE_HAS_UNPRICED_LINES"
-        # LOSS PREVENTION (hard stop): a КП whose client total is below its landed cost would be
-        # sold at a loss — never allow it into the approval chain. Below the margin FLOOR is a
-        # softer signal (warn + approval on the client side), NOT a hard block here.
-        _econ = compute_quote_economics(quote)
-        if _econ["fx_missing"]:
-            return None, "FX_RATE_MISSING"
-        if _econ["below_cost"]:
-            return None, "QUOTE_BELOW_COST"
+        # Resolve the КП-owning company WITHOUT mutating anything (audit F0) and gate the
+        # approval-chain ENTRY on the quote.build CompanyRole permission — see
+        # lifecycle_gates.resolve_submit_company for the full F0/H2 + ADR-0005 rationale.
+        company_id, err = resolve_submit_company(quote, actor)
+        if err:
+            return None, err
+
+        # Status + value + loss-prevention gate (see lifecycle_gates.assert_submittable).
+        # compute_quote_economics is resolved via this module's global and reused for the
+        # approval-chain build below.
+        economics = compute_quote_economics(quote)
+        err = assert_submittable(quote, economics)
+        if err:
+            return None, err
+
         # All gates passed — NOW it is safe to claim the КП: anchor BOTH the preparer and the
         # owning seller company to the VERIFIED company resolved above (audit F0/H2), so the
         # rest of the chain, the document header and the КП number all resolve to ONE coherent
@@ -502,7 +348,7 @@ class QuoteLifecycleService:
         # not a granular status — the КП goes to a single «На согласовании» (PENDING_APPROVAL).
         from crm.services.approvals import _active_order, _notify_order, build_approval_chain
 
-        build_approval_chain(quote, company_id, economics=_econ)
+        build_approval_chain(quote, company_id, economics=economics)
         _set_quote_status(quote, QuoteStatusCode.PENDING_APPROVAL)
         first_order = _active_order(quote)
         if first_order is not None:
