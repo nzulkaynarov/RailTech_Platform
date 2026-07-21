@@ -17,3 +17,14 @@ export function useHasCompanyPermission(permission: string): boolean {
   if (!permissions || permissions.length === 0) return isOwner;
   return permissions.includes(permission);
 }
+
+/**
+ * Wave B2 (auto-claim) — true when the acting seller is effectively the only member who can claim
+ * routed work, so «Взять в работу» is pure noise (claim routes work between teammates; with one it
+ * routes nothing). Drives HIDING the claim button, never a business gate — the backend still owns
+ * claim/assignment. Reads the OPTIONAL `capabilities.is_solo_seller` flag the backend (B1) surfaces
+ * on /me; while it is undefined this returns false and claim keeps its prior behaviour.
+ */
+export function useIsSoloSeller(): boolean {
+  return useUserStore((s) => s.capabilities?.is_solo_seller === true);
+}

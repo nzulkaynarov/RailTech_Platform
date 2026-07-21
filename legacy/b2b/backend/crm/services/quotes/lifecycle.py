@@ -30,8 +30,6 @@ from crm.services.deals import transition_deal_stage
 from . import lifecycle_audit
 from ._shared import (
     _log_quote,
-    _notify_quote_outcome,
-    _quote_client_display_name,
     _set_quote_status,
 )
 from .lifecycle_gates import (
@@ -178,11 +176,27 @@ class QuoteLifecycleService:
 
             quote.number = next_document_number("KP", "КП", seller_company)
 
+        # Default offer validity (Odoo Default Validity): a sent КП should carry an expiry. If
+        # valid_until is still unset and the ISSUING company configured default_offer_validity_days,
+        # populate it now — the create-time pre-fill may not have run, or the setting was added
+        # later. Left None when the company hasn't configured a default (open-ended, today's public
+        # link behaviour). seller_company is None on a superuser/platform send → no validity.
+        from crm.services.quotes.access import compute_default_valid_until
+
+        validity_fields = []
+        if quote.valid_until is None:
+            default_valid_until = compute_default_valid_until(seller_company)
+            if default_valid_until is not None:
+                quote.valid_until = default_valid_until
+                validity_fields.append("valid_until")
+
         # Freeze prices
         sent_status = QuoteStatus.objects.filter(code=QuoteStatusCode.SENT).first()
         quote.status = sent_status
         quote.frozen_at = timezone.now()
-        quote.save(update_fields=["status", "number", "frozen_at", "public_access_token", "updated_at"])
+        quote.save(
+            update_fields=["status", "number", "frozen_at", "public_access_token", *validity_fields, "updated_at"]
+        )
 
         # AI-калибровка: the sent КП is the ground truth for the draft's AI match candidates.
         from crm.services.ai_telemetry import finalize_outcomes_on_send
@@ -230,69 +244,54 @@ class QuoteLifecycleService:
         return quote
 
     @staticmethod
-    @transaction.atomic
     def approve_quote(quote_id: int, approved_by_user) -> Quote:
-        """Client approves the quote. Only SENT quotes can be approved."""
-        from django.utils import timezone
+        """Registered buyer accepts the КП. Only SENT quotes can be approved.
 
-        quote = Quote.objects.select_related("deal__company", "deal__manager", "deal__stage", "status").get(pk=quote_id)
+        Thin wrapper over the shared acceptance core (Rule 8) — the offline-contact path
+        (``accept_quote_as_contact``) reuses the exact same FSM + contract + notification.
+        """
+        from .lifecycle_accept import perform_quote_acceptance
 
-        # Status guard
-        current = quote.status.code if quote.status else "None"
-        if current != QuoteStatusCode.SENT:
-            raise ValueError(f"Cannot approve quote in status '{current}'. " "Only SENT quotes can be approved.")
+        return perform_quote_acceptance(quote_id, approved_by_user=approved_by_user)
 
-        approved_status = QuoteStatus.objects.filter(code=QuoteStatusCode.APPROVED).first()
-        quote.status = approved_status
-        quote.approved_at = timezone.now()
-        quote.approved_by = approved_by_user
-        quote.save(update_fields=["status", "approved_at", "approved_by", "updated_at"])
+    @staticmethod
+    def accept_quote_as_contact(quote_id: int, *, contact_email: str, request_ip: str = "") -> Quote:
+        """Offline contact accepts the КП after email-code verification (Wave A).
 
-        # Change deal stage via FSM (P0-1: capture the error — don't swallow it).
-        _, stage_err = transition_deal_stage(
-            quote.deal,
-            DealStageCode.CONTRACT_SIGNED,
-            actor=approved_by_user,
-            reason=f"КП v{quote.version} одобрено клиентом",
-        )
-        if stage_err:
-            raise ValueError(stage_err)
+        No ``CustomUser`` exists for an offline contact, so ``approved_by`` stays NULL; the
+        contact's email + request IP are recorded on the timeline audit. Same FSM / contract /
+        seller-notification path as the registered-buyer accept. Commercial acceptance
+        (коммерческий акцепт) with an audit trail — NOT a qualified e-signature.
+        """
+        from .lifecycle_accept import perform_quote_acceptance
 
-        # Materialize the Contract the instant the buyer accepts — otherwise the deal sits in
-        # CONTRACT_SIGNED with NO actual Contract (audit B1: approve → green badge → dead-end,
-        # generate_contract_from_quote was only ever called from tests). actor=None = system
-        # path: the buyer's approval triggers it, and the buyer is not a seller so it must NOT
-        # go through the seller-actor guard. Best-effort — a render hiccup must not unwind the
-        # approval (the seller can re-issue from the contract surface).
-        from crm.services.contracts import generate_contract_from_quote
-
-        try:
-            generate_contract_from_quote(quote.id, actor=None)
-        except (ValueError, OSError) as exc:  # noqa: BLE001 — narrow: lookup/PDF render
-            logger.warning("Contract auto-generation after approval failed for quote %s: %s", quote.id, exc)
-
-        # Notify the seller who built the КП (and a distinct manager, if assigned)
-        # that the client approved. deal.manager is usually unset in the single-
-        # seller model, so prepared_by is the reliable recipient — without it the
-        # seller never learned the outcome. Pushed over WS for realtime delivery.
-        _notify_quote_outcome(
-            quote,
-            type_code="SUCCESS",
-            title="КП одобрено клиентом",
-            message=f"{_quote_client_display_name(quote)} одобрил КП v{quote.version}",
+        return perform_quote_acceptance(
+            quote_id, approved_by_user=None, contact_email=contact_email, request_ip=request_ip
         )
 
-        # Counterparty timeline (Phase A): the acceptance itself was only visible as a stage
-        # flip before — record it as a first-class event on the client's history.
-        _log_quote(
-            quote,
-            approved_by_user,
-            "КП принято клиентом",
-            f"КП v{quote.version} ({quote.number or '—'})",
-            event_code="quote.accepted",
-            event_params={"version": quote.version, "number": quote.number or "—"},
-        )
+    @staticmethod
+    def revoke_public_link(quote_id: int, actor: CustomUser) -> Quote:
+        """Seller revokes the public no-login link (Wave B post-send panel).
 
+        Idempotent: sets ``public_token_revoked=True`` so ``public_quote_gate`` returns
+        QUOTE_LINK_REVOKED (410) on any further open. The 256-bit token itself is NOT rotated
+        (re-sending the same КП version keeps its citable number/link); a fresh link is minted by
+        issuing a new version. Records a timeline event so the audit shows who pulled the link.
+        """
+        from ._shared import _log_quote
+
+        quote = Quote.objects.select_related("deal", "status").get(pk=quote_id)
+        if not quote.public_token_revoked:
+            quote.public_token_revoked = True
+            quote.save(update_fields=["public_token_revoked", "updated_at"])
+            _log_quote(
+                quote,
+                actor,
+                "Публичная ссылка отозвана",
+                f"КП v{quote.version} ({quote.number or '—'})",
+                event_code="quote.link_revoked",
+                event_params={"version": quote.version},
+            )
         return quote
 
     # ── Internal approval chain (документооборот) ──────────────────────────
@@ -346,10 +345,27 @@ class QuoteLifecycleService:
         # Unified approval workflow: build the permission-driven step list (mandatory head +
         # optional reviewer(s) + risk-aware reason), then route. Source of truth = the steps,
         # not a granular status — the КП goes to a single «На согласовании» (PENDING_APPROVAL).
-        from crm.services.approvals import _active_order, _notify_order, build_approval_chain
+        from crm.services.approvals import (
+            _active_order,
+            _notify_order,
+            auto_approve_solo_chain,
+            build_approval_chain,
+        )
 
         build_approval_chain(quote, company_id, economics=economics)
         _set_quote_status(quote, QuoteStatusCode.PENDING_APPROVAL)
+
+        # Salesforce «no approval rule triggered / only approver is the submitter» pattern: when
+        # every step of the freshly-built chain is assigned to the submitter themselves (a solo
+        # company, or the company admin submitting their own КП), auto-approve instantly →
+        # READY_TO_SEND, with an audited «согласовано автоматически» journal event. A genuine
+        # cross-person chain (a different head, a ВЭД reviewer, a below-floor escalation to
+        # someone else) is untouched and routes exactly as today. Removes ritual, not control —
+        # the below-floor justification gate still fires at send.
+        if auto_approve_solo_chain(quote, actor):
+            quote.refresh_from_db()
+            return quote, None
+
         first_order = _active_order(quote)
         if first_order is not None:
             _notify_order(quote, first_order)
@@ -421,51 +437,26 @@ class QuoteLifecycleService:
         return quote, None
 
     @staticmethod
-    @transaction.atomic
     def reject_quote(quote_id: int, rejected_by_user, reason: str = "") -> Quote:
-        """Client rejects the quote. Only SENT quotes can be rejected."""
+        """Registered buyer rejects the КП. Only SENT quotes can be rejected.
 
-        quote = Quote.objects.select_related("deal__company", "deal__manager", "deal__stage", "status").get(pk=quote_id)
+        Thin wrapper over the shared rejection core (Rule 8); the offline-contact path
+        (``reject_quote_as_contact``) reuses the exact same FSM + notification.
+        """
+        from .lifecycle_accept import perform_quote_rejection
 
-        # Status guard
-        current = quote.status.code if quote.status else "None"
-        if current != QuoteStatusCode.SENT:
-            raise ValueError(f"Cannot reject quote in status '{current}'. " "Only SENT quotes can be rejected.")
+        return perform_quote_rejection(quote_id, rejected_by_user=rejected_by_user, reason=reason)
 
-        rejected_status = QuoteStatus.objects.filter(code=QuoteStatusCode.REJECTED).first()
-        quote.status = rejected_status
-        # LEAK FIX: the rejection reason is NOT written to quote.notes (rendered in the client КП
-        # PDF). It's preserved on the deal-stage transition audit below + the seller notification.
-        quote.save(update_fields=["status", "updated_at"])
+    @staticmethod
+    def reject_quote_as_contact(quote_id: int, *, reason: str, contact_email: str = "", request_ip: str = "") -> Quote:
+        """Offline contact rejects the КП from the public page (Wave A) — required reason.
 
-        # Move deal back to CALCULATING via FSM (P0-1: capture the error — don't swallow it).
-        _, stage_err = transition_deal_stage(
-            quote.deal,
-            DealStageCode.CALCULATING,
-            actor=rejected_by_user,
-            reason=f"КП v{quote.version} отклонено. {reason}",
+        Reject is recoverable (deal returns to CALCULATING; the seller can re-send), so it is
+        gated only by possession of the 256-bit public link + a required reason, not the email
+        code. Same FSM / seller-notification path as the registered-buyer reject.
+        """
+        from .lifecycle_accept import perform_quote_rejection
+
+        return perform_quote_rejection(
+            quote_id, rejected_by_user=None, reason=reason, contact_email=contact_email, request_ip=request_ip
         )
-        if stage_err:
-            raise ValueError(stage_err)
-
-        # Notify the КП author (+ distinct manager) that the client rejected —
-        # same single-seller reasoning as approve_quote. Pushed over WS.
-        _notify_quote_outcome(
-            quote,
-            type_code="WARNING",
-            title="КП отклонено клиентом",
-            message=f"{_quote_client_display_name(quote)} отклонил КП v{quote.version}. {reason}".strip(),
-        )
-
-        # Counterparty timeline (Phase A): first-class rejection event (the reason already
-        # lives on the stage-transition audit row; keep the client-PDF leak fix intact).
-        _log_quote(
-            quote,
-            rejected_by_user,
-            "КП отклонено клиентом",
-            f"КП v{quote.version}",
-            event_code="quote.rejected",
-            event_params={"version": quote.version},
-        )
-
-        return quote

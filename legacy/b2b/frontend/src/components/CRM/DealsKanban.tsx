@@ -8,6 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Handshake, UserCheck, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useClaimDeal } from '@/hooks/useCRM';
+import { useIsSoloSeller } from '@/hooks/useCapabilities';
 import { DEAL_STAGE_LABEL_KEY } from '@/lib/codes';
 import { translateApiError } from '@/lib/apiError';
 import type { Deal } from '@/api/crmApi';
@@ -36,6 +37,8 @@ export function DealsKanban({ deals, stages, onOpen }: DealsKanbanProps) {
   const { t } = useTranslation();
   const format = useCurrencyStore((s) => s.format);
   const claimMut = useClaimDeal();
+  // Wave B2 (auto-claim): hide the per-card «Взять в работу» for a solo seller — no queue to route.
+  const isSoloSeller = useIsSoloSeller();
 
   const handleClaim = (e: React.MouseEvent, dealId: number) => {
     e.stopPropagation(); // don't open the deal — just take ownership from the queue
@@ -134,7 +137,7 @@ export function DealsKanban({ deals, stages, onOpen }: DealsKanbanProps) {
                             <UserCheck className="h-3 w-3" aria-hidden="true" />
                             <span className="truncate">{d.assigned_to_name || t('dealsKanban.assigned')}</span>
                           </Badge>
-                        ) : (
+                        ) : isSoloSeller ? null : (
                           <Button
                             variant="outline"
                             size="sm"

@@ -286,6 +286,147 @@ def act_on_step(step_id: int, actor, decision: str, comment: str = "") -> Tuple[
     return quote, None
 
 
+# ── auto-approve (Salesforce «no other approver» pattern) ────────────────────
+def _acting_pending_steps(quote: Quote):
+    """PENDING steps that BLOCK sending — every non-INFORMED step awaiting a decision."""
+    return quote.approval_steps.filter(status=StepStatus.PENDING).exclude(participation=StepParticipation.INFORMED)
+
+
+def chain_requires_only_submitter(quote: Quote, submitter_user_id: Optional[int]) -> bool:
+    """The exact predicate that decides auto-approve vs route.
+
+    True IFF every pending blocking step is assigned to the submitter themselves — i.e. NO step
+    needs a DIFFERENT person to act. Fail-closed: an unassigned step (approver is NULL — an
+    orphaned head) or ANY step whose approver is a different user makes this False, so a genuine
+    cross-person chain (a real head, a ВЭД reviewer, a below-floor escalation to someone else)
+    can NEVER auto-pass and routes exactly as today. Returns False for an empty step set (nothing
+    to auto-approve) and for an anonymous submitter."""
+    if not submitter_user_id:
+        return False
+    steps = list(_acting_pending_steps(quote).select_related("approver"))
+    if not steps:
+        return False
+    return all(step.approver is not None and step.approver.user_id == submitter_user_id for step in steps)
+
+
+def auto_approve_solo_chain(quote: Quote, submitter) -> bool:
+    """Salesforce «only approver is the submitter» → auto-approve the whole chain instantly.
+
+    Approves each blocking step AS the submitter via the normal ``act_on_step`` advance path
+    (reuse, not hand-mutation), so the КП lands in READY_TO_SEND through the same code a human
+    approval would, emitting the per-step + completion audit events; it can only succeed because
+    the submitter genuinely holds each step's permission. Writes an explicit «согласовано
+    автоматически» journal event so the audit shows an auto-pass, not a silent skip.
+
+    Runs inside the caller's transaction (submit_for_review is @transaction.atomic). Returns True
+    when the КП auto-advanced to READY_TO_SEND; False if it could not (e.g. the submitter turned
+    out to lack a step's permission) — in which case the caller routes exactly as today."""
+    submitter_id = getattr(submitter, "id", None)
+    if not chain_requires_only_submitter(quote, submitter_id):
+        return False
+    # Drain the blocking steps in order (a lower order resolves before the head becomes active).
+    while True:
+        active_order = _active_order(quote)
+        if active_order is None:
+            break
+        step = _acting_pending_steps(quote).filter(order=active_order).order_by("id").first()
+        if step is None:
+            break
+        _, err = act_on_step(
+            step.id,
+            submitter,
+            "APPROVE",
+            comment="Автосогласование (единственный согласующий — отправитель)",
+        )
+        if err:
+            logger.warning("auto_approve_solo_chain: step %s not auto-approvable (%s) — routing", step.id, err)
+            return False
+    quote.refresh_from_db()
+    if quote.status and quote.status.code == QuoteStatusCode.READY_TO_SEND:
+        _log(
+            quote,
+            submitter,
+            "Согласовано автоматически",
+            "Единственный согласующий — отправитель: цепочка пройдена автоматически",
+            event_code="quote.approval_auto",
+            event_params={},
+        )
+        return True
+    return False
+
+
+# ── preview (Salesforce «Approval Preview») ──────────────────────────────────
+_PARTICIPATION_LABELS = dict(StepParticipation.choices)
+_TRIGGER_LABELS = dict(StepTrigger.choices)
+
+
+def _member_display(member) -> str:
+    if member is None:
+        return ""
+    user = getattr(member, "user", None)
+    if user is None:
+        return ""
+    return (user.get_full_name() or user.email or "").strip()
+
+
+def _preview_step(member, participation: str, trigger: str, submitter_user_id: Optional[int]) -> dict:
+    """Project a would-be approver into the read-only preview shape (no QuoteApprovalStep row)."""
+    role = getattr(member, "company_role", None)
+    return {
+        "participation": participation,
+        "participation_label": str(_PARTICIPATION_LABELS.get(participation, participation)),
+        "trigger": trigger,
+        "trigger_label": str(_TRIGGER_LABELS.get(trigger, trigger)),
+        "member_id": getattr(member, "id", None),
+        "user_id": getattr(member, "user_id", None),
+        "name": _member_display(member),
+        "role": role.name if role is not None else "",
+        "is_assigned": member is not None,
+        "is_submitter": member is not None and member.user_id == submitter_user_id,
+    }
+
+
+def preview_approval_chain(quote_id: int, actor) -> Tuple[Optional[dict], Optional[str]]:
+    """Read-only «who would have to approve this КП if submitted now» (Salesforce Approval
+    Preview). Builds NO steps and persists NOTHING — it mirrors ``build_approval_chain``'s member
+    resolution to project the would-be chain (reviewers + mandatory head, with names/roles) plus
+    whether it would auto-approve (only the submitter on it). Scoped to a seller who could
+    actually submit the КП (quote.build on the owning company), via the resolver submit uses."""
+    from crm.services.quotes.lifecycle_gates import resolve_submit_company
+    from crm.services.quotes.pricing import compute_quote_economics
+
+    quote = Quote.objects.select_related("status", "prepared_by", "deal").filter(pk=quote_id).first()
+    if quote is None:
+        return None, "QUOTE_NOT_FOUND"
+    company_id, err = resolve_submit_company(quote, actor)
+    if err:
+        return None, err
+
+    economics = compute_quote_economics(quote)
+    below_floor = bool(economics.get("below_floor"))
+
+    head_candidates = _members_with_permission(company_id, Permission.QUOTE_APPROVE_FINAL.value)
+    head_member = head_candidates[0] if head_candidates else _fallback_head(company_id)
+    head_ids = {m.id for m in head_candidates}
+    reviewers = [m for m in _members_with_permission(company_id, Permission.QUOTE_REVIEW.value) if m.id not in head_ids]
+
+    submitter_id = getattr(actor, "id", None)
+    steps = [
+        _preview_step(reviewer, StepParticipation.APPROVER, StepTrigger.TRADE_REVIEW, submitter_id)
+        for reviewer in reviewers
+    ]
+    head_trigger = StepTrigger.BELOW_FLOOR_ESCALATION if below_floor else StepTrigger.HEAD_FINAL
+    steps.append(_preview_step(head_member, StepParticipation.HEAD, head_trigger, submitter_id))
+
+    # Mirror chain_requires_only_submitter: every step assigned AND assigned to the submitter.
+    would_auto_approve = bool(steps) and all(step["is_assigned"] and step["is_submitter"] for step in steps)
+    return {
+        "would_auto_approve": would_auto_approve,
+        "below_floor": below_floor,
+        "steps": steps,
+    }, None
+
+
 @transaction.atomic
 def recall_quote(quote_id: int, actor) -> Tuple[Optional[Quote], Optional[str]]:
     """Submitter (or head/owner) pulls a КП back out of approval to edit it. PENDING_APPROVAL →

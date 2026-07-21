@@ -526,10 +526,27 @@ class MeSerializer(serializers.ModelSerializer):
             "subscription_active": bool(self.get_seller_subscription_operational(obj)),
             "can_send_quotes": bool(seller_company_id and quote_send_entitled(seller_company_id)),
             "quote_send_is_demo": bool(seller_company_id and is_demo(seller_company_id, FeatureKey.QUOTE_SEND)),
+            # Wave B: a "solo seller" is a seller company with exactly ONE active member who can
+            # sell — for them the deal-claim button is pure noise (nobody else to claim against),
+            # so the SPA hides it. UI-only signal; claim/routing services stay authoritative.
+            "is_solo_seller": self._is_solo_seller(seller_company_id),
             "permissions": permissions,
             "is_platform_admin": bool(getattr(obj, "is_platform_admin", False)),
             "operator_permissions": self.get_operator_permissions(obj),
         }
+
+    @staticmethod
+    def _is_solo_seller(seller_company_id) -> bool:
+        """True when the seller company has exactly one active member with sell capability —
+        the case where deal-claim is meaningless noise (Wave B). False for no seller context or
+        any multi-seller team (claim still routes work there)."""
+        if not seller_company_id:
+            return False
+        from accounts.models import CompanyMember
+
+        return (
+            CompanyMember.objects.filter(company_id=seller_company_id, is_active=True, can_sell=True).count() == 1
+        )
 
 
 class KYCVerificationSerializer(serializers.Serializer):

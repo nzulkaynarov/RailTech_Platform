@@ -12846,7 +12846,7 @@
             },
             "post": {
                 "operationId": "crm_quotes_create",
-                "description": "CRUD for quotes (commercial proposals).\n\nQuote lifecycle: DRAFT -> SENT -> APPROVED / REJECTED.\nIncludes PDF generation, send-to-client, approve, and reject actions.",
+                "description": "CRUD for quotes (commercial proposals).\n\nQuote lifecycle: DRAFT -> SENT -> APPROVED / REJECTED.\nIncludes PDF generation, send-to-client, approve, and reject actions.\n(The approve/reject/force-approve and approval-chain actions come from\n``QuoteApprovalMixin`` — the ``operator_permissions`` map lives there too.)",
                 "summary": "Create quote",
                 "tags": [
                     "CRM"
@@ -12929,7 +12929,7 @@
             },
             "put": {
                 "operationId": "crm_quotes_update",
-                "description": "CRUD for quotes (commercial proposals).\n\nQuote lifecycle: DRAFT -> SENT -> APPROVED / REJECTED.\nIncludes PDF generation, send-to-client, approve, and reject actions.",
+                "description": "CRUD for quotes (commercial proposals).\n\nQuote lifecycle: DRAFT -> SENT -> APPROVED / REJECTED.\nIncludes PDF generation, send-to-client, approve, and reject actions.\n(The approve/reject/force-approve and approval-chain actions come from\n``QuoteApprovalMixin`` — the ``operator_permissions`` map lives there too.)",
                 "summary": "Update quote",
                 "parameters": [
                     {
@@ -12985,7 +12985,7 @@
             },
             "patch": {
                 "operationId": "crm_quotes_partial_update",
-                "description": "CRUD for quotes (commercial proposals).\n\nQuote lifecycle: DRAFT -> SENT -> APPROVED / REJECTED.\nIncludes PDF generation, send-to-client, approve, and reject actions.",
+                "description": "CRUD for quotes (commercial proposals).\n\nQuote lifecycle: DRAFT -> SENT -> APPROVED / REJECTED.\nIncludes PDF generation, send-to-client, approve, and reject actions.\n(The approve/reject/force-approve and approval-chain actions come from\n``QuoteApprovalMixin`` — the ``operator_permissions`` map lives there too.)",
                 "summary": "Partially update quote",
                 "parameters": [
                     {
@@ -13040,7 +13040,7 @@
             },
             "delete": {
                 "operationId": "crm_quotes_destroy",
-                "description": "CRUD for quotes (commercial proposals).\n\nQuote lifecycle: DRAFT -> SENT -> APPROVED / REJECTED.\nIncludes PDF generation, send-to-client, approve, and reject actions.",
+                "description": "CRUD for quotes (commercial proposals).\n\nQuote lifecycle: DRAFT -> SENT -> APPROVED / REJECTED.\nIncludes PDF generation, send-to-client, approve, and reject actions.\n(The approve/reject/force-approve and approval-chain actions come from\n``QuoteApprovalMixin`` — the ``operator_permissions`` map lives there too.)",
                 "summary": "Delete quote",
                 "parameters": [
                     {
@@ -13128,6 +13128,43 @@
                     },
                     "403": {
                         "description": "Role not permitted"
+                    }
+                }
+            }
+        },
+        "/api/v1/crm/quotes/{id}/approval-preview/": {
+            "get": {
+                "operationId": "crm_quotes_approval_preview_retrieve",
+                "description": "Read-only Salesforce-style Approval Preview: the would-be reviewers + mandatory head (names / roles), and whether the КП would auto-approve because the only approver is the submitter. Builds and persists NOTHING (no side effects). Seller-side only — the same quote.build gate as submit-for-review; feeds the «кто должен согласовать» preview in the send dialog.",
+                "summary": "Preview the КП approval chain (who would approve if submitted now)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Коммерческое предложение.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{would_auto_approve, below_floor, steps:[{...}]}"
+                    },
+                    "403": {
+                        "description": "Not permitted"
+                    },
+                    "404": {
+                        "description": "Quote not found"
                     }
                 }
             }
@@ -13614,6 +13651,64 @@
                 }
             }
         },
+        "/api/v1/crm/quotes/{id}/revoke-public-link/": {
+            "post": {
+                "operationId": "crm_quotes_revoke_public_link_create",
+                "description": "Seller pulls the shared client link (post-send panel). Idempotent; further opens return 410 QUOTE_LINK_REVOKED. Same authorization as send-to-client.",
+                "summary": "Revoke the public no-login link of a sent КП",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Коммерческое предложение.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/QuoteRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/QuoteRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/QuoteRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Quote"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/v1/crm/quotes/{id}/send-to-client/": {
             "post": {
                 "operationId": "crm_quotes_send_to_client_create",
@@ -13738,7 +13833,7 @@
         "/api/v1/crm/quotes/{id}/submit-for-review/": {
             "post": {
                 "operationId": "crm_quotes_submit_for_review_create",
-                "description": "CRUD for quotes (commercial proposals).\n\nQuote lifecycle: DRAFT -> SENT -> APPROVED / REJECTED.\nIncludes PDF generation, send-to-client, approve, and reject actions.",
+                "description": "CRUD for quotes (commercial proposals).\n\nQuote lifecycle: DRAFT -> SENT -> APPROVED / REJECTED.\nIncludes PDF generation, send-to-client, approve, and reject actions.\n(The approve/reject/force-approve and approval-chain actions come from\n``QuoteApprovalMixin`` — the ``operator_permissions`` map lives there too.)",
                 "summary": "Submit КП into the approval chain (SALES_MANAGER)",
                 "parameters": [
                     {
@@ -15450,8 +15545,8 @@
         "/api/v1/public/quotes/{token}/": {
             "get": {
                 "operationId": "public_quotes_retrieve",
-                "description": "Unauthenticated КП view/download by secret token (client base, CB-public-link).\n\nLets an offline or registered client open the КП the seller emailed them WITHOUT a\nlogin. Streams the CLIENT projection PDF only (quote_pdf.html exposes no margin/cost/\ncharges). Only a SENT (frozen) КП with a token is reachable; an unknown token 404s.\nRate-limited to blunt token brute-forcing despite the 256-bit space.",
-                "summary": "Public КП view/download by token",
+                "description": "Content-negotiated public КП: HTML page for browsers, client-projection PDF for downloads.",
+                "summary": "Public КП page (HTML) or PDF by token",
                 "parameters": [
                     {
                         "in": "path",
@@ -15466,14 +15561,11 @@
                     "CRM"
                 ],
                 "security": [
-                    {
-                        "jwtAuth": []
-                    },
                     {}
                 ],
                 "responses": {
                     "200": {
-                        "description": "КП PDF (client projection)"
+                        "description": "Client КП page (browser HTML) or client-projection PDF (?export=pdf)"
                     },
                     "202": {
                         "description": "PDF still rendering off-thread — retry after Retry-After seconds"
@@ -15482,7 +15574,119 @@
                         "description": "Unknown or not-yet-sent token"
                     },
                     "410": {
-                        "description": "Public link revoked or expired (QUOTE_LINK_REVOKED / QUOTE_LINK_EXPIRED)"
+                        "description": "Public link revoked or expired"
+                    }
+                }
+            }
+        },
+        "/api/v1/public/quotes/{token}/accept/": {
+            "post": {
+                "operationId": "public_quotes_accept_create",
+                "description": "Verify the one-time code and accept the КП as the offline contact (коммерческий акцепт).",
+                "summary": "Accept КП with email code",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "token",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/v1/public/quotes/{token}/reject/": {
+            "post": {
+                "operationId": "public_quotes_reject_create",
+                "description": "Reject the КП from the public page — required reason (recoverable, link-gated only).",
+                "summary": "Reject КП with reason",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "token",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/v1/public/quotes/{token}/request-code/": {
+            "post": {
+                "operationId": "public_quotes_request_code_create",
+                "description": "Email a one-time acceptance code to the recipient resolved from the QUOTE'S deal.",
+                "summary": "Request КП acceptance code",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "token",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/v1/public/quotes/{token}/viewed/": {
+            "post": {
+                "operationId": "public_quotes_viewed_create",
+                "description": "Browser BEACON marking a genuine open (fired by page JS, NOT the bare GET).",
+                "summary": "Mark public КП as viewed (beacon)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "token",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
                     }
                 }
             }
@@ -25070,6 +25274,27 @@
                         "title": "Дата заморозки цен",
                         "description": "Момент фиксации цен при отправке клиенту"
                     },
+                    "first_viewed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true,
+                        "title": "Впервые просмотрено клиентом",
+                        "description": "Момент первого реального открытия публичной страницы КП клиентом (маркер, не статус)"
+                    },
+                    "public_token_revoked": {
+                        "type": "boolean",
+                        "readOnly": true,
+                        "title": "Публичная ссылка отозвана",
+                        "description": "Если включено — публичная ссылка на КП больше не открывается (410)"
+                    },
+                    "public_access_token": {
+                        "type": "string",
+                        "readOnly": true,
+                        "nullable": true,
+                        "title": "Публичный токен доступа",
+                        "description": "Секретный токен для просмотра/скачивания КП клиентом без входа"
+                    },
                     "approved_by": {
                         "type": "integer",
                         "readOnly": true,
@@ -25137,12 +25362,15 @@
                     "delivery_basis_data",
                     "economics",
                     "effective_delivery_lead_time_days",
+                    "first_viewed_at",
                     "fx_market",
                     "fx_snapshot",
                     "id",
                     "items",
                     "number",
                     "prepared_by",
+                    "public_access_token",
+                    "public_token_revoked",
                     "status_code",
                     "status_name",
                     "subtotal_excl_vat",

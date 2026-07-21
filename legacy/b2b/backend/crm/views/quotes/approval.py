@@ -226,6 +226,34 @@ class QuoteApprovalMixin:
         return Response(self.get_serializer(quote).data)
 
     @extend_schema(
+        summary="Preview the КП approval chain (who would approve if submitted now)",
+        description=(
+            "Read-only Salesforce-style Approval Preview: the would-be reviewers + mandatory head "
+            "(names / roles), and whether the КП would auto-approve because the only approver is "
+            "the submitter. Builds and persists NOTHING (no side effects). Seller-side only — the "
+            "same quote.build gate as submit-for-review; feeds the «кто должен согласовать» preview "
+            "in the send dialog."
+        ),
+        responses={
+            200: OpenApiResponse(description="{would_auto_approve, below_floor, steps:[{...}]}"),
+            403: OpenApiResponse(description="Not permitted"),
+            404: OpenApiResponse(description="Quote not found"),
+        },
+        tags=["CRM"],
+    )
+    @action(detail=True, methods=["get"], url_path="approval-preview", permission_classes=[IsAuthenticated])
+    def approval_preview(self, request, pk=None):
+        """Read-only preview of the would-be approval chain (no side effects)."""
+        from crm.services.approvals import preview_approval_chain
+
+        data, error = preview_approval_chain(int(pk), request.user)
+        if error:
+            if error == "QUOTE_NOT_FOUND":
+                return Response({"detail": error}, status=status.HTTP_404_NOT_FOUND)
+            return _chain_error_response(error)
+        return Response(data)
+
+    @extend_schema(
         summary="My КП approval queue",
         description="Quotes in the company(ies) I belong to that are waiting on my workspace role's step.",
         responses={200: QuoteSerializer(many=True)},

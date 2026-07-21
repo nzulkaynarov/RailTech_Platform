@@ -3,6 +3,7 @@
 Public API re-exported so existing import paths keep working.
 """
 
+from .acceptance import QuoteAcceptanceCode
 from .ai_match import AIMatchOutcome
 from .approvals import QuoteApprovalStep, StepParticipation, StepStatus, StepTrigger
 from .billing import Act, Invoice, InvoiceItem, Payment
@@ -38,6 +39,7 @@ __all__ = [
     "Message",
     "Payment",
     "Quote",
+    "QuoteAcceptanceCode",
     "QuoteApprovalStep",
     "RelationshipDirection",
     "RelationshipSource",

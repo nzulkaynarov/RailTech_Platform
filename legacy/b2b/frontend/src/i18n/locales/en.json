@@ -4750,7 +4750,15 @@
     "backToRequests": "Back to my requests",
     "routedTo": "Routed to",
     "charges": "Charges / allowances",
-    "openContract": "Open contract"
+    "openContract": "Open contract",
+    "accepted": {
+      "title": "Offer accepted",
+      "readyToSign": "Contract No. {{number}} is ready for your signature",
+      "contractReady": "Contract No. {{number}} has been created",
+      "contractPending": "The contract is being prepared — open the Contracts section",
+      "resolving": "Loading contract…",
+      "goToContract": "Go to contract"
+    }
   },
   "createQuoteDialog": {
     "title": "Create quote",
@@ -5326,6 +5334,10 @@
       "approved_force": {
         "title": "[FORCE_ADMIN] Quote approved by platform admin",
         "detail": "Quote #{{quote_id}} ({{from_status}} → APPROVED)"
+      },
+      "viewed": {
+        "title": "Quote viewed by client",
+        "detail": "Quote v{{version}} ({{number}})"
       }
     },
     "lead": {
@@ -5502,5 +5514,44 @@
     "xpk": "pack",
     "hur": "hour",
     "day": "day"
+  },
+  "sendDialog": {
+    "title": "Send quote to the client",
+    "description": "Review the summary before sending — the buyer sees the priced offer and prices are frozen.",
+    "recipient": "Recipient",
+    "recipientMissing": "No recipient — add a client or contact",
+    "validUntil": "Valid until",
+    "validUntilUnset": "not set",
+    "margin": "Margin",
+    "marginOk": "Margin {{margin}} ≥ floor {{floor}}",
+    "marginBelow": "Margin {{margin}} below the floor {{floor}}",
+    "marginHidden": "Margin hidden",
+    "approval": "Approval",
+    "approvalAuto": "not required — auto-approved",
+    "approvalApproved": "approved",
+    "approvalApprovedBy": "approved by {{names}}",
+    "approvalPending": "awaiting approval",
+    "approvalPendingBy": "awaiting approval: {{names}}",
+    "previewPdf": "Preview PDF",
+    "justificationRequired": "Provide a justification for sending"
+  },
+  "sentPanel": {
+    "sent": "Sent",
+    "viewed": "Viewed",
+    "decision": "Decision",
+    "pending": "—",
+    "yes": "Yes",
+    "decisionAccepted": "Accepted",
+    "decisionRejected": "Rejected",
+    "copyLink": "Copy link",
+    "revokeLink": "Revoke link",
+    "linkRevokedNote": "Link revoked",
+    "linkRevoked": "Public link revoked",
+    "newVersion": "Create new version",
+    "newVersionCreated": "New quote version created",
+    "revokeTitle": "Revoke the public link?",
+    "revokeDescription": "Anyone with the link will no longer be able to open the quote.",
+    "newVersionTitle": "Create a new quote version?",
+    "newVersionDescription": "A draft of the next version of this quote will be created for edits and re-sending."
   }
 }

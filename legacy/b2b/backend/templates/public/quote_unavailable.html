@@ -1,8 +1,12 @@
 <!doctype html>
-{# Shown (HTTP 410 GONE / 404) when a client opens a public КП link that is no longer valid —
-   revoked, expired (valid_until passed or EXPIRED status), or unknown token. Browser-facing
-   (the emailed link opens this endpoint directly, no SPA in front), so a human sees a friendly
-   Russian page instead of the raw DRF/JSON error. Self-contained, matches quote_generating.html. #}
+{% comment %}
+Shown (HTTP 410 GONE / 404) when a client opens a public КП link that is no longer valid —
+revoked, expired (valid_until passed or EXPIRED status), or unknown token. Browser-facing
+(the emailed link opens this endpoint directly, no SPA in front), so a human sees a friendly
+Russian page instead of the raw DRF/JSON error. Self-contained, matches quote_generating.html.
+NB: Django {# #} comments are SINGLE-LINE only — a multi-line one leaks as visible page text
+(caught in Wave B eyes-on); use {% comment %} for multi-line.
+{% endcomment %}
 <html lang="ru">
 <head>
   <meta charset="utf-8">

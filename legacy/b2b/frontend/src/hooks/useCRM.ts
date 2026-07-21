@@ -468,6 +468,19 @@ export const useSendQuoteToClient = () => {
     });
 };
 
+// Wave B2 — revoke the КП public share link from the post-send panel. Refresh quotes + deals
+// so the panel reflects the new public_token_revoked state (copy/revoke controls update).
+export const useRevokePublicLink = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (id: number) => crmApi.revokePublicLink(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['quotes'] });
+            queryClient.invalidateQueries({ queryKey: ['deals'] });
+        },
+    });
+};
+
 export const useApproveQuote = () => {
     const queryClient = useQueryClient();
     return useMutation({
@@ -475,6 +488,10 @@ export const useApproveQuote = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['quotes'] });
             queryClient.invalidateQueries({ queryKey: ['deals'] });
+            // Move 0 auto-materializes a Contract (PENDING_CLIENT) on approval — refresh
+            // ['contracts'] so the buyer's post-accept "next step" panel resolves the real
+            // contract and the dashboard "contracts to sign" counter reflects it at once.
+            queryClient.invalidateQueries({ queryKey: ['contracts'] });
         },
     });
 };

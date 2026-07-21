@@ -6,6 +6,7 @@ import { QuoteStatus, DealStage, DEAL_STAGE_LABEL_KEY, quoteStatusLabelKey } fro
 import { useUserStore } from '@/store/userStore';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useIsViewerMode } from '@/hooks/useViewerMode';
+import { useIsSoloSeller } from '@/hooks/useCapabilities';
 import { useDeal, useChangeDealStage, useApproveQuote, useRejectQuote, useSendQuoteToClient, useUpdateRequestMeta, usePreflightCheck, useQuoteRequestDiff, useClaimDeal } from '@/hooks/useCRM';
 import { crmApi } from '@/api/crmApi';
 import type { PreflightFinding, PreflightLine, QuoteDiffFinding } from '@/api/crmApi';
@@ -23,6 +24,7 @@ import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
 import { RequestItemsEditor } from '@/components/CRM/RequestItemsEditor';
 import { PreflightWarnings } from '@/components/CRM/PreflightWarnings';
 import { GenerateQuoteDialog } from '@/components/CRM/GenerateQuoteDialog';
+import { BuyerAcceptedPanel } from '@/components/CRM/BuyerAcceptedPanel';
 import { CoverageCheck } from '@/components/CRM/CoverageCheck';
 import { DealTimeline } from '@/components/CRM/DealTimeline';
 import { StatusBadge } from '@/components/ui/StatusBadge';
@@ -63,6 +65,7 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
   const sendQuote = useSendQuoteToClient();
   const updateMeta = useUpdateRequestMeta();
   const claimMut = useClaimDeal();
+  const isSoloSeller = useIsSoloSeller();
 
   // Gate seller-side actions (start sourcing / calculation / send quote) to
   // sellers. A buyer would only hit backend guards — and the buttons are
@@ -107,7 +110,8 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
   // Seller-only pull from the routed queue; `assigned_to` (the id, derived from the
   // viewer's OWN routing row) == null means this seller's copy is unclaimed. Reuses
   // useClaimDeal + the `dealsKanban.claim`/`.claimed` keys.
-  const canClaim = isSellerSide && deal.assigned_to == null;
+  // Wave B2 (auto-claim): a solo seller has no queue to route, so hide «Взять в работу» entirely.
+  const canClaim = isSellerSide && deal.assigned_to == null && !isSoloSeller;
   const openQuoteBuilder = () => { window.location.hash = `deal-quote/${deal.id}`; };
   // Buyer may build/edit their own request (name + qty) until the seller engages.
   // The backend is the source of truth (can_edit_request); the UI only reflects it.
@@ -267,17 +271,26 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
           </div>
         </div>
 
+        {/* Post-accept "what's next" (Wave A2). Once the buyer approves the КП the FSM
+            materializes a Contract awaiting their signature — surface it here (with the
+            real contract number + a deep-link) instead of dead-ending on the dashboard. */}
+        {isBuyerSide && isWon && <BuyerAcceptedPanel dealId={deal.id} />}
+
         {/* Action Bar. Seller-side actions (start sourcing / start calculation
             / send quote) only show for SELLER / MANUFACTURER. Buyer only sees
             approve / reject once the quote is sent. */}
         {(() => {
           const sellerActions = isSellerSide && (isDraft || isSourcing || isCalculating || hasQuote || canBuildNewVersion);
           const buyerActions = isBuyerSide && isQuoteSent && quote;
-          const showActionBar = sellerActions || buyerActions || isWon || canClaim;
+          // Buyer-side "won" state is owned by BuyerAcceptedPanel above, so it does not
+          // open an action bar; the seller still gets the "deal accepted / open contract"
+          // row from the isWon branch below.
+          const showActionBar = sellerActions || buyerActions || (isWon && isSellerSide) || canClaim;
           if (!showActionBar) {
             // A buyer editing a draft already gets this guidance from the "Your
-            // request" card subtitle — don't waste a whole banner repeating it.
-            if (isBuyerSide && canEditRequest) return null;
+            // request" card subtitle — don't waste a whole banner repeating it; the
+            // post-accept panel already speaks for the won state.
+            if (isBuyerSide && (canEditRequest || isWon)) return null;
             return (
               <p className="text-sm text-muted-foreground">
                 {isBuyerSide ? t('requestDetailActions.buyerWaitHint') : t('requestDetailActions.noActions')}

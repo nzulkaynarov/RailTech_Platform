@@ -257,6 +257,12 @@ class QuoteSerializer(serializers.ModelSerializer):
             "notes",
             "pdf_file",
             "frozen_at",
+            # Wave A/B post-send tracking: when the client first opened the public КП page,
+            # whether the public link is revoked, and the token itself (seller-only — see
+            # _SELLER_ONLY_FIELDS: it grants client-projection access and must not reach the buyer).
+            "first_viewed_at",
+            "public_token_revoked",
+            "public_access_token",
             "approved_by",
             "approved_at",
             "items",
@@ -276,6 +282,9 @@ class QuoteSerializer(serializers.ModelSerializer):
             # the client-writable override.
             "fx_snapshot",
             "effective_delivery_lead_time_days",
+            "first_viewed_at",
+            "public_token_revoked",
+            "public_access_token",
             "approved_by",
             "approved_at",
             "created_at",
@@ -299,6 +308,9 @@ class QuoteSerializer(serializers.ModelSerializer):
         "margin_percent",
         "fx_snapshot",
         "fx_manual",
+        # The public no-login link grants client-projection access; only the КП-owning seller
+        # needs it (to copy/revoke the link on the post-send panel). Never hand it to the buyer.
+        "public_access_token",
     )
 
     def _can_see_costs(self, quote) -> bool:
