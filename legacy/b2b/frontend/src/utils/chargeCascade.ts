@@ -8,6 +8,9 @@ import { toDecimal } from '@/utils/decimal';
  */
 export interface CascadeStep {
 	id: number;
+	/** ChargeType lookup CODE (e.g. "FREIGHT") — the consumer localizes it via
+	 *  `chargeTypeLabelKey`; `name` is the raw RU-only DB fallback for unknown codes. */
+	chargeType: string;
 	name: string;
 	description?: string;
 	isDeduction: boolean;
@@ -69,6 +72,7 @@ export function buildChargeCascade(
 		running = Decimal.max(running.plus(signed), new Decimal(0));
 		steps.push({
 			id: charge.id,
+			chargeType: charge.charge_type,
 			name: charge.charge_type_name || charge.charge_type,
 			description: charge.description,
 			isDeduction: charge.is_deduction,

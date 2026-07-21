@@ -19,6 +19,7 @@ import { useCartStore } from '@/store/cartStore';
 import { formatMoney } from '@/utils/decimal';
 import { useUserStore } from '@/store/userStore';
 import { getDomainLabelKey } from '@/config/domainConfig';
+import { deliveryBasisLabelKey, uomLabelKey } from '@/lib/codes';
 
 interface ProductDetailProps {
   productId: string;
@@ -92,7 +93,7 @@ export function ProductDetail({ productId, onBack }: ProductDetailProps) {
   const attributes = [
     { label: t('productDetail.article'), value: product.sku },
     { label: t('productDetail.gostDrawing'), value: product.gost_drawing },
-    { label: t('productDetail.uom'), value: product.uom_data?.name },
+    { label: t('productDetail.uom'), value: product.uom_data ? (uomLabelKey(product.uom_data.code) ? t(uomLabelKey(product.uom_data.code)) : product.uom_data.name) : undefined },
     { label: t('productDetail.manufacturer'), value: product.brand_name },
     { label: t('productDetail.category'), value: product.category_data?.name },
     { label: t('productDetail.domain'), value: product.domain_type_name ? t(getDomainLabelKey(product.domain_type_code ?? ''), product.domain_type_name) : undefined },
@@ -318,10 +319,14 @@ export function ProductDetail({ productId, onBack }: ProductDetailProps) {
                           {formatMoney(offer.base_price, offer.currency_data?.code || 'UZS')}
                         </p>
                         <div className="flex flex-col gap-1 text-xs text-muted-foreground">
-                          {offer.delivery_basis_data?.name && (
+                          {offer.delivery_basis_data && (
                             <div className="flex items-center gap-1.5">
                               <Truck className="h-3 w-3 shrink-0" />
-                              <span>{offer.delivery_basis_data.name}</span>
+                              <span>
+                                {deliveryBasisLabelKey(offer.delivery_basis_data.code)
+                                  ? t(deliveryBasisLabelKey(offer.delivery_basis_data.code))
+                                  : offer.delivery_basis_data.name}
+                              </span>
                             </div>
                           )}
                           {offer.delivery_lead_time && (

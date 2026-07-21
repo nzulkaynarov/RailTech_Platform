@@ -6,6 +6,7 @@ import type { QuoteItem } from '@/api/crmApi';
 import { useAddRequestItem, useUpdateQuoteItem, useDeleteQuoteItem, useSubmitRequest, useRouteDeal } from '@/hooks/useCRM';
 import { usePartnerSuppliers } from '@/hooks/useAccounts';
 import { translateApiError } from '@/lib/apiError';
+import { uomLabelKey } from '@/lib/codes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -301,7 +302,7 @@ export function RequestItemsEditor({
                       </SelectTrigger>
                       <SelectContent>
                         {(units ?? []).map((u) => (
-                          <SelectItem key={u.code} value={u.code}>{u.name}</SelectItem>
+                          <SelectItem key={u.code} value={u.code}>{uomLabelKey(u.code) ? t(uomLabelKey(u.code)) : u.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -412,7 +413,7 @@ export function RequestItemsEditor({
               <SelectTrigger className="w-24"><SelectValue placeholder={t('requestItems.unitCol')} /></SelectTrigger>
               <SelectContent>
                 {(units ?? []).map((u) => (
-                  <SelectItem key={u.code} value={u.code}>{u.name}</SelectItem>
+                  <SelectItem key={u.code} value={u.code}>{uomLabelKey(u.code) ? t(uomLabelKey(u.code)) : u.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

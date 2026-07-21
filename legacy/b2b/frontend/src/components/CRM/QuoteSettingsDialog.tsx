@@ -5,6 +5,7 @@ import { Loader2 } from 'lucide-react';
 import { Quote } from '@/api/crmApi';
 import { useUpdateQuoteSettings, useSetQuoteDeliveryBasis } from '@/hooks/useCRM';
 import { useCountries, useCurrencies } from '@/hooks/useMasterData';
+import { countryLabelKey, currencyLabelKey } from '@/lib/codes';
 import { DeliveryBasisSelect } from './DeliveryBasisSelect';
 import {
 	Dialog,
@@ -198,7 +199,7 @@ export function QuoteSettingsDialog({ quote, open, onOpenChange }: QuoteSettings
 								<SelectContent>
 									{countries.map((country) => (
 										<SelectItem key={country.id} value={String(country.id)}>
-											{country.name}
+											{countryLabelKey(country.code) ? t(countryLabelKey(country.code)) : country.name}
 										</SelectItem>
 									))}
 								</SelectContent>
@@ -230,7 +231,7 @@ export function QuoteSettingsDialog({ quote, open, onOpenChange }: QuoteSettings
 								<SelectContent>
 									{currencies.filter((item) => item.code === 'UZS').map((item) => (
 										<SelectItem key={item.id} value={item.code}>
-											{item.code} — {item.name}
+											{item.code} — {currencyLabelKey(item.code) ? t(currencyLabelKey(item.code)) : item.name}
 										</SelectItem>
 									))}
 								</SelectContent>
@@ -247,7 +248,7 @@ export function QuoteSettingsDialog({ quote, open, onOpenChange }: QuoteSettings
 								<SelectContent>
 									{currencies.map((item) => (
 										<SelectItem key={item.id} value={item.code}>
-											{item.code} — {item.name}
+											{item.code} — {currencyLabelKey(item.code) ? t(currencyLabelKey(item.code)) : item.name}
 										</SelectItem>
 									))}
 								</SelectContent>

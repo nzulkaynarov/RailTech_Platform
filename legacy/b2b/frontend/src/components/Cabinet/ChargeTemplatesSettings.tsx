@@ -10,7 +10,7 @@ import {
 } from '@/hooks/useCRM';
 import { useDeliveryBases } from '@/hooks/useMasterData';
 import type { ChargeTemplate } from '@/api/crmApi';
-import { chargeTypeLabelKey } from '@/lib/codes';
+import { chargeTypeLabelKey, deliveryBasisLabelKey } from '@/lib/codes';
 import { ResponsiveDataTable, type ResponsiveColumn } from '@/components/ResponsiveDataTable';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -193,7 +193,9 @@ export function ChargeTemplatesSettings() {
             </SelectTrigger>
             <SelectContent>
               {bases.map((b) => (
-                <SelectItem key={b.id} value={b.code}>{b.code} — {b.name}</SelectItem>
+                <SelectItem key={b.id} value={b.code}>
+                  {b.code} — {deliveryBasisLabelKey(b.code) ? t(deliveryBasisLabelKey(b.code)) : b.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>

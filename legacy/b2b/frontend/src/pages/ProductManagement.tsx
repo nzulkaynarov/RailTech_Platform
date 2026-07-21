@@ -20,6 +20,7 @@ import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/
 import { useProducts, useDomainTypes, useStockStatuses, useManufacturers } from '@/hooks/useCatalog';
 import type { Product } from '@/api/catalogApi';
 import { getDomainLabelKey } from '@/config/domainConfig';
+import { uomLabelKey } from '@/lib/codes';
 import { useUserStore } from '@/store/userStore';
 import { useAuthStore } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
@@ -244,7 +245,7 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
                       <Badge variant="secondary" className="text-xs">{t(getDomainLabelKey(product.domain_type_code ?? ''), product.domain_type_name)}</Badge>
                     </TableCell>
                     <TableCell className="text-sm">{product.category_data?.name || ''}</TableCell>
-                    <TableCell className="text-sm">{product.uom_data?.name || ''}</TableCell>
+                    <TableCell className="text-sm">{product.uom_data ? (uomLabelKey(product.uom_data.code) ? t(uomLabelKey(product.uom_data.code)) : product.uom_data.name) : ''}</TableCell>
                     {showPrices && (
                       <TableCell className="text-right font-medium tabular-nums text-sm">
                         {product.base_price && parseFloat(product.base_price) > 0

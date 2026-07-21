@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Loader2, Shield, Sliders } from 'lucide-react';
 
 import { accountsApi, CompanySettings, CompanySettingsUpdate } from '@/api/accountsApi';
+import { currencyLabelKey, deliveryBasisLabelKey } from '@/lib/codes';
 import { useAuthStore } from '@/store/authStore';
 import { useHasCompanyPermission } from '@/hooks/useCapabilities';
 import { useCurrencies, useDeliveryBases } from '@/hooks/useMasterData';
@@ -192,7 +193,7 @@ export function CompanyDefaultsSettings() {
                   <SelectItem value={NONE}>{t('companyDefaults.notSet')}</SelectItem>
                   {bases.map((basis) => (
                     <SelectItem key={basis.code} value={basis.code}>
-                      {basis.code} — {basis.name}
+                      {basis.code} — {deliveryBasisLabelKey(basis.code) ? t(deliveryBasisLabelKey(basis.code)) : basis.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -210,11 +211,16 @@ export function CompanyDefaultsSettings() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={NONE}>{t('companyDefaults.notSet')}</SelectItem>
-                  {currencies.map((currency) => (
-                    <SelectItem key={currency.code} value={currency.code}>
-                      {currency.code}{currency.name ? ` — ${currency.name}` : ''}
-                    </SelectItem>
-                  ))}
+                  {currencies.map((currency) => {
+                    const currencyName = currencyLabelKey(currency.code)
+                      ? t(currencyLabelKey(currency.code))
+                      : currency.name;
+                    return (
+                      <SelectItem key={currency.code} value={currency.code}>
+                        {currency.code}{currencyName ? ` — ${currencyName}` : ''}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>

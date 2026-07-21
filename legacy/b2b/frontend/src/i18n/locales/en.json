@@ -5457,5 +5457,40 @@
     "dap": "Delivered At Place",
     "dpu": "Delivered At Place Unloaded",
     "ddp": "Delivered Duty Paid"
+  },
+  "currencies": {
+    "usd": "US Dollar",
+    "eur": "Euro",
+    "cny": "Chinese Yuan",
+    "rub": "Russian Ruble",
+    "uzs": "Uzbek Som"
+  },
+  "countries": {
+    "de": "Germany",
+    "in": "India",
+    "kz": "Kazakhstan",
+    "cn": "China",
+    "ru": "Russia",
+    "tr": "Turkey",
+    "uz": "Uzbekistan"
+  },
+  "uoms": {
+    "h87": "pcs",
+    "set": "set",
+    "pr": "pair",
+    "mtr": "m",
+    "kmt": "km",
+    "cmt": "cm",
+    "mmt": "mm",
+    "mtk": "m²",
+    "mtq": "m³",
+    "kgm": "kg",
+    "grm": "g",
+    "tne": "t",
+    "ltr": "L",
+    "mlt": "ml",
+    "xpk": "pack",
+    "hur": "hour",
+    "day": "day"
   }
 }

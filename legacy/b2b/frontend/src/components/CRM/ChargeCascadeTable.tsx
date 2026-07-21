@@ -4,6 +4,7 @@ import Decimal from 'decimal.js';
 import type { QuoteCharge, QuoteEconomics } from '@/api/crmApi';
 import { toDecimal, formatMoney } from '@/utils/decimal';
 import { buildChargeCascade } from '@/utils/chargeCascade';
+import { chargeTypeLabelKey } from '@/lib/codes';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
@@ -57,7 +58,9 @@ export const ChargeCascadeTable: React.FC<ChargeCascadeTableProps> = ({
 							<Badge variant={step.isDeduction ? 'secondary' : 'outline'} className="shrink-0">
 								{step.isDeduction ? t('quote.charges.discount') : t('quote.charges.charge')}
 							</Badge>
-							<span className="truncate text-sm font-medium">{step.name}</span>
+							<span className="truncate text-sm font-medium">
+								{chargeTypeLabelKey(step.chargeType) ? t(chargeTypeLabelKey(step.chargeType)) : step.name}
+							</span>
 							{step.isPercent && (
 								<span className="hidden text-xs text-muted-foreground sm:inline">
 									{t('quote.charges.ofBase', { rate: step.ratePercent, base: formatMoney(step.base.toString(), currency) })}

@@ -361,3 +361,63 @@ export const DELIVERY_BASIS_LABEL_KEY: Record<string, string> = {
  *  may add lookup rows via Unfold) so callers can fall back to the raw DB name (`|| basis.name`). */
 export const deliveryBasisLabelKey = (code: string | undefined | null): string =>
   code && DELIVERY_BASIS_LABEL_KEY[code] ? DELIVERY_BASIS_LABEL_KEY[code] : '';
+
+/** `Currency` lookup CODEs (master_data.Currency). The ISO code (USD/UZS/…) is the
+ *  language-neutral identifier and is shown as-is; only the descriptive `name`
+ *  («Доллар США» / «US Dollar») needs localizing. Mirrors `currencies.*` in ru/en.json. */
+export const CURRENCY_LABEL_KEY: Record<string, string> = {
+  USD: 'currencies.usd',
+  EUR: 'currencies.eur',
+  CNY: 'currencies.cny',
+  RUB: 'currencies.rub',
+  UZS: 'currencies.uzs',
+};
+
+/** Resolve a currency descriptive-name label key from a code, returning `''` when unknown
+ *  so callers can fall back to the raw DB name (`|| currency.name`). The currency CODE
+ *  itself (badge/symbol) is language-neutral — do NOT route it through this. */
+export const currencyLabelKey = (code: string | undefined | null): string =>
+  code && CURRENCY_LABEL_KEY[code] ? CURRENCY_LABEL_KEY[code] : '';
+
+/** `Country` lookup CODEs (master_data.Country, alpha-2). Mirrors `countries.*` in ru/en.json. */
+export const COUNTRY_LABEL_KEY: Record<string, string> = {
+  DE: 'countries.de',
+  IN: 'countries.in',
+  KZ: 'countries.kz',
+  CN: 'countries.cn',
+  RU: 'countries.ru',
+  TR: 'countries.tr',
+  UZ: 'countries.uz',
+};
+
+/** Resolve a country label key from a code, returning `''` when unknown (operators may add
+ *  lookup rows via Unfold) so callers can fall back to the raw DB name (`|| country.name`). */
+export const countryLabelKey = (code: string | undefined | null): string =>
+  code && COUNTRY_LABEL_KEY[code] ? COUNTRY_LABEL_KEY[code] : '';
+
+/** `UnitOfMeasure` lookup CODEs (master_data.UnitOfMeasure, UN/ECE Rec 20). Mirrors
+ *  `uoms.*` in ru/en.json — the short display name («шт.» / «pcs»). */
+export const UOM_LABEL_KEY: Record<string, string> = {
+  H87: 'uoms.h87',
+  SET: 'uoms.set',
+  PR: 'uoms.pr',
+  MTR: 'uoms.mtr',
+  KMT: 'uoms.kmt',
+  CMT: 'uoms.cmt',
+  MMT: 'uoms.mmt',
+  MTK: 'uoms.mtk',
+  MTQ: 'uoms.mtq',
+  KGM: 'uoms.kgm',
+  GRM: 'uoms.grm',
+  TNE: 'uoms.tne',
+  LTR: 'uoms.ltr',
+  MLT: 'uoms.mlt',
+  XPK: 'uoms.xpk',
+  HUR: 'uoms.hur',
+  DAY: 'uoms.day',
+};
+
+/** Resolve a unit-of-measure label key from a code, returning `''` when unknown (operators
+ *  may add lookup rows via Unfold) so callers can fall back to the raw DB name (`|| uom.name`). */
+export const uomLabelKey = (code: string | undefined | null): string =>
+  code && UOM_LABEL_KEY[code] ? UOM_LABEL_KEY[code] : '';
