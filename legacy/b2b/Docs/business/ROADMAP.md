@@ -38,13 +38,13 @@
 - [ ] Починить биллинг GitHub Actions — CI-гейты и nightly e2e не работают с ~2026-07-06
 - [ ] INF-12: сделать CI-job `security` обязательным status-check в branch protection (после биллинга)
 
-### Инфраструктура (аудит 2026-07-02, ещё открыто)
-- [ ] INF-04: backup-gate (pg_dump) перед авто-`migrate --noinput` в `entrypoint.sh` — наивысший инфра-риск
-- [ ] INF-01: edge rate-limit в Caddy для `/api/v1/auth/*` и `/admin/` (сейчас только DRF app-throttle)
-- [ ] INF-05/09: пиннинг зависимостей (`>=` → lock) + уход с psycopg2-binary
-- [ ] INF-07: пиннинг minio/minio + minio/mc образов (`:latest`)
-- [ ] INF-08: проверить/сбросить наследование `./backend:/app` bind-mount в прод-compose
-- [ ] Staging-окружение (DNS + GitHub environment + Caddy block) → активировать deploy-staging.yml; тогда nightly e2e перестанет ходить в прод
+### Инфраструктура (аудит 2026-07-02 — INF-01/04/05/07/08/09 ЗАКРЫТЫ в коде, сверка 2026-07-08/07-16)
+- [x] INF-04: backup-gate (pg_dump) перед авто-`migrate --noinput` — `entrypoint.sh` гейтит миграции на `AUTO_MIGRATE`, `deploy-b2b.yml` делает `pg_dump` до миграций
+- [x] INF-01: edge rate-limit в Caddy для `/api/v1/auth/*` и `/admin/` — на проде (PR #253)
+- [x] INF-05/09: пиннинг зависимостей (hashed pip-compile lock) + уход с psycopg2-binary (сборка из исходников) (PR #251)
+- [x] INF-07: пиннинг minio/minio + minio/mc образов (`RELEASE.*`, вместо `:latest`)
+- [x] INF-08: наследование `./backend:/app` bind-mount сброшено — `volumes: !override` в `docker-compose.prod.yml` (прод бежит образ, не bind-mount)
+- [ ] Staging-окружение (DNS + GitHub environment + Caddy block) → активировать deploy-staging.yml; тогда nightly e2e перестанет ходить в прод (сторона владельца)
 
 ### Продукт
 - [x] **CRM-слой «книга контрагентов с историей»** (главная продуктовая ценность) — **ПОСТРОЕН**: `CounterpartyRelationship`-ребро (`crm/models/relationships.py`, миграция `crm/0056`) + `RelationshipViewSet` (`crm/views/relationships.py`) + книга «Контрагенты» на фронте (`CounterpartiesPage.tsx`, nav Клиенты/Поставщики); идентичность по ИНН + слияние + CB-auto-populate (`accounts/services/merge.py`: `merge_companies`, `auto_populate_history`); rollup-пересчёт (`recompute_relationship_rollups` cmd). Хвост: калибровка invite-петли на реальных данных.

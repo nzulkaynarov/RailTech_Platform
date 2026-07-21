@@ -111,3 +111,28 @@ _Ответ на второй вопрос владельца. Фундамен�
 **OWNER-блокеры (не код):** CI billing-dead (гейты локально); Click/Payme/E-IMZO by design; coverage 30→70 ждёт живого CI.
 
 **Решения владельца, нужные до кода:** (1) DT1 маржа — read-only vs per-line override; (2) F3 — `Deal.company` nullable vs self-company; (3) приоритет волн D vs E (полировка UX vs новая фича продавцового КП).
+
+
+---
+
+## Статус на 2026-07-21 (сверка по коду и git-истории, main 662d3fa, миграции crm/0065)
+
+**DONE (на проде):**
+- Волны **A / B / E** — реализованы.
+- **DT1** (per-line margin override) — крайняя миграция `crm/0064_per_line_margin_override`; DEPLOY-1 transitional None-guard (`crm/services/pricing`).
+- **DT2** (типизация economics), **DT5** (S7b i18n), **T1 / T3** (тест-долг части) — сделаны.
+- **B4 (TOCTOU)** — сделано: атомарный апдейт под row-lock `select_for_update` в `backend/crm/views/quotes/items.py` (см. коммент «B4 (TOCTOU)» + `select_for_update()` на строке ~186).
+- **DT6** (устранение `as unknown as` в хуках грида) — сделано: grep `as unknown as` по `frontend/src/hooks/useQuoteBuilderActions.ts` и `usePricingMirror.ts` пуст.
+
+**В РАБОТЕ:**
+- **DT3** — распил трёх файлов грида до <500 строк (PR #358 / #359 / #360).
+
+**ОСТАЁТСЯ:**
+- **U5** — группировка/сворачивание секций.
+- **U6** — полная клавиатурная навигация грида.
+- **U7** — переключатель density.
+- **T2** — Playwright-спека виртуализации.
+- **DT9** — батч fast-follows.
+- **MINOR** — RequestDetailPage (косметика).
+
+**OWNER-блокеры (не код, без изменений):** CI billing-dead; Click/Payme/E-IMZO by design; coverage 30→70 ждёт живого CI.

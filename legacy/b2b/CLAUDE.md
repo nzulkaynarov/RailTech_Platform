@@ -1,6 +1,6 @@
 # RailTech B2B SaaS — Claude Code Context
 
-_Last full refresh: 2026-07-06 (HEAD c6cb04f, post PR #229); partial touch-up 2026-07-12 (migration heads, 2FA/sessions, Settings Hub, WorkspaceRole-deprecation status). Verify against code when in doubt — Rule 6._
+_Last full refresh: 2026-07-06 (HEAD c6cb04f, post PR #229); partial touch-up 2026-07-21 (migration heads across all apps — crm now 0065; earlier 2026-07-12: 2FA/sessions, Settings Hub, WorkspaceRole-deprecation status). Verify against code when in doubt — Rule 6._
 
 ## Project Overview
 
@@ -105,7 +105,7 @@ ADR index (`Docs/dev/adr/`): **0001** admin separation · **0002** role responsi
 - **Local dev:** a local **Postgres container** is added via `docker-compose.override.yml` (gitignored, auto-loaded by `make up`; prod/staging use explicit `-f ...prod.yml` so never load it). Backend reaches it as `db:5432`; `.env` → `DATABASE_URL=postgresql://railtech:railtech@db:5432/railtech?sslmode=disable`.
 - **Connection:** `DATABASE_URL` env var parsed via `urlparse` (query params → DB `OPTIONS`, `sslmode` defaults to `require`), fallback to individual `POSTGRES_*` vars
 - **Auth user:** `accounts.CustomUser` (email login)
-- **Migration heads (2026-07-17):** `accounts/0039`, `crm/0062` (0062 = QuoteItem.display_type/is_optional/position — S1 sections/notes/optional lines; backfill position by id order)
+- **Migration heads (2026-07-21):** `accounts/0039`, `crm/0065`, `catalog/0012`, `sourcing/0007`, `master_data/0010`, `notifications/0008`, `core/0004`. Latest crm: `0062` (QuoteItem.display_type/is_optional/position — S1 sections/notes/optional lines; backfill position by id order), `0063` (fix document currency from quote), `0064` (per-line margin override — DT1), `0065` (Deal.company nullable)
 
 ## API Surface (prefix: `/api/v1/`)
 
