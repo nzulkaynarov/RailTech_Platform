@@ -3792,7 +3792,8 @@
       "openChat": "Chat with buyer",
       "contextTitle": "Request & chat",
       "calculatorDraft": "Draft with no client",
-      "calculatorDraftHint": "Pick the recipient later — sending the КП will ask you to choose a client first."
+      "calculatorDraftHint": "Pick the recipient later — sending the КП will ask you to choose a client first.",
+      "stageBadgeHint": "Deal stage"
     }
   },
   "dealSplit": {

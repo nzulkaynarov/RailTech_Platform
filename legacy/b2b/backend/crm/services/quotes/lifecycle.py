@@ -90,15 +90,24 @@ class QuoteLifecycleService:
             public_quote_url,
         )
 
+        projected_items = client_projection_items(quote)
         html_string = render_to_string(
             "crm/quote_pdf.html",
             {
                 "quote": quote,
+                # Governance: a КП is an OFFER only once frozen on send. Until then (draft or
+                # internally-approved-but-unsent) the PDF carries a «ЧЕРНОВИК» watermark, so a copy
+                # leaked out-of-band cannot pass as a binding offer (matches send_to_client policy).
+                "is_draft": quote.frozen_at is None,
+                # Only surface the per-line «Срок» column when at least one line actually carries a
+                # lead time — otherwise it prints a column of «—» that duplicates the single КП-level
+                # «Срок поставки» in the terms block (client confusion).
+                "has_line_lead_time": any(getattr(item, "lead_time_days", None) for item in projected_items),
                 # Client projection: charges distributed into per-line delivered prices (no
                 # goods-vs-charges breakout — confidentiality). Lines sum to quote.total_excl_vat.
                 # Includes SECTION/NOTE rows (display_type) in position order; optional lines are
                 # rendered separately below the totals via `optional_items` (off-total offer).
-                "items": client_projection_items(quote),
+                "items": projected_items,
                 "optional_items": client_optional_items(quote),
                 "company": quote.deal.company,
                 # Public «Принять онлайн» link + QR — present only after send (token minted), so the

@@ -93,12 +93,6 @@ export const EconomicsRail: React.FC = () => {
 							<Badge variant="outline">{t('quote.marginApplied')} {Number(activeQuote?.margin_percent).toFixed(0)}%</Badge>
 						)}
 					</div>
-					{!activeQuote.frozen_at && (
-						<Button variant="outline" size="sm" className="w-full" onClick={() => setShowSettings(true)}>
-							<Settings className="size-3" />
-							{t('quote.settings.title')}
-						</Button>
-					)}
 				</div>
 
 				{/* Экономика сделки (cost-viewer only) */}

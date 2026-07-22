@@ -44,9 +44,9 @@
     <thead>
       <tr>
         <th style="width:5%">№</th>
-        <th style="width:{% if show_lead_time %}43{% else %}55{% endif %}%">Наименование</th>
+        <th style="width:{% if show_lead_time and has_line_lead_time %}43{% else %}55{% endif %}%">Наименование</th>
         <th style="width:10%" class="center">Кол-во</th>
-        {% if show_lead_time %}<th style="width:12%" class="center">Срок</th>{% endif %}
+        {% if show_lead_time and has_line_lead_time %}<th style="width:12%" class="center">Срок</th>{% endif %}
         <th style="width:15%" class="num">Цена за ед., {{ pres_ccy }}</th>
         <th style="width:15%" class="num">Сумма, {{ pres_ccy }}</th>
       </tr>
@@ -56,13 +56,13 @@
       {% if item.display_type == "SECTION" %}
       {# Group header spanning the whole width, with the section subtotal (Σ of its ITEM lines). #}
       <tr class="section-row">
-        <td colspan="{% if show_lead_time %}5{% else %}4{% endif %}" class="section-name">{{ item.imported_raw_name|default:"—" }}</td>
+        <td colspan="{% if show_lead_time and has_line_lead_time %}5{% else %}4{% endif %}" class="section-name">{{ item.imported_raw_name|default:"—" }}</td>
         <td class="num section-sub">{{ item.section_subtotal|money }}</td>
       </tr>
       {% elif item.display_type == "NOTE" %}
       {# Free-text note spanning the whole width, italic, no prices. #}
       <tr class="note-row">
-        <td colspan="{% if show_lead_time %}6{% else %}5{% endif %}" class="note-text">{{ item.imported_raw_name }}</td>
+        <td colspan="{% if show_lead_time and has_line_lead_time %}6{% else %}5{% endif %}" class="note-text">{{ item.imported_raw_name }}</td>
       </tr>
       {% else %}
       <tr>
@@ -78,7 +78,7 @@
           {% endif %}
         </td>
         <td class="center">{{ item.quantity|qty:item.unit }}</td>
-        {% if show_lead_time %}<td class="center">{% if item.lead_time_days %}до {{ item.lead_time_days }} дн.{% else %}&mdash;{% endif %}</td>{% endif %}
+        {% if show_lead_time and has_line_lead_time %}<td class="center">{% if item.lead_time_days %}до {{ item.lead_time_days }} дн.{% else %}&mdash;{% endif %}</td>{% endif %}
         <td class="num">{{ item.final_price_excl_vat|money }}</td>
         <td class="num">{{ item.line_total|money }}</td>
       </tr>
@@ -121,9 +121,9 @@
       <thead>
         <tr>
           <th style="width:5%">№</th>
-          <th style="width:{% if show_lead_time %}43{% else %}55{% endif %}%">Наименование</th>
+          <th style="width:{% if show_lead_time and has_line_lead_time %}43{% else %}55{% endif %}%">Наименование</th>
           <th style="width:10%" class="center">Кол-во</th>
-          {% if show_lead_time %}<th style="width:12%" class="center">Срок</th>{% endif %}
+          {% if show_lead_time and has_line_lead_time %}<th style="width:12%" class="center">Срок</th>{% endif %}
           <th style="width:15%" class="num">Цена за ед., {{ pres_ccy }}</th>
           <th style="width:15%" class="num">Сумма, {{ pres_ccy }}</th>
         </tr>
@@ -143,7 +143,7 @@
             {% endif %}
           </td>
           <td class="center">{{ item.quantity|qty:item.unit }}</td>
-          {% if show_lead_time %}<td class="center">{% if item.lead_time_days %}до {{ item.lead_time_days }} дн.{% else %}&mdash;{% endif %}</td>{% endif %}
+          {% if show_lead_time and has_line_lead_time %}<td class="center">{% if item.lead_time_days %}до {{ item.lead_time_days }} дн.{% else %}&mdash;{% endif %}</td>{% endif %}
           <td class="num">{{ item.final_price_excl_vat|money }}</td>
           <td class="num">{{ item.line_total|money }}</td>
         </tr>
@@ -169,8 +169,10 @@
     <table class="cta-table"><tr>
       <td class="cta-text">
         <span class="cta-title">Онлайн-версия предложения.</span>
-        {% if public_quote_qr %}Отсканируйте QR или откройте ссылку, чтобы посмотреть актуальную версию КП;{% else %}Актуальная версия КП доступна по ссылке;{% endif %} для подтверждения свяжитесь с вашим менеджером:
-        <span class="cta-link">{{ public_quote_url }}</span>
+        {% if public_quote_qr %}Отсканируйте QR-код, чтобы посмотреть актуальную версию КП;{% else %}Актуальная версия КП доступна по ссылке;{% endif %} для подтверждения свяжитесь с вашим менеджером.
+        {# The public link carries a long random token — unreadable/ugly in print. Show it only as a
+           text fallback when there is no QR; when the QR is present it IS the access method. #}
+        {% if not public_quote_qr %}<span class="cta-link">{{ public_quote_url }}</span>{% endif %}
       </td>
       {% if public_quote_qr %}
       <td class="cta-qr-cell"><img class="cta-qr" src="{{ public_quote_qr }}" alt="QR — онлайн-версия КП"></td>

@@ -166,11 +166,20 @@
     font-size: 16pt; font-weight: 700; letter-spacing: 1pt;
     color: rgba(200, 55, 55, 0.13); white-space: nowrap;
   }
+  /* Governance: a NOT-yet-sent КП (draft / internally-approved-but-unsent) carries a «ЧЕРНОВИК»
+     watermark so a copy handed to a client out-of-band — bypassing the review/send chain — is
+     visibly not a binding offer. Cleared once the КП is frozen on send. */
+  .draft-watermark {
+    position: fixed; top: 45%; left: -5%; right: -5%;
+    text-align: center; transform: rotate(-27deg); transform-origin: center;
+    font-size: 15pt; font-weight: 700; letter-spacing: 1pt;
+    color: rgba(120, 120, 120, 0.16); white-space: nowrap;
+  }
   {% block extra_head %}{% endblock %}
 </style>
 </head>
 <body>
-  {% block watermark %}{% if is_demo %}<div class="demo-watermark">ДЕМО — не для коммерческого использования</div>{% endif %}{% endblock %}
+  {% block watermark %}{% if is_demo %}<div class="demo-watermark">ДЕМО — не для коммерческого использования</div>{% elif is_draft %}<div class="draft-watermark">ЧЕРНОВИК · не является офертой</div>{% endif %}{% endblock %}
 
   <!-- ── Brand header ── -->
   <table class="brandbar">

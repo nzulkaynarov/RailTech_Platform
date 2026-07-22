@@ -158,6 +158,11 @@ def render_document_profile_preview_html(company) -> str:
         "items": sample_items,
         "optional_items": [],
         "company": sample_buyer,
+        # Branding preview, not a real export — no «ЧЕРНОВИК» watermark (it would obscure the very
+        # branding this sample exists to show); keep the lead-time column visible so the seller can
+        # see it styled when their profile toggle is on.
+        "is_draft": False,
+        "has_line_lead_time": True,
         **document_brand_context(company, is_demo=False),
     }
     return render_to_string("crm/quote_pdf.html", context)

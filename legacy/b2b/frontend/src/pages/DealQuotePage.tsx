@@ -134,14 +134,17 @@ export function DealQuotePage({ dealId, onBack, onNavigate }: DealQuotePageProps
               ? <span className="font-normal text-muted-foreground">{` · ${deal.client_name || deal.company_name}`}</span>
               : ''}
           </h1>
-          <StatusBadge
-            className="shrink-0"
-            label={deal.stage_code && DEAL_STAGE_LABEL_KEY[deal.stage_code]
-              ? t(DEAL_STAGE_LABEL_KEY[deal.stage_code])
-              : (deal.stage_name ?? '')}
-            variant={getDealStageVariant(deal.stage_code ?? '')}
-          />
-          {/* КП internal approval chain (документооборот) — compact pill + Popover. */}
+          {/* Two adjacent pills read as conflicting statuses of one thing unless disambiguated: the
+              first is the DEAL's funnel stage, the second is the КП document's status. Title says which. */}
+          <span title={t('pages.dealQuote.stageBadgeHint')} className="shrink-0">
+            <StatusBadge
+              label={deal.stage_code && DEAL_STAGE_LABEL_KEY[deal.stage_code]
+                ? t(DEAL_STAGE_LABEL_KEY[deal.stage_code])
+                : (deal.stage_name ?? '')}
+              variant={getDealStageVariant(deal.stage_code ?? '')}
+            />
+          </span>
+          {/* КП internal approval chain (документооборот) — compact pill + Popover for КП status. */}
           {quote && <QuoteApprovalChain quote={quote} />}
         </div>
         <div className="flex flex-wrap items-center gap-2">
