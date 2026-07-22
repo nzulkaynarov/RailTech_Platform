@@ -518,6 +518,15 @@ const invalidateQuoteChain = (queryClient: ReturnType<typeof useQueryClient>) =>
     queryClient.invalidateQueries({ queryKey: ['my-approval-queue'] });
 };
 
+// DRAFT-stage approval preview (Salesforce pattern): read-only, fetched only while a draft's
+// chain popover can show it — tells the seller up-front who will have to approve, or that the
+// chain will auto-approve (solo).
+export const useQuoteApprovalPreview = (id: number, enabled: boolean) => useQuery({
+    queryKey: ['quotes', id, 'approval-preview'],
+    queryFn: () => crmApi.getQuoteApprovalPreview(id),
+    enabled: enabled && !!id,
+});
+
 export const useSubmitQuoteForReview = () => {
     const queryClient = useQueryClient();
     return useMutation({

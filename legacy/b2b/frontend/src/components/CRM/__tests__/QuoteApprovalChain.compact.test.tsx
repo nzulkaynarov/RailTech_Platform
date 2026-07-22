@@ -10,6 +10,7 @@ vi.mock('@/hooks/useCRM', () => ({
 	useSubmitQuoteForReview: vi.fn(),
 	useActOnApprovalStep: vi.fn(),
 	useRecallQuote: vi.fn(),
+	useQuoteApprovalPreview: vi.fn(() => ({ data: undefined })),
 }));
 
 const mkMutation = () => ({ mutate: vi.fn(), mutateAsync: vi.fn().mockResolvedValue(undefined), isPending: false });

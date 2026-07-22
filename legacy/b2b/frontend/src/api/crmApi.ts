@@ -290,6 +290,23 @@ export interface QuoteApprovalStep {
 	can_act: boolean;        // may the requesting user act on this step right now
 }
 
+export interface QuoteApprovalPreviewStep {
+	participation: string;
+	participation_label: string;
+	trigger: string;
+	trigger_label: string;
+	name: string;
+	role: string;
+	is_assigned: boolean;
+	is_submitter: boolean;
+}
+
+export interface QuoteApprovalPreview {
+	would_auto_approve: boolean;
+	below_floor: boolean;
+	steps: QuoteApprovalPreviewStep[];
+}
+
 export interface Quote {
 	id: number;
 	deal: number;
@@ -772,6 +789,12 @@ export const crmApi = {
 	},
 	getQuote: async (id: number) => {
 		const response = await apiClient.get<Quote>(`crm/quotes/${id}/`);
+		return response.data;
+	},
+	// Read-only «who would have to approve this КП if submitted now» (Salesforce Approval
+	// Preview) — builds nothing, persists nothing. Surfaced in the DRAFT approval popover.
+	getQuoteApprovalPreview: async (id: number) => {
+		const response = await apiClient.get<QuoteApprovalPreview>(`crm/quotes/${id}/approval-preview/`);
 		return response.data;
 	},
 	createQuote: async (data: { deal: number; notes?: string; valid_until?: string }) => {

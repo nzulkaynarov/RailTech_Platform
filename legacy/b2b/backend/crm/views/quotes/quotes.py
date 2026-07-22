@@ -196,6 +196,13 @@ class QuoteViewSet(QuoteApprovalMixin, OptimisticLockingMixin, viewsets.ModelVie
     def generate_pdf(self, request, pk=None):
         """Re-render the КП PDF off-thread."""
         quote = self.get_object()
+        # A FROZEN КП's file is the immutable snapshot the client received — explicit
+        # regeneration is refused (staleness is impossible: frozen content never changes,
+        # and re-rendering under a newer template could silently alter a legal document).
+        # A frozen КП with a MISSING file (pre-existing data / lost storage) may still
+        # render once via the lazy download path.
+        if quote.frozen_at is not None and quote.pdf_file:
+            return Response({"detail": "QUOTE_PDF_IMMUTABLE"}, status=status.HTTP_409_CONFLICT)
         from crm.services import QuoteLifecycleService
 
         try:
@@ -207,6 +214,8 @@ class QuoteViewSet(QuoteApprovalMixin, OptimisticLockingMixin, viewsets.ModelVie
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         # Explicit regenerate: drop the stale file reference first so a concurrent
         # download can't serve the outdated render while the task rebuilds it.
+        # (Drafts self-invalidate on every content write now — recalculate_quote clears the
+        # file — so this endpoint survives mainly as a manual re-render escape hatch.)
         if quote.pdf_file:
             quote.pdf_file = None
             quote.save(update_fields=["pdf_file"])

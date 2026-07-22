@@ -877,7 +877,10 @@
         "REJECTED": "Отклонено",
         "RECALLED": "Отозвано",
         "SKIPPED": "Пропущено"
-      }
+      },
+      "previewTitle": "Как пройдёт согласование",
+      "previewAuto": "Не потребуется — будет согласовано автоматически (единственный согласующий — вы)",
+      "previewBelowFloor": "Маржа ниже порога компании — цепочка усилена эскалацией руководителю"
     },
     "pdf": "PDF",
     "empty": {
@@ -3294,14 +3297,12 @@
         "approve": "Согласовать",
         "reject": "Отклонить",
         "downloadPDF": "Скачать PDF",
-        "generatePDF": "Сформировать PDF",
         "forceApprove": "Force-согласовать (админ)"
       },
       "toast": {
         "sentSuccess": "КП #{{id}} отправлено клиенту",
         "approvedSuccess": "КП #{{id}} согласовано",
         "rejectedSuccess": "КП #{{id}} отклонено",
-        "pdfGenerated": "PDF сформирован",
         "actionError": "Не удалось выполнить действие",
         "forceReasonRequired": "Укажите причину force-согласования",
         "forceApproved": "КП #{{id}} force-согласовано платформенным админом"

@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { Check, ChevronDown, Clock, Loader2, Lock, SendHorizontal, Undo2, X, Mail } from 'lucide-react';
 import type { Quote, QuoteApprovalStep } from '@/api/crmApi';
 import { translateApiError } from '@/lib/apiError';
-import { useSubmitQuoteForReview, useActOnApprovalStep, useRecallQuote } from '@/hooks/useCRM';
+import { useQuoteApprovalPreview, useSubmitQuoteForReview, useActOnApprovalStep, useRecallQuote } from '@/hooks/useCRM';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
@@ -48,6 +48,11 @@ export const QuoteApprovalChain: React.FC<QuoteApprovalChainProps> = ({ quote })
   const [reason, setReason] = useState('');
 
   const status = quote.status_code;
+  // DRAFT: read-only preview of the would-be chain — the seller sees up-front who will approve
+  // (or that it will auto-approve) BEFORE committing to submit. No side effects (Salesforce
+  // Approval Preview). Hook order is unconditional (rules-of-hooks); the fetch itself is gated
+  // to drafts via `enabled`.
+  const { data: approvalPreview } = useQuoteApprovalPreview(quote.id, status === 'DRAFT');
   if (!CHAIN_STATUSES.has(status)) return null;
 
   const steps = quote.approval_steps ?? [];
@@ -137,6 +142,32 @@ export const QuoteApprovalChain: React.FC<QuoteApprovalChainProps> = ({ quote })
   // The step list / status body — identical in the inline bar and the compact popover.
   const chainBody = (
     <>
+      {status === 'DRAFT' && approvalPreview && (
+        <div className="flex flex-col gap-1.5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            {t('quote.approvalChain.previewTitle')}
+          </p>
+          {approvalPreview.would_auto_approve ? (
+            <p className="text-xs text-muted-foreground">{t('quote.approvalChain.previewAuto')}</p>
+          ) : (
+            <div className="rounded-md border bg-background px-3 py-1.5">
+              {approvalPreview.steps.map((step, index) => (
+                <div key={index} className="flex items-center gap-2 py-1 text-xs">
+                  <Clock className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                  <span className="font-medium">{step.name}</span>
+                  <span className="text-muted-foreground">
+                    {step.role ? `${step.role} · ` : ''}{step.participation_label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+          {approvalPreview.below_floor && (
+            <p className="text-xs text-warning">{t('quote.approvalChain.previewBelowFloor')}</p>
+          )}
+        </div>
+      )}
+
       {status === 'PENDING_APPROVAL' && steps.length > 0 && (
         <div className="flex flex-col gap-2">
           <p className="text-xs text-muted-foreground">{t('quote.approvalChain.pendingApprovalHelper')}</p>

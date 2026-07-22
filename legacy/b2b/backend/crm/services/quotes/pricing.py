@@ -286,17 +286,26 @@ class QuoteCalculationService:
         quote.vat_amount = (tax_exclusive * vat_rate).quantize(penny, rounding=ROUND_HALF_UP)
         quote.total_incl_vat = tax_exclusive + quote.vat_amount
 
-        quote.save(
-            update_fields=[
-                "subtotal_excl_vat",
-                "charges_total",
-                "vat_amount",
-                "total_incl_vat",
-                # FX snapshot freezes any newly-resolved market rate so the total can't drift.
-                "fx_snapshot",
-                "updated_at",
-            ]
-        )
+        update_fields = [
+            "subtotal_excl_vat",
+            "charges_total",
+            "vat_amount",
+            "total_incl_vat",
+            # FX snapshot freezes any newly-resolved market rate so the total can't drift.
+            "fx_snapshot",
+            "updated_at",
+        ]
+        # PDF freshness (invalidate-on-write, Odoo model): the rendered file is a CACHE of this
+        # КП's content. Every content write funnels through this recalc (item save/delete via the
+        # model+signal, bulk paths, charges, КП settings), so clearing the stale file HERE is the
+        # single choke point — the download endpoint lazily re-renders on next request (ARCH-03).
+        # A FROZEN КП is the immutable snapshot the client received (PandaDoc/DocuSign model):
+        # its file is never invalidated. The old file is left to storage (same pattern as the
+        # explicit regenerate action) — no deletion inside the transaction.
+        if quote.frozen_at is None and quote.pdf_file:
+            quote.pdf_file = None
+            update_fields.append("pdf_file")
+        quote.save(update_fields=update_fields)
         return quote
 
 

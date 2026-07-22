@@ -875,7 +875,10 @@
         "REJECTED": "Rejected",
         "RECALLED": "Recalled",
         "SKIPPED": "Skipped"
-      }
+      },
+      "previewTitle": "How approval will go",
+      "previewAuto": "Not required — it will be approved automatically (you are the only approver)",
+      "previewBelowFloor": "Margin is below the company floor — the chain escalates to the head"
     },
     "pdf": "PDF",
     "empty": {
@@ -3290,14 +3293,12 @@
         "approve": "Approve",
         "reject": "Reject",
         "downloadPDF": "Download PDF",
-        "generatePDF": "Generate PDF",
         "forceApprove": "Force-approve (admin)"
       },
       "toast": {
         "sentSuccess": "Quote #{{id}} sent to client",
         "approvedSuccess": "Quote #{{id}} approved",
         "rejectedSuccess": "Quote #{{id}} rejected",
-        "pdfGenerated": "PDF generated",
         "actionError": "Failed to perform action",
         "forceReasonRequired": "Force-approve reason is required",
         "forceApproved": "Quote #{{id}} force-approved by platform admin"
