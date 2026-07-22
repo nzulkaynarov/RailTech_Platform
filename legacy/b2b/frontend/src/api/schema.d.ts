@@ -6915,6 +6915,7 @@ export interface components {
              */
             company?: number | null;
             readonly company_name: string | null;
+            readonly contact_name: string | null;
             /**
              * Контактное лицо
              * @description Представитель клиента в данной сделке
@@ -7012,6 +7013,7 @@ export interface components {
              */
             company?: number | null;
             readonly company_name: string | null;
+            readonly contact_name: string | null;
             /**
              * Этап воронки
              * @description Текущий этап сделки в воронке продаж

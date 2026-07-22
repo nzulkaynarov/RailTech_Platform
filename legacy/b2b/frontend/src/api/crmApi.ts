@@ -372,6 +372,7 @@ export interface Deal {
 	id: number;
 	company?: number | null;
 	company_name?: string;
+	contact_name?: string | null;
 	client?: number | null;
 	client_name?: string;
 	manager?: number | null;

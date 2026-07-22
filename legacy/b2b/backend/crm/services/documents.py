@@ -318,11 +318,19 @@ def public_quote_page_context(quote) -> dict:
     from crm.services.quotes._shared import _quote_seller_company
 
     seller_company = _quote_seller_company(quote)
+    projected_items = client_projection_items(quote)
     context = {
         "quote": quote,
-        "items": client_projection_items(quote),
+        "items": projected_items,
         "optional_items": client_optional_items(quote),
         "company": quote.deal.company,
+        # Offline client fallback for the «Покупатель» block (deal.company is NULL for a
+        # seller-created deal with an offline contact).
+        "contact": quote.deal.contact,
+        # Mirror the PDF (#375): render the per-line «Срок» column only when at least one line
+        # actually carries a lead time — otherwise it is a column of «—» duplicating the single
+        # КП-level «Срок поставки» below.
+        "has_line_lead_time": any(item.get("lead_time_days") for item in projected_items),
         "public_quote_url": public_quote_url(quote),
         **document_brand_context(
             seller_company,

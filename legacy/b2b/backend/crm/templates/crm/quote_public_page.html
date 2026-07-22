@@ -160,7 +160,8 @@
         </div>
         <div class="party">
           <h3>Покупатель</h3>
-          <div class="pname">{{ company.name|default:"—" }}</div>
+          {# Offline client: deal.company is NULL — name the contact instead of a bare «—». #}
+          <div class="pname">{% if company %}{{ company.name|default:"—" }}{% elif contact %}{{ contact.name|default:"—" }}{% else %}—{% endif %}</div>
           {% if company.inn %}<p>ИНН: {{ company.inn }}</p>{% endif %}
           {% if company.legal_address %}<p>{{ company.legal_address }}</p>{% endif %}
         </div>
@@ -176,7 +177,7 @@
               <th style="width:6%">№</th>
               <th>Наименование</th>
               <th class="center" style="width:12%">Кол-во</th>
-              {% if show_lead_time %}<th class="center" style="width:12%">Срок</th>{% endif %}
+              {% if show_lead_time and has_line_lead_time %}<th class="center" style="width:12%">Срок</th>{% endif %}
               <th class="num" style="width:16%">Цена, {{ pres_ccy }}</th>
               <th class="num" style="width:16%">Сумма, {{ pres_ccy }}</th>
             </tr>
@@ -185,12 +186,12 @@
             {% for item in items %}
               {% if item.display_type == "SECTION" %}
               <tr class="section-row">
-                <td colspan="{% if show_lead_time %}5{% else %}4{% endif %}">{{ item.imported_raw_name|default:"—" }}</td>
+                <td colspan="{% if show_lead_time and has_line_lead_time %}5{% else %}4{% endif %}">{{ item.imported_raw_name|default:"—" }}</td>
                 <td class="num section-sub">{{ item.section_subtotal|money }}</td>
               </tr>
               {% elif item.display_type == "NOTE" %}
               <tr class="note-row">
-                <td colspan="{% if show_lead_time %}6{% else %}5{% endif %}">{{ item.imported_raw_name }}</td>
+                <td colspan="{% if show_lead_time and has_line_lead_time %}6{% else %}5{% endif %}">{{ item.imported_raw_name }}</td>
               </tr>
               {% else %}
               <tr>
@@ -206,7 +207,7 @@
                   {% endif %}
                 </td>
                 <td class="center">{{ item.quantity|qty:item.unit }}</td>
-                {% if show_lead_time %}<td class="center">{% if item.lead_time_days %}до {{ item.lead_time_days }} дн.{% else %}&mdash;{% endif %}</td>{% endif %}
+                {% if show_lead_time and has_line_lead_time %}<td class="center">{% if item.lead_time_days %}до {{ item.lead_time_days }} дн.{% else %}&mdash;{% endif %}</td>{% endif %}
                 <td class="num">{{ item.final_price_excl_vat|money }}</td>
                 <td class="num">{{ item.line_total|money }}</td>
               </tr>

@@ -102,7 +102,7 @@ class QuoteLifecycleService:
                 # Only surface the per-line «Срок» column when at least one line actually carries a
                 # lead time — otherwise it prints a column of «—» that duplicates the single КП-level
                 # «Срок поставки» in the terms block (client confusion).
-                "has_line_lead_time": any(getattr(item, "lead_time_days", None) for item in projected_items),
+                "has_line_lead_time": any(item.get("lead_time_days") for item in projected_items),
                 # Client projection: charges distributed into per-line delivered prices (no
                 # goods-vs-charges breakout — confidentiality). Lines sum to quote.total_excl_vat.
                 # Includes SECTION/NOTE rows (display_type) in position order; optional lines are

@@ -19622,6 +19622,11 @@
                         "readOnly": true,
                         "nullable": true
                     },
+                    "contact_name": {
+                        "type": "string",
+                        "readOnly": true,
+                        "nullable": true
+                    },
                     "client": {
                         "type": "integer",
                         "nullable": true,
@@ -19730,6 +19735,7 @@
                     "can_edit_request",
                     "client_name",
                     "company_name",
+                    "contact_name",
                     "created_at",
                     "id",
                     "manager_name",
@@ -19806,6 +19812,11 @@
                         "readOnly": true,
                         "nullable": true
                     },
+                    "contact_name": {
+                        "type": "string",
+                        "readOnly": true,
+                        "nullable": true
+                    },
                     "stage": {
                         "type": "integer",
                         "nullable": true,
@@ -19874,6 +19885,7 @@
                     "assigned_to",
                     "assigned_to_name",
                     "company_name",
+                    "contact_name",
                     "created_at",
                     "id",
                     "stage_code",

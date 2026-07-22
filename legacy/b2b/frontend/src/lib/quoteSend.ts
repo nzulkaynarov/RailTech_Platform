@@ -33,9 +33,10 @@ export interface SendSummary {
 }
 
 export function composeSendSummary(deal: Deal, quote: Quote): SendSummary {
-  // Recipient: the registered client or the offline contact's company. The send path resolves the
-  // actual email server-side; we only display who it goes to (email is not on the Deal serializer).
-  const recipient = deal.client_name || deal.company_name || null;
+  // Recipient: the registered client, the offline contact, or the buyer company. The send path
+  // resolves the actual email server-side (resolve_quote_recipient); we only display who it goes
+  // to — contact_name covers the seller-created deal with an offline client (deal.company NULL).
+  const recipient = deal.client_name || deal.contact_name || deal.company_name || null;
 
   const economics = quote.economics ?? null;
   let marginState: MarginState = 'hidden';
