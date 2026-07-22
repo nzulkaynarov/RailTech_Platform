@@ -17,7 +17,8 @@ import {
 import { NewQuoteDialog } from '@/components/CRM/NewQuoteDialog';
 import { RecordPaymentDialog } from '@/components/Billing/RecordPaymentDialog';
 import { useDocumentTemplates, useGenerateDocument } from '@/hooks/useDocuments';
-import { useDeals, useContacts } from '@/hooks/useCRM';
+import { useDeals, useContacts, useDeal } from '@/hooks/useCRM';
+import { useCreateInvoiceDraft } from '@/hooks/useBilling';
 import { useUserStore } from '@/store/userStore';
 import { translateApiError } from '@/lib/apiError';
 import type { DocumentTemplate } from '@/api/documentsApi';
@@ -34,9 +35,9 @@ interface DocumentCreateWizardProps {
  * ROUTED to their canonical creators — only the free-form «letter» document is built inline. */
 type DocType = 'letter' | 'quote' | 'invoice' | 'act' | 'payment';
 
-/** Wizard steps. `type` is the type picker; `letter` is the inline generate flow; the two
- * `*Hint` steps explain where invoices/acts actually come from (a route, never a dead-end). */
-type Step = 'type' | 'letter' | 'invoiceHint' | 'actHint';
+/** Wizard steps. `type` is the type picker; `letter` is the inline generate flow; `invoice` is
+ * the from-scratch DRAFT-invoice builder (WP-G2); `actHint` explains where acts come from. */
+type Step = 'type' | 'letter' | 'invoice' | 'actHint';
 
 const NONE = '__none__';
 
@@ -69,10 +70,22 @@ export function DocumentCreateWizard({ open, onOpenChange, defaultDealId }: Docu
   const [title, setTitle] = useState('');
   const dealLocked = defaultDealId != null;
 
+  // WP-G2 invoice-from-scratch state: which deal the DRAFT invoice is for + an optional source
+  // КП whose lines are imported. Kept separate from the letter's `dealId` so the two flows don't
+  // cross-contaminate. Pre-selected + locked when opened from a deal card.
+  const [invoiceDealId, setInvoiceDealId] = useState<string>(defaultDealId ? String(defaultDealId) : '');
+  const [sourceQuoteId, setSourceQuoteId] = useState<string>(NONE);
+
   const { data: templates, isLoading: templatesLoading } = useDocumentTemplates();
   const { data: deals } = useDeals();
   const { data: contacts } = useContacts();
   const generate = useGenerateDocument();
+  const createInvoice = useCreateInvoiceDraft();
+  // The detail of the invoice's selected deal — its `quotes` feed the «import lines from КП» picker.
+  const invoiceDealNum = invoiceDealId ? Number(invoiceDealId) : 0;
+  const { data: invoiceDeal } = useDeal(invoiceDealNum);
+  // Only КП with priced lines are worth importing into an invoice.
+  const importableQuotes = (invoiceDeal?.quotes ?? []).filter((quote) => (quote.items?.length ?? 0) > 0);
 
   const templateList = useMemo<DocumentTemplate[]>(() => templates ?? [], [templates]);
   // III-2: a deactivated template (is_active === false) must disappear from the picker for NEW
@@ -86,12 +99,15 @@ export function DocumentCreateWizard({ open, onOpenChange, defaultDealId }: Docu
   const hasOwnTemplates = ownedTemplates.length > 0;
 
   const busy = generate.isPending;
+  const invoiceBusy = createInvoice.isPending;
 
   function resetLetter() {
     setTemplateId('');
     setDealId(defaultDealId ? String(defaultDealId) : NONE);
     setContactId(NONE);
     setTitle('');
+    setInvoiceDealId(defaultDealId ? String(defaultDealId) : '');
+    setSourceQuoteId(NONE);
   }
 
   function closeWizard() {
@@ -116,7 +132,10 @@ export function DocumentCreateWizard({ open, onOpenChange, defaultDealId }: Docu
         setQuoteOpen(true);
         break;
       case 'invoice':
-        setStep('invoiceHint');
+        // WP-G2 — a real «create invoice from scratch» step (was a dead-end hint routing to
+        // contracts). Reset the source-КП picker; the deal defaults to the locked deal if any.
+        setSourceQuoteId(NONE);
+        setStep('invoice');
         break;
       case 'act':
         setStep('actHint');
@@ -142,6 +161,23 @@ export function DocumentCreateWizard({ open, onOpenChange, defaultDealId }: Docu
       // Opened from a deal card → stay on the deal (its «Документы сделки» block refreshes via the
       // query invalidation). Standalone → jump to the registry so the new document is visible.
       if (!dealLocked) window.location.hash = 'other-documents';
+    } catch (error) {
+      toast.error(translateApiError(error));
+    }
+  }
+
+  async function submitInvoice() {
+    if (!invoiceDealId) return;
+    try {
+      const invoice = await createInvoice.mutateAsync({
+        deal: Number(invoiceDealId),
+        source_quote: sourceQuoteId !== NONE ? Number(sourceQuoteId) : undefined,
+      });
+      toast.success(t('documentsHub.invoice.created'));
+      closeWizard();
+      // Land the seller ON the new invoice's DRAFT editor (the existing #385 Sheet) via a deep
+      // link the Invoices page opens on load — reusing that surface, not rebuilding it.
+      window.location.hash = `invoices?open=${invoice.id}`;
     } catch (error) {
       toast.error(translateApiError(error));
     }
@@ -179,10 +215,18 @@ export function DocumentCreateWizard({ open, onOpenChange, defaultDealId }: Docu
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileSignature className="h-5 w-5" aria-hidden="true" />
-              {step === 'type' ? t('documentsHub.create') : t('documentsHub.steps.letterTitle')}
+              {step === 'type'
+                ? t('documentsHub.create')
+                : step === 'invoice'
+                  ? t('documentsHub.invoice.title')
+                  : t('documentsHub.steps.letterTitle')}
             </DialogTitle>
             <DialogDescription>
-              {step === 'type' ? t('documentsHub.steps.typeDescription') : t('documentsHub.steps.letterDescription')}
+              {step === 'type'
+                ? t('documentsHub.steps.typeDescription')
+                : step === 'invoice'
+                  ? t('documentsHub.invoice.description')
+                  : t('documentsHub.steps.letterDescription')}
             </DialogDescription>
           </DialogHeader>
 
@@ -304,11 +348,59 @@ export function DocumentCreateWizard({ open, onOpenChange, defaultDealId }: Docu
             </div>
           )}
 
-          {step === 'invoiceHint' && (
-            <HintPanel
-              icon={<Receipt className="h-6 w-6 text-primary" aria-hidden="true" />}
-              text={t('documentsHub.hints.invoice')}
-            />
+          {step === 'invoice' && (
+            <div className="mt-2 space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="doc-wizard-invoice-deal">{t('documentsHub.invoice.deal')}</Label>
+                {dealLocked ? (
+                  <div
+                    id="doc-wizard-invoice-deal"
+                    className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-3 text-sm text-foreground"
+                  >
+                    {(deals ?? []).find((deal) => String(deal.id) === invoiceDealId)?.title || `#${invoiceDealId}`}
+                  </div>
+                ) : (
+                  <Select value={invoiceDealId || undefined} onValueChange={(value) => { setInvoiceDealId(value); setSourceQuoteId(NONE); }} disabled={invoiceBusy}>
+                    <SelectTrigger id="doc-wizard-invoice-deal">
+                      <SelectValue placeholder={t('documentsHub.invoice.selectDeal')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(deals ?? []).length === 0 ? (
+                        <div className="px-2 py-3 text-xs text-muted-foreground">{t('documentsHub.invoice.noDeals')}</div>
+                      ) : (
+                        (deals ?? []).map((deal) => (
+                          <SelectItem key={deal.id} value={String(deal.id)}>
+                            {deal.title || `#${deal.id}`}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="doc-wizard-invoice-source">{t('documentsHub.invoice.sourceQuote')}</Label>
+                <Select
+                  value={sourceQuoteId}
+                  onValueChange={setSourceQuoteId}
+                  disabled={invoiceBusy || !invoiceDealId}
+                >
+                  <SelectTrigger id="doc-wizard-invoice-source">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE}>{t('documentsHub.invoice.noSource')}</SelectItem>
+                    {importableQuotes.map((quote) => (
+                      <SelectItem key={quote.id} value={String(quote.id)}>
+                        {t('documentsHub.invoice.quoteOption', { id: quote.id, version: quote.version })}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">{t('documentsHub.invoice.hint')}</p>
+              </div>
+            </div>
           )}
           {step === 'actHint' && (
             <HintPanel
@@ -319,7 +411,7 @@ export function DocumentCreateWizard({ open, onOpenChange, defaultDealId }: Docu
 
           <DialogFooter className="mt-4 gap-2">
             {step !== 'type' && (
-              <Button type="button" variant="ghost" onClick={() => setStep('type')} disabled={busy}>
+              <Button type="button" variant="ghost" onClick={() => setStep('type')} disabled={busy || invoiceBusy}>
                 <ArrowLeft className="mr-1 h-4 w-4" aria-hidden="true" />
                 {t('common.back')}
               </Button>
@@ -330,9 +422,10 @@ export function DocumentCreateWizard({ open, onOpenChange, defaultDealId }: Docu
                 {busy ? t('documentsHub.generating') : t('documentsHub.generate')}
               </Button>
             )}
-            {step === 'invoiceHint' && (
-              <Button type="button" onClick={() => { closeWizard(); window.location.hash = 'contracts'; }}>
-                {t('documentsHub.hints.goToContracts')}
+            {step === 'invoice' && (
+              <Button type="button" onClick={submitInvoice} disabled={invoiceBusy || !invoiceDealId}>
+                {invoiceBusy && <Loader2 className="mr-1 h-4 w-4 animate-spin" aria-hidden="true" />}
+                {invoiceBusy ? t('documentsHub.invoice.creating') : t('documentsHub.invoice.create')}
               </Button>
             )}
             {step === 'actHint' && (

@@ -102,6 +102,20 @@ export const useInvoice = (id: number | null) => useQuery({
   enabled: !!id,
 });
 
+// WP-G2 — «Создать инвойс с нуля» (DRAFT invoice, contract=null; optional source КП to import
+// lines). Refresh the invoices list so the new DRAFT is present when the editor Sheet opens.
+export const useCreateInvoiceDraft = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: { deal: number; source_quote?: number }) =>
+      invoicesApi.createDraft(payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['invoices'] });
+      qc.invalidateQueries({ queryKey: ['deals'] });
+    },
+  });
+};
+
 export const useGenerateInvoice = () => {
   const qc = useQueryClient();
   return useMutation({

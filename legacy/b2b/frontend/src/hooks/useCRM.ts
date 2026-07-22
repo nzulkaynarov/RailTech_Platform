@@ -648,6 +648,21 @@ export const useCreateQuote = () => {
   });
 };
 
+// WP-G1 — «Дублировать КП». Deep-copies a quote into a new DRAFT on the same deal and returns
+// it. Invalidate quotes + deals (the deal's active_quote flips to the new version) + quote-items
+// so the redirected builder shows the filled copy.
+export const useDuplicateQuote = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => crmApi.duplicateQuote(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['quotes'] });
+      qc.invalidateQueries({ queryKey: ['deals'] });
+      qc.invalidateQueries({ queryKey: ['quote-items'] });
+    },
+  });
+};
+
 export const useRejectQuote = () => {
   const qc = useQueryClient();
   return useMutation({
