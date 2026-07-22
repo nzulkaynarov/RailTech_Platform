@@ -2261,6 +2261,7 @@
     "acts": "Акты",
     "fulfillments": "Исполнение",
     "otherDocuments": "Прочие документы",
+    "files": "Файлы",
     "supplierBids": "Тендер-предложения",
     "adminBids": "Тендер-предложения (админ)",
     "rfq": "RFQ",
@@ -4534,6 +4535,31 @@
     "downloadSigned": "Скачать подписанный",
     "uploadSigned": "Загрузить подписанный",
     "signedAt": "Подписан"
+  },
+  "companyFilesPage": {
+    "title": "Файлы",
+    "description": "Все вложения по сделкам компании",
+    "searchPlaceholder": "Имя файла или кто загрузил",
+    "allKinds": "Все типы",
+    "emptyState": "Файлы появятся здесь, когда вы или коллеги прикрепите документы к сделкам или заявкам",
+    "stats": {
+      "total": "Всего файлов",
+      "sources": "Исходники",
+      "documents": "Документы"
+    },
+    "kind": {
+      "SOURCE": "Исходник заявки",
+      "SUPPORTING": "Документ"
+    },
+    "table": {
+      "name": "Имя файла",
+      "deal": "Сделка",
+      "kind": "Тип",
+      "uploadedBy": "Кем загружен",
+      "date": "Дата",
+      "actions": "Действие",
+      "download": "Скачать"
+    }
   },
   "otherDocumentsPage": {
     "title": "Прочие документы",

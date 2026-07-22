@@ -2257,6 +2257,7 @@
     "acts": "Acts",
     "fulfillments": "Fulfillment",
     "otherDocuments": "Other documents",
+    "files": "Files",
     "supplierBids": "Supplier bids",
     "adminBids": "Supplier bids (admin)",
     "rfq": "RFQ",
@@ -4530,6 +4531,31 @@
     "downloadSigned": "Download signed",
     "uploadSigned": "Upload signed",
     "signedAt": "Signed"
+  },
+  "companyFilesPage": {
+    "title": "Files",
+    "description": "All attachments across your company's deals",
+    "searchPlaceholder": "File name or uploader",
+    "allKinds": "All types",
+    "emptyState": "Files will appear here once you or your colleagues attach documents to deals or requests",
+    "stats": {
+      "total": "Total files",
+      "sources": "Sources",
+      "documents": "Documents"
+    },
+    "kind": {
+      "SOURCE": "Request source",
+      "SUPPORTING": "Document"
+    },
+    "table": {
+      "name": "File name",
+      "deal": "Deal",
+      "kind": "Type",
+      "uploadedBy": "Uploaded by",
+      "date": "Date",
+      "actions": "Action",
+      "download": "Download"
+    }
   },
   "otherDocumentsPage": {
     "title": "Other documents",

@@ -119,6 +119,7 @@ export const TENANT_NAV: NavNodeDef[] = [
       { labelKey: 'shell.acts', id: 'acts', side: 'sell', requires: { kyc: true } },
       { labelKey: 'shell.fulfillments', id: 'fulfillments', requires: { kyc: true } },
       { labelKey: 'shell.otherDocuments', id: 'other-documents', requires: { kyc: true } },
+      { labelKey: 'shell.files', id: 'company-files', requires: { kyc: true } },
     ],
   },
 

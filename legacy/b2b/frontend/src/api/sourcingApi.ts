@@ -23,6 +23,25 @@ export const sourcingApi = {
     const response = await apiClient.get<PaginatedResponse<Attachment>>('sourcing/attachments/', { params });
     return response.data.results;
   },
+  // Company-wide file registry (wave D «Файлы»). The endpoint is paginated
+  // (PageNumberPagination, PAGE_SIZE=20) and does NOT expose a `page_size` query
+  // param, so a single request would silently truncate the registry to 20 rows.
+  // We walk every page via the paginator's `next` link to build the COMPLETE list
+  // (a bounded loop guards against a misbehaving API), so the UI can be honest
+  // about totals instead of showing a partial slice.
+  listAllAttachments: async (): Promise<Attachment[]> => {
+    const MAX_PAGES = 50; // 50 × 20 = 1000 files ceiling for v1 — plenty, and never unbounded
+    const all: Attachment[] = [];
+    for (let page = 1; page <= MAX_PAGES; page++) {
+      const response = await apiClient.get<PaginatedResponse<Attachment>>(
+        'sourcing/attachments/',
+        { params: { page } },
+      );
+      all.push(...response.data.results);
+      if (!response.data.next) break;
+    }
+    return all;
+  },
   uploadAttachment: async (
     parent: { deal?: number; message?: number; quote?: number; company?: number; product?: number },
     file: File,
