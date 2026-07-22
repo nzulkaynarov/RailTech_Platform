@@ -400,6 +400,12 @@ def test_record_payment_marks_invoice_paid(master_data, deal, manager, buyer):
     invoice, err = crm_services.generate_invoice_from_contract(contract.id, actor=manager)
     assert err is None
 
+    # Documents-2.0 F1 (I-1): an invoice is BORN a DRAFT and record_payment rejects a DRAFT
+    # (no legal PDF / issue date yet) — so it must be ISSUED before it can be paid. This test
+    # predates that change; issue it first, then pay.
+    _, err = crm_services.issue_invoice(invoice, manager)
+    assert err is None
+
     _, err = crm_services.record_payment(
         invoice.id,
         manager,

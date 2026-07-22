@@ -108,8 +108,15 @@ def scenario(db):
         imported_raw_name="rail-part",
     )
     quote.refresh_from_db()
+
+    # A SINGLE-seller deal (only Seller A routed) — a pure-manual счёт is confidentiality-safe here
+    # (no competitor to leak to), unlike the multi-seller `deal` above.
+    solo_deal = Deal.objects.create(title="Solo deal", company=buyer, stage=DealStage.objects.get(code="DRAFT"))
+    DealSellerRouting.objects.create(deal=solo_deal, seller_company=seller)
+
     return {
         "deal": deal,
+        "solo_deal": solo_deal,
         "quote": quote,
         "seller": seller,
         "seller_user": seller_user,
@@ -165,8 +172,9 @@ def test_manual_invoice_lines_match_billable_projection(scenario):
 
 @pytest.mark.django_db
 def test_manual_invoice_with_manual_lines_only(scenario):
+    # Pure-manual счёт on a SINGLE-seller deal — allowed (no competitor to leak to).
     invoice, err = create_manual_invoice(
-        scenario["deal"].id,
+        scenario["solo_deal"].id,
         scenario["seller_user"],
         lines=[{"description": "Доставка", "quantity": 1, "unit_price_excl_vat": "150000.00"}],
     )
@@ -176,6 +184,26 @@ def test_manual_invoice_with_manual_lines_only(scenario):
     assert invoice.subtotal_excl_vat == Decimal("150000.00")
     # No source КП → currency left NULL (PDF falls back to UZS), never a cost currency.
     assert invoice.currency_id is None
+
+
+@pytest.mark.django_db
+def test_pure_manual_on_multiseller_deal_requires_a_quote(scenario):
+    """Confidentiality (ADR-0003): a pure-manual invoice on a MULTI-seller deal has no owner
+    anchor and would leak to a co-routed competitor — so it is refused; the seller must pull a КП
+    (which resolves ownership). The same lines WITH a source КП succeed."""
+    invoice, err = create_manual_invoice(
+        scenario["deal"].id,  # 2 routed sellers
+        scenario["seller_user"],
+        lines=[{"description": "Доставка", "quantity": 1, "unit_price_excl_vat": "150000.00"}],
+    )
+    assert invoice is None
+    assert err == "MANUAL_INVOICE_REQUIRES_QUOTE_MULTISELLER"
+    # With a source КП on the same multi-seller deal, ownership resolves → allowed.
+    invoice, err = create_manual_invoice(
+        scenario["deal"].id, scenario["seller_user"], source_quote_id=scenario["quote"].id
+    )
+    assert err is None
+    assert invoice.contract_id is None
 
 
 @pytest.mark.django_db
@@ -224,12 +252,13 @@ def test_issue_cancel_lifecycle_and_payment_guard(scenario):
     assert issue_err is None
     assert issued.status_code == "ISSUED"
 
-    # Cancel a fresh manual DRAFT works too.
-    fresh, _ = create_manual_invoice(
-        scenario["deal"].id,
+    # Cancel a fresh manual DRAFT works too (pure-manual on the SINGLE-seller deal — allowed).
+    fresh, fresh_err = create_manual_invoice(
+        scenario["solo_deal"].id,
         scenario["seller_user"],
         lines=[{"description": "X", "quantity": 1, "unit_price_excl_vat": "1000.00"}],
     )
+    assert fresh_err is None
     cancelled, cancel_err = cancel_invoice(fresh, scenario["seller_user"])
     assert cancel_err is None
     assert cancelled.status_code == "CANCELLED"

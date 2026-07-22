@@ -117,6 +117,16 @@ def create_manual_invoice(
     if source_quote is None and not manual_lines:
         return None, "INVOICE_NO_LINES"
 
+    # Confidentiality (ADR-0003 hidden competition): a PURE-manual invoice (no source КП) has no
+    # owner anchor, so on a MULTI-seller-routed deal it would fall to the routed-deal visibility
+    # and a co-routed competitor could see it. A multi-seller deal always has a КП (that is how a
+    # seller got routed), so require one there — ownership then resolves through the КП and the
+    # invoice is competitor-hidden like any other. Single-seller deals: a pure-manual счёт is fine.
+    if source_quote is None:
+        routed_seller_count = deal.seller_routings.values("seller_company_id").distinct().count()
+        if routed_seller_count > 1:
+            return None, "MANUAL_INVOICE_REQUIRES_QUOTE_MULTISELLER"
+
     # Presentation currency = the КП's quote_currency (UZS by rule); NULL for a pure-manual счёт
     # (PDF/serializer fall back to UZS). NEVER a line's frozen COST currency (the B1 bug).
     currency = source_quote.quote_currency if source_quote else None
