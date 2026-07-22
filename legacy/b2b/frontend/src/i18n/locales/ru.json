@@ -5063,7 +5063,7 @@
     "CONTRACT_ID_REQUIRED": "Параметр contract_id обязателен",
     "NO_FILE_PROVIDED": "Файл не передан",
     "DEAL_ID_AND_STATUS_REQUIRED": "Параметры deal_id и status обязательны",
-    "ROLE_NOT_PERMITTED": "Этот шаг согласования недоступен для вашей рабочей роли",
+    "ROLE_NOT_PERMITTED": "Недостаточно прав для этого действия",
     "INVALID_STATUS": "Действие недоступно в текущем статусе КП",
     "NO_QUOTE_COMPANY": "Не определена компания-владелец КП — назначьте составителя",
     "UNKNOWN": "Неизвестная ошибка",

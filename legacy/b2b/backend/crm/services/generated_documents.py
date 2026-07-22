@@ -204,11 +204,17 @@ def generate_document(company, user: CustomUser, *, template, deal=None, contact
     Gates: entitlement (document.generate) and IDOR (deal/contact belong to the
     acting company/user). Returns (document, None) or (None, ERROR_CODE)."""
     from accounts.services import is_platform_admin_viewer
+    from accounts.services.permissions import member_has_permission
 
     from ..models import GeneratedDocument
 
     if is_platform_admin_viewer(user):
         return None, "ADMIN_VIEWER_CANNOT_ACT"
+    # Producing a branded company document is a build action — gate it on the quote.build CompanyRole
+    # permission (§2), mirroring the КП builder. A buy-only member (no quote.build) must not issue
+    # letters on the company's letterhead. OWNER/company-admin keeps it via the legacy OWNER fallback.
+    if not member_has_permission(user, company.id, "quote.build"):
+        return None, "ROLE_NOT_PERMITTED"
     if not has_entitlement(company.id, FeatureKey.DOCUMENT_GENERATE):
         return None, "SUBSCRIPTION_REQUIRED"
     if deal is not None and not _user_can_access_deal(user, deal):
@@ -273,11 +279,16 @@ def issue_document(document, user: CustomUser) -> Tuple[Optional[object], Option
     import secrets
 
     from accounts.services import is_platform_admin_viewer
+    from accounts.services.permissions import member_has_permission
 
     if is_platform_admin_viewer(user):
         return None, "ADMIN_VIEWER_CANNOT_ACT"
     if not _user_owns_document(user, document):
         return None, "DOCUMENT_NOT_FOUND"
+    # Issuing freezes the document + produces the deliverable PDF — a build action, gated on
+    # quote.build like generation (§2). Checked for the OWNING company (owner-gate already passed).
+    if not member_has_permission(user, document.company_id, "quote.build"):
+        return None, "ROLE_NOT_PERMITTED"
     # Re-check entitlement at issue time (A4/m4): a subscription may have lapsed after the DRAFT was
     # created, and issuing is what produces the deliverable PDF.
     if not has_entitlement(document.company_id, FeatureKey.DOCUMENT_GENERATE):
@@ -436,11 +447,16 @@ def send_document_email(document, user: CustomUser, *, to=None) -> Tuple[Optiona
     """Email an ISSUED document (public link in the body) to its recipient. Thin: gate → resolve
     recipient → enqueue the off-thread task (ARCH-03). Returns (recipient_email, None) or (None, CODE)."""
     from accounts.services import is_platform_admin_viewer
+    from accounts.services.permissions import member_has_permission
 
     if is_platform_admin_viewer(user):
         return None, "ADMIN_VIEWER_CANNOT_ACT"
     if not _user_owns_document(user, document):
         return None, "DOCUMENT_NOT_FOUND"
+    # Dispatching the branded document is part of the build/send flow — gate on quote.build (§2),
+    # so a buy-only member can't aim the company's letterhead email.
+    if not member_has_permission(user, document.company_id, "quote.build"):
+        return None, "ROLE_NOT_PERMITTED"
     if document.status_code != GeneratedDocumentStatusCode.ISSUED:
         return None, "DOCUMENT_NOT_ISSUED"
     recipient = resolve_document_recipient(document, override_email=to)

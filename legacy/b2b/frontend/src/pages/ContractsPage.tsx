@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { translateApiError } from '@/lib/apiError';
-import { fetchDocumentBlob, saveBlob } from '@/lib/documents';
+import { extractBlobErrorCode, fetchDocumentBlob, saveBlob } from '@/lib/documents';
 import { FileText, PenLine, Upload, Download, Receipt, Ban, FileSignature, ShieldAlert } from 'lucide-react';
 import { DocumentActions } from '@/components/Shared/DocumentActions';
 import { Card, CardContent } from '@/components/ui/card';
@@ -86,8 +86,11 @@ export function ContractsPage() {
       const blob = await fetchDocumentBlob(`crm/contracts/${contract.id}/download-signed/`);
       const ext = blob.type.includes('pdf') ? 'pdf' : (blob.type.split('/')[1] || 'bin');
       saveBlob(blob, `RailTech_Contract_${contract.id}_signed.${ext}`);
-    } catch {
-      toast.error(t('errors.operationFailed'));
+    } catch (err) {
+      // Surface the real backend code (403/404/expiry) so permission/not-found reads differently
+      // from a network blip. Blob-response bodies aren't plain JSON — parse the code out first.
+      const code = await extractBlobErrorCode(err);
+      toast.error(code ? translateApiError(code) : t('errors.operationFailed'));
     }
   };
 

@@ -5059,7 +5059,7 @@
     "CONTRACT_ID_REQUIRED": "contract_id is required",
     "NO_FILE_PROVIDED": "No file provided",
     "DEAL_ID_AND_STATUS_REQUIRED": "deal_id and status are required",
-    "ROLE_NOT_PERMITTED": "This approval step is not available for your workspace role",
+    "ROLE_NOT_PERMITTED": "You don't have permission for this action",
     "INVALID_STATUS": "Action not available in the quote's current status",
     "NO_QUOTE_COMPANY": "The quote has no owning company — assign a preparer first",
     "UNKNOWN": "Unknown error",

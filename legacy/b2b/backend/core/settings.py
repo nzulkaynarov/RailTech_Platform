@@ -572,6 +572,7 @@ REST_FRAMEWORK = {
         "public_quote": "30/minute",  # unauthenticated КП-by-token view; blunts token brute-forcing
         "public_document": "30/minute",  # unauthenticated ISSUED-document-by-token view; blunts token brute-forcing
         "document_send_email": "20/hour",  # F2-3: authenticated document email dispatch; blunts spam/phishing relay
+        "document_preview": "60/minute",  # F3-1/III-5: template live-preview sanitises+renders up to 100k per call
         "public_quote_view": "60/minute",  # Wave A: КП page «viewed» beacon (deduped server-side)
         "public_quote_code": "5/hour",  # Wave A: request КП acceptance code, per IP — blunts email bombing
         "public_quote_accept": "10/minute",  # Wave A: verify code / reject, per IP — blunts code brute-force

@@ -75,8 +75,14 @@ export function DocumentCreateWizard({ open, onOpenChange, defaultDealId }: Docu
   const generate = useGenerateDocument();
 
   const templateList = useMemo<DocumentTemplate[]>(() => templates ?? [], [templates]);
-  const ownedTemplates = templateList.filter((tpl) => tpl.is_owned);
-  const selectedTemplate = templateList.find((tpl) => String(tpl.id) === templateId) ?? null;
+  // III-2: a deactivated template (is_active === false) must disappear from the picker for NEW
+  // documents. Platform samples are always active, so `is_sample` stays regardless of the flag.
+  const selectableTemplates = useMemo(
+    () => templateList.filter((tpl) => tpl.is_active !== false || tpl.is_sample),
+    [templateList],
+  );
+  const ownedTemplates = selectableTemplates.filter((tpl) => tpl.is_owned);
+  const selectedTemplate = selectableTemplates.find((tpl) => String(tpl.id) === templateId) ?? null;
   const hasOwnTemplates = ownedTemplates.length > 0;
 
   const busy = generate.isPending;
@@ -90,9 +96,13 @@ export function DocumentCreateWizard({ open, onOpenChange, defaultDealId }: Docu
 
   function closeWizard() {
     onOpenChange(false);
-    // Defer reset until the dialog has visually closed to avoid a flash of step 1.
-    setStep('type');
-    resetLetter();
+    // Defer the step/field reset until the dialog's close animation has finished — resetting
+    // synchronously would repaint step 1 (the type picker) under the fading-out letter step,
+    // producing a visible flash. ~150ms matches the Radix dialog close transition.
+    window.setTimeout(() => {
+      setStep('type');
+      resetLetter();
+    }, 150);
   }
 
   function pickType(type: DocType) {
@@ -210,10 +220,10 @@ export function DocumentCreateWizard({ open, onOpenChange, defaultDealId }: Docu
                     />
                   </SelectTrigger>
                   <SelectContent>
-                    {templateList.length === 0 ? (
+                    {selectableTemplates.length === 0 ? (
                       <div className="px-2 py-3 text-xs text-muted-foreground">{t('documentsHub.noTemplates')}</div>
                     ) : (
-                      templateList.map((tpl) => (
+                      selectableTemplates.map((tpl) => (
                         <SelectItem key={tpl.id} value={String(tpl.id)}>
                           <span className="flex items-center gap-2">
                             {tpl.name}
@@ -229,7 +239,7 @@ export function DocumentCreateWizard({ open, onOpenChange, defaultDealId }: Docu
                 {selectedTemplate && !selectedTemplate.is_owned && (
                   <p className="text-xs text-muted-foreground">{t('documentsHub.sampleHint')}</p>
                 )}
-                {!hasOwnTemplates && templateList.length > 0 && (
+                {!hasOwnTemplates && selectableTemplates.length > 0 && (
                   <p className="text-xs text-muted-foreground">{t('documentsHub.noOwnTemplatesHint')}</p>
                 )}
               </div>

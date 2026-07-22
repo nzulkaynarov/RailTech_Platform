@@ -10,24 +10,21 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
-import {
   Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle,
 } from '@/components/ui/sheet';
+import { ResponsiveDataTable, type ResponsiveColumn } from '@/components/ResponsiveDataTable';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import {
-  Toolbar, SortableHead, Pager, useListParams, applyListParams,
+  Toolbar, Pager, useListParams, applyListParams,
 } from '@/components/DataTable';
 import {
   useGeneratedDocuments, useIssueDocument, useCancelDocument, useUpdateDocumentValues, useSendDocument,
 } from '@/hooks/useDocuments';
 import { useIsViewerMode } from '@/hooks/useViewerMode';
 import { DocumentCreateWizard } from '@/components/Documents/DocumentCreateWizard';
-import { openableRowProps } from '@/lib/rowClick';
 import { DealLink } from '@/components/Shared/DealLink';
 import type { GeneratedDocument, GeneratedDocumentStatus } from '@/api/documentsApi';
 
@@ -80,6 +77,53 @@ export function OtherDocumentsPage() {
       toast.error(translateApiError(error));
     }
   };
+
+  const columns: ResponsiveColumn<GeneratedDocument>[] = [
+    {
+      id: 'number', sortKey: 'number', header: t('otherDocumentsPage.table.number'), mobileTitle: true,
+      cell: (doc) => <span className="font-medium">{doc.number}</span>,
+    },
+    {
+      id: 'title', sortKey: 'title', header: t('otherDocumentsPage.table.title'),
+      cell: (doc) => doc.title,
+    },
+    {
+      id: 'type', header: t('otherDocumentsPage.table.type'), className: 'text-muted-foreground',
+      cell: (doc) => doc.template_name,
+    },
+    {
+      id: 'status', header: t('otherDocumentsPage.table.status'),
+      cell: (doc) => (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Badge variant={STATUS_VARIANT[doc.status_code]}>
+            {t(`otherDocumentsPage.status.${doc.status_code}`)}
+          </Badge>
+          {doc.is_owned === false && (
+            <Badge variant="outline" className="gap-1">
+              <Inbox className="size-3" aria-hidden="true" />
+              {t('otherDocumentsPage.received')}
+            </Badge>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: 'created', sortKey: 'created_at', header: t('otherDocumentsPage.table.created'),
+      className: 'text-xs text-muted-foreground',
+      cell: (doc) => new Date(doc.created_at).toLocaleDateString(),
+    },
+    {
+      id: 'actions', header: t('otherDocumentsPage.table.actions'), className: 'text-right', mobileActions: true,
+      cell: (doc) => (doc.pdf_available ? (
+        <DocumentActions
+          request={() => ({ path: `crm/generated-documents/${doc.id}/download-pdf/` })}
+          filenameBase={`RailTech_Document_${doc.id}`}
+          variant="ghost"
+          iconOnly
+        />
+      ) : null),
+    },
+  ];
 
   return (
     <PageShell
@@ -136,62 +180,14 @@ export function OtherDocumentsPage() {
             }
             return (
               <>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <SortableHead sortKey="number" current={listParams.ordering} onChange={listParams.toggleOrdering}>
-                        {t('otherDocumentsPage.table.number')}
-                      </SortableHead>
-                      <SortableHead sortKey="title" current={listParams.ordering} onChange={listParams.toggleOrdering}>
-                        {t('otherDocumentsPage.table.title')}
-                      </SortableHead>
-                      <TableHead>{t('otherDocumentsPage.table.type')}</TableHead>
-                      <TableHead>{t('otherDocumentsPage.table.status')}</TableHead>
-                      <SortableHead sortKey="created_at" current={listParams.ordering} onChange={listParams.toggleOrdering}>
-                        {t('otherDocumentsPage.table.created')}
-                      </SortableHead>
-                      <TableHead className="text-right">{t('otherDocumentsPage.table.actions')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {pageItems.map((doc) => (
-                      <TableRow
-                        key={doc.id}
-                        {...openableRowProps(() => setSelectedId(doc.id), `${t('common.open')} ${doc.number}`)}
-                      >
-                        <TableCell className="font-medium">{doc.number}</TableCell>
-                        <TableCell>{doc.title}</TableCell>
-                        <TableCell className="text-muted-foreground">{doc.template_name}</TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <Badge variant={STATUS_VARIANT[doc.status_code]}>
-                              {t(`otherDocumentsPage.status.${doc.status_code}`)}
-                            </Badge>
-                            {doc.is_owned === false && (
-                              <Badge variant="outline" className="gap-1">
-                                <Inbox className="size-3" aria-hidden="true" />
-                                {t('otherDocumentsPage.received')}
-                              </Badge>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {new Date(doc.created_at).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell className="text-right" data-row-action>
-                          {doc.pdf_available && (
-                            <DocumentActions
-                              request={() => ({ path: `crm/generated-documents/${doc.id}/download-pdf/` })}
-                              filenameBase={`RailTech_Document_${doc.id}`}
-                              variant="ghost"
-                              iconOnly
-                            />
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <ResponsiveDataTable
+                  columns={columns}
+                  rows={pageItems}
+                  getRowId={(doc) => doc.id}
+                  // Clicking the row opens the document detail sheet (issue / cancel / send / preview).
+                  onRowClick={(doc) => setSelectedId(doc.id)}
+                  sorting={{ ordering: listParams.ordering, onToggle: listParams.toggleOrdering }}
+                />
                 <Pager page={listParams.page} pageSize={listParams.pageSize} total={total} onPageChange={listParams.setPage} />
               </>
             );

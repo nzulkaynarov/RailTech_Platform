@@ -5,7 +5,7 @@ tenant scoping is company-derived from the caller's active memberships (IDOR-saf
 platform-admin viewers are refused on every mutation via the services.
 """
 
-from django.db.models import Q
+from django.db.models import ProtectedError, Q
 from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
 from rest_framework import serializers as drf_serializers
 from rest_framework import viewsets
@@ -26,6 +26,14 @@ class DocumentSendEmailThrottle(UserRateThrottle):
     spam/phishing relay via arbitrary `to` (F2-3/MAJOR-2). Rate from settings `document_send_email`."""
 
     scope = "document_send_email"
+
+
+class DocumentPreviewThrottle(UserRateThrottle):
+    """Per-user rate cap on the template live-preview endpoint — it sanitises and renders up to
+    100k of body HTML on every call with only IsAuthenticated (F3-1/III-5). Rate from settings
+    `document_preview`."""
+
+    scope = "document_preview"
 
 
 def _user_company_ids(user):
@@ -106,7 +114,13 @@ class DocumentTemplateViewSet(viewsets.ModelViewSet):
         instance = self.get_object()
         self._owner_company()
         self._assert_owned(instance)
-        instance.delete()
+        try:
+            instance.delete()
+        except ProtectedError:
+            # GeneratedDocument.template is on_delete=PROTECT — a template that already produced
+            # documents can't be hard-deleted (would 500). The UI offers soft-deactivation
+            # (is_active=False) instead (III-1).
+            return Response({"detail": "TEMPLATE_IN_USE"}, status=400)
         return Response(status=204)
 
     @extend_schema(summary="Copy a platform sample into the caller's company", tags=["CRM"])
@@ -142,7 +156,7 @@ class DocumentTemplateViewSet(viewsets.ModelViewSet):
             400: OpenApiResponse(description="Validation error"),
         },
     )
-    @action(detail=False, methods=["post"], url_path="preview")
+    @action(detail=False, methods=["post"], url_path="preview", throttle_classes=[DocumentPreviewThrottle])
     def preview(self, request):
         """Render the editor body on sample data. Auth only — no settings.edit needed."""
         from django.core.exceptions import ValidationError as DjangoValidationError

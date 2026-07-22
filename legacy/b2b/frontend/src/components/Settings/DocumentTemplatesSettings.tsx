@@ -72,15 +72,16 @@ export function DocumentTemplatesSettings() {
   const owned = useMemo(() => templates.filter((tpl) => tpl.is_owned && !tpl.is_sample), [templates]);
   const samples = useMemo(() => templates.filter((tpl) => tpl.is_sample), [templates]);
 
-  // Live-preview: debounce body edits, then ask the server to render (sanitised there).
+  // Live-preview: debounce body edits, then ask the server to render (sanitised there). Depend
+  // ONLY on the body — the previous `[editor, …]` dep re-fired (and re-hit the render endpoint)
+  // on every name/kind keystroke, which never affects the preview.
   const previewMutate = previewMut.mutate;
+  const editorBody = editor?.body_html ?? '';
   useEffect(() => {
-    if (!editor) return;
-    const body = editor.body_html;
-    if (!body.trim()) return;
-    const handle = setTimeout(() => previewMutate(body), PREVIEW_DEBOUNCE_MS);
+    if (!editorBody.trim()) return;
+    const handle = setTimeout(() => previewMutate(editorBody), PREVIEW_DEBOUNCE_MS);
     return () => clearTimeout(handle);
-  }, [editor, previewMutate]);
+  }, [editorBody, previewMutate]);
 
   function startCreate() {
     setEditor({ id: null, name: '', kind: 'LETTER', body_html: '' });
