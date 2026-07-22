@@ -4891,6 +4891,7 @@
   },
   "requestDetailActions": {
     "titleLabel": "Название заявки",
+    "soloNoClient": "Без клиента (расчёт)",
     "noteToSeller": "Примечание поставщику",
     "noteToSellerPlaceholder": "Сроки, условия поставки, пожелания…",
     "startSourcing": "К подбору",

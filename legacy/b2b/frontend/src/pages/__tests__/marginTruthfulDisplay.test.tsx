@@ -26,10 +26,10 @@ import {
 } from '@/hooks/useCRM';
 
 /**
- * WP-7 — «Правдивое отображение наценки». Two display-only guarantees:
- *  1. RequestDetailPage never renders a FALSE «0.0%» for a per-line margin that the
- *     deal-detail endpoint does not carry (QuoteItem.margin_percent is a dead model
- *     default of 0 — the КП markup is applied at quote level). It must read «—».
+ * WP-7 / DT1 — «Правдивое отображение наценки». Two display-only guarantees:
+ *  1. RequestDetailPage's per-line «Наценка» column never CONFLATES inherit with 0 (DT1):
+ *     a NULL margin (inherit the КП markup) reads as a muted «—», while an explicit 0
+ *     («продать по себестоимости») reads as a real «0.0%». A genuine value renders as «X.X%».
  *  2. (SUPERSEDED BY DT1 — see the second describe block.) QuoteBuilderGrid's marginCell
  *     used to be READ-ONLY, because the per-line column was a dead NOT NULL default the
  *     engine ignored. DT1 made it a real nullable override, so the cell is now editable and
@@ -93,7 +93,8 @@ const setHook = (hook: unknown, value: unknown) => {
 };
 const mkMutation = () => ({ mutate: vi.fn(), mutateAsync: vi.fn().mockResolvedValue(undefined), isPending: false });
 
-// A sent seller КП: one line with a dead per-line margin (0.00) + one with a real value (18.50).
+// A sent seller КП exercising all three DT1 per-line margin states: NULL (inherit → «—»),
+// an explicit 0 (sell at cost → «0.0%», NOT «—»), and a genuine non-zero value (18.50 → «18.5%»).
 const pageDeal = {
   id: 42,
   title: 'Заявка на рельсы',
@@ -124,7 +125,7 @@ const pageDeal = {
         unit: 'шт',
         offer_supplier_name: 'ООО Поставщик',
         frozen_base_price: '100.00',
-        margin_percent: '0.00',
+        margin_percent: null, // inherits the КП margin → muted «—»
         final_price_excl_vat: '120.00',
       },
       {
@@ -134,8 +135,18 @@ const pageDeal = {
         unit: 'шт',
         offer_supplier_name: 'ООО Поставщик',
         frozen_base_price: '50.00',
-        margin_percent: '18.50',
+        margin_percent: '18.50', // genuine override → «18.5%»
         final_price_excl_vat: '59.25',
+      },
+      {
+        id: 3,
+        product_name: 'Костыль',
+        quantity: 4,
+        unit: 'шт',
+        offer_supplier_name: 'ООО Поставщик',
+        frozen_base_price: '25.00',
+        margin_percent: '0.00', // explicit 0 = «продать по себестоимости» → «0.0%», NOT «—»
+        final_price_excl_vat: '25.00',
       },
     ],
   },
@@ -220,14 +231,18 @@ describe('WP-7 truthful margin display', () => {
       setHook(useDeal, { data: pageDeal, isLoading: false, isError: false, refetch: vi.fn() });
     });
 
-    it('renders «—» instead of a false «0.0%» when the endpoint carries no real per-line margin', () => {
+    it('renders «—» ONLY for an inheriting (null) per-line margin — never for an explicit 0', () => {
       renderWithProviders(<RequestDetailPage dealId={42} onBack={() => {}} />);
 
-      // The bug rendered «0%» (or «0.0%») for the zero-valued line — neither may appear.
-      expect(screen.queryByText('0%')).toBeNull();
-      expect(screen.queryByText('0.0%')).toBeNull();
-      // The zero-margin line shows a truthful em-dash placeholder instead.
+      // The inheriting (null) line shows a muted em-dash placeholder.
       expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('distinguishes an explicit 0 override («0.0%») from inherit («—») — DT1 no-conflation', () => {
+      renderWithProviders(<RequestDetailPage dealId={42} onBack={() => {}} />);
+
+      // «продать по себестоимости» is a deliberate choice and must READ as a real 0, not a blank.
+      expect(screen.getByText('0.0%')).toBeInTheDocument();
     });
 
     it('still renders a genuine non-zero per-line margin as a percentage', () => {

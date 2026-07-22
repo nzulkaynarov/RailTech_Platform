@@ -4887,6 +4887,7 @@
   },
   "requestDetailActions": {
     "titleLabel": "Request title",
+    "soloNoClient": "No client (calculator)",
     "noteToSeller": "Note to the seller",
     "noteToSellerPlaceholder": "Deadlines, delivery terms, preferences…",
     "startSourcing": "Start sourcing",
