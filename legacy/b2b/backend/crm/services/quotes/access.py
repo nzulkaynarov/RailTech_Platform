@@ -169,6 +169,27 @@ def can_send_quote_to_client(actor, quote) -> bool:
     return has_explicit_company_role_perm(actor, company_id, "quote.send") or _has_legacy_send_role(actor, company_id)
 
 
+def can_duplicate_quote(actor, quote) -> bool:
+    """Who may deep-copy a КП into a new DRAFT version (Odoo «Duplicate»).
+
+    Duplicating BUILDS a new draft КП, so it is gated exactly like building — the superuser
+    (platform escalation), or a member of the КП-owning company (the preparer's seller company)
+    holding the ``quote.build`` CompanyRole permission. ``member_has_permission`` scopes to that
+    owning company, which is BOTH the routing bind and the IDOR guard: a foreign seller (member
+    of a different company, even one co-routed to the same deal) is not a member of the owning
+    company → denied. A platform-admin VIEWER (SystemRole.ADMIN, no membership) is likewise
+    denied — creating a КП is a business action they must not perform (ADMIN_VIEWER_CANNOT_ACT).
+    """
+    from accounts.services.permissions import member_has_permission
+
+    if getattr(actor, "is_superuser", False):
+        return True
+    company_id = _quote_owner_company_id(quote)
+    if not company_id:
+        return False
+    return member_has_permission(actor, company_id, "quote.build")
+
+
 def approval_queue_for(user):
     """КП waiting on THIS user's pending approval STEP (unified step-based chain).
 

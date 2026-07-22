@@ -9,12 +9,6 @@ from .ai_chat import suggest_chat_reply
 from .ai_diff import quote_vs_request_diff, user_can_view_quote_diff
 from .availability import Tranche, auto_split_quote_by_availability, resolve_seller_offer, split_line_by_availability
 from .billing import generate_act, generate_invoice_from_contract, record_payment, sign_act
-from .invoice_lifecycle import (
-    cancel_invoice,
-    issue_invoice,
-    notify_seller_invoice_draft,
-    update_invoice_draft,
-)
 from .charges import apply_charge_template_to_quote, set_quote_delivery_basis
 from .contracts import (
     cancel_contract,
@@ -51,11 +45,20 @@ from .generated_documents import (
     update_document_values,
     update_template,
 )
+from .invoice_lifecycle import (
+    cancel_invoice,
+    issue_invoice,
+    notify_seller_invoice_draft,
+    update_invoice_draft,
+)
+from .manual_invoice import create_manual_invoice
 from .messaging import archive_messages_sync, send_deal_message, user_can_access_deal_chat
 from .quotes import (
     QuoteCalculationService,
     QuoteLifecycleService,
     apply_company_quote_defaults,
+    can_duplicate_quote,
+    duplicate_quote,
     effective_quote_lead_time,
     reassign_quote_item_product,
 )
@@ -94,9 +97,12 @@ __all__ = [
     "buyer_update_request_item",
     "buyer_update_request_meta",
     "bulk_close_deals_lost",
+    "can_duplicate_quote",
     "cancel_contract",
     "cancel_document",
+    "create_manual_invoice",
     "create_template",
+    "duplicate_quote",
     "generate_document",
     "issue_document",
     "party_visible_document_q",

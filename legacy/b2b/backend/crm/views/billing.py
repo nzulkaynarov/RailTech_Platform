@@ -18,6 +18,7 @@ from crm.models import (
     Contract,
     Fulfillment,
     Invoice,
+    InvoiceItem,
     Payment,
 )
 from crm.serializers import (
@@ -62,6 +63,38 @@ def _seller_side_q(user, request, *, deal_path, seller_path):
     # winner's billing to a losing co-routed seller, because the winner's docs ARE owner-anchored.
     routed_deal_ids = seller_visible_deal_ids(user, request, force=True) or set()
     unresolved_q = Q(**{f"{seller_path}__isnull": True}) & Q(**{f"{deal_path}_id__in": routed_deal_ids})
+    return owned_q | unresolved_q
+
+
+def _invoice_seller_side_q(user, request):
+    """SELLER-ownership Q for INVOICES, or None if the user owns no seller company.
+
+    An invoice's owning seller is normally resolved through its contract → winning quote
+    (``contract__quote__seller_company``). A G2 MANUAL invoice has NO contract, so its owner is
+    resolved through its items' source КП (``items__source_quote_item__quote__seller_company``) —
+    a manual DRAFT invoice raised from seller A's КП is thus OWNED by A and hidden from a co-routed
+    competitor B, exactly like a contracted invoice. Subquery membership (``pk__in``) is used rather
+    than a to-many join isnull so an invoice that mixes КП + ad-hoc lines resolves cleanly.
+
+    The legacy routed-deal fallback (unresolved owner → visible to any ROUTED seller) fires ONLY
+    when BOTH ownership chains are empty (a pure ad-hoc счёт with no source КП). It never re-exposes
+    an owner-anchored invoice to a losing co-routed seller."""
+    owned_seller_ids = seller_company_ids(user)
+    if not owned_seller_ids:
+        return None
+    owned_via_source_ids = InvoiceItem.objects.filter(
+        source_quote_item__quote__seller_company_id__in=owned_seller_ids
+    ).values("invoice_id")
+    any_source_owner_ids = InvoiceItem.objects.filter(source_quote_item__quote__seller_company__isnull=False).values(
+        "invoice_id"
+    )
+    owned_q = Q(contract__quote__seller_company_id__in=owned_seller_ids) | Q(pk__in=owned_via_source_ids)
+    routed_deal_ids = seller_visible_deal_ids(user, request, force=True) or set()
+    unresolved_q = (
+        Q(contract__quote__seller_company_id__isnull=True)
+        & ~Q(pk__in=any_source_owner_ids)
+        & Q(deal_id__in=routed_deal_ids)
+    )
     return owned_q | unresolved_q
 
 
@@ -251,14 +284,18 @@ class InvoiceViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
         # X-Active-Context header (WP-1). Seller side stays routing-scoped.
         if getattr(user, "is_platform_admin", False):
             return qs
-        seller_path = "contract__quote__seller_company_id"
-        visibility_q = _billing_visibility_q(user, self.request, deal_path="deal", seller_path=seller_path)
+        # Invoice ownership resolves through the contract chain OR — for a G2 contract-less MANUAL
+        # invoice — through its items' source КП (see _invoice_seller_side_q). Buyer sees its deals'
+        # invoices; seller sees the ones its company OWNS (hidden competition).
+        user_company_ids = list(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
+        buyer_q = Q(deal__company_id__in=user_company_ids)
+        seller_side_q = _invoice_seller_side_q(user, self.request)
+        visibility_q = buyer_q if seller_side_q is None else (buyer_q | seller_side_q)
         # I-3: a DRAFT invoice is the seller's private working copy — hidden from the buyer until
         # it is ISSUED (Odoo canon: a draft is not shown to the customer). CANCELLED/ISSUED/… stay
         # visible to both sides. seller_side_q ⊆ visibility_q, so ANDing the gate keeps non-DRAFT
         # rows untouched and confines DRAFT rows to the seller side. A pure buyer (no seller
         # company) has seller_side_q=None → never matches a DRAFT.
-        seller_side_q = _seller_side_q(user, self.request, deal_path="deal", seller_path=seller_path)
         draft_gate = ~Q(status__code=InvoiceStatusCode.DRAFT)
         if seller_side_q is not None:
             draft_gate = draft_gate | seller_side_q
@@ -307,6 +344,56 @@ class InvoiceViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
         if err:
             return Response({"detail": err}, status=400)
         return Response(InvoiceSerializer(invoice, context=self.get_serializer_context()).data)
+
+    @extend_schema(
+        summary="Create a manual DRAFT invoice (no signed contract)",
+        description=(
+            "Raise a DRAFT invoice directly on a deal WITHOUT a signed contract (Odoo / МойСклад "
+            "«invoice without contract»; СНГ «счёт = оферта»). Populate lines from an active КП on "
+            "the deal (`source_quote` → same billable projection as the contract path) and/or a "
+            "manual line list. Amounts follow the КП presentation currency (UZS), never a cost "
+            "currency. The invoice is born DRAFT and rides the existing issue / cancel lifecycle."
+        ),
+        request=inline_serializer(
+            "CreateManualInvoice",
+            fields={
+                "deal": drf_serializers.IntegerField(),
+                "source_quote": drf_serializers.IntegerField(required=False),
+                "due_days": drf_serializers.IntegerField(required=False, default=14),
+                "lines": drf_serializers.ListField(
+                    required=False,
+                    child=inline_serializer(
+                        "ManualInvoiceLine",
+                        fields={
+                            "description": drf_serializers.CharField(),
+                            "quantity": drf_serializers.IntegerField(),
+                            "unit_price_excl_vat": drf_serializers.DecimalField(max_digits=14, decimal_places=2),
+                        },
+                    ),
+                ),
+            },
+        ),
+        responses={201: InvoiceSerializer, 400: OpenApiResponse(description="Validation / authorization error")},
+        tags=["CRM"],
+    )
+    @action(detail=False, methods=["post"], url_path="create-manual", permission_classes=[IsAuthenticated])
+    def create_manual(self, request):
+        deal_id = request.data.get("deal")
+        if not deal_id:
+            return Response({"detail": "DEAL_ID_REQUIRED"}, status=400)
+        source_quote = request.data.get("source_quote")
+        invoice, err = crm_services.create_manual_invoice(
+            int(deal_id),
+            actor=request.user,
+            source_quote_id=int(source_quote) if source_quote else None,
+            lines=request.data.get("lines"),
+            due_days=int(request.data.get("due_days", 14)),
+        )
+        if err:
+            forbidden = {"ADMIN_VIEWER_CANNOT_ACT", "MEMBER_REQUIRED_FOR_ACTION"}
+            http_status = 404 if err == "NOT_FOUND" else (403 if err in forbidden else 400)
+            return Response({"detail": err}, status=http_status)
+        return Response(InvoiceSerializer(invoice, context=self.get_serializer_context()).data, status=201)
 
     @extend_schema(summary="Generate invoice from a signed contract", tags=["CRM"])
     @action(

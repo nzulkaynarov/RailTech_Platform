@@ -11809,6 +11809,56 @@
                 }
             }
         },
+        "/api/v1/crm/invoices/create-manual/": {
+            "post": {
+                "operationId": "crm_invoices_create_manual_create",
+                "description": "Raise a DRAFT invoice directly on a deal WITHOUT a signed contract (Odoo / МойСклад «invoice without contract»; СНГ «счёт = оферта»). Populate lines from an active КП on the deal (`source_quote` → same billable projection as the contract path) and/or a manual line list. Amounts follow the КП presentation currency (UZS), never a cost currency. The invoice is born DRAFT and rides the existing issue / cancel lifecycle.",
+                "summary": "Create a manual DRAFT invoice (no signed contract)",
+                "tags": [
+                    "CRM"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateManualInvoiceRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateManualInvoiceRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateManualInvoiceRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Invoice"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Validation / authorization error"
+                    }
+                }
+            }
+        },
         "/api/v1/crm/invoices/generate-from-contract/": {
             "post": {
                 "operationId": "crm_invoices_generate_from_contract_create",
@@ -14189,6 +14239,50 @@
                     },
                     "409": {
                         "description": "QUOTE_NOT_CLAIMED / FX_RATE_MISSING / QUOTE_BELOW_COST"
+                    }
+                }
+            }
+        },
+        "/api/v1/crm/quotes/{id}/duplicate/": {
+            "post": {
+                "operationId": "crm_quotes_duplicate_create",
+                "description": "Deep-copy this КП into a NEW DRAFT quote on the SAME deal (version = max+1): all line items (incl. sections / notes / optional lines and per-line margin), all document charges, and the КП settings. The public link, PDF, КП number and freeze/approve artefacts are NOT copied, and the FX snapshot is re-frozen at current rates on the copy's first recalc. Same seller-side authorization as building a КП (quote.build).",
+                "summary": "Duplicate a КП into a new DRAFT version (Odoo «Duplicate»)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Коммерческое предложение.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Quote"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "403": {
+                        "description": "Role not permitted (ROLE_NOT_PERMITTED)"
+                    },
+                    "404": {
+                        "description": "Quote not found"
                     }
                 }
             }
@@ -20429,6 +20523,30 @@
                     "name"
                 ]
             },
+            "CreateManualInvoiceRequest": {
+                "type": "object",
+                "properties": {
+                    "deal": {
+                        "type": "integer"
+                    },
+                    "source_quote": {
+                        "type": "integer"
+                    },
+                    "due_days": {
+                        "type": "integer",
+                        "default": 14
+                    },
+                    "lines": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ManualInvoiceLineRequest"
+                        }
+                    }
+                },
+                "required": [
+                    "deal"
+                ]
+            },
             "Currency": {
                 "type": "object",
                 "properties": {
@@ -22187,6 +22305,28 @@
                         "minLength": 1
                     }
                 }
+            },
+            "ManualInvoiceLineRequest": {
+                "type": "object",
+                "properties": {
+                    "description": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "quantity": {
+                        "type": "integer"
+                    },
+                    "unit_price_excl_vat": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$"
+                    }
+                },
+                "required": [
+                    "description",
+                    "quantity",
+                    "unit_price_excl_vat"
+                ]
             },
             "Manufacturer": {
                 "type": "object",
