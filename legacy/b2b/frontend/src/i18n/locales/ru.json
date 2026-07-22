@@ -4378,7 +4378,10 @@
       "PENDING_MANAGER": "Ожидает менеджера",
       "SIGNED": "Подписан",
       "CANCELLED": "Отменён"
-    }
+    },
+    "downloadSigned": "Скачать подписанный",
+    "createInvoice": "Создать инвойс",
+    "invoiceCreated": "Инвойс создан"
   },
   "invoicesPage": {
     "title": "Инвойсы",
@@ -4478,7 +4481,10 @@
       "ISSUED": "Выставлен",
       "SIGNED": "Подписан",
       "CANCELLED": "Отменён"
-    }
+    },
+    "downloadSigned": "Скачать подписанный",
+    "uploadSigned": "Загрузить подписанный",
+    "signedAt": "Подписан"
   },
   "fulfillmentPage": {
     "title": "Исполнение сделок",

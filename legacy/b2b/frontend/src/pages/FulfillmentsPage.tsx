@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { openableRowProps } from '@/lib/rowClick';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { translateApiError } from '@/lib/apiError';
@@ -153,7 +154,12 @@ export function FulfillmentsPage() {
               </TableHeader>
               <TableBody>
                 {(list ?? []).map((f) => (
-                  <TableRow key={f.id}>
+                  <TableRow
+                    key={f.id}
+                    {...(isSeller && !isViewer
+                      ? openableRowProps(() => startEdit(f), `${t('common.open')} #${f.deal}`)
+                      : {})}
+                  >
                     <TableCell><DealLink dealId={f.deal} /></TableCell>
                     <TableCell>
                       <Badge variant={STATUS_VARIANT[f.status]}>
@@ -165,7 +171,7 @@ export function FulfillmentsPage() {
                     </TableCell>
                     <TableCell>{f.tracking_number || '—'}</TableCell>
                     <TableCell>{f.carrier || '—'}</TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right" data-row-action>
                       {isSeller && (
                         <Button
                           variant="ghost"

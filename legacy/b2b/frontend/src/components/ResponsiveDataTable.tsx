@@ -4,6 +4,7 @@ import {
 } from '@/components/ui/table';
 import { SortableHead } from '@/components/DataTable';
 import { cn } from '@/lib/utils';
+import { clickOriginatesFromControl } from '@/lib/rowClick';
 
 export interface ResponsiveColumn<T> {
   id: string;
@@ -73,8 +74,19 @@ export function ResponsiveDataTable<T>({
             {rows.map((row) => (
               <TableRow
                 key={getRowId(row)}
-                className={cn(onRowClick && 'cursor-pointer', rowClassName?.(row))}
-                onClick={onRowClick ? () => onRowClick(row) : undefined}
+                role={onRowClick ? 'button' : undefined}
+                tabIndex={onRowClick ? 0 : undefined}
+                className={cn(
+                  onRowClick && 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
+                  rowClassName?.(row),
+                )}
+                // Open the document on row click — but never steal a click that landed on a control
+                // inside the row (its actions menu / link owns that click). Same guard as the raw pages.
+                onClick={onRowClick ? (event) => { if (!clickOriginatesFromControl(event.target)) onRowClick(row); } : undefined}
+                onKeyDown={onRowClick ? (event) => {
+                  if (event.target !== event.currentTarget) return;
+                  if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onRowClick(row); }
+                } : undefined}
               >
                 {columns.map((col) => (
                   <TableCell key={col.id} className={col.className}>

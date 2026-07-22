@@ -12,7 +12,7 @@ interface PageShellProps {
   // filters, not a total — so a subset of statuses no longer reads as "the sum
   // doesn't add up"). `active` highlights the currently-applied filter.
   stats?: { label: string; value: string; onClick?: () => void; active?: boolean }[];
-  actions?: { label: string; variant?: 'default' | 'outline'; onClick?: () => void }[];
+  actions?: { label: string; variant?: 'default' | 'outline'; onClick?: () => void; disabled?: boolean }[];
   children?: React.ReactNode;
 }
 
@@ -31,7 +31,7 @@ export function PageShell({ title, description, icon, stats, actions, children }
         {actions && (
           <div className="flex gap-2">
             {actions.map((a, i) => (
-              <Button key={i} variant={a.variant ?? 'default'} onClick={a.onClick}>{a.label}</Button>
+              <Button key={i} variant={a.variant ?? 'default'} onClick={a.onClick} disabled={a.disabled}>{a.label}</Button>
             ))}
           </div>
         )}

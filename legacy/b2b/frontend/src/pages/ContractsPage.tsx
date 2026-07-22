@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { translateApiError } from '@/lib/apiError';
-import { FileText, PenLine, Upload, Ban, FileSignature, ShieldAlert } from 'lucide-react';
+import { fetchDocumentBlob, saveBlob } from '@/lib/documents';
+import { FileText, PenLine, Upload, Download, Receipt, Ban, FileSignature, ShieldAlert } from 'lucide-react';
 import { DocumentActions } from '@/components/Shared/DocumentActions';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -26,7 +27,7 @@ import {
 } from '@/components/DataTable';
 import {
   useContracts, useSignContractClient, useSignContractManager,
-  useUploadSignedContract, useCancelContract, useForceCancelContract,
+  useUploadSignedContract, useCancelContract, useForceCancelContract, useGenerateInvoice,
 } from '@/hooks/useBilling';
 import { useUserStore } from '@/store/userStore';
 import { useCurrencyStore } from '@/store/currencyStore';
@@ -75,6 +76,29 @@ export function ContractsPage() {
   const isViewer = useIsViewerMode();
   const viewerTip = t('apiErrors.ADMIN_VIEWER_CANNOT_ACT');
   const { data: contracts, isLoading, isError, refetch } = useContracts(undefined);
+  const generateInvoice = useGenerateInvoice();
+
+  // Download the uploaded signed copy (the endpoint exists both here and for acts — the file was
+  // uploadable but never downloadable back, a plain governance gap). The file may be a PDF or an
+  // image, so it saves as-is rather than assuming a PDF.
+  const onDownloadSigned = async (contract: Contract) => {
+    try {
+      const blob = await fetchDocumentBlob(`crm/contracts/${contract.id}/download-signed/`);
+      const ext = blob.type.includes('pdf') ? 'pdf' : (blob.type.split('/')[1] || 'bin');
+      saveBlob(blob, `RailTech_Contract_${contract.id}_signed.${ext}`);
+    } catch {
+      toast.error(t('errors.operationFailed'));
+    }
+  };
+
+  const onCreateInvoice = async (contract: Contract) => {
+    try {
+      await generateInvoice.mutateAsync({ contractId: contract.id });
+      toast.success(t('contractsPage.invoiceCreated'));
+    } catch (e) {
+      toast.error(translateApiError(e));
+    }
+  };
   const formatCurrency = useCurrencyStore((s) => s.format);
   const signClient = useSignContractClient();
   const signManager = useSignContractManager();
@@ -354,6 +378,23 @@ export function ContractsPage() {
                     filenameBase={`RailTech_Contract_${selected.id}`}
                     size="default"
                   />
+                )}
+                {selected.signed_file_url && (
+                  <Button variant="outline" onClick={() => onDownloadSigned(selected)}>
+                    <Download className="mr-2 h-4 w-4" />
+                    {t('contractsPage.downloadSigned')}
+                  </Button>
+                )}
+                {selected.status === 'SIGNED' && (
+                  <Button
+                    variant="outline"
+                    onClick={() => onCreateInvoice(selected)}
+                    disabled={generateInvoice.isPending || isViewer}
+                    title={isViewer ? viewerTip : undefined}
+                  >
+                    <Receipt className="mr-2 h-4 w-4" />
+                    {t('contractsPage.createInvoice')}
+                  </Button>
                 )}
                 {selected.viewer_can_sign_client && !selected.client_signed_at && (selected.status === 'PENDING_CLIENT' || selected.status === 'DRAFT') && (
                   <Button

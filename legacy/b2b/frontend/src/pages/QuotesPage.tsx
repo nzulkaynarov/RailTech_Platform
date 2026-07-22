@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-  Calculator, MoreHorizontal, Send, FileDown, ShieldAlert,
+  Calculator, MoreHorizontal, Send, ShieldAlert,
 } from 'lucide-react';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -24,10 +24,11 @@ import { SendQuoteDialog } from '@/components/CRM/SendQuoteDialog';
 import { translateApiError } from '@/lib/apiError';
 import { useUserStore } from '@/store/userStore';
 import { QuoteStatus, quoteStatusLabelKey } from '@/lib/codes';
+import { publicQuoteUrl } from '@/lib/quoteSend';
+import { DocumentActions } from '@/components/Shared/DocumentActions';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useQuotes, useQuote, useDeal, useQuoteStatuses, useForceApproveQuote } from '@/hooks/useCRM';
 import { sumMoney } from '@/utils/decimal';
-import { crmApi } from '@/api/crmApi';
 import type { Quote } from '@/api/crmApi';
 import { toast } from 'sonner';
 import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
@@ -76,14 +77,6 @@ export function QuotesPage() {
         { label: t('pages.quotes.stats.approved'), value: String(quotesList.filter(q => q.status_code === 'APPROVED').length) },
         { label: t('pages.quotes.stats.pipeline'), value: String(quotesList.filter(q => !['APPROVED', 'REJECTED', 'EXPIRED'].includes(q.status_code)).length) },
       ];
-
-  const handleDownloadPDF = async (id: number) => {
-    try {
-      await crmApi.downloadQuotePDF(id);
-    } catch {
-      toast.error(t('pages.quotes.toast.actionError'));
-    }
-  };
 
   const handleForceApprove = async () => {
     if (!forceApproveTarget) return;
@@ -153,47 +146,50 @@ export function QuotesPage() {
       cell: (q) => new Date(q.created_at).toLocaleDateString(),
     },
     {
+      // Unified document actions (Просмотр/Печать/Скачать/Копировать ссылку) + the status-gated
+      // Send/force menu. `data-row-action` keeps a click here from also opening the row.
       id: 'actions', header: t('pages.quotes.table.actions'), className: 'text-center', mobileActions: true,
-      cell: (q) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {!isBuyer && (
-              <>
-                {/* Only an internally-approved КП can be sent — otherwise the
-                    backend FSM rejects it. The actual chain steps live on the
-                    КП builder (deal detail). */}
+      cell: (q) => {
+        const showStatusMenu = !isBuyer
+          && (q.status_code === QuoteStatus.READY_TO_SEND
+            || (isPlatformAdmin && q.status_code !== QuoteStatus.APPROVED));
+        return (
+        <div className="flex items-center justify-center gap-1" data-row-action>
+          <DocumentActions
+            request={() => ({ path: `crm/quotes/${q.id}/download-pdf/` })}
+            filenameBase={`RailTech_Quote_${q.id}`}
+            publicLink={q.public_access_token && !q.public_token_revoked
+              ? (publicQuoteUrl(q.public_access_token, window.location.origin) ?? undefined)
+              : undefined}
+            iconOnly
+          />
+          {showStatusMenu && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label={t('pages.quotes.table.actions')}>
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {/* Only an internally-approved КП can be sent — the FSM rejects otherwise. */}
                 {q.status_code === QuoteStatus.READY_TO_SEND && (
                   <DropdownMenuItem onClick={() => setSendConfirmId(q.id)}>
                     <Send className="mr-2 h-4 w-4" />
                     {t('pages.quotes.actions.sendToClient')}
                   </DropdownMenuItem>
                 )}
-              </>
-            )}
-            {/* Buyer accept/reject lives only on the canonical
-                request-detail surface (My Requests → open). This
-                list stays read-only for the buyer. */}
-            <DropdownMenuItem onClick={() => handleDownloadPDF(q.id)}>
-              <FileDown className="mr-2 h-4 w-4" />
-              {t('pages.quotes.actions.downloadPDF')}
-            </DropdownMenuItem>
-            {isPlatformAdmin && q.status_code !== QuoteStatus.APPROVED && (
-              <DropdownMenuItem
-                onClick={() => setForceApproveTarget(q)}
-                className="text-warning"
-              >
-                <ShieldAlert className="mr-2 h-4 w-4" />
-                {t('pages.quotes.actions.forceApprove')}
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ),
+                {isPlatformAdmin && q.status_code !== QuoteStatus.APPROVED && (
+                  <DropdownMenuItem onClick={() => setForceApproveTarget(q)} className="text-warning">
+                    <ShieldAlert className="mr-2 h-4 w-4" />
+                    {t('pages.quotes.actions.forceApprove')}
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+        );
+      },
     },
   ];
 
@@ -255,6 +251,9 @@ export function QuotesPage() {
               columns={columns}
               rows={pageItems}
               getRowId={(q) => q.id}
+              // Click a row to OPEN the КП: the seller lands on the builder, the buyer on their
+              // canonical request surface (both keyed by the deal).
+              onRowClick={(q) => { window.location.hash = isBuyer ? `request-detail/${q.deal}` : `deal-quote/${q.deal}`; }}
               sorting={{ ordering: listParams.ordering, onToggle: listParams.toggleOrdering }}
             />
             <Pager page={listParams.page} pageSize={listParams.pageSize} total={total} onPageChange={listParams.setPage} />

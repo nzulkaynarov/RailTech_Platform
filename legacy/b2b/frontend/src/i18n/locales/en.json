@@ -4374,7 +4374,10 @@
       "PENDING_MANAGER": "Awaiting manager",
       "SIGNED": "Signed",
       "CANCELLED": "Cancelled"
-    }
+    },
+    "downloadSigned": "Download signed",
+    "createInvoice": "Create invoice",
+    "invoiceCreated": "Invoice created"
   },
   "invoicesPage": {
     "title": "Invoices",
@@ -4474,7 +4477,10 @@
       "ISSUED": "Issued",
       "SIGNED": "Signed",
       "CANCELLED": "Cancelled"
-    }
+    },
+    "downloadSigned": "Download signed",
+    "uploadSigned": "Upload signed",
+    "signedAt": "Signed"
   },
   "fulfillmentPage": {
     "title": "Deal fulfillment",

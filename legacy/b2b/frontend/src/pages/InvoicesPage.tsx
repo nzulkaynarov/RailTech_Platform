@@ -29,6 +29,7 @@ import { useIsViewerMode } from '@/hooks/useViewerMode';
 import { useUserStore } from '@/store/userStore';
 import { useCurrencyStore } from '@/store/currencyStore';
 import type { Invoice, InvoiceStatus } from '@/api/billingApi';
+import { openableRowProps } from '@/lib/rowClick';
 
 const STATUS_VARIANT: Record<InvoiceStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   DRAFT: 'secondary',
@@ -151,7 +152,7 @@ export function InvoicesPage() {
                   </TableHeader>
                   <TableBody>
                     {pageItems.map((inv) => (
-                      <TableRow key={inv.id}>
+                      <TableRow key={inv.id} {...openableRowProps(() => setSelected(inv), `${t('common.open')} ${inv.number}`)}>
                         <TableCell className="font-medium">{inv.number}</TableCell>
                         <TableCell><DealLink dealId={inv.deal} /></TableCell>
                         <TableCell className="tabular-nums">{formatCurrency(Number(inv.total_incl_vat))}</TableCell>
@@ -167,8 +168,8 @@ export function InvoicesPage() {
                         <TableCell className="text-xs text-muted-foreground">
                           {inv.due_date ? new Date(inv.due_date).toLocaleDateString() : '—'}
                         </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" onClick={() => setSelected(inv)}>
+                        <TableCell className="text-right" data-row-action>
+                          <Button variant="ghost" size="sm" onClick={() => setSelected(inv)} aria-label={t('common.open')}>
                             <Receipt className="h-4 w-4" />
                           </Button>
                         </TableCell>
