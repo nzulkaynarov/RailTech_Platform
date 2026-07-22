@@ -30,7 +30,7 @@ import {
 import { useIsViewerMode } from '@/hooks/useViewerMode';
 import { useUserStore } from '@/store/userStore';
 import { useCurrencyStore } from '@/store/currencyStore';
-import type { Invoice, InvoiceStatus } from '@/api/billingApi';
+import type { InvoiceStatus } from '@/api/billingApi';
 import { openableRowProps } from '@/lib/rowClick';
 
 const STATUS_VARIANT: Record<InvoiceStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -47,10 +47,18 @@ const STATUS_CODES: InvoiceStatus[] = ['DRAFT', 'ISSUED', 'PARTIAL', 'PAID', 'OV
 export function InvoicesPage() {
   const { t } = useTranslation();
   const listParams = useListParams(['status'] as const, { defaultOrdering: '-created_at' });
-  const [selected, setSelected] = useState<Invoice | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const [payOpen, setPayOpen] = useState(false);
 
   const { data: invoices, isLoading, isError, refetch } = useInvoices(undefined);
+  // Render the detail Sheet from the LIVE query cache (not a captured snapshot) so
+  // issue/cancel/save/generate-act always reflect fresh data — the canon shared with
+  // ContractsPage/ActsPage/OtherDocuments. A mutation invalidates ['invoices'] → the
+  // list refetches → this memo re-derives `selected`.
+  const selected = useMemo(
+    () => (invoices ?? []).find((invoice) => invoice.id === selectedId) ?? null,
+    [invoices, selectedId],
+  );
   const formatCurrency = useCurrencyStore((s) => s.format);
   const generateAct = useGenerateAct();
   const issueInvoice = useIssueInvoice();
@@ -65,10 +73,14 @@ export function InvoicesPage() {
   // invoice changes; amounts are NOT editable (they derive from the contract).
   const [draftDue, setDraftDue] = useState('');
   const [draftNotes, setDraftNotes] = useState('');
+  // Sync the editable draft fields when the opened invoice changes or its server
+  // values change. Keyed on the primitives (not the memoized `selected` object,
+  // whose identity churns on every cache refetch) so a background refetch that
+  // returns identical data doesn't wipe an in-progress edit.
   useEffect(() => {
     setDraftDue(selected?.due_date ?? '');
     setDraftNotes(selected?.notes ?? '');
-  }, [selected]);
+  }, [selectedId, selected?.due_date, selected?.notes]);
 
   const stats = useMemo(() => {
     const list = invoices ?? [];
@@ -98,10 +110,11 @@ export function InvoicesPage() {
   const onSaveDraft = async () => {
     if (!selected) return;
     try {
-      const updated = await updateDraft.mutateAsync({
+      // No setSelected — the mutation invalidates ['invoices'], the list refetches,
+      // and `selected` re-derives from cache.
+      await updateDraft.mutateAsync({
         id: selected.id, dueDate: draftDue || undefined, notes: draftNotes,
       });
-      setSelected(updated);
       toast.success(t('invoicesPage.draftSaved'));
     } catch (e) {
       toast.error(translateApiError(e));
@@ -113,7 +126,7 @@ export function InvoicesPage() {
     try {
       await issueInvoice.mutateAsync(selected.id);
       toast.success(t('invoicesPage.issued'));
-      setSelected(null);
+      setSelectedId(null);
     } catch (e) {
       toast.error(translateApiError(e));
     }
@@ -122,8 +135,8 @@ export function InvoicesPage() {
   const onCancelInvoice = async () => {
     if (!selected) return;
     try {
-      const updated = await cancelInvoice.mutateAsync(selected.id);
-      setSelected(updated);
+      // Cache-driven: cancel invalidates ['invoices'], `selected` re-derives.
+      await cancelInvoice.mutateAsync(selected.id);
       toast.success(t('invoicesPage.cancelled'));
     } catch (e) {
       toast.error(translateApiError(e));
@@ -201,7 +214,7 @@ export function InvoicesPage() {
                   </TableHeader>
                   <TableBody>
                     {pageItems.map((inv) => (
-                      <TableRow key={inv.id} {...openableRowProps(() => setSelected(inv), `${t('common.open')} ${inv.number}`)}>
+                      <TableRow key={inv.id} {...openableRowProps(() => setSelectedId(inv.id), `${t('common.open')} ${inv.number}`)}>
                         <TableCell className="font-medium">{inv.number}</TableCell>
                         <TableCell><DealLink dealId={inv.deal} /></TableCell>
                         <TableCell className="tabular-nums">{formatCurrency(Number(inv.total_incl_vat))}</TableCell>
@@ -218,7 +231,7 @@ export function InvoicesPage() {
                           {inv.due_date ? new Date(inv.due_date).toLocaleDateString() : '—'}
                         </TableCell>
                         <TableCell className="text-right" data-row-action>
-                          <Button variant="ghost" size="sm" onClick={() => setSelected(inv)} aria-label={t('common.open')}>
+                          <Button variant="ghost" size="sm" onClick={() => setSelectedId(inv.id)} aria-label={t('common.open')}>
                             <Receipt className="h-4 w-4" />
                           </Button>
                         </TableCell>
@@ -234,7 +247,7 @@ export function InvoicesPage() {
       </Card>
 
       {selected && (
-        <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
+        <Sheet open={!!selected} onOpenChange={(o) => !o && setSelectedId(null)}>
           <SheetContent className="overflow-y-auto sm:max-w-lg">
             <SheetHeader>
               <SheetTitle>{selected.number}</SheetTitle>

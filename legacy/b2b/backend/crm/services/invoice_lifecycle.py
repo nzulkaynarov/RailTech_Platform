@@ -166,9 +166,15 @@ def cancel_invoice(invoice, user) -> Tuple[Optional[object], Optional[str]]:
 
 
 @transaction.atomic
-def update_invoice_draft(invoice, *, due_date=None, notes=None) -> Tuple[Optional[object], Optional[str]]:
+def update_invoice_draft(invoice, user, *, due_date=None, notes=None) -> Tuple[Optional[object], Optional[str]]:
     """Edit a DRAFT invoice's due_date / notes. Amounts are NEVER hand-edited — they mirror the
-    contract/КП (Rule 1). Only DRAFT invoices are editable; ISSUED+ are immutable (trust)."""
+    contract/КП (Rule 1). Only DRAFT invoices are editable; ISSUED+ are immutable (trust).
+
+    Seller-side only: the same gate as issue/cancel (viewer-block + seller-role + routing-scope).
+    Closes the hole where the buyer (both sides land in the invoice queryset) or a platform-admin
+    viewer could rewrite another seller's draft due_date / notes."""
+    if gate_err := _assert_seller_may_act_on_invoice(invoice, user):
+        return None, gate_err
     if invoice.status_code != InvoiceStatusCode.DRAFT:
         return None, "INVOICE_NOT_EDITABLE"
 

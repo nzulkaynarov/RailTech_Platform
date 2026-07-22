@@ -7019,6 +7019,7 @@ export interface components {
             readonly number: string;
             readonly status: string;
             readonly status_name: string;
+            readonly invoice_id: number | null;
             /**
              * Сумма контракта
              * Format: decimal

@@ -4418,6 +4418,7 @@
     },
     "downloadSigned": "Download signed",
     "createInvoice": "Create invoice",
+    "openInvoice": "Open invoice",
     "invoiceCreated": "Invoice created"
   },
   "invoicesPage": {

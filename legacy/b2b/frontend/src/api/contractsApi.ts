@@ -32,6 +32,9 @@ export interface Contract {
   viewer_can_sign_manager: boolean;
   valid_from: string | null;
   valid_until: string | null;
+  // id of this contract's non-cancelled invoice, or null if none exists yet
+  // (server-derived). Drives the "Create invoice" ↔ "Open invoice" switch.
+  invoice_id: number | null;
   notes: string;
   created_at: string;
   updated_at: string;

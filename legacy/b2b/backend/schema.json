@@ -20056,6 +20056,11 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "invoice_id": {
+                        "type": "integer",
+                        "nullable": true,
+                        "readOnly": true
+                    },
                     "total_amount": {
                         "type": "string",
                         "format": "decimal",
@@ -20162,6 +20167,7 @@
                     "created_at",
                     "deal",
                     "id",
+                    "invoice_id",
                     "manager_signed_at",
                     "manager_signer",
                     "manager_signer_name",

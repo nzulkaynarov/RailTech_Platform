@@ -107,7 +107,13 @@ export const useGenerateInvoice = () => {
   return useMutation({
     mutationFn: ({ contractId, dueDays }: { contractId: number; dueDays?: number }) =>
       invoicesApi.generateFromContract(contractId, dueDays),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['invoices'] }),
+    onSuccess: (_data, { contractId }) => {
+      qc.invalidateQueries({ queryKey: ['invoices'] });
+      // Refresh contracts so invoice_id populates and the source contract's
+      // "Create invoice" button flips to "Open invoice".
+      qc.invalidateQueries({ queryKey: ['contracts'] });
+      qc.invalidateQueries({ queryKey: ['contract', contractId] });
+    },
   });
 };
 
@@ -163,6 +169,9 @@ export const useCancelInvoice = () => {
     onSuccess: (_data, id) => {
       qc.invalidateQueries({ queryKey: ['invoices'] });
       qc.invalidateQueries({ queryKey: ['invoice', id] });
+      // Cancelling clears the contract's non-cancelled invoice → its `invoice_id` goes null, so the
+      // contract Sheet must flip «Открыть инвойс» back to «Создать инвойс» (re-issue after cancel).
+      qc.invalidateQueries({ queryKey: ['contracts'] });
     },
   });
 };

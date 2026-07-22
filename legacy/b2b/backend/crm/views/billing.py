@@ -12,6 +12,7 @@ from core.file_streaming import stream_file_field
 from core.optimistic_locking import OptimisticLockingMixin
 from core.permissions import IsCompanyMemberOrPlatformAdmin, OperatorScoped
 from crm import services as crm_services
+from crm.constants import InvoiceStatusCode
 from crm.models import (
     Act,
     Contract,
@@ -44,6 +45,26 @@ def _stream_or_render_pdf(obj):
     return stream_file_field(obj.pdf_file)
 
 
+def _seller_side_q(user, request, *, deal_path, seller_path):
+    """The SELLER-ownership portion of billing visibility, or None if the user owns no seller
+    company. A document is on the seller side when it is OWNED by the user's seller company
+    (winning quote.seller_company) OR its owner is unresolvable but the deal is routed to the
+    user (legacy/manual fallback). Split out of _billing_visibility_q so DRAFT documents can be
+    confined to the seller side only (I-3: a buyer must not see a seller's DRAFT invoice)."""
+    owned_seller_ids = seller_company_ids(user)
+    if not owned_seller_ids:
+        return None
+    # The seller sees documents OWNED by its seller company (winning quote.seller_company).
+    owned_q = Q(**{f"{seller_path}__in": owned_seller_ids})
+    # Fallback ONLY for documents whose owner is unresolvable (quote.seller_company NULL —
+    # legacy/manual docs, NEVER a contracted winning quote, which is always owner-anchored on
+    # claim/submit): keep them visible to a ROUTED seller by deal (WP-1). This never re-exposes a
+    # winner's billing to a losing co-routed seller, because the winner's docs ARE owner-anchored.
+    routed_deal_ids = seller_visible_deal_ids(user, request, force=True) or set()
+    unresolved_q = Q(**{f"{seller_path}__isnull": True}) & Q(**{f"{deal_path}_id__in": routed_deal_ids})
+    return owned_q | unresolved_q
+
+
 def _billing_visibility_q(user, request, *, deal_path, seller_path):
     """Tenant-scope Q for a non-admin billing queryset.
 
@@ -64,18 +85,10 @@ def _billing_visibility_q(user, request, *, deal_path, seller_path):
     """
     user_company_ids = list(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
     buyer_q = Q(**{f"{deal_path}__company_id__in": user_company_ids})
-    owned_seller_ids = seller_company_ids(user)
-    if not owned_seller_ids:
+    seller_q = _seller_side_q(user, request, deal_path=deal_path, seller_path=seller_path)
+    if seller_q is None:
         return buyer_q
-    # The seller sees documents OWNED by its seller company (winning quote.seller_company).
-    owned_q = Q(**{f"{seller_path}__in": owned_seller_ids})
-    # Fallback ONLY for documents whose owner is unresolvable (quote.seller_company NULL —
-    # legacy/manual docs, NEVER a contracted winning quote, which is always owner-anchored on
-    # claim/submit): keep them visible to a ROUTED seller by deal (WP-1). This never re-exposes a
-    # winner's billing to a losing co-routed seller, because the winner's docs ARE owner-anchored.
-    routed_deal_ids = seller_visible_deal_ids(user, request, force=True) or set()
-    unresolved_q = Q(**{f"{seller_path}__isnull": True}) & Q(**{f"{deal_path}_id__in": routed_deal_ids})
-    return buyer_q | owned_q | unresolved_q
+    return buyer_q | seller_q
 
 
 class ContractViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
@@ -238,11 +251,18 @@ class InvoiceViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
         # X-Active-Context header (WP-1). Seller side stays routing-scoped.
         if getattr(user, "is_platform_admin", False):
             return qs
-        return qs.filter(
-            _billing_visibility_q(
-                user, self.request, deal_path="deal", seller_path="contract__quote__seller_company_id"
-            )
-        ).distinct()
+        seller_path = "contract__quote__seller_company_id"
+        visibility_q = _billing_visibility_q(user, self.request, deal_path="deal", seller_path=seller_path)
+        # I-3: a DRAFT invoice is the seller's private working copy — hidden from the buyer until
+        # it is ISSUED (Odoo canon: a draft is not shown to the customer). CANCELLED/ISSUED/… stay
+        # visible to both sides. seller_side_q ⊆ visibility_q, so ANDing the gate keeps non-DRAFT
+        # rows untouched and confines DRAFT rows to the seller side. A pure buyer (no seller
+        # company) has seller_side_q=None → never matches a DRAFT.
+        seller_side_q = _seller_side_q(user, self.request, deal_path="deal", seller_path=seller_path)
+        draft_gate = ~Q(status__code=InvoiceStatusCode.DRAFT)
+        if seller_side_q is not None:
+            draft_gate = draft_gate | seller_side_q
+        return qs.filter(visibility_q & draft_gate).distinct()
 
     def update(self, request, *args, **kwargs):
         """DRAFT-only edit, restricted to due_date / notes (amounts mirror the contract, never
@@ -258,6 +278,7 @@ class InvoiceViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
             return Response({"detail": "PRECONDITION_FAILED_STALE_WRITE"}, status=status.HTTP_412_PRECONDITION_FAILED)
         updated, err = crm_services.update_invoice_draft(
             invoice,
+            request.user,
             due_date=request.data.get("due_date"),
             notes=request.data.get("notes"),
         )
@@ -305,7 +326,7 @@ class InvoiceViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
             due_days=due_days,
         )
         if err:
-            return Response({"detail": err}, status=400)
+            return Response({"detail": err}, status=(404 if err == "NOT_FOUND" else 400))
         return Response(InvoiceSerializer(invoice).data, status=201)
 
     @extend_schema(
@@ -333,7 +354,7 @@ class InvoiceViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
             proof_file=request.FILES.get("proof_file"),
         )
         if err:
-            return Response({"detail": err}, status=400)
+            return Response({"detail": err}, status=(404 if err == "NOT_FOUND" else 400))
         return Response(PaymentSerializer(payment).data, status=201)
 
     @extend_schema(summary="Generate Act for this invoice", tags=["CRM"])
@@ -341,7 +362,7 @@ class InvoiceViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
     def generate_act(self, request, pk=None):
         act, err = crm_services.generate_act(int(pk), actor=request.user)
         if err:
-            return Response({"detail": err}, status=400)
+            return Response({"detail": err}, status=(404 if err == "NOT_FOUND" else 400))
         return Response(ActSerializer(act).data, status=201)
 
 

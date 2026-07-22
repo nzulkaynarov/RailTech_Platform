@@ -95,6 +95,9 @@ export function ContractsPage() {
     try {
       await generateInvoice.mutateAsync({ contractId: contract.id });
       toast.success(t('contractsPage.invoiceCreated'));
+      // Take the user to the invoices registry — closes the "created it, now where?"
+      // dead-end. The just-created invoice is a DRAFT there.
+      window.location.hash = 'invoices';
     } catch (e) {
       toast.error(translateApiError(e));
     }
@@ -385,7 +388,18 @@ export function ContractsPage() {
                     {t('contractsPage.downloadSigned')}
                   </Button>
                 )}
-                {selected.status === 'SIGNED' && (
+                {selected.invoice_id ? (
+                  // An invoice already exists for this contract — route to it instead
+                  // of re-creating. Falls back to "Create invoice" once it's cancelled
+                  // (server sets invoice_id back to null).
+                  <Button
+                    variant="outline"
+                    onClick={() => { window.location.hash = 'invoices'; }}
+                  >
+                    <Receipt className="mr-2 h-4 w-4" />
+                    {t('contractsPage.openInvoice')}
+                  </Button>
+                ) : selected.status === 'SIGNED' && (
                   <Button
                     variant="outline"
                     onClick={() => onCreateInvoice(selected)}

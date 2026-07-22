@@ -81,6 +81,7 @@ function makeContract(id: number, status: ContractStatus): Contract {
     viewer_can_sign_manager: false,
     valid_from: null,
     valid_until: null,
+    invoice_id: null,
     notes: '',
     created_at: '2026-07-01T10:00:00Z',
     updated_at: '2026-07-01T10:00:00Z',

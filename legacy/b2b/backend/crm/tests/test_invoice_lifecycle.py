@@ -230,7 +230,7 @@ def test_cancel_paid_invoice_is_rejected(world):
 def test_update_draft_changes_due_date(world):
     invoice = _make_draft(world)
     new_due = date(2030, 1, 15)
-    updated, err = update_invoice_draft(invoice, due_date=new_due, notes="Оплата по факту")
+    updated, err = update_invoice_draft(invoice, world["seller_user"], due_date=new_due, notes="Оплата по факту")
     assert err is None, err
     updated.refresh_from_db()
     assert updated.due_date == new_due
@@ -241,7 +241,7 @@ def test_update_draft_changes_due_date(world):
 def test_update_issued_invoice_is_rejected(world):
     invoice = _make_draft(world)
     issued, _ = issue_invoice(invoice, world["seller_user"])
-    result, err = update_invoice_draft(issued, due_date=date(2030, 1, 15))
+    result, err = update_invoice_draft(issued, world["seller_user"], due_date=date(2030, 1, 15))
     assert result is None
     assert err == "INVOICE_NOT_EDITABLE"
 

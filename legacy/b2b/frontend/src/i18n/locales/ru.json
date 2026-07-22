@@ -4422,6 +4422,7 @@
     },
     "downloadSigned": "Скачать подписанный",
     "createInvoice": "Создать инвойс",
+    "openInvoice": "Открыть инвойс",
     "invoiceCreated": "Инвойс создан"
   },
   "invoicesPage": {

@@ -23,6 +23,9 @@ class ContractSerializer(serializers.ModelSerializer):
     # the context it landed in. Mirrors the sign_contract_by_* authorization (review fix).
     viewer_can_sign_client = serializers.SerializerMethodField()
     viewer_can_sign_manager = serializers.SerializerMethodField()
+    # id of the договор's LIVE (non-cancelled) invoice, or null. Lets the frontend hide the
+    # «Создать инвойс» button once an invoice exists and re-enable it after a cancellation (III-3).
+    invoice_id = serializers.SerializerMethodField()
 
     class Meta:
         model = Contract
@@ -33,6 +36,7 @@ class ContractSerializer(serializers.ModelSerializer):
             "number",
             "status",
             "status_name",
+            "invoice_id",
             "total_amount",
             "currency",
             "pdf_file",
@@ -70,6 +74,9 @@ class ContractSerializer(serializers.ModelSerializer):
 
     def get_signed_file_url(self, obj) -> str | None:
         return obj.signed_file.url if obj.signed_file else None
+
+    def get_invoice_id(self, obj) -> int | None:
+        return obj.invoices.exclude(status__code="CANCELLED").values_list("id", flat=True).first()
 
     def get_viewer_can_sign_client(self, obj) -> bool:
         from crm.services.contracts import viewer_can_sign_client

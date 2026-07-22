@@ -63,14 +63,22 @@ def generate_invoice_from_contract(
     # Paid-seller gate (skipped for the actor=None automation path).
     if actor is not None and (sub_err := assert_seller_can_operate(actor)):
         return None, sub_err
-    contract = Contract.objects.select_related("quote__deal", "quote__quote_currency").get(pk=contract_id)
+    try:
+        contract = Contract.objects.select_related("quote__deal", "quote__quote_currency").get(pk=contract_id)
+    except Contract.DoesNotExist:
+        return None, "NOT_FOUND"
 
     if contract.status_code != ContractStatusCode.SIGNED:
         return None, "INVOICE_REQUIRES_SIGNED_CONTRACT"
 
-    # Idempotency: one signed contract yields one invoice. Re-issuing would
-    # double-count receivables. Return the existing invoice instead.
-    existing_invoice = Invoice.objects.filter(contract=contract).first()
+    # Idempotency: one signed contract yields one LIVE invoice. Re-issuing would
+    # double-count receivables. Return the existing invoice instead — but a CANCELLED
+    # invoice is dead: excluding it lets the seller re-invoice a signed contract after a
+    # cancellation (otherwise the договор dead-ends). Mirrors the auto-path guard in
+    # tasks.auto_invoice_on_closed_won so the automation never re-surfaces a cancelled one.
+    existing_invoice = (
+        Invoice.objects.filter(contract=contract).exclude(status__code=InvoiceStatusCode.CANCELLED).first()
+    )
     if existing_invoice is not None:
         return existing_invoice, None
 
@@ -203,7 +211,10 @@ def record_payment(
 
     from ..models import Invoice, Payment
 
-    invoice = Invoice.objects.select_for_update().select_related("deal").get(pk=invoice_id)
+    try:
+        invoice = Invoice.objects.select_for_update().select_related("deal").get(pk=invoice_id)
+    except Invoice.DoesNotExist:
+        return None, "NOT_FOUND"
     # Actor-guard: platform-admin viewer cannot execute business actions.
     if is_platform_admin_viewer(actor):
         return None, "ADMIN_VIEWER_CANNOT_ACT"
@@ -222,6 +233,15 @@ def record_payment(
         return None, "MEMBER_REQUIRED_FOR_ACTION"
     if invoice.status_code in {InvoiceStatusCode.CANCELLED}:
         return None, "INVOICE_CANCELLED"
+    # A DRAFT invoice was never issued — it has no issue date / legal PDF. Paying it would mint a
+    # "zombie" PAID invoice that can never be issued (ALWAYS_ISSUED) nor cancelled (CANNOT_CANCEL_PAID),
+    # and an act could be generated against a never-issued счёт. Payment is only against a live
+    # receivable: ISSUED / PARTIAL / OVERDUE.
+    if invoice.status_code == InvoiceStatusCode.DRAFT:
+        return None, "INVOICE_NOT_ISSUED"
+    # A fully-paid invoice takes no further money (no over-payment).
+    if invoice.status_code == InvoiceStatusCode.PAID:
+        return None, "INVOICE_ALREADY_PAID"
     amount_d = D(str(amount))
     if amount_d <= 0:
         return None, "PAYMENT_AMOUNT_MUST_BE_POSITIVE"
@@ -311,7 +331,10 @@ def generate_act(
     # Paid-seller gate (skipped for the actor=None automation path).
     if actor is not None and (sub_err := assert_seller_can_operate(actor)):
         return None, sub_err
-    invoice = Invoice.objects.select_related("contract__quote", "deal", "status").get(pk=invoice_id)
+    try:
+        invoice = Invoice.objects.select_related("contract__quote", "deal", "status").get(pk=invoice_id)
+    except Invoice.DoesNotExist:
+        return None, "NOT_FOUND"
     # Bind to THIS invoice's deal routing — a seller must not issue an act on a
     # competitor's invoice (audit H4).
     if (
