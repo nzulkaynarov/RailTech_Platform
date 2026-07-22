@@ -2218,6 +2218,7 @@
     "payments": "Payments",
     "acts": "Acts",
     "fulfillments": "Fulfillment",
+    "otherDocuments": "Other documents",
     "supplierBids": "Supplier bids",
     "adminBids": "Supplier bids (admin)",
     "rfq": "RFQ",
@@ -4482,6 +4483,88 @@
     "uploadSigned": "Upload signed",
     "signedAt": "Signed"
   },
+  "otherDocumentsPage": {
+    "title": "Other documents",
+    "description": "Documents assembled from your company templates",
+    "searchPlaceholder": "Number or title",
+    "emptyState": "No documents found",
+    "emptyStateHint": "Create a document from a template with the «Create document» button or from a deal.",
+    "allStatuses": "All statuses",
+    "issued": "Document issued",
+    "cancelled": "Document cancelled",
+    "valuesSaved": "Values saved",
+    "valuesTitle": "Field values",
+    "saveValues": "Save values",
+    "previewTitle": "Preview",
+    "stats": {
+      "total": "Total",
+      "draft": "Drafts",
+      "issued": "Issued"
+    },
+    "table": {
+      "number": "Number",
+      "title": "Title",
+      "type": "Type",
+      "status": "Status",
+      "created": "Created",
+      "deal": "Deal",
+      "contact": "Counterparty",
+      "issued": "Issued",
+      "actions": "Actions"
+    },
+    "status": {
+      "DRAFT": "Draft",
+      "ISSUED": "Issued",
+      "CANCELLED": "Cancelled"
+    },
+    "actions": {
+      "issue": "Issue",
+      "cancel": "Cancel",
+      "preview": "Preview"
+    }
+  },
+  "documentsHub": {
+    "create": "Create document",
+    "selectTemplate": "Template",
+    "selectTemplatePlaceholder": "Select a template",
+    "noTemplates": "No templates found",
+    "sample": "Sample",
+    "sampleHint": "The document will be built from a platform sample. You can set up your own templates under «Settings → Templates».",
+    "noOwnTemplatesHint": "You have no templates of your own yet — you can generate from samples, and set up your own under «Settings → Templates».",
+    "copyToOwn": "Copy to my templates",
+    "titleField": "Title",
+    "titlePlaceholder": "Defaults to the template name",
+    "dealOptional": "Deal (optional)",
+    "contactOptional": "Counterparty (optional)",
+    "noContext": "No link",
+    "contextHint": "Deal and counterparty placeholders are filled in if you pick a link.",
+    "generate": "Create",
+    "generating": "Creating…",
+    "success": "Document created",
+    "steps": {
+      "typeDescription": "Choose a document type",
+      "letterTitle": "Letter / free-form document",
+      "letterDescription": "Assemble a document from a company template"
+    },
+    "types": {
+      "letter": "Letter / free-form document",
+      "letterHint": "Assemble a document from a company template",
+      "quote": "Quote (КП)",
+      "quoteHint": "A new quote for a deal or a price calculator",
+      "invoice": "Invoice",
+      "invoiceHint": "An invoice from a signed contract",
+      "act": "Act",
+      "actHint": "An act of works from an invoice",
+      "payment": "Payment",
+      "paymentHint": "Record a payment against an invoice"
+    },
+    "hints": {
+      "invoice": "An invoice is created from a signed contract. Open the contract and click «Create invoice».",
+      "act": "An act is generated from an invoice. Go to invoices and create an act for the relevant invoice.",
+      "goToContracts": "Go to contracts",
+      "goToInvoices": "Go to invoices"
+    }
+  },
   "fulfillmentPage": {
     "title": "Deal fulfillment",
     "description": "Shipping, delivery, acceptance",
@@ -4793,6 +4876,18 @@
     "COMPANY_ALREADY_REGISTERED": "The company is already registered",
     "CLIENT_INVITE_INVALID": "The invitation is invalid or has expired",
     "SUBSCRIPTION_REQUIRED": "An active subscription is required to perform seller actions. Activate a subscription to continue.",
+    "DOCUMENT_NOT_EDITABLE": "Only a draft document can be edited",
+    "DOCUMENT_ALREADY_ISSUED": "The document is already issued",
+    "DOCUMENT_ALREADY_CANCELLED": "The document is already cancelled",
+    "DOCUMENT_CANCELLED": "The document is cancelled",
+    "TEMPLATE_BODY_TOO_LARGE": "The template body is too large",
+    "TEMPLATE_NOT_FOUND": "Template not found",
+    "TEMPLATE_ID_REQUIRED": "No template selected",
+    "TEMPLATE_NOT_EDITABLE": "This template cannot be edited",
+    "SETTINGS_EDIT_REQUIRED": "The company settings edit permission is required",
+    "NO_COMPANY": "You have no company linked for this action",
+    "DEAL_NOT_FOUND": "Deal not found",
+    "CONTACT_NOT_FOUND": "Counterparty not found",
     "CONTRACT_NEEDS_APPROVAL": "A contract can only be created from an approved quote",
     "CONTRACT_CLIENT_SIGN_NOT_ALLOWED": "Contract cannot be signed by the client in current status",
     "CONTRACT_MANAGER_SIGN_NOT_ALLOWED": "Contract cannot be signed by the manager in current status",

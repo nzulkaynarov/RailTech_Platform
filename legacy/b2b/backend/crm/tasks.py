@@ -355,6 +355,11 @@ def _render_pdf_for(doc_type: str, doc_id: int) -> None:
         from .services.quotes import QuoteLifecycleService
 
         QuoteLifecycleService.generate_pdf(doc_id)
+    elif doc_type == "generated":
+        from .models import GeneratedDocument
+        from .services.generated_documents import _render_generated_pdf
+
+        _render_generated_pdf(GeneratedDocument.objects.get(pk=doc_id))
     else:
         raise ValueError(f"Unknown PDF doc_type: {doc_type}")
 

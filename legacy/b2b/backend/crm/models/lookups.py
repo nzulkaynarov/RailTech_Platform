@@ -79,3 +79,23 @@ class ChargeType(AbstractLookup):
     class Meta(AbstractLookup.Meta):
         verbose_name = _("Статья расхода")
         verbose_name_plural = _("Справочник: Статьи расхода КП")
+
+
+# «Документы 2.0» — arbitrary template-based documents (letters, reports, поручения).
+# Codes: see crm/constants.py (DocumentTemplateKindCode, GeneratedDocumentStatusCode).
+
+
+class DocumentTemplateKind(AbstractLookup):
+    """Вид шаблона документа. Seed: LETTER, REPORT, CUSTOM."""
+
+    class Meta(AbstractLookup.Meta):
+        verbose_name = _("Вид шаблона документа")
+        verbose_name_plural = _("Справочник: Виды шаблонов документов")
+
+
+class GeneratedDocumentStatus(AbstractLookup):
+    """Статус сгенерированного документа. Seed: DRAFT, ISSUED, CANCELLED."""
+
+    class Meta(AbstractLookup.Meta):
+        verbose_name = _("Статус документа")
+        verbose_name_plural = _("Справочник: Статусы документов")

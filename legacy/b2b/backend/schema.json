@@ -10220,6 +10220,322 @@
                 }
             }
         },
+        "/api/v1/crm/document-templates/": {
+            "get": {
+                "operationId": "crm_document_templates_list",
+                "description": "Company template library. Read = own templates + platform samples («скопировать\nк себе»); write is gated on the `settings.edit` CompanyRole permission and limited\nto the caller's own company (never samples, never another tenant).",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "A search term.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "crm"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/DocumentTemplate"
+                                    }
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "crm_document_templates_create",
+                "description": "Company template library. Read = own templates + platform samples («скопировать\nк себе»); write is gated on the `settings.edit` CompanyRole permission and limited\nto the caller's own company (never samples, never another tenant).",
+                "tags": [
+                    "crm"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DocumentTemplateRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DocumentTemplateRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DocumentTemplateRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DocumentTemplate"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/crm/document-templates/{id}/": {
+            "get": {
+                "operationId": "crm_document_templates_retrieve",
+                "description": "Company template library. Read = own templates + platform samples («скопировать\nк себе»); write is gated on the `settings.edit` CompanyRole permission and limited\nto the caller's own company (never samples, never another tenant).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Шаблон документа.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "crm"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DocumentTemplate"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "put": {
+                "operationId": "crm_document_templates_update",
+                "description": "Company template library. Read = own templates + platform samples («скопировать\nк себе»); write is gated on the `settings.edit` CompanyRole permission and limited\nto the caller's own company (never samples, never another tenant).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Шаблон документа.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "crm"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DocumentTemplateRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DocumentTemplateRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DocumentTemplateRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DocumentTemplate"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "crm_document_templates_partial_update",
+                "description": "Company template library. Read = own templates + platform samples («скопировать\nк себе»); write is gated on the `settings.edit` CompanyRole permission and limited\nto the caller's own company (never samples, never another tenant).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Шаблон документа.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "crm"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedDocumentTemplateRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedDocumentTemplateRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedDocumentTemplateRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DocumentTemplate"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "crm_document_templates_destroy",
+                "description": "Company template library. Read = own templates + platform samples («скопировать\nк себе»); write is gated on the `settings.edit` CompanyRole permission and limited\nto the caller's own company (never samples, never another tenant).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Шаблон документа.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "crm"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/v1/crm/document-templates/{id}/copy/": {
+            "post": {
+                "operationId": "crm_document_templates_copy_create",
+                "description": "Company template library. Read = own templates + platform samples («скопировать\nк себе»); write is gated on the `settings.edit` CompanyRole permission and limited\nto the caller's own company (never samples, never another tenant).",
+                "summary": "Copy a platform sample into the caller's company",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Шаблон документа.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DocumentTemplateRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DocumentTemplateRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DocumentTemplateRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DocumentTemplate"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/v1/crm/fulfillments/": {
             "get": {
                 "operationId": "crm_fulfillments_list",
@@ -10520,6 +10836,306 @@
                             }
                         },
                         "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/crm/generated-documents/": {
+            "get": {
+                "operationId": "crm_generated_documents_list",
+                "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (entitlement + IDOR + viewer gates).",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "A search term.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "crm"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/GeneratedDocument"
+                                    }
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "crm_generated_documents_create",
+                "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (entitlement + IDOR + viewer gates).",
+                "tags": [
+                    "crm"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GeneratedDocument"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/crm/generated-documents/{id}/": {
+            "get": {
+                "operationId": "crm_generated_documents_retrieve",
+                "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (entitlement + IDOR + viewer gates).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Сгенерированный документ.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "crm"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GeneratedDocument"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "crm_generated_documents_partial_update",
+                "description": "Edit a DRAFT document's placeholder values (re-render + PDF invalidation).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Сгенерированный документ.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "crm"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GeneratedDocument"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/crm/generated-documents/{id}/cancel/": {
+            "post": {
+                "operationId": "crm_generated_documents_cancel_create",
+                "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (entitlement + IDOR + viewer gates).",
+                "summary": "Cancel a document",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Сгенерированный документ.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GeneratedDocument"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/crm/generated-documents/{id}/download-pdf/": {
+            "get": {
+                "operationId": "crm_generated_documents_download_pdf_retrieve",
+                "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (entitlement + IDOR + viewer gates).",
+                "summary": "Download the document PDF (202 + enqueue if not ready)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Сгенерированный документ.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GeneratedDocument"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/crm/generated-documents/{id}/issue/": {
+            "post": {
+                "operationId": "crm_generated_documents_issue_create",
+                "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (entitlement + IDOR + viewer gates).",
+                "summary": "Issue a draft document (freeze + render PDF)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Сгенерированный документ.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GeneratedDocument"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/crm/generated-documents/generate/": {
+            "post": {
+                "operationId": "crm_generated_documents_generate_create",
+                "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (entitlement + IDOR + viewer gates).",
+                "summary": "Generate a document from a template",
+                "tags": [
+                    "CRM"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GenerateDocumentRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GenerateDocumentRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GenerateDocumentRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GeneratedDocument"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Validation error"
                     }
                 }
             }
@@ -20058,6 +20674,108 @@
                 "type": "string",
                 "description": "* `ITEM` - Позиция\n* `SECTION` - Раздел\n* `NOTE` - Заметка"
             },
+            "DocumentTemplate": {
+                "type": "object",
+                "description": "Company template CRUD. `company`/`placeholders_used` are server-derived.",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "name": {
+                        "type": "string",
+                        "title": "Название",
+                        "maxLength": 255
+                    },
+                    "kind": {
+                        "type": "string",
+                        "title": "Код",
+                        "description": "Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')",
+                        "readOnly": true
+                    },
+                    "kind_code": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "kind_name": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "body_html": {
+                        "type": "string",
+                        "title": "HTML-тело",
+                        "description": "Санитайзится при сохранении; плейсхолдеры вида {{company.name}}."
+                    },
+                    "placeholders_used": {
+                        "readOnly": true,
+                        "title": "Плейсхолдеры",
+                        "description": "Производное поле: коды плейсхолдеров, найденные в теле."
+                    },
+                    "is_sample": {
+                        "type": "boolean",
+                        "readOnly": true,
+                        "title": "Образец платформы",
+                        "description": "Глобальный шаблон-заготовка (company пусто) для копирования к себе."
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "title": "Активен"
+                    },
+                    "is_owned": {
+                        "type": "boolean",
+                        "description": "True when the requester's company owns this template (vs a platform sample).",
+                        "readOnly": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "title": "Дата создания"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "title": "Дата обновления"
+                    }
+                },
+                "required": [
+                    "created_at",
+                    "id",
+                    "is_owned",
+                    "is_sample",
+                    "kind",
+                    "kind_code",
+                    "kind_name",
+                    "name",
+                    "placeholders_used",
+                    "updated_at"
+                ]
+            },
+            "DocumentTemplateRequest": {
+                "type": "object",
+                "description": "Company template CRUD. `company`/`placeholders_used` are server-derived.",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "title": "Название",
+                        "maxLength": 255
+                    },
+                    "body_html": {
+                        "type": "string",
+                        "title": "HTML-тело",
+                        "description": "Санитайзится при сохранении; плейсхолдеры вида {{company.name}}."
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "title": "Активен"
+                    }
+                },
+                "required": [
+                    "name"
+                ]
+            },
             "DomainType": {
                 "type": "object",
                 "properties": {
@@ -20473,6 +21191,150 @@
                 },
                 "required": [
                     "quote_id"
+                ]
+            },
+            "GenerateDocumentRequest": {
+                "type": "object",
+                "properties": {
+                    "template_id": {
+                        "type": "integer"
+                    },
+                    "deal_id": {
+                        "type": "integer"
+                    },
+                    "contact_id": {
+                        "type": "integer"
+                    },
+                    "title": {
+                        "type": "string",
+                        "minLength": 1
+                    }
+                },
+                "required": [
+                    "template_id"
+                ]
+            },
+            "GeneratedDocument": {
+                "type": "object",
+                "description": "A rendered document. Snapshot fields (`values`, `rendered_html`) are read-only\nhere — DRAFT edits go through the dedicated update-values action.",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "number": {
+                        "type": "string",
+                        "readOnly": true,
+                        "title": "Номер"
+                    },
+                    "title": {
+                        "type": "string",
+                        "readOnly": true,
+                        "title": "Заголовок"
+                    },
+                    "status": {
+                        "type": "integer",
+                        "readOnly": true,
+                        "title": "Статус"
+                    },
+                    "status_code": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "status_name": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "template": {
+                        "type": "integer",
+                        "readOnly": true,
+                        "title": "Шаблон"
+                    },
+                    "template_name": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "deal": {
+                        "type": "integer",
+                        "readOnly": true,
+                        "nullable": true,
+                        "title": "Сделка"
+                    },
+                    "deal_title": {
+                        "type": "string",
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "contact": {
+                        "type": "integer",
+                        "readOnly": true,
+                        "nullable": true,
+                        "title": "Контакт"
+                    },
+                    "contact_name": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "values": {
+                        "readOnly": true,
+                        "title": "Значения плейсхолдеров",
+                        "description": "Снапшот подставленных значений на момент генерации (НЕ живые ссылки)."
+                    },
+                    "rendered_html": {
+                        "type": "string",
+                        "readOnly": true,
+                        "title": "Готовый HTML",
+                        "description": "Снапшот тела с подставленными значениями."
+                    },
+                    "pdf_available": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "issued_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true,
+                        "title": "Дата выпуска"
+                    },
+                    "created_by_name": {
+                        "type": "string",
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "title": "Дата создания"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "title": "Дата обновления"
+                    }
+                },
+                "required": [
+                    "contact",
+                    "contact_name",
+                    "created_at",
+                    "created_by_name",
+                    "deal",
+                    "deal_title",
+                    "id",
+                    "issued_at",
+                    "number",
+                    "pdf_available",
+                    "rendered_html",
+                    "status",
+                    "status_code",
+                    "status_name",
+                    "template",
+                    "template_name",
+                    "title",
+                    "updated_at",
+                    "values"
                 ]
             },
             "InviteRequestRequest": {
@@ -23065,6 +23927,27 @@
                         "type": "boolean",
                         "title": "Продавец оплачивает доставку до места",
                         "description": "Доставка до названного места назначения (D-термы)"
+                    }
+                }
+            },
+            "PatchedDocumentTemplateRequest": {
+                "type": "object",
+                "description": "Company template CRUD. `company`/`placeholders_used` are server-derived.",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "title": "Название",
+                        "maxLength": 255
+                    },
+                    "body_html": {
+                        "type": "string",
+                        "title": "HTML-тело",
+                        "description": "Санитайзится при сохранении; плейсхолдеры вида {{company.name}}."
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "title": "Активен"
                     }
                 }
             },

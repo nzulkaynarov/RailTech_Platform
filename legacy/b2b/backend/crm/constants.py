@@ -71,3 +71,20 @@ class FulfillmentStatusCode(models.TextChoices):
     DELIVERED = "DELIVERED", "Доставлено"
     ACCEPTED = "ACCEPTED", "Принято клиентом"
     DISPUTED = "DISPUTED", "Спорная ситуация"
+
+
+# ── «Документы 2.0» — arbitrary template-based documents (letters, reports) ──
+# Lookup CODES mirroring the DocumentTemplateKind / GeneratedDocumentStatus rows
+# seeded by a data migration (IRON RULE 1). Referenced from services by code.
+
+
+class DocumentTemplateKindCode(models.TextChoices):
+    LETTER = "LETTER", "Письмо"
+    REPORT = "REPORT", "Рапорт / отчёт"
+    CUSTOM = "CUSTOM", "Произвольный"
+
+
+class GeneratedDocumentStatusCode(models.TextChoices):
+    DRAFT = "DRAFT", "Черновик"
+    ISSUED = "ISSUED", "Выпущен"
+    CANCELLED = "CANCELLED", "Отменён"

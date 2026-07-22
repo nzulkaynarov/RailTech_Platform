@@ -10,8 +10,19 @@ from .billing import Act, Invoice, InvoiceItem, Payment
 from .charges import ChargeTemplate, QuoteCharge
 from .contracts import Contract
 from .deals import ActivityLog, Deal, DealSellerRouting, Lead, Message
+from .documents import DocumentTemplate, GeneratedDocument
 from .fulfillment import Fulfillment
-from .lookups import ActStatus, ChargeType, ContractStatus, DealStage, FulfillmentStatus, InvoiceStatus, QuoteStatus
+from .lookups import (
+    ActStatus,
+    ChargeType,
+    ContractStatus,
+    DealStage,
+    DocumentTemplateKind,
+    FulfillmentStatus,
+    GeneratedDocumentStatus,
+    InvoiceStatus,
+    QuoteStatus,
+)
 from .quotes import Quote, QuoteItem, QuoteItemHistory
 from .relationships import CounterpartyRelationship, RelationshipDirection, RelationshipSource, RelationshipStage
 from .sequences import DocumentSequence
@@ -30,8 +41,12 @@ __all__ = [
     "DealSellerRouting",
     "DealStage",
     "DocumentSequence",
+    "DocumentTemplate",
+    "DocumentTemplateKind",
     "Fulfillment",
     "FulfillmentStatus",
+    "GeneratedDocument",
+    "GeneratedDocumentStatus",
     "Invoice",
     "InvoiceItem",
     "InvoiceStatus",

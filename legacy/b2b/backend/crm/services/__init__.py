@@ -31,6 +31,15 @@ from .deals import (
 )
 from .exporters import export_quote
 from .fulfillment import ensure_fulfillment, update_fulfillment_status
+from .generated_documents import (
+    cancel_document,
+    create_template,
+    generate_document,
+    issue_document,
+    resolve_owner_company_id,
+    update_document_values,
+    update_template,
+)
 from .messaging import archive_messages_sync, send_deal_message, user_can_access_deal_chat
 from .quotes import (
     QuoteCalculationService,
@@ -75,6 +84,13 @@ __all__ = [
     "buyer_update_request_meta",
     "bulk_close_deals_lost",
     "cancel_contract",
+    "cancel_document",
+    "create_template",
+    "generate_document",
+    "issue_document",
+    "resolve_owner_company_id",
+    "update_document_values",
+    "update_template",
     "convert_lead_to_deal",
     "effective_quote_lead_time",
     "ensure_edges_for_deal_routing",

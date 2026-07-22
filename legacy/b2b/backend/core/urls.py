@@ -70,7 +70,9 @@ from crm.views import (
     DashboardAnalyticsView,
     DealStageViewSet,
     DealViewSet,
+    DocumentTemplateViewSet,
     FulfillmentViewSet,
+    GeneratedDocumentViewSet,
     InvoiceViewSet,
     LeadCreateView,
     LeadViewSet,
@@ -123,6 +125,8 @@ router.register(r"crm/quote-items", QuoteItemViewSet, basename="quoteitem")
 router.register(r"crm/quote-charges", QuoteChargeViewSet, basename="quotecharge")
 router.register(r"crm/charge-types", ChargeTypeViewSet, basename="chargetype")
 router.register(r"crm/charge-templates", ChargeTemplateViewSet, basename="chargetemplate")
+router.register(r"crm/document-templates", DocumentTemplateViewSet, basename="documenttemplate")
+router.register(r"crm/generated-documents", GeneratedDocumentViewSet, basename="generateddocument")
 router.register(r"crm/messages", MessageViewSet, basename="message")
 router.register(r"crm/activity-logs", ActivityLogViewSet, basename="activitylog")
 router.register(r"crm/deal-stages", DealStageViewSet, basename="dealstage")

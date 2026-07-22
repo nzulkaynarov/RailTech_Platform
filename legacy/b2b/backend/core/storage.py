@@ -138,6 +138,16 @@ def payment_proof_path(instance, filename):
     return f"deals/{instance.invoice.deal_id}/payments/{name}"
 
 
+def generated_document_pdf_path(instance, filename):
+    """companies/{company_id}/generated/{uuid}.pdf
+
+    A template-based document («Документы 2.0») may not be tied to a deal, so it is
+    filed under its owning company rather than a deal folder.
+    """
+    name = _uuid_filename(instance, filename)
+    return f"companies/{instance.company_id}/generated/{name}"
+
+
 def import_source_path(instance, filename):
     """sourcing/imports/{task_id}/{uuid}.{ext}"""
     name = _uuid_filename(instance, filename)

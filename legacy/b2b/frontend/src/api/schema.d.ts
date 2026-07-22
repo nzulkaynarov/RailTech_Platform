@@ -3556,6 +3556,90 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/crm/document-templates/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Company template library. Read = own templates + platform samples («скопировать
+         *     к себе»); write is gated on the `settings.edit` CompanyRole permission and limited
+         *     to the caller's own company (never samples, never another tenant).
+         */
+        get: operations["crm_document_templates_list"];
+        put?: never;
+        /**
+         * @description Company template library. Read = own templates + platform samples («скопировать
+         *     к себе»); write is gated on the `settings.edit` CompanyRole permission and limited
+         *     to the caller's own company (never samples, never another tenant).
+         */
+        post: operations["crm_document_templates_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/document-templates/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Company template library. Read = own templates + platform samples («скопировать
+         *     к себе»); write is gated on the `settings.edit` CompanyRole permission and limited
+         *     to the caller's own company (never samples, never another tenant).
+         */
+        get: operations["crm_document_templates_retrieve"];
+        /**
+         * @description Company template library. Read = own templates + platform samples («скопировать
+         *     к себе»); write is gated on the `settings.edit` CompanyRole permission and limited
+         *     to the caller's own company (never samples, never another tenant).
+         */
+        put: operations["crm_document_templates_update"];
+        post?: never;
+        /**
+         * @description Company template library. Read = own templates + platform samples («скопировать
+         *     к себе»); write is gated on the `settings.edit` CompanyRole permission and limited
+         *     to the caller's own company (never samples, never another tenant).
+         */
+        delete: operations["crm_document_templates_destroy"];
+        options?: never;
+        head?: never;
+        /**
+         * @description Company template library. Read = own templates + platform samples («скопировать
+         *     к себе»); write is gated on the `settings.edit` CompanyRole permission and limited
+         *     to the caller's own company (never samples, never another tenant).
+         */
+        patch: operations["crm_document_templates_partial_update"];
+        trace?: never;
+    };
+    "/api/v1/crm/document-templates/{id}/copy/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Copy a platform sample into the caller's company
+         * @description Company template library. Read = own templates + platform samples («скопировать
+         *     к себе»); write is gated on the `settings.edit` CompanyRole permission and limited
+         *     to the caller's own company (never samples, never another tenant).
+         */
+        post: operations["crm_document_templates_copy_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/fulfillments/": {
         parameters: {
             query?: never;
@@ -3599,6 +3683,135 @@ export interface paths {
         put?: never;
         /** Update fulfillment status */
         post: operations["crm_fulfillments_update_status_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/generated-documents/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Rendered documents registry. List/retrieve are company-scoped; generation and
+         *     status transitions run in services (entitlement + IDOR + viewer gates).
+         */
+        get: operations["crm_generated_documents_list"];
+        put?: never;
+        /**
+         * @description Rendered documents registry. List/retrieve are company-scoped; generation and
+         *     status transitions run in services (entitlement + IDOR + viewer gates).
+         */
+        post: operations["crm_generated_documents_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/generated-documents/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Rendered documents registry. List/retrieve are company-scoped; generation and
+         *     status transitions run in services (entitlement + IDOR + viewer gates).
+         */
+        get: operations["crm_generated_documents_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description Edit a DRAFT document's placeholder values (re-render + PDF invalidation). */
+        patch: operations["crm_generated_documents_partial_update"];
+        trace?: never;
+    };
+    "/api/v1/crm/generated-documents/{id}/cancel/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel a document
+         * @description Rendered documents registry. List/retrieve are company-scoped; generation and
+         *     status transitions run in services (entitlement + IDOR + viewer gates).
+         */
+        post: operations["crm_generated_documents_cancel_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/generated-documents/{id}/download-pdf/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download the document PDF (202 + enqueue if not ready)
+         * @description Rendered documents registry. List/retrieve are company-scoped; generation and
+         *     status transitions run in services (entitlement + IDOR + viewer gates).
+         */
+        get: operations["crm_generated_documents_download_pdf_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/generated-documents/{id}/issue/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Issue a draft document (freeze + render PDF)
+         * @description Rendered documents registry. List/retrieve are company-scoped; generation and
+         *     status transitions run in services (entitlement + IDOR + viewer gates).
+         */
+        post: operations["crm_generated_documents_issue_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/generated-documents/generate/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate a document from a template
+         * @description Rendered documents registry. List/retrieve are company-scoped; generation and
+         *     status transitions run in services (entitlement + IDOR + viewer gates).
+         */
+        post: operations["crm_generated_documents_generate_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7160,6 +7373,60 @@ export interface components {
          * @enum {string}
          */
         DisplayTypeEnum: "ITEM" | "SECTION" | "NOTE";
+        /** @description Company template CRUD. `company`/`placeholders_used` are server-derived. */
+        DocumentTemplate: {
+            readonly id: number;
+            /** Название */
+            name: string;
+            /**
+             * Код
+             * @description Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')
+             */
+            readonly kind: string;
+            readonly kind_code: string;
+            readonly kind_name: string;
+            /**
+             * HTML-тело
+             * @description Санитайзится при сохранении; плейсхолдеры вида {{company.name}}.
+             */
+            body_html?: string;
+            /**
+             * Плейсхолдеры
+             * @description Производное поле: коды плейсхолдеров, найденные в теле.
+             */
+            readonly placeholders_used: unknown;
+            /**
+             * Образец платформы
+             * @description Глобальный шаблон-заготовка (company пусто) для копирования к себе.
+             */
+            readonly is_sample: boolean;
+            /** Активен */
+            is_active?: boolean;
+            /** @description True when the requester's company owns this template (vs a platform sample). */
+            readonly is_owned: boolean;
+            /**
+             * Дата создания
+             * Format: date-time
+             */
+            readonly created_at: string;
+            /**
+             * Дата обновления
+             * Format: date-time
+             */
+            readonly updated_at: string;
+        };
+        /** @description Company template CRUD. `company`/`placeholders_used` are server-derived. */
+        DocumentTemplateRequest: {
+            /** Название */
+            name: string;
+            /**
+             * HTML-тело
+             * @description Санитайзится при сохранении; плейсхолдеры вида {{company.name}}.
+             */
+            body_html?: string;
+            /** Активен */
+            is_active?: boolean;
+        };
         DomainType: {
             readonly id: number;
             /**
@@ -7351,6 +7618,63 @@ export interface components {
             quote_id: number;
             /** @default  */
             notes: string;
+        };
+        GenerateDocumentRequest: {
+            template_id: number;
+            deal_id?: number;
+            contact_id?: number;
+            title?: string;
+        };
+        /**
+         * @description A rendered document. Snapshot fields (`values`, `rendered_html`) are read-only
+         *     here — DRAFT edits go through the dedicated update-values action.
+         */
+        GeneratedDocument: {
+            readonly id: number;
+            /** Номер */
+            readonly number: string;
+            /** Заголовок */
+            readonly title: string;
+            /** Статус */
+            readonly status: number;
+            readonly status_code: string;
+            readonly status_name: string;
+            /** Шаблон */
+            readonly template: number;
+            readonly template_name: string;
+            /** Сделка */
+            readonly deal: number | null;
+            readonly deal_title: string | null;
+            /** Контакт */
+            readonly contact: number | null;
+            readonly contact_name: string;
+            /**
+             * Значения плейсхолдеров
+             * @description Снапшот подставленных значений на момент генерации (НЕ живые ссылки).
+             */
+            readonly values: unknown;
+            /**
+             * Готовый HTML
+             * @description Снапшот тела с подставленными значениями.
+             */
+            readonly rendered_html: string;
+            readonly pdf_available: boolean;
+            /**
+             * Дата выпуска
+             * Format: date-time
+             */
+            readonly issued_at: string | null;
+            readonly created_by_name: string | null;
+            /**
+             * Дата создания
+             * Format: date-time
+             */
+            readonly created_at: string;
+            /**
+             * Дата обновления
+             * Format: date-time
+             */
+            readonly updated_at: string;
         };
         InviteRequestRequest: {
             /** Format: email */
@@ -8760,6 +9084,18 @@ export interface components {
              * @description Доставка до названного места назначения (D-термы)
              */
             seller_pays_delivery?: boolean;
+        };
+        /** @description Company template CRUD. `company`/`placeholders_used` are server-derived. */
+        PatchedDocumentTemplateRequest: {
+            /** Название */
+            name?: string;
+            /**
+             * HTML-тело
+             * @description Санитайзится при сохранении; плейсхолдеры вида {{company.name}}.
+             */
+            body_html?: string;
+            /** Активен */
+            is_active?: boolean;
         };
         /** @description DB-editable email template — Platform-Operator admin CRUD. */
         PatchedEmailTemplateRequest: {
@@ -17528,6 +17864,180 @@ export interface operations {
             };
         };
     };
+    crm_document_templates_list: {
+        parameters: {
+            query?: {
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentTemplate"][];
+                };
+            };
+        };
+    };
+    crm_document_templates_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DocumentTemplateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["DocumentTemplateRequest"];
+                "multipart/form-data": components["schemas"]["DocumentTemplateRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentTemplate"];
+                };
+            };
+        };
+    };
+    crm_document_templates_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Шаблон документа. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentTemplate"];
+                };
+            };
+        };
+    };
+    crm_document_templates_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Шаблон документа. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DocumentTemplateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["DocumentTemplateRequest"];
+                "multipart/form-data": components["schemas"]["DocumentTemplateRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentTemplate"];
+                };
+            };
+        };
+    };
+    crm_document_templates_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Шаблон документа. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    crm_document_templates_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Шаблон документа. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedDocumentTemplateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedDocumentTemplateRequest"];
+                "multipart/form-data": components["schemas"]["PatchedDocumentTemplateRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentTemplate"];
+                };
+            };
+        };
+    };
+    crm_document_templates_copy_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Шаблон документа. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DocumentTemplateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["DocumentTemplateRequest"];
+                "multipart/form-data": components["schemas"]["DocumentTemplateRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentTemplate"];
+                };
+            };
+        };
+    };
     crm_fulfillments_list: {
         parameters: {
             query?: {
@@ -17698,6 +18208,189 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Fulfillment"];
                 };
+            };
+        };
+    };
+    crm_generated_documents_list: {
+        parameters: {
+            query?: {
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GeneratedDocument"][];
+                };
+            };
+        };
+    };
+    crm_generated_documents_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GeneratedDocument"];
+                };
+            };
+        };
+    };
+    crm_generated_documents_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Сгенерированный документ. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GeneratedDocument"];
+                };
+            };
+        };
+    };
+    crm_generated_documents_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Сгенерированный документ. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GeneratedDocument"];
+                };
+            };
+        };
+    };
+    crm_generated_documents_cancel_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Сгенерированный документ. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GeneratedDocument"];
+                };
+            };
+        };
+    };
+    crm_generated_documents_download_pdf_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Сгенерированный документ. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GeneratedDocument"];
+                };
+            };
+        };
+    };
+    crm_generated_documents_issue_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Сгенерированный документ. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GeneratedDocument"];
+                };
+            };
+        };
+    };
+    crm_generated_documents_generate_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GenerateDocumentRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["GenerateDocumentRequest"];
+                "multipart/form-data": components["schemas"]["GenerateDocumentRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GeneratedDocument"];
+                };
+            };
+            /** @description Validation error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

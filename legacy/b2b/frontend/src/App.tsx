@@ -57,6 +57,7 @@ const ContractsPage = lazyWithRetry(() => import('./pages/ContractsPage'));
 const InvoicesPage = lazyWithRetry(() => import('./pages/InvoicesPage'));
 const PaymentsPage = lazyWithRetry(() => import('./pages/PaymentsPage'));
 const ActsPage = lazyWithRetry(() => import('./pages/ActsPage'));
+const OtherDocumentsPage = lazyWithRetry(() => import('./pages/OtherDocumentsPage'));
 const FulfillmentsPage = lazyWithRetry(() => import('./pages/FulfillmentsPage'));
 const MySubscriptionPage = lazyWithRetry(() => import('./pages/MySubscriptionPage'));
 const CatalogImportPage = lazyWithRetry(() => import('./pages/CatalogImportPage'));
@@ -101,6 +102,7 @@ type Page =
   | { type: 'invoices' }
   | { type: 'payments' }
   | { type: 'acts' }
+  | { type: 'other-documents' }
   | { type: 'fulfillments' }
   | { type: 'my-subscription' }
   | { type: 'catalog-import' }
@@ -343,7 +345,7 @@ const COMMON_PAGES = ['dashboard', 'profile', 'settings', 'help'];
 const BUYER_PAGES = new Set([
   ...COMMON_PAGES,
   'products', 'product_detail', 'my-requests', 'request-detail',
-  'contracts', 'invoices', 'payments', 'fulfillments', 'my-subscription',
+  'contracts', 'invoices', 'payments', 'fulfillments', 'other-documents', 'my-subscription',
   'suppliers',
 ]);
 const SELLER_PAGES = new Set([
@@ -351,7 +353,7 @@ const SELLER_PAGES = new Set([
   'products', 'product_detail', 'categories', 'equipment-groups', 'catalog-import',
   'sourcing-requests', 'crm-deals', 'crm-quotes',
   'deal-quote', 'request-detail', 'my-subscription',
-  'contracts', 'invoices', 'payments', 'acts', 'fulfillments',
+  'contracts', 'invoices', 'payments', 'acts', 'fulfillments', 'other-documents',
   'clients',
 ]);
 
@@ -554,7 +556,7 @@ function MainApp() {
       'admin-catalog', 'admin-categories', 'admin-equipment-groups', 'admin-offers',
       'admin-companies', 'admin-deals', 'admin-master-data', 'admin-email-templates',
       'admin-operator-roles', 'admin-access-log', 'admin-support', 'admin-leads',
-      'contracts', 'invoices', 'payments', 'acts', 'fulfillments',
+      'contracts', 'invoices', 'payments', 'acts', 'fulfillments', 'other-documents',
       'my-subscription', 'catalog-import',
     ];
     if (validTypes.includes(target)) {
@@ -739,6 +741,9 @@ function MainApp() {
       break;
     case 'acts':
       content = <ActsPage />;
+      break;
+    case 'other-documents':
+      content = <OtherDocumentsPage />;
       break;
     case 'fulfillments':
       content = <FulfillmentsPage />;

@@ -264,6 +264,7 @@ class FeatureKey(models.TextChoices):
     AI_PREFLIGHT = "ai.preflight", "AI-проверка заявки"
     AI_ENRICH = "ai.enrich", "AI-обогащение карточки товара (PIM)"
     ROLES_CUSTOM = "roles.custom", "Кастомные роли компании"
+    DOCUMENT_GENERATE = "document.generate", "Генерация документов по шаблонам"
 
 
 # The FREE FLOOR — features always granted, no entitlement row required. Keeps the platform's core
@@ -290,5 +291,9 @@ SUBSCRIPTION_BASELINE_FEATURES = frozenset(
         # of the free floor — enrich is gated on this baseline / an explicit grant.
         FeatureKey.AI_ENRICH.value,
         FeatureKey.ROLES_CUSTOM.value,
+        # «Документы 2.0» (owner decision 2026-07-22): generating arbitrary
+        # template-based documents (letters, reports, поручения) is a baseline
+        # subscription feature, gated like quote.send.
+        FeatureKey.DOCUMENT_GENERATE.value,
     }
 )

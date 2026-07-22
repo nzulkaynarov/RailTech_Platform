@@ -24,6 +24,7 @@ from .billing import (
 )
 from .charge import ChargeTemplateSerializer, ChargeTypeSerializer, QuoteChargeSerializer
 from .deal import DealDetailSerializer, DealListSerializer
+from .documents import DocumentTemplateSerializer, GeneratedDocumentSerializer
 from .item import QuoteItemSerializer
 from .misc import ActivityLogSerializer, LeadSerializer, MessageSerializer
 from .quote import QuoteApprovalStepSerializer, QuoteSerializer
@@ -39,6 +40,9 @@ __all__ = [
     # deals
     "DealListSerializer",
     "DealDetailSerializer",
+    # documents ("Документы 2.0")
+    "DocumentTemplateSerializer",
+    "GeneratedDocumentSerializer",
     # misc
     "MessageSerializer",
     "LeadSerializer",
