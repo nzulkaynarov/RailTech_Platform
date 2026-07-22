@@ -114,6 +114,21 @@ export const invoicesApi = {
     const response = await apiClient.post<Act>(`crm/invoices/${invoiceId}/generate-act/`);
     return response.data;
   },
+  // DRAFT → ISSUED: renders the PDF and notifies the buyer.
+  issue: async (id: number) => {
+    const response = await apiClient.post<Invoice>(`crm/invoices/${id}/issue/`);
+    return response.data;
+  },
+  // Issued-but-unpaid → CANCELLED (backend refuses PAID/PARTIAL with INVOICE_CANNOT_CANCEL_PAID).
+  cancel: async (id: number) => {
+    const response = await apiClient.post<Invoice>(`crm/invoices/${id}/cancel/`);
+    return response.data;
+  },
+  // Edits a DRAFT invoice's due date / notes (amounts come from the contract).
+  updateDraft: async (id: number, payload: { due_date?: string; notes?: string }) => {
+    const response = await apiClient.patch<Invoice>(`crm/invoices/${id}/`, payload);
+    return response.data;
+  },
   remove: async (id: number) => {
     await apiClient.delete(`crm/invoices/${id}/`);
   },

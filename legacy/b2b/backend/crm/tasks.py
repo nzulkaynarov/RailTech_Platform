@@ -222,7 +222,7 @@ def auto_invoice_on_closed_won(self, deal_id: int) -> dict:
       * Celery task retries duplicate the call.
     """
     from .models import Act, Deal, Invoice
-    from .services import ensure_fulfillment, generate_act, generate_invoice_from_contract
+    from .services import ensure_fulfillment, generate_act, generate_invoice_from_contract, notify_seller_invoice_draft
 
     try:
         deal = Deal.objects.get(pk=deal_id)
@@ -248,6 +248,9 @@ def auto_invoice_on_closed_won(self, deal_id: int) -> dict:
         invoice, err = generate_invoice_from_contract(contract.id)
         if invoice is None:
             return result
+        # Wave C: the invoice is born a DRAFT (not auto-ISSUED). Nudge the seller team to
+        # review + explicitly issue it — the owner keeps control (ERP canon, spec ОВ-2).
+        notify_seller_invoice_draft(invoice)
     else:
         result["idempotent_reuse"] = True
     result["invoice"] = invoice.id

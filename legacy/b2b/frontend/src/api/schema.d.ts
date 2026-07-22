@@ -3885,7 +3885,11 @@ export interface paths {
         };
         /** @description Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`. */
         get: operations["crm_invoices_retrieve"];
-        /** @description Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`. */
+        /**
+         * @description DRAFT-only edit, restricted to due_date / notes (amounts mirror the contract, never
+         *     hand-edited). Covers PATCH too (DRF routes partial_update → update). ISSUED+ are immutable
+         *     → 400 INVOICE_NOT_EDITABLE. Honours the optimistic-lock If-Match token like the base mixin.
+         */
         put: operations["crm_invoices_update"];
         post?: never;
         /** @description Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`. */
@@ -3894,6 +3898,26 @@ export interface paths {
         head?: never;
         /** @description Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`. */
         patch: operations["crm_invoices_partial_update"];
+        trace?: never;
+    };
+    "/api/v1/crm/invoices/{id}/cancel/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel an invoice (→ CANCELLED; not allowed if paid)
+         * @description Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`.
+         */
+        post: operations["crm_invoices_cancel_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/crm/invoices/{id}/download-pdf/": {
@@ -3927,6 +3951,26 @@ export interface paths {
          * @description Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`.
          */
         post: operations["crm_invoices_generate_act_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/invoices/{id}/issue/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Issue a DRAFT invoice (DRAFT → ISSUED)
+         * @description Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`.
+         */
+        post: operations["crm_invoices_issue_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -18648,6 +18692,34 @@ export interface operations {
             };
         };
     };
+    crm_invoices_cancel_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Инвойс. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InvoiceRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["InvoiceRequest"];
+                "multipart/form-data": components["schemas"]["InvoiceRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Invoice"];
+                };
+            };
+        };
+    };
     crm_invoices_download_pdf_retrieve: {
         parameters: {
             query?: never;
@@ -18671,6 +18743,34 @@ export interface operations {
         };
     };
     crm_invoices_generate_act_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Инвойс. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InvoiceRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["InvoiceRequest"];
+                "multipart/form-data": components["schemas"]["InvoiceRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Invoice"];
+                };
+            };
+        };
+    };
+    crm_invoices_issue_create: {
         parameters: {
             query?: never;
             header?: never;

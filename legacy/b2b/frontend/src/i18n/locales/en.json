@@ -4474,7 +4474,16 @@
       "price": "Price",
       "line": "Line"
     },
-    "balanceDue": "Balance due"
+    "balanceDue": "Balance due",
+    "issue": "Issue",
+    "cancel": "Cancel",
+    "saveDraft": "Save",
+    "dueDate": "Due date",
+    "notes": "Notes",
+    "amountsFromContract": "Amounts come from the contract and are not editable here",
+    "issued": "Invoice issued",
+    "cancelled": "Invoice cancelled",
+    "draftSaved": "Draft saved"
   },
   "paymentsPage": {
     "title": "Payments",
@@ -4934,6 +4943,10 @@
     "CONTRACT_SIGNED_CANNOT_CANCEL": "A signed contract cannot be cancelled — issue a termination document instead",
     "INVOICE_REQUIRES_SIGNED_CONTRACT": "Invoice can only be issued against a signed contract",
     "INVOICE_CANCELLED": "Invoice has been cancelled",
+    "INVOICE_NOT_EDITABLE": "Only a draft invoice can be edited",
+    "INVOICE_ALREADY_ISSUED": "Invoice has already been issued",
+    "INVOICE_ALREADY_CANCELLED": "Invoice has already been cancelled",
+    "INVOICE_CANNOT_CANCEL_PAID": "A paid invoice cannot be cancelled",
     "PAYMENT_AMOUNT_MUST_BE_POSITIVE": "Payment amount must be greater than 0",
     "ACT_INVALID_INVOICE_STATUS": "Act cannot be issued for an invoice in this status",
     "ACT_SIGN_NOT_ALLOWED": "Act cannot be signed in the current status",

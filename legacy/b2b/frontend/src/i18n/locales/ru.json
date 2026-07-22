@@ -4478,7 +4478,16 @@
       "price": "Цена",
       "line": "Сумма"
     },
-    "balanceDue": "Остаток к оплате"
+    "balanceDue": "Остаток к оплате",
+    "issue": "Выставить",
+    "cancel": "Отменить",
+    "saveDraft": "Сохранить",
+    "dueDate": "Срок оплаты",
+    "notes": "Примечания",
+    "amountsFromContract": "Суммы берутся из договора и не редактируются здесь",
+    "issued": "Инвойс выставлен",
+    "cancelled": "Инвойс отменён",
+    "draftSaved": "Черновик сохранён"
   },
   "paymentsPage": {
     "title": "Платежи",
@@ -4938,6 +4947,10 @@
     "CONTRACT_SIGNED_CANNOT_CANCEL": "Подписанный контракт нельзя отменить — оформите расторжение отдельным документом",
     "INVOICE_REQUIRES_SIGNED_CONTRACT": "Инвойс можно выставить только по подписанному контракту",
     "INVOICE_CANCELLED": "Инвойс отменён",
+    "INVOICE_NOT_EDITABLE": "Редактировать можно только черновик инвойса",
+    "INVOICE_ALREADY_ISSUED": "Инвойс уже выставлен",
+    "INVOICE_ALREADY_CANCELLED": "Инвойс уже отменён",
+    "INVOICE_CANNOT_CANCEL_PAID": "Оплаченный инвойс отменить нельзя",
     "PAYMENT_AMOUNT_MUST_BE_POSITIVE": "Сумма платежа должна быть больше 0",
     "ACT_INVALID_INVOICE_STATUS": "Акт нельзя выставить для инвойса в этом статусе",
     "ACT_SIGN_NOT_ALLOWED": "Акт нельзя подписать в текущем статусе",

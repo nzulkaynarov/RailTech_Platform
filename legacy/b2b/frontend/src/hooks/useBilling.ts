@@ -145,6 +145,40 @@ export const useGenerateAct = () => {
   });
 };
 
+export const useIssueInvoice = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => invoicesApi.issue(id),
+    onSuccess: (_data, id) => {
+      qc.invalidateQueries({ queryKey: ['invoices'] });
+      qc.invalidateQueries({ queryKey: ['invoice', id] });
+    },
+  });
+};
+
+export const useCancelInvoice = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => invoicesApi.cancel(id),
+    onSuccess: (_data, id) => {
+      qc.invalidateQueries({ queryKey: ['invoices'] });
+      qc.invalidateQueries({ queryKey: ['invoice', id] });
+    },
+  });
+};
+
+export const useUpdateInvoiceDraft = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, dueDate, notes }: { id: number; dueDate?: string; notes?: string }) =>
+      invoicesApi.updateDraft(id, { due_date: dueDate, notes }),
+    onSuccess: (_data, { id }) => {
+      qc.invalidateQueries({ queryKey: ['invoices'] });
+      qc.invalidateQueries({ queryKey: ['invoice', id] });
+    },
+  });
+};
+
 // ─── Payments ─────────────────────────────────────────────────
 
 export const usePayments = (params?: { invoice?: number; page?: number }) => useQuery({

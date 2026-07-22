@@ -260,9 +260,14 @@ def test_golden_path_rfq_to_closed_won(deal, buyer, manager):
     assert err is None, f"sign_contract_by_manager failed: {err}"
     assert contract.status_code == "SIGNED"
 
-    # 8. Invoice issued from the signed contract, then paid in full.
+    # 8. Invoice created (DRAFT) from the signed contract, then explicitly ISSUED (Wave C:
+    #    the ERP draft→posted split), then paid in full.
     invoice, err = crm_services.generate_invoice_from_contract(contract.id, actor=manager)
     assert err is None, f"generate_invoice_from_contract failed: {err}"
+    assert invoice.status_code == "DRAFT"
+    invoice, err = crm_services.issue_invoice(invoice, manager)
+    assert err is None, f"issue_invoice failed: {err}"
+    assert invoice.status_code == "ISSUED"
     _, err = crm_services.record_payment(
         invoice.id,
         manager,
@@ -318,8 +323,13 @@ def test_contract_and_billing_events_are_structured(deal, buyer, manager):
     signed_manager = ActivityLog.objects.filter(event_code="contract.signed_manager", deal=deal).order_by("-id").first()
     assert signed_manager.event_params == {"number": contract.number, "deal_id": deal.id, "manual": True}
 
-    # billing.py — invoice.issued + payment.recorded (money as str, manual flag).
+    # billing.py — invoice.issued + payment.recorded (money as str, manual flag). Wave C: creation
+    # emits invoice.created (DRAFT); the invoice.issued event now rides the explicit issue step.
     invoice, err = crm_services.generate_invoice_from_contract(contract.id, actor=manager)
+    assert err is None
+    created = ActivityLog.objects.filter(event_code="invoice.created", deal=deal).order_by("-id").first()
+    assert created.event_params == {"number": invoice.number, "deal_id": deal.id}
+    invoice, err = crm_services.issue_invoice(invoice, manager)
     assert err is None
     issued = ActivityLog.objects.filter(event_code="invoice.issued", deal=deal).order_by("-id").first()
     assert issued.event_params == {"number": invoice.number, "deal_id": deal.id}

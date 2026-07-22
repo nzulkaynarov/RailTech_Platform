@@ -1,12 +1,14 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { translateApiError } from '@/lib/apiError';
-import { Receipt, DollarSign, ScrollText } from 'lucide-react';
+import { Receipt, DollarSign, ScrollText, Send, Ban, Save } from 'lucide-react';
 import { DocumentActions } from '@/components/Shared/DocumentActions';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -23,7 +25,7 @@ import {
   Toolbar, SortableHead, Pager, useListParams, applyListParams,
 } from '@/components/DataTable';
 import {
-  useInvoices, useGenerateAct,
+  useInvoices, useGenerateAct, useIssueInvoice, useCancelInvoice, useUpdateInvoiceDraft,
 } from '@/hooks/useBilling';
 import { useIsViewerMode } from '@/hooks/useViewerMode';
 import { useUserStore } from '@/store/userStore';
@@ -51,10 +53,22 @@ export function InvoicesPage() {
   const { data: invoices, isLoading, isError, refetch } = useInvoices(undefined);
   const formatCurrency = useCurrencyStore((s) => s.format);
   const generateAct = useGenerateAct();
+  const issueInvoice = useIssueInvoice();
+  const cancelInvoice = useCancelInvoice();
+  const updateDraft = useUpdateInvoiceDraft();
   const isViewer = useIsViewerMode();
   // Recording payment is a BUYER action; issuing the Act is a SELLER action.
   const isBuyer = useUserStore((s) => s.activeStatus) === 'BUYER';
   const viewerTip = t('apiErrors.ADMIN_VIEWER_CANNOT_ACT');
+
+  // DRAFT-only editable fields. Kept in local state, synced when the open
+  // invoice changes; amounts are NOT editable (they derive from the contract).
+  const [draftDue, setDraftDue] = useState('');
+  const [draftNotes, setDraftNotes] = useState('');
+  useEffect(() => {
+    setDraftDue(selected?.due_date ?? '');
+    setDraftNotes(selected?.notes ?? '');
+  }, [selected]);
 
   const stats = useMemo(() => {
     const list = invoices ?? [];
@@ -76,6 +90,41 @@ export function InvoicesPage() {
     try {
       await generateAct.mutateAsync(selected.id);
       toast.success(t('invoicesPage.actGenerated'));
+    } catch (e) {
+      toast.error(translateApiError(e));
+    }
+  };
+
+  const onSaveDraft = async () => {
+    if (!selected) return;
+    try {
+      const updated = await updateDraft.mutateAsync({
+        id: selected.id, dueDate: draftDue || undefined, notes: draftNotes,
+      });
+      setSelected(updated);
+      toast.success(t('invoicesPage.draftSaved'));
+    } catch (e) {
+      toast.error(translateApiError(e));
+    }
+  };
+
+  const onIssue = async () => {
+    if (!selected) return;
+    try {
+      await issueInvoice.mutateAsync(selected.id);
+      toast.success(t('invoicesPage.issued'));
+      setSelected(null);
+    } catch (e) {
+      toast.error(translateApiError(e));
+    }
+  };
+
+  const onCancelInvoice = async () => {
+    if (!selected) return;
+    try {
+      const updated = await cancelInvoice.mutateAsync(selected.id);
+      setSelected(updated);
+      toast.success(t('invoicesPage.cancelled'));
     } catch (e) {
       toast.error(translateApiError(e));
     }
@@ -211,36 +260,93 @@ export function InvoicesPage() {
                 <div><Label>{t('invoicesPage.table.due')}</Label><p>{selected.due_date ? new Date(selected.due_date).toLocaleDateString() : '—'}</p></div>
               </div>
               <Separator />
-              <div className="flex flex-col gap-2">
-                {selected.pdf_url && (
-                  <DocumentActions
-                    request={() => ({ path: `crm/invoices/${selected.id}/download-pdf/` })}
-                    filenameBase={`RailTech_Invoice_${selected.id}`}
-                    size="default"
-                  />
-                )}
-                {isBuyer && selected.status !== 'PAID' && selected.status !== 'CANCELLED' && (
-                  <Button
-                    onClick={() => setPayOpen(true)}
-                    disabled={isViewer}
-                    title={isViewer ? viewerTip : undefined}
-                  >
-                    <DollarSign className="mr-2 h-4 w-4" />
-                    {t('invoicesPage.recordPayment')}
-                  </Button>
-                )}
-                {!isBuyer && (
+              {selected.status === 'DRAFT' ? (
+                // DRAFT — editable due date + notes; amounts come from the contract
+                // and are not editable. «Issue» renders the PDF and notifies the buyer.
+                <div className="flex flex-col gap-3">
+                  <p className="text-xs text-muted-foreground">{t('invoicesPage.amountsFromContract')}</p>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="inv-draft-due">{t('invoicesPage.dueDate')}</Label>
+                    <Input
+                      id="inv-draft-due"
+                      type="date"
+                      value={draftDue}
+                      onChange={(e) => setDraftDue(e.target.value)}
+                      disabled={isViewer}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="inv-draft-notes">{t('invoicesPage.notes')}</Label>
+                    <Textarea
+                      id="inv-draft-notes"
+                      value={draftNotes}
+                      onChange={(e) => setDraftNotes(e.target.value)}
+                      disabled={isViewer}
+                    />
+                  </div>
                   <Button
                     variant="outline"
-                    onClick={onGenerateAct}
-                    disabled={generateAct.isPending || isViewer}
+                    onClick={onSaveDraft}
+                    disabled={updateDraft.isPending || isViewer}
                     title={isViewer ? viewerTip : undefined}
                   >
-                    <ScrollText className="mr-2 h-4 w-4" />
-                    {t('invoicesPage.generateAct')}
+                    <Save className="mr-2 h-4 w-4" />
+                    {t('invoicesPage.saveDraft')}
                   </Button>
-                )}
-              </div>
+                  <Button
+                    onClick={onIssue}
+                    disabled={issueInvoice.isPending || isViewer}
+                    title={isViewer ? viewerTip : undefined}
+                  >
+                    <Send className="mr-2 h-4 w-4" />
+                    {t('invoicesPage.issue')}
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {/* CANCELLED invoices are view-only — no PDF/actions. */}
+                  {selected.status !== 'CANCELLED' && selected.pdf_url && (
+                    <DocumentActions
+                      request={() => ({ path: `crm/invoices/${selected.id}/download-pdf/` })}
+                      filenameBase={`RailTech_Invoice_${selected.id}`}
+                      size="default"
+                    />
+                  )}
+                  {isBuyer && selected.status !== 'PAID' && selected.status !== 'CANCELLED' && (
+                    <Button
+                      onClick={() => setPayOpen(true)}
+                      disabled={isViewer}
+                      title={isViewer ? viewerTip : undefined}
+                    >
+                      <DollarSign className="mr-2 h-4 w-4" />
+                      {t('invoicesPage.recordPayment')}
+                    </Button>
+                  )}
+                  {!isBuyer && selected.status !== 'CANCELLED' && (
+                    <Button
+                      variant="outline"
+                      onClick={onGenerateAct}
+                      disabled={generateAct.isPending || isViewer}
+                      title={isViewer ? viewerTip : undefined}
+                    >
+                      <ScrollText className="mr-2 h-4 w-4" />
+                      {t('invoicesPage.generateAct')}
+                    </Button>
+                  )}
+                  {/* Cancel an issued-but-unpaid invoice; backend refuses PAID/PARTIAL. */}
+                  {selected.status !== 'PAID' && selected.status !== 'CANCELLED' && (
+                    <Button
+                      variant="outline"
+                      onClick={onCancelInvoice}
+                      disabled={cancelInvoice.isPending || isViewer}
+                      title={isViewer ? viewerTip : undefined}
+                    >
+                      <Ban className="mr-2 h-4 w-4" />
+                      {t('invoicesPage.cancel')}
+                    </Button>
+                  )}
+                </div>
+              )}
               {selected.items?.length > 0 && (
                 <div>
                   <Label>{t('invoicesPage.items')}</Label>

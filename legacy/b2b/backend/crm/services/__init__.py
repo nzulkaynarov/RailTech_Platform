@@ -9,6 +9,12 @@ from .ai_chat import suggest_chat_reply
 from .ai_diff import quote_vs_request_diff, user_can_view_quote_diff
 from .availability import Tranche, auto_split_quote_by_availability, resolve_seller_offer, split_line_by_availability
 from .billing import generate_act, generate_invoice_from_contract, record_payment, sign_act
+from .invoice_lifecycle import (
+    cancel_invoice,
+    issue_invoice,
+    notify_seller_invoice_draft,
+    update_invoice_draft,
+)
 from .charges import apply_charge_template_to_quote, set_quote_delivery_basis
 from .contracts import (
     cancel_contract,
@@ -103,6 +109,10 @@ __all__ = [
     "generate_act",
     "generate_contract_from_quote",
     "generate_invoice_from_contract",
+    "issue_invoice",
+    "cancel_invoice",
+    "update_invoice_draft",
+    "notify_seller_invoice_draft",
     "get_allowed_transitions",
     "link_registered_client_to_contact_deals",
     "mark_leads_processed",

@@ -244,9 +244,48 @@ class InvoiceViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
             )
         ).distinct()
 
+    def update(self, request, *args, **kwargs):
+        """DRAFT-only edit, restricted to due_date / notes (amounts mirror the contract, never
+        hand-edited). Covers PATCH too (DRF routes partial_update → update). ISSUED+ are immutable
+        → 400 INVOICE_NOT_EDITABLE. Honours the optimistic-lock If-Match token like the base mixin."""
+        from crm.constants import InvoiceStatusCode
+
+        invoice = self.get_object()
+        if invoice.status_code != InvoiceStatusCode.DRAFT:
+            return Response({"detail": "INVOICE_NOT_EDITABLE"}, status=400)
+        if_match = request.headers.get("If-Match")
+        if if_match and if_match != self._etag_for(invoice):
+            return Response({"detail": "PRECONDITION_FAILED_STALE_WRITE"}, status=status.HTTP_412_PRECONDITION_FAILED)
+        updated, err = crm_services.update_invoice_draft(
+            invoice,
+            due_date=request.data.get("due_date"),
+            notes=request.data.get("notes"),
+        )
+        if err:
+            return Response({"detail": err}, status=400)
+        response = Response(InvoiceSerializer(updated, context=self.get_serializer_context()).data)
+        response["ETag"] = self._etag_for(updated)
+        return response
+
     @action(detail=True, methods=["get"], url_path="download-pdf")
     def download_pdf(self, request, pk=None):
         return _stream_or_render_pdf(self.get_object())
+
+    @extend_schema(summary="Issue a DRAFT invoice (DRAFT → ISSUED)", tags=["CRM"])
+    @action(detail=True, methods=["post"], url_path="issue", permission_classes=[IsAuthenticated])
+    def issue(self, request, pk=None):
+        invoice, err = crm_services.issue_invoice(self.get_object(), request.user)
+        if err:
+            return Response({"detail": err}, status=400)
+        return Response(InvoiceSerializer(invoice, context=self.get_serializer_context()).data)
+
+    @extend_schema(summary="Cancel an invoice (→ CANCELLED; not allowed if paid)", tags=["CRM"])
+    @action(detail=True, methods=["post"], url_path="cancel", permission_classes=[IsAuthenticated])
+    def cancel(self, request, pk=None):
+        invoice, err = crm_services.cancel_invoice(self.get_object(), request.user)
+        if err:
+            return Response({"detail": err}, status=400)
+        return Response(InvoiceSerializer(invoice, context=self.get_serializer_context()).data)
 
     @extend_schema(summary="Generate invoice from a signed contract", tags=["CRM"])
     @action(

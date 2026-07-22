@@ -84,12 +84,15 @@ def generate_invoice_from_contract(
     # note lines on the invoice so Σ(InvoiceItem.line_total) overshot Invoice.total (which mirrors
     # the header total that already excludes them) — the invoice stopped adding up.
     billable_items = list(quote.items.billable().select_related("product"))
+    # Wave C: an invoice is BORN as a DRAFT (ERP canon — Odoo draft→posted). It carries no
+    # issue date and no PDF yet; the seller reviews it (due_date / notes editable while DRAFT)
+    # and then explicitly `issue_invoice` → ISSUED (renders the PDF, notifies the buyer).
     invoice = Invoice.objects.create(
         deal=contract.deal,
         contract=contract,
         number=_next_invoice_number(seller_company),
-        status=_istatus(InvoiceStatusCode.ISSUED),
-        issued_at=timezone.now().date(),
+        status=_istatus(InvoiceStatusCode.DRAFT),
+        issued_at=None,
         due_date=(timezone.now() + timedelta(days=due_days)).date(),
         subtotal_excl_vat=quote.subtotal_excl_vat,
         vat_amount=quote.vat_amount,
@@ -114,16 +117,11 @@ def generate_invoice_from_contract(
             source_quote_item=qi,
         )
 
-    # Render off the request thread, after commit (F1.6 — avoids orphan PDFs on
-    # rollback). The download endpoint renders lazily if a download races ahead.
-    from ..tasks import render_document_pdf
-
-    invoice_id = invoice.id
-    transaction.on_commit(lambda: render_document_pdf.delay("invoice", invoice_id))
+    # No PDF at DRAFT — the render happens on `issue_invoice` (a draft has no legal PDF yet).
     ActivityLog.objects.create(
-        action="Инвойс выставлен",
+        action="Инвойс создан (черновик)",
         detail=f"Инвойс {invoice.number} по сделке #{invoice.deal_id}",
-        event_code="invoice.issued",
+        event_code="invoice.created",
         event_params={"number": invoice.number, "deal_id": invoice.deal_id},
         user=actor,
         level="INFO",
