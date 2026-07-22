@@ -117,3 +117,15 @@ export const useCancelDocument = () => {
     },
   });
 };
+
+// F2 II-1: email an ISSUED document. `to` optional (backend falls back to the deal contact).
+export const useSendDocument = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, to }: { id: number; to?: string }) => generatedDocumentsApi.sendEmail(id, to),
+    onSuccess: (_data, { id }) => {
+      qc.invalidateQueries({ queryKey: ['generated-documents'] });
+      qc.invalidateQueries({ queryKey: ['generated-document', id] });
+    },
+  });
+};

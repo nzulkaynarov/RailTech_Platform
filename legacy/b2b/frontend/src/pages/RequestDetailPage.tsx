@@ -27,6 +27,7 @@ import { GenerateQuoteDialog } from '@/components/CRM/GenerateQuoteDialog';
 import { BuyerAcceptedPanel } from '@/components/CRM/BuyerAcceptedPanel';
 import { CoverageCheck } from '@/components/CRM/CoverageCheck';
 import { DealTimeline } from '@/components/CRM/DealTimeline';
+import { DealDocumentsCard } from '@/components/CRM/DealDocumentsCard';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { buyerStatus } from '@/lib/requestStatus';
 
@@ -647,6 +648,10 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
             </CardContent>
           </Card>
         )}
+
+        {/* F2 II-4 — documents attached to this deal + «Создать документ» (pre-bound to the deal).
+            Received counterparty documents surface here read-only with a «Получен» badge. */}
+        <DealDocumentsCard dealId={deal.id} isViewer={isViewer} viewerTip={viewerTip} />
 
         {/* CRM Phase A — deal history feed (renders nothing while empty) */}
         <DealTimeline dealId={deal.id} />

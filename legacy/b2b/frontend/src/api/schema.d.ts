@@ -3837,6 +3837,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/crm/generated-documents/{id}/send-email/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Email an issued document to its recipient (public link in body)
+         * @description Rendered documents registry. List/retrieve are company-scoped; generation and
+         *     status transitions run in services (entitlement + IDOR + viewer gates).
+         */
+        post: operations["crm_generated_documents_send_email_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/generated-documents/generate/": {
         parameters: {
             query?: never;
@@ -5237,6 +5258,26 @@ export interface paths {
          * @description Mark all of the current user's notifications as read.
          */
         patch: operations["notifications_mark_all_read_partial_update"];
+        trace?: never;
+    };
+    "/api/v1/public/documents/{token}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Public generated-document page (HTML) or PDF by token
+         * @description Content-negotiated public generated document: branded HTML page or PDF by token.
+         */
+        get: operations["public_documents_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/public/quotes/{token}/": {
@@ -7764,6 +7805,13 @@ export interface components {
              * Format: date-time
              */
             readonly issued_at: string | null;
+            /**
+             * @description True when the requester's company owns this document — the registry shows a «Получен»
+             *     (read-only) badge on documents that are NOT owned (II-2).
+             */
+            readonly is_owned: boolean;
+            /** @description Public no-login link (present only for ISSUED documents that carry a minted token). */
+            readonly public_url: string | null;
             readonly created_by_name: string | null;
             /**
              * Дата создания
@@ -11260,6 +11308,13 @@ export interface components {
              * @description Пользовательские настройки (тема, язык, часовой пояс)
              */
             preferences?: unknown;
+        };
+        SendDocumentEmailRequest: {
+            to?: string;
+        };
+        SendDocumentEmailResult: {
+            detail: string;
+            to: string;
         };
         SessionResponse: {
             sessions: components["schemas"]["ActiveSession"][];
@@ -18513,6 +18568,41 @@ export interface operations {
             };
         };
     };
+    crm_generated_documents_send_email_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Сгенерированный документ. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SendDocumentEmailRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SendDocumentEmailRequest"];
+                "multipart/form-data": components["schemas"]["SendDocumentEmailRequest"];
+            };
+        };
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SendDocumentEmailResult"];
+                };
+            };
+            /** @description Not issued / no recipient / not owned */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     crm_generated_documents_generate_create: {
         parameters: {
             query?: never;
@@ -21435,6 +21525,47 @@ export interface operations {
         responses: {
             /** @description All notifications marked as read */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    public_documents_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Document page (browser HTML) or PDF (?export=pdf) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description PDF still rendering off-thread — retry after Retry-After seconds */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unknown token or not an issued document */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Public link revoked or expired */
+            410: {
                 headers: {
                     [name: string]: unknown;
                 };

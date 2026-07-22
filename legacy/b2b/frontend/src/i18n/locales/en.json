@@ -4595,7 +4595,18 @@
     "actions": {
       "issue": "Issue",
       "cancel": "Cancel",
-      "preview": "Preview"
+      "preview": "Preview",
+      "sendEmail": "Send by email"
+    },
+    "received": "Received",
+    "sendDialog": {
+      "title": "Send document by email",
+      "description": "An email with a link to the document will be sent to the recipient.",
+      "emailLabel": "Recipient email",
+      "emailPlaceholder": "client@company.uz",
+      "hint": "Leave blank to send to the deal counterparty's email.",
+      "submit": "Send",
+      "sent": "Email sent"
     }
   },
   "documentsHub": {
@@ -5064,7 +5075,10 @@
     "BELOW_FLOOR_JUSTIFICATION_REQUIRED": "The КП is below the margin floor — a justification is required to send.",
     "JUSTIFICATION_TOO_LONG": "The justification is too long (max 500 characters).",
     "RECIPIENT_REQUIRED": "This draft has no recipient — pick or create a client before sending.",
-    "ONLY_SELLER_CAN_CREATE_CALCULATOR_DRAFT": "Only a seller can create a calculator draft"
+    "ONLY_SELLER_CAN_CREATE_CALCULATOR_DRAFT": "Only a seller can create a calculator draft",
+    "DOCUMENT_NOT_ISSUED": "The document is not issued yet — issue it first.",
+    "INVALID_EMAIL": "Enter a valid email address",
+    "NO_RECIPIENT": "Could not determine a recipient — enter an email."
   },
   "fileUpload": {
     "upload": "Upload",
@@ -5736,5 +5750,11 @@
     "revokeDescription": "Anyone with the link will no longer be able to open the quote.",
     "newVersionTitle": "Create a new quote version?",
     "newVersionDescription": "A draft of the next version of this quote will be created for edits and re-sending."
+  },
+  "dealDocuments": {
+    "title": "Deal documents",
+    "create": "Create document",
+    "empty": "No documents for this deal yet",
+    "emptyHint": "Build a letter or a template-based document with «Create document»."
   }
 }

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { FileSignature, Send, Ban } from 'lucide-react';
+import { FileSignature, Send, Ban, Mail, Loader2, Inbox } from 'lucide-react';
 import { translateApiError } from '@/lib/apiError';
 import { DocumentActions } from '@/components/Shared/DocumentActions';
 import { Card, CardContent } from '@/components/ui/card';
@@ -15,12 +15,15 @@ import {
 import {
   Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle,
 } from '@/components/ui/sheet';
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
 import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import {
   Toolbar, SortableHead, Pager, useListParams, applyListParams,
 } from '@/components/DataTable';
 import {
-  useGeneratedDocuments, useIssueDocument, useCancelDocument, useUpdateDocumentValues,
+  useGeneratedDocuments, useIssueDocument, useCancelDocument, useUpdateDocumentValues, useSendDocument,
 } from '@/hooks/useDocuments';
 import { useIsViewerMode } from '@/hooks/useViewerMode';
 import { DocumentCreateWizard } from '@/components/Documents/DocumentCreateWizard';
@@ -110,7 +113,7 @@ export function OtherDocumentsPage() {
         <CardContent className="p-0">
           {(() => {
             const { items: pageItems, total } = applyListParams(documents ?? [], listParams, {
-              searchFields: (d) => [d.number, d.title, d.template_name],
+              searchFields: (d) => [d.number, d.title, d.template_name, d.deal_title ?? ''],
               filterPredicates: { status: (d, v) => d.status_code === v },
               sortAccessors: {
                 number: (d) => d.number,
@@ -160,9 +163,17 @@ export function OtherDocumentsPage() {
                         <TableCell>{doc.title}</TableCell>
                         <TableCell className="text-muted-foreground">{doc.template_name}</TableCell>
                         <TableCell>
-                          <Badge variant={STATUS_VARIANT[doc.status_code]}>
-                            {t(`otherDocumentsPage.status.${doc.status_code}`)}
-                          </Badge>
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <Badge variant={STATUS_VARIANT[doc.status_code]}>
+                              {t(`otherDocumentsPage.status.${doc.status_code}`)}
+                            </Badge>
+                            {doc.is_owned === false && (
+                              <Badge variant="outline" className="gap-1">
+                                <Inbox className="size-3" aria-hidden="true" />
+                                {t('otherDocumentsPage.received')}
+                              </Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">
                           {new Date(doc.created_at).toLocaleDateString()}
@@ -222,9 +233,16 @@ function DocumentSheet({
 }: DocumentSheetProps) {
   const { t } = useTranslation();
   const [values, setValues] = useState<Record<string, string>>(() => ({ ...(document.values ?? {}) }));
+  const [sendOpen, setSendOpen] = useState(false);
   const valueKeys = Object.keys(document.values ?? {});
   const isDraft = document.status_code === 'DRAFT';
-  const canAct = !isViewer;
+  const isIssued = document.status_code === 'ISSUED';
+  // A received (counterparty-owned) document is strictly read-only: no issue/cancel/value editing.
+  const isReceived = document.is_owned === false;
+  const canAct = !isViewer && !isReceived;
+  // Public share link: the backend builds it from FRONTEND_URL + minted token and only fills it
+  // for ISSUED documents (null otherwise), so use it verbatim.
+  const publicLink = isIssued ? document.public_url : null;
 
   const onSave = async () => {
     try {
@@ -240,10 +258,18 @@ function DocumentSheet({
       <SheetContent className="overflow-y-auto sm:max-w-xl">
         <SheetHeader>
           <SheetTitle>{document.number}</SheetTitle>
-          <SheetDescription>
-            <Badge variant={STATUS_VARIANT[document.status_code]}>
-              {t(`otherDocumentsPage.status.${document.status_code}`)}
-            </Badge>
+          <SheetDescription asChild>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Badge variant={STATUS_VARIANT[document.status_code]}>
+                {t(`otherDocumentsPage.status.${document.status_code}`)}
+              </Badge>
+              {isReceived && (
+                <Badge variant="outline" className="gap-1">
+                  <Inbox className="size-3" aria-hidden="true" />
+                  {t('otherDocumentsPage.received')}
+                </Badge>
+              )}
+            </div>
           </SheetDescription>
         </SheetHeader>
         <div className="space-y-4 p-4">
@@ -277,8 +303,9 @@ function DocumentSheet({
           </div>
 
           {/* DRAFT placeholder-value editing (re-render + PDF invalidation on the backend).
-              `values` keys come from the template placeholders resolved at generation time. */}
-          {isDraft && valueKeys.length > 0 && (
+              `values` keys come from the template placeholders resolved at generation time.
+              Received (counterparty) documents are read-only — no value editor. */}
+          {isDraft && !isReceived && valueKeys.length > 0 && (
             <div className="space-y-3 rounded-md border border-border p-3">
               <p className="text-sm font-medium">{t('otherDocumentsPage.valuesTitle')}</p>
               {valueKeys.map((key) => (
@@ -317,20 +344,33 @@ function DocumentSheet({
           </div>
 
           <div className="flex flex-col gap-2">
-            {document.status_code === 'ISSUED' && document.pdf_available && (
+            {isIssued && document.pdf_available && (
               <DocumentActions
                 request={() => ({ path: `crm/generated-documents/${document.id}/download-pdf/` })}
                 filenameBase={`RailTech_Document_${document.id}`}
+                publicLink={publicLink ?? undefined}
                 size="default"
               />
             )}
-            {isDraft && (
+            {/* Send by email — owner-only, ISSUED-only (the public link travels in the body). */}
+            {isIssued && !isReceived && (
+              <Button
+                variant="outline"
+                disabled={!canAct}
+                title={canAct ? undefined : viewerTip}
+                onClick={() => setSendOpen(true)}
+              >
+                <Mail className="mr-2 h-4 w-4" />
+                {t('otherDocumentsPage.actions.sendEmail')}
+              </Button>
+            )}
+            {isDraft && !isReceived && (
               <Button disabled={!canAct || busy} title={canAct ? undefined : viewerTip} onClick={onIssue}>
                 <Send className="mr-2 h-4 w-4" />
                 {t('otherDocumentsPage.actions.issue')}
               </Button>
             )}
-            {(document.status_code === 'DRAFT' || document.status_code === 'ISSUED') && (
+            {!isReceived && (isDraft || isIssued) && (
               <Button
                 variant="outline"
                 disabled={!canAct || busy}
@@ -345,7 +385,70 @@ function DocumentSheet({
         </div>
         <SheetFooter />
       </SheetContent>
+      <SendDocumentDialog document={document} open={sendOpen} onOpenChange={setSendOpen} />
     </Sheet>
+  );
+}
+
+interface SendDocumentDialogProps {
+  document: GeneratedDocument;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+/**
+ * F2 II-1 — email an ISSUED document to the counterparty. The email carries the public no-login
+ * link (backend `send-email` action, `send_templated_email` — the КП-send pattern). The recipient
+ * is pre-filled from the deal contact when the backend can resolve it; leaving it blank lets the
+ * backend fall back to the deal contact server-side (NO_RECIPIENT if none exists).
+ */
+function SendDocumentDialog({ document, open, onOpenChange }: SendDocumentDialogProps) {
+  const { t } = useTranslation();
+  const sendDocument = useSendDocument();
+  const [email, setEmail] = useState<string>(document.recipient_email ?? '');
+
+  const submit = async () => {
+    try {
+      await sendDocument.mutateAsync({ id: document.id, to: email.trim() || undefined });
+      toast.success(t('otherDocumentsPage.sendDialog.sent'));
+      onOpenChange(false);
+    } catch (error) {
+      toast.error(translateApiError(error));
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(next) => { if (!sendDocument.isPending) onOpenChange(next); }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t('otherDocumentsPage.sendDialog.title')}</DialogTitle>
+          <DialogDescription>{t('otherDocumentsPage.sendDialog.description')}</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-1.5">
+          <Label htmlFor="send-doc-email">{t('otherDocumentsPage.sendDialog.emailLabel')}</Label>
+          <Input
+            id="send-doc-email"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder={t('otherDocumentsPage.sendDialog.emailPlaceholder')}
+            disabled={sendDocument.isPending}
+          />
+          <p className="text-xs text-muted-foreground">{t('otherDocumentsPage.sendDialog.hint')}</p>
+        </div>
+        <DialogFooter className="gap-2">
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={sendDocument.isPending}>
+            {t('common.cancel')}
+          </Button>
+          <Button onClick={submit} disabled={sendDocument.isPending}>
+            {sendDocument.isPending
+              ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+              : <Mail className="mr-2 h-4 w-4" aria-hidden="true" />}
+            {t('otherDocumentsPage.sendDialog.submit')}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

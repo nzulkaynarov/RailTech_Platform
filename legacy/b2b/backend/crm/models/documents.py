@@ -160,6 +160,30 @@ class GeneratedDocument(models.Model):
         blank=True,
         verbose_name=_("PDF"),
     )
+    # Random token for an UNAUTHENTICATED public view/download of an ISSUED document
+    # (letter/report — no cost/margin data; the body is a sanitised snapshot). Minted once
+    # on issue (see services.generated_documents.issue_document), by the same pattern as
+    # Quote.public_access_token. DRAFT/CANCELLED never carry a live link.
+    public_access_token = models.CharField(
+        max_length=64,
+        unique=True,
+        null=True,
+        blank=True,
+        db_index=True,
+        verbose_name=_("Публичный токен доступа"),
+        help_text=_("Секретный токен для просмотра/скачивания выпущенного документа без входа"),
+    )
+    public_token_revoked = models.BooleanField(
+        default=False,
+        verbose_name=_("Публичная ссылка отозвана"),
+        help_text=_("Если включено — публичная ссылка на документ больше не открывается (410)"),
+    )
+    public_token_expires_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Публичная ссылка истекает"),
+        help_text=_("Явный TTL публичной ссылки. NULL — без отдельного TTL."),
+    )
     issued_at = models.DateTimeField(null=True, blank=True, verbose_name=_("Дата выпуска"))
     created_by = models.ForeignKey(
         "accounts.CustomUser",

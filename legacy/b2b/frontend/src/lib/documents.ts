@@ -68,6 +68,16 @@ export function printBlob(blob: Blob): void {
   document.body.appendChild(iframe);
 }
 
+/**
+ * Build the public no-login document URL from the share token, mirroring the backend public КП
+ * URL ({origin}/api/v1/public/documents/{token}/). Returns null when the token is not exposed
+ * (draft / cancelled / backend not yet updated), so callers can hide the «Копировать ссылку» item.
+ */
+export function publicDocumentUrl(token: string | null | undefined, origin: string): string | null {
+  if (!token) return null;
+  return `${origin}/api/v1/public/documents/${token}/`;
+}
+
 /** Best-effort parse of an axios-blob error into its `{"detail": CODE}` code (DRF error shape). */
 export async function extractBlobErrorCode(err: unknown): Promise<string> {
   const data = (err as { response?: { data?: unknown } })?.response?.data;

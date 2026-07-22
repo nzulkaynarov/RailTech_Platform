@@ -13,11 +13,19 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import UserRateThrottle
 
 from core.file_streaming import stream_file_field
 from crm import services as crm_services
 from crm.models import DocumentTemplate, GeneratedDocument
 from crm.serializers import DocumentTemplateSerializer, GeneratedDocumentSerializer
+
+
+class DocumentSendEmailThrottle(UserRateThrottle):
+    """Per-user rate cap on document email dispatch — the platform must not become an open
+    spam/phishing relay via arbitrary `to` (F2-3/MAJOR-2). Rate from settings `document_send_email`."""
+
+    scope = "document_send_email"
 
 
 def _user_company_ids(user):
@@ -202,9 +210,18 @@ class GeneratedDocumentViewSet(viewsets.ModelViewSet):
         qs = GeneratedDocument.objects.select_related(
             "status", "template", "deal", "contact", "created_by", "company"
         ).order_by("-created_at")
-        if getattr(user, "is_platform_admin", False):
-            return qs
-        return qs.filter(company_id__in=_user_company_ids(user))
+        if not getattr(user, "is_platform_admin", False):
+            # Own-company documents (all statuses) + ISSUED documents on deals the user reaches as a
+            # PARTY — «полученные письма» read-only (II-2). A counterparty never sees another
+            # company's DRAFT/CANCELLED. `.distinct()` de-dupes the seller_routings join.
+            qs = qs.filter(
+                Q(company_id__in=_user_company_ids(user)) | crm_services.party_visible_document_q(user)
+            ).distinct()
+        # Deal-scoped registry (карточка сделки → её документы; реестр «Прочие» filter), II-4.
+        deal_id = self.request.query_params.get("deal")
+        if deal_id:
+            qs = qs.filter(deal_id=deal_id)
+        return qs
 
     def _readable_template(self, template_id):
         owner_company_id = crm_services.resolve_owner_company_id(self.request.user)
@@ -269,10 +286,15 @@ class GeneratedDocumentViewSet(viewsets.ModelViewSet):
     def partial_update(self, request, *args, **kwargs):
         """Edit a DRAFT document's placeholder values (re-render + PDF invalidation)."""
         from accounts.services import is_platform_admin_viewer
+        from crm.services.generated_documents import _user_owns_document
 
         instance = self.get_object()
         if is_platform_admin_viewer(request.user):
             return Response({"detail": "ADMIN_VIEWER_CANNOT_ACT"}, status=400)
+        # Defence-in-depth (F2-3/MINOR-4): the widened registry queryset now surfaces counterparties'
+        # ISSUED documents — only the OWNER may edit (issue/cancel already gate the same way).
+        if not _user_owns_document(request.user, instance):
+            return Response({"detail": "DOCUMENT_NOT_FOUND"}, status=400)
         document, err = crm_services.update_document_values(instance, request.data.get("values", {}))
         if err:
             return Response({"detail": err}, status=400)
@@ -293,6 +315,36 @@ class GeneratedDocumentViewSet(viewsets.ModelViewSet):
         if err:
             return Response({"detail": err}, status=400)
         return Response(self.get_serializer(document).data)
+
+    @extend_schema(
+        summary="Email an issued document to its recipient (public link in body)",
+        tags=["CRM"],
+        request=inline_serializer(
+            "SendDocumentEmail",
+            fields={"to": drf_serializers.EmailField(required=False, allow_blank=True)},
+        ),
+        responses={
+            202: inline_serializer(
+                "SendDocumentEmailResult",
+                fields={"detail": drf_serializers.CharField(), "to": drf_serializers.CharField()},
+            ),
+            400: OpenApiResponse(description="Not issued / no recipient / not owned"),
+        },
+    )
+    @action(detail=True, methods=["post"], url_path="send-email", throttle_classes=[DocumentSendEmailThrottle])
+    def send_email(self, request, pk=None):
+        to_raw = (request.data.get("to") or "").strip()
+        if to_raw:
+            # Validate the override as a real email — the value is passed verbatim to the mailer,
+            # so an unvalidated `to` would let the owner aim the branded email anywhere (F2-3/MAJOR-2).
+            try:
+                drf_serializers.EmailField().run_validation(to_raw)
+            except drf_serializers.ValidationError:
+                return Response({"detail": "INVALID_EMAIL"}, status=400)
+        recipient, err = crm_services.send_document_email(self.get_object(), request.user, to=to_raw or None)
+        if err:
+            return Response({"detail": err}, status=400)
+        return Response({"detail": "EMAIL_QUEUED", "to": recipient}, status=202)
 
     @extend_schema(summary="Download the document PDF (202 + enqueue if not ready)", tags=["CRM"])
     @action(detail=True, methods=["get"], url_path="download-pdf")

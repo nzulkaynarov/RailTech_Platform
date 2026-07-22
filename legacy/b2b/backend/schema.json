@@ -11166,6 +11166,66 @@
                 }
             }
         },
+        "/api/v1/crm/generated-documents/{id}/send-email/": {
+            "post": {
+                "operationId": "crm_generated_documents_send_email_create",
+                "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (entitlement + IDOR + viewer gates).",
+                "summary": "Email an issued document to its recipient (public link in body)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Сгенерированный документ.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SendDocumentEmailRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SendDocumentEmailRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SendDocumentEmailRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SendDocumentEmailResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Not issued / no recipient / not owned"
+                    }
+                }
+            }
+        },
         "/api/v1/crm/generated-documents/generate/": {
             "post": {
                 "operationId": "crm_generated_documents_generate_create",
@@ -16346,6 +16406,43 @@
                 "responses": {
                     "200": {
                         "description": "All notifications marked as read"
+                    }
+                }
+            }
+        },
+        "/api/v1/public/documents/{token}/": {
+            "get": {
+                "operationId": "public_documents_retrieve",
+                "description": "Content-negotiated public generated document: branded HTML page or PDF by token.",
+                "summary": "Public generated-document page (HTML) or PDF by token",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "token",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Document page (browser HTML) or PDF (?export=pdf)"
+                    },
+                    "202": {
+                        "description": "PDF still rendering off-thread — retry after Retry-After seconds"
+                    },
+                    "404": {
+                        "description": "Unknown token or not an issued document"
+                    },
+                    "410": {
+                        "description": "Public link revoked or expired"
                     }
                 }
             }
@@ -21557,6 +21654,17 @@
                         "nullable": true,
                         "title": "Дата выпуска"
                     },
+                    "is_owned": {
+                        "type": "boolean",
+                        "description": "True when the requester's company owns this document — the registry shows a «Получен»\n(read-only) badge on documents that are NOT owned (II-2).",
+                        "readOnly": true
+                    },
+                    "public_url": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Public no-login link (present only for ISSUED documents that carry a minted token).",
+                        "readOnly": true
+                    },
                     "created_by_name": {
                         "type": "string",
                         "nullable": true,
@@ -21583,9 +21691,11 @@
                     "deal",
                     "deal_title",
                     "id",
+                    "is_owned",
                     "issued_at",
                     "number",
                     "pdf_available",
+                    "public_url",
                     "rendered_html",
                     "status",
                     "status_code",
@@ -27587,6 +27697,38 @@
                         "description": "Пользовательские настройки (тема, язык, часовой пояс)"
                     }
                 }
+            },
+            "SendDocumentEmailRequest": {
+                "type": "object",
+                "properties": {
+                    "to": {
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "format": "email"
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
+                    }
+                }
+            },
+            "SendDocumentEmailResult": {
+                "type": "object",
+                "properties": {
+                    "detail": {
+                        "type": "string"
+                    },
+                    "to": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "detail",
+                    "to"
+                ]
             },
             "SessionResponse": {
                 "type": "object",

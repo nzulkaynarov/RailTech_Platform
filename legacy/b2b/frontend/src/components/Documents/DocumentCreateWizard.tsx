@@ -25,6 +25,9 @@ import type { DocumentTemplate } from '@/api/documentsApi';
 interface DocumentCreateWizardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** F2 II-3: when opened from a deal card, the deal is pre-selected and its picker is locked,
+   *  so the letter is bound to that deal without the user re-choosing it. */
+  defaultDealId?: number;
 }
 
 /** The document kinds the wizard can start. Existing flows (quote/invoice/act/payment) are
@@ -46,7 +49,7 @@ const NONE = '__none__';
  * free-form «letter / arbitrary document» path. КП / invoice / act / payment reuse the
  * existing creators rather than re-implementing them.
  */
-export function DocumentCreateWizard({ open, onOpenChange }: DocumentCreateWizardProps) {
+export function DocumentCreateWizard({ open, onOpenChange, defaultDealId }: DocumentCreateWizardProps) {
   const { t } = useTranslation();
   // Gate document types on the member's CAPABILITIES, not the display context: `activeStatus`
   // defaults to BUYER (the manual context switcher was retired, ADR-0005), so a seller opening the
@@ -59,11 +62,12 @@ export function DocumentCreateWizard({ open, onOpenChange }: DocumentCreateWizar
   const [quoteOpen, setQuoteOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
 
-  // Inline «letter» state.
+  // Inline «letter» state. When opened from a deal card the deal is pre-selected and locked.
   const [templateId, setTemplateId] = useState<string>('');
-  const [dealId, setDealId] = useState<string>(NONE);
+  const [dealId, setDealId] = useState<string>(defaultDealId ? String(defaultDealId) : NONE);
   const [contactId, setContactId] = useState<string>(NONE);
   const [title, setTitle] = useState('');
+  const dealLocked = defaultDealId != null;
 
   const { data: templates, isLoading: templatesLoading } = useDocumentTemplates();
   const { data: deals } = useDeals();
@@ -79,7 +83,7 @@ export function DocumentCreateWizard({ open, onOpenChange }: DocumentCreateWizar
 
   function resetLetter() {
     setTemplateId('');
-    setDealId(NONE);
+    setDealId(defaultDealId ? String(defaultDealId) : NONE);
     setContactId(NONE);
     setTitle('');
   }
@@ -125,7 +129,9 @@ export function DocumentCreateWizard({ open, onOpenChange }: DocumentCreateWizar
       });
       toast.success(t('documentsHub.success'));
       closeWizard();
-      window.location.hash = 'other-documents';
+      // Opened from a deal card → stay on the deal (its «Документы сделки» block refreshes via the
+      // query invalidation). Standalone → jump to the registry so the new document is visible.
+      if (!dealLocked) window.location.hash = 'other-documents';
     } catch (error) {
       toast.error(translateApiError(error));
     }
@@ -243,19 +249,29 @@ export function DocumentCreateWizard({ open, onOpenChange }: DocumentCreateWizar
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="doc-wizard-deal">{t('documentsHub.dealOptional')}</Label>
-                  <Select value={dealId} onValueChange={setDealId} disabled={busy}>
-                    <SelectTrigger id="doc-wizard-deal">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={NONE}>{t('documentsHub.noContext')}</SelectItem>
-                      {(deals ?? []).map((deal) => (
-                        <SelectItem key={deal.id} value={String(deal.id)}>
-                          {deal.title || `#${deal.id}`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {dealLocked ? (
+                    // Opened from a deal card — the deal is fixed, show it read-only.
+                    <div
+                      id="doc-wizard-deal"
+                      className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-3 text-sm text-foreground"
+                    >
+                      {(deals ?? []).find((deal) => String(deal.id) === dealId)?.title || `#${dealId}`}
+                    </div>
+                  ) : (
+                    <Select value={dealId} onValueChange={setDealId} disabled={busy}>
+                      <SelectTrigger id="doc-wizard-deal">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={NONE}>{t('documentsHub.noContext')}</SelectItem>
+                        {(deals ?? []).map((deal) => (
+                          <SelectItem key={deal.id} value={String(deal.id)}>
+                            {deal.title || `#${deal.id}`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="doc-wizard-contact">{t('documentsHub.contactOptional')}</Label>

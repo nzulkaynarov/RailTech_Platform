@@ -77,6 +77,7 @@ vi.mock('@/hooks/useViewerMode', () => ({ useIsViewerMode: () => false }));
 // Heavy children irrelevant to the button under test → inert stubs.
 vi.mock('@/components/Sourcing/DealChatPanel', () => ({ DealChatPanel: () => null }));
 vi.mock('@/components/CRM/DealTimeline', () => ({ DealTimeline: () => null }));
+vi.mock('@/components/CRM/DealDocumentsCard', () => ({ DealDocumentsCard: () => null }));
 vi.mock('@/components/CRM/GenerateQuoteDialog', () => ({ GenerateQuoteDialog: () => null }));
 vi.mock('@/components/CRM/RejectQuoteDialog', () => ({ RejectQuoteDialog: () => null }));
 vi.mock('@/components/Admin/ConfirmActionDialog', () => ({ ConfirmActionDialog: () => null }));

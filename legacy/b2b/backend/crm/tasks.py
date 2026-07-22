@@ -463,3 +463,62 @@ def send_quote_email(self, quote_id: int) -> dict:
     )
     logger.info("Quote %s email sent to %s", quote_id, to_email)
     return {"quote_id": quote_id, "status": "sent", "to": to_email}
+
+
+@shared_task(
+    bind=True,
+    name="crm.send_document_email",
+    queue="pdf",
+    time_limit=600,
+    soft_time_limit=540,
+    max_retries=3,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+)
+def send_document_email(self, document_id: int, to_email: str) -> dict:
+    """Email an ISSUED generated document to its recipient (off-thread, after commit).
+
+    Ensures the PDF is rendered first (so it can be attached), and includes the public no-login
+    link (mirrors send_quote_email). Best-effort — never blocks the request path. The recipient is
+    resolved synchronously in the service (send_document_email); this task only trusts that address.
+    """
+    from notifications.emails import send_templated_email
+
+    from .models import GeneratedDocument
+    from .services.generated_documents import public_document_url
+
+    document = GeneratedDocument.objects.select_related("company", "deal", "status").get(pk=document_id)
+
+    # Re-check status at run time (F2-3/MINOR-5): the document may have been CANCELLED between the
+    # on_commit enqueue and execution (or on retry) — never mail a cancelled document.
+    if document.status_code != "ISSUED":
+        return {"document_id": document_id, "status": "skipped_not_issued"}
+
+    if not document.pdf_file:
+        _render_pdf_for("generated", document_id)
+        document.refresh_from_db()
+
+    attachments = []
+    if document.pdf_file:
+        try:
+            document.pdf_file.open("rb")
+            attachments = [(f"Document_{document.number}.pdf", document.pdf_file.read(), "application/pdf")]
+        finally:
+            document.pdf_file.close()
+
+    send_templated_email(
+        "generated_document",
+        {
+            "document_title": document.title or document.number,
+            "document_number": document.number,
+            "company_name": document.company.name if document.company else "",
+            "public_link": public_document_url(document) or "",
+        },
+        to=[to_email],
+        channel="transactional",
+        user=None,
+        attachments=attachments,
+        fail_silently=True,
+    )
+    logger.info("Generated document %s email sent to %s", document_id, to_email)
+    return {"document_id": document_id, "status": "sent", "to": to_email}

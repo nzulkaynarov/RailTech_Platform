@@ -78,6 +78,7 @@ from crm.views import (
     LeadViewSet,
     MessageViewSet,
     PaymentViewSet,
+    PublicDocumentView,
     PublicQuoteAcceptView,
     PublicQuotePageScriptView,
     PublicQuoteRejectView,
@@ -251,6 +252,9 @@ urlpatterns = (
         path("api/v1/public/quotes/<str:token>/accept/", PublicQuoteAcceptView.as_view(), name="public-quote-accept"),
         path("api/v1/public/quotes/<str:token>/reject/", PublicQuoteRejectView.as_view(), name="public-quote-reject"),
         path("api/v1/public/quotes/<str:token>/", PublicQuoteView.as_view(), name="public-quote"),
+        # Public, unauthenticated ISSUED-document surface by secret token (II-1). Content-negotiates
+        # (browser → HTML page, ?export=pdf → PDF, ARCH-03 202 pattern).
+        path("api/v1/public/documents/<str:token>/", PublicDocumentView.as_view(), name="public-document"),
         path("api/v1/system-settings/", SystemSettingsView.as_view(), name="system-settings"),
         path("api/v1/accounts/me/", MeView.as_view(), name="current-user"),
         path("api/v1/accounts/permissions/", PermissionCatalogView.as_view(), name="permission-catalog"),

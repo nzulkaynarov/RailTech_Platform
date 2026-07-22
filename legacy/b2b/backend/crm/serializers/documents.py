@@ -58,6 +58,8 @@ class GeneratedDocumentSerializer(serializers.ModelSerializer):
     contact_name = serializers.CharField(source="contact.name", read_only=True, default=None)
     created_by_name = serializers.SerializerMethodField()
     pdf_available = serializers.SerializerMethodField()
+    is_owned = serializers.SerializerMethodField()
+    public_url = serializers.SerializerMethodField()
 
     class Meta:
         model = GeneratedDocument
@@ -78,11 +80,35 @@ class GeneratedDocumentSerializer(serializers.ModelSerializer):
             "rendered_html",
             "pdf_available",
             "issued_at",
+            "is_owned",
+            "public_url",
             "created_by_name",
             "created_at",
             "updated_at",
         ]
         read_only_fields = fields
+
+    def _owner_company_ids(self):
+        request = self.context.get("request")
+        cached = self.context.get("_owner_company_ids")
+        if cached is not None:
+            return cached
+        ids = set()
+        if request is not None and getattr(request.user, "is_authenticated", False):
+            ids = set(request.user.memberships.filter(is_active=True).values_list("company_id", flat=True))
+        self.context["_owner_company_ids"] = ids
+        return ids
+
+    def get_is_owned(self, obj) -> bool:
+        """True when the requester's company owns this document — the registry shows a «Получен»
+        (read-only) badge on documents that are NOT owned (II-2)."""
+        return obj.company_id in self._owner_company_ids()
+
+    def get_public_url(self, obj) -> str | None:
+        """Public no-login link (present only for ISSUED documents that carry a minted token)."""
+        from crm.services.generated_documents import public_document_url
+
+        return public_document_url(obj)
 
     def get_deal_title(self, obj) -> str | None:
         if obj.deal_id is None:

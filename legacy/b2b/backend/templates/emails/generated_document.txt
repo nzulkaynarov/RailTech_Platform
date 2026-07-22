@@ -1,0 +1,9 @@
+Здравствуйте!
+
+{% if company_name %}Компания {{ company_name }}{% else %}Отправитель{% endif %} направила вам документ «{{ document_title }}» ({{ document_number }}).
+{% if public_link %}
+Открыть и скачать документ можно по ссылке (без регистрации):
+{{ public_link }}
+{% endif %}
+С уважением,
+команда RailTech

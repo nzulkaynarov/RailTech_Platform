@@ -31,6 +31,11 @@ from .document_placeholders import (
 # real letter/report.
 MAX_TEMPLATE_BODY_CHARS = 100_000
 
+# TTL of the public no-login link minted when a document is ISSUED (mirrors the КП public link
+# lifecycle). A generated letter/report is a point-in-time deliverable; 30 days matches the КП
+# window and keeps a stale emailed link from living forever.
+DOCUMENT_PUBLIC_TOKEN_TTL_DAYS = 30
+
 # ── Owner-company + access resolution ───────────────────────────────────────
 
 
@@ -56,6 +61,19 @@ def _user_can_access_deal(user: CustomUser, deal) -> bool:
     if getattr(user, "is_superuser", False):
         return True
     return bool(is_member_of(user, deal.company_id) or seller_company_routed_to_deal(user, deal.id))
+
+
+def _user_owns_document(user: CustomUser, document) -> bool:
+    """True if the acting user belongs to the company that OWNS the document.
+
+    The registry queryset is widened (II-2) so a counterparty sees ISSUED documents on shared
+    deals read-only — this gate keeps every MUTATION (issue/cancel) owner-only, closing the hole
+    where a buyer who can now see a seller's ISSUED document could cancel it."""
+    from accounts.services import is_member_of
+
+    if getattr(user, "is_superuser", False):
+        return True
+    return is_member_of(user, document.company_id)
 
 
 def _user_can_access_contact(user: CustomUser, contact, deal) -> bool:
@@ -250,11 +268,16 @@ def update_document_values(document, values: dict) -> Tuple[Optional[object], Op
 
 @transaction.atomic
 def issue_document(document, user: CustomUser) -> Tuple[Optional[object], Optional[str]]:
-    """DRAFT → ISSUED: freeze the document and dispatch the off-thread PDF render (ARCH-03)."""
+    """DRAFT → ISSUED: freeze the document, mint the public no-login token, dispatch the
+    off-thread PDF render (ARCH-03) and notify the deal counterparty (II-1/II-2)."""
+    import secrets
+
     from accounts.services import is_platform_admin_viewer
 
     if is_platform_admin_viewer(user):
         return None, "ADMIN_VIEWER_CANNOT_ACT"
+    if not _user_owns_document(user, document):
+        return None, "DOCUMENT_NOT_FOUND"
     # Re-check entitlement at issue time (A4/m4): a subscription may have lapsed after the DRAFT was
     # created, and issuing is what produces the deliverable PDF.
     if not has_entitlement(document.company_id, FeatureKey.DOCUMENT_GENERATE):
@@ -263,13 +286,49 @@ def issue_document(document, user: CustomUser) -> Tuple[Optional[object], Option
         return None, "DOCUMENT_ALREADY_ISSUED"
     document.status = _status(GeneratedDocumentStatusCode.ISSUED)
     document.issued_at = timezone.now()
-    document.save(update_fields=["status", "issued_at", "updated_at"])
+    fields = ["status", "issued_at", "updated_at"]
+    # Mint the public link ONCE, on issue (never on DRAFT) — the same pattern as Quote.public_access_token.
+    if not document.public_access_token:
+        document.public_access_token = secrets.token_urlsafe(32)
+        document.public_token_expires_at = timezone.now() + timezone.timedelta(days=DOCUMENT_PUBLIC_TOKEN_TTL_DAYS)
+        fields += ["public_access_token", "public_token_expires_at"]
+    document.save(update_fields=fields)
 
     from ..tasks import render_document_pdf
 
     document_id = document.id
     transaction.on_commit(lambda: render_document_pdf.delay("generated", document_id))
+    _notify_document_issued_to_counterparty(document)
     return document, None
+
+
+def _notify_document_issued_to_counterparty(document) -> None:
+    """Alert the deal's OTHER-side team that a document was issued to them (read-only «получено»).
+
+    FK→deal so the deep-link derives from it (platform convention, mirrors the invoice notify).
+    Only fires when the document is bound to a deal with a real counterparty company that is NOT the
+    issuing company — a solo deal (deal.company_id is None) has no one to notify."""
+    from notifications.models import Notification, NotificationType
+    from notifications.services import push_notification_ws
+
+    deal = document.deal
+    if deal is None or not deal.company_id or deal.company_id == document.company_id:
+        return
+    info_type = NotificationType.objects.filter(code="INFO").first()
+    member_user_ids = deal.company.members.filter(is_active=True).values_list("user_id", flat=True)
+    notifications = [
+        Notification(
+            user_id=uid,
+            type=info_type,
+            title="Получен документ",
+            message=f"По сделке #{deal.pk} вам направлен документ {document.number}",
+            link="/crm/documents",
+            deal=deal,
+        )
+        for uid in member_user_ids
+    ]
+    for notif in Notification.objects.bulk_create(notifications):
+        push_notification_ws(notif)
 
 
 @transaction.atomic
@@ -279,6 +338,8 @@ def cancel_document(document, user: CustomUser) -> Tuple[Optional[object], Optio
 
     if is_platform_admin_viewer(user):
         return None, "ADMIN_VIEWER_CANNOT_ACT"
+    if not _user_owns_document(user, document):
+        return None, "DOCUMENT_NOT_FOUND"
     if document.status_code == GeneratedDocumentStatusCode.CANCELLED:
         return None, "DOCUMENT_ALREADY_CANCELLED"
     document.status = _status(GeneratedDocumentStatusCode.CANCELLED)
@@ -290,6 +351,108 @@ def cancel_document(document, user: CustomUser) -> Tuple[Optional[object], Optio
         fields.append("pdf_file")
     document.save(update_fields=fields)
     return document, None
+
+
+# ── Public link + delivery (II-1 / II-2) ─────────────────────────────────────
+
+
+def public_document_gate(document) -> Optional[str]:
+    """Reachability of a document's PUBLIC (no-login) token link. Returns an error CODE
+    (mapped to 404/410 by the view) or None when live. ONLY an ISSUED document is ever
+    served publicly — a DRAFT (no token) or CANCELLED document is never reachable."""
+    from django.utils import timezone
+
+    if document is None or document.status_code != GeneratedDocumentStatusCode.ISSUED:
+        return "NOT_FOUND"
+    if document.public_token_revoked:
+        return "DOCUMENT_LINK_REVOKED"
+    if document.public_token_expires_at and document.public_token_expires_at < timezone.now():
+        return "DOCUMENT_LINK_EXPIRED"
+    return None
+
+
+def public_document_url(document) -> Optional[str]:
+    """Public no-login link built from the minted token, or None before issue. ONE place owns
+    the URL pattern (Rule 8) — shared by the send-email task and the serializer."""
+    from django.conf import settings
+
+    token = getattr(document, "public_access_token", None)
+    if not token:
+        return None
+    return f"{settings.FRONTEND_URL}/api/v1/public/documents/{token}/"
+
+
+def party_visible_document_q(user):
+    """Q matching ISSUED documents a user may see as the COUNTERPARTY — the «полученные письма»
+    read-only surface (II-2). Combined by the ViewSet with the own-company clause; DRAFT/CANCELLED
+    of another company are never included.
+
+    Hidden-competition invariant (ADR-0003, F2-3/MAJOR-1): on a multi-seller deal a routed seller
+    must NEVER see a CO-ROUTED competitor's document. So the seller-side clause is confined to
+    documents whose author is the deal's BUYER (`company == deal.company`) — a seller sees only the
+    buyer's letters addressed to the deal, never another seller's. The buyer-side clause (the user
+    IS the deal owner) may see any seller's ISSUED document on their own deal (it is addressed to
+    them)."""
+    from django.db.models import F, Q
+
+    company_ids = list(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
+    seller_company_ids = list(
+        user.memberships.filter(is_active=True, can_sell=True).values_list("company_id", flat=True)
+    )
+    # As the buyer (deal owner): any ISSUED document on your deal is addressed to you.
+    as_buyer = Q(deal__company_id__in=company_ids)
+    # As a routed seller: ONLY the buyer's own documents (company == deal.company) — never a
+    # co-routed competitor's, whose company_id differs from the deal owner's.
+    as_seller = Q(deal__seller_routings__seller_company_id__in=seller_company_ids) & Q(
+        company_id=F("deal__company_id")
+    )
+    return Q(status__code=GeneratedDocumentStatusCode.ISSUED) & (as_buyer | as_seller)
+
+
+def resolve_document_recipient(document, override_email=None):
+    """The document's outgoing email recipient as ``(email, display_name)``, or ``None``.
+
+    An explicit override (seller typed an address) wins; else the document's own contact, then the
+    deal's offline contact, then the deal's registered buyer, then the buyer company's email."""
+    if override_email:
+        return override_email, override_email
+    contact = getattr(document, "contact", None)
+    if contact and contact.email:
+        return contact.email, contact.name
+    deal = document.deal
+    if deal is not None:
+        deal_contact = getattr(deal, "contact", None)
+        if deal_contact and deal_contact.email:
+            return deal_contact.email, deal_contact.name
+        client = getattr(deal, "client", None)
+        if client and client.email:
+            return client.email, (client.get_full_name() or client.email)
+        if deal.company_id and deal.company and deal.company.email:
+            return deal.company.email, deal.company.name
+    return None
+
+
+def send_document_email(document, user: CustomUser, *, to=None) -> Tuple[Optional[object], Optional[str]]:
+    """Email an ISSUED document (public link in the body) to its recipient. Thin: gate → resolve
+    recipient → enqueue the off-thread task (ARCH-03). Returns (recipient_email, None) or (None, CODE)."""
+    from accounts.services import is_platform_admin_viewer
+
+    if is_platform_admin_viewer(user):
+        return None, "ADMIN_VIEWER_CANNOT_ACT"
+    if not _user_owns_document(user, document):
+        return None, "DOCUMENT_NOT_FOUND"
+    if document.status_code != GeneratedDocumentStatusCode.ISSUED:
+        return None, "DOCUMENT_NOT_ISSUED"
+    recipient = resolve_document_recipient(document, override_email=to)
+    if recipient is None:
+        return None, "DOCUMENT_NO_RECIPIENT"
+    to_email, _to_name = recipient
+
+    from ..tasks import send_document_email as send_document_email_task
+
+    document_id = document.id
+    transaction.on_commit(lambda: send_document_email_task.delay(document_id, to_email))
+    return to_email, None
 
 
 def _render_generated_pdf(document) -> None:
