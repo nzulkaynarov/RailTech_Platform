@@ -34,6 +34,20 @@ export interface UpdateTemplatePayload {
   is_active?: boolean;
 }
 
+// Live-preview: server renders {{code}} whitelist replacement + returns unknown placeholders as
+// warnings (body sanitised server-side). See spec-documents-hub §placeholders.
+export interface TemplatePreviewResult {
+  rendered_html: string;
+  placeholders_used: string[];
+  warnings: string[];
+}
+
+// Placeholder catalog is static reference data (Bitrix24 insert-chip pattern).
+export interface PlaceholderCatalogEntry {
+  code: string;
+  label: string;
+}
+
 // ─── Generated documents (rendered instances) ─────────────────────
 
 export type GeneratedDocumentStatus = 'DRAFT' | 'ISSUED' | 'CANCELLED';
@@ -94,6 +108,19 @@ export const documentTemplatesApi = {
   copy: async (id: number) => {
     const response = await apiClient.post<DocumentTemplate>(`crm/document-templates/${id}/copy/`);
     return response.data;
+  },
+  preview: async (bodyHtml: string) => {
+    const response = await apiClient.post<TemplatePreviewResult>('crm/document-templates/preview/', {
+      body_html: bodyHtml,
+    });
+    return response.data;
+  },
+  placeholders: async () => {
+    // Backend wraps the catalogue as { placeholders: [...] } (avoids a top-level JSON array).
+    const response = await apiClient.get<{ placeholders: PlaceholderCatalogEntry[] }>(
+      'crm/document-templates/placeholders/',
+    );
+    return response.data.placeholders;
   },
 };
 

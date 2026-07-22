@@ -10536,6 +10536,82 @@
                 }
             }
         },
+        "/api/v1/crm/document-templates/placeholders/": {
+            "get": {
+                "operationId": "crm_document_templates_placeholders_retrieve",
+                "description": "Advertised `{{code}}` placeholders (code + human label) for the editor helper.",
+                "summary": "Placeholder catalogue for the template editor",
+                "tags": [
+                    "CRM"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DocumentPlaceholderCatalog"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/crm/document-templates/preview/": {
+            "post": {
+                "operationId": "crm_document_templates_preview_create",
+                "description": "Render the editor body on sample data. Auth only — no settings.edit needed.",
+                "summary": "Live-preview a template body against sample data (no DB write)",
+                "tags": [
+                    "CRM"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DocumentTemplatePreviewRequestRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DocumentTemplatePreviewRequestRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DocumentTemplatePreviewRequestRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DocumentTemplatePreview"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
         "/api/v1/crm/fulfillments/": {
             "get": {
                 "operationId": "crm_fulfillments_list",
@@ -20674,6 +20750,35 @@
                 "type": "string",
                 "description": "* `ITEM` - Позиция\n* `SECTION` - Раздел\n* `NOTE` - Заметка"
             },
+            "DocumentPlaceholder": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "code",
+                    "label"
+                ]
+            },
+            "DocumentPlaceholderCatalog": {
+                "type": "object",
+                "properties": {
+                    "placeholders": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DocumentPlaceholder"
+                        }
+                    }
+                },
+                "required": [
+                    "placeholders"
+                ]
+            },
             "DocumentTemplate": {
                 "type": "object",
                 "description": "Company template CRUD. `company`/`placeholders_used` are server-derived.",
@@ -20751,6 +20856,39 @@
                     "placeholders_used",
                     "updated_at"
                 ]
+            },
+            "DocumentTemplatePreview": {
+                "type": "object",
+                "properties": {
+                    "rendered_html": {
+                        "type": "string"
+                    },
+                    "placeholders_used": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "warnings": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "placeholders_used",
+                    "rendered_html",
+                    "warnings"
+                ]
+            },
+            "DocumentTemplatePreviewRequestRequest": {
+                "type": "object",
+                "properties": {
+                    "body_html": {
+                        "type": "string"
+                    }
+                }
             },
             "DocumentTemplateRequest": {
                 "type": "object",

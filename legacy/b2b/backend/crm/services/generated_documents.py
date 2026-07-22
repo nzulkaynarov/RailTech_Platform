@@ -6,6 +6,7 @@ the ViewSets are thin wrappers. Placeholder substitution / sanitisation is deleg
 to crm.services.document_placeholders (SSTI-safe flat replacement).
 """
 
+from types import SimpleNamespace
 from typing import Optional, Tuple
 
 from django.core.exceptions import ValidationError
@@ -129,6 +130,40 @@ def update_template(template, *, name=None, kind_code=None, body_html=None, is_a
         fields.append("is_active")
     template.save(update_fields=fields)
     return template
+
+
+# ── Live preview (editor) ────────────────────────────────────────────────────
+
+
+def _demo_context(company, user) -> PlaceholderContext:
+    """Sample PlaceholderContext for the editor preview: the caller's REAL company
+    (so ``company.*`` shows their own data) plus plausible fictional deal / counterparty /
+    quote / contract stand-ins. Lightweight SimpleNamespace stubs — nothing is persisted."""
+    counterparty = SimpleNamespace(name="ООО Пример", inn="301234567")
+    deal = SimpleNamespace(id=1024, title="Демо-сделка", company_id=1, company=counterparty)
+    contact = SimpleNamespace(name="ООО Пример", company_id=1, company=counterparty)
+    quote = SimpleNamespace(number="КП-2026-00042", total_incl_vat="12 500 000 UZS")
+    contract = SimpleNamespace(number="ДГ-2026-00007")
+    return PlaceholderContext(
+        company=company, deal=deal, contact=contact, quote=quote, contract=contract, user=user
+    )
+
+
+def preview_template(company, user: CustomUser, *, body_html: str) -> dict:
+    """Render a template body against SAMPLE data for the live editor preview.
+
+    Sanitises the body, resolves placeholders on a demo context (real company + fictional
+    deal/counterparty/quote/contract), and returns the rendered HTML plus the resolved and
+    unknown placeholder codes. Never touches the DB — no document/template is created."""
+    if len(body_html or "") > MAX_TEMPLATE_BODY_CHARS:
+        raise ValidationError("TEMPLATE_BODY_TOO_LARGE")
+    clean_html = sanitize_template_html(body_html)
+    rendered_html, values, warnings = render_template(clean_html, _demo_context(company, user))
+    return {
+        "rendered_html": rendered_html,
+        "placeholders_used": list(values.keys()),
+        "warnings": warnings,
+    }
 
 
 # ── Generation lifecycle ─────────────────────────────────────────────────────

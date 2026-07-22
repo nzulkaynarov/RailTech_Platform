@@ -50,6 +50,18 @@ export const useCopyTemplate = () => {
   });
 };
 
+// Live-preview mutation — the editor debounces the body before calling.
+export const usePreviewTemplate = () => useMutation({
+  mutationFn: (bodyHtml: string) => documentTemplatesApi.preview(bodyHtml),
+});
+
+// Static placeholder catalog — long staleTime, it is reference data.
+export const usePlaceholderCatalog = () => useQuery({
+  queryKey: ['document-template-placeholders'],
+  queryFn: () => documentTemplatesApi.placeholders(),
+  staleTime: 1000 * 60 * 60, // 1h — server-side whitelist rarely changes
+});
+
 // ─── Generated documents ──────────────────────────────────────────
 
 export const useGeneratedDocuments = (params?: { status?: string; deal?: number; page?: number }) =>

@@ -47,17 +47,18 @@ describe('buildSettingsSections — матрица гейтинга (spec §2.2 
     expect(defaultSettingsSection(gate)).toBe('platform');
   });
 
-  it('OWNER компании-продавца (can_sell): все 8 tenant-секций, без platform', () => {
+  it('OWNER компании-продавца (can_sell): все 9 tenant-секций, без platform', () => {
     const gate = makeGate({ isOwner: true, capabilities: makeCapabilities({ can_sell: true }) });
     expect(sectionKeys(gate)).toEqual([
-      'profile', 'security', 'company', 'documents', 'defaults', 'numbering', 'templates', 'team',
+      'profile', 'security', 'company', 'documents', 'defaults', 'numbering', 'templates',
+      'doc-templates', 'team',
     ]);
     expect(defaultSettingsSection(gate)).toBe('company');
   });
 
-  it('OWNER компании-покупателя: без documents/defaults/numbering/templates', () => {
+  it('OWNER компании-покупателя: без seller-секций, но doc-templates виден (письма нужны обоим)', () => {
     const gate = makeGate({ isOwner: true, capabilities: makeCapabilities({ can_sell: false }) });
-    expect(sectionKeys(gate)).toEqual(['profile', 'security', 'company', 'team']);
+    expect(sectionKeys(gate)).toEqual(['profile', 'security', 'company', 'doc-templates', 'team']);
     expect(defaultSettingsSection(gate)).toBe('company');
   });
 
@@ -69,7 +70,8 @@ describe('buildSettingsSections — матрица гейтинга (spec §2.2 
       companySells: false,
       capabilities: makeCapabilities({ can_sell: true }),
     });
-    expect(sectionKeys(gate)).toEqual(['profile', 'security', 'company', 'team']);
+    // seller-секции скрыты; company + doc-templates остаются (canEditCompanySettings через OWNER).
+    expect(sectionKeys(gate)).toEqual(['profile', 'security', 'company', 'doc-templates', 'team']);
   });
 
   it('член команды без прав: только profile/security/team', () => {

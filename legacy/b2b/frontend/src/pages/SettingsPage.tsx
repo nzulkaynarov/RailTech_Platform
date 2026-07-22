@@ -23,6 +23,7 @@ import { SecuritySection } from '@/components/Settings/SecuritySection';
 import { PlatformSettings } from '@/components/Settings/PlatformSettings';
 import { CompanyTeamSettings } from '@/components/Cabinet/CompanyTeamSettings';
 import { ChargeTemplatesSettings } from '@/components/Cabinet/ChargeTemplatesSettings';
+import { DocumentTemplatesSettings } from '@/components/Settings/DocumentTemplatesSettings';
 import { CompanyDocumentProfileSettings } from '@/components/Cabinet/CompanyDocumentProfileSettings';
 import { CompanyDefaultsSettings } from '@/components/Cabinet/CompanyDefaultsSettings';
 import { CompanyNumberingSettings } from '@/components/Cabinet/CompanyNumberingSettings';
@@ -83,6 +84,8 @@ function SectionContent({ sectionKey, isAdmin }: { sectionKey: SettingsSectionKe
       return <CompanyNumberingSettings />;
     case 'templates':
       return <ChargeTemplatesSettings />;
+    case 'doc-templates':
+      return <DocumentTemplatesSettings />;
     case 'team':
       return <CompanyTeamSettings />;
     case 'platform':

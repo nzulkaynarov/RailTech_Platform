@@ -1624,6 +1624,44 @@
     "deleteTitle": "Delete charge template?",
     "deleteConfirm": "The template will be deleted. This cannot be undone."
   },
+  "docTemplatesSettings": {
+    "title": "Document templates",
+    "subtitle": "Your company's HTML letter and report templates. Placeholders from the catalog are filled with deal data when a document is generated.",
+    "newTemplate": "New template",
+    "editTemplate": "Edit template",
+    "myTemplates": "My templates",
+    "samples": "Platform samples",
+    "sampleBadge": "Sample",
+    "copyToMe": "Copy to me",
+    "emptyOwned": "No templates yet. Create a new one or copy a platform sample.",
+    "active": "Active",
+    "inactive": "Disabled",
+    "placeholders": "Placeholder catalog",
+    "placeholdersHint": "Click to insert a placeholder into the text at the cursor.",
+    "preview": "Preview",
+    "previewEmpty": "Start typing the template body — a preview will appear here.",
+    "unknownPlaceholders": "Unknown placeholders: {{list}}. They stay in the text as-is.",
+    "deleteTitle": "Delete document template?",
+    "deleteConfirm": "The template will be deleted. This cannot be undone.",
+    "fields": {
+      "name": "Name",
+      "namePlaceholder": "e.g. Cover letter",
+      "kind": "Type",
+      "body": "Template body",
+      "bodyPlaceholder": "HTML with placeholders…"
+    },
+    "kind": {
+      "letter": "Letter",
+      "report": "Report",
+      "custom": "Custom"
+    },
+    "toast": {
+      "created": "Template created",
+      "updated": "Template updated",
+      "deleted": "Template deleted",
+      "copied": "Template copied to you"
+    }
+  },
   "team": {
     "title": "Company Team",
     "subtitle": "Manage employee access to the dashboard",
@@ -2675,7 +2713,8 @@
       "documentProfile": "Documents & branding",
       "companyAdmin": "Company settings",
       "defaults": "Quote defaults",
-      "numbering": "Document numbering"
+      "numbering": "Document numbering",
+      "docTemplates": "Document templates"
     },
     "platform": {
       "title": "Platform settings",
@@ -4881,6 +4920,7 @@
     "DOCUMENT_ALREADY_CANCELLED": "The document is already cancelled",
     "DOCUMENT_CANCELLED": "The document is cancelled",
     "TEMPLATE_BODY_TOO_LARGE": "The template body is too large",
+    "TEMPLATE_NAME_REQUIRED": "Please enter a template name",
     "TEMPLATE_NOT_FOUND": "Template not found",
     "TEMPLATE_ID_REQUIRED": "No template selected",
     "TEMPLATE_NOT_EDITABLE": "This template cannot be edited",

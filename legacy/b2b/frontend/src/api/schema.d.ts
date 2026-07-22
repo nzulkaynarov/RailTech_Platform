@@ -3640,6 +3640,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/crm/document-templates/placeholders/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Placeholder catalogue for the template editor
+         * @description Advertised `{{code}}` placeholders (code + human label) for the editor helper.
+         */
+        get: operations["crm_document_templates_placeholders_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/document-templates/preview/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Live-preview a template body against sample data (no DB write)
+         * @description Render the editor body on sample data. Auth only — no settings.edit needed.
+         */
+        post: operations["crm_document_templates_preview_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/fulfillments/": {
         parameters: {
             query?: never;
@@ -7373,6 +7413,13 @@ export interface components {
          * @enum {string}
          */
         DisplayTypeEnum: "ITEM" | "SECTION" | "NOTE";
+        DocumentPlaceholder: {
+            code: string;
+            label: string;
+        };
+        DocumentPlaceholderCatalog: {
+            placeholders: components["schemas"]["DocumentPlaceholder"][];
+        };
         /** @description Company template CRUD. `company`/`placeholders_used` are server-derived. */
         DocumentTemplate: {
             readonly id: number;
@@ -7414,6 +7461,14 @@ export interface components {
              * Format: date-time
              */
             readonly updated_at: string;
+        };
+        DocumentTemplatePreview: {
+            rendered_html: string;
+            placeholders_used: string[];
+            warnings: string[];
+        };
+        DocumentTemplatePreviewRequestRequest: {
+            body_html?: string;
         };
         /** @description Company template CRUD. `company`/`placeholders_used` are server-derived. */
         DocumentTemplateRequest: {
@@ -18035,6 +18090,57 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["DocumentTemplate"];
                 };
+            };
+        };
+    };
+    crm_document_templates_placeholders_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentPlaceholderCatalog"];
+                };
+            };
+        };
+    };
+    crm_document_templates_preview_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["DocumentTemplatePreviewRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["DocumentTemplatePreviewRequestRequest"];
+                "multipart/form-data": components["schemas"]["DocumentTemplatePreviewRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentTemplatePreview"];
+                };
+            };
+            /** @description Validation error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

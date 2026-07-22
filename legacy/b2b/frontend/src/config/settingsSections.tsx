@@ -24,6 +24,7 @@ export type SettingsSectionKey =
   | 'defaults'
   | 'numbering'
   | 'templates'
+  | 'doc-templates'
   | 'team'
   | 'platform';
 
@@ -90,6 +91,12 @@ const SECTION_RULES: SectionRule[] = [
     def: { key: 'templates', labelKey: 'settings.tabs.templates' },
     visible: (input) =>
       !input.isAdmin && canEditCompanySettings(input) && input.capabilities.can_sell && input.companySells,
+  },
+  // Шаблоны документов — письма/акты нужны И покупателю, И продавцу, поэтому гейт только
+  // на company-admin (canEditCompanySettings), БЕЗ can_sell/companySells (spec-documents-hub §4).
+  {
+    def: { key: 'doc-templates', labelKey: 'settings.tabs.docTemplates' },
+    visible: (input) => !input.isAdmin && canEditCompanySettings(input),
   },
   // Team — все не-ADMIN (инвайт-форма гейтится внутри CompanyTeamSettings).
   { def: { key: 'team', labelKey: 'settings.tabs.team' }, visible: (input) => !input.isAdmin },

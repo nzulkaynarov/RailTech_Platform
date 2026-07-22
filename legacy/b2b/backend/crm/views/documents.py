@@ -115,6 +115,73 @@ class DocumentTemplateViewSet(viewsets.ModelViewSet):
         )
         return Response(self.get_serializer(template).data, status=201)
 
+    @extend_schema(
+        summary="Live-preview a template body against sample data (no DB write)",
+        tags=["CRM"],
+        request=inline_serializer(
+            "DocumentTemplatePreviewRequest",
+            fields={"body_html": drf_serializers.CharField(required=False, allow_blank=True)},
+        ),
+        responses={
+            200: inline_serializer(
+                "DocumentTemplatePreview",
+                fields={
+                    "rendered_html": drf_serializers.CharField(),
+                    "placeholders_used": drf_serializers.ListField(child=drf_serializers.CharField()),
+                    "warnings": drf_serializers.ListField(child=drf_serializers.CharField()),
+                },
+            ),
+            400: OpenApiResponse(description="Validation error"),
+        },
+    )
+    @action(detail=False, methods=["post"], url_path="preview")
+    def preview(self, request):
+        """Render the editor body on sample data. Auth only — no settings.edit needed."""
+        from django.core.exceptions import ValidationError as DjangoValidationError
+
+        from accounts.models import Company
+
+        company_id = crm_services.resolve_owner_company_id(request.user)
+        if not company_id:
+            return Response({"detail": "NO_COMPANY"}, status=400)
+        try:
+            result = crm_services.preview_template(
+                Company.objects.get(pk=company_id),
+                request.user,
+                body_html=request.data.get("body_html", ""),
+            )
+        except DjangoValidationError as exc:
+            return Response({"detail": exc.messages[0]}, status=400)
+        return Response(result)
+
+    @extend_schema(
+        summary="Placeholder catalogue for the template editor",
+        tags=["CRM"],
+        responses={
+            200: inline_serializer(
+                "DocumentPlaceholderCatalog",
+                fields={
+                    "placeholders": drf_serializers.ListField(
+                        child=inline_serializer(
+                            "DocumentPlaceholder",
+                            fields={
+                                "code": drf_serializers.CharField(),
+                                "label": drf_serializers.CharField(),
+                            },
+                        )
+                    )
+                },
+            )
+        },
+    )
+    @action(detail=False, methods=["get"], url_path="placeholders")
+    def placeholders(self, request):
+        """Advertised `{{code}}` placeholders (code + human label) for the editor helper."""
+        from crm.services.document_placeholders import PLACEHOLDER_CATALOG
+
+        catalog = [{"code": code, "label": label} for code, label in PLACEHOLDER_CATALOG.items()]
+        return Response({"placeholders": catalog})
+
 
 class GeneratedDocumentViewSet(viewsets.ModelViewSet):
     """Rendered documents registry. List/retrieve are company-scoped; generation and
