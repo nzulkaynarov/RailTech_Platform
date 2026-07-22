@@ -69,6 +69,7 @@ def world(lookups):
     return {
         "dual": dual,
         "buyer": buyer,
+        "seller_co": seller_co,
         "own_deal": own_deal,
         "other_deal": other_deal,
         "seller_quote": seller_quote,
@@ -145,3 +146,32 @@ def test_pure_buyer_forged_header_sees_no_seller_quotes(world):
         resp = _client(world["buyer"], ctx=ctx).get("/api/v1/crm/quotes/")
         assert resp.status_code == 200
         assert world["seller_quote"].id not in _ids(resp)  # seller's КП — never visible to a pure buyer
+
+
+def test_seller_retrieves_own_company_less_deal_in_buyer_context(world):
+    """A seller's own «калькулятор» deal (company=None) is a seller artefact, invisible to the
+    buyer-company scope. RETRIEVE of that SPECIFIC deal must still succeed in the default BUYER
+    context (routing resolved via force=True), while a NON-party seller still 404s — no leak.
+    Regression guard for the request-detail / КП-builder 404 on solo deals."""
+    from accounts.models import Company, CompanyType, VerificationStatus
+    from crm.models import Deal, DealSellerRouting, DealStage
+
+    draft = DealStage.objects.get(code="DRAFT")
+    solo = Deal.objects.create(title="calc", company=None, stage=draft)  # no buyer
+    DealSellerRouting.objects.create(deal=solo, seller_company=world["seller_co"])
+
+    # The owning seller opens it in BUYER context (the SPA default) → 200.
+    resp = _client(world["dual"], ctx="BUYER").get(f"/api/v1/crm/deals/{solo.id}/")
+    assert resp.status_code == 200
+    assert resp.json()["id"] == solo.id
+    # It never appears in the buyer-context LIST (list stays context-scoped).
+    assert solo.id not in _ids(_client(world["dual"], ctx="BUYER").get("/api/v1/crm/deals/"))
+
+    # A different seller NOT routed to this deal cannot open it (confidentiality preserved).
+    l2 = VerificationStatus.objects.get(code="L2_VERIFIED")
+    other_co = Company.objects.create(name="Other Seller", inn="S9", verification_status=l2)
+    other_co.types.add(CompanyType.objects.get(code="SUPPLIER"))
+    intruder = _member(other_co, "intruder@t.test", can_sell=True, can_buy=False)
+    for ctx in ("BUYER", "SELLER"):
+        r = _client(intruder, ctx=ctx).get(f"/api/v1/crm/deals/{solo.id}/")
+        assert r.status_code == 404
