@@ -51,6 +51,29 @@ export function InvoicesPage() {
   const [payOpen, setPayOpen] = useState(false);
 
   const { data: invoices, isLoading, isError, refetch } = useInvoices(undefined);
+
+  // WP-G2 — deep link `#invoices?open=<id>` (the create-invoice wizard lands the seller here on
+  // the new DRAFT's editor). Open the Sheet from the id, then strip the param so a manual close /
+  // reload doesn't reopen it. `selected` derives from the live list cache, so the Sheet appears
+  // once the just-created invoice is present after the create mutation's invalidation.
+  useEffect(() => {
+    const applyDeepLink = () => {
+      const query = window.location.hash.split('?')[1];
+      const openId = query ? new URLSearchParams(query).get('open') : null;
+      const parsed = openId ? Number(openId) : NaN;
+      if (Number.isFinite(parsed) && parsed > 0) {
+        setSelectedId(parsed);
+        window.history.replaceState(
+          { ...(window.history.state || {}) },
+          '',
+          `${window.location.pathname}${window.location.search}#invoices`,
+        );
+      }
+    };
+    applyDeepLink();
+    window.addEventListener('hashchange', applyDeepLink);
+    return () => window.removeEventListener('hashchange', applyDeepLink);
+  }, []);
   // Render the detail Sheet from the LIVE query cache (not a captured snapshot) so
   // issue/cancel/save/generate-act always reflect fresh data — the canon shared with
   // ContractsPage/ActsPage/OtherDocuments. A mutation invalidates ['invoices'] → the

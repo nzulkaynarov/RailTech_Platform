@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { CheckCircle2, ChevronRight, Copy, Eye, FilePlus2, Link2Off, Loader2, Send, XCircle } from 'lucide-react';
+import { CheckCircle2, ChevronRight, Copy, Eye, FilePlus2, Files, Link2Off, Loader2, Send, XCircle } from 'lucide-react';
 import type { Deal, Quote } from '@/api/crmApi';
 import { publicQuoteUrl, resolveDecision } from '@/lib/quoteSend';
-import { useRevokePublicLink, useCreateQuote } from '@/hooks/useCRM';
+import { useRevokePublicLink, useCreateQuote, useDuplicateQuote } from '@/hooks/useCRM';
 import { translateApiError } from '@/lib/apiError';
 import { Button } from '@/components/ui/button';
 import {
@@ -44,6 +44,7 @@ export function QuoteSentPanel({ deal, quote }: QuoteSentPanelProps) {
   const { t } = useTranslation();
   const revoke = useRevokePublicLink();
   const createQuote = useCreateQuote();
+  const duplicateQuote = useDuplicateQuote();
   const [revokeOpen, setRevokeOpen] = useState(false);
   const [newVersionOpen, setNewVersionOpen] = useState(false);
 
@@ -82,6 +83,19 @@ export function QuoteSentPanel({ deal, quote }: QuoteSentPanelProps) {
         onError: (err) => toast.error(translateApiError(err)),
       },
     );
+  };
+
+  // WP-G1 — one-click «Дублировать» (Odoo Duplicate): deep-copy this КП into a new DRAFT version
+  // and drop the seller straight into the builder of the filled copy. No confirm modal — Odoo
+  // duplicates on one click; the copy is just a draft, harmless if unwanted (PRODUCT RULE 2).
+  const duplicate = () => {
+    duplicateQuote.mutate(quote.id, {
+      onSuccess: (newQuote) => {
+        toast.success(t('sentPanel.duplicated'));
+        window.location.hash = `deal-quote/${newQuote.deal}`;
+      },
+      onError: (err) => toast.error(translateApiError(err)),
+    });
   };
 
   return (
@@ -127,6 +141,11 @@ export function QuoteSentPanel({ deal, quote }: QuoteSentPanelProps) {
         {!!link && quote.public_token_revoked && (
           <span className="text-xs text-muted-foreground">{t('sentPanel.linkRevokedNote')}</span>
         )}
+        {/* «Дублировать» (fills a new draft) sits beside «Новая версия» (empty next version). */}
+        <Button variant="ghost" size="sm" className="h-7 gap-1.5 text-xs" onClick={duplicate} disabled={duplicateQuote.isPending}>
+          {duplicateQuote.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Files className="h-3.5 w-3.5" aria-hidden="true" />}
+          {t('sentPanel.duplicate')}
+        </Button>
         <Button variant="ghost" size="sm" className="h-7 gap-1.5 text-xs" onClick={() => setNewVersionOpen(true)} disabled={createQuote.isPending}>
           {createQuote.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FilePlus2 className="h-3.5 w-3.5" aria-hidden="true" />}
           {t('sentPanel.newVersion')}

@@ -14,6 +14,7 @@ import { QuoteSentPanel } from '@/components/CRM/QuoteSentPanel';
 vi.mock('@/hooks/useCRM', () => ({
   useRevokePublicLink: () => ({ mutate: vi.fn(), isPending: false }),
   useCreateQuote: () => ({ mutate: vi.fn(), isPending: false }),
+  useDuplicateQuote: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 const deal = { id: 42, created_at: '' } as Deal;
