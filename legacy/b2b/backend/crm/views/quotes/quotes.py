@@ -305,6 +305,40 @@ class QuoteViewSet(QuoteApprovalMixin, OptimisticLockingMixin, viewsets.ModelVie
         return Response(self.get_serializer(quote).data)
 
     @extend_schema(
+        summary="Duplicate a КП into a new DRAFT version (Odoo «Duplicate»)",
+        description=(
+            "Deep-copy this КП into a NEW DRAFT quote on the SAME deal (version = max+1): all line "
+            "items (incl. sections / notes / optional lines and per-line margin), all document "
+            "charges, and the КП settings. The public link, PDF, КП number and freeze/approve "
+            "artefacts are NOT copied, and the FX snapshot is re-frozen at current rates on the "
+            "copy's first recalc. Same seller-side authorization as building a КП (quote.build)."
+        ),
+        request=None,
+        responses={
+            201: QuoteSerializer,
+            403: OpenApiResponse(description="Role not permitted (ROLE_NOT_PERMITTED)"),
+            404: OpenApiResponse(description="Quote not found"),
+        },
+        tags=["CRM"],
+    )
+    @action(detail=True, methods=["post"], url_path="duplicate", permission_classes=[IsAuthenticated])
+    def duplicate(self, request, pk=None):
+        """Deep-copy a КП into a new DRAFT (thin wrapper, Rule 8).
+
+        Anchored to the КП-owning company like send-to-client, so it fetches the quote directly
+        rather than through the deal-company-scoped get_queryset."""
+        from crm.services import duplicate_quote
+        from crm.services.quotes import can_duplicate_quote
+
+        quote = Quote.objects.select_related("status", "deal").filter(pk=pk).first()
+        if quote is None:
+            return Response({"detail": "QUOTE_NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)
+        if not can_duplicate_quote(request.user, quote):
+            return _chain_error_response("ROLE_NOT_PERMITTED")
+        new_quote = duplicate_quote(quote.pk, request.user)
+        return Response(self.get_serializer(new_quote).data, status=status.HTTP_201_CREATED)
+
+    @extend_schema(
         summary="Revoke the public no-login link of a sent КП",
         description="Seller pulls the shared client link (post-send panel). Idempotent; further "
         "opens return 410 QUOTE_LINK_REVOKED. Same authorization as send-to-client.",
