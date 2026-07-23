@@ -64,6 +64,10 @@ export interface CompanyDocumentProfile {
 	signatory_position?: string;
 	footer_text?: string;
 	accent_color?: string;
+	// D2 document theme (Odoo Document Layout model) — one theme drives ALL the company's PDFs.
+	secondary_color?: string;
+	layout_preset?: DocumentLayoutPreset;
+	font_family?: DocumentFontFamily;
 	use_company_defaults?: boolean;
 	// P3 layout toggles — what the seller shows on its documents.
 	show_logo?: boolean;
@@ -72,6 +76,12 @@ export interface CompanyDocumentProfile {
 	created_at?: string;
 	updated_at?: string;
 }
+
+// Mirror backend CompanyDocumentProfile.LAYOUT_CHOICES / FONT_CHOICES (compare by code, Rule 2).
+export type DocumentLayoutPreset = 'light' | 'boxed' | 'bold' | 'striped';
+export type DocumentFontFamily = 'sans' | 'serif';
+// The sample-document kinds the Document-Layout preview can render (mirror backend PREVIEW_DOC_TYPES).
+export type DocumentPreviewType = 'KP' | 'CT' | 'INV' | 'ACT' | 'DOC';
 
 // OneToOne → Company (accounts.CompanySettings). The selling company's КП
 // defaults + document-numbering prefix. Read/written by the company OWNER.
@@ -310,11 +320,16 @@ export const accountsApi = {
 		);
 		return response.data;
 	},
-	// Live preview: a SAMPLE КП rendered as HTML with the company's CURRENT profile (branding +
-	// toggles). Shown in an iframe on the document-settings panel; refetched after each save.
-	getCompanyDocumentProfilePreview: async (companyId: number): Promise<string> => {
-		const response = await apiClient.get(
+	// Live preview: a SAMPLE document of the requested kind rendered as HTML with the company's
+	// profile + UNSAVED draft theme overrides (WYSIWYG, Odoo Document-Layout wizard model).
+	// Shown in an iframe on the document-settings panel; re-fired on every draft change (debounced).
+	previewCompanyDocumentProfile: async (
+		companyId: number,
+		payload: { doc_type: DocumentPreviewType; draft?: Partial<CompanyDocumentProfile> },
+	): Promise<string> => {
+		const response = await apiClient.post(
 			`accounts/companies/${companyId}/document-profile/preview/`,
+			payload,
 			{ responseType: 'text' },
 		);
 		return response.data as string;

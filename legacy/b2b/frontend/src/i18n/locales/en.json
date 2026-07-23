@@ -1652,6 +1652,7 @@
     "samples": "Platform samples",
     "sampleBadge": "Sample",
     "copyToMe": "Copy to me",
+    "previewSample": "Preview",
     "emptyOwned": "No templates yet. Create a new one or copy a platform sample.",
     "active": "Active",
     "inactive": "Disabled",
@@ -5382,7 +5383,34 @@
     "showFxNote": "CBU FX rate on the КП",
     "showFxNoteHint": "Print the CBU rate on the client КП. Off by default — the client sees the UZS price",
     "preview": "Preview",
-    "previewHint": "A sample КП with your branding and settings. Refreshes after you save.",
+    "previewHint": "A live sample with your branding — reflects unsaved changes. One theme applies to all documents.",
+    "previewTypes": {
+      "KP": "Quote",
+      "CT": "Contract",
+      "INV": "Invoice",
+      "ACT": "Act",
+      "DOC": "Letter"
+    },
+    "themeTitle": "Document design",
+    "themeHint": "One theme for all the company's PDFs: layout, font and colors — world-practice model (Odoo Document Layout).",
+    "layoutPreset": "Layout",
+    "layouts": {
+      "light": "Light",
+      "lightHint": "Classic header with an accent rule",
+      "boxed": "Boxed",
+      "boxedHint": "Framed header and tables, no fills",
+      "bold": "Bold",
+      "boldHint": "Large header and strong accents",
+      "striped": "Striped",
+      "stripedHint": "Airy header, zebra-striped tables"
+    },
+    "fontFamily": "Font",
+    "fonts": {
+      "sans": "Grotesque (sans-serif)",
+      "serif": "Antiqua (serif)"
+    },
+    "secondaryColor": "Secondary color",
+    "secondaryColorHint": "Panel fills and table stripes. Empty — neutral light gray.",
     "useCompanyDefaults": "Use company profile data",
     "useCompanyDefaultsHint": "Name, INN, address and bank details are inherited from the company profile automatically"
   },

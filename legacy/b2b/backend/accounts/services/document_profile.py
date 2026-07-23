@@ -28,7 +28,15 @@ _EDITABLE_FIELDS = (
     "signatory_position",
     "footer_text",
     "accent_color",
+    "secondary_color",
 )
+
+# Theme choice fields (D2, Odoo Document Layout model) — validated against the model's
+# choice sets, never written raw (a bad value would land in a PDF <style>/class attr).
+_EDITABLE_CHOICE_FIELDS = {
+    "layout_preset": {code for code, _label in CompanyDocumentProfile.LAYOUT_CHOICES},
+    "font_family": {code for code, _label in CompanyDocumentProfile.FONT_CHOICES},
+}
 
 # Layout toggles (P3) — coerced to bool, so a False value isn't turned into "" like the text fields.
 _EDITABLE_BOOL_FIELDS = (
@@ -72,17 +80,27 @@ def update_document_profile(
     """
     if not is_company_owner(user, company):
         return None, "NOT_COMPANY_OWNER"
-    # SEC (audit #9): accent_color is interpolated raw into a <style> block in the PDF
-    # templates, so an unvalidated value ("red;background:url(http://10.0.0.2)") is CSS
-    # injection → WeasyPrint SSRF/LFI on render. Reject anything but a #hex colour.
+    # SEC (audit #9): accent/secondary colours are interpolated raw into a <style> block in
+    # the PDF templates, so an unvalidated value ("red;background:url(http://10.0.0.2)") is
+    # CSS injection → WeasyPrint SSRF/LFI on render. Reject anything but a #hex colour.
     accent = data.get("accent_color")
     if accent not in (None, "") and not is_hex_color(accent):
         return None, "INVALID_ACCENT_COLOR"
+    secondary = data.get("secondary_color")
+    if secondary not in (None, "") and not is_hex_color(secondary):
+        return None, "INVALID_SECONDARY_COLOR"
+    for field, allowed in _EDITABLE_CHOICE_FIELDS.items():
+        if field in data and data[field] not in allowed:
+            return None, f"INVALID_{field.upper()}"
     profile = get_document_profile(company)
     changed = []
     for field in _EDITABLE_FIELDS:
         if field in data:
             setattr(profile, field, data[field] or "")
+            changed.append(field)
+    for field in _EDITABLE_CHOICE_FIELDS:
+        if field in data:
+            setattr(profile, field, data[field])
             changed.append(field)
     for field in _EDITABLE_BOOL_FIELDS:
         if field in data:
@@ -90,7 +108,39 @@ def update_document_profile(
             changed.append(field)
     if changed:
         profile.save(update_fields=[*changed, "updated_at"])
+        _invalidate_branded_pdfs(company)
     return profile, None
+
+
+def _invalidate_branded_pdfs(company: Company) -> None:
+    """Brand/theme edits must re-render still-mutable cached PDFs (Odoo model: a report is a
+    VIEW of live data — our pdf_file is only a cache of it).
+
+    Cleared (lazily re-rendered with the new brand on next download / render task):
+      • Quote — unfrozen only (a frozen КП is the client-received snapshot, PandaDoc model);
+      • Contract — until SIGNED (a signed contract is a legal artifact);
+      • Act / Invoice — DRAFT only (ISSUED docs are what the buyer received).
+    Files are left in storage (same as every other invalidate-on-write path). Local import —
+    accounts must not import crm at module load.
+    """
+    from crm.constants import ActStatusCode, ContractStatusCode, InvoiceStatusCode
+    from crm.models import Act, Contract, Invoice, Quote
+
+    Quote.objects.filter(seller_company=company, frozen_at__isnull=True).exclude(pdf_file="").update(pdf_file="")
+    Contract.objects.filter(
+        quote__seller_company=company,
+        status__code__in=[
+            ContractStatusCode.DRAFT,
+            ContractStatusCode.PENDING_CLIENT,
+            ContractStatusCode.PENDING_MANAGER,
+        ],
+    ).exclude(pdf_file="").update(pdf_file="")
+    Invoice.objects.filter(
+        contract__quote__seller_company=company, status__code=InvoiceStatusCode.DRAFT
+    ).exclude(pdf_file="").update(pdf_file="")
+    Act.objects.filter(
+        contract__quote__seller_company=company, status__code=ActStatusCode.DRAFT
+    ).exclude(pdf_file="").update(pdf_file="")
 
 
 def _as_bool(value) -> bool:
@@ -122,4 +172,5 @@ def upload_document_profile_logo(
         profile.logo.delete(save=False)
     profile.logo = logo_file
     profile.save(update_fields=["logo", "updated_at"])
+    _invalidate_branded_pdfs(company)
     return profile, None

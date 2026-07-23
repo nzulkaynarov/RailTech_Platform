@@ -15,6 +15,7 @@ import {
 import type { DocumentTemplate, PlaceholderCatalogGroup, TemplatePreviewResult } from '@/api/documentsApi';
 import { translateApiError } from '@/lib/apiError';
 import { DocumentLetterheadPreview } from '@/components/Documents/DocumentLetterheadPreview';
+import { SampleTemplatePreviewDialog } from '@/components/Settings/SampleTemplatePreviewDialog';
 import {
   RichTextTemplateEditor,
   type RichTextTemplateEditorHandle,
@@ -310,6 +311,7 @@ export function DocumentTemplatesSettings() {
                         </Badge>
                       </div>
                     </div>
+                    <SampleTemplatePreviewDialog template={tpl} />
                     <Button
                       variant="outline"
                       size="sm"

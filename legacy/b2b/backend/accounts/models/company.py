@@ -272,6 +272,45 @@ class CompanyDocumentProfile(models.Model):
         verbose_name=_("Акцентный цвет"),
         help_text=_("HEX-цвет фирменного стиля для шапки документа (напр. #15294d)"),
     )
+    # ── Document theme (Odoo Document Layout / PandaDoc Themes model) ──────────
+    # One theme drives ALL the company's PDFs (КП / договор / инвойс / акт / письмо):
+    # a named layout preset + font pair + secondary tint, applied by _document_base.html.
+    LAYOUT_LIGHT = "light"
+    LAYOUT_BOXED = "boxed"
+    LAYOUT_BOLD = "bold"
+    LAYOUT_STRIPED = "striped"
+    LAYOUT_CHOICES = [
+        (LAYOUT_LIGHT, _("Светлый")),
+        (LAYOUT_BOXED, _("В рамках")),
+        (LAYOUT_BOLD, _("Контрастный")),
+        (LAYOUT_STRIPED, _("Полосатый")),
+    ]
+    FONT_SANS = "sans"
+    FONT_SERIF = "serif"
+    FONT_CHOICES = [
+        (FONT_SANS, _("Гротеск (без засечек)")),
+        (FONT_SERIF, _("Антиква (с засечками)")),
+    ]
+    layout_preset = models.CharField(
+        max_length=16,
+        choices=LAYOUT_CHOICES,
+        default=LAYOUT_LIGHT,
+        verbose_name=_("Макет документов"),
+        help_text=_("Именованный макет оформления всех PDF компании (как в Odoo Document Layout)"),
+    )
+    font_family = models.CharField(
+        max_length=16,
+        choices=FONT_CHOICES,
+        default=FONT_SANS,
+        verbose_name=_("Шрифт документов"),
+        help_text=_("Гарнитура всех PDF компании (кириллица поддерживается обеими)"),
+    )
+    secondary_color = models.CharField(
+        max_length=20,
+        blank=True,
+        verbose_name=_("Второй цвет"),
+        help_text=_("HEX-цвет подложек и полос таблиц (напр. #f6f8fb); пусто — нейтральный"),
+    )
     use_company_defaults = models.BooleanField(
         default=True,
         verbose_name=_("Использовать реквизиты компании"),

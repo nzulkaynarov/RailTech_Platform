@@ -175,23 +175,35 @@ class CompanyDocumentsMixin:
         return Response(CompanyDocumentProfileSerializer(profile, context={"request": request}).data)
 
     @extend_schema(
-        summary="Live preview of a sample КП with the company's document profile",
-        description="Renders a SAMPLE КП as HTML using the company's CURRENT document profile "
-        "(branding + layout toggles) — the live preview behind the document-settings panel. "
-        "OWNER only. Returns text/html (no WeasyPrint in the request thread, ARCH-03).",
-        responses={200: OpenApiResponse(description="Sample КП HTML")},
+        summary="Live preview of a sample document with the company's theme (Document Layout)",
+        description="Renders a SAMPLE document of the requested kind (КП / договор / инвойс / "
+        "акт / письмо) as HTML using the company's document profile. POST body may carry "
+        "{doc_type, draft:{...}} — the draft overlays UNSAVED theme settings in-memory (never "
+        "saved), so the editor previews live like the Odoo Document-Layout wizard. GET stays "
+        "the legacy saved-profile КП preview. OWNER only. Returns text/html (no WeasyPrint in "
+        "the request thread, ARCH-03).",
+        request=None,
+        responses={200: OpenApiResponse(description="Sample document HTML")},
         tags=["Accounts"],
     )
-    @action(detail=True, methods=["get"], url_path="document-profile/preview")
+    @action(detail=True, methods=["get", "post"], url_path="document-profile/preview")
     def document_profile_preview(self, request, pk=None):
         from django.http import HttpResponse
 
-        from crm.services.documents import render_document_profile_preview_html
+        from crm.services.documents import PREVIEW_DOC_TYPES, render_document_profile_preview_html
 
         company = self.get_object()
         if not services.is_company_owner(request.user, company):
             return Response({"detail": "NOT_COMPANY_OWNER"}, status=status.HTTP_403_FORBIDDEN)
-        html = render_document_profile_preview_html(company)
+        doc_type = "KP"
+        overrides = None
+        if request.method == "POST":
+            doc_type = request.data.get("doc_type") or "KP"
+            if doc_type not in PREVIEW_DOC_TYPES:
+                return Response({"detail": "INVALID_PREVIEW_DOC_TYPE"}, status=status.HTTP_400_BAD_REQUEST)
+            draft = request.data.get("draft")
+            overrides = draft if isinstance(draft, dict) else None
+        html = render_document_profile_preview_html(company, doc_type=doc_type, overrides=overrides)
         return HttpResponse(html, content_type="text/html; charset=utf-8")
 
     @extend_schema(

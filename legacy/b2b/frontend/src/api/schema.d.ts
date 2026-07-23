@@ -134,12 +134,16 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Live preview of a sample КП with the company's document profile
-         * @description Renders a SAMPLE КП as HTML using the company's CURRENT document profile (branding + layout toggles) — the live preview behind the document-settings panel. OWNER only. Returns text/html (no WeasyPrint in the request thread, ARCH-03).
+         * Live preview of a sample document with the company's theme (Document Layout)
+         * @description Renders a SAMPLE document of the requested kind (КП / договор / инвойс / акт / письмо) as HTML using the company's document profile. POST body may carry {doc_type, draft:{...}} — the draft overlays UNSAVED theme settings in-memory (never saved), so the editor previews live like the Odoo Document-Layout wizard. GET stays the legacy saved-profile КП preview. OWNER only. Returns text/html (no WeasyPrint in the request thread, ARCH-03).
          */
         get: operations["accounts_companies_document_profile_preview_retrieve"];
         put?: never;
-        post?: never;
+        /**
+         * Live preview of a sample document with the company's theme (Document Layout)
+         * @description Renders a SAMPLE document of the requested kind (КП / договор / инвойс / акт / письмо) as HTML using the company's document profile. POST body may carry {doc_type, draft:{...}} — the draft overlays UNSAVED theme settings in-memory (never saved), so the editor previews live like the Odoo Document-Layout wizard. GET stays the legacy saved-profile КП preview. OWNER only. Returns text/html (no WeasyPrint in the request thread, ARCH-03).
+         */
+        post: operations["accounts_companies_document_profile_preview_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6695,6 +6699,29 @@ export interface components {
              */
             accent_color?: string;
             /**
+             * Второй цвет
+             * @description HEX-цвет подложек и полос таблиц (напр. #f6f8fb); пусто — нейтральный
+             */
+            secondary_color?: string;
+            /**
+             * Макет документов
+             * @description Именованный макет оформления всех PDF компании (как в Odoo Document Layout)
+             *
+             *     * `light` - Светлый
+             *     * `boxed` - В рамках
+             *     * `bold` - Контрастный
+             *     * `striped` - Полосатый
+             */
+            layout_preset?: components["schemas"]["LayoutPresetEnum"];
+            /**
+             * Шрифт документов
+             * @description Гарнитура всех PDF компании (кириллица поддерживается обеими)
+             *
+             *     * `sans` - Гротеск (без засечек)
+             *     * `serif` - Антиква (с засечками)
+             */
+            font_family?: components["schemas"]["FontFamilyEnum"];
+            /**
              * Использовать реквизиты компании
              * @description Автоматически наследовать название, ИНН и адрес из профиля компании
              */
@@ -7912,6 +7939,12 @@ export interface components {
              */
             name: string;
         };
+        /**
+         * @description * `sans` - Гротеск (без засечек)
+         *     * `serif` - Антиква (с засечками)
+         * @enum {string}
+         */
+        FontFamilyEnum: "sans" | "serif";
         ForceApproveQuoteRequestRequest: {
             reason: string;
         };
@@ -8184,6 +8217,14 @@ export interface components {
          * @enum {string}
          */
         KindEnum: "SOURCE" | "SUPPORTING";
+        /**
+         * @description * `light` - Светлый
+         *     * `boxed` - В рамках
+         *     * `bold` - Контрастный
+         *     * `striped` - Полосатый
+         * @enum {string}
+         */
+        LayoutPresetEnum: "light" | "boxed" | "bold" | "striped";
         Lead: {
             readonly id: number;
             /**
@@ -9135,6 +9176,29 @@ export interface components {
              * @description HEX-цвет фирменного стиля для шапки документа (напр. #15294d)
              */
             accent_color?: string;
+            /**
+             * Второй цвет
+             * @description HEX-цвет подложек и полос таблиц (напр. #f6f8fb); пусто — нейтральный
+             */
+            secondary_color?: string;
+            /**
+             * Макет документов
+             * @description Именованный макет оформления всех PDF компании (как в Odoo Document Layout)
+             *
+             *     * `light` - Светлый
+             *     * `boxed` - В рамках
+             *     * `bold` - Контрастный
+             *     * `striped` - Полосатый
+             */
+            layout_preset?: components["schemas"]["LayoutPresetEnum"];
+            /**
+             * Шрифт документов
+             * @description Гарнитура всех PDF компании (кириллица поддерживается обеими)
+             *
+             *     * `sans` - Гротеск (без засечек)
+             *     * `serif` - Антиква (с засечками)
+             */
+            font_family?: components["schemas"]["FontFamilyEnum"];
             /**
              * Использовать реквизиты компании
              * @description Автоматически наследовать название, ИНН и адрес из профиля компании
@@ -12685,7 +12749,28 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Sample КП HTML */
+            /** @description Sample document HTML */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    accounts_companies_document_profile_preview_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Компания. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sample document HTML */
             200: {
                 headers: {
                     [name: string]: unknown;

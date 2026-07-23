@@ -34,11 +34,15 @@
   :root {
     --accent: {{ accent }};
     --accent-contrast: {{ accent_contrast }};
+    /* D2 document theme: the font pair + secondary tint come validated from
+       document_brand_context (allowlist stack / #hex only — never raw user CSS). */
+    --font-main: {{ font_stack|default:"'DejaVu Sans', 'Helvetica', 'Arial', sans-serif" }};
+    --secondary: {{ secondary|default:"#f6f8fb" }};
     --ink: #20242b;
     --ink-soft: #3c424c;
     --muted: #7a828f;
     --line: #e6e9ef;
-    --panel: #f7f9fc;
+    --panel: var(--secondary);
     /* Typographic scale — replaces ad-hoc pt values (F-14) */
     --fs-xs: 7.5pt;
     --fs-sm: 8.5pt;
@@ -67,7 +71,7 @@
   @page:first { @top-right { content: none; } }
   * { box-sizing: border-box; }
   body {
-    font-family: 'Helvetica', 'Arial', sans-serif;
+    font-family: var(--font-main);
     font-size: var(--fs-base);
     line-height: 1.45;
     color: var(--ink);
@@ -101,7 +105,7 @@
   table.lines thead th { background: var(--accent); color: var(--accent-contrast); padding: 7pt 7pt; text-align: left; font-size: 8pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3pt; }
   table.lines tbody td { padding: 6pt 7pt; border-bottom: 0.5pt solid var(--line); font-size: 9pt; vertical-align: top; }
   table.lines tbody tr { break-inside: avoid; }  /* a row never splits across pages (F-04) */
-  table.lines tbody tr:nth-child(even) { background: #f6f8fb; }
+  table.lines tbody tr:nth-child(even) { background: var(--secondary); }
   .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
   .center { text-align: center; white-space: nowrap; }
   .item-name { font-weight: 600; color: var(--ink); }
@@ -175,10 +179,34 @@
     font-size: 15pt; font-weight: 700; letter-spacing: 1pt;
     color: rgba(120, 120, 120, 0.16); white-space: nowrap;
   }
+  /* ── D2 layout presets (Odoo Document Layout: Light / Boxed / Bold / Striped) ──────
+     `light` is the historical default — zero extra rules. Each preset restyles ONLY the
+     shared primitives (brandbar / rule / lines / totals), so every document type inherits
+     the theme identically. WeasyPrint-safe: plain selectors, no flex/grid. */
+  /* boxed — everything framed, no fills */
+  .layout-boxed .rule { display: none; }
+  .layout-boxed .brandbar { border: 1pt solid var(--accent); margin-bottom: 16pt; }
+  .layout-boxed .brandbar td { padding: 8pt; }
+  .layout-boxed table.lines thead th { background: transparent; color: var(--accent); border: 0.5pt solid var(--line); border-bottom: 1.5pt solid var(--accent); }
+  .layout-boxed table.lines tbody td { border: 0.5pt solid var(--line); }
+  .layout-boxed table.lines tbody tr:nth-child(even) { background: transparent; }
+  .layout-boxed table.totals tr.grand td { background: transparent; color: var(--accent); border: 1pt solid var(--accent); }
+  /* bold — heavy accent presence */
+  .layout-bold .rule { height: 6pt; }
+  .layout-bold .brand-name { font-size: 19pt; }
+  .layout-bold h1.doc-title { font-size: 16pt; text-transform: uppercase; letter-spacing: 0.5pt; }
+  .layout-bold table.lines thead th { padding: 8pt 7pt; font-size: 8.5pt; }
+  .layout-bold table.totals tr.grand td { font-size: 12pt; }
+  /* striped — airy, zebra-led, minimal fills */
+  .layout-striped .rule { height: 1pt; }
+  .layout-striped table.lines thead th { background: transparent; color: var(--accent); border-bottom: 2pt solid var(--accent); }
+  .layout-striped table.lines tbody tr:nth-child(odd) { background: var(--secondary); }
+  .layout-striped table.lines tbody tr:nth-child(even) { background: transparent; }
+  .layout-striped table.totals tr.grand td { background: transparent; color: var(--accent); border-top: 2pt solid var(--accent); }
   {% block extra_head %}{% endblock %}
 </style>
 </head>
-<body>
+<body class="layout-{{ layout_preset|default:'light' }}">
   {% block watermark %}{% if is_demo %}<div class="demo-watermark">ДЕМО — не для коммерческого использования</div>{% elif is_draft %}<div class="draft-watermark">ЧЕРНОВИК · не является офертой</div>{% endif %}{% endblock %}
 
   <!-- ── Brand header ── -->

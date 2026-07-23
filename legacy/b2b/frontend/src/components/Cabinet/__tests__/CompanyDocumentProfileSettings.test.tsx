@@ -27,7 +27,7 @@ vi.mock('@/store/authStore', () => ({
 vi.mock('@/api/accountsApi', () => ({
   accountsApi: {
     getCompanyDocumentProfile: vi.fn(),
-    getCompanyDocumentProfilePreview: vi.fn(),
+    previewCompanyDocumentProfile: vi.fn(),
     updateCompanyDocumentProfile: vi.fn(),
     uploadCompanyDocumentLogo: vi.fn(),
   },
@@ -60,7 +60,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   canEditRef.value = true;
   vi.mocked(accountsApi.getCompanyDocumentProfile).mockResolvedValue(makeProfile());
-  vi.mocked(accountsApi.getCompanyDocumentProfilePreview).mockResolvedValue(
+  vi.mocked(accountsApi.previewCompanyDocumentProfile).mockResolvedValue(
     '<html><body>PREVIEW</body></html>',
   );
 });

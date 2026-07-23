@@ -20,10 +20,15 @@ interface DocumentLetterheadPreviewProps {
  * The brand accent is a per-company colour (not a semantic token), so it rides a `--doc-accent` CSS
  * custom property and every accent surface reads it via `var()` — the sanctioned escape hatch for
  * dynamic colours (no inline `backgroundColor`).
+ *
+ * D3 unified A4: the preview renders as an A4-proportioned white sheet (210/297; content may
+ * stretch it taller) so EVERY document preview on the platform reads as the same physical page.
+ * bg-white + text-neutral-900 are intentional (justified Rule 4 exception, same as the brand-settings
+ * iframe): the sheet depicts PAPER, which stays white with dark ink in both UI themes.
  */
 export function DocumentLetterheadPreview({ brand, bodyHtml, className }: DocumentLetterheadPreviewProps) {
   const { t } = useTranslation();
-  const accentVars = { '--doc-accent': brand.accent } as CSSProperties;
+  const accentVars = { '--doc-accent': brand.accent, aspectRatio: '210/297' } as CSSProperties;
   const meta = [
     brand.inn ? t('docLetterhead.inn', { value: brand.inn }) : null,
     brand.phone ? t('docLetterhead.phone', { value: brand.phone }) : null,
@@ -33,7 +38,8 @@ export function DocumentLetterheadPreview({ brand, bodyHtml, className }: Docume
   return (
     <div
       style={accentVars}
-      className={`overflow-hidden rounded-lg border border-border bg-background ${className ?? ''}`}
+      // eslint-disable-next-line railtech/no-hardcoded-colors -- A4 paper: white with dark ink in BOTH themes (justified Rule 4 exception, same as the brand-settings iframe)
+      className={`mx-auto flex w-full max-w-[794px] flex-col overflow-hidden rounded-sm border border-border bg-white text-neutral-900 shadow-sm ${className ?? ''}`}
     >
       {/* Letterhead шапка */}
       <div className="px-6 pt-6">
@@ -48,22 +54,26 @@ export function DocumentLetterheadPreview({ brand, bodyHtml, className }: Docume
             )}
             <div>
               <div className="text-lg font-bold text-[color:var(--doc-accent)]">{brand.seller_name}</div>
-              {meta && <div className="mt-0.5 text-xs text-muted-foreground">{meta}</div>}
+              {/* Paper neutrals (not theme tokens): the sheet is white in both UI themes. */}
+              {/* eslint-disable-next-line railtech/no-hardcoded-colors -- paper ink, not UI theme */}
+              {meta && <div className="mt-0.5 text-xs text-neutral-500">{meta}</div>}
             </div>
           </div>
         </div>
-        {brand.address && <div className="mt-1 text-xs text-muted-foreground">{brand.address}</div>}
+        {/* eslint-disable-next-line railtech/no-hardcoded-colors -- paper ink, not UI theme */}
+        {brand.address && <div className="mt-1 text-xs text-neutral-500">{brand.address}</div>}
         <div className="mt-3 h-0.5 w-full bg-[color:var(--doc-accent)]" />
       </div>
 
       {/* Body — sanitised server-side (allowlist), safe to inject. */}
       <div
-        className="prose prose-sm max-w-none px-6 py-5 text-sm text-foreground [&_h3]:text-[color:var(--doc-accent)]"
+        className="prose prose-sm max-w-none px-6 py-5 text-sm [&_h3]:text-[color:var(--doc-accent)]"
         dangerouslySetInnerHTML={{ __html: bodyHtml }}
       />
 
-      {/* Колонтитул */}
-      <div className="border-t border-border px-6 py-3 text-center text-xs text-muted-foreground">
+      {/* Колонтитул — прижат к низу А4-листа */}
+      {/* eslint-disable-next-line railtech/no-hardcoded-colors -- paper ink, not UI theme */}
+      <div className="mt-auto border-t border-neutral-200 px-6 py-3 text-center text-xs text-neutral-500">
         {brand.footer_text}
       </div>
     </div>

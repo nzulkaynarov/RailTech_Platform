@@ -87,12 +87,94 @@ def seller_logo_url(seller_profile) -> Optional[str]:
         return None
 
 
-def render_document_profile_preview_html(company) -> str:
-    """Render a SAMPLE КП as HTML using the company's CURRENT document profile — the live preview
-    behind the document-settings panel (P3). Uses representative sample data (never a real quote),
-    so the seller sees exactly how their branding + layout toggles look before issuing a real
-    offer. Returns HTML (not a PDF): instant, cheap to re-render on every change, and it never
-    runs WeasyPrint in the request thread (ARCH-03). It IS the same template the PDF renders."""
+# The document kinds the Document-Layout preview can render (mirrors the real PDF set).
+PREVIEW_DOC_TYPES = ("KP", "CT", "INV", "ACT", "DOC")
+
+# Draft-override keys the theme editor may pass for a WYSIWYG preview of UNSAVED settings
+# (applied to an in-memory row only — never saved; hex/choice values are neutralized by the
+# render-time allowlists in _brand_context_from_row).
+_PREVIEW_TEXT_OVERRIDES = (
+    "legal_name",
+    "inn",
+    "legal_address",
+    "bank_details",
+    "signatory_name",
+    "signatory_position",
+    "footer_text",
+    "accent_color",
+    "secondary_color",
+    "layout_preset",
+    "font_family",
+)
+_PREVIEW_BOOL_OVERRIDES = ("use_company_defaults", "show_logo", "show_lead_time", "show_fx_note")
+
+
+def render_document_profile_preview_html(company, doc_type: str = "KP", overrides: dict = None) -> str:
+    """Render a SAMPLE document of the requested kind (КП / договор / инвойс / акт / письмо) as
+    HTML using the company's document profile, optionally overlaid with UNSAVED draft settings —
+    the live Document-Layout preview (Odoo wizard model: see the theme on every report BEFORE
+    saving). Uses representative sample data (never a real document), returns HTML (not a PDF):
+    instant, cheap to re-render on every change, never WeasyPrint in the request thread
+    (ARCH-03). They ARE the same templates the PDFs render — the preview cannot drift."""
+    from accounts.models import CompanyDocumentProfile
+
+    row = CompanyDocumentProfile.objects.filter(company=company).first()
+    if overrides:
+        if row is None:
+            row = CompanyDocumentProfile(company=company)  # in-memory only — never .save()
+        for field in _PREVIEW_TEXT_OVERRIDES:
+            if field in overrides:
+                setattr(row, field, overrides[field] or "")
+        for field in _PREVIEW_BOOL_OVERRIDES:
+            if field in overrides:
+                value = overrides[field]
+                if isinstance(value, str):
+                    value = value.strip().lower() in {"1", "true", "yes", "on"}
+                setattr(row, field, bool(value))
+    brand = _brand_context_from_row(company, row, is_demo=False)
+
+    if doc_type == "CT":
+        return _render_sample_contract_html(brand)
+    if doc_type == "INV":
+        return _render_sample_invoice_html(brand)
+    if doc_type == "ACT":
+        return _render_sample_act_html(brand)
+    if doc_type == "DOC":
+        return _render_sample_letter_html(brand)
+    return _render_sample_quote_html(brand)
+
+
+# Shared sample counterparty for every preview document (never real data — Rule 1 concerns
+# PRODUCTION data paths; a clearly-labelled «образец» preview is the documented exception,
+# same as the pre-existing sample КП below).
+_SAMPLE_BUYER = {
+    "name": "ООО «Образец-Клиент»",
+    "inn": "300000000",
+    "legal_address": "г. Ташкент, ул. Примерная, 1",
+    "contact_person": "",
+}
+
+
+def _sample_invoice_lines():
+    from decimal import Decimal
+
+    return [
+        {
+            "description": "Подшипник буксовый ЦКБ тип 2726",
+            "quantity": 10,
+            "unit_price_excl_vat": Decimal("1500000.00"),
+            "line_total_excl_vat": Decimal("15000000.00"),
+        },
+        {
+            "description": "Колодка тормозная композиционная",
+            "quantity": 40,
+            "unit_price_excl_vat": Decimal("85000.00"),
+            "line_total_excl_vat": Decimal("3400000.00"),
+        },
+    ]
+
+
+def _render_sample_quote_html(brand: dict) -> str:
     from datetime import date
     from decimal import Decimal
 
@@ -147,25 +229,150 @@ def render_document_profile_preview_html(company) -> str:
         "frozen_at": None,
         "updated_at": date(2026, 7, 8),
     }
-    sample_buyer = {
-        "name": "ООО «Образец-Клиент»",
-        "inn": "300000000",
-        "legal_address": "г. Ташкент, ул. Примерная, 1",
-        "contact_person": "",
-    }
     context = {
         "quote": sample_quote,
         "items": sample_items,
         "optional_items": [],
-        "company": sample_buyer,
+        "company": _SAMPLE_BUYER,
         # Branding preview, not a real export — no «ЧЕРНОВИК» watermark (it would obscure the very
         # branding this sample exists to show); keep the lead-time column visible so the seller can
         # see it styled when their profile toggle is on.
         "is_draft": False,
         "has_line_lead_time": True,
-        **document_brand_context(company, is_demo=False),
+        **brand,
     }
     return render_to_string("crm/quote_pdf.html", context)
+
+
+def _render_sample_contract_html(brand: dict) -> str:
+    """Sample договор — the SAME contract_pdf.html the real contract renders."""
+    from datetime import date
+    from decimal import Decimal
+
+    from django.template.loader import render_to_string
+
+    sample_quote = {
+        "quote_currency": {"code": "UZS"},
+        "vat_rate": Decimal("12"),
+        "effective_delivery_lead_time_days": 21,
+        "delivery_basis": {"code": "DAP", "name": "Ташкент"},
+    }
+    sample_items = [
+        {
+            "product": None,
+            "imported_raw_name": "Подшипник буксовый ЦКБ тип 2726",
+            "quantity": 10,
+            "unit": "шт.",
+            "final_price_excl_vat": Decimal("1500000.00"),
+            "line_total": Decimal("15000000.00"),
+        },
+        {
+            "product": None,
+            "imported_raw_name": "Колодка тормозная композиционная",
+            "quantity": 40,
+            "unit": "шт.",
+            "final_price_excl_vat": Decimal("85000.00"),
+            "line_total": Decimal("3400000.00"),
+        },
+    ]
+    sample_contract = {
+        "number": "CT-2026-00042 (образец)",
+        "created_at": date(2026, 7, 8),
+        "valid_from": date(2026, 7, 8),
+        "valid_until": date(2026, 12, 31),
+        "total_amount": Decimal("20608000.00"),
+        "notes": "",
+        "client_signed_at": None,
+        "manager_signed_at": None,
+        "client_signer": None,
+        "manager_signer": None,
+    }
+    context = {
+        "contract": sample_contract,
+        "deal": {"id": 0},
+        "company": _SAMPLE_BUYER,
+        "quote": sample_quote,
+        "items": sample_items,
+        **brand,
+    }
+    return render_to_string("crm/contract_pdf.html", context)
+
+
+def _render_sample_invoice_html(brand: dict) -> str:
+    """Sample инвойс — the SAME invoice_pdf.html the real invoice renders."""
+    from datetime import date
+    from decimal import Decimal
+
+    from django.template.loader import render_to_string
+
+    sample_invoice = {
+        "number": "INV-2026-00042 (образец)",
+        "issued_at": date(2026, 7, 8),
+        "due_date": date(2026, 8, 8),
+        "notes": "",
+        "contract": {"number": "CT-2026-00042"},
+        "subtotal_excl_vat": Decimal("18400000.00"),
+        "vat_amount": Decimal("2208000.00"),
+        "total_incl_vat": Decimal("20608000.00"),
+        "amount_paid": Decimal("0"),
+        "balance_due": Decimal("20608000.00"),
+    }
+    context = {
+        "invoice": sample_invoice,
+        "items": _sample_invoice_lines(),
+        "company": _SAMPLE_BUYER,
+        **brand,
+    }
+    return render_to_string("crm/invoice_pdf.html", context)
+
+
+def _render_sample_act_html(brand: dict) -> str:
+    """Sample акт — the SAME act_pdf.html the real act renders."""
+    from datetime import date
+    from decimal import Decimal
+
+    from django.template.loader import render_to_string
+
+    sample_invoice = {
+        "number": "INV-2026-00042",
+        "issued_at": date(2026, 7, 8),
+        "items": {"all": _sample_invoice_lines()},
+    }
+    sample_act = {
+        "number": "ACT-2026-00042 (образец)",
+        "issued_at": date(2026, 7, 15),
+        "deal_id": 0,
+        "total_amount": Decimal("20608000.00"),
+        "contract": {"number": "CT-2026-00042", "created_at": date(2026, 7, 8)},
+        "invoice": sample_invoice,
+    }
+    context = {
+        "act": sample_act,
+        "invoice": sample_invoice,
+        "company": _SAMPLE_BUYER,
+        **brand,
+    }
+    return render_to_string("crm/act_pdf.html", context)
+
+
+def _render_sample_letter_html(brand: dict) -> str:
+    """Sample произвольное письмо — the SAME generated_document_pdf.html the templater renders."""
+    from datetime import date
+
+    from django.template.loader import render_to_string
+
+    sample_letter = {
+        "title": "Гарантийное письмо (образец)",
+        "number": "DOC-2026-00042",
+        "created_at": date(2026, 7, 8),
+        "rendered_html": (
+            "<p>Настоящим гарантируем оплату по сделке #1024 в полном объёме в согласованные сроки.</p>"
+            "<p>Сумма обязательств соответствует коммерческому предложению КП-2026-00042 "
+            "на сумму 20 608 000 UZS.</p>"
+        ),
+    }
+    context = {"document": sample_letter, **brand}
+    return render_to_string("crm/generated_document_pdf.html", context)
 
 
 def client_projection_items(quote) -> list:
@@ -340,19 +547,38 @@ def public_quote_page_context(quote) -> dict:
     return context
 
 
+# Document theme (D2, Odoo Document Layout model). Font stacks are limited to families the
+# backend container actually ships (DejaVu — full Cyrillic); offering a font WeasyPrint would
+# silently substitute would be a fake choice (Rule 1).
+_LAYOUT_PRESETS = {"light", "boxed", "bold", "striped"}
+_FONT_STACKS = {
+    "sans": "'DejaVu Sans', 'Helvetica', 'Arial', sans-serif",
+    "serif": "'DejaVu Serif', 'Georgia', 'Times New Roman', serif",
+}
+_DEFAULT_SECONDARY = "#f6f8fb"  # the historical panel/zebra tint — zero-diff default
+
+
 def document_brand_context(seller_company, *, is_demo: bool = False) -> dict:
     """The branding bundle every concrete document template feeds the base with. Resolves the
     seller's CompanyDocumentProfile + logo. Safe when `seller_company` is None (renders the
     neutral platform fallback — never fake counterparty data)."""
     from accounts.models import CompanyDocumentProfile
 
-    from .quotes import _profile_has_branding
-
-    # ONE read of the profile row (never creates). Branding (legal name / logo / requisites) only
-    # renders when actually filled (_profile_has_branding) → the template falls back to the Company
-    # otherwise. The layout TOGGLES read from the raw row regardless, so a seller can flip «скрыть
-    # колонку срока» without also filling their legal name.
+    # ONE read of the profile row (never creates).
     row = CompanyDocumentProfile.objects.filter(company=seller_company).first() if seller_company else None
+    return _brand_context_from_row(seller_company, row, is_demo=is_demo)
+
+
+def _brand_context_from_row(seller_company, row, *, is_demo: bool = False) -> dict:
+    """Build the brand context from an ALREADY-FETCHED profile row (may be mutated in-memory by
+    the caller — the draft-preview path applies unsaved overrides before delegating here).
+
+    Branding (legal name / logo / requisites) only renders when actually filled
+    (_profile_has_branding) → the template falls back to the Company otherwise. The layout
+    TOGGLES and the document THEME (layout preset / font / secondary tint) read from the raw
+    row regardless, so a seller can restyle documents without also filling their legal name.
+    """
+    from .quotes import _profile_has_branding
 
     if row and getattr(row, "use_company_defaults", False) and seller_company:
         # Single source of truth (#287): with use_company_defaults ON the Company is authoritative
@@ -382,6 +608,14 @@ def document_brand_context(seller_company, *, is_demo: bool = False) -> dict:
     # injection → WeasyPrint SSRF).
     raw_accent = getattr(branded, "accent_color", None) if branded else None
     accent = raw_accent if is_hex_color(raw_accent) else _DEFAULT_ACCENT
+    # Theme reads from the RAW row (like the toggles) and is allowlist-validated at render
+    # time too — defence-in-depth: layout lands in a class attr, secondary in a <style> block.
+    raw_layout = getattr(row, "layout_preset", None) if row else None
+    layout_preset = raw_layout if raw_layout in _LAYOUT_PRESETS else "light"
+    raw_font = getattr(row, "font_family", None) if row else None
+    font_stack = _FONT_STACKS.get(raw_font, _FONT_STACKS["sans"])
+    raw_secondary = getattr(row, "secondary_color", None) if row else None
+    secondary = raw_secondary if is_hex_color(raw_secondary) else _DEFAULT_SECONDARY
     return {
         "seller": seller_company,
         "seller_profile": branded,
@@ -394,4 +628,8 @@ def document_brand_context(seller_company, *, is_demo: bool = False) -> dict:
         # and text on the accent fill reads --accent-contrast so a light brand accent stays legible.
         "accent": accent,
         "accent_contrast": accent_contrast(accent),
+        # D2 document theme — one theme drives all the company's PDFs.
+        "layout_preset": layout_preset,
+        "font_stack": font_stack,
+        "secondary": secondary,
     }

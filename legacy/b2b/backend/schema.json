@@ -473,8 +473,8 @@
         "/api/v1/accounts/companies/{id}/document-profile/preview/": {
             "get": {
                 "operationId": "accounts_companies_document_profile_preview_retrieve",
-                "description": "Renders a SAMPLE КП as HTML using the company's CURRENT document profile (branding + layout toggles) — the live preview behind the document-settings panel. OWNER only. Returns text/html (no WeasyPrint in the request thread, ARCH-03).",
-                "summary": "Live preview of a sample КП with the company's document profile",
+                "description": "Renders a SAMPLE document of the requested kind (КП / договор / инвойс / акт / письмо) as HTML using the company's document profile. POST body may carry {doc_type, draft:{...}} — the draft overlays UNSAVED theme settings in-memory (never saved), so the editor previews live like the Odoo Document-Layout wizard. GET stays the legacy saved-profile КП preview. OWNER only. Returns text/html (no WeasyPrint in the request thread, ARCH-03).",
+                "summary": "Live preview of a sample document with the company's theme (Document Layout)",
                 "parameters": [
                     {
                         "in": "path",
@@ -496,7 +496,36 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Sample КП HTML"
+                        "description": "Sample document HTML"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "accounts_companies_document_profile_preview_create",
+                "description": "Renders a SAMPLE document of the requested kind (КП / договор / инвойс / акт / письмо) as HTML using the company's document profile. POST body may carry {doc_type, draft:{...}} — the draft overlays UNSAVED theme settings in-memory (never saved), so the editor previews live like the Odoo Document-Layout wizard. GET stays the legacy saved-profile КП preview. OWNER only. Returns text/html (no WeasyPrint in the request thread, ARCH-03).",
+                "summary": "Live preview of a sample document with the company's theme (Document Layout)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Компания.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Accounts"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Sample document HTML"
                     }
                 }
             }
@@ -19623,6 +19652,30 @@
                         "description": "HEX-цвет фирменного стиля для шапки документа (напр. #15294d)",
                         "maxLength": 20
                     },
+                    "secondary_color": {
+                        "type": "string",
+                        "title": "Второй цвет",
+                        "description": "HEX-цвет подложек и полос таблиц (напр. #f6f8fb); пусто — нейтральный",
+                        "maxLength": 20
+                    },
+                    "layout_preset": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/LayoutPresetEnum"
+                            }
+                        ],
+                        "title": "Макет документов",
+                        "description": "Именованный макет оформления всех PDF компании (как в Odoo Document Layout)\n\n* `light` - Светлый\n* `boxed` - В рамках\n* `bold` - Контрастный\n* `striped` - Полосатый"
+                    },
+                    "font_family": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/FontFamilyEnum"
+                            }
+                        ],
+                        "title": "Шрифт документов",
+                        "description": "Гарнитура всех PDF компании (кириллица поддерживается обеими)\n\n* `sans` - Гротеск (без засечек)\n* `serif` - Антиква (с засечками)"
+                    },
                     "use_company_defaults": {
                         "type": "boolean",
                         "title": "Использовать реквизиты компании",
@@ -21929,6 +21982,14 @@
                     "name"
                 ]
             },
+            "FontFamilyEnum": {
+                "enum": [
+                    "sans",
+                    "serif"
+                ],
+                "type": "string",
+                "description": "* `sans` - Гротеск (без засечек)\n* `serif` - Антиква (с засечками)"
+            },
             "ForceApproveQuoteRequestRequest": {
                 "type": "object",
                 "properties": {
@@ -22645,6 +22706,16 @@
                 ],
                 "type": "string",
                 "description": "* `SOURCE` - Исходник заявки\n* `SUPPORTING` - Документ"
+            },
+            "LayoutPresetEnum": {
+                "enum": [
+                    "light",
+                    "boxed",
+                    "bold",
+                    "striped"
+                ],
+                "type": "string",
+                "description": "* `light` - Светлый\n* `boxed` - В рамках\n* `bold` - Контрастный\n* `striped` - Полосатый"
             },
             "Lead": {
                 "type": "object",
@@ -24493,6 +24564,30 @@
                         "title": "Акцентный цвет",
                         "description": "HEX-цвет фирменного стиля для шапки документа (напр. #15294d)",
                         "maxLength": 20
+                    },
+                    "secondary_color": {
+                        "type": "string",
+                        "title": "Второй цвет",
+                        "description": "HEX-цвет подложек и полос таблиц (напр. #f6f8fb); пусто — нейтральный",
+                        "maxLength": 20
+                    },
+                    "layout_preset": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/LayoutPresetEnum"
+                            }
+                        ],
+                        "title": "Макет документов",
+                        "description": "Именованный макет оформления всех PDF компании (как в Odoo Document Layout)\n\n* `light` - Светлый\n* `boxed` - В рамках\n* `bold` - Контрастный\n* `striped` - Полосатый"
+                    },
+                    "font_family": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/FontFamilyEnum"
+                            }
+                        ],
+                        "title": "Шрифт документов",
+                        "description": "Гарнитура всех PDF компании (кириллица поддерживается обеими)\n\n* `sans` - Гротеск (без засечек)\n* `serif` - Антиква (с засечками)"
                     },
                     "use_company_defaults": {
                         "type": "boolean",

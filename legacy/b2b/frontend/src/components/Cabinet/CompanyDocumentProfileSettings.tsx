@@ -4,12 +4,24 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { FileText, Loader2, Lock, Shield } from 'lucide-react';
 
-import { accountsApi, CompanyDocumentProfile } from '@/api/accountsApi';
+import {
+  accountsApi,
+  CompanyDocumentProfile,
+  DocumentFontFamily,
+  DocumentLayoutPreset,
+  DocumentPreviewType,
+} from '@/api/accountsApi';
 import { useAuthStore } from '@/store/authStore';
 import { useHasCompanyPermission } from '@/hooks/useCapabilities';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
@@ -22,6 +34,13 @@ import { ImageUpload } from '@/components/Shared/ImageUpload';
 // document default). This is a PDF-document brand value, NOT a UI color token —
 // named here so the placeholder and the color-picker fallback stay in sync.
 const PDF_ACCENT_COLOR_DEFAULT = '#15294d';
+// Backend default secondary (panel/zebra) tint — same rationale as the accent default.
+const PDF_SECONDARY_COLOR_DEFAULT = '#f6f8fb';
+
+// Mirror backend LAYOUT_CHOICES / FONT_CHOICES / PREVIEW_DOC_TYPES (codes, Rule 2).
+const LAYOUT_PRESETS: DocumentLayoutPreset[] = ['light', 'boxed', 'bold', 'striped'];
+const FONT_FAMILIES: DocumentFontFamily[] = ['sans', 'serif'];
+const PREVIEW_TYPES: DocumentPreviewType[] = ['KP', 'CT', 'INV', 'ACT', 'DOC'];
 
 type ProfileForm = {
   use_company_defaults: boolean;
@@ -33,6 +52,9 @@ type ProfileForm = {
   signatory_position: string;
   footer_text: string;
   accent_color: string;
+  secondary_color: string;
+  layout_preset: DocumentLayoutPreset;
+  font_family: DocumentFontFamily;
   show_logo: boolean;
   show_lead_time: boolean;
   show_fx_note: boolean;
@@ -48,6 +70,9 @@ const EMPTY_FORM: ProfileForm = {
   signatory_position: '',
   footer_text: '',
   accent_color: '',
+  secondary_color: '',
+  layout_preset: 'light',
+  font_family: 'sans',
   show_logo: true,
   show_lead_time: true,
   show_fx_note: false,
@@ -64,6 +89,9 @@ function toForm(profile: CompanyDocumentProfile): ProfileForm {
     signatory_position: profile.signatory_position ?? '',
     footer_text: profile.footer_text ?? '',
     accent_color: profile.accent_color ?? '',
+    secondary_color: profile.secondary_color ?? '',
+    layout_preset: profile.layout_preset ?? 'light',
+    font_family: profile.font_family ?? 'sans',
     show_logo: profile.show_logo ?? true,
     show_lead_time: profile.show_lead_time ?? true,
     show_fx_note: profile.show_fx_note ?? false,
@@ -102,6 +130,7 @@ export function CompanyDocumentProfileSettings() {
   const canEditSettings = useHasCompanyPermission('settings.edit');
 
   const [form, setForm] = useState<ProfileForm>(EMPTY_FORM);
+  const [previewType, setPreviewType] = useState<DocumentPreviewType>('KP');
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ['company-document-profile', companyId],
@@ -113,12 +142,22 @@ export function CompanyDocumentProfileSettings() {
     if (profile) setForm(toForm(profile));
   }, [profile]);
 
-  // Live preview: a SAMPLE КП rendered with the company's CURRENT (saved) profile. Refetched
-  // after each save so the seller immediately sees how branding + toggles look.
+  // Live WYSIWYG preview (Odoo Document-Layout wizard): the CURRENT form state overlays the
+  // saved profile in-memory server-side, so every unsaved edit (accent, layout, font…) shows
+  // immediately, on ANY of the 5 document kinds. Debounced via a serialized key so object
+  // identity churn doesn't refire per keystroke.
+  const previewKey = useDebouncedValue(JSON.stringify({ t: previewType, d: form }), 400);
   const previewQuery = useQuery({
-    queryKey: ['company-document-profile-preview', companyId],
-    queryFn: () => accountsApi.getCompanyDocumentProfilePreview(companyId as number),
+    queryKey: ['company-document-profile-preview', companyId, previewKey],
+    queryFn: () => {
+      const parsed = JSON.parse(previewKey) as { t: DocumentPreviewType; d: ProfileForm };
+      return accountsApi.previewCompanyDocumentProfile(companyId as number, {
+        doc_type: parsed.t,
+        draft: parsed.d,
+      });
+    },
     enabled: companyId != null && canEditSettings,
+    placeholderData: (previous) => previous,
   });
 
   const saveMut = useMutation({
@@ -127,7 +166,6 @@ export function CompanyDocumentProfileSettings() {
     onSuccess: (updated) => {
       queryClient.setQueryData(['company-document-profile', companyId], updated);
       toast.success(t('documentProfile.saved'));
-      previewQuery.refetch();
     },
     onError: () => toast.error(t('common.error')),
   });
@@ -154,7 +192,7 @@ export function CompanyDocumentProfileSettings() {
     if (companyId == null) throw new Error('NO_COMPANY');
     const updated = await accountsApi.uploadCompanyDocumentLogo(companyId, file);
     queryClient.setQueryData(['company-document-profile', companyId], updated);
-    previewQuery.refetch();
+    queryClient.invalidateQueries({ queryKey: ['company-document-profile-preview', companyId] });
   };
 
   const toggleRow = (
@@ -339,6 +377,81 @@ export function CompanyDocumentProfileSettings() {
             </div>
 
             <Separator />
+            {/* D2 document theme (Odoo Document Layout): one theme drives ALL the company's
+                PDFs — layout preset, font pair, secondary tint. Applied live in the preview. */}
+            <div className="space-y-4">
+              <div>
+                <h4 className="text-sm font-semibold text-foreground">{t('documentProfile.themeTitle')}</h4>
+                <p className="mt-0.5 text-xs text-muted-foreground">{t('documentProfile.themeHint')}</p>
+              </div>
+              <div className="space-y-2">
+                <Label>{t('documentProfile.layoutPreset')}</Label>
+                <RadioGroup
+                  value={form.layout_preset}
+                  onValueChange={(v) => setForm({ ...form, layout_preset: v as DocumentLayoutPreset })}
+                  className="grid grid-cols-2 gap-2"
+                >
+                  {LAYOUT_PRESETS.map((preset) => (
+                    <Label
+                      key={preset}
+                      htmlFor={`dp-layout-${preset}`}
+                      className="flex cursor-pointer items-start gap-2 rounded-lg border border-border p-3 font-normal has-[button[data-state=checked]]:border-primary"
+                    >
+                      <RadioGroupItem value={preset} id={`dp-layout-${preset}`} className="mt-0.5" />
+                      <span className="space-y-0.5">
+                        <span className="block text-sm font-medium text-foreground">
+                          {t(`documentProfile.layouts.${preset}`)}
+                        </span>
+                        <span className="block text-xs text-muted-foreground">
+                          {t(`documentProfile.layouts.${preset}Hint`)}
+                        </span>
+                      </span>
+                    </Label>
+                  ))}
+                </RadioGroup>
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="dp-font">{t('documentProfile.fontFamily')}</Label>
+                  <Select
+                    value={form.font_family}
+                    onValueChange={(v) => setForm({ ...form, font_family: v as DocumentFontFamily })}
+                  >
+                    <SelectTrigger id="dp-font">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {FONT_FAMILIES.map((font) => (
+                        <SelectItem key={font} value={font}>
+                          {t(`documentProfile.fonts.${font}`)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="dp-secondary">{t('documentProfile.secondaryColor')}</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="dp-secondary"
+                      value={form.secondary_color}
+                      onChange={(e) => setForm({ ...form, secondary_color: e.target.value })}
+                      placeholder={PDF_SECONDARY_COLOR_DEFAULT}
+                    />
+                    <Input
+                      type="color"
+                      aria-label={t('documentProfile.secondaryColor')}
+                      className="h-9 w-12 shrink-0 p-1"
+                      value={/^#[0-9a-fA-F]{6}$/.test(form.secondary_color) ? form.secondary_color : PDF_SECONDARY_COLOR_DEFAULT}
+                      onChange={(e) => setForm({ ...form, secondary_color: e.target.value })}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">{t('documentProfile.secondaryColorHint')}</p>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
             <div className="space-y-3">
               <h4 className="text-sm font-semibold text-foreground">{t('documentProfile.toggles')}</h4>
               {toggleRow('show_logo', 'documentProfile.showLogo', 'documentProfile.showLogoHint')}
@@ -360,6 +473,16 @@ export function CompanyDocumentProfileSettings() {
               )}
             </div>
             <p className="text-xs text-muted-foreground">{t('documentProfile.previewHint')}</p>
+            {/* Preview any of the 5 document kinds — the ONE theme applies to all (D1b). */}
+            <Tabs value={previewType} onValueChange={(v) => setPreviewType(v as DocumentPreviewType)}>
+              <TabsList className="w-full">
+                {PREVIEW_TYPES.map((docType) => (
+                  <TabsTrigger key={docType} value={docType} className="flex-1">
+                    {t(`documentProfile.previewTypes.${docType}`)}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
             {/* allow-same-origin lets Chrome actually PAINT the srcDoc (an opaque-origin
                 sandbox="" renders blank); scripts stay blocked (no allow-scripts) so any markup
                 a seller injects into their requisites can't execute in the preview.
