@@ -2891,14 +2891,21 @@
       "business": "Бизнес",
       "company": "Компания",
       "team": "Команда",
-      "templates": "Шаблоны расходов",
+      "templates": "Статьи расхода КП",
       "system": "Система",
       "platform": "Платформа",
       "documentProfile": "Документы и бренд",
       "companyAdmin": "Настройки компании",
-      "defaults": "Дефолты КП",
+      "defaults": "Параметры КП по умолчанию",
       "numbering": "Нумерация документов",
-      "docTemplates": "Шаблоны документов"
+      "docTemplates": "Шаблоны писем и актов"
+    },
+    "groups": {
+      "account": "Аккаунт",
+      "company": "Компания",
+      "sales": "Продажи",
+      "team": "Команда и доступ",
+      "platform": "Платформа"
     },
     "platform": {
       "title": "Системные настройки",

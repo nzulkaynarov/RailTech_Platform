@@ -2722,14 +2722,21 @@
       "business": "Business",
       "company": "Company",
       "team": "Team",
-      "templates": "Charge templates",
+      "templates": "Quote charge items",
       "system": "System",
       "platform": "Platform",
       "documentProfile": "Documents & branding",
       "companyAdmin": "Company settings",
-      "defaults": "Quote defaults",
+      "defaults": "Default quote parameters",
       "numbering": "Document numbering",
-      "docTemplates": "Document templates"
+      "docTemplates": "Email & act templates"
+    },
+    "groups": {
+      "account": "Account",
+      "company": "Company",
+      "sales": "Sales",
+      "team": "Team & access",
+      "platform": "Platform"
     },
     "platform": {
       "title": "Platform settings",

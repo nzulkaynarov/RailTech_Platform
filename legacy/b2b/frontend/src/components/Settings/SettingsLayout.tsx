@@ -19,6 +19,8 @@ import { cn } from '@/lib/utils';
 export interface SettingsLayoutSection {
   key: string;
   label: string;
+  /** Ключ группы (S2) — секции в сайдбаре кластеризуются под заголовком t(`settings.groups.<group>`). */
+  group: string;
 }
 
 interface SettingsLayoutProps {
@@ -52,26 +54,44 @@ export function SettingsLayout({ sections, activeSection, onSelectSection, child
     );
   }
 
+  // S2 — группируем секции по group, сохраняя исходный порядок групп (первое появление).
+  const groupOrder: string[] = [];
+  const grouped = new Map<string, SettingsLayoutSection[]>();
+  for (const section of sections) {
+    if (!grouped.has(section.group)) {
+      grouped.set(section.group, []);
+      groupOrder.push(section.group);
+    }
+    grouped.get(section.group)!.push(section);
+  }
+
   return (
     <div className="grid gap-6 md:grid-cols-[220px_1fr]">
-      <nav aria-label={t('settings.title')} className="flex flex-col gap-1">
-        {sections.map((section) => {
-          const isActive = section.key === activeSection;
-          return (
-            <Button
-              key={section.key}
-              variant="ghost"
-              aria-current={isActive ? 'page' : undefined}
-              className={cn(
-                'justify-start',
-                isActive ? 'bg-muted font-medium text-foreground' : 'text-muted-foreground',
-              )}
-              onClick={() => onSelectSection(section.key)}
-            >
-              {section.label}
-            </Button>
-          );
-        })}
+      <nav aria-label={t('settings.title')} className="flex flex-col gap-4">
+        {groupOrder.map((group) => (
+          <div key={group} className="flex flex-col gap-1">
+            <p className="px-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {t(`settings.groups.${group}`)}
+            </p>
+            {grouped.get(group)!.map((section) => {
+              const isActive = section.key === activeSection;
+              return (
+                <Button
+                  key={section.key}
+                  variant="ghost"
+                  aria-current={isActive ? 'page' : undefined}
+                  className={cn(
+                    'justify-start',
+                    isActive ? 'bg-muted font-medium text-foreground' : 'text-muted-foreground',
+                  )}
+                  onClick={() => onSelectSection(section.key)}
+                >
+                  {section.label}
+                </Button>
+              );
+            })}
+          </div>
+        ))}
       </nav>
       <div className="min-w-0">{children}</div>
     </div>

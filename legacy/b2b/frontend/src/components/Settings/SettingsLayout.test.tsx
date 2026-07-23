@@ -12,9 +12,9 @@ vi.mock('@/hooks/use-mobile', () => ({
 }));
 
 const SECTIONS: SettingsLayoutSection[] = [
-  { key: 'profile', label: 'Личные данные' },
-  { key: 'security', label: 'Безопасность' },
-  { key: 'team', label: 'Команда' },
+  { key: 'profile', label: 'Личные данные', group: 'account' },
+  { key: 'security', label: 'Безопасность', group: 'account' },
+  { key: 'team', label: 'Команда', group: 'team' },
 ];
 
 describe('SettingsLayout', () => {

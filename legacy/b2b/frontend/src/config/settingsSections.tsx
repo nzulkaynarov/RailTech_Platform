@@ -1,17 +1,24 @@
 /**
- * Settings Hub — единый source of truth секций (spec: Docs/dev/specs/settings-profile-redesign.md §2.2).
+ * Settings Hub — единый source of truth секций (spec: Docs/dev/specs/spec-settings-reorg-2026-07-23.md).
  *
  * По аналогии с buildNavigation (ADR-0005, config/navigation.tsx): ОДНА функция строит список
  * секций из деклараций с гейтингом по capabilities/permissions; секции СКРЫВАЮТСЯ, не
- * дизейблятся. Гейтинг воспроизводит прежний SettingsPage/ProfilePage байт-в-байт:
- *   - isAdmin = SystemRole ADMIN (Platform Operator, ADR-0002);
- *   - canEditCompany = OWNER || settings.edit || charge_templates.manage (ADR-0005 U2);
- *   - seller-секции (documents/defaults/numbering/templates) за can_sell И companySells:
- *     /me.capabilities.can_sell — флаг УЧАСТНИКА (CompanyMember.can_sell) и не знает тип
- *     компании, поэтому один он показывал seller-секции OWNER'у CLIENT-only компании
- *     (нарушение матрицы §5.2). companySells — компания типизирована как продавец
- *     (SUPPLIER/MANUFACTURER в statusEntries); мягче nav'а (без требования verified),
- *     чтобы свежий продавец мог настроить документы до одобрения KYC.
+ * дизейблятся.
+ *
+ * S1 — ПОКАЗ-ГЕЙТ = ПРАВДА СОХРАНЕНИЯ (фикс тупиков): раньше все company-секции показывались по
+ * ШИРОКОМУ canEditCompanySettings (isOwner || settings.edit || charge_templates.manage), но
+ * сохраняли по УЗКОМУ праву → делегат с одним charge_templates.manage видел 6 секций, работал в 1,
+ * остальные 5 — мёртвые заглушки. Теперь каждой секции гейт = точное право, которое её РЕАЛЬНО
+ * сохраняет (hasSettingsEdit для company/documents/defaults/numbering/doc-templates; hasChargeManage
+ * только для templates=статей расхода; hasTeamManage внутри секции team). Это устранение трения,
+ * НЕ новая блокировка (PRODUCT RULE 2) — перестаём ПОКАЗЫВАТЬ несохраняемое.
+ *
+ * seller-секции (documents/defaults/numbering/templates) дополнительно за can_sell И companySells:
+ * /me.capabilities.can_sell — флаг УЧАСТНИКА (CompanyMember.can_sell) и не знает тип компании,
+ * поэтому один он показывал seller-секции OWNER'у CLIENT-only компании (нарушение матрицы).
+ * companySells — компания типизирована как продавец (SUPPLIER/MANUFACTURER в statusEntries);
+ * мягче nav'а (без требования verified), чтобы свежий продавец мог настроить документы до KYC.
+ *
  * UX-гейтинг only — backend enforcement (member_has_permission / KYC / entitlements) независим.
  */
 import type { Capabilities } from '@/store/userStore';
@@ -28,9 +35,13 @@ export type SettingsSectionKey =
   | 'team'
   | 'platform';
 
+/** Группа сайдбара (S2) — порядок: account → company → sales → team → platform. */
+export type SettingsGroupKey = 'account' | 'company' | 'sales' | 'team' | 'platform';
+
 export interface SettingsSectionDef {
   key: SettingsSectionKey;
   labelKey: string;
+  group: SettingsGroupKey;
 }
 
 /** Inputs the gate needs — mirrors what SettingsPage already reads from the stores. */
@@ -46,12 +57,28 @@ export interface SettingsGateInput {
 }
 
 /**
- * ADR-0005 U2 — company-admin gate on the CompanyRole PERMISSION, not WorkspaceRole alone.
- * Fallback to isOwner when permission data is absent (old /me payload); backend still enforces.
+ * S1 гейт-хелперы — каждый = точное право, которое РЕАЛЬНО сохраняет секцию.
+ * Fallback на isOwner (OWNER всегда имеет все company-права; на случай старого /me payload).
+ */
+/** settings.edit — редактирует профиль компании, документы, дефолты, нумерацию, шаблоны писем. */
+export function hasSettingsEdit(input: SettingsGateInput): boolean {
+  return input.isOwner || input.capabilities.permissions.includes('settings.edit');
+}
+/** charge_templates.manage — редактирует ТОЛЬКО статьи расхода КП (секция templates). */
+export function hasChargeManage(input: SettingsGateInput): boolean {
+  return input.isOwner || input.capabilities.permissions.includes('charge_templates.manage');
+}
+/** team.manage — управляет составом команды и ролями (действия внутри секции team). */
+export function hasTeamManage(input: SettingsGateInput): boolean {
+  return input.isOwner || input.capabilities.permissions.includes('team.manage');
+}
+
+/**
+ * @deprecated S1 — широкий company-гейт заменён точечными hasSettingsEdit/hasChargeManage/hasTeamManage.
+ * Сохранён как OR всех company-прав для мест, которым нужен «любой company-admin» флаг.
  */
 export function canEditCompanySettings(input: SettingsGateInput): boolean {
-  const perms = input.capabilities.permissions;
-  return input.isOwner || perms.includes('settings.edit') || perms.includes('charge_templates.manage');
+  return hasSettingsEdit(input) || hasChargeManage(input) || hasTeamManage(input);
 }
 
 interface SectionRule {
@@ -59,49 +86,49 @@ interface SectionRule {
   visible: (input: SettingsGateInput) => boolean;
 }
 
+const sells = (input: SettingsGateInput) => input.capabilities.can_sell && input.companySells;
+
 /**
- * Полный каталог секций в порядке отображения (§2.2): profile всегда первый.
+ * Полный каталог секций в порядке отображения; порядок групп account→company→sales→team→platform.
  * labelKey переиспользует существующие ключи табов — контент секций тот же.
  */
 const SECTION_RULES: SectionRule[] = [
-  { def: { key: 'profile', labelKey: 'profile.tabs.personal' }, visible: () => true },
-  { def: { key: 'security', labelKey: 'profile.tabs.security' }, visible: () => true },
-  // Company: canEditCompany редактирует (CompanyTab); ADMIN видит read-only превью.
+  // ── account ──
+  { def: { key: 'profile', labelKey: 'profile.tabs.personal', group: 'account' }, visible: () => true },
+  { def: { key: 'security', labelKey: 'profile.tabs.security', group: 'account' }, visible: () => true },
+  // ── company ── (documents тут временно — слияние с company будет отдельной волной S4)
+  // Company: hasSettingsEdit редактирует (CompanyTab); ADMIN видит read-only превью.
   {
-    def: { key: 'company', labelKey: 'settings.tabs.company' },
-    visible: (input) => input.isAdmin || canEditCompanySettings(input),
-  },
-  // Seller-секции — прежние подтабы CompanyAdminHub, гейтинг без изменений.
-  {
-    def: { key: 'documents', labelKey: 'settings.tabs.documentProfile' },
-    visible: (input) =>
-      !input.isAdmin && canEditCompanySettings(input) && input.capabilities.can_sell && input.companySells,
+    def: { key: 'company', labelKey: 'settings.tabs.company', group: 'company' },
+    visible: (input) => input.isAdmin || hasSettingsEdit(input),
   },
   {
-    def: { key: 'defaults', labelKey: 'settings.tabs.defaults' },
-    visible: (input) =>
-      !input.isAdmin && canEditCompanySettings(input) && input.capabilities.can_sell && input.companySells,
+    def: { key: 'documents', labelKey: 'settings.tabs.documentProfile', group: 'company' },
+    visible: (input) => !input.isAdmin && hasSettingsEdit(input) && sells(input),
   },
   {
-    def: { key: 'numbering', labelKey: 'settings.tabs.numbering' },
-    visible: (input) =>
-      !input.isAdmin && canEditCompanySettings(input) && input.capabilities.can_sell && input.companySells,
+    def: { key: 'numbering', labelKey: 'settings.tabs.numbering', group: 'company' },
+    visible: (input) => !input.isAdmin && hasSettingsEdit(input) && sells(input),
   },
+  // ── sales ──
   {
-    def: { key: 'templates', labelKey: 'settings.tabs.templates' },
-    visible: (input) =>
-      !input.isAdmin && canEditCompanySettings(input) && input.capabilities.can_sell && input.companySells,
+    def: { key: 'defaults', labelKey: 'settings.tabs.defaults', group: 'sales' },
+    visible: (input) => !input.isAdmin && hasSettingsEdit(input) && sells(input),
   },
-  // Шаблоны документов — письма/акты нужны И покупателю, И продавцу, поэтому гейт только
-  // на company-admin (canEditCompanySettings), БЕЗ can_sell/companySells (spec-documents-hub §4).
+  // templates = «Статьи расхода КП» — ЕДИНСТВЕННАЯ секция на charge-праве.
   {
-    def: { key: 'doc-templates', labelKey: 'settings.tabs.docTemplates' },
-    visible: (input) => !input.isAdmin && canEditCompanySettings(input),
+    def: { key: 'templates', labelKey: 'settings.tabs.templates', group: 'sales' },
+    visible: (input) => !input.isAdmin && hasChargeManage(input) && sells(input),
   },
-  // Team — все не-ADMIN (инвайт-форма гейтится внутри CompanyTeamSettings).
-  { def: { key: 'team', labelKey: 'settings.tabs.team' }, visible: (input) => !input.isAdmin },
-  // Platform — SystemSettings CRUD, только Platform Operator.
-  { def: { key: 'platform', labelKey: 'settings.tabs.platform' }, visible: (input) => input.isAdmin },
+  // Шаблоны писем и актов — нужны И покупателю, И продавцу (решение владельца), гейт на settings.edit.
+  {
+    def: { key: 'doc-templates', labelKey: 'settings.tabs.docTemplates', group: 'sales' },
+    visible: (input) => !input.isAdmin && hasSettingsEdit(input),
+  },
+  // ── team ── (виден всем не-ADMIN; действия управления внутри гейтятся hasTeamManage).
+  { def: { key: 'team', labelKey: 'settings.tabs.team', group: 'team' }, visible: (input) => !input.isAdmin },
+  // ── platform ── SystemSettings CRUD, только Platform Operator.
+  { def: { key: 'platform', labelKey: 'settings.tabs.platform', group: 'platform' }, visible: (input) => input.isAdmin },
 ];
 
 /** Видимые секции для пользователя — скрытие, не дизейбл (ADR-0005). */
@@ -110,12 +137,10 @@ export function buildSettingsSections(input: SettingsGateInput): SettingsSection
 }
 
 /**
- * Дефолтная секция — та же логика, что прежние defaultTab у SettingsPage
- * (ADMIN → platform; canEditCompany → company; иначе team); profile при этом
- * всегда первый в СПИСКЕ, но не дефолт.
+ * Дефолтная секция (S1 — убираем тупик P3: раньше бросало в read-only company/team).
+ * ADMIN → platform; все не-админы → profile (всегда видима, никогда не мёртвая).
  */
 export function defaultSettingsSection(input: SettingsGateInput): SettingsSectionKey {
   if (input.isAdmin) return 'platform';
-  if (canEditCompanySettings(input)) return 'company';
-  return 'team';
+  return 'profile';
 }

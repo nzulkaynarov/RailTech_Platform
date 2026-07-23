@@ -56,7 +56,11 @@ export function SettingsPage() {
       </div>
 
       <SettingsLayout
-        sections={sections.map((section) => ({ key: section.key, label: t(section.labelKey) }))}
+        sections={sections.map((section) => ({
+          key: section.key,
+          label: t(section.labelKey),
+          group: section.group,
+        }))}
         activeSection={activeSection}
         onSelectSection={(key) => set({ section: key })}
       >
