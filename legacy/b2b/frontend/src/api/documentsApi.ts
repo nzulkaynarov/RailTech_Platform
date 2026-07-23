@@ -34,18 +34,43 @@ export interface UpdateTemplatePayload {
   is_active?: boolean;
 }
 
+// Flat letterhead slice (T1-a): the branded header/footer the SPA wraps the body in, so the preview
+// is the FULL document (шапка + тело + подвал) — not a bare body that hides where the requisites
+// already print. Mirrors crm.services.generated_documents.brand_letterhead_preview.
+export interface DocumentBrandPreview {
+  seller_name: string;
+  inn: string;
+  address: string;
+  phone: string;
+  email: string;
+  logo_url: string | null;
+  footer_text: string;
+  accent: string;
+  accent_contrast: string;
+  signatory_name: string;
+  signatory_position: string;
+}
+
 // Live-preview: server renders {{code}} whitelist replacement + returns unknown placeholders as
-// warnings (body sanitised server-side). See spec-documents-hub §placeholders.
+// warnings (body sanitised server-side) + the letterhead slice. See spec-documents-hub §placeholders.
 export interface TemplatePreviewResult {
   rendered_html: string;
   placeholders_used: string[];
   warnings: string[];
+  brand: DocumentBrandPreview;
 }
 
-// Placeholder catalog is static reference data (Bitrix24 insert-chip pattern).
+// Placeholder catalog is static reference data (Bitrix24 insert-chip pattern), split into groups
+// (T1-c): dynamic data vs company requisites already printed in the letterhead шапка.
 export interface PlaceholderCatalogEntry {
   code: string;
   label: string;
+}
+
+export interface PlaceholderCatalogGroup {
+  key: string;
+  label: string;
+  items: PlaceholderCatalogEntry[];
 }
 
 // ─── Generated documents (rendered instances) ─────────────────────
@@ -85,6 +110,9 @@ export interface GeneratedDocument {
   /** Pre-resolved recipient email (deal contact), when the backend can determine it. Optional —
    *  when absent the send dialog leaves the field empty and the backend resolves it server-side. */
   recipient_email?: string | null;
+  /** Letterhead slice (T1-a) so the registry sheet renders the FULL branded document — header +
+   *  body + footer. Frozen brand snapshot once issued, live company branding for a draft. */
+  brand: DocumentBrandPreview;
 }
 
 export interface GenerateDocumentPayload {
@@ -129,11 +157,12 @@ export const documentTemplatesApi = {
     return response.data;
   },
   placeholders: async () => {
-    // Backend wraps the catalogue as { placeholders: [...] } (avoids a top-level JSON array).
-    const response = await apiClient.get<{ placeholders: PlaceholderCatalogEntry[] }>(
+    // Backend wraps the catalogue as { groups: [{ key, label, items }] } (T1-c) — dynamic data vs
+    // company requisites already in the letterhead шапка.
+    const response = await apiClient.get<{ groups: PlaceholderCatalogGroup[] }>(
       'crm/document-templates/placeholders/',
     );
-    return response.data.placeholders;
+    return response.data.groups;
   },
 };
 

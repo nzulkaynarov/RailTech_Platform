@@ -102,6 +102,26 @@ def test_preview_uses_real_company_name(lookups):
     assert "S1" in html
 
 
+def test_preview_returns_letterhead_brand(lookups):
+    """T1-a: the preview carries the letterhead slice so the SPA renders the FULL branded document
+    (header + body + footer), not the bare body — the seller's own name/ИНН print in the шапка."""
+    company = _company("ООО Продавец-Бренд", "S9")
+    user = _member(company, "s@t.uz")
+    resp = _api(user).post(
+        "/api/v1/crm/document-templates/preview/",
+        {"body_html": "<p>{{deal.title}}</p>"},
+        format="json",
+    )
+    assert resp.status_code == 200, resp.content
+    brand = resp.json()["brand"]
+    # The header prints the seller name + ИНН — proving the requisites already live in the letterhead.
+    assert brand["seller_name"] == "ООО Продавец-Бренд"
+    assert brand["inn"] == "S9"
+    assert brand["accent"]
+    assert brand["accent_contrast"]
+    assert "footer_text" in brand
+
+
 def test_preview_warns_on_unknown_placeholder(lookups):
     company = _company("Продавец", "S1")
     user = _member(company, "s@t.uz")
@@ -150,19 +170,29 @@ def test_preview_requires_auth(lookups):
 # ── placeholder catalogue ─────────────────────────────────────────────────────
 
 
-def test_placeholder_catalog_returns_code_and_label(lookups):
+def test_placeholder_catalog_returns_grouped_code_and_label(lookups):
+    """T1-c: the catalogue is two groups — dynamic data vs company requisites already in the шапка."""
     company = _company("Продавец", "S1")
     user = _member(company, "s@t.uz")
     resp = _api(user).get("/api/v1/crm/document-templates/placeholders/")
     assert resp.status_code == 200, resp.content
-    placeholders = resp.json()["placeholders"]
-    assert len(placeholders) > 0
-    for entry in placeholders:
-        assert entry["code"]
-        assert entry["label"]
-    codes = {entry["code"] for entry in placeholders}
-    assert "deal.number" in codes
-    assert "company.name" in codes
+    groups = resp.json()["groups"]
+    assert len(groups) == 2
+    by_key = {group["key"]: group for group in groups}
+    assert set(by_key) == {"dynamic", "company"}
+    for group in groups:
+        assert group["label"]
+        assert group["items"]
+        for entry in group["items"]:
+            assert entry["code"]
+            assert entry["label"]
+    dynamic_codes = {entry["code"] for entry in by_key["dynamic"]["items"]}
+    company_codes = {entry["code"] for entry in by_key["company"]["items"]}
+    assert "deal.number" in dynamic_codes
+    assert "counterparty.name" in dynamic_codes
+    # The owner-company requisites live in the «уже в шапке» group, never in dynamic.
+    assert "company.name" in company_codes
+    assert "company.name" not in dynamic_codes
 
 
 def test_placeholder_catalog_requires_auth(lookups):

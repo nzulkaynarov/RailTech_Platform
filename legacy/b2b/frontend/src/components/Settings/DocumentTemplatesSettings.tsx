@@ -12,8 +12,9 @@ import {
   usePreviewTemplate,
   usePlaceholderCatalog,
 } from '@/hooks/useDocuments';
-import type { DocumentTemplate } from '@/api/documentsApi';
+import type { DocumentTemplate, PlaceholderCatalogGroup, TemplatePreviewResult } from '@/api/documentsApi';
 import { translateApiError } from '@/lib/apiError';
+import { DocumentLetterheadPreview } from '@/components/Documents/DocumentLetterheadPreview';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -59,7 +60,7 @@ interface EditorState {
 export function DocumentTemplatesSettings() {
   const { t } = useTranslation();
   const { data: templates = [], isLoading } = useDocumentTemplates();
-  const { data: placeholders = [] } = usePlaceholderCatalog();
+  const { data: placeholderGroups = [] } = usePlaceholderCatalog();
   const createMut = useCreateTemplate();
   const updateMut = useUpdateTemplate();
   const deleteMut = useDeleteTemplate();
@@ -210,7 +211,7 @@ export function DocumentTemplatesSettings() {
           onSave={handleSave}
           onInsert={insertPlaceholder}
           bodyRef={bodyRef}
-          placeholders={placeholders}
+          placeholderGroups={placeholderGroups}
           preview={previewMut.data}
           isPreviewing={previewMut.isPending}
           isSaving={isSaving}
@@ -351,14 +352,20 @@ interface TemplateEditorProps {
   // React.Ref (not RefObject) so it accepts the parent's useRef output and satisfies the
   // Textarea's LegacyRef prop; .current is read only in the parent's insertPlaceholder.
   bodyRef: React.Ref<HTMLTextAreaElement>;
-  placeholders: { code: string; label: string }[];
-  preview: { rendered_html: string; warnings: string[] } | undefined;
+  placeholderGroups: PlaceholderCatalogGroup[];
+  preview: TemplatePreviewResult | undefined;
   isPreviewing: boolean;
   isSaving: boolean;
 }
 
+// Group headings + hints are UI text (Rule 5) — keyed on the backend group `key`, with the backend
+// Russian label as the last-resort fallback.
+const groupHeadingKey = (key: string) => `docTemplatesSettings.placeholderGroups.${key}`;
+const groupHintKey = (key: string) => `docTemplatesSettings.placeholderGroupHints.${key}`;
+const GROUPS_WITH_HINT = new Set(['company']);
+
 function TemplateEditor({
-  editor, onChange, onClose, onSave, onInsert, bodyRef, placeholders, preview, isPreviewing, isSaving,
+  editor, onChange, onClose, onSave, onInsert, bodyRef, placeholderGroups, preview, isPreviewing, isSaving,
 }: TemplateEditorProps) {
   const { t } = useTranslation();
 
@@ -415,45 +422,53 @@ function TemplateEditor({
             />
           </div>
 
-          {/* Placeholder catalog — clicking a chip inserts {{code}} at the caret (Bitrix24 pattern). */}
-          <div className="space-y-2">
+          {/* Placeholder catalog — two groups (T1-c): dynamic data vs company requisites already in
+              the letterhead шапка. Clicking a chip inserts {{code}} at the caret (Bitrix24 pattern). */}
+          <div className="space-y-3">
             <Label>{t('docTemplatesSettings.placeholders')}</Label>
             <p className="text-xs text-muted-foreground">{t('docTemplatesSettings.placeholdersHint')}</p>
-            <div className="flex flex-wrap gap-1.5">
-              {placeholders.map((entry) => (
-                <Button
-                  key={entry.code}
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-auto py-1"
-                  onClick={() => onInsert(entry.code)}
-                  title={`{{${entry.code}}}`}
-                >
-                  <span className="font-mono text-xs">{entry.label}</span>
-                </Button>
-              ))}
-            </div>
+            {placeholderGroups.map((group) => (
+              <div key={group.key} className="space-y-1.5">
+                <p className="text-xs font-semibold text-foreground">
+                  {t(groupHeadingKey(group.key), group.label)}
+                </p>
+                {GROUPS_WITH_HINT.has(group.key) && (
+                  <p className="text-xs text-muted-foreground">{t(groupHintKey(group.key))}</p>
+                )}
+                <div className="flex flex-wrap gap-1.5">
+                  {group.items.map((entry) => (
+                    <Button
+                      key={entry.code}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-auto py-1"
+                      onClick={() => onInsert(entry.code)}
+                      title={`{{${entry.code}}}`}
+                    >
+                      <span className="font-mono text-xs">{entry.label}</span>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Live preview — server-sanitised HTML. */}
+        {/* Live preview — the FULL branded document (шапка + тело + подвал), so the author sees the
+            requisites already print in the letterhead and stops duplicating them in the body (T1-a). */}
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
             <Label>{t('docTemplatesSettings.preview')}</Label>
             {isPreviewing && <Loader2 className="size-3.5 animate-spin text-muted-foreground" aria-hidden="true" />}
           </div>
-          <div className="rounded-lg border border-border bg-muted/30 p-4">
-            {preview && preview.rendered_html ? (
-              // Sanitised server-side (bleach allowlist, spec §placeholders) before it reaches the client.
-              <div
-                className="prose prose-sm max-w-none text-sm text-foreground"
-                dangerouslySetInnerHTML={{ __html: preview.rendered_html }}
-              />
-            ) : (
+          {preview && preview.rendered_html ? (
+            <DocumentLetterheadPreview brand={preview.brand} bodyHtml={preview.rendered_html} />
+          ) : (
+            <div className="rounded-lg border border-border bg-muted/30 p-4">
               <p className="text-sm text-muted-foreground">{t('docTemplatesSettings.previewEmpty')}</p>
-            )}
-          </div>
+            </div>
+          )}
           {preview && preview.warnings.length > 0 && (
             <p className="text-xs text-warning">
               {t('docTemplatesSettings.unknownPlaceholders', { list: preview.warnings.join(', ') })}

@@ -1624,6 +1624,10 @@
     "deleteTitle": "Delete charge template?",
     "deleteConfirm": "The template will be deleted. This cannot be undone."
   },
+  "docLetterhead": {
+    "inn": "TIN {{value}}",
+    "phone": "tel. {{value}}"
+  },
   "docTemplatesSettings": {
     "title": "Document templates",
     "subtitle": "Your company's HTML letter and report templates. Placeholders from the catalog are filled with deal data when a document is generated.",
@@ -1638,6 +1642,13 @@
     "inactive": "Disabled",
     "placeholders": "Placeholder catalog",
     "placeholdersHint": "Click to insert a placeholder into the text at the cursor.",
+    "placeholderGroups": {
+      "dynamic": "Dynamic data",
+      "company": "Company requisites (already in the letterhead)"
+    },
+    "placeholderGroupHints": {
+      "company": "These already print in the document letterhead — usually not needed in the body."
+    },
     "preview": "Preview",
     "previewEmpty": "Start typing the template body — a preview will appear here.",
     "unknownPlaceholders": "Unknown placeholders: {{list}}. They stay in the text as-is.",

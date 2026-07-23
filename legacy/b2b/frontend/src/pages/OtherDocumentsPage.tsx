@@ -26,6 +26,7 @@ import {
 } from '@/hooks/useDocuments';
 import { useIsViewerMode } from '@/hooks/useViewerMode';
 import { DocumentCreateWizard } from '@/components/Documents/DocumentCreateWizard';
+import { DocumentLetterheadPreview } from '@/components/Documents/DocumentLetterheadPreview';
 import { DealLink } from '@/components/Shared/DealLink';
 import type { GeneratedDocument, GeneratedDocumentStatus } from '@/api/documentsApi';
 
@@ -340,16 +341,15 @@ function DocumentSheet({
             </div>
           )}
 
-          {/* Preview: `rendered_html` is sanitised server-side by an allowlist sanitiser
-              (crm.services strips scripts/handlers), so it is safe to inject here. */}
+          {/* Preview: the FULL branded document (letterhead шапка + тело + подвал) — matches the real
+              PDF, so the requisites are never shown as if missing from the body (T1-a). `rendered_html`
+              is sanitised server-side by the crm.services allowlist sanitiser (scripts/handlers
+              stripped) before it is ever returned — safe to inject. */}
           <div>
             <Label>{t('otherDocumentsPage.previewTitle')}</Label>
-            <div
-              className="mt-2 max-h-[40vh] overflow-auto rounded-md border border-border bg-muted/30 p-4 text-sm leading-relaxed text-foreground"
-              // rendered_html is sanitised server-side by the crm.services allowlist sanitiser
-              // (scripts/handlers stripped) before it is ever returned — safe to inject.
-              dangerouslySetInnerHTML={{ __html: document.rendered_html }}
-            />
+            <div className="mt-2 max-h-[50vh] overflow-auto">
+              <DocumentLetterheadPreview brand={document.brand} bodyHtml={document.rendered_html} />
+            </div>
           </div>
 
           <div className="flex flex-col gap-2">

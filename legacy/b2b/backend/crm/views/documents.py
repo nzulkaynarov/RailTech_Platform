@@ -40,6 +40,27 @@ def _user_company_ids(user):
     return list(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
 
 
+def _brand_preview_field():
+    """Inline serializer for the flat letterhead slice (T1-a) — the header/footer branding the SPA
+    wraps the sanitised body in. Shared by the preview response + the generated-document serializer."""
+    return inline_serializer(
+        "DocumentBrandPreview",
+        fields={
+            "seller_name": drf_serializers.CharField(),
+            "inn": drf_serializers.CharField(allow_blank=True),
+            "address": drf_serializers.CharField(allow_blank=True),
+            "phone": drf_serializers.CharField(allow_blank=True),
+            "email": drf_serializers.CharField(allow_blank=True),
+            "logo_url": drf_serializers.CharField(allow_null=True),
+            "footer_text": drf_serializers.CharField(allow_blank=True),
+            "accent": drf_serializers.CharField(),
+            "accent_contrast": drf_serializers.CharField(),
+            "signatory_name": drf_serializers.CharField(allow_blank=True),
+            "signatory_position": drf_serializers.CharField(allow_blank=True),
+        },
+    )
+
+
 class DocumentTemplateViewSet(viewsets.ModelViewSet):
     """Company template library. Read = own templates + platform samples («скопировать
     к себе»); write is gated on the `settings.edit` CompanyRole permission and limited
@@ -151,6 +172,9 @@ class DocumentTemplateViewSet(viewsets.ModelViewSet):
                     "rendered_html": drf_serializers.CharField(),
                     "placeholders_used": drf_serializers.ListField(child=drf_serializers.CharField()),
                     "warnings": drf_serializers.ListField(child=drf_serializers.CharField()),
+                    # Letterhead slice (name/ИНН/лого/подвал/accent) so the SPA renders the FULL
+                    # branded document, not the bare body (T1-a).
+                    "brand": _brand_preview_field(),
                 },
             ),
             400: OpenApiResponse(description="Validation error"),
@@ -177,18 +201,27 @@ class DocumentTemplateViewSet(viewsets.ModelViewSet):
         return Response(result)
 
     @extend_schema(
-        summary="Placeholder catalogue for the template editor",
+        summary="Placeholder catalogue for the template editor (grouped)",
         tags=["CRM"],
         responses={
             200: inline_serializer(
                 "DocumentPlaceholderCatalog",
                 fields={
-                    "placeholders": drf_serializers.ListField(
+                    "groups": drf_serializers.ListField(
                         child=inline_serializer(
-                            "DocumentPlaceholder",
+                            "DocumentPlaceholderGroup",
                             fields={
-                                "code": drf_serializers.CharField(),
+                                "key": drf_serializers.CharField(),
                                 "label": drf_serializers.CharField(),
+                                "items": drf_serializers.ListField(
+                                    child=inline_serializer(
+                                        "DocumentPlaceholder",
+                                        fields={
+                                            "code": drf_serializers.CharField(),
+                                            "label": drf_serializers.CharField(),
+                                        },
+                                    )
+                                ),
                             },
                         )
                     )
@@ -198,11 +231,11 @@ class DocumentTemplateViewSet(viewsets.ModelViewSet):
     )
     @action(detail=False, methods=["get"], url_path="placeholders")
     def placeholders(self, request):
-        """Advertised `{{code}}` placeholders (code + human label) for the editor helper."""
-        from crm.services.document_placeholders import PLACEHOLDER_CATALOG
+        """Advertised `{{code}}` placeholders in two groups (dynamic data vs company requisites
+        already printed in the letterhead шапка) — the editor helper (T1-c)."""
+        from crm.services.document_placeholders import PLACEHOLDER_GROUPS
 
-        catalog = [{"code": code, "label": label} for code, label in PLACEHOLDER_CATALOG.items()]
-        return Response({"placeholders": catalog})
+        return Response({"groups": PLACEHOLDER_GROUPS})
 
 
 class GeneratedDocumentViewSet(viewsets.ModelViewSet):

@@ -10742,8 +10742,8 @@
         "/api/v1/crm/document-templates/placeholders/": {
             "get": {
                 "operationId": "crm_document_templates_placeholders_retrieve",
-                "description": "Advertised `{{code}}` placeholders (code + human label) for the editor helper.",
-                "summary": "Placeholder catalogue for the template editor",
+                "description": "Advertised `{{code}}` placeholders in two groups (dynamic data vs company requisites\nalready printed in the letterhead шапка) — the editor helper (T1-c).",
+                "summary": "Placeholder catalogue for the template editor (grouped)",
                 "tags": [
                     "CRM"
                 ],
@@ -21328,6 +21328,58 @@
                 "type": "string",
                 "description": "* `ITEM` - Позиция\n* `SECTION` - Раздел\n* `NOTE` - Заметка"
             },
+            "DocumentBrandPreview": {
+                "type": "object",
+                "properties": {
+                    "seller_name": {
+                        "type": "string"
+                    },
+                    "inn": {
+                        "type": "string"
+                    },
+                    "address": {
+                        "type": "string"
+                    },
+                    "phone": {
+                        "type": "string"
+                    },
+                    "email": {
+                        "type": "string"
+                    },
+                    "logo_url": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "footer_text": {
+                        "type": "string"
+                    },
+                    "accent": {
+                        "type": "string"
+                    },
+                    "accent_contrast": {
+                        "type": "string"
+                    },
+                    "signatory_name": {
+                        "type": "string"
+                    },
+                    "signatory_position": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "accent",
+                    "accent_contrast",
+                    "address",
+                    "email",
+                    "footer_text",
+                    "inn",
+                    "logo_url",
+                    "phone",
+                    "seller_name",
+                    "signatory_name",
+                    "signatory_position"
+                ]
+            },
             "DocumentPlaceholder": {
                 "type": "object",
                 "properties": {
@@ -21346,7 +21398,27 @@
             "DocumentPlaceholderCatalog": {
                 "type": "object",
                 "properties": {
-                    "placeholders": {
+                    "groups": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DocumentPlaceholderGroup"
+                        }
+                    }
+                },
+                "required": [
+                    "groups"
+                ]
+            },
+            "DocumentPlaceholderGroup": {
+                "type": "object",
+                "properties": {
+                    "key": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "items": {
                         "type": "array",
                         "items": {
                             "$ref": "#/components/schemas/DocumentPlaceholder"
@@ -21354,7 +21426,9 @@
                     }
                 },
                 "required": [
-                    "placeholders"
+                    "items",
+                    "key",
+                    "label"
                 ]
             },
             "DocumentTemplate": {
@@ -21452,9 +21526,13 @@
                         "items": {
                             "type": "string"
                         }
+                    },
+                    "brand": {
+                        "$ref": "#/components/schemas/DocumentBrandPreview"
                     }
                 },
                 "required": [
+                    "brand",
                     "placeholders_used",
                     "rendered_html",
                     "warnings"
@@ -22028,6 +22106,12 @@
                         "type": "boolean",
                         "readOnly": true
                     },
+                    "brand": {
+                        "type": "object",
+                        "additionalProperties": {},
+                        "description": "Flat letterhead slice for the registry preview (T1-a): frozen brand snapshot once issued,\nlive company branding for a draft.",
+                        "readOnly": true
+                    },
                     "created_by_name": {
                         "type": "string",
                         "nullable": true,
@@ -22047,6 +22131,7 @@
                     }
                 },
                 "required": [
+                    "brand",
                     "contact",
                     "contact_name",
                     "created_at",

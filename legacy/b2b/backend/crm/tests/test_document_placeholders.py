@@ -10,6 +10,9 @@ allowlist. The two security invariants under test:
 from types import SimpleNamespace
 
 from crm.services.document_placeholders import (
+    PLACEHOLDER_CATALOG,
+    PLACEHOLDER_GROUPS,
+    RESOLVERS,
     PlaceholderContext,
     extract_placeholders,
     render_from_values,
@@ -146,3 +149,24 @@ def test_sanitizer_keeps_formatting_tags_and_tables():
 def test_sanitizer_handles_empty():
     assert sanitize_template_html("") == ""
     assert sanitize_template_html(None) == ""
+
+
+# ── T1-c: grouped catalogue ──────────────────────────────────────────────────
+
+
+def test_placeholder_groups_split_company_from_dynamic():
+    by_key = {group["key"]: group for group in PLACEHOLDER_GROUPS}
+    assert set(by_key) == {"dynamic", "company"}
+    company_codes = {item["code"] for item in by_key["company"]["items"]}
+    dynamic_codes = {item["code"] for item in by_key["dynamic"]["items"]}
+    # Every company.* placeholder is in the «уже в шапке» group and NONE leak into dynamic.
+    assert company_codes == {"company.name", "company.inn", "company.address"}
+    assert not any(code.startswith("company.") for code in dynamic_codes)
+
+
+def test_flat_catalog_derived_from_groups_and_matches_resolvers():
+    # The flat projection covers exactly the grouped codes …
+    grouped_codes = {item["code"] for group in PLACEHOLDER_GROUPS for item in group["items"]}
+    assert set(PLACEHOLDER_CATALOG) == grouped_codes
+    # … and every advertised code has a real resolver (no phantom placeholder).
+    assert grouped_codes <= set(RESOLVERS)

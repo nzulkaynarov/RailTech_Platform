@@ -60,6 +60,10 @@ class GeneratedDocumentSerializer(serializers.ModelSerializer):
     pdf_available = serializers.SerializerMethodField()
     is_owned = serializers.SerializerMethodField()
     public_url = serializers.SerializerMethodField()
+    # Flat letterhead slice (name/ИНН/лого/подвал/accent) so the registry sheet renders the FULL
+    # branded document — header + body + footer — instead of the bare body (T1-a). Frozen snapshot
+    # once issued, live company branding for a draft.
+    brand = serializers.SerializerMethodField()
     # Read-only mirror of public_token_revoked so the SPA can swap «Копировать ссылку» for a
     # «Ссылка отозвана» badge (J-b). public_url itself null-s once revoked.
     public_link_revoked = serializers.BooleanField(source="public_token_revoked", read_only=True)
@@ -86,6 +90,7 @@ class GeneratedDocumentSerializer(serializers.ModelSerializer):
             "is_owned",
             "public_url",
             "public_link_revoked",
+            "brand",
             "created_by_name",
             "created_at",
             "updated_at",
@@ -113,6 +118,13 @@ class GeneratedDocumentSerializer(serializers.ModelSerializer):
         from crm.services.generated_documents import public_document_url
 
         return public_document_url(obj)
+
+    def get_brand(self, obj) -> dict:
+        """Flat letterhead slice for the registry preview (T1-a): frozen brand snapshot once issued,
+        live company branding for a draft."""
+        from crm.services.generated_documents import brand_letterhead_for_document
+
+        return brand_letterhead_for_document(obj)
 
     def get_deal_title(self, obj) -> str | None:
         if obj.deal_id is None:

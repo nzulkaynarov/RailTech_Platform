@@ -89,6 +89,59 @@ def _brand_context_from_snapshot(snapshot: dict) -> dict:
     context["seller_profile"] = SimpleNamespace(**profile) if profile else None
     return context
 
+
+# ── Letterhead preview (T1-a) ────────────────────────────────────────────────
+# The KEY insight behind «Документы 2.0» T1: the branded шапка/колонтитул already print the owner
+# company's name/ИНН/адрес/лого/подпись (crm/_document_base.html). A preview that shows only the
+# sanitised BODY hides that letterhead, so the author re-types the same requisites into the body and
+# the real PDF prints them TWICE. So both previews (editor + registry sheet) render the FULL branded
+# document — header + body + footer — off this flat, JSON-serializable letterhead slice.
+
+
+def _flatten_brand_for_preview(brand: dict) -> dict:
+    """Flatten a ``document_brand_context()`` bundle (or a snapshot-rebuilt one) into the flat, JSON
+    letterhead the SPA header/footer render. Reads the SAME fields the PDF base template prints:
+    seller_profile.legal_name → seller.name → platform fallback; ИНН/адрес/телефон/почта; logo (only
+    when show_logo); footer_text; accent + on-accent contrast; optional signatory. Accepts both live
+    model instances and SimpleNamespace stubs (getattr with a default works for either)."""
+    seller = brand.get("seller")
+    profile = brand.get("seller_profile")
+    seller_name = getattr(profile, "legal_name", None) or getattr(seller, "name", None) or "RailTech B2B"
+    inn = getattr(profile, "inn", None) or getattr(seller, "inn", None) or ""
+    address = getattr(profile, "legal_address", None) or getattr(seller, "legal_address", None) or ""
+    footer = getattr(profile, "footer_text", None) or "Документ сформирован в RailTech B2B Ecosystem"
+    logo = brand.get("seller_logo_url") if brand.get("show_logo", True) else None
+    return {
+        "seller_name": seller_name,
+        "inn": inn or "",
+        "address": address or "",
+        "phone": getattr(seller, "phone", "") or "",
+        "email": getattr(seller, "email", "") or "",
+        "logo_url": logo,
+        "footer_text": footer,
+        "accent": brand.get("accent") or "#15294d",
+        "accent_contrast": brand.get("accent_contrast") or "#ffffff",
+        "signatory_name": getattr(profile, "signatory_name", None) or "",
+        "signatory_position": getattr(profile, "signatory_position", None) or "",
+    }
+
+
+def brand_letterhead_preview(company) -> dict:
+    """Flat letterhead slice for a company's LIVE branding — the editor preview (no document yet)."""
+    from .documents import document_brand_context
+
+    return _flatten_brand_for_preview(document_brand_context(company))
+
+
+def brand_letterhead_for_document(document) -> dict:
+    """Flat letterhead slice for a generated document: the FROZEN brand snapshot once issued (J-a
+    immutability), else the owner company's live branding for a DRAFT."""
+    from .documents import document_brand_context
+
+    if document.brand_snapshot:
+        return _flatten_brand_for_preview(_brand_context_from_snapshot(document.brand_snapshot))
+    return _flatten_brand_for_preview(document_brand_context(document.company))
+
 # ── Owner-company + access resolution ───────────────────────────────────────
 
 
@@ -234,6 +287,9 @@ def preview_template(company, user: CustomUser, *, body_html: str) -> dict:
         "rendered_html": rendered_html,
         "placeholders_used": list(values.keys()),
         "warnings": warnings,
+        # The FULL branded document = header (name/ИНН/лого) + body + footer, so the author sees the
+        # requisites are already in the letterhead and stops duplicating them in the body (T1-a).
+        "brand": brand_letterhead_preview(company),
     }
 
 

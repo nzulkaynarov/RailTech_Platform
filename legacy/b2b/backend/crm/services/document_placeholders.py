@@ -88,21 +88,46 @@ RESOLVERS: dict = {
     "today": lambda ctx: date.today().strftime("%d.%m.%Y"),
 }
 
-# Advertised catalogue for the UI (settings placeholder helper). Values are labels.
+# Advertised catalogue for the UI (settings placeholder helper), split into two GROUPS (T1-c):
+#   • dynamic  — per-document data (сделка / контрагент / КП / договор / автор / дата) that the
+#                letterhead can NOT know: this is what a template body is for.
+#   • company  — the OWNER company's own requisites. They are already printed in the branded шапка +
+#                колонтитул (crm/_document_base.html), so repeating them in the body duplicates the
+#                letterhead. Kept in the catalogue (a rare template may still want them inline) but
+#                flagged «уже в шапке» so the editor steers the author away from the dupe.
+# `label` is a Russian fallback; the SPA re-labels group HEADINGS via i18n keyed on `key` (Rule 5).
+PLACEHOLDER_GROUPS = [
+    {
+        "key": "dynamic",
+        "label": "Динамические данные",
+        "items": [
+            {"code": "deal.number", "label": "Номер сделки"},
+            {"code": "deal.title", "label": "Название сделки"},
+            {"code": "counterparty.name", "label": "Контрагент — название"},
+            {"code": "counterparty.inn", "label": "Контрагент — ИНН"},
+            {"code": "quote.number", "label": "Номер КП"},
+            {"code": "quote.total", "label": "Сумма КП"},
+            {"code": "contract.number", "label": "Номер договора"},
+            {"code": "user.full_name", "label": "Ваше ФИО"},
+            {"code": "user.email", "label": "Ваш email"},
+            {"code": "today", "label": "Сегодняшняя дата"},
+        ],
+    },
+    {
+        "key": "company",
+        "label": "Реквизиты компании (уже в шапке)",
+        "items": [
+            {"code": "company.name", "label": "Ваша компания — название"},
+            {"code": "company.inn", "label": "Ваша компания — ИНН"},
+            {"code": "company.address", "label": "Ваша компания — адрес"},
+        ],
+    },
+]
+
+# Flat {code: label} projection of the grouped catalogue — kept for any consumer that just needs the
+# label of a code (derived from PLACEHOLDER_GROUPS so the two never drift).
 PLACEHOLDER_CATALOG = {
-    "deal.number": "Номер сделки",
-    "deal.title": "Название сделки",
-    "company.name": "Ваша компания — название",
-    "company.inn": "Ваша компания — ИНН",
-    "company.address": "Ваша компания — адрес",
-    "counterparty.name": "Контрагент — название",
-    "counterparty.inn": "Контрагент — ИНН",
-    "quote.number": "Номер КП",
-    "quote.total": "Сумма КП",
-    "contract.number": "Номер договора",
-    "user.full_name": "Ваше ФИО",
-    "user.email": "Ваш email",
-    "today": "Сегодняшняя дата",
+    item["code"]: item["label"] for group in PLACEHOLDER_GROUPS for item in group["items"]
 }
 
 

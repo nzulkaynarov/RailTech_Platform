@@ -3728,8 +3728,9 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Placeholder catalogue for the template editor
-         * @description Advertised `{{code}}` placeholders (code + human label) for the editor helper.
+         * Placeholder catalogue for the template editor (grouped)
+         * @description Advertised `{{code}}` placeholders in two groups (dynamic data vs company requisites
+         *     already printed in the letterhead шапка) — the editor helper (T1-c).
          */
         get: operations["crm_document_templates_placeholders_retrieve"];
         put?: never;
@@ -7646,12 +7647,30 @@ export interface components {
          * @enum {string}
          */
         DisplayTypeEnum: "ITEM" | "SECTION" | "NOTE";
+        DocumentBrandPreview: {
+            seller_name: string;
+            inn: string;
+            address: string;
+            phone: string;
+            email: string;
+            logo_url: string | null;
+            footer_text: string;
+            accent: string;
+            accent_contrast: string;
+            signatory_name: string;
+            signatory_position: string;
+        };
         DocumentPlaceholder: {
             code: string;
             label: string;
         };
         DocumentPlaceholderCatalog: {
-            placeholders: components["schemas"]["DocumentPlaceholder"][];
+            groups: components["schemas"]["DocumentPlaceholderGroup"][];
+        };
+        DocumentPlaceholderGroup: {
+            key: string;
+            label: string;
+            items: components["schemas"]["DocumentPlaceholder"][];
         };
         /** @description Company template CRUD. `company`/`placeholders_used` are server-derived. */
         DocumentTemplate: {
@@ -7699,6 +7718,7 @@ export interface components {
             rendered_html: string;
             placeholders_used: string[];
             warnings: string[];
+            brand: components["schemas"]["DocumentBrandPreview"];
         };
         DocumentTemplatePreviewRequestRequest: {
             body_html?: string;
@@ -7960,6 +7980,13 @@ export interface components {
             /** @description Public no-login link (present only for ISSUED documents that carry a minted token). */
             readonly public_url: string | null;
             readonly public_link_revoked: boolean;
+            /**
+             * @description Flat letterhead slice for the registry preview (T1-a): frozen brand snapshot once issued,
+             *     live company branding for a draft.
+             */
+            readonly brand: {
+                [key: string]: unknown;
+            };
             readonly created_by_name: string | null;
             /**
              * Дата создания
