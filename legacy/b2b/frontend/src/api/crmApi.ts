@@ -2,6 +2,7 @@ import { runAiJob } from '@/lib/aiJob';
 import { apiClient } from './client';
 import { Product as CatalogProduct } from './catalogApi';
 import { PaginatedResponse } from './types';
+import type { components } from './schema';
 
 export type Product = CatalogProduct;
 
@@ -255,20 +256,9 @@ export interface ChargeTemplate {
 }
 
 /** Seller unit economics for the КП (cost-gated; null when the viewer can't see costs or
- *  on list endpoints). Decimals arrive as strings. */
-export interface QuoteEconomics {
-	total_landed_cost: string;
-	gross_profit: string;
-	gross_margin_percent: string;   // gross margin ON PRICE (governance metric)
-	markup_percent: string;         // markup on cost (reference)
-	charge_cost_total: string;
-	operating_profit: string;
-	below_cost: boolean;            // hard-stop flag: operating profit < 0 (landed + charge costs)
-	below_floor: boolean;           // warn+approval flag: margin < company floor
-	min_margin_percent: string;
-	target_margin_percent: string;
-	fx_missing: string[];           // line currencies with NO resolvable rate → blocks submit/send
-}
+ *  on list endpoints). Decimals arrive as strings. Re-exported from the generated OpenAPI
+ *  types (DT2) — the hand-written interface was a field-for-field duplicate. */
+export type QuoteEconomics = components['schemas']['QuoteEconomics'];
 
 /** One node of the КП internal approval chain (unified workflow). */
 export interface QuoteApprovalStep {
@@ -799,6 +789,14 @@ export const crmApi = {
 	},
 	createQuote: async (data: { deal: number; notes?: string; valid_until?: string }) => {
 		const response = await apiClient.post<Quote>('crm/quotes/', data);
+		return response.data;
+	},
+	// WP-G1 — «Дублировать КП» (Odoo Duplicate). Deep-copies the source quote into a new DRAFT
+	// on the SAME deal (version+1, lines + charges carried over) and returns the new Quote.
+	// Endpoint added by the parallel backend lane; the duplicate control degrades to an error
+	// toast (translateApiError) if it 404s in a build where the backend has not landed yet.
+	duplicateQuote: async (id: number) => {
+		const response = await apiClient.post<Quote>(`crm/quotes/${id}/duplicate/`, {});
 		return response.data;
 	},
 	// Seller sets КП-level fields (currency, notes, validity).

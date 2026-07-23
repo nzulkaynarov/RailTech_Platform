@@ -31,6 +31,7 @@ from .access import (
     _has_legacy_send_role,
     apply_company_quote_defaults,
     approval_queue_for,
+    can_duplicate_quote,
     can_send_quote_to_client,
     public_quote_gate,
     scope_quotes_for_viewer,
@@ -44,6 +45,7 @@ from .bulk import (
     bulk_update_quote_items,
     reassign_quote_item_product,
 )
+from .duplicate import duplicate_quote
 from .lifecycle import QuoteLifecycleService
 from .pricing import (
     QuoteCalculationService,
@@ -71,6 +73,8 @@ __all__ = [
     # access
     "scope_quotes_for_viewer",
     "apply_company_quote_defaults",
+    "can_duplicate_quote",
+    "duplicate_quote",
     "can_send_quote_to_client",
     "_has_legacy_send_role",
     "approval_queue_for",

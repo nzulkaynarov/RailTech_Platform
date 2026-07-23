@@ -4018,6 +4018,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/crm/invoices/create-manual/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a manual DRAFT invoice (no signed contract)
+         * @description Raise a DRAFT invoice directly on a deal WITHOUT a signed contract (Odoo / МойСклад «invoice without contract»; СНГ «счёт = оферта»). Populate lines from an active КП on the deal (`source_quote` → same billable projection as the contract path) and/or a manual line list. Amounts follow the КП presentation currency (UZS), never a cost currency. The invoice is born DRAFT and rides the existing issue / cancel lifecycle.
+         */
+        post: operations["crm_invoices_create_manual_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/invoices/generate-from-contract/": {
         parameters: {
             query?: never;
@@ -4631,6 +4651,26 @@ export interface paths {
         get: operations["crm_quotes_download_pdf_retrieve"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/quotes/{id}/duplicate/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Duplicate a КП into a new DRAFT version (Odoo «Duplicate»)
+         * @description Deep-copy this КП into a NEW DRAFT quote on the SAME deal (version = max+1): all line items (incl. sections / notes / optional lines and per-line margin), all document charges, and the КП settings. The public link, PDF, КП number and freeze/approve artefacts are NOT copied, and the FX snapshot is re-frozen at current rates on the copy's first recalc. Same seller-side authorization as building a КП (quote.build).
+         */
+        post: operations["crm_quotes_duplicate_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7190,6 +7230,13 @@ export interface components {
              */
             vat_rate?: string;
         };
+        CreateManualInvoiceRequest: {
+            deal: number;
+            source_quote?: number;
+            /** @default 14 */
+            due_days: number;
+            lines?: components["schemas"]["ManualInvoiceLineRequest"][];
+        };
         Currency: {
             readonly id: number;
             /**
@@ -8043,6 +8090,12 @@ export interface components {
         LogoutRequestRequest: {
             all?: boolean;
             refresh?: string;
+        };
+        ManualInvoiceLineRequest: {
+            description: string;
+            quantity: number;
+            /** Format: decimal */
+            unit_price_excl_vat: string;
         };
         /**
          * @description OEM brand lookup (catalog.Manufacturer) — the canonical `Product.brand` source.
@@ -18917,6 +18970,38 @@ export interface operations {
             };
         };
     };
+    crm_invoices_create_manual_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateManualInvoiceRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["CreateManualInvoiceRequest"];
+                "multipart/form-data": components["schemas"]["CreateManualInvoiceRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Invoice"];
+                };
+            };
+            /** @description Validation / authorization error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     crm_invoices_generate_from_contract_create: {
         parameters: {
             query?: never;
@@ -20236,6 +20321,42 @@ export interface operations {
             };
             /** @description QUOTE_NOT_CLAIMED / FX_RATE_MISSING / QUOTE_BELOW_COST */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    crm_quotes_duplicate_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Коммерческое предложение. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Quote"];
+                };
+            };
+            /** @description Role not permitted (ROLE_NOT_PERMITTED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Quote not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

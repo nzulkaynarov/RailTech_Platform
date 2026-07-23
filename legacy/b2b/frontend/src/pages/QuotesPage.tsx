@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-  Calculator, MoreHorizontal, Send, ShieldAlert,
+  Calculator, Files, MoreHorizontal, Send, ShieldAlert,
 } from 'lucide-react';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -27,7 +27,7 @@ import { QuoteStatus, quoteStatusLabelKey } from '@/lib/codes';
 import { publicQuoteUrl } from '@/lib/quoteSend';
 import { DocumentActions } from '@/components/Shared/DocumentActions';
 import { useCurrencyStore } from '@/store/currencyStore';
-import { useQuotes, useQuote, useDeal, useQuoteStatuses, useForceApproveQuote } from '@/hooks/useCRM';
+import { useQuotes, useQuote, useDeal, useQuoteStatuses, useForceApproveQuote, useDuplicateQuote } from '@/hooks/useCRM';
 import { sumMoney } from '@/utils/decimal';
 import type { Quote } from '@/api/crmApi';
 import { toast } from 'sonner';
@@ -39,6 +39,7 @@ export function QuotesPage() {
   const { activeStatus, role } = useUserStore();
   const { data: quotes, isLoading, isError, refetch } = useQuotes();
   const forceApproveMut = useForceApproveQuote();
+  const duplicateMut = useDuplicateQuote();
   const formatCurrency = useCurrencyStore((s) => s.format);
   const isBuyer = activeStatus === 'BUYER';
   const isPlatformAdmin = role === 'ADMIN';
@@ -77,6 +78,18 @@ export function QuotesPage() {
         { label: t('pages.quotes.stats.approved'), value: String(quotesList.filter(q => q.status_code === 'APPROVED').length) },
         { label: t('pages.quotes.stats.pipeline'), value: String(quotesList.filter(q => !['APPROVED', 'REJECTED', 'EXPIRED'].includes(q.status_code)).length) },
       ];
+
+  // WP-G1 — «Дублировать КП» from the registry: deep-copy → land the seller in the new draft's
+  // builder. Degrades to an error toast if the backend duplicate endpoint isn't present yet.
+  const handleDuplicate = async (quote: Quote) => {
+    try {
+      const newQuote = await duplicateMut.mutateAsync(quote.id);
+      toast.success(t('pages.quotes.toast.duplicated', { id: quote.id }));
+      window.location.hash = `deal-quote/${newQuote.deal}`;
+    } catch (e) {
+      toast.error(translateApiError(e));
+    }
+  };
 
   const handleForceApprove = async () => {
     if (!forceApproveTarget) return;
@@ -150,8 +163,12 @@ export function QuotesPage() {
       // Send/force menu. `data-row-action` keeps a click here from also opening the row.
       id: 'actions', header: t('pages.quotes.table.actions'), className: 'text-center', mobileActions: true,
       cell: (q) => {
+        // «Дублировать» is a seller authoring action — offered to any non-buyer, non-viewer
+        // seller row (platform admins are viewers → no КП authoring, ADMIN_VIEWER_CANNOT_ACT).
+        const canDuplicate = !isBuyer && !isPlatformAdmin;
         const showStatusMenu = !isBuyer
-          && (q.status_code === QuoteStatus.READY_TO_SEND
+          && (canDuplicate
+            || q.status_code === QuoteStatus.READY_TO_SEND
             || (isPlatformAdmin && q.status_code !== QuoteStatus.APPROVED));
         return (
         <div className="flex items-center justify-center gap-1" data-row-action>
@@ -176,6 +193,12 @@ export function QuotesPage() {
                   <DropdownMenuItem onClick={() => setSendConfirmId(q.id)}>
                     <Send className="mr-2 h-4 w-4" />
                     {t('pages.quotes.actions.sendToClient')}
+                  </DropdownMenuItem>
+                )}
+                {canDuplicate && (
+                  <DropdownMenuItem onClick={() => handleDuplicate(q)} disabled={duplicateMut.isPending}>
+                    <Files className="mr-2 h-4 w-4" />
+                    {t('pages.quotes.actions.duplicate')}
                   </DropdownMenuItem>
                 )}
                 {isPlatformAdmin && q.status_code !== QuoteStatus.APPROVED && (

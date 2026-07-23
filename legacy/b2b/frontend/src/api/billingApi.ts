@@ -71,6 +71,13 @@ export const invoicesApi = {
     return response.data;
   },
   downloadPdf: (id: number) => downloadFile(`crm/invoices/${id}/download-pdf/`, `RailTech_Invoice_${id}.pdf`),
+  // WP-G2 — «Создать инвойс с нуля». POST a deal (+ optional `source_quote` to import that КП's
+  // lines) → a DRAFT Invoice with contract=null. Mirrors the Odoo «create invoice, optionally
+  // from a sales order» pattern. Endpoint: the backend `create-manual` action on InvoiceViewSet.
+  createDraft: async (payload: { deal: number; source_quote?: number }) => {
+    const response = await apiClient.post<Invoice>('crm/invoices/create-manual/', payload);
+    return response.data;
+  },
   generateFromContract: async (contractId: number, dueDays = 14) => {
     const response = await apiClient.post<Invoice>('crm/invoices/generate-from-contract/', {
       contract_id: contractId,

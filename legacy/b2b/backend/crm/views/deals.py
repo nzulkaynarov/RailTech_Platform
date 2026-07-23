@@ -109,6 +109,8 @@ class DealViewSet(viewsets.ModelViewSet):
             .prefetch_related(Prefetch("quotes", queryset=quotes_qs), "target_sellers")
         )
 
+        from django.db.models import Q
+
         from accounts.services.permissions import seller_visible_deal_ids
 
         # Platform admin sees every deal (oversight). A seller acting in a seller
@@ -119,12 +121,29 @@ class DealViewSet(viewsets.ModelViewSet):
         if getattr(user, "is_platform_admin", False):
             return queryset
 
+        user_company_ids = list(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
+        buyer_scope = Q(company_id__in=user_company_ids)
+
         visible_deal_ids = seller_visible_deal_ids(user, self.request)
         if visible_deal_ids is not None:
-            return queryset.filter(id__in=visible_deal_ids)
+            scope = Q(id__in=visible_deal_ids)
+            # Opening ONE specific deal: a seller may also open a deal they own as the buyer.
+            if self.action == "retrieve":
+                scope |= buyer_scope
+            return queryset.filter(scope)
 
-        user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
-        return queryset.filter(company_id__in=user_company_ids)
+        # Buyer / no-seller-context. LIST stays buyer-scoped (context-switching, ADR-0005), but
+        # RETRIEVE of a specific deal a user is a ROUTED SELLER on must succeed regardless of the
+        # active context — otherwise a seller's own company-less «калькулятор» deal (buyer=None)
+        # 404s in the default BUYER context (it's a seller artifact, invisible to buyer scope).
+        # force=True resolves routing regardless of the X-Active-Context header, staying
+        # routing-only (no competitor widening) — the same WP-1 rule billing docs already use.
+        scope = buyer_scope
+        if self.action == "retrieve":
+            forced = seller_visible_deal_ids(user, self.request, force=True)
+            if forced:
+                scope |= Q(id__in=forced)
+        return queryset.filter(scope)
 
     def destroy(self, request, *args, **kwargs):
         """Members may delete only their own DRAFT deals; once a deal enters the

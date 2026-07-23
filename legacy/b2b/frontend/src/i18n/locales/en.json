@@ -3334,6 +3334,7 @@
         "approve": "Approve",
         "reject": "Reject",
         "downloadPDF": "Download PDF",
+        "duplicate": "Duplicate",
         "forceApprove": "Force-approve (admin)"
       },
       "toast": {
@@ -3342,7 +3343,8 @@
         "rejectedSuccess": "Quote #{{id}} rejected",
         "actionError": "Failed to perform action",
         "forceReasonRequired": "Force-approve reason is required",
-        "forceApproved": "Quote #{{id}} force-approved by platform admin"
+        "forceApproved": "Quote #{{id}} force-approved by platform admin",
+        "duplicated": "Duplicated quote #{{id}}"
       },
       "confirmForceApprove": "Force-approve quote (platform admin)",
       "forceApproveHint": "Quote #{{id}} will be moved to APPROVED regardless of its current status. The action is audit-logged with [FORCE_ADMIN] marker.",
@@ -4638,7 +4640,7 @@
       "quote": "Quote (КП)",
       "quoteHint": "A new quote for a deal or a price calculator",
       "invoice": "Invoice",
-      "invoiceHint": "An invoice from a signed contract",
+      "invoiceHint": "An invoice for a deal; lines can be imported from a quote",
       "act": "Act",
       "actHint": "An act of works from an invoice",
       "payment": "Payment",
@@ -4649,6 +4651,20 @@
       "act": "An act is generated from an invoice. Go to invoices and create an act for the relevant invoice.",
       "goToContracts": "Go to contracts",
       "goToInvoices": "Go to invoices"
+    },
+    "invoice": {
+      "title": "Create invoice",
+      "description": "A draft invoice for a deal; lines can be imported from a quote",
+      "deal": "Deal",
+      "selectDeal": "Select a deal",
+      "noDeals": "No deals available",
+      "sourceQuote": "Import lines from a quote (optional)",
+      "noSource": "No import — add lines manually",
+      "quoteOption": "Quote #{{id}}-v{{version}}",
+      "hint": "An invoice can also be issued from a signed contract — open the relevant contract.",
+      "create": "Create invoice",
+      "creating": "Creating…",
+      "created": "Draft invoice created"
     }
   },
   "fulfillmentPage": {
@@ -4887,6 +4903,7 @@
   },
   "requestDetailActions": {
     "titleLabel": "Request title",
+    "soloNoClient": "No client (calculator)",
     "noteToSeller": "Note to the seller",
     "noteToSellerPlaceholder": "Deadlines, delivery terms, preferences…",
     "startSourcing": "Start sourcing",
@@ -5746,6 +5763,8 @@
     "linkRevoked": "Public link revoked",
     "newVersion": "Create new version",
     "newVersionCreated": "New quote version created",
+    "duplicate": "Duplicate",
+    "duplicated": "Quote duplicated",
     "revokeTitle": "Revoke the public link?",
     "revokeDescription": "Anyone with the link will no longer be able to open the quote.",
     "newVersionTitle": "Create a new quote version?",
