@@ -15,6 +15,7 @@ function makeMember(
   email: string,
   firstName: string,
   companyRoleId: number | null,
+  isActive = true,
 ): User {
   const membership: MembershipFixture = {
     id: 100 + id,
@@ -28,6 +29,7 @@ function makeMember(
     first_name: firstName,
     last_name: '',
     phone: '',
+    is_active: isActive,
     memberships: [membership],
   };
 }
@@ -80,5 +82,30 @@ describe('TeamMembersTable', () => {
   it('shows the empty state for a team without members', () => {
     renderWithProviders(<TeamMembersTable {...baseProps} team={[]} canManageTeam />);
     expect(screen.getByText('Нет сотрудников')).toBeInTheDocument();
+  });
+
+  it('renders the REAL status — active and disabled (P8)', () => {
+    const team: User[] = [
+      makeMember(1, 'owner@acme.uz', 'Владелец', 7, true),
+      makeMember(2, 'off@acme.uz', 'Отключённый', null, false),
+    ];
+    renderWithProviders(
+      <TeamMembersTable {...baseProps} team={team} canManageTeam={false} />,
+    );
+    expect(screen.getAllByText('Активен').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Отключён').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('offers deactivate + remove actions for OTHER members with team.manage (P2)', () => {
+    renderWithProviders(<TeamMembersTable {...baseProps} canManageTeam />);
+    // Non-self member (sales) gets both actions; self (owner) does not.
+    expect(screen.getAllByLabelText('Деактивировать').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByLabelText('Удалить из команды').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('hides member actions without team.manage', () => {
+    renderWithProviders(<TeamMembersTable {...baseProps} canManageTeam={false} />);
+    expect(screen.queryByLabelText('Удалить из команды')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Деактивировать')).not.toBeInTheDocument();
   });
 });

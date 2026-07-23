@@ -529,6 +529,24 @@ export const accountsApi = {
 		);
 		return response.data;
 	},
+	// S3 (P2): Company Admin removes a member from the company. Never-orphan on the
+	// backend → CANNOT_REMOVE_LAST_COMPANY_ADMIN. `member_id` is the CompanyMember pk.
+	removeMember: async (companyId: number, memberId: number) => {
+		const response = await apiClient.post<{ removed: boolean; member_id: number }>(
+			`accounts/companies/${companyId}/remove-member/`,
+			{ member_id: memberId },
+		);
+		return response.data;
+	},
+	// S3 (P8): Company Admin activates / deactivates a member's account. Never-orphan
+	// (sole admin) and self-deactivation guards live on the backend.
+	toggleMemberActive: async (companyId: number, memberId: number) => {
+		const response = await apiClient.post<{ member_id: number; user_id: number; is_active: boolean }>(
+			`accounts/companies/${companyId}/toggle-member-active/`,
+			{ member_id: memberId },
+		);
+		return response.data;
+	},
 	getWorkspaceRoles: async (companyType?: string) => {
 		const url = companyType
 			? `accounts/workspace-roles/?company_type=${encodeURIComponent(companyType)}`

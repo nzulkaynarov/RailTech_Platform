@@ -746,6 +746,66 @@
                 }
             }
         },
+        "/api/v1/accounts/companies/{id}/remove-member/": {
+            "post": {
+                "operationId": "accounts_companies_remove_member_create",
+                "description": "Company Admin removes a member from the company (S3 / spec P2 — «added the wrong person, can't remove»). Never-orphan: refuses to remove the last admin → CANNOT_REMOVE_LAST_COMPANY_ADMIN (transfer admin first).",
+                "summary": "Remove a team member",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Компания.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Accounts"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RemoveMemberRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RemoveMemberRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RemoveMemberRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Member removed"
+                    },
+                    "403": {
+                        "description": "Only Company Admin can manage the team"
+                    },
+                    "404": {
+                        "description": "Member not found"
+                    },
+                    "409": {
+                        "description": "Cannot remove the last admin"
+                    }
+                }
+            }
+        },
         "/api/v1/accounts/companies/{id}/set-member-role/": {
             "post": {
                 "operationId": "accounts_companies_set_member_role_create",
@@ -971,6 +1031,66 @@
                             }
                         },
                         "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/accounts/companies/{id}/toggle-member-active/": {
+            "post": {
+                "operationId": "accounts_companies_toggle_member_active_create",
+                "description": "Company Admin toggles a member's account active flag (S3 / spec P8 — real status, not a fake «Active» badge). Never-orphan: refuses to deactivate the sole active admin → CANNOT_DEACTIVATE_SOLE_COMPANY_ADMIN; a member cannot deactivate themselves → CANNOT_DEACTIVATE_SELF.",
+                "summary": "Activate / deactivate a team member",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Компания.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Accounts"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ToggleMemberActiveRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ToggleMemberActiveRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ToggleMemberActiveRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Member active flag toggled"
+                    },
+                    "403": {
+                        "description": "Only Company Admin can manage the team"
+                    },
+                    "404": {
+                        "description": "Member not found"
+                    },
+                    "409": {
+                        "description": "Cannot deactivate the sole admin"
                     }
                 }
             }
@@ -27941,6 +28061,17 @@
                     }
                 }
             },
+            "RemoveMemberRequest": {
+                "type": "object",
+                "properties": {
+                    "member_id": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "member_id"
+                ]
+            },
             "ResetPasswordRequest": {
                 "type": "object",
                 "properties": {
@@ -29141,6 +29272,17 @@
                     "id",
                     "timestamp",
                     "user_name"
+                ]
+            },
+            "ToggleMemberActiveRequest": {
+                "type": "object",
+                "properties": {
+                    "member_id": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "member_id"
                 ]
             },
             "TokenObtainPair": {

@@ -246,6 +246,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/accounts/companies/{id}/remove-member/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Remove a team member
+         * @description Company Admin removes a member from the company (S3 / spec P2 — «added the wrong person, can't remove»). Never-orphan: refuses to remove the last admin → CANNOT_REMOVE_LAST_COMPANY_ADMIN (transfer admin first).
+         */
+        post: operations["accounts_companies_remove_member_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/accounts/companies/{id}/set-member-role/": {
         parameters: {
             query?: never;
@@ -304,6 +324,26 @@ export interface paths {
         get: operations["accounts_companies_team_list"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/accounts/companies/{id}/toggle-member-active/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Activate / deactivate a team member
+         * @description Company Admin toggles a member's account active flag (S3 / spec P8 — real status, not a fake «Active» badge). Never-orphan: refuses to deactivate the sole active admin → CANNOT_DEACTIVATE_SOLE_COMPANY_ADMIN; a member cannot deactivate themselves → CANNOT_DEACTIVATE_SELF.
+         */
+        post: operations["accounts_companies_toggle_member_active_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -11393,6 +11433,9 @@ export interface components {
              */
             owner_member?: number | null;
         };
+        RemoveMemberRequest: {
+            member_id: number;
+        };
         ResetPasswordRequest: {
             uid: string;
             token: string;
@@ -12026,6 +12069,9 @@ export interface components {
             readonly company_id: number | null;
             /** Контакт */
             readonly contact_id: number | null;
+        };
+        ToggleMemberActiveRequest: {
+            member_id: number;
         };
         TokenObtainPair: {
             readonly access: string;
@@ -12681,6 +12727,54 @@ export interface operations {
             };
         };
     };
+    accounts_companies_remove_member_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Компания. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RemoveMemberRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["RemoveMemberRequest"];
+                "multipart/form-data": components["schemas"]["RemoveMemberRequest"];
+            };
+        };
+        responses: {
+            /** @description Member removed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Only Company Admin can manage the team */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Member not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Cannot remove the last admin */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     accounts_companies_set_member_role_create: {
         parameters: {
             query?: never;
@@ -12819,6 +12913,54 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["PaginatedUserList"];
                 };
+            };
+        };
+    };
+    accounts_companies_toggle_member_active_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Компания. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ToggleMemberActiveRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ToggleMemberActiveRequest"];
+                "multipart/form-data": components["schemas"]["ToggleMemberActiveRequest"];
+            };
+        };
+        responses: {
+            /** @description Member active flag toggled */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Only Company Admin can manage the team */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Member not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Cannot deactivate the sole admin */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

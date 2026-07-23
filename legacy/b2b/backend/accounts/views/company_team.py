@@ -163,6 +163,93 @@ class CompanyTeamMixin:
         return Response({"id": result.id, "user_id": result.user_id, "role": result.role.code})
 
     @extend_schema(
+        summary="Remove a team member",
+        description=(
+            "Company Admin removes a member from the company (S3 / spec P2 — «added the "
+            "wrong person, can't remove»). Never-orphan: refuses to remove the last admin "
+            "→ CANNOT_REMOVE_LAST_COMPANY_ADMIN (transfer admin first)."
+        ),
+        request=inline_serializer(
+            "RemoveMember",
+            fields={"member_id": drf_serializers.IntegerField()},
+        ),
+        responses={
+            200: OpenApiResponse(description="Member removed"),
+            403: OpenApiResponse(description="Only Company Admin can manage the team"),
+            404: OpenApiResponse(description="Member not found"),
+            409: OpenApiResponse(description="Cannot remove the last admin"),
+        },
+        tags=["Accounts"],
+    )
+    @action(detail=True, methods=["post"], url_path="remove-member")
+    def remove_member(self, request, pk=None):
+        company = self.get_object()
+        # Authorization mirrors invite / set_member_role / update_member_capabilities:
+        # team.manage CompanyRole permission (delegated company admin), or platform staff.
+        if not request.user.is_platform_admin and not member_has_permission(request.user, company.id, "team.manage"):
+            return Response({"detail": "ONLY_COMPANY_ADMIN_CAN_MANAGE_TEAM"}, status=status.HTTP_403_FORBIDDEN)
+
+        member_id = request.data.get("member_id")
+        if not member_id:
+            return Response({"detail": "MEMBER_ID_REQUIRED"}, status=400)
+        member = CompanyMember.objects.filter(pk=member_id, company=company).select_related("company").first()
+        if not member:
+            return Response({"detail": "MEMBER_NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Never-orphan invariant lives in the service (Rule 8).
+        _result, error = services.remove_company_member(member)
+        if error:
+            http_status = (
+                status.HTTP_409_CONFLICT
+                if error == "CANNOT_REMOVE_LAST_COMPANY_ADMIN"
+                else status.HTTP_400_BAD_REQUEST
+            )
+            return Response({"detail": error}, status=http_status)
+        # member.pk is None after delete(); echo the request id so the SPA can drop the row.
+        return Response({"removed": True, "member_id": int(member_id)})
+
+    @extend_schema(
+        summary="Activate / deactivate a team member",
+        description=(
+            "Company Admin toggles a member's account active flag (S3 / spec P8 — real "
+            "status, not a fake «Active» badge). Never-orphan: refuses to deactivate the "
+            "sole active admin → CANNOT_DEACTIVATE_SOLE_COMPANY_ADMIN; a member cannot "
+            "deactivate themselves → CANNOT_DEACTIVATE_SELF."
+        ),
+        request=inline_serializer(
+            "ToggleMemberActive",
+            fields={"member_id": drf_serializers.IntegerField()},
+        ),
+        responses={
+            200: OpenApiResponse(description="Member active flag toggled"),
+            403: OpenApiResponse(description="Only Company Admin can manage the team"),
+            404: OpenApiResponse(description="Member not found"),
+            409: OpenApiResponse(description="Cannot deactivate the sole admin"),
+        },
+        tags=["Accounts"],
+    )
+    @action(detail=True, methods=["post"], url_path="toggle-member-active")
+    def toggle_member_active(self, request, pk=None):
+        company = self.get_object()
+        if not request.user.is_platform_admin and not member_has_permission(request.user, company.id, "team.manage"):
+            return Response({"detail": "ONLY_COMPANY_ADMIN_CAN_MANAGE_TEAM"}, status=status.HTTP_403_FORBIDDEN)
+
+        member_id = request.data.get("member_id")
+        if not member_id:
+            return Response({"detail": "MEMBER_ID_REQUIRED"}, status=400)
+        member = CompanyMember.objects.filter(pk=member_id, company=company).select_related("user").first()
+        if not member:
+            return Response({"detail": "MEMBER_NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Never-orphan + self-deactivation guards live in the service (Rule 8).
+        result, error = services.toggle_user_active(member.user, request.user)
+        if error:
+            never_orphan = {"CANNOT_DEACTIVATE_SOLE_COMPANY_ADMIN", "CANNOT_DEACTIVATE_SOLE_OPERATOR"}
+            http_status = status.HTTP_409_CONFLICT if error in never_orphan else status.HTTP_400_BAD_REQUEST
+            return Response({"detail": error}, status=http_status)
+        return Response({"member_id": int(member_id), "user_id": result.id, "is_active": result.is_active})
+
+    @extend_schema(
         summary="Invite team member",
         description=(
             "Invite a new user to the company by email. "

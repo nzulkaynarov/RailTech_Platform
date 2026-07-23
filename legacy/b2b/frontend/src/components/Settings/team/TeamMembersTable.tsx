@@ -2,13 +2,33 @@
  * Company team members table — ResponsiveDataTable (repo convention; §2.4: data tables
  * are full width). Row-derivation logic moved verbatim from the former monolithic
  * Cabinet/CompanyTeamSettings.tsx (spec PR 4 package split).
+ *
+ * S3 (spec P2/P8): a member with team.manage can deactivate/reactivate and remove OTHER
+ * members (confirmed via AlertDialog); the Status column reads the member's REAL
+ * `is_active`, not a hardcoded green «Active» badge. Never-orphan / self-guard errors
+ * come from the backend and surface via translateApiError.
  */
 import { useTranslation } from 'react-i18next';
-import { CheckCircle2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { CheckCircle2, XCircle, UserCheck, UserX, Trash2 } from 'lucide-react';
 
 import type { CompanyRole, User, UserMembership } from '@/api/accountsApi';
+import { useRemoveMember, useToggleMemberActive } from '@/hooks/useAccounts';
+import { translateApiError } from '@/lib/apiError';
 import { ResponsiveDataTable, type ResponsiveColumn } from '@/components/ResponsiveDataTable';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import {
   Select,
   SelectTrigger,
@@ -35,6 +55,9 @@ interface MemberRow {
   currentCompanyRoleId: number | null;
   isSelf: boolean;
   canEdit: boolean;
+  /** Real membership/account status (P8) — false for invited-but-not-activated / disabled. */
+  isActive: boolean;
+  displayName: string;
 }
 
 type MemberExt = User & { membership_id?: number; company_role?: number | null };
@@ -53,7 +76,128 @@ function toMemberRow(
     (myMembership as (UserMembership & { company_role?: number | null }) | undefined)
       ?.company_role ?? extMember.company_role ?? null;
   const isSelf = member.id === currentUserId;
-  return { member, memberId, currentCompanyRoleId, isSelf, canEdit: canManageTeam && !isSelf };
+  // Real status (P8): the account-level is_active the backend returns per member.
+  // Absent (older payloads) → treat as active so we never show a false «disabled».
+  const isActive = member.is_active !== false;
+  return {
+    member,
+    memberId,
+    currentCompanyRoleId,
+    isSelf,
+    canEdit: canManageTeam && !isSelf,
+    isActive,
+    displayName: member.first_name || member.username || member.email,
+  };
+}
+
+/** Deactivate/activate + remove actions for one member (team.manage, non-self). */
+function MemberRowActions({
+  companyId,
+  memberId,
+  displayName,
+  isActive,
+}: {
+  companyId: number;
+  memberId: number;
+  displayName: string;
+  isActive: boolean;
+}) {
+  const { t } = useTranslation();
+  const toggleMut = useToggleMemberActive();
+  const removeMut = useRemoveMember();
+
+  async function handleToggle() {
+    try {
+      const res = await toggleMut.mutateAsync({ companyId, memberId });
+      toast.success(res.is_active ? t('team.activateSuccess') : t('team.deactivateSuccess'));
+    } catch (err) {
+      toast.error(translateApiError(err));
+    }
+  }
+
+  async function handleRemove() {
+    try {
+      await removeMut.mutateAsync({ companyId, memberId });
+      toast.success(t('team.removeSuccess'));
+    } catch (err) {
+      toast.error(translateApiError(err));
+    }
+  }
+
+  const busy = toggleMut.isPending || removeMut.isPending;
+
+  return (
+    <div className="flex items-center justify-end gap-1">
+      {/* ── Deactivate / activate ── */}
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+            aria-label={isActive ? t('team.deactivate') : t('team.activate')}
+            disabled={busy}
+          >
+            {isActive ? (
+              <UserX className="h-4 w-4" aria-hidden="true" />
+            ) : (
+              <UserCheck className="h-4 w-4" aria-hidden="true" />
+            )}
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {isActive ? t('team.deactivate') : t('team.activate')}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {isActive
+                ? t('team.deactivateConfirm', { name: displayName })
+                : t('team.activateConfirm', { name: displayName })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleToggle}>
+              {isActive ? t('team.deactivate') : t('team.activate')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ── Remove from team ── */}
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-destructive hover:text-destructive"
+            aria-label={t('team.remove')}
+            disabled={busy}
+          >
+            <Trash2 className="h-4 w-4" aria-hidden="true" />
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('team.remove')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('team.removeConfirm', { name: displayName })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRemove}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {t('team.remove')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
 }
 
 export function TeamMembersTable({
@@ -125,13 +269,32 @@ export function TeamMembersTable({
     },
     {
       id: 'status',
-      header: t('team.status'),
-      cell: () => (
-        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-success">
-          <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-          {t('team.active')}
-        </span>
-      ),
+      header: t('team.status.label'),
+      cell: ({ isActive }) =>
+        isActive ? (
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-success">
+            <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+            {t('team.status.active')}
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            <XCircle className="h-4 w-4" aria-hidden="true" />
+            {t('team.status.inactive')}
+          </span>
+        ),
+    },
+    {
+      id: 'actions',
+      header: '',
+      cell: ({ memberId, canEdit, isActive, displayName }) =>
+        canEdit && companyId ? (
+          <MemberRowActions
+            companyId={companyId}
+            memberId={memberId}
+            displayName={displayName}
+            isActive={isActive}
+          />
+        ) : null,
     },
   ];
 

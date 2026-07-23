@@ -229,6 +229,34 @@ export const useInviteMember = () => {
   });
 };
 
+// S3 (P2): remove a member from the company. Invalidates the team query so the
+// row disappears; never-orphan errors surface to the caller for a toast.
+export const useRemoveMember = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ companyId, memberId }: { companyId: number; memberId: number }) =>
+      accountsApi.removeMember(companyId, memberId),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: ['company-team', variables.companyId] });
+      qc.invalidateQueries({ queryKey: ['users'] });
+    },
+  });
+};
+
+// S3 (P8): activate / deactivate a member. Invalidates the team query so the
+// real status badge refreshes.
+export const useToggleMemberActive = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ companyId, memberId }: { companyId: number; memberId: number }) =>
+      accountsApi.toggleMemberActive(companyId, memberId),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: ['company-team', variables.companyId] });
+      qc.invalidateQueries({ queryKey: ['users'] });
+    },
+  });
+};
+
 export const useVerifyCompany = () => {
   const queryClient = useQueryClient();
   return useMutation({

@@ -96,6 +96,8 @@ class CompanyViewSet(CompanyKYCMixin, CompanyDocumentsMixin, CompanyTeamMixin, v
         "invite": "users.manage",
         "set_member_role": "users.manage",
         "update_member_capabilities": "users.manage",
+        "remove_member": "users.manage",
+        "toggle_member_active": "users.manage",
     }
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = {
@@ -127,6 +129,8 @@ class CompanyViewSet(CompanyKYCMixin, CompanyDocumentsMixin, CompanyTeamMixin, v
         "invite",
         "update_member_capabilities",
         "set_member_role",
+        "remove_member",
+        "toggle_member_active",
     }
 
     def get_permissions(self):
