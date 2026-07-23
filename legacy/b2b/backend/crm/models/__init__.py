@@ -25,7 +25,7 @@ from .lookups import (
 )
 from .quotes import Quote, QuoteItem, QuoteItemHistory
 from .relationships import CounterpartyRelationship, RelationshipDirection, RelationshipSource, RelationshipStage
-from .sequences import DocumentSequence
+from .sequences import DocumentNumberingScheme, DocumentSequence
 
 __all__ = [
     "AIMatchOutcome",
@@ -40,6 +40,7 @@ __all__ = [
     "Deal",
     "DealSellerRouting",
     "DealStage",
+    "DocumentNumberingScheme",
     "DocumentSequence",
     "DocumentTemplate",
     "DocumentTemplateKind",

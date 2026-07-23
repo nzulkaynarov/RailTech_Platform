@@ -1,25 +1,68 @@
-"""Race-safe, per-company sequential document numbering.
+"""Race-safe, per-company sequential document numbering — now scheme-driven (N1).
 
 Replaces `Model.objects.filter(created_at__year=...).count() + 1`, which races:
 two concurrent issuers read the same count and mint the same number, hitting the
-`number` unique constraint → 500. Here a per-(company, doc_type, year)
+`number` unique constraint → 500. Here a per-(company, doc_type, period)
 DocumentSequence row is locked with select_for_update, so concurrent callers
 serialize and each gets a distinct, gap-free number.
+
+FORMAT is no longer hardcoded. Each company can carry a `DocumentNumberingScheme`
+(token mask + padding + reset period + start value); the number is assembled from that
+mask. A company without its own scheme falls back to the platform default scheme
+(company=NULL, seeded by migration to reproduce the historical format) and finally to
+the code-level DEFAULT_SCHEME below — so numbering works with NO scheme row at all
+(hot path never writes a scheme on read; Rule 1).
 
 Per-company branding: a selling company that sets a `doc_number_prefix` mints under
 its OWN scoped counter and prefix — `ACME-CT-2026-00001`. A company WITHOUT a prefix
 (and the actor=None automation path) uses the SHARED platform counter (company=NULL)
-and the platform format `CT-2026-00001`.
+and the platform scheme `CT-2026-00001`.
 
-GLOBAL-UNIQUE SAFETY: Contract/Invoice/Act.number is globally `unique=True`. To keep
-two companies from colliding on that constraint, a per-company counter is used ONLY
-when the company carries a (non-empty) prefix — the prefix is the brand discriminator
-that makes `{prefix}-{label}-{year}-{NNNNN}` globally distinct. Prefix-less companies
-fall back to the single platform counter, so they share ONE monotonic sequence and
-can never mint the same `{label}-{year}-{NNNNN}` twice.
+GLOBAL-UNIQUE SAFETY (unchanged): Contract/Invoice/Act.number is globally `unique=True`.
+A per-company counter is used ONLY when the company carries a (non-empty) prefix — the
+prefix is the brand discriminator that makes the number globally distinct. Prefix-less
+companies fall back to the single platform counter AND the platform scheme, so they
+share ONE monotonic sequence under ONE format and can never mint the same number twice.
 """
 
+from dataclasses import dataclass
+
 from django.utils import timezone
+
+# Reset-period codes (mirrors DocumentNumberingScheme.RESET_* to avoid importing the
+# model at module import time / in hot-path branches).
+RESET_NEVER = "never"
+RESET_YEARLY = "yearly"
+RESET_MONTHLY = "monthly"
+
+# Code-level default scheme = the historical hardcoded format, so a company with NO
+# scheme row (and no platform row) still mints `{prefix}-{label}-{year}-{NNNNN}`.
+DEFAULT_PATTERN = "{prefix}{type}-{YYYY}-{seq}"
+DEFAULT_PADDING = 5
+DEFAULT_RESET_PERIOD = RESET_YEARLY
+DEFAULT_START_VALUE = 0
+
+
+@dataclass(frozen=True)
+class SchemeSpec:
+    """Immutable snapshot of the numbering scheme actually used to mint a number."""
+
+    pattern: str = DEFAULT_PATTERN
+    padding: int = DEFAULT_PADDING
+    reset_period: str = DEFAULT_RESET_PERIOD
+    start_value: int = DEFAULT_START_VALUE
+
+    @classmethod
+    def from_row(cls, row) -> "SchemeSpec":
+        return cls(
+            pattern=row.pattern,
+            padding=row.padding,
+            reset_period=row.reset_period,
+            start_value=row.start_value,
+        )
+
+
+DEFAULT_SCHEME = SchemeSpec()
 
 
 def _company_prefix(company) -> str:
@@ -37,17 +80,66 @@ def _company_prefix(company) -> str:
     return (row.doc_number_prefix or "").strip() if row else ""
 
 
+def _scheme_company_id(company, prefix: str):
+    """The company id whose scheme/counter applies — the SAME discriminator for both.
+
+    Only a prefixed company is routed to its OWN counter and OWN scheme; without a prefix
+    we route to the platform counter AND platform scheme. Tying scheme resolution to the
+    exact prefix discriminator that routes the counter keeps the global `number` unique
+    safe: all prefix-less callers share one counter under one format.
+    """
+    return getattr(company, "pk", company) if prefix else None
+
+
+def _resolve_scheme(scheme_company_id) -> SchemeSpec:
+    """Company row → platform (company=NULL) row → code-level DEFAULT_SCHEME."""
+    from ..models import DocumentNumberingScheme
+
+    row = None
+    if scheme_company_id is not None:
+        row = DocumentNumberingScheme.objects.filter(company_id=scheme_company_id).first()
+    if row is None:
+        row = DocumentNumberingScheme.objects.filter(company__isnull=True).first()
+    if row is None:
+        return DEFAULT_SCHEME
+    return SchemeSpec.from_row(row)
+
+
+def _period_key(reset_period: str, now) -> str:
+    """Counter period key: never → "ALL", monthly → "YYYY-MM", yearly (default) → "YYYY"."""
+    if reset_period == RESET_MONTHLY:
+        return f"{now.year}-{now.month:02d}"
+    if reset_period == RESET_NEVER:
+        return "ALL"
+    return str(now.year)
+
+
+def _render_number(scheme: SchemeSpec, *, prefix: str, label: str, now, displayed: int) -> str:
+    """Assemble the final number from the scheme's token mask."""
+    prefix_segment = f"{prefix}-" if prefix else ""
+    seq_str = f"{displayed:0{scheme.padding}d}"
+    result = scheme.pattern
+    result = result.replace("{prefix}", prefix_segment)
+    result = result.replace("{type}", label)
+    result = result.replace("{YYYY}", f"{now.year:04d}")  # before {YY} so it isn't clobbered
+    result = result.replace("{YY}", f"{now.year % 100:02d}")
+    result = result.replace("{MM}", f"{now.month:02d}")
+    result = result.replace("{seq}", seq_str)
+    return result
+
+
 def next_document_number(doc_type: str, label: str, company=None) -> str:
     """Return the next gap-free document number from a locked counter.
 
-    Formats `{prefix}-{label}-{year}-{NNNNN}` when `company` has a doc_number_prefix,
-    otherwise the platform default `{label}-{year}-{NNNNN}`. `doc_type` is the short
-    storage code of the counter (e.g. "CT"/"INV"/"ACT"); `label` is the human doc kind
-    printed in the number (kept equal to doc_type for the existing CT/INV/ACT docs).
+    The FORMAT comes from the effective DocumentNumberingScheme (company → platform →
+    code default); `doc_type` is the short storage code of the counter (e.g. "CT"/"INV"),
+    `label` is the human doc kind substituted for the `{type}` token (kept separate: КП
+    docs use doc_type "KP" but label "КП").
 
-    Counter scope: a prefixed company gets its OWN (company, doc_type, year) row; a
+    Counter scope: a prefixed company gets its OWN (company, doc_type, period) row; a
     prefix-less company (or company=None) shares the platform (company=NULL) row — see
-    the module docstring for why this keeps the global `number` unique safe.
+    the module docstring for why this keeps the global `number` unique safe. `period` is
+    derived from the scheme's reset_period (never/yearly/monthly).
 
     MUST be called inside the caller's `transaction.atomic()` block — the row lock is
     held until that transaction commits, which is exactly the window in which the
@@ -56,19 +148,67 @@ def next_document_number(doc_type: str, label: str, company=None) -> str:
     from ..models import DocumentSequence
 
     prefix = _company_prefix(company)
-    # Only a prefixed company is routed to its own counter; without a prefix we share
-    # the platform counter so the global number can't collide across companies.
-    sequence_company_id = getattr(company, "pk", company) if prefix else None
+    scheme_company_id = _scheme_company_id(company, prefix)
+    scheme = _resolve_scheme(scheme_company_id)
 
-    year = timezone.now().year
+    now = timezone.now()
+    period = _period_key(scheme.reset_period, now)
+
     # select_for_update locks the row; get_or_create's internal IntegrityError retry
-    # handles the first-ever concurrent insert for a (company, doc_type, year).
+    # handles the first-ever concurrent insert for a (company, doc_type, period).
     seq = DocumentSequence.objects.select_for_update().get_or_create(
-        company_id=sequence_company_id, doc_type=doc_type, year=year
+        company_id=scheme_company_id,
+        doc_type=doc_type,
+        period=period,
+        defaults={"year": now.year},
     )[0]
     seq.last_value += 1
     seq.save(update_fields=["last_value"])
 
-    if prefix:
-        return f"{prefix}-{label}-{year}-{seq.last_value:05d}"
-    return f"{label}-{year}-{seq.last_value:05d}"
+    displayed = scheme.start_value + seq.last_value
+    return _render_number(scheme, prefix=prefix, label=label, now=now, displayed=displayed)
+
+
+# ── Editability API (thin, for the N2 Settings editor) ─────────────────────────────
+
+
+def get_company_scheme(company) -> SchemeSpec:
+    """The EFFECTIVE scheme a company mints under (for live preview / display).
+
+    Honours the same prefix discriminator as minting: a prefix-less company sees the
+    platform/default scheme (its own row, if any, is not effective until it sets a
+    prefix — that's the global-unique invariant). Returns a plain SchemeSpec so callers
+    read `pattern`/`padding`/`reset_period`/`start_value` without touching the ORM.
+    """
+    prefix = _company_prefix(company)
+    return _resolve_scheme(_scheme_company_id(company, prefix))
+
+
+def set_company_scheme(company, *, pattern=None, padding=None, reset_period=None, start_value=None):
+    """Upsert a company's own DocumentNumberingScheme row (validated). Returns the row.
+
+    Business logic lives here (Rule 8); the N2 DRF view is a thin wrapper. Runs
+    `full_clean()` so an invalid pattern (missing {seq}, empty) raises ValidationError
+    before save. Effectiveness for minting still requires the company to carry a prefix
+    (global-unique invariant) — the caller/UX surfaces that.
+    """
+    from ..models import DocumentNumberingScheme
+
+    if company is None:
+        raise ValueError("set_company_scheme requires a company")
+    company_id = getattr(company, "pk", company)
+
+    row = DocumentNumberingScheme.objects.filter(company_id=company_id).first()
+    if row is None:
+        row = DocumentNumberingScheme(company_id=company_id)
+    if pattern is not None:
+        row.pattern = pattern
+    if padding is not None:
+        row.padding = padding
+    if reset_period is not None:
+        row.reset_period = reset_period
+    if start_value is not None:
+        row.start_value = start_value
+    row.full_clean()
+    row.save()
+    return row
