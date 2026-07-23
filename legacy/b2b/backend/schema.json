@@ -23084,7 +23084,7 @@
             },
             "NumberingPreviewRequestRequest": {
                 "type": "object",
-                "description": "POST preview body — a full DRAFT scheme to render examples for (dry-run).",
+                "description": "POST preview body — a full DRAFT scheme to render examples for (dry-run).\n\n`prefix` is the editor's DRAFT brand prefix (optional): when sent, the `{prefix}` token\nrenders from it so the example reflects an unsaved prefix live. Omitted → the persisted\ncompany prefix is used.",
                 "properties": {
                     "pattern": {
                         "type": "string",
@@ -23102,6 +23102,18 @@
                     "start_value": {
                         "type": "integer",
                         "minimum": 0
+                    },
+                    "prefix": {
+                        "type": "string",
+                        "maxLength": 16
+                    },
+                    "type_labels": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 32
+                        }
                     }
                 },
                 "required": [
@@ -23152,6 +23164,13 @@
                     "is_effective": {
                         "type": "boolean",
                         "readOnly": true
+                    },
+                    "type_labels": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "string"
+                        },
+                        "readOnly": true
                     }
                 },
                 "required": [
@@ -23160,7 +23179,8 @@
                     "pattern",
                     "prefix",
                     "reset_period",
-                    "start_value"
+                    "start_value",
+                    "type_labels"
                 ]
             },
             "OfflineClientCreateRequest": {
@@ -25274,7 +25294,7 @@
             },
             "PatchedNumberingSchemeWriteRequest": {
                 "type": "object",
-                "description": "PATCH body — shape/type validation only; the mask semantics ({seq} present,\nnon-empty) are enforced by the model's full_clean inside `set_company_scheme`.",
+                "description": "PATCH body — shape/type validation only; the mask semantics ({seq} present,\nnon-empty) and non-empty type labels are enforced by the model's full_clean inside\n`set_company_scheme`.",
                 "properties": {
                     "pattern": {
                         "type": "string",
@@ -25292,6 +25312,14 @@
                     "start_value": {
                         "type": "integer",
                         "minimum": 0
+                    },
+                    "type_labels": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 32
+                        }
                     }
                 }
             },

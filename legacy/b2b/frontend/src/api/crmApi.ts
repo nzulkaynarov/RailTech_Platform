@@ -10,6 +10,9 @@ export type Product = CatalogProduct;
 // DocumentNumberingScheme.RESET_PERIOD_CHOICES.
 export type NumberingResetPeriod = 'never' | 'yearly' | 'monthly';
 
+// Редактируемые метки токена {type} по виду документа (КП/CT/INV/ACT/DOC → текст).
+export type NumberingTypeLabels = Record<string, string>;
+
 export interface NumberingScheme {
 	pattern: string;
 	padding: number;
@@ -17,6 +20,7 @@ export interface NumberingScheme {
 	start_value: number;
 	prefix: string;
 	is_effective: boolean;
+	type_labels: NumberingTypeLabels;
 }
 
 // PATCH / preview body — a full draft scheme (mask semantics validated backend-side).
@@ -25,6 +29,13 @@ export interface NumberingSchemeUpdate {
 	padding: number;
 	reset_period: NumberingResetPeriod;
 	start_value: number;
+	type_labels?: NumberingTypeLabels;
+}
+
+// Preview дополнительно принимает ЧЕРНОВОЙ префикс из поля редактора, чтобы пример
+// нумерации отражал ещё не сохранённый префикс И метки типов вживую (WYSIWYG).
+export interface NumberingPreviewInput extends NumberingSchemeUpdate {
+	prefix?: string;
 }
 
 export interface NumberingPreviewItem {
@@ -1095,7 +1106,7 @@ export const crmApi = {
 	},
 	// Dry-run: render КП/CT/INV examples for a DRAFT scheme WITHOUT touching any counter.
 	// Same token parser as real minting — the single source of truth for the live preview.
-	previewNumberingScheme: async (data: NumberingSchemeUpdate) => {
+	previewNumberingScheme: async (data: NumberingPreviewInput) => {
 		const response = await apiClient.post<{ results: NumberingPreviewItem[] }>(
 			'crm/numbering-scheme/preview/',
 			data,

@@ -8420,12 +8420,22 @@ export interface components {
             label: string;
             number: string;
         };
-        /** @description POST preview body — a full DRAFT scheme to render examples for (dry-run). */
+        /**
+         * @description POST preview body — a full DRAFT scheme to render examples for (dry-run).
+         *
+         *     `prefix` is the editor's DRAFT brand prefix (optional): when sent, the `{prefix}` token
+         *     renders from it so the example reflects an unsaved prefix live. Omitted → the persisted
+         *     company prefix is used.
+         */
         NumberingPreviewRequestRequest: {
             pattern: string;
             padding: number;
             reset_period: components["schemas"]["ResetPeriodEnum"];
             start_value: number;
+            prefix?: string;
+            type_labels?: {
+                [key: string]: string;
+            };
         };
         NumberingPreviewResponse: {
             results: components["schemas"]["NumberingPreviewItem"][];
@@ -8443,6 +8453,9 @@ export interface components {
             readonly start_value: number;
             readonly prefix: string;
             readonly is_effective: boolean;
+            readonly type_labels: {
+                [key: string]: string;
+            };
         };
         /** @description Flat write payload for the create action (nested read, flat write pattern). */
         OfflineClientCreateRequest: {
@@ -9656,13 +9669,17 @@ export interface components {
         };
         /**
          * @description PATCH body — shape/type validation only; the mask semantics ({seq} present,
-         *     non-empty) are enforced by the model's full_clean inside `set_company_scheme`.
+         *     non-empty) and non-empty type labels are enforced by the model's full_clean inside
+         *     `set_company_scheme`.
          */
         PatchedNumberingSchemeWriteRequest: {
             pattern?: string;
             padding?: number;
             reset_period?: components["schemas"]["ResetPeriodEnum"];
             start_value?: number;
+            type_labels?: {
+                [key: string]: string;
+            };
         };
         /** @description A platform-operator sub-role with its capability set (ADR-0004 G1). */
         PatchedOperatorRoleRequest: {

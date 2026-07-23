@@ -52,9 +52,13 @@ def test_default_scheme_reproduces_prefixed_format():
     year = timezone.now().year
     acme = _company("ACME", "6100000001", prefix="ACME")
     with transaction.atomic():
-        number = next_document_number("CT", "КП", company=acme)
-    # КП label (not doc_type "CT") is what {type} renders — the branded historical shape.
+        # The {type} token now renders from the scheme's editable type_labels (default
+        # KP→"КП"), so the branded historical shape is unchanged at zero config.
+        number = next_document_number("KP", "КП", company=acme)
     assert number == f"ACME-КП-{year}-00001"
+    with transaction.atomic():
+        contract = next_document_number("CT", "CT", company=acme)
+    assert contract == f"ACME-CT-{year}-00001"
 
 
 def test_default_scheme_used_without_any_scheme_row():

@@ -63,6 +63,7 @@ def _scheme_view_payload(company) -> dict:
         "start_value": view.scheme.start_value,
         "prefix": view.prefix,
         "is_effective": view.is_effective,
+        "type_labels": view.scheme.type_labels,
     }
 
 

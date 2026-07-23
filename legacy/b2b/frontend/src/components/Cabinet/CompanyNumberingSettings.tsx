@@ -6,7 +6,7 @@ import { Hash, Info, Loader2, Shield } from 'lucide-react';
 
 import { accountsApi } from '@/api/accountsApi';
 import { crmApi } from '@/api/crmApi';
-import type { NumberingResetPeriod, NumberingSchemeUpdate } from '@/api/crmApi';
+import type { NumberingPreviewInput, NumberingResetPeriod, NumberingSchemeUpdate } from '@/api/crmApi';
 import { useAuthStore } from '@/store/authStore';
 import { useHasCompanyPermission } from '@/hooks/useCapabilities';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
@@ -34,12 +34,19 @@ const PRESETS: { id: string; pattern: string; exampleKey: string }[] = [
 
 const RESET_PERIODS: NumberingResetPeriod[] = ['never', 'yearly', 'monthly'];
 
-// Backend {type} codes → localized «what kind» caption for the preview rows.
+// Backend {type} codes → localized «what kind» caption for the preview rows + editable
+// type-label inputs. The VALUE printed in the number is company-editable (typeLabels state);
+// this caption only NAMES the doc kind in the UI.
 const TYPE_LABEL_KEYS: Record<string, string> = {
   KP: 'companyNumbering.types.quote',
   CT: 'companyNumbering.types.contract',
   INV: 'companyNumbering.types.invoice',
+  ACT: 'companyNumbering.types.act',
+  DOC: 'companyNumbering.types.doc',
 };
+
+// The editable {type}-label codes, in display order (mirrors backend NUMBERING_TYPE_CODES).
+const TYPE_CODES = ['KP', 'CT', 'INV', 'ACT', 'DOC'] as const;
 
 function patternToPresetId(pattern: string): string {
   return PRESETS.find((preset) => preset.pattern === pattern)?.id ?? 'custom';
@@ -65,6 +72,7 @@ export function CompanyNumberingSettings() {
   const [padding, setPadding] = useState(5);
   const [resetPeriod, setResetPeriod] = useState<NumberingResetPeriod>('yearly');
   const [startValue, setStartValue] = useState(0);
+  const [typeLabels, setTypeLabels] = useState<Record<string, string>>({});
 
   const { data: settings, isLoading: settingsLoading } = useQuery({
     queryKey: ['company-settings', companyId],
@@ -88,34 +96,39 @@ export function CompanyNumberingSettings() {
       setPadding(scheme.padding);
       setResetPeriod(scheme.reset_period);
       setStartValue(scheme.start_value);
+      setTypeLabels(scheme.type_labels ?? {});
     }
   }, [scheme]);
 
   const presetId = patternToPresetId(pattern);
   const patternValid = pattern.trim() !== '' && pattern.includes('{seq}');
 
+  const cleanPrefix = prefix.trim().slice(0, 16);
+
   // Live preview via the backend dry-run — the single source of truth for the number
   // FORMAT (uses the same token parser as real minting). Debounced so we fire one request
-  // per pause, not per keystroke. The preview reflects the SAVED prefix (persist below to
-  // brand it). We debounce a serialized key so the object identity churn doesn't reset it.
+  // per pause, not per keystroke. The preview reflects the DRAFT prefix AND type labels
+  // (WYSIWYG — no need to save first). We debounce a serialized key so object-identity
+  // churn doesn't reset it.
   const draft: NumberingSchemeUpdate = {
     pattern,
     padding,
     reset_period: resetPeriod,
     start_value: startValue,
+    type_labels: typeLabels,
   };
-  const draftKey = JSON.stringify(draft);
-  const debouncedKey = useDebouncedValue(draftKey, 350);
+  const previewInput: NumberingPreviewInput = { ...draft, prefix: cleanPrefix };
+  const previewKey = JSON.stringify(previewInput);
+  const debouncedKey = useDebouncedValue(previewKey, 350);
   const { data: preview } = useQuery({
     queryKey: ['numbering-preview', debouncedKey],
-    queryFn: () => crmApi.previewNumberingScheme(JSON.parse(debouncedKey) as NumberingSchemeUpdate),
+    queryFn: () => crmApi.previewNumberingScheme(JSON.parse(debouncedKey) as NumberingPreviewInput),
     enabled: canEditSettings && patternValid,
     placeholderData: (previous) => previous,
   });
 
   const saveMut = useMutation({
     mutationFn: async () => {
-      const cleanPrefix = prefix.trim().slice(0, 16);
       // Persist the prefix (CompanySettings) only when it changed — it's the brand
       // discriminator that makes a custom scheme effective (global-unique invariant).
       if (companyId != null && cleanPrefix !== (settings?.doc_number_prefix ?? '').trim()) {
@@ -156,6 +169,9 @@ export function CompanyNumberingSettings() {
     const preset = PRESETS.find((item) => item.id === id);
     if (preset) setPattern(preset.pattern);
   };
+
+  const setLabel = (code: string, value: string) =>
+    setTypeLabels((previous) => ({ ...previous, [code]: value }));
 
   // §2.4 reading-form pattern: section header left, form card right with a width cap.
   return (
@@ -273,7 +289,32 @@ export function CompanyNumberingSettings() {
             </div>
           </div>
 
-          {/* Live preview — dry-run of 3 document kinds. */}
+          {/* Editable {type}-token label per doc kind — nothing hardcoded; the company
+              decides what «КП/Договор/Инвойс/Акт/Документ» prints as in its numbers. */}
+          <div className="space-y-3">
+            <div>
+              <Label>{t('companyNumbering.typeLabelsTitle')}</Label>
+              <p className="mt-1 text-xs text-muted-foreground">{t('companyNumbering.typeLabelsHelp')}</p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {TYPE_CODES.map((code) => (
+                <div key={code} className="space-y-1.5">
+                  <Label htmlFor={`cn-type-${code}`} className="text-xs font-normal text-muted-foreground">
+                    {t(TYPE_LABEL_KEYS[code])}
+                  </Label>
+                  <Input
+                    id={`cn-type-${code}`}
+                    value={typeLabels[code] ?? ''}
+                    maxLength={32}
+                    onChange={(event) => setLabel(code, event.target.value)}
+                    className="font-mono"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Live preview — dry-run of every editable document kind. */}
           <div className="rounded-lg border border-border bg-muted/40 p-4">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               {t('companyNumbering.previewLabel')}

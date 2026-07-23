@@ -24,9 +24,10 @@ def test_prefixed_company_mints_branded_number():
     year = timezone.now().year
     acme = _company("ACME", "4000000001", prefix="ACME")
     with transaction.atomic():
-        number = next_document_number("CT", "КП", company=acme)
+        # {type} renders from the scheme's editable type_labels (default KP→"КП").
+        number = next_document_number("KP", "КП", company=acme)
     assert number == f"ACME-КП-{year}-00001"
-    assert DocumentSequence.objects.get(company=acme, doc_type="CT", year=year).last_value == 1
+    assert DocumentSequence.objects.get(company=acme, doc_type="KP", year=year).last_value == 1
 
 
 def test_two_companies_have_independent_counters_no_collision():

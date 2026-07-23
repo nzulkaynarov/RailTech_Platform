@@ -101,7 +101,7 @@ def test_patch_invalid_pattern_returns_code():
 # ── Preview (dry-run) ─────────────────────────────────────────────────────────────────
 
 
-def test_preview_renders_three_types_without_counter():
+def test_preview_renders_all_editable_types_without_counter():
     company = _seller_company("ACME", "6200000005", prefix="ACME")
     resp = _client(_owner(company, "owner@acme5.test")).post(
         PREVIEW_URL,
@@ -111,7 +111,7 @@ def test_preview_renders_three_types_without_counter():
     assert resp.status_code == 200, resp.content
     results = resp.json()["results"]
     codes = {r["type_code"]: r["number"] for r in results}
-    assert set(codes) == {"KP", "CT", "INV"}
+    assert set(codes) == {"KP", "CT", "INV", "ACT", "DOC"}
     from django.utils import timezone
 
     year = timezone.now().year
@@ -120,6 +120,31 @@ def test_preview_renders_three_types_without_counter():
     assert codes["INV"] == f"ACME-INV-{year}-00001"
     # Dry-run: no counter row was created / touched.
     assert not DocumentSequence.objects.filter(company=company).exists()
+
+
+def test_preview_reflects_draft_prefix_and_type_labels():
+    """The editor's UNSAVED prefix + type-label edits render live in the dry-run (WYSIWYG)."""
+    company = _seller_company("BETA", "6200000055", prefix="")  # no persisted prefix yet
+    resp = _client(_owner(company, "owner@beta55.test")).post(
+        PREVIEW_URL,
+        {
+            "pattern": "{prefix}{type}-{YYYY}-{seq}",
+            "padding": 5,
+            "reset_period": "yearly",
+            "start_value": 0,
+            "prefix": "BETA",
+            "type_labels": {"CT": "ДОГ", "INV": "СЧ"},
+        },
+        format="json",
+    )
+    assert resp.status_code == 200, resp.content
+    codes = {r["type_code"]: r["number"] for r in resp.json()["results"]}
+    from django.utils import timezone
+
+    year = timezone.now().year
+    assert codes["CT"] == f"BETA-ДОГ-{year}-00001"  # draft prefix + draft label both applied
+    assert codes["INV"] == f"BETA-СЧ-{year}-00001"
+    assert codes["KP"] == f"BETA-КП-{year}-00001"  # unset label falls back to shipped default
 
 
 def test_preview_reflects_draft_start_value():

@@ -5438,12 +5438,16 @@
     },
     "startValue": "Start value",
     "startValueHelp": "First number = value + 1",
+    "typeLabelsTitle": "Document type labels",
+    "typeLabelsHelp": "What the {type} token prints for each document kind. Adjust to your style — e.g. «CON» instead of «CT».",
     "previewLabel": "Number preview",
     "previewUnavailable": "Enter a valid mask containing the {seq} token",
     "types": {
       "quote": "Quote",
       "contract": "Contract",
-      "invoice": "Invoice"
+      "invoice": "Invoice",
+      "act": "Act",
+      "doc": "Custom document"
     },
     "saved": "Numbering settings saved",
     "ownerOnly": "Only the company owner can configure numbering"

@@ -3,6 +3,18 @@ from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+# The document kinds whose {type} token is company-editable, in preview order. The values
+# are the SHIPPED defaults (kept equal to the historical hardcoded labels → zero visual diff
+# for companies that never touch them); each is overridable per company via
+# DocumentNumberingScheme.type_labels so nothing about the label is hardcoded downstream.
+NUMBERING_TYPE_CODES = ("KP", "CT", "INV", "ACT", "DOC")
+DEFAULT_TYPE_LABELS = {"KP": "КП", "CT": "CT", "INV": "INV", "ACT": "ACT", "DOC": "DOC"}
+
+
+def default_type_labels():
+    """Fresh copy of the shipped type-label map (JSONField default must be a callable)."""
+    return dict(DEFAULT_TYPE_LABELS)
+
 
 class DocumentSequence(models.Model):
     """Race-safe, gap-free, per-period document numbering counter.
@@ -144,6 +156,14 @@ class DocumentNumberingScheme(models.Model):
         verbose_name=_("Стартовое значение"),
         help_text=_("Первый номер = start_value + 1 (по умолчанию 0 → первый номер 1)"),
     )
+    type_labels = models.JSONField(
+        default=default_type_labels,
+        verbose_name=_("Метки типов документов"),
+        help_text=_(
+            "Что подставляется в токен {type} для каждого вида документа "
+            "(КП / договор / инвойс / акт / произвольный) — редактируется компанией."
+        ),
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Создан"))
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Обновлён"))
 
@@ -158,6 +178,15 @@ class DocumentNumberingScheme(models.Model):
         if "{seq}" not in pattern:
             # Without {seq} the same period would mint identical numbers → unique violation.
             raise ValidationError({"pattern": _("Маска обязана содержать токен {seq}")})
+        labels = self.type_labels
+        if not isinstance(labels, dict):
+            raise ValidationError({"type_labels": _("Метки типов должны быть объектом код→метка")})
+        for code in NUMBERING_TYPE_CODES:
+            value = labels.get(code)
+            if value is None:
+                continue  # a missing key falls back to the shipped default at render time
+            if not isinstance(value, str) or not value.strip():
+                raise ValidationError({"type_labels": _("Метка типа не может быть пустой")})
 
     def __str__(self):
         scope = self.company_id or "platform"

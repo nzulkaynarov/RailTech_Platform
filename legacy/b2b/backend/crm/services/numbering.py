@@ -25,7 +25,7 @@ companies fall back to the single platform counter AND the platform scheme, so t
 share ONE monotonic sequence under ONE format and can never mint the same number twice.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from django.utils import timezone
 
@@ -41,6 +41,11 @@ DEFAULT_PATTERN = "{prefix}{type}-{YYYY}-{seq}"
 DEFAULT_PADDING = 5
 DEFAULT_RESET_PERIOD = RESET_YEARLY
 DEFAULT_START_VALUE = 0
+# Shipped {type}-token labels per doc kind (mirrors DocumentNumberingScheme.DEFAULT_TYPE_LABELS).
+# Used as the fallback when a company's scheme leaves a code unset — nothing is hardcoded at
+# the call sites: each caller passes the doc's default label, but the scheme's editable
+# type_labels override it.
+DEFAULT_TYPE_LABELS = {"KP": "КП", "CT": "CT", "INV": "INV", "ACT": "ACT", "DOC": "DOC"}
 
 
 @dataclass(frozen=True)
@@ -51,6 +56,7 @@ class SchemeSpec:
     padding: int = DEFAULT_PADDING
     reset_period: str = DEFAULT_RESET_PERIOD
     start_value: int = DEFAULT_START_VALUE
+    type_labels: dict = field(default_factory=lambda: dict(DEFAULT_TYPE_LABELS))
 
     @classmethod
     def from_row(cls, row) -> "SchemeSpec":
@@ -59,7 +65,16 @@ class SchemeSpec:
             padding=row.padding,
             reset_period=row.reset_period,
             start_value=row.start_value,
+            type_labels=dict(row.type_labels or {}),
         )
+
+    def label_for(self, doc_type: str, fallback: str) -> str:
+        """The editable {type} label for a doc kind — company override → shipped default → the
+        caller's fallback. Never hardcoded downstream."""
+        value = self.type_labels.get(doc_type)
+        if isinstance(value, str) and value.strip():
+            return value
+        return DEFAULT_TYPE_LABELS.get(doc_type, fallback)
 
 
 DEFAULT_SCHEME = SchemeSpec()
@@ -166,21 +181,18 @@ def next_document_number(doc_type: str, label: str, company=None) -> str:
     seq.save(update_fields=["last_value"])
 
     displayed = scheme.start_value + seq.last_value
-    return _render_number(scheme, prefix=prefix, label=label, now=now, displayed=displayed)
+    # The {type} label is resolved from the company's EDITABLE type_labels (falling back to
+    # the caller-supplied default), so the printed kind is never hardcoded downstream.
+    effective_label = scheme.label_for(doc_type, label)
+    return _render_number(scheme, prefix=prefix, label=effective_label, now=now, displayed=displayed)
 
 
 # ── Editability API (thin, for the N2 Settings editor) ─────────────────────────────
 
-# (type_code, label) pairs used for the live preview — mirrors the real minting call
-# sites (КП docs mint under doc_type "KP" but the {type} token shows the label "КП";
-# contracts/invoices show "CT"/"INV"). The preview is a single source of truth: it uses
-# the SAME token renderer as `next_document_number`, so the editor can never drift from
-# the real assembled number.
-PREVIEW_TYPES = (
-    ("KP", "КП"),
-    ("CT", "CT"),
-    ("INV", "INV"),
-)
+# The doc kinds shown in the live preview, in order — the editable {type} codes. The label
+# for each is resolved from the scheme's type_labels (single source of truth: the SAME token
+# renderer + label resolution as `next_document_number`, so the editor can never drift).
+PREVIEW_TYPE_CODES = ("KP", "CT", "INV", "ACT", "DOC")
 
 
 @dataclass(frozen=True)
@@ -199,13 +211,26 @@ class SchemeView:
 
 
 def get_company_scheme_view(company) -> SchemeView:
-    """The effective scheme + prefix + effectiveness flag for the N2 Settings editor."""
+    """The effective scheme + prefix + effectiveness flag for the N2 Settings editor.
+
+    The scheme carries the editable `type_labels` map so the editor can render one input
+    per doc kind (with the shipped default filled in for any code the company hasn't set).
+    """
     prefix = _company_prefix(company)
     scheme = _resolve_scheme(_scheme_company_id(company, prefix))
+    # Present every editable code, defaulting unset ones — so the editor shows a full form.
+    merged_labels = {code: scheme.label_for(code, code) for code in DEFAULT_TYPE_LABELS}
+    scheme = SchemeSpec(
+        pattern=scheme.pattern,
+        padding=scheme.padding,
+        reset_period=scheme.reset_period,
+        start_value=scheme.start_value,
+        type_labels=merged_labels,
+    )
     return SchemeView(scheme=scheme, prefix=prefix, is_effective=bool(prefix))
 
 
-def preview_scheme_numbers(company, *, pattern, padding, reset_period, start_value) -> list:
+def preview_scheme_numbers(company, *, pattern, padding, reset_period, start_value, prefix=None, type_labels=None) -> list:
     """Dry-run: render example КП/CT/INV numbers for a DRAFT scheme, WITHOUT touching any
     counter (`DocumentSequence` is never read or incremented).
 
@@ -214,7 +239,11 @@ def preview_scheme_numbers(company, *, pattern, padding, reset_period, start_val
     endpoint and the PATCH endpoint reject identical input. Uses the same `_render_number`
     token parser as real minting, so the preview is the single source of truth for format.
 
-    `seq` is fixed at `start_value + 1` (the first number the counter would ever mint).
+    `prefix` is the DRAFT brand prefix from the editor field: when provided (not None) the
+    preview renders `{prefix}` from it, so typing a prefix updates the example live (WYSIWYG)
+    BEFORE saving. When None, falls back to the company's persisted prefix. `type_labels` is
+    the DRAFT editable {type}-label map (same live-reflection role). `seq` is fixed at
+    `start_value + 1` (the first number the counter would ever mint).
     """
     from ..models import DocumentNumberingScheme
 
@@ -224,21 +253,25 @@ def preview_scheme_numbers(company, *, pattern, padding, reset_period, start_val
         reset_period=reset_period,
         start_value=start_value,
     )
-    # Validate ONLY the mask fields — company (OneToOne) is irrelevant to a dry-run and
-    # its uniqueness check would spuriously fail on the unsaved draft.
+    if type_labels is not None:
+        candidate.type_labels = type_labels
+    # Validate the mask + type_labels fields — company (OneToOne) is irrelevant to a dry-run
+    # and its uniqueness check would spuriously fail on the unsaved draft.
     candidate.full_clean(exclude=["company", "created_at", "updated_at"], validate_unique=False)
 
     spec = SchemeSpec.from_row(candidate)
-    prefix = _company_prefix(company)
+    effective_prefix = prefix.strip() if prefix is not None else _company_prefix(company)
     now = timezone.now()
     displayed = spec.start_value + 1
     return [
         {
             "type_code": type_code,
-            "label": label,
-            "number": _render_number(spec, prefix=prefix, label=label, now=now, displayed=displayed),
+            "label": spec.label_for(type_code, type_code),
+            "number": _render_number(
+                spec, prefix=effective_prefix, label=spec.label_for(type_code, type_code), now=now, displayed=displayed
+            ),
         }
-        for type_code, label in PREVIEW_TYPES
+        for type_code in PREVIEW_TYPE_CODES
     ]
 
 
@@ -254,13 +287,13 @@ def get_company_scheme(company) -> SchemeSpec:
     return _resolve_scheme(_scheme_company_id(company, prefix))
 
 
-def set_company_scheme(company, *, pattern=None, padding=None, reset_period=None, start_value=None):
+def set_company_scheme(company, *, pattern=None, padding=None, reset_period=None, start_value=None, type_labels=None):
     """Upsert a company's own DocumentNumberingScheme row (validated). Returns the row.
 
     Business logic lives here (Rule 8); the N2 DRF view is a thin wrapper. Runs
-    `full_clean()` so an invalid pattern (missing {seq}, empty) raises ValidationError
-    before save. Effectiveness for minting still requires the company to carry a prefix
-    (global-unique invariant) — the caller/UX surfaces that.
+    `full_clean()` so an invalid pattern (missing {seq}, empty) or empty type label raises
+    ValidationError before save. Effectiveness for minting still requires the company to carry
+    a prefix (global-unique invariant) — the caller/UX surfaces that.
     """
     from ..models import DocumentNumberingScheme
 
@@ -279,6 +312,11 @@ def set_company_scheme(company, *, pattern=None, padding=None, reset_period=None
         row.reset_period = reset_period
     if start_value is not None:
         row.start_value = start_value
+    if type_labels is not None:
+        # Merge onto the shipped defaults so a partial map never blanks an unset code.
+        merged = dict(DEFAULT_TYPE_LABELS)
+        merged.update({code: value for code, value in type_labels.items() if code in DEFAULT_TYPE_LABELS})
+        row.type_labels = merged
     row.full_clean()
     row.save()
     return row
