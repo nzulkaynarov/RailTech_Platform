@@ -6,6 +6,33 @@ import type { components } from './schema';
 
 export type Product = CatalogProduct;
 
+// N2 — document-numbering scheme. Reset period mirrors the backend
+// DocumentNumberingScheme.RESET_PERIOD_CHOICES.
+export type NumberingResetPeriod = 'never' | 'yearly' | 'monthly';
+
+export interface NumberingScheme {
+	pattern: string;
+	padding: number;
+	reset_period: NumberingResetPeriod;
+	start_value: number;
+	prefix: string;
+	is_effective: boolean;
+}
+
+// PATCH / preview body — a full draft scheme (mask semantics validated backend-side).
+export interface NumberingSchemeUpdate {
+	pattern: string;
+	padding: number;
+	reset_period: NumberingResetPeriod;
+	start_value: number;
+}
+
+export interface NumberingPreviewItem {
+	type_code: string;
+	label: string;
+	number: string;
+}
+
 // Odoo-style строковый тип позиции КП (mirror backend QuoteItem.DisplayType):
 //   ITEM — обычная позиция с ценой (входит в итоги); SECTION — заголовок раздела
 //   (жирный, с подытогом, без цен); NOTE — заметка (курсив, без цен).
@@ -1052,6 +1079,28 @@ export const crmApi = {
 			);
 			return response.data;
 		});
+	},
+
+	// ─── N2: document-numbering-scheme editor (Settings → «Нумерация») ────────
+	// The seller company's effective numbering scheme + brand prefix. A custom mask
+	// is only EFFECTIVE (`is_effective`) while the company carries a non-empty prefix
+	// (global-unique invariant); prefix-less it mints under the platform default.
+	getNumberingScheme: async () => {
+		const response = await apiClient.get<NumberingScheme>('crm/numbering-scheme/');
+		return response.data;
+	},
+	updateNumberingScheme: async (data: NumberingSchemeUpdate) => {
+		const response = await apiClient.patch<NumberingScheme>('crm/numbering-scheme/', data);
+		return response.data;
+	},
+	// Dry-run: render КП/CT/INV examples for a DRAFT scheme WITHOUT touching any counter.
+	// Same token parser as real minting — the single source of truth for the live preview.
+	previewNumberingScheme: async (data: NumberingSchemeUpdate) => {
+		const response = await apiClient.post<{ results: NumberingPreviewItem[] }>(
+			'crm/numbering-scheme/preview/',
+			data,
+		);
+		return response.data.results;
 	},
 };
 

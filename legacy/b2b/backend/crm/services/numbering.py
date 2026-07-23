@@ -171,6 +171,76 @@ def next_document_number(doc_type: str, label: str, company=None) -> str:
 
 # ── Editability API (thin, for the N2 Settings editor) ─────────────────────────────
 
+# (type_code, label) pairs used for the live preview — mirrors the real minting call
+# sites (КП docs mint under doc_type "KP" but the {type} token shows the label "КП";
+# contracts/invoices show "CT"/"INV"). The preview is a single source of truth: it uses
+# the SAME token renderer as `next_document_number`, so the editor can never drift from
+# the real assembled number.
+PREVIEW_TYPES = (
+    ("KP", "КП"),
+    ("CT", "CT"),
+    ("INV", "INV"),
+)
+
+
+@dataclass(frozen=True)
+class SchemeView:
+    """What the N2 editor reads: the EFFECTIVE scheme + the prefix that would brand it.
+
+    `is_effective` mirrors the global-unique invariant — a company mints under its OWN
+    scheme ONLY while it carries a non-empty prefix; prefix-less it uses the platform
+    default. The editor surfaces this so the user understands why their custom mask is
+    not yet applied (banner), without any blocking.
+    """
+
+    scheme: SchemeSpec
+    prefix: str
+    is_effective: bool
+
+
+def get_company_scheme_view(company) -> SchemeView:
+    """The effective scheme + prefix + effectiveness flag for the N2 Settings editor."""
+    prefix = _company_prefix(company)
+    scheme = _resolve_scheme(_scheme_company_id(company, prefix))
+    return SchemeView(scheme=scheme, prefix=prefix, is_effective=bool(prefix))
+
+
+def preview_scheme_numbers(company, *, pattern, padding, reset_period, start_value) -> list:
+    """Dry-run: render example КП/CT/INV numbers for a DRAFT scheme, WITHOUT touching any
+    counter (`DocumentSequence` is never read or incremented).
+
+    Validates the draft the same way a save would (model `full_clean` → raises
+    django ValidationError on a missing {seq} / empty mask / bad padding) so the preview
+    endpoint and the PATCH endpoint reject identical input. Uses the same `_render_number`
+    token parser as real minting, so the preview is the single source of truth for format.
+
+    `seq` is fixed at `start_value + 1` (the first number the counter would ever mint).
+    """
+    from ..models import DocumentNumberingScheme
+
+    candidate = DocumentNumberingScheme(
+        pattern=pattern,
+        padding=padding,
+        reset_period=reset_period,
+        start_value=start_value,
+    )
+    # Validate ONLY the mask fields — company (OneToOne) is irrelevant to a dry-run and
+    # its uniqueness check would spuriously fail on the unsaved draft.
+    candidate.full_clean(exclude=["company", "created_at", "updated_at"], validate_unique=False)
+
+    spec = SchemeSpec.from_row(candidate)
+    prefix = _company_prefix(company)
+    now = timezone.now()
+    displayed = spec.start_value + 1
+    return [
+        {
+            "type_code": type_code,
+            "label": label,
+            "number": _render_number(spec, prefix=prefix, label=label, now=now, displayed=displayed),
+        }
+        for type_code, label in PREVIEW_TYPES
+    ]
+
 
 def get_company_scheme(company) -> SchemeSpec:
     """The EFFECTIVE scheme a company mints under (for live preview / display).

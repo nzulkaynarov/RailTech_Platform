@@ -27,6 +27,12 @@ from .deal import DealDetailSerializer, DealListSerializer
 from .documents import DocumentTemplateSerializer, GeneratedDocumentSerializer
 from .item import QuoteItemSerializer
 from .misc import ActivityLogSerializer, LeadSerializer, MessageSerializer
+from .numbering import (
+    NumberingPreviewRequestSerializer,
+    NumberingPreviewResponseSerializer,
+    NumberingSchemeSerializer,
+    NumberingSchemeWriteSerializer,
+)
 from .quote import QuoteApprovalStepSerializer, QuoteSerializer
 
 __all__ = [
@@ -43,6 +49,11 @@ __all__ = [
     # documents ("Документы 2.0")
     "DocumentTemplateSerializer",
     "GeneratedDocumentSerializer",
+    # numbering (N2 editor)
+    "NumberingSchemeSerializer",
+    "NumberingSchemeWriteSerializer",
+    "NumberingPreviewRequestSerializer",
+    "NumberingPreviewResponseSerializer",
     # misc
     "MessageSerializer",
     "LeadSerializer",

@@ -25,6 +25,7 @@ from crm.views.documents import DocumentTemplateViewSet, GeneratedDocumentViewSe
 from crm.views.documents_public import PublicDocumentView  # noqa: F401
 from crm.views.leads import LeadCreateView, LeadViewSet  # noqa: F401
 from crm.views.messages import ActivityLogViewSet, MessageViewSet  # noqa: F401
+from crm.views.numbering import NumberingSchemePreviewView, NumberingSchemeView  # noqa: F401
 from crm.views.quotes import (  # noqa: F401
     ChargeTemplateViewSet,
     ChargeTypeViewSet,
@@ -62,6 +63,9 @@ __all__ = [
     # messages
     "MessageViewSet",
     "ActivityLogViewSet",
+    # numbering (N2 editor)
+    "NumberingSchemeView",
+    "NumberingSchemePreviewView",
     # analytics
     "DashboardAnalyticsView",
     "RecentDocumentsView",

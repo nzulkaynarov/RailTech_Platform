@@ -77,6 +77,8 @@ from crm.views import (
     LeadCreateView,
     LeadViewSet,
     MessageViewSet,
+    NumberingSchemePreviewView,
+    NumberingSchemeView,
     PaymentViewSet,
     PublicDocumentView,
     PublicQuoteAcceptView,
@@ -230,6 +232,14 @@ urlpatterns = (
         path("api/v1/crm/analytics/time-to-first-quote/", TimeToFirstQuoteView.as_view(), name="time-to-first-quote"),
         path("api/v1/crm/analytics/recent-documents/", RecentDocumentsView.as_view(), name="recent-documents"),
         path("api/v1/crm/analytics/search-documents/", SearchDocumentsView.as_view(), name="search-documents"),
+        # N2 — document-numbering-scheme editor (Settings → «Нумерация»). preview/ MUST
+        # precede the bare path so it isn't shadowed.
+        path(
+            "api/v1/crm/numbering-scheme/preview/",
+            NumberingSchemePreviewView.as_view(),
+            name="numbering-scheme-preview",
+        ),
+        path("api/v1/crm/numbering-scheme/", NumberingSchemeView.as_view(), name="numbering-scheme"),
         # CRM Phase A — counterparty / deal activity timeline (read-only).
         path("api/v1/crm/timeline/", TimelineView.as_view(), name="crm-timeline"),
         path("api/v1/analytics/page-stats/", PageStatsView.as_view(), name="page-stats"),

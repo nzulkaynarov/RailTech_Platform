@@ -12779,6 +12779,139 @@
                 }
             }
         },
+        "/api/v1/crm/numbering-scheme/": {
+            "get": {
+                "operationId": "crm_numbering_scheme_retrieve",
+                "description": "The acting seller company's EFFECTIVE numbering scheme (mask/padding/reset/start) plus its brand `prefix` and `is_effective` (whether a custom scheme actually mints — only true with a non-empty prefix). settings.edit + seller only.",
+                "summary": "Read effective numbering scheme",
+                "tags": [
+                    "CRM"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NumberingScheme"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "403": {
+                        "description": "Not a seller / no settings.edit"
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "crm_numbering_scheme_partial_update",
+                "description": "Upsert the seller company's numbering scheme. An invalid mask (missing {seq}, empty) → 400 {\"detail\": \"INVALID_NUMBERING_PATTERN\"}. Applies to FUTURE numbers only; already-issued numbers are snapshots and never change. settings.edit + seller.",
+                "summary": "Update numbering scheme",
+                "tags": [
+                    "CRM"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedNumberingSchemeWriteRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedNumberingSchemeWriteRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedNumberingSchemeWriteRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NumberingScheme"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "INVALID_NUMBERING_PATTERN"
+                    },
+                    "403": {
+                        "description": "Not a seller / no settings.edit"
+                    }
+                }
+            }
+        },
+        "/api/v1/crm/numbering-scheme/preview/": {
+            "post": {
+                "operationId": "crm_numbering_scheme_preview_create",
+                "description": "Render example КП/CT/INV numbers for a DRAFT scheme WITHOUT touching any counter — the live editor preview. Uses the same token parser as real minting (single source of truth). Invalid mask → 400 INVALID_NUMBERING_PATTERN.",
+                "summary": "Preview numbering scheme (dry-run)",
+                "tags": [
+                    "CRM"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/NumberingPreviewRequestRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/NumberingPreviewRequestRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/NumberingPreviewRequestRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NumberingPreviewResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "INVALID_NUMBERING_PATTERN"
+                    },
+                    "403": {
+                        "description": "Not a seller / no settings.edit"
+                    }
+                }
+            }
+        },
         "/api/v1/crm/payments/": {
             "get": {
                 "operationId": "crm_payments_list",
@@ -22929,6 +23062,107 @@
                     "type_name"
                 ]
             },
+            "NumberingPreviewItem": {
+                "type": "object",
+                "description": "One rendered example number for a document kind (КП / CT / INV).",
+                "properties": {
+                    "type_code": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "number": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "label",
+                    "number",
+                    "type_code"
+                ]
+            },
+            "NumberingPreviewRequestRequest": {
+                "type": "object",
+                "description": "POST preview body — a full DRAFT scheme to render examples for (dry-run).",
+                "properties": {
+                    "pattern": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 128
+                    },
+                    "padding": {
+                        "type": "integer",
+                        "maximum": 20,
+                        "minimum": 1
+                    },
+                    "reset_period": {
+                        "$ref": "#/components/schemas/ResetPeriodEnum"
+                    },
+                    "start_value": {
+                        "type": "integer",
+                        "minimum": 0
+                    }
+                },
+                "required": [
+                    "padding",
+                    "pattern",
+                    "reset_period",
+                    "start_value"
+                ]
+            },
+            "NumberingPreviewResponse": {
+                "type": "object",
+                "properties": {
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/NumberingPreviewItem"
+                        }
+                    }
+                },
+                "required": [
+                    "results"
+                ]
+            },
+            "NumberingScheme": {
+                "type": "object",
+                "description": "GET / PATCH response: the effective scheme + the prefix that would brand it.\n\n`is_effective` is False when the company carries no prefix — the custom mask is\nsaved but the platform default is what actually mints (global-unique invariant).",
+                "properties": {
+                    "pattern": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "padding": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "reset_period": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "start_value": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "prefix": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "is_effective": {
+                        "type": "boolean",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "is_effective",
+                    "padding",
+                    "pattern",
+                    "prefix",
+                    "reset_period",
+                    "start_value"
+                ]
+            },
             "OfflineClientCreateRequest": {
                 "type": "object",
                 "description": "Flat write payload for the create action (nested read, flat write pattern).",
@@ -25035,6 +25269,29 @@
                         "type": "boolean",
                         "title": "Прочитано",
                         "description": "Пользователь прочитал уведомление"
+                    }
+                }
+            },
+            "PatchedNumberingSchemeWriteRequest": {
+                "type": "object",
+                "description": "PATCH body — shape/type validation only; the mask semantics ({seq} present,\nnon-empty) are enforced by the model's full_clean inside `set_company_scheme`.",
+                "properties": {
+                    "pattern": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 128
+                    },
+                    "padding": {
+                        "type": "integer",
+                        "maximum": 20,
+                        "minimum": 1
+                    },
+                    "reset_period": {
+                        "$ref": "#/components/schemas/ResetPeriodEnum"
+                    },
+                    "start_value": {
+                        "type": "integer",
+                        "minimum": 0
                     }
                 }
             },
@@ -28171,6 +28428,15 @@
                     "token",
                     "uid"
                 ]
+            },
+            "ResetPeriodEnum": {
+                "enum": [
+                    "never",
+                    "yearly",
+                    "monthly"
+                ],
+                "type": "string",
+                "description": "* `never` - Никогда\n* `yearly` - Ежегодно\n* `monthly` - Ежемесячно"
             },
             "RouteRequestRequestRequest": {
                 "type": "object",

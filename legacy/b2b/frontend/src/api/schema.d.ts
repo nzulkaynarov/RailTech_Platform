@@ -4303,6 +4303,50 @@ export interface paths {
         patch: operations["crm_messages_partial_update"];
         trace?: never;
     };
+    "/api/v1/crm/numbering-scheme/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read effective numbering scheme
+         * @description The acting seller company's EFFECTIVE numbering scheme (mask/padding/reset/start) plus its brand `prefix` and `is_effective` (whether a custom scheme actually mints — only true with a non-empty prefix). settings.edit + seller only.
+         */
+        get: operations["crm_numbering_scheme_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update numbering scheme
+         * @description Upsert the seller company's numbering scheme. An invalid mask (missing {seq}, empty) → 400 {"detail": "INVALID_NUMBERING_PATTERN"}. Applies to FUTURE numbers only; already-issued numbers are snapshots and never change. settings.edit + seller.
+         */
+        patch: operations["crm_numbering_scheme_partial_update"];
+        trace?: never;
+    };
+    "/api/v1/crm/numbering-scheme/preview/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview numbering scheme (dry-run)
+         * @description Render example КП/CT/INV numbers for a DRAFT scheme WITHOUT touching any counter — the live editor preview. Uses the same token parser as real minting (single source of truth). Invalid mask → 400 INVALID_NUMBERING_PATTERN.
+         */
+        post: operations["crm_numbering_scheme_preview_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/payments/": {
         parameters: {
             query?: never;
@@ -8370,6 +8414,36 @@ export interface components {
              */
             readonly created_at: string;
         };
+        /** @description One rendered example number for a document kind (КП / CT / INV). */
+        NumberingPreviewItem: {
+            type_code: string;
+            label: string;
+            number: string;
+        };
+        /** @description POST preview body — a full DRAFT scheme to render examples for (dry-run). */
+        NumberingPreviewRequestRequest: {
+            pattern: string;
+            padding: number;
+            reset_period: components["schemas"]["ResetPeriodEnum"];
+            start_value: number;
+        };
+        NumberingPreviewResponse: {
+            results: components["schemas"]["NumberingPreviewItem"][];
+        };
+        /**
+         * @description GET / PATCH response: the effective scheme + the prefix that would brand it.
+         *
+         *     `is_effective` is False when the company carries no prefix — the custom mask is
+         *     saved but the platform default is what actually mints (global-unique invariant).
+         */
+        NumberingScheme: {
+            readonly pattern: string;
+            readonly padding: number;
+            readonly reset_period: string;
+            readonly start_value: number;
+            readonly prefix: string;
+            readonly is_effective: boolean;
+        };
         /** @description Flat write payload for the create action (nested read, flat write pattern). */
         OfflineClientCreateRequest: {
             company_name: string;
@@ -9579,6 +9653,16 @@ export interface components {
              * @description Пользователь прочитал уведомление
              */
             is_read?: boolean;
+        };
+        /**
+         * @description PATCH body — shape/type validation only; the mask semantics ({seq} present,
+         *     non-empty) are enforced by the model's full_clean inside `set_company_scheme`.
+         */
+        PatchedNumberingSchemeWriteRequest: {
+            pattern?: string;
+            padding?: number;
+            reset_period?: components["schemas"]["ResetPeriodEnum"];
+            start_value?: number;
         };
         /** @description A platform-operator sub-role with its capability set (ADR-0004 G1). */
         PatchedOperatorRoleRequest: {
@@ -11462,6 +11546,13 @@ export interface components {
             token: string;
             password: string;
         };
+        /**
+         * @description * `never` - Никогда
+         *     * `yearly` - Ежегодно
+         *     * `monthly` - Ежемесячно
+         * @enum {string}
+         */
+        ResetPeriodEnum: "never" | "yearly" | "monthly";
         RouteRequestRequestRequest: {
             seller_company_ids: number[];
         };
@@ -19678,6 +19769,110 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Message"];
                 };
+            };
+        };
+    };
+    crm_numbering_scheme_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NumberingScheme"];
+                };
+            };
+            /** @description Not a seller / no settings.edit */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    crm_numbering_scheme_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedNumberingSchemeWriteRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedNumberingSchemeWriteRequest"];
+                "multipart/form-data": components["schemas"]["PatchedNumberingSchemeWriteRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NumberingScheme"];
+                };
+            };
+            /** @description INVALID_NUMBERING_PATTERN */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not a seller / no settings.edit */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    crm_numbering_scheme_preview_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NumberingPreviewRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["NumberingPreviewRequestRequest"];
+                "multipart/form-data": components["schemas"]["NumberingPreviewRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NumberingPreviewResponse"];
+                };
+            };
+            /** @description INVALID_NUMBERING_PATTERN */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not a seller / no settings.edit */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
