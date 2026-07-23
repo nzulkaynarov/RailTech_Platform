@@ -102,6 +102,15 @@ export const dashboardApi = {
     );
     return response.data.results;
   },
+  // Global document search for the company command palette (Cmd+K). Returns the same
+  // `RecentDocument` shape (each row carries a ready-to-use SPA deep-link in `hash`).
+  // q shorter than 2 chars yields an empty result set on the backend.
+  searchDocuments: async (query: string, limit = 8): Promise<RecentDocument[]> => {
+    const response = await apiClient.get<{ results: RecentDocument[] }>(
+      `crm/analytics/search-documents/?q=${encodeURIComponent(query)}&limit=${limit}`,
+    );
+    return response.data.results;
+  },
   getPageStats: async (): Promise<PageStats> => {
     const response = await apiClient.get<PageStats>('analytics/page-stats/');
     return response.data;

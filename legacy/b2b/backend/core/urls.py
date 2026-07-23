@@ -92,6 +92,7 @@ from crm.views import (
     QuoteViewSet,
     RecentDocumentsView,
     RelationshipViewSet,
+    SearchDocumentsView,
     SuggestChatReplyView,
     TimelineView,
     TimeToFirstQuoteView,
@@ -228,6 +229,7 @@ urlpatterns = (
         path("api/v1/crm/analytics/dashboard/", DashboardAnalyticsView.as_view(), name="dashboard-analytics"),
         path("api/v1/crm/analytics/time-to-first-quote/", TimeToFirstQuoteView.as_view(), name="time-to-first-quote"),
         path("api/v1/crm/analytics/recent-documents/", RecentDocumentsView.as_view(), name="recent-documents"),
+        path("api/v1/crm/analytics/search-documents/", SearchDocumentsView.as_view(), name="search-documents"),
         # CRM Phase A — counterparty / deal activity timeline (read-only).
         path("api/v1/crm/timeline/", TimelineView.as_view(), name="crm-timeline"),
         path("api/v1/analytics/page-stats/", PageStatsView.as_view(), name="page-stats"),

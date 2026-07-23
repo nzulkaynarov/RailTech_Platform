@@ -461,3 +461,75 @@ class RecentDocumentsView(APIView):
 
         results = recent_documents(request.user, request, limit=request.query_params.get("limit"))
         return Response({"results": results})
+
+
+@extend_schema(
+    summary="Search documents (global document search)",
+    description=(
+        "Cross-type textual search over the viewer's documents — КП / контракты / инвойсы / акты / "
+        "сгенерированные — matched case-insensitively by `q` on document number, title and deal "
+        "title, merged and sorted by date desc, capped at `limit`. Each type is company-scoped "
+        "exactly like its own list endpoint (hidden competition preserved). A query shorter than "
+        "2 characters returns an empty list without touching the DB."
+    ),
+    parameters=[
+        OpenApiParameter(
+            name="q",
+            description="Search query (min 2 chars; shorter → empty results). Required.",
+            type=str,
+            location=OpenApiParameter.QUERY,
+            required=True,
+        ),
+        OpenApiParameter(
+            name="limit",
+            description="Number of documents to return (1..20, clamped). Default 8.",
+            type=int,
+            location=OpenApiParameter.QUERY,
+            required=False,
+        ),
+    ],
+    responses={
+        200: inline_serializer(
+            "SearchDocumentsResponse",
+            fields={
+                "results": drf_serializers.ListField(
+                    child=inline_serializer(
+                        "SearchDocument",
+                        fields={
+                            "type": drf_serializers.ChoiceField(
+                                choices=["quote", "contract", "invoice", "act", "generated"]
+                            ),
+                            "id": drf_serializers.IntegerField(),
+                            "label": drf_serializers.CharField(),
+                            "status_code": drf_serializers.CharField(allow_null=True),
+                            "date": drf_serializers.DateTimeField(),
+                            "deal": drf_serializers.IntegerField(allow_null=True),
+                            "hash": drf_serializers.CharField(),
+                        },
+                    )
+                )
+            },
+        )
+    },
+    tags=["Analytics"],
+)
+class SearchDocumentsView(APIView):
+    """Сквозной поиск по документам — global document search for the «единая станция документов».
+    GET /api/v1/crm/analytics/search-documents/?q=<str>&limit=8
+
+    Thin wrapper (Rule 8): pass query + limit → ONE service call → return. All company-scoping
+    (incl. the hidden-competition boundary) lives in crm.services.document_search.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from crm.services.document_search import search_documents
+
+        results = search_documents(
+            request.user,
+            request,
+            q=request.query_params.get("q"),
+            limit=request.query_params.get("limit"),
+        )
+        return Response({"results": results})

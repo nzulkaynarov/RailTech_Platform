@@ -10,6 +10,7 @@ from crm.views.ai_diff import QuoteRequestDiffView  # noqa: F401
 from crm.views.analytics import (  # noqa: F401
     DashboardAnalyticsView,
     RecentDocumentsView,
+    SearchDocumentsView,
     TimeToFirstQuoteView,
 )
 from crm.views.billing import (  # noqa: F401
@@ -64,6 +65,7 @@ __all__ = [
     # analytics
     "DashboardAnalyticsView",
     "RecentDocumentsView",
+    "SearchDocumentsView",
     "TimeToFirstQuoteView",
     # billing (contracts, invoices, payments, acts, fulfillment)
     "ContractViewSet",

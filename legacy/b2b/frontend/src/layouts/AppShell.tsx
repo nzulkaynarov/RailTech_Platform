@@ -7,6 +7,7 @@ import {
   User,
   LogOut,
   ChevronUp,
+  Search,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -56,6 +57,8 @@ import { useAuthStore } from '@/store/authStore';
 import { NotificationCenter } from '@/components/Layout/NotificationCenter';
 import { SupportButton } from '@/components/Layout/SupportButton';
 import { ChatDrawer } from '@/components/Layout/ChatDrawer';
+import { DocumentSearchDialog } from '@/components/Layout/DocumentSearchDialog';
+import { useCommandPaletteShortcut, useCommandPaletteState } from '@/components/Layout/CommandPalette';
 import { SubscriptionStatusBanner } from '@/components/Shared/SubscriptionStatusBanner';
 import { CartDrawer } from '@/components/ui/CartDrawer';
 
@@ -249,6 +252,12 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour, fullBlee
     [capabilities, capableSides, activePage, t],
   );
 
+  // Global document search (Cmd/Ctrl+K) — a company-facing counterpart to the operator
+  // command palette. Documents carry a ready-to-use deep-link `hash`, so the dialog assigns
+  // `window.location.hash` directly (App.tsx handleNavigate only accepts clean page ids).
+  const [searchOpen, setSearchOpen] = useCommandPaletteState();
+  useCommandPaletteShortcut(() => setSearchOpen(true));
+
 
   return (
       <TooltipProvider>
@@ -428,11 +437,35 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour, fullBlee
                   <CartDrawer />
                 </>
               )}
+              {/* Global document search — icon-only on small screens, labelled + ⌘K hint above sm */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-2 text-muted-foreground"
+                    onClick={() => setSearchOpen(true)}
+                    aria-label={t('search.trigger')}
+                  >
+                    <Search className="h-4 w-4" />
+                    <span className="hidden md:inline text-xs">{t('search.trigger')}</span>
+                    <kbd className="pointer-events-none hidden items-center gap-1 rounded border bg-muted px-1.5 py-0.5 font-mono text-xs font-medium md:inline-flex">
+                      <span className="text-xs">⌘</span>K
+                    </kbd>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{t('search.trigger')}</TooltipContent>
+              </Tooltip>
               <ChatDrawer onNavigate={onNavigate} />
               <SupportButton />
               <NotificationCenter onNavigate={onNavigate} />
             </div>
           </header>
+          <DocumentSearchDialog
+            open={searchOpen}
+            onOpenChange={setSearchOpen}
+            onNavigate={(hash) => { window.location.hash = hash; }}
+          />
           <main className={cn('flex-1 min-h-0', fullBleed ? 'overflow-hidden' : 'overflow-y-auto p-6')}>
             {!fullBleed && (
               <div className="mb-4 space-y-2">

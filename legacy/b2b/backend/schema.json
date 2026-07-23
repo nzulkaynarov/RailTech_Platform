@@ -8095,6 +8095,52 @@
                 }
             }
         },
+        "/api/v1/crm/analytics/search-documents/": {
+            "get": {
+                "operationId": "crm_analytics_search_documents_retrieve",
+                "description": "Cross-type textual search over the viewer's documents — КП / контракты / инвойсы / акты / сгенерированные — matched case-insensitively by `q` on document number, title and deal title, merged and sorted by date desc, capped at `limit`. Each type is company-scoped exactly like its own list endpoint (hidden competition preserved). A query shorter than 2 characters returns an empty list without touching the DB.",
+                "summary": "Search documents (global document search)",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "limit",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Number of documents to return (1..20, clamped). Default 8."
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Search query (min 2 chars; shorter → empty results). Required.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Analytics"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SearchDocumentsResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/v1/crm/analytics/time-to-first-quote/": {
             "get": {
                 "operationId": "crm_analytics_time_to_first_quote_retrieve",
@@ -27929,6 +27975,58 @@
                 },
                 "required": [
                     "seller_company_ids"
+                ]
+            },
+            "SearchDocument": {
+                "type": "object",
+                "properties": {
+                    "type": {
+                        "$ref": "#/components/schemas/TypeEnum"
+                    },
+                    "id": {
+                        "type": "integer"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "status_code": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "date": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "deal": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "hash": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "date",
+                    "deal",
+                    "hash",
+                    "id",
+                    "label",
+                    "status_code",
+                    "type"
+                ]
+            },
+            "SearchDocumentsResponse": {
+                "type": "object",
+                "properties": {
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SearchDocument"
+                        }
+                    }
+                },
+                "required": [
+                    "results"
                 ]
             },
             "SelfUpdate": {

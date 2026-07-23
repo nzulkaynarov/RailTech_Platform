@@ -2870,6 +2870,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/crm/analytics/search-documents/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search documents (global document search)
+         * @description Cross-type textual search over the viewer's documents — КП / контракты / инвойсы / акты / сгенерированные — matched case-insensitively by `q` on document number, title and deal title, merged and sorted by date desc, capped at `limit`. Each type is company-scoped exactly like its own list endpoint (hidden competition preserved). A query shorter than 2 characters returns an empty list without touching the DB.
+         */
+        get: operations["crm_analytics_search_documents_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/analytics/time-to-first-quote/": {
         parameters: {
             query?: never;
@@ -11381,6 +11401,19 @@ export interface components {
         RouteRequestRequestRequest: {
             seller_company_ids: number[];
         };
+        SearchDocument: {
+            type: components["schemas"]["TypeEnum"];
+            id: number;
+            label: string;
+            status_code: string | null;
+            /** Format: date-time */
+            date: string;
+            deal: number | null;
+            hash: string;
+        };
+        SearchDocumentsResponse: {
+            results: components["schemas"]["SearchDocument"][];
+        };
         /**
          * @description Fields a user may edit on their OWN profile via /users/update-me/.
          *
@@ -16936,6 +16969,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RecentDocumentsResponse"];
+                };
+            };
+        };
+    };
+    crm_analytics_search_documents_retrieve: {
+        parameters: {
+            query: {
+                /** @description Number of documents to return (1..20, clamped). Default 8. */
+                limit?: number;
+                /** @description Search query (min 2 chars; shorter → empty results). Required. */
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchDocumentsResponse"];
                 };
             };
         };

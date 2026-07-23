@@ -5796,5 +5796,20 @@
     "create": "Create document",
     "empty": "No documents for this deal yet",
     "emptyHint": "Build a letter or a template-based document with «Create document»."
+  },
+  "search": {
+    "title": "Document search",
+    "description": "Search across your company's quotes, invoices, contracts and acts",
+    "placeholder": "Search documents: quotes, invoices, contracts, acts…",
+    "trigger": "Search",
+    "minChars": "Type at least {{count}} characters to search",
+    "empty": "Nothing found",
+    "groups": {
+      "quote": "Quotes",
+      "contract": "Contracts",
+      "invoice": "Invoices",
+      "act": "Acts",
+      "generated": "Documents"
+    }
   }
 }
