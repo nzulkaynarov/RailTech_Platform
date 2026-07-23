@@ -14,9 +14,12 @@ from core.models import SystemSetting
 class SystemSettingSerializer(drf_serializers.ModelSerializer):
     class Meta:
         model = SystemSetting
+        # standard_margin removed from the API surface (P9): the pricing engine reads
+        # CompanySettings.default_margin_percent, so this platform field was inert. The DB
+        # column + pgtrigger history stay (dropping a column is riskier than it's worth) —
+        # it is simply no longer read or written through the settings API.
         fields = [
             "vat_rate",
-            "standard_margin",
             "exchange_rate_usd_uzs",
             "platform_name",
             "maintenance_mode",

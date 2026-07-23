@@ -2743,20 +2743,21 @@
       "companyAdmin": "Company settings",
       "defaults": "Default quote parameters",
       "numbering": "Document numbering",
-      "docTemplates": "Email & act templates"
+      "docTemplates": "Email & act templates",
+      "billing": "Plan & subscription"
     },
     "groups": {
       "account": "Account",
       "company": "Company",
       "sales": "Sales",
       "team": "Team & access",
+      "billing": "Billing",
       "platform": "Platform"
     },
     "platform": {
       "title": "Platform settings",
       "description": "Global platform parameters (admin only)",
       "vatRate": "VAT rate (%)",
-      "standardMargin": "Standard margin (%)",
       "exchangeRate": "USD→UZS exchange rate",
       "platformName": "Platform name",
       "save": "Save",
@@ -5389,6 +5390,11 @@
     "prefixPlaceholder": "e.g. ACME",
     "prefixHelp": "Up to 16 characters. Empty means platform numbering is used.",
     "previewLabel": "Number preview",
+    "types": {
+      "quote": "Quote",
+      "contract": "Contract",
+      "invoice": "Invoice"
+    },
     "saved": "Numbering settings saved",
     "ownerOnly": "Only the company owner can configure numbering"
   },

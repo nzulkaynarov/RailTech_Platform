@@ -2,7 +2,8 @@ import { apiClient } from './client';
 
 export interface SystemSettings {
 	vat_rate: string;
-	standard_margin: string;
+	// standard_margin removed from the settings API surface (P9) — it was inert
+	// (the pricing engine reads CompanySettings.default_margin_percent).
 	exchange_rate_usd_uzs: string;
 	platform_name: string;
 	maintenance_mode: boolean;

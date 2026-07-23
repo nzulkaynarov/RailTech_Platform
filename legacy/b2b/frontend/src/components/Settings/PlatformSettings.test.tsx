@@ -46,9 +46,11 @@ describe('PlatformSettings (spec PR 5, вариант Б)', () => {
     // Живые настройки на месте (значения из данных бэкенда).
     expect(screen.getByText('Системные настройки')).toBeInTheDocument();
     expect(screen.getByDisplayValue('12.00')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('15.00')).toBeInTheDocument();
     expect(screen.getByDisplayValue('12650.0000')).toBeInTheDocument();
     expect(screen.getByDisplayValue('RailTech B2B')).toBeInTheDocument();
+
+    // standard_margin убран из UI (P9): поле инертно, не показываем и не редактируем.
+    expect(screen.queryByDisplayValue('15.00')).not.toBeInTheDocument();
 
     // Мёртвые переключатели удалены: ни одного Switch и ни одной старой подписи.
     expect(screen.queryAllByRole('switch')).toHaveLength(0);
@@ -66,12 +68,13 @@ describe('PlatformSettings (spec PR 5, вариант Б)', () => {
     });
     expect(mutateAsyncMock).toHaveBeenCalledWith({
       vat_rate: '12.00',
-      standard_margin: '15.00',
       exchange_rate_usd_uzs: '12650.0000',
       platform_name: 'RailTech B2B',
     });
     const payload = mutateAsyncMock.mock.calls[0][0];
     expect(payload).not.toHaveProperty('maintenance_mode');
     expect(payload).not.toHaveProperty('is_two_factor_required');
+    // standard_margin более не отправляется (P9).
+    expect(payload).not.toHaveProperty('standard_margin');
   });
 });

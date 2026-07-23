@@ -13,7 +13,7 @@
  * навигацию, не переписываем страницы.
  */
 import {
-  LayoutDashboard, Package, ClipboardList, Handshake, Receipt,
+  LayoutDashboard, Package, ClipboardList, Handshake,
   FileText, Boxes, Settings, HelpCircle, Users, Truck,
 } from 'lucide-react';
 import type { Capabilities } from '@/store/userStore';
@@ -138,9 +138,8 @@ export const TENANT_NAV: NavNodeDef[] = [
     ],
   },
 
-  // Подписка — seller billing entry that isn't a "document". A seller subscribes only
-  // after KYC (L2) to reach T2, so this is KYC-gated too (App.tsx bounces it pre-KYC).
-  { labelKey: 'shell.mySubscription', id: 'my-subscription', icon: <Receipt className="h-4 w-4" />, side: 'sell', requires: { kyc: true } },
+  // «Подписка» перенесена в Настройки → Биллинг (S5/P7) — top-level пункт убран. Роут
+  // #my-subscription остаётся рабочим (App.tsx) для старых ссылок/закладок, но в меню его нет.
 ];
 
 // Профиль слился с Настройками в единый Settings Hub (settings-profile-redesign §2.1):

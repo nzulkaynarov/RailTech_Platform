@@ -32,10 +32,11 @@ export type SettingsSectionKey =
   | 'templates'
   | 'doc-templates'
   | 'team'
+  | 'billing'
   | 'platform';
 
-/** Группа сайдбара (S2) — порядок: account → company → sales → team → platform. */
-export type SettingsGroupKey = 'account' | 'company' | 'sales' | 'team' | 'platform';
+/** Группа сайдбара (S2/S5) — порядок: account → company → sales → team → billing → platform. */
+export type SettingsGroupKey = 'account' | 'company' | 'sales' | 'team' | 'billing' | 'platform';
 
 export interface SettingsSectionDef {
   key: SettingsSectionKey;
@@ -123,6 +124,14 @@ const SECTION_RULES: SectionRule[] = [
   },
   // ── team ── (виден всем не-ADMIN; действия управления внутри гейтятся hasTeamManage).
   { def: { key: 'team', labelKey: 'settings.tabs.team', group: 'team' }, visible: (input) => !input.isAdmin },
+  // ── billing ── (S5/P7) «План и подписка» — витрина плана КОМПАНИИ (read-only), перенос
+  // top-level «Подписки» в Настройки. Гейт = компания-продавец (companySells): подписка —
+  // продавцовая сущность (T2), покупателю не нужна; ADMIN сюда не ходит (у него свой план в
+  // PlatformAdminShell). Права участника не требуются — витрина плана видна всей команде продавца.
+  {
+    def: { key: 'billing', labelKey: 'settings.tabs.billing', group: 'billing' },
+    visible: (input) => !input.isAdmin && input.companySells,
+  },
   // ── platform ── SystemSettings CRUD, только Platform Operator.
   { def: { key: 'platform', labelKey: 'settings.tabs.platform', group: 'platform' }, visible: (input) => input.isAdmin },
 ];

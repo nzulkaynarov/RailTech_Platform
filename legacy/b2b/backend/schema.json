@@ -25642,13 +25642,6 @@
                         "title": "Ставка НДС (%)",
                         "description": "Процент НДС, применяемый к котировкам"
                     },
-                    "standard_margin": {
-                        "type": "string",
-                        "format": "decimal",
-                        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
-                        "title": "Стандартная маржа (%)",
-                        "description": "Маржа по умолчанию для новых позиций КП"
-                    },
                     "exchange_rate_usd_uzs": {
                         "type": "string",
                         "format": "decimal",
@@ -29071,13 +29064,6 @@
                         "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
                         "title": "Ставка НДС (%)",
                         "description": "Процент НДС, применяемый к котировкам"
-                    },
-                    "standard_margin": {
-                        "type": "string",
-                        "format": "decimal",
-                        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
-                        "title": "Стандартная маржа (%)",
-                        "description": "Маржа по умолчанию для новых позиций КП"
                     },
                     "exchange_rate_usd_uzs": {
                         "type": "string",

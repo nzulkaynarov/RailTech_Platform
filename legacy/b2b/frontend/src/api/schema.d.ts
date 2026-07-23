@@ -10077,12 +10077,6 @@ export interface components {
              */
             vat_rate?: string;
             /**
-             * Стандартная маржа (%)
-             * Format: decimal
-             * @description Маржа по умолчанию для новых позиций КП
-             */
-            standard_margin?: string;
-            /**
              * Курс USD/UZS
              * Format: decimal
              * @description Справочный курс (может обновляться автоматически)
@@ -11967,12 +11961,6 @@ export interface components {
              * @description Процент НДС, применяемый к котировкам
              */
             vat_rate?: string;
-            /**
-             * Стандартная маржа (%)
-             * Format: decimal
-             * @description Маржа по умолчанию для новых позиций КП
-             */
-            standard_margin?: string;
             /**
              * Курс USD/UZS
              * Format: decimal

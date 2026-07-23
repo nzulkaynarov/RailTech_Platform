@@ -44,7 +44,26 @@ function daysUntil(dateStr?: string | null): number | null {
   return Math.ceil(diff / 86_400_000);
 }
 
+/**
+ * Standalone page — plan витрина под своим PageShell-заголовком.
+ * Тело вынесено в MySubscriptionContent, чтобы Settings Hub (секция «Биллинг», S5/P7)
+ * переиспользовал его БЕЗ второго заголовка (в настройках уже есть h1 + таб).
+ */
 export function MySubscriptionPage() {
+  const { t } = useTranslation();
+  return (
+    <PageShell
+      title={t('mySubscription.title')}
+      description={t('mySubscription.description')}
+      icon={<CreditCard className="h-5 w-5" />}
+    >
+      <MySubscriptionContent />
+    </PageShell>
+  );
+}
+
+/** Тело витрины подписки без PageShell — переиспользуется страницей и секцией «Биллинг». */
+export function MySubscriptionContent() {
   const { t } = useTranslation();
   const { data: sub, isLoading, isError, refetch } = useMySubscription();
   const [payOpen, setPayOpen] = useState(false);
@@ -66,11 +85,8 @@ export function MySubscriptionPage() {
   const isSuspended = sub?.status === 'SUSPENDED';
 
   return (
-    <PageShell
-      title={t('mySubscription.title')}
-      description={t('mySubscription.description')}
-      icon={<CreditCard className="h-5 w-5" />}
-    >
+    // Own vertical rhythm (PageShell previously supplied the flex gap around these blocks).
+    <div className="flex flex-col gap-6">
       {isLoading ? (
         <Card>
           <CardContent className="p-6">
@@ -228,7 +244,7 @@ export function MySubscriptionPage() {
           />
         </>
       )}
-    </PageShell>
+    </div>
   );
 }
 

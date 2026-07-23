@@ -20,14 +20,12 @@ export function PlatformSettings() {
   const updateMut = useUpdateSystemSettings();
 
   const [vatRate, setVatRate] = useState('');
-  const [standardMargin, setStandardMargin] = useState('');
   const [exchangeRate, setExchangeRate] = useState('');
   const [platformName, setPlatformName] = useState('');
 
   useEffect(() => {
     if (data) {
       setVatRate(data.vat_rate ?? '');
-      setStandardMargin(data.standard_margin ?? '');
       setExchangeRate(data.exchange_rate_usd_uzs ?? '');
       setPlatformName(data.platform_name ?? '');
     }
@@ -35,9 +33,10 @@ export function PlatformSettings() {
 
   const handleSave = async () => {
     try {
+      // standard_margin removed (P9): it was inert — the pricing engine reads
+      // CompanySettings.default_margin_percent, not this platform setting.
       await updateMut.mutateAsync({
         vat_rate: vatRate,
-        standard_margin: standardMargin,
         exchange_rate_usd_uzs: exchangeRate,
         platform_name: platformName,
       });
@@ -65,10 +64,6 @@ export function PlatformSettings() {
               <div className="space-y-2">
                 <Label>{t('settings.platform.vatRate')}</Label>
                 <Input type="number" step="0.01" value={vatRate} onChange={(e) => setVatRate(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>{t('settings.platform.standardMargin')}</Label>
-                <Input type="number" step="0.01" value={standardMargin} onChange={(e) => setStandardMargin(e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label>{t('settings.platform.exchangeRate')}</Label>

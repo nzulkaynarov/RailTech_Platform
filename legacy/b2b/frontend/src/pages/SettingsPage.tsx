@@ -29,6 +29,7 @@ import { CompanyDocumentProfileSettings } from '@/components/Cabinet/CompanyDocu
 import { CompanyDefaultsSettings } from '@/components/Cabinet/CompanyDefaultsSettings';
 import { CompanyNumberingSettings } from '@/components/Cabinet/CompanyNumberingSettings';
 import { CompanyTab } from '@/components/Cabinet/CompanyTab';
+import { MySubscriptionContent } from '@/pages/MySubscriptionPage';
 
 export function SettingsPage() {
   const { t } = useTranslation();
@@ -95,6 +96,9 @@ function SectionContent(
       return <DocumentTemplatesSettings />;
     case 'team':
       return <CompanyTeamSettings />;
+    case 'billing':
+      // S5/P7 — витрина плана компании (read-only), перенос top-level «Подписки» в настройки.
+      return <MySubscriptionContent />;
     case 'platform':
       return <PlatformSettings />;
   }

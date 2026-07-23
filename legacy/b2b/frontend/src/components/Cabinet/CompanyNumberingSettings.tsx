@@ -15,13 +15,21 @@ import { Label } from '@/components/ui/label';
 // Server-minted document numbers are race-safe, per-company and authoritative — this
 // preview is illustrative ONLY (it mirrors the backend format) and never replaces the
 // value the API returns when a real document is issued.
-const PREVIEW_LABEL = 'КП';
+//
+// P6: the prefix brands ALL document numbers, not just КП — so preview several kinds.
+// `code` is the fixed backend number-format label (see crm/services: КП/CT/INV in
+// next_document_number), NOT UI text; `labelKey` is the translated «what kind» caption.
 const PREVIEW_SEQ = '00001';
+const PREVIEW_TYPES: { labelKey: string; code: string }[] = [
+  { labelKey: 'companyNumbering.types.quote', code: 'КП' },
+  { labelKey: 'companyNumbering.types.contract', code: 'CT' },
+  { labelKey: 'companyNumbering.types.invoice', code: 'INV' },
+];
 
-function buildPreview(prefix: string, year: number): string {
+function buildPreview(prefix: string, code: string, year: number): string {
   const clean = prefix.trim();
-  if (clean) return `${clean}-${PREVIEW_LABEL}-${year}-${PREVIEW_SEQ}`;
-  return `${PREVIEW_LABEL}-${year}-${PREVIEW_SEQ}`;
+  if (clean) return `${clean}-${code}-${year}-${PREVIEW_SEQ}`;
+  return `${code}-${year}-${PREVIEW_SEQ}`;
 }
 
 /**
@@ -108,9 +116,16 @@ export function CompanyNumberingSettings() {
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               {t('companyNumbering.previewLabel')}
             </p>
-            <p className="mt-1 font-mono text-lg font-semibold text-foreground">
-              {buildPreview(prefix, year)}
-            </p>
+            <div className="mt-2 space-y-1.5">
+              {PREVIEW_TYPES.map((type) => (
+                <div key={type.code} className="flex items-baseline gap-2">
+                  <span className="w-24 shrink-0 text-xs text-muted-foreground">{t(type.labelKey)}</span>
+                  <span className="font-mono text-base font-semibold text-foreground">
+                    {buildPreview(prefix, type.code, year)}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </CardContent>
 
