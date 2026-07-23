@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Plus, Trash2, Loader2, FileText, Copy, Pencil, X } from 'lucide-react';
+import { Plus, Trash2, Loader2, FileText, Copy, Pencil, X, Info } from 'lucide-react';
 
 import {
   useDocumentTemplates,
@@ -15,12 +15,15 @@ import {
 import type { DocumentTemplate, PlaceholderCatalogGroup, TemplatePreviewResult } from '@/api/documentsApi';
 import { translateApiError } from '@/lib/apiError';
 import { DocumentLetterheadPreview } from '@/components/Documents/DocumentLetterheadPreview';
+import {
+  RichTextTemplateEditor,
+  type RichTextTemplateEditorHandle,
+} from '@/components/Settings/RichTextTemplateEditor';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -68,7 +71,7 @@ export function DocumentTemplatesSettings() {
   const previewMut = usePreviewTemplate();
 
   const [editor, setEditor] = useState<EditorState | null>(null);
-  const bodyRef = useRef<HTMLTextAreaElement>(null);
+  const richEditorRef = useRef<RichTextTemplateEditorHandle>(null);
 
   const owned = useMemo(() => templates.filter((tpl) => tpl.is_owned && !tpl.is_sample), [templates]);
   const samples = useMemo(() => templates.filter((tpl) => tpl.is_sample), [templates]);
@@ -102,26 +105,10 @@ export function DocumentTemplatesSettings() {
     previewMut.reset();
   }
 
-  /** Insert a `{{code}}` placeholder at the textarea caret (or append when unfocused). */
+  /** Insert a `{{code}}` placeholder at the caret — delegated to the rich-text editor (which knows
+   *  whether it is in WYSIWYG or HTML-source mode and targets the right caret). */
   function insertPlaceholder(code: string) {
-    if (!editor) return;
-    const token = `{{${code}}}`;
-    const textarea = bodyRef.current;
-    const body = editor.body_html;
-    if (!textarea) {
-      setEditor({ ...editor, body_html: body + token });
-      return;
-    }
-    const start = textarea.selectionStart ?? body.length;
-    const end = textarea.selectionEnd ?? body.length;
-    const next = body.slice(0, start) + token + body.slice(end);
-    setEditor({ ...editor, body_html: next });
-    // Restore caret just after the inserted token on the next tick.
-    requestAnimationFrame(() => {
-      textarea.focus();
-      const caret = start + token.length;
-      textarea.setSelectionRange(caret, caret);
-    });
+    richEditorRef.current?.insertPlaceholder(code);
   }
 
   async function handleSave() {
@@ -210,7 +197,7 @@ export function DocumentTemplatesSettings() {
           onClose={closeEditor}
           onSave={handleSave}
           onInsert={insertPlaceholder}
-          bodyRef={bodyRef}
+          richEditorRef={richEditorRef}
           placeholderGroups={placeholderGroups}
           preview={previewMut.data}
           isPreviewing={previewMut.isPending}
@@ -349,9 +336,8 @@ interface TemplateEditorProps {
   onClose: () => void;
   onSave: () => void;
   onInsert: (code: string) => void;
-  // React.Ref (not RefObject) so it accepts the parent's useRef output and satisfies the
-  // Textarea's LegacyRef prop; .current is read only in the parent's insertPlaceholder.
-  bodyRef: React.Ref<HTMLTextAreaElement>;
+  // Forwarded to the rich-text editor so placeholder chips can insert at the caret.
+  richEditorRef: React.Ref<RichTextTemplateEditorHandle>;
   placeholderGroups: PlaceholderCatalogGroup[];
   preview: TemplatePreviewResult | undefined;
   isPreviewing: boolean;
@@ -365,7 +351,7 @@ const groupHintKey = (key: string) => `docTemplatesSettings.placeholderGroupHint
 const GROUPS_WITH_HINT = new Set(['company']);
 
 function TemplateEditor({
-  editor, onChange, onClose, onSave, onInsert, bodyRef, placeholderGroups, preview, isPreviewing, isSaving,
+  editor, onChange, onClose, onSave, onInsert, richEditorRef, placeholderGroups, preview, isPreviewing, isSaving,
 }: TemplateEditorProps) {
   const { t } = useTranslation();
 
@@ -409,16 +395,21 @@ function TemplateEditor({
           </div>
         </div>
 
+        {/* Reinforces the T1 anti-duplication fix: requisites + signature come from the letterhead. */}
+        <div className="flex items-start gap-2 rounded-md border border-info/40 bg-info/10 p-3 text-sm text-foreground">
+          <Info className="mt-0.5 size-4 shrink-0 text-info" aria-hidden="true" />
+          <p>{t('docTemplatesSettings.letterheadHint')}</p>
+        </div>
+
         <div className="grid gap-4 lg:grid-cols-[1fr_16rem]">
           <div className="space-y-1.5">
             <Label htmlFor="doc-tpl-body">{t('docTemplatesSettings.fields.body')}</Label>
-            <Textarea
+            <RichTextTemplateEditor
               id="doc-tpl-body"
-              ref={bodyRef}
+              ref={richEditorRef}
               value={editor.body_html}
-              onChange={(event) => onChange({ ...editor, body_html: event.target.value })}
-              placeholder={t('docTemplatesSettings.fields.bodyPlaceholder')}
-              className="min-h-64 font-mono text-xs"
+              onChange={(html) => onChange({ ...editor, body_html: html })}
+              templateKey={editor.id ?? 'new'}
             />
           </div>
 

@@ -1628,6 +1628,21 @@
     "inn": "TIN {{value}}",
     "phone": "tel. {{value}}"
   },
+  "richEditor": {
+    "bold": "Bold",
+    "italic": "Italic",
+    "heading": "Heading",
+    "bulletList": "Bulleted list",
+    "orderedList": "Numbered list",
+    "table": "Insert table",
+    "link": "Link",
+    "linkUrl": "Link URL",
+    "linkInvalid": "Enter a link that starts with http:// or https://",
+    "linkInsert": "Insert",
+    "htmlSource": "HTML source",
+    "sourcePlaceholder": "HTML with placeholders…",
+    "editorLabel": "Template body"
+  },
   "docTemplatesSettings": {
     "title": "Document templates",
     "subtitle": "Your company's HTML letter and report templates. Placeholders from the catalog are filled with deal data when a document is generated.",
@@ -1642,6 +1657,7 @@
     "inactive": "Disabled",
     "placeholders": "Placeholder catalog",
     "placeholdersHint": "Click to insert a placeholder into the text at the cursor.",
+    "letterheadHint": "The letterhead with company requisites and the signature are added to the document automatically — don't duplicate them in the body.",
     "placeholderGroups": {
       "dynamic": "Dynamic data",
       "company": "Company requisites (already in the letterhead)"
