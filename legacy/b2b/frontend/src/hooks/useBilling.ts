@@ -1,10 +1,21 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  QueryClient, useMutation, useQuery, useQueryClient,
+} from '@tanstack/react-query';
 import { contractsApi, ContractFilterParams } from '@/api/contractsApi';
 import {
   actsApi, invoicesApi, paymentsApi,
   InvoiceFilterParams,
 } from '@/api/billingApi';
 import { fulfillmentApi, FulfillmentUpdatePayload } from '@/api/fulfillmentApi';
+
+// Wave I-3 — document/billing mutations must refresh the dashboard surfaces (stat counters
+// + the «Недавние документы» widget) or they drift stale. Prefix-matches so `['dashboard-stats',
+// period]` / `['recent-documents', limit]` variants are all invalidated.
+const invalidateDashboardSurfaces = (qc: QueryClient) => {
+  qc.invalidateQueries({ queryKey: ['dashboard-stats'] });
+  qc.invalidateQueries({ queryKey: ['page-stats'] });
+  qc.invalidateQueries({ queryKey: ['recent-documents'] });
+};
 
 // ─── Contracts ────────────────────────────────────────────────
 
@@ -27,6 +38,7 @@ export const useGenerateContract = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['contracts'] });
       qc.invalidateQueries({ queryKey: ['deals'] });
+      invalidateDashboardSurfaces(qc);
     },
   });
 };
@@ -112,6 +124,7 @@ export const useCreateInvoiceDraft = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['invoices'] });
       qc.invalidateQueries({ queryKey: ['deals'] });
+      invalidateDashboardSurfaces(qc);
     },
   });
 };
@@ -127,6 +140,7 @@ export const useGenerateInvoice = () => {
       // "Create invoice" button flips to "Open invoice".
       qc.invalidateQueries({ queryKey: ['contracts'] });
       qc.invalidateQueries({ queryKey: ['contract', contractId] });
+      invalidateDashboardSurfaces(qc);
     },
   });
 };
@@ -150,6 +164,7 @@ export const useRecordPayment = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['invoices'] });
       qc.invalidateQueries({ queryKey: ['payments'] });
+      invalidateDashboardSurfaces(qc);
     },
   });
 };
@@ -161,6 +176,7 @@ export const useGenerateAct = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['invoices'] });
       qc.invalidateQueries({ queryKey: ['acts'] });
+      invalidateDashboardSurfaces(qc);
     },
   });
 };
@@ -172,6 +188,7 @@ export const useIssueInvoice = () => {
     onSuccess: (_data, id) => {
       qc.invalidateQueries({ queryKey: ['invoices'] });
       qc.invalidateQueries({ queryKey: ['invoice', id] });
+      invalidateDashboardSurfaces(qc);
     },
   });
 };
@@ -186,6 +203,7 @@ export const useCancelInvoice = () => {
       // Cancelling clears the contract's non-cancelled invoice → its `invoice_id` goes null, so the
       // contract Sheet must flip «Открыть инвойс» back to «Создать инвойс» (re-issue after cancel).
       qc.invalidateQueries({ queryKey: ['contracts'] });
+      invalidateDashboardSurfaces(qc);
     },
   });
 };
@@ -198,6 +216,7 @@ export const useUpdateInvoiceDraft = () => {
     onSuccess: (_data, { id }) => {
       qc.invalidateQueries({ queryKey: ['invoices'] });
       qc.invalidateQueries({ queryKey: ['invoice', id] });
+      invalidateDashboardSurfaces(qc);
     },
   });
 };
@@ -227,7 +246,10 @@ export const useSignAct = () => {
   return useMutation({
     mutationFn: ({ id, signedFile }: { id: number; signedFile?: File }) =>
       actsApi.sign(id, signedFile),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['acts'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['acts'] });
+      invalidateDashboardSurfaces(qc);
+    },
   });
 };
 

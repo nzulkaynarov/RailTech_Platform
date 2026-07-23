@@ -3,12 +3,17 @@ import { useQuery } from '@tanstack/react-query';
 import {
   Package,
   FileText,
+  FileSignature,
+  Receipt,
+  ClipboardCheck,
+  FileType,
   Calendar,
   ShoppingCart,
   AlertCircle,
   Loader2,
   Clock,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,8 +38,9 @@ import { useTranslation } from 'react-i18next';
 import { useUserStore, selectIsSellerCapable } from '@/store/userStore';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useDeals, useTimeToFirstQuote } from '@/hooks/useCRM';
+import { useRecentDocuments } from '@/hooks/usePageStats';
 import { buyerStatus } from '@/lib/requestStatus';
-import { dashboardApi, type DashboardStats } from '@/api/dashboardApi';
+import { dashboardApi, type DashboardStats, type RecentDocument } from '@/api/dashboardApi';
 
 // ─── KYC Pending Banner ────────────────────────────────────────────────
 
@@ -301,6 +307,94 @@ function RecentRequestsCard({ onNavigate }: { onNavigate: (page: string) => void
   );
 }
 
+// ─── Recent Documents (wave I-2, both buyer & seller) ───────────────────
+
+const DOC_TYPE_ICON: Record<RecentDocument['type'], LucideIcon> = {
+  quote: FileText,
+  contract: FileSignature,
+  invoice: Receipt,
+  act: ClipboardCheck,
+  generated: FileType,
+};
+
+function RecentDocumentsCard() {
+  const { t } = useTranslation();
+  const { data: documents, isError, refetch } = useRecentDocuments(8);
+
+  // A failed fetch reads as an explicit error with a retry — never a silent
+  // absence that would look like "no documents yet".
+  if (isError) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center gap-3 py-8 text-center">
+          <AlertCircle className="h-6 w-6 text-destructive" aria-hidden="true" />
+          <p className="text-sm font-medium">{t('common.loadError')}</p>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            {t('common.retry')}
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Empty → render nothing (mirrors RecentRequestsCard; no fake rows).
+  const items = documents ?? [];
+  if (items.length === 0) return null;
+
+  const openDocument = (hash: string) => { window.location.hash = hash; };
+
+  return (
+    <Card className="py-0 gap-0">
+      <CardHeader className="flex flex-row items-center justify-between px-4 py-3">
+        <CardTitle className="text-sm font-semibold">{t('dashboardPage.recentDocuments.title')}</CardTitle>
+      </CardHeader>
+      <Table>
+        <TableHeader>
+          <TableRow className="bg-muted/40">
+            <TableHead className="text-xs">{t('dashboardPage.recentDocuments.document')}</TableHead>
+            <TableHead className="text-xs">{t('dashboardPage.recentDocuments.type')}</TableHead>
+            <TableHead className="text-xs">{t('dashboardPage.recentDocuments.status')}</TableHead>
+            <TableHead className="text-right text-xs">{t('dashboardPage.recentDocuments.date')}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {items.map((doc) => {
+            const Icon = DOC_TYPE_ICON[doc.type] ?? FileText;
+            return (
+              <TableRow
+                key={`${doc.type}-${doc.id}`}
+                className="cursor-pointer"
+                tabIndex={0}
+                role="link"
+                onClick={() => openDocument(doc.hash)}
+                onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openDocument(doc.hash); } }}
+              >
+                <TableCell>
+                  <span className="flex items-center gap-2">
+                    <Icon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                    <span className="text-sm font-medium truncate max-w-xs">{doc.label}</span>
+                  </span>
+                </TableCell>
+                <TableCell className="text-xs text-muted-foreground">
+                  {t(`dashboardPage.recentDocuments.types.${doc.type}`)}
+                </TableCell>
+                <TableCell>
+                  {doc.status_code
+                    ? <Badge variant="secondary">{t(`dashboardPage.recentDocuments.statusCode.${doc.status_code}`, { defaultValue: doc.status_code })}</Badge>
+                    : <span className="text-muted-foreground">—</span>}
+                </TableCell>
+                <TableCell className="text-right text-xs text-muted-foreground">
+                  {new Date(doc.date).toLocaleDateString()}
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </Card>
+  );
+}
+
 // ─── BUYER Dashboard ────────────────────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -320,6 +414,7 @@ function BuyerDashboard({ onProductClick: _onProductClick, period: _period, stat
     <div className="flex flex-col gap-6">
       <BuyerAttentionStrip onNavigate={onNavigate} />
       <RecentRequestsCard onNavigate={onNavigate} />
+      <RecentDocumentsCard />
       <PipelineFunnel onNavigate={onNavigate} />
       <MetricStrip stats={stats} role="buyer" />
     </div>
@@ -377,6 +472,7 @@ function SellerDashboard({ period: _period, stats, onNavigate }: { period: strin
     <div className="flex flex-col gap-6">
       <SellerAttentionStrip onNavigate={onNavigate} />
       <QuoteApprovalQueue />
+      <RecentDocumentsCard />
       <TimeToFirstQuoteCard />
       <PipelineFunnel onNavigate={onNavigate} />
       <MetricStrip stats={stats} role="seller" />

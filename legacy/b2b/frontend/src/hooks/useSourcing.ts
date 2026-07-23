@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { sourcingApi } from '@/api/sourcingApi';
 
 /**
@@ -11,3 +11,20 @@ export const useCompanyAttachments = () => useQuery({
   queryKey: ['company-attachments'],
   queryFn: () => sourcingApi.listAllAttachments(),
 });
+
+/**
+ * Wave I-1 — upload a company-scoped file into the «Файлы» registry (no deal). The
+ * backend requires exactly ONE parent; a company file passes `company=<id>` and is
+ * magic-byte validated server-side (`validate_document_upload`). Invalidates the
+ * registry so the new row appears immediately.
+ */
+export const useUploadCompanyFile = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ companyId, file }: { companyId: number; file: File }) =>
+      sourcingApi.uploadAttachment({ company: companyId }, file),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-attachments'] });
+    },
+  });
+};

@@ -60,6 +60,9 @@ class GeneratedDocumentSerializer(serializers.ModelSerializer):
     pdf_available = serializers.SerializerMethodField()
     is_owned = serializers.SerializerMethodField()
     public_url = serializers.SerializerMethodField()
+    # Read-only mirror of public_token_revoked so the SPA can swap «Копировать ссылку» for a
+    # «Ссылка отозвана» badge (J-b). public_url itself null-s once revoked.
+    public_link_revoked = serializers.BooleanField(source="public_token_revoked", read_only=True)
 
     class Meta:
         model = GeneratedDocument
@@ -82,6 +85,7 @@ class GeneratedDocumentSerializer(serializers.ModelSerializer):
             "issued_at",
             "is_owned",
             "public_url",
+            "public_link_revoked",
             "created_by_name",
             "created_at",
             "updated_at",

@@ -77,8 +77,11 @@ export interface GeneratedDocument {
   /** True = the document belongs to the viewer's company. False = received from a counterparty
    *  (read-only — no issue/cancel/value editing; badge «Получен»). */
   is_owned: boolean;
-  /** Public no-login share URL (backend-built from FRONTEND_URL + token), non-null only for ISSUED. */
+  /** Public no-login share URL (backend-built from FRONTEND_URL + token), non-null only for ISSUED.
+   *  Null once the link is revoked (see `public_link_revoked`). */
   public_url: string | null;
+  /** True when the public link was revoked — hide «Копировать ссылку», show «Ссылка отозвана» (J-b). */
+  public_link_revoked?: boolean;
   /** Pre-resolved recipient email (deal contact), when the backend can determine it. Optional —
    *  when absent the send dialog leaves the field empty and the backend resolves it server-side. */
   recipient_email?: string | null;
@@ -170,6 +173,12 @@ export const generatedDocumentsApi = {
       `crm/generated-documents/${id}/send-email/`,
       to ? { to } : {},
     );
+    return response.data;
+  },
+  // J-b: kill the public no-login link (owner-only, ISSUED). The public view then 410s; the
+  // serializer null-s `public_url` and flips `public_link_revoked`.
+  revokePublicLink: async (id: number) => {
+    const response = await apiClient.post<GeneratedDocument>(`crm/generated-documents/${id}/revoke-public-link/`);
     return response.data;
   },
 };

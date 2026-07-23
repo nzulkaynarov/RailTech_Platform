@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { FolderOpen, Download, FileText } from 'lucide-react';
@@ -12,9 +12,14 @@ import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShe
 import {
   Toolbar, Pager, useListParams, applyListParams,
 } from '@/components/DataTable';
-import { useCompanyAttachments } from '@/hooks/useSourcing';
+import { useCompanyAttachments, useUploadCompanyFile } from '@/hooks/useSourcing';
+import { useIsViewerMode } from '@/hooks/useViewerMode';
+import { useUserStore } from '@/store/userStore';
 import { DealLink } from '@/components/Shared/DealLink';
 import type { Attachment } from '@/api/sourcingApi';
+
+// Same extension set the backend `validate_document_upload` accepts (magic-byte checked).
+const UPLOAD_ACCEPT = '.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.jpg,.jpeg,.png,.gif,.webp';
 
 type AttachmentKind = NonNullable<Attachment['kind']>;
 
@@ -28,6 +33,25 @@ export function CompanyFilesPage() {
   const { t } = useTranslation();
   const listParams = useListParams(['kind'] as const, { defaultOrdering: '-uploaded_at' });
   const { data: attachments, isLoading, isError, refetch } = useCompanyAttachments();
+  const isViewer = useIsViewerMode();
+  const companyId = useUserStore((s) => s.company.id);
+  const uploadFile = useUploadCompanyFile();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const onUploadSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    // Reset the input so re-selecting the SAME file still fires `onChange`.
+    event.target.value = '';
+    if (!file || companyId == null) return;
+    try {
+      await uploadFile.mutateAsync({ companyId, file });
+      await refetch();
+      toast.success(t('companyFilesPage.uploaded'));
+    } catch (err) {
+      // Surfaces the real backend code (magic-byte reject / extension / size) via translateApiError.
+      toast.error(translateApiError(err));
+    }
+  };
 
   const stats = useMemo(() => {
     const list = attachments ?? [];
@@ -104,7 +128,20 @@ export function CompanyFilesPage() {
       description={t('companyFilesPage.description')}
       icon={<FolderOpen className="h-5 w-5" />}
       stats={stats}
+      actions={[{
+        label: t('companyFilesPage.upload'),
+        onClick: () => fileInputRef.current?.click(),
+        // Viewer-mode admins can't act; without a company there's no valid parent.
+        disabled: isViewer || companyId == null || uploadFile.isPending,
+      }]}
     >
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={UPLOAD_ACCEPT}
+        className="hidden"
+        onChange={onUploadSelected}
+      />
       <Toolbar
         searchValue={listParams.searchInput}
         onSearchChange={listParams.setSearchInput}

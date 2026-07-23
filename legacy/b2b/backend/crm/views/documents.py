@@ -331,6 +331,19 @@ class GeneratedDocumentViewSet(viewsets.ModelViewSet):
         return Response(self.get_serializer(document).data)
 
     @extend_schema(
+        summary="Revoke the public no-login link of an issued document",
+        description="Owner pulls the shared public link (post-issue). Idempotent; further public "
+        "opens return 410 DOCUMENT_LINK_REVOKED. Mirrors the КП revoke-public-link.",
+        tags=["CRM"],
+    )
+    @action(detail=True, methods=["post"], url_path="revoke-public-link")
+    def revoke_public_link(self, request, pk=None):
+        document, err = crm_services.revoke_document_public_link(self.get_object(), request.user)
+        if err:
+            return Response({"detail": err}, status=400)
+        return Response(self.get_serializer(document).data)
+
+    @extend_schema(
         summary="Email an issued document to its recipient (public link in body)",
         tags=["CRM"],
         request=inline_serializer(

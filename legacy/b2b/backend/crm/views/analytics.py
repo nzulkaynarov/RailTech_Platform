@@ -3,7 +3,8 @@ from decimal import Decimal
 
 from django.db.models import Count, OuterRef, Q, Subquery, Sum
 from django.utils import timezone
-from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema, inline_serializer
+from rest_framework import serializers as drf_serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -401,3 +402,62 @@ class TimeToFirstQuoteView(APIView):
             since_days = None
         data = time_to_first_quote_stats(seller_company_ids=seller_company_ids, since_days=since_days)
         return Response(data)
+
+
+@extend_schema(
+    summary="Recent documents (dashboard widget)",
+    description=(
+        "The viewer's newest documents ACROSS types — КП / контракты / инвойсы / акты / "
+        "сгенерированные — merged and sorted by date desc, capped at `limit`. Each type is "
+        "company-scoped exactly like its own list endpoint (hidden competition preserved): a "
+        "routed seller never sees a co-routed competitor's document, nor another company's DRAFT."
+    ),
+    parameters=[
+        OpenApiParameter(
+            name="limit",
+            description="Number of documents to return (1..20, clamped). Default 8.",
+            type=int,
+            location=OpenApiParameter.QUERY,
+            required=False,
+        ),
+    ],
+    responses={
+        200: inline_serializer(
+            "RecentDocumentsResponse",
+            fields={
+                "results": drf_serializers.ListField(
+                    child=inline_serializer(
+                        "RecentDocument",
+                        fields={
+                            "type": drf_serializers.ChoiceField(
+                                choices=["quote", "contract", "invoice", "act", "generated"]
+                            ),
+                            "id": drf_serializers.IntegerField(),
+                            "label": drf_serializers.CharField(),
+                            "status_code": drf_serializers.CharField(allow_null=True),
+                            "date": drf_serializers.DateTimeField(),
+                            "deal": drf_serializers.IntegerField(allow_null=True),
+                            "hash": drf_serializers.CharField(),
+                        },
+                    )
+                )
+            },
+        )
+    },
+    tags=["Analytics"],
+)
+class RecentDocumentsView(APIView):
+    """«Недавние документы» feed for the dashboard station widget.
+    GET /api/v1/crm/analytics/recent-documents/?limit=8
+
+    Thin wrapper (Rule 8): resolve limit → ONE service call → return. All company-scoping
+    (incl. the hidden-competition boundary) lives in crm.services.recent_documents.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from crm.services.recent_documents import recent_documents
+
+        results = recent_documents(request.user, request, limit=request.query_params.get("limit"))
+        return Response({"results": results})

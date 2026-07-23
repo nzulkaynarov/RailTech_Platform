@@ -1,8 +1,18 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  QueryClient, useMutation, useQuery, useQueryClient,
+} from '@tanstack/react-query';
 import {
   documentTemplatesApi, generatedDocumentsApi,
   CreateTemplatePayload, UpdateTemplatePayload, GenerateDocumentPayload,
 } from '@/api/documentsApi';
+
+// Wave I-3 — generated-document mutations refresh the dashboard surfaces (stat counters +
+// «Недавние документы» widget) so they don't go stale after generate/issue/cancel/send.
+const invalidateDashboardSurfaces = (qc: QueryClient) => {
+  qc.invalidateQueries({ queryKey: ['dashboard-stats'] });
+  qc.invalidateQueries({ queryKey: ['page-stats'] });
+  qc.invalidateQueries({ queryKey: ['recent-documents'] });
+};
 
 // ─── Templates ────────────────────────────────────────────────────
 
@@ -80,7 +90,10 @@ export const useGenerateDocument = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (payload: GenerateDocumentPayload) => generatedDocumentsApi.generate(payload),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['generated-documents'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['generated-documents'] });
+      invalidateDashboardSurfaces(qc);
+    },
   });
 };
 
@@ -103,6 +116,7 @@ export const useIssueDocument = () => {
     onSuccess: (_data, id) => {
       qc.invalidateQueries({ queryKey: ['generated-documents'] });
       qc.invalidateQueries({ queryKey: ['generated-document', id] });
+      invalidateDashboardSurfaces(qc);
     },
   });
 };
@@ -114,6 +128,7 @@ export const useCancelDocument = () => {
     onSuccess: (_data, id) => {
       qc.invalidateQueries({ queryKey: ['generated-documents'] });
       qc.invalidateQueries({ queryKey: ['generated-document', id] });
+      invalidateDashboardSurfaces(qc);
     },
   });
 };
@@ -124,6 +139,19 @@ export const useSendDocument = () => {
   return useMutation({
     mutationFn: ({ id, to }: { id: number; to?: string }) => generatedDocumentsApi.sendEmail(id, to),
     onSuccess: (_data, { id }) => {
+      qc.invalidateQueries({ queryKey: ['generated-documents'] });
+      qc.invalidateQueries({ queryKey: ['generated-document', id] });
+      invalidateDashboardSurfaces(qc);
+    },
+  });
+};
+
+// J-b: revoke the public no-login link of an ISSUED document (owner-only).
+export const useRevokeDocument = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => generatedDocumentsApi.revokePublicLink(id),
+    onSuccess: (_data, id) => {
       qc.invalidateQueries({ queryKey: ['generated-documents'] });
       qc.invalidateQueries({ queryKey: ['generated-document', id] });
     },

@@ -2425,6 +2425,20 @@
     "year": "Year",
     "export": "Export",
     "showAll": "Show all",
+    "recentDocuments": {
+      "title": "Recent documents",
+      "document": "Document",
+      "type": "Type",
+      "status": "Status",
+      "date": "Date",
+      "types": {
+        "quote": "Quote",
+        "contract": "Contract",
+        "invoice": "Invoice",
+        "act": "Act",
+        "generated": "Document"
+      }
+    },
     "byMonths": "By months",
     "byWeeks": "By weeks",
     "thisWeek": "This week",
@@ -4538,6 +4552,8 @@
   "companyFilesPage": {
     "title": "Files",
     "description": "All attachments across your company's deals",
+    "upload": "Upload file",
+    "uploaded": "File uploaded",
     "searchPlaceholder": "File name or uploader",
     "allKinds": "All types",
     "emptyState": "Files will appear here once you or your colleagues attach documents to deals or requests",
@@ -4598,7 +4614,8 @@
       "issue": "Issue",
       "cancel": "Cancel",
       "preview": "Preview",
-      "sendEmail": "Send by email"
+      "sendEmail": "Send by email",
+      "revokeLink": "Revoke link"
     },
     "received": "Received",
     "sendDialog": {
@@ -4609,7 +4626,9 @@
       "hint": "Leave blank to send to the deal counterparty's email.",
       "submit": "Send",
       "sent": "Email sent"
-    }
+    },
+    "linkRevoked": "Public link revoked",
+    "linkRevokedNote": "The public link is revoked — the document no longer opens by it."
   },
   "documentsHub": {
     "create": "Create document",
@@ -5095,7 +5114,9 @@
     "ONLY_SELLER_CAN_CREATE_CALCULATOR_DRAFT": "Only a seller can create a calculator draft",
     "DOCUMENT_NOT_ISSUED": "The document is not issued yet — issue it first.",
     "INVALID_EMAIL": "Enter a valid email address",
-    "NO_RECIPIENT": "Could not determine a recipient — enter an email."
+    "NO_RECIPIENT": "Could not determine a recipient — enter an email.",
+    "DOCUMENT_LINK_NOT_ACTIVE": "The document has no active public link",
+    "DOCUMENT_LINK_REVOKED": "The public link has been revoked"
   },
   "fileUpload": {
     "upload": "Upload",

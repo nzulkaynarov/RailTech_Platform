@@ -2850,6 +2850,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/crm/analytics/recent-documents/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Recent documents (dashboard widget)
+         * @description The viewer's newest documents ACROSS types — КП / контракты / инвойсы / акты / сгенерированные — merged and sorted by date desc, capped at `limit`. Each type is company-scoped exactly like its own list endpoint (hidden competition preserved): a routed seller never sees a co-routed competitor's document, nor another company's DRAFT.
+         */
+        get: operations["crm_analytics_recent_documents_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/analytics/time-to-first-quote/": {
         parameters: {
             query?: never;
@@ -3831,6 +3851,26 @@ export interface paths {
          *     status transitions run in services (entitlement + IDOR + viewer gates).
          */
         post: operations["crm_generated_documents_issue_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/generated-documents/{id}/revoke-public-link/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revoke the public no-login link of an issued document
+         * @description Owner pulls the shared public link (post-issue). Idempotent; further public opens return 410 DOCUMENT_LINK_REVOKED. Mirrors the КП revoke-public-link.
+         */
+        post: operations["crm_generated_documents_revoke_public_link_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7859,6 +7899,7 @@ export interface components {
             readonly is_owned: boolean;
             /** @description Public no-login link (present only for ISSUED documents that carry a minted token). */
             readonly public_url: string | null;
+            readonly public_link_revoked: boolean;
             readonly created_by_name: string | null;
             /**
              * Дата создания
@@ -11225,6 +11266,19 @@ export interface components {
         ReassignProductRequest: {
             product_id: number | null;
         };
+        RecentDocument: {
+            type: components["schemas"]["TypeEnum"];
+            id: number;
+            label: string;
+            status_code: string | null;
+            /** Format: date-time */
+            date: string;
+            deal: number | null;
+            hash: string;
+        };
+        RecentDocumentsResponse: {
+            results: components["schemas"]["RecentDocument"][];
+        };
         RecordPaymentRequest: {
             /** Format: decimal */
             amount: string;
@@ -11955,6 +12009,15 @@ export interface components {
         TokenRefreshRequest: {
             refresh: string;
         };
+        /**
+         * @description * `quote` - quote
+         *     * `contract` - contract
+         *     * `invoice` - invoice
+         *     * `act` - act
+         *     * `generated` - generated
+         * @enum {string}
+         */
+        TypeEnum: "quote" | "contract" | "invoice" | "act" | "generated";
         UnitOfMeasure: {
             readonly id: number;
             /**
@@ -16855,6 +16918,28 @@ export interface operations {
             };
         };
     };
+    crm_analytics_recent_documents_retrieve: {
+        parameters: {
+            query?: {
+                /** @description Number of documents to return (1..20, clamped). Default 8. */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecentDocumentsResponse"];
+                };
+            };
+        };
+    };
     crm_analytics_time_to_first_quote_retrieve: {
         parameters: {
             query?: {
@@ -18600,6 +18685,28 @@ export interface operations {
         };
     };
     crm_generated_documents_issue_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Сгенерированный документ. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GeneratedDocument"];
+                };
+            };
+        };
+    };
+    crm_generated_documents_revoke_public_link_create: {
         parameters: {
             query?: never;
             header?: never;

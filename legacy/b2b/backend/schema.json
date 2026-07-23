@@ -8058,6 +8058,43 @@
                 }
             }
         },
+        "/api/v1/crm/analytics/recent-documents/": {
+            "get": {
+                "operationId": "crm_analytics_recent_documents_retrieve",
+                "description": "The viewer's newest documents ACROSS types — КП / контракты / инвойсы / акты / сгенерированные — merged and sorted by date desc, capped at `limit`. Each type is company-scoped exactly like its own list endpoint (hidden competition preserved): a routed seller never sees a co-routed competitor's document, nor another company's DRAFT.",
+                "summary": "Recent documents (dashboard widget)",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "limit",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Number of documents to return (1..20, clamped). Default 8."
+                    }
+                ],
+                "tags": [
+                    "Analytics"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RecentDocumentsResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/v1/crm/analytics/time-to-first-quote/": {
             "get": {
                 "operationId": "crm_analytics_time_to_first_quote_retrieve",
@@ -11133,6 +11170,44 @@
                 "operationId": "crm_generated_documents_issue_create",
                 "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (entitlement + IDOR + viewer gates).",
                 "summary": "Issue a draft document (freeze + render PDF)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Сгенерированный документ.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GeneratedDocument"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/crm/generated-documents/{id}/revoke-public-link/": {
+            "post": {
+                "operationId": "crm_generated_documents_revoke_public_link_create",
+                "description": "Owner pulls the shared public link (post-issue). Idempotent; further public opens return 410 DOCUMENT_LINK_REVOKED. Mirrors the КП revoke-public-link.",
+                "summary": "Revoke the public no-login link of an issued document",
                 "parameters": [
                     {
                         "in": "path",
@@ -21783,6 +21858,10 @@
                         "description": "Public no-login link (present only for ISSUED documents that carry a minted token).",
                         "readOnly": true
                     },
+                    "public_link_revoked": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
                     "created_by_name": {
                         "type": "string",
                         "nullable": true,
@@ -21813,6 +21892,7 @@
                     "issued_at",
                     "number",
                     "pdf_available",
+                    "public_link_revoked",
                     "public_url",
                     "rendered_html",
                     "status",
@@ -27512,6 +27592,58 @@
                     "product_id"
                 ]
             },
+            "RecentDocument": {
+                "type": "object",
+                "properties": {
+                    "type": {
+                        "$ref": "#/components/schemas/TypeEnum"
+                    },
+                    "id": {
+                        "type": "integer"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "status_code": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "date": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "deal": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "hash": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "date",
+                    "deal",
+                    "hash",
+                    "id",
+                    "label",
+                    "status_code",
+                    "type"
+                ]
+            },
+            "RecentDocumentsResponse": {
+                "type": "object",
+                "properties": {
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/RecentDocument"
+                        }
+                    }
+                },
+                "required": [
+                    "results"
+                ]
+            },
             "RecordPaymentRequest": {
                 "type": "object",
                 "properties": {
@@ -28976,6 +29108,17 @@
                 "required": [
                     "refresh"
                 ]
+            },
+            "TypeEnum": {
+                "enum": [
+                    "quote",
+                    "contract",
+                    "invoice",
+                    "act",
+                    "generated"
+                ],
+                "type": "string",
+                "description": "* `quote` - quote\n* `contract` - contract\n* `invoice` - invoice\n* `act` - act\n* `generated` - generated"
             },
             "UnitOfMeasure": {
                 "type": "object",

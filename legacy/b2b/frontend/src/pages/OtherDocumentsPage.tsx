@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { FileSignature, Send, Ban, Mail, Loader2, Inbox } from 'lucide-react';
+import { FileSignature, Send, Ban, Mail, Loader2, Inbox, Link2Off } from 'lucide-react';
 import { translateApiError } from '@/lib/apiError';
 import { DocumentActions } from '@/components/Shared/DocumentActions';
 import { Card, CardContent } from '@/components/ui/card';
@@ -22,6 +22,7 @@ import {
 } from '@/components/DataTable';
 import {
   useGeneratedDocuments, useIssueDocument, useCancelDocument, useUpdateDocumentValues, useSendDocument,
+  useRevokeDocument,
 } from '@/hooks/useDocuments';
 import { useIsViewerMode } from '@/hooks/useViewerMode';
 import { DocumentCreateWizard } from '@/components/Documents/DocumentCreateWizard';
@@ -237,8 +238,20 @@ function DocumentSheet({
   const isReceived = document.is_owned === false;
   const canAct = !isViewer && !isReceived;
   // Public share link: the backend builds it from FRONTEND_URL + minted token and only fills it
-  // for ISSUED documents (null otherwise), so use it verbatim.
+  // for ISSUED documents (null otherwise), so use it verbatim. Null once revoked (J-b).
   const publicLink = isIssued ? document.public_url : null;
+  const revoke = useRevokeDocument();
+  // Revoke is offered only while a live public link exists (own ISSUED, not yet revoked).
+  const canRevokeLink = isIssued && !isReceived && !!document.public_url && !document.public_link_revoked;
+
+  const onRevoke = async () => {
+    try {
+      await revoke.mutateAsync(document.id);
+      toast.success(t('otherDocumentsPage.linkRevoked'));
+    } catch (error) {
+      toast.error(translateApiError(error));
+    }
+  };
 
   const onSave = async () => {
     try {
@@ -359,6 +372,21 @@ function DocumentSheet({
                 <Mail className="mr-2 h-4 w-4" />
                 {t('otherDocumentsPage.actions.sendEmail')}
               </Button>
+            )}
+            {/* Revoke the public link — kills a leaked/mis-sent share URL without cancelling the document (J-b). */}
+            {canRevokeLink && (
+              <Button
+                variant="outline"
+                disabled={!canAct || revoke.isPending}
+                title={canAct ? undefined : viewerTip}
+                onClick={onRevoke}
+              >
+                <Link2Off className="mr-2 h-4 w-4" />
+                {t('otherDocumentsPage.actions.revokeLink')}
+              </Button>
+            )}
+            {isIssued && !isReceived && document.public_link_revoked && (
+              <p className="text-xs text-muted-foreground">{t('otherDocumentsPage.linkRevokedNote')}</p>
             )}
             {isDraft && !isReceived && (
               <Button disabled={!canAct || busy} title={canAct ? undefined : viewerTip} onClick={onIssue}>

@@ -77,11 +77,30 @@ export interface PlatformDashboard {
   }[];
 }
 
+// Wave I-2 — «Недавние документы» dashboard widget. The backend returns a ready-to-use
+// SPA deep-link in `hash` (e.g. `deal-quote/5`, `invoices?open=3`, `other-documents`), so
+// the widget never has to reconstruct navigation targets per document type.
+export interface RecentDocument {
+  type: 'quote' | 'contract' | 'invoice' | 'act' | 'generated';
+  id: number;
+  label: string;
+  status_code: string | null;
+  date: string;
+  deal: number | null;
+  hash: string;
+}
+
 export const dashboardApi = {
   getStats: async (period?: string): Promise<DashboardStats> => {
     const url = period ? `crm/analytics/dashboard/?period=${period}` : 'crm/analytics/dashboard/';
     const response = await apiClient.get<DashboardStats>(url);
     return response.data;
+  },
+  getRecentDocuments: async (limit = 8): Promise<RecentDocument[]> => {
+    const response = await apiClient.get<{ results: RecentDocument[] }>(
+      `crm/analytics/recent-documents/?limit=${limit}`,
+    );
+    return response.data.results;
   },
   getPageStats: async (): Promise<PageStats> => {
     const response = await apiClient.get<PageStats>('analytics/page-stats/');

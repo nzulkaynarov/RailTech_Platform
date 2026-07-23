@@ -36,6 +36,59 @@ MAX_TEMPLATE_BODY_CHARS = 100_000
 # window and keeps a stale emailed link from living forever.
 DOCUMENT_PUBLIC_TOKEN_TTL_DAYS = 30
 
+# Brand-letterhead snapshot (J-a). document_brand_context() returns LIVE model instances (seller
+# Company, seller_profile CompanyDocumentProfile) that are NOT JSON-serializable, so on issue we
+# flatten exactly the attributes _document_base.html reads into brand_snapshot. An ISSUED document
+# then renders off that frozen copy — its шапка/реквизиты never «плывут» when the company later
+# edits its CompanyDocumentProfile (Odoo/PandaDoc immutability principle).
+_BRAND_SELLER_FIELDS = ("name", "inn", "phone", "email", "legal_address")
+_BRAND_PROFILE_FIELDS = (
+    "legal_name",
+    "accent_color",
+    "inn",
+    "legal_address",
+    "bank_details",
+    "signatory_name",
+    "signatory_position",
+    "footer_text",
+)
+_BRAND_SCALAR_FIELDS = (
+    "seller_logo_url",
+    "is_demo",
+    "show_logo",
+    "show_lead_time",
+    "show_fx_note",
+    "accent",
+    "accent_contrast",
+)
+
+
+def _serialize_brand_context(brand: dict) -> dict:
+    """Flatten a live ``document_brand_context()`` into a JSON-serializable snapshot dict.
+
+    The two model instances (seller Company, seller_profile CompanyDocumentProfile) are reduced to
+    the scalar attributes the PDF base template reads; every other key is already a scalar."""
+    seller = brand.get("seller")
+    profile = brand.get("seller_profile")
+    snapshot = {key: brand.get(key) for key in _BRAND_SCALAR_FIELDS}
+    snapshot["seller"] = {field: getattr(seller, field, None) for field in _BRAND_SELLER_FIELDS} if seller else None
+    snapshot["seller_profile"] = (
+        {field: getattr(profile, field, None) for field in _BRAND_PROFILE_FIELDS} if profile else None
+    )
+    return snapshot
+
+
+def _brand_context_from_snapshot(snapshot: dict) -> dict:
+    """Rebuild the PDF render context from a stored brand snapshot: SimpleNamespace stubs stand in
+    for the seller/profile model instances so ``_document_base.html`` renders unchanged off the
+    frozen data."""
+    context = {key: snapshot.get(key) for key in _BRAND_SCALAR_FIELDS}
+    seller = snapshot.get("seller")
+    profile = snapshot.get("seller_profile")
+    context["seller"] = SimpleNamespace(**seller) if seller else None
+    context["seller_profile"] = SimpleNamespace(**profile) if profile else None
+    return context
+
 # ── Owner-company + access resolution ───────────────────────────────────────
 
 
@@ -295,9 +348,14 @@ def issue_document(document, user: CustomUser) -> Tuple[Optional[object], Option
         return None, "SUBSCRIPTION_REQUIRED"
     if document.status_code != GeneratedDocumentStatusCode.DRAFT:
         return None, "DOCUMENT_ALREADY_ISSUED"
+    from .documents import document_brand_context
+
     document.status = _status(GeneratedDocumentStatusCode.ISSUED)
     document.issued_at = timezone.now()
-    fields = ["status", "issued_at", "updated_at"]
+    # Freeze the letterhead (лого/реквизиты/accent) at issue so the ISSUED PDF never «плывёт» when
+    # the company later edits its CompanyDocumentProfile (J-a, immutability).
+    document.brand_snapshot = _serialize_brand_context(document_brand_context(document.company))
+    fields = ["status", "issued_at", "brand_snapshot", "updated_at"]
     # Mint the public link ONCE, on issue (never on DRAFT) — the same pattern as Quote.public_access_token.
     if not document.public_access_token:
         document.public_access_token = secrets.token_urlsafe(32)
@@ -383,14 +441,35 @@ def public_document_gate(document) -> Optional[str]:
 
 
 def public_document_url(document) -> Optional[str]:
-    """Public no-login link built from the minted token, or None before issue. ONE place owns
-    the URL pattern (Rule 8) — shared by the send-email task and the serializer."""
+    """Public no-login link built from the minted token, or None before issue / after revoke.
+    ONE place owns the URL pattern (Rule 8) — shared by the send-email task and the serializer.
+    A revoked link returns None so the SPA hides the dead «Копировать ссылку» affordance (J-b)."""
     from django.conf import settings
 
     token = getattr(document, "public_access_token", None)
-    if not token:
+    if not token or getattr(document, "public_token_revoked", False):
         return None
     return f"{settings.FRONTEND_URL}/api/v1/public/documents/{token}/"
+
+
+@transaction.atomic
+def revoke_document_public_link(document, user: CustomUser) -> Tuple[Optional[object], Optional[str]]:
+    """Pull an ISSUED document's public no-login link (owner-only). Idempotent — a further public
+    open then returns 410 (public_document_gate → DOCUMENT_LINK_REVOKED). Mirrors the КП
+    revoke-public-link (Quote.revoke_public_link). Returns (document, None) or (None, ERROR_CODE)."""
+    from accounts.services import is_platform_admin_viewer
+
+    if is_platform_admin_viewer(user):
+        return None, "ADMIN_VIEWER_CANNOT_ACT"
+    if not _user_owns_document(user, document):
+        return None, "DOCUMENT_NOT_FOUND"
+    # Only an ISSUED document that still carries a minted token has a live link to pull.
+    if document.status_code != GeneratedDocumentStatusCode.ISSUED or not document.public_access_token:
+        return None, "DOCUMENT_LINK_NOT_ACTIVE"
+    if not document.public_token_revoked:
+        document.public_token_revoked = True
+        document.save(update_fields=["public_token_revoked", "updated_at"])
+    return document, None
 
 
 def party_visible_document_q(user):
@@ -481,12 +560,17 @@ def _render_generated_pdf(document) -> None:
 
     from .documents import document_brand_context
 
+    # Prefer the frozen letterhead snapshot (J-a); fall back to the live brand context only for
+    # documents issued before the brand_snapshot column existed.
+    brand = _brand_context_from_snapshot(document.brand_snapshot) if document.brand_snapshot else document_brand_context(
+        document.company
+    )
     html_string = render_to_string(
         "crm/generated_document_pdf.html",
         {
             "document": document,
             "company": document.company,
-            **document_brand_context(document.company),
+            **brand,
         },
     )
     buffer = BytesIO()

@@ -153,6 +153,15 @@ class GeneratedDocument(models.Model):
             "а не из живого template.body_html — иначе поздняя правка шаблона молча меняла бы документ."
         ),
     )
+    brand_snapshot = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name=_("Снапшот бренд-контекста"),
+        help_text=_(
+            "Бренд-шапка (лого/реквизиты/accent) на момент ВЫПУСКА. ISSUED-документ рендерится из "
+            "неё, поэтому не «плывёт» при поздней правке CompanyDocumentProfile (иммутабельность)."
+        ),
+    )
     pdf_file = models.FileField(
         upload_to=generated_document_pdf_path,
         storage=get_private_storage,

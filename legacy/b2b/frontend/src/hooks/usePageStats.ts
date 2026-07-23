@@ -8,6 +8,15 @@ export const usePageStats = () => useQuery({
   gcTime: 5 * 60_000,
 });
 
+// Wave I-2 — recent documents feed for the dashboard widget (quotes/contracts/invoices/
+// acts/generated). Invalidated by document & billing mutations so the widget stays fresh.
+export const useRecentDocuments = (limit = 8) => useQuery({
+  queryKey: ['recent-documents', limit],
+  queryFn: () => dashboardApi.getRecentDocuments(limit),
+  staleTime: 60_000,
+  gcTime: 5 * 60_000,
+});
+
 export const usePlatformDashboard = () => useQuery({
   queryKey: ['platform-dashboard'],
   queryFn: dashboardApi.getPlatformDashboard,
