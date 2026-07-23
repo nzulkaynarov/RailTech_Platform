@@ -184,11 +184,15 @@ _ALLOWED_ATTRS = {
     "td": {"colspan", "rowspan"},
     "th": {"colspan", "rowspan"},
 }
-# Per-attribute URL policy. `href` (links) must NOT accept `data:` at all. `src` (only <img>) may
-# carry an inline raster data URI, but NEVER data:image/svg+xml — an SVG document can run script
-# (A4/m5). Everything else (javascript:/vbscript:/unknown schemes) is dropped.
+# Per-attribute URL policy. `href` (links) must NOT accept `data:` at all. `src` (only <img>) is
+# restricted to an inline raster data URI — NEVER a remote http(s)/relative URL. Rationale (T3):
+# document bodies are rendered to PDF by WeasyPrint, whose default url_fetcher performs a
+# SERVER-SIDE GET of any remote `src` at render time. The app-VPS sits on the private LAN to the
+# DB-VPS, so an author-chosen `<img src="http://10.0.0.2:.../">` / metadata URL would be a blind
+# SSRF. Inline base64 rasters carry no fetch; data:image/svg+xml stays banned (SVG can run script).
+# The letterhead logo is a company FileField rendered OUTSIDE this body sanitizer, so it is unaffected.
 _SAFE_HREF_RE = re.compile(r"^(https?:|mailto:|tel:|/|#)", re.IGNORECASE)
-_SAFE_SRC_RE = re.compile(r"^(https?:|/|#|data:image/(?:png|jpe?g|gif|webp);base64,)", re.IGNORECASE)
+_SAFE_SRC_RE = re.compile(r"^data:image/(?:png|jpe?g|gif|webp);base64,", re.IGNORECASE)
 _URL_ATTR_POLICY = {"href": _SAFE_HREF_RE, "src": _SAFE_SRC_RE}
 
 

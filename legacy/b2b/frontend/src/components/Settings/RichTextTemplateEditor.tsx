@@ -74,8 +74,13 @@ export const RichTextTemplateEditor = forwardRef<RichTextTemplateEditorHandle, R
       if (showSource) return;
       const el = editableRef.current;
       if (!el) return;
-      if (document.activeElement !== el && el.innerHTML !== value) {
-        el.innerHTML = value;
+      // Normalise before assigning to a LIVE contentEditable: `value` may be raw markup typed in
+      // HTML-source mode (e.g. `<img src=x onerror=...>`), and innerHTML executes img onerror even
+      // though it never runs <script>. normalizeTemplateHtml (DOMParser, no resource loads) strips
+      // event handlers to the same allowlist the backend enforces, so the toggle can't self-XSS (T3).
+      const safe = normalizeTemplateHtml(value);
+      if (document.activeElement !== el && el.innerHTML !== safe) {
+        el.innerHTML = safe;
       }
     }, [templateKey, showSource, value]);
 
