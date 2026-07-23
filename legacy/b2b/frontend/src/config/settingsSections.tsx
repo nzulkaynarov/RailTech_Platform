@@ -27,7 +27,6 @@ export type SettingsSectionKey =
   | 'profile'
   | 'security'
   | 'company'
-  | 'documents'
   | 'defaults'
   | 'numbering'
   | 'templates'
@@ -96,15 +95,12 @@ const SECTION_RULES: SectionRule[] = [
   // ── account ──
   { def: { key: 'profile', labelKey: 'profile.tabs.personal', group: 'account' }, visible: () => true },
   { def: { key: 'security', labelKey: 'profile.tabs.security', group: 'account' }, visible: () => true },
-  // ── company ── (documents тут временно — слияние с company будет отдельной волной S4)
-  // Company: hasSettingsEdit редактирует (CompanyTab); ADMIN видит read-only превью.
+  // ── company ── S4: «Документы и бренд» слита в «Реквизиты и бренд» (P4-дубль реквизитов).
+  // Company: hasSettingsEdit редактирует (CompanyTab + PDF-бренд-подраздел для продавца);
+  // ADMIN видит read-only превью. Отдельной секции documents больше НЕТ (композиция в SettingsPage).
   {
-    def: { key: 'company', labelKey: 'settings.tabs.company', group: 'company' },
+    def: { key: 'company', labelKey: 'settings.tabs.companyBranding', group: 'company' },
     visible: (input) => input.isAdmin || hasSettingsEdit(input),
-  },
-  {
-    def: { key: 'documents', labelKey: 'settings.tabs.documentProfile', group: 'company' },
-    visible: (input) => !input.isAdmin && hasSettingsEdit(input) && sells(input),
   },
   {
     def: { key: 'numbering', labelKey: 'settings.tabs.numbering', group: 'company' },

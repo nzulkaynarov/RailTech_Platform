@@ -10,6 +10,7 @@ import { Store, Building2 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 
 import { useAuthStore } from '@/store/authStore';
 import { useUserStore, companyStatusLabels } from '@/store/userStore';
@@ -43,7 +44,9 @@ export function SettingsPage() {
   // `?section=` живёт в search-части URL (useUrlState), hash остаётся `#settings` —
   // deep-link и refresh сохраняют секцию; невидимая/неизвестная секция → дефолт.
   const { get, set } = useUrlState();
-  const urlSection = get('section');
+  // S4: секция `documents` слита в `company` — старые deep-link `?section=documents`
+  // маппим на `company`, чтобы не ловить белый экран/фоллбэк на profile.
+  const urlSection = get('section') === 'documents' ? 'company' : get('section');
   const activeSection: SettingsSectionKey = sections.some((section) => section.key === urlSection)
     ? (urlSection as SettingsSectionKey)
     : defaultSettingsSection(gate);
@@ -64,24 +67,24 @@ export function SettingsPage() {
         activeSection={activeSection}
         onSelectSection={(key) => set({ section: key })}
       >
-        <SectionContent sectionKey={activeSection} isAdmin={isAdmin} />
+        <SectionContent sectionKey={activeSection} isAdmin={isAdmin} companySells={companySells} />
       </SettingsLayout>
     </div>
   );
 }
 
 /** Маппинг секция → существующий компонент (монтируется как есть, spec PR 1). */
-function SectionContent({ sectionKey, isAdmin }: { sectionKey: SettingsSectionKey; isAdmin: boolean }): ReactNode {
+function SectionContent(
+  { sectionKey, isAdmin, companySells }: { sectionKey: SettingsSectionKey; isAdmin: boolean; companySells: boolean },
+): ReactNode {
   switch (sectionKey) {
     case 'profile':
       return <ProfileSection />;
     case 'security':
       return <SecuritySection />;
     case 'company':
-      // ADMIN — read-only превью (прежний admin-таб company); tenant — CompanyTab.
-      return isAdmin ? <AdminCompanyPreview /> : <CompanyTab />;
-    case 'documents':
-      return <CompanyDocumentProfileSettings />;
+      // ADMIN — read-only превью (прежний admin-таб company); tenant — реквизиты + бренд-подраздел.
+      return isAdmin ? <AdminCompanyPreview /> : <CompanyDetailsAndBranding showBranding={companySells} />;
     case 'defaults':
       return <CompanyDefaultsSettings />;
     case 'numbering':
@@ -95,6 +98,33 @@ function SectionContent({ sectionKey, isAdmin }: { sectionKey: SettingsSectionKe
     case 'platform':
       return <PlatformSettings />;
   }
+}
+
+/**
+ * S4 «Реквизиты и бренд» — композиция двух НЕЗАВИСИМЫХ форм на одной секции (P4-дубль реквизитов):
+ *  1) CompanyTab — реквизиты/банк/KYC компании (источник; сохраняет через company PATCH);
+ *  2) CompanyDocumentProfileSettings — PDF-бренд КП/контракта (сохраняет через document-profile PATCH),
+ *     ТОЛЬКО для продавца. Тумблер «наследовать реквизиты компании» внутри неё связывает реквизиты
+ *     выше с бренд-блоком, поэтому дубль полей больше не сбивает с толку. Каждая форма несёт свой
+ *     стейт и свою кнопку «Сохранить» — компонуем, не переписываем.
+ */
+function CompanyDetailsAndBranding({ showBranding }: { showBranding: boolean }) {
+  const { t } = useTranslation();
+  return (
+    <div className="space-y-8">
+      <CompanyTab />
+      {showBranding && (
+        <div className="space-y-4">
+          <Separator />
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight">{t('settings.company.brandingSubtitle')}</h2>
+            <p className="text-sm text-muted-foreground mt-1">{t('settings.company.brandingSubtitleHint')}</p>
+          </div>
+          <CompanyDocumentProfileSettings />
+        </div>
+      )}
+    </div>
+  );
 }
 
 /** Read-only превью компании для Platform Operator — перенесено из прежнего таба company как есть. */

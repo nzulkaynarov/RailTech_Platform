@@ -50,12 +50,13 @@ describe('buildSettingsSections — S1 гейтинг = правда сохра�
     expect(defaultSettingsSection(gate)).toBe('platform');
   });
 
-  it('OWNER компании-продавца (can_sell): все 9 tenant-секций, без platform; дефолт=profile', () => {
+  it('OWNER компании-продавца (can_sell): все 8 tenant-секций (S4: documents слита в company), без platform; дефолт=profile', () => {
     const gate = makeGate({ isOwner: true, capabilities: makeCapabilities({ can_sell: true }) });
     expect(sectionKeys(gate)).toEqual([
-      'profile', 'security', 'company', 'documents', 'numbering', 'defaults', 'templates',
+      'profile', 'security', 'company', 'numbering', 'defaults', 'templates',
       'doc-templates', 'team',
     ]);
+    expect(sectionKeys(gate)).not.toContain('documents');
     expect(defaultSettingsSection(gate)).toBe('profile');
   });
 
@@ -82,12 +83,12 @@ describe('buildSettingsSections — S1 гейтинг = правда сохра�
     expect(defaultSettingsSection(gate)).toBe('profile');
   });
 
-  it('settings.edit-делегат (без OWNER): company/documents/numbering/defaults/doc-templates — но НЕ templates(charge)', () => {
+  it('settings.edit-делегат (без OWNER): company/numbering/defaults/doc-templates — но НЕ templates(charge)', () => {
     const gate = makeGate({
       capabilities: makeCapabilities({ can_sell: true, permissions: ['settings.edit'] }),
     });
     expect(sectionKeys(gate)).toEqual([
-      'profile', 'security', 'company', 'documents', 'numbering', 'defaults', 'doc-templates', 'team',
+      'profile', 'security', 'company', 'numbering', 'defaults', 'doc-templates', 'team',
     ]);
     expect(sectionKeys(gate)).not.toContain('templates');
     expect(defaultSettingsSection(gate)).toBe('profile');
@@ -99,7 +100,7 @@ describe('buildSettingsSections — S1 гейтинг = правда сохра�
     });
     expect(sectionKeys(gate)).toEqual(['profile', 'security', 'templates', 'team']);
     // именно эти company-секции больше НЕ показываются как заглушки:
-    for (const dead of ['company', 'documents', 'numbering', 'defaults', 'doc-templates']) {
+    for (const dead of ['company', 'numbering', 'defaults', 'doc-templates']) {
       expect(sectionKeys(gate)).not.toContain(dead);
     }
     expect(defaultSettingsSection(gate)).toBe('profile');
@@ -148,7 +149,7 @@ describe('buildSettingsSections — S2 группировка', () => {
     expect(byKey.get('profile')).toBe('account');
     expect(byKey.get('security')).toBe('account');
     expect(byKey.get('company')).toBe('company');
-    expect(byKey.get('documents')).toBe('company');
+    // S4: секции documents больше нет — реквизиты+бренд слиты в company.
     expect(byKey.get('numbering')).toBe('company');
     expect(byKey.get('defaults')).toBe('sales');
     expect(byKey.get('templates')).toBe('sales');

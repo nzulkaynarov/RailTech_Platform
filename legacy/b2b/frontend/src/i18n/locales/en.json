@@ -2739,6 +2739,7 @@
       "system": "System",
       "platform": "Platform",
       "documentProfile": "Documents & branding",
+      "companyBranding": "Company details & branding",
       "companyAdmin": "Company settings",
       "defaults": "Default quote parameters",
       "numbering": "Document numbering",
@@ -2854,7 +2855,9 @@
       "bankTitle": "Bank details",
       "bankDescription": "Settlement account and bank MFO",
       "kycTitle": "KYC documents",
-      "kycDescription": "Verification status and supporting documents"
+      "kycDescription": "Verification status and supporting documents",
+      "brandingSubtitle": "Document branding (PDF)",
+      "brandingSubtitleHint": "The quote and contract inherit the requisites above; configure the logo, signatory, footer and display toggles here."
     },
     "system": {
       "title": "System Settings",
