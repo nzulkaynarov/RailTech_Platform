@@ -105,6 +105,12 @@ def test_preview_kp_renders_cover_terms_and_bank():
     assert "Уважаемый ООО «Образец-Клиент», благодарим за интерес." in html
     assert "Условия поставки" in html and "100% предоплата" in html
     assert "brand-bank" in html and "МФО 00421" in html
+    # Guard: Django comment markers must NOT leak into the rendered document — a MULTI-LINE {# #}
+    # is printed literally by Django (must use {% comment %}). Caught by eyes-on on prod. (CSS
+    # /* */ comments are fine; we only forbid the Django-template delimiters.)
+    assert "{#" not in html and "#}" not in html
+    assert "{% comment" not in html
+    assert "плоская подстановка" not in html  # a phrase that lived inside the leaked comment
 
 
 @pytest.mark.django_db

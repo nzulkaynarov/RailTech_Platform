@@ -47,8 +47,10 @@
 
 {% block content %}
   {% with pres_ccy=quote.quote_currency.code|default:"UZS" %}
-  {# spec-kp-blank block 3 — сопроводительный абзац («КП + письмо в одном»). Текст резолвится в
-     сервисе (плоская подстановка), здесь только печать с авто-эскейпом (|linebreaks). #}
+  {% comment %}
+    spec-kp-blank block 3 — сопроводительный абзац («КП + письмо в одном»). Текст резолвится в
+    сервисе (плоская подстановка), здесь только печать с авто-эскейпом (|linebreaks).
+  {% endcomment %}
   {% if cover_text %}<div class="cover-letter">{{ cover_text|linebreaks }}</div>{% endif %}
 
   <!-- ── Line items (client projection — NO cost/margin) ── -->
@@ -193,11 +195,13 @@
   </div>
   {% endif %}
 
-  {# spec-kp-blank block 6 — структурные «Условия поставки» (label:value). Всё, кроме «Прочих»,
-     ДИНАМИЧНО — собрано в crm.services.documents.build_quote_terms из данных КП/продавца. «Прочие
-     условия» = Quote.notes (единственное free-text). Старые term-box/valid-box/notes-block
-     заменены на этот единый блок (устраняет дублирование срока/valid/примечаний).
-     CONFIDENTIALITY: курс ЦБ/FX здесь НИКОГДА не печатается — клиент видит только цену в UZS. #}
+  {% comment %}
+    spec-kp-blank block 6 — структурные «Условия поставки» (label:value). Всё, кроме «Прочих»,
+    ДИНАМИЧНО — собрано в crm.services.documents.build_quote_terms из данных КП/продавца. «Прочие
+    условия» = Quote.notes (единственное free-text). Старые term-box/valid-box/notes-block
+    заменены на этот единый блок (устраняет дублирование срока/valid/примечаний).
+    CONFIDENTIALITY: курс ЦБ/FX здесь НИКОГДА не печатается — клиент видит только цену в UZS.
+  {% endcomment %}
   {% if quote_terms %}
   <div class="terms">
     <div class="terms-title">Условия поставки</div>
