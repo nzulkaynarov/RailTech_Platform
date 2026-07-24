@@ -55,6 +55,9 @@ type ProfileForm = {
   secondary_color: string;
   layout_preset: DocumentLayoutPreset;
   font_family: DocumentFontFamily;
+  cover_letter_text: string;
+  show_cover_letter: boolean;
+  show_bank_in_header: boolean;
   show_logo: boolean;
   show_lead_time: boolean;
   show_fx_note: boolean;
@@ -73,6 +76,9 @@ const EMPTY_FORM: ProfileForm = {
   secondary_color: '',
   layout_preset: 'light',
   font_family: 'sans',
+  cover_letter_text: '',
+  show_cover_letter: false,
+  show_bank_in_header: true,
   show_logo: true,
   show_lead_time: true,
   show_fx_note: false,
@@ -92,6 +98,9 @@ function toForm(profile: CompanyDocumentProfile): ProfileForm {
     secondary_color: profile.secondary_color ?? '',
     layout_preset: profile.layout_preset ?? 'light',
     font_family: profile.font_family ?? 'sans',
+    cover_letter_text: profile.cover_letter_text ?? '',
+    show_cover_letter: profile.show_cover_letter ?? false,
+    show_bank_in_header: profile.show_bank_in_header ?? true,
     show_logo: profile.show_logo ?? true,
     show_lead_time: profile.show_lead_time ?? true,
     show_fx_note: profile.show_fx_note ?? false,
@@ -196,7 +205,7 @@ export function CompanyDocumentProfileSettings() {
   };
 
   const toggleRow = (
-    key: 'show_logo' | 'show_lead_time' | 'show_fx_note',
+    key: 'show_logo' | 'show_lead_time' | 'show_fx_note' | 'show_cover_letter' | 'show_bank_in_header',
     labelKey: string,
     descKey: string,
   ) => (
@@ -449,6 +458,30 @@ export function CompanyDocumentProfileSettings() {
                   <p className="text-xs text-muted-foreground">{t('documentProfile.secondaryColorHint')}</p>
                 </div>
               </div>
+            </div>
+
+            <Separator />
+            {/* spec-kp-blank: cover-letter paragraph («КП + письмо в одном») + bank-in-header. */}
+            <div className="space-y-4">
+              <div>
+                <h4 className="text-sm font-semibold text-foreground">{t('documentProfile.blankTitle')}</h4>
+                <p className="mt-0.5 text-xs text-muted-foreground">{t('documentProfile.blankHint')}</p>
+              </div>
+              {toggleRow('show_bank_in_header', 'documentProfile.showBankInHeader', 'documentProfile.showBankInHeaderHint')}
+              {toggleRow('show_cover_letter', 'documentProfile.showCoverLetter', 'documentProfile.showCoverLetterHint')}
+              {form.show_cover_letter && (
+                <div className="space-y-2">
+                  <Label htmlFor="dp-cover">{t('documentProfile.coverText')}</Label>
+                  <Textarea
+                    id="dp-cover"
+                    rows={4}
+                    value={form.cover_letter_text}
+                    onChange={(e) => setForm({ ...form, cover_letter_text: e.target.value })}
+                    placeholder={t('documentProfile.coverTextPlaceholder')}
+                  />
+                  <p className="text-xs text-muted-foreground">{t('documentProfile.coverTextTokens')}</p>
+                </div>
+              )}
             </div>
 
             <Separator />

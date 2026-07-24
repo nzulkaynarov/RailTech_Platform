@@ -332,6 +332,25 @@ class CompanyDocumentProfile(models.Model):
         verbose_name=_("Показывать курс ЦБ в КП"),
         help_text=_("Печатать курс ЦБ (FX-базис) на клиентском КП. По умолчанию скрыто — клиент видит цену в сумах."),
     )
+    # ── КП «фирменный бланк» (spec-kp-blank) ──────────────────────────────────
+    # Сопроводительный абзац = «КП + письмо в одном» (СНГ-практика). Хранится как ПЛОСКИЙ
+    # текст; при рендере несколько токенов ({{buyer}}/{{deal}}/{{seller}}) подставляются
+    # значениями и Django авто-эскейпит — НЕ рендерится как шаблон (без SSTI).
+    cover_letter_text = models.TextField(
+        blank=True,
+        verbose_name=_("Сопроводительный текст КП"),
+        help_text=_("Вступительный абзац перед таблицей. Токены: {{buyer}}, {{deal}}, {{seller}}."),
+    )
+    show_cover_letter = models.BooleanField(
+        default=False,
+        verbose_name=_("Печатать сопроводительный текст"),
+        help_text=_("Добавлять вступительный абзац в начало КП"),
+    )
+    show_bank_in_header = models.BooleanField(
+        default=True,
+        verbose_name=_("Банковские реквизиты в шапке"),
+        help_text=_("Печатать банк/МФО/р-с в шапке документа (СНГ-практика). Выкл — только в блоке «Поставщик»."),
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Создан"))
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Обновлён"))
 
@@ -402,6 +421,22 @@ class CompanySettings(models.Model):
         blank=True,
         verbose_name=_("Срок действия КП по умолчанию (дней)"),
         help_text=_("Через сколько дней истекает новый КП (valid_until = сегодня + N)"),
+    )
+    # ── Условия поставки для «фирменного бланка» КП (spec-kp-blank) ────────────
+    # Динамические строки блока «Условия»: подставляются в КП автоматически (не набираются
+    # заново). Оплата/гарантия — company-дефолты; отгрузка/сроки/базис/срок действия берутся
+    # из данных КП; «Прочие» — free-text per-КП (Quote.notes).
+    default_payment_terms = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name=_("Условия оплаты по умолчанию"),
+        help_text=_("Напр. «100% предоплата» — подставляется в блок «Условия поставки» КП"),
+    )
+    default_warranty_months = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        verbose_name=_("Гарантия по умолчанию (мес.)"),
+        help_text=_("Срок гарантии в месяцах для блока «Условия поставки» КП"),
     )
     # ── Margin governance (юнит-экономика / защита от убытка) ──────────────────
     # Both are GROSS MARGIN ON PRICE (прибыль / цена), NOT markup. The КП builder shows a

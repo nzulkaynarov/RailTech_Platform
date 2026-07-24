@@ -19676,6 +19676,21 @@
                         "title": "Шрифт документов",
                         "description": "Гарнитура всех PDF компании (кириллица поддерживается обеими)\n\n* `sans` - Гротеск (без засечек)\n* `serif` - Антиква (с засечками)"
                     },
+                    "cover_letter_text": {
+                        "type": "string",
+                        "title": "Сопроводительный текст КП",
+                        "description": "Вступительный абзац перед таблицей. Токены: {{buyer}}, {{deal}}, {{seller}}."
+                    },
+                    "show_cover_letter": {
+                        "type": "boolean",
+                        "title": "Печатать сопроводительный текст",
+                        "description": "Добавлять вступительный абзац в начало КП"
+                    },
+                    "show_bank_in_header": {
+                        "type": "boolean",
+                        "title": "Банковские реквизиты в шапке",
+                        "description": "Печатать банк/МФО/р-с в шапке документа (СНГ-практика). Выкл — только в блоке «Поставщик»."
+                    },
                     "use_company_defaults": {
                         "type": "boolean",
                         "title": "Использовать реквизиты компании",
@@ -20513,6 +20528,20 @@
                         "nullable": true,
                         "title": "Срок действия КП по умолчанию (дней)",
                         "description": "Через сколько дней истекает новый КП (valid_until = сегодня + N)"
+                    },
+                    "default_payment_terms": {
+                        "type": "string",
+                        "title": "Условия оплаты по умолчанию",
+                        "description": "Напр. «100% предоплата» — подставляется в блок «Условия поставки» КП",
+                        "maxLength": 255
+                    },
+                    "default_warranty_months": {
+                        "type": "integer",
+                        "maximum": 32767,
+                        "minimum": 0,
+                        "nullable": true,
+                        "title": "Гарантия по умолчанию (мес.)",
+                        "description": "Срок гарантии в месяцах для блока «Условия поставки» КП"
                     },
                     "min_margin_percent": {
                         "type": "string",
@@ -24589,6 +24618,21 @@
                         "title": "Шрифт документов",
                         "description": "Гарнитура всех PDF компании (кириллица поддерживается обеими)\n\n* `sans` - Гротеск (без засечек)\n* `serif` - Антиква (с засечками)"
                     },
+                    "cover_letter_text": {
+                        "type": "string",
+                        "title": "Сопроводительный текст КП",
+                        "description": "Вступительный абзац перед таблицей. Токены: {{buyer}}, {{deal}}, {{seller}}."
+                    },
+                    "show_cover_letter": {
+                        "type": "boolean",
+                        "title": "Печатать сопроводительный текст",
+                        "description": "Добавлять вступительный абзац в начало КП"
+                    },
+                    "show_bank_in_header": {
+                        "type": "boolean",
+                        "title": "Банковские реквизиты в шапке",
+                        "description": "Печатать банк/МФО/р-с в шапке документа (СНГ-практика). Выкл — только в блоке «Поставщик»."
+                    },
                     "use_company_defaults": {
                         "type": "boolean",
                         "title": "Использовать реквизиты компании",
@@ -24842,6 +24886,20 @@
                         "nullable": true,
                         "title": "Срок действия КП по умолчанию (дней)",
                         "description": "Через сколько дней истекает новый КП (valid_until = сегодня + N)"
+                    },
+                    "default_payment_terms": {
+                        "type": "string",
+                        "title": "Условия оплаты по умолчанию",
+                        "description": "Напр. «100% предоплата» — подставляется в блок «Условия поставки» КП",
+                        "maxLength": 255
+                    },
+                    "default_warranty_months": {
+                        "type": "integer",
+                        "maximum": 32767,
+                        "minimum": 0,
+                        "nullable": true,
+                        "title": "Гарантия по умолчанию (мес.)",
+                        "description": "Срок гарантии в месяцах для блока «Условия поставки» КП"
                     },
                     "min_margin_percent": {
                         "type": "string",

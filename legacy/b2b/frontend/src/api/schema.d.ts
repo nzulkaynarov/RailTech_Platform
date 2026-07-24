@@ -6722,6 +6722,21 @@ export interface components {
              */
             font_family?: components["schemas"]["FontFamilyEnum"];
             /**
+             * Сопроводительный текст КП
+             * @description Вступительный абзац перед таблицей. Токены: {{buyer}}, {{deal}}, {{seller}}.
+             */
+            cover_letter_text?: string;
+            /**
+             * Печатать сопроводительный текст
+             * @description Добавлять вступительный абзац в начало КП
+             */
+            show_cover_letter?: boolean;
+            /**
+             * Банковские реквизиты в шапке
+             * @description Печатать банк/МФО/р-с в шапке документа (СНГ-практика). Выкл — только в блоке «Поставщик».
+             */
+            show_bank_in_header?: boolean;
+            /**
              * Использовать реквизиты компании
              * @description Автоматически наследовать название, ИНН и адрес из профиля компании
              */
@@ -7203,6 +7218,16 @@ export interface components {
              * @description Через сколько дней истекает новый КП (valid_until = сегодня + N)
              */
             default_offer_validity_days?: number | null;
+            /**
+             * Условия оплаты по умолчанию
+             * @description Напр. «100% предоплата» — подставляется в блок «Условия поставки» КП
+             */
+            default_payment_terms?: string;
+            /**
+             * Гарантия по умолчанию (мес.)
+             * @description Срок гарантии в месяцах для блока «Условия поставки» КП
+             */
+            default_warranty_months?: number | null;
             /**
              * Порог маржи (%)
              * Format: decimal
@@ -9200,6 +9225,21 @@ export interface components {
              */
             font_family?: components["schemas"]["FontFamilyEnum"];
             /**
+             * Сопроводительный текст КП
+             * @description Вступительный абзац перед таблицей. Токены: {{buyer}}, {{deal}}, {{seller}}.
+             */
+            cover_letter_text?: string;
+            /**
+             * Печатать сопроводительный текст
+             * @description Добавлять вступительный абзац в начало КП
+             */
+            show_cover_letter?: boolean;
+            /**
+             * Банковские реквизиты в шапке
+             * @description Печатать банк/МФО/р-с в шапке документа (СНГ-практика). Выкл — только в блоке «Поставщик».
+             */
+            show_bank_in_header?: boolean;
+            /**
              * Использовать реквизиты компании
              * @description Автоматически наследовать название, ИНН и адрес из профиля компании
              */
@@ -9374,6 +9414,16 @@ export interface components {
              * @description Через сколько дней истекает новый КП (valid_until = сегодня + N)
              */
             default_offer_validity_days?: number | null;
+            /**
+             * Условия оплаты по умолчанию
+             * @description Напр. «100% предоплата» — подставляется в блок «Условия поставки» КП
+             */
+            default_payment_terms?: string;
+            /**
+             * Гарантия по умолчанию (мес.)
+             * @description Срок гарантии в месяцах для блока «Условия поставки» КП
+             */
+            default_warranty_months?: number | null;
             /**
              * Порог маржи (%)
              * Format: decimal

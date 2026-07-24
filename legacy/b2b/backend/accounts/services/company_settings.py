@@ -87,19 +87,24 @@ def update_company_settings(
                     return None, "BAD_NUMBER"
             changed.append(field)
 
-    if "default_offer_validity_days" in data:
-        raw = data.get("default_offer_validity_days")
-        if raw in (None, ""):
-            settings_row.default_offer_validity_days = None
-        else:
-            try:
-                days = int(raw)
-            except (TypeError, ValueError):
-                return None, "BAD_NUMBER"
-            if days < 0:
-                return None, "BAD_NUMBER"
-            settings_row.default_offer_validity_days = days
-        changed.append("default_offer_validity_days")
+    for int_field in ("default_offer_validity_days", "default_warranty_months"):
+        if int_field in data:
+            raw = data.get(int_field)
+            if raw in (None, ""):
+                setattr(settings_row, int_field, None)
+            else:
+                try:
+                    number = int(raw)
+                except (TypeError, ValueError):
+                    return None, "BAD_NUMBER"
+                if number < 0:
+                    return None, "BAD_NUMBER"
+                setattr(settings_row, int_field, number)
+            changed.append(int_field)
+
+    if "default_payment_terms" in data:
+        settings_row.default_payment_terms = (data.get("default_payment_terms") or "").strip()[:255]
+        changed.append("default_payment_terms")
 
     for field in _TEXT_FIELDS:
         if field in data:

@@ -29,6 +29,7 @@ _EDITABLE_FIELDS = (
     "footer_text",
     "accent_color",
     "secondary_color",
+    "cover_letter_text",
 )
 
 # Theme choice fields (D2, Odoo Document Layout model) — validated against the model's
@@ -44,6 +45,8 @@ _EDITABLE_BOOL_FIELDS = (
     "show_logo",
     "show_lead_time",
     "show_fx_note",
+    "show_cover_letter",
+    "show_bank_in_header",
 )
 
 

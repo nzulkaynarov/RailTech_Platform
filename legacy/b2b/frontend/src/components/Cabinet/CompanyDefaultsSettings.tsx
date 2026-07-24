@@ -28,6 +28,8 @@ type DefaultsForm = {
   min_margin_percent: string;
   target_margin_percent: string;
   default_offer_validity_days: string;
+  default_payment_terms: string;
+  default_warranty_months: string;
 };
 
 const EMPTY_FORM: DefaultsForm = {
@@ -38,6 +40,8 @@ const EMPTY_FORM: DefaultsForm = {
   min_margin_percent: '',
   target_margin_percent: '',
   default_offer_validity_days: '',
+  default_payment_terms: '',
+  default_warranty_months: '',
 };
 
 function toForm(settings: CompanySettings): DefaultsForm {
@@ -52,6 +56,9 @@ function toForm(settings: CompanySettings): DefaultsForm {
       settings.default_offer_validity_days != null
         ? String(settings.default_offer_validity_days)
         : '',
+    default_payment_terms: settings.default_payment_terms ?? '',
+    default_warranty_months:
+      settings.default_warranty_months != null ? String(settings.default_warranty_months) : '',
   };
 }
 
@@ -117,6 +124,7 @@ export function CompanyDefaultsSettings() {
     const minMargin = form.min_margin_percent.trim() !== '' ? Number(form.min_margin_percent) : null;
     const targetMargin = form.target_margin_percent.trim() !== '' ? Number(form.target_margin_percent) : null;
     const validityDays = form.default_offer_validity_days.trim() !== '' ? Number(form.default_offer_validity_days) : null;
+    const warrantyMonths = form.default_warranty_months.trim() !== '' ? Number(form.default_warranty_months) : null;
 
     if (vat !== null && (vat < 0 || vat > 100 || isNaN(vat))) {
       toast.error(t('companyDefaults.errors.invalidVat'));
@@ -136,6 +144,10 @@ export function CompanyDefaultsSettings() {
     }
     if (validityDays !== null && (validityDays < 0 || isNaN(validityDays))) {
       toast.error(t('companyDefaults.errors.invalidValidity'));
+      return;
+    }
+    if (warrantyMonths !== null && (warrantyMonths < 0 || isNaN(warrantyMonths))) {
+      toast.error(t('companyDefaults.errors.invalidWarranty'));
       return;
     }
 
@@ -163,6 +175,8 @@ export function CompanyDefaultsSettings() {
       target_margin_percent:
         form.target_margin_percent.trim() === '' ? null : form.target_margin_percent.trim(),
       default_offer_validity_days: validityDays,
+      default_payment_terms: form.default_payment_terms.trim(),
+      default_warranty_months: warrantyMonths,
     });
   };
 
@@ -287,6 +301,29 @@ export function CompanyDefaultsSettings() {
                 value={form.default_offer_validity_days}
                 onChange={(e) => setForm({ ...form, default_offer_validity_days: e.target.value })}
                 placeholder="30"
+              />
+            </div>
+
+            {/* spec-kp-blank: dynamic «Условия поставки» defaults printed on the КП. */}
+            <div className="space-y-2">
+              <Label htmlFor="cd-payment">{t('companyDefaults.paymentTerms')}</Label>
+              <Input
+                id="cd-payment"
+                value={form.default_payment_terms}
+                onChange={(e) => setForm({ ...form, default_payment_terms: e.target.value })}
+                placeholder={t('companyDefaults.paymentTermsPlaceholder')}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cd-warranty">{t('companyDefaults.warrantyMonths')}</Label>
+              <Input
+                id="cd-warranty"
+                type="number"
+                step="1"
+                min="0"
+                value={form.default_warranty_months}
+                onChange={(e) => setForm({ ...form, default_warranty_months: e.target.value })}
+                placeholder="12"
               />
             </div>
           </div>

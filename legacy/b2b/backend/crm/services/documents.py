@@ -105,8 +105,16 @@ _PREVIEW_TEXT_OVERRIDES = (
     "secondary_color",
     "layout_preset",
     "font_family",
+    "cover_letter_text",
 )
-_PREVIEW_BOOL_OVERRIDES = ("use_company_defaults", "show_logo", "show_lead_time", "show_fx_note")
+_PREVIEW_BOOL_OVERRIDES = (
+    "use_company_defaults",
+    "show_logo",
+    "show_lead_time",
+    "show_fx_note",
+    "show_cover_letter",
+    "show_bank_in_header",
+)
 
 
 def render_document_profile_preview_html(company, doc_type: str = "KP", overrides: dict = None) -> str:
@@ -141,7 +149,9 @@ def render_document_profile_preview_html(company, doc_type: str = "KP", override
         return _render_sample_act_html(brand)
     if doc_type == "DOC":
         return _render_sample_letter_html(brand)
-    return _render_sample_quote_html(brand)
+    # `row` (draft profile) is passed so the cover-letter toggle/text preview live, even before
+    # the seller has filled the branding requisites (cover is independent of _profile_has_branding).
+    return _render_sample_quote_html(brand, cover_profile=row)
 
 
 # Shared sample counterparty for every preview document (never real data — Rule 1 concerns
@@ -174,7 +184,7 @@ def _sample_invoice_lines():
     ]
 
 
-def _render_sample_quote_html(brand: dict) -> str:
+def _render_sample_quote_html(brand: dict, cover_profile=None) -> str:
     from datetime import date
     from decimal import Decimal
 
@@ -229,11 +239,28 @@ def _render_sample_quote_html(brand: dict) -> str:
         "frozen_at": None,
         "updated_at": date(2026, 7, 8),
     }
+    # «Фирменный бланк» blocks in the preview (spec-kp-blank): cover letter resolved from the
+    # (draft) profile so the seller sees it live; structured terms use representative sample values
+    # (the preview is an «образец») + the shipment place from the branded requisites.
+    cover_text = resolve_cover_letter(
+        cover_profile, buyer_name=_SAMPLE_BUYER["name"], deal_number="КП-2026-000123", seller_name=brand.get("seller_name", "")
+    )
+    quote_terms = build_quote_terms(
+        shipment_place=(getattr(brand.get("seller_profile"), "legal_address", "") or "Республика Узбекистан, г. Ташкент"),
+        lead_days=21,
+        payment="100% предоплата",
+        incoterm="DAP (Ташкент)",
+        warranty_months=12,
+        valid_until="08.08.2026",
+        other="При отсутствии модели у производителя может быть предложен аналог с соответствующими характеристиками.",
+    )
     context = {
         "quote": sample_quote,
         "items": sample_items,
         "optional_items": [],
         "company": _SAMPLE_BUYER,
+        "cover_text": cover_text,
+        "quote_terms": quote_terms,
         # Branding preview, not a real export — no «ЧЕРНОВИК» watermark (it would obscure the very
         # branding this sample exists to show); keep the lead-time column visible so the seller can
         # see it styled when their profile toggle is on.
@@ -633,3 +660,65 @@ def _brand_context_from_row(seller_company, row, *, is_demo: bool = False) -> di
         "font_stack": font_stack,
         "secondary": secondary,
     }
+
+
+# ── КП «фирменный бланк»: сопроводительный текст + структурные условия (spec-kp-blank) ──
+
+
+def resolve_cover_letter(profile, *, buyer_name: str = "", deal_number: str = "", seller_name: str = "") -> str:
+    """Resolved cover-letter paragraph, or "" when disabled/empty.
+
+    FLAT token substitution ({{buyer}}/{{deal}}/{{seller}}) — the stored text is NEVER rendered
+    as a Django template (no SSTI). Values are inserted raw; the caller's template prints it via
+    `|linebreaks`, which auto-escapes, so an injected value can't become markup (no XSS).
+    """
+    if not profile or not getattr(profile, "show_cover_letter", False):
+        return ""
+    text = (getattr(profile, "cover_letter_text", "") or "").strip()
+    if not text:
+        return ""
+    return (
+        text.replace("{{buyer}}", buyer_name or "")
+        .replace("{{deal}}", str(deal_number or ""))
+        .replace("{{seller}}", seller_name or "")
+    )
+
+
+def build_quote_terms(
+    *,
+    shipment_place: str = "",
+    lead_days=None,
+    delivery_note: str = "",
+    payment: str = "",
+    incoterm: str = "",
+    warranty_months=None,
+    valid_until: str = "",
+    other: str = "",
+) -> list:
+    """The structured «Условия поставки» rows (label:value) for the КП blank.
+
+    Everything except «Прочие условия» is DYNAMIC — sourced from КП / seller data, not retyped.
+    Empty values are skipped so a blank line never prints. ONE builder (Rule 8) shared by the
+    real render and the settings preview, so the two can't drift.
+    """
+    rows = []
+
+    def add(label, value):
+        if value not in (None, "", 0):
+            rows.append({"label": label, "value": value})
+
+    add("Место отгрузки", shipment_place)
+    if lead_days:
+        srok = f"до {lead_days} дн."
+        if delivery_note:
+            srok = f"{srok} · {delivery_note}"
+        add("Сроки поставки", srok)
+    elif delivery_note:
+        add("Сроки поставки", delivery_note)
+    add("Условия оплаты", payment)
+    add("Базис поставки", incoterm)
+    if warranty_months:
+        add("Гарантия", f"{warranty_months} мес.")
+    add("Срок действия КП", valid_until)
+    add("Прочие условия", other)
+    return rows

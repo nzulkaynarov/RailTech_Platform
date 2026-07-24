@@ -63,6 +63,9 @@ def _quote_ctx(**toggles):
         "show_logo": True,
         "show_lead_time": True,
         "show_fx_note": False,
+        # The sample item carries a lead time, so the real render path sets this True — the
+        # «Срок» COLUMN renders only when both are true (the terms block is separate now).
+        "has_line_lead_time": True,
     }
     ctx.update(toggles)
     return ctx
@@ -70,7 +73,7 @@ def _quote_ctx(**toggles):
 
 def test_lead_time_column_shown_by_default():
     html = render_to_string("crm/quote_pdf.html", _quote_ctx(show_lead_time=True))
-    assert "Срок" in html
+    assert '<th style="width:12%" class="center">Срок</th>' in html
 
 
 def test_lead_time_column_hidden_when_toggle_off():

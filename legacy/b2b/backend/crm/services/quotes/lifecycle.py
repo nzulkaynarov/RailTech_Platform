@@ -81,20 +81,55 @@ class QuoteLifecycleService:
         # cannot commercially SEND this КП (explicit DEMO grant, no operational subscription,
         # OR — ADR-0006 Phase E — no KYC). Building/previewing stays free; only a fully verified
         # + subscribed seller gets a clean, sendable document.
+        from accounts.models import CompanyDocumentProfile, CompanySettings
         from accounts.services.entitlements import quote_send_entitled
         from crm.services.documents import (
+            build_quote_terms,
             client_optional_items,
             client_projection_items,
             document_brand_context,
             public_quote_qr,
             public_quote_url,
+            resolve_cover_letter,
         )
 
         projected_items = client_projection_items(quote)
+
+        # «Фирменный бланк» extras (spec-kp-blank): the cover-letter paragraph + the structured
+        # «Условия поставки» block. Read the profile/settings rows WITHOUT creating them (render
+        # path must not write). Terms are DYNAMIC — sourced from the КП/seller data; only «Прочие»
+        # (Quote.notes) is free-text.
+        doc_profile = CompanyDocumentProfile.objects.filter(company=seller_company).first()
+        seller_settings = CompanySettings.objects.filter(company=seller_company).first()
+        buyer = quote.deal.company
+        cover_text = resolve_cover_letter(
+            doc_profile,
+            buyer_name=getattr(buyer, "name", "") or "",
+            deal_number=quote.number or quote.deal_id,
+            seller_name=getattr(seller_company, "name", "") or "",
+        )
+        incoterm = ""
+        if quote.delivery_basis:
+            incoterm = quote.delivery_basis.code
+            if quote.delivery_basis.name:
+                incoterm = f"{incoterm} ({quote.delivery_basis.name})"
+        quote_terms = build_quote_terms(
+            shipment_place=(getattr(doc_profile, "legal_address", "") or getattr(seller_company, "legal_address", "") or ""),
+            lead_days=quote.effective_delivery_lead_time_days,
+            delivery_note=quote.delivery_note or "",
+            payment=getattr(seller_settings, "default_payment_terms", "") or "",
+            incoterm=incoterm,
+            warranty_months=getattr(seller_settings, "default_warranty_months", None),
+            valid_until=quote.valid_until.strftime("%d.%m.%Y") if quote.valid_until else "",
+            other=quote.notes or "",
+        )
+
         html_string = render_to_string(
             "crm/quote_pdf.html",
             {
                 "quote": quote,
+                "cover_text": cover_text,
+                "quote_terms": quote_terms,
                 # Governance: a КП is an OFFER only once frozen on send. Until then (draft or
                 # internally-approved-but-unsent) the PDF carries a «ЧЕРНОВИК» watermark, so a copy
                 # leaked out-of-band cannot pass as a binding offer (matches send_to_client policy).

@@ -34,11 +34,23 @@
     .optional-block { margin-top: 14pt; break-inside: avoid; }
     .optional-block h3 { margin: 0 0 4pt 0; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.6pt; color: var(--accent); font-weight: 700; }
     .optional-block .optional-hint { font-size: 8pt; color: var(--muted); margin: 0 0 5pt 0; }
+    /* spec-kp-blank: cover-letter paragraph («КП + письмо в одном») + structured «Условия» grid. */
+    .cover-letter { margin: 0 0 12pt 0; font-size: 9.2pt; color: var(--ink-soft); }
+    .cover-letter p { margin: 0 0 5pt 0; text-indent: 16pt; }
+    .terms-title { margin: 0 0 6pt 0; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.6pt; color: var(--accent); font-weight: 700; }
+    table.terms-grid { width: 100%; border-collapse: collapse; break-inside: avoid; }
+    table.terms-grid td { padding: 2.5pt 0; font-size: 8.8pt; vertical-align: top; }
+    table.terms-grid td.tk { width: 34%; color: var(--muted); padding-right: 10pt; }
+    table.terms-grid td.tv { color: var(--ink-soft); }
   </style>
 {% endblock %}
 
 {% block content %}
   {% with pres_ccy=quote.quote_currency.code|default:"UZS" %}
+  {# spec-kp-blank block 3 — сопроводительный абзац («КП + письмо в одном»). Текст резолвится в
+     сервисе (плоская подстановка), здесь только печать с авто-эскейпом (|linebreaks). #}
+  {% if cover_text %}<div class="cover-letter">{{ cover_text|linebreaks }}</div>{% endif %}
+
   <!-- ── Line items (client projection — NO cost/margin) ── -->
   <table class="lines">
     <thead>
@@ -181,31 +193,19 @@
   </div>
   {% endif %}
 
-  <!-- ── Terms ── -->
+  {# spec-kp-blank block 6 — структурные «Условия поставки» (label:value). Всё, кроме «Прочих»,
+     ДИНАМИЧНО — собрано в crm.services.documents.build_quote_terms из данных КП/продавца. «Прочие
+     условия» = Quote.notes (единственное free-text). Старые term-box/valid-box/notes-block
+     заменены на этот единый блок (устраняет дублирование срока/valid/примечаний).
+     CONFIDENTIALITY: курс ЦБ/FX здесь НИКОГДА не печатается — клиент видит только цену в UZS. #}
+  {% if quote_terms %}
   <div class="terms">
-    <div class="term-box">
-      <span class="k">Срок поставки:</span>
-      {% if quote.effective_delivery_lead_time_days %}до {{ quote.effective_delivery_lead_time_days }} дн.{% else %}по согласованию{% endif %}
-      {% if quote.delivery_basis %} &middot; <span class="k">Базис поставки:</span> {{ quote.delivery_basis.code }}{% if quote.delivery_basis.name %} ({{ quote.delivery_basis.name }}){% endif %}{% endif %}
-      {% if quote.delivery_note %} &middot; {{ quote.delivery_note }}{% endif %}
-    </div>
-
-    {% if quote.valid_until %}
-    <div class="term-box valid-box">
-      <span class="k">Предложение действительно до:</span> {{ quote.valid_until|date:"d.m.Y" }}
-    </div>
-    {% endif %}
-    {% comment %}
-      CONFIDENTIALITY: the CBU/FX-rate snapshot is NEVER shown on the client КП. Printing the rate
-      lets the buyer divide the UZS price by it to recover the seller's foreign-currency (e.g. USD)
-      cost basis — a sourcing leak (confidentiality invariant). The show_fx_note seller toggle no
-      longer renders here; the client only ever sees the final UZS price.
-    {% endcomment %}
-  </div>
-
-  {% if quote.notes %}
-  <div class="notes-block">
-    <span class="k">Примечания:</span><br>{{ quote.notes|linebreaks }}
+    <div class="terms-title">Условия поставки</div>
+    <table class="terms-grid">
+      {% for row in quote_terms %}
+      <tr><td class="tk">{{ row.label }}</td><td class="tv">{{ row.value }}</td></tr>
+      {% endfor %}
+    </table>
   </div>
   {% endif %}
   {% endwith %}

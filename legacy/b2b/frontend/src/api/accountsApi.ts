@@ -68,6 +68,10 @@ export interface CompanyDocumentProfile {
 	secondary_color?: string;
 	layout_preset?: DocumentLayoutPreset;
 	font_family?: DocumentFontFamily;
+	// КП «фирменный бланк» (spec-kp-blank): cover letter + bank-in-header toggle.
+	cover_letter_text?: string;
+	show_cover_letter?: boolean;
+	show_bank_in_header?: boolean;
 	use_company_defaults?: boolean;
 	// P3 layout toggles — what the seller shows on its documents.
 	show_logo?: boolean;
@@ -97,6 +101,9 @@ export interface CompanySettings {
 	min_margin_percent?: string | null;     // loss-prevention floor (below → warn + approval)
 	target_margin_percent?: string | null;  // healthy target (≥ → green traffic-light)
 	default_offer_validity_days?: number | null;
+	// КП «фирменный бланк» defaults (spec-kp-blank): feed the dynamic «Условия поставки» block.
+	default_payment_terms?: string;
+	default_warranty_months?: number | null;
 	doc_number_prefix?: string;
 	created_at?: string;
 	updated_at?: string;
@@ -112,6 +119,8 @@ export interface CompanySettingsUpdate {
 	min_margin_percent?: string | null;
 	target_margin_percent?: string | null;
 	default_offer_validity_days?: number | null;
+	default_payment_terms?: string;
+	default_warranty_months?: number | null;
 	doc_number_prefix?: string;
 }
 

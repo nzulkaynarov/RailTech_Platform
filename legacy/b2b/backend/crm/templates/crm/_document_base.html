@@ -85,6 +85,7 @@
   .brandbar td { vertical-align: top; padding: 0; }
   .brand-name { font-size: var(--fs-xl); font-weight: 700; color: var(--accent); letter-spacing: 0.2pt; }
   .brand-meta { font-size: var(--fs-sm); color: #5a6270; margin-top: 2pt; }
+  .brand-bank { font-size: var(--fs-xs); color: var(--muted); line-height: 1.35; }
   .doc-id { text-align: right; font-size: var(--fs-sm); color: #5a6270; }
   .doc-id .doc-no { font-size: var(--fs-lg); font-weight: 700; color: var(--accent); letter-spacing: 0.2pt; string-set: doc-ref content(); }
   .rule { height: 2.5pt; background: var(--accent); margin: 0 0 16pt 0; }
@@ -224,6 +225,8 @@
           {% if seller.phone %} · тел. {{ seller.phone }}{% endif %}
           {% if seller.email %} · {{ seller.email }}{% endif %}
           {% if not seller %}RailTech B2B Ecosystem{% endif %}
+          {# Bank requisites in the letterhead (CIS practice) — spec-kp-blank, toggle on the profile. #}
+          {% if seller_profile.show_bank_in_header and seller_profile.bank_details %}<br><span class="brand-bank">{{ seller_profile.bank_details|linebreaksbr }}</span>{% endif %}
         </div>
       </td>
       <td class="doc-id">{% block doc_meta %}{% endblock %}</td>
