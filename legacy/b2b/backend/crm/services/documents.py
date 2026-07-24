@@ -242,8 +242,15 @@ def _render_sample_quote_html(brand: dict, cover_profile=None) -> str:
     # «Фирменный бланк» blocks in the preview (spec-kp-blank): cover letter resolved from the
     # (draft) profile so the seller sees it live; structured terms use representative sample values
     # (the preview is an «образец») + the shipment place from the branded requisites.
+    # `seller_name` is composed in the template (firstof legal_name/name), not carried in the brand
+    # dict — derive it here so the {{seller}} token resolves in the preview like it does live.
+    _seller_name = (
+        getattr(brand.get("seller_profile"), "legal_name", "")
+        or getattr(brand.get("seller"), "name", "")
+        or ""
+    )
     cover_text = resolve_cover_letter(
-        cover_profile, buyer_name=_SAMPLE_BUYER["name"], deal_number="КП-2026-000123", seller_name=brand.get("seller_name", "")
+        cover_profile, buyer_name=_SAMPLE_BUYER["name"], deal_number="КП-2026-000123", seller_name=_seller_name
     )
     quote_terms = build_quote_terms(
         shipment_place=(getattr(brand.get("seller_profile"), "legal_address", "") or "Республика Узбекистан, г. Ташкент"),
