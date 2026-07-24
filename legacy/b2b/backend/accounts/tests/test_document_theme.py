@@ -140,6 +140,20 @@ def test_preview_defaults_reproduce_light_layout(seller):
 
 
 @pytest.mark.django_db
+def test_serif_font_family_is_not_html_escaped(seller):
+    """The font stack carries apostrophes ('DejaVu Serif'); without |safe Django escapes them to
+    &#x27; and the whole font-family is dropped by the CSS parser (serif silently ignored)."""
+    import re
+
+    company, _owner_user = seller
+    html = render_document_profile_preview_html(company, doc_type="KP", overrides={"font_family": "serif"})
+    line = re.search(r"--font-main:[^;]+;", html)
+    assert line is not None
+    assert "'DejaVu Serif'" in line.group(0)
+    assert "&#x27;" not in line.group(0)
+
+
+@pytest.mark.django_db
 def test_preview_endpoint_post_draft(seller):
     company, owner = seller
     resp = _client(owner).post(

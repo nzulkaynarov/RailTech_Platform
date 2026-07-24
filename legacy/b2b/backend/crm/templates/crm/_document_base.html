@@ -36,7 +36,9 @@
     --accent-contrast: {{ accent_contrast }};
     /* D2 document theme: the font pair + secondary tint come validated from
        document_brand_context (allowlist stack / #hex only — never raw user CSS). */
-    --font-main: {{ font_stack|default:"'DejaVu Sans', 'Helvetica', 'Arial', sans-serif" }};
+    {# |safe: font_stack is a fixed allowlist value (_FONT_STACKS), never user input — without it
+       Django escapes the apostrophes ('DejaVu Serif' → &#x27;) and the font-family is dropped. #}
+    --font-main: {{ font_stack|default:"'DejaVu Sans', 'Helvetica', 'Arial', sans-serif"|safe }};
     --secondary: {{ secondary|default:"#f6f8fb" }};
     --ink: #20242b;
     --ink-soft: #3c424c;
@@ -53,7 +55,9 @@
   }
   @page {
     size: A4;
-    margin: 18mm 16mm 20mm 16mm;
+    /* Поля печати по ГОСТ Р 7.0.97-2016 (орг-документы): левое ≥20мм (подшивка), правое ≥10мм,
+       верх/низ ≥20мм. Стандартная A4-вёрстка, а не подгонка под конкретный бланк. */
+    margin: 20mm 15mm 20mm 20mm;
     @bottom-center {
       content: "Стр. " counter(page) " из " counter(pages);
       font-family: 'Helvetica', 'Arial', sans-serif;
