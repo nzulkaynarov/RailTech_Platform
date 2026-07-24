@@ -1,1 +1,1 @@
-Коммерческое предложение RailTech №{{ deal_id }} (в.{{ quote_version }})
+Коммерческое предложение{% if seller_name %} от «{{ seller_name }}»{% endif %} №{{ deal_id }} (в.{{ quote_version }})

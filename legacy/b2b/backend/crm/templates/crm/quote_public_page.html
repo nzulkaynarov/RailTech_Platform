@@ -22,20 +22,33 @@
   <style>
     :root {
       color-scheme: light dark;
+      /* D2 document theme — the SAME accent / secondary tint / font the PDF uses, so the emailed
+         PDF and this public page read as one branded document (not two designs). */
       --accent: {{ accent|default:"#15294d" }};
       --accent-contrast: {{ accent_contrast|default:"#ffffff" }};
+      --font-main: {{ font_stack|default:"-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" }};
       --ink: #20242b; --ink-soft: #3c424c; --muted: #7a828f;
-      --line: #e6e9ef; --panel: #f7f9fc; --bg: #eef1f5; --card: #ffffff;
+      --line: #e6e9ef; --panel: {{ secondary|default:"#f7f9fc" }}; --bg: #eef1f5; --card: #ffffff;
       --success: #15803d; --danger: #b91c1c;
     }
     @media (prefers-color-scheme: dark) {
+      /* Seller's light secondary tint is unreadable on a dark screen — fall back to a dark panel. */
       :root { --ink: #e8eaee; --ink-soft: #c2c7cf; --muted: #9aa0a6;
         --line: #2a2f38; --panel: #1a1f27; --bg: #0b0f19; --card: #111827; }
     }
     * { box-sizing: border-box; }
     body { margin: 0; background: var(--bg); color: var(--ink);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-family: var(--font-main);
       font-size: 15px; line-height: 1.5; -webkit-text-size-adjust: 100%; }
+    /* D2 layout presets (screen analogues of the print presets — same seller choice, one theme). */
+    body.layout-bold .brand-name { font-size: 26px; }
+    body.layout-bold h1.doc-title { text-transform: uppercase; letter-spacing: .5px; }
+    body.layout-bold .rule { height: 5px; }
+    body.layout-boxed .rule { display: none; }
+    body.layout-boxed .brandbar { border: 1px solid var(--accent); border-radius: 8px; padding: 12px; }
+    body.layout-boxed table.lines thead th { background: transparent; color: var(--accent);
+      border-bottom: 2px solid var(--accent); }
+    body.layout-striped table.lines tbody tr:nth-child(odd) td { background: var(--panel); }
     .wrap { max-width: 860px; margin: 0 auto; padding: 16px; }
     .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px;
       padding: 20px; margin-bottom: 16px; }
@@ -113,6 +126,7 @@
   </style>
 </head>
 <body
+  class="layout-{{ layout_preset|default:'light' }}"
   data-token="{{ token }}"
   data-api-base="/api/v1/public/quotes/{{ token }}/"
   data-recipient-hint="{{ recipient_hint }}">

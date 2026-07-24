@@ -96,12 +96,15 @@ def _send_role_application_email(app: CompanyRoleApplication, approved: bool) ->
     )
     if not owners:
         return
+    from .subscriptions import TRIAL_SUBSCRIPTION_DAYS
+
     template = "role_application_approved" if approved else "role_application_rejected"
     context = {
         "company_name": app.company.name,
         "requested_type_name": app.requested_type.name,
         "review_notes": app.review_notes or "",
         "trial_granted": approved and app.requested_type.code in ("SUPPLIER", "MANUFACTURER"),
+        "trial_days": TRIAL_SUBSCRIPTION_DAYS,
         "frontend_url": getattr(settings, "FRONTEND_URL", "http://localhost:5173"),
     }
     for owner in owners:

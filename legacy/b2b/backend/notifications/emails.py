@@ -142,6 +142,14 @@ def send_templated_email(
     if not recipients:
         raise ValueError("`to` must contain at least one recipient")
 
+    # Platform-wide defaults every email template may reference (footer support contact, links).
+    # Merged UNDER the caller's context so an explicit value always wins.
+    context = {
+        "support_email": getattr(settings, "SUPPORT_EMAIL", "support@railtech.uz"),
+        "frontend_url": getattr(settings, "FRONTEND_URL", ""),
+        **context,
+    }
+
     cfg = _channel_config(channel)
     subject, text_body, html_body = _render_bodies(template_name, context)
 

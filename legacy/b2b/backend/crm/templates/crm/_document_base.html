@@ -218,7 +218,7 @@
       </td>
       {% endif %}
       <td>
-        <div class="brand-name" style="color:{{ accent }};">{{ seller_name }}</div>
+        <div class="brand-name">{{ seller_name }}</div>
         <div class="brand-meta">
           {% if seller_profile.inn %}ИНН {{ seller_profile.inn }}{% elif seller.inn %}ИНН {{ seller.inn }}{% endif %}
           {% if seller.phone %} · тел. {{ seller.phone }}{% endif %}
@@ -229,9 +229,9 @@
       <td class="doc-id">{% block doc_meta %}{% endblock %}</td>
     </tr>
   </table>
-  <div class="rule" style="background:{{ accent }};"></div>
+  <div class="rule"></div>
 
-  <h1 class="doc-title" style="color:{{ accent }};">{% block doc_title %}{% endblock %}</h1>
+  <h1 class="doc-title">{% block doc_title %}{% endblock %}</h1>
 
   {% block parties %}
   <table class="parties">

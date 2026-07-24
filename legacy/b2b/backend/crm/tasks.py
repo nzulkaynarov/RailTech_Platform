@@ -444,13 +444,16 @@ def send_quote_email(self, quote_id: int) -> dict:
 
     public_link = public_quote_url(quote) or ""
 
+    # The КП is prepared by the REAL selling company, never the platform — the email must name it
+    # (Rule 1: no hardcoded platform identity). Same resolution as the public page / acceptance code.
+    seller_name = getattr(quote.seller_company, "name", None) or "Поставщик"
     send_templated_email(
         "quote_sent",
         {
             "recipient_name": to_name,
+            "seller_name": seller_name,
             "deal_id": quote.deal_id,
             "quote_version": quote.version,
-            "company_name": quote.deal.company.name if quote.deal.company else "",
             "valid_until": quote.valid_until.strftime("%d.%m.%Y") if quote.valid_until else "—",
             "total_incl_vat": str(quote.total_incl_vat),
             "public_link": public_link,

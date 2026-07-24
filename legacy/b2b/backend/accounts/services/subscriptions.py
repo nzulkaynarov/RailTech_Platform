@@ -9,8 +9,12 @@ from .permissions import is_member_of, is_platform_admin_viewer
 
 logger = logging.getLogger(__name__)
 
+# Single source of truth for the trial length — used both when granting the subscription and when
+# telling the applicant about it (the approval email), so the two can never disagree.
+TRIAL_SUBSCRIPTION_DAYS = 30
 
-def ensure_trial_subscription(company: Company, trial_days: int = 30) -> SupplierSubscription:
+
+def ensure_trial_subscription(company: Company, trial_days: int = TRIAL_SUBSCRIPTION_DAYS) -> SupplierSubscription:
     """Create a TRIAL subscription for the company if missing."""
     from datetime import timedelta
 

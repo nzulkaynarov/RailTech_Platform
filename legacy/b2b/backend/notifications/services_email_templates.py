@@ -39,12 +39,15 @@ SAMPLE_CONTEXTS: dict[str, dict] = {
         "frontend_url": "https://b2b.railtech.uz",
     },
     "quote_sent": {
-        "first_name": "Алиса",
-        "company_name": "ООО «Пример»",
-        "deal_title": "Запрос на стрелочные переводы",
-        "quote_number": "КП-2026-000123",
-        "public_url": "https://b2b.railtech.uz/api/v1/public/quotes/sample-token/",
-        "frontend_url": "https://b2b.railtech.uz",
+        # Mirrors the REAL merge variables passed by crm.tasks.send_quote_email — an operator
+        # editing this template by the preview must see the same names the live send substitutes.
+        "recipient_name": "Алиса",
+        "seller_name": "ООО «Вагонсервис»",
+        "deal_id": 1024,
+        "quote_version": 1,
+        "valid_until": "08.08.2026",
+        "total_incl_vat": "20 608 000,00",
+        "public_link": "https://b2b.railtech.uz/api/v1/public/quotes/sample-token/",
     },
     "reset_password": {
         "first_name": "Алиса",
@@ -54,6 +57,7 @@ SAMPLE_CONTEXTS: dict[str, dict] = {
         "company_name": "ООО «Пример»",
         "requested_type_name": "Поставщик",
         "trial_granted": True,
+        "trial_days": 30,
         "frontend_url": "https://b2b.railtech.uz",
     },
     "role_application_rejected": {

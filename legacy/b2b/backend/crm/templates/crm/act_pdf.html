@@ -21,7 +21,7 @@
     {% if act.invoice %} &middot; <span class="k">Счёт:</span> {{ act.invoice.number }} от {{ act.invoice.issued_at|date:"d.m.Y" }}{% endif %}
   </div>
 
-  <p style="font-size:9pt;color:#3c424c;margin:12pt 0;">
+  <p style="font-size:9pt;color:var(--ink-soft);margin:12pt 0;">
     Настоящий Акт составлен о том, что Поставщик передал, а Покупатель принял следующие
     товары / услуги по указанной сделке:
   </p>
@@ -60,7 +60,7 @@
   </table>
   <div class="amount-words"><span class="k">Сумма прописью:</span> {{ act.total_amount|money_words:ccy }}</div>
 
-  <p style="font-size:8.8pt;color:#3c424c;margin:12pt 0;">
+  <p style="font-size:8.8pt;color:var(--ink-soft);margin:12pt 0;">
     Услуги / товары оказаны / поставлены в полном объёме и в согласованные сроки. Стороны претензий
     по объёму, качеству, комплектности и срокам друг к другу не имеют.
   </p>
