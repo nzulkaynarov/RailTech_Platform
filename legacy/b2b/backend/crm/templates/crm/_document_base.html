@@ -35,9 +35,10 @@
     --accent: {{ accent }};
     --accent-contrast: {{ accent_contrast }};
     /* D2 document theme: the font pair + secondary tint come validated from
-       document_brand_context (allowlist stack / #hex only — never raw user CSS). */
-    {# |safe: font_stack is a fixed allowlist value (_FONT_STACKS), never user input — without it
-       Django escapes the apostrophes ('DejaVu Serif' → &#x27;) and the font-family is dropped. #}
+       document_brand_context (allowlist stack / #hex only — never raw user CSS).
+       |safe: font_stack is a fixed allowlist value (_FONT_STACKS), never user input — without it
+       Django escapes the apostrophes ('DejaVu Serif' → &#x27;) and the font-family is dropped.
+       NB: a multi-line Django {# #} comment leaks verbatim — keep notes inside this /* */ block. */
     --font-main: {{ font_stack|default:"'DejaVu Sans', 'Helvetica', 'Arial', sans-serif"|safe }};
     --secondary: {{ secondary|default:"#f6f8fb" }};
     --ink: #20242b;
@@ -81,6 +82,24 @@
     color: var(--ink);
     margin: 0;
     font-variant-numeric: tabular-nums;  /* lining figures so money columns align (F-15) */
+  }
+  /* Screen-only A4 page emulation. The SAME template renders two ways: WeasyPrint (PRINT media —
+     applies @page margins) for the exported PDF, and a browser <iframe> for the live preview. A
+     browser has no @page, so without this the preview draws edge-to-edge and reads unlike the paged
+     PDF. WeasyPrint ignores @media screen entirely, so the PDF is UNTOUCHED — this only frames the
+     preview as an A4 sheet whose padding mirrors the @page margins (20/15/20/20mm), so content sits
+     where it prints. max-width keeps it from overflowing a narrow preview column. */
+  @media screen {
+    html { background: #eceef1; }
+    body {
+      width: 100%;
+      max-width: 210mm;
+      min-height: 297mm;
+      margin: 16px auto;
+      padding: 20mm 15mm 20mm 20mm;
+      background: #fff;
+      box-shadow: 0 1px 10px rgba(16, 24, 40, 0.14);
+    }
   }
   p, .notes-block, .term-box, .legal-article p { orphans: 3; widows: 3; }
 

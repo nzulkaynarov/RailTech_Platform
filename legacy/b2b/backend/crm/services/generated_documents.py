@@ -51,6 +51,9 @@ _BRAND_PROFILE_FIELDS = (
     "signatory_name",
     "signatory_position",
     "footer_text",
+    # _document_base.html gates the letterhead bank block on this toggle — freeze it too, else an
+    # ISSUED document's header silently drops (or gains) the bank requisites after the company edits.
+    "show_bank_in_header",
 )
 _BRAND_SCALAR_FIELDS = (
     "seller_logo_url",
@@ -60,6 +63,12 @@ _BRAND_SCALAR_FIELDS = (
     "show_fx_note",
     "accent",
     "accent_contrast",
+    # D2 document theme: _document_base.html reads these (body layout class + :root font/tint vars).
+    # Without them a frozen snapshot rebuilds to the DEFAULT theme, so an ISSUED document's PDF loses
+    # the seller's layout preset / font / secondary tint that its DRAFT preview showed (fidelity gap).
+    "layout_preset",
+    "font_stack",
+    "secondary",
 )
 
 
@@ -136,11 +145,18 @@ def brand_letterhead_preview(company) -> dict:
 def brand_letterhead_for_document(document) -> dict:
     """Flat letterhead slice for a generated document: the FROZEN brand snapshot once issued (J-a
     immutability), else the owner company's live branding for a DRAFT."""
+    return _flatten_brand_for_preview(document_render_brand(document))
+
+
+def document_render_brand(document) -> dict:
+    """The brand render context a document's PDF renders from: the FROZEN snapshot once issued (J-a),
+    else the owner company's live branding for a DRAFT. Single source shared by the PDF renderer, the
+    public HTML page, and the 1:1 registry preview — so all three read the same letterhead."""
     from .documents import document_brand_context
 
     if document.brand_snapshot:
-        return _flatten_brand_for_preview(_brand_context_from_snapshot(document.brand_snapshot))
-    return _flatten_brand_for_preview(document_brand_context(document.company))
+        return _brand_context_from_snapshot(document.brand_snapshot)
+    return document_brand_context(document.company)
 
 # ── Owner-company + access resolution ───────────────────────────────────────
 
@@ -273,6 +289,34 @@ def _demo_context(company, user) -> PlaceholderContext:
     )
 
 
+def render_document_html_from_body(company, rendered_body_html: str, *, brand: dict = None) -> str:
+    """Wrap an already-rendered document BODY in the FULL branded document HTML using the SAME
+    template the PDF renders (crm/generated_document_pdf.html → _document_base.html).
+
+    This is the 1:1 preview primitive: the editor/registry preview the SPA shows in an iframe is
+    literally the document template — header (лого/реквизиты/банк/тема) + body + footer — so it
+    cannot drift from the WeasyPrint PDF the way a hand-written React letterhead did. `brand`
+    defaults to the company's LIVE branding; pass a snapshot-rebuilt context to preview an ISSUED
+    document exactly as its frozen PDF renders. Returns HTML only (no WeasyPrint — instant, cheap
+    on every keystroke, never blocks the request thread; ARCH-03)."""
+    from django.template.loader import render_to_string
+
+    from .documents import document_brand_context
+
+    if brand is None:
+        brand = document_brand_context(company)
+    document_stub = SimpleNamespace(
+        rendered_html=rendered_body_html,
+        number="DOC-2026-00001",
+        title="Образец документа",
+        created_at=timezone.now(),
+    )
+    return render_to_string(
+        "crm/generated_document_pdf.html",
+        {"document": document_stub, "company": None, **brand},
+    )
+
+
 def preview_template(company, user: CustomUser, *, body_html: str) -> dict:
     """Render a template body against SAMPLE data for the live editor preview.
 
@@ -290,6 +334,9 @@ def preview_template(company, user: CustomUser, *, body_html: str) -> dict:
         # The FULL branded document = header (name/ИНН/лого) + body + footer, so the author sees the
         # requisites are already in the letterhead and stops duplicating them in the body (T1-a).
         "brand": brand_letterhead_preview(company),
+        # 1:1 preview: the whole document rendered by the REAL PDF template. The SPA drops this into
+        # an iframe instead of re-implementing the letterhead in React (which drifted from the PDF).
+        "document_html": render_document_html_from_body(company, rendered_html),
     }
 
 

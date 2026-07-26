@@ -39,6 +39,25 @@ export function saveBlob(blob: Blob, filename: string): void {
 }
 
 /**
+ * Open a PDF blob in a new browser tab (the native viewer) — the 1:1 «Просмотр» primitive: what
+ * the user sees IS the rendered PDF, never a re-implementation. `tab` must be a window opened
+ * SYNCHRONOUSLY inside the click gesture (before any await), else the popup blocker kills it —
+ * callers own that `window.open('', '_blank')`. When the tab was blocked (`tab` null) we fall back
+ * to saving the file. Returns true if it opened in the tab, false if it fell back to download.
+ */
+export function openBlobInNewTab(blob: Blob, tab: Window | null, downloadFilename: string): boolean {
+  const url = window.URL.createObjectURL(blob);
+  if (tab) {
+    tab.location.href = url;
+    window.setTimeout(() => window.URL.revokeObjectURL(url), 60_000);
+    return true;
+  }
+  saveBlob(blob, downloadFilename);
+  window.URL.revokeObjectURL(url);
+  return false;
+}
+
+/**
  * Print a PDF blob via a hidden iframe (prints without navigating away). Falls back to opening
  * the blob in a new tab (where the user can print manually) if the iframe print can't fire.
  */

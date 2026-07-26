@@ -1626,7 +1626,8 @@
   },
   "docLetterhead": {
     "inn": "TIN {{value}}",
-    "phone": "tel. {{value}}"
+    "phone": "tel. {{value}}",
+    "previewTitle": "Document preview"
   },
   "richEditor": {
     "bold": "Bold",

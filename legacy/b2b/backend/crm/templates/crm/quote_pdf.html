@@ -184,8 +184,9 @@
       <td class="cta-text">
         <span class="cta-title">Онлайн-версия предложения.</span>
         {% if public_quote_qr %}Отсканируйте QR-код, чтобы посмотреть актуальную версию КП;{% else %}Актуальная версия КП доступна по ссылке;{% endif %} для подтверждения свяжитесь с вашим менеджером.
-        {# The public link carries a long random token — unreadable/ugly in print. Show it only as a
-           text fallback when there is no QR; when the QR is present it IS the access method. #}
+        {% comment %} The public link carries a long random token — unreadable/ugly in print. Show it
+           only as a text fallback when there is no QR; when the QR is present it IS the access method.
+           NB: Django {# #} comments are SINGLE-LINE — a multi-line one leaks verbatim into the PDF. {% endcomment %}
         {% if not public_quote_qr %}<span class="cta-link">{{ public_quote_url }}</span>{% endif %}
       </td>
       {% if public_quote_qr %}

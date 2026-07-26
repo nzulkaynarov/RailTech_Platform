@@ -14,7 +14,7 @@ import {
 } from '@/hooks/useDocuments';
 import type { DocumentTemplate, PlaceholderCatalogGroup, TemplatePreviewResult } from '@/api/documentsApi';
 import { translateApiError } from '@/lib/apiError';
-import { DocumentLetterheadPreview } from '@/components/Documents/DocumentLetterheadPreview';
+import { DocumentHtmlPreview } from '@/components/Documents/DocumentHtmlPreview';
 import { SampleTemplatePreviewDialog } from '@/components/Settings/SampleTemplatePreviewDialog';
 import {
   RichTextTemplateEditor,
@@ -455,8 +455,8 @@ function TemplateEditor({
             <Label>{t('docTemplatesSettings.preview')}</Label>
             {isPreviewing && <Loader2 className="size-3.5 animate-spin text-muted-foreground" aria-hidden="true" />}
           </div>
-          {preview && preview.rendered_html ? (
-            <DocumentLetterheadPreview brand={preview.brand} bodyHtml={preview.rendered_html} />
+          {preview && preview.document_html ? (
+            <DocumentHtmlPreview html={preview.document_html} title={t('docTemplatesSettings.preview')} />
           ) : (
             <div className="rounded-lg border border-border bg-muted/30 p-4">
               <p className="text-sm text-muted-foreground">{t('docTemplatesSettings.previewEmpty')}</p>

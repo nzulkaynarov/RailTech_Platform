@@ -64,6 +64,9 @@ class GeneratedDocumentSerializer(serializers.ModelSerializer):
     # branded document — header + body + footer — instead of the bare body (T1-a). Frozen snapshot
     # once issued, live company branding for a draft.
     brand = serializers.SerializerMethodField()
+    # Full branded document HTML (real PDF template) for the 1:1 registry preview — computed ONLY on
+    # the detail endpoint (see get_document_html); null in the list so N rows never each render.
+    document_html = serializers.SerializerMethodField()
     # Read-only mirror of public_token_revoked so the SPA can swap «Копировать ссылку» for a
     # «Ссылка отозвана» badge (J-b). public_url itself null-s once revoked.
     public_link_revoked = serializers.BooleanField(source="public_token_revoked", read_only=True)
@@ -91,6 +94,7 @@ class GeneratedDocumentSerializer(serializers.ModelSerializer):
             "public_url",
             "public_link_revoked",
             "brand",
+            "document_html",
             "created_by_name",
             "created_at",
             "updated_at",
@@ -125,6 +129,16 @@ class GeneratedDocumentSerializer(serializers.ModelSerializer):
         from crm.services.generated_documents import brand_letterhead_for_document
 
         return brand_letterhead_for_document(obj)
+
+    def get_document_html(self, obj) -> str | None:
+        """The full branded document rendered by the REAL PDF template — the 1:1 iframe preview that
+        replaces the hand-written React letterhead. Rendered only when the DETAIL endpoint sets the
+        context flag; the list returns None so it never renders every row's document."""
+        if not self.context.get("include_document_html"):
+            return None
+        from crm.services.generated_documents import document_render_brand, render_document_html_from_body
+
+        return render_document_html_from_body(obj.company, obj.rendered_html, brand=document_render_brand(obj))
 
     def get_deal_title(self, obj) -> str | None:
         if obj.deal_id is None:
