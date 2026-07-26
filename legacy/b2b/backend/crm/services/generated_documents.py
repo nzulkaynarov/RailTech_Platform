@@ -661,19 +661,17 @@ def _render_generated_pdf(document) -> None:
     from django.template.loader import render_to_string
     from weasyprint import HTML
 
-    from .documents import document_brand_context
+    from .documents import brand_context_for_pdf
 
-    # Prefer the frozen letterhead snapshot (J-a); fall back to the live brand context only for
-    # documents issued before the brand_snapshot column existed.
-    brand = _brand_context_from_snapshot(document.brand_snapshot) if document.brand_snapshot else document_brand_context(
-        document.company
-    )
+    # document_render_brand: frozen letterhead snapshot (J-a) for ISSUED, live brand for DRAFT.
+    # brand_context_for_pdf: inline the logo as a data: URI (WeasyPrint can't resolve the relative
+    # /media/… URL prod storage yields — broken-image box otherwise).
     html_string = render_to_string(
         "crm/generated_document_pdf.html",
         {
             "document": document,
             "company": document.company,
-            **brand,
+            **brand_context_for_pdf(document_render_brand(document)),
         },
     )
     buffer = BytesIO()
