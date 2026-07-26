@@ -1628,7 +1628,8 @@
   },
   "docLetterhead": {
     "inn": "ИНН {{value}}",
-    "phone": "тел. {{value}}"
+    "phone": "тел. {{value}}",
+    "previewTitle": "Предпросмотр документа"
   },
   "richEditor": {
     "bold": "Жирный",

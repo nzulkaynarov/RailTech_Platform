@@ -122,6 +122,29 @@ def test_preview_returns_letterhead_brand(lookups):
     assert "footer_text" in brand
 
 
+def test_preview_returns_full_document_html_from_real_template(lookups):
+    """1:1 preview: the response carries document_html — the WHOLE branded document rendered by the
+    REAL PDF template (crm/generated_document_pdf.html → _document_base.html), so the SPA iframe
+    shows exactly what WeasyPrint prints instead of a hand-written React letterhead."""
+    company = _company("ООО Полный-Документ", "S7")
+    user = _member(company, "s@t.uz")
+    resp = _api(user).post(
+        "/api/v1/crm/document-templates/preview/",
+        {"body_html": "<p>Тело {{deal.title}}</p>"},
+        format="json",
+    )
+    assert resp.status_code == 200, resp.content
+    document_html = resp.json()["document_html"]
+    # Structural markers only the real base template emits (not the old React re-implementation):
+    assert 'class="brandbar"' in document_html  # letterhead шапка table
+    assert "--accent:" in document_html  # :root theme tokens
+    assert "layout-" in document_html  # body layout-preset class
+    assert 'class="doc-body"' in document_html  # generated_document_pdf.html body wrapper
+    # …carrying the seller's own letterhead + the rendered body.
+    assert "ООО Полный-Документ" in document_html
+    assert "Демо-сделка" in document_html
+
+
 def test_preview_warns_on_unknown_placeholder(lookups):
     company = _company("Продавец", "S1")
     user = _member(company, "s@t.uz")

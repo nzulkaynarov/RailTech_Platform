@@ -58,6 +58,9 @@ export interface TemplatePreviewResult {
   placeholders_used: string[];
   warnings: string[];
   brand: DocumentBrandPreview;
+  /** Full branded document HTML rendered by the REAL PDF template (server-side) — the 1:1 iframe
+   *  preview. Replaces re-implementing the letterhead in React off `brand` + `rendered_html`. */
+  document_html: string;
 }
 
 // Placeholder catalog is static reference data (Bitrix24 insert-chip pattern), split into groups
@@ -113,6 +116,9 @@ export interface GeneratedDocument {
   /** Letterhead slice (T1-a) so the registry sheet renders the FULL branded document — header +
    *  body + footer. Frozen brand snapshot once issued, live company branding for a draft. */
   brand: DocumentBrandPreview;
+  /** Full branded document HTML (real PDF template) for the 1:1 iframe preview. Present only on the
+   *  DETAIL response (`generatedDocumentsApi.get`); null on list rows to avoid rendering every one. */
+  document_html?: string | null;
 }
 
 export interface GenerateDocumentPayload {

@@ -4,7 +4,7 @@ import { Eye, Loader2 } from 'lucide-react';
 
 import { usePreviewTemplate } from '@/hooks/useDocuments';
 import type { DocumentTemplate } from '@/api/documentsApi';
-import { DocumentLetterheadPreview } from '@/components/Documents/DocumentLetterheadPreview';
+import { DocumentHtmlPreview } from '@/components/Documents/DocumentHtmlPreview';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -48,11 +48,8 @@ export function SampleTemplatePreviewDialog({ template }: { template: DocumentTe
             <span className="sr-only">{t('common.loading')}</span>
           </div>
         )}
-        {previewMut.data && (
-          <DocumentLetterheadPreview
-            brand={previewMut.data.brand}
-            bodyHtml={previewMut.data.rendered_html}
-          />
+        {previewMut.data?.document_html && (
+          <DocumentHtmlPreview html={previewMut.data.document_html} title={template.name} className="h-[65vh]" />
         )}
       </DialogContent>
     </Dialog>

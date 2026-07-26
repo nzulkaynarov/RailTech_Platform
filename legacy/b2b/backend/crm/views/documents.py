@@ -175,6 +175,9 @@ class DocumentTemplateViewSet(viewsets.ModelViewSet):
                     # Letterhead slice (name/ИНН/лого/подвал/accent) so the SPA renders the FULL
                     # branded document, not the bare body (T1-a).
                     "brand": _brand_preview_field(),
+                    # Full branded document HTML rendered by the REAL PDF template — the 1:1 iframe
+                    # preview that replaces the hand-written React letterhead.
+                    "document_html": drf_serializers.CharField(),
                 },
             ),
             400: OpenApiResponse(description="Validation error"),
@@ -249,6 +252,13 @@ class GeneratedDocumentViewSet(viewsets.ModelViewSet):
     # the full set (mirrors DocumentTemplateViewSet). Default paging would silently cap at 20 rows and
     # understate the counts (A4/M3).
     pagination_class = None
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        # The 1:1 preview HTML is rendered per document — only worth it on the single-object detail
+        # endpoint, never for every row of the (unpaginated) list.
+        context["include_document_html"] = self.action == "retrieve"
+        return context
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):

@@ -21,12 +21,12 @@ import {
   Toolbar, Pager, useListParams, applyListParams,
 } from '@/components/DataTable';
 import {
-  useGeneratedDocuments, useIssueDocument, useCancelDocument, useUpdateDocumentValues, useSendDocument,
-  useRevokeDocument,
+  useGeneratedDocuments, useGeneratedDocument, useIssueDocument, useCancelDocument,
+  useUpdateDocumentValues, useSendDocument, useRevokeDocument,
 } from '@/hooks/useDocuments';
 import { useIsViewerMode } from '@/hooks/useViewerMode';
 import { DocumentCreateWizard } from '@/components/Documents/DocumentCreateWizard';
-import { DocumentLetterheadPreview } from '@/components/Documents/DocumentLetterheadPreview';
+import { DocumentHtmlPreview } from '@/components/Documents/DocumentHtmlPreview';
 import { DealLink } from '@/components/Shared/DealLink';
 import type { GeneratedDocument, GeneratedDocumentStatus } from '@/api/documentsApi';
 
@@ -232,6 +232,8 @@ function DocumentSheet({
   const { t } = useTranslation();
   const [values, setValues] = useState<Record<string, string>>(() => ({ ...(document.values ?? {}) }));
   const [sendOpen, setSendOpen] = useState(false);
+  // The list row omits the heavy document_html; the detail endpoint renders it (1:1 iframe preview).
+  const { data: detail } = useGeneratedDocument(document.id);
   const valueKeys = Object.keys(document.values ?? {});
   const isDraft = document.status_code === 'DRAFT';
   const isIssued = document.status_code === 'ISSUED';
@@ -341,14 +343,24 @@ function DocumentSheet({
             </div>
           )}
 
-          {/* Preview: the FULL branded document (letterhead шапка + тело + подвал) — matches the real
-              PDF, so the requisites are never shown as if missing from the body (T1-a). `rendered_html`
-              is sanitised server-side by the crm.services allowlist sanitiser (scripts/handlers
-              stripped) before it is ever returned — safe to inject. */}
+          {/* Preview: the FULL branded document rendered by the SERVER using the REAL PDF template
+              (1:1 with the exported PDF — same letterhead/theme/footer WeasyPrint rasterises). The
+              list row omits document_html (cost), so fetch the detail here; fall back to a loader. */}
           <div>
             <Label>{t('otherDocumentsPage.previewTitle')}</Label>
-            <div className="mt-2 max-h-[50vh] overflow-auto">
-              <DocumentLetterheadPreview brand={document.brand} bodyHtml={document.rendered_html} />
+            <div className="mt-2">
+              {detail?.document_html ? (
+                <DocumentHtmlPreview
+                  html={detail.document_html}
+                  title={document.title}
+                  className="h-[50vh]"
+                />
+              ) : (
+                <div className="flex h-[50vh] items-center justify-center rounded-lg border border-border bg-muted/30" role="status">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" aria-hidden="true" />
+                  <span className="sr-only">{t('common.loading')}</span>
+                </div>
+              )}
             </div>
           </div>
 

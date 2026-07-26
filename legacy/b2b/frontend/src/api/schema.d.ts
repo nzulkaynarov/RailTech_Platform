@@ -7815,6 +7815,7 @@ export interface components {
             placeholders_used: string[];
             warnings: string[];
             brand: components["schemas"]["DocumentBrandPreview"];
+            document_html: string;
         };
         DocumentTemplatePreviewRequestRequest: {
             body_html?: string;
@@ -8089,6 +8090,12 @@ export interface components {
             readonly brand: {
                 [key: string]: unknown;
             };
+            /**
+             * @description The full branded document rendered by the REAL PDF template — the 1:1 iframe preview that
+             *     replaces the hand-written React letterhead. Rendered only when the DETAIL endpoint sets the
+             *     context flag; the list returns None so it never renders every row's document.
+             */
+            readonly document_html: string | null;
             readonly created_by_name: string | null;
             /**
              * Дата создания
