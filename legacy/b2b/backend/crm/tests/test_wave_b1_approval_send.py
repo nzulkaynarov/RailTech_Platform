@@ -313,3 +313,27 @@ def test_valid_until_left_none_when_company_unconfigured(lookups):
         QLS.send_to_client(quote.id, seller_user)
     quote.refresh_from_db()
     assert quote.valid_until is None
+
+
+# ─── Send must drop a stale pre-send PDF cache ───────────────────────────────
+
+
+def test_send_invalidates_cached_draft_pdf(lookups):
+    """Prod incident 2026-07-26: «Предпросмотр PDF» seconds before send caches a DRAFT render
+    («ЧЕРНОВИК» watermark, placeholder number) — and send_quote_email only renders when pdf_file
+    is EMPTY, so the client received the stale draft. Send re-mints the document identity
+    (№, frozen prices) → it must blank pdf_file so the email/public link re-render fresh."""
+    from django.core.files.base import ContentFile
+
+    seller_user, quote = _sendable_quote(default_validity_days=None)
+    # Simulate the pre-send preview: a cached DRAFT render sits on the quote.
+    quote.pdf_file.save("draft-preview.pdf", ContentFile(b"%PDF-1.7 stale draft"), save=True)
+    assert quote.pdf_file
+
+    with mock.patch("crm.services.quotes.lifecycle.compute_quote_economics", return_value=_clean_econ()):
+        QLS.send_to_client(quote.id, seller_user)
+
+    quote.refresh_from_db()
+    assert not quote.pdf_file, "send_to_client must drop the stale pre-send PDF cache"
+    assert quote.frozen_at is not None
+    assert quote.number  # the minted citable № the fresh render will print

@@ -127,3 +127,38 @@ def test_preview_kp_cover_xss_escaped():
     )
     assert "<script>alert(1)</script>" not in html
     assert "&lt;script&gt;" in html
+
+
+# ── brand_context_for_pdf: logo inlined as data: URI for WeasyPrint ────────────────
+
+
+def test_brand_context_for_pdf_inlines_relative_media_logo(tmp_path, settings):
+    """Prod (FileSystemStorage) yields a RELATIVE /media/… logo URL that WeasyPrint cannot
+    resolve (HTML(string=…) has no base_url and fetches nothing) — every prod PDF printed a
+    broken-image box. The PDF render path must inline the file as a data: URI."""
+    from django.core.files.storage import default_storage
+
+    from crm.services.documents import brand_context_for_pdf
+
+    settings.MEDIA_ROOT = str(tmp_path)
+    name = default_storage.save("companies/logos/test-logo.png", __import__("io").BytesIO(b"\x89PNG fake"))
+    brand = brand_context_for_pdf({"seller_logo_url": settings.MEDIA_URL + name, "accent": "#15294d"})
+    assert brand["seller_logo_url"].startswith("data:image/png;base64,")
+    assert brand["accent"] == "#15294d"  # rest of the context untouched
+
+
+def test_brand_context_for_pdf_leaves_absolute_urls_and_none(settings):
+    from crm.services.documents import brand_context_for_pdf
+
+    absolute = {"seller_logo_url": "http://minio:9000/bucket/logo.png?sig=x"}
+    assert brand_context_for_pdf(absolute)["seller_logo_url"] == absolute["seller_logo_url"]
+    assert brand_context_for_pdf({"seller_logo_url": None})["seller_logo_url"] is None
+
+
+def test_brand_context_for_pdf_missing_file_degrades_to_no_logo(tmp_path, settings):
+    """A dangling storage key must degrade to «no logo» (text letterhead), never a broken box."""
+    from crm.services.documents import brand_context_for_pdf
+
+    settings.MEDIA_ROOT = str(tmp_path)
+    brand = brand_context_for_pdf({"seller_logo_url": settings.MEDIA_URL + "companies/logos/gone.png"})
+    assert brand["seller_logo_url"] is None

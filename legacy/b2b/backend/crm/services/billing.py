@@ -151,7 +151,7 @@ def _render_invoice_pdf(invoice) -> None:
     # platform identity. An invoice is a legal document and must name the real counterparty
     # (Rule 1/2). Falls back gracefully when the seller can't be resolved (manual invoice
     # without a contract) — the template shows "—", not a fake ИНН.
-    from .documents import document_brand_context
+    from .documents import brand_context_for_pdf, document_brand_context
     from .quotes import _quote_seller_company
 
     quote = invoice.contract.quote if (invoice.contract_id and invoice.contract.quote_id) else None
@@ -163,7 +163,7 @@ def _render_invoice_pdf(invoice) -> None:
             "invoice": invoice,
             "items": invoice.items.select_related("source_quote_item").all(),
             "company": invoice.deal.company,
-            **document_brand_context(supplier),
+            **brand_context_for_pdf(document_brand_context(supplier)),
         },
     )
     buf = BytesIO()
@@ -378,7 +378,7 @@ def _render_act_pdf(act) -> None:
 
     # Real seller (via the act's contract → КП) so «От Поставщика» names the counterparty,
     # not a blank line. Shared branding bundle, same shape as every other document.
-    from .documents import document_brand_context
+    from .documents import brand_context_for_pdf, document_brand_context
     from .quotes import _quote_seller_company
 
     quote = act.contract.quote if (act.contract_id and act.contract.quote_id) else None
@@ -390,7 +390,7 @@ def _render_act_pdf(act) -> None:
             "act": act,
             "invoice": act.invoice,
             "company": act.deal.company,
-            **document_brand_context(supplier),
+            **brand_context_for_pdf(document_brand_context(supplier)),
         },
     )
     buf = BytesIO()

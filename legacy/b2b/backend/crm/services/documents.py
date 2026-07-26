@@ -87,6 +87,45 @@ def seller_logo_url(seller_profile) -> Optional[str]:
         return None
 
 
+# Logos above this size are dropped from the PDF render rather than inlined (a data: URI of a
+# multi-MB upload would bloat every render); the letterhead then falls back to the text name.
+_LOGO_EMBED_MAX_BYTES = 1_000_000
+
+
+def brand_context_for_pdf(brand: dict) -> dict:
+    """Prepare a brand context for a WeasyPrint render: inline the seller logo as a data: URI.
+
+    On prod (FileSystemStorage) ``seller_logo_url`` is a RELATIVE ``/media/…`` URL — WeasyPrint
+    renders from ``HTML(string=…)`` with no ``base_url`` and deliberately no network fetching, so
+    the logo came out as a broken-image box on every prod PDF. Browser surfaces (public pages,
+    settings iframe, SPA) resolve the same URL fine, so the swap happens ONLY at PDF render time —
+    never in the stored brand_snapshot or serializer slices (a data: URI there would bloat every
+    row). Absolute http(s) URLs (e.g. dev MinIO, reachable in-network) are left as-is; missing or
+    oversized files degrade to no logo (the template then prints the text name, not a broken box).
+    """
+    from django.conf import settings
+
+    logo_url = brand.get("seller_logo_url")
+    if not logo_url or not logo_url.startswith(settings.MEDIA_URL):
+        return brand
+    import base64
+    import mimetypes
+
+    from django.core.files.storage import default_storage
+
+    name = logo_url[len(settings.MEDIA_URL):]
+    try:
+        with default_storage.open(name, "rb") as file_handle:
+            data = file_handle.read(_LOGO_EMBED_MAX_BYTES + 1)
+    except (OSError, ValueError, FileNotFoundError):
+        return {**brand, "seller_logo_url": None}
+    if len(data) > _LOGO_EMBED_MAX_BYTES:
+        return {**brand, "seller_logo_url": None}
+    mime = mimetypes.guess_type(name)[0] or "image/png"
+    encoded = base64.b64encode(data).decode("ascii")
+    return {**brand, "seller_logo_url": f"data:{mime};base64,{encoded}"}
+
+
 # The document kinds the Document-Layout preview can render (mirrors the real PDF set).
 PREVIEW_DOC_TYPES = ("KP", "CT", "INV", "ACT", "DOC")
 

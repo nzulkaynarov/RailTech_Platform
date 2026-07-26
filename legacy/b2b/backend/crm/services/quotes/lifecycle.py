@@ -84,6 +84,7 @@ class QuoteLifecycleService:
         from accounts.models import CompanyDocumentProfile, CompanySettings
         from accounts.services.entitlements import quote_send_entitled
         from crm.services.documents import (
+            brand_context_for_pdf,
             build_quote_terms,
             client_optional_items,
             client_projection_items,
@@ -149,7 +150,11 @@ class QuoteLifecycleService:
                 # seller-facing draft PDF has no CTA while the sent/public КП does (F-09).
                 "public_quote_url": public_quote_url(quote),
                 "public_quote_qr": public_quote_qr(quote),
-                **document_brand_context(seller_company, is_demo=not quote_send_entitled(seller_company.id)),
+                # brand_context_for_pdf: inline the logo as a data: URI — WeasyPrint can't resolve
+                # the relative /media/… URL prod storage yields (broken-image box on every PDF).
+                **brand_context_for_pdf(
+                    document_brand_context(seller_company, is_demo=not quote_send_entitled(seller_company.id))
+                ),
             },
         )
 
@@ -238,8 +243,18 @@ class QuoteLifecycleService:
         sent_status = QuoteStatus.objects.filter(code=QuoteStatusCode.SENT).first()
         quote.status = sent_status
         quote.frozen_at = timezone.now()
+        # Drop any cached pre-send render. A «Предпросмотр PDF» seconds before sending caches a
+        # DRAFT PDF («ЧЕРНОВИК» watermark, placeholder number «{deal}-{v}») — and send_quote_email
+        # only renders when pdf_file is EMPTY, so that stale draft would be emailed to the client
+        # and served on the public link (prod incident 2026-07-26: КП RFQ-0726RT-01 delivered as
+        # «КП № 27-1 / ЧЕРНОВИК»). The send re-mints the document identity (№, frozen prices), so
+        # the cache is wrong by construction. Blank the field only (file stays in storage —
+        # same non-transactional-delete caution as _invalidate_branded_pdfs).
+        quote.pdf_file = ""
         quote.save(
-            update_fields=["status", "number", "frozen_at", "public_access_token", *validity_fields, "updated_at"]
+            update_fields=[
+                "status", "number", "frozen_at", "public_access_token", "pdf_file", *validity_fields, "updated_at"
+            ]
         )
 
         # AI-калибровка: the sent КП is the ground truth for the draft's AI match candidates.
