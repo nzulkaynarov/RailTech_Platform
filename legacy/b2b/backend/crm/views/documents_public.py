@@ -101,12 +101,22 @@ class PublicDocumentView(APIView):
         from django.shortcuts import render
 
         from crm.services.documents import document_brand_context
+        from crm.services.generated_documents import _brand_context_from_snapshot
 
+        # Read the SAME brand the PDF renders from: an ISSUED document freezes its letterhead into
+        # brand_snapshot, and _render_generated_pdf renders off it — so this public HTML twin must
+        # too, or the on-screen page and the downloadable PDF diverge after a later company edit.
+        # Fall back to the live context only for docs issued before the snapshot column existed.
+        brand = (
+            _brand_context_from_snapshot(document.brand_snapshot)
+            if document.brand_snapshot
+            else document_brand_context(document.company)
+        )
         context = {
             "document": document,
             "company": document.company,
             "download_url": "?export=pdf",
-            **document_brand_context(document.company),
+            **brand,
         }
         return render(request, "public/document_view.html", context)
 

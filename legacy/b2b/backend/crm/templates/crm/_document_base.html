@@ -35,9 +35,10 @@
     --accent: {{ accent }};
     --accent-contrast: {{ accent_contrast }};
     /* D2 document theme: the font pair + secondary tint come validated from
-       document_brand_context (allowlist stack / #hex only — never raw user CSS). */
-    {# |safe: font_stack is a fixed allowlist value (_FONT_STACKS), never user input — without it
-       Django escapes the apostrophes ('DejaVu Serif' → &#x27;) and the font-family is dropped. #}
+       document_brand_context (allowlist stack / #hex only — never raw user CSS).
+       |safe: font_stack is a fixed allowlist value (_FONT_STACKS), never user input — without it
+       Django escapes the apostrophes ('DejaVu Serif' → &#x27;) and the font-family is dropped.
+       NB: a multi-line Django {# #} comment leaks verbatim — keep notes inside this /* */ block. */
     --font-main: {{ font_stack|default:"'DejaVu Sans', 'Helvetica', 'Arial', sans-serif"|safe }};
     --secondary: {{ secondary|default:"#f6f8fb" }};
     --ink: #20242b;

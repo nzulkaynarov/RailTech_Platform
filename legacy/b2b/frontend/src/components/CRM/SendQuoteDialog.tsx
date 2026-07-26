@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { AlertTriangle, CheckCircle2, FileText, Loader2, Send, User } from 'lucide-react';
-import { crmApi, type Deal, type Quote } from '@/api/crmApi';
+import { type Deal, type Quote } from '@/api/crmApi';
 import { useSendQuoteToClient, useUpdateQuoteSettings } from '@/hooks/useCRM';
 import { composeSendSummary } from '@/lib/quoteSend';
 import { translateApiError, extractApiErrorCode } from '@/lib/apiError';
@@ -71,10 +71,19 @@ export function SendQuoteDialog({ deal, quote, open, onOpenChange, onSent }: Sen
   };
 
   const preview = async () => {
+    // «Предпросмотр PDF» must OPEN the rendered PDF (the 1:1 ground truth), not silently download
+    // it — mirrors DocumentActions «Просмотр». Open the blank tab synchronously inside the click
+    // gesture (before any await) so the popup blocker doesn't kill it.
+    const previewWindow = window.open('', '_blank');
     setPreviewing(true);
     try {
-      await crmApi.exportQuote(quote.id, 'pdf');
+      const { fetchDocumentBlob, openBlobInNewTab } = await import('@/lib/documents');
+      const blob = await fetchDocumentBlob(`crm/quotes/${quote.id}/export/`, { export_format: 'pdf' });
+      if (!openBlobInNewTab(blob, previewWindow, `RailTech_Quote_${quote.id}.pdf`)) {
+        toast.error(t('docActions.popupBlocked'));
+      }
     } catch (err) {
+      previewWindow?.close();
       toast.error(translateApiError(err));
     } finally {
       setPreviewing(false);

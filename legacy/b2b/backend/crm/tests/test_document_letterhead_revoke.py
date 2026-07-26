@@ -155,6 +155,46 @@ def test_render_context_reads_snapshot_not_live(world):
     assert brand["seller_profile"] is None  # no profile → None stub (serializable)
 
 
+def test_snapshot_freezes_document_theme_and_bank_toggle(world):
+    """Preview↔PDF fidelity: the D2 theme (layout/font/tint) and the letterhead bank toggle
+    _document_base.html reads must be frozen into the snapshot — else an ISSUED document's PDF
+    rebuilds to the DEFAULT theme and loses the styling its DRAFT preview showed."""
+    from accounts.models import CompanyDocumentProfile
+
+    seller_co = world["seller_co"]
+    # A branded, non-default theme (legal_name filled → _profile_has_branding True → profile captured).
+    CompanyDocumentProfile.objects.update_or_create(
+        company=seller_co,
+        defaults={
+            "use_company_defaults": False,
+            "legal_name": "ООО «Продавец»",
+            "layout_preset": "boxed",
+            "font_family": "serif",
+            "secondary_color": "#eef2f7",
+            "bank_details": "р/с 1234, МФО 00014",
+            "show_bank_in_header": True,
+        },
+    )
+
+    document = _issue(world)
+    document.refresh_from_db()
+    snap = document.brand_snapshot
+
+    # Theme scalars are frozen at their resolved (allowlisted) values, not dropped.
+    assert snap["layout_preset"] == "boxed"
+    assert "serif" in snap["font_stack"]  # _FONT_STACKS["serif"] resolved, not the raw "serif"
+    assert snap["secondary"] == "#eef2f7"
+    # The letterhead bank toggle survives on the frozen profile block.
+    assert snap["seller_profile"]["show_bank_in_header"] is True
+
+    # And the rebuilt render context reproduces them (what _render_generated_pdf feeds WeasyPrint).
+    brand = _brand_context_from_snapshot(snap)
+    assert brand["layout_preset"] == "boxed"
+    assert "serif" in brand["font_stack"]
+    assert brand["secondary"] == "#eef2f7"
+    assert brand["seller_profile"].show_bank_in_header is True
+
+
 # ── J-b: revoke public link ──────────────────────────────────────────────────
 
 

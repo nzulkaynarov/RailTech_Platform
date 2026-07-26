@@ -1,7 +1,8 @@
 <!doctype html>
-{# ARCH-03: shown (HTTP 202) when a client opens the public КП link during the race window —
+{% comment %} ARCH-03: shown (HTTP 202) when a client opens the public КП link during the race window —
    the PDF is being rendered off-thread and is not persisted yet. Self-contained (no external
-   assets), self-refreshing a few times, then a manual «Обновить». Russian, matching the КП/email. #}
+   assets), self-refreshing a few times, then a manual «Обновить». Russian, matching the КП/email.
+   NB: Django {# #} comments are SINGLE-LINE — a multi-line one leaks as visible page text. {% endcomment %}
 <html lang="ru">
 <head>
   <meta charset="utf-8">

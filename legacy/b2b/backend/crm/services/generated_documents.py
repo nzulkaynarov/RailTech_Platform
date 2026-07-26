@@ -51,6 +51,9 @@ _BRAND_PROFILE_FIELDS = (
     "signatory_name",
     "signatory_position",
     "footer_text",
+    # _document_base.html gates the letterhead bank block on this toggle — freeze it too, else an
+    # ISSUED document's header silently drops (or gains) the bank requisites after the company edits.
+    "show_bank_in_header",
 )
 _BRAND_SCALAR_FIELDS = (
     "seller_logo_url",
@@ -60,6 +63,12 @@ _BRAND_SCALAR_FIELDS = (
     "show_fx_note",
     "accent",
     "accent_contrast",
+    # D2 document theme: _document_base.html reads these (body layout class + :root font/tint vars).
+    # Without them a frozen snapshot rebuilds to the DEFAULT theme, so an ISSUED document's PDF loses
+    # the seller's layout preset / font / secondary tint that its DRAFT preview showed (fidelity gap).
+    "layout_preset",
+    "font_stack",
+    "secondary",
 )
 
 
