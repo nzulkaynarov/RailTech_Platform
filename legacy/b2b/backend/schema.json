@@ -10354,6 +10354,71 @@
                 }
             }
         },
+        "/api/v1/crm/deals/{id}/take-and-prepare/": {
+            "post": {
+                "operationId": "crm_deals_take_and_prepare_create",
+                "description": "One-click-quotation (утв. spec-inbound-rfq W2): claim + переход стадии в CALCULATING + предзаполненный черновик КП со строками заявки. Продавец с ai.draft получает 202 {task_id, mode:'ai'} (существующий draft_quote job — AI-матч и цены, поллинг sourcing/ai-status/); без entitlement — 200 {quote_id, mode:'quote'} синхронно (копия строк + точный ГОСТ/MPN-матч + цены из своих офферов, без AI). Идемпотентно: существующий КП компании переиспользуется, повторный клик в AI-режиме возвращает уже идущий task_id (кредит не списывается дважды).",
+                "summary": "W2 одна кнопка: взять заявку в работу и подготовить КП",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Сделка.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DealDetailRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DealDetailRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DealDetailRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{mode:'quote', quote_id} — КП готов, открывайте билдер"
+                    },
+                    "202": {
+                        "description": "{mode:'ai', task_id} — AI-черновик готовится, поллинг ai-status"
+                    },
+                    "400": {
+                        "description": "Нет строк заявки / стадия вне пред-КП набора"
+                    },
+                    "403": {
+                        "description": "Не routed-продавец / viewer"
+                    },
+                    "404": {
+                        "description": "Deal not found"
+                    },
+                    "409": {
+                        "description": "Заявку уже взял коллега (DEAL_ALREADY_CLAIMED)"
+                    }
+                }
+            }
+        },
         "/api/v1/crm/deals/{id}/update-request-meta/": {
             "patch": {
                 "operationId": "crm_deals_update_request_meta_partial_update",

@@ -3600,6 +3600,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/crm/deals/{id}/take-and-prepare/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * W2 одна кнопка: взять заявку в работу и подготовить КП
+         * @description One-click-quotation (утв. spec-inbound-rfq W2): claim + переход стадии в CALCULATING + предзаполненный черновик КП со строками заявки. Продавец с ai.draft получает 202 {task_id, mode:'ai'} (существующий draft_quote job — AI-матч и цены, поллинг sourcing/ai-status/); без entitlement — 200 {quote_id, mode:'quote'} синхронно (копия строк + точный ГОСТ/MPN-матч + цены из своих офферов, без AI). Идемпотентно: существующий КП компании переиспользуется, повторный клик в AI-режиме возвращает уже идущий task_id (кредит не списывается дважды).
+         */
+        post: operations["crm_deals_take_and_prepare_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/deals/{id}/update-request-meta/": {
         parameters: {
             query?: never;
@@ -18568,6 +18588,68 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["DealDetail"];
                 };
+            };
+        };
+    };
+    crm_deals_take_and_prepare_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Сделка. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["DealDetailRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["DealDetailRequest"];
+                "multipart/form-data": components["schemas"]["DealDetailRequest"];
+            };
+        };
+        responses: {
+            /** @description {mode:'quote', quote_id} — КП готов, открывайте билдер */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description {mode:'ai', task_id} — AI-черновик готовится, поллинг ai-status */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Нет строк заявки / стадия вне пред-КП набора */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Не routed-продавец / viewer */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Deal not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Заявку уже взял коллега (DEAL_ALREADY_CLAIMED) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

@@ -438,6 +438,73 @@ class DealViewSet(viewsets.ModelViewSet):
         return self._assignment_response(deal, err, request)
 
     @extend_schema(
+        summary="W2 одна кнопка: взять заявку в работу и подготовить КП",
+        description=(
+            "One-click-quotation (утв. spec-inbound-rfq W2): claim + переход стадии в CALCULATING + "
+            "предзаполненный черновик КП со строками заявки. Продавец с ai.draft получает "
+            "202 {task_id, mode:'ai'} (существующий draft_quote job — AI-матч и цены, поллинг "
+            "sourcing/ai-status/); без entitlement — 200 {quote_id, mode:'quote'} синхронно "
+            "(копия строк + точный ГОСТ/MPN-матч + цены из своих офферов, без AI). Идемпотентно: "
+            "существующий КП компании переиспользуется, повторный клик в AI-режиме возвращает "
+            "уже идущий task_id (кредит не списывается дважды)."
+        ),
+        responses={
+            200: OpenApiResponse(description="{mode:'quote', quote_id} — КП готов, открывайте билдер"),
+            202: OpenApiResponse(description="{mode:'ai', task_id} — AI-черновик готовится, поллинг ai-status"),
+            400: OpenApiResponse(description="Нет строк заявки / стадия вне пред-КП набора"),
+            403: OpenApiResponse(description="Не routed-продавец / viewer"),
+            404: OpenApiResponse(description="Deal not found"),
+            409: OpenApiResponse(description="Заявку уже взял коллега (DEAL_ALREADY_CLAIMED)"),
+        },
+        tags=["CRM"],
+    )
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="take-and-prepare",
+        permission_classes=[IsAuthenticated],
+        throttle_classes=[AiDraftThrottle],
+    )
+    def take_and_prepare(self, request, pk=None):
+        """Thin wrapper (Rule 8): ONE service call orchestrates claim+stage+КП; the view only
+        maps error codes and, for the AI mode, enqueues the existing draft_quote job with a
+        cache-backed double-click guard (an in-flight task is returned, not re-bought)."""
+        from django.core.cache import cache
+
+        from crm.services.draft_quote import take_and_prepare_quote, validate_draft_quote_gates
+        from sourcing.ai_jobs import enqueue_ai_job
+
+        result, err = take_and_prepare_quote(int(pk), request.user)
+        if err:
+            http_status = (
+                status.HTTP_403_FORBIDDEN
+                if err in ("ADMIN_VIEWER_CANNOT_ACT", "ONLY_SELLER_CAN_BUILD_QUOTE", "MEMBER_REQUIRED_FOR_ACTION")
+                else status.HTTP_404_NOT_FOUND
+                if err in ("DEAL_NOT_FOUND",)
+                else status.HTTP_409_CONFLICT
+                if err in ("DEAL_ALREADY_CLAIMED",)
+                else status.HTTP_400_BAD_REQUEST
+            )
+            return Response({"detail": err}, status=http_status)
+        if result["mode"] == "quote":
+            return Response({"mode": "quote", "quote_id": result["quote"].id, "deal_id": int(pk)})
+
+        # AI mode. Double-click guard: while the first job is in flight its task_id is cached —
+        # a second press re-polls the SAME job instead of double-spending an ai.draft credit.
+        cache_key = f"draft_quote_inflight:{pk}:{request.user.id}"
+        inflight_task_id = cache.get(cache_key)
+        if inflight_task_id:
+            return Response({"mode": "ai", "task_id": inflight_task_id}, status=status.HTTP_202_ACCEPTED)
+        gate_err = validate_draft_quote_gates(int(pk), request.user)
+        if gate_err:
+            return Response({"detail": gate_err}, status=status.HTTP_400_BAD_REQUEST)
+        response = enqueue_ai_job("draft_quote", {"deal_id": int(pk), "user_id": request.user.id}, request.user)
+        if response.status_code == status.HTTP_202_ACCEPTED:
+            cache.add(cache_key, response.data["task_id"], timeout=180)
+            response.data["mode"] = "ai"
+        return response
+
+    @extend_schema(
         summary="Generate a pre-filled draft КП from the buyer request (AI moat / speed)",
         description=(
             "Creates a fresh DRAFT Quote for the seller, copying the buyer's request lines and "

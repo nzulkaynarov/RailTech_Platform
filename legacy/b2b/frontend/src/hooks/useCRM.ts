@@ -98,6 +98,19 @@ export const useClaimDeal = () => {
   });
 };
 
+/** W2 «одна кнопка»: claim + стадия + предзаполненный КП (AI для entitled — поллинг внутри api). */
+export const useTakeAndPrepareQuote = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (dealId: number) => crmApi.takeAndPrepareQuote(dealId),
+    onSuccess: (_data, dealId) => {
+      queryClient.invalidateQueries({ queryKey: ['deals'] });
+      queryClient.invalidateQueries({ queryKey: ['deals', dealId] });
+      queryClient.invalidateQueries({ queryKey: ['quotes'] });
+    },
+  });
+};
+
 export const useReleaseDeal = () => {
   const queryClient = useQueryClient();
   return useMutation({

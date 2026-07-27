@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Send, Calculator, ThumbsUp, ThumbsDown, Loader2, FileText, Handshake } from 'lucide-react';
+import { Send, Calculator, ThumbsUp, ThumbsDown, Loader2, FileText, Handshake, Sparkles } from 'lucide-react';
 import type { Quote } from '@/api/crmApi';
 import { QuoteStatus } from '@/lib/codes';
 import { Button } from '@/components/ui/button';
@@ -19,14 +19,17 @@ export interface RequestActionBarProps {
   canBuildQuote: boolean;
   canBuildNewVersion: boolean;
   canClaim: boolean;
+  canTakeAndPrepare: boolean;
   canEditRequest: boolean;
   isViewer: boolean;
   viewerTip: string;
   changeStagePending: boolean;
   claimPending: boolean;
+  takePending: boolean;
   sendQuotePending: boolean;
   approvePending: boolean;
   onClaim: () => void;
+  onTakeAndPrepare: () => void;
   onStartSourcing: () => void;
   onStartCalculation: () => void;
   onOpenGenerate: () => void;
@@ -46,17 +49,17 @@ export function RequestActionBar(props: RequestActionBarProps) {
   const { t } = useTranslation();
   const {
     quote, isSellerSide, isBuyerSide, isDraft, isSourcing, isCalculating, isQuoteSent, isWon,
-    hasQuote, canBuildQuote, canBuildNewVersion, canClaim, canEditRequest, isViewer, viewerTip,
-    changeStagePending, claimPending, sendQuotePending, approvePending,
-    onClaim, onStartSourcing, onStartCalculation, onOpenGenerate, onOpenQuoteBuilder,
-    onSendQuote, onApprove, onReject, onOpenContract,
+    hasQuote, canBuildQuote, canBuildNewVersion, canClaim, canTakeAndPrepare, canEditRequest,
+    isViewer, viewerTip, changeStagePending, claimPending, takePending, sendQuotePending,
+    approvePending, onClaim, onTakeAndPrepare, onStartSourcing, onStartCalculation,
+    onOpenGenerate, onOpenQuoteBuilder, onSendQuote, onApprove, onReject, onOpenContract,
   } = props;
 
   const sellerActions = isSellerSide && (isDraft || isSourcing || isCalculating || hasQuote || canBuildNewVersion);
   const buyerActions = isBuyerSide && isQuoteSent && !!quote;
   // Buyer-side "won" state is owned by BuyerAcceptedPanel above, so it does not open an action
   // bar; the seller still gets the "deal accepted / open contract" row from the isWon branch below.
-  const showActionBar = sellerActions || buyerActions || (isWon && isSellerSide) || canClaim;
+  const showActionBar = sellerActions || buyerActions || (isWon && isSellerSide) || canClaim || canTakeAndPrepare;
 
   if (!showActionBar) {
     // A buyer editing a draft already gets this guidance from the "Your request" card subtitle —
@@ -71,8 +74,23 @@ export function RequestActionBar(props: RequestActionBarProps) {
 
   return (
     <Card className="bg-muted/30">
-      <CardContent className="flex items-center gap-3 py-4">
+      <CardContent className="flex flex-wrap items-center gap-3 py-4">
         <span className="text-sm font-medium">{t('requestDetailActions.actionsLabel')}:</span>
+        {/* W2 «одна кнопка» (one-click-quotation): claim + стадия + предзаполненный КП одним
+            действием — короткий путь; кнопки ниже остаются для пошагового сценария. */}
+        {canTakeAndPrepare && (
+          <Button
+            variant="default"
+            onClick={onTakeAndPrepare}
+            disabled={isViewer || takePending}
+            title={isViewer ? viewerTip : undefined}
+          >
+            {takePending
+              ? <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" />
+              : <Sparkles className="h-4 w-4 mr-2" aria-hidden="true" />}
+            {takePending ? t('requestDetailActions.takePreparing') : t('requestDetailActions.takeAndPrepare')}
+          </Button>
+        )}
         {canClaim && (
           <Button
             variant="outline"

@@ -8,7 +8,7 @@ import { useIsViewerMode } from '@/hooks/useViewerMode';
 import { useIsSoloSeller } from '@/hooks/useCapabilities';
 import {
   useDeal, useChangeDealStage, useApproveQuote, useRejectQuote, useSendQuoteToClient,
-  useUpdateRequestMeta, useClaimDeal,
+  useUpdateRequestMeta, useClaimDeal, useTakeAndPrepareQuote,
 } from '@/hooks/useCRM';
 import { translateApiError, extractApiErrorCode } from '@/lib/apiError';
 import { Textarea } from '@/components/ui/textarea';
@@ -56,6 +56,7 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
   const sendQuote = useSendQuoteToClient();
   const updateMeta = useUpdateRequestMeta();
   const claimMut = useClaimDeal();
+  const takeMut = useTakeAndPrepareQuote();
   const isSoloSeller = useIsSoloSeller();
 
   // Gate seller-side actions (start sourcing / calculation / send quote) to sellers. A buyer would
@@ -84,12 +85,17 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
   const quote = deal.active_quote ?? deal.quotes?.[deal.quotes.length - 1] ?? null;
 
   const isDraft = deal.stage_code === DealStage.DRAFT;
+  const isRfqOpen = deal.stage_code === DealStage.RFQ_OPEN;
   const isSourcing = deal.stage_code === DealStage.SOURCING;
   const isCalculating = deal.stage_code === DealStage.CALCULATING;
   const isQuoteSent = deal.stage_code === DealStage.QUOTE_SENT;
   const isWon = deal.stage_code === DealStage.CLOSED_WON || deal.stage_code === DealStage.CONTRACT_SIGNED;
   // Seller КП-builder entry: create the КП once the deal is in work, or open the focused builder.
   const canBuildQuote = isSellerSide && (isSourcing || isCalculating) && !deal.active_quote;
+  // W2 «одна кнопка» (one-click-quotation): claim + стадия + предзаполненный КП одним действием.
+  // Виден во всём пред-КП наборе стадий, пока КП нет и заявку не взял коллега.
+  const canTakeAndPrepare =
+    isSellerSide && (isRfqOpen || isSourcing || isCalculating) && !deal.active_quote;
   const hasQuote = isSellerSide && !!deal.active_quote;
   // Buyer rejected the КП → offer a primary "new version" action (perform_create auto-increments).
   const canBuildNewVersion = isSellerSide && deal.active_quote?.status_code === QuoteStatus.REJECTED;
@@ -164,11 +170,22 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
           canBuildQuote={canBuildQuote}
           canBuildNewVersion={canBuildNewVersion}
           canClaim={canClaim}
+          canTakeAndPrepare={canTakeAndPrepare}
           canEditRequest={canEditRequest}
           isViewer={isViewer}
           viewerTip={viewerTip}
           changeStagePending={changeStage.isPending}
           claimPending={claimMut.isPending}
+          takePending={takeMut.isPending}
+          onTakeAndPrepare={async () => {
+            try {
+              await takeMut.mutateAsync(deal.id);
+              toast.success(t('requestDetailActions.takePrepared'));
+              openQuoteBuilder();
+            } catch (e) {
+              toast.error(translateApiError(e));
+            }
+          }}
           sendQuotePending={sendQuote.isPending}
           approvePending={approveQuote.isPending}
           onClaim={() => claimMut.mutate(deal.id, {

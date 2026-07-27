@@ -148,6 +148,13 @@ class QuoteViewSet(QuoteApprovalMixin, OptimisticLockingMixin, viewsets.ModelVie
 
             seller_company = Company.objects.filter(pk=seller_company_id).first()
             crm_services.apply_company_quote_defaults(quote, seller_company)
+        # W2 (spec-inbound-rfq, разрыв №4): the manual «Сформировать КП» path used to create an
+        # EMPTY КП — the seller re-typed lines that already exist on the заявка. Copy them here
+        # (same deterministic builder as the one-click path: lines + exact GOST/MPN + own-offer
+        # prices, no AI, no credit). No-op when the deal carries no request lines.
+        from crm.services.draft_quote import prefill_created_quote
+
+        prefill_created_quote(quote)
 
     def perform_update(self, serializer):
         """Editing КП-level settings (VAT rate, tax country, validity, currency) is a

@@ -145,7 +145,7 @@ def _resolve_ai_catalog_matches(request_items, resolved: dict) -> Tuple[int, lis
     return added, telemetry
 
 
-def _run_draft_quote_gates(deal_id: int, actor: CustomUser):
+def _run_draft_quote_gates(deal_id: int, actor: CustomUser, *, require_ai_entitlement: bool = True):
     """Read-only gate checks shared by generate_draft_quote and the pre-enqueue validation
     (ARCH-01): actor role, deal existence, seller routing, request lines, and a cheap
     read-only entitlement look (has_entitlement — never consumed). No writes, no LLM.
@@ -175,7 +175,7 @@ def _run_draft_quote_gates(deal_id: int, actor: CustomUser):
     if not request_items:
         return deal, [], None, "NO_REQUEST_LINES"
     seller_company_id = primary_seller_company_id(actor)
-    if not getattr(actor, "is_superuser", False):
+    if require_ai_entitlement and not getattr(actor, "is_superuser", False):
         from accounts.constants import FeatureKey
         from accounts.services import has_entitlement
 
@@ -224,70 +224,209 @@ def generate_draft_quote(deal_id: int, actor: CustomUser) -> Tuple[Optional[Quot
 
             if not consume_credit(seller_company_id, FeatureKey.AI_DRAFT):
                 return None, "AI_DRAFT_NOT_ENTITLED", 0
-        version = (deal.quotes.aggregate(max_v=Max("version"))["max_v"] or 0) + 1
-        quote = Quote.objects.create(
-            deal=deal,
-            version=version,
-            prepared_by=actor,
-            status=QuoteStatus.objects.get(code=QuoteStatusCode.DRAFT),
-            seller_company_id=seller_company_id,
+        quote, prefilled = _create_prefilled_quote(
+            deal, actor, seller_company_id, request_items, resolved_matches,
+            ai_telemetry=ai_telemetry, ai_matched=ai_matched,
         )
-        # КП-level defaults (Incoterm / VAT / margin / validity) from the seller's CompanySettings.
-        if seller_company_id:
-            from accounts.models import Company
-
-            from .quotes import apply_company_quote_defaults
-
-            apply_company_quote_defaults(quote, Company.objects.filter(pk=seller_company_id).first())
-
-        effective_ids = [it.product_id or resolved_matches.get(it.pk) for it in request_items]
-        pricing = (
-            suggest_pricing_for_products([pid for pid in effective_ids if pid], seller_company_id)
-            if seller_company_id
-            else {}
-        )
-        prefilled = 0
-        auto_matched = 0
-        item_by_src_pk = {}
-        for line_index, src in enumerate(request_items):
-            data = {field: getattr(src, field) for field in _LINE_FIELDS}
-            # Explicit row order on the new КП grid, following the buyer's request order (request
-            # lines default position=0 — copying that would pile every line at the top once the
-            # seller starts reordering). One deterministic pass = stable grid on first open.
-            data["position"] = line_index
-            if not data["product_id"]:
-                resolved_pid = resolved_matches.get(src.pk)
-                if resolved_pid:
-                    data["product_id"] = resolved_pid
-                    auto_matched += 1
-            product_id = data["product_id"]
-            offer = pricing.get(product_id) if product_id else None
-            if offer:
-                data["frozen_base_price"] = Decimal(offer["base_price"])  # str (JSON-safe) → Decimal field
-                data["lead_time_days"] = offer["lead_time_days"]
-                if offer["currency"]:
-                    from master_data.models import Currency
-
-                    data["frozen_currency"] = Currency.objects.filter(code=offer["currency"]).first()
-                prefilled += 1
-            item_by_src_pk[src.pk] = QuoteItem.objects.create(quote=quote, **data)
-
-        if ai_telemetry:
-            from .ai_telemetry import record_draft_match_outcomes
-
-            record_draft_match_outcomes(quote, ai_telemetry, item_by_src_pk)
-
-        if auto_matched:
-            logger.info(
-                "draft КП %s: auto-matched %s line(s) to catalog (%s exact GOST/MPN, %s fuzzy AI)",
-                quote.id,
-                auto_matched,
-                auto_matched - ai_matched,
-                ai_matched,
-            )
-
-        from .quotes import QuoteCalculationService
-
-        QuoteCalculationService.recalculate_quote(quote.id)
     quote.refresh_from_db()
     return quote, None, prefilled
+
+
+def _create_prefilled_quote(
+    deal, actor, seller_company_id, request_items, resolved_matches, *, ai_telemetry=None, ai_matched=0
+):
+    """The DETERMINISTIC draft-КП builder shared by the AI path (generate_draft_quote) and the
+    no-AI path (prepare_quote_from_request, W2): create the seller's DRAFT quote, copy the buyer
+    request lines, bind resolved catalog matches, prefill prices from the seller's own offers,
+    recalc totals. Must run inside transaction.atomic. Returns (quote, prefilled_count)."""
+    version = (deal.quotes.aggregate(max_v=Max("version"))["max_v"] or 0) + 1
+    quote = Quote.objects.create(
+        deal=deal,
+        version=version,
+        prepared_by=actor,
+        status=QuoteStatus.objects.get(code=QuoteStatusCode.DRAFT),
+        seller_company_id=seller_company_id,
+    )
+    # КП-level defaults (Incoterm / VAT / margin / validity) from the seller's CompanySettings.
+    if seller_company_id:
+        from accounts.models import Company
+
+        from .quotes import apply_company_quote_defaults
+
+        apply_company_quote_defaults(quote, Company.objects.filter(pk=seller_company_id).first())
+
+    effective_ids = [it.product_id or resolved_matches.get(it.pk) for it in request_items]
+    pricing = (
+        suggest_pricing_for_products([pid for pid in effective_ids if pid], seller_company_id)
+        if seller_company_id
+        else {}
+    )
+    prefilled = 0
+    auto_matched = 0
+    item_by_src_pk = {}
+    for line_index, src in enumerate(request_items):
+        data = {field: getattr(src, field) for field in _LINE_FIELDS}
+        # Explicit row order on the new КП grid, following the buyer's request order (request
+        # lines default position=0 — copying that would pile every line at the top once the
+        # seller starts reordering). One deterministic pass = stable grid on first open.
+        data["position"] = line_index
+        if not data["product_id"]:
+            resolved_pid = resolved_matches.get(src.pk)
+            if resolved_pid:
+                data["product_id"] = resolved_pid
+                auto_matched += 1
+        product_id = data["product_id"]
+        offer = pricing.get(product_id) if product_id else None
+        if offer:
+            data["frozen_base_price"] = Decimal(offer["base_price"])  # str (JSON-safe) → Decimal field
+            data["lead_time_days"] = offer["lead_time_days"]
+            if offer["currency"]:
+                from master_data.models import Currency
+
+                data["frozen_currency"] = Currency.objects.filter(code=offer["currency"]).first()
+            prefilled += 1
+        item_by_src_pk[src.pk] = QuoteItem.objects.create(quote=quote, **data)
+
+    if ai_telemetry:
+        from .ai_telemetry import record_draft_match_outcomes
+
+        record_draft_match_outcomes(quote, ai_telemetry, item_by_src_pk)
+
+    if auto_matched:
+        logger.info(
+            "draft КП %s: auto-matched %s line(s) to catalog (%s exact GOST/MPN, %s fuzzy AI)",
+            quote.id,
+            auto_matched,
+            auto_matched - ai_matched,
+            ai_matched,
+        )
+
+    from .quotes import QuoteCalculationService
+
+    QuoteCalculationService.recalculate_quote(quote.id)
+    return quote, prefilled
+
+
+def prefill_created_quote(quote: Quote) -> int:
+    """W2 fix (разрыв №4): a freshly-created MANUAL КП copies the buyer's request lines instead of
+    starting empty (lines + exact GOST/MPN binds + own-offer prices — deterministic, no AI, no
+    credit). Only fills a quote that has NO items yet (never clobbers duplication flows); a deal
+    without request lines is a no-op. Returns the number of copied lines."""
+    if not quote.deal_id or quote.items.exists():
+        return 0
+    request_items = _request_items(quote.deal)
+    if not request_items:
+        return 0
+    resolved_matches = _resolve_exact_catalog_matches(request_items)
+    effective_ids = [it.product_id or resolved_matches.get(it.pk) for it in request_items]
+    pricing = (
+        suggest_pricing_for_products([pid for pid in effective_ids if pid], quote.seller_company_id)
+        if quote.seller_company_id
+        else {}
+    )
+    for line_index, src in enumerate(request_items):
+        data = {field: getattr(src, field) for field in _LINE_FIELDS}
+        data["position"] = line_index
+        if not data["product_id"]:
+            data["product_id"] = resolved_matches.get(src.pk)
+        offer = pricing.get(data["product_id"]) if data["product_id"] else None
+        if offer:
+            data["frozen_base_price"] = Decimal(offer["base_price"])
+            data["lead_time_days"] = offer["lead_time_days"]
+            if offer["currency"]:
+                from master_data.models import Currency
+
+                data["frozen_currency"] = Currency.objects.filter(code=offer["currency"]).first()
+        QuoteItem.objects.create(quote=quote, **data)
+
+    from .quotes import QuoteCalculationService
+
+    QuoteCalculationService.recalculate_quote(quote.id)
+    return len(request_items)
+
+
+def prepare_quote_from_request(deal_id: int, actor: CustomUser) -> Tuple[Optional[Quote], Optional[str], int]:
+    """W2 no-AI path: the same prefilled draft КП (lines copied, EXACT GOST/MPN matches bound,
+    prices from the seller's own offers) WITHOUT the paid AI fuzzy pass — for sellers without the
+    ai.draft entitlement. Free deterministic logic only: no credit consumed, no LLM call."""
+    deal, request_items, seller_company_id, err = _run_draft_quote_gates(
+        deal_id, actor, require_ai_entitlement=False
+    )
+    if err:
+        return None, err, 0
+    resolved_matches = _resolve_exact_catalog_matches(request_items)
+    with transaction.atomic():
+        quote, prefilled = _create_prefilled_quote(deal, actor, seller_company_id, request_items, resolved_matches)
+    quote.refresh_from_db()
+    return quote, None, prefilled
+
+
+# Deal stages the one-click button operates in: the pre-КП working set. QUOTE_SENT and later
+# stages already have a КП in flight — the short path must not fork a parallel draft there.
+_TAKEABLE_STAGES = ("RFQ_OPEN", "SOURCING", "CALCULATING")
+
+
+def take_and_prepare_quote(deal_id: int, actor: CustomUser) -> Tuple[Optional[dict], Optional[str]]:
+    """W2 «одна кнопка» (one-click-quotation, Odoo pattern): claim + stage advance + a prefilled
+    draft КП in ONE action, collapsing the 4–6 manual steps across two screens.
+
+    Orchestration of EXISTING services (no FSM bypass, no duplicated gates):
+      1. claim_deal — the actor's company takes its copy (no-op when already self-owned;
+         refuses when a teammate owns it).
+      2. transition_deal_stage → CALCULATING (RFQ_OPEN→CALCULATING is a legal single FSM hop —
+         one buyer notification, not two).
+      3. Idempotency: the actor company's existing КП short-circuits — pressing the button
+         twice never forks a second КП.
+      4. Mode: ai.draft-entitled sellers get {"mode": "ai"} — the VIEW enqueues the existing
+         draft_quote job (paid pass, 202+poll); everyone else gets the deterministic prefilled
+         КП synchronously ({"mode": "quote", "quote": ...}).
+
+    Returns ({"deal", "mode", "quote"|None}, None) or (None, error_code).
+    """
+    from crm.constants import DealStageCode
+
+    from .assignment import claim_deal
+    from .deals import transition_deal_stage
+
+    deal, err = claim_deal(deal_id, actor)
+    if err:
+        return None, err
+
+    stage_code = deal.stage.code if deal.stage_id else None
+    if stage_code not in _TAKEABLE_STAGES:
+        return None, "DEAL_STAGE_NOT_TAKEABLE"
+    if stage_code != DealStageCode.CALCULATING:
+        deal, err = transition_deal_stage(deal, DealStageCode.CALCULATING, actor)
+        if err:
+            return None, err
+
+    # Idempotency: this seller company's КП already exists → reuse it, never fork a duplicate.
+    from accounts.services.permissions import primary_seller_company_id
+
+    seller_company_id = primary_seller_company_id(actor)
+    existing = (
+        deal.quotes.exclude(prepared_by__isnull=True)
+        .filter(seller_company_id=seller_company_id)
+        .order_by("-version")
+        .first()
+        if seller_company_id
+        else None
+    )
+    if existing is not None:
+        return {"deal": deal, "mode": "quote", "quote": existing}, None
+
+    entitled_for_ai = False
+    if getattr(actor, "is_superuser", False):
+        entitled_for_ai = True
+    elif seller_company_id:
+        from accounts.constants import FeatureKey
+        from accounts.services import has_entitlement
+
+        entitled_for_ai = has_entitlement(seller_company_id, FeatureKey.AI_DRAFT)
+    if entitled_for_ai:
+        return {"deal": deal, "mode": "ai", "quote": None}, None
+
+    quote, err, _prefilled = prepare_quote_from_request(deal_id, actor)
+    if err:
+        return None, err
+    return {"deal": deal, "mode": "quote", "quote": quote}, None

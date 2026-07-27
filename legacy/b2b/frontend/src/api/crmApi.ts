@@ -1026,6 +1026,22 @@ export const crmApi = {
 		});
 	},
 
+	/**
+	 * W2 «одна кнопка» (one-click-quotation): claim + стадия + предзаполненный КП.
+	 * Бэкенд отвечает 200 {mode:'quote', quote_id} (без AI — КП уже готов) либо
+	 * 202 {mode:'ai', task_id} — тогда поллим существующий ai-status до готовности.
+	 * В обоих случаях резолвимся, когда КП существует и можно открывать билдер.
+	 */
+	takeAndPrepareQuote: async (dealId: number): Promise<{ quote_id?: number }> => {
+		const response = await apiClient.post<{ mode: string; task_id?: string; quote_id?: number }>(
+			`crm/deals/${dealId}/take-and-prepare/`,
+			{},
+		);
+		if (response.data.mode === 'quote') return { quote_id: response.data.quote_id };
+		const taskId = response.data.task_id as string;
+		return runAiJob<{ prefilled: number; quote_id: number }>(async () => ({ task_id: taskId }));
+	},
+
 	// ─── AI #7 pre-flight quality check ──────────────────────
 	// POST draft request lines → advisory quality findings per line.
 	// Advisory only (never blocks submit); may 503 {error:'AI_DISABLED'}.

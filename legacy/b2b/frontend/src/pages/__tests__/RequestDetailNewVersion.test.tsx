@@ -62,6 +62,7 @@ vi.mock('@/hooks/useCRM', () => ({
   usePreflightCheck: () => mutation(),
   useQuoteRequestDiff: () => mutation(),
   useClaimDeal: () => mutation(),
+  useTakeAndPrepareQuote: () => mutation(),
 }));
 
 vi.mock('@/store/userStore', () => ({
