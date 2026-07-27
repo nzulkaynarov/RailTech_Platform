@@ -126,3 +126,64 @@ def smart_match_candidates(raw_name: str, limit: int = 5, domain_hint: Optional[
         }
         for p in scored
     ]
+
+
+def suggest_sellers_for_deal(deal, *, per_line_candidates: int = 3) -> List[dict]:
+    """R1 (spec-freetext-rfq-routing): подобрать продавцов для заявки по её позициям.
+
+    Паттерн category-matched routing (Ariba Discovery / Alibaba RFQ). Каждая позиция заявки →
+    каталожный товар (СВОЙ product_id, если позиция взята из каталога, ИЛИ trigram-матч free-text
+    имени к PUBLISHED-товарам) → `owner_company` (продавец). Агрегируем по компании со счётом
+    СОВПАВШИХ позиций — наш аналог confidence («совпало 3 из 5»). Только SUPPLIER-компании.
+    Чистое чтение: ничего не пишет, никакого AI — детерминированный trigram.
+
+    Возврат по убыванию совпадений: [{company_id, name, matched_lines, total_lines}].
+    Пустой список, когда каталог ничего не подсказал (UI оставляет ручной выбор — без тупика).
+    """
+    from collections import defaultdict
+
+    from accounts.constants import SELLER_COMPANY_TYPES
+    from accounts.models import Company
+
+    request_quote = deal.quotes.filter(prepared_by__isnull=True).order_by("version").first()
+    if request_quote is None:
+        return []
+    lines = [
+        item
+        for item in request_quote.items.all()
+        if item.product_id or (item.imported_raw_name or "").strip()
+    ]
+    if not lines:
+        return []
+
+    company_hits: dict = defaultdict(int)  # seller company id → сколько позиций она может закрыть
+    for line in lines:
+        if line.product_id:
+            product_ids = [line.product_id]
+        else:
+            product_ids = [c["product_id"] for c in smart_match_candidates(line.imported_raw_name, limit=per_line_candidates)]
+        if not product_ids:
+            continue
+        owner_ids = (
+            Product.objects.filter(
+                id__in=product_ids,
+                status__code="PUBLISHED",
+                owner_company__types__code__in=SELLER_COMPANY_TYPES,
+            )
+            .values_list("owner_company_id", flat=True)
+            .distinct()
+        )
+        for owner_id in owner_ids:
+            if owner_id:
+                company_hits[owner_id] += 1  # одна позиция засчитывается компании один раз
+
+    if not company_hits:
+        return []
+    names = dict(Company.objects.filter(id__in=list(company_hits)).values_list("id", "name"))
+    total_lines = len(lines)
+    result = [
+        {"company_id": cid, "name": names.get(cid, ""), "matched_lines": hits, "total_lines": total_lines}
+        for cid, hits in company_hits.items()
+    ]
+    result.sort(key=lambda row: (-row["matched_lines"], row["name"]))
+    return result

@@ -413,6 +413,14 @@ export interface SellerCompanyRef {
 	name: string;
 }
 
+/** R1 — предложенный продавец: сколько позиций заявки он может закрыть (наш confidence). */
+export interface SuggestedSeller {
+	company_id: number;
+	name: string;
+	matched_lines: number;
+	total_lines: number;
+}
+
 export interface Deal {
 	id: number;
 	company?: number | null;
@@ -626,6 +634,12 @@ export const crmApi = {
 	// Returns the refreshed deal (incl. target_sellers_data).
 	routeDeal: async (dealId: number, sellerCompanyIds: number[]) => {
 		const response = await apiClient.post<Deal>(`crm/deals/${dealId}/route/`, { seller_company_ids: sellerCompanyIds });
+		return response.data;
+	},
+	// R1 (spec-freetext-rfq-routing): предложенные продавцы по позициям заявки (trigram-матч
+	// к каталогу, счёт совпавших позиций). Read-only подсказка для шага выбора получателей.
+	getSuggestedSellers: async (dealId: number): Promise<SuggestedSeller[]> => {
+		const response = await apiClient.get<SuggestedSeller[]>(`crm/deals/${dealId}/suggested-sellers/`);
 		return response.data;
 	},
 	changeDealStage: async (dealId: number, stageCode: string) => {

@@ -3600,6 +3600,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/crm/deals/{id}/suggested-sellers/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Suggested sellers for a free-text заявка (R1 — category-matched routing)
+         * @description Детерминированный trigram-подбор продавцов по позициям заявки (Ariba Discovery-паттерн): каждая позиция → каталожный товар → owner_company, со счётом совпавших позиций. Чистое чтение, без AI. Покупатель подтверждает выбор через POST route/. Пустой список — каталог не подсказал, покупатель выбирает вручную.
+         */
+        get: operations["crm_deals_suggested_sellers_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/deals/{id}/take-and-prepare/": {
         parameters: {
             query?: never;
@@ -11820,6 +11840,12 @@ export interface components {
             /** @default  */
             invite: string;
         };
+        SuggestedSellerItem: {
+            company_id: number;
+            name: string;
+            matched_lines: number;
+            total_lines: number;
+        };
         SupplierOffer: {
             readonly id: number;
             /**
@@ -18587,6 +18613,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DealDetail"];
+                };
+            };
+        };
+    };
+    crm_deals_suggested_sellers_list: {
+        parameters: {
+            query?: {
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Сделка. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuggestedSellerItem"][];
                 };
             };
         };

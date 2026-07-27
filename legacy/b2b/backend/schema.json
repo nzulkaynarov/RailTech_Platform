@@ -10354,6 +10354,56 @@
                 }
             }
         },
+        "/api/v1/crm/deals/{id}/suggested-sellers/": {
+            "get": {
+                "operationId": "crm_deals_suggested_sellers_list",
+                "description": "Детерминированный trigram-подбор продавцов по позициям заявки (Ariba Discovery-паттерн): каждая позиция → каталожный товар → owner_company, со счётом совпавших позиций. Чистое чтение, без AI. Покупатель подтверждает выбор через POST route/. Пустой список — каталог не подсказал, покупатель выбирает вручную.",
+                "summary": "Suggested sellers for a free-text заявка (R1 — category-matched routing)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Сделка.",
+                        "required": true
+                    },
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "A search term.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/SuggestedSellerItem"
+                                    }
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/v1/crm/deals/{id}/take-and-prepare/": {
             "post": {
                 "operationId": "crm_deals_take_and_prepare_create",
@@ -28963,6 +29013,29 @@
                 "required": [
                     "companyName",
                     "position"
+                ]
+            },
+            "SuggestedSellerItem": {
+                "type": "object",
+                "properties": {
+                    "company_id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "matched_lines": {
+                        "type": "integer"
+                    },
+                    "total_lines": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "company_id",
+                    "matched_lines",
+                    "name",
+                    "total_lines"
                 ]
             },
             "SupplierOffer": {

@@ -392,6 +392,41 @@ class DealViewSet(viewsets.ModelViewSet):
         deal = self.get_queryset().get(pk=pk)
         return Response(DealDetailSerializer(deal, context={"request": request}).data)
 
+    @extend_schema(
+        summary="Suggested sellers for a free-text заявка (R1 — category-matched routing)",
+        description=(
+            "Детерминированный trigram-подбор продавцов по позициям заявки (Ariba Discovery-паттерн): "
+            "каждая позиция → каталожный товар → owner_company, со счётом совпавших позиций. "
+            "Чистое чтение, без AI. Покупатель подтверждает выбор через POST route/. Пустой список — "
+            "каталог не подсказал, покупатель выбирает вручную."
+        ),
+        responses={
+            200: inline_serializer(
+                "SuggestedSellerItem",
+                fields={
+                    "company_id": drf_serializers.IntegerField(),
+                    "name": drf_serializers.CharField(),
+                    "matched_lines": drf_serializers.IntegerField(),
+                    "total_lines": drf_serializers.IntegerField(),
+                },
+                many=True,
+            )
+        },
+        tags=["CRM"],
+    )
+    @action(detail=True, methods=["get"], url_path="suggested-sellers", pagination_class=None)
+    def suggested_sellers(self, request, pk=None):
+        """Thin wrapper (Rule 8): read-only seller suggestions for the buyer's routing step."""
+        from accounts.services.permissions import is_member_of, is_platform_admin_viewer
+        from sourcing.services import suggest_sellers_for_deal
+
+        deal = self.get_object()
+        if is_platform_admin_viewer(request.user):
+            return Response({"detail": "ADMIN_VIEWER_CANNOT_ACT"}, status=status.HTTP_403_FORBIDDEN)
+        if not is_member_of(request.user, deal.company_id, capability="buy"):
+            return Response({"detail": "ONLY_BUYER_CAN_ROUTE"}, status=status.HTTP_403_FORBIDDEN)
+        return Response(suggest_sellers_for_deal(deal))
+
     def _assignment_response(self, deal, err, request):
         if err:
             http_status = (

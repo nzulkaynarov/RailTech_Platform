@@ -1,9 +1,9 @@
-import { useState, Fragment } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Trash2, PackagePlus, AlertTriangle, Send, Upload } from 'lucide-react';
+import { Plus, Trash2, PackagePlus, AlertTriangle, Send, Upload, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import type { QuoteItem } from '@/api/crmApi';
-import { useAddRequestItem, useUpdateQuoteItem, useDeleteQuoteItem, useSubmitRequest, useRouteDeal } from '@/hooks/useCRM';
+import { useAddRequestItem, useUpdateQuoteItem, useDeleteQuoteItem, useSubmitRequest, useRouteDeal, useSuggestedSellers } from '@/hooks/useCRM';
 import { usePartnerSuppliers } from '@/hooks/useAccounts';
 import { translateApiError } from '@/lib/apiError';
 import { uomLabelKey } from '@/lib/codes';
@@ -65,6 +65,20 @@ export function RequestItemsEditor({
   // know about EXPLICIT routings (hasRecipients) or catalog-linked lines (product set).
   const hasCatalogLines = items.some((item) => item.product != null);
   const { data: suppliers, isLoading: suppliersLoading } = usePartnerSuppliers(pickerOpen);
+  // R1 — предложенные продавцы по позициям заявки; грузим только когда пикер открыт.
+  const { data: suggested } = useSuggestedSellers(dealId, pickerOpen);
+  const suggestedById = new Map((suggested ?? []).map((s) => [s.company_id, s]));
+  // Предвыбор: когда подсказка пришла и покупатель ещё ничего не трогал — отмечаем совпавших.
+  const [touchedPicker, setTouchedPicker] = useState(false);
+  useEffect(() => {
+    if (pickerOpen && !touchedPicker && suggested && suggested.length > 0) {
+      setSelectedSellerIds(suggested.map((s) => s.company_id));
+    }
+  }, [pickerOpen, touchedPicker, suggested]);
+  // Совпавшие продавцы — вверх списка, чтобы покупатель видел их первыми.
+  const orderedSuppliers = [...(suppliers ?? [])].sort(
+    (a, b) => (suggestedById.get(b.id)?.matched_lines ?? 0) - (suggestedById.get(a.id)?.matched_lines ?? 0),
+  );
 
   const unitName = (code?: string) => units?.find((u) => u.code === code)?.name || '';
 
@@ -134,8 +148,10 @@ export function RequestItemsEditor({
     await doSubmit();
   };
 
-  const toggleSeller = (id: number) =>
+  const toggleSeller = (id: number) => {
+    setTouchedPicker(true);  // покупатель сам управляет выбором — больше не перетираем предвыбором
     setSelectedSellerIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
 
   const handleAdd = async () => {
     const name = newName.trim();
@@ -460,31 +476,54 @@ export function RequestItemsEditor({
 
       {/* Recipient picker for free-text заявки: the backend requires ≥1 seller routing
           (NO_RECIPIENTS invariant), and typed lines imply none — so the buyer chooses here. */}
-      <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
+      <Dialog
+        open={pickerOpen}
+        onOpenChange={(open) => {
+          setPickerOpen(open);
+          if (!open) { setTouchedPicker(false); setSelectedSellerIds([]); }  // reopen → пере-подскажем
+        }}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{t('requestItems.pickSuppliersTitle')}</DialogTitle>
             <DialogDescription>{t('requestItems.pickSuppliersDesc')}</DialogDescription>
           </DialogHeader>
+          {/* R1 — подсказка: платформа сама нашла подходящих продавцов по позициям заявки. */}
+          {(suggested?.length ?? 0) > 0 && (
+            <div className="flex items-start gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs">
+              <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+              <span>{t('requestItems.suggestedHint', { count: suggested!.length })}</span>
+            </div>
+          )}
           <div className="max-h-64 space-y-1 overflow-y-auto">
             {suppliersLoading ? (
               <p className="py-4 text-center text-sm text-muted-foreground">…</p>
             ) : (suppliers?.length ?? 0) === 0 ? (
               <p className="py-4 text-center text-sm text-muted-foreground">{t('requestItems.noSuppliers')}</p>
             ) : (
-              suppliers!.map((supplier) => (
-                <label
-                  key={supplier.id}
-                  className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 hover:bg-accent"
-                >
-                  <Checkbox
-                    checked={selectedSellerIds.includes(supplier.id)}
-                    onCheckedChange={() => toggleSeller(supplier.id)}
-                  />
-                  <span className="flex-1 text-sm">{supplier.name}</span>
-                  {supplier.inn && <span className="text-xs text-muted-foreground">{t('nav.inn')} {supplier.inn}</span>}
-                </label>
-              ))
+              orderedSuppliers.map((supplier) => {
+                const hit = suggestedById.get(supplier.id);
+                return (
+                  <label
+                    key={supplier.id}
+                    className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 hover:bg-accent"
+                  >
+                    <Checkbox
+                      checked={selectedSellerIds.includes(supplier.id)}
+                      onCheckedChange={() => toggleSeller(supplier.id)}
+                    />
+                    <span className="flex-1 text-sm">{supplier.name}</span>
+                    {hit ? (
+                      <Badge variant="secondary" className="gap-1 text-xs font-normal">
+                        <Sparkles className="h-3 w-3" aria-hidden="true" />
+                        {t('requestItems.matchedLines', { matched: hit.matched_lines, total: hit.total_lines })}
+                      </Badge>
+                    ) : supplier.inn ? (
+                      <span className="text-xs text-muted-foreground">{t('nav.inn')} {supplier.inn}</span>
+                    ) : null}
+                  </label>
+                );
+              })
             )}
           </div>
           <DialogFooter>

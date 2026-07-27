@@ -4974,7 +4974,10 @@
     "pickSuppliersTitle": "Who should receive this request?",
     "pickSuppliersDesc": "Choose the suppliers — they will receive your request and prepare quotes.",
     "noSuppliers": "No verified suppliers on the platform yet. Try again later or contact support.",
-    "sendToSelected": "Send to selected"
+    "sendToSelected": "Send to selected",
+    "suggestedHint_one": "Found {{count}} matching supplier for your items — pre-selected. You can uncheck or add others.",
+    "suggestedHint_other": "Found {{count}} matching suppliers for your items — pre-selected. You can uncheck or add others.",
+    "matchedLines": "matched {{matched}} of {{total}}"
   },
   "requestDetailActions": {
     "titleLabel": "Request title",

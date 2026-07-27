@@ -72,6 +72,14 @@ export const useDealSuppliers = () => useQuery({
   staleTime: 5 * 60_000,
 });
 
+/** R1 — предложенные продавцы для заявки (только когда пикер открыт). */
+export const useSuggestedSellers = (dealId: number, enabled: boolean) => useQuery({
+  queryKey: ['suggested-sellers', dealId],
+  queryFn: () => crmApi.getSuggestedSellers(dealId),
+  enabled,
+  staleTime: 60_000,
+});
+
 // Buyer routes a DRAFT RFQ to seller companies. Invalidate the deals list and
 // the specific deal detail (key ['deals', id]) so target_sellers_data refreshes.
 export const useRouteDeal = () => {
