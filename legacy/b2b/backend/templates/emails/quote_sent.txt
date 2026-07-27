@@ -1,6 +1,6 @@
 Здравствуйте{% if recipient_name %}, {{ recipient_name }}{% endif %}!
 
-{% if seller_name %}Компания «{{ seller_name }}» подготовила{% else %}Для вас подготовлено{% endif %} коммерческое предложение по сделке №{{ deal_id }} (версия {{ quote_version }}).
+{% if seller_name %}Компания {{ seller_name }} подготовила{% else %}Для вас подготовлено{% endif %} коммерческое предложение № {{ quote_number }} (версия {{ quote_version }}).
 
 Сумма с НДС: {{ total_incl_vat }}
 Действительно до: {{ valid_until }}

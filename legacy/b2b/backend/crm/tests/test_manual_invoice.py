@@ -187,6 +187,38 @@ def test_manual_invoice_with_manual_lines_only(scenario):
 
 
 @pytest.mark.django_db
+def test_invoice_supplier_resolves_via_source_quote_when_no_contract(scenario):
+    # D0: a manual invoice built from a КП has no contract, but the header supplier must still
+    # resolve (via the item's source_quote_item → КП → seller), NOT print «—».
+    from crm.services.billing import _invoice_seller_company
+
+    invoice, err = create_manual_invoice(
+        scenario["deal"].id, scenario["seller_user"], source_quote_id=scenario["quote"].id
+    )
+    assert err is None and invoice.contract_id is None
+    supplier = _invoice_seller_company(invoice)
+    assert supplier is not None
+    assert supplier.id == scenario["seller"].id  # Seller A, never the co-routed competitor
+
+
+@pytest.mark.django_db
+def test_invoice_supplier_resolves_via_deal_routing_for_pure_manual(scenario):
+    # D0: a pure-manual invoice (ad-hoc lines, no КП) on a solo deal still names the seller —
+    # falls back to the creator's routed company / the deal's sole routing.
+    from crm.services.billing import _invoice_seller_company
+
+    invoice, err = create_manual_invoice(
+        scenario["solo_deal"].id,
+        scenario["seller_user"],
+        lines=[{"description": "Доставка", "quantity": 1, "unit_price_excl_vat": "150000.00"}],
+    )
+    assert err is None
+    supplier = _invoice_seller_company(invoice)
+    assert supplier is not None
+    assert supplier.id == scenario["seller"].id
+
+
+@pytest.mark.django_db
 def test_pure_manual_on_multiseller_deal_requires_a_quote(scenario):
     """Confidentiality (ADR-0003): a pure-manual invoice on a MULTI-seller deal has no owner
     anchor and would leak to a co-routed competitor — so it is refused; the seller must pull a КП

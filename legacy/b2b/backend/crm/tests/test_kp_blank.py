@@ -18,18 +18,37 @@ class _Profile:
 
 def test_cover_letter_substitutes_tokens():
     out = resolve_cover_letter(
-        _Profile(text="{{seller}} благодарит {{buyer}} за заявку {{deal}}."),
+        _Profile(text="{{seller}} благодарит {{buyer}} за запрос от {{deal}}."),
         buyer_name="ООО «Клиент»",
-        deal_number="КП-2026-42",
+        deal_ref="24.07.2026",
         seller_name="ООО «Продавец»",
     )
-    assert out == "ООО «Продавец» благодарит ООО «Клиент» за заявку КП-2026-42."
+    assert out == "ООО «Продавец» благодарит ООО «Клиент» за запрос от 24.07.2026."
 
 
 def test_cover_letter_disabled_or_empty_returns_blank():
     assert resolve_cover_letter(_Profile(show=False, text="x"), buyer_name="B") == ""
     assert resolve_cover_letter(_Profile(show=True, text="   "), buyer_name="B") == ""
     assert resolve_cover_letter(None, buyer_name="B") == ""
+
+
+def test_cover_letter_tidies_empty_buyer_placeholder():
+    # D0: no counterparty (solo deal) → the flat «…, {{buyer}}.» must not leave a dangling «, .».
+    out = resolve_cover_letter(
+        _Profile(text="Благодарим за интерес к сотрудничеству, {{buyer}}."),
+        buyer_name="",
+        seller_name="ООО «Продавец»",
+    )
+    assert out == "Благодарим за интерес к сотрудничеству."
+
+
+def test_cover_letter_keeps_normal_punctuation_when_filled():
+    # Cleanup runs only on empty substitution — a filled buyer name with quotes is untouched.
+    out = resolve_cover_letter(
+        _Profile(text="Уважаемый {{buyer}}, направляем предложение."),
+        buyer_name="ООО «Ромашка»",
+    )
+    assert out == "Уважаемый ООО «Ромашка», направляем предложение."
 
 
 def test_cover_letter_is_not_a_template_engine_no_ssti():
@@ -147,12 +166,44 @@ def test_brand_context_for_pdf_inlines_relative_media_logo(tmp_path, settings):
     assert brand["accent"] == "#15294d"  # rest of the context untouched
 
 
-def test_brand_context_for_pdf_leaves_absolute_urls_and_none(settings):
+def test_brand_context_for_pdf_absolute_url_degrades_or_reads_profile_file(settings):
+    """WeasyPrint fetches nothing — an absolute URL we can't resolve to a storage FILE must
+    degrade to «no logo» (text letterhead), never survive as a broken-image box. When the live
+    profile object carries the FieldFile, its bytes are inlined regardless of URL shape."""
+    import io
+
+    from django.core.files.storage import default_storage
+
     from crm.services.documents import brand_context_for_pdf
 
+    # No profile object + unreachable absolute URL → logo dropped.
     absolute = {"seller_logo_url": "http://minio:9000/bucket/logo.png?sig=x"}
-    assert brand_context_for_pdf(absolute)["seller_logo_url"] == absolute["seller_logo_url"]
+    assert brand_context_for_pdf(absolute)["seller_logo_url"] is None
     assert brand_context_for_pdf({"seller_logo_url": None})["seller_logo_url"] is None
+    # data: URI passes through untouched.
+    data_uri = {"seller_logo_url": "data:image/png;base64,QUJD"}
+    assert brand_context_for_pdf(data_uri)["seller_logo_url"] == data_uri["seller_logo_url"]
+
+    # Live profile with a real storage file → inlined even when .url is an absolute URL.
+    class _P:
+        pass
+
+    profile = _P()
+    name = default_storage.save("companies/logos/abs-test.png", io.BytesIO(b"\x89PNG abs"))
+    from django.db.models.fields.files import FieldFile
+
+    class _F:
+        def __init__(self, storage_name):
+            self.name = storage_name
+
+        def open(self, mode="rb"):
+            return default_storage.open(self.name, mode)
+
+    profile.logo = _F(name)
+    brand = brand_context_for_pdf(
+        {"seller_logo_url": "http://minio:9000/whatever.png", "seller_profile": profile}
+    )
+    assert brand["seller_logo_url"].startswith("data:image/png;base64,")
 
 
 def test_brand_context_for_pdf_missing_file_degrades_to_no_logo(tmp_path, settings):

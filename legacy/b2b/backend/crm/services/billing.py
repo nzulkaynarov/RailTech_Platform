@@ -139,6 +139,42 @@ def generate_invoice_from_contract(
     return invoice, None
 
 
+def _invoice_seller_company(invoice):
+    """Resolve the REAL seller (supplier) that a legal invoice must name — never a platform
+    identity (Rule 1/2). A contract-based invoice resolves via contract→КП. A MANUAL invoice
+    (Wave G, contract=None) loses that link, so fall back, in order, to:
+      (1) a source КП carried on its items (built «из активного КП»),
+      (2) the seller company that created it, scoped to THIS deal's routing,
+      (3) the deal's sole seller routing (unambiguous single-seller / solo deal).
+    Returns None only when no seller is derivable — the template then shows «—», not a fake ИНН.
+    """
+    from accounts.models import Company
+
+    from .quotes import _quote_seller_company
+
+    quote = invoice.contract.quote if (invoice.contract_id and invoice.contract.quote_id) else None
+    if quote is None:
+        item = (
+            invoice.items.filter(source_quote_item__isnull=False)
+            .select_related("source_quote_item__quote")
+            .first()
+        )
+        if item and item.source_quote_item and item.source_quote_item.quote_id:
+            quote = item.source_quote_item.quote
+    supplier = _quote_seller_company(quote) if quote else None
+    if supplier is None and invoice.created_by_id:
+        from accounts.services.permissions import routed_seller_company_id
+
+        company_id = routed_seller_company_id(invoice.created_by, invoice.deal_id)
+        if company_id:
+            supplier = Company.objects.filter(pk=company_id).first()
+    if supplier is None:
+        routed = list(invoice.deal.seller_routings.values_list("seller_company_id", flat=True)[:2])
+        if len(routed) == 1:
+            supplier = Company.objects.filter(pk=routed[0]).first()
+    return supplier
+
+
 def _render_invoice_pdf(invoice) -> None:
     from io import BytesIO
 
@@ -146,16 +182,9 @@ def _render_invoice_pdf(invoice) -> None:
     from django.template.loader import render_to_string
     from weasyprint import HTML
 
-    # Supplier = the REAL seller that owns the underlying КП (via the invoice's contract),
-    # plus its branded document profile (shared document_brand_context) — NEVER a hardcoded
-    # platform identity. An invoice is a legal document and must name the real counterparty
-    # (Rule 1/2). Falls back gracefully when the seller can't be resolved (manual invoice
-    # without a contract) — the template shows "—", not a fake ИНН.
     from .documents import brand_context_for_pdf, document_brand_context
-    from .quotes import _quote_seller_company
 
-    quote = invoice.contract.quote if (invoice.contract_id and invoice.contract.quote_id) else None
-    supplier = _quote_seller_company(quote) if quote else None
+    supplier = _invoice_seller_company(invoice)
 
     html_string = render_to_string(
         "crm/invoice_pdf.html",

@@ -447,15 +447,21 @@ def send_quote_email(self, quote_id: int) -> dict:
     # The КП is prepared by the REAL selling company, never the platform — the email must name it
     # (Rule 1: no hardcoded platform identity). Same resolution as the public page / acceptance code.
     seller_name = getattr(quote.seller_company, "name", None) or "Поставщик"
+    # D0 content-correctness: the client sees the КП NUMBER (not the internal deal id) and a sum WITH
+    # its currency. `money` is the same NBSP-grouped formatter the PDF uses (reused, not re-invented).
+    from crm.templatetags.document_format import money
+
+    presentation_ccy = getattr(quote.quote_currency, "code", None) or "UZS"
+    quote_number = quote.number or f"{quote.deal_id}-в{quote.version}"
     send_templated_email(
         "quote_sent",
         {
             "recipient_name": to_name,
             "seller_name": seller_name,
-            "deal_id": quote.deal_id,
+            "quote_number": quote_number,
             "quote_version": quote.version,
             "valid_until": quote.valid_until.strftime("%d.%m.%Y") if quote.valid_until else "—",
-            "total_incl_vat": str(quote.total_incl_vat),
+            "total_incl_vat": money(quote.total_incl_vat, presentation_ccy),
             "public_link": public_link,
         },
         to=[to_email],

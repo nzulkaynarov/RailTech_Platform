@@ -103,10 +103,13 @@ class QuoteLifecycleService:
         doc_profile = CompanyDocumentProfile.objects.filter(company=seller_company).first()
         seller_settings = CompanySettings.objects.filter(company=seller_company).first()
         buyer = quote.deal.company
+        # {{deal}} = the buyer's REQUEST reference. A заявка has no formal number (owner
+        # decision 27-07) → use its creation date («на Ваш запрос от 24.07.2026»).
+        deal_created = getattr(quote.deal, "created_at", None)
         cover_text = resolve_cover_letter(
             doc_profile,
             buyer_name=getattr(buyer, "name", "") or "",
-            deal_number=quote.number or quote.deal_id,
+            deal_ref=deal_created.strftime("%d.%m.%Y") if deal_created else "",
             seller_name=getattr(seller_company, "name", "") or "",
         )
         incoterm = ""

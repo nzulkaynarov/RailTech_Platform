@@ -7,6 +7,7 @@ on an identical context shape is what makes the documents read as one product (A
 document-polish P1). Rule 8: logic lives here; the render functions are thin.
 """
 
+import re
 from typing import Optional
 
 from core.validators import is_hex_color
@@ -103,21 +104,42 @@ def brand_context_for_pdf(brand: dict) -> dict:
     row). Absolute http(s) URLs (e.g. dev MinIO, reachable in-network) are left as-is; missing or
     oversized files degrade to no logo (the template then prints the text name, not a broken box).
     """
-    from django.conf import settings
-
-    logo_url = brand.get("seller_logo_url")
-    if not logo_url or not logo_url.startswith(settings.MEDIA_URL):
-        return brand
     import base64
     import mimetypes
 
-    from django.core.files.storage import default_storage
+    from django.conf import settings
 
-    name = logo_url[len(settings.MEDIA_URL):]
-    try:
-        with default_storage.open(name, "rb") as file_handle:
-            data = file_handle.read(_LOGO_EMBED_MAX_BYTES + 1)
-    except (OSError, ValueError, FileNotFoundError):
+    logo_url = brand.get("seller_logo_url")
+    if not logo_url or logo_url.startswith("data:"):
+        return brand
+
+    data = None
+    name = ""
+    # Live render context carries the real CompanyDocumentProfile — read its file straight from
+    # storage (works for ANY backend/URL shape: prod relative /media, dev MinIO absolute URL that
+    # the container can't reach back through, future CDN). Snapshot renders carry a
+    # SimpleNamespace without the FieldFile — those fall to the MEDIA_URL-relative branch below.
+    profile = brand.get("seller_profile")
+    logo_field = getattr(profile, "logo", None)
+    if logo_field is not None and hasattr(logo_field, "open"):
+        try:
+            with logo_field.open("rb") as file_handle:
+                data = file_handle.read(_LOGO_EMBED_MAX_BYTES + 1)
+            name = logo_field.name or ""
+        except (OSError, ValueError, FileNotFoundError):
+            data = None
+    if data is None and logo_url.startswith(settings.MEDIA_URL):
+        from django.core.files.storage import default_storage
+
+        name = logo_url[len(settings.MEDIA_URL):]
+        try:
+            with default_storage.open(name, "rb") as file_handle:
+                data = file_handle.read(_LOGO_EMBED_MAX_BYTES + 1)
+        except (OSError, ValueError, FileNotFoundError):
+            data = None
+    if data is None:
+        # Unresolvable absolute URL (or dangling key): degrade to NO logo — the letterhead then
+        # prints the text name, never a broken-image box (WeasyPrint deliberately fetches nothing).
         return {**brand, "seller_logo_url": None}
     if len(data) > _LOGO_EMBED_MAX_BYTES:
         return {**brand, "seller_logo_url": None}
@@ -289,7 +311,7 @@ def _render_sample_quote_html(brand: dict, cover_profile=None) -> str:
         or ""
     )
     cover_text = resolve_cover_letter(
-        cover_profile, buyer_name=_SAMPLE_BUYER["name"], deal_number="КП-2026-000123", seller_name=_seller_name
+        cover_profile, buyer_name=_SAMPLE_BUYER["name"], deal_ref="08.07.2026", seller_name=_seller_name
     )
     quote_terms = build_quote_terms(
         shipment_place=(getattr(brand.get("seller_profile"), "legal_address", "") or "Республика Узбекистан, г. Ташкент"),
@@ -711,23 +733,46 @@ def _brand_context_from_row(seller_company, row, *, is_demo: bool = False) -> di
 # ── КП «фирменный бланк»: сопроводительный текст + структурные условия (spec-kp-blank) ──
 
 
-def resolve_cover_letter(profile, *, buyer_name: str = "", deal_number: str = "", seller_name: str = "") -> str:
+def _tidy_empty_substitutions(text: str) -> str:
+    """Clean the punctuation residue an EMPTY token leaves behind.
+
+    A flat substitution of «…за интерес, {{buyer}}.» with no buyer yields «…за интерес, .».
+    Collapse the artifacts (empty brackets/quotes, space-before-punctuation, doubled
+    punctuation, runs of spaces) so a missing counterparty never prints a dangling comma.
+    Only runs when a token actually resolved to «» — normal seller text is left untouched.
+    """
+    text = re.sub(r"«\s*»|\(\s*\)|\"\s*\"", "", text)  # empty brackets/quotes
+    text = re.sub(r"\s+([,.;:!?])", r"\1", text)  # space before punctuation
+    text = re.sub(r"([,;:])\s*([.,;:])", r"\2", text)  # doubled punctuation → keep the last
+    text = re.sub(r"[ \t]{2,}", " ", text)  # collapse space runs
+    text = re.sub(r"[ \t]+\n", "\n", text)  # trailing spaces per line
+    return text.strip()
+
+
+def resolve_cover_letter(profile, *, buyer_name: str = "", deal_ref: str = "", seller_name: str = "") -> str:
     """Resolved cover-letter paragraph, or "" when disabled/empty.
 
     FLAT token substitution ({{buyer}}/{{deal}}/{{seller}}) — the stored text is NEVER rendered
     as a Django template (no SSTI). Values are inserted raw; the caller's template prints it via
     `|linebreaks`, which auto-escapes, so an injected value can't become markup (no XSS).
+
+    `deal_ref` fills {{deal}} — the buyer's REQUEST reference. A заявка has no formal number
+    (owner decision 27-07), so callers pass its date («на Ваш запрос от 24.07.2026»).
     """
     if not profile or not getattr(profile, "show_cover_letter", False):
         return ""
     text = (getattr(profile, "cover_letter_text", "") or "").strip()
     if not text:
         return ""
-    return (
-        text.replace("{{buyer}}", buyer_name or "")
-        .replace("{{deal}}", str(deal_number or ""))
-        .replace("{{seller}}", seller_name or "")
-    )
+    values = {
+        "{{buyer}}": buyer_name or "",
+        "{{deal}}": str(deal_ref or ""),
+        "{{seller}}": seller_name or "",
+    }
+    had_empty = any(token in text and not value for token, value in values.items())
+    for token, value in values.items():
+        text = text.replace(token, value)
+    return _tidy_empty_substitutions(text) if had_empty else text
 
 
 def build_quote_terms(

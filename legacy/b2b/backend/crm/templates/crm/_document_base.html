@@ -59,7 +59,14 @@
     /* Поля печати по ГОСТ Р 7.0.97-2016 (орг-документы): левое ≥20мм (подшивка), правое ≥10мм,
        верх/низ ≥20мм. Стандартная A4-вёрстка, а не подгонка под конкретный бланк. */
     margin: 20mm 15mm 20mm 20mm;
-    @bottom-center {
+    /* Running footer (F-doc): the seller footer line lives in the page-margin box, NOT in flow.
+       An in-flow trailing footer with a top margin spills onto a near-empty last page whenever
+       the body ends close to the bottom edge (audit «пустая стр. 2»). As a running element it
+       prints at the bottom of EVERY page and can never force an extra page. */
+    @bottom-left {
+      content: element(docfooter);
+    }
+    @bottom-right {
       content: "Стр. " counter(page) " из " counter(pages);
       font-family: 'Helvetica', 'Arial', sans-serif;
       font-size: var(--fs-xs);
@@ -185,7 +192,9 @@
   .sign-line { margin-top: 26pt; border-top: 0.75pt solid #9aa0a6; padding-top: 3pt; font-size: 7.8pt; color: var(--muted); }
   .seal { margin-top: 10pt; font-size: 7.8pt; color: var(--muted); }
 
-  .footer { margin-top: 26pt; padding-top: 8pt; border-top: 0.5pt solid var(--line); font-size: var(--fs-xs); color: #9aa0a6; text-align: center; }
+  /* Rendered into the @bottom-left page-margin box via position:running() — see @page above.
+     No top margin (it's not in flow); a thin rule + muted text read as a professional footer. */
+  .footer { position: running(docfooter); padding-top: 4pt; border-top: 0.5pt solid var(--line); font-size: var(--fs-xs); color: #9aa0a6; text-align: left; width: 100%; }
 
   /* Move 4 monetization: DEMO watermark. position:fixed repeats on every page in WeasyPrint. */
   .demo-watermark {

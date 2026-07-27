@@ -5390,8 +5390,8 @@
     "showCoverLetter": "Cover letter",
     "showCoverLetterHint": "Introductory paragraph at the top of the КП before the table",
     "coverText": "Cover-letter text",
-    "coverTextPlaceholder": "e.g.: {{seller}} thanks {{buyer}} for their interest and offers the following products:",
-    "coverTextTokens": "Tokens: {{buyer}} — counterparty, {{deal}} — quote number, {{seller}} — your company.",
+    "coverTextPlaceholder": "e.g.: {{seller}} thanks {{buyer}} for their interest and, in reply to your request of {{deal}}, offers the following products:",
+    "coverTextTokens": "Tokens: {{buyer}} — counterparty, {{deal}} — request date, {{seller}} — your company.",
     "preview": "Preview",
     "previewHint": "A live sample with your branding — reflects unsaved changes. One theme applies to all documents.",
     "previewTypes": {

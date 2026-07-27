@@ -8,7 +8,7 @@
 {% endcomment %}
 {% block doc_meta %}
   <div class="doc-no">Инвойс № {{ invoice.number }}</div>
-  <div>от {{ invoice.issued_at|date:"d.m.Y" }}</div>
+  <div>от {% if invoice.issued_at %}{{ invoice.issued_at|date:"d.m.Y" }}{% else %}{{ invoice.created_at|date:"d.m.Y" }}{% endif %}</div>
   {% if invoice.due_date %}<div>оплата до {{ invoice.due_date|date:"d.m.Y" }}</div>{% endif %}
   {% if invoice.contract %}<div>по договору № {{ invoice.contract.number }}</div>{% endif %}
 {% endblock %}
@@ -94,7 +94,7 @@
     {% elif seller.bank_account %}
     <p><span class="k">Р/с:</span> {{ seller.bank_account }}{% if seller.mfo %} · <span class="k">МФО:</span> {{ seller.mfo }}{% endif %}</p>
     {% endif %}
-    <p><span class="k">Назначение платежа:</span> Оплата по счёту № {{ invoice.number }} от {{ invoice.issued_at|date:"d.m.Y" }}{% if invoice.contract %}, договор № {{ invoice.contract.number }}{% endif %}, в т.ч. НДС {{ invoice.vat_amount|money:ccy }}.</p>
+    <p><span class="k">Назначение платежа:</span> Оплата по счёту № {{ invoice.number }} от {% if invoice.issued_at %}{{ invoice.issued_at|date:"d.m.Y" }}{% else %}{{ invoice.created_at|date:"d.m.Y" }}{% endif %}{% if invoice.contract %}, договор № {{ invoice.contract.number }}{% endif %}, в т.ч. НДС {{ invoice.vat_amount|money:ccy }}.</p>
   </div>
 
   {% if invoice.notes %}

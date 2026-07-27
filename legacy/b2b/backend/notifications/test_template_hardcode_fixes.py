@@ -23,9 +23,9 @@ def test_quote_sent_names_the_real_seller_not_railtech():
         {
             "recipient_name": "Алиса",
             "seller_name": "ООО «Вагонсервис»",
-            "deal_id": 1024,
+            "quote_number": "КП-2026-00099",
             "quote_version": 1,
-            "total_incl_vat": "20 608 000",
+            "total_incl_vat": "20 608 000,00 UZS",
             "valid_until": "08.08.2026",
             "public_link": "https://x/y",
         },
@@ -36,13 +36,18 @@ def test_quote_sent_names_the_real_seller_not_railtech():
     # ...and the old hardcoded platform identity is gone.
     assert "Компания <strong>RailTech</strong>" not in html
     assert "RailTech" not in subject
+    # D0 content-correctness: the client sees the КП NUMBER (not an internal deal id), the sum WITH
+    # currency, and the subject does not nest «ёлочки» around an already-quoted seller name.
+    assert "КП-2026-00099" in subject and "КП-2026-00099" in html
+    assert "UZS" in html
+    assert "«ООО «Вагонсервис»»" not in subject
 
 
 @pytest.mark.django_db
 def test_quote_sent_without_seller_is_graceful():
     _subject, _text, html = _render_bodies(
         "quote_sent",
-        {"recipient_name": "Алиса", "deal_id": 1, "quote_version": 1, "total_incl_vat": "1", "valid_until": "—"},
+        {"recipient_name": "Алиса", "quote_number": "КП-2026-00001", "quote_version": 1, "total_incl_vat": "1", "valid_until": "—"},
     )
     # No seller → neutral wording, never a fabricated company name.
     assert "подготовлено" in html
