@@ -5,8 +5,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Handshake, UserCheck, Loader2 } from 'lucide-react';
+import { Handshake, UserCheck, Loader2, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatWaiting, isUnclaimedRfq, waitingHours } from '@/lib/waiting';
 import { useClaimDeal } from '@/hooks/useCRM';
 import { useIsSoloSeller } from '@/hooks/useCapabilities';
 import { DEAL_STAGE_LABEL_KEY } from '@/lib/codes';
@@ -132,6 +133,17 @@ export function DealsKanban({ deals, stages, onOpen }: DealsKanbanProps) {
                         {/* Ownership keys off assigned_to (the id) — NOT the name, which is empty for
                             invited members (blank full name) and redacted across tenants, so a claimed
                             deal would otherwise render as unclaimed. Name is display-only with a fallback. */}
+                        {/* W3 aging-counter: непринятая пред-КП заявка показывает, сколько она
+                            ждёт (warning < 24ч, destructive дальше) — Bitrix24-паттерн счётчиков. */}
+                        {isUnclaimedRfq(d) && formatWaiting(t, d.created_at) ? (
+                          <div className={cn(
+                            'flex items-center gap-1 text-xs font-medium',
+                            (waitingHours(d.created_at) ?? 0) >= 24 ? 'text-destructive' : 'text-warning',
+                          )}>
+                            <Clock className="h-3 w-3" aria-hidden="true" />
+                            {formatWaiting(t, d.created_at)}
+                          </div>
+                        ) : null}
                         {d.assigned_to != null ? (
                           <Badge variant="secondary" className="gap-1 text-xs font-normal">
                             <UserCheck className="h-3 w-3" aria-hidden="true" />

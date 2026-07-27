@@ -2492,7 +2492,8 @@
       "signContract": "Contracts to sign",
       "rfqNoKp": "RFQs without a quote",
       "expiredKp": "Expired quotes",
-      "reviewKp": "Quotes to review"
+      "reviewKp": "Quotes to review",
+      "oldestWaiting": "oldest {{waiting}}"
     },
     "funnel": {
       "title": "Deal pipeline"
@@ -5942,5 +5943,11 @@
       "act": "Acts",
       "generated": "Documents"
     }
+  },
+  "deals": {
+    "waitingHours_one": "waiting {{count}} h",
+    "waitingHours_other": "waiting {{count}} h",
+    "waitingDays_one": "waiting {{count}} day",
+    "waitingDays_other": "waiting {{count}} days"
   }
 }

@@ -2496,7 +2496,8 @@
       "signContract": "Договоры на подписи",
       "rfqNoKp": "Заявки без КП",
       "expiredKp": "Истёкшие КП",
-      "reviewKp": "КП к рассмотрению"
+      "reviewKp": "КП к рассмотрению",
+      "oldestWaiting": "старшая {{waiting}}"
     },
     "funnel": {
       "title": "Воронка сделок"
@@ -5946,5 +5947,15 @@
       "act": "Акты",
       "generated": "Документы"
     }
+  },
+  "deals": {
+    "waitingHours_one": "ждёт {{count}} ч",
+    "waitingHours_few": "ждёт {{count}} ч",
+    "waitingHours_many": "ждёт {{count}} ч",
+    "waitingHours_other": "ждёт {{count}} ч",
+    "waitingDays_one": "ждёт {{count}} дн.",
+    "waitingDays_few": "ждёт {{count}} дн.",
+    "waitingDays_many": "ждёт {{count}} дн.",
+    "waitingDays_other": "ждёт {{count}} дн."
   }
 }

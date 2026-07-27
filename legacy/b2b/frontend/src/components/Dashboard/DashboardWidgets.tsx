@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ClipboardCheck, PenLine, FileWarning, FileClock, FileCheck2, type LucideIcon } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
+import { PRE_KP_STAGES, formatWaiting, isUnclaimedRfq } from '@/lib/waiting';
 import { Card, CardContent } from '@/components/ui/card';
 import { useDeals, useQuotes, useMyApprovalQueue, useDealStages } from '@/hooks/useCRM';
 import { useContracts } from '@/hooks/useBilling';
@@ -13,8 +14,7 @@ import type { DashboardStats } from '@/api/dashboardApi';
 // ── Urgency signals are derived from real data and compared BY CODE (FSM canon),
 //    never by translated name and never by an arbitrary time threshold. ────────
 
-// A buyer RFQ sits in these stages until the seller answers it with a КП.
-const PRE_KP_STAGES = ['RFQ_OPEN', 'SOURCING', 'CALCULATING'];
+// A buyer RFQ sits in these stages until the seller answers it with a КП (shared lib/waiting).
 // Quote statuses that are still "in flight" (a КП that has expired here must be re-issued).
 const ACTIVE_QUOTE_STATUSES = ['DRAFT', 'PENDING_TRADE_REVIEW', 'PENDING_APPROVAL', 'READY_TO_SEND', 'SENT'];
 
@@ -26,6 +26,8 @@ interface AttentionItem {
   count: number;
   tone: Tone;
   page: string;
+  /** W3 aging-counter: вторичная строка («старшая ждёт 6 ч»). */
+  hint?: string | null;
 }
 
 function AttentionStat({ item, onNavigate }: { item: AttentionItem; onNavigate: (p: string) => void }) {
@@ -56,6 +58,9 @@ function AttentionStat({ item, onNavigate }: { item: AttentionItem; onNavigate: 
       <div className="min-w-0">
         <div className="text-2xl font-bold tabular-nums leading-none">{item.count}</div>
         <div className="mt-1 truncate text-xs text-muted-foreground">{item.label}</div>
+        {item.hint && item.count > 0 ? (
+          <div className="mt-0.5 truncate text-xs font-medium text-destructive">{item.hint}</div>
+        ) : null}
       </div>
     </button>
   );
@@ -79,7 +84,13 @@ export function SellerAttentionStrip({ onNavigate }: { onNavigate: (p: string) =
   const { data: deals } = useDeals();
   const { data: quotes } = useQuotes();
 
-  const rfqsNeedingKp = (deals ?? []).filter((d) => PRE_KP_STAGES.includes(d.stage_code ?? '')).length;
+  const rfqQueue = (deals ?? []).filter((d) => PRE_KP_STAGES.includes(d.stage_code ?? ''));
+  const rfqsNeedingKp = rfqQueue.length;
+  // W3 aging-counter (Bitrix24): сколько ждёт самая старая НЕПРИНЯТАЯ заявка.
+  const oldestUnclaimed = rfqQueue
+    .filter((d) => isUnclaimedRfq(d))
+    .reduce<string | null>((oldest, d) => (!oldest || (d.created_at ?? '') < oldest ? d.created_at ?? oldest : oldest), null);
+  const oldestWaiting = formatWaiting(t, oldestUnclaimed);
   const expiredQuotes = (quotes ?? []).filter(
     (q) => ACTIVE_QUOTE_STATUSES.includes(q.status_code) && q.valid_until && new Date(q.valid_until).getTime() < Date.now(),
   ).length;
@@ -87,7 +98,7 @@ export function SellerAttentionStrip({ onNavigate }: { onNavigate: (p: string) =
   const items: AttentionItem[] = [
     { icon: ClipboardCheck, label: t('dashboardPage.attn.approvals'), count: (approvals ?? []).length, tone: 'warning', page: 'crm-quotes' },
     { icon: PenLine, label: t('dashboardPage.attn.signContract'), count: (pendingContracts ?? []).length, tone: 'warning', page: 'contracts' },
-    { icon: FileWarning, label: t('dashboardPage.attn.rfqNoKp'), count: rfqsNeedingKp, tone: 'destructive', page: 'crm-deals' },
+    { icon: FileWarning, label: t('dashboardPage.attn.rfqNoKp'), count: rfqsNeedingKp, tone: 'destructive', page: 'crm-deals', hint: oldestWaiting ? t('dashboardPage.attn.oldestWaiting', { waiting: oldestWaiting }) : null },
     { icon: FileClock, label: t('dashboardPage.attn.expiredKp'), count: expiredQuotes, tone: 'destructive', page: 'crm-quotes' },
   ];
   return <AttentionGrid items={items} onNavigate={onNavigate} />;
