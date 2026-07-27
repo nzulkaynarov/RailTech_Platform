@@ -671,12 +671,15 @@ def public_quote_page_context(quote) -> dict:
 
 
 # Document theme (D2, Odoo Document Layout model). Font stacks are limited to families the
-# backend container actually ships (DejaVu — full Cyrillic); offering a font WeasyPrint would
-# silently substitute would be a fake choice (Rule 1).
+# backend container actually ships (Rule 1 — offering a font WeasyPrint would silently
+# substitute would be a fake choice). Print typography wave (2026-07-27, owner: «кривые
+# шрифты»): the container now ships Inter (fonts-inter) and PT Sans/PT Serif
+# (fonts-paratype — ParaType, designed for Russian document typography); DejaVu is demoted
+# to fallback only. Web surfaces fall through to Helvetica/Georgia when Inter/PT are absent.
 _LAYOUT_PRESETS = {"light", "boxed", "bold", "striped"}
 _FONT_STACKS = {
-    "sans": "'DejaVu Sans', 'Helvetica', 'Arial', sans-serif",
-    "serif": "'DejaVu Serif', 'Georgia', 'Times New Roman', serif",
+    "sans": "'Inter', 'PT Sans', 'DejaVu Sans', 'Helvetica', 'Arial', sans-serif",
+    "serif": "'PT Serif', 'DejaVu Serif', 'Georgia', 'Times New Roman', serif",
 }
 _DEFAULT_SECONDARY = "#f6f8fb"  # the historical panel/zebra tint — zero-diff default
 

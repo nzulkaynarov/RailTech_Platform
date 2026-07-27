@@ -87,9 +87,10 @@ def test_empty_profile_falls_back(scenario):
     CompanyDocumentProfile.objects.create(company=seller)
     assert _seller_document_profile(seller) is None
     html = _render(quote, buyer, seller, None)
-    # Seller Company name (not the branded legal_name) + platform footer fallback.
+    # Seller Company name (not the branded legal_name) + platform attribution in the footer
+    # (print-typography wave: the auto registration footer wraps the attribution with <br>).
     assert "РемПуть" in html
-    assert "Документ сформирован в RailTech B2B Ecosystem" in html
+    assert "Документ сформирован" in html and "RailTech B2B Ecosystem" in html
 
 
 @pytest.mark.django_db

@@ -48,6 +48,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 #   libffi8         — cffi (WeasyPrint зависимость)
 #   shared-mime-info — MIME-типы для openpyxl/pandas
 #   curl            — healthcheck в docker-compose
+#   fonts-paratype  — PT Sans / PT Serif: печатная кириллица документного класса
+#                     (_FONT_STACKS в crm/services/documents.py; DejaVu — только fallback)
+#   fonts-inter     — Inter: современный гротеск для sans-стека PDF
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     libcairo2 \
@@ -58,6 +61,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     shared-mime-info \
     curl \
     gosu \
+    fonts-paratype \
+    fonts-inter \
     && rm -rf /var/lib/apt/lists/*
 
 # Копируем установленные пакеты из builder
