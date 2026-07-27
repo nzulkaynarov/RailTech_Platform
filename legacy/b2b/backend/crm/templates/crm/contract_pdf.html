@@ -49,6 +49,13 @@
 
 {% block content %}
   {% with ccy=contract.currency.code|default:"UZS" %}
+  {% comment %}
+    Преамбула договора (P2, стандарт СНГ): место заключения + дата. «г. Ташкент» — как и
+    остальной юр-бойлерплейт договора (§7 — право Республики Узбекистан), не бизнес-данные.
+  {% endcomment %}
+  <p style="margin:0 0 12pt 0; font-size:9pt; color:var(--ink-soft);">
+    г. Ташкент<span style="float:right;">{{ contract.created_at|date:"d.m.Y" }} г.</span>
+  </p>
   <div class="legal-article">
     <h2>1. Предмет договора</h2>
     <p>Поставщик обязуется передать в собственность Покупателя, а Покупатель — принять и оплатить
