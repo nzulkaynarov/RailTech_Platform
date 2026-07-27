@@ -193,6 +193,11 @@ def _notify_assignee(deal: Deal, assignee: CustomUser) -> None:
     # Defer the WS push until the surrounding transaction commits (codebase on_commit convention) —
     # never announce a notification id that a rollback would delete.
     transaction.on_commit(lambda: push_notification_ws(notif))
+    # W1 (spec-inbound-rfq): the addressed assignment also lands by EMAIL — the assignee may be
+    # offline, and «вам назначена заявка» is exactly the message that must not wait for a login.
+    from notifications.signals import notify_new_rfq_by_email
+
+    notify_new_rfq_by_email(deal, [assignee.pk], assigned=True)
 
 
 def _log(

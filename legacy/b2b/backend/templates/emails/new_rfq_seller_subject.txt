@@ -1,0 +1,1 @@
+Новая заявка{% if buyer_name %} от {{ buyer_name }}{% endif %} — ожидает КП

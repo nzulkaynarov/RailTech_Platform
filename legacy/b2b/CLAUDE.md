@@ -422,7 +422,7 @@ Transformation happens in: `userStore.loadFromAuth()` and DRF serializers.
 ## Common Pitfalls
 
 - Frontend is a **production build** served by in-container nginx — `import.meta.env.DEV` is always `false` in Docker; frontend changes need rebuild (`docker compose up -d --build frontend`)
-- Auth URL routes (`/`, `/register`, `/setup-password`) via `useAuthRoute()`; main app pages use `#hash` navigation; hash deep-links bounce to `#dashboard` on cold load — navigate in-app
+- Auth URL routes (`/`, `/register`, `/setup-password`) via `useAuthRoute()`; main app pages use `#hash` navigation. Cold-load hash deep-links (`#request-detail/3`, `#deal-quote/7`) РАБОТАЮТ — `evaluatePageGuard` откладывает гейты до bootstrap (раньше отскакивало в `#dashboard`; починено, email-ссылки W1 на это опираются)
 - **Celery does NOT auto-reload** (only Daphne does). After ANY model/migration change: `docker compose restart celery-worker celery-beat` — otherwise tasks run stale code. Prod is safe (deploy does `up -d --build`)
 - `DATABASE_URL` query params (like `sslmode=require`) are passed as DB OPTIONS
 - **api-contract CI gate**: model `verbose_name`/label edits change the OpenAPI schema — regenerate spectacular schema + `gen:api-types` in the same PR

@@ -1,3 +1,7 @@
+import logging
+
+from django.conf import settings
+from django.db import transaction
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 
@@ -7,6 +11,45 @@ from crm.models import Deal, Message
 
 from .models import Notification, NotificationType
 from .services import push_notification_ws
+
+logger = logging.getLogger(__name__)
+
+
+def notify_new_rfq_by_email(deal, user_ids, *, assigned: bool = False) -> None:
+    """W1 (spec-inbound-rfq): the instant-assign-notification email — the seller must learn
+    about a new заявка even OFFLINE (the in-app bell reaches only who is logged in; the B2B
+    median first response of 42h is lost exactly here). One task PER RECIPIENT — routed
+    companies are competitors, their addresses must never share one message. Enqueued
+    on_commit (never announce a заявка a rollback would erase); a broker outage must not
+    break the stage transition — log and move on."""
+    from accounts.models import CustomUser
+
+    emails = list(
+        CustomUser.objects.filter(pk__in=user_ids, is_active=True)
+        .exclude(email="")
+        .values_list("email", "pk")
+    )
+    if not emails:
+        return
+    context = {
+        "buyer_name": deal.company.name if deal.company else "",
+        "deal_title": deal.title or "",
+        "deal_url": f"{settings.FRONTEND_URL}/#request-detail/{deal.pk}",
+        "assigned": assigned,
+    }
+
+    def _enqueue():
+        from .tasks import send_transactional_email
+
+        for email, user_id in emails:
+            try:
+                send_transactional_email.delay(
+                    "new_rfq_seller", context, to=[email], channel="transactional", user_id=user_id
+                )
+            except Exception:  # noqa: BLE001 — a dead broker must not fail the заявка submit
+                logger.exception("new_rfq_seller email enqueue failed for deal %s", deal.pk)
+
+    transaction.on_commit(_enqueue)
 
 
 def _seller_user_ids_for_companies(company_ids) -> set:
@@ -57,6 +100,8 @@ def _notify_seller_team(deal, info_type):
     if notifications:
         for notif in Notification.objects.bulk_create(notifications):
             push_notification_ws(notif)
+    # W1: the same event by EMAIL — the only channel that reaches an offline seller.
+    notify_new_rfq_by_email(deal, seller_user_ids)
 
 
 @receiver(post_save, sender=Deal)
