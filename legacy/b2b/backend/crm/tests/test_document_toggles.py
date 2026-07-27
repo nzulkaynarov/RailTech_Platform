@@ -73,13 +73,13 @@ def _quote_ctx(**toggles):
 
 def test_lead_time_column_shown_by_default():
     html = render_to_string("crm/quote_pdf.html", _quote_ctx(show_lead_time=True))
-    assert '<th style="width:12%" class="center">Срок</th>' in html
+    assert '<th style="width:12%" class="center">Срок / наличие</th>' in html
 
 
 def test_lead_time_column_hidden_when_toggle_off():
     html = render_to_string("crm/quote_pdf.html", _quote_ctx(show_lead_time=False))
     # The «Срок» column header is gone; the offer still renders.
-    assert '<th style="width:12%" class="center">Срок</th>' not in html
+    assert '<th style="width:12%" class="center">Срок / наличие</th>' not in html
     assert "Коммерческое предложение" in html
 
 
@@ -136,7 +136,7 @@ def test_preview_html_reflects_profile_branding_and_toggles():
     assert "ООО «Превью Тест»" in html  # branding applied
     assert "Подшипник буксовый ЦКБ тип 2726" in html  # sample data
     # lead-time COLUMN suppressed by the toggle (the «Срок поставки» delivery term still shows).
-    assert '<th style="width:12%" class="center">Срок</th>' not in html
+    assert '<th style="width:12%" class="center">Срок / наличие</th>' not in html
     # CONFIDENTIALITY: even with show_fx_note=True on the profile, the client КП never prints the
     # CBU/FX rate — the toggle no longer leaks the seller's foreign-currency cost basis.
     assert "Курс ЦБ" not in html

@@ -14,23 +14,22 @@
 
 {% block doc_title %}Договор поставки{% endblock %}
 
+{% comment %}
+  D1 — стороны КРАТКО в шапке (название + ИНН + адрес). Полные реквизиты (банк, р/с, МФО,
+  подписант) — ниже, в §10 «Реквизиты и подписи Сторон», где они юридически и нужны.
+{% endcomment %}
 {% block parties %}
 <table class="parties">
   <tr>
     <td>
       <div class="party">
         <h3>Поставщик</h3>
-        {% if seller %}
+        {% if seller or seller_profile %}
           <div class="pname">{% firstof seller_profile.legal_name seller.name %}</div>
           {% firstof seller_profile.inn seller.inn as supplier_inn %}
           {% if supplier_inn %}<p>ИНН: {{ supplier_inn }}</p>{% endif %}
           {% firstof seller_profile.legal_address seller.legal_address as supplier_addr %}
           {% if supplier_addr %}<p>{{ supplier_addr }}</p>{% endif %}
-          {% if seller_profile.bank_details %}<p>{{ seller_profile.bank_details|linebreaksbr }}</p>
-          {% elif seller.bank_account %}<p>Р/с: {{ seller.bank_account }}{% if seller.mfo %} · МФО: {{ seller.mfo }}{% endif %}</p>{% endif %}
-          {% if seller.phone %}<p>Тел.: {{ seller.phone }}</p>{% endif %}
-          {% if seller.contact_person %}<p>Контактное лицо: {{ seller.contact_person }}</p>{% endif %}
-          {% if seller_profile.signatory_name %}<p>{{ seller_profile.signatory_position|default:"Подписант" }}: {{ seller_profile.signatory_name }}</p>{% endif %}
         {% else %}
           <div class="pname">Поставщик не указан</div>
         {% endif %}
@@ -42,9 +41,6 @@
         <div class="pname">{{ company.name }}</div>
         {% if company.inn %}<p>ИНН: {{ company.inn }}</p>{% endif %}
         {% if company.legal_address %}<p>{{ company.legal_address }}</p>{% endif %}
-        {% if company.bank_account %}<p>Р/с: {{ company.bank_account }}{% if company.mfo %} · МФО: {{ company.mfo }}{% endif %}</p>{% endif %}
-        {% if company.phone %}<p>Тел.: {{ company.phone }}</p>{% endif %}
-        {% if company.contact_person %}<p>Контактное лицо: {{ company.contact_person }}</p>{% endif %}
       </div>
     </td>
   </tr>
@@ -84,17 +80,7 @@
     </tbody>
   </table>
 
-  <table class="totals-wrap">
-    <tr><td>
-      <table class="totals">
-        <tr class="grand">
-          <td class="lbl">Итого с НДС ({{ quote.vat_rate|floatformat:0 }}%):</td>
-          <td class="val">{{ contract.total_amount|money:ccy }}</td>
-        </tr>
-      </table>
-    </td></tr>
-  </table>
-  <div class="amount-words"><span class="k">Сумма прописью:</span> {{ contract.total_amount|money_words:ccy }}</div>
+  {% include "crm/_totals_block.html" %}
 
   <div class="legal-article">
     <h2>2. Цена и порядок расчётов</h2>
@@ -170,6 +156,38 @@
   <div class="legal-article">
     <h2>10. Реквизиты и подписи Сторон</h2>
   </div>
+  {% comment %}
+    D1 — полные реквизиты СТОРОН одним блоком (юр.название, ИНН, адрес, банк, р/с, МФО, подписант).
+    Для юрдока обязательны; в шапке-сторонах их сознательно нет (краткость), здесь — полностью.
+  {% endcomment %}
+  <table class="parties" style="margin-bottom:14pt;">
+    <tr>
+      <td>
+        <div class="party">
+          <h3>Поставщик</h3>
+          <div class="pname">{% firstof seller_profile.legal_name seller.name "Поставщик" %}</div>
+          {% firstof seller_profile.inn seller.inn as req_seller_inn %}
+          {% if req_seller_inn %}<p>ИНН: {{ req_seller_inn }}</p>{% endif %}
+          {% firstof seller_profile.legal_address seller.legal_address as req_seller_addr %}
+          {% if req_seller_addr %}<p>Адрес: {{ req_seller_addr }}</p>{% endif %}
+          {% if seller_profile.bank_details %}<p>{{ seller_profile.bank_details|linebreaksbr }}</p>
+          {% elif seller.bank_account %}<p>Р/с: {{ seller.bank_account }}{% if seller.mfo %} · МФО: {{ seller.mfo }}{% endif %}</p>{% endif %}
+          {% if seller.phone %}<p>Тел.: {{ seller.phone }}</p>{% endif %}
+          {% if seller_profile.signatory_name %}<p>{{ seller_profile.signatory_position|default:"Подписант" }}: {{ seller_profile.signatory_name }}</p>{% endif %}
+        </div>
+      </td>
+      <td>
+        <div class="party">
+          <h3>Покупатель</h3>
+          <div class="pname">{{ company.name|default:"Покупатель" }}</div>
+          {% if company.inn %}<p>ИНН: {{ company.inn }}</p>{% endif %}
+          {% if company.legal_address %}<p>Адрес: {{ company.legal_address }}</p>{% endif %}
+          {% if company.bank_account %}<p>Р/с: {{ company.bank_account }}{% if company.mfo %} · МФО: {{ company.mfo }}{% endif %}</p>{% endif %}
+          {% if company.phone %}<p>Тел.: {{ company.phone }}</p>{% endif %}
+        </div>
+      </td>
+    </tr>
+  </table>
   <table class="signatures">
     <tr>
       <td>

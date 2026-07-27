@@ -182,16 +182,27 @@ def _render_invoice_pdf(invoice) -> None:
     from django.template.loader import render_to_string
     from weasyprint import HTML
 
-    from .documents import brand_context_for_pdf, document_brand_context
+    from .documents import brand_context_for_pdf, document_brand_context, document_totals
 
     supplier = _invoice_seller_company(invoice)
 
+    # D1: shared 3-line VAT bridge (+ paid/balance rows). Same block as КП/договор/акт.
+    ccy = invoice.currency.code if invoice.currency_id else "UZS"
+    totals = document_totals(
+        ccy=ccy,
+        subtotal=invoice.subtotal_excl_vat,
+        vat_amount=invoice.vat_amount,
+        total=invoice.total_incl_vat,
+        amount_paid=invoice.amount_paid,
+        balance_due=invoice.balance_due,
+    )
     html_string = render_to_string(
         "crm/invoice_pdf.html",
         {
             "invoice": invoice,
             "items": invoice.items.select_related("source_quote_item").all(),
             "company": invoice.deal.company,
+            "totals": totals,
             **brand_context_for_pdf(document_brand_context(supplier)),
         },
     )
@@ -407,11 +418,25 @@ def _render_act_pdf(act) -> None:
 
     # Real seller (via the act's contract → КП) so «От Поставщика» names the counterparty,
     # not a blank line. Shared branding bundle, same shape as every other document.
-    from .documents import brand_context_for_pdf, document_brand_context
+    from .documents import brand_context_for_pdf, document_brand_context, document_totals
     from .quotes import _quote_seller_company
 
     quote = act.contract.quote if (act.contract_id and act.contract.quote_id) else None
     supplier = _quote_seller_company(quote) if quote else None
+
+    # D1: the act MIRRORS its invoice (audit: «акт зеркалит инвойс») — same net/VAT/gross figures,
+    # same shared 3-line block. Falls back to the act's own gross total if it has no invoice.
+    src_invoice = act.invoice
+    ccy = src_invoice.currency.code if (src_invoice and src_invoice.currency_id) else "UZS"
+    if src_invoice:
+        totals = document_totals(
+            ccy=ccy,
+            subtotal=src_invoice.subtotal_excl_vat,
+            vat_amount=src_invoice.vat_amount,
+            total=src_invoice.total_incl_vat,
+        )
+    else:
+        totals = document_totals(ccy=ccy, total=act.total_amount)
 
     html_string = render_to_string(
         "crm/act_pdf.html",
@@ -419,6 +444,8 @@ def _render_act_pdf(act) -> None:
             "act": act,
             "invoice": act.invoice,
             "company": act.deal.company,
+            "contact": act.deal.contact,
+            "totals": totals,
             **brand_context_for_pdf(document_brand_context(supplier)),
         },
     )

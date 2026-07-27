@@ -176,6 +176,8 @@ def test_quote_pdf_subtotal_excl_vat_keeps_kopecks_and_document_adds_up(quote_qt
     # The document adds up: pre-VAT base + VAT == grand total.
     assert quote.total_excl_vat + quote.vat_amount == quote.total_incl_vat
 
+    from crm.services.documents import document_totals
+
     html = render_to_string(
         "crm/quote_pdf.html",
         {
@@ -186,6 +188,13 @@ def test_quote_pdf_subtotal_excl_vat_keeps_kopecks_and_document_adds_up(quote_qt
             "seller_profile": None,
             "seller_logo_url": None,
             "is_demo": False,
+            "totals": document_totals(
+                ccy="UZS",
+                vat_rate=quote.vat_rate,
+                subtotal=quote.total_excl_vat,
+                vat_amount=quote.vat_amount,
+                total=quote.total_incl_vat,
+            ),
         },
     )
     # The correct pre-VAT total is rendered with grouped, comma-decimal money formatting
@@ -205,7 +214,7 @@ def test_client_projection_distributes_charges_and_hides_the_breakout(quote_qty2
     lets the buyer decompose the seller's cost/charge structure (confidentiality). Charges are
     spread into per-line delivered prices, which sum EXACTLY to total_excl_vat."""
     from crm.models import QuoteItem
-    from crm.services.documents import client_projection_items
+    from crm.services.documents import client_projection_items, document_totals
 
     buyer, seller, quote = quote_qty2  # line 1: Колодка ×2 @100 → 200
     QuoteItem.objects.create(quote=quote, imported_raw_name="Втулка", quantity=1, frozen_base_price=Decimal("300"))
@@ -232,6 +241,13 @@ def test_client_projection_distributes_charges_and_hides_the_breakout(quote_qty2
             "seller_profile": None,
             "seller_logo_url": None,
             "is_demo": False,
+            "totals": document_totals(
+                ccy="UZS",
+                vat_rate=quote.vat_rate,
+                subtotal=quote.total_excl_vat,
+                vat_amount=quote.vat_amount,
+                total=quote.total_incl_vat,
+            ),
         },
     )
     # No goods/charges decomposition on the client projection.

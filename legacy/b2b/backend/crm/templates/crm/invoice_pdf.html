@@ -71,20 +71,7 @@
     </tbody>
   </table>
 
-  <table class="totals-wrap">
-    <tr><td>
-      <table class="totals">
-        <tr><td class="lbl">Сумма без НДС:</td><td class="val">{{ invoice.subtotal_excl_vat|money:ccy }}</td></tr>
-        <tr class="sep"><td class="lbl">НДС{% if invoice.subtotal_excl_vat %} ({% widthratio invoice.vat_amount invoice.subtotal_excl_vat 100 %}%){% endif %}:</td><td class="val">{{ invoice.vat_amount|money:ccy }}</td></tr>
-        <tr class="grand"><td class="lbl">К оплате:</td><td class="val">{{ invoice.total_incl_vat|money:ccy }}</td></tr>
-        {% if invoice.amount_paid %}
-        <tr><td class="lbl">Оплачено:</td><td class="val">{{ invoice.amount_paid|money:ccy }}</td></tr>
-        <tr class="sep"><td class="lbl">Остаток к оплате:</td><td class="val">{{ invoice.balance_due|money:ccy }}</td></tr>
-        {% endif %}
-      </table>
-    </td></tr>
-  </table>
-  <div class="amount-words"><span class="k">Сумма прописью:</span> {{ invoice.total_incl_vat|money_words:ccy }}</div>
+  {% include "crm/_totals_block.html" %}
 
   <div class="pay-block">
     <h3>Платёжные реквизиты</h3>

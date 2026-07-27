@@ -51,14 +51,7 @@
   </table>
   {% endif %}
 
-  <table class="totals-wrap">
-    <tr><td>
-      <table class="totals">
-        <tr class="grand"><td class="lbl">Итого:</td><td class="val">{{ act.total_amount|money:ccy }}</td></tr>
-      </table>
-    </td></tr>
-  </table>
-  <div class="amount-words"><span class="k">Сумма прописью:</span> {{ act.total_amount|money_words:ccy }}</div>
+  {% include "crm/_totals_block.html" %}
 
   <p style="font-size:8.8pt;color:var(--ink-soft);margin:12pt 0;">
     Услуги / товары оказаны / поставлены в полном объёме и в согласованные сроки. Стороны претензий

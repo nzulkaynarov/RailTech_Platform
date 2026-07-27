@@ -60,9 +60,9 @@
         <th style="width:5%">№</th>
         <th style="width:{% if show_lead_time and has_line_lead_time %}43{% else %}55{% endif %}%">Наименование</th>
         <th style="width:10%" class="center">Кол-во</th>
-        {% if show_lead_time and has_line_lead_time %}<th style="width:12%" class="center">Срок</th>{% endif %}
-        <th style="width:15%" class="num">Цена за ед., {{ pres_ccy }}</th>
-        <th style="width:15%" class="num">Сумма, {{ pres_ccy }}</th>
+        {% if show_lead_time and has_line_lead_time %}<th style="width:12%" class="center">Срок / наличие</th>{% endif %}
+        <th style="width:15%" class="num">Цена за ед. без НДС</th>
+        <th style="width:15%" class="num">Сумма без НДС</th>
       </tr>
     </thead>
     <tbody>
@@ -92,7 +92,8 @@
           {% endif %}
         </td>
         <td class="center">{{ item.quantity|qty:item.unit }}</td>
-        {% if show_lead_time and has_line_lead_time %}<td class="center">{% if item.lead_time_days %}до {{ item.lead_time_days }} дн.{% else %}&mdash;{% endif %}</td>{% endif %}
+        {% comment %} Срок/наличие (spec-kp-blank block 4): per-line lead → общий срок КП → «В наличии». {% endcomment %}
+        {% if show_lead_time and has_line_lead_time %}<td class="center">{% if item.lead_time_days %}до {{ item.lead_time_days }} дн.{% elif quote.effective_delivery_lead_time_days %}до {{ quote.effective_delivery_lead_time_days }} дн.{% else %}В наличии{% endif %}</td>{% endif %}
         <td class="num">{{ item.final_price_excl_vat|money }}</td>
         <td class="num">{{ item.line_total|money }}</td>
       </tr>
@@ -101,30 +102,12 @@
     </tbody>
   </table>
 
-  <!-- ── Totals bridge: pre-VAT total → VAT → grand total. CONFIDENTIALITY: no goods-vs-charges
-       breakout — charges are distributed into the delivered line prices above (client_projection_items),
-       so the buyer sees ONE all-in price per line summing exactly to «Итого без НДС». ── -->
-  <table class="totals-wrap">
-    <tr>
-      <td>
-        <table class="totals">
-          <tr class="sep">
-            <td class="lbl">Итого без НДС:</td>
-            <td class="val">{{ quote.total_excl_vat|money:pres_ccy }}</td>
-          </tr>
-          <tr>
-            <td class="lbl">НДС {{ quote.vat_rate|floatformat:0 }}%:</td>
-            <td class="val">{{ quote.vat_amount|money:pres_ccy }}</td>
-          </tr>
-          <tr class="grand">
-            <td class="lbl">ИТОГО к оплате:</td>
-            <td class="val">{{ quote.total_incl_vat|money:pres_ccy }}</td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-  <div class="amount-words"><span class="k">Сумма прописью:</span> {{ quote.total_incl_vat|money_words:pres_ccy }}</div>
+  {% comment %}
+    Единый блок итогов НДС (D1: crm/_totals_block.html). CONFIDENTIALITY: без разбивки
+    товары-vs-расходы — расходы размазаны в цены строк (client_projection_items), покупатель
+    видит одну all-in цену за строку, сумма которых = «Сумма без НДС».
+  {% endcomment %}
+  {% include "crm/_totals_block.html" %}
 
   {% if optional_items %}
   <!-- ── Optional lines: quoted WITH prices but NOT included in the totals above (доп. предложение). ── -->
@@ -137,9 +120,9 @@
           <th style="width:5%">№</th>
           <th style="width:{% if show_lead_time and has_line_lead_time %}43{% else %}55{% endif %}%">Наименование</th>
           <th style="width:10%" class="center">Кол-во</th>
-          {% if show_lead_time and has_line_lead_time %}<th style="width:12%" class="center">Срок</th>{% endif %}
-          <th style="width:15%" class="num">Цена за ед., {{ pres_ccy }}</th>
-          <th style="width:15%" class="num">Сумма, {{ pres_ccy }}</th>
+          {% if show_lead_time and has_line_lead_time %}<th style="width:12%" class="center">Срок / наличие</th>{% endif %}
+          <th style="width:15%" class="num">Цена за ед. без НДС</th>
+          <th style="width:15%" class="num">Сумма без НДС</th>
         </tr>
       </thead>
       <tbody>
@@ -157,7 +140,7 @@
             {% endif %}
           </td>
           <td class="center">{{ item.quantity|qty:item.unit }}</td>
-          {% if show_lead_time and has_line_lead_time %}<td class="center">{% if item.lead_time_days %}до {{ item.lead_time_days }} дн.{% else %}&mdash;{% endif %}</td>{% endif %}
+          {% if show_lead_time and has_line_lead_time %}<td class="center">{% if item.lead_time_days %}до {{ item.lead_time_days }} дн.{% elif quote.effective_delivery_lead_time_days %}до {{ quote.effective_delivery_lead_time_days }} дн.{% else %}В наличии{% endif %}</td>{% endif %}
           <td class="num">{{ item.final_price_excl_vat|money }}</td>
           <td class="num">{{ item.line_total|money }}</td>
         </tr>

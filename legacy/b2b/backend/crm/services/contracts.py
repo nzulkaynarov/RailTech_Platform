@@ -160,11 +160,19 @@ def _render_contract_pdf(contract) -> None:
     # a preparer's primary membership which can be missing/wrong), plus its branded
     # document profile (shared document_brand_context, mirroring the КП PDF). NEVER a hardcoded
     # platform identity: a contract is a legal document and must name the real counterparty.
-    from .documents import brand_context_for_pdf, document_brand_context
+    from .documents import brand_context_for_pdf, document_brand_context, document_totals
     from .quotes import _quote_seller_company
 
     supplier = _quote_seller_company(contract.quote)
 
+    # D1: shared 3-line VAT bridge. A contract stores only the gross `total_amount`, so the net/VAT
+    # split is derived from the КП vat_rate (document_totals) — same block as КП/инвойс/акт.
+    ccy = contract.currency.code if contract.currency else "UZS"
+    totals = document_totals(
+        ccy=ccy,
+        vat_rate=contract.quote.vat_rate if contract.quote_id else None,
+        total=contract.total_amount,
+    )
     html_string = render_to_string(
         "crm/contract_pdf.html",
         {
@@ -172,6 +180,7 @@ def _render_contract_pdf(contract) -> None:
             "deal": contract.deal,
             "company": contract.deal.company,
             "quote": contract.quote,
+            "totals": totals,
             # A signed contract's specification (Приложение № 1) is the LEGALLY agreed goods:
             # only billable lines (non-optional ITEM). SECTION/NOTE are not payable line items and
             # optional lines were quoted outside the offer — printing them here as numbered priced

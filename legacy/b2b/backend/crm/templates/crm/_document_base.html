@@ -268,26 +268,25 @@
 
   <h1 class="doc-title">{% block doc_title %}{% endblock %}</h1>
 
+  {% comment %}
+    D1 — единый стандарт «стороны кратко»: шапка-letterhead уже несёт бренд продавца (название,
+    ИНН, тел./email и — по тумблеру — банк), поэтому карточка «Поставщик» здесь КРАТКАЯ (название +
+    ИНН + адрес), без дубля банка/контактов/подписанта. Полные реквизиты — там, где юридически
+    нужно: договор §10, «Платёжные реквизиты» инвойса. Карточка «Покупатель» скрывается целиком,
+    когда клиента ещё нет (соло-калькулятор) — вместо пустого серого бокса.
+  {% endcomment %}
   {% block parties %}
   <table class="parties">
     <tr>
       <td>
         <div class="party">
           <h3>Поставщик</h3>
-          {% if seller_profile %}
-            <div class="pname">{{ seller_profile.legal_name|default:seller.name }}</div>
-            {% if seller_profile.inn %}<p>ИНН: {{ seller_profile.inn }}</p>{% elif seller.inn %}<p>ИНН: {{ seller.inn }}</p>{% endif %}
-            {% if seller_profile.legal_address %}<p>{{ seller_profile.legal_address }}</p>{% elif seller.legal_address %}<p>{{ seller.legal_address }}</p>{% endif %}
-            {% if seller_profile.bank_details %}<p>{{ seller_profile.bank_details|linebreaksbr }}</p>{% endif %}
-            {% if seller.phone %}<p>Тел.: {{ seller.phone }}</p>{% endif %}
-            {% if seller.email %}<p>{{ seller.email }}</p>{% endif %}
-            {% if seller_profile.signatory_name %}<p>{{ seller_profile.signatory_position|default:"Подписант" }}: {{ seller_profile.signatory_name }}</p>{% endif %}
-          {% elif seller %}
-            <div class="pname">{{ seller.name }}</div>
-            {% if seller.inn %}<p>ИНН: {{ seller.inn }}</p>{% endif %}
-            {% if seller.legal_address %}<p>{{ seller.legal_address }}</p>{% endif %}
-            {% if seller.phone %}<p>Тел.: {{ seller.phone }}</p>{% endif %}
-            {% if seller.email %}<p>{{ seller.email }}</p>{% endif %}
+          {% if seller or seller_profile %}
+            <div class="pname">{% firstof seller_profile.legal_name seller.name %}</div>
+            {% firstof seller_profile.inn seller.inn as party_seller_inn %}
+            {% if party_seller_inn %}<p>ИНН: {{ party_seller_inn }}</p>{% endif %}
+            {% firstof seller_profile.legal_address seller.legal_address as party_seller_addr %}
+            {% if party_seller_addr %}<p>{{ party_seller_addr }}</p>{% endif %}
           {% else %}
             <div class="pname">RailTech B2B</div>
             <p>Платформа b2b.railtech.uz</p>
@@ -295,13 +294,21 @@
         </div>
       </td>
       <td>
+        {% if company or contact %}
         <div class="party">
           <h3>Покупатель</h3>
-          <div class="pname">{{ company.name }}</div>
-          {% if company.inn %}<p>ИНН: {{ company.inn }}</p>{% endif %}
-          {% if company.legal_address %}<p>{{ company.legal_address }}</p>{% endif %}
-          {% if company.contact_person %}<p>Контакт: {{ company.contact_person }}</p>{% endif %}
+          {% if company %}
+            <div class="pname">{{ company.name }}</div>
+            {% if company.inn %}<p>ИНН: {{ company.inn }}</p>{% endif %}
+            {% if company.legal_address %}<p>{{ company.legal_address }}</p>{% endif %}
+            {% if company.contact_person %}<p>Контакт: {{ company.contact_person }}</p>{% endif %}
+          {% else %}
+            <div class="pname">{% firstof contact.name "Покупатель" %}</div>
+            {% if contact.inn %}<p>ИНН: {{ contact.inn }}</p>{% endif %}
+            {% if contact.phone %}<p>Тел.: {{ contact.phone }}</p>{% endif %}
+          {% endif %}
         </div>
+        {% endif %}
       </td>
     </tr>
   </table>

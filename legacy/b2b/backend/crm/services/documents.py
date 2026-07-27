@@ -329,6 +329,14 @@ def _render_sample_quote_html(brand: dict, cover_profile=None) -> str:
         "company": _SAMPLE_BUYER,
         "cover_text": cover_text,
         "quote_terms": quote_terms,
+        # Shared 3-line VAT block (D1) — the preview mirrors the real render.
+        "totals": document_totals(
+            ccy="UZS",
+            vat_rate=sample_quote["vat_rate"],
+            subtotal=sample_quote["total_excl_vat"],
+            vat_amount=sample_quote["vat_amount"],
+            total=sample_quote["total_incl_vat"],
+        ),
         # Branding preview, not a real export — no «ЧЕРНОВИК» watermark (it would obscure the very
         # branding this sample exists to show); keep the lead-time column visible so the seller can
         # see it styled when their profile toggle is on.
@@ -388,6 +396,7 @@ def _render_sample_contract_html(brand: dict) -> str:
         "company": _SAMPLE_BUYER,
         "quote": sample_quote,
         "items": sample_items,
+        "totals": document_totals(ccy="UZS", vat_rate=Decimal("12"), total=Decimal("20608000.00")),
         **brand,
     }
     return render_to_string("crm/contract_pdf.html", context)
@@ -416,6 +425,14 @@ def _render_sample_invoice_html(brand: dict) -> str:
         "invoice": sample_invoice,
         "items": _sample_invoice_lines(),
         "company": _SAMPLE_BUYER,
+        "totals": document_totals(
+            ccy="UZS",
+            subtotal=Decimal("18400000.00"),
+            vat_amount=Decimal("2208000.00"),
+            total=Decimal("20608000.00"),
+            amount_paid=Decimal("0"),
+            balance_due=Decimal("20608000.00"),
+        ),
         **brand,
     }
     return render_to_string("crm/invoice_pdf.html", context)
@@ -445,6 +462,13 @@ def _render_sample_act_html(brand: dict) -> str:
         "act": sample_act,
         "invoice": sample_invoice,
         "company": _SAMPLE_BUYER,
+        # Act mirrors its invoice — the same net/VAT/gross split.
+        "totals": document_totals(
+            ccy="UZS",
+            subtotal=Decimal("18400000.00"),
+            vat_amount=Decimal("2208000.00"),
+            total=Decimal("20608000.00"),
+        ),
         **brand,
     }
     return render_to_string("crm/act_pdf.html", context)
@@ -634,6 +658,10 @@ def public_quote_page_context(quote) -> dict:
         # КП-level «Срок поставки» below.
         "has_line_lead_time": any(item.get("lead_time_days") for item in projected_items),
         "public_quote_url": public_quote_url(quote),
+        # D1c: the online page is the PDF's twin — same cover letter, structured «Условия
+        # поставки» and 3-line VAT totals (one shared builder), so the QR «оригинал» never
+        # looks poorer than the attached PDF.
+        **quote_document_extras(quote, seller_company),
         **document_brand_context(
             seller_company,
             is_demo=bool(seller_company) and not quote_send_entitled(seller_company.id),
@@ -813,3 +841,97 @@ def build_quote_terms(
     add("Срок действия КП", valid_until)
     add("Прочие условия", other)
     return rows
+
+
+def quote_document_extras(quote, seller_company) -> dict:
+    """The «фирменный бланк» extras shared by the КП PDF *and* its online twin (D1c): the resolved
+    cover letter, the structured «Условия поставки», and the unified 3-line VAT totals. ONE builder
+    so the PDF and the public page — the «оригинал» a client reaches by scanning the QR — can never
+    diverge. Read-only (never creates a profile/settings row)."""
+    from accounts.models import CompanyDocumentProfile, CompanySettings
+
+    doc_profile = CompanyDocumentProfile.objects.filter(company=seller_company).first() if seller_company else None
+    seller_settings = CompanySettings.objects.filter(company=seller_company).first() if seller_company else None
+    buyer = quote.deal.company
+    deal_created = getattr(quote.deal, "created_at", None)
+    cover_text = resolve_cover_letter(
+        doc_profile,
+        buyer_name=getattr(buyer, "name", "") or "",
+        deal_ref=deal_created.strftime("%d.%m.%Y") if deal_created else "",
+        seller_name=getattr(seller_company, "name", "") or "",
+    )
+    incoterm = ""
+    if quote.delivery_basis:
+        incoterm = quote.delivery_basis.code
+        if quote.delivery_basis.name:
+            incoterm = f"{incoterm} ({quote.delivery_basis.name})"
+    quote_terms = build_quote_terms(
+        shipment_place=(getattr(doc_profile, "legal_address", "") or getattr(seller_company, "legal_address", "") or ""),
+        lead_days=quote.effective_delivery_lead_time_days,
+        delivery_note=quote.delivery_note or "",
+        payment=getattr(seller_settings, "default_payment_terms", "") or "",
+        incoterm=incoterm,
+        warranty_months=getattr(seller_settings, "default_warranty_months", None),
+        valid_until=quote.valid_until.strftime("%d.%m.%Y") if quote.valid_until else "",
+        other=quote.notes or "",
+    )
+    totals = document_totals(
+        ccy=quote.quote_currency.code if quote.quote_currency else "UZS",
+        vat_rate=quote.vat_rate,
+        subtotal=quote.total_excl_vat,
+        vat_amount=quote.vat_amount,
+        total=quote.total_incl_vat,
+    )
+    return {"cover_text": cover_text, "quote_terms": quote_terms, "totals": totals}
+
+
+def document_totals(
+    *,
+    ccy: str,
+    vat_rate=None,
+    subtotal=None,
+    vat_amount=None,
+    total=None,
+    amount_paid=None,
+    balance_due=None,
+) -> dict:
+    """The uniform «Сумма без НДС → НДС X% → Итого к оплате» bridge for EVERY transactional PDF
+    (КП / договор / инвойс / акт). D1: the four documents used three different totals formats
+    («3 разных формата итогов НДС»); this single builder + the shared _totals_block.html partial
+    give them one identical block.
+
+    Pass whichever figures the model actually stores — the rest are derived:
+      • gross `total` + `vat_rate` only (contract) → subtotal = total / (1 + rate/100);
+      • `subtotal` + `vat_amount` (invoice/act) → total and the effective rate are derived.
+    """
+    from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
+
+    def _dec(value):
+        if value in (None, ""):
+            return None
+        try:
+            return Decimal(str(value))
+        except (InvalidOperation, ValueError, TypeError):
+            return None
+
+    subtotal_d, vat_d, total_d, rate = _dec(subtotal), _dec(vat_amount), _dec(total), _dec(vat_rate)
+    if subtotal_d is None and total_d is not None:
+        if rate and rate > 0:
+            subtotal_d = (total_d / (Decimal(1) + rate / Decimal(100))).quantize(Decimal("0.01"), ROUND_HALF_UP)
+        else:
+            subtotal_d = total_d
+    if vat_d is None and total_d is not None and subtotal_d is not None:
+        vat_d = total_d - subtotal_d
+    if total_d is None and subtotal_d is not None:
+        total_d = subtotal_d + (vat_d or Decimal(0))
+    if (rate is None or rate == 0) and subtotal_d and vat_d and subtotal_d > 0:
+        rate = (vat_d / subtotal_d * Decimal(100)).quantize(Decimal("1"), ROUND_HALF_UP)
+    return {
+        "ccy": ccy or "UZS",
+        "vat_rate": rate or Decimal(0),
+        "subtotal": subtotal_d,
+        "vat_amount": vat_d,
+        "total": total_d,
+        "amount_paid": _dec(amount_paid),
+        "balance_due": _dec(balance_due),
+    }
