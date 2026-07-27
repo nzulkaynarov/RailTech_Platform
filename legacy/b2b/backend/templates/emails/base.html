@@ -11,10 +11,15 @@
       <td align="center">
         <table role="presentation" cellpadding="0" cellspacing="0" width="600" style="max-width:600px; background-color:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 2px 8px rgba(15,23,42,0.06);">
           <tr>
-            <td style="background-color:#1e3a8a; padding:24px 32px; color:#ffffff;">
+            {% comment %}
+              White-label (D1e): a client-facing email opens with the SELLER's brand + accent when
+              the caller passes it (email_brand), else the platform default. The platform stays named
+              in the footer — the Stripe/DocuSign pattern (sender's brand on top, platform below).
+            {% endcomment %}
+            <td style="background-color:{{ brand_accent|default:'#1e3a8a' }}; padding:24px 32px; color:{{ brand_contrast|default:'#ffffff' }};">
               <table role="presentation" width="100%">
                 <tr>
-                  <td style="font-size:20px; font-weight:700; letter-spacing:0.3px;">RailTech B2B</td>
+                  <td style="font-size:20px; font-weight:700; letter-spacing:0.3px;">{{ brand_name|default:'RailTech B2B' }}</td>
                   <td align="right" style="font-size:12px; opacity:0.8;">{% block header_hint %}Уведомление платформы{% endblock %}</td>
                 </tr>
               </table>

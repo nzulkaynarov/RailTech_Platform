@@ -154,7 +154,7 @@ def send_client_invite(*, seller: CustomUser, contact_id: int) -> Tuple[Optional
 
     from django.utils import timezone
 
-    from notifications.emails import EmailDeliveryError, send_templated_email
+    from notifications.emails import EmailDeliveryError, email_brand, send_templated_email
 
     from ..models import ClientInvite, Contact
 
@@ -183,7 +183,13 @@ def send_client_invite(*, seller: CustomUser, contact_id: int) -> Tuple[Optional
     try:
         send_templated_email(
             "invite_client",
-            {"company_name": contact.company.name, "contact_name": contact.name, "invite_url": invite_url},
+            {
+                "company_name": contact.company.name,
+                "contact_name": contact.name,
+                "invite_url": invite_url,
+                # D1e white-label: the inviting seller's brand opens the email.
+                **email_brand(contact.company),
+            },
             to=[contact.email],
             channel="transactional",
             user=seller,

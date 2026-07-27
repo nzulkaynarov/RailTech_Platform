@@ -54,6 +54,56 @@ def test_quote_sent_without_seller_is_graceful():
     assert "RailTech</strong>" not in html
 
 
+# ── D1e: white-label — the seller's brand opens a client email, platform stays in the footer ──
+
+
+@pytest.mark.django_db
+def test_client_email_header_is_white_labeled_with_seller_brand():
+    subject, _text, html = _render_bodies(
+        "quote_sent",
+        {
+            "recipient_name": "Алиса",
+            "seller_name": "ООО «Вагонсервис»",
+            "quote_number": "КП-2026-00099",
+            "quote_version": 1,
+            "total_incl_vat": "1 UZS",
+            "valid_until": "—",
+            "brand_name": "ООО «Вагонсервис»",
+            "brand_accent": "#7a1f1f",
+        },
+    )
+    header = html.split("padding:24px 32px", 1)[1][:400]  # the letterhead <td> content
+    # Seller brand opens the email — name in the header, its accent as the header background.
+    assert "ООО «Вагонсервис»" in header
+    assert "#7a1f1f" in html
+    # ...but the platform stays named in the FOOTER (Stripe/DocuSign pattern), never erased.
+    assert "платформы RailTech B2B" in html
+
+
+@pytest.mark.django_db
+def test_client_email_falls_back_to_platform_brand_without_seller():
+    _subject, _text, html = _render_bodies(
+        "quote_sent",
+        {"recipient_name": "Алиса", "quote_number": "КП-1", "quote_version": 1, "total_incl_vat": "1", "valid_until": "—"},
+    )
+    header = html.split("padding:24px 32px", 1)[1][:400]
+    assert "RailTech B2B" in header  # platform default header when no brand passed
+    assert "#1e3a8a" in html  # platform default accent
+
+
+@pytest.mark.django_db
+def test_invite_client_names_the_inviting_company():
+    subject, text, html = _render_bodies(
+        "invite_client",
+        {"company_name": "ООО «Рельсы»", "contact_name": "Пётр", "invite_url": "https://x/register?invite=abc"},
+    )
+    # The inviting company is NAMED (audit: «приглашающая компания НЕ названа»), not a generic
+    # «ваш поставщик».
+    assert "ООО «Рельсы»" in subject
+    assert "ООО «Рельсы»" in html
+    assert "ваш поставщик приглашает" not in html.lower()
+
+
 @pytest.mark.django_db
 def test_send_quote_email_passes_seller_name_not_buyer():
     """The task must resolve the КП's OWN seller company into the email context (Rule 1)."""

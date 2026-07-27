@@ -1,1 +1,1 @@
-Регистрация компании «{{ company_name }}» на RailTech B2B
+{{ company_name }} приглашает вас на RailTech B2B

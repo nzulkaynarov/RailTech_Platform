@@ -114,7 +114,7 @@ def issue_acceptance_code(quote, request_ip: str = "") -> None:
 def _send_code_email(quote, email: str, code: str) -> None:
     """Best-effort delivery of the acceptance code. A transport failure must NOT change the
     neutral public response, so it is logged and swallowed here (fail_silently)."""
-    from notifications.emails import send_templated_email
+    from notifications.emails import email_brand, send_templated_email
 
     seller_name = getattr(quote.seller_company, "name", None) or "Поставщик"
     deal_ref = quote.deal.title or f"#{quote.deal_id}"
@@ -127,6 +127,8 @@ def _send_code_email(quote, email: str, code: str) -> None:
                 "seller_name": seller_name,
                 "deal_ref": deal_ref,
                 "expires_minutes": CODE_TTL_MINUTES,
+                # D1e white-label: the seller's brand opens the email.
+                **email_brand(quote.seller_company),
             },
             to=[email],
             channel="transactional",
@@ -185,7 +187,7 @@ def _send_accepted_next_step_email(quote, email: str) -> None:
     """After a contact accepts, email them the «what's next» — the contract is ready to sign.
     Best-effort; a transport fault is logged, not surfaced (the page already shows success)."""
     from crm.models import Contract
-    from notifications.emails import send_templated_email
+    from notifications.emails import email_brand, send_templated_email
 
     contract = Contract.objects.filter(deal=quote.deal, quote=quote).order_by("-id").first()
     seller_name = getattr(quote.seller_company, "name", None) or "Поставщик"
@@ -196,6 +198,8 @@ def _send_accepted_next_step_email(quote, email: str) -> None:
                 "quote_number": quote.number or f"{quote.deal_id}-{quote.version}",
                 "contract_number": getattr(contract, "number", "") or "—",
                 "seller_name": seller_name,
+                # D1e white-label: the seller's brand opens the email.
+                **email_brand(quote.seller_company),
             },
             to=[email],
             channel="transactional",

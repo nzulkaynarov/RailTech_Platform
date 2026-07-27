@@ -1,14 +1,15 @@
 {% extends "emails/base.html" %}
-{% block subject %}Регистрация компании {{ company_name }}{% endblock %}
+{% block subject %}{{ company_name }} приглашает вас на RailTech B2B{% endblock %}
 {% block header_hint %}Приглашение к регистрации{% endblock %}
 {% block content %}
   <h1 style="margin:0 0 16px 0; font-size:22px; line-height:1.3; color:#111827;">
     Зарегистрируйтесь на RailTech B2B
   </h1>
   <p style="margin:0 0 16px 0;">
-    {% if contact_name %}{{ contact_name }}, в{% else %}В{% endif %}аш поставщик приглашает компанию
-    <strong>{{ company_name }}</strong> зарегистрироваться на платформе RailTech B2B. Регистрация
-    подтянет уже накопленную историю взаимодействий под ваш аккаунт — без создания дубля.
+    {% if contact_name %}{{ contact_name }}, к{% else %}К{% endif %}омпания
+    <strong>{{ company_name }}</strong> приглашает вас зарегистрироваться на платформе RailTech B2B,
+    чтобы получать коммерческие предложения и документы напрямую. Регистрация подтянет уже
+    накопленную историю взаимодействий под ваш аккаунт — без создания дубля.
   </p>
   <table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0;">
     <tr><td style="border-radius:8px; background-color:#2563eb;">

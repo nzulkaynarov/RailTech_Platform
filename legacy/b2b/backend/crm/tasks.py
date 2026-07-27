@@ -450,6 +450,7 @@ def send_quote_email(self, quote_id: int) -> dict:
     # D0 content-correctness: the client sees the КП NUMBER (not the internal deal id) and a sum WITH
     # its currency. `money` is the same NBSP-grouped formatter the PDF uses (reused, not re-invented).
     from crm.templatetags.document_format import money
+    from notifications.emails import email_brand
 
     presentation_ccy = getattr(quote.quote_currency, "code", None) or "UZS"
     quote_number = quote.number or f"{quote.deal_id}-в{quote.version}"
@@ -463,6 +464,8 @@ def send_quote_email(self, quote_id: int) -> dict:
             "valid_until": quote.valid_until.strftime("%d.%m.%Y") if quote.valid_until else "—",
             "total_incl_vat": money(quote.total_incl_vat, presentation_ccy),
             "public_link": public_link,
+            # D1e white-label: the seller's brand opens the email; platform stays in the footer.
+            **email_brand(quote.seller_company),
         },
         to=[to_email],
         channel="transactional",
@@ -515,6 +518,8 @@ def send_document_email(self, document_id: int, to_email: str) -> dict:
         finally:
             document.pdf_file.close()
 
+    from notifications.emails import email_brand
+
     send_templated_email(
         "generated_document",
         {
@@ -522,6 +527,8 @@ def send_document_email(self, document_id: int, to_email: str) -> dict:
             "document_number": document.number,
             "company_name": document.company.name if document.company else "",
             "public_link": public_document_url(document) or "",
+            # D1e white-label: the issuing seller's brand opens the email.
+            **email_brand(document.company),
         },
         to=[to_email],
         channel="transactional",

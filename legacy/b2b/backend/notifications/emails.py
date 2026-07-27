@@ -120,6 +120,28 @@ def _render_bodies(template_name: str, context: dict) -> tuple[str, str, str]:
     return subject, text_body, html_body
 
 
+def email_brand(company) -> dict:
+    """White-label header bundle for a CLIENT-facing email (D1e): the SELLER's name + accent go in
+    the header, the platform stays named in the footer (Stripe/DocuSign pattern). Spread into the
+    email context (``**email_brand(seller)``). Returns ``{}`` (→ platform default header) when the
+    company is None or has no filled brand. Read-only."""
+    if not company:
+        return {}
+    from accounts.models import CompanyDocumentProfile
+    from crm.services.documents import accent_contrast
+
+    profile = CompanyDocumentProfile.objects.filter(company=company).first()
+    name = (getattr(profile, "legal_name", "") or getattr(company, "name", "") or "").strip()
+    accent = (getattr(profile, "accent_color", "") or "").strip()
+    brand = {}
+    if name:
+        brand["brand_name"] = name
+    if accent:
+        brand["brand_accent"] = accent
+        brand["brand_contrast"] = accent_contrast(accent)
+    return brand
+
+
 def send_templated_email(
     template_name: str,
     context: dict,
