@@ -285,6 +285,12 @@ def _create_prefilled_quote(
 
                 data["frozen_currency"] = Currency.objects.filter(code=offer["currency"]).first()
             prefilled += 1
+        # Bug fix (владелец 27-07): a line WITHOUT its own offer currency inherits the КП
+        # cost-currency default — the seller's «валюта себестоимости» setting — exactly like a
+        # manually-added line (useQuoteBuilderActions), instead of silently defaulting to UZS.
+        # Never overrides an offer's real currency.
+        if not data.get("frozen_currency") and quote.cost_currency_default_id:
+            data["frozen_currency_id"] = quote.cost_currency_default_id
         item_by_src_pk[src.pk] = QuoteItem.objects.create(quote=quote, **data)
 
     if ai_telemetry:
@@ -337,6 +343,9 @@ def prefill_created_quote(quote: Quote) -> int:
                 from master_data.models import Currency
 
                 data["frozen_currency"] = Currency.objects.filter(code=offer["currency"]).first()
+        # Same «валюта себестоимости» inheritance as _create_prefilled_quote (владелец 27-07).
+        if not data.get("frozen_currency") and quote.cost_currency_default_id:
+            data["frozen_currency_id"] = quote.cost_currency_default_id
         QuoteItem.objects.create(quote=quote, **data)
 
     from .quotes import QuoteCalculationService
