@@ -27,6 +27,7 @@ export type SettingsSectionKey =
   | 'profile'
   | 'security'
   | 'company'
+  | 'branding'
   | 'defaults'
   | 'numbering'
   | 'templates'
@@ -35,8 +36,18 @@ export type SettingsSectionKey =
   | 'billing'
   | 'platform';
 
-/** Группа сайдбара (S2/S5) — порядок: account → company → sales → team → billing → platform. */
-export type SettingsGroupKey = 'account' | 'company' | 'sales' | 'team' | 'billing' | 'platform';
+/** Группа сайдбара — порядок: account → company → documents → sales → team → billing → platform.
+ * Группа «documents» (решение владельца 27-07): всё «как выглядят мои документы» — бланк/бренд,
+ * шаблоны писем и актов, нумерация — живёт в ОДНОМ месте. Юр.реквизиты компании остаются в
+ * «company» (это идентичность, не внешний вид — трёхуровневый принцип настроек). */
+export type SettingsGroupKey =
+  | 'account'
+  | 'company'
+  | 'documents'
+  | 'sales'
+  | 'team'
+  | 'billing'
+  | 'platform';
 
 export interface SettingsSectionDef {
   key: SettingsSectionKey;
@@ -96,18 +107,30 @@ const SECTION_RULES: SectionRule[] = [
   // ── account ──
   { def: { key: 'profile', labelKey: 'profile.tabs.personal', group: 'account' }, visible: () => true },
   { def: { key: 'security', labelKey: 'profile.tabs.security', group: 'account' }, visible: () => true },
-  // ── company ── S4: «Документы и бренд» слита в «Реквизиты и бренд» (P4-дубль реквизитов).
-  // Company: hasSettingsEdit редактирует (CompanyTab + PDF-бренд-подраздел для продавца);
-  // ADMIN видит read-only превью. Отдельной секции documents больше НЕТ (композиция в SettingsPage).
+  // ── company ── ТОЛЬКО юр.реквизиты компании (CompanyTab): название/ИНН/банк/KYC — идентичность,
+  // не внешний вид. PDF-бланк/бренд переехал в группу «documents» (решение владельца 27-07).
+  // ADMIN видит read-only превью компании.
   {
-    def: { key: 'company', labelKey: 'settings.tabs.companyBranding', group: 'company' },
+    def: { key: 'company', labelKey: 'settings.tabs.company', group: 'company' },
     visible: (input) => input.isAdmin || hasSettingsEdit(input),
   },
+  // ── documents ── всё «как выглядят мои документы» в одном месте (владелец 27-07).
+  // Бланк и бренд — PDF-letterhead/тема/бланк КП (был подразделом company), продавец.
   {
-    def: { key: 'numbering', labelKey: 'settings.tabs.numbering', group: 'company' },
+    def: { key: 'branding', labelKey: 'settings.tabs.branding', group: 'documents' },
     visible: (input) => !input.isAdmin && hasSettingsEdit(input) && sells(input),
   },
-  // ── sales ──
+  // Шаблоны писем и актов — нужны И покупателю, И продавцу (решение владельца), гейт на settings.edit.
+  {
+    def: { key: 'doc-templates', labelKey: 'settings.tabs.docTemplates', group: 'documents' },
+    visible: (input) => !input.isAdmin && hasSettingsEdit(input),
+  },
+  // Нумерация документов (была в company) — номер тоже часть документа.
+  {
+    def: { key: 'numbering', labelKey: 'settings.tabs.numbering', group: 'documents' },
+    visible: (input) => !input.isAdmin && hasSettingsEdit(input) && sells(input),
+  },
+  // ── sales ── бизнес-дефолты КП (маржа/НДС/валюта/срок) + статьи расхода — НЕ внешний вид.
   {
     def: { key: 'defaults', labelKey: 'settings.tabs.defaults', group: 'sales' },
     visible: (input) => !input.isAdmin && hasSettingsEdit(input) && sells(input),
@@ -116,11 +139,6 @@ const SECTION_RULES: SectionRule[] = [
   {
     def: { key: 'templates', labelKey: 'settings.tabs.templates', group: 'sales' },
     visible: (input) => !input.isAdmin && hasChargeManage(input) && sells(input),
-  },
-  // Шаблоны писем и актов — нужны И покупателю, И продавцу (решение владельца), гейт на settings.edit.
-  {
-    def: { key: 'doc-templates', labelKey: 'settings.tabs.docTemplates', group: 'sales' },
-    visible: (input) => !input.isAdmin && hasSettingsEdit(input),
   },
   // ── team ── (виден всем не-ADMIN; действия управления внутри гейтятся hasTeamManage).
   { def: { key: 'team', labelKey: 'settings.tabs.team', group: 'team' }, visible: (input) => !input.isAdmin },

@@ -2774,7 +2774,8 @@
       "defaults": "Default quote parameters",
       "numbering": "Document numbering",
       "docTemplates": "Email & act templates",
-      "billing": "Plan & subscription"
+      "billing": "Plan & subscription",
+      "branding": "Letterhead & brand"
     },
     "groups": {
       "account": "Account",
@@ -2782,7 +2783,8 @@
       "sales": "Sales",
       "team": "Team & access",
       "billing": "Billing",
-      "platform": "Platform"
+      "platform": "Platform",
+      "documents": "Documents"
     },
     "platform": {
       "title": "Platform settings",

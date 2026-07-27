@@ -10,7 +10,6 @@ import { Store, Building2 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 
 import { useAuthStore } from '@/store/authStore';
 import { useUserStore, companyStatusLabels } from '@/store/userStore';
@@ -45,9 +44,9 @@ export function SettingsPage() {
   // `?section=` живёт в search-части URL (useUrlState), hash остаётся `#settings` —
   // deep-link и refresh сохраняют секцию; невидимая/неизвестная секция → дефолт.
   const { get, set } = useUrlState();
-  // S4: секция `documents` слита в `company` — старые deep-link `?section=documents`
-  // маппим на `company`, чтобы не ловить белый экран/фоллбэк на profile.
-  const urlSection = get('section') === 'documents' ? 'company' : get('section');
+  // Старые deep-link `?section=documents` (когда-то = бланк+бренд) маппим на новую секцию
+  // `branding` (PDF-бланк/бренд теперь отдельная секция в группе «Документы»).
+  const urlSection = get('section') === 'documents' ? 'branding' : get('section');
   const activeSection: SettingsSectionKey = sections.some((section) => section.key === urlSection)
     ? (urlSection as SettingsSectionKey)
     : defaultSettingsSection(gate);
@@ -68,7 +67,7 @@ export function SettingsPage() {
         activeSection={activeSection}
         onSelectSection={(key) => set({ section: key })}
       >
-        <SectionContent sectionKey={activeSection} isAdmin={isAdmin} companySells={companySells} />
+        <SectionContent sectionKey={activeSection} isAdmin={isAdmin} />
       </SettingsLayout>
     </div>
   );
@@ -76,7 +75,7 @@ export function SettingsPage() {
 
 /** Маппинг секция → существующий компонент (монтируется как есть, spec PR 1). */
 function SectionContent(
-  { sectionKey, isAdmin, companySells }: { sectionKey: SettingsSectionKey; isAdmin: boolean; companySells: boolean },
+  { sectionKey, isAdmin }: { sectionKey: SettingsSectionKey; isAdmin: boolean },
 ): ReactNode {
   switch (sectionKey) {
     case 'profile':
@@ -84,8 +83,11 @@ function SectionContent(
     case 'security':
       return <SecuritySection />;
     case 'company':
-      // ADMIN — read-only превью (прежний admin-таб company); tenant — реквизиты + бренд-подраздел.
-      return isAdmin ? <AdminCompanyPreview /> : <CompanyDetailsAndBranding showBranding={companySells} />;
+      // ADMIN — read-only превью; tenant — ТОЛЬКО юр.реквизиты компании (бренд переехал в `branding`).
+      return isAdmin ? <AdminCompanyPreview /> : <CompanyTab />;
+    case 'branding':
+      // «Бланк и бренд» — PDF-letterhead/тема/бланк КП (группа «Документы»), только продавец.
+      return <CompanyBrandingSection />;
     case 'defaults':
       return <CompanyDefaultsSettings />;
     case 'numbering':
@@ -105,28 +107,20 @@ function SectionContent(
 }
 
 /**
- * S4 «Реквизиты и бренд» — композиция двух НЕЗАВИСИМЫХ форм на одной секции (P4-дубль реквизитов):
- *  1) CompanyTab — реквизиты/банк/KYC компании (источник; сохраняет через company PATCH);
- *  2) CompanyDocumentProfileSettings — PDF-бренд КП/контракта (сохраняет через document-profile PATCH),
- *     ТОЛЬКО для продавца. Тумблер «наследовать реквизиты компании» внутри неё связывает реквизиты
- *     выше с бренд-блоком, поэтому дубль полей больше не сбивает с толку. Каждая форма несёт свой
- *     стейт и свою кнопку «Сохранить» — компонуем, не переписываем.
+ * «Бланк и бренд» (группа «Документы», решение владельца 27-07) — PDF-letterhead/тема/бланк КП.
+ * Выделено из прежней композиции company: юр.реквизиты (CompanyTab) остались в «Компании», а
+ * всё «как выглядит документ» переехало сюда. Секция гейтится на продавца (sells) в
+ * settingsSections, поэтому showBranding-условие тут больше не нужно.
  */
-function CompanyDetailsAndBranding({ showBranding }: { showBranding: boolean }) {
+function CompanyBrandingSection() {
   const { t } = useTranslation();
   return (
-    <div className="space-y-8">
-      <CompanyTab />
-      {showBranding && (
-        <div className="space-y-4">
-          <Separator />
-          <div>
-            <h2 className="text-lg font-semibold tracking-tight">{t('settings.company.brandingSubtitle')}</h2>
-            <p className="text-sm text-muted-foreground mt-1">{t('settings.company.brandingSubtitleHint')}</p>
-          </div>
-          <CompanyDocumentProfileSettings />
-        </div>
-      )}
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-lg font-semibold tracking-tight">{t('settings.company.brandingSubtitle')}</h2>
+        <p className="text-sm text-muted-foreground mt-1">{t('settings.company.brandingSubtitleHint')}</p>
+      </div>
+      <CompanyDocumentProfileSettings />
     </div>
   );
 }
