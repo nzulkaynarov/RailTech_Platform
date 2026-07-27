@@ -266,9 +266,12 @@
       <td>
         <div class="brand-name">{{ seller_name }}</div>
         <div class="brand-meta">
+          {% comment %}
+            Реквизиты продавца печатаются ОДИН раз полностью — в рег-футере. Шапка несёт только
+            идентичность (имя + ИНН + банк по тумблеру); тел/email убраны (владелец 27-07:
+            «в КП 3 раза реквизиты» — были в шапке, блоке сторон и футере одновременно).
+          {% endcomment %}
           {% if seller_profile.inn %}ИНН {{ seller_profile.inn }}{% elif seller.inn %}ИНН {{ seller.inn }}{% endif %}
-          {% if seller.phone %} · тел. {{ seller.phone }}{% endif %}
-          {% if seller.email %} · {{ seller.email }}{% endif %}
           {% if not seller %}RailTech B2B Ecosystem{% endif %}
           {# Bank requisites in the letterhead (CIS practice) — spec-kp-blank, toggle on the profile. #}
           {% if seller_profile.show_bank_in_header and seller_profile.bank_details %}<br><span class="brand-bank">{{ seller_profile.bank_details|linebreaksbr }}</span>{% endif %}
@@ -278,6 +281,8 @@
     </tr>
   </table>
   <div class="rule"></div>
+
+  {% block pre_title %}{% endblock %}{# КП-письмо: реквизит «адресат» (ГОСТ) живёт ДО заголовка #}
 
   <h1 class="doc-title">{% block doc_title %}{% endblock %}</h1>
 
@@ -346,7 +351,8 @@
               {% firstof seller_profile.legal_address seller.legal_address as f_addr %}
               {% if f_addr %}<br>{{ f_addr }}{% endif %}
             </td>
-            {% if seller_profile.bank_details %}
+            {% if seller_profile.bank_details and not seller_profile.show_bank_in_header %}
+            {# Bank prints in the footer ONLY when not already in the letterhead (no dup). #}
             <td style="width:30%">{{ seller_profile.bank_details|linebreaksbr }}</td>
             {% endif %}
             <td style="width:22%">

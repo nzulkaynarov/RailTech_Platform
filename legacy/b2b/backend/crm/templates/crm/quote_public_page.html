@@ -67,6 +67,9 @@
     h1.doc-title { font-size: 18px; color: var(--accent); margin: 0 0 14px; }
     .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     @media (max-width: 640px) { .parties { grid-template-columns: 1fr; } }
+    /* КП-письмо: адресат (ГОСТ) — справа до заголовка, строки по левому краю. */
+    .addressee { margin: 0 0 14px auto; max-width: 46%; text-align: left; font-size: 14px; line-height: 1.5; }
+    .addressee .addr-org { font-weight: 700; }
     /* D1c: сопроводительный абзац + структурные условия — как в PDF. */
     .cover-letter { margin: 14px 0 0; font-size: 14px; color: var(--ink-soft); line-height: 1.5; }
     .cover-letter p { margin: 0 0 6px; }
@@ -175,32 +178,19 @@
         </div>
       </div>
       <div class="rule"></div>
-      <h1 class="doc-title">Коммерческое предложение</h1>
-
-      <div class="parties">
-        <div class="party">
-          <h3>Поставщик</h3>
-          {% if seller_profile %}
-            <div class="pname">{{ seller_profile.legal_name|default:seller.name }}</div>
-            {% if seller_profile.inn %}<p>ИНН: {{ seller_profile.inn }}</p>{% elif seller.inn %}<p>ИНН: {{ seller.inn }}</p>{% endif %}
-            {% if seller_profile.legal_address %}<p>{{ seller_profile.legal_address }}</p>{% elif seller.legal_address %}<p>{{ seller.legal_address }}</p>{% endif %}
-          {% elif seller %}
-            <div class="pname">{{ seller.name }}</div>
-            {% if seller.inn %}<p>ИНН: {{ seller.inn }}</p>{% endif %}
-            {% if seller.legal_address %}<p>{{ seller.legal_address }}</p>{% endif %}
-          {% else %}
-            <div class="pname">RailTech B2B</div>
-            <p>Платформа b2b.railtech.uz</p>
-          {% endif %}
-        </div>
-        <div class="party">
-          <h3>Покупатель</h3>
-          {# Offline client: deal.company is NULL — name the contact instead of a bare «—». #}
-          <div class="pname">{% if company %}{{ company.name|default:"—" }}{% elif contact %}{{ contact.name|default:"—" }}{% else %}—{% endif %}</div>
-          {% if company.inn %}<p>ИНН: {{ company.inn }}</p>{% endif %}
-          {% if company.legal_address %}<p>{{ company.legal_address }}</p>{% endif %}
-        </div>
+      {# КП-письмо (близнец PDF): адресат «куда/кому» ДО заголовка вместо договорных колонок сторон. #}
+      {% if company or contact %}
+      <div class="addressee">
+        {% if company %}
+          <div class="addr-org">{{ company.name }}</div>
+          {% if company.contact_person %}<div>{{ company.contact_person }}</div>{% endif %}
+        {% else %}
+          {% if contact.position %}<div>{{ contact.position }}</div>{% endif %}
+          <div class="addr-org">{{ contact.name }}</div>
+        {% endif %}
       </div>
+      {% endif %}
+      <h1 class="doc-title">Коммерческое предложение</h1>
       {# D1c: сопроводительный абзац — тот же, что в PDF (одна anatomy на обеих поверхностях). #}
       {% if cover_text %}<div class="cover-letter">{{ cover_text|linebreaks }}</div>{% endif %}
     </div>

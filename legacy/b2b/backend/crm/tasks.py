@@ -434,9 +434,13 @@ def send_quote_email(self, quote_id: int) -> dict:
 
     attachments = []
     if quote.pdf_file:
+        from crm.services.documents import quote_pdf_filename
+
         try:
             quote.pdf_file.open("rb")
-            attachments = [(f"KP-{quote.deal_id}-v{quote.version}.pdf", quote.pdf_file.read(), "application/pdf")]
+            # Attachment named by the КП number (seller's numbering scheme) — what the client
+            # saves must match the document, not an internal deal id (владелец 27-07).
+            attachments = [(quote_pdf_filename(quote), quote.pdf_file.read(), "application/pdf")]
         finally:
             quote.pdf_file.close()
 

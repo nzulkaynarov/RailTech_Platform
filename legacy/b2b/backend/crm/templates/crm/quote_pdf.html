@@ -33,6 +33,33 @@
   </table>
 {% endblock %}
 
+{% comment %}
+  КП-письмо (владелец 27-07, ГОСТ Р 7.0.97-2016 реквизит «адресат»): КП оформляется как ПИСЬМО,
+  а не как договор. Двухколоночный блок «Поставщик/Покупатель» здесь ОТМЕНЁН (он «обязывал
+  покупателя» и отпугивал) — вместо него адресат «куда/кому» справа до заголовка. Стороны
+  остаются в договоре/инвойсе/акте, где они юридически нужны.
+{% endcomment %}
+{% block pre_title %}
+{% if company or contact %}
+<table class="addressee-wrap">
+  <tr>
+    <td></td>
+    <td class="addr">
+      {% if company %}
+        <div class="addr-org">{{ company.name }}</div>
+        {% if company.contact_person %}<div>{{ company.contact_person }}</div>{% endif %}
+      {% else %}
+        {% if contact.position %}<div>{{ contact.position }}</div>{% endif %}
+        <div class="addr-org">{{ contact.name }}</div>
+      {% endif %}
+    </td>
+  </tr>
+</table>
+{% endif %}
+{% endblock %}
+
+{% block parties %}{% endblock %}
+
 {% block doc_title %}Коммерческое предложение{% endblock %}
 
 {% block extra_head %}
@@ -47,6 +74,11 @@
     .optional-block { margin-top: 14pt; break-inside: avoid; }
     .optional-block h3 { margin: 0 0 4pt 0; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.6pt; color: var(--accent); font-weight: 700; }
     .optional-block .optional-hint { font-size: 8pt; color: var(--muted); margin: 0 0 5pt 0; }
+    /* КП-письмо (владелец 27-07): реквизит «адресат» по ГОСТ Р 7.0.97-2016 — справа под
+       реквизитами бланка, ДО заголовка; строки внутри блока по левому краю. */
+    table.addressee-wrap { width: 100%; border-collapse: collapse; margin: 0 0 10pt 0; }
+    table.addressee-wrap td.addr { width: 45%; text-align: left; font-size: 9.2pt; color: var(--ink); line-height: 1.5; }
+    table.addressee-wrap td.addr .addr-org { font-weight: 700; }
     /* spec-kp-blank: cover-letter paragraph («КП + письмо в одном») + structured «Условия» grid. */
     .cover-letter { margin: 0 0 12pt 0; font-size: 9.2pt; color: var(--ink-soft); }
     .cover-letter p { margin: 0 0 5pt 0; text-indent: 16pt; }

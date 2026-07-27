@@ -222,7 +222,8 @@ _SAMPLE_BUYER = {
     "name": "ООО «Образец-Клиент»",
     "inn": "300000000",
     "legal_address": "г. Ташкент, ул. Примерная, 1",
-    "contact_person": "",
+    # КП-письмо: реквизит «адресат» (ГОСТ 7.0.97) — образец показывает строку «кому».
+    "contact_person": "Директору Иванову К. К.",
 }
 
 
@@ -279,9 +280,32 @@ def _render_sample_quote_html(brand: dict, cover_profile=None) -> str:
             "line_total": Decimal("3400000.00"),
         },
     ]
+    # Владелец 27-07: «нумерация документа разрознена с настройками компании» — номер образца
+    # рендерится ПО СХЕМЕ НУМЕРАЦИИ продавца (dry-run, счётчик не трогается), а не хардкодом.
+    sample_number = "КП-2026-000123"
+    seller_for_number = brand.get("seller")
+    if seller_for_number is not None:
+        from django.core.exceptions import ValidationError as DjangoValidationError
+
+        from .numbering import get_company_scheme_view, preview_scheme_numbers
+
+        try:
+            scheme_view = get_company_scheme_view(seller_for_number)
+            rendered = preview_scheme_numbers(
+                seller_for_number,
+                pattern=scheme_view.scheme.pattern,
+                padding=scheme_view.scheme.padding,
+                reset_period=scheme_view.scheme.reset_period,
+                start_value=scheme_view.scheme.start_value,
+            )
+            sample_number = next(
+                (row["number"] for row in rendered if row["type_code"] == "KP"), sample_number
+            )
+        except (DjangoValidationError, ValueError):
+            pass  # a broken draft scheme must never kill the preview — fall back to the stock sample
     sample_quote = {
         "quote_currency": {"code": "UZS"},
-        "number": "КП-2026-000123 (образец)",
+        "number": f"{sample_number} (образец)",
         "deal_id": 0,
         "version": 1,
         "created_at": date(2026, 7, 8),
@@ -851,6 +875,19 @@ def build_quote_terms(
     add("Срок действия КП", valid_until)
     add("Прочие условия", other)
     return rows
+
+
+def quote_pdf_filename(quote) -> str:
+    """PDF filename derived from the КП's OWN number (the seller's numbering scheme) — the file a
+    client saves must match the document it contains («КП-2026-00042_v2.pdf»), not an internal
+    deal-id. Filesystem-unsafe characters collapse to «_» (cyrillic is kept — modern browsers,
+    mail clients and Django's RFC-5987 Content-Disposition handle it). A draft with no number
+    yet degrades to the legacy deal-scoped name so uniqueness never breaks."""
+    number = (quote.number or "").strip()
+    if not number:
+        return f"KP_{quote.deal_id}_v{quote.version}.pdf"
+    safe = re.sub(r"[^\w\-.]+", "_", number, flags=re.UNICODE).strip("_")
+    return f"{safe}_v{quote.version}.pdf"
 
 
 def quote_document_extras(quote, seller_company) -> dict:

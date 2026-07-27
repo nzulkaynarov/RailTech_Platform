@@ -138,13 +138,12 @@ class QuoteLifecycleService:
         pdf_file = BytesIO()
         HTML(string=html_string).write_pdf(pdf_file)
 
-        # Wave E F3: `deal.company` is nullable (company-less «калькулятор» draft) — the
-        # filename must degrade, not raise. `inn` is also blank for offline (pre-KYC) client
-        # companies, so fall back to the deal id in both cases and keep the name unique.
-        buyer_company = quote.deal.company
-        client_ref = (getattr(buyer_company, "inn", "") or "").strip() or f"deal{quote.deal_id}"
-        filename = f"KP_{client_ref}_{quote.deal_id}_v{quote.version}.pdf"
-        quote.pdf_file.save(filename, ContentFile(pdf_file.getvalue()), save=True)
+        # Владелец 27-07: «имя файла разрознено с настройками компании» — файл называется
+        # НОМЕРОМ КП из схемы нумерации продавца («КП-2026-00042_v1.pdf»), а не внутренним
+        # deal-id/ИНН. Черновик без номера деградирует в старую deal-схему (уникальность цела).
+        from crm.services.documents import quote_pdf_filename
+
+        quote.pdf_file.save(quote_pdf_filename(quote), ContentFile(pdf_file.getvalue()), save=True)
 
         return quote
 
