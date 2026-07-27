@@ -119,6 +119,11 @@
   .brand-bank { font-size: var(--fs-xs); color: var(--muted); line-height: 1.35; }
   .doc-id { text-align: right; font-size: var(--fs-sm); color: #5a6270; }
   .doc-id .doc-no { font-size: var(--fs-lg); font-weight: 700; color: var(--accent); letter-spacing: 0.2pt; string-set: doc-ref content(); }
+  /* Т4 (ADZ meta block): label:value rows with hairline rules under the doc number —
+     date / valid-until / manager / phone / email live HERE, not at the document tail. */
+  .doc-id table.meta-grid { margin-left: auto; border-collapse: collapse; margin-top: 5pt; }
+  .doc-id table.meta-grid td { font-size: 8pt; padding: 2pt 0 2pt 12pt; border-bottom: 0.5pt solid var(--line); text-align: right; color: var(--ink-soft); white-space: nowrap; }
+  .doc-id table.meta-grid td.mk { color: var(--muted); text-align: left; padding-left: 0; }
   /* Print-typography wave: the default (light) preset speaks DOCUMENT idioms — thin rules and
      typographic hierarchy, not web fills. Heavy fills live only in the Bold preset. */
   .rule { height: 1.5pt; background: var(--accent); margin: 0 0 16pt 0; }

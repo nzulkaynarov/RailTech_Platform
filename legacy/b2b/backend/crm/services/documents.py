@@ -299,6 +299,13 @@ def _render_sample_quote_html(brand: dict, cover_profile=None) -> str:
         "fx_snapshot": {"USD": "12650.00"},
         "frozen_at": None,
         "updated_at": date(2026, 7, 8),
+        # Т4 meta block WYSIWYG: a sample manager so the seller sees the header contacts styled.
+        # Dict lookups satisfy the template's prepared_by.get_full_name/.phone/.email reads.
+        "prepared_by": {
+            "get_full_name": "Алексей Менеджеров",
+            "phone": "+998 90 123-45-67",
+            "email": "sales@company.uz",
+        },
     }
     # «Фирменный бланк» blocks in the preview (spec-kp-blank): cover letter resolved from the
     # (draft) profile so the seller sees it live; structured terms use representative sample values

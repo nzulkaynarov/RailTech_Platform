@@ -59,6 +59,10 @@
     .brand-logo { max-height: 46px; max-width: 140px; }
     .doc-id { text-align: right; font-size: 13px; color: var(--ink-soft); }
     .doc-id .doc-no { font-size: 18px; font-weight: 700; color: var(--accent); }
+    /* Т4 meta block — как в PDF: label:value с линейками. */
+    .doc-id table.meta-grid { margin-left: auto; border-collapse: collapse; margin-top: 6px; }
+    .doc-id table.meta-grid td { font-size: 12px; padding: 3px 0 3px 14px; border-bottom: 1px solid var(--line); text-align: right; color: var(--ink-soft); white-space: nowrap; }
+    .doc-id table.meta-grid td.mk { color: var(--muted); text-align: left; padding-left: 0; }
     .rule { height: 3px; background: var(--accent); border-radius: 3px; margin: 14px 0 18px; }
     h1.doc-title { font-size: 18px; color: var(--accent); margin: 0 0 14px; }
     .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -157,8 +161,17 @@
         </div>
         <div class="doc-id">
           <div class="doc-no">КП {% if quote.number %}№ {{ quote.number }}{% else %}{{ quote.deal_id }}-{{ quote.version }}{% endif %}</div>
-          <div>от {{ quote.created_at|date:"d.m.Y" }}</div>
-          {% if quote.valid_until %}<div>Действительно до: {{ quote.valid_until|date:"d.m.Y" }}</div>{% endif %}
+          {# Т4 — тот же мета-блок, что в PDF (близнецы): дата/срок/менеджер/контакты в шапке. #}
+          <table class="meta-grid">
+            <tr><td class="mk">Дата</td><td>{{ quote.created_at|date:"d.m.Y" }}</td></tr>
+            {% if quote.valid_until %}<tr><td class="mk">Действительно до</td><td>{{ quote.valid_until|date:"d.m.Y" }}</td></tr>{% endif %}
+            {% if quote.prepared_by %}
+            <tr><td class="mk">Менеджер</td><td>{% firstof quote.prepared_by.get_full_name quote.prepared_by.email %}</td></tr>
+            {% firstof quote.prepared_by.phone seller.phone as meta_phone %}
+            {% if meta_phone %}<tr><td class="mk">Телефон</td><td>{{ meta_phone }}</td></tr>{% endif %}
+            {% if quote.prepared_by.email %}<tr><td class="mk">Email</td><td>{{ quote.prepared_by.email }}</td></tr>{% endif %}
+            {% endif %}
+          </table>
         </div>
       </div>
       <div class="rule"></div>
@@ -285,14 +298,8 @@
       {% endif %}
     </div>
 
-    <!-- ── Manager + CTA ── -->
+    <!-- ── CTA (Т4: контакты менеджера переехали в мета-блок шапки — дубль убран) ── -->
     <div class="card">
-      {% if quote.prepared_by %}
-      <div class="manager-box">
-        <span class="k">Ваш менеджер:</span> {% firstof quote.prepared_by.get_full_name quote.prepared_by.email %}{% if quote.prepared_by.email %} · {{ quote.prepared_by.email }}{% endif %}{% if quote.prepared_by.phone %} · тел. {{ quote.prepared_by.phone }}{% endif %}
-      </div>
-      {% endif %}
-
       <div id="already-decided" class="panel" {% if is_open %}hidden{% endif %}>
         <div class="status-box {% if is_approved %}ok{% else %}info{% endif %}">
           {% if is_approved %}

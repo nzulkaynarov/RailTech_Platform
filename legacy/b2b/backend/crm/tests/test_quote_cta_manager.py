@@ -56,25 +56,29 @@ def _manager(full_name="Иван Петров", email="ivan@seller.uz", phone="+
     return SimpleNamespace(get_full_name=lambda: full_name, email=email, phone=phone)
 
 
-# ── manager block ────────────────────────────────────────────────────
-def test_manager_block_renders_when_prepared_by_set():
+# ── manager contacts (Т4: живут в мета-блоке шапки, не в хвосте документа) ───────
+def test_manager_renders_in_header_meta_when_prepared_by_set():
     html = render_to_string("crm/quote_pdf.html", _ctx(quote={"prepared_by": _manager()}))
-    assert "Ваш менеджер:" in html
-    assert "Иван Петров" in html
-    assert "ivan@seller.uz" in html
-    assert "+998 90 000-11-22" in html
+    meta = html.split('class="meta-grid"')[1].split("</table>")[0]
+    assert "Менеджер" in meta
+    assert "Иван Петров" in meta
+    assert "ivan@seller.uz" in meta
+    assert "+998 90 000-11-22" in meta
 
 
-def test_manager_block_absent_when_no_prepared_by():
+def test_manager_meta_absent_when_no_prepared_by():
     html = render_to_string("crm/quote_pdf.html", _ctx())
-    assert "Ваш менеджер" not in html
+    meta = html.split('class="meta-grid"')[1].split("</table>")[0]
+    assert "Менеджер" not in meta
+    assert "Дата" in meta  # the date rows still print
 
 
 def test_manager_falls_back_to_email_and_seller_phone():
     mgr = SimpleNamespace(get_full_name=lambda: "", email="sales@seller.uz", phone="")
     html = render_to_string("crm/quote_pdf.html", _ctx(quote={"prepared_by": mgr}))
-    assert "sales@seller.uz" in html
-    assert "+998 90 111-22-33" in html  # seller.phone fallback
+    meta = html.split('class="meta-grid"')[1].split("</table>")[0]
+    assert "sales@seller.uz" in meta
+    assert "+998 90 111-22-33" in meta  # seller.phone fallback
 
 
 # ── online-accept CTA ────────────────────────────────────────────────

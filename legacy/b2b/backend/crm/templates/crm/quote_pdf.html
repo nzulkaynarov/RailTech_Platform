@@ -16,8 +16,21 @@
 {% endcomment %}
 {% block doc_meta %}
   <div class="doc-no">{% if quote.number %}КП № {{ quote.number }}{% else %}КП № {{ quote.deal_id }}-{{ quote.version }}{% endif %}</div>
-  <div>от {{ quote.created_at|date:"d.m.Y" }}</div>
-  {% if quote.valid_until %}<div>действ. до {{ quote.valid_until|date:"d.m.Y" }}</div>{% endif %}
+  {% comment %}
+    Т4 — мета-блок ADZ-класса: label:value с линейками. Менеджер/контакты живут ЗДЕСЬ
+    (как «Sales responsible» у ADZ), а не в хвосте документа — клиент видит, кому звонить,
+    не листая. Телефон: личный менеджера → общий компании.
+  {% endcomment %}
+  <table class="meta-grid">
+    <tr><td class="mk">Дата</td><td>{{ quote.created_at|date:"d.m.Y" }}</td></tr>
+    {% if quote.valid_until %}<tr><td class="mk">Действительно до</td><td>{{ quote.valid_until|date:"d.m.Y" }}</td></tr>{% endif %}
+    {% if quote.prepared_by %}
+    <tr><td class="mk">Менеджер</td><td>{% firstof quote.prepared_by.get_full_name quote.prepared_by.email %}</td></tr>
+    {% firstof quote.prepared_by.phone seller.phone as meta_phone %}
+    {% if meta_phone %}<tr><td class="mk">Телефон</td><td>{{ meta_phone }}</td></tr>{% endif %}
+    {% if quote.prepared_by.email %}<tr><td class="mk">Email</td><td>{{ quote.prepared_by.email }}</td></tr>{% endif %}
+    {% endif %}
+  </table>
 {% endblock %}
 
 {% block doc_title %}Коммерческое предложение{% endblock %}
@@ -151,14 +164,9 @@
   {% endif %}
 
   {% comment %}
-    Manager contact + online-accept CTA — seller-side contact only (no confidentiality impact);
-    the public link is the buyer's own no-login КП. CTA renders only after send (token minted).
+    Т4: контакты менеджера переехали в мета-блок шапки (ADZ «Sales responsible») — хвостовой
+    manager-box удалён как дубль. Online-accept CTA рендерится только после send (token minted).
   {% endcomment %}
-  {% if quote.prepared_by %}
-  <div class="manager-box">
-    <span class="k">Ваш менеджер:</span> {% firstof quote.prepared_by.get_full_name quote.prepared_by.email %}{% if quote.prepared_by.phone %} &middot; тел. {{ quote.prepared_by.phone }}{% elif seller.phone %} &middot; тел. {{ seller.phone }}{% endif %}{% if quote.prepared_by.email %} &middot; {{ quote.prepared_by.email }}{% endif %}
-  </div>
-  {% endif %}
 
   {% if public_quote_url %}
   <div class="cta-box">
