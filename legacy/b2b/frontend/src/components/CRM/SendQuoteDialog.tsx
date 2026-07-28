@@ -61,6 +61,13 @@ export function SendQuoteDialog({ deal, quote, open, onOpenChange, onSent }: Sen
   const needJustification = justificationRequired || summary.marginState === 'below';
   const missingReason = needJustification && !reason.trim();
 
+  // #6 (soft, non-blocking): billable lines the seller never bound to a catalog product. A quote
+  // still sends — this is a "you may have skipped matching" nudge, not a gate. SECTION/NOTE carry
+  // no product and optional lines are extras, so both are excluded (mirrors the billable() rule).
+  const unmatchedLines = (quote.items ?? []).filter(
+    (item) => (item.display_type ?? 'ITEM') === 'ITEM' && !item.is_optional && item.product == null,
+  ).length;
+
   const saveValidity = () => {
     const next = validUntil || null;
     if (next === (quote.valid_until ?? null)) return;
@@ -186,6 +193,17 @@ export function SendQuoteDialog({ deal, quote, open, onOpenChange, onSent }: Sen
               </span>
             )}
           </SummaryRow>
+
+          {/* #6 — catalog-match nudge (soft): N billable lines aren't linked to a catalog product.
+              Informational only; never blocks the send. */}
+          {unmatchedLines > 0 && (
+            <SummaryRow label={t('sendDialog.catalogMatch')}>
+              <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                <AlertTriangle className="h-3.5 w-3.5 text-warning" aria-hidden="true" />
+                {t('sendDialog.unmatchedLines', { count: unmatchedLines })}
+              </span>
+            </SummaryRow>
+          )}
 
           {/* Below-floor justification — required, recorded in the deal timeline */}
           {needJustification && (

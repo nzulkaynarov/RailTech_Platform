@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-	Loader2, Plus, Sparkles, Settings, Tag, PanelRightClose, PanelRightOpen, Maximize2, Minimize2, ClipboardPaste,
+	Loader2, Plus, Sparkles, Settings, Tag, PanelRightClose, PanelRightOpen, Maximize2, Minimize2, ClipboardPaste, Upload,
 	Heading, StickyNote, Search, X, Rows2, Rows3, type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -67,7 +67,7 @@ export const BuilderToolbar: React.FC<BuilderToolbarProps> = ({ selectionSlot })
 	const { t } = useTranslation();
 	const {
 		activeTab, activeQuote, draftItems, visibleItems, showAddRow, setShowAddRow, handleAddSection, handleAddNote,
-		openPasteDialog, setShowAiMatch, filterQuery, setFilterQuery, isFiltered,
+		openPasteDialog, openImportDialog, setShowAiMatch, filterQuery, setFilterQuery, isFiltered,
 		handlePricingAssist, pricingBusy, setShowSettings, railAsSheet, railOpen, setRailSheetOpen,
 		toggleRail, fullscreen, setFullscreen, gridDensity, toggleGridDensity,
 	} = useQuoteBuilderGrid();
@@ -109,6 +109,9 @@ export const BuilderToolbar: React.FC<BuilderToolbarProps> = ({ selectionSlot })
 						)}
 						{!activeQuote.frozen_at && (
 							<ToolbarAction icon={ClipboardPaste} label={t('quote.paste.button')} onClick={openPasteDialog} />
+						)}
+						{!activeQuote.frozen_at && (
+							<ToolbarAction icon={Upload} label={t('quoteImport.button')} onClick={openImportDialog} />
 						)}
 						{draftItems.some(item => !item.product) && (
 							<ToolbarAction icon={Sparkles} label={t('aiMatch.button')} onClick={() => setShowAiMatch(true)} />

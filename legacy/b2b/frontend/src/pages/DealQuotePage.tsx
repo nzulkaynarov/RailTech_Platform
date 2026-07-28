@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Calculator, FileText, Send, FileSignature, AlertTriangle, MessageSquare, ChevronDown } from 'lucide-react';
+import { toast } from 'sonner';
+import { ArrowLeft, Calculator, FileText, Send, FileSignature, AlertTriangle, MessageSquare, ChevronDown, Plus, Wand2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { StatusBadge, getDealStageVariant } from '@/components/ui/StatusBadge';
@@ -9,10 +10,12 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useDeal } from '@/hooks/useCRM';
+import { useDeal, useTakeAndPrepareQuote } from '@/hooks/useCRM';
+import { useUserStore } from '@/store/userStore';
 import { useQuoteSendGate } from '@/hooks/useQuoteSendGate';
 import { translateApiError } from '@/lib/apiError';
 import { QuoteBuilderGrid } from '@/components/Admin/QuoteBuilderGrid';
+import { GenerateQuoteDialog } from '@/components/CRM/GenerateQuoteDialog';
 import { QuoteApprovalChain } from '@/components/CRM/QuoteApprovalChain';
 import { QuoteSendGateBanner } from '@/components/CRM/QuoteSendGateBanner';
 import { SendQuoteDialog } from '@/components/CRM/SendQuoteDialog';
@@ -20,7 +23,7 @@ import { QuoteSentPanel } from '@/components/CRM/QuoteSentPanel';
 import { DealChatPanel } from '@/components/Sourcing/DealChatPanel';
 import { GenerateContractDialog } from '@/components/CRM/GenerateContractDialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { QuoteStatus, DEAL_STAGE_LABEL_KEY } from '@/lib/codes';
+import { QuoteStatus, DealStage, DEAL_STAGE_LABEL_KEY } from '@/lib/codes';
 import { LoadingRows, EmptyState } from './shared/PageShell';
 
 interface DealQuotePageProps {
@@ -39,9 +42,14 @@ interface DealQuotePageProps {
 export function DealQuotePage({ dealId, onBack, onNavigate }: DealQuotePageProps) {
   const { t } = useTranslation();
   const { data: deal, isLoading, isError, refetch } = useDeal(dealId);
+  const activeStatus = useUserStore((s) => s.activeStatus);
+  const takeMut = useTakeAndPrepareQuote();
   // WP-H: proactive KYC/entitlement send-gate — banner up-front + disabled Send with the reason.
   const sendGate = useQuoteSendGate();
   const [contractOpen, setContractOpen] = useState(false);
+  // Q1: seller lands on the builder route before a КП exists — offer the manual «Сформировать КП»
+  // path (one-click «Взять и подготовить» is the primary, below), never a dead «Назад»-only screen.
+  const [generateQuoteOpen, setGenerateQuoteOpen] = useState(false);
   // Wave B2: the single «Отправить клиенту» composer (recipient · validity · margin · approval).
   // The below-floor justification + reactive re-prompt now live INSIDE SendQuoteDialog.
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
@@ -115,6 +123,15 @@ export function DealQuotePage({ dealId, onBack, onNavigate }: DealQuotePageProps
     .includes(quoteStatus);
 
   const hasNote = (deal.notes ?? '').trim().length > 0;
+
+  // Q1: the no-КП screen must give a seller a way FORWARD, not just «Назад». Mirror request-detail's
+  // one-click «Взять в работу и подготовить КП» (claim + стадия + предзаполненный КП) as the primary
+  // path across the pre-КП stages, with the manual «Сформировать КП» dialog as the fallback.
+  const isSellerSide = activeStatus === 'SELLER';
+  const canTakeAndPrepare =
+    isSellerSide
+    && !quote
+    && ([DealStage.RFQ_OPEN, DealStage.SOURCING, DealStage.CALCULATING] as string[]).includes(deal.stage_code ?? '');
 
   return (
     <div className="flex h-full flex-col">
@@ -244,13 +261,46 @@ export function DealQuotePage({ dealId, onBack, onNavigate }: DealQuotePageProps
           <QuoteBuilderGrid dealId={dealId} onDirtyChange={setHasUnsavedChanges} />
         </div>
       ) : (
-        <div className="p-6">
-          <EmptyState
-            icon={<FileText className="h-5 w-5" />}
-            message={t('pages.dealQuote.noQuote')}
-            hint={t('pages.dealQuote.noQuoteHint')}
-            action={{ label: t('common.back'), onClick: onBack }}
-          />
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
+          <div className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
+            <FileText className="h-5 w-5" />
+          </div>
+          <div className="max-w-md space-y-1">
+            <p className="text-sm font-medium text-foreground">{t('pages.dealQuote.noQuote')}</p>
+            <p className="text-sm text-muted-foreground">
+              {isSellerSide ? t('pages.dealQuote.noQuoteSellerHint') : t('pages.dealQuote.noQuoteHint')}
+            </p>
+          </div>
+          {/* Q1: give the seller a way forward — one-click prepare (primary) or a manual КП, never a
+              dead «Назад»-only screen. Buyers just get «Назад» (they never build КП). */}
+          {isSellerSide ? (
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              {canTakeAndPrepare && (
+                <Button
+                  onClick={async () => {
+                    try {
+                      await takeMut.mutateAsync(dealId);
+                      await refetch();
+                      toast.success(t('requestDetailActions.takePrepared'));
+                    } catch (e) {
+                      toast.error(translateApiError(e));
+                    }
+                  }}
+                  disabled={takeMut.isPending}
+                >
+                  <Wand2 className="mr-2 h-4 w-4" />
+                  {t('requestDetailActions.takeAndPrepare')}
+                </Button>
+              )}
+              <Button variant={canTakeAndPrepare ? 'outline' : 'default'} onClick={() => setGenerateQuoteOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                {t('generateQuote.submit')}
+              </Button>
+              <Button variant="ghost" onClick={onBack}>{t('common.back')}</Button>
+            </div>
+          ) : (
+            <Button variant="outline" onClick={onBack}>{t('common.back')}</Button>
+          )}
         </div>
       )}
 
@@ -270,6 +320,15 @@ export function DealQuotePage({ dealId, onBack, onNavigate }: DealQuotePageProps
         quoteId={quote?.id ?? null}
         open={contractOpen}
         onOpenChange={setContractOpen}
+      />
+
+      {/* Q1: manual «Сформировать КП» — creates the DRAFT, then the page refetches and the grid
+          mounts in place (no navigation away from the builder route). */}
+      <GenerateQuoteDialog
+        dealId={dealId}
+        open={generateQuoteOpen}
+        onOpenChange={setGenerateQuoteOpen}
+        onGenerated={() => { void refetch(); }}
       />
 
       {/* Wave B2 — unified send composer (recipient · validity · margin vs floor · approval). */}

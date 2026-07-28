@@ -8,7 +8,7 @@ import { useIsViewerMode } from '@/hooks/useViewerMode';
 import { useIsSoloSeller } from '@/hooks/useCapabilities';
 import {
   useDeal, useChangeDealStage, useApproveQuote, useRejectQuote, useSendQuoteToClient,
-  useUpdateRequestMeta, useClaimDeal, useTakeAndPrepareQuote,
+  useUpdateRequestMeta, useClaimDeal, useTakeAndPrepareQuote, useSubmitQuoteForReview,
 } from '@/hooks/useCRM';
 import { translateApiError, extractApiErrorCode } from '@/lib/apiError';
 import { Textarea } from '@/components/ui/textarea';
@@ -57,6 +57,7 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
   const updateMeta = useUpdateRequestMeta();
   const claimMut = useClaimDeal();
   const takeMut = useTakeAndPrepareQuote();
+  const submitReviewMut = useSubmitQuoteForReview();
   const isSoloSeller = useIsSoloSeller();
 
   // Gate seller-side actions (start sourcing / calculation / send quote) to sellers. A buyer would
@@ -90,13 +91,17 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
   const isCalculating = deal.stage_code === DealStage.CALCULATING;
   const isQuoteSent = deal.stage_code === DealStage.QUOTE_SENT;
   const isWon = deal.stage_code === DealStage.CLOSED_WON || deal.stage_code === DealStage.CONTRACT_SIGNED;
-  // Seller КП-builder entry: create the КП once the deal is in work, or open the focused builder.
-  const canBuildQuote = isSellerSide && (isSourcing || isCalculating) && !deal.active_quote;
   // W2 «одна кнопка» (one-click-quotation): claim + стадия + предзаполненный КП одним действием.
   // Виден во всём пред-КП наборе стадий, пока КП нет и заявку не взял коллега.
   const canTakeAndPrepare =
     isSellerSide && (isRfqOpen || isSourcing || isCalculating) && !deal.active_quote;
+  // Q5 (устранение рассинхрона гейтов): «Сформировать КП» — резервный ручной путь, НЕ показываем
+  // рядом с одной кнопкой W2 (иначе две кнопки создания на одной стадии сбивают с толку).
+  const canBuildQuote = isSellerSide && (isSourcing || isCalculating) && !deal.active_quote && !canTakeAndPrepare;
   const hasQuote = isSellerSide && !!deal.active_quote;
+  // Q4: send a DRAFT КП into internal review straight from the request card (no builder detour).
+  // The server re-runs every gate; a sole-approver КП auto-approves → «Отправить» surfaces next.
+  const canSubmitForReview = isSellerSide && deal.active_quote?.status_code === QuoteStatus.DRAFT;
   // Buyer rejected the КП → offer a primary "new version" action (perform_create auto-increments).
   const canBuildNewVersion = isSellerSide && deal.active_quote?.status_code === QuoteStatus.REJECTED;
   // Wave B2 (auto-claim): a solo seller has no queue to route, so hide «Взять в работу» entirely.
@@ -171,12 +176,23 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
           canBuildNewVersion={canBuildNewVersion}
           canClaim={canClaim}
           canTakeAndPrepare={canTakeAndPrepare}
+          canSubmitForReview={canSubmitForReview}
           canEditRequest={canEditRequest}
           isViewer={isViewer}
           viewerTip={viewerTip}
           changeStagePending={changeStage.isPending}
           claimPending={claimMut.isPending}
           takePending={takeMut.isPending}
+          submitReviewPending={submitReviewMut.isPending}
+          onSubmitForReview={async () => {
+            if (!quote) return;
+            try {
+              await submitReviewMut.mutateAsync(quote.id);
+              toast.success(t('quote.approvalChain.submitted'));
+            } catch (e) {
+              toast.error(translateApiError(e));
+            }
+          }}
           onTakeAndPrepare={async () => {
             try {
               await takeMut.mutateAsync(deal.id);

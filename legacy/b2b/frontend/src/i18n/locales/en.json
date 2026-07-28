@@ -3902,6 +3902,7 @@
       "title": "Quote builder",
       "noQuote": "No quote yet",
       "noQuoteHint": "Go back to the deal and click “Create quote” to start.",
+      "noQuoteSellerHint": "Prepare the quote in one click (the request and its lines are pulled in) or create an empty quote manually.",
       "notFound": "Deal not found",
       "buyerNote": "What the buyer asked for",
       "openChat": "Chat with buyer",
@@ -5106,6 +5107,7 @@
     "NO_RECIPIENTS": "Select at least one seller before submitting the request",
     "DOC_PREFIX_TAKEN": "This numbering prefix is already used by another company — choose a different one",
     "QUOTE_NOT_CLAIMED": "The quote isn't prepared by a seller yet — export becomes available after it's submitted for review",
+    "QUOTE_EMPTY": "This quote has no lines yet — add at least one priced line",
     "QUOTE_HAS_UNPRICED_LINES": "Set a price on every line — a quote with zero-priced rows can't be submitted",
     "QUOTE_BELOW_COST": "Quote is below landed cost — selling at a loss. Raise the price or margin.",
     "FX_RATE_MISSING": "No FX rate for a line currency — cost not computed. Set the rate in КП settings.",
@@ -5156,6 +5158,12 @@
     "CANNOT_DEACTIVATE_SOLE_COMPANY_ADMIN": "Cannot deactivate the sole Company Admin — assign another one first.",
     "ONLY_COMPANY_ADMIN_CAN_MANAGE_TEAM": "Only the Company Admin can manage the team.",
     "FILE_TOO_LARGE": "File is too large (max 10 MB)",
+    "FILE_REQUIRED": "Choose a file to upload",
+    "FILE_TYPE_UNSUPPORTED": "Unsupported file format. Upload an Excel, CSV, PDF or photo.",
+    "IMPORT_NO_LINES": "No lines to add were found in the file",
+    "QUOTE_ITEMS_BULK_EMPTY": "No rows to add",
+    "QUOTE_ITEMS_BULK_TOO_LARGE": "Too many rows at once — add no more than 500",
+    "QUOTE_ITEMS_BULK_INVALID": "Some rows have errors — fix them and try again",
     "STAGE_CODE_REQUIRED": "stage_code is required",
     "QUOTE_ID_REQUIRED": "quote_id is required",
     "CONTRACT_ID_REQUIRED": "contract_id is required",
@@ -5906,7 +5914,10 @@
     "approvalPending": "awaiting approval",
     "approvalPendingBy": "awaiting approval: {{names}}",
     "previewPdf": "Preview PDF",
-    "justificationRequired": "Provide a justification for sending"
+    "justificationRequired": "Provide a justification for sending",
+    "catalogMatch": "Catalog",
+    "unmatchedLines_one": "{{count}} line isn't linked to a catalog product — you can still send, but it won't show in analytics",
+    "unmatchedLines_other": "{{count}} lines aren't linked to a catalog product — you can still send, but they won't show in analytics"
   },
   "sentPanel": {
     "sent": "Sent",
@@ -5955,5 +5966,20 @@
     "waitingHours_other": "waiting {{count}} h",
     "waitingDays_one": "waiting {{count}} day",
     "waitingDays_other": "waiting {{count}} days"
+  },
+  "quoteImport": {
+    "button": "Import from file",
+    "title": "Import lines from a file",
+    "desc": "Upload an Excel, PDF or photo — AI recognizes the lines and adds them to the quote. Excel can also be pasted from the clipboard.",
+    "pick": "Choose a file or drop it here",
+    "changeFile": "Click to pick another file",
+    "formats": "Excel, CSV, PDF, image",
+    "import": "Import",
+    "importing": "Recognizing…",
+    "added_one": "Added {{count}} line from the file",
+    "added_other": "Added {{count}} lines from the file",
+    "none": "No lines recognized in the file",
+    "truncated_one": "Added {{count}} line; the file was longer — remaining rows were truncated",
+    "truncated_other": "Added {{count}} lines; the file was longer — remaining rows were truncated"
   }
 }

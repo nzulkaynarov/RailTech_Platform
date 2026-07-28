@@ -1091,6 +1091,22 @@ export const crmApi = {
 		});
 	},
 
+	// Q2 — импорт позиций КП из файла продавцом: multipart POST → 202+task_id, извлечение на
+	// Celery (Excel/PDF/фото), результат {added, recognized, truncated} из ai-status поллинга.
+	importQuoteLinesFromFile: async (quoteId: number, file: File) => {
+		const formData = new FormData();
+		formData.append('file', file);
+		formData.append('quote_id', String(quoteId));
+		return runAiJob<{ added: number; recognized: number; truncated: boolean; quote_id: number }>(async () => {
+			const response = await apiClient.post<{ task_id: string }>(
+				'sourcing/import-quote-lines/',
+				formData,
+				{ headers: { 'Content-Type': 'multipart/form-data' } },
+			);
+			return response.data;
+		});
+	},
+
 	// ─── AI #4 deal-chat reply assist ────────────────────────
 	// POST a deal id → a professional reply DRAFT built from the recent chat history.
 	// The draft fills the input for the user to review/edit before sending (never

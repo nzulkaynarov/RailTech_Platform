@@ -379,3 +379,61 @@ def reassign_quote_item_product(
         event_params={"item_id": item.id, "product_id": product_id},
     )
     return item, None
+
+
+# Поля позиции КП, наследуемые из AI-извлечённой строки (маппинг extract → QuoteItem).
+_IMPORT_QTY_MIN, _IMPORT_QTY_MAX = 1, 1_000_000
+
+
+def import_extracted_lines_into_quote(quote: Quote, actor: CustomUser, rows: list) -> Tuple[int, bool, Optional[str]]:
+    """Q2 (импорт файла в билдер) — WORKER-SAFE вставка AI-извлечённых строк в КП продавца.
+
+    Зеркалит гейты bulk_create_quote_items, но БЕЗ request (вызывается из Celery-хендлера):
+    продавцовая capability (can_edit_quote_pricing), routing к сделке (request-free
+    seller_company_routed_to_deal), НЕ frozen КП, лимит строк. Строки без имени отбрасываются;
+    свыше QUOTE_ITEMS_BULK_MAX_ROWS — обрезаются с флагом truncated (тупик №8: не молча).
+    Позиции добавляются В КОНЕЦ (после max position), валюта = cost_currency_default КП (как
+    ручное «Добавить строку»), затем ОДИН recalc. Возврат: (added, truncated, error_code)."""
+    from accounts.services.permissions import can_edit_quote_pricing, seller_company_routed_to_deal
+    from django.conf import settings
+    from django.db.models import Max
+
+    is_superuser = getattr(actor, "is_superuser", False)
+    if not (is_superuser or can_edit_quote_pricing(actor)):
+        return 0, False, "ONLY_SELLER_CAN_BUILD_QUOTE"
+    if not (is_superuser or seller_company_routed_to_deal(actor, quote.deal_id)):
+        return 0, False, "QUOTE_NOT_FOUND"
+    if quote.frozen_at:
+        return 0, False, "QUOTE_FROZEN"
+
+    clean = [row for row in rows if isinstance(row, dict) and (row.get("name") or "").strip()]
+    if not clean:
+        return 0, False, "IMPORT_NO_LINES"
+    truncated = len(clean) > settings.QUOTE_ITEMS_BULK_MAX_ROWS
+    clean = clean[: settings.QUOTE_ITEMS_BULK_MAX_ROWS]
+
+    def _qty(value):
+        try:
+            return max(_IMPORT_QTY_MIN, min(_IMPORT_QTY_MAX, int(value)))
+        except (TypeError, ValueError):
+            return 1
+
+    default_currency = quote.cost_currency_default if quote.cost_currency_default_id else None
+    with transaction.atomic():
+        next_position = (quote.items.aggregate(mx=Max("position"))["mx"] or 0) + 1
+        for offset, row in enumerate(clean):
+            QuoteItem(
+                quote=quote,
+                imported_raw_name=(row.get("name") or "").strip()[:500],
+                name_canonical=(row.get("name_canonical") or "").strip(),
+                quantity=_qty(row.get("quantity", 1)),
+                unit=(row.get("unit") or "").strip(),
+                unit_code=(row.get("unit_code") or "").strip(),
+                mpn=(row.get("mpn") or "").strip(),
+                gost_drawing=(row.get("gost_drawing") or "").strip(),
+                note=(row.get("note") or "").strip(),
+                frozen_currency=default_currency,
+                position=next_position + offset,
+            ).save(skip_recalculate=True)
+        QuoteCalculationService.recalculate_quote(quote.id)
+    return len(clean), truncated, None

@@ -33,6 +33,7 @@ vi.mock('@/hooks/useCRM', () => ({
 	useSendQuoteToClient: () => ({ mutateAsync: sendMutateAsync, isPending: false }),
 	// Wave B2 — the send composer lets the seller adjust the КП validity; not exercised here.
 	useUpdateQuoteSettings: () => ({ mutate: vi.fn(), isPending: false }),
+	useTakeAndPrepareQuote: () => ({ mutate: vi.fn(), mutateAsync: vi.fn().mockResolvedValue(undefined), isPending: false }),
 }));
 
 // Seller is fully entitled — the send-gate is not what this spec covers.
@@ -43,6 +44,7 @@ vi.mock('@/hooks/useQuoteSendGate', () => ({
 // Heavy children of the workspace aren't under test — stub them so the page renders
 // in isolation and the dialog is the only interactive surface.
 vi.mock('@/components/Admin/QuoteBuilderGrid', () => ({ QuoteBuilderGrid: () => null }));
+vi.mock('@/components/CRM/GenerateQuoteDialog', () => ({ GenerateQuoteDialog: () => null }));
 vi.mock('@/components/CRM/QuoteApprovalChain', () => ({ QuoteApprovalChain: () => null }));
 vi.mock('@/components/CRM/QuoteSendGateBanner', () => ({ QuoteSendGateBanner: () => null }));
 vi.mock('@/components/Sourcing/DealChatPanel', () => ({ DealChatPanel: () => null }));

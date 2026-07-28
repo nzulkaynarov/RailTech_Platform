@@ -239,3 +239,97 @@ class DocumentExtractView(APIView):
             "reference_id": contract_id or quote_id,
         }
         return enqueue_ai_job("extract", payload, request.user)
+
+
+@extend_schema(
+    summary="Импорт позиций КП из файла продавцом (AI, Q2)",
+    description=(
+        "Продавец загружает файл (Excel/CSV/PDF/фото) в КОНКРЕТНЫЙ КП; Claude извлекает позиции "
+        "(тем же vision-экстрактором, что заявку покупателя) и добавляет их В КОНЕЦ таблицы КП. "
+        "ARCH-01: файл едет storage-ключом, извлечение — на Celery (202+task_id, поллинг "
+        "sourcing/ai-status/). Тот же платформенный флаг AI_IMPORT_ENABLED, БЕЗ нового пейволла. "
+        "Excel-вставка из буфера остаётся как быстрый путь."
+    ),
+    request={
+        "multipart/form-data": {
+            "type": "object",
+            "properties": {
+                "file": {"type": "string", "format": "binary"},
+                "quote_id": {"type": "integer"},
+            },
+        }
+    },
+    responses={
+        202: OpenApiResponse(description="AI job queued, task_id returned (poll ai-status)"),
+        400: OpenApiResponse(description="No file / bad type / missing quote_id"),
+        403: OpenApiResponse(description="Not the routed seller of this КП"),
+        404: OpenApiResponse(description="Quote not found"),
+        503: OpenApiResponse(description="AI import disabled"),
+    },
+    tags=["Sourcing"],
+)
+class QuoteImportFileView(APIView):
+    """Q2 — seller-scoped file import of КП line items (mirrors DocumentExtractView staging)."""
+
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "ai_extract"
+
+    def post(self, request):
+        from django.conf import settings
+
+        if not getattr(settings, "AI_IMPORT_ENABLED", False):
+            return Response({"detail": "AI_DISABLED"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+        try:
+            quote_id = int(request.data.get("quote_id"))
+        except (TypeError, ValueError):
+            return Response({"detail": "QUOTE_ID_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Seller-scoped authorization: only a routed can_sell seller with pricing capability may
+        # write to THIS КП (mirrors the builder's bulk-create gate). Foreign КП → 404 like the
+        # scoped queryset would yield; the worker re-checks (TOCTOU) with the recorded user.
+        from accounts.services.permissions import can_edit_quote_pricing, seller_company_routed_to_deal
+        from crm.models import Quote
+
+        quote = Quote.objects.select_related("deal").filter(pk=quote_id).first()
+        if quote is None:
+            return Response({"detail": "QUOTE_NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)
+        if not (getattr(request.user, "is_superuser", False) or can_edit_quote_pricing(request.user)):
+            return Response({"detail": "ONLY_SELLER_CAN_BUILD_QUOTE"}, status=status.HTTP_403_FORBIDDEN)
+        if not (
+            getattr(request.user, "is_superuser", False)
+            or seller_company_routed_to_deal(request.user, quote.deal_id)
+        ):
+            return Response({"detail": "QUOTE_NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)
+        if quote.frozen_at:
+            return Response({"detail": "QUOTE_FROZEN"}, status=status.HTTP_400_BAD_REQUEST)
+
+        uploaded = request.FILES.get("file")
+        if uploaded is None:
+            return Response({"detail": "FILE_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
+        if uploaded.size > getattr(settings, "AI_IMPORT_MAX_BYTES", MAX_DOC_FILE_SIZE):
+            return Response({"detail": "FILE_TOO_LARGE"}, status=status.HTTP_400_BAD_REQUEST)
+        extension = (uploaded.name or "").rsplit(".", 1)[-1].lower() if "." in (uploaded.name or "") else ""
+        if extension not in _DOC_EXT_ALLOWLIST:
+            return Response({"detail": "FILE_TYPE_UNSUPPORTED"}, status=status.HTTP_400_BAD_REQUEST)
+        from core.validators import content_matches_extension
+
+        raw = uploaded.read()
+        if not content_matches_extension(raw[:16], extension):
+            return Response({"detail": "FILE_TYPE_UNSUPPORTED"}, status=status.HTTP_400_BAD_REQUEST)
+
+        from django.core.files.base import ContentFile
+        from django.core.files.storage import default_storage
+
+        from .ai_jobs import enqueue_ai_job
+
+        file_key = default_storage.save(f"ai_extract_tmp/{uuid.uuid4().hex}.{extension}", ContentFile(raw))
+        payload = {
+            "file_key": file_key,
+            "filename": uploaded.name,
+            "quote_id": quote_id,
+            "user_id": request.user.id,
+        }
+        return enqueue_ai_job("import_lines", payload, request.user)

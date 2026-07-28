@@ -103,6 +103,7 @@ export interface QuoteBuilderGridContextValue {
 	handleAddSection: () => void;
 	handleAddNote: () => void;
 	openPasteDialog: () => void;
+	openImportDialog: () => void;
 	setShowAiMatch: Dispatch<SetStateAction<boolean>>;
 	handlePricingAssist: () => void;
 	pricingBusy: boolean;

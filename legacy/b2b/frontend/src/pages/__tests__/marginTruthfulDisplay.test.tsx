@@ -24,6 +24,7 @@ import {
   useSetQuoteDeliveryBasis,
   useClaimDeal,
   useTakeAndPrepareQuote,
+  useSubmitQuoteForReview,
 } from '@/hooks/useCRM';
 
 /**
@@ -58,6 +59,7 @@ vi.mock('@/hooks/useCRM', () => ({
   useReassignProduct: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useClaimDeal: vi.fn(),
   useTakeAndPrepareQuote: vi.fn(),
+  useSubmitQuoteForReview: vi.fn(),
 }));
 
 // Page context: seller sees the margin column; a plain currency formatter keeps assertions simple.
@@ -224,7 +226,7 @@ describe('WP-7 truthful margin display', () => {
       useCreateQuoteItem,
       useDeleteQuoteItem,
       useSetQuoteDeliveryBasis,
-      useClaimDeal, useTakeAndPrepareQuote,
+      useClaimDeal, useTakeAndPrepareQuote, useSubmitQuoteForReview,
     ].forEach((hook) => setHook(hook, mkMutation()));
   });
 

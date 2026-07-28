@@ -15,6 +15,7 @@ import { useDeal, useSendQuoteToClient } from '@/hooks/useCRM';
 vi.mock('@/hooks/useCRM', () => ({
 	useDeal: vi.fn(),
 	useSendQuoteToClient: vi.fn(),
+	useTakeAndPrepareQuote: () => ({ mutate: vi.fn(), mutateAsync: vi.fn().mockResolvedValue(undefined), isPending: false }),
 }));
 
 // The builder is stubbed to a button that flips the dirty signal on demand.
@@ -24,6 +25,7 @@ vi.mock('@/components/Admin/QuoteBuilderGrid', () => ({
 	),
 }));
 vi.mock('@/components/CRM/QuoteApprovalChain', () => ({ QuoteApprovalChain: () => null }));
+vi.mock('@/components/CRM/GenerateQuoteDialog', () => ({ GenerateQuoteDialog: () => null }));
 vi.mock('@/components/Sourcing/DealChatPanel', () => ({ DealChatPanel: () => null }));
 vi.mock('@/components/CRM/GenerateContractDialog', () => ({ GenerateContractDialog: () => null }));
 // Wave B2 — the unified send composer + post-send panel are stubbed; this spec is only the nav guard.

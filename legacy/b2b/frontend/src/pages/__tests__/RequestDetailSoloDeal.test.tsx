@@ -14,6 +14,7 @@ import {
   useQuoteRequestDiff,
   useClaimDeal,
   useTakeAndPrepareQuote,
+  useSubmitQuoteForReview,
 } from '@/hooks/useCRM';
 
 /**
@@ -37,6 +38,7 @@ vi.mock('@/hooks/useCRM', () => ({
   useQuoteRequestDiff: vi.fn(),
   useClaimDeal: vi.fn(),
   useTakeAndPrepareQuote: vi.fn(),
+  useSubmitQuoteForReview: vi.fn(),
 }));
 
 // SELLER context; a solo deal has no capabilities.is_solo_seller in this fixture (undefined → false).
@@ -124,6 +126,7 @@ describe('RequestDetailPage — seller SOLO deal (company === null)', () => {
     [
       useChangeDealStage, useApproveQuote, useRejectQuote, useSendQuoteToClient,
       useUpdateRequestMeta, useQuoteRequestDiff, useClaimDeal, useTakeAndPrepareQuote,
+      useSubmitQuoteForReview,
     ].forEach((hook) => setHook(hook, mkMutation()));
     setHook(useDeal, { data: soloDeal, isLoading: false, isError: false, refetch: vi.fn() });
   });

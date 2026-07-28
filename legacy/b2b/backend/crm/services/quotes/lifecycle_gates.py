@@ -30,6 +30,16 @@ logger = logging.getLogger(__name__)
 BELOW_FLOOR_JUSTIFICATION_MAX_LEN = 500
 
 
+def _zero_value_code(quote) -> str:
+    """Q3 (honest errors): a КП with a zero/negative total fails for TWO different reasons —
+    tell them apart so the seller gets a true message, not «непросчитанные позиции» on an
+    empty КП. NO billable ITEM rows at all → the КП is empty (`QUOTE_EMPTY`); rows exist but
+    price out to nothing → `QUOTE_HAS_UNPRICED_LINES`."""
+    if not quote.items.billable().exists():
+        return "QUOTE_EMPTY"
+    return "QUOTE_HAS_UNPRICED_LINES"
+
+
 def assert_renderable(quote):
     """КП render guards; returns the issuing seller company.
 
@@ -135,7 +145,7 @@ def assert_send_economics(quote, economics, justification) -> None:
     expected pre-stripped by the caller.
     """
     if (quote.subtotal_excl_vat or 0) <= 0:
-        raise ValueError("QUOTE_HAS_UNPRICED_LINES")
+        raise ValueError(_zero_value_code(quote))
     if economics["fx_missing"]:
         raise ValueError("FX_RATE_MISSING")
     if economics["below_cost"]:
@@ -194,7 +204,7 @@ def assert_submittable(quote, economics) -> Optional[str]:
     if not quote.status or quote.status.code != QuoteStatusCode.DRAFT:
         return "INVALID_STATUS"
     if (quote.subtotal_excl_vat or 0) <= 0:
-        return "QUOTE_HAS_UNPRICED_LINES"
+        return _zero_value_code(quote)
     if economics["fx_missing"]:
         return "FX_RATE_MISSING"
     if economics["below_cost"]:

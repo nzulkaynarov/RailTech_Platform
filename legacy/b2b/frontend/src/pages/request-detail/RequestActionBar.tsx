@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Send, Calculator, ThumbsUp, ThumbsDown, Loader2, FileText, Handshake, Sparkles } from 'lucide-react';
+import { Send, Calculator, ThumbsUp, ThumbsDown, Loader2, FileText, Handshake, Sparkles, ClipboardCheck } from 'lucide-react';
 import type { Quote } from '@/api/crmApi';
 import { QuoteStatus } from '@/lib/codes';
 import { Button } from '@/components/ui/button';
@@ -20,12 +20,14 @@ export interface RequestActionBarProps {
   canBuildNewVersion: boolean;
   canClaim: boolean;
   canTakeAndPrepare: boolean;
+  canSubmitForReview: boolean;
   canEditRequest: boolean;
   isViewer: boolean;
   viewerTip: string;
   changeStagePending: boolean;
   claimPending: boolean;
   takePending: boolean;
+  submitReviewPending: boolean;
   sendQuotePending: boolean;
   approvePending: boolean;
   onClaim: () => void;
@@ -34,6 +36,7 @@ export interface RequestActionBarProps {
   onStartCalculation: () => void;
   onOpenGenerate: () => void;
   onOpenQuoteBuilder: () => void;
+  onSubmitForReview: () => void;
   onSendQuote: () => void;
   onApprove: () => void;
   onReject: () => void;
@@ -49,10 +52,11 @@ export function RequestActionBar(props: RequestActionBarProps) {
   const { t } = useTranslation();
   const {
     quote, isSellerSide, isBuyerSide, isDraft, isSourcing, isCalculating, isQuoteSent, isWon,
-    hasQuote, canBuildQuote, canBuildNewVersion, canClaim, canTakeAndPrepare, canEditRequest,
-    isViewer, viewerTip, changeStagePending, claimPending, takePending, sendQuotePending,
-    approvePending, onClaim, onTakeAndPrepare, onStartSourcing, onStartCalculation,
-    onOpenGenerate, onOpenQuoteBuilder, onSendQuote, onApprove, onReject, onOpenContract,
+    hasQuote, canBuildQuote, canBuildNewVersion, canClaim, canTakeAndPrepare, canSubmitForReview,
+    canEditRequest, isViewer, viewerTip, changeStagePending, claimPending, takePending,
+    submitReviewPending, sendQuotePending, approvePending, onClaim, onTakeAndPrepare,
+    onStartSourcing, onStartCalculation, onOpenGenerate, onOpenQuoteBuilder, onSubmitForReview,
+    onSendQuote, onApprove, onReject, onOpenContract,
   } = props;
 
   const sellerActions = isSellerSide && (isDraft || isSourcing || isCalculating || hasQuote || canBuildNewVersion);
@@ -155,6 +159,22 @@ export function RequestActionBar(props: RequestActionBarProps) {
           <Button variant="outline" onClick={onOpenQuoteBuilder}>
             <FileText className="h-4 w-4 mr-2" />
             {t('pages.deals.detail.openQuote')}
+          </Button>
+        )}
+        {/* Q4: send the DRAFT КП into internal review straight from the request card — no need to
+            open the full builder just to start the approval chain. The backend re-runs every gate
+            (empty/unpriced/below-cost); a sole-approver КП auto-approves → «Отправить» appears next. */}
+        {canSubmitForReview && (
+          <Button
+            variant="default"
+            onClick={onSubmitForReview}
+            disabled={isViewer || submitReviewPending}
+            title={isViewer ? viewerTip : undefined}
+          >
+            {submitReviewPending
+              ? <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" />
+              : <ClipboardCheck className="h-4 w-4 mr-2" aria-hidden="true" />}
+            {t('quote.approvalChain.submit')}
           </Button>
         )}
         {/* Only an internally-approved КП can be sent (backend requires READY_TO_SEND). Getting

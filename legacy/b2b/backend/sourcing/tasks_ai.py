@@ -75,6 +75,42 @@ def _handle_extract(payload: dict) -> dict:
     }
 
 
+def _handle_import_lines(payload: dict) -> dict:
+    """Q2 — импорт позиций КП из файла продавцом: vision-извлечение строк (Excel/PDF/фото) →
+    вставка в КП продавца. Тот же экстрактор, что у покупателя (extract_request_items), но цель —
+    КОНКРЕТНЫЙ КП по quote_id, а не deal.active_quote. Авторизация перепроверяется с записанным
+    user (TOCTOU — как quote_diff): под очередью routing мог быть отозван. Файл едет storage-ключом
+    (не через брокер), удаляется после попытки."""
+    from django.core.files.storage import default_storage
+
+    from accounts.models import CustomUser
+    from crm.models import Quote
+    from crm.services.quotes.bulk import import_extracted_lines_into_quote
+    from sourcing.services_ai import extract_request_items
+
+    file_key = payload["file_key"]
+    user = CustomUser.objects.filter(pk=payload["user_id"]).first()
+    quote = Quote.objects.select_related("deal", "cost_currency_default").filter(pk=payload["quote_id"]).first()
+    if user is None or quote is None:
+        default_storage.delete(file_key)
+        return {"error": "QUOTE_NOT_FOUND"}
+    try:
+        with default_storage.open(file_key) as stored:
+            raw = stored.read()
+        try:
+            rows = extract_request_items(raw, payload.get("filename") or "upload")
+        except (RuntimeError, ValueError) as exc:
+            logger.warning("AI import-lines extract failed: %s", exc)
+            return {"error": "AI_EXTRACT_FAILED"}
+    finally:
+        default_storage.delete(file_key)
+
+    added, truncated, err = import_extracted_lines_into_quote(quote, user, rows)
+    if err:
+        return {"error": err}
+    return {"added": added, "recognized": len(rows), "truncated": truncated, "quote_id": quote.id}
+
+
 def _handle_compose(payload: dict) -> dict:
     from sourcing.services_ai_conversational import build_request_from_text
 
@@ -151,6 +187,7 @@ FEATURE_HANDLERS = {
     "match": _handle_match,
     "preflight": _handle_preflight,
     "extract": _handle_extract,
+    "import_lines": _handle_import_lines,
     "compose": _handle_compose,
     "enrich": _handle_enrich,
     "chat_reply": _handle_chat_reply,

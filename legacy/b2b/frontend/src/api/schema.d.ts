@@ -5840,6 +5840,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sourcing/import-quote-lines/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Импорт позиций КП из файла продавцом (AI, Q2)
+         * @description Продавец загружает файл (Excel/CSV/PDF/фото) в КОНКРЕТНЫЙ КП; Claude извлекает позиции (тем же vision-экстрактором, что заявку покупателя) и добавляет их В КОНЕЦ таблицы КП. ARCH-01: файл едет storage-ключом, извлечение — на Celery (202+task_id, поллинг sourcing/ai-status/). Тот же платформенный флаг AI_IMPORT_ENABLED, БЕЗ нового пейволла. Excel-вставка из буфера остаётся как быстрый путь.
+         */
+        post: operations["sourcing_import_quote_lines_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sourcing/import-status/{task_id}/": {
         parameters: {
             query?: never;
@@ -23003,6 +23023,60 @@ export interface operations {
             };
             /** @description Deal not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    sourcing_import_quote_lines_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file?: string;
+                    quote_id?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description AI job queued, task_id returned (poll ai-status) */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No file / bad type / missing quote_id */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not the routed seller of this КП */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Quote not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description AI import disabled */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

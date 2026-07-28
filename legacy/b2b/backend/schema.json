@@ -17727,6 +17727,56 @@
                 }
             }
         },
+        "/api/v1/sourcing/import-quote-lines/": {
+            "post": {
+                "operationId": "sourcing_import_quote_lines_create",
+                "description": "Продавец загружает файл (Excel/CSV/PDF/фото) в КОНКРЕТНЫЙ КП; Claude извлекает позиции (тем же vision-экстрактором, что заявку покупателя) и добавляет их В КОНЕЦ таблицы КП. ARCH-01: файл едет storage-ключом, извлечение — на Celery (202+task_id, поллинг sourcing/ai-status/). Тот же платформенный флаг AI_IMPORT_ENABLED, БЕЗ нового пейволла. Excel-вставка из буфера остаётся как быстрый путь.",
+                "summary": "Импорт позиций КП из файла продавцом (AI, Q2)",
+                "tags": [
+                    "Sourcing"
+                ],
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "file": {
+                                        "type": "string",
+                                        "format": "binary"
+                                    },
+                                    "quote_id": {
+                                        "type": "integer"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "AI job queued, task_id returned (poll ai-status)"
+                    },
+                    "400": {
+                        "description": "No file / bad type / missing quote_id"
+                    },
+                    "403": {
+                        "description": "Not the routed seller of this КП"
+                    },
+                    "404": {
+                        "description": "Quote not found"
+                    },
+                    "503": {
+                        "description": "AI import disabled"
+                    }
+                }
+            }
+        },
         "/api/v1/sourcing/import-status/{task_id}/": {
             "get": {
                 "operationId": "sourcing_import_status_retrieve",

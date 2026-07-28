@@ -14,6 +14,7 @@ from .views_ai import (  # noqa: F401
     DocumentExtractView,
     MatchCatalogView,
     PreflightCheckView,
+    QuoteImportFileView,
     _resolve_expected,
 )
 from .views_attachments import AttachmentViewSet  # noqa: F401
@@ -35,6 +36,7 @@ __all__ = [
     "CatalogImportView",
     "CatalogTemplateView",
     "DocumentExtractView",
+    "QuoteImportFileView",
     "ExcelImportView",
     "ImportStatusView",
     "MatchCatalogView",

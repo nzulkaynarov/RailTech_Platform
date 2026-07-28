@@ -206,6 +206,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	const mirrorTotals = pricingMirror.totals;
 
 	const [showAiMatch, setShowAiMatch] = useState(false);
+	const [importOpen, setImportOpen] = useState(false);  // Q2: импорт позиций из файла
 	const [showGenerateQuote, setShowGenerateQuote] = useState(false);
 	const [showSettings, setShowSettings] = useState(false);
 	const [pricingBusy, setPricingBusy] = useState(false);
@@ -383,7 +384,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 		// surprising) while the visible set is filtered, so the controls disable with a tooltip.
 		reorderDisabled: isFiltered,
 		showAddRow, setShowAddRow, handleAddSection: actions.handleAddSection, handleAddNote: actions.handleAddNote,
-		openPasteDialog: actions.openPasteDialog, setShowAiMatch,
+		openPasteDialog: actions.openPasteDialog, openImportDialog: () => setImportOpen(true), setShowAiMatch,
 		handlePricingAssist: actions.handlePricingAssist, pricingBusy, fullscreen, setFullscreen, setShowSettings,
 		railAsSheet, railOpen, railSheetOpen, setRailSheetOpen, toggleRail,
 		scrollContainerRef, gridKeyboardOnKeyDown: gridKeyboard.onKeyDown, handleGridPaste: actions.handleGridPaste,
@@ -477,6 +478,8 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 						showAiMatch={showAiMatch}
 						setShowAiMatch={setShowAiMatch}
 						draftItems={draftItems}
+						importOpen={importOpen}
+						setImportOpen={setImportOpen}
 						activeQuote={activeQuote}
 						showSettings={showSettings}
 						setShowSettings={setShowSettings}

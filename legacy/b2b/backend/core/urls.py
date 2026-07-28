@@ -111,6 +111,7 @@ from sourcing.views import (  # noqa: F811
     ImportStatusView,
     MatchCatalogView,
     PreflightCheckView,
+    QuoteImportFileView,
 )
 from sourcing.views_ai_conversational import ComposeRequestView  # noqa: E402,F811
 
@@ -215,6 +216,7 @@ urlpatterns = (
         path("api/v1/sourcing/match-catalog/", MatchCatalogView.as_view(), name="match-catalog"),
         path("api/v1/sourcing/preflight-check/", PreflightCheckView.as_view(), name="preflight-check"),
         path("api/v1/sourcing/extract-document/", DocumentExtractView.as_view(), name="extract-document"),
+        path("api/v1/sourcing/import-quote-lines/", QuoteImportFileView.as_view(), name="import-quote-lines"),
         path("api/v1/sourcing/compose-request/", ComposeRequestView.as_view(), name="compose-request"),
         path("api/v1/catalog/product-enrich/", ProductEnrichView.as_view(), name="product-enrich"),
         path(

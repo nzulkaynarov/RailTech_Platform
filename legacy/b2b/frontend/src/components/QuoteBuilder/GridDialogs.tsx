@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { ExcelPasteDialog } from '@/components/QuoteBuilder/ExcelPasteDialog';
 import { AICatalogMatchDialog } from '@/components/Admin/AICatalogMatchDialog';
+import { ImportFileDialog } from '@/components/QuoteBuilder/ImportFileDialog';
 import { QuoteSettingsDialog } from '@/components/CRM/QuoteSettingsDialog';
 import { ReassignProductDialog } from '@/components/CRM/ReassignProductDialog';
 import { QUOTE_ITEMS_BULK_MAX_ROWS } from '@/components/QuoteBuilder/gridConstants';
@@ -29,6 +30,10 @@ export interface GridDialogsProps {
 	showAiMatch: boolean;
 	setShowAiMatch: Dispatch<SetStateAction<boolean>>;
 	draftItems: QuoteItem[];
+
+	// ── Q2: импорт позиций из файла ────────────────────────────────────────────────────────────
+	importOpen: boolean;
+	setImportOpen: Dispatch<SetStateAction<boolean>>;
 
 	// ── КП settings ─────────────────────────────────────────────────────────────────────────────
 	activeQuote: Quote;
@@ -63,6 +68,7 @@ export interface GridDialogsProps {
 export const GridDialogs: React.FC<GridDialogsProps> = ({
 	pasteOpen, setPasteOpen, pasteText, pasteRowErrors, setPasteRowErrors, pasteSubmitting, onPasteConfirm,
 	showAiMatch, setShowAiMatch, draftItems,
+	importOpen, setImportOpen,
 	activeQuote, showSettings, setShowSettings,
 	reassignItemId, setReassignItemId,
 	deleteTarget, setDeleteTarget, onConfirmDelete, deletePending,
@@ -106,6 +112,7 @@ export const GridDialogs: React.FC<GridDialogsProps> = ({
 				onConfirm={onPasteConfirm}
 			/>
 			<AICatalogMatchDialog open={showAiMatch} onOpenChange={setShowAiMatch} items={draftItems} />
+			<ImportFileDialog open={importOpen} onOpenChange={setImportOpen} quoteId={activeQuote.id} />
 			<QuoteSettingsDialog quote={activeQuote} open={showSettings} onOpenChange={setShowSettings} />
 			<ReassignProductDialog
 				quoteItemId={reassignItemId}
