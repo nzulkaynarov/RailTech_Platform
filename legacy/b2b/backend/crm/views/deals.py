@@ -714,7 +714,9 @@ class DealStageLookupSerializer(drf_serializers.Serializer):
     list=extend_schema(summary="List deal stages", tags=["CRM"]),
 )
 class DealStageViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = DealStage.objects.all().order_by("sort_order", "name")
+    # Только активные этапы: выведенный из эксплуатации (KYC_PENDING, is_active=False) исчезает
+    # из дропдауна/Канбана/воронки сам — источники этапов на фронте едины (useDealStages).
+    queryset = DealStage.objects.filter(is_active=True).order_by("sort_order", "name")
     serializer_class = DealStageLookupSerializer
     permission_classes = [IsAuthenticated]
     pagination_class = None

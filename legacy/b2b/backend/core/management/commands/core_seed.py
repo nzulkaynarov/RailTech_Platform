@@ -211,7 +211,9 @@ class Command(BaseCommand):
             "CLOSED_LOST": "Закрыта (проиграна)",
         }
         for code, order in DEAL_STAGE_CANONICAL_ORDER.items():
-            _seed(DealStage, code, name=stage_names[code], sort_order=order)
+            # KYC_PENDING выведен из эксплуатации (28-07): строка живёт (история/FK),
+            # но неактивна — активные списки этапов её не отдают.
+            _seed(DealStage, code, name=stage_names[code], sort_order=order, is_active=(code != "KYC_PENDING"))
 
         # ─── 14. Статусы КП ───
         q_statuses = [

@@ -22,7 +22,11 @@ _S = DealStageCode  # local alias to keep the FSM matrix readable
 
 
 ALLOWED_STAGE_TRANSITIONS = {
-    _S.DRAFT: [_S.KYC_PENDING, _S.RFQ_OPEN, _S.SOURCING, _S.CLOSED_LOST],
+    # KYC_PENDING выведен из эксплуатации (решение владельца 28-07): KYC — свойство КОМПАНИИ
+    # (verification_status + KYC-floor гейты), а не этап сделки; бизнес-логика этап никогда не
+    # ставила (мёртвая колонка воронки). ВХОДА в него больше нет; ВЫХОДЫ сохранены, чтобы
+    # застрявшая сделка всегда могла уйти (никаких тупиков).
+    _S.DRAFT: [_S.RFQ_OPEN, _S.SOURCING, _S.CLOSED_LOST],
     _S.KYC_PENDING: [_S.RFQ_OPEN, _S.SOURCING, _S.CLOSED_LOST],
     _S.RFQ_OPEN: [_S.SOURCING, _S.CALCULATING, _S.CLOSED_LOST],
     _S.SOURCING: [_S.CALCULATING, _S.CLOSED_LOST],
