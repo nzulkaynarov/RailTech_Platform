@@ -186,6 +186,49 @@ class QuoteViewSet(QuoteApprovalMixin, OptimisticLockingMixin, viewsets.ModelVie
         serializer.instance.refresh_from_db()
 
     @extend_schema(
+        summary="Reapply company defaults to the quote",
+        description=(
+            "Re-pull the seller company's CURRENT defaults (VAT rate, margin, delivery basis, "
+            "validity term, cost currency) into this DRAFT КП, OVERWRITING those five fields "
+            "(Odoo «Update Prices» / Salesforce «Recalculate» pattern). Seller-only, unfrozen "
+            "КП only (else QUOTE_FROZEN). Returns `changed_fields` — the fields that actually "
+            "differed and were updated (empty when the КП already matched the defaults)."
+        ),
+        request=None,
+        responses={
+            200: OpenApiResponse(description="Applied — `changed_fields` lists what changed"),
+            403: OpenApiResponse(description="ONLY_SELLER_CAN_BUILD_QUOTE / QUOTE_FROZEN"),
+        },
+        tags=["CRM"],
+    )
+    @action(detail=True, methods=["post"], url_path="apply-defaults")
+    def apply_defaults(self, request, pk=None):
+        """Re-pull current CompanySettings defaults into this DRAFT КП (thin wrapper — Rule 8)."""
+        from rest_framework.exceptions import PermissionDenied
+
+        from accounts.services.permissions import (
+            can_edit_quote_pricing,
+            is_platform_admin_viewer,
+        )
+        from crm.services.quotes._shared import _quote_seller_company
+
+        quote = self.get_object()
+        user = request.user
+        if is_platform_admin_viewer(user):
+            raise PermissionDenied("ADMIN_VIEWER_CANNOT_ACT")
+        if not (getattr(user, "is_superuser", False) or can_edit_quote_pricing(user)):
+            raise PermissionDenied("ONLY_SELLER_CAN_BUILD_QUOTE")
+        if quote.frozen_at:
+            raise PermissionDenied("QUOTE_FROZEN")
+        changed = crm_services.reapply_company_defaults(quote, _quote_seller_company(quote))
+        # vat_rate / margin move the КП totals — re-aggregate only when something changed.
+        if changed:
+            from crm.services import QuoteCalculationService
+
+            QuoteCalculationService.recalculate_quote(quote.pk)
+        return Response({"changed_fields": changed})
+
+    @extend_schema(
         summary="Generate quote PDF",
         description=(
             "Validate the render guards, drop the stale PDF and enqueue an off-thread "

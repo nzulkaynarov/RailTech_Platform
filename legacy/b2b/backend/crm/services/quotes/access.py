@@ -104,6 +104,59 @@ def apply_company_quote_defaults(quote: Quote, company: Optional[Company]) -> Qu
     return quote
 
 
+def reapply_company_defaults(quote: Quote, company: Optional[Company]) -> list:
+    """Re-pull the CURRENT company defaults into an EXISTING КП, OVERWRITING the five
+    default-backed fields (Odoo «Update Prices» / Salesforce CPQ «Recalculate» pattern).
+
+    Unlike ``apply_company_quote_defaults`` — a create-time *fill-empties* helper whose
+    guards make it a no-op on an already-configured КП — this is an explicit, user-triggered
+    OVERWRITE so a seller who changed their CompanySettings after the КП was built can refresh
+    it on demand. It touches ONLY: delivery_basis, cost_currency_default, vat_rate,
+    margin_percent and valid_until (= today + default_offer_validity_days). It never touches
+    the locked presentation currency (quote_currency = UZS) or the manual FX overrides, and it
+    only writes a field when the company has that default configured AND the КП's current value
+    differs (so a no-diff reapply is a genuine no-op and reports nothing changed).
+
+    Returns the list of field codes actually changed (for the caller's UI summary). The
+    unfrozen/DRAFT gate + the recalc afterwards are the CALLER's responsibility (mirrors the
+    ``perform_update`` chain — vat_rate/margin move the totals).
+    """
+    if company is None:
+        return []
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from accounts.models import CompanySettings
+
+    settings_row = CompanySettings.objects.filter(company=company).first()
+    if settings_row is None:
+        return []
+
+    changed = []
+    if settings_row.default_delivery_basis_id and quote.delivery_basis_id != settings_row.default_delivery_basis_id:
+        quote.delivery_basis_id = settings_row.default_delivery_basis_id
+        changed.append("delivery_basis")
+    if settings_row.default_cost_currency_id and quote.cost_currency_default_id != settings_row.default_cost_currency_id:
+        quote.cost_currency_default_id = settings_row.default_cost_currency_id
+        changed.append("cost_currency_default")
+    if settings_row.default_vat_rate is not None and quote.vat_rate != settings_row.default_vat_rate:
+        quote.vat_rate = settings_row.default_vat_rate
+        changed.append("vat_rate")
+    if settings_row.default_margin_percent is not None and quote.margin_percent != settings_row.default_margin_percent:
+        quote.margin_percent = settings_row.default_margin_percent
+        changed.append("margin_percent")
+    if settings_row.default_offer_validity_days is not None:
+        new_valid_until = timezone.now().date() + timedelta(days=settings_row.default_offer_validity_days)
+        if quote.valid_until != new_valid_until:
+            quote.valid_until = new_valid_until
+            changed.append("valid_until")
+
+    if changed:
+        quote.save(update_fields=[*changed, "updated_at"])
+    return changed
+
+
 def compute_default_valid_until(company: Optional[Company]):
     """The КП validity date derived from the company's ``default_offer_validity_days`` (Odoo
     Default Validity), or ``None`` when the company left it unconfigured. PURE — no writes.

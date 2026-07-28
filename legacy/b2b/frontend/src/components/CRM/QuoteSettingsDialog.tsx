@@ -1,9 +1,9 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, RefreshCw } from 'lucide-react';
 import { Quote } from '@/api/crmApi';
-import { useUpdateQuoteSettings, useSetQuoteDeliveryBasis } from '@/hooks/useCRM';
+import { useUpdateQuoteSettings, useSetQuoteDeliveryBasis, useApplyQuoteDefaults } from '@/hooks/useCRM';
 import { useCountries, useCurrencies } from '@/hooks/useMasterData';
 import { countryLabelKey, currencyLabelKey } from '@/lib/codes';
 import { DeliveryBasisSelect } from './DeliveryBasisSelect';
@@ -15,6 +15,16 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
 	Select,
 	SelectContent,
@@ -50,6 +60,9 @@ export function QuoteSettingsDialog({ quote, open, onOpenChange }: QuoteSettings
 	// applies immediately on change rather than waiting for Save — same behaviour as the old rail
 	// select, just relocated here (S2 consolidation).
 	const setBasis = useSetQuoteDeliveryBasis();
+	// «Применить настройки компании» (Odoo Update Prices) — re-pull current company defaults.
+	const applyDefaults = useApplyQuoteDefaults();
+	const [confirmApplyOpen, setConfirmApplyOpen] = useState(false);
 
 	const [marginPercent, setMarginPercent] = useState('');
 	const [vatRate, setVatRate] = useState('');
@@ -133,6 +146,25 @@ export function QuoteSettingsDialog({ quote, open, onOpenChange }: QuoteSettings
 		}
 	}
 
+	// Odoo «Update Prices»: overwrite the five default-backed fields with the company's CURRENT
+	// defaults, then let the form re-seed from the refreshed КП (null the seed guard so the seed
+	// effect re-runs when the invalidated quote refetches).
+	async function handleApplyDefaults() {
+		try {
+			const { changed_fields } = await applyDefaults.mutateAsync(quote.id);
+			seededQuoteIdRef.current = null;
+			if (changed_fields.length > 0) {
+				toast.success(t('quote.settings.defaultsApplied', { count: changed_fields.length }));
+			} else {
+				toast.info(t('quote.settings.defaultsAlreadyCurrent'));
+			}
+		} catch {
+			toast.error(t('errors.operationFailed'));
+		} finally {
+			setConfirmApplyOpen(false);
+		}
+	}
+
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
@@ -143,6 +175,28 @@ export function QuoteSettingsDialog({ quote, open, onOpenChange }: QuoteSettings
 					</DialogHeader>
 
 					<div className="mt-4 flex flex-col gap-4">
+						{/* «Применить настройки компании» (Odoo Update Prices): дефолты замораживаются при
+						    создании КП; эта кнопка по требованию перетягивает ТЕКУЩИЕ настройки компании
+						    (НДС, маржа, базис, срок действия, валюта себестоимости), перезаписывая эти поля.
+						    Только для незамороженного КП; за подтверждением, т.к. затрёт ручные правки. */}
+						{!quote.frozen_at && (
+							<div className="flex flex-col gap-1.5 rounded-md border border-dashed p-3">
+								<Button
+									type="button"
+									variant="outline"
+									className="w-full"
+									onClick={() => setConfirmApplyOpen(true)}
+									disabled={applyDefaults.isPending}
+								>
+									{applyDefaults.isPending
+										? <Loader2 className="size-4 animate-spin" />
+										: <RefreshCw className="size-4" />}
+									{t('quote.settings.applyDefaults')}
+								</Button>
+								<p className="text-xs text-muted-foreground">{t('quote.settings.applyDefaultsHelp')}</p>
+							</div>
+						)}
+
 						{/* Поставка (S2): базис поставки (Incoterm) переехал сюда из правой панели грида.
 						    Применяется сразу при выборе — движок пересчитывает статьи затрат по базису. */}
 						<div className="flex flex-col gap-1.5">
@@ -321,6 +375,23 @@ export function QuoteSettingsDialog({ quote, open, onOpenChange }: QuoteSettings
 					</DialogFooter>
 				</form>
 			</DialogContent>
+
+			{/* Overwrites the seller's manual vat/margin/basis/validity/cost-currency edits with the
+			    company defaults — a confirm before the (recoverable, but wide) change. */}
+			<AlertDialog open={confirmApplyOpen} onOpenChange={setConfirmApplyOpen}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>{t('quote.settings.applyDefaults')}</AlertDialogTitle>
+						<AlertDialogDescription>{t('quote.settings.applyDefaultsConfirm')}</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+						<AlertDialogAction onClick={handleApplyDefaults} disabled={applyDefaults.isPending}>
+							{t('quote.settings.applyDefaults')}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</Dialog>
 	);
 }

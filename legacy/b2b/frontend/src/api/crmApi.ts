@@ -878,6 +878,13 @@ export const crmApi = {
 		const response = await apiClient.patch<Quote>(`crm/quotes/${id}/`, data);
 		return response.data;
 	},
+	// Re-pull the seller company's CURRENT defaults (VAT / margin / basis / validity /
+	// cost currency) into this DRAFT КП, overwriting those five fields (Odoo «Update
+	// Prices»). Returns the field codes that actually changed (for the UI summary).
+	applyQuoteDefaults: async (id: number) => {
+		const response = await apiClient.post<{ changed_fields: string[] }>(`crm/quotes/${id}/apply-defaults/`);
+		return response.data;
+	},
 	// Seller picks the Incoterm → server sets the basis AND auto-applies its charge
 	// template (the default expense items for that basis). Dedicated endpoint, not a
 	// plain PATCH, so the template side-effect is explicit.

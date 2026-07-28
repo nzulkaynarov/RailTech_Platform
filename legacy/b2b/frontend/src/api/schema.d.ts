@@ -4746,6 +4746,26 @@ export interface paths {
         patch: operations["crm_quotes_partial_update"];
         trace?: never;
     };
+    "/api/v1/crm/quotes/{id}/apply-defaults/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reapply company defaults to the quote
+         * @description Re-pull the seller company's CURRENT defaults (VAT rate, margin, delivery basis, validity term, cost currency) into this DRAFT КП, OVERWRITING those five fields (Odoo «Update Prices» / Salesforce «Recalculate» pattern). Seller-only, unfrozen КП only (else QUOTE_FROZEN). Returns `changed_fields` — the fields that actually differed and were updated (empty when the КП already matched the defaults).
+         */
+        post: operations["crm_quotes_apply_defaults_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/quotes/{id}/approval-act/": {
         parameters: {
             query?: never;
@@ -20978,6 +20998,34 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Quote"];
                 };
+            };
+        };
+    };
+    crm_quotes_apply_defaults_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Коммерческое предложение. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Applied — `changed_fields` lists what changed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description ONLY_SELLER_CAN_BUILD_QUOTE / QUOTE_FROZEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
