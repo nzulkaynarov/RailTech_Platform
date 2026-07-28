@@ -3330,7 +3330,8 @@
         "value": "Сумма",
         "manager": "Менеджер",
         "managerUnassigned": "Не назначен",
-        "date": "Дата"
+        "date": "Дата",
+        "responsible": "Ответственный"
       },
       "detail": {
         "info": "Информация о сделке",

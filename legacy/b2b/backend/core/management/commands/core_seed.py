@@ -194,18 +194,24 @@ class Command(BaseCommand):
             _seed(StockStatus, code, name=name)
 
         # ─── 13. Этапы сделок ───
-        stages = [
-            ("DRAFT", "Черновик", 0),
-            ("KYC_PENDING", "Ожидание KYC", 1),
-            ("SOURCING", "Подбор поставщиков", 2),
-            ("CALCULATING", "Расчёт цен", 3),
-            ("QUOTE_SENT", "КП отправлено", 4),
-            ("CONTRACT_SIGNED", "Договор подписан", 5),
-            ("CLOSED_WON", "Закрыта (выиграна)", 6),
-            ("CLOSED_LOST", "Закрыта (проиграна)", 7),
-        ]
-        for code, name, order in stages:
-            _seed(DealStage, code, name=name, sort_order=order)
+        # Порядок — из ЕДИНОГО канона DEAL_STAGE_CANONICAL_ORDER (crm/constants): этот список
+        # раньше жил своей жизнью (0-7, БЕЗ RFQ_OPEN) и при каждом `make seed` перетирал порядок,
+        # ломая воронку («Заявка открыта» в хвосте) — ресерч 2026-07-28.
+        from crm.constants import DEAL_STAGE_CANONICAL_ORDER
+
+        stage_names = {
+            "DRAFT": "Черновик",
+            "KYC_PENDING": "Ожидание KYC",
+            "RFQ_OPEN": "Заявка открыта",
+            "SOURCING": "Подбор поставщиков",
+            "CALCULATING": "Расчёт цен",
+            "QUOTE_SENT": "КП отправлено",
+            "CONTRACT_SIGNED": "Договор подписан",
+            "CLOSED_WON": "Закрыта (выиграна)",
+            "CLOSED_LOST": "Закрыта (проиграна)",
+        }
+        for code, order in DEAL_STAGE_CANONICAL_ORDER.items():
+            _seed(DealStage, code, name=stage_names[code], sort_order=order)
 
         # ─── 14. Статусы КП ───
         q_statuses = [

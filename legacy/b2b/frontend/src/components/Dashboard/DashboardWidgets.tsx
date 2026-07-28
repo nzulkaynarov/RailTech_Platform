@@ -84,9 +84,14 @@ export function SellerAttentionStrip({ onNavigate }: { onNavigate: (p: string) =
   const { data: deals } = useDeals();
   const { data: quotes } = useQuotes();
 
-  const rfqQueue = (deals ?? []).filter((d) => PRE_KP_STAGES.includes(d.stage_code ?? ''));
+  // «Заявки без КП» — ЧЕСТНЫЙ счёт (ресерч 2026-07-28): pre-КП стадия И КП ещё НЕТ.
+  // Раньше считали только по стадии — плитка кричала «6 без КП», когда у всех шести уже
+  // лежали черновики КП (воронка врала глазам).
+  const rfqQueue = (deals ?? []).filter(
+    (d) => PRE_KP_STAGES.includes(d.stage_code ?? '') && !d.active_quote,
+  );
   const rfqsNeedingKp = rfqQueue.length;
-  // W3 aging-counter (Bitrix24): сколько ждёт самая старая НЕПРИНЯТАЯ заявка.
+  // W3 aging-counter (Bitrix24): сколько ждёт самая старая заявка из этой же выборки.
   const oldestUnclaimed = rfqQueue
     .filter((d) => isUnclaimedRfq(d))
     .reduce<string | null>((oldest, d) => (!oldest || (d.created_at ?? '') < oldest ? d.created_at ?? oldest : oldest), null);

@@ -22,6 +22,24 @@ class DealStageCode(models.TextChoices):
     CLOSED_LOST = "CLOSED_LOST", "Закрыта (отказ)"
 
 
+# Канонический порядок этапов в воронке — ЕДИНСТВЕННЫЙ источник sort_order для DealStage.
+# Его читают: data-миграция починки порядка (crm/0076), dev-сид (core_seed) и guard-тест.
+# Ресерч 2026-07-28: ранние сиды создали этапы с порядком 0-7 БЕЗ RFQ_OPEN; добавленный позже
+# RFQ_OPEN получил хвостовой 25, а get_or_create сид-миграции существующие строки не чинит —
+# «Заявка открыта» падала В КОНЕЦ дропдауна/канбана/воронки, после закрытых сделок.
+DEAL_STAGE_CANONICAL_ORDER = {
+    DealStageCode.DRAFT: 10,
+    DealStageCode.KYC_PENDING: 20,
+    DealStageCode.RFQ_OPEN: 30,
+    DealStageCode.SOURCING: 40,
+    DealStageCode.CALCULATING: 50,
+    DealStageCode.QUOTE_SENT: 60,
+    DealStageCode.CONTRACT_SIGNED: 70,
+    DealStageCode.CLOSED_WON: 80,
+    DealStageCode.CLOSED_LOST: 90,
+}
+
+
 class QuoteStatusCode(models.TextChoices):
     DRAFT = "DRAFT", "Черновик"
     PENDING_TRADE_REVIEW = "PENDING_TRADE_REVIEW", "На проверке ВЭД"

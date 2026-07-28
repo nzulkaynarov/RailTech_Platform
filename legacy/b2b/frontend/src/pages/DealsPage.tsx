@@ -107,9 +107,12 @@ export function DealsPage() {
       ),
     },
     {
-      id: 'manager', header: t('pages.deals.table.manager'),
-      cell: (deal) => (deal.manager_name
-        ? <span>{deal.manager_name}</span>
+      // Ресерч 2026-07-28: колонка читала legacy deal.manager_name, которого в list-ответе
+      // ВООБЩЕ нет — всегда «Не назначен», даже когда заявка взята. Владение живёт на
+      // routing.assigned_to (как в Канбане) — показываем его.
+      id: 'manager', header: t('pages.deals.table.responsible'),
+      cell: (deal) => (deal.assigned_to != null
+        ? <span>{deal.assigned_to_name || t('dealsKanban.assigned')}</span>
         : <span className="text-muted-foreground italic">{t('pages.deals.table.managerUnassigned')}</span>),
     },
     {

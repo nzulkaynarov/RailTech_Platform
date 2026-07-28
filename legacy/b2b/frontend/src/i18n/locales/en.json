@@ -3326,7 +3326,8 @@
         "value": "Value",
         "manager": "Manager",
         "managerUnassigned": "Unassigned",
-        "date": "Date"
+        "date": "Date",
+        "responsible": "Responsible"
       },
       "detail": {
         "info": "Deal Information",
