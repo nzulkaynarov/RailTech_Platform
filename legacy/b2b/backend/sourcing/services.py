@@ -138,16 +138,26 @@ def _request_lines_for_routing(deal):
 
 
 def _owner_ids_for_products(product_ids) -> set:
-    """PUBLISHED seller (SUPPLIER/MANUFACTURER) owner-company ids for the given products."""
+    """PUBLISHED seller owner-company ids for the given products — only sellers a buyer can
+    actually invite.
+
+    The KYC filter is load-bearing, not defensive: the recipient picker lists only verified
+    sellers, while the suggestion pre-checks the companies it returns. Suggesting an unverified
+    seller therefore pre-selected a company that had NO row in the picker — invisible to the
+    buyer, impossible to un-check, and still sent to routing. Same set as the picker
+    (accounts/views/company.py `suppliers`), so suggestion ⊆ picker by construction.
+    """
     if not product_ids:
         return set()
     from accounts.constants import SELLER_COMPANY_TYPES
+    from accounts.services.kyc import KYC_VERIFIED_CODES
 
     owner_ids = (
         Product.objects.filter(
             id__in=product_ids,
             status__code="PUBLISHED",
             owner_company__types__code__in=SELLER_COMPANY_TYPES,
+            owner_company__verification_status__code__in=KYC_VERIFIED_CODES,
         )
         .values_list("owner_company_id", flat=True)
         .distinct()
@@ -204,10 +214,30 @@ def suggest_sellers_for_deal(deal, *, per_line_candidates: int = 3) -> List[dict
     return _build_seller_suggestions(company_hits, len(lines))
 
 
+def _canonicalize_missing_names(ai_candidate_lines: list[dict]) -> None:
+    """Заполнить пустой `name_canonical` у строк, набранных руками (мутирует список).
+
+    Без этого шага AI-ветка бесполезна ровно там, где заявлена. `match_lines_to_catalog`
+    сначала строит шорт-лист товаров ТРИГРАМОМ (по `name` и `name_canonical`), и у латиницы
+    вроде «relsy R65» сходство с кириллической карточкой ≈ 0 → шорт-лист пуст → модель даже
+    не вызывается. У строк из файлового ИИ-импорта `name_canonical` уже есть, у набранных
+    руками — нет. Один батчевый вызов канонизации закрывает этот разрыв.
+    """
+    from sourcing.services_ai import canonicalize_names
+
+    needs_canonical = [line["name"] for line in ai_candidate_lines if not line["name_canonical"]]
+    if not needs_canonical:
+        return
+    canonical_by_name = canonicalize_names(needs_canonical)
+    for line in ai_candidate_lines:
+        if not line["name_canonical"]:
+            line["name_canonical"] = canonical_by_name.get(line["name"], "")
+
+
 def suggest_sellers_for_deal_ai(deal, *, per_line_candidates: int = 3) -> List[dict]:
     """R3 — то же, что `suggest_sellers_for_deal`, но free-text позиции БЕЗ trigram-совпадения
-    добираются ОДНИМ AI-вызовом (`match_lines_to_catalog`: билингва RU↔латиница + LLM-реранк) —
-    ловит опечатки, синонимы и латиницу, которые триграм пропускает.
+    добираются ИИ: сначала батчевая канонизация имён (латиница/опечатки → русское каноническое),
+    затем `match_lines_to_catalog` (шорт-лист + LLM-реранк). Ловит то, что триграм пропускает.
 
     Опциональное усиление (покупатель запускает явно, под суточным лимитом ИИ); человек всё
     равно подтверждает список — AI ничего не привязывает сам. Деградирует до детерминированного
@@ -238,6 +268,7 @@ def suggest_sellers_for_deal_ai(deal, *, per_line_candidates: int = 3) -> List[d
             )
 
     if ai_candidate_lines:
+        _canonicalize_missing_names(ai_candidate_lines)
         for match in match_lines_to_catalog(ai_candidate_lines, top_k=per_line_candidates):
             product_ids = [c["product_id"] for c in match.get("candidates", []) if c.get("product_id")]
             for owner_id in _owner_ids_for_products(product_ids):

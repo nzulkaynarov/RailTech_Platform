@@ -14,7 +14,7 @@ from rest_framework import exceptions, filters, permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from accounts.constants import SELLER_COMPANY_TYPES, VerificationStatusCode
+from accounts.constants import SELLER_COMPANY_TYPES
 from accounts.models import Company, CompanyMember
 from accounts.serializers import CompanySerializer
 from accounts.services.permissions import member_has_permission
@@ -164,11 +164,19 @@ class CompanyViewSet(CompanyKYCMixin, CompanyDocumentsMixin, CompanyTeamMixin, v
 
         Deliberately narrow (id/name/inn) and capped to verified sellers, so the
         full company list — protected by IsPlatformAdmin — stays admin-only.
+
+        Verified == the canonical KYC set (L2 + L3), NOT L2 alone: an L3_CONTRACTED seller
+        is MORE verified than L2, and the old exact-L2 filter silently dropped exactly the
+        contracted suppliers a buyer most wants to invite. This is also the same set the
+        routing suggestion uses (sourcing.services), so a suggested seller is always a
+        seller the buyer can actually see and un-check here.
         """
+        from accounts.services.kyc import KYC_VERIFIED_CODES
+
         verified_suppliers = (
             Company.objects.filter(
                 types__code__in=SELLER_COMPANY_TYPES,
-                verification_status__code=VerificationStatusCode.L2_VERIFIED,
+                verification_status__code__in=KYC_VERIFIED_CODES,
             )
             .distinct()
             .order_by("name")
