@@ -128,6 +128,58 @@ def smart_match_candidates(raw_name: str, limit: int = 5, domain_hint: Optional[
     ]
 
 
+def _request_lines_for_routing(deal):
+    """The buyer-request КП lines usable for routing (a catalog product OR a non-empty free-text
+    name). Empty when the deal has no buyer request or no usable lines."""
+    request_quote = deal.quotes.filter(prepared_by__isnull=True).order_by("version").first()
+    if request_quote is None:
+        return []
+    return [item for item in request_quote.items.all() if item.product_id or (item.imported_raw_name or "").strip()]
+
+
+def _owner_ids_for_products(product_ids) -> set:
+    """PUBLISHED seller (SUPPLIER/MANUFACTURER) owner-company ids for the given products."""
+    if not product_ids:
+        return set()
+    from accounts.constants import SELLER_COMPANY_TYPES
+
+    owner_ids = (
+        Product.objects.filter(
+            id__in=product_ids,
+            status__code="PUBLISHED",
+            owner_company__types__code__in=SELLER_COMPANY_TYPES,
+        )
+        .values_list("owner_company_id", flat=True)
+        .distinct()
+    )
+    return {owner_id for owner_id in owner_ids if owner_id}
+
+
+def _trigram_owner_ids_for_line(line, per_line_candidates: int) -> set:
+    """Deterministic per-line owner set: the line's own product owner, or trigram-matched
+    catalog owners for a free-text line. No AI, no writes."""
+    if line.product_id:
+        return _owner_ids_for_products([line.product_id])
+    product_ids = [c["product_id"] for c in smart_match_candidates(line.imported_raw_name, limit=per_line_candidates)]
+    return _owner_ids_for_products(product_ids)
+
+
+def _build_seller_suggestions(company_hits: dict, total_lines: int) -> List[dict]:
+    """Shape + sort the aggregated hits into the API result [{company_id, name, matched_lines,
+    total_lines}], most-matched first (name tiebreak)."""
+    if not company_hits:
+        return []
+    from accounts.models import Company
+
+    names = dict(Company.objects.filter(id__in=list(company_hits)).values_list("id", "name"))
+    result = [
+        {"company_id": cid, "name": names.get(cid, ""), "matched_lines": hits, "total_lines": total_lines}
+        for cid, hits in company_hits.items()
+    ]
+    result.sort(key=lambda row: (-row["matched_lines"], row["name"]))
+    return result
+
+
 def suggest_sellers_for_deal(deal, *, per_line_candidates: int = 3) -> List[dict]:
     """R1 (spec-freetext-rfq-routing): подобрать продавцов для заявки по её позициям.
 
@@ -135,55 +187,60 @@ def suggest_sellers_for_deal(deal, *, per_line_candidates: int = 3) -> List[dict
     каталожный товар (СВОЙ product_id, если позиция взята из каталога, ИЛИ trigram-матч free-text
     имени к PUBLISHED-товарам) → `owner_company` (продавец). Агрегируем по компании со счётом
     СОВПАВШИХ позиций — наш аналог confidence («совпало 3 из 5»). Только SUPPLIER-компании.
-    Чистое чтение: ничего не пишет, никакого AI — детерминированный trigram.
+    Чистое чтение: ничего не пишет, никакого AI — детерминированный trigram (мгновенно).
 
     Возврат по убыванию совпадений: [{company_id, name, matched_lines, total_lines}].
     Пустой список, когда каталог ничего не подсказал (UI оставляет ручной выбор — без тупика).
     """
     from collections import defaultdict
 
-    from accounts.constants import SELLER_COMPANY_TYPES
-    from accounts.models import Company
-
-    request_quote = deal.quotes.filter(prepared_by__isnull=True).order_by("version").first()
-    if request_quote is None:
+    lines = _request_lines_for_routing(deal)
+    if not lines:
         return []
-    lines = [
-        item
-        for item in request_quote.items.all()
-        if item.product_id or (item.imported_raw_name or "").strip()
-    ]
+    company_hits: dict = defaultdict(int)
+    for line in lines:
+        for owner_id in _trigram_owner_ids_for_line(line, per_line_candidates):
+            company_hits[owner_id] += 1  # одна позиция засчитывается компании один раз
+    return _build_seller_suggestions(company_hits, len(lines))
+
+
+def suggest_sellers_for_deal_ai(deal, *, per_line_candidates: int = 3) -> List[dict]:
+    """R3 — то же, что `suggest_sellers_for_deal`, но free-text позиции БЕЗ trigram-совпадения
+    добираются ОДНИМ AI-вызовом (`match_lines_to_catalog`: билингва RU↔латиница + LLM-реранк) —
+    ловит опечатки, синонимы и латиницу, которые триграм пропускает.
+
+    Опциональное усиление (покупатель запускает явно, под суточным лимитом ИИ); человек всё
+    равно подтверждает список — AI ничего не привязывает сам. Деградирует до детерминированного
+    результата, когда AI выключен или не дал кандидатов. Тот же shape, что у R1."""
+    from collections import defaultdict
+
+    from sourcing.services_ai import match_lines_to_catalog
+
+    lines = _request_lines_for_routing(deal)
     if not lines:
         return []
 
-    company_hits: dict = defaultdict(int)  # seller company id → сколько позиций она может закрыть
+    company_hits: dict = defaultdict(int)
+    ai_candidate_lines: list[dict] = []  # free-text misses to send to the model in one batch
     for line in lines:
-        if line.product_id:
-            product_ids = [line.product_id]
-        else:
-            product_ids = [c["product_id"] for c in smart_match_candidates(line.imported_raw_name, limit=per_line_candidates)]
-        if not product_ids:
-            continue
-        owner_ids = (
-            Product.objects.filter(
-                id__in=product_ids,
-                status__code="PUBLISHED",
-                owner_company__types__code__in=SELLER_COMPANY_TYPES,
+        owner_ids = _trigram_owner_ids_for_line(line, per_line_candidates)
+        if owner_ids:
+            for owner_id in owner_ids:
+                company_hits[owner_id] += 1
+        elif (line.imported_raw_name or "").strip():
+            ai_candidate_lines.append(
+                {
+                    "name": line.imported_raw_name or "",
+                    "name_canonical": getattr(line, "name_canonical", "") or "",
+                    "mpn": getattr(line, "mpn", "") or "",
+                    "gost_drawing": getattr(line, "gost_drawing", "") or "",
+                }
             )
-            .values_list("owner_company_id", flat=True)
-            .distinct()
-        )
-        for owner_id in owner_ids:
-            if owner_id:
-                company_hits[owner_id] += 1  # одна позиция засчитывается компании один раз
 
-    if not company_hits:
-        return []
-    names = dict(Company.objects.filter(id__in=list(company_hits)).values_list("id", "name"))
-    total_lines = len(lines)
-    result = [
-        {"company_id": cid, "name": names.get(cid, ""), "matched_lines": hits, "total_lines": total_lines}
-        for cid, hits in company_hits.items()
-    ]
-    result.sort(key=lambda row: (-row["matched_lines"], row["name"]))
-    return result
+    if ai_candidate_lines:
+        for match in match_lines_to_catalog(ai_candidate_lines, top_k=per_line_candidates):
+            product_ids = [c["product_id"] for c in match.get("candidates", []) if c.get("product_id")]
+            for owner_id in _owner_ids_for_products(product_ids):
+                company_hits[owner_id] += 1  # одна (AI-распознанная) позиция — один зачёт компании
+
+    return _build_seller_suggestions(company_hits, len(lines))

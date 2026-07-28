@@ -80,6 +80,11 @@ export const useSuggestedSellers = (dealId: number, enabled: boolean) => useQuer
   staleTime: 60_000,
 });
 
+// R3: buyer opts into an AI-enhanced pass (async 202/poll); merged into the picker on the client.
+export const useSuggestSellersAi = () => useMutation({
+  mutationFn: (dealId: number) => crmApi.suggestSellersAi(dealId),
+});
+
 // Buyer routes a DRAFT RFQ to seller companies. Invalidate the deals list and
 // the specific deal detail (key ['deals', id]) so target_sellers_data refreshes.
 export const useRouteDeal = () => {

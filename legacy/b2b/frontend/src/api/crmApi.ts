@@ -642,6 +642,15 @@ export const crmApi = {
 		const response = await apiClient.get<SuggestedSeller[]>(`crm/deals/${dealId}/suggested-sellers/`);
 		return response.data;
 	},
+	// R3: AI-enhanced подбор продавцов — free-text позиции без trigram-совпадения добираются
+	// одним билингвальным LLM-вызовом. ARCH-01: 202 + task_id → ai-status poll. Может вернуть
+	// 503 {error:'AI_DISABLED'} / 429 {error:'AI_DAILY_CAP_REACHED'} (re-thrown как Error(CODE)).
+	suggestSellersAi: async (dealId: number): Promise<{ sellers: SuggestedSeller[] }> => {
+		return runAiJob<{ sellers: SuggestedSeller[] }>(async () => {
+			const response = await apiClient.post<{ task_id: string }>(`crm/deals/${dealId}/suggest-sellers-ai/`);
+			return response.data;
+		});
+	},
 	changeDealStage: async (dealId: number, stageCode: string) => {
 		const response = await apiClient.post<Deal>(`crm/deals/${dealId}/change-stage/`, { stage_code: stageCode });
 		return response.data;

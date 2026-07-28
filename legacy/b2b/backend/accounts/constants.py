@@ -265,6 +265,11 @@ class FeatureKey(models.TextChoices):
     AI_ENRICH = "ai.enrich", "AI-обогащение карточки товара (PIM)"
     ROLES_CUSTOM = "roles.custom", "Кастомные роли компании"
     DOCUMENT_GENERATE = "document.generate", "Генерация документов по шаблонам"
+    # NOT a grantable feature — a per-company OVERRIDE carrier for the daily AI-job ceiling.
+    # An operator sets CompanyEntitlement(feature_key=ai.daily_cap).limit = N to give ONE company
+    # a custom daily allowance that wins over its subscription-plan tier (ai_spend_cap.py reads
+    # `.limit`, not has_entitlement). Deliberately absent from FREE_FLOOR / SUBSCRIPTION_BASELINE.
+    AI_DAILY_CAP = "ai.daily_cap", "Суточный лимит ИИ (override)"
 
 
 # The FREE FLOOR — features always granted, no entitlement row required. Keeps the platform's core

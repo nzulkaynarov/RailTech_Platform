@@ -80,11 +80,11 @@ def test_free_company_below_free_cap_enqueues(settings, stub_apply_async):
 
 @pytest.mark.django_db
 def test_subscribed_company_uses_higher_cap(settings, stub_apply_async):
-    """At the free ceiling but subscribed → still allowed (the paid ceiling applies)."""
+    """At the free ceiling but subscribed → still allowed (the plan ceiling applies)."""
     settings.AI_DAILY_JOB_CAP_FREE = 2
-    settings.AI_DAILY_JOB_CAP_PER_COMPANY = 5
+    settings.AI_DAILY_CAP_BASIC = 5  # default sub plan is BASIC (Старт)
     company = Company.objects.create(name="Paid Co", inn="810000003")
-    SupplierSubscription.objects.create(company=company)  # TRIAL + no expiry → operational
+    SupplierSubscription.objects.create(company=company)  # TRIAL + no expiry → operational, plan BASIC
     user = _member("paid@x.test", company)
     _seed_jobs(user, 2)  # would block a free company, but this one is subscribed
 
@@ -95,13 +95,13 @@ def test_subscribed_company_uses_higher_cap(settings, stub_apply_async):
 
 
 @pytest.mark.django_db
-def test_subscribed_company_blocked_at_paid_cap(settings, stub_apply_async):
+def test_subscribed_company_blocked_at_plan_cap(settings, stub_apply_async):
     settings.AI_DAILY_JOB_CAP_FREE = 2
-    settings.AI_DAILY_JOB_CAP_PER_COMPANY = 5
+    settings.AI_DAILY_CAP_BASIC = 5  # Старт ceiling
     company = Company.objects.create(name="Paid Full Co", inn="810000004")
-    SupplierSubscription.objects.create(company=company)
+    SupplierSubscription.objects.create(company=company)  # plan BASIC
     user = _member("paid-full@x.test", company)
-    _seed_jobs(user, 5)  # paid ceiling reached
+    _seed_jobs(user, 5)  # plan ceiling reached
 
     response = enqueue_ai_job("match", {"lines": []}, user)
 
