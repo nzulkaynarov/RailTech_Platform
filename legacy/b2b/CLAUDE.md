@@ -121,7 +121,7 @@ ADR index (`Docs/dev/adr/`): **0001** admin separation · **0002** role responsi
 - `notifications/` — CRUD + mark as read (structured FKs for deep-links)
 - `health/` — health check (also at root `/health/`)
 
-Full schema: `Docs/dev/architecture/schema.json` + generated `frontend/src/api/schema.d.ts`. **Any model label/verbose_name change flows into the OpenAPI schema — regenerate (spectacular + `gen:api-types`) or the `api-contract` CI gate fails.**
+Full schema: `backend/schema.json` + generated `frontend/src/api/schema.d.ts` — оба под гейтом `api-contract` (CI перегенерирует их и падает на расхождении, поэтому им можно верить). **Any model label/verbose_name change flows into the OpenAPI schema — regenerate (spectacular + `gen:api-types`) or the `api-contract` CI gate fails.**
 
 ## Celery Tasks
 

@@ -312,4 +312,6 @@ GitHub Actions (`.github/workflows/ci.yml`), 6 параллельных jobs:
 - [business-logic.md](../../business/business-logic.md) — FSM и пользовательские сценарии.
 - [role-model.md](../../old/misc/role-model.md) — RBAC.
 - [adr/0001-admin-separation.md](../adr/0001-admin-separation.md) — разделение Unfold ↔ React Admin.
-- `Docs/dev/architecture/schema.json` — актуальный OpenAPI schema (копия из `/api/schema/`).
+- `backend/schema.json` — OpenAPI schema. Генерируется (`manage.py spectacular`) и проверяется
+  CI-джобой `api-contract` вместе с `frontend/src/api/schema.d.ts`; расхождение с кодом валит сборку.
+  Ручных копий держать НЕ нужно — предыдущая, лежавшая в этом каталоге, отстала на 190+ эндпоинтов.
