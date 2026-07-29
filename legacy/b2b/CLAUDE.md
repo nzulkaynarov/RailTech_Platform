@@ -48,7 +48,7 @@ backend/                    # Django project
   {crm,accounts,catalog}/models/   # Packages split by domain. Same-app FKs use string refs ("app.Model")
 frontend/                   # React app
   src/api/                  # Axios client with JWT interceptor + refresh mutex; schema.d.ts (generated)
-  src/store/                # 8 Zustand stores: auth, user, cart, task, theme, currency, domain, loading
+  src/store/                # 6 Zustand stores: auth, user, cart, task, theme, currency
   src/layouts/              # AppShell.tsx + PlatformAdminShell.tsx — the ONLY two shells
   src/config/navigation.tsx # buildNavigation(capabilities) — single capability-driven nav (ADR-0005)
   src/pages/                # ~40 pages incl. 16 Admin* pages (Entitlements, OperatorRoles, AccessLog,
@@ -60,9 +60,10 @@ frontend/                   # React app
   src/config/settingsSections.tsx # buildSettingsSections(gate) — capability-gated Settings Hub sections
   src/components/           # ui (shadcn), Admin, Auth, Billing, CRM, Cabinet, Dashboard, DataTable,
                             #   Settings (Settings Hub sections + team/ package), Sourcing,
-                            #   Shared (OnboardingTour), ResponsiveDataTable.tsx (root),
-                            #   Layout (ChatDrawer, CommandPalette, NotificationCenter, SupportButton,
-                            #   ErrorBoundary — NOT shells)
+                            #   Shared (OnboardingTour, ErrorBoundary — mounted in main.tsx + App.tsx),
+                            #   ResponsiveDataTable.tsx (root),
+                            #   Layout (ChatDrawer, CommandPalette, DocumentSearchDialog,
+                            #   NotificationCenter, SupportButton — NOT shells)
   src/hooks/                # useAccounts, useAdmin, useBilling, useCRM, useCapabilities, useCatalog,
                             #   useMasterData, usePageStats, useSupport, useSystemSettings, useUrlState,
                             #   useViewerMode, use-mobile (exports useMediaQuery)
