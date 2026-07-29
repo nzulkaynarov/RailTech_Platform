@@ -86,10 +86,7 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
         visible_deal_ids = seller_visible_deal_ids(user, self.request)
         if visible_deal_ids is not None:
             from accounts.models import CompanyMember
-            from accounts.services.permissions import (
-                SELLER_COMPANY_TYPES,
-                seller_acting_company_ids,
-            )
+            from accounts.services.permissions import seller_acting_company_ids
 
             # The seller sees items/charges on deals routed to them. Audit H1 (no cross-seller
             # leak): hide a quote ONLY when it was prepared by a COMPETING seller company. The
@@ -108,7 +105,8 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
                 "user_id", flat=True
             )
             competing_preparer_ids = (
-                CompanyMember.objects.filter(is_active=True, company__types__code__in=SELLER_COMPANY_TYPES)
+                CompanyMember.objects.filter(is_active=True)
+                .in_seller_company()
                 .exclude(company_id__in=seller_ids)
                 .exclude(user_id__in=own_member_ids)
                 .values_list("user_id", flat=True)

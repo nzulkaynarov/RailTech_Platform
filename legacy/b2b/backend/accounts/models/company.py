@@ -4,8 +4,69 @@ from django.core.validators import RegexValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from accounts.constants import KYC_VERIFIED_CODES, SELLER_COMPANY_TYPES
 from core.storage import company_document_profile_logo_path, company_logo_path, get_public_storage
 from master_data.models import Country
+
+# ────────────────────────────────────────────
+# «Кто такой продавец» — ОДНО определение на всю платформу
+# ────────────────────────────────────────────
+#
+# Раньше предикат «компания-продавец» был размазан инлайн-фильтрами по 23 местам в 6 приложениях
+# (core, catalog, crm, sourcing, accounts). Это не стилистика — на этом уже был баг в проде:
+# пикер получателей считал приглашаемым продавцом «SUPPLIER + пройденный KYC», а подсказка
+# продавцов (R1) — просто «SUPPLIER». Два места кодировали одно понятие и разошлись, из-за чего
+# непроверенная компания попадала в предвыбор БЕЗ видимой строки: покупатель её не видит, снять
+# не может, а в маршрутизацию она уходит (починено в #436).
+#
+# Здесь определение живёт один раз, поэтому такое расхождение перестаёт быть выразимым.
+
+
+def seller_company_q(prefix: str = "") -> models.Q:
+    """Предикат «это компания-продавец» для фильтра по СВЯЗИ.
+
+    `prefix` — путь до Company от фильтруемой модели: `seller_company_q("company")` для
+    CompanyMember, `seller_company_q("owner_company")` для Product. Без префикса — фильтр по
+    самой Company (но там обычно уместнее `Company.objects.sellers()`).
+    """
+    field = f"{prefix}__types__code__in" if prefix else "types__code__in"
+    return models.Q(**{field: SELLER_COMPANY_TYPES})
+
+
+def verified_seller_company_q(prefix: str = "") -> models.Q:
+    """«Продавец, которого покупатель может пригласить»: продавец + пройденный KYC.
+
+    Именно эта пара — продавец И верификация — расходилась между пикером и подсказкой.
+    Держим её вместе, чтобы забыть половину было невозможно.
+    """
+    status_field = f"{prefix}__verification_status__code__in" if prefix else "verification_status__code__in"
+    return seller_company_q(prefix) & models.Q(**{status_field: KYC_VERIFIED_CODES})
+
+
+class CompanyQuerySet(models.QuerySet):
+    """Публичный словарь выборок по компаниям — импортируется другими приложениями."""
+
+    def sellers(self):
+        """Компании, работающие на стороне продавца.
+
+        `.distinct()` обязателен: `types` — M2M, и фильтр по нему размножает строки, если у
+        компании несколько подходящих типов.
+        """
+        return self.filter(seller_company_q()).distinct()
+
+    def verified_sellers(self):
+        """Продавцы, которых покупатель может пригласить в заявку (продавец + KYC)."""
+        return self.filter(verified_seller_company_q()).distinct()
+
+
+class CompanyMemberQuerySet(models.QuerySet):
+    """Выборки по членству. Доступны и через обратную связь: `user.memberships.…`."""
+
+    def in_seller_company(self):
+        """Членства в компании-продавце. Флаги `is_active` / `can_sell` оставляем вызывающему —
+        они про самого участника, а не про то, продавец ли компания."""
+        return self.filter(seller_company_q("company"))
+
 
 # ────────────────────────────────────────────
 # Справочники модуля Accounts
@@ -169,6 +230,8 @@ class Company(models.Model):
         auto_now=True,
         verbose_name=_("Дата обновления"),
     )
+
+    objects = models.Manager.from_queryset(CompanyQuerySet)()
 
     class Meta:
         verbose_name = _("Компания")
@@ -695,6 +758,8 @@ class CompanyMember(models.Model):
         auto_now_add=True,
         verbose_name=_("Дата вступления"),
     )
+
+    objects = models.Manager.from_queryset(CompanyMemberQuerySet)()
 
     class Meta:
         verbose_name = _("Участник компании")

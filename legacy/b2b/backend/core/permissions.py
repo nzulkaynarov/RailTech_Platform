@@ -1,7 +1,5 @@
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
-from accounts.constants import SELLER_COMPANY_TYPES
-
 
 class IsPlatformAdmin(BasePermission):
     """
@@ -85,10 +83,9 @@ class IsSupplierWithActiveSubscription(BasePermission):
             return True
         from accounts.models import SupplierSubscription
 
-        supplier_company_ids = user.memberships.filter(
-            is_active=True,
-            company__types__code__in=SELLER_COMPANY_TYPES,
-        ).values_list("company_id", flat=True)
+        supplier_company_ids = (
+            user.memberships.filter(is_active=True).in_seller_company().values_list("company_id", flat=True)
+        )
         subs = SupplierSubscription.objects.filter(company_id__in=list(supplier_company_ids))
         return any(s.is_operational for s in subs)
 
@@ -111,10 +108,7 @@ class IsProductManagerOrAdmin(BasePermission):
         if user.is_platform_admin:
             return True
         if view.action == "create":
-            return user.memberships.filter(
-                is_active=True,
-                company__types__code__in=SELLER_COMPANY_TYPES,
-            ).exists()
+            return user.memberships.filter(is_active=True).in_seller_company().exists()
         return True  # object-level check below for retrieve/update/delete
 
     def has_object_permission(self, request, view, obj):

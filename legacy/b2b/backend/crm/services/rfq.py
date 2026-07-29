@@ -347,7 +347,6 @@ def route_request_to_sellers(user: CustomUser, deal: Deal, seller_company_ids: l
     """
     from rest_framework.exceptions import PermissionDenied, ValidationError
 
-    from accounts.constants import SELLER_COMPANY_TYPES
     from accounts.models import Company
     from accounts.services.permissions import is_member_of, is_platform_admin_viewer
     from crm.models import DealSellerRouting
@@ -366,14 +365,7 @@ def route_request_to_sellers(user: CustomUser, deal: Deal, seller_company_ids: l
     # NB: Company has no is_active flag (only CompanyMember does). A company is
     # "active as a seller" iff it carries a SUPPLIER CompanyType — same gate the
     # rest of the codebase uses (core.permissions, catalog offers, contracts).
-    valid_ids = set(
-        Company.objects.filter(
-            id__in=requested_ids,
-            types__code__in=SELLER_COMPANY_TYPES,
-        )
-        .distinct()
-        .values_list("id", flat=True)
-    )
+    valid_ids = set(Company.objects.sellers().filter(id__in=requested_ids).values_list("id", flat=True))
     if valid_ids != requested_ids:
         raise ValidationError({"detail": "NOT_A_SELLER_COMPANY"})
 

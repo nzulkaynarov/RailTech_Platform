@@ -641,15 +641,9 @@ class DealViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"], url_path="suppliers", pagination_class=None)
     def suppliers(self, request):
         """Active SUPPLIER companies for the buyer's routing picker."""
-        from accounts.constants import SELLER_COMPANY_TYPES
         from accounts.models import Company
 
-        sellers = (
-            Company.objects.filter(types__code__in=SELLER_COMPANY_TYPES)
-            .distinct()
-            .order_by("name")
-            .values("id", "name")
-        )
+        sellers = Company.objects.sellers().order_by("name").values("id", "name")
         return Response(list(sellers))
 
     @extend_schema(

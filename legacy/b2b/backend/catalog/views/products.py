@@ -5,8 +5,6 @@ from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 
-from accounts.constants import CompanyTypeCode
-
 from ..models import Product, ProductDocument, ProductImage
 from ..serializers import ProductDocumentSerializer, ProductImageSerializer, ProductListSerializer, ProductSerializer
 
@@ -127,12 +125,7 @@ class ProductViewSet(viewsets.ModelViewSet):
             serializer.save()
             return
         seller_membership = (
-            user.memberships.filter(
-                is_active=True,
-                company__types__code=CompanyTypeCode.SUPPLIER,
-            )
-            .select_related("company")
-            .first()
+            user.memberships.filter(is_active=True).in_seller_company().select_related("company").first()
         )
         if not seller_membership:
             from rest_framework.exceptions import PermissionDenied

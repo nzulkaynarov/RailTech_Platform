@@ -130,7 +130,11 @@ class TestIsCompanyMemberOrPlatformAdmin:
         user.is_platform_admin = False
         user.memberships.filter.return_value.exists.return_value = False
 
-        obj = MagicMock()
+        # Same spec as test_company_member_allowed: this test asserts the company-membership
+        # DENIAL, so the seller-routing branch must stay inert. Without the spec the branch
+        # runs, and whether it short-circuits depends on the exact ORM call chain inside
+        # is_seller() — which made the test pass by accident rather than by intent.
+        obj = MagicMock(spec=["company"])
         obj.company = company
 
         request = self._make_request(user)

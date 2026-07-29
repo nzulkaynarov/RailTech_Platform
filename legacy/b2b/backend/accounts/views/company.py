@@ -14,7 +14,6 @@ from rest_framework import exceptions, filters, permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from accounts.constants import SELLER_COMPANY_TYPES
 from accounts.models import Company, CompanyMember
 from accounts.serializers import CompanySerializer
 from accounts.services.permissions import member_has_permission
@@ -171,17 +170,7 @@ class CompanyViewSet(CompanyKYCMixin, CompanyDocumentsMixin, CompanyTeamMixin, v
         routing suggestion uses (sourcing.services), so a suggested seller is always a
         seller the buyer can actually see and un-check here.
         """
-        from accounts.services.kyc import KYC_VERIFIED_CODES
-
-        verified_suppliers = (
-            Company.objects.filter(
-                types__code__in=SELLER_COMPANY_TYPES,
-                verification_status__code__in=KYC_VERIFIED_CODES,
-            )
-            .distinct()
-            .order_by("name")
-            .values("id", "name", "inn")
-        )
+        verified_suppliers = Company.objects.verified_sellers().order_by("name").values("id", "name", "inn")
         return Response(list(verified_suppliers))
 
     def _assert_member_or_admin(self, company):
