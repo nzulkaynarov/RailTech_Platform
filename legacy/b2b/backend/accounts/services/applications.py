@@ -175,15 +175,28 @@ def bulk_approve_role_applications(
     return approved, errors
 
 
+#: Причина, проставляемая массовому отклонению. `reject_role_application` требует причину
+#: для аудита (и это правильно — у отказа должно быть основание), а массовое действие в
+#: Unfold формы для неё не имеет. Раньше bulk вызывал одиночное отклонение БЕЗ причины,
+#: получал `REASON_REQUIRED` на каждой заявке и возвращал 0: кнопка «[Emergency] Отклонить»
+#: молча не работала, показывая оператору «0 заявок отклонено».
+BULK_REJECT_REASON = "Массовое отклонение (экстренное действие оператора платформы)"
+
+
 def bulk_reject_role_applications(
     applications: QuerySet[CompanyRoleApplication],
     reviewer: CustomUser,
+    reason: str = BULK_REJECT_REASON,
 ) -> int:
-    """Bulk reject. Returns count of rejected applications."""
+    """Bulk reject. Returns count of rejected applications.
+
+    `reason` попадает в `review_notes` и в аудит-лог каждой заявки — по умолчанию явно
+    помечает отказ как массовое экстренное действие, чтобы запись оставалась осмысленной.
+    """
     pending = applications.filter(status__in=["PENDING", "PAYMENT_REQUIRED", "DOCUMENTS_REQUIRED"])
     rejected = 0
     for app in pending:
-        _, error = reject_role_application(app, reviewer)
+        _, error = reject_role_application(app, reviewer, reason)
         if not error:
             rejected += 1
     return rejected
