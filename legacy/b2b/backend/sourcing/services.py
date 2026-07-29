@@ -149,15 +149,13 @@ def _owner_ids_for_products(product_ids) -> set:
     """
     if not product_ids:
         return set()
-    from accounts.constants import SELLER_COMPANY_TYPES
-    from accounts.services.kyc import KYC_VERIFIED_CODES
+    from accounts.models import verified_seller_company_q
 
     owner_ids = (
         Product.objects.filter(
+            verified_seller_company_q("owner_company"),
             id__in=product_ids,
             status__code="PUBLISHED",
-            owner_company__types__code__in=SELLER_COMPANY_TYPES,
-            owner_company__verification_status__code__in=KYC_VERIFIED_CODES,
         )
         .values_list("owner_company_id", flat=True)
         .distinct()

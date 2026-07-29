@@ -20,7 +20,6 @@ from typing import Optional, Tuple
 
 from django.db import transaction
 
-from accounts.constants import SystemRoleCode
 from accounts.models import CustomUser
 from core.audit import log_admin_action
 from crm.constants import DealStageCode, QuoteStatusCode
@@ -431,10 +430,13 @@ class QuoteLifecycleService:
         """
         from django.utils import timezone
 
-        if not (
-            getattr(admin_user, "is_superuser", False)
-            or (admin_user.role and admin_user.role.code == SystemRoleCode.ADMIN)
-        ):
+        # Каноничный предикат вместо ручной сборки того же условия. Он СТРОЖЕ на одну деталь:
+        # дополнительно требует отсутствия активных членств у носителя SystemRole=ADMIN. Это и
+        # есть инвариант ADR-0003 («оператор платформы не бывает CompanyMember»), который
+        # миграция accounts/0010 обеспечивает на данных, — так что на реальных пользователях
+        # результат тот же, а расхождение, если оно когда-нибудь возникнет, теперь закрывается
+        # отказом, а не тихим допуском.
+        if not getattr(admin_user, "is_platform_admin", False):
             return None, "PLATFORM_ADMIN_REQUIRED"
         if not reason.strip():
             return None, "FORCE_REASON_REQUIRED"

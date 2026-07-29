@@ -1,7 +1,7 @@
 import logging
 from typing import Optional
 
-from ..constants import SELLER_COMPANY_TYPES, WorkspaceRoleCode
+from ..constants import WorkspaceRoleCode
 from ..models import CustomUser, SupplierSubscription
 
 logger = logging.getLogger(__name__)
@@ -89,11 +89,7 @@ def is_seller(user: "CustomUser") -> bool:
     """
     if not user or not user.is_authenticated:
         return False
-    return user.memberships.filter(
-        is_active=True,
-        can_sell=True,
-        company__types__code__in=SELLER_COMPANY_TYPES,
-    ).exists()
+    return user.memberships.filter(is_active=True, can_sell=True).in_seller_company().exists()
 
 
 def primary_seller_company_id(user: "CustomUser") -> Optional[int]:
@@ -102,13 +98,7 @@ def primary_seller_company_id(user: "CustomUser") -> Optional[int]:
     if not user or not user.is_authenticated:
         return None
     membership = (
-        user.memberships.filter(
-            is_active=True,
-            can_sell=True,
-            company__types__code__in=SELLER_COMPANY_TYPES,
-        )
-        .order_by("-is_primary", "id")
-        .first()
+        user.memberships.filter(is_active=True, can_sell=True).in_seller_company().order_by("-is_primary", "id").first()
     )
     return membership.company_id if membership else None
 
@@ -170,9 +160,7 @@ def can_view_quote_costs(user: "CustomUser") -> bool:
     if getattr(user, "is_superuser", False) or is_platform_admin_viewer(user):
         return True
     seller_company_ids = (
-        user.memberships.filter(is_active=True, company__types__code__in=SELLER_COMPANY_TYPES)
-        .values_list("company_id", flat=True)
-        .distinct()
+        user.memberships.filter(is_active=True).in_seller_company().values_list("company_id", flat=True).distinct()
     )
     return any(member_has_permission(user, cid, "quote.view_cost_margin") for cid in seller_company_ids)
 
@@ -285,9 +273,7 @@ def seller_company_ids(user: "CustomUser") -> list:
     if getattr(user, "is_platform_admin", False):
         return []
     return list(
-        user.memberships.filter(
-            is_active=True, can_sell=True, company__types__code__in=SELLER_COMPANY_TYPES
-        ).values_list("company_id", flat=True)
+        user.memberships.filter(is_active=True, can_sell=True).in_seller_company().values_list("company_id", flat=True)
     )
 
 
@@ -319,9 +305,7 @@ def seller_visible_deal_ids(user: "CustomUser", request, *, force: bool = False)
     from crm.models import Deal
 
     seller_company_ids = list(
-        user.memberships.filter(
-            is_active=True, can_sell=True, company__types__code__in=SELLER_COMPANY_TYPES
-        ).values_list("company_id", flat=True)
+        user.memberships.filter(is_active=True, can_sell=True).in_seller_company().values_list("company_id", flat=True)
     )
     # ROUTING ROWS ONLY. A prior version also OR'd in "deals that merely offer one of my
     # products" — but that leaked: a buyer adding seller A's product to a deal routed to
@@ -354,9 +338,7 @@ def seller_can_access_deal(user: "CustomUser", request, deal_id, *, force: bool 
     from crm.models import Deal
 
     seller_company_ids = list(
-        user.memberships.filter(
-            is_active=True, can_sell=True, company__types__code__in=SELLER_COMPANY_TYPES
-        ).values_list("company_id", flat=True)
+        user.memberships.filter(is_active=True, can_sell=True).in_seller_company().values_list("company_id", flat=True)
     )
     # Routing rows only — see seller_visible_deal_ids (the product-owner OR-clause leaked).
     return Deal.objects.filter(pk=deal_id, seller_routings__seller_company_id__in=seller_company_ids).exists()
@@ -374,9 +356,7 @@ def seller_company_routed_to_deal(user: "CustomUser", deal_id) -> bool:
     from crm.models import Deal
 
     seller_company_ids = list(
-        user.memberships.filter(
-            is_active=True, can_sell=True, company__types__code__in=SELLER_COMPANY_TYPES
-        ).values_list("company_id", flat=True)
+        user.memberships.filter(is_active=True, can_sell=True).in_seller_company().values_list("company_id", flat=True)
     )
     if not seller_company_ids:
         return False
@@ -404,12 +384,8 @@ def routed_seller_company_id(user: "CustomUser", deal_id) -> Optional[int]:
     # downstream permission check in submit_for_review resolves against the RIGHT company.
     # ADR-0005 Phase E U3: the tie-break reads the quote.build permission, not a WorkspaceRole.
     memberships = (
-        user.memberships.filter(
-            is_active=True,
-            can_sell=True,
-            company__types__code__in=SELLER_COMPANY_TYPES,
-            company_id__in=routed_ids,
-        )
+        user.memberships.filter(is_active=True, can_sell=True, company_id__in=routed_ids)
+        .in_seller_company()
         .select_related("company_role", "role")
         .order_by("-is_primary", "company_id")
     )
@@ -434,9 +410,7 @@ def seller_acting_company_ids(user: "CustomUser", request):
     if acting_context(request) not in ({""} | _SELLER_CONTEXTS):
         return None
     return set(
-        user.memberships.filter(
-            is_active=True, can_sell=True, company__types__code__in=SELLER_COMPANY_TYPES
-        ).values_list("company_id", flat=True)
+        user.memberships.filter(is_active=True, can_sell=True).in_seller_company().values_list("company_id", flat=True)
     )
 
 
@@ -450,8 +424,6 @@ def can_edit_quote_pricing(user: "CustomUser") -> bool:
     if getattr(user, "is_superuser", False) or is_platform_admin_viewer(user):
         return True
     seller_company_ids = (
-        user.memberships.filter(is_active=True, company__types__code__in=SELLER_COMPANY_TYPES)
-        .values_list("company_id", flat=True)
-        .distinct()
+        user.memberships.filter(is_active=True).in_seller_company().values_list("company_id", flat=True).distinct()
     )
     return any(member_has_permission(user, cid, "quote.edit_pricing") for cid in seller_company_ids)

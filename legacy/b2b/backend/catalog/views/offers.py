@@ -3,8 +3,6 @@ from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import permissions, viewsets
 from rest_framework.exceptions import PermissionDenied
 
-from accounts.constants import SELLER_COMPANY_TYPES
-
 from ..models import SupplierOffer
 from ..serializers import SupplierOfferSerializer
 
@@ -41,12 +39,7 @@ class SupplierOfferViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if not user.is_authenticated:
             return []
-        return list(
-            user.memberships.filter(
-                is_active=True,
-                company__types__code__in=SELLER_COMPANY_TYPES,
-            ).values_list("company_id", flat=True)
-        )
+        return list(user.memberships.filter(is_active=True).in_seller_company().values_list("company_id", flat=True))
 
     def get_queryset(self):
         # An offer carries the seller's cost + supplier identity — confidential (C1/C2).

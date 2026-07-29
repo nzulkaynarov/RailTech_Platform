@@ -4,7 +4,19 @@ Public API re-exported so existing import paths keep working.
 """
 
 from .applications import CompanyRoleApplication
-from .company import ClientInvite, Company, CompanyDocumentProfile, CompanyMember, CompanyRole, CompanySettings, Contact
+from .company import (
+    ClientInvite,
+    Company,
+    CompanyDocumentProfile,
+    CompanyMember,
+    CompanyMemberQuerySet,
+    CompanyQuerySet,
+    CompanyRole,
+    CompanySettings,
+    Contact,
+    seller_company_q,
+    verified_seller_company_q,
+)
 from .kyc import KYCDocument
 from .lookups import CompanyType, KYCDocType, SystemRole, VerificationStatus, WorkspaceRole
 from .operators import OperatorRole
@@ -17,6 +29,8 @@ __all__ = [
     "CompanyDocumentProfile",
     "CompanyEntitlement",
     "CompanyMember",
+    "CompanyMemberQuerySet",
+    "CompanyQuerySet",
     "CompanyRole",
     "CompanyRoleApplication",
     "CompanySettings",
@@ -30,4 +44,6 @@ __all__ = [
     "SystemRole",
     "VerificationStatus",
     "WorkspaceRole",
+    "seller_company_q",
+    "verified_seller_company_q",
 ]

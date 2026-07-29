@@ -220,16 +220,13 @@ def viewer_can_sign_manager(user, contract) -> bool:
     """Seller-side signing capability for THIS contract, bound to deal routing (a seller can only
     sign contracts on deals routed to its company — audit H3), independent of page context. Shared
     by sign_contract_by_manager and the serializer hint."""
-    from accounts.constants import SELLER_COMPANY_TYPES
     from accounts.services import is_platform_admin_viewer, is_seller, seller_company_routed_to_deal
 
     from ._params import has_explicit_company_role_perm
 
     if user is None or getattr(user, "is_anonymous", False) or is_platform_admin_viewer(user):
         return False
-    seller_memberships = user.memberships.filter(is_active=True, company__types__code__in=SELLER_COMPANY_TYPES).only(
-        "company_id"
-    )
+    seller_memberships = user.memberships.filter(is_active=True).in_seller_company().only("company_id")
     has_sign_perm = any(has_explicit_company_role_perm(user, m.company_id, "contract.sign") for m in seller_memberships)
     return (is_seller(user) or has_sign_perm) and seller_company_routed_to_deal(user, contract.deal_id)
 

@@ -7,15 +7,15 @@ from django.db.models import QuerySet
 
 from notifications.emails import send_templated_email
 
-from ..constants import VerificationStatusCode
+from ..constants import KYC_VERIFIED_CODES, VerificationStatusCode
 from ..models import Company, CustomUser, VerificationStatus
 
 logger = logging.getLogger(__name__)
 
-# ADR-0006 Phase E — the KYC floor. A company completes KYC at L2; below it can register + browse
-# + build a DRAFT заявка, but not SUBMIT it (or otherwise trade). This makes «после KYC = минимум»
-# real on the BACKEND (it was FE-cosmetic only — the Layer-0 gap).
-KYC_VERIFIED_CODES = frozenset({VerificationStatusCode.L2_VERIFIED, VerificationStatusCode.L3_CONTRACTED})
+# KYC_VERIFIED_CODES moved to accounts.constants so the model layer can use it too
+# (models cannot import services without a cycle). Re-exported here because this was
+# its historical home and callers import it from this module.
+__all__ = ["KYC_VERIFIED_CODES"]
 
 
 def company_kyc_verified(company_id: int) -> bool:

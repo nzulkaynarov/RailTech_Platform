@@ -12,7 +12,6 @@ from typing import Optional, Tuple
 from django.conf import settings
 from django.db import transaction
 
-from ..constants import SELLER_COMPANY_TYPES
 from ..models import Company, CompanyType, Contact, CustomUser
 
 logger = logging.getLogger(__name__)
@@ -20,12 +19,7 @@ logger = logging.getLogger(__name__)
 
 def _seller_company_ids(user: CustomUser) -> list:
     """The SUPPLIER/MANUFACTURER companies the user is an active member of."""
-    return list(
-        user.memberships.filter(
-            is_active=True,
-            company__types__code__in=SELLER_COMPANY_TYPES,
-        ).values_list("company_id", flat=True)
-    )
+    return list(user.memberships.filter(is_active=True).in_seller_company().values_list("company_id", flat=True))
 
 
 def seller_clients(user: CustomUser):
